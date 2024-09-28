@@ -169,8 +169,8 @@ pub fn Editor<'a>(
         cleaned
     };
 
-    // Run the code
-    let run = move |format: bool, set_cursor: bool| {
+    // Format the code
+    let format = move |do_format: bool, set_cursor: bool| -> (String, u64) {
         // Get code
         let mut code_text = get_code();
         let mut cursor = if set_cursor {
@@ -189,7 +189,7 @@ pub fn Editor<'a>(
         // Format code
         let seed = now().to_bits();
         seed_random(seed);
-        let input = if format {
+        let input = if do_format {
             if let Ok(formatted) = format_str(
                 &code_text,
                 &FormatConfig {
@@ -248,6 +248,14 @@ pub fn Editor<'a>(
                 });
             }
         }
+
+        (input, seed)
+    };
+
+    // Run the code
+    let run = move |do_format: bool, set_cursor: bool| {
+        // Format code
+        let (input, seed) = format(do_format, set_cursor);
 
         // Run code
         set_output.set(view!(<div class="running-text">"Running"</div>).into_view());
@@ -487,8 +495,14 @@ pub fn Editor<'a>(
 
         match key {
             "Enter" => {
-                if os_ctrl(event) || event.shift_key() {
-                    run(true, true);
+                let ctrl = os_ctrl(event);
+                let shift = event.shift_key();
+                if ctrl || shift {
+                    if get_run_on_format() || shift {
+                        run(true, true);
+                    } else {
+                        format(true, true);
+                    }
                 } else {
                     let (start, _) = get_code_cursor().unwrap();
                     state.update(|state| {
@@ -1415,6 +1429,7 @@ pub fn Editor<'a>(
     let toggle_show_experimental = move |_| {
         set_show_experimental(!get_show_experimental());
     };
+    let toggle_run_on_format = move |_| set_run_on_format(!get_run_on_format());
     let on_select_font = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let name = input.value();
@@ -1493,6 +1508,13 @@ pub fn Editor<'a>(
                                 type="checkbox"
                                 checked=get_show_experimental
                                 on:change=toggle_show_experimental/>
+                        </div>
+                        <div title="Run and format together">
+                            "Run on format:"
+                            <input
+                                type="checkbox"
+                                checked=get_run_on_format
+                                on:change=toggle_run_on_format/>
                         </div>
                         <div>
                             "Stack:"
@@ -1645,7 +1667,12 @@ pub fn Editor<'a>(
                             </div>
                         </div>
                         <div id="code-buttons">
-                            <button class="code-button" on:click=move |_| run(true, false)>{ "Run" }</button>
+                            <button
+                                class="code-button format-button run-format-button"
+                                on:click=move |_| {format(true, false);}
+                                data-title=" ctrl Enter - Format        \nshift Enter - Format and Run"
+                            >{ "Format" }</button>
+                            <button class="code-button" on:click=move |_| run(get_run_on_format(), false)>{ "Run" }</button>
                             <button
                                 id="prev-example"
                                 class="code-button"

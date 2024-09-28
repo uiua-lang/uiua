@@ -68,6 +68,8 @@
       devShell = pkgs.mkShell {
         inputsFrom = builtins.attrValues self.packages.${system};
         nativeBuildInputs = with pkgs; [
+          lld_18
+          trunk
           clippy
           rust-analyzer
           rustfmt

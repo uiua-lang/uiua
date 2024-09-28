@@ -403,6 +403,8 @@ macro_rules! code_font {
     };
 }
 
+pub(crate) use code_font;
+
 fn prim_class(prim: Primitive) -> &'static str {
     prim_sig_class(prim, None)
 }

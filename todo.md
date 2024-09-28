@@ -5,14 +5,11 @@
     - `un` for `under` arg extensions
     - `un dip`
   - Subscript dropdown
-  - More base functionality
-  - Change stack macros to positional macros
-  - Recursive positional macros
   - Non-scalar `fill take`
   - Update language tour
+  - Placeholder spans and highlighting
   - Update design page
   - Label and format string glyphs?
-  - Inversion errors
   - `setinv/setund` unification
     - Custom `on/by` inverses
   - Document on and by inverses

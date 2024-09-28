@@ -650,7 +650,7 @@ impl<'a> Formatter<'a> {
                 self.output.push_str(&binding.name.value);
                 self.output
                     .push_str(if binding.public { " ←" } else { " ↚" });
-                if binding.array_macro {
+                if binding.code_macro {
                     self.output.push('^');
                 }
                 if !binding.words.is_empty() || binding.signature.is_some() {

@@ -50,32 +50,46 @@ impl Compiler {
         // Handle macro
         let ident_margs = ident_modifier_args(&name);
         let placeholder_count = count_placeholders(&binding.words);
-        if binding.array_macro {
+        if binding.code_macro {
             if placeholder_count > 0 {
                 return Err(
-                    self.fatal_error(span.clone(), "Array macros may not contain placeholders")
+                    self.fatal_error(span.clone(), "Code macros may not contain placeholders")
                 );
             }
-            // Array macro
+            // Code macro
             if ident_margs == 0 {
                 self.add_error(
                     span.clone(),
                     format!(
-                        "Array macros must take at least 1 operand, \
+                        "Code macros must take at least 1 operand, \
                         but `{name}`'s name suggests it takes 0",
                     ),
                 );
             }
             let new_func = self.compile_words(binding.words, true)?;
             let sig = match instrs_signature(&new_func.instrs) {
-                Ok(s) => s,
+                Ok(s) => {
+                    if let Some(declared) = binding.signature {
+                        if s != declared.value {
+                            self.add_error(
+                                span.clone(),
+                                format!(
+                                    "Code macro signature mismatch: \
+                                    declared {} but inferred {s}",
+                                    declared.value
+                                ),
+                            );
+                        }
+                    }
+                    s
+                }
                 Err(e) => {
                     if let Some(sig) = binding.signature {
                         sig.value
                     } else {
                         self.add_error(
                             span.clone(),
-                            format!("Cannot infer array macro signature: {e}"),
+                            format!("Cannot infer code macro signature: {e}"),
                         );
                         Signature::new(1, 1)
                     }
@@ -90,7 +104,7 @@ impl Compiler {
                 self.add_error(
                     span.clone(),
                     format!(
-                        "Array macros must have a signature of {} or {}, \
+                        "Code macros must have a signature of {} or {}, \
                         but a signature of {} was inferred",
                         Signature::new(1, 1),
                         Signature::new(2, 1),
@@ -100,20 +114,20 @@ impl Compiler {
             }
             let function = self.make_function(FunctionId::Named(name.clone()), sig, new_func);
             self.scope.names.insert(name.clone(), local);
-            (self.asm).add_global_at(
+            self.asm.add_binding_at(
                 local,
-                BindingKind::ArrayMacro(function.slice),
+                BindingKind::CodeMacro(function.slice),
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
             );
-            let mac = ArrayMacro {
+            let mac = CodeMacro {
                 function,
                 names: self.scope.names.clone(),
             };
-            self.array_macros.insert(local.index, mac);
+            self.code_macros.insert(local.index, mac);
             return Ok(());
         }
-        // Stack macro
+        // Positional macro
         match (ident_margs > 0, placeholder_count > 0) {
             (true, true) | (false, false) => {}
             (true, false) => {
@@ -138,13 +152,14 @@ impl Compiler {
         }
         if placeholder_count > 0 || ident_margs > 0 {
             self.scope.names.insert(name.clone(), local);
-            (self.asm).add_global_at(
+            self.asm.add_binding_at(
                 local,
-                BindingKind::StackMacro(ident_margs),
+                BindingKind::IndexMacro(ident_margs),
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
             );
             let mut words = binding.words.clone();
+            let mut recursive = false;
             recurse_words_mut(&mut words, &mut |word| {
                 let mut path_locals = None;
                 let mut name_local = None;
@@ -176,9 +191,14 @@ impl Compiler {
                     }
                     _ => {}
                 }
-                if let Some((name, local)) = name_local {
-                    self.validate_local(&name.value, local, &name.span);
-                    (self.code_meta.global_references).insert(name.span.clone(), local.index);
+                if let Some((nm, local)) = name_local {
+                    if nm.value == name
+                        && path_locals.as_ref().map_or(true, |(pl, _)| pl.is_empty())
+                    {
+                        recursive = true;
+                    }
+                    self.validate_local(&nm.value, local, &nm.span);
+                    (self.code_meta.global_references).insert(nm.span.clone(), local.index);
                 }
                 if let Some((path, locals)) = path_locals {
                     for (local, comp) in locals.into_iter().zip(path) {
@@ -187,12 +207,27 @@ impl Compiler {
                     }
                 }
             });
-            let mac = StackMacro {
+            if recursive {
+                self.experimental_error(span, || {
+                    "Recursive positional macros are experimental. \
+                    Add `# Experimental!` to the top of the file to use them."
+                });
+                if binding.signature.is_none() {
+                    self.add_error(
+                        span.clone(),
+                        "Recursive positional macro must have a \
+                    signature declared after the ←",
+                    );
+                }
+            }
+            let mac = IndexMacro {
                 words,
                 names: self.scope.names.clone(),
                 hygenic: true,
+                sig: binding.signature.map(|s| s.value),
+                recursive,
             };
-            self.stack_macros.insert(local.index, mac);
+            self.index_macros.insert(local.index, mac);
             return Ok(());
         }
 
@@ -479,7 +514,7 @@ impl Compiler {
                 let comment = prev_com
                     .or_else(|| module.comment.clone())
                     .map(|text| DocComment::from(text.as_str()));
-                self.asm.add_global_at(
+                self.asm.add_binding_at(
                     local,
                     BindingKind::Module(module),
                     Some(name.span.clone()),
@@ -516,7 +551,7 @@ impl Compiler {
                 index: global_index,
                 public: true,
             };
-            self.asm.add_global_at(
+            self.asm.add_binding_at(
                 local,
                 BindingKind::Import(module_path.clone()),
                 Some(name.span.clone()),

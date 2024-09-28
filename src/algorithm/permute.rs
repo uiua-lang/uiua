@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use ecow::EcoVec;
 
 use crate::{
@@ -35,6 +33,10 @@ pub fn tuples(env: &mut Uiua) -> UiuaResult {
 
 fn tuple1(f: Function, env: &mut Uiua) -> UiuaResult {
     let mut xs = env.pop(1)?;
+    if xs.rank() == 0 {
+        env.push(xs);
+        return env.call(f);
+    }
     let mut results = Vec::new();
     let mut per_meta = xs.take_per_meta();
     if xs.row_count() == 0 {
@@ -73,16 +75,14 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
                 Primitive::Le => k.choose(&xs, false, true, env)?,
                 Primitive::Gt => k.choose(&xs, true, false, env)?,
                 Primitive::Ge => k.choose(&xs, true, true, env)?,
-                Primitive::Ne => k.permute(&xs, env)?,
+                Primitive::Ne => k.permute(xs, env)?,
                 _ => break 'blk,
             };
             env.push(res);
             return Ok(());
         }
     }
-    if xs.rank() == 0 {
-        return Err(env.error("Cannot get tuples of scalar"));
-    }
+    let is_scalar = xs.rank() == 0;
     let k = k.as_nat(env, "Tuple size must be a natural number")?;
     match k {
         0 => {
@@ -93,9 +93,14 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
         }
         1 => xs.shape_mut().insert(1, 1),
         2 => {
-            let range: Value = match range(&[xs.row_count() as isize], env)? {
-                Ok(data) => Array::new(xs.row_count(), data).into(),
-                Err(data) => Array::new(xs.row_count(), data).into(),
+            let n = if is_scalar {
+                xs.as_nat(env, "Tuples of scalar must be a natural number")?
+            } else {
+                xs.row_count()
+            };
+            let range: Value = match range(&[n as isize], env)? {
+                Ok(data) => data.into(),
+                Err(data) => data.into(),
             };
             env.push(range.clone());
             env.push(range);
@@ -110,36 +115,42 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
                 )));
             }
             table.transpose();
-            let table = table.as_natural_array(
-                env,
-                "tuples's function must return \
-                        an array of naturals",
-            )?;
-            let mut rows = Vec::new();
-            for (i, counts) in table.row_slices().enumerate() {
-                for (j, &count) in counts.iter().enumerate() {
-                    for _ in 0..count {
-                        rows.push(xs.row(i));
-                        rows.push(xs.row(j));
+            let table = table
+                .as_natural_array(env, "tuples's function must return an array of naturals")?;
+            if is_scalar {
+                xs = table.data.into_iter().fold(0, usize::saturating_add).into();
+            } else {
+                let mut rows = Vec::new();
+                for (i, counts) in table.row_slices().enumerate() {
+                    for (j, &count) in counts.iter().enumerate() {
+                        for _ in 0..count {
+                            rows.push(xs.row(i));
+                            rows.push(xs.row(j));
+                        }
                     }
                 }
+                xs = Value::from_row_values(rows, env)?;
+                xs.shape_mut()[0] /= 2;
+                xs.shape_mut().insert(1, 2);
+                xs.validate_shape();
             }
-            xs = Value::from_row_values(rows, env)?;
-            xs.shape_mut()[0] /= 2;
-            xs.shape_mut().insert(1, 2);
-            xs.validate_shape();
         }
         k => {
             fn inner<T: Clone>(
                 arr: &Array<T>,
                 k: usize,
                 f: Function,
+                is_scalar: bool,
+                scalar: UiuaResult<usize>,
                 env: &mut Uiua,
-            ) -> UiuaResult<Array<T>> {
+            ) -> UiuaResult<Value>
+            where
+                Value: From<Array<T>>,
+            {
                 let mut curr = vec![0; k];
                 let mut data = EcoVec::new();
                 let mut count = 0;
-                let row_count = arr.row_count();
+                let row_count = if is_scalar { scalar? } else { arr.row_count() };
                 let row_len = arr.row_len();
                 'outer: loop {
                     // println!("curr: {curr:?}");
@@ -159,8 +170,10 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
                         }
                     }
                     if add_it {
-                        for &i in &curr {
-                            data.extend_from_slice(&arr.data[i * row_len..][..row_len]);
+                        if !is_scalar {
+                            for &i in &curr {
+                                data.extend_from_slice(&arr.data[i * row_len..][..row_len]);
+                            }
                         }
                         count += 1;
                     }
@@ -175,17 +188,22 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
                     }
                     break;
                 }
-                let mut shape = arr.shape.clone();
-                shape[0] = count;
-                shape.insert(1, k);
-                Ok(Array::new(shape, data))
+                Ok(if is_scalar {
+                    count.into()
+                } else {
+                    let mut shape = arr.shape.clone();
+                    shape[0] = count;
+                    shape.insert(1, k);
+                    Array::new(shape, data).into()
+                })
             }
+            let scalar = xs.as_nat(env, "Tuples of scalar must be a natural number");
             xs = match &xs {
-                Value::Num(a) => inner(a, k, f, env)?.into(),
-                Value::Byte(a) => inner(a, k, f, env)?.into(),
-                Value::Complex(a) => inner(a, k, f, env)?.into(),
-                Value::Char(a) => inner(a, k, f, env)?.into(),
-                Value::Box(a) => inner(a, k, f, env)?.into(),
+                Value::Num(a) => inner(a, k, f, is_scalar, scalar, env)?,
+                Value::Byte(a) => inner(a, k, f, is_scalar, scalar, env)?,
+                Value::Complex(a) => inner(a, k, f, is_scalar, scalar, env)?,
+                Value::Char(a) => inner(a, k, f, is_scalar, scalar, env)?,
+                Value::Box(a) => inner(a, k, f, is_scalar, scalar, env)?,
             };
         }
     }
@@ -203,7 +221,7 @@ impl Value {
         val_as_arr!(from, |a| a.choose(k, reverse, same, env).map(Into::into))
     }
     /// `permute` all combinations of `k` rows from a value
-    pub fn permute(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn permute(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         let k = self.as_nat(env, "Permute k must be an integer")?;
         if let Ok(n) = from.as_nat(env, "") {
             return permutations(n, k, env).map(Into::into);
@@ -352,7 +370,7 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     /// `permute` all combinations of `k` rows from this array
-    fn permute(&self, k: usize, env: &Uiua) -> UiuaResult<Self> {
+    fn permute(self, k: usize, env: &Uiua) -> UiuaResult<Self> {
         if self.rank() == 0 {
             return Err(env.error("Cannot permute scalar"));
         }
@@ -370,22 +388,24 @@ impl<T: ArrayValue> Array<T> {
         let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
         let mut data = EcoVec::with_capacity(elem_count);
         let row_len = self.row_len();
-        let mut indices = vec![0; k];
-        let mut set = HashSet::with_capacity(k);
+        // It took me forever to find this algorithm
+        let mut perm: Vec<usize> = (0..n).collect();
+        let mut cycles: Vec<usize> = (n - k + 1..=n).rev().collect();
+        for &i in &perm[..k] {
+            data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+        }
         'outer: loop {
-            env.respect_execution_limit()?;
-            set.clear();
-            if indices.iter().all(|&i| set.insert(i)) {
-                for &i in indices.iter().rev() {
-                    data.extend_from_slice(&self.data[i * row_len..][..row_len]);
-                }
-            }
-            // Increment indices
-            for i in 0..k {
-                indices[i] += 1;
-                if indices[i] == n {
-                    indices[i] = 0;
+            for i in (0..k).rev() {
+                cycles[i] -= 1;
+                if cycles[i] == 0 {
+                    perm[i..].rotate_left(1);
+                    cycles[i] = n - i;
                 } else {
+                    let j = cycles[i];
+                    perm.swap(i, n - j);
+                    for &i in &perm[..k] {
+                        data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+                    }
                     continue 'outer;
                 }
             }

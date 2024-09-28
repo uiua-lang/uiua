@@ -7,8 +7,9 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - **Breaking Change** - [`minimum ↧`](https://uiua.org/docs/minimum) and [`maximum ↥`](https://uiua.org/docs/maximum) now compare lexicographically
   - This makes them consistent with comparison functions like [`less than <`](https://uiua.org/docs/less%20than)
+- **Breaking Change** - [`gen`](https://uiua.org/docs/gen) now takes a shape argument
 - The experimental `chunks ⑄` function's behavior has been moved to an extension on [`windows ◫`](https://uiua.org/docs/windows)
-  - This also allow the specification of "stride"
+  - This also allows the specification of "stride"
   - This is inspired by APL's `stencil ⌺` behavior
   - `chunks ⑄` has been deprecated
 - Stabilize [`orient ⤸`](https://uiua.org/docs/orient)
@@ -17,6 +18,11 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`below ◡`](https://uiua.org/docs/below)
 - Rename `⤙ but` and `⤚ with` to [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off)
   - [`with ⤙`](https://uiua.org/docs/with) has been stabilized
+- "Stack macros" are now called "index macros"
+  - Stabilize existing placeholder indexing syntax (`^0`, `^1`, etc.)
+  - Deprecate existing stack-based macro placeholders (`^!`, `^.`, etc.)
+- [`fold ∧`](https://uiua.org/docs/fold) now works with any signature
+  - Excess values are collected into arrays
 - [`un °`](https://uiua.org/docs/un) [`orient ⤸`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
   - This is analogous to the behavior of [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select)
 - Add a feature to some [`under ⍜`](https://uiua.org/docs/under) functions that makes them more permissive of changes in rank
@@ -46,6 +52,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add a `Lorem` constant, which contains the Lorem Ipsum text
 - Add several color constants
 - Add pride flag constants
+- Allow [`&raw`](https://uiua.org/docs/&raw) to be inverted, acting as a getter for the raw state of the terminal
+  - [`under ⍜`](https://uiua.org/docs/under)[`&raw`](https://uiua.org/docs/&raw) sets raw mode, and then returns it to the previous state
 - Add experimental [`anti ˘`](https://uiua.org/docs/anti) modifier, which simplifies specifying certain inverses
 - Add experimental [`tuples ⧅`](https://uiua.org/docs/tuples) modifier
   - This unifies and extends the behavior of the `choose` and `permute` functions, which are now deprecated
@@ -72,9 +80,11 @@ This version is not yet released. If you are reading this on the website, then t
 - `uiua repl` now has a `-s`/`--stack` flag to disable clearing the stack after each line
   - Clearing the stack is now the default
   - The `-c/--clear` has been removed
+- After programs finish executing, the terminal raw mode will be automatically disabled if it was left on. 
 ### Website
 - Add [Ranges](https://uiua.org/tutorial/ranges) tutorial
 - In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
+- Add the option to decouple running and formatting in the pad
 - Add a dropdown to the pad to insert named functions
 - Add an [RSS Feed](https://uiua.org/blog/feed.rss) for the blog
 

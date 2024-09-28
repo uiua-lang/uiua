@@ -1617,32 +1617,59 @@ impl<T: RealArrayValue> Array<T> {
         if base.is_nan() {
             return Err(env.error("Base cannot be NaN"));
         }
-        let max_row_len = self
-            .data
-            .iter()
-            .map(|&n| {
+        Ok(if base >= 0.0 {
+            let max_row_len = self
+                .data
+                .iter()
+                .map(|&n| {
+                    let n = n.to_f64();
+                    if n == 0.0 {
+                        0
+                    } else {
+                        n.abs().log(base).floor() as usize + 1
+                    }
+                })
+                .max()
+                .unwrap_or(0);
+            let mut new_shape = self.shape.clone();
+            new_shape.push(max_row_len);
+            let elem_count = validate_size::<f64>(new_shape.iter().copied(), env)?;
+            let mut new_data = eco_vec![0.0; elem_count];
+            let slice = new_data.make_mut();
+            for (i, n) in self.data.iter().enumerate() {
                 let n = n.to_f64();
-                if n == 0.0 {
-                    0
-                } else {
-                    n.log(base).floor() as usize + 1
+                let mut abs_n = n.abs();
+                let sign = if n < 0.0 { -1.0 } else { 1.0 };
+                for j in 0..max_row_len {
+                    slice[i * max_row_len + j] = abs_n.rem_euclid(base) * sign;
+                    abs_n = abs_n.div_euclid(base);
                 }
-            })
-            .max()
-            .unwrap_or(0);
-        let mut new_shape = self.shape.clone();
-        new_shape.push(max_row_len);
-        let elem_count = validate_size::<f64>(new_shape.iter().copied(), env)?;
-        let mut new_data = eco_vec![0.0; elem_count];
-        let slice = new_data.make_mut();
-        for (i, n) in self.data.iter().enumerate() {
-            let mut n = n.to_f64();
-            for j in 0..max_row_len {
-                slice[i * max_row_len + j] = n.rem_euclid(base);
-                n = n.div_euclid(base);
             }
-        }
-        Ok(Array::new(new_shape, new_data))
+            Array::new(new_shape, new_data)
+        } else {
+            let mut rows = Vec::with_capacity(self.row_count());
+            for n in &self.data {
+                let mut row = Vec::new();
+                let mut n = n.to_f64();
+                while n.abs() > f64::EPSILON {
+                    row.push(n.rem_euclid(base));
+                    n = n.div_euclid(base);
+                }
+                rows.push(row);
+            }
+            let max_len = rows.iter().map(|row| row.len()).max().unwrap_or(0);
+            let mut new_shape = self.shape.clone();
+            new_shape.push(max_len);
+            let elem_count = validate_size::<f64>(new_shape.iter().copied(), env)?;
+            let mut new_data = eco_vec![0.0; elem_count];
+            let slice = new_data.make_mut();
+            for (i, row) in rows.into_iter().enumerate() {
+                for (j, n) in row.into_iter().enumerate() {
+                    slice[i * max_len + j] = n;
+                }
+            }
+            Array::new(new_shape, new_data)
+        })
     }
     fn base_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
         for &base in bases {

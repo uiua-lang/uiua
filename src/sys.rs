@@ -30,7 +30,7 @@ Double ← +.
 Increment ← +1
 RangeDiff ↚ ⇡-
 Span ← +⟜RangeDiff
-Mac! ← /^! [1 2 3 4 5]
+Mac! ← /^0 [1 2 3 4 5]
 Foo ← 5
 Bar ← \"bar\"";
 
@@ -186,6 +186,9 @@ sys_op! {
     ///
     /// [&sc] will still work, but it will not return until the user presses enter.
     /// To get individual characters, use [&rs] or [&rb] with a count of `1` and a handle of `0`, which is stdin.
+    ///
+    /// [un][&raw] will return the current state of the terminal.
+    /// [under][&raw] will set raw mode, and then revert it to the previous state.
     (1(0), RawMode, Env, "&raw", "set raw mode", Mutating),
     /// Get the command line arguments
     ///

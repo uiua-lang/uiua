@@ -75,7 +75,7 @@ impl Assembly {
         comment: Option<DocComment>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(local, BindingKind::Func(function), span.code(), comment);
+        self.add_binding_at(local, BindingKind::Func(function), span.code(), comment);
     }
     pub(crate) fn bind_const(
         &mut self,
@@ -85,9 +85,9 @@ impl Assembly {
         comment: Option<DocComment>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(local, BindingKind::Const(value), span.code(), comment);
+        self.add_binding_at(local, BindingKind::Const(value), span.code(), comment);
     }
-    pub(crate) fn add_global_at(
+    pub(crate) fn add_binding_at(
         &mut self,
         local: LocalName,
         global: BindingKind,
@@ -118,7 +118,7 @@ impl Assembly {
     pub fn remove_dead_code(&mut self) {
         let mut slices = Vec::new();
         self.bindings.retain(|binding| {
-            if let BindingKind::ArrayMacro(mut slice) = binding.kind {
+            if let BindingKind::CodeMacro(mut slice) = binding.kind {
                 if slice.start > 0 {
                     if let Some((Instr::Comment(before), Instr::Comment(after))) = self
                         .instrs
@@ -161,7 +161,7 @@ impl Assembly {
                         func.slice.start -= removed.len();
                     }
                 }
-                BindingKind::ArrayMacro(slice) => {
+                BindingKind::CodeMacro(slice) => {
                     if slice.start > removed.start {
                         slice.start -= removed.len();
                         slice.len -= removed.len();
@@ -422,12 +422,12 @@ pub enum BindingKind {
     Import(PathBuf),
     /// A scoped module
     Module(Module),
-    /// A stack macro
+    /// An index macro
     ///
     /// Contains the number of arguments
-    StackMacro(usize),
-    /// An array macro
-    ArrayMacro(FuncSlice),
+    IndexMacro(usize),
+    /// A code macro
+    CodeMacro(FuncSlice),
 }
 
 impl BindingKind {
@@ -438,8 +438,8 @@ impl BindingKind {
             Self::Func(func) => Some(func.signature()),
             Self::Import { .. } => None,
             Self::Module(_) => None,
-            Self::StackMacro(_) => None,
-            Self::ArrayMacro(_) => None,
+            Self::IndexMacro(_) => None,
+            Self::CodeMacro(_) => None,
         }
     }
     /// Check if the global is a once-bound constant
@@ -722,7 +722,7 @@ impl<'de> Deserialize<'de> for Instr {
 enum InstrRep {
     #[serde(rename = "#")]
     Comment(Ident),
-    CallGlobal(usize, bool),
+    CallGlobal(usize, bool, Signature),
     BindGlobal(usize, usize),
     BeginArray,
     EndArray(bool, usize),
@@ -758,7 +758,7 @@ impl From<Instr> for InstrRep {
         match value {
             Instr::Comment(ident) => Self::Comment(ident),
             Instr::Push(value) => Self::Push(value),
-            Instr::CallGlobal { index, call } => Self::CallGlobal(index, call),
+            Instr::CallGlobal { index, call, sig } => Self::CallGlobal(index, call, sig),
             Instr::BindGlobal { span, index } => Self::BindGlobal(span, index),
             Instr::BeginArray => Self::BeginArray,
             Instr::EndArray { boxed, span } => Self::EndArray(boxed, span),
@@ -814,7 +814,7 @@ impl From<InstrRep> for Instr {
         match value {
             InstrRep::Comment(ident) => Self::Comment(ident),
             InstrRep::Push(value) => Self::Push(value),
-            InstrRep::CallGlobal(index, call) => Self::CallGlobal { index, call },
+            InstrRep::CallGlobal(index, call, sig) => Self::CallGlobal { index, call, sig },
             InstrRep::BindGlobal(span, index) => Self::BindGlobal { span, index },
             InstrRep::BeginArray => Self::BeginArray,
             InstrRep::EndArray(boxed, span) => Self::EndArray { boxed, span },

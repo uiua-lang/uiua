@@ -681,10 +681,10 @@
     "description": "Discard the top stack value then call a function"
   },
   "gen": {
-    "args": 1,
+    "args": 2,
     "outputs": 2,
     "class": "Misc",
-    "description": "Generate a random number between 0 and 1 from a seed, as well as the next seed"
+    "description": "Generate an array of random numbers with a seed"
   },
   "get": {
     "args": 2,

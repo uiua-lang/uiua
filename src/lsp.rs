@@ -337,7 +337,7 @@ impl Spanner {
             match &binfo.kind {
                 BindingKind::Const(None) => comment = Some("constant".into()),
                 BindingKind::Import(_) | BindingKind::Module(_) => comment = Some("module".into()),
-                BindingKind::StackMacro(_) | BindingKind::ArrayMacro(_) => {
+                BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
                     comment = Some("macro".into())
                 }
                 BindingKind::Func(_) => {}
@@ -351,17 +351,17 @@ impl Spanner {
                 invertible: {
                     let instrs = f.instrs(&self.asm);
                     let mut compiler = Compiler::new().with_assembly(self.asm.clone());
-                    invert_instrs(instrs, &mut compiler).is_some()
+                    invert_instrs(instrs, &mut compiler).is_ok()
                 },
                 underable: {
                     let instrs = f.instrs(&self.asm);
                     let mut compiler = Compiler::new().with_assembly(self.asm.clone());
-                    under_instrs(instrs, (1, 1).into(), &mut compiler).is_some()
+                    under_instrs(instrs, (1, 1).into(), &mut compiler).is_ok()
                 },
                 pure: instrs_are_pure(f.instrs(&self.asm), &self.asm, Purity::Pure),
             },
-            BindingKind::StackMacro(args) => BindingDocsKind::Modifier(*args),
-            BindingKind::ArrayMacro(_) => {
+            BindingKind::IndexMacro(args) => BindingDocsKind::Modifier(*args),
+            BindingKind::CodeMacro(_) => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
             }
             BindingKind::Import(_) => BindingDocsKind::Module { sig: None },
@@ -1048,7 +1048,7 @@ mod server {
                     }
                     BindingKind::Const(_) => CompletionItemKind::CONSTANT,
                     BindingKind::Func(_) => CompletionItemKind::FUNCTION,
-                    BindingKind::StackMacro(_) | BindingKind::ArrayMacro(_) => {
+                    BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
                         CompletionItemKind::FUNCTION
                     }
                     BindingKind::Import(_) | BindingKind::Module(_) => CompletionItemKind::MODULE,

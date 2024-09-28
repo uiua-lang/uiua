@@ -159,7 +159,7 @@ impl Compiler {
                 m => {
                     if let Modifier::Ref(name) = m {
                         if let Ok((_, local)) = self.ref_local(name) {
-                            if self.array_macros.contains_key(&local.index) {
+                            if self.code_macros.contains_key(&local.index) {
                                 return Ok(false);
                             }
                         }
@@ -214,7 +214,7 @@ impl Compiler {
                 Modifier::Primitive(_) => true,
                 Modifier::Ref(name) => {
                     let (_, local) = self.ref_local(name)?;
-                    self.stack_macros.contains_key(&local.index)
+                    self.index_macros.contains_key(&local.index)
                 }
             };
             if strict_args {
@@ -258,30 +258,86 @@ impl Compiler {
                         self.fatal_error(modified.modifier.span.clone(), "Macro recurs too deep")
                     );
                 }
-                if let Some(mut mac) = self.stack_macros.get(&local.index).cloned() {
-                    // Stack macros
-                    // Expand
-                    self.expand_stack_macro(
-                        r.name.value.clone(),
-                        &mut mac.words,
-                        modified.operands,
-                        modified.modifier.span.clone(),
-                        mac.hygenic,
-                    )?;
-                    // Compile
-                    let new_func = self.suppress_diagnostics(|comp| {
-                        comp.temp_scope(mac.names, |comp| comp.compile_words(mac.words, true))
-                    })?;
-                    // Add
-                    let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
-                    let func = self.make_function(r.name.value.clone().into(), sig, new_func);
-                    self.push_instr(Instr::PushFunc(func));
-                    if call {
-                        let span = self.add_span(modified.modifier.span);
-                        self.push_instr(Instr::Call(span));
+                if let Some(mut mac) = self.index_macros.get(&local.index).cloned() {
+                    // Index macros
+                    match self.scope.kind {
+                        ScopeKind::Temp(Some(mac_local))
+                            if mac_local.macro_index == local.index =>
+                        {
+                            // Recursive
+                            let new_func = self.compile_words(modified.operands, false)?;
+                            self.push_all_instrs(new_func);
+                            if let Some(sig) = mac.sig {
+                                self.push_instr(Instr::CallGlobal {
+                                    index: mac_local.expansion_index,
+                                    call,
+                                    sig,
+                                });
+                            }
+                        }
+                        _ => {
+                            // Expand
+                            self.expand_positional_macro(
+                                r.name.value.clone(),
+                                &mut mac.words,
+                                modified.operands,
+                                modified.modifier.span.clone(),
+                                mac.hygenic,
+                            )?;
+                            // Handle recursion
+                            // Recursive macros work by creating a binding for the expansion.
+                            // Recursive calls then call that binding.
+                            // We know that this is a recursive call if the scope tracks
+                            // a macro with the same index.
+                            let macro_local = mac.recursive.then(|| {
+                                let expansion_index = self.next_global;
+                                let count = ident_modifier_args(&r.name.value);
+                                // Add temporary binding
+                                self.asm.add_binding_at(
+                                    LocalName {
+                                        index: expansion_index,
+                                        public: false,
+                                    },
+                                    BindingKind::IndexMacro(count),
+                                    Some(modified.modifier.span.clone()),
+                                    None,
+                                );
+                                self.next_global += 1;
+                                MacroLocal {
+                                    macro_index: local.index,
+                                    expansion_index,
+                                }
+                            });
+                            // Compile
+                            let new_func = self.suppress_diagnostics(|comp| {
+                                comp.temp_scope(mac.names, macro_local, |comp| {
+                                    comp.compile_words(mac.words, true)
+                                })
+                            })?;
+                            // Add
+                            let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
+                            let mut func =
+                                self.make_function(FunctionId::Macro(r.name.span), sig, new_func);
+                            if mac.recursive {
+                                func.flags |= FunctionFlags::RECURSIVE;
+                            }
+                            if let Some(macro_local) = macro_local {
+                                self.asm.bindings.make_mut()[macro_local.expansion_index].kind =
+                                    BindingKind::Func(func.clone());
+                            }
+                            self.push_instr(Instr::PushFunc(func));
+                            if call {
+                                let span = self.add_span(modified.modifier.span);
+                                self.push_instr(if mac.recursive {
+                                    Instr::CallRecursive(span)
+                                } else {
+                                    Instr::Call(span)
+                                });
+                            }
+                        }
                     }
-                } else if let Some(mac) = self.array_macros.get(&local.index).cloned() {
-                    // Array macros
+                } else if let Some(mac) = self.code_macros.get(&local.index).cloned() {
+                    // Code macros
                     let full_span = (modified.modifier.span.clone())
                         .merge(modified.operands.last().unwrap().span.clone());
 
@@ -400,7 +456,7 @@ impl Compiler {
                         .macro_expansions
                         .insert(full_span, (r.name.value.clone(), code.clone()));
                     self.suppress_diagnostics(|comp| {
-                        comp.temp_scope(mac.names, |comp| {
+                        comp.temp_scope(mac.names, None, |comp| {
                             comp.quote(&code, &modified.modifier.span, call)
                         })
                     })?;
@@ -417,13 +473,18 @@ impl Compiler {
                         comp.words(modified.operands, call)
                     })?;
                 } else {
-                    return Err(self.fatal_error(
-                        modified.modifier.span.clone(),
-                        format!(
-                            "Macro {} not found. This is a bug in the interpreter.",
-                            r.name.value
-                        ),
-                    ));
+                    // Recursive positional macro inside itself
+                    if !call {
+                        self.new_functions.push(NewFunction::default());
+                    }
+                    self.words(modified.operands, false)?;
+                    self.ident(r.name.value.clone(), r.name.span, true, r.in_macro_arg)?;
+                    if !call {
+                        let new_func = self.new_functions.pop().unwrap();
+                        let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
+                        let func = self.make_function(modified.modifier.span.into(), sig, new_func);
+                        self.push_instr(Instr::PushFunc(func));
+                    }
                 }
                 self.macro_depth -= 1;
 
@@ -584,8 +645,11 @@ impl Compiler {
         let Modifier::Primitive(prim) = modified.modifier.value else {
             return Ok(false);
         };
+
+        // Validation
         self.handle_primitive_experimental(prim, &modified.modifier.span);
         self.handle_primitive_deprecation(prim, &modified.modifier.span);
+
         macro_rules! finish {
             ($instrs:expr, $sig:expr) => {{
                 if call {
@@ -881,6 +945,7 @@ impl Compiler {
                         }
                     }
                     if let Some((inverse, inv_sig)) = invert_instrs(&new_func.instrs, self)
+                        .ok()
                         .and_then(|inv| instrs_signature(&inv).ok().map(|sig| (inv, sig)))
                         .filter(|(_, inv_sig)| sig.is_compatible_with(*inv_sig))
                     {
@@ -925,12 +990,13 @@ impl Compiler {
                 let (mut new_func, _) = f_res?;
 
                 self.add_span(span.clone());
-                if let Some(inverted) = invert_instrs(&new_func.instrs, self) {
-                    let sig = self.sig_of(&inverted, &span)?;
-                    new_func.instrs = inverted;
-                    finish!(new_func, sig);
-                } else {
-                    return Err(self.fatal_error(span, "No inverse found"));
+                match invert_instrs(&new_func.instrs, self) {
+                    Ok(inverted) => {
+                        let sig = self.sig_of(&inverted, &span)?;
+                        new_func.instrs = inverted;
+                        finish!(new_func, sig);
+                    }
+                    Err(e) => return Err(self.fatal_error(span, e)),
                 }
             }
             Anti if !self.in_inverse => {
@@ -954,12 +1020,13 @@ impl Compiler {
                     );
                 }
 
-                if let Some(inverted) = anti_instrs(&new_func.instrs, self) {
-                    let sig = self.sig_of(&inverted, &span)?;
-                    new_func.instrs = inverted;
-                    finish!(new_func, sig);
-                } else {
-                    return Err(self.fatal_error(span, "No inverse found"));
+                match anti_instrs(&new_func.instrs, self) {
+                    Ok(inverted) => {
+                        let sig = self.sig_of(&inverted, &span)?;
+                        new_func.instrs = inverted;
+                        finish!(new_func, sig);
+                    }
+                    Err(e) => return Err(self.fatal_error(span, e)),
                 }
             }
             Under => {
@@ -986,27 +1053,28 @@ impl Compiler {
                     );
                 }
 
-                if let Some((f_before, f_after)) = under_instrs(&f_new_func.instrs, g_sig, self) {
-                    let mut instrs = f_before;
-                    instrs.extend(g_new_func.instrs);
-                    instrs.extend(f_after);
-                    let new_func = NewFunction {
-                        instrs,
-                        flags: f_new_func.flags | g_new_func.flags,
-                    };
-                    if call {
-                        self.push_all_instrs(new_func);
-                    } else {
-                        let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
-                        let func = self.make_function(
-                            modified.modifier.span.clone().into(),
-                            sig,
-                            new_func,
-                        );
-                        self.push_instr(Instr::PushFunc(func));
+                match under_instrs(&f_new_func.instrs, g_sig, self) {
+                    Ok((f_before, f_after)) => {
+                        let mut instrs = f_before;
+                        instrs.extend(g_new_func.instrs);
+                        instrs.extend(f_after);
+                        let new_func = NewFunction {
+                            instrs,
+                            flags: f_new_func.flags | g_new_func.flags,
+                        };
+                        if call {
+                            self.push_all_instrs(new_func);
+                        } else {
+                            let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
+                            let func = self.make_function(
+                                modified.modifier.span.clone().into(),
+                                sig,
+                                new_func,
+                            );
+                            self.push_instr(Instr::PushFunc(func));
+                        }
                     }
-                } else {
-                    return Err(self.fatal_error(f_span, "No inverse found"));
+                    Err(e) => return Err(self.fatal_error(f_span, e)),
                 }
             }
             SetInverse => {
@@ -1300,6 +1368,24 @@ impl Compiler {
                 prefix.extend(new_func.instrs);
                 new_func.instrs = prefix;
                 finish!(new_func, sig);
+            }
+            Fold => {
+                let operand = modified.code_operands().next().unwrap().clone();
+                let op_span = operand.span.clone();
+                let (new_func, sig) = self.compile_operand_word(operand)?;
+                if sig.args <= sig.outputs {
+                    self.experimental_error(&modified.modifier.span, || {
+                        format!(
+                            "{} with arguments ≤ outputs is experimental. To use it, \
+                            add `# Experimental!` to the top of the file.",
+                            prim.format()
+                        )
+                    });
+                }
+                let func = self.make_function(op_span.into(), sig, new_func);
+                let spandex = self.add_span(modified.modifier.span.clone());
+                let instrs = eco_vec![Instr::PushFunc(func), Instr::Prim(Primitive::Fold, spandex)];
+                finish!(instrs, sig);
             }
             Stringify => {
                 let operand = modified.code_operands().next().unwrap();
@@ -1650,7 +1736,7 @@ impl Compiler {
                 self.compile_bind_function(name, local, func, span, Some(&comment))?;
 
                 // Make args
-                let args_module = self.in_scope(ScopeKind::Temp, |comp| {
+                let args_module = self.in_scope(ScopeKind::Temp(None), |comp| {
                     // Arg getters
                     for field in &fields {
                         let name = &field.name;
@@ -1684,9 +1770,9 @@ impl Compiler {
                 let args_macro_index = self.next_global;
                 self.next_global += 1;
                 let span = &operand.span;
-                self.stack_macros.insert(
+                self.index_macros.insert(
                     args_macro_index,
-                    StackMacro {
+                    IndexMacro {
                         words: vec![span.clone().sp(Word::Modified(Box::new(Modified {
                             modifier: span.clone().sp(Modifier::Primitive(Primitive::Fill)),
                             operands: vec![
@@ -1695,11 +1781,13 @@ impl Compiler {
                                     name: span.clone().sp("New".into()),
                                     in_macro_arg: false,
                                 })),
-                                span.clone().sp(Word::Placeholder(PlaceholderOp::Call)),
+                                span.clone().sp(Word::Placeholder(PlaceholderOp::Nth(0))),
                             ],
                         })))],
                         names: args_module.names,
+                        sig: None,
                         hygenic: false,
+                        recursive: false,
                     },
                 );
                 let local = LocalName {
@@ -1707,9 +1795,9 @@ impl Compiler {
                     public: true,
                 };
                 self.scope.names.insert("Args!".into(), local);
-                self.asm.add_global_at(
+                self.asm.add_binding_at(
                     local,
-                    BindingKind::StackMacro(1),
+                    BindingKind::IndexMacro(1),
                     None,
                     Some(DocComment::from(format!(
                         "Take {} argument{} and bind {} to {} field name{}",
@@ -1729,8 +1817,8 @@ impl Compiler {
         }
         Ok(())
     }
-    /// Expand a stack macro
-    fn expand_stack_macro(
+    /// Expand a positional macro
+    fn expand_positional_macro(
         &mut self,
         name: Ident,
         macro_words: &mut Vec<Sp<Word>>,
@@ -1756,6 +1844,14 @@ impl Compiler {
         for op in ops {
             let span = op.span;
             let op = op.value;
+            if !matches!(op, PlaceholderOp::Nth(_)) {
+                self.emit_diagnostic(
+                    "Non-positional placeholders have been deprecated. \
+                    Use positional placeholders (^0, ^1, etc.) instead.",
+                    DiagnosticKind::Warning,
+                    span.clone(),
+                );
+            }
             let mut pop = || {
                 (ph_stack.pop())
                     .ok_or_else(|| self.fatal_error(span.clone(), "Operand stack is empty"))
@@ -1781,10 +1877,6 @@ impl Compiler {
                     ph_stack.push(b);
                 }
                 PlaceholderOp::Nth(_) => {
-                    self.experimental_error(&span, || {
-                        "Indexed placeholders are experimental. To use them, \
-                        add `# Experimental!` to the top of the file."
-                    });
                     ignore_remaining = true;
                 }
             }
@@ -1961,11 +2053,12 @@ impl Compiler {
     fn temp_scope<T>(
         &mut self,
         names: IndexMap<Ident, LocalName>,
+        macro_local: Option<MacroLocal>,
         f: impl FnOnce(&mut Self) -> T,
     ) -> T {
         let macro_names_len = names.len();
         let temp_scope = Scope {
-            kind: ScopeKind::Temp,
+            kind: ScopeKind::Temp(macro_local),
             names,
             experimental: self.scope.experimental,
             experimental_error: self.scope.experimental_error,

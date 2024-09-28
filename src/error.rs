@@ -188,10 +188,47 @@ fn format_trace(trace: &[TraceFrame]) -> Vec<String> {
         })
         .max()
         .unwrap_or(0);
-    let mut lines = Vec::new();
-    for frame in trace {
+    let mut lines: Vec<String> = Vec::new();
+    let mut i = 0;
+    'outer: while i < trace.len() {
+        let frame = &trace[i];
         if frame.id == FunctionId::Main {
+            i += 1;
             continue;
+        }
+        // Look for cycles
+        for n in 1..=4 {
+            if i >= n
+                && i + n < trace.len()
+                && trace[i - n..][..n]
+                    .iter()
+                    .zip(&trace[i..][..n])
+                    .all(|(a, b)| a.id == b.id)
+            {
+                for (i, line) in lines.iter_mut().rev().take(n).rev().enumerate() {
+                    let sep = match (n, i) {
+                        (1, _) => " ×",
+                        (_, 0) => " ┬×",
+                        (n, i) if i == n - 1 => " ┘",
+                        _ => " ┤",
+                    };
+                    if let Some((msg, n)) = line
+                        .rsplit_once(sep)
+                        .and_then(|(a, b)| b.parse::<usize>().ok().map(|n| (a, n)))
+                    {
+                        *line = format!("{msg}{sep}{}", n + 1);
+                    } else {
+                        if !line.ends_with(sep) {
+                            line.push_str(sep);
+                        }
+                        if i == 0 {
+                            line.push('2');
+                        }
+                    }
+                }
+                i += n;
+                continue 'outer;
+            }
         }
         lines.push(match &frame.span {
             Span::Code(span) => format!(
@@ -201,6 +238,7 @@ fn format_trace(trace: &[TraceFrame]) -> Vec<String> {
             ),
             Span::Builtin => format!("  in {:max_id_length$}", frame.id.to_string()),
         });
+        i += 1;
     }
     lines
 }

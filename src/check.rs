@@ -1,7 +1,6 @@
 //! Signature checker implementation
 
 use std::{
-    borrow::Cow,
     cell::RefCell,
     cmp::Ordering,
     collections::HashMap,
@@ -13,7 +12,7 @@ use enum_iterator::Sequence;
 
 use crate::{
     array::Array,
-    function::{Function, Instr, Signature},
+    function::{Instr, Signature},
     value::Value,
     ImplPrimitive, Primitive, TempStack,
 };
@@ -82,23 +81,23 @@ pub(crate) fn instrs_all_signatures(instrs: &[Instr]) -> Result<AllSignatures, S
 }
 
 /// An environment that emulates the runtime but only keeps track of the stack.
-struct VirtualEnv<'a> {
+struct VirtualEnv {
     stack: Vec<BasicValue>,
     temp_stacks: [Vec<BasicValue>; TempStack::CARDINALITY],
-    function_stack: Vec<Cow<'a, Function>>,
+    function_stack: Vec<Signature>,
     array_stack: Vec<usize>,
     min_height: usize,
     temp_min_heights: [usize; TempStack::CARDINALITY],
     popped: Vec<usize>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SigCheckError {
     pub message: String,
     pub kind: SigCheckErrorKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SigCheckErrorKind {
     Incorrect,
     Ambiguous,
@@ -195,8 +194,8 @@ fn derive_sig(min_height: usize, final_height: usize) -> Signature {
     }
 }
 
-impl<'a> VirtualEnv<'a> {
-    fn from_instrs(instrs: &'a [Instr]) -> Result<Self, SigCheckError> {
+impl VirtualEnv {
+    fn from_instrs(instrs: &[Instr]) -> Result<Self, SigCheckError> {
         let mut temp_stacks = <[_; TempStack::CARDINALITY]>::default();
         for stack in temp_stacks.iter_mut() {
             *stack = vec![BasicValue::Other; START_HEIGHT];
@@ -227,7 +226,7 @@ impl<'a> VirtualEnv<'a> {
         }
         sigs
     }
-    fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), SigCheckError> {
+    fn instrs(&mut self, instrs: &[Instr]) -> Result<(), SigCheckError> {
         let mut i = 0;
         while i < instrs.len() {
             match &instrs[i] {
@@ -262,14 +261,16 @@ impl<'a> VirtualEnv<'a> {
         }
         Ok(())
     }
-    fn instr(&mut self, instr: &'a Instr) -> Result<(), SigCheckError> {
+    fn instr(&mut self, instr: &Instr) -> Result<(), SigCheckError> {
         use Primitive::*;
         match instr {
             Instr::Comment(_) => {}
             Instr::Push(val) => self.stack.push(BasicValue::from_val(val)),
-            Instr::CallGlobal { call, .. } => {
+            Instr::CallGlobal { call, sig, .. } => {
                 if *call {
-                    self.handle_args_outputs(0, 1)?;
+                    self.handle_sig(*sig)?;
+                } else {
+                    self.function_stack.push(*sig);
                 }
             }
             Instr::BindGlobal { .. } => {
@@ -291,7 +292,7 @@ impl<'a> VirtualEnv<'a> {
                 self.stack.push(BasicValue::Other);
             }
             Instr::Call(_) | Instr::CallRecursive(_) => {
-                let sig = self.pop_func()?.signature();
+                let sig = self.pop_func()?;
                 self.handle_sig(sig)?
             }
             Instr::Recur(_) => return Err(SigCheckError::from("recur present").ambiguous()),
@@ -322,7 +323,7 @@ impl<'a> VirtualEnv<'a> {
             }
             Instr::Label { .. } => self.handle_args_outputs(1, 1)?,
             Instr::ValidateType { .. } => self.handle_args_outputs(1, 1)?,
-            Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
+            Instr::PushFunc(f) => self.function_stack.push(f.signature()),
             &Instr::Switch {
                 count,
                 sig,
@@ -350,9 +351,9 @@ impl<'a> VirtualEnv<'a> {
             Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count)?,
             Instr::Prim(Astar, _) | Instr::ImplPrim(ImplPrimitive::AstarFirst, _) => {
                 let _start = self.pop()?;
-                let neighbors = self.pop_func()?.signature();
-                let heuristic = self.pop_func()?.signature();
-                let is_goal = self.pop_func()?.signature();
+                let neighbors = self.pop_func()?;
+                let heuristic = self.pop_func()?;
+                let is_goal = self.pop_func()?;
                 let args = neighbors
                     .args
                     .max(heuristic.args)
@@ -362,45 +363,38 @@ impl<'a> VirtualEnv<'a> {
             }
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => {
-                    let sig = self.pop_func()?.signature();
+                    let sig = self.pop_func()?;
                     let args = sig.args.saturating_sub(sig.outputs);
                     self.handle_args_outputs(args, sig.outputs)?;
                 }
                 Each | Rows | Inventory => {
-                    let sig = self.pop_func()?.signature();
+                    let sig = self.pop_func()?;
                     self.handle_sig(sig)?
                 }
                 Table | Tuples | Triangle => {
-                    let sig = self.pop_func()?.signature();
+                    let sig = self.pop_func()?;
                     self.handle_sig(sig)?;
                 }
                 Group | Partition => {
-                    let sig = self.pop_func()?.signature();
+                    let sig = self.pop_func()?;
                     self.handle_args_outputs(2, sig.outputs)?;
                 }
                 Spawn | Pool => {
-                    let sig = self.pop_func()?.signature();
+                    let sig = self.pop_func()?;
                     self.handle_args_outputs(sig.args, 1)?;
                 }
                 Repeat => {
                     let f = self.pop_func()?;
-                    let sig = f.signature();
                     let n = self.pop()?;
-                    self.repeat(sig, n)?;
+                    self.repeat(f, n)?;
                 }
                 Do => {
                     let body = self.pop_func()?;
                     let cond = self.pop_func()?;
-                    let body_sig = body.signature();
-                    let cond_sig = cond.signature();
-                    let copy_count = cond_sig
-                        .args
-                        .saturating_sub(cond_sig.outputs.saturating_sub(1));
-                    let cond_sub_sig = Signature::new(
-                        cond_sig.args,
-                        (cond_sig.outputs + copy_count).saturating_sub(1),
-                    );
-                    let comp_sig = body_sig.compose(cond_sub_sig);
+                    let copy_count = cond.args.saturating_sub(cond.outputs.saturating_sub(1));
+                    let cond_sub_sig =
+                        Signature::new(cond.args, (cond.outputs + copy_count).saturating_sub(1));
+                    let comp_sig = body.compose(cond_sub_sig);
                     if comp_sig.args < comp_sig.outputs && self.array_stack.is_empty() {
                         return Err(SigCheckError::from(format!(
                             "do with a function with signature {comp_sig}"
@@ -409,42 +403,42 @@ impl<'a> VirtualEnv<'a> {
                     }
                     self.handle_args_outputs(
                         comp_sig.args,
-                        comp_sig.outputs + cond_sub_sig.outputs.saturating_sub(cond_sig.args),
+                        comp_sig.outputs + cond_sub_sig.outputs.saturating_sub(cond.args),
                     )?;
                 }
                 Un => {
-                    let sig = self.pop_func()?.signature();
+                    let sig = self.pop_func()?;
                     self.handle_args_outputs(sig.outputs, sig.args)?;
                 }
                 Anti => {
-                    let sig = self.pop_func()?.signature();
+                    let sig = self.pop_func()?;
                     self.handle_args_outputs(sig.args, sig.outputs)?;
                 }
                 Fold => {
                     let f = self.pop_func()?;
-                    self.handle_sig(f.signature())?;
+                    self.handle_sig(f)?;
                 }
                 Try => {
-                    let f_sig = self.pop_func()?.signature();
-                    let _handler_sig = self.pop_func()?.signature();
+                    let f_sig = self.pop_func()?;
+                    let _handler_sig = self.pop_func()?;
                     self.handle_sig(f_sig)?;
                 }
                 Case => {
-                    let f_sig = self.pop_func()?.signature();
+                    let f_sig = self.pop_func()?;
                     self.handle_sig(f_sig)?;
                 }
                 Fill => {
-                    let fill_sig = self.pop_func()?.signature();
+                    let fill_sig = self.pop_func()?;
                     if fill_sig.outputs > 0 {
                         self.handle_sig(fill_sig)?;
                     }
                     self.handle_args_outputs(fill_sig.outputs, 0)?;
                     let f = self.pop_func()?;
-                    self.handle_sig(f.signature())?;
+                    self.handle_sig(f)?;
                 }
                 Content | Memo | Comptime => {
                     let f = self.pop_func()?;
-                    self.handle_sig(f.signature())?;
+                    self.handle_sig(f)?;
                 }
                 Dup => {
                     let val = self.pop()?;
@@ -498,13 +492,13 @@ impl<'a> VirtualEnv<'a> {
                 SetInverse => {
                     let f = self.pop_func()?;
                     let _inv = self.pop_func()?;
-                    self.handle_sig(f.signature())?;
+                    self.handle_sig(f)?;
                 }
                 SetUnder => {
                     let f = self.pop_func()?;
                     let _before = self.pop_func()?;
                     let _after = self.pop_func()?;
-                    self.handle_sig(f.signature())?;
+                    self.handle_sig(f)?;
                 }
                 Dump => {
                     self.pop_func()?;
@@ -524,21 +518,21 @@ impl<'a> VirtualEnv<'a> {
             },
             Instr::ImplPrim(prim, _) => match prim {
                 ImplPrimitive::ReduceContent | ImplPrimitive::ReduceDepth(_) => {
-                    let sig = self.pop_func()?.signature();
+                    let sig = self.pop_func()?;
                     let args = sig.args.saturating_sub(sig.outputs);
                     self.handle_args_outputs(args, sig.outputs)?;
                 }
                 ImplPrimitive::RepeatWithInverse => {
                     let f = self.pop_func()?;
                     let inv = self.pop_func()?;
-                    if f.signature().inverse() != inv.signature() {
+                    if f.inverse() != inv {
                         return Err(SigCheckError::from(
                             "repeat inverse does not have inverse signature",
                         )
                         .ambiguous());
                     }
                     let n = self.pop()?;
-                    self.repeat(f.signature(), n)?;
+                    self.repeat(f, n)?;
                 }
                 prim => {
                     let args = prim.args();
@@ -572,7 +566,7 @@ impl<'a> VirtualEnv<'a> {
             .pop()
             .ok_or("function has too many args")?)
     }
-    fn pop_func(&mut self) -> Result<Cow<'a, Function>, String> {
+    fn pop_func(&mut self) -> Result<Signature, String> {
         self.function_stack
             .pop()
             .ok_or_else(|| "expected function. This is an interpreter bug".into())

@@ -61,10 +61,13 @@ pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
         }
         // Collect arguments
         let mut args = Vec::with_capacity(sig.args + 1);
-        let new_shape = n.shape().clone();
+        let mut new_shape = n.shape().clone();
         args.push(n);
         for i in 0..sig.args {
             let arg = env.pop(i + 1)?;
+            for (a, &b) in new_shape.iter_mut().zip(arg.shape()) {
+                *a = (*a).max(b);
+            }
             args.push(arg);
         }
         args[1..].reverse();
@@ -124,13 +127,13 @@ pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
         // Collect output
         for output in outputs.into_iter().rev() {
             let mut new_value = Value::from_row_values(output, env)?;
-            if is_empty {
-                new_value.pop_row();
-            }
             let mut new_shape = new_shape.clone();
             new_shape.extend_from_slice(&new_value.shape()[1..]);
             *new_value.shape_mut() = new_shape;
             new_value.validate_shape();
+            if is_empty {
+                new_value.pop_row();
+            }
             env.push(new_value);
         }
         Ok(())

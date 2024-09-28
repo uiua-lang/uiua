@@ -461,21 +461,22 @@ code:
                             "Called unbound constant. \
                             This is a bug in the interpreter.",
                         )),
-                        BindingKind::Func(f) if call => self.call(f),
-                        BindingKind::Func(f) => {
-                            self.rt.function_stack.push(f);
-                            Ok(())
+                        BindingKind::Func(f) if call => {
+                            self.respect_recursion_limit().and_then(|_| self.call(f))
                         }
+                        BindingKind::Func(f) => self
+                            .respect_recursion_limit()
+                            .map(|_| self.rt.function_stack.push(f)),
                         BindingKind::Import { .. } | BindingKind::Module(_) => Err(self.error(
                             "Called module global. \
                             This is a bug in the interpreter.",
                         )),
-                        BindingKind::StackMacro(_) => Err(self.error(
-                            "Called stack macro global. \
+                        BindingKind::IndexMacro(_) => Err(self.error(
+                            "Called index macro global. \
                             This is a bug in the interpreter.",
                         )),
-                        BindingKind::ArrayMacro(_) => Err(self.error(
-                            "Called array macro global. \
+                        BindingKind::CodeMacro(_) => Err(self.error(
+                            "Called code macro global. \
                             This is a bug in the interpreter.",
                         )),
                     }
@@ -1214,6 +1215,20 @@ code:
     pub(crate) fn truncate_temp_stack(&mut self, stack: TempStack, size: usize) {
         self.rt.temp_stacks[stack as usize].truncate(size);
     }
+    pub(crate) fn remove_nth_back(&mut self, n: usize) -> UiuaResult<Value> {
+        let len = self.rt.stack.len();
+        if n >= len {
+            return Err(self.error(format!("Stack was empty evaluating argument {}", n + 1)));
+        }
+        Ok(self.rt.stack.remove(len - n - 1))
+    }
+    pub(crate) fn pop_n(&mut self, n: usize) -> UiuaResult<Vec<Value>> {
+        let len = self.rt.stack.len();
+        if n > len {
+            return Err(self.error(format!("Stack was empty evaluating argument {}", n + 1)));
+        }
+        Ok(self.rt.stack.split_off(len - n))
+    }
     pub(crate) fn num_scalar_fill(&self) -> Result<f64, &'static str> {
         match self.value_fill() {
             Some(Value::Num(n)) if n.rank() == 0 => Ok(n.data[0]),
@@ -1395,10 +1410,25 @@ code:
         self.rt.recur_stack.truncate(with_height);
         res
     }
+    pub(crate) fn respect_recursion_limit(&mut self) -> UiuaResult {
+        #[cfg(debug_assertions)]
+        const RECURSION_LIMIT: usize = 22;
+        #[cfg(not(debug_assertions))]
+        const RECURSION_LIMIT: usize = 130;
+        if self.rt.call_stack.len() > RECURSION_LIMIT {
+            Err(self.error("Recursion limit reached"))
+        } else {
+            Ok(())
+        }
+    }
     pub(crate) fn recur(&mut self) -> UiuaResult {
         let Some(i) = self.rt.recur_stack.last().copied() else {
-            return Err(self.error("No recursion context set"));
+            return Err(self.error(
+                "No recursion context set. This \
+                is a bug in the interpreter.",
+            ));
         };
+        self.respect_recursion_limit()?;
         let mut frame = self.rt.call_stack[i].clone();
         frame.pc = 0;
         self.respect_execution_limit()?;

@@ -14,8 +14,8 @@ use uiua::{
     ast::Item,
     encode::{image_to_bytes, value_to_gif_bytes, value_to_image, value_to_wav_bytes},
     lsp::{spans_with_backend, BindingDocsKind},
-    Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, SpanKind, SysBackend,
-    Uiua, UiuaError, UiuaResult, Value,
+    Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
+    SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
@@ -26,7 +26,7 @@ use web_sys::{
 
 use crate::{
     backend::{OutputItem, WebBackend},
-    binding_class,
+    binding_class, code_font,
     editor::Editor,
     element, prim_sig_class, sig_class,
 };
@@ -442,7 +442,8 @@ pub fn gen_code_view(code: &str) -> View {
             continue;
         }
         let mut frag_views = Vec::new();
-        for frag in line {
+        let mut frags = line.into_iter().peekable();
+        while let Some(frag) = frags.next() {
             match frag {
                 CodeFragment::Unspanned(s) => {
                     // logging::log!("unspanned escaped: `{}`", s);
@@ -465,6 +466,47 @@ pub fn gen_code_view(code: &str) -> View {
                         _ => "",
                     };
                     match kind {
+                        SpanKind::Primitive(Primitive::On, _)
+                            if frags.peek().is_some_and(|frag| {
+                                matches!(
+                                    frag,
+                                    CodeFragment::Span(_, SpanKind::Primitive(Primitive::By, _))
+                                )
+                            }) =>
+                        {
+                            let Some(CodeFragment::Span(next_text, _)) = frags.next() else {
+                                unreachable!()
+                            };
+                            let title = format!(
+                                "{}{}: Call a function keeping its first and last \
+                                arguments on either side of the outputs",
+                                Primitive::On.name(),
+                                Primitive::By.name()
+                            );
+                            let class = format!(
+                                "code-span code-underline {}",
+                                code_font!("nb2 text-gradient")
+                            );
+                            let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
+                            let onclick = move |event: web_sys::MouseEvent| {
+                                if os_ctrl(&event) {
+                                    window()
+                                        .open_with_url_and_target(
+                                            "/tutorial/advancedstack#on-and-by",
+                                            "_blank",
+                                        )
+                                        .unwrap();
+                                }
+                            };
+                            let text = format!("{text}{next_text}");
+                            let view = view!(<span
+                                    class=class
+                                    data-title=title
+                                    on:mouseover=onmouseover
+                                    on:click=onclick>{text}</span>)
+                            .into_view();
+                            frag_views.push(view)
+                        }
                         SpanKind::Primitive(prim, _) => {
                             let name = prim.name();
                             let mut title = format!("{}: {}", name, prim.doc().short_text());
@@ -1183,6 +1225,14 @@ pub fn set_show_experimental(show_experimental: bool) {
     update_style();
 }
 
+pub fn get_run_on_format() -> bool {
+    get_local_var("run-on-format", || true)
+}
+pub fn set_run_on_format(run_on_format: bool) {
+    set_local_var("run-on-format", run_on_format);
+    update_style();
+}
+
 fn update_style() {
     let font_name = get_font_name();
     let font_size = get_font_size();
@@ -1191,6 +1241,7 @@ fn update_style() {
     } else {
         "none"
     };
+    let run_on_format = if get_run_on_format() { "none" } else { "block" };
     // Remove the old style
     let head = &document().head().unwrap();
     if let Some(item) = head.get_elements_by_tag_name("style").item(0) {
@@ -1205,7 +1256,8 @@ fn update_style() {
     new_style.set_inner_text(&format!(
         "@font-face {{ font-family: 'Code Font'; src: url('/{font_name}.ttf') format('truetype'); }}\n\
         .sized-code {{ font-size: {font_size}; }}\n\
-        .experimental-glyph-button {{ display: {show_experimental}; }}",
+        .experimental-glyph-button {{ display: {show_experimental}; }}\n\
+        .format-button {{ display: {run_on_format}; }}",
     ));
     document().head().unwrap().append_child(&new_style).unwrap();
 }

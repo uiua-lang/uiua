@@ -32,8 +32,8 @@ pub struct Binding {
     pub arrow_span: CodeSpan,
     /// Whether the binding is public
     pub public: bool,
-    /// Whether the binding is an array macro
-    pub array_macro: bool,
+    /// Whether the binding is a code macro
+    pub code_macro: bool,
     /// The signature
     pub signature: Option<Sp<Signature>>,
     /// The code

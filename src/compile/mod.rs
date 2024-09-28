@@ -62,10 +62,10 @@ pub struct Compiler {
     current_imports: Vec<PathBuf>,
     /// The bindings of imported files
     imports: HashMap<PathBuf, Module>,
-    /// Unexpanded stack macros
-    stack_macros: HashMap<usize, StackMacro>,
-    /// Unexpanded array macros
-    array_macros: HashMap<usize, ArrayMacro>,
+    /// Unexpanded index macros
+    index_macros: HashMap<usize, IndexMacro>,
+    /// Unexpanded code macros
+    code_macros: HashMap<usize, CodeMacro>,
     /// The depth of macro expansion
     macro_depth: usize,
     /// Whether the compiler is in an inverse
@@ -103,8 +103,8 @@ impl Default for Compiler {
             mode: RunMode::All,
             current_imports: Vec::new(),
             imports: HashMap::new(),
-            stack_macros: HashMap::new(),
-            array_macros: HashMap::new(),
+            index_macros: HashMap::new(),
+            code_macros: HashMap::new(),
             macro_depth: 0,
             in_inverse: false,
             in_test: false,
@@ -164,15 +164,19 @@ pub struct Module {
     experimental: bool,
 }
 
+/// An index macro
 #[derive(Clone)]
-struct StackMacro {
+struct IndexMacro {
     words: Vec<Sp<Word>>,
     names: IndexMap<Ident, LocalName>,
+    sig: Option<Signature>,
     hygenic: bool,
+    recursive: bool,
 }
 
+/// A code macro
 #[derive(Clone)]
-struct ArrayMacro {
+struct CodeMacro {
     function: Function,
     names: IndexMap<Ident, LocalName>,
 }
@@ -226,9 +230,15 @@ enum ScopeKind {
     /// A scope that includes all bindings in a module
     AllInModule,
     /// A temporary scope, probably for a macro
-    Temp,
+    Temp(Option<MacroLocal>),
     /// A test scope between `---`s
     Test,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct MacroLocal {
+    macro_index: usize,
+    expansion_index: usize,
 }
 
 impl Default for Scope {
@@ -779,7 +789,7 @@ code:
             comment
         });
         self.asm
-            .add_global_at(local, BindingKind::Const(value), span, comment);
+            .add_binding_at(local, BindingKind::Const(value), span, comment);
         self.scope.names.insert(name, local);
     }
     /// Import a module
@@ -1399,7 +1409,7 @@ code:
     /// potentially pull in a variable number of values
     fn validate_array_loop_sig(&mut self, instrs: &[Instr], span: &CodeSpan) -> Option<Signature> {
         let inner_sig = instrs_signature(instrs);
-        if self.current_bindings.is_empty() && self.scope.kind != ScopeKind::Temp {
+        if self.current_bindings.is_empty() && !matches!(self.scope.kind, ScopeKind::Temp(_)) {
             return inner_sig.ok();
         }
         let Err(e) = &inner_sig else {
@@ -1587,16 +1597,16 @@ code:
                     format!("`{}` is a constant, not a module", first.module.value),
                 ))
             }
-            BindingKind::StackMacro(_) => {
+            BindingKind::IndexMacro(_) => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
-                    format!("`{}` is a stack macro, not a module", first.module.value),
+                    format!("`{}` is an index macro, not a module", first.module.value),
                 ))
             }
-            BindingKind::ArrayMacro(_) => {
+            BindingKind::CodeMacro(_) => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
-                    format!("`{}` is an array macro, not a module", first.module.value),
+                    format!("`{}` is a code macro, not a module", first.module.value),
                 ))
             }
         };
@@ -1628,16 +1638,19 @@ code:
                         format!("`{}` is a constant, not a module", comp.module.value),
                     ))
                 }
-                BindingKind::StackMacro(_) => {
+                BindingKind::IndexMacro(_) => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
-                        format!("`{}` is a stack macro, not a module", comp.module.value),
+                        format!(
+                            "`{}` is a positional macro, not a module",
+                            comp.module.value
+                        ),
                     ))
                 }
-                BindingKind::ArrayMacro(_) => {
+                BindingKind::CodeMacro(_) => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
-                        format!("`{}` is an array macro, not a module", comp.module.value),
+                        format!("`{}` is a code macro, not a module", comp.module.value),
                     ))
                 }
             };
@@ -1670,7 +1683,7 @@ code:
                     span,
                     format!(
                         "Recursive function `{ident}` must have a \
-                        signature declared after the `←`."
+                        signature declared after the ←."
                     ),
                 ));
             };
@@ -1733,12 +1746,21 @@ code:
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            BindingKind::Const(None) if call => self.push_instr(Instr::CallGlobal { index, call }),
+            BindingKind::Const(None) if call => self.push_instr(Instr::CallGlobal {
+                index,
+                call: true,
+                sig: Signature::new(0, 1),
+            }),
             BindingKind::Const(None) => {
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
-                    eco_vec![Instr::CallGlobal { index, call }].into(),
+                    eco_vec![Instr::CallGlobal {
+                        index,
+                        call: true,
+                        sig: Signature::new(0, 1)
+                    }]
+                    .into(),
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
@@ -1774,7 +1796,7 @@ code:
                     self.add_error(span, "Cannot import module item here.");
                 }
             }
-            BindingKind::StackMacro(_) | BindingKind::ArrayMacro(_) => {
+            BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
         }

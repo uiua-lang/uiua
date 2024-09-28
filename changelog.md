@@ -33,7 +33,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) now preserves a minimum bit length
 - [`under ⍜`](https://uiua.org/docs/under) [`reverse ⇌`](https://uiua.org/docs/reverse), [`transpose ⍉`](https://uiua.org/docs/transpose), and [`rotate ↻`](https://uiua.org/docs/rotate) are now smarter with respect to the signature of [`under ⍜`](https://uiua.org/docs/under)'s second function
   - For example `⍜⇌°⊂` behaves in a more useful way
-- [`under ⍜`](https://uiua.org/docs/under) [`len ⧻`](https://uiua.org/docs/len) now reshapes an array to have the transformed length
+- [`under ⍜`](https://uiua.org/docs/under) [`length ⧻`](https://uiua.org/docs/len) now reshapes an array to have the transformed length
 - `NaN` and `∞` indices for [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now get the [`fill ⬚`](https://uiua.org/docs/fill) value
 - [`scan \\`](https://uiua.org/docs/scan) now accepts functions that take more than 2 arguments
   - The behavior is similar to the analogous behavior for [`reduce /`](https://uiua.org/docs/reduce)

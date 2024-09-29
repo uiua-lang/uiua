@@ -1461,7 +1461,7 @@ impl Value {
         let mut undices = Vec::with_capacity(indices.len());
         for i in indices {
             let u = i.unsigned_abs();
-            if u >= target.rank() {
+            if i >= 0 && u >= target.rank() || i < 0 && u > target.rank() {
                 return Err(env.error(format!(
                     "Cannot orient axis {i} in array of rank {}",
                     target.rank()
@@ -1485,68 +1485,142 @@ impl Value {
                 return Err(env.error("Orient indices must be unique"));
             }
         }
-        target.orient_impl(&undices);
+        for (depth, amnt) in derive_orient_rotations(target.rank(), &undices) {
+            target.transpose_depth(depth, amnt);
+        }
         Ok(())
     }
-    fn orient_impl(&mut self, undices: &[usize]) {
-        let mut orientation: Vec<usize> = (0..self.rank()).collect();
-        let mut depth_rotations: Vec<(usize, i32)> = Vec::new();
-        for (i, &u) in undices.iter().enumerate() {
-            let j = orientation.iter().position(|&o| o == u).unwrap();
-            if i == j {
-                continue;
-            }
-            if j != orientation.len() - 1 {
-                orientation[j..].rotate_left(1);
-                depth_rotations.push((j, 1));
-            }
-            orientation[i..].rotate_right(1);
-            depth_rotations.push((i, -1));
-        }
-        for (depth, amnt) in depth_rotations {
-            self.transpose_depth(depth, amnt);
-        }
-    }
-    pub(crate) fn undo_orient(&self, target: &mut Self, env: &Uiua) -> UiuaResult {
+    pub(crate) fn anti_orient(&self, target: Self, env: &Uiua) -> UiuaResult<Self> {
         let indices = self.as_ints(env, "Unorient indices must be integers")?;
-        let mut undices = Vec::with_capacity(indices.len());
-        for i in indices {
-            let u = i.unsigned_abs();
-            if u >= target.rank() {
+        val_as_arr!(target, |a| a.anti_orient(&indices, env).map(Into::into))
+    }
+}
+
+fn derive_orient_rotations(rank: usize, undices: &[usize]) -> Vec<(usize, i32)> {
+    let mut orientation: Vec<usize> = (0..rank).collect();
+    let mut depth_rotations: Vec<(usize, i32)> = Vec::new();
+    for (i, &u) in undices.iter().enumerate() {
+        let j = orientation.iter().position(|&o| o == u).unwrap();
+        if i == j {
+            continue;
+        }
+        if j != orientation.len() - 1 {
+            orientation[j..].rotate_left(1);
+            depth_rotations.push((j, 1));
+        }
+        orientation[i..].rotate_right(1);
+        depth_rotations.push((i, -1));
+    }
+    depth_rotations
+}
+
+impl<T: ArrayValue> Array<T> {
+    fn anti_orient(mut self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        fn derive_orient_data(
+            indices: &[isize],
+            shape: &[usize],
+            env: &Uiua,
+        ) -> UiuaResult<(Vec<usize>, Shape, usize, usize)> {
+            let rank = shape.len();
+            // Normalize indices
+            let mut undices = Vec::with_capacity(indices.len());
+            for &i in indices {
+                let u = i.unsigned_abs();
+                if i >= 0 && u >= rank || i < 0 && u > rank {
+                    return Err(
+                        env.error(format!("Cannot orient axis {i} in array of rank {rank}"))
+                    );
+                }
+                if i >= 0 {
+                    undices.push(u);
+                } else {
+                    undices.push(rank - u);
+                }
+            }
+
+            // Add missing axes
+            let duplicate_count = undices
+                .iter()
+                .enumerate()
+                .filter(|&(i, a)| undices[..i].contains(a))
+                .count();
+            let max_undex = undices.iter().max().copied().unwrap_or(0);
+            let min_allowed_rank = max_undex + duplicate_count + 1;
+            if rank < min_allowed_rank {
                 return Err(env.error(format!(
-                    "Cannot unorient axis {i} in array of rank {}",
-                    target.rank()
+                    "Orient indices imply a rank of at least {min_allowed_rank}, \
+                    but the array is rank {rank}"
                 )));
             }
-            if i >= 0 {
-                undices.push(u);
-            } else {
-                undices.push(target.rank() - u);
+            let new_rank = rank - duplicate_count;
+            for i in 0..new_rank {
+                if !undices.contains(&i) {
+                    undices.push(i);
+                }
             }
-        }
-        if undices.len() > target.rank() {
-            return Err(env.error(format!(
-                "Cannot unorient array of rank {} with {} indices",
-                target.rank(),
-                undices.len()
-            )));
-        }
-        for (i, u) in undices.iter().enumerate() {
-            if undices[i + 1..].iter().any(|u2| u == u2) {
-                return Err(env.error("Orient indices must be unique"));
+
+            // New shape
+            let mut new_shape = Shape::with_capacity(new_rank);
+            for i in 0..new_rank {
+                new_shape.push(
+                    (undices.iter().enumerate())
+                        .filter(|&(_, &j)| j == i)
+                        .map(|(j, _)| shape[j])
+                        .min()
+                        .unwrap(),
+                );
             }
+
+            // Trailing dimensions
+            let trailing_dims = undices
+                .iter()
+                .enumerate()
+                .rev()
+                .take_while(|&(i, a)| !undices[..i].contains(a))
+                .zip((0..new_rank).rev())
+                .take_while(|&((_, &a), b)| a == b)
+                .count();
+
+            Ok((undices, new_shape, duplicate_count, trailing_dims))
         }
-        for i in 0..target.rank() {
-            if !undices.contains(&i) {
-                undices.push(i);
+
+        let (undices, new_shape, duplicates, trailing_dims) =
+            derive_orient_data(indices, &self.shape, env)?;
+
+        if new_shape.elements() == 0 {
+            return Ok(Array::new(new_shape, CowSlice::new()));
+        } else if trailing_dims == self.rank() {
+            return Ok(self.clone());
+        } else if duplicates == 0 {
+            let mut inverted: Vec<usize> = (0..undices.len()).collect();
+            inverted.sort_by_key(|&i| undices[i]);
+            for (depth, amnt) in derive_orient_rotations(self.rank(), &inverted) {
+                self.transpose_depth(depth, amnt);
             }
+            return Ok(self);
         }
-        let mut inverted_undices = undices.clone();
-        for (i, u) in undices.into_iter().enumerate() {
-            inverted_undices[u] = i;
+
+        let mut data = self.data.clone();
+        data.truncate(new_shape.elements());
+        let considered_orig_shape = Shape::from(&self.shape[..self.rank() - trailing_dims]);
+        let considered_new_shape = Shape::from(&new_shape[..new_shape.len() - trailing_dims]);
+        let trailing_row_len: usize = self.shape[considered_orig_shape.len()..].iter().product();
+        let mut orig_index = vec![0; considered_orig_shape.len()];
+        let mut new_index = vec![0; considered_new_shape.len()];
+        for (i, row) in data
+            .as_mut_slice()
+            .chunks_exact_mut(trailing_row_len)
+            .enumerate()
+        {
+            considered_new_shape.flat_to_dims(i, &mut new_index);
+            for (j, oi) in orig_index.iter_mut().enumerate() {
+                *oi = new_index[undices[j]];
+            }
+            let j = considered_orig_shape.dims_to_flat(&orig_index).unwrap();
+            row.clone_from_slice(&self.data[j * trailing_row_len..][..trailing_row_len]);
         }
-        target.orient_impl(&inverted_undices);
-        Ok(())
+
+        Ok(Array::new(new_shape, data))
     }
 }
 

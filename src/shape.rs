@@ -112,6 +112,11 @@ impl Shape {
     pub fn dims_mut(&mut self) -> &mut [usize] {
         &mut self.dims
     }
+    /// Truncate the shape
+    #[track_caller]
+    pub fn truncate(&mut self, len: usize) {
+        self.dims.truncate(len);
+    }
     pub(crate) fn flat_to_dims(&self, flat: usize, index: &mut Vec<usize>) {
         index.clear();
         let mut flat = flat;

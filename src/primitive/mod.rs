@@ -1204,12 +1204,7 @@ impl ImplPrimitive {
                 let mask = indices.undo_where(&shape, env)?;
                 env.push(mask);
             }
-            ImplPrimitive::UndoOrient => {
-                let indices = env.pop(1)?;
-                let mut array = env.pop(2)?;
-                indices.undo_orient(&mut array, env)?;
-                env.push(array);
-            }
+            ImplPrimitive::UndoOrient => env.dyadic_ro_env(Value::anti_orient)?,
             ImplPrimitive::UndoRerank => {
                 let rank = env.pop(1)?;
                 let shape = env.pop(2)?;

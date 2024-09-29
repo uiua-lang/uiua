@@ -1,18 +1,20 @@
 # Uiua Todo
 
 - 0.13
+  - End-of-line signature comments
+  - Align multi-line arrays in formatter
+  - Allow trailing newline in arrays
   - Make `un under` work...
     - `un` for `under` arg extensions
     - `un dip`
-  - Subscript dropdown
   - Non-scalar `fill take`
-  - Update language tour
   - Placeholder spans and highlighting
-  - Update design page
-  - Label and format string glyphs?
   - `setinv/setund` unification
     - Custom `on/by` inverses
   - Document on and by inverses
+  - Subscript dropdown
+  - Update language tour
+  - Update design page
 - Possible
   - `orient` boxed
   - Dynamic modules

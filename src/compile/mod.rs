@@ -172,6 +172,7 @@ struct IndexMacro {
     sig: Option<Signature>,
     hygenic: bool,
     recursive: bool,
+    flags: FunctionFlags,
 }
 
 /// A code macro

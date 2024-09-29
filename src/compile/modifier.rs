@@ -309,11 +309,12 @@ impl Compiler {
                                 }
                             });
                             // Compile
-                            let new_func = self.suppress_diagnostics(|comp| {
+                            let mut new_func = self.suppress_diagnostics(|comp| {
                                 comp.temp_scope(mac.names, macro_local, |comp| {
                                     comp.compile_words(mac.words, true)
                                 })
                             })?;
+                            new_func.flags |= mac.flags;
                             // Add
                             let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
                             let mut func =
@@ -416,8 +417,10 @@ impl Compiler {
                             return Err(self.fatal_error(modified.modifier.span.clone(), message));
                         }
 
+                        let span = self.add_span(modified.modifier.span.clone());
                         let env = &mut self.macro_env;
                         env.asm = self.asm.clone();
+                        env.rt.call_stack.last_mut().unwrap().call_span = span;
 
                         // Run the macro function
                         if let Some(sigs) = op_sigs {
@@ -1795,6 +1798,7 @@ impl Compiler {
                         sig: None,
                         hygenic: false,
                         recursive: false,
+                        flags: FunctionFlags::default(),
                     },
                 );
                 let local = LocalName {

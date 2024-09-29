@@ -51,7 +51,7 @@ pub(crate) struct Runtime {
     /// The stack height at the start of each array currently being built
     pub(crate) array_stack: Vec<usize>,
     /// The call stack
-    call_stack: Vec<StackFrame>,
+    pub(crate) call_stack: Vec<StackFrame>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -104,7 +104,7 @@ pub(crate) struct StackFrame {
     pub(crate) sig: Signature,
     track_caller: bool,
     /// The span at which the function was called
-    call_span: usize,
+    pub(crate) call_span: usize,
     /// The program counter for the function
     pub(crate) pc: usize,
     /// Additional spans for error reporting

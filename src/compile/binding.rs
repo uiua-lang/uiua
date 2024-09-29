@@ -46,6 +46,7 @@ impl Compiler {
                 _ => None,
             })
         });
+        let flags = prelude.flags;
 
         // Handle macro
         let ident_margs = ident_modifier_args(&name);
@@ -66,7 +67,8 @@ impl Compiler {
                     ),
                 );
             }
-            let new_func = self.compile_words(binding.words, true)?;
+            let mut new_func = self.compile_words(binding.words, true)?;
+            new_func.flags |= flags;
             let sig = match instrs_signature(&new_func.instrs) {
                 Ok(s) => {
                     if let Some(declared) = binding.signature {
@@ -127,7 +129,7 @@ impl Compiler {
             self.code_macros.insert(local.index, mac);
             return Ok(());
         }
-        // Positional macro
+        // Index macro
         match (ident_margs > 0, placeholder_count > 0) {
             (true, true) | (false, false) => {}
             (true, false) => {
@@ -216,7 +218,7 @@ impl Compiler {
                     self.add_error(
                         span.clone(),
                         "Recursive positional macro must have a \
-                    signature declared after the ←",
+                        signature declared after the ←",
                     );
                 }
             }
@@ -226,13 +228,13 @@ impl Compiler {
                 hygenic: true,
                 sig: binding.signature.map(|s| s.value),
                 recursive,
+                flags,
             };
             self.index_macros.insert(local.index, mac);
             return Ok(());
         }
 
         // A non-macro binding
-        let flags = prelude.flags;
         let mut make_fn: Box<dyn FnOnce(_, _, &mut Compiler) -> _> = {
             let name = name.clone();
             Box::new(

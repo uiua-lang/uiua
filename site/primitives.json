@@ -572,7 +572,7 @@
     "outputs": 0,
     "modifier_args": 1,
     "class": "Debug",
-    "description": "Debug print all the values currently on stack without popping them"
+    "description": "Preprocess and print all stack values without popping them"
   },
   "duplicate": {
     "glyph": ".",

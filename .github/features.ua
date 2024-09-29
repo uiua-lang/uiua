@@ -1,6 +1,6 @@
 # Test combinations of features
 
-Command ← {"cargo" "c" "--lib" "--no-default-features"}
+Command  ← {"cargo" "c" "--lib" "--no-default-features"}
 Features ← (
   {"audio" "tls"}
   ⊂⨬(

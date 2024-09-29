@@ -1,8 +1,8 @@
 {1 3 "hi" [1 2 3]}
 {2 4 "there" [4 5 6]}
 map:
-MapA ←
-MapB ← insert 5 6 MapA
+MapA  ←
+MapB  ← insert 5 6 MapA
 MapsI ← MapA MapB
 
 ∩(⍤. has 1) MapsI

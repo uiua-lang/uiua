@@ -6,9 +6,9 @@ ThisFileDir
 
 # Imports
 Ex ~ "example.ua"
-  Foo ← Ex~Foo
+  Foo  ← Ex~Foo
   Incr ← Ex~Increment
-  Dub ← Ex~Double
+  Dub  ← Ex~Double
 ⍤⤙≍ 12 Dub Incr Foo
 ~ "example" ~ Square
 ⍤⤙≍ 25 Square 5

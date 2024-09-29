@@ -20,9 +20,9 @@ GetExt ← |1 °□⊢⇌ ⊜□ ≠@. .
 °⊟⍉[
   {"js" "text/javascript"}
   {"wasm" "application/wasm"}]
-ExtMimeExt ←
+ExtMimeExt  ←
 ExtMimeMime ←
-ExtMime ← |1 °□⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
+ExtMime     ← |1 °□⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
 
 # ? Status Mime Bytes
 Response ← (
@@ -35,8 +35,8 @@ Response ← (
 )
 
 # Handlers
-NotFound ← Response "404 Not Found" "text/plain" utf₈"Not Found"
-ServerError ← Response "500 Internal Server Error" "text/plain"
+NotFound            ← Response "404 Not Found" "text/plain" utf₈"Not Found"
+ServerError         ← Response "500 Internal Server Error" "text/plain"
 HandlePageLoadError ← ⋅(
   /↥⌕"The system cannot find the file specified".
   ⨬(NotFound◌|ServerError))

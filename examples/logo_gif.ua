@@ -23,12 +23,12 @@ Paint ← ▽⟜≡▽÷⊙(S⍉↯)
  Paint 5 ⟜⇡5]
 ≡◇⊏
 °⍉⊞⊟. ÷÷2: -÷2,⇡.⧻⊢.
-Xy ←
+Xy      ←
 TrueRgb ← ⍉ [:°⊟×.Xy ↯△⊢Xy0.5]
 ≡+ ∩× ¬⟜:0.7 ¤TrueRgb
 ⊂ TrueRgb # Comment out for pride only
 Rgb ←
-u ← ↥<0.2:>0.7.+×2 ×.:°⊟Xy
-c ← >⌵/ℂ Xy
+u   ← ↥<0.2:>0.7.+×2 ×.:°⊟Xy
+c   ← >⌵/ℂ Xy
 ≡⍉≡⊂:¤-¬u c1 +0.1 ↧¤¤c0.95 ≡°⍉Rgb
 &gifs1

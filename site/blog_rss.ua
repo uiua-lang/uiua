@@ -1,4 +1,4 @@
-Tag ← $"<__>_</_>" ⊃⊙⊙∘∘ ⊃↙↘⊸⊗@  ⊙(⍥/$"_\n_"=3type.)
+Tag   ← $"<__>_</_>" ⊃⊙⊙∘∘ ⊃↙↘⊸⊗@  ⊙(⍥/$"_\n_"=3type.)
 Month ← ◇↙3⊏:Months-1⋕
 Date ← $"_, _ +0000" ⊃(
   ◇↙3⊏:Days⌊◿7+4÷/×[60 60 24]
@@ -14,7 +14,7 @@ Date ← $"_, _ +0000" ⊃(
 ⊜□⊸≠@\n
 ⍚°$"_(_): _ - _"
 
-Rss ← $ rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"
+Rss      ← $ rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"
 AtomLink ← $ atom:link href="https://uiua.org/blog/feed.rss" rel="self" type="application/rss+xml"
 Tag Rss Tag "channel" ⊂ {
   Tag "title" $ Uiua Blog

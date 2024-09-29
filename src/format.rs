@@ -505,11 +505,30 @@ impl<'a> Formatter<'a> {
         (output, self.glyph_map)
     }
     fn format_items(&mut self, items: &[Item], depth: usize) {
+        let mut max_name_len = 0;
         for (i, item) in items.iter().enumerate() {
             if i > 0 || depth > 0 {
                 self.newline(depth);
             }
-            self.format_item(item, depth);
+            // Calculate max name length to align single-line bindings
+            match item {
+                Item::Binding(binding) if !words_are_multiline(&binding.words) => {
+                    if max_name_len == 0 {
+                        max_name_len = items[i..]
+                            .iter()
+                            .take_while(|item| matches!(item, Item::Binding(_)))
+                            .map(|item| match item {
+                                Item::Binding(binding) => binding.name.value.chars().count(),
+                                _ => 0,
+                            })
+                            .max()
+                            .unwrap();
+                    }
+                }
+                _ => max_name_len = 0,
+            }
+            // Format item
+            self.format_item(item, max_name_len, depth);
         }
         // Align end-of-line comments
         if self.config.align_comments && !self.end_of_line_comments.is_empty() {
@@ -591,7 +610,7 @@ impl<'a> Formatter<'a> {
             self.output.push(' ');
         }
     }
-    fn format_item(&mut self, item: &Item, depth: usize) {
+    fn format_item(&mut self, item: &Item, max_name_len: usize, depth: usize) {
         match item {
             Item::Module(m) => {
                 self.prev_import_function = None;
@@ -648,6 +667,12 @@ impl<'a> Formatter<'a> {
                 }
 
                 self.output.push_str(&binding.name.value);
+                let len = binding.name.value.chars().count();
+                if len < max_name_len {
+                    for _ in 0..max_name_len - len {
+                        self.output.push(' ');
+                    }
+                }
                 self.output
                     .push_str(if binding.public { " ←" } else { " ↚" });
                 if binding.code_macro {
@@ -1343,6 +1368,15 @@ impl<'a> Formatter<'a> {
             values
         });
         values.remove(&index).unwrap_or_default()
+    }
+}
+
+fn words_are_multiline(words: &[Sp<Word>]) -> bool {
+    if let Some((last, words)) = words.split_last() {
+        words.iter().any(|word| word_is_multiline(&word.value))
+            || !last.value.is_end_of_line() && word_is_multiline(&last.value)
+    } else {
+        false
     }
 }
 

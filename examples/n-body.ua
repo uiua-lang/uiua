@@ -1,5 +1,5 @@
-G ← 2e4
-Dt ← 0.01
+G     ← 2e4
+Dt    ← 0.01
 Steps ← 120
 
 Step ← (

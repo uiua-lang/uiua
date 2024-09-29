@@ -86,57 +86,70 @@ impl Value {
         Ok(match (self, self.shape().dims()) {
             (Value::Char(arr), [] | [_]) => {
                 let mut s: String = arr.data.iter().copied().collect();
-                let mut mul = 1.0;
-                if s.contains('¯') {
-                    s = s.replace('¯', "-");
-                }
-                if s.contains('`') {
-                    s = s.replace('`', "-");
-                }
-                'glyphs: for (names, constant) in [
-                    (["η", "eta"], PI * 0.5),
-                    (["π", "pi"], PI),
-                    (["τ", "tau"], TAU),
-                    (["∞", "inf"], f64::INFINITY),
-                ] {
-                    if let Some((before, after)) = s.split_once('/') {
-                        for name in names {
-                            if before.trim_start_matches('-') == name {
-                                s = format!(
-                                    "{}/{}",
-                                    before.replace(name, &constant.to_string()),
-                                    after
-                                );
-                                break 'glyphs;
-                            } else if let Some(start) = before.strip_suffix(name) {
-                                mul = constant;
-                                s = format!("{}/{}", start, after);
-                                break 'glyphs;
+                match s.strip_suffix("i").and_then(|s| s.split_once("r")) {
+                    Some((re, im)) => {
+                        let re_parsed = Self::from(re).parse_num(env)?;
+                        let im_parsed = Self::from(im).parse_num(env)?;
+                        Complex {
+                            re: re_parsed.as_num(env, "")?,
+                            im: im_parsed.as_num(env, "")?,
+                        }
+                        .into()
+                    }
+                    None => {
+                        let mut mul = 1.0;
+                        if s.contains('¯') {
+                            s = s.replace('¯', "-");
+                        }
+                        if s.contains('`') {
+                            s = s.replace('`', "-");
+                        }
+                        'glyphs: for (names, constant) in [
+                            (["η", "eta"], PI * 0.5),
+                            (["π", "pi"], PI),
+                            (["τ", "tau"], TAU),
+                            (["∞", "inf"], f64::INFINITY),
+                        ] {
+                            if let Some((before, after)) = s.split_once('/') {
+                                for name in names {
+                                    if before.trim_start_matches('-') == name {
+                                        s = format!(
+                                            "{}/{}",
+                                            before.replace(name, &constant.to_string()),
+                                            after
+                                        );
+                                        break 'glyphs;
+                                    } else if let Some(start) = before.strip_suffix(name) {
+                                        mul = constant;
+                                        s = format!("{}/{}", start, after);
+                                        break 'glyphs;
+                                    }
+                                }
+                            } else {
+                                for name in names {
+                                    if s.trim_start_matches('-') == name {
+                                        s = s.replace(name, &constant.to_string());
+                                        break 'glyphs;
+                                    } else if let Some(start) = s.strip_suffix(name) {
+                                        mul = constant;
+                                        s = start.to_string();
+                                        break 'glyphs;
+                                    }
+                                }
                             }
                         }
-                    } else {
-                        for name in names {
-                            if s.trim_start_matches('-') == name {
-                                s = s.replace(name, &constant.to_string());
-                                break 'glyphs;
-                            } else if let Some(start) = s.strip_suffix(name) {
-                                mul = constant;
-                                s = start.to_string();
-                                break 'glyphs;
-                            }
+                        match s.split_once('/') {
+                            Some((numer, denom)) => numer
+                                .parse::<f64>()
+                                .and_then(|n| denom.parse::<f64>().map(|d| n / d)),
+                            None => s.parse::<f64>(),
                         }
+                        .map(|n| n * mul)
+                        .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))
+                        .or_else(|e| env.num_scalar_fill().map_err(|_| e))?
+                        .into()
                     }
                 }
-                match s.split_once('/') {
-                    Some((numer, denom)) => numer
-                        .parse::<f64>()
-                        .and_then(|n| denom.parse::<f64>().map(|d| n / d)),
-                    None => s.parse::<f64>(),
-                }
-                .map(|n| n * mul)
-                .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))
-                .or_else(|e| env.num_scalar_fill().map_err(|_| e))?
-                .into()
             }
             (Value::Box(arr), []) => {
                 let value = &arr.data[0].0;

@@ -370,7 +370,7 @@ impl Value {
             |a, b| a.undo_take(&index, b, env).map(Into::into),
             |a, b| {
                 env.error(format!(
-                    "Cannot untake {} into {}",
+                    "Cannot undo take {} into {}",
                     a.type_name(),
                     b.type_name()
                 ))
@@ -1023,7 +1023,7 @@ impl Value {
             |a, b| a.undo_select(&idx_shape, &ind, b, env).map(Into::into),
             |a, b| {
                 env.error(format!(
-                    "Cannot untake {} into {}",
+                    "Cannot undo selection of {} into {}",
                     a.type_name(),
                     b.type_name()
                 ))

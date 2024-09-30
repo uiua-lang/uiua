@@ -239,6 +239,88 @@ where
     Ok(())
 }
 
+pub fn bin_pervade_mut_new<T>(
+    mut a: Array<T>,
+    b: &mut Array<T>,
+    a_depth: usize,
+    b_depth: usize,
+    env: &Uiua,
+    f: impl Fn(T, T) -> T + Copy,
+) -> UiuaResult
+where
+    T: ArrayValue + Copy,
+{
+    let _a_depth = a_depth.min(a.rank());
+    let _b_depth = b_depth.min(b.rank());
+
+    let new_rank = a.rank().max(b.rank());
+    let mut new_shape = Shape::with_capacity(new_rank);
+    let fill = env.scalar_fill::<T>();
+    for i in 0..new_rank {
+        let c = match (a.shape.get(i).copied(), b.shape.get(i).copied()) {
+            (None, None) => unreachable!(),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (Some(ad), Some(bd)) => {
+                if ad == bd || ad == 1 || bd == 1 || fill.is_ok() {
+                    ad.max(bd)
+                } else {
+                    return Err(env.error(format!(
+                        "Shapes {} and {} are not compatible",
+                        a.shape, b.shape
+                    )));
+                }
+            }
+        };
+        new_shape.push(c);
+    }
+
+    if new_shape == b.shape {
+        // The existing array can be used
+        if a.shape == b.shape {
+            // Try to avoid copying when possible
+            if a.data.is_copy_of(&b.data) {
+                drop(a);
+                let b_data = b.data.as_mut_slice();
+                for b in b_data {
+                    *b = f(*b, *b);
+                }
+            } else if a.data.is_unique() {
+                let a_data = a.data.as_mut_slice();
+                let b_data = b.data.as_slice();
+                for (a, b) in a_data.iter_mut().zip(b_data) {
+                    *a = f(*a, *b);
+                }
+                *b = a;
+            } else {
+                let a_data = a.data.as_slice();
+                let b_data = b.data.as_mut_slice();
+                for (a, b) in a_data.iter().zip(b_data) {
+                    *b = f(*a, *b);
+                }
+            }
+        } else {
+            let fill = fill.unwrap_or_else(|_| T::proxy());
+            fn inner<T: ArrayValue>(
+                a: &[T],
+                b: &mut [T],
+                ash: &[usize],
+                bsh: &[usize],
+                f: impl Fn(T, T) -> T + Copy,
+            ) {
+                match (ash, bsh) {}
+            }
+        }
+    } else {
+        // Allocate a new array
+        let mut new_data = eco_vec![T::default(); new_shape.elements()];
+        let _slice = new_data.make_mut();
+        todo!()
+    }
+
+    Ok(())
+}
+
 pub fn bin_pervade_mut<T>(
     mut a: Array<T>,
     b: &mut Array<T>,

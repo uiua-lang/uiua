@@ -1128,6 +1128,11 @@ primitive!(
     /// ex: °⋕ 1_2_3
     /// ex: °⋕ ↯3_4⇡12
     ///
+    /// [parse] accepts both `a+bi` and `arbi` formats, [un][parse] returns a string using the latter.
+    /// ex: ∩⋕ "8+3i" "8-3i"
+    /// ex: ∩⋕ "8r3i" "8r-3i"
+    /// ex: °⋕ ℂ3 8
+    ///
     /// [fill][parse] sets a default value for failed parses.
     /// ex: ⬚5⋕ {"13" "124" "not a number"}
     (1, Parse, Misc, ("parse", '⋕')),

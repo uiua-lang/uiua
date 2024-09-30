@@ -7,6 +7,7 @@ use std::{
     f64::consts::{PI, TAU},
     iter,
     mem::size_of,
+    ops::Neg,
     ptr, slice,
     time::Duration,
 };
@@ -86,8 +87,12 @@ impl Value {
         Ok(match (self, self.shape().dims()) {
             (Value::Char(arr), [] | [_]) => {
                 let mut s: String = arr.data.iter().copied().collect();
-                match s.strip_suffix("i").and_then(|s| s.split_once("r")) {
-                    Some((re, im)) => {
+                match (
+                    s.strip_suffix("i").and_then(|s| s.split_once("r")),
+                    s.strip_suffix("i").and_then(|s| s.split_once("+")),
+                    s.strip_suffix("i").and_then(|s| s.split_once("-")),
+                ) {
+                    (Some((re, im)), None, _) | (None, Some((re, im)), _) => {
                         let re_parsed = Self::from(re).parse_num(env)?;
                         let im_parsed = Self::from(im).parse_num(env)?;
                         Complex {
@@ -96,7 +101,16 @@ impl Value {
                         }
                         .into()
                     }
-                    None => {
+                    (_, _, Some((re, im))) => {
+                        let re_parsed = Self::from(re).parse_num(env)?;
+                        let im_parsed = Self::from(im).parse_num(env)?;
+                        Complex {
+                            re: re_parsed.as_num(env, "")?,
+                            im: im_parsed.as_num(env, "")?.neg(),
+                        }
+                        .into()
+                    }
+                    _ => {
                         let mut mul = 1.0;
                         if s.contains('¯') {
                             s = s.replace('¯', "-");

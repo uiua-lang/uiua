@@ -1388,7 +1388,6 @@ primitive!(
     /// [orient]`¯1` is equivalent to [un][transpose].
     /// ex: °△ 2_3_4
     ///   : ∩△ ⊃°⍉(⤸¯1)
-    /// Currently, all uses of [orient] can be written with sequences of [transpose] and [rows].
     (2, Orient, DyadicArray, ("orient", '⤸')),
     /// The n-wise windows of an array
     ///

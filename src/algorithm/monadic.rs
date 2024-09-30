@@ -5,6 +5,8 @@ use std::{
     collections::{HashMap, HashSet},
     convert::identity,
     f64::consts::{PI, TAU},
+    fmt,
+    io::Write,
     iter,
     mem::size_of,
     ptr, slice,
@@ -172,27 +174,77 @@ impl Value {
                 value => Ok(value.format().into()),
             };
         }
+
+        fn padded<T: fmt::Display>(c: char, arr: &Array<T>, env: &Uiua) -> UiuaResult<Array<char>> {
+            let mut buf = Vec::new();
+            let mut max_whole = 0;
+            let mut max_dec = 0;
+            for v in &arr.data {
+                buf.clear();
+                write!(&mut buf, "{v}").unwrap();
+                if let Some(i) = buf.iter().position(|&c| c == b'.') {
+                    max_whole = max_whole.max(i);
+                    max_dec = max_dec.max(buf.len() - i - 1);
+                } else {
+                    max_whole = max_whole.max(buf.len());
+                }
+            }
+            let max_len = if max_dec == 0 {
+                max_whole
+            } else {
+                max_whole + max_dec + 1
+            };
+            let mut new_shape = arr.shape().clone();
+            new_shape.push(max_len);
+            let elem_count = validate_size::<char>(new_shape.iter().copied(), env)?;
+            let mut new_data = eco_vec![c; elem_count];
+            if max_len > 0 {
+                for (i, s) in new_data.make_mut().chunks_exact_mut(max_len).enumerate() {
+                    let n = arr.data[i].to_string();
+                    let dot_pos = n.find('.');
+                    let skip = dot_pos
+                        .map(|i| max_dec - (n.len() - i - 1))
+                        .unwrap_or(max_dec + 1);
+                    for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
+                        *s = c;
+                    }
+                    if dot_pos.is_none() && max_dec > 0 && c.is_ascii_digit() {
+                        s[max_whole] = '.';
+                    }
+                }
+            }
+            Ok(Array::new(new_shape, new_data))
+        }
+
         Ok(match self {
-            Value::Num(nums) => {
-                let new_data: CowSlice<Boxed> = (nums.data.iter().map(|v| v.to_string()))
-                    .map(Value::from)
-                    .map(Boxed)
-                    .collect();
-                Array::new(nums.shape.clone(), new_data).into()
+            Value::Num(arr) => {
+                if let Ok(c) = env.char_scalar_fill() {
+                    padded(c, arr, env)?.into()
+                } else {
+                    let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
+                        .map(Value::from)
+                        .map(Boxed)
+                        .collect();
+                    Array::new(arr.shape.clone(), new_data).into()
+                }
             }
-            Value::Byte(bytes) => {
-                let new_data: CowSlice<Boxed> = (bytes.data.iter().map(|v| v.to_string()))
-                    .map(Value::from)
-                    .map(Boxed)
-                    .collect();
-                Array::new(bytes.shape.clone(), new_data).into()
+            Value::Byte(arr) => {
+                if let Ok(c) = env.char_scalar_fill() {
+                    padded(c, arr, env)?.into()
+                } else {
+                    let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
+                        .map(Value::from)
+                        .map(Boxed)
+                        .collect();
+                    Array::new(arr.shape.clone(), new_data).into()
+                }
             }
-            Value::Complex(complexes) => {
-                let new_data: CowSlice<Boxed> = (complexes.data.iter().map(|v| v.to_string()))
+            Value::Complex(arr) => {
+                let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
                     .map(Value::from)
                     .map(Boxed)
                     .collect();
-                Array::new(complexes.shape.clone(), new_data).into()
+                Array::new(arr.shape.clone(), new_data).into()
             }
             val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
         })

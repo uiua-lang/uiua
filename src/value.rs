@@ -1529,6 +1529,18 @@ impl Value {
     }
 }
 
+fn optimize_types(a: Value, b: Value) -> (Value, Value) {
+    match (a, b) {
+        (Value::Num(a), Value::Byte(b)) if a.element_count() > b.element_count() => {
+            (a.into(), b.convert::<f64>().into())
+        }
+        (Value::Byte(a), Value::Num(b)) if a.element_count() < b.element_count() => {
+            (a.convert::<f64>().into(), b.into())
+        }
+        (a, b) => (a, b),
+    }
+}
+
 macro_rules! value_bin_impl {
     ($name:ident, $(
         $(($na:ident, $nb:ident, $f1:ident))*
@@ -1536,10 +1548,11 @@ macro_rules! value_bin_impl {
     ),* ) => {
         impl Value {
             #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
-            pub(crate) fn $name(mut self, mut other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
-                self.match_fill(env);
-                other.match_fill(env);
-                self.keep_metas(other, |a, b| { Ok(match (a, b) {
+            pub(crate) fn $name(self, other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
+                let (mut a, mut b) = optimize_types(self, other);
+                a.match_fill(env);
+                b.match_fill(env);
+                a.keep_metas(b, |a, b| { Ok(match (a, b) {
                     $($((Value::$ip(mut a), Value::$ip(mut b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;
                         f(a.meta()) && f(b.meta())

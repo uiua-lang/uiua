@@ -333,8 +333,10 @@ mod tests {
                 return;
             }
             let contents = std::fs::read_to_string(path).unwrap();
-            if contents.contains("dbg!") {
-                panic!("File {} contains a dbg! macro", path.display());
+            for line in contents.lines() {
+                if line.contains("dbg!") && !line.trim().starts_with("//") {
+                    panic!("File {} contains a dbg! macro", path.display());
+                }
             }
         });
         if crate::algorithm::invert::DEBUG {

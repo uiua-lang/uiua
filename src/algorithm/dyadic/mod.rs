@@ -26,8 +26,7 @@ use crate::{
 };
 
 use super::{
-    pervade::ArrayRef, shape_prefixes_match, validate_size, validate_size_of, ArrayCmpSlice,
-    FillContext, SizeError,
+    shape_prefixes_match, validate_size, validate_size_of, ArrayCmpSlice, FillContext, SizeError,
 };
 
 impl Value {
@@ -1425,11 +1424,13 @@ impl Array<f64> {
             let mut i = 0;
             for b_row in b.row_slices() {
                 _ = bin_pervade_recursive(
-                    ArrayRef::new(&a_row_shape, a_row),
-                    ArrayRef::new(&b_row_shape, b_row),
+                    (a_row, &a_row_shape),
+                    (b_row, &b_row_shape),
                     &mut prod_row,
-                    env,
+                    None,
+                    None,
                     InfalliblePervasiveFn::new(pervade::mul::num_num),
+                    env,
                 );
                 let (sum, rest) = prod_row.split_at_mut(prod_elems);
                 for chunk in rest.chunks_exact(prod_elems) {

@@ -321,7 +321,7 @@ impl Assembly {
                         }
                     }
                 }
-                serde_json::Value::String(s) => {
+                serde_json::Value::String(s) if !s.trim().is_empty() => {
                     uasm.push_str(s);
                     uasm.push('\n');
                     continue;

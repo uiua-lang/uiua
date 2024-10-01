@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    collections::HashSet,
+    collections::{hash_map::DefaultHasher, HashSet},
     fmt,
     hash::{Hash, Hasher},
     ops::{Add, AddAssign, BitAnd, BitOr, BitOrAssign},
@@ -19,110 +19,217 @@ use crate::{
     Assembly, BindingKind, Ident, NewFunction,
 };
 
-/// A Uiua bytecode instruction
-#[derive(Clone)]
-#[repr(u8)]
-#[allow(missing_docs)]
-pub enum Instr {
-    /// A comment
-    Comment(Ident) = 0,
-    /// Push a value onto the stack
-    Push(Value),
-    /// Push a global value onto the stack
-    CallGlobal {
-        index: usize,
-        call: bool,
-        sig: Signature,
-    },
-    /// Bind a global value
-    BindGlobal {
-        span: usize,
-        index: usize,
-    },
-    /// Begin an array
-    BeginArray,
-    /// End an array
-    EndArray {
-        boxed: bool,
-        span: usize,
-    },
-    /// Execute a primitive
-    Prim(Primitive, usize),
-    /// Execute an implementation primitive
-    ImplPrim(ImplPrimitive, usize),
-    /// Call a function
-    Call(usize),
-    /// Call a recursive function
-    CallRecursive(usize),
-    /// Recur
-    Recur(usize),
-    /// Push a function onto the function stack
-    PushFunc(Function),
-    /// Execute a switch
-    Switch {
-        count: usize,
-        sig: Signature,
-        span: usize,
-        under_cond: bool,
-    },
-    /// Do a format string
-    Format {
-        parts: EcoVec<EcoString>,
-        span: usize,
-    },
-    /// Match a format string pattern
-    MatchFormatPattern {
-        parts: EcoVec<EcoString>,
-        span: usize,
-    },
-    /// Execute a stack swizzle
-    StackSwizzle(StackSwizzle, usize),
-    /// Label an array
-    Label {
-        label: EcoString,
-        span: usize,
-        remove: bool,
-    },
-    /// Validate a field type
-    ValidateType {
-        index: usize,
-        name: EcoString,
-        type_num: u8,
-        span: usize,
-    },
-    /// Call a dynamic function
-    Dynamic(DynamicFunction),
-    Unpack {
-        count: usize,
-        span: usize,
-        unbox: bool,
-    },
-    TouchStack {
-        count: usize,
-        span: usize,
-    },
-    PushTemp {
-        stack: TempStack,
-        count: usize,
-        span: usize,
-    },
-    PopTemp {
-        stack: TempStack,
-        count: usize,
-        span: usize,
-    },
-    CopyToTemp {
-        stack: TempStack,
-        count: usize,
-        span: usize,
-    },
-    SetOutputComment {
-        i: usize,
-        n: usize,
-    },
-    PushSig(Signature),
-    PopSig,
+macro_rules! instr {
+    ($((
+        $num:literal,
+        $(#[$attr:meta])*
+        $name:ident
+        $(($($tup_name:ident($tup_type:ty)),* $(,)?))?
+        $({$($field_name:ident : $field_type:ty),* $(,)?})?
+    )),* $(,)?) => {
+        /// A Uiua bytecode instruction
+        #[derive(Clone, Serialize, Deserialize)]
+        #[repr(u8)]
+        #[allow(missing_docs)]
+        #[serde(from = "InstrRep", into = "InstrRep")]
+        pub enum Instr {
+            $(
+                $(#[$attr])*
+                $name $(($($tup_type),*))? $({$($field_name : $field_type),*})? = $num,
+            )*
+        }
+
+        impl PartialEq for Instr {
+            #[allow(unused_variables)]
+            fn eq(&self, other: &Self) -> bool {
+                let mut hasher = DefaultHasher::new();
+                self.hash(&mut hasher);
+                let hash = hasher.finish();
+                let mut other_hasher = DefaultHasher::new();
+                other.hash(&mut other_hasher);
+                let other_hash = other_hasher.finish();
+                hash == other_hash
+            }
+        }
+
+        impl Eq for Instr {}
+
+        impl Hash for Instr {
+            #[allow(unused_variables)]
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                macro_rules! hash_field {
+                    (span) => {};
+                    ($nm:ident) => {Hash::hash($nm, state)};
+                }
+                match self {
+                    $(
+                        Self::$name $(($($tup_name),*))? $({$($field_name),*})? => {
+                            $num.hash(state);
+                            $($(hash_field!($field_name);)*)?
+                            $($(hash_field!($tup_name);)*)?
+                        }
+                    )*
+                }
+            }
+        }
+
+        #[derive(Serialize, Deserialize)]
+        pub(crate) enum InstrRep {
+            $(
+                $name(
+                    $($($tup_type),*)?
+                    $($($field_type),*)?
+                ),
+            )*
+        }
+
+        impl From<InstrRep> for Instr {
+            fn from(rep: InstrRep) -> Self {
+                match rep {
+                    $(
+                        InstrRep::$name (
+                            $($($tup_name,)*)?
+                            $($($field_name,)*)?
+                        ) => Self::$name $(($($tup_name),*))? $({$($field_name),*})?,
+                    )*
+                }
+            }
+        }
+
+        impl From<Instr> for InstrRep {
+            fn from(instr: Instr) -> Self {
+                match instr {
+                    $(
+                        Instr::$name $(($($tup_name),*))? $({$($field_name),*})? => InstrRep::$name (
+                            $($($tup_name),*)?
+                            $($($field_name),*)?
+                        ),
+                    )*
+                }
+            }
+        }
+    };
 }
+
+instr!(
+    (0, Comment(text(Ident))),
+    (1, Push(val(Value))),
+    (
+        2,
+        CallGlobal {
+            index: usize,
+            call: bool,
+            sig: Signature,
+        }
+    ),
+    (
+        3,
+        BindGlobal {
+            index: usize,
+            span: usize,
+        }
+    ),
+    (4, BeginArray),
+    (
+        5,
+        EndArray {
+            boxed: bool,
+            span: usize,
+        }
+    ),
+    (6, Prim(prim(Primitive), span(usize))),
+    (7, ImplPrim(prim(ImplPrimitive), span(usize))),
+    (8, Call(span(usize))),
+    (9, CallRecursive(span(usize))),
+    (10, Recur(span(usize))),
+    (11, PushFunc(func(Function))),
+    (
+        12,
+        Switch {
+            count: usize,
+            sig: Signature,
+            under_cond: bool,
+            span: usize,
+        }
+    ),
+    (
+        13,
+        Format {
+            parts: FmtParts,
+            span: usize,
+        }
+    ),
+    (
+        14,
+        MatchFormatPattern {
+            parts: FmtParts,
+            span: usize,
+        }
+    ),
+    (15, StackSwizzle(swiz(StackSwizzle), span(usize))),
+    (
+        16,
+        Label {
+            label: EcoString,
+            remove: bool,
+            span: usize,
+        }
+    ),
+    (
+        17,
+        ValidateType {
+            index: usize,
+            type_num: u8,
+            name: EcoString,
+            span: usize,
+        }
+    ),
+    (18, Dynamic(func(DynamicFunction))),
+    (
+        19,
+        Unpack {
+            count: usize,
+            unbox: bool,
+            span: usize,
+        }
+    ),
+    (
+        20,
+        TouchStack {
+            count: usize,
+            span: usize,
+        }
+    ),
+    (
+        21,
+        PushTemp {
+            stack: TempStack,
+            count: usize,
+            span: usize,
+        }
+    ),
+    (
+        22,
+        PopTemp {
+            stack: TempStack,
+            count: usize,
+            span: usize,
+        }
+    ),
+    (
+        23,
+        CopyToTemp {
+            stack: TempStack,
+            count: usize,
+            span: usize,
+        }
+    ),
+    (24, SetOutputComment { i: usize, n: usize }),
+    (25, PushSig(sig(Signature))),
+    (26, PopSig),
+);
+
+type FmtParts = EcoVec<EcoString>;
 
 /// A type of temporary stacks
 #[derive(
@@ -142,178 +249,6 @@ impl fmt::Display for TempStack {
         match self {
             Self::Under => write!(f, "under"),
             Self::Inline => write!(f, "inline"),
-        }
-    }
-}
-
-impl PartialEq for Instr {
-    fn eq(&self, other: &Self) -> bool {
-        // Comparison ignores spans
-        match (self, other) {
-            (Self::Comment(a), Self::Comment(b)) => a == b,
-            (Self::Push(a), Self::Push(b)) => a == b,
-            (
-                Self::CallGlobal {
-                    index: index_a,
-                    call: call_a,
-                    sig: sig_a,
-                },
-                Self::CallGlobal {
-                    index: index_b,
-                    call: call_b,
-                    sig: sig_b,
-                },
-            ) => index_a == index_b && call_a == call_b && sig_a == sig_b,
-            (Self::BindGlobal { index: a, .. }, Self::BindGlobal { index: b, .. }) => a == b,
-            (Self::BeginArray, Self::BeginArray) => true,
-            (Self::EndArray { boxed: a, .. }, Self::EndArray { boxed: b, .. }) => a == b,
-            (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
-            (Self::ImplPrim(a, _), Self::ImplPrim(b, _)) => a == b,
-            (Self::Call(_), Self::Call(_)) => true,
-            (Self::CallRecursive(_), Self::CallRecursive(_)) => true,
-            (Self::Recur(_), Self::Recur(_)) => true,
-            (Self::PushFunc(a), Self::PushFunc(b)) => a == b,
-            (
-                Self::Switch {
-                    count: count_a,
-                    sig: sig_a,
-                    under_cond: under_cond_a,
-                    ..
-                },
-                Self::Switch {
-                    count: count_b,
-                    sig: sig_b,
-                    under_cond: under_cond_b,
-                    ..
-                },
-            ) => count_a == count_b && sig_a == sig_b && under_cond_a == under_cond_b,
-            (Self::Format { parts: a, .. }, Self::Format { parts: b, .. }) => a == b,
-            (
-                Self::MatchFormatPattern { parts: a, .. },
-                Self::MatchFormatPattern { parts: b, .. },
-            ) => a == b,
-            (Self::StackSwizzle(a, _), Self::StackSwizzle(b, _)) => a == b,
-            (Self::Label { label: a, .. }, Self::Label { label: b, .. }) => a == b,
-            (
-                Self::ValidateType {
-                    index: index_a,
-                    type_num: type_num_a,
-                    name: name_a,
-                    ..
-                },
-                Self::ValidateType {
-                    index: index_b,
-                    type_num: type_num_b,
-                    name: name_b,
-                    ..
-                },
-            ) => index_a == index_b && type_num_a == type_num_b && name_a == name_b,
-            (Self::Dynamic(a), Self::Dynamic(b)) => a == b,
-            (
-                Self::Unpack {
-                    count: count_a,
-                    unbox: unbox_a,
-                    ..
-                },
-                Self::Unpack {
-                    count: count_b,
-                    unbox: unbox_b,
-                    ..
-                },
-            ) => count_a == count_b && unbox_a == unbox_b,
-            (Self::TouchStack { count: count_a, .. }, Self::TouchStack { count: count_b, .. }) => {
-                count_a == count_b
-            }
-            (
-                Self::PushTemp {
-                    stack: stack_a,
-                    count: count_a,
-                    ..
-                },
-                Self::PushTemp {
-                    stack: stack_b,
-                    count: count_b,
-                    ..
-                },
-            ) => stack_a == stack_b && count_a == count_b,
-            (
-                Self::PopTemp {
-                    stack: stack_a,
-                    count: count_a,
-                    ..
-                },
-                Self::PopTemp {
-                    stack: stack_b,
-                    count: count_b,
-                    ..
-                },
-            ) => stack_a == stack_b && count_a == count_b,
-            (
-                Self::CopyToTemp {
-                    stack: stack_a,
-                    count: count_a,
-                    ..
-                },
-                Self::CopyToTemp {
-                    stack: stack_b,
-                    count: count_b,
-                    ..
-                },
-            ) => stack_a == stack_b && count_a == count_b,
-            (
-                Self::SetOutputComment { i: i_a, n: n_a, .. },
-                Self::SetOutputComment { i: i_b, n: n_b, .. },
-            ) => i_a == i_b && n_a == n_b,
-            (Self::PushSig(sig_a), Self::PushSig(sig_b)) => sig_a == sig_b,
-            (Self::PopSig, Self::PopSig) => true,
-            _ => false,
-        }
-    }
-}
-
-impl Eq for Instr {}
-
-impl Hash for Instr {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        // Hashing ignores spans
-        match self {
-            Instr::Comment(comment) => (0, comment).hash(state),
-            Instr::Push(val) => (1, val).hash(state),
-            Instr::CallGlobal { index, call, sig } => (2, index, call, sig).hash(state),
-            Instr::BindGlobal { index, .. } => (3, index).hash(state),
-            Instr::BeginArray => (4).hash(state),
-            Instr::EndArray { boxed, .. } => (5, boxed).hash(state),
-            Instr::Prim(prim, _) => (6, prim).hash(state),
-            Instr::ImplPrim(prim, _) => (7, prim).hash(state),
-            Instr::Call(_) => 8.hash(state),
-            Instr::CallRecursive(_) => 9.hash(state),
-            Instr::Recur(_) => 10.hash(state),
-            Instr::PushFunc(func) => (11, func).hash(state),
-            Instr::Switch {
-                count,
-                sig,
-                under_cond,
-                ..
-            } => (12, count, sig, under_cond).hash(state),
-            Instr::Format { parts, .. } => (13, parts).hash(state),
-            Instr::MatchFormatPattern { parts, .. } => (14, parts).hash(state),
-            Instr::StackSwizzle(swizzle, _) => (15, swizzle).hash(state),
-            Instr::Label { label, .. } => (16, label).hash(state),
-            Instr::ValidateType {
-                index,
-                type_num,
-                name,
-                ..
-            } => (17, index, type_num, name).hash(state),
-            Instr::Dynamic(df) => (18, df).hash(state),
-            Instr::Unpack { count, unbox, .. } => (19, count, unbox).hash(state),
-            Instr::TouchStack { count, .. } => (20, count).hash(state),
-            Instr::PushTemp { stack, count, .. } => (21, stack, count).hash(state),
-            Instr::PopTemp { stack, count, .. } => (22, stack, count).hash(state),
-            Instr::CopyToTemp { stack, count, .. } => (23, stack, count).hash(state),
-            Instr::SetOutputComment { i, n, .. } => (24, i, n).hash(state),
-            Instr::PushSig(sig) => (25, sig).hash(state),
-            Instr::PopSig => 26.hash(state),
         }
     }
 }

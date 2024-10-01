@@ -13,7 +13,14 @@ pub struct ConstantDef {
     /// The constant's value
     pub value: Lazy<ConstantValue>,
     /// The constant's documentation
-    pub doc: &'static str,
+    pub doc: Lazy<String>,
+}
+
+impl ConstantDef {
+    /// Get the constant's documentation
+    pub fn doc(&self) -> &str {
+        &self.doc
+    }
 }
 
 /// The value of a shadowable constant
@@ -75,8 +82,7 @@ where
 }
 
 macro_rules! constant {
-    ($(#[doc = $doc:literal] $(#[$attr:meta])* ($name:literal, $value:expr)),* $(,)?) => {
-        #[allow(unused)]
+    ($($(#[doc = $doc:literal])+ ($(#[$attr:meta])* $name:literal, $value:expr)),* $(,)?) => {
         const COUNT: usize = {
             let mut count = 0;
             $(
@@ -89,14 +95,21 @@ macro_rules! constant {
             count
         };
         /// The list of all shadowable constants
-        #[allow(unused)]
         pub static CONSTANTS: [ConstantDef; COUNT] =
             [$(
                 $(#[$attr])*
                 ConstantDef {
                     name: $name,
                     value: Lazy::new(|| {$value.into()}),
-                    doc: $doc,
+                    doc: Lazy::new(|| {
+                        let mut s = String::new();
+                        $(
+                            s.push_str($doc.trim());
+                            s.push('\n');
+                        )*
+                        s.pop();
+                        s
+                    }),
                 },
             )*];
     };
@@ -254,16 +267,12 @@ constant!(
     /// Emoji hair components
     ("Hair", "🦰🦱🦲🦳"),
     /// The Uiua logo
-    #[cfg(feature = "image")]
-    ("Logo", crate::encode::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
+    (#[cfg(feature = "image")] "Logo", crate::encode::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
     /// Ethically sourced Lena picture
-    ///
     /// Morten Rieger Hannemose
-    /// Recreated Lena Picture
     /// 2019
     /// https://mortenhannemose.github.io/lena/
-    #[cfg(feature = "image")]
-    ("Lena", crate::encode::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
+    (#[cfg(feature = "image")] "Lena", crate::encode::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
     /// Sample music data
     ("Music", ConstantValue::Music),
     /// Lorem Ipsum text

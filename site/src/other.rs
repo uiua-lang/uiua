@@ -198,7 +198,22 @@ pub fn Constants() -> impl IntoView {
     let constants = CONSTANTS
         .iter()
         .filter(|con| !con.doc.trim().is_empty())
-        .map(|con| view!(<p><Const con=con/>" - "{ con.doc }</p>))
+        .map(|con| {
+            view!(<tr>
+                <td><Const con=con/></td>
+                <td><div class="const-desc">{
+                    if let Some(i) = con.doc().find("https://") {
+                        let url = con.doc()[i..].trim();
+                        view!(
+                            {&con.doc()[..i]}
+                            <a href={url}>{url}</a>
+                        ).into_view()
+                    } else {
+                        con.doc().into_view()
+                    }
+                 }</div></td>
+            </tr>)
+        })
         .collect::<Vec<_>>();
     view! {
         <Title text="Constants - Uiua Docs"/>
@@ -207,7 +222,13 @@ pub fn Constants() -> impl IntoView {
         <Editor example="e\ne ← 5\ne"/>
         <br/>
         <div>
-        { constants }
+        <table class="bordered-table">
+            <tr>
+                <th>"Name"</th>
+                <th>"Description"</th>
+            </tr>
+            { constants }
+        </table>
         </div>
     }
 }

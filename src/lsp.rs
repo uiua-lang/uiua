@@ -310,7 +310,7 @@ impl Spanner {
             let val = constant.value.resolve(path, sys);
             return Some(BindingDocs {
                 src_span: span.clone(),
-                comment: Some(constant.doc.into()),
+                comment: Some(constant.doc().into()),
                 is_public: true,
                 kind: BindingDocsKind::Constant(Some(val)),
                 escape: None,
@@ -1231,7 +1231,7 @@ mod server {
                 completions.push(CompletionItem {
                     label: constant.name.into(),
                     kind: Some(CompletionItemKind::CONSTANT),
-                    detail: Some(constant.doc.into()),
+                    detail: Some(constant.doc().into()),
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                         range: uiua_span_to_lsp(&sp.span),
                         new_text: constant.name.into(),

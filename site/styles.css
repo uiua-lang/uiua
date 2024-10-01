@@ -1183,6 +1183,11 @@ input[type=text] {
     align-items: center;
 }
 
+.const-desc {
+    display: inline-block;
+    white-space: pre-wrap;
+}
+
 .running-text {
     animation: fadeAnimation 1s infinite;
 }

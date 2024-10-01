@@ -491,7 +491,7 @@ primitive!(
     /// Duplicate the top of the stack to the third-to-top position, around the second element
     ///
     /// ex: [' 1 2 3 4 5]
-    (2(3), Around, Stack, ("around", '\'')),
+    (2(3), Around, Stack, ("around", AsciiToken::Quote, '’')),
     /// Swap the top two values on the stack
     ///
     /// ex: [: 1 2 3 4 5]

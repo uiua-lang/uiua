@@ -792,6 +792,13 @@ impl Primitive {
                 env.push(a);
                 env.push(b);
             }
+            Primitive::Around => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                env.push(a.clone());
+                env.push(b);
+                env.push(a);
+            }
             Primitive::Pop => {
                 env.pop(1)?;
             }

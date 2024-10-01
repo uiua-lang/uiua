@@ -807,22 +807,23 @@ impl<'a> Formatter<'a> {
         let words = trim_spaces(words, trim_end);
         for (i, word) in words.iter().enumerate() {
             self.format_word(word, depth);
-            if word_is_multiline(&word.value)
-                && self.output.ends_with(')')
-                && !self.output.ends_with("()")
-                && i < words.len() - 1
-            {
-                self.output.pop();
-                while self.output.ends_with(' ') {
-                    self.output.pop();
+            if word_is_multiline(&word.value) && i < words.len() - 1 {
+                for (end, empty) in [(')', "()"), (']', "[]"), ('}', "{}")] {
+                    if self.output.ends_with(end) && !self.output.ends_with(empty) {
+                        self.output.pop();
+                        while self.output.ends_with(' ') {
+                            self.output.pop();
+                        }
+                        if !self.output.ends_with('\n') {
+                            self.output.push('\n');
+                        }
+                        for _ in 0..self.config.multiline_indent * depth {
+                            self.output.push(' ');
+                        }
+                        self.output.push(end);
+                        break;
+                    }
                 }
-                if !self.output.ends_with('\n') {
-                    self.output.push('\n');
-                }
-                for _ in 0..self.config.multiline_indent * depth {
-                    self.output.push(' ');
-                }
-                self.output.push(')');
             }
         }
     }
@@ -971,14 +972,7 @@ impl<'a> Formatter<'a> {
                 let indent = self.config.multiline_indent * depth;
                 let allow_compact = start_indent <= indent + 2;
 
-                self.format_multiline_words(
-                    &arr.lines,
-                    allow_compact,
-                    true,
-                    false,
-                    true,
-                    depth + 1,
-                );
+                self.format_multiline_words(&arr.lines, allow_compact, true, true, true, depth + 1);
                 if arr.boxes {
                     self.output.push('}');
                 } else {

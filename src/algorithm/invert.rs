@@ -12,12 +12,12 @@ use ecow::{eco_vec, EcoString, EcoVec};
 use regex::Regex;
 
 use crate::{
-    check::{instrs_clean_signature, instrs_signature, SigCheckError},
+    check::{instrs_clean_signature, instrs_signature, naive_under_sig, SigCheckError},
     instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
     Array, Assembly, BindingKind, Compiler, Complex, FmtInstrs, Function, FunctionFlags,
     FunctionId, Instr, NewFunction, Purity, Signature, Span, SysOp, TempStack, Uiua, UiuaResult,
-    Value,
+    UnderedFunctions, Value,
 };
 
 use super::IgnoreError;
@@ -31,6 +31,9 @@ pub enum InversionError {
     TooManyInstructions,
     Signature(SigCheckError),
     InnerFunc(Vec<FunctionId>, Box<Self>),
+    AsymmetricUnderSig(Signature),
+    ComplexInvertedUnder,
+    UnderExperimental,
 }
 
 type InversionResult<T = ()> = Result<T, InversionError>;
@@ -50,6 +53,24 @@ impl fmt::Display for InversionError {
                 }
                 let inner = inner.to_string().to_lowercase();
                 write!(f, " {inner}")
+            }
+            InversionError::AsymmetricUnderSig(sig) => {
+                write!(
+                    f,
+                    "Cannot invert under with asymmetric \
+                    second function signature {sig}"
+                )
+            }
+            InversionError::ComplexInvertedUnder => {
+                write!(f, "This under itself is too complex to invert")
+            }
+            InversionError::UnderExperimental => {
+                write!(
+                    f,
+                    "Inversion of {} is experimental. To enable it, \
+                    add `# Experimental!` to the top of the file.",
+                    Primitive::Under.format()
+                )
             }
         }
     }
@@ -267,6 +288,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
     use ImplPrimitive::*;
     use Primitive::*;
     &[
+        &InvertPatternFn(invert_under_pattern, "under"),
         &InvertPatternFn(invert_flip_pattern, "flip"),
         &InvertPatternFn(invert_join_val_pattern, "join_val"),
         &InvertPatternFn(invert_join_pattern, "join"),
@@ -589,6 +611,7 @@ pub(crate) fn under_instrs(
 
     let patterns: &[&dyn UnderPattern] = &[
         // Hand-written patterns
+        &UnderPatternFn(under_under_pattern, "under"),
         &maybe_val!(UnderPatternFn(under_fill_pattern, "fill")),
         &UnderPatternFn(under_call_pattern, "call"),
         &UnderPatternFn(under_dump_pattern, "dump"),
@@ -846,7 +869,7 @@ pub(crate) fn under_instrs(
     comp.asm.instrs = comp_instrs_backup;
     // dbgln!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
-    generic()
+    Err(error)
 }
 
 fn resolve_uns(instrs: EcoVec<Instr>, comp: &mut Compiler) -> InversionResult<EcoVec<Instr>> {
@@ -960,6 +983,112 @@ invert_pat!(
     ),
     |input, comp| (input, EcoVec::from(f.instrs(&comp.asm)))
 );
+
+fn get_undered<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> InversionResult<(UnderedFunctions, &'a [Instr])> {
+    let res = if let [Instr::PushFunc(g), Instr::PushFunc(f), Instr::Prim(Primitive::Under, span), input @ ..] =
+        input
+    {
+        Ok((
+            UnderedFunctions {
+                f: EcoVec::from(f.instrs(&comp.asm)),
+                f_sig: f.signature(),
+                g: EcoVec::from(g.instrs(&comp.asm)),
+                g_sig: g.signature(),
+                span: *span,
+            },
+            input,
+        ))
+    } else if input.len() < 3 {
+        generic()
+    } else {
+        (0..=input.len())
+            .rev()
+            .find_map(|i| {
+                comp.undered_funcs
+                    .get(&input[..i])
+                    .map(|u| (u.clone(), &input[i..]))
+            })
+            .ok_or(Generic)
+    };
+    if res.is_ok() && !comp.scope.experimental {
+        return Err(InversionError::UnderExperimental);
+    }
+    res
+}
+
+fn invert_under_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
+    let (u, input) = get_undered(input, comp)?;
+    let UnderedFunctions {
+        f, f_sig, g, g_sig, ..
+    } = u;
+    if g_sig.args != g_sig.outputs {
+        return Err(InversionError::AsymmetricUnderSig(g_sig));
+    }
+    let (f_before, f_after) = under_instrs(&f, g_sig, comp)?;
+    let g_inv = invert_instrs(&g, comp)?;
+    let mut inverse = f_before;
+    inverse.extend(g_inv);
+    inverse.extend(f_after);
+    if instrs_signature(&inverse)? != naive_under_sig(f_sig, g_sig) {
+        return Err(InversionError::ComplexInvertedUnder);
+    }
+    Ok((input, inverse))
+}
+
+fn under_under_pattern<'a>(
+    input: &'a [Instr],
+    outer_g_sig: Signature,
+    comp: &mut Compiler,
+) -> InversionResult<(&'a [Instr], Under)> {
+    let (u, input) = get_undered(input, comp)?;
+    let UnderedFunctions {
+        f,
+        f_sig,
+        g,
+        g_sig,
+        span,
+    } = u;
+    if g_sig.args != g_sig.outputs {
+        return Err(InversionError::AsymmetricUnderSig(g_sig));
+    }
+    let (f_before, f_after) = under_instrs(&f, g_sig, comp)?;
+    let (g_before, g_after) = under_instrs(&g, outer_g_sig, comp)?;
+    let context_size = f_sig.args.saturating_sub(f_sig.outputs);
+
+    let mut before = EcoVec::new();
+    if context_size > 0 {
+        before.push(Instr::CopyToTemp {
+            stack: TempStack::Under,
+            count: context_size,
+            span,
+        });
+    }
+    before.extend(f_before.iter().cloned());
+    before.extend(g_before);
+    before.extend(f_after.iter().cloned());
+    if instrs_signature(&before)? != naive_under_sig(f_sig, g_sig) {
+        return Err(InversionError::ComplexInvertedUnder);
+    }
+
+    let mut after = EcoVec::new();
+    if context_size > 0 {
+        after.push(Instr::PopTemp {
+            stack: TempStack::Under,
+            count: context_size,
+            span,
+        });
+    }
+    after.extend(f_before);
+    after.extend(g_after);
+    after.extend(f_after);
+    Ok((input, (before, after)))
+}
 
 fn under_un_pattern<'a>(
     input: &'a [Instr],

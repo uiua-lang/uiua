@@ -21,7 +21,8 @@ Tag Rss Tag "channel" ⊂ {
   Tag "description" $ Blog of the Uiua Programming Language
   Tag "link" $ https://uiua.org/blog
   Tag AtomLink ""
-  Tag "lastBuildDate" Date now} ⍚(
+  Tag "lastBuildDate" Date now
+} ⍚(
   ⊙⊙(Date °datetime ⋕⊜□⊸≠@-) # Convert date
   Tag "item" {
     ⊓(Tag "link" $"https://uiua.org/blog/_"

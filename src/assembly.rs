@@ -1,4 +1,4 @@
-use std::{fmt, iter::once, path::PathBuf, sync::Arc};
+use std::{fmt, path::PathBuf, str::FromStr, sync::Arc};
 
 use dashmap::DashMap;
 use ecow::{eco_vec, EcoString, EcoVec};
@@ -321,7 +321,7 @@ impl Assembly {
                         }
                     }
                 }
-                serde_json::Value::String(s) => {
+                serde_json::Value::String(s) if !s.trim().is_empty() => {
                     uasm.push_str(s);
                     uasm.push('\n');
                     continue;
@@ -518,6 +518,66 @@ pub struct DocCommentArg {
     pub ty: Option<EcoString>,
 }
 
+impl FromStr for DocCommentSig {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.trim_end().ends_with('?') && !s.trim_end().ends_with(" ?")
+            || !(s.chars()).all(|c| c.is_whitespace() || "?:".contains(c) || is_ident_char(c))
+        {
+            return Err(());
+        }
+        // Split into args and outputs
+        let (mut outputs_text, mut args_text) = s.split_once('?').ok_or(())?;
+        outputs_text = outputs_text.trim();
+        args_text = args_text.trim();
+        // Parse args and outputs
+        let mut args = Vec::new();
+        let mut outputs = Vec::new();
+        for (args, text) in [(&mut args, args_text), (&mut outputs, outputs_text)] {
+            // Tokenize text
+            let mut tokens = Vec::new();
+            for frag in text.split_whitespace() {
+                for (i, token) in frag.split(':').enumerate() {
+                    if i > 0 {
+                        tokens.push(":");
+                    }
+                    tokens.push(token);
+                }
+            }
+            // Parse tokens into args
+            let mut curr_arg_name = None;
+            let mut tokens = tokens.into_iter().peekable();
+            while let Some(token) = tokens.next() {
+                if token == ":" {
+                    let ty = tokens.next().unwrap_or_default();
+                    args.push(DocCommentArg {
+                        name: curr_arg_name.take().unwrap_or_default(),
+                        ty: if ty.is_empty() { None } else { Some(ty.into()) },
+                    });
+                } else {
+                    if let Some(curr) = curr_arg_name.take() {
+                        args.push(DocCommentArg {
+                            name: curr,
+                            ty: None,
+                        });
+                    }
+                    curr_arg_name = Some(token.into());
+                }
+            }
+            if let Some(curr) = curr_arg_name.take() {
+                args.push(DocCommentArg {
+                    name: curr,
+                    ty: None,
+                });
+            }
+        }
+        Ok(DocCommentSig {
+            args,
+            outputs: (!outputs.is_empty()).then_some(outputs),
+        })
+    }
+}
+
 impl From<String> for DocComment {
     fn from(text: String) -> Self {
         Self::from(text.as_str())
@@ -533,60 +593,10 @@ impl From<&str> for DocComment {
                 && (line.chars()).all(|c| c.is_whitespace() || "?:".contains(c) || is_ident_char(c))
         });
         let raw_text = if let Some(i) = sig_line {
-            let sig_text = text.lines().nth(i).unwrap();
-            // Split into args and outputs
-            let (mut outputs_text, mut args_text) = sig_text.split_once('?').unwrap();
-            outputs_text = outputs_text.trim();
-            args_text = args_text.trim();
-            // Parse args and outputs
-            let mut args = Vec::new();
-            let mut outputs = Vec::new();
-            for (args, text) in [(&mut args, args_text), (&mut outputs, outputs_text)] {
-                // Tokenize text
-                let mut tokens = Vec::new();
-                for frag in text.split_whitespace() {
-                    for (i, token) in frag.split(':').enumerate() {
-                        if i > 0 {
-                            tokens.push(":");
-                        }
-                        tokens.push(token);
-                    }
-                }
-                // Parse tokens into args
-                let mut curr_arg_name = None;
-                let mut tokens = tokens.into_iter().peekable();
-                while let Some(token) = tokens.next() {
-                    if token == ":" {
-                        let ty = tokens.next().unwrap_or_default();
-                        args.push(DocCommentArg {
-                            name: curr_arg_name.take().unwrap_or_default(),
-                            ty: if ty.is_empty() { None } else { Some(ty.into()) },
-                        });
-                    } else {
-                        if let Some(curr) = curr_arg_name.take() {
-                            args.push(DocCommentArg {
-                                name: curr,
-                                ty: None,
-                            });
-                        }
-                        curr_arg_name = Some(token.into());
-                    }
-                }
-                if let Some(curr) = curr_arg_name.take() {
-                    args.push(DocCommentArg {
-                        name: curr,
-                        ty: None,
-                    });
-                }
-            }
-
-            sig = Some(DocCommentSig {
-                args,
-                outputs: (!outputs.is_empty()).then_some(outputs),
-            });
+            sig = text.lines().nth(i).unwrap().parse().ok();
 
             let mut text: EcoString = (text.lines().take(i))
-                .chain(once("\n"))
+                .chain(["\n"])
                 .chain(text.lines().skip(i + 1))
                 .flat_map(|s| s.chars().chain(Some('\n')))
                 .collect();

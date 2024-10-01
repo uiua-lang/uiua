@@ -35,10 +35,10 @@ use crate::{
     lsp::{CodeMeta, ImportSrc, SigDecl},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, flip_unsplit_lines, parse, split_words},
-    Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, GitTarget, Ident,
-    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment,
-    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA,
-    SUBSCRIPT_NUMS, VERSION,
+    Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, DocCommentSig,
+    GitTarget, Ident, ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode,
+    SemanticComment, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
+    EXAMPLE_UA, SUBSCRIPT_NUMS, VERSION,
 };
 
 /// The Uiua compiler
@@ -53,7 +53,7 @@ pub struct Compiler {
     /// The index of the next global binding
     next_global: usize,
     /// The current scope
-    scope: Scope,
+    pub(crate) scope: Scope,
     /// Ancestor scopes of the current one
     higher_scopes: Vec<Scope>,
     /// Determines which How test scopes are run
@@ -74,6 +74,10 @@ pub struct Compiler {
     in_try: bool,
     /// Whether the compiler is in a test
     in_test: bool,
+    /// Map of instructions to undered functions that created them
+    ///
+    /// This is used to under functions that have already been inlined
+    pub(crate) undered_funcs: HashMap<EcoVec<Instr>, UnderedFunctions>,
     /// Accumulated errors
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are deprecated
@@ -109,6 +113,7 @@ impl Default for Compiler {
             in_inverse: false,
             in_test: false,
             in_try: false,
+            undered_funcs: HashMap::new(),
             errors: Vec::new(),
             deprecated_prim_errors: HashSet::new(),
             diagnostics: BTreeSet::new(),
@@ -202,6 +207,15 @@ struct CurrentBinding {
     global_index: usize,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct UnderedFunctions {
+    pub f: EcoVec<Instr>,
+    pub f_sig: Signature,
+    pub g: EcoVec<Instr>,
+    pub g_sig: Signature,
+    pub span: usize,
+}
+
 /// A scope where names are defined
 #[derive(Clone)]
 pub(crate) struct Scope {
@@ -213,7 +227,7 @@ pub(crate) struct Scope {
     /// Map local names to global indices
     names: IndexMap<Ident, LocalName>,
     /// Whether to allow experimental features
-    experimental: bool,
+    pub experimental: bool,
     /// Whether an error has been emitted for experimental features
     experimental_error: bool,
     /// Whether an error has been emitted for fill function signatures
@@ -579,7 +593,7 @@ code:
         // Compile top-level words
 
         // Populate prelude
-        for line in &lines {
+        for line in &mut lines {
             let mut words = line.iter().filter(|w| !matches!(w.value, Word::Spaces));
             if words.clone().count() == 1 {
                 let word = words.next().unwrap();
@@ -591,6 +605,7 @@ code:
                         } else {
                             prelude.comment = Some(c.as_str().into());
                         }
+                        line.clear();
                     }
                     Word::SemanticComment(SemanticComment::NoInline) => {
                         prelude.flags |= FunctionFlags::NO_INLINE;
@@ -625,6 +640,7 @@ code:
                     Word::Char(_) | Word::Number(..) | Word::String(_) | Word::MultilineString(_)
                 )
             });
+            let line_sig_comment = line_sig(&line);
             // Compile the words
             let instr_count_before = self.asm.instrs.len();
             let binding_count_before = self.asm.bindings.len();
@@ -635,6 +651,16 @@ code:
             let mut line_eval_errored = false;
             match instrs_signature(&new_func.instrs) {
                 Ok(sig) => {
+                    // Check doc comment sig
+                    if let Some(comment_sig) = line_sig_comment {
+                        if !comment_sig.value.matches_sig(sig) {
+                            self.emit_diagnostic(
+                                format!("Line signature {sig} does not match comment"),
+                                DiagnosticKind::Warning,
+                                comment_sig.span.clone(),
+                            );
+                        }
+                    }
                     // Update scope stack height
                     if let Ok(height) = &mut self.scope.stack_height {
                         *height = (*height + sig.outputs).saturating_sub(sig.args);
@@ -908,6 +934,23 @@ code:
             self.words(line, call)?;
         }
         Ok(self.new_functions.pop().unwrap())
+    }
+    // Compile a line, checking an end-of-line signature comment
+    fn compile_line(&mut self, line: Vec<Sp<Word>>, call: bool) -> UiuaResult<NewFunction> {
+        let comment_sig = line_sig(&line);
+        let new_func = self.compile_words(line, call)?;
+        if let Some(comment_sig) = comment_sig {
+            if let Ok(sig) = instrs_signature(&new_func.instrs) {
+                if !comment_sig.value.matches_sig(sig) {
+                    self.emit_diagnostic(
+                        format!("Line signature {sig} does not match comment"),
+                        DiagnosticKind::Warning,
+                        comment_sig.span.clone(),
+                    );
+                }
+            }
+        }
+        Ok(new_func)
     }
     fn compile_operand_word(&mut self, word: Sp<Word>) -> UiuaResult<(NewFunction, Signature)> {
         let span = word.span.clone();
@@ -1275,8 +1318,8 @@ code:
                 let mut inner = Vec::new();
                 let mut flags = FunctionFlags::default();
                 let line_count = arr.lines.len();
-                for lines in arr.lines.into_iter().rev() {
-                    let nf = self.compile_words(lines, true)?;
+                for line in arr.lines.into_iter().rev() {
+                    let nf = self.compile_line(line, true)?;
                     inner.extend(nf.instrs);
                     flags |= nf.flags;
                 }
@@ -1843,7 +1886,7 @@ code:
     ) -> UiuaResult<(FunctionId, Option<Signature>, NewFunction)> {
         let mut new_func = NewFunction::default();
         for line in func.lines {
-            let nf = self.compile_words(line, true)?;
+            let nf = self.compile_line(line, true)?;
             new_func.instrs.extend(nf.instrs);
             new_func.flags |= nf.flags;
         }
@@ -2729,4 +2772,21 @@ fn recurse_words_mut(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)
             _ => {}
         }
     }
+}
+
+fn line_sig(line: &[Sp<Word>]) -> Option<Sp<DocCommentSig>> {
+    line.split_last()
+        .and_then(|(last, mut rest)| match &last.value {
+            Word::Comment(c) => c.parse::<DocCommentSig>().ok().map(|sig| {
+                while rest.last().is_some_and(|w| matches!(w.value, Word::Spaces)) {
+                    rest = &rest[..rest.len() - 1];
+                }
+                let span = (rest.first())
+                    .zip(rest.last())
+                    .map(|(f, l)| f.span.clone().merge(l.span.clone()))
+                    .unwrap_or_else(|| last.span.clone());
+                span.sp(sig)
+            }),
+            _ => None,
+        })
 }

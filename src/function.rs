@@ -148,70 +148,124 @@ impl fmt::Display for TempStack {
 
 impl PartialEq for Instr {
     fn eq(&self, other: &Self) -> bool {
+        // Comparison ignores spans
         match (self, other) {
+            (Self::Comment(a), Self::Comment(b)) => a == b,
             (Self::Push(a), Self::Push(b)) => a == b,
+            (
+                Self::CallGlobal {
+                    index: index_a,
+                    call: call_a,
+                    sig: sig_a,
+                },
+                Self::CallGlobal {
+                    index: index_b,
+                    call: call_b,
+                    sig: sig_b,
+                },
+            ) => index_a == index_b && call_a == call_b && sig_a == sig_b,
+            (Self::BindGlobal { index: a, .. }, Self::BindGlobal { index: b, .. }) => a == b,
             (Self::BeginArray, Self::BeginArray) => true,
             (Self::EndArray { boxed: a, .. }, Self::EndArray { boxed: b, .. }) => a == b,
             (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
             (Self::ImplPrim(a, _), Self::ImplPrim(b, _)) => a == b,
-            (Self::Call(a), Self::Call(b)) => a == b,
-            (Self::Format { parts: a, .. }, Self::Format { parts: b, .. }) => a == b,
-            (Self::MatchFormatPattern { parts: a, .. }, Self::Format { parts: b, .. }) => a == b,
+            (Self::Call(_), Self::Call(_)) => true,
+            (Self::CallRecursive(_), Self::CallRecursive(_)) => true,
+            (Self::Recur(_), Self::Recur(_)) => true,
             (Self::PushFunc(a), Self::PushFunc(b)) => a == b,
-            (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
-            (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
-            (Self::TouchStack { count: a, .. }, Self::TouchStack { count: b, .. }) => a == b,
-            (Self::Comment(a), Self::Comment(b)) => a == b,
-            (Self::CallGlobal { index: a, .. }, Self::CallGlobal { index: b, .. }) => a == b,
-            (Self::BindGlobal { index: a, .. }, Self::BindGlobal { index: b, .. }) => a == b,
             (
                 Self::Switch {
-                    count: a,
-                    under_cond: au,
-                    sig: asig,
+                    count: count_a,
+                    sig: sig_a,
+                    under_cond: under_cond_a,
                     ..
                 },
                 Self::Switch {
-                    count: b,
-                    under_cond: bu,
-                    sig: bsig,
+                    count: count_b,
+                    sig: sig_b,
+                    under_cond: under_cond_b,
                     ..
                 },
-            ) => a == b && au == bu && asig == bsig,
+            ) => count_a == count_b && sig_a == sig_b && under_cond_a == under_cond_b,
+            (Self::Format { parts: a, .. }, Self::Format { parts: b, .. }) => a == b,
+            (
+                Self::MatchFormatPattern { parts: a, .. },
+                Self::MatchFormatPattern { parts: b, .. },
+            ) => a == b,
+            (Self::StackSwizzle(a, _), Self::StackSwizzle(b, _)) => a == b,
             (Self::Label { label: a, .. }, Self::Label { label: b, .. }) => a == b,
+            (
+                Self::ValidateType {
+                    index: index_a,
+                    type_num: type_num_a,
+                    name: name_a,
+                    ..
+                },
+                Self::ValidateType {
+                    index: index_b,
+                    type_num: type_num_b,
+                    name: name_b,
+                    ..
+                },
+            ) => index_a == index_b && type_num_a == type_num_b && name_a == name_b,
             (Self::Dynamic(a), Self::Dynamic(b)) => a == b,
             (
                 Self::Unpack {
-                    count: a,
-                    unbox: au,
+                    count: count_a,
+                    unbox: unbox_a,
                     ..
                 },
                 Self::Unpack {
-                    count: b,
-                    unbox: bu,
+                    count: count_b,
+                    unbox: unbox_b,
                     ..
                 },
-            ) => a == b && au == bu,
-            (Self::SetOutputComment { i: ai, n: an }, Self::SetOutputComment { i: bi, n: bn }) => {
-                ai == bi && an == bn
+            ) => count_a == count_b && unbox_a == unbox_b,
+            (Self::TouchStack { count: count_a, .. }, Self::TouchStack { count: count_b, .. }) => {
+                count_a == count_b
             }
-            (Self::PushSig(a), Self::PushSig(b)) => a == b,
-            (Self::PopSig, Self::PopSig) => true,
-            (Self::StackSwizzle(a, _), Self::StackSwizzle(b, _)) => a == b,
             (
-                Self::ValidateType {
-                    index: ai,
-                    name: a,
-                    type_num: an,
+                Self::PushTemp {
+                    stack: stack_a,
+                    count: count_a,
                     ..
                 },
-                Self::ValidateType {
-                    index: bi,
-                    name: b,
-                    type_num: bn,
+                Self::PushTemp {
+                    stack: stack_b,
+                    count: count_b,
                     ..
                 },
-            ) => ai == bi && a == b && an == bn,
+            ) => stack_a == stack_b && count_a == count_b,
+            (
+                Self::PopTemp {
+                    stack: stack_a,
+                    count: count_a,
+                    ..
+                },
+                Self::PopTemp {
+                    stack: stack_b,
+                    count: count_b,
+                    ..
+                },
+            ) => stack_a == stack_b && count_a == count_b,
+            (
+                Self::CopyToTemp {
+                    stack: stack_a,
+                    count: count_a,
+                    ..
+                },
+                Self::CopyToTemp {
+                    stack: stack_b,
+                    count: count_b,
+                    ..
+                },
+            ) => stack_a == stack_b && count_a == count_b,
+            (
+                Self::SetOutputComment { i: i_a, n: n_a, .. },
+                Self::SetOutputComment { i: i_b, n: n_b, .. },
+            ) => i_a == i_b && n_a == n_b,
+            (Self::PushSig(sig_a), Self::PushSig(sig_b)) => sig_a == sig_b,
+            (Self::PopSig, Self::PopSig) => true,
             _ => false,
         }
     }
@@ -221,44 +275,45 @@ impl Eq for Instr {}
 
 impl Hash for Instr {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        // Hashing ignores spans
         match self {
-            Instr::Push(val) => (0, val).hash(state),
-            Instr::BeginArray => 1.hash(state),
-            Instr::EndArray { boxed, .. } => (2, boxed).hash(state),
-            Instr::Prim(prim, _) => (3, prim).hash(state),
-            Instr::ImplPrim(prim, _) => (4, prim).hash(state),
-            Instr::Call(_) => 5.hash(state),
-            Instr::CallRecursive(_) => 29.hash(state),
-            Instr::Recur(_) => 30.hash(state),
-            Instr::Format { parts, .. } => (6, parts).hash(state),
-            Instr::MatchFormatPattern { parts, .. } => (28, parts).hash(state),
-            Instr::PushFunc(func) => (7, func).hash(state),
-            Instr::PushTemp { count, stack, .. } => (8, count, stack).hash(state),
-            Instr::PopTemp { count, stack, .. } => (9, count, stack).hash(state),
-            Instr::CopyToTemp { count, stack, .. } => (10, count, stack).hash(state),
-            Instr::TouchStack { count, .. } => (13, count).hash(state),
-            Instr::Comment(_) => (14, 0).hash(state),
-            Instr::CallGlobal { index, call, .. } => (15, index, call).hash(state),
-            Instr::BindGlobal { index, .. } => (16, index).hash(state),
+            Instr::Comment(comment) => (0, comment).hash(state),
+            Instr::Push(val) => (1, val).hash(state),
+            Instr::CallGlobal { index, call, sig } => (2, index, call, sig).hash(state),
+            Instr::BindGlobal { index, .. } => (3, index).hash(state),
+            Instr::BeginArray => (4).hash(state),
+            Instr::EndArray { boxed, .. } => (5, boxed).hash(state),
+            Instr::Prim(prim, _) => (6, prim).hash(state),
+            Instr::ImplPrim(prim, _) => (7, prim).hash(state),
+            Instr::Call(_) => 8.hash(state),
+            Instr::CallRecursive(_) => 9.hash(state),
+            Instr::Recur(_) => 10.hash(state),
+            Instr::PushFunc(func) => (11, func).hash(state),
             Instr::Switch {
                 count,
-                under_cond,
                 sig,
+                under_cond,
                 ..
-            } => (17, count, under_cond, sig).hash(state),
-            Instr::Label { label, remove, .. } => (18, label, remove).hash(state),
-            Instr::Dynamic(df) => (19, df).hash(state),
-            Instr::Unpack { count, unbox, .. } => (23, count, unbox).hash(state),
+            } => (12, count, sig, under_cond).hash(state),
+            Instr::Format { parts, .. } => (13, parts).hash(state),
+            Instr::MatchFormatPattern { parts, .. } => (14, parts).hash(state),
+            Instr::StackSwizzle(swizzle, _) => (15, swizzle).hash(state),
+            Instr::Label { label, .. } => (16, label).hash(state),
+            Instr::ValidateType {
+                index,
+                type_num,
+                name,
+                ..
+            } => (17, index, type_num, name).hash(state),
+            Instr::Dynamic(df) => (18, df).hash(state),
+            Instr::Unpack { count, unbox, .. } => (19, count, unbox).hash(state),
+            Instr::TouchStack { count, .. } => (20, count).hash(state),
+            Instr::PushTemp { stack, count, .. } => (21, stack, count).hash(state),
+            Instr::PopTemp { stack, count, .. } => (22, stack, count).hash(state),
+            Instr::CopyToTemp { stack, count, .. } => (23, stack, count).hash(state),
             Instr::SetOutputComment { i, n, .. } => (24, i, n).hash(state),
             Instr::PushSig(sig) => (25, sig).hash(state),
             Instr::PopSig => 26.hash(state),
-            Instr::ValidateType {
-                index,
-                name,
-                type_num,
-                ..
-            } => (27, index, name, type_num).hash(state),
-            Instr::StackSwizzle(swizzle, _) => (31, swizzle).hash(state),
         }
     }
 }

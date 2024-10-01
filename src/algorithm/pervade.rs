@@ -4,47 +4,17 @@ use std::{
     cmp::{self, Ordering},
     convert::Infallible,
     fmt::Display,
+    iter::repeat,
     marker::PhantomData,
-    slice::{self, ChunksExact},
+    slice,
 };
 
 use ecow::eco_vec;
 
-use crate::{array::*, Uiua, UiuaError, UiuaResult};
+use crate::{algorithm::loops::flip, array::*, Uiua, UiuaError, UiuaResult};
 use crate::{Complex, Shape};
 
-use super::{fill_array_shapes, FillContext};
-
-pub(crate) struct ArrayRef<'a, T> {
-    shape: &'a [usize],
-    data: &'a [T],
-}
-
-impl<'a, T> Clone for ArrayRef<'a, T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<'a, T> Copy for ArrayRef<'a, T> {}
-
-impl<'a, T> ArrayRef<'a, T> {
-    pub fn new(shape: &'a [usize], data: &'a [T]) -> Self {
-        Self { shape, data }
-    }
-    fn row_len(&self) -> usize {
-        self.shape.iter().skip(1).product()
-    }
-    fn rows(&self) -> ChunksExact<T> {
-        self.data.chunks_exact(self.row_len().max(1))
-    }
-}
-
-impl<'a, T> From<&'a Array<T>> for ArrayRef<'a, T> {
-    fn from(a: &'a Array<T>) -> Self {
-        Self::new(a.shape(), a.data.as_slice())
-    }
-}
+use super::FillContext;
 
 pub trait PervasiveFn<A, B> {
     type Output;
@@ -92,9 +62,21 @@ where
     }
 }
 
+fn pervade_dim(a: usize, b: usize) -> usize {
+    if a == b {
+        a
+    } else if a == 1 {
+        b
+    } else if b == 1 {
+        a
+    } else {
+        a.max(b)
+    }
+}
+
 pub fn bin_pervade<A, B, C, F>(
-    mut a: Array<A>,
-    mut b: Array<B>,
+    a: Array<A>,
+    b: Array<B>,
     a_depth: usize,
     b_depth: usize,
     env: &Uiua,
@@ -107,138 +89,176 @@ where
     F: PervasiveFn<A, B, Output = C> + Clone,
     F::Error: Into<UiuaError>,
 {
-    // Fast fixed cases
-    if a_depth == 0 && b_depth == 0 && env.scalar_fill::<C>().is_err() {
-        // A is fixed
-        if a.row_count() == 1 && b.row_count() != 1 {
-            let fix_count = a.shape.iter().take_while(|&&d| d == 1).count();
-            if b.rank() > fix_count && b.rank() >= a.rank() {
-                if (a.shape().iter())
-                    .zip(b.shape())
-                    .skip(fix_count)
-                    .any(|(a, b)| a != b)
-                {
-                    return Err(env.error(format!(
-                        "Shapes {} and {} do not match",
-                        a.shape(),
-                        b.shape()
-                    )));
-                }
-                let mut data = eco_vec![C::default(); b.element_count()];
-                let a_row_shape = &a.shape()[fix_count..];
-                let b_row_shape = &b.shape()[fix_count..];
-                let b_row_len = b_row_shape.iter().product();
-                if b_row_len > 0 {
-                    for (b, c) in (b.data.chunks_exact(b_row_len))
-                        .zip(data.make_mut().chunks_exact_mut(b_row_len))
-                    {
-                        bin_pervade_recursive(
-                            ArrayRef::new(a_row_shape, &a.data),
-                            ArrayRef::new(b_row_shape, b),
-                            c,
-                            env,
-                            f.clone(),
-                        )
-                        .map_err(Into::into)?;
+    let _a_depth = a_depth.min(a.rank());
+    let _b_depth = b_depth.min(b.rank());
+
+    let new_rank = a.rank().max(b.rank());
+    let mut new_shape = Shape::with_capacity(new_rank);
+    let a_fill = env.scalar_fill::<A>();
+    let b_fill = env.scalar_fill::<B>();
+    for i in 0..new_rank {
+        let c = match (a.shape.get(i).copied(), b.shape.get(i).copied()) {
+            (None, None) => unreachable!(),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (Some(ad), Some(bd)) => {
+                if ad == bd || ad == 1 || bd == 1 {
+                    pervade_dim(ad, bd)
+                } else if ad < bd {
+                    match &a_fill {
+                        Ok(_) => pervade_dim(ad, bd),
+                        Err(e) => {
+                            return Err(env.error(format!(
+                                "Shapes {} and {} are not compatible{e}",
+                                a.shape, b.shape
+                            )))
+                        }
+                    }
+                } else {
+                    match &b_fill {
+                        Ok(_) => pervade_dim(ad, bd),
+                        Err(e) => {
+                            return Err(env.error(format!(
+                                "Shapes {} and {} are not compatible{e}",
+                                a.shape, b.shape
+                            )))
+                        }
                     }
                 }
-                return Ok(Array::new(b.shape, data));
             }
-        }
-        // B is fixed
-        if a.row_count() != 1 && b.row_count() == 1 {
-            let fix_count = b.shape.iter().take_while(|&&d| d == 1).count();
-            if a.rank() > fix_count && a.rank() >= b.rank() {
-                if (a.shape().iter())
-                    .zip(b.shape())
-                    .skip(fix_count)
-                    .any(|(a, b)| a != b)
-                {
-                    return Err(env.error(format!(
-                        "Shapes {} and {} do not match",
-                        a.shape(),
-                        b.shape()
-                    )));
-                }
-                let mut data = eco_vec![C::default(); a.element_count()];
-                let a_row_shape = &a.shape()[fix_count..];
-                let b_row_shape = &b.shape()[fix_count..];
-                let a_row_len = a_row_shape.iter().product();
-                if a_row_len > 0 {
-                    for (a, c) in (a.data.chunks_exact(a_row_len))
-                        .zip(data.make_mut().chunks_exact_mut(a_row_len))
-                    {
-                        bin_pervade_recursive(
-                            ArrayRef::new(a_row_shape, a),
-                            ArrayRef::new(b_row_shape, &b.data),
-                            c,
-                            env,
-                            f.clone(),
-                        )
-                        .map_err(Into::into)?;
-                    }
-                }
-                return Ok(Array::new(a.shape, data));
-            }
-        }
+        };
+        new_shape.push(c);
     }
-    // Fill
-    fill_array_shapes(&mut a, &mut b, a_depth, b_depth, env)?;
-    // Pervade
-    let shape = a.shape().max(b.shape()).clone();
-    let mut data = eco_vec![C::default(); shape.elements()];
-    bin_pervade_recursive((&a).into(), (&b).into(), data.make_mut(), env, f).map_err(Into::into)?;
-    Ok(Array::new(shape, data))
+
+    // dbg!(&a.shape, &b.shape, &new_shape);
+
+    let mut new_data = eco_vec![C::default(); new_shape.elements()];
+    if !new_shape.contains(&0) {
+        let slice = new_data.make_mut();
+        let a_fill = a_fill.as_ref().ok();
+        let b_fill = b_fill.as_ref().ok();
+        bin_pervade_recursive(
+            (&a.data, &a.shape),
+            (&b.data, &b.shape),
+            slice,
+            a_fill,
+            b_fill,
+            f,
+            env,
+        )
+        .map_err(Into::into)?;
+    }
+    Ok(Array::new(new_shape, new_data))
 }
 
-pub fn bin_pervade_recursive<A, B, C, F>(
-    a: ArrayRef<A>,
-    b: ArrayRef<B>,
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn bin_pervade_recursive<A, B, C, F>(
+    (a, ash): (&[A], &[usize]),
+    (b, bsh): (&[B], &[usize]),
     c: &mut [C],
-    env: &Uiua,
+    a_fill: Option<&A>,
+    b_fill: Option<&B>,
     f: F,
+    env: &Uiua,
 ) -> Result<(), F::Error>
 where
-    A: ArrayValue,
-    B: ArrayValue,
-    C: ArrayValue,
+    A: ArrayValue + Clone,
+    B: ArrayValue + Clone,
+    C: ArrayValue + Clone,
     F: PervasiveFn<A, B, Output = C> + Clone,
 {
-    match (a.shape, b.shape) {
-        ([], []) => c[0] = f.call(a.data[0].clone(), b.data[0].clone(), env)?,
-        (ash, bsh) if ash.contains(&0) || bsh.contains(&0) => {}
-        (ash, bsh) if ash == bsh => {
-            for ((a, b), c) in a.data.iter().zip(b.data).zip(c) {
+    let recur = |a: &[A], ash: &[usize], b: &[B], bsh: &[usize], c: &mut [C]| {
+        bin_pervade_recursive((a, ash), (b, bsh), c, a_fill, b_fill, f.clone(), env)
+    };
+    match (ash, bsh) {
+        ([], []) => {
+            let (a, b) = (a[0].clone(), b[0].clone());
+            c[0] = f.call(a, b, env)?;
+        }
+        // Scalar A
+        ([], [_, ..]) => {
+            let a = &a[0];
+            for (b, c) in b.iter().zip(c) {
                 *c = f.call(a.clone(), b.clone(), env)?;
             }
         }
-        ([], bsh) => {
-            for (brow, crow) in b.rows().zip(c.chunks_exact_mut(b.row_len())) {
-                bin_pervade_recursive(a, ArrayRef::new(&bsh[1..], brow), crow, env, f.clone())?;
+        // Scalar B
+        ([_, ..], []) => {
+            let b = &b[0];
+            for (a, c) in a.iter().zip(c) {
+                *c = f.call(a.clone(), b.clone(), env)?;
             }
         }
-        (ash, []) => {
-            for (arow, crow) in a.rows().zip(c.chunks_exact_mut(a.row_len())) {
-                bin_pervade_recursive(ArrayRef::new(&ash[1..], arow), b, crow, env, f.clone())?;
-            }
-        }
-        (ash, bsh) => {
-            for ((arow, brow), crow) in
-                (a.rows().zip(b.rows())).zip(c.chunks_exact_mut(a.row_len().max(b.row_len())))
-            {
-                bin_pervade_recursive(
-                    ArrayRef::new(&ash[1..], arow),
-                    ArrayRef::new(&bsh[1..], brow),
-                    crow,
-                    env,
-                    f.clone(),
-                )?;
+        ([al, ash @ ..], [bl, bsh @ ..]) => {
+            let a_row_len = a.len() / al;
+            let b_row_len = b.len() / bl;
+            let c_row_len = c.len() / al.max(bl);
+            if al == bl {
+                if ash == bsh {
+                    for ((a, b), c) in a.iter().zip(b).zip(c) {
+                        *c = f.call(a.clone(), b.clone(), env)?;
+                    }
+                } else {
+                    for ((a, b), c) in a
+                        .chunks_exact(a_row_len)
+                        .zip(b.chunks_exact(b_row_len))
+                        .zip(c.chunks_exact_mut(c_row_len))
+                    {
+                        recur(a, ash, b, bsh, c)?;
+                    }
+                }
+            } else if al < bl {
+                if let Some(a_fill) = a_fill {
+                    let a_fill_row = vec![a_fill.clone(); a_row_len];
+                    let a_iter = a
+                        .chunks_exact(a_row_len)
+                        .chain(repeat(a_fill_row.as_slice()));
+                    for ((a, b), c) in a_iter
+                        .zip(b.chunks_exact(b_row_len))
+                        .zip(c.chunks_exact_mut(c_row_len))
+                    {
+                        recur(a, ash, b, bsh, c)?;
+                    }
+                } else if ash == bsh {
+                    for (b, c) in b.chunks_exact(b_row_len).zip(c.chunks_exact_mut(c_row_len)) {
+                        for ((a, b), c) in a.iter().zip(b).zip(c) {
+                            *c = f.call(a.clone(), b.clone(), env)?;
+                        }
+                    }
+                } else {
+                    for (b, c) in b.chunks_exact(b_row_len).zip(c.chunks_exact_mut(c_row_len)) {
+                        recur(a, ash, b, bsh, c)?;
+                    }
+                }
+            } else if let Some(b_fill) = b_fill {
+                let b_fill_row = vec![b_fill.clone(); b_row_len];
+                let b_iter = b
+                    .chunks_exact(b_row_len)
+                    .chain(repeat(b_fill_row.as_slice()));
+                for ((a, b), c) in a
+                    .chunks_exact(a_row_len)
+                    .zip(b_iter)
+                    .zip(c.chunks_exact_mut(c_row_len))
+                {
+                    recur(a, ash, b, bsh, c)?;
+                }
+            } else if ash == bsh {
+                for (a, c) in a.chunks_exact(a_row_len).zip(c.chunks_exact_mut(c_row_len)) {
+                    for ((a, b), c) in a.iter().zip(b).zip(c) {
+                        *c = f.call(a.clone(), b.clone(), env)?;
+                    }
+                }
+            } else {
+                for (a, c) in a.chunks_exact(a_row_len).zip(c.chunks_exact_mut(c_row_len)) {
+                    recur(a, ash, b, bsh, c)?;
+                }
             }
         }
     }
     Ok(())
 }
 
+/// Pervade an operation where both input types and the output type are all the same
 pub fn bin_pervade_mut<T>(
     mut a: Array<T>,
     b: &mut Array<T>,
@@ -250,188 +270,257 @@ pub fn bin_pervade_mut<T>(
 where
     T: ArrayValue + Copy,
 {
-    // Fast case if A is fixed
-    if a.row_count() == 1 && b.row_count() != 1 && env.scalar_fill::<T>().is_err() {
-        let fix_count = a.shape.iter().take_while(|&&d| d == 1).count();
-        if b.rank() > fix_count && b.rank() >= a.rank() {
-            if (a.shape().iter())
-                .zip(b.shape())
-                .skip(fix_count)
-                .any(|(a, b)| a != b)
-            {
-                return Err(env.error(format!(
-                    "Shapes {} and {} do not match",
-                    a.shape(),
-                    b.shape()
-                )));
-            }
-            let a_row_shape = &a.shape()[fix_count..];
-            let b_row_shape = b.shape()[fix_count..].to_vec();
-            let b_row_len = b_row_shape.iter().product();
-            if b_row_len > 0 {
-                for b in b.data.as_mut_slice().chunks_exact_mut(b_row_len) {
-                    bin_pervade_recursive_mut_right(
-                        a.data.as_slice(),
-                        a_row_shape,
-                        b,
-                        &b_row_shape,
-                        f,
-                    );
+    let _a_depth = a_depth.min(a.rank());
+    let _b_depth = b_depth.min(b.rank());
+
+    let new_rank = a.rank().max(b.rank());
+    let mut new_shape = Shape::with_capacity(new_rank);
+    let fill = env.scalar_fill::<T>();
+    let mut requires_fill = false;
+    for i in 0..new_rank {
+        let c = match (a.shape.get(i).copied(), b.shape.get(i).copied()) {
+            (None, None) => unreachable!(),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (Some(ad), Some(bd)) => {
+                if ad == bd || ad == 1 || bd == 1 {
+                    requires_fill |= ad != bd && fill.is_ok();
+                    pervade_dim(ad, bd)
+                } else {
+                    match &fill {
+                        Ok(_) => {
+                            requires_fill = true;
+                            pervade_dim(ad, bd)
+                        }
+                        Err(e) => {
+                            return Err(env.error(format!(
+                                "Shapes {} and {} are not compatible{e}",
+                                a.shape, b.shape
+                            )))
+                        }
+                    }
                 }
             }
-            return Ok(());
+        };
+        new_shape.push(c);
+    }
+
+    let fill = if requires_fill { fill.ok() } else { None };
+
+    // dbg!(&a.shape, &b.shape, &new_shape);
+
+    fn reuse_no_fill<T: ArrayValue + Copy>(
+        a: &[T],
+        b: &mut [T],
+        ash: &[usize],
+        bsh: &[usize],
+        f: impl Fn(T, T) -> T + Copy,
+    ) {
+        match (ash, bsh) {
+            ([], _) => {
+                for b in b {
+                    *b = f(a[0], *b);
+                }
+            }
+            ([1, ash @ ..], [bl, bsh @ ..]) => {
+                let b_row_len = b.len() / bl;
+                if ash == bsh {
+                    for b in b.chunks_exact_mut(b_row_len) {
+                        for (a, b) in a.iter().zip(b) {
+                            *b = f(*a, *b);
+                        }
+                    }
+                } else {
+                    for b in b.chunks_exact_mut(b_row_len) {
+                        reuse_no_fill(a, b, ash, bsh, f);
+                    }
+                }
+            }
+            ([al, ash @ ..], [bl, bsh @ ..]) => {
+                debug_assert_eq!(al, bl);
+                if ash == bsh {
+                    for (a, b) in a.iter().zip(b) {
+                        *b = f(*a, *b);
+                    }
+                } else {
+                    let a_row_len = a.len() / al;
+                    let b_row_len = b.len() / bl;
+                    for (a, b) in a.chunks_exact(a_row_len).zip(b.chunks_exact_mut(b_row_len)) {
+                        reuse_no_fill(a, b, ash, bsh, f);
+                    }
+                }
+            }
+            _ => unreachable!(),
         }
     }
-    // Fill
-    fill_array_shapes(&mut a, b, a_depth, b_depth, env)?;
-    // Pervade
-    let ash = a.shape.dims();
-    let bsh = b.shape.dims();
-    // Try to avoid copying when possible
-    if ash == bsh {
-        if a.data.is_copy_of(&b.data) {
-            drop(a);
-            let b_data = b.data.as_mut_slice();
-            for b in b_data {
-                *b = f(*b, *b);
+    fn reuse_fill<T: ArrayValue + Copy>(
+        a: &[T],
+        b: &mut [T],
+        ash: &[usize],
+        bsh: &[usize],
+        fill: T,
+        f: impl Fn(T, T) -> T + Copy,
+    ) {
+        match (ash, bsh) {
+            ([], _) => {
+                for b in b {
+                    *b = f(a[0], *b);
+                }
             }
-        } else if a.data.is_unique() {
-            let a_data = a.data.as_mut_slice();
-            let b_data = b.data.as_slice();
-            for (a, b) in a_data.iter_mut().zip(b_data) {
-                *a = f(*a, *b);
+            ([al, ash @ ..], [bl, bsh @ ..]) => {
+                let a_row_len = a.len() / al;
+                let b_row_len = b.len() / bl;
+                if al == bl {
+                    for (a, b) in a.chunks_exact(a_row_len).zip(b.chunks_exact_mut(b_row_len)) {
+                        reuse_fill(a, b, ash, bsh, fill, f);
+                    }
+                } else {
+                    let fill_row = vec![fill; a_row_len];
+                    for (a, b) in a
+                        .chunks_exact(a_row_len)
+                        .chain(repeat(fill_row.as_slice()))
+                        .zip(b.chunks_exact_mut(b_row_len))
+                    {
+                        reuse_fill(a, b, ash, bsh, fill, f);
+                    }
+                }
             }
-            *b = a;
-        } else {
-            let a_data = a.data.as_slice();
-            let b_data = b.data.as_mut_slice();
-            for (a, b) in a_data.iter().zip(b_data) {
-                *b = f(*a, *b);
-            }
+            _ => unreachable!(),
         }
-    } else if ash.contains(&0) || bsh.contains(&0) {
-        if ash.len() > bsh.len() {
-            *b = a;
-        }
-    } else {
-        match ash.len().cmp(&bsh.len()) {
-            Ordering::Greater => {
+    }
+
+    if new_shape.contains(&0) {
+        b.shape = new_shape;
+        b.data = Default::default();
+    } else if new_shape == b.shape {
+        // The existing array can be used
+        if a.shape == b.shape {
+            // Try to avoid copying when possible
+            if a.data.is_copy_of(&b.data) {
+                drop(a);
+                let b_data = b.data.as_mut_slice();
+                for b in b_data {
+                    *b = f(*b, *b);
+                }
+            } else if a.data.is_unique() {
                 let a_data = a.data.as_mut_slice();
                 let b_data = b.data.as_slice();
-                bin_pervade_recursive_mut_left(a_data, ash, b_data, bsh, f);
-                *b = a;
-            }
-            Ordering::Less => {
+                for (a, b) in a_data.iter_mut().zip(b_data) {
+                    *a = f(*a, *b);
+                }
+                b.data = a.data;
+            } else {
                 let a_data = a.data.as_slice();
                 let b_data = b.data.as_mut_slice();
-                bin_pervade_recursive_mut_right(a_data, ash, b_data, bsh, f);
+                for (a, b) in a_data.iter().zip(b_data) {
+                    *b = f(*a, *b);
+                }
             }
-            Ordering::Equal => {
-                let a_data = a.data.as_mut_slice();
-                let b_data = b.data.as_mut_slice();
-                bin_pervade_recursive_mut(a_data, ash, b_data, bsh, f);
+        } else if let Some(fill) = fill {
+            reuse_fill(&a.data, b.data.as_mut_slice(), &a.shape, &b.shape, fill, f);
+        } else {
+            reuse_no_fill(&a.data, b.data.as_mut_slice(), &a.shape, &b.shape, f);
+        }
+    } else if new_shape == a.shape {
+        // An existing array can be used, but things need to be flipped
+        if let Some(fill) = fill {
+            reuse_fill(
+                &b.data,
+                a.data.as_mut_slice(),
+                &b.shape,
+                &a.shape,
+                fill,
+                flip(f),
+            );
+        } else {
+            reuse_no_fill(&b.data, a.data.as_mut_slice(), &b.shape, &a.shape, flip(f));
+        }
+        *b = a;
+    } else {
+        // Allocate a new array
+        let mut new_data = eco_vec![T::default(); new_shape.elements()];
+        let slice = new_data.make_mut();
+        let fill = fill.expect("There should be a fill if the new shape is not b's shape");
+
+        #[allow(clippy::too_many_arguments)]
+        fn inner<T: ArrayValue + Copy>(
+            a: &[T],
+            b: &[T],
+            c: &mut [T],
+            ash: &[usize],
+            bsh: &[usize],
+            fill: T,
+            f: impl Fn(T, T) -> T + Copy,
+        ) {
+            match (ash, bsh) {
+                ([], []) => c[0] = f(a[0], b[0]),
+                ([], [_, ..]) => {
+                    let a = a[0];
+                    for (b, c) in b.iter().zip(c) {
+                        *c = f(a, *b);
+                    }
+                }
+                ([_, ..], []) => {
+                    let b = b[0];
+                    for (a, c) in a.iter().zip(c) {
+                        *c = f(*a, b);
+                    }
+                }
+                ([al, ash @ ..], [bl, bsh @ ..]) => {
+                    let a_row_len = a.len() / al;
+                    let b_row_len = b.len() / bl;
+                    let c_row_len = c.len() / al.max(bl);
+                    match al.cmp(bl) {
+                        Ordering::Equal => {
+                            if ash == bsh {
+                                for ((a, b), c) in a.iter().zip(b).zip(c) {
+                                    *c = f(*a, *b);
+                                }
+                            } else {
+                                for ((a, b), c) in a
+                                    .chunks_exact(a_row_len)
+                                    .zip(b.chunks_exact(b_row_len))
+                                    .zip(c.chunks_exact_mut(c_row_len))
+                                {
+                                    inner(a, b, c, ash, bsh, fill, f);
+                                }
+                            }
+                        }
+                        Ordering::Less => {
+                            let a_fill_row = vec![fill; a_row_len];
+                            let a_iter = a
+                                .chunks_exact(a_row_len)
+                                .chain(repeat(a_fill_row.as_slice()));
+                            for ((a, b), c) in a_iter
+                                .zip(b.chunks_exact(b_row_len))
+                                .zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                inner(a, b, c, ash, bsh, fill, f);
+                            }
+                        }
+                        Ordering::Greater => {
+                            let b_fill_row = vec![fill; b_row_len];
+                            let b_iter = b
+                                .chunks_exact(b_row_len)
+                                .chain(repeat(b_fill_row.as_slice()));
+                            for ((a, b), c) in a
+                                .chunks_exact(a_row_len)
+                                .zip(b_iter)
+                                .zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                inner(a, b, c, ash, bsh, fill, f);
+                            }
+                        }
+                    }
+                }
             }
         }
+        inner(&a.data, &b.data, slice, &a.shape, &b.shape, fill, f);
+        b.data = new_data.into();
+        b.shape = new_shape;
     }
+
     Ok(())
-}
-
-fn bin_pervade_recursive_mut<T>(
-    a_data: &mut [T],
-    a_shape: &[usize],
-    b_data: &mut [T],
-    b_shape: &[usize],
-    f: impl Fn(T, T) -> T + Copy,
-) where
-    T: Copy,
-{
-    match (a_shape, b_shape) {
-        ([], []) => {
-            panic!("should never call `bin_pervade_recursive_mut` with scalars")
-        }
-        (_, []) => {
-            let b_scalar = b_data[0];
-            for a in a_data {
-                *a = f(*a, b_scalar);
-            }
-        }
-        ([], _) => {
-            let a_scalar = a_data[0];
-            for b in b_data {
-                *b = f(a_scalar, *b);
-            }
-        }
-        (ash, bsh) => {
-            let a_row_len = a_data.len() / ash[0];
-            let b_row_len = b_data.len() / bsh[0];
-            for (a, b) in a_data
-                .chunks_exact_mut(a_row_len)
-                .zip(b_data.chunks_exact_mut(b_row_len))
-            {
-                bin_pervade_recursive_mut(a, &ash[1..], b, &bsh[1..], f);
-            }
-        }
-    }
-}
-
-fn bin_pervade_recursive_mut_left<T>(
-    a_data: &mut [T],
-    a_shape: &[usize],
-    b_data: &[T],
-    b_shape: &[usize],
-    f: impl Fn(T, T) -> T + Copy,
-) where
-    T: Copy,
-{
-    match (a_shape, b_shape) {
-        ([], _) => a_data[0] = f(a_data[0], b_data[0]),
-        (_, []) => {
-            let b_scalar = b_data[0];
-            for a in a_data {
-                *a = f(*a, b_scalar);
-            }
-        }
-        (ash, bsh) => {
-            let a_row_len = a_data.len() / ash[0];
-            let b_row_len = b_data.len() / bsh[0];
-            for (a, b) in a_data
-                .chunks_exact_mut(a_row_len)
-                .zip(b_data.chunks_exact(b_row_len))
-            {
-                bin_pervade_recursive_mut_left(a, &ash[1..], b, &bsh[1..], f);
-            }
-        }
-    }
-}
-
-fn bin_pervade_recursive_mut_right<T>(
-    a_data: &[T],
-    a_shape: &[usize],
-    b_data: &mut [T],
-    b_shape: &[usize],
-    f: impl Fn(T, T) -> T + Copy,
-) where
-    T: Copy,
-{
-    match (a_shape, b_shape) {
-        (_, []) => b_data[0] = f(a_data[0], b_data[0]),
-        ([], _) => {
-            let a_scalar = a_data[0];
-            for b in b_data {
-                *b = f(a_scalar, *b);
-            }
-        }
-        (ash, bsh) => {
-            let a_row_len = a_data.len() / ash[0];
-            let b_row_len = b_data.len() / bsh[0];
-            for (a, b) in a_data
-                .chunks_exact(a_row_len)
-                .zip(b_data.chunks_exact_mut(b_row_len))
-            {
-                bin_pervade_recursive_mut_right(a, &ash[1..], b, &bsh[1..], f);
-            }
-        }
-    }
 }
 
 pub mod not {

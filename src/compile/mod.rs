@@ -53,7 +53,7 @@ pub struct Compiler {
     /// The index of the next global binding
     next_global: usize,
     /// The current scope
-    scope: Scope,
+    pub(crate) scope: Scope,
     /// Ancestor scopes of the current one
     higher_scopes: Vec<Scope>,
     /// Determines which How test scopes are run
@@ -227,7 +227,7 @@ pub(crate) struct Scope {
     /// Map local names to global indices
     names: IndexMap<Ident, LocalName>,
     /// Whether to allow experimental features
-    experimental: bool,
+    pub experimental: bool,
     /// Whether an error has been emitted for experimental features
     experimental_error: bool,
     /// Whether an error has been emitted for fill function signatures
@@ -2425,7 +2425,7 @@ code:
         .into();
         self.errors.push(e);
     }
-    pub(crate) fn experimental_error<S>(&mut self, span: &CodeSpan, message: impl FnOnce() -> S)
+    fn experimental_error<S>(&mut self, span: &CodeSpan, message: impl FnOnce() -> S)
     where
         S: ToString,
     {

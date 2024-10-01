@@ -33,6 +33,7 @@ pub enum InversionError {
     InnerFunc(Vec<FunctionId>, Box<Self>),
     AsymmetricUnderSig(Signature),
     ComplexInvertedUnder,
+    UnderExperimental,
 }
 
 type InversionResult<T = ()> = Result<T, InversionError>;
@@ -61,7 +62,15 @@ impl fmt::Display for InversionError {
                 )
             }
             InversionError::ComplexInvertedUnder => {
-                write!(f, "Under itself is too complex to invert")
+                write!(f, "This under itself is too complex to invert")
+            }
+            InversionError::UnderExperimental => {
+                write!(
+                    f,
+                    "Inversion of {} is experimental. To enable it, \
+                    add `# Experimental!` to the top of the file.",
+                    Primitive::Under.format()
+                )
             }
         }
     }
@@ -978,11 +987,11 @@ invert_pat!(
 fn get_undered<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
-) -> Option<(UnderedFunctions, &'a [Instr])> {
+) -> InversionResult<(UnderedFunctions, &'a [Instr])> {
     if let [Instr::PushFunc(g), Instr::PushFunc(f), Instr::Prim(Primitive::Under, span), input @ ..] =
         input
     {
-        Some((
+        Ok((
             UnderedFunctions {
                 f: EcoVec::from(f.instrs(&comp.asm)),
                 f_sig: f.signature(),
@@ -993,26 +1002,17 @@ fn get_undered<'a>(
             input,
         ))
     } else if input.len() < 3 {
-        None
+        generic()
     } else {
         let res = (0..=input.len()).rev().find_map(|i| {
             comp.undered_funcs
                 .get(&input[..i])
                 .map(|u| (u.clone(), &input[i..]))
         });
-        if let Some((u, _)) = &res {
-            let span = comp.get_span(u.span);
-            if let Span::Code(span) = span {
-                comp.experimental_error(&span, || {
-                    format!(
-                        "Inversion of {} is experimental. To enable it, \
-                        add `# Experimental!` to the top of the file.",
-                        Primitive::Under.format()
-                    )
-                })
-            }
+        if res.is_some() && !comp.scope.experimental {
+            return Err(InversionError::UnderExperimental);
         }
-        res
+        res.ok_or(Generic)
     }
 }
 
@@ -1020,7 +1020,7 @@ fn invert_under_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
-    let (u, input) = get_undered(input, comp).ok_or(Generic)?;
+    let (u, input) = get_undered(input, comp)?;
     let UnderedFunctions {
         f, f_sig, g, g_sig, ..
     } = u;
@@ -1043,7 +1043,7 @@ fn under_under_pattern<'a>(
     outer_g_sig: Signature,
     comp: &mut Compiler,
 ) -> InversionResult<(&'a [Instr], Under)> {
-    let (u, input) = get_undered(input, comp).ok_or(Generic)?;
+    let (u, input) = get_undered(input, comp)?;
     let UnderedFunctions {
         f,
         f_sig,

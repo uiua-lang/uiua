@@ -2,9 +2,7 @@
 
 - 0.13
   - Better testing
-  - Make `un under` work...
-    - `un` for `under` arg extensions
-    - `un dip`
+  - `under (join dip/flip val)`
   - Non-scalar `fill take`
   - Placeholder spans and highlighting
   - `setinv/setund` unification

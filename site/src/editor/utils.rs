@@ -457,8 +457,6 @@ pub fn gen_code_view(code: &str) -> View {
                         SpanKind::String => "string-literal-span",
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
                         SpanKind::Strand => "strand-span",
-                        SpanKind::StackSwizzle(sw) => sig_class(sw.signature()),
-                        SpanKind::ArraySwizzle(sw) => sig_class(sw.signature()),
                         SpanKind::Subscript(None, _) => "number-literal",
                         SpanKind::Subscript(Some(prim), n) => {
                             prim_sig_class(*prim, prim.subscript_sig(*n))
@@ -566,20 +564,6 @@ pub fn gen_code_view(code: &str) -> View {
                         SpanKind::Placeholder(op) => {
                             let class = format!("code-span {}", color_class);
                             let title = format!("placeholder {}", op.name());
-                            frag_views.push(
-                                view!(<span class=class data-title=title>{text}</span>).into_view(),
-                            )
-                        }
-                        SpanKind::StackSwizzle(sw) => {
-                            let class = format!("code-span {}", color_class);
-                            let title = format!("stack swizzle {}", sw.signature());
-                            frag_views.push(
-                                view!(<span class=class data-title=title>{text}</span>).into_view(),
-                            )
-                        }
-                        SpanKind::ArraySwizzle(sw) => {
-                            let class = format!("code-span {}", color_class);
-                            let title = format!("array swizzle {}", sw.signature());
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )

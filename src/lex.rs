@@ -665,8 +665,6 @@ pub enum AsciiToken {
     Backtick,
     Tilde,
     TripleMinus,
-    Quote,
-    Quote2,
     Placeholder(PlaceholderOp),
 }
 
@@ -694,8 +692,6 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Backtick => write!(f, "`"),
             AsciiToken::Tilde => write!(f, "~"),
             AsciiToken::TripleMinus => write!(f, "---"),
-            AsciiToken::Quote => write!(f, "'"),
-            AsciiToken::Quote2 => write!(f, "''"),
             AsciiToken::Placeholder(op) => write!(f, "{op}"),
         }
     }
@@ -893,8 +889,6 @@ impl<'a> Lexer<'a> {
                 ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),
                 "-" if self.next_chars_exact(["-", "-"]) => self.end(TripleMinus, start),
-                "'" if self.next_char_exact("'") => self.end(Quote2, start),
-                "'" => self.end(Quote, start),
                 "~" => self.end(Tilde, start),
                 "`" => {
                     if self.number("-") {

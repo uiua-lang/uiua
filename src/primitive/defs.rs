@@ -76,6 +76,7 @@ where
 
 macro_rules! constant {
     ($(#[doc = $doc:literal] $(#[$attr:meta])* ($name:literal, $value:expr)),* $(,)?) => {
+        #[allow(unused)]
         const COUNT: usize = {
             let mut count = 0;
             $(
@@ -88,6 +89,7 @@ macro_rules! constant {
             count
         };
         /// The list of all shadowable constants
+        #[allow(unused)]
         pub static CONSTANTS: [ConstantDef; COUNT] =
             [$(
                 $(#[$attr])*
@@ -255,6 +257,11 @@ constant!(
     #[cfg(feature = "image")]
     ("Logo", crate::encode::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
     /// Ethically sourced Lena picture
+    ///
+    /// Morten Rieger Hannemose
+    /// Recreated Lena Picture
+    /// 2019
+    /// https://mortenhannemose.github.io/lena/
     #[cfg(feature = "image")]
     ("Lena", crate::encode::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
     /// Sample music data

@@ -211,6 +211,10 @@ pub fn Documentation() -> impl IntoView {
         <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Stack/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
         <p>"If you also want to give names to a function's outputs, you can list them in front of the "<code>"?"</code>". This lets you read the comment signature right-to-left, the same way as normal Uiua code."</p>
         <Editor example="# Quotient Remainder ? Divisor Dividend\nDivRem ← ⌊⊃÷◿\nDivRem 3 7"/>
+        <p>"These kinds of comments can also be put at the end of lines. The signature of the line will be checked against the signature specified in the comment."</p>
+        <Editor example="1 2 # A B ?\n+⌵  # Sum ? A B\n⇡+5 # Res ? Foo Bar"/> // Should fail
+        <p>"These can be put in functions as well."</p>
+        <Editor example="# Get the average of a list\n# ? List\nAvg ← (\n  ⟜/+ # List Sum ? List\n  ⧻   # Length ? List\n  ÷   # Avg ? Length List\n)"/>
 
         <Hd id="track-caller"><code>"# Track caller!"</code></Hd>
 

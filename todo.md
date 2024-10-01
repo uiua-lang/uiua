@@ -1,9 +1,7 @@
 # Uiua Todo
 
 - 0.13
-  - End-of-line signature comments
-  - Align multi-line arrays in formatter
-  - Allow trailing newline in arrays
+  - Better testing
   - Make `un under` work...
     - `un` for `under` arg extensions
     - `un dip`

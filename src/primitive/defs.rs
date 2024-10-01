@@ -488,7 +488,7 @@ primitive!(
     /// [over] is often used in examples of functions with two inputs to show both inputs and the output.
     /// ex: [+,, +3 4 5]
     (2(3), Over, Stack, ("over", ',')),
-    /// Duplicate the top of the stack to the third-to-top position, around the second element
+    /// Duplicate the top of the stack around the second element
     ///
     /// ex: [' 1 2 3 4 5]
     (2(3), Around, Stack, ("around", AsciiToken::Quote, '’')),

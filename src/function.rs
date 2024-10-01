@@ -75,8 +75,6 @@ pub enum Instr {
         parts: EcoVec<EcoString>,
         span: usize,
     },
-    /// Execute a stack swizzle
-    StackSwizzle(StackSwizzle, usize),
     /// Label an array
     Label {
         label: EcoString,
@@ -192,7 +190,6 @@ impl PartialEq for Instr {
                 Self::MatchFormatPattern { parts: a, .. },
                 Self::MatchFormatPattern { parts: b, .. },
             ) => a == b,
-            (Self::StackSwizzle(a, _), Self::StackSwizzle(b, _)) => a == b,
             (Self::Label { label: a, .. }, Self::Label { label: b, .. }) => a == b,
             (
                 Self::ValidateType {
@@ -297,7 +294,6 @@ impl Hash for Instr {
             } => (12, count, sig, under_cond).hash(state),
             Instr::Format { parts, .. } => (13, parts).hash(state),
             Instr::MatchFormatPattern { parts, .. } => (14, parts).hash(state),
-            Instr::StackSwizzle(swizzle, _) => (15, swizzle).hash(state),
             Instr::Label { label, .. } => (16, label).hash(state),
             Instr::ValidateType {
                 index,
@@ -418,92 +414,6 @@ impl<'a> fmt::Display for FmtInstrs<'a> {
             }?
         }
         Ok(())
-    }
-}
-
-/// A swizzle for the stack
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
-pub struct StackSwizzle {
-    /// The indices of the stack elements
-    pub indices: EcoVec<u8>,
-    /// The fix mask
-    pub fix: EcoVec<bool>,
-}
-
-impl fmt::Display for StackSwizzle {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "λ")?;
-        for (&i, &fix) in self.indices.iter().zip(&self.fix) {
-            let mut c = b'a' + i;
-            if fix {
-                c = c.to_ascii_uppercase();
-            }
-            write!(f, "{}", c as char)?;
-        }
-        Ok(())
-    }
-}
-
-impl StackSwizzle {
-    pub(crate) fn args(&self) -> usize {
-        (self.indices.iter().max().copied()).map_or(0, |max| max as usize + 1)
-    }
-    /// Get the signature of the swizzle
-    pub fn signature(&self) -> Signature {
-        Signature::new(self.args(), self.indices.len())
-    }
-    /// Get the inverse of the swizzle
-    pub fn inverse(&self) -> Option<Self> {
-        if self.args() != self.indices.len() {
-            return None;
-        }
-        let set: HashSet<_> = self.indices.iter().copied().collect();
-        if set.len() != self.indices.len() {
-            return None;
-        }
-        let mut indices = eco_vec![0; self.indices.len()];
-        let slice = indices.make_mut();
-        for (i, &j) in self.indices.iter().enumerate() {
-            slice[j as usize] = i as u8;
-        }
-        Some(Self {
-            indices,
-            fix: self.fix.clone(),
-        })
-    }
-}
-
-/// A swizzle for an array
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
-pub struct ArraySwizzle {
-    /// The indices of the array elements
-    pub indices: EcoVec<i8>,
-    /// The (un)box mask
-    pub unbox: EcoVec<bool>,
-}
-
-impl fmt::Display for ArraySwizzle {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "⋊")?;
-        for (&i, &b) in self.indices.iter().zip(&self.unbox) {
-            let mut c = if i < 0 {
-                b'z' + 1 - i.unsigned_abs()
-            } else {
-                b'a' + i.unsigned_abs()
-            };
-            if b {
-                c = c.to_ascii_uppercase();
-            }
-            write!(f, "{}", c as char)?;
-        }
-        Ok(())
-    }
-}
-
-impl ArraySwizzle {
-    /// Get the signature of the swizzle
-    pub fn signature(&self) -> Signature {
-        Signature::new(1, self.indices.len())
     }
 }
 
@@ -686,7 +596,6 @@ impl fmt::Display for Instr {
             Instr::CopyToTemp { stack, count, .. } => {
                 write!(f, "<copy to {stack} {count}>")
             }
-            Instr::StackSwizzle(swizzle, _) => write!(f, "{swizzle}"),
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),

@@ -6,7 +6,7 @@ use serde::*;
 
 use crate::{
     is_ident_char, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc,
-    Instr, IntoInputSrc, LocalName, Module, Primitive, Signature, Span, StackSwizzle, TempStack,
+    Instr, IntoInputSrc, LocalName, Module, Primitive, Signature, Span, TempStack,
     Uiua, UiuaResult, Value,
 };
 
@@ -743,7 +743,6 @@ enum InstrRep {
     Switch(usize, Signature, usize, bool),
     Format(EcoVec<EcoString>, usize),
     MatchFormatPattern(EcoVec<EcoString>, usize),
-    StackSwizzle(EcoVec<u8>, Vec<usize>, usize),
     Label(EcoString, usize, bool),
     ValidateType(usize, EcoString, u8, usize),
     Dynamic(DynamicFunction),
@@ -786,15 +785,6 @@ impl From<Instr> for InstrRep {
             } => Self::Switch(count, sig, span, under_cond),
             Instr::Format { parts, span } => Self::Format(parts, span),
             Instr::MatchFormatPattern { parts, span } => Self::MatchFormatPattern(parts, span),
-            Instr::StackSwizzle(swizzle, span) => {
-                let fix_indices: Vec<usize> = swizzle
-                    .fix
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, f)| f.then_some(i))
-                    .collect();
-                Self::StackSwizzle(swizzle.indices, fix_indices, span)
-            }
             Instr::Label {
                 label,
                 span,
@@ -842,14 +832,6 @@ impl From<InstrRep> for Instr {
             },
             InstrRep::Format(parts, span) => Self::Format { parts, span },
             InstrRep::MatchFormatPattern(parts, span) => Self::MatchFormatPattern { parts, span },
-            InstrRep::StackSwizzle(indices, fix_indices, span) => {
-                let mut fix = eco_vec![false; indices.len()];
-                let slice = fix.make_mut();
-                for i in fix_indices {
-                    slice[i] = true;
-                }
-                Self::StackSwizzle(StackSwizzle { indices, fix }, span)
-            }
             InstrRep::Label(label, span, remove) => Self::Label {
                 label,
                 span,

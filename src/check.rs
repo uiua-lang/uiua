@@ -365,7 +365,6 @@ impl VirtualEnv {
             Instr::MatchFormatPattern { parts, .. } => {
                 self.handle_args_outputs(1, parts.len().saturating_sub(1))?
             }
-            Instr::StackSwizzle(sw, _) => self.handle_sig(sw.signature())?,
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::Unpack { count, .. } => self.handle_args_outputs(1, *count)?,
             Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count)?,

@@ -994,10 +994,6 @@ impl<'i> Parser<'i> {
             span.sp(Word::BreakLine)
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
-        } else if let Some(pack) = self.next_token_map(Token::as_stack_swizzle) {
-            pack.cloned().map(Word::StackSwizzle)
-        } else if let Some(pack) = self.next_token_map(Token::as_array_swizzle) {
-            pack.cloned().map(Word::ArraySwizzle)
         } else {
             return None;
         };

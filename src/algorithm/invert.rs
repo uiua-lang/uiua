@@ -308,7 +308,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_split_pattern, "split"),
         &InvertPatternFn(invert_rows_pattern, "rows"),
         &InvertPatternFn(invert_dup_pattern, "dup"),
-        &InvertPatternFn(invert_stack_swizzle_pattern, "stack swizzle"),
         &InvertPatternFn(invert_select_pattern, "select"),
         &pat!(Sqrt, (Dup, Mul)),
         &pat!((Dup, Add), (2, Div)),
@@ -1392,20 +1391,6 @@ fn under_dup_pattern<'a>(
     }
     afters.extend(monadic_afters);
     Ok((input, (befores, afters)))
-}
-
-fn invert_stack_swizzle_pattern<'a>(
-    input: &'a [Instr],
-    _: &mut Compiler,
-) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::StackSwizzle(swizzle, span), input @ ..] = input else {
-        return generic();
-    };
-    let instrs = eco_vec![Instr::StackSwizzle(
-        swizzle.inverse().ok_or(Generic)?,
-        *span
-    )];
-    Ok((input, instrs))
 }
 
 fn invert_select_pattern<'a>(

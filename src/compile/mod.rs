@@ -74,6 +74,10 @@ pub struct Compiler {
     in_try: bool,
     /// Whether the compiler is in a test
     in_test: bool,
+    /// Map of instructions to undered functions that created them
+    ///
+    /// This is used to under functions that have already been inlined
+    pub(crate) undered_funcs: HashMap<EcoVec<Instr>, UnderedFunctions>,
     /// Accumulated errors
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are deprecated
@@ -109,6 +113,7 @@ impl Default for Compiler {
             in_inverse: false,
             in_test: false,
             in_try: false,
+            undered_funcs: HashMap::new(),
             errors: Vec::new(),
             deprecated_prim_errors: HashSet::new(),
             diagnostics: BTreeSet::new(),
@@ -200,6 +205,15 @@ struct CurrentBinding {
     signature: Option<Signature>,
     referenced: bool,
     global_index: usize,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct UnderedFunctions {
+    pub f: EcoVec<Instr>,
+    pub f_sig: Signature,
+    pub g: EcoVec<Instr>,
+    pub g_sig: Signature,
+    pub span: usize,
 }
 
 /// A scope where names are defined
@@ -2411,7 +2425,7 @@ code:
         .into();
         self.errors.push(e);
     }
-    fn experimental_error<S>(&mut self, span: &CodeSpan, message: impl FnOnce() -> S)
+    pub(crate) fn experimental_error<S>(&mut self, span: &CodeSpan, message: impl FnOnce() -> S)
     where
         S: ToString,
     {

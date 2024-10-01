@@ -175,7 +175,7 @@ impl Compiler {
         }
     }
     #[allow(clippy::collapsible_match)]
-    pub(super) fn modified(
+    pub(crate) fn modified(
         &mut self,
         mut modified: Modified,
         subscript: Option<usize>,
@@ -987,9 +987,10 @@ impl Compiler {
                 let f = modified.code_operands().next().unwrap().clone();
                 let span = f.span.clone();
 
-                self.in_inverse = !self.in_inverse;
+                let in_inverse = self.in_inverse;
+                self.in_inverse = !in_inverse;
                 let f_res = self.compile_operand_word(f);
-                self.in_inverse = !self.in_inverse;
+                self.in_inverse = in_inverse;
                 let (mut new_func, _) = f_res?;
 
                 self.add_span(span.clone());
@@ -1006,9 +1007,10 @@ impl Compiler {
                 let f = modified.code_operands().next().unwrap().clone();
                 let span = f.span.clone();
 
-                self.in_inverse = !self.in_inverse;
+                let in_inverse = self.in_inverse;
+                self.in_inverse = !in_inverse;
                 let f_res = self.compile_operand_word(f);
-                self.in_inverse = !self.in_inverse;
+                self.in_inverse = in_inverse;
                 let (mut new_func, f_sig) = f_res?;
                 if f_sig.args < 2 {
                     self.emit_diagnostic(
@@ -1032,7 +1034,7 @@ impl Compiler {
                     Err(e) => return Err(self.fatal_error(span, e)),
                 }
             }
-            Under => {
+            Under if !self.in_inverse => {
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let f_span = f.span.clone();
@@ -1045,7 +1047,7 @@ impl Compiler {
                 self.in_inverse = !self.in_inverse;
                 let f_res = self.compile_operand_word(f);
                 self.in_inverse = !self.in_inverse;
-                let (f_new_func, _) = f_res?;
+                let (f_new_func, f_new_sig) = f_res?;
 
                 // Under pop diagnostic
                 if let [Instr::Prim(Pop, _)] = f_new_func.instrs.as_slice() {
@@ -1059,8 +1061,22 @@ impl Compiler {
                 match under_instrs(&f_new_func.instrs, g_sig, self) {
                     Ok((f_before, f_after)) => {
                         let mut instrs = f_before;
-                        instrs.extend(g_new_func.instrs);
+                        instrs.extend(g_new_func.instrs.iter().cloned());
                         instrs.extend(f_after);
+
+                        // Register undered functions
+                        let span = self.add_span(modified.modifier.span.clone());
+                        self.undered_funcs.insert(
+                            instrs.clone(),
+                            UnderedFunctions {
+                                f: f_new_func.instrs,
+                                f_sig: f_new_sig,
+                                g: g_new_func.instrs,
+                                g_sig,
+                                span,
+                            },
+                        );
+
                         let new_func = NewFunction {
                             instrs,
                             flags: f_new_func.flags | g_new_func.flags,

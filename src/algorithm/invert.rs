@@ -988,7 +988,7 @@ fn get_undered<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> InversionResult<(UnderedFunctions, &'a [Instr])> {
-    if let [Instr::PushFunc(g), Instr::PushFunc(f), Instr::Prim(Primitive::Under, span), input @ ..] =
+    let res = if let [Instr::PushFunc(g), Instr::PushFunc(f), Instr::Prim(Primitive::Under, span), input @ ..] =
         input
     {
         Ok((
@@ -1004,16 +1004,19 @@ fn get_undered<'a>(
     } else if input.len() < 3 {
         generic()
     } else {
-        let res = (0..=input.len()).rev().find_map(|i| {
-            comp.undered_funcs
-                .get(&input[..i])
-                .map(|u| (u.clone(), &input[i..]))
-        });
-        if res.is_some() && !comp.scope.experimental {
-            return Err(InversionError::UnderExperimental);
-        }
-        res.ok_or(Generic)
+        (0..=input.len())
+            .rev()
+            .find_map(|i| {
+                comp.undered_funcs
+                    .get(&input[..i])
+                    .map(|u| (u.clone(), &input[i..]))
+            })
+            .ok_or(Generic)
+    };
+    if res.is_ok() && !comp.scope.experimental {
+        return Err(InversionError::UnderExperimental);
     }
+    res
 }
 
 fn invert_under_pattern<'a>(

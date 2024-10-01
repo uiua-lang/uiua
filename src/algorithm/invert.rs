@@ -869,7 +869,7 @@ pub(crate) fn under_instrs(
     comp.asm.instrs = comp_instrs_backup;
     // dbgln!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
-    generic()
+    Err(error)
 }
 
 fn resolve_uns(instrs: EcoVec<Instr>, comp: &mut Compiler) -> InversionResult<EcoVec<Instr>> {

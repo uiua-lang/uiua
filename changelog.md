@@ -23,6 +23,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Deprecate existing stack-based macro placeholders (`^!`, `^.`, etc.)
 - [`fold ∧`](https://uiua.org/docs/fold) now works with any signature
   - Excess values are collected into arrays
+- [`parse ⋕`](https://uiua.org/docs/parse) now parses complex values from both `arbi`and `a+bi` formats
+  - [`un °`](https://uiua.org/docs/un)[`parse ⋕`](https://uiua.org/docs/parse)'s return value uses the `arbi` format
 - [`un °`](https://uiua.org/docs/un) [`orient ⤸`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
   - This is analogous to the behavior of [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select)
 - Add a feature to some [`under ⍜`](https://uiua.org/docs/under) functions that makes them more permissive of changes in rank

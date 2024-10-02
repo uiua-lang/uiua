@@ -468,7 +468,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (Anti | Off | Backward | Above)
+            (Anti | Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
                 | Struct
                 | (Last | Sort | Chunks | Base | Coordinate | Fft | Case | Layout)

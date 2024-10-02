@@ -307,8 +307,6 @@ where
 
     let fill = if requires_fill { fill.ok() } else { None };
 
-    // dbg!(&a.shape, &b.shape, &new_shape);
-
     fn reuse_no_fill<T: ArrayValue + Copy>(
         a: &[T],
         b: &mut [T],
@@ -389,6 +387,138 @@ where
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
+    fn use_new_fill<T: ArrayValue + Copy>(
+        a: &[T],
+        b: &[T],
+        c: &mut [T],
+        ash: &[usize],
+        bsh: &[usize],
+        fill: T,
+        f: impl Fn(T, T) -> T + Copy,
+    ) {
+        match (ash, bsh) {
+            ([], []) => c[0] = f(a[0], b[0]),
+            ([], [_, ..]) => {
+                let a = a[0];
+                for (b, c) in b.iter().zip(c) {
+                    *c = f(a, *b);
+                }
+            }
+            ([_, ..], []) => {
+                let b = b[0];
+                for (a, c) in a.iter().zip(c) {
+                    *c = f(*a, b);
+                }
+            }
+            ([al, ash @ ..], [bl, bsh @ ..]) => {
+                let a_row_len = a.len() / al;
+                let b_row_len = b.len() / bl;
+                let c_row_len = c.len() / al.max(bl);
+                match al.cmp(bl) {
+                    Ordering::Equal => {
+                        if ash == bsh {
+                            for ((a, b), c) in a.iter().zip(b).zip(c) {
+                                *c = f(*a, *b);
+                            }
+                        } else {
+                            for ((a, b), c) in a
+                                .chunks_exact(a_row_len)
+                                .zip(b.chunks_exact(b_row_len))
+                                .zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                use_new_fill(a, b, c, ash, bsh, fill, f);
+                            }
+                        }
+                    }
+                    Ordering::Less => {
+                        let a_fill_row = vec![fill; a_row_len];
+                        let a_iter = a
+                            .chunks_exact(a_row_len)
+                            .chain(repeat(a_fill_row.as_slice()));
+                        for ((a, b), c) in a_iter
+                            .zip(b.chunks_exact(b_row_len))
+                            .zip(c.chunks_exact_mut(c_row_len))
+                        {
+                            use_new_fill(a, b, c, ash, bsh, fill, f);
+                        }
+                    }
+                    Ordering::Greater => {
+                        let b_fill_row = vec![fill; b_row_len];
+                        let b_iter = b
+                            .chunks_exact(b_row_len)
+                            .chain(repeat(b_fill_row.as_slice()));
+                        for ((a, b), c) in a
+                            .chunks_exact(a_row_len)
+                            .zip(b_iter)
+                            .zip(c.chunks_exact_mut(c_row_len))
+                        {
+                            use_new_fill(a, b, c, ash, bsh, fill, f);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn use_new_no_fill<T: ArrayValue + Copy>(
+        a: &[T],
+        b: &[T],
+        c: &mut [T],
+        ash: &[usize],
+        bsh: &[usize],
+        f: impl Fn(T, T) -> T + Copy,
+    ) {
+        match (ash, bsh) {
+            ([], []) => c[0] = f(a[0], b[0]),
+            ([], [_, ..]) => {
+                let a = a[0];
+                for (b, c) in b.iter().zip(c) {
+                    *c = f(a, *b);
+                }
+            }
+            ([_, ..], []) => {
+                let b = b[0];
+                for (a, c) in a.iter().zip(c) {
+                    *c = f(*a, b);
+                }
+            }
+            ([al, ash @ ..], [bl, bsh @ ..]) => {
+                let a_row_len = a.len() / al;
+                let b_row_len = b.len() / bl;
+                let c_row_len = c.len() / al.max(bl);
+                match al.cmp(bl) {
+                    Ordering::Equal => {
+                        if ash == bsh {
+                            for ((a, b), c) in a.iter().zip(b).zip(c) {
+                                *c = f(*a, *b);
+                            }
+                        } else {
+                            for ((a, b), c) in a
+                                .chunks_exact(a_row_len)
+                                .zip(b.chunks_exact(b_row_len))
+                                .zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                use_new_no_fill(a, b, c, ash, bsh, f);
+                            }
+                        }
+                    }
+                    Ordering::Less => {
+                        for (b, c) in b.chunks_exact(b_row_len).zip(c.chunks_exact_mut(c_row_len)) {
+                            use_new_no_fill(a, b, c, ash, bsh, f);
+                        }
+                    }
+                    Ordering::Greater => {
+                        for (a, c) in a.chunks_exact(a_row_len).zip(c.chunks_exact_mut(c_row_len)) {
+                            use_new_no_fill(a, b, c, ash, bsh, f);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     if new_shape.contains(&0) {
         b.shape = new_shape;
         b.data = Default::default();
@@ -440,82 +570,11 @@ where
         // Allocate a new array
         let mut new_data = eco_vec![T::default(); new_shape.elements()];
         let slice = new_data.make_mut();
-        let fill = fill.expect("There should be a fill if the new shape is not b's shape");
-
-        #[allow(clippy::too_many_arguments)]
-        fn inner<T: ArrayValue + Copy>(
-            a: &[T],
-            b: &[T],
-            c: &mut [T],
-            ash: &[usize],
-            bsh: &[usize],
-            fill: T,
-            f: impl Fn(T, T) -> T + Copy,
-        ) {
-            match (ash, bsh) {
-                ([], []) => c[0] = f(a[0], b[0]),
-                ([], [_, ..]) => {
-                    let a = a[0];
-                    for (b, c) in b.iter().zip(c) {
-                        *c = f(a, *b);
-                    }
-                }
-                ([_, ..], []) => {
-                    let b = b[0];
-                    for (a, c) in a.iter().zip(c) {
-                        *c = f(*a, b);
-                    }
-                }
-                ([al, ash @ ..], [bl, bsh @ ..]) => {
-                    let a_row_len = a.len() / al;
-                    let b_row_len = b.len() / bl;
-                    let c_row_len = c.len() / al.max(bl);
-                    match al.cmp(bl) {
-                        Ordering::Equal => {
-                            if ash == bsh {
-                                for ((a, b), c) in a.iter().zip(b).zip(c) {
-                                    *c = f(*a, *b);
-                                }
-                            } else {
-                                for ((a, b), c) in a
-                                    .chunks_exact(a_row_len)
-                                    .zip(b.chunks_exact(b_row_len))
-                                    .zip(c.chunks_exact_mut(c_row_len))
-                                {
-                                    inner(a, b, c, ash, bsh, fill, f);
-                                }
-                            }
-                        }
-                        Ordering::Less => {
-                            let a_fill_row = vec![fill; a_row_len];
-                            let a_iter = a
-                                .chunks_exact(a_row_len)
-                                .chain(repeat(a_fill_row.as_slice()));
-                            for ((a, b), c) in a_iter
-                                .zip(b.chunks_exact(b_row_len))
-                                .zip(c.chunks_exact_mut(c_row_len))
-                            {
-                                inner(a, b, c, ash, bsh, fill, f);
-                            }
-                        }
-                        Ordering::Greater => {
-                            let b_fill_row = vec![fill; b_row_len];
-                            let b_iter = b
-                                .chunks_exact(b_row_len)
-                                .chain(repeat(b_fill_row.as_slice()));
-                            for ((a, b), c) in a
-                                .chunks_exact(a_row_len)
-                                .zip(b_iter)
-                                .zip(c.chunks_exact_mut(c_row_len))
-                            {
-                                inner(a, b, c, ash, bsh, fill, f);
-                            }
-                        }
-                    }
-                }
-            }
+        if let Some(fill) = fill {
+            use_new_fill(&a.data, &b.data, slice, &a.shape, &b.shape, fill, f);
+        } else {
+            use_new_no_fill(&a.data, &b.data, slice, &a.shape, &b.shape, f);
         }
-        inner(&a.data, &b.data, slice, &a.shape, &b.shape, fill, f);
         b.data = new_data.into();
         b.shape = new_shape;
     }

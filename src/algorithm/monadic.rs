@@ -216,9 +216,13 @@ impl Value {
                 for (i, s) in new_data.make_mut().chunks_exact_mut(max_len).enumerate() {
                     let n = arr.data[i].to_string();
                     let dot_pos = n.find('.');
-                    let skip = dot_pos
-                        .map(|i| max_dec - (n.len() - i - 1))
-                        .unwrap_or(max_dec + 1);
+                    let skip = if max_dec == 0 {
+                        0
+                    } else {
+                        dot_pos
+                            .map(|i| max_dec - (n.len() - i - 1))
+                            .unwrap_or(max_dec + 1)
+                    };
                     for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
                         *s = c;
                     }

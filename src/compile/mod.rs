@@ -1425,8 +1425,6 @@ code:
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
-            Word::StackSwizzle(sw) => self.stack_swizzle(sw, word.span, call),
-            Word::ArraySwizzle(sw) => self.array_swizzle(sw, word.span, call)?,
             Word::SemanticComment(sc) => match sc {
                 SemanticComment::Experimental => self.scope.experimental = true,
                 SemanticComment::NoInline => {
@@ -2252,121 +2250,6 @@ code:
                 self.add_error(span.clone(), "Subscripts are not allowed in this context");
             }
         }
-        Ok(())
-    }
-    fn stack_swizzle(&mut self, swiz: StackSwizzle, span: CodeSpan, call: bool) {
-        self.experimental_error(&span, || {
-            "Swizzles are experimental. To use them, add \
-            `# Experimental!` to the top of the file."
-        });
-        self.emit_diagnostic(
-            "Stack swizzles are deprecated and will be removed in the future.",
-            DiagnosticKind::Warning,
-            span.clone(),
-        );
-        let sig = swiz.signature();
-        let spandex = self.add_span(span.clone());
-        let equivalent = match (swiz.indices.as_slice(), swiz.fix.as_slice()) {
-            ([0], [false]) => Some(Primitive::Identity),
-            ([0], [true]) => Some(Primitive::Fix),
-            ([1, 0], [false, false]) => Some(Primitive::Flip),
-            ([0, 0], [false, false]) => Some(Primitive::Dup),
-            ([1, 0, 1], [false, false, false]) => Some(Primitive::Over),
-            _ => None,
-        };
-        let mut instr = if let Some(prim) = equivalent {
-            self.emit_diagnostic(
-                format!(
-                    "This swizzle is equivalent to {}. \
-                    Use that instead.",
-                    prim.format()
-                ),
-                DiagnosticKind::Style,
-                span.clone(),
-            );
-            Instr::Prim(prim, spandex)
-        } else {
-            Instr::StackSwizzle(swiz, spandex)
-        };
-        if !call {
-            instr = Instr::PushFunc(self.make_function(
-                FunctionId::Anonymous(span),
-                sig,
-                eco_vec![instr].into(),
-            ));
-        }
-        self.push_instr(instr);
-    }
-    fn array_swizzle(&mut self, swiz: ArraySwizzle, span: CodeSpan, call: bool) -> UiuaResult {
-        if !self.scope.experimental {
-            self.add_error(
-                span.clone(),
-                "Swizzles are experimental. To use them, add \
-                `# Experimental!` to the top of the file.",
-            );
-        }
-        self.emit_diagnostic(
-            "Array swizzles are deprecated and will be removed in the future.",
-            DiagnosticKind::Warning,
-            span.clone(),
-        );
-        let sig = swiz.signature();
-        let mut instrs = EcoVec::new();
-        let normal_ordered = (swiz.indices.iter().enumerate()).all(|(i, &idx)| i == idx as usize);
-        let spandex = self.add_span(span.clone());
-        if normal_ordered {
-            let val = Value::from(swiz.indices.len());
-            instrs.extend([Instr::push(val), Instr::Prim(Primitive::Take, spandex)]);
-        } else {
-            let arr = Array::from_iter(swiz.indices.iter().map(|&i| i as f64));
-            instrs.extend([Instr::push(arr), Instr::Prim(Primitive::Select, spandex)]);
-        }
-        if swiz.unbox.iter().all(|&b| b) {
-            instrs.push(Instr::Unpack {
-                count: sig.outputs,
-                span: spandex,
-                unbox: true,
-            })
-        } else {
-            instrs.push(Instr::Unpack {
-                count: sig.outputs,
-                span: spandex,
-                unbox: false,
-            });
-            if !swiz.unbox.iter().all(|&b| !b) {
-                let mut boxed_indices: Vec<usize> = (swiz.unbox.iter().enumerate())
-                    .filter_map(|(i, b)| b.then_some(i))
-                    .collect();
-                let mut curr_index = boxed_indices.pop().unwrap();
-                if curr_index != 0 {
-                    instrs.push(Instr::PushTemp {
-                        stack: TempStack::Inline,
-                        count: curr_index,
-                        span: spandex,
-                    });
-                }
-                instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, spandex));
-                for i in boxed_indices.into_iter().rev() {
-                    let diff = curr_index - i;
-                    instrs.extend([
-                        Instr::pop_inline(diff, spandex),
-                        Instr::ImplPrim(ImplPrimitive::UnBox, spandex),
-                    ]);
-                    curr_index = i;
-                }
-                if curr_index != 0 {
-                    instrs.push(Instr::pop_inline(curr_index, spandex));
-                }
-            }
-        }
-        if !call {
-            instrs = eco_vec![Instr::PushFunc(self.make_function(
-                FunctionId::Anonymous(span),
-                sig,
-                instrs.into(),
-            ))];
-        }
-        self.push_all_instrs(instrs);
         Ok(())
     }
     pub(crate) fn inlinable(&self, instrs: &[Instr], flags: FunctionFlags) -> bool {

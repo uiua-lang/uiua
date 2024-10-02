@@ -16,9 +16,7 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{
-    ast::PlaceholderOp, ArraySwizzle, Ident, Inputs, Primitive, StackSwizzle, WILDCARD_CHAR,
-};
+use crate::{ast::PlaceholderOp, Ident, Inputs, Primitive, WILDCARD_CHAR};
 
 /// Subscript digit characters
 pub const SUBSCRIPT_NUMS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
@@ -509,8 +507,6 @@ pub enum Token {
     MultilineFormatStr(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
-    StackSwizzle(StackSwizzle),
-    ArraySwizzle(ArraySwizzle),
     Subscript(usize),
     LeftArrow,
     LeftStrokeArrow,
@@ -582,18 +578,6 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_stack_swizzle(&self) -> Option<&StackSwizzle> {
-        match self {
-            Token::StackSwizzle(s) => Some(s),
-            _ => None,
-        }
-    }
-    pub(crate) fn as_array_swizzle(&self) -> Option<&ArraySwizzle> {
-        match self {
-            Token::ArraySwizzle(s) => Some(s),
-            _ => None,
-        }
-    }
     pub(crate) fn as_subscript(&self) -> Option<usize> {
         match self {
             Token::Subscript(n) => Some(*n),
@@ -634,8 +618,6 @@ impl fmt::Display for Token {
                 }
                 Ok(())
             }
-            Token::StackSwizzle(s) => s.fmt(f),
-            Token::ArraySwizzle(s) => s.fmt(f),
             Token::Simple(t) => t.fmt(f),
             Token::Glyph(p) => p.fmt(f),
             Token::LeftArrow => write!(f, "←"),
@@ -680,9 +662,8 @@ pub enum AsciiToken {
     GreaterEqual,
     Backtick,
     Tilde,
-    TripleMinus,
     Quote,
-    Quote2,
+    TripleMinus,
     Placeholder(PlaceholderOp),
 }
 
@@ -711,7 +692,6 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Tilde => write!(f, "~"),
             AsciiToken::TripleMinus => write!(f, "---"),
             AsciiToken::Quote => write!(f, "'"),
-            AsciiToken::Quote2 => write!(f, "''"),
             AsciiToken::Placeholder(op) => write!(f, "{op}"),
         }
     }
@@ -909,29 +889,8 @@ impl<'a> Lexer<'a> {
                 ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),
                 "-" if self.next_chars_exact(["-", "-"]) => self.end(TripleMinus, start),
-                "'" if self.next_char_exact("'") => {
-                    if let Some(swiz) = self.array_swizzle() {
-                        self.end(ArraySwizzle(swiz), start)
-                    } else {
-                        self.end(Quote2, start)
-                    }
-                }
-                "'" => {
-                    if let Some(swiz) = self.stack_swizzle() {
-                        self.end(StackSwizzle(swiz), start)
-                    } else {
-                        self.end(Quote, start)
-                    }
-                }
-                "λ" => {
-                    let swiz = self.stack_swizzle().unwrap_or_default();
-                    self.end(StackSwizzle(swiz), start)
-                }
-                "⋊" => {
-                    let swiz = self.array_swizzle().unwrap_or_default();
-                    self.end(ArraySwizzle(swiz), start)
-                }
                 "~" => self.end(Tilde, start),
+                "'" => self.end(Quote, start),
                 "`" => {
                     if self.number("-") {
                         self.end(Number, start)
@@ -1310,32 +1269,29 @@ impl<'a> Lexer<'a> {
         let mut s = c.to_string();
         let end = self.loc.byte_pos as usize;
         let raw = &self.input[start.byte_pos as usize..end];
-        if raw.contains('\\') {
+        if raw.contains('\\') || is_custom_glyph(c) || !c.is_empty() && "!‼".contains(c) {
             return s;
         }
-        if !is_custom_glyph(c) {
-            let mut started_subscript = false;
-            // Handle identifiers beginning with __
-            loop {
-                if self.next_chars_exact(["_"; 2]) {
-                    s.push_str("__");
-                    while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                        s.push_str(c);
-                    }
-                    started_subscript = true;
-                } else if let Some(c) =
-                    self.next_char_if_all(|c| !started_subscript && is_ident_start(c))
-                {
+        let mut started_subscript = false;
+        // Handle identifiers beginning with __
+        loop {
+            if self.next_chars_exact(["_"; 2]) {
+                s.push_str("__");
+                while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                     s.push_str(c);
-                } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_NUMS.contains(&c)) {
-                    s.push_str(c);
-                    started_subscript = true;
-                } else {
-                    break;
                 }
+                started_subscript = true;
+            } else if let Some(c) =
+                self.next_char_if_all(|c| !started_subscript && is_ident_start(c))
+            {
+                s.push_str(c);
+            } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_NUMS.contains(&c)) {
+                s.push_str(c);
+                started_subscript = true;
+            } else {
+                break s;
             }
         }
-        s
     }
     fn number(&mut self, init: &str) -> bool {
         // Whole part
@@ -1456,44 +1412,6 @@ impl<'a> Lexer<'a> {
         } else {
             c.into()
         }))
-    }
-    fn stack_swizzle(&mut self) -> Option<StackSwizzle> {
-        let mut indices = EcoVec::new();
-        let mut fix = EcoVec::new();
-        while let Some(c) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_alphabetic())) {
-            for c in c.chars() {
-                let is_upper = c.is_ascii_uppercase();
-                let c = c.to_ascii_lowercase();
-                indices.push(c as u8 - b'a');
-                fix.push(is_upper);
-            }
-        }
-        if indices.is_empty() {
-            None
-        } else {
-            Some(StackSwizzle { indices, fix })
-        }
-    }
-    fn array_swizzle(&mut self) -> Option<ArraySwizzle> {
-        let mut indices = EcoVec::new();
-        let mut unbox = EcoVec::new();
-        while let Some(c) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_alphabetic())) {
-            for c in c.chars() {
-                let is_upper = c.is_ascii_uppercase();
-                let c = c.to_ascii_lowercase();
-                if c <= 'm' {
-                    indices.push(c as i8 - b'a' as i8);
-                } else {
-                    indices.push(c as i8 - b'z' as i8 - 1);
-                }
-                unbox.push(is_upper);
-            }
-        }
-        if indices.is_empty() {
-            None
-        } else {
-            Some(ArraySwizzle { indices, unbox })
-        }
     }
     fn parse_string_contents(
         &mut self,

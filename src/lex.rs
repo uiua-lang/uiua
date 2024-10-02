@@ -1310,32 +1310,29 @@ impl<'a> Lexer<'a> {
         let mut s = c.to_string();
         let end = self.loc.byte_pos as usize;
         let raw = &self.input[start.byte_pos as usize..end];
-        if raw.contains('\\') {
+        if raw.contains('\\') || is_custom_glyph(c) || !c.is_empty() && "!‼".contains(c) {
             return s;
         }
-        if !is_custom_glyph(c) {
-            let mut started_subscript = false;
-            // Handle identifiers beginning with __
-            loop {
-                if self.next_chars_exact(["_"; 2]) {
-                    s.push_str("__");
-                    while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                        s.push_str(c);
-                    }
-                    started_subscript = true;
-                } else if let Some(c) =
-                    self.next_char_if_all(|c| !started_subscript && is_ident_start(c))
-                {
+        let mut started_subscript = false;
+        // Handle identifiers beginning with __
+        loop {
+            if self.next_chars_exact(["_"; 2]) {
+                s.push_str("__");
+                while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                     s.push_str(c);
-                } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_NUMS.contains(&c)) {
-                    s.push_str(c);
-                    started_subscript = true;
-                } else {
-                    break;
                 }
+                started_subscript = true;
+            } else if let Some(c) =
+                self.next_char_if_all(|c| !started_subscript && is_ident_start(c))
+            {
+                s.push_str(c);
+            } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_NUMS.contains(&c)) {
+                s.push_str(c);
+                started_subscript = true;
+            } else {
+                break s;
             }
         }
-        s
     }
     fn number(&mut self, init: &str) -> bool {
         // Whole part

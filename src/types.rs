@@ -196,6 +196,13 @@ impl<'a> TypeRt<'a> {
                 P::Over => {
                     let a = self.pop()?;
                     let b = self.pop()?;
+                    self.stack.push(b.clone());
+                    self.stack.push(a);
+                    self.stack.push(b);
+                }
+                P::Around => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
                     self.stack.push(a.clone());
                     self.stack.push(b);
                     self.stack.push(a);

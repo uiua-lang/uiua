@@ -10,7 +10,6 @@ use std::{
     sync::Arc,
 };
 
-use ecow::EcoVec;
 use enum_iterator::{all, Sequence};
 use serde::*;
 use serde_tuple::*;

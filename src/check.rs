@@ -491,6 +491,14 @@ impl VirtualEnv {
                     self.stack.push(a);
                     self.stack.push(b);
                 }
+                Around => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.set_min_height();
+                    self.stack.push(a.clone());
+                    self.stack.push(b);
+                    self.stack.push(a);
+                }
                 Join => {
                     let a = self.pop()?;
                     let b = self.pop()?;

@@ -353,7 +353,7 @@
     "args": 2,
     "outputs": 3,
     "class": "Stack",
-    "description": "Duplicate the top of the stack around the second element",
+    "description": "Duplicate the top value on the stack to the third-to-top position",
     "experimental": true
   },
   "assert": {

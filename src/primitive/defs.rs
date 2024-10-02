@@ -504,10 +504,17 @@ primitive!(
     /// [over] is often used in examples of functions with two inputs to show both inputs and the output.
     /// ex: [+,, +3 4 5]
     (2(3), Over, Stack, ("over", ',')),
-    /// Duplicate the top of the stack around the second element
+    /// Duplicate the top value on the stack to the third-to-top position
+    ///
+    /// Formats from `'`.
     ///
     /// ex: # Experimental!
-    ///   : [' 1 2 3 4 5]
+    ///   : [’ 1 2 3]
+    /// This can be usful when used with [both] or [bracket] to combine one array with each of two others.
+    /// ex: # Experimental!
+    ///   : [∩+’] 10 2 5
+    /// ex: # Experimental!
+    ///   : [⊓+×’] 10 2 5
     (2(3), Around, Stack, ("around", AsciiToken::Quote, '’')),
     /// Swap the top two values on the stack
     ///

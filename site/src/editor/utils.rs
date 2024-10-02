@@ -28,7 +28,7 @@ use crate::{
     backend::{OutputItem, WebBackend},
     binding_class, code_font,
     editor::Editor,
-    element, prim_sig_class, sig_class,
+    element, prim_sig_class,
 };
 
 /// Handles setting the code in the editor, setting the cursor, and managing the history

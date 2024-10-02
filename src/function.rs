@@ -6,7 +6,7 @@ use std::{
     ops::{Add, AddAssign, BitAnd, BitOr, BitOrAssign},
 };
 
-use ecow::{eco_vec, EcoString, EcoVec};
+use ecow::{EcoString, EcoVec};
 use enum_iterator::Sequence;
 use serde::*;
 use serde_tuple::*;

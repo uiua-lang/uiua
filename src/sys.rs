@@ -370,7 +370,7 @@ sys_op! {
     /// How the image is shown depends on the system backend.
     ///
     /// In the default backend, the image is shown in the terminal. Here you can make it use sixel
-    /// by setting the `UIUA_ENABLE_SIXEL` environment variable to `1`. Else it will try to use the
+    /// by setting the `UIUA_ENABLE_SIXEL` environment variable to `1`. Otherwise it will try to use the
     /// `kitty` or `iTerm` image protocols and fall back to half-block image printing.
     /// On the web, the image is shown in the output area.
     ///

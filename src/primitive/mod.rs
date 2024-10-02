@@ -468,7 +468,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (Anti | Off | Backward | Above)
+            (Anti | Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
                 | Struct
                 | (Last | Sort | Chunks | Base | Coordinate | Fft | Case | Layout)
@@ -791,6 +791,13 @@ impl Primitive {
                 env.push(b.clone());
                 env.push(a);
                 env.push(b);
+            }
+            Primitive::Around => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                env.push(a.clone());
+                env.push(b);
+                env.push(a);
             }
             Primitive::Pop => {
                 env.pop(1)?;

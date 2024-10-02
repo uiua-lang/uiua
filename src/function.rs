@@ -166,9 +166,8 @@ instr!(
             span: usize,
         }
     ),
-    (15, StackSwizzle(swiz(StackSwizzle), span(usize))),
     (
-        16,
+        15,
         Label {
             label: EcoString,
             remove: bool,
@@ -176,7 +175,7 @@ instr!(
         }
     ),
     (
-        17,
+        16,
         ValidateType {
             index: usize,
             type_num: u8,
@@ -184,9 +183,9 @@ instr!(
             span: usize,
         }
     ),
-    (18, Dynamic(func(DynamicFunction))),
+    (17, Dynamic(func(DynamicFunction))),
     (
-        19,
+        18,
         Unpack {
             count: usize,
             unbox: bool,
@@ -194,14 +193,14 @@ instr!(
         }
     ),
     (
-        20,
+        19,
         TouchStack {
             count: usize,
             span: usize,
         }
     ),
     (
-        21,
+        20,
         PushTemp {
             stack: TempStack,
             count: usize,
@@ -209,7 +208,7 @@ instr!(
         }
     ),
     (
-        22,
+        21,
         PopTemp {
             stack: TempStack,
             count: usize,
@@ -217,16 +216,16 @@ instr!(
         }
     ),
     (
-        23,
+        22,
         CopyToTemp {
             stack: TempStack,
             count: usize,
             span: usize,
         }
     ),
-    (24, SetOutputComment { i: usize, n: usize }),
-    (25, PushSig(sig(Signature))),
-    (26, PopSig),
+    (23, SetOutputComment { i: usize, n: usize }),
+    (24, PushSig(sig(Signature))),
+    (25, PopSig),
 );
 
 type FmtParts = EcoVec<EcoString>;
@@ -353,92 +352,6 @@ impl<'a> fmt::Display for FmtInstrs<'a> {
             }?
         }
         Ok(())
-    }
-}
-
-/// A swizzle for the stack
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
-pub struct StackSwizzle {
-    /// The indices of the stack elements
-    pub indices: EcoVec<u8>,
-    /// The fix mask
-    pub fix: EcoVec<bool>,
-}
-
-impl fmt::Display for StackSwizzle {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "λ")?;
-        for (&i, &fix) in self.indices.iter().zip(&self.fix) {
-            let mut c = b'a' + i;
-            if fix {
-                c = c.to_ascii_uppercase();
-            }
-            write!(f, "{}", c as char)?;
-        }
-        Ok(())
-    }
-}
-
-impl StackSwizzle {
-    pub(crate) fn args(&self) -> usize {
-        (self.indices.iter().max().copied()).map_or(0, |max| max as usize + 1)
-    }
-    /// Get the signature of the swizzle
-    pub fn signature(&self) -> Signature {
-        Signature::new(self.args(), self.indices.len())
-    }
-    /// Get the inverse of the swizzle
-    pub fn inverse(&self) -> Option<Self> {
-        if self.args() != self.indices.len() {
-            return None;
-        }
-        let set: HashSet<_> = self.indices.iter().copied().collect();
-        if set.len() != self.indices.len() {
-            return None;
-        }
-        let mut indices = eco_vec![0; self.indices.len()];
-        let slice = indices.make_mut();
-        for (i, &j) in self.indices.iter().enumerate() {
-            slice[j as usize] = i as u8;
-        }
-        Some(Self {
-            indices,
-            fix: self.fix.clone(),
-        })
-    }
-}
-
-/// A swizzle for an array
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
-pub struct ArraySwizzle {
-    /// The indices of the array elements
-    pub indices: EcoVec<i8>,
-    /// The (un)box mask
-    pub unbox: EcoVec<bool>,
-}
-
-impl fmt::Display for ArraySwizzle {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "⋊")?;
-        for (&i, &b) in self.indices.iter().zip(&self.unbox) {
-            let mut c = if i < 0 {
-                b'z' + 1 - i.unsigned_abs()
-            } else {
-                b'a' + i.unsigned_abs()
-            };
-            if b {
-                c = c.to_ascii_uppercase();
-            }
-            write!(f, "{}", c as char)?;
-        }
-        Ok(())
-    }
-}
-
-impl ArraySwizzle {
-    /// Get the signature of the swizzle
-    pub fn signature(&self) -> Signature {
-        Signature::new(1, self.indices.len())
     }
 }
 
@@ -621,7 +534,6 @@ impl fmt::Display for Instr {
             Instr::CopyToTemp { stack, count, .. } => {
                 write!(f, "<copy to {stack} {count}>")
             }
-            Instr::StackSwizzle(swizzle, _) => write!(f, "{swizzle}"),
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),

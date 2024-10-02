@@ -347,6 +347,15 @@
     "description": "Invert the behavior of a function, but keep its signature",
     "experimental": true
   },
+  "around": {
+    "ascii": "'",
+    "glyph": "’",
+    "args": 2,
+    "outputs": 3,
+    "class": "Stack",
+    "description": "Duplicate the top of the stack around the second element",
+    "experimental": true
+  },
   "assert": {
     "glyph": "⍤",
     "args": 2,

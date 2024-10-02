@@ -138,7 +138,8 @@ The `uiua` crate has the following noteable feature flags:
 #![allow(
     clippy::single_match,
     clippy::needless_range_loop,
-    clippy::mutable_key_type
+    clippy::mutable_key_type,
+    clippy::match_like_matches_macro
 )]
 #![warn(missing_docs)]
 
@@ -235,7 +236,6 @@ mod tests {
             // Test running
             let mut env = Uiua::with_native_sys();
             let mut comp = Compiler::new();
-            comp.mode(RunMode::Test);
             if let Err(e) = comp.load_str_src(&code, &path).and_then(|comp| {
                 comp.asm.remove_dead_code();
                 env.run_asm(&comp.asm)
@@ -258,7 +258,8 @@ mod tests {
                     panic!("{} had a non-empty {} stack", path.display(), temp_stack);
                 }
             }
-            // Test lsp spans
+
+            // Make sure lsp spans doesn't panic
             _ = spans(&code);
         }
         _ = std::fs::remove_file("example.ua");

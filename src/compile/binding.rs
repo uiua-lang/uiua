@@ -485,7 +485,7 @@ impl Compiler {
             ModuleKind::Named(name) => ScopeKind::Module(name.value.clone()),
             ModuleKind::Test => ScopeKind::Test,
         };
-        let module = self.in_scope(scope_kind, |comp| comp.items(m.items))?;
+        let module = self.in_scope(scope_kind, |comp| comp.items(m.items, false))?;
         match m.kind {
             ModuleKind::Named(name) => {
                 // Add imports

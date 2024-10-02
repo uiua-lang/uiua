@@ -1984,7 +1984,8 @@ impl Compiler {
         // Compile the generated items
         let temp_mode = self.pre_eval_mode.min(PreEvalMode::Line);
         let pre_eval_mod = replace(&mut self.pre_eval_mode, temp_mode);
-        self.items(items).map_err(|e| e.trace_macro(span.clone()))?;
+        self.items(items, true)
+            .map_err(|e| e.trace_macro(span.clone()))?;
         self.pre_eval_mode = pre_eval_mod;
         // Extract generated top-level instructions
         let mut instrs = EcoVec::new();

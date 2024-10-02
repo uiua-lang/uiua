@@ -27,6 +27,14 @@ use uiua::{
     Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
 };
 
+static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
+static WATCH_CHILD: Lazy<Mutex<Option<Child>>> = Lazy::new(Default::default);
+
+fn fail<T>(e: UiuaError) -> T {
+    println!("{}", e.report());
+    exit(1)
+}
+
 fn main() {
     color_backtrace::install();
 
@@ -55,26 +63,16 @@ fn main() {
     #[cfg(feature = "raw_mode")]
     rawrrr::save_term();
 
-    if let Err(e) = run() {
-        println!("{}", e.report());
-        exit(1);
-    }
-}
-
-static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
-static WATCH_CHILD: Lazy<Mutex<Option<Child>>> = Lazy::new(Default::default);
-
-fn run() -> UiuaResult {
     if cfg!(feature = "profile") {
         uiua::profile::run_profile();
-        return Ok(());
+        return;
     }
     #[cfg(feature = "stand")]
     if let Some(asm) = &*uiua::stand::STAND_ASM {
         let mut rt = Uiua::with_native_sys().with_args(env::args().skip(1).collect());
-        rt.run_asm(asm)?;
+        rt.run_asm(asm).unwrap_or_else(fail);
         print_stack(&rt.take_stack(), true);
-        return Ok(());
+        return;
     }
     match App::try_parse() {
         Ok(app) => match app {
@@ -93,7 +91,8 @@ fn run() -> UiuaResult {
                 let config = FormatConfig::from_source(
                     formatter_options.format_config_source,
                     path.as_deref(),
-                )?;
+                )
+                .unwrap_or_else(fail);
 
                 if io {
                     let mut buffer = String::new();
@@ -110,12 +109,12 @@ fn run() -> UiuaResult {
                         }
                         code.push_str(&buffer);
                     }
-                    let formatted = format_str(&code, &config)?;
+                    let formatted = format_str(&code, &config).unwrap_or_else(fail);
                     print!("{}", formatted.output);
                 } else if let Some(path) = path {
-                    format_single_file(path, &config)?;
+                    format_single_file(path, &config).unwrap_or_else(fail);
                 } else {
-                    format_multi_files(&config)?;
+                    format_multi_files(&config).unwrap_or_else(fail);
                 }
             }
             App::Run {
@@ -137,7 +136,7 @@ fn run() -> UiuaResult {
                         Ok(path) => path,
                         Err(e) => {
                             eprintln!("{}", e);
-                            return Ok(());
+                            return;
                         }
                     }
                 };
@@ -153,29 +152,37 @@ fn run() -> UiuaResult {
                         Ok(json) => json,
                         Err(e) => {
                             eprintln!("Failed to read assembly: {e}");
-                            return Ok(());
+                            return;
                         }
                     };
                     let assembly = match Assembly::from_uasm(&uasm) {
                         Ok(assembly) => assembly,
                         Err(e) => {
                             eprintln!("Failed to parse assembly: {e}");
-                            return Ok(());
+                            return;
                         }
                     };
-                    rt.run_asm(assembly)?;
+                    rt.run_asm(assembly).unwrap_or_else(fail);
                 } else {
                     if !no_format {
                         let config = FormatConfig::from_source(
                             formatter_options.format_config_source,
                             Some(&path),
-                        )?;
-                        format_file(&path, &config)?;
+                        )
+                        .unwrap_or_else(fail);
+                        format_file(&path, &config).unwrap_or_else(fail);
                     }
                     let mode = mode.unwrap_or(RunMode::Normal);
-                    rt.compile_run(|comp| {
+                    let res = rt.compile_run(|comp| {
                         comp.mode(mode).print_diagnostics(true).load_file(&path)
-                    })?;
+                    });
+                    if let Err(e) = &res {
+                        println!("{}", e.report());
+                    }
+                    rt.print_reports();
+                    if res.is_err() {
+                        exit(1);
+                    }
                 }
                 print_stack(&rt.take_stack(), !no_color);
                 #[cfg(feature = "raw_mode")]
@@ -189,14 +196,15 @@ fn run() -> UiuaResult {
                         Ok(path) => path,
                         Err(e) => {
                             eprintln!("{}", e);
-                            return Ok(());
+                            return;
                         }
                     }
                 };
                 let mut assembly = Compiler::with_backend(NativeSys)
                     .mode(RunMode::Normal)
                     .print_diagnostics(true)
-                    .load_file(&path)?
+                    .load_file(&path)
+                    .unwrap_or_else(fail)
                     .finish();
                 assembly.remove_dead_code();
                 let output = output.unwrap_or_else(|| path.with_extension("uasm"));
@@ -219,7 +227,8 @@ fn run() -> UiuaResult {
                     comp.mode(RunMode::Normal)
                         .print_diagnostics(true)
                         .load_str(&code)
-                })?;
+                })
+                .unwrap_or_else(fail);
                 print_stack(&rt.take_stack(), !no_color);
             }
             App::Test {
@@ -234,22 +243,29 @@ fn run() -> UiuaResult {
                         Ok(path) => path,
                         Err(e) => {
                             eprintln!("{}", e);
-                            return Ok(());
+                            return;
                         }
                     }
                 };
                 let config =
-                    FormatConfig::from_source(formatter_options.format_config_source, Some(&path))?;
-                format_file(&path, &config)?;
+                    FormatConfig::from_source(formatter_options.format_config_source, Some(&path))
+                        .unwrap_or_else(fail);
+                format_file(&path, &config).unwrap_or_else(fail);
                 let mut rt = Uiua::with_native_sys()
                     .with_file_path(&path)
                     .with_args(args);
-                rt.compile_run(|comp| {
+                let res = rt.compile_run(|comp| {
                     comp.mode(RunMode::Test)
                         .print_diagnostics(true)
                         .load_file(path)
-                })?;
-                println!("No failures!");
+                });
+                if let Err(e) = &res {
+                    println!("{}", e.report());
+                }
+                rt.print_reports();
+                if res.is_err() {
+                    exit(1);
+                }
             }
             App::Watch {
                 no_format,
@@ -285,7 +301,8 @@ fn run() -> UiuaResult {
             } => {
                 let config = FormatConfig {
                     trailing_newline: false,
-                    ..FormatConfig::from_source(formatter_options.format_config_source, None)?
+                    ..FormatConfig::from_source(formatter_options.format_config_source, None)
+                        .unwrap_or_else(fail)
                 };
 
                 #[cfg(feature = "audio")]
@@ -294,8 +311,8 @@ fn run() -> UiuaResult {
                 let mut compiler = Compiler::with_backend(NativeSys);
                 compiler.mode(RunMode::Normal).print_diagnostics(true);
                 if let Some(file) = file {
-                    compiler.load_file(file)?;
-                    rt.run_compiler(&mut compiler)?;
+                    compiler.load_file(file).unwrap_or_else(fail);
+                    rt.run_compiler(&mut compiler).unwrap_or_else(fail);
                 }
                 repl(rt, compiler, true, stack, config);
             }
@@ -305,7 +322,7 @@ fn run() -> UiuaResult {
                     Ok(paths) => paths,
                     Err(e) => {
                         eprintln!("Failed to list modules: {e}");
-                        return Ok(());
+                        return;
                     }
                 };
                 match command.unwrap_or(ModuleCommand::List) {
@@ -323,7 +340,7 @@ fn run() -> UiuaResult {
                             paths
                         } else {
                             eprintln!("No modules to update");
-                            return Ok(());
+                            return;
                         };
                         if let Err(e) = update_modules(&modules) {
                             eprintln!("Failed to update modules: {e}");
@@ -371,7 +388,7 @@ fn run() -> UiuaResult {
                     }
                 }
             }
-            App::Find { path, text, raw } => find(path, text, raw)?,
+            App::Find { path, text, raw } => find(path, text, raw).unwrap_or_else(fail),
         },
         Err(e)
             if e.kind() == ErrorKind::InvalidSubcommand
@@ -398,7 +415,7 @@ fn run() -> UiuaResult {
                 Err(nwf) => {
                     _ = e.print();
                     eprintln!("\n{nwf}");
-                    return Ok(());
+                    return;
                 }
             };
             if let Err(e) = res {
@@ -407,7 +424,6 @@ fn run() -> UiuaResult {
         }
         Err(e) => _ = e.print(),
     }
-    Ok(())
 }
 
 #[derive(Debug)]

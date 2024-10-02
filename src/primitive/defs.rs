@@ -3467,6 +3467,7 @@ impl_primitive!(
     (1(2), ImageDecode),
     (1(2), GifDecode),
     (1(3), AudioDecode),
+    (0(1), UnRawMode, Impure),
     // Unders
     (1, UndoFix),
     (2, UndoUnbits),
@@ -3516,5 +3517,5 @@ impl_primitive!(
     (1[2], RepeatWithInverse),
     (2(1), ValidateType),
     (2(0), ValidateTypeConsume),
-    (0(1), UnRawMode, Impure)
+    (2(0), TestAssert, Impure),
 );

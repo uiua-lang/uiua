@@ -192,6 +192,7 @@ impl fmt::Display for ImplPrimitive {
             ImageDecode => write!(f, "{Un}{ImageEncode}"),
             GifDecode => write!(f, "{Un}{GifEncode}"),
             AudioDecode => write!(f, "{Un}{AudioEncode}"),
+            UnRawMode => write!(f, "{Un}{}", Primitive::Sys(SysOp::RawMode)),
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoUnbits => write!(f, "{Under}{Un}{Bits}"),
             UndoBase => write!(f, "{Under}{Base}"),
@@ -294,7 +295,7 @@ impl fmt::Display for ImplPrimitive {
             RepeatWithInverse => write!(f, "{Repeat}"),
             ValidateType => write!(f, "{Un}…{Type}{Dup}"),
             ValidateTypeConsume => write!(f, "{Un}…{Type}"),
-            UnRawMode => write!(f, "{Un}{}", Primitive::Sys(SysOp::RawMode)),
+            TestAssert => write!(f, "{Assert}"),
         }
     }
 }
@@ -1152,6 +1153,10 @@ impl ImplPrimitive {
             ImplPrimitive::ImageDecode => encode::image_decode(env)?,
             ImplPrimitive::GifDecode => encode::gif_decode(env)?,
             ImplPrimitive::AudioDecode => encode::audio_decode(env)?,
+            ImplPrimitive::UnRawMode => {
+                let raw_mode = env.rt.backend.get_raw_mode().map_err(|e| env.error(e))?;
+                env.push(raw_mode);
+            }
             // Unders
             ImplPrimitive::UndoUnbits => {
                 let orig_shape = env.pop(1)?;
@@ -1372,9 +1377,19 @@ impl ImplPrimitive {
                     env.push(val);
                 }
             }
-            ImplPrimitive::UnRawMode => {
-                let raw_mode = env.rt.backend.get_raw_mode().map_err(|e| env.error(e))?;
-                env.push(raw_mode);
+            ImplPrimitive::TestAssert => {
+                let msg = env.pop(1)?;
+                let cond = env.pop(2)?;
+                let mut res = Ok(());
+                if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
+                    res = Err(UiuaErrorKind::Throw(
+                        msg.into(),
+                        env.span().clone(),
+                        env.asm.inputs.clone().into(),
+                    )
+                    .into());
+                }
+                env.rt.test_results.push(res);
             }
         }
         Ok(())

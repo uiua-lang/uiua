@@ -47,8 +47,6 @@ pub enum UiuaErrorKind {
     CompilerPanic(String),
     /// The program was interrupted
     Interrupted,
-    /// Some tests failed
-    TestsFailed(usize, usize),
 }
 
 impl UiuaErrorKind {
@@ -103,18 +101,6 @@ impl fmt::Display for UiuaError {
             UiuaErrorKind::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaErrorKind::CompilerPanic(message) => message.fmt(f),
             UiuaErrorKind::Interrupted => write!(f, "# Program interrupted"),
-            UiuaErrorKind::TestsFailed(successes, failures) => {
-                let total = successes + failures;
-                write!(
-                    f,
-                    "{}/{} test{} passed, {}/{} failed",
-                    successes,
-                    total,
-                    if total == 1 { "" } else { "s" },
-                    failures,
-                    total
-                )
-            }
         }
     }
 }
@@ -298,28 +284,6 @@ impl UiuaError {
                     color: true,
                 }
             }
-            UiuaErrorKind::TestsFailed(successes, failures) => {
-                let total = successes + failures;
-                return Report {
-                    fragments: vec![
-                        ReportFragment::Colored(
-                            format!(
-                                "{}/{} test{} passed",
-                                successes,
-                                total,
-                                if total == 1 { "" } else { "s" }
-                            ),
-                            DiagnosticKind::Info.into(),
-                        ),
-                        ReportFragment::Plain(", ".into()),
-                        ReportFragment::Colored(
-                            format!("{}/{} failed", failures, total),
-                            ReportKind::Error,
-                        ),
-                    ],
-                    color: true,
-                };
-            }
         };
         report = report.trace(&self.trace);
         let default_inputs = Inputs::default();
@@ -485,6 +449,18 @@ pub struct Report {
     pub color: bool,
 }
 
+impl From<UiuaError> for Report {
+    fn from(error: UiuaError) -> Self {
+        error.report()
+    }
+}
+
+impl From<UiuaError> for Vec<Report> {
+    fn from(error: UiuaError) -> Self {
+        error.into_multi().into_iter().map(Into::into).collect()
+    }
+}
+
 impl Report {
     /// Change whether to color the report with ANSI escape codes when converting it to a string
     ///
@@ -587,6 +563,48 @@ impl Report {
             }
         }
         Self {
+            fragments,
+            color: true,
+        }
+    }
+    /// A report that tests have finished
+    pub fn tests(successes: usize, failures: usize) -> Self {
+        let total = successes + failures;
+        let fragments = if successes == 0 {
+            if failures == 0 {
+                vec![]
+            } else {
+                vec![ReportFragment::Colored(
+                    format!(
+                        "{}{failures} test{} failed",
+                        if failures > 1 { "All " } else { "" },
+                        if failures == 1 { "" } else { "s" }
+                    ),
+                    ReportKind::Error,
+                )]
+            }
+        } else {
+            let mut fragments = vec![ReportFragment::Colored(
+                format!(
+                    "{}{successes} test{} passed",
+                    if failures == 0 && successes > 1 {
+                        "All "
+                    } else {
+                        ""
+                    },
+                    if total == 1 { "" } else { "s" }
+                ),
+                DiagnosticKind::Info.into(),
+            )];
+            if failures > 0 {
+                fragments.extend([
+                    ReportFragment::Plain(", ".into()),
+                    ReportFragment::Colored(format!("{failures} failed"), ReportKind::Error),
+                ])
+            }
+            fragments
+        };
+        Report {
             fragments,
             color: true,
         }

@@ -4,7 +4,7 @@ mod modifier;
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    collections::{hash_map::DefaultHasher, BTreeSet, HashMap, HashSet},
+    collections::{hash_map::DefaultHasher, BTreeSet, HashMap, HashSet, VecDeque},
     env::current_dir,
     fmt, fs,
     hash::{Hash, Hasher},
@@ -83,15 +83,13 @@ pub struct Compiler {
     /// Accumulated diagnostics
     diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
-    print_diagnostics: bool,
+    pub(crate) print_diagnostics: bool,
     /// Whether to evaluate comptime code
     comptime: bool,
     /// The comptime mode
     pre_eval_mode: PreEvalMode,
     /// The interpreter used for comptime code
     macro_env: Uiua,
-    /// The results of tests
-    test_results: Vec<UiuaResult>,
 }
 
 impl Default for Compiler {
@@ -120,7 +118,6 @@ impl Default for Compiler {
             comptime: true,
             pre_eval_mode: PreEvalMode::default(),
             macro_env: Uiua::default(),
-            test_results: Vec::new(),
         }
     }
 }
@@ -448,12 +445,8 @@ impl Compiler {
         let instrs_start = self.asm.instrs.len();
         let top_slices_start = self.asm.top_slices.len();
         let (items, errors, diagnostics) = parse(input, src.clone(), &mut self.asm.inputs);
-        if self.print_diagnostics {
-            for diagnostic in diagnostics {
-                println!("{}", diagnostic.report()); // Allow println
-            }
-        } else {
-            self.diagnostics.extend(diagnostics);
+        for diagnostic in diagnostics {
+            self.emit_diagnostic_impl(diagnostic);
         }
         if !errors.is_empty() {
             return Err(UiuaErrorKind::Parse(errors, self.asm.inputs.clone().into()).into());
@@ -470,7 +463,7 @@ impl Compiler {
             });
         }
 
-        let res = self.catching_crash(input, |env| env.items(items));
+        let res = self.catching_crash(input, |env| env.items(items, false));
 
         if self.print_diagnostics {
             for diagnostic in self.take_diagnostics() {
@@ -488,31 +481,6 @@ impl Compiler {
                 self.errors.push(e);
             }
             _ => {}
-        }
-        if !self.test_results.is_empty() {
-            let total = self.test_results.len();
-            let mut successes = 0;
-            for res in self.test_results.drain(..) {
-                match res {
-                    Ok(()) => successes += 1,
-                    Err(e) => self.errors.push(e),
-                }
-            }
-            if successes == total {
-                self.emit_diagnostic(
-                    format!(
-                        "{}/{} test{} passed",
-                        successes,
-                        total,
-                        if total == 1 { "" } else { "s" }
-                    ),
-                    DiagnosticKind::Info,
-                    Span::Builtin,
-                );
-            } else {
-                self.errors
-                    .push(UiuaErrorKind::TestsFailed(successes, total - successes).into());
-            }
         }
         match self.errors.len() {
             0 => Ok(self),
@@ -542,7 +510,7 @@ code:
             .into()),
         }
     }
-    pub(crate) fn items(&mut self, items: Vec<Item>) -> UiuaResult {
+    pub(crate) fn items(&mut self, items: Vec<Item>, must_run: bool) -> UiuaResult {
         // Set scope comment
         if let Some(Item::Words(lines)) = items.first() {
             let mut started = false;
@@ -577,22 +545,26 @@ code:
 
         let mut prelude = BindingPrelude::default();
         let mut item_errored = false;
-        let mut must_run: Vec<bool> = (items.iter().rev())
-            .scan(false, |acc, item| {
-                *acc = *acc
-                    || match item {
+        let mut items = VecDeque::from(items);
+        while let Some(item) = items.pop_front() {
+            let must_run = must_run
+                || matches!(&item, Item::Words(_))
+                    && items.iter().any(|item| match item {
+                        Item::Binding(binding)
+                            if (binding.words.iter())
+                                .filter(|word| word.value.is_code())
+                                .count()
+                                == 0 =>
+                        {
+                            true
+                        }
                         Item::Words(lines) => lines.iter().any(|line| {
-                            line.first().is_some_and(|w| {
+                            line.iter().find(|w| w.value.is_code()).is_some_and(|w| {
                                 matches!(w.value, Word::Primitive(Primitive::Assert))
                             })
                         }),
                         _ => false,
-                    };
-                Some(*acc)
-            })
-            .collect();
-        must_run.reverse();
-        for (item, must_run) in items.into_iter().zip(must_run) {
+                    });
             if let Err(e) = self.item(item, must_run, &mut prelude) {
                 if !item_errored {
                     self.errors.push(e);
@@ -619,14 +591,8 @@ code:
             Item::Module(m) => return self.module(m, take(prelude).comment),
             Item::Words(lines) => lines,
             Item::Binding(binding) => {
-                let can_run = match self.mode {
-                    RunMode::Normal => !in_test,
-                    RunMode::All | RunMode::Test => true,
-                };
                 let prelude = take(prelude);
-                if can_run || must_run || words_should_run_anyway(&binding.words) {
-                    self.binding(binding, prelude)?;
-                }
+                self.binding(binding, prelude)?;
                 return Ok(());
             }
             Item::Import(import) => return self.import(import, take(prelude).comment),
@@ -666,9 +632,20 @@ code:
             RunMode::Test => in_test,
             RunMode::All => true,
         };
-        lines = flip_unsplit_lines(lines.into_iter().flat_map(split_words).collect());
-        for line in lines {
-            if line.is_empty() || !(can_run || must_run || words_should_run_anyway(&line)) {
+        let mut lines = VecDeque::from(flip_unsplit_lines(
+            lines.into_iter().flat_map(split_words).collect(),
+        ));
+        while let Some(line) = lines.pop_front() {
+            let assert_later = || {
+                lines.iter().any(|line| {
+                    line.iter()
+                        .find(|w| w.value.is_code())
+                        .is_some_and(|w| matches!(w.value, Word::Primitive(Primitive::Assert)))
+                })
+            };
+            if line.is_empty()
+                || !(can_run || must_run || assert_later() || words_should_run_anyway(&line))
+            {
                 continue;
             }
             let span =
@@ -692,7 +669,7 @@ code:
             let (mut new_func, pre_eval_errors) = self.pre_eval_instrs(new_func);
             let mut line_eval_errored = false;
             match instrs_signature(&new_func.instrs) {
-                Ok(mut sig) => {
+                Ok(sig) => {
                     // Check doc comment sig
                     if let Some(comment_sig) = line_sig_comment {
                         if !comment_sig.value.matches_sig(sig) {
@@ -706,45 +683,16 @@ code:
                     // Update scope stack height
                     if let Ok(height) = &mut self.scope.stack_height {
                         *height = (*height + sig.outputs).saturating_sub(sig.args);
-                        // Run tests
-                        if sig.outputs == 0
-                            && can_run
-                            && new_func.instrs.last().is_some_and(|instr| {
-                                matches!(instr, Instr::Prim(Primitive::Assert, _))
-                            })
-                        {
-                            let mut test_instrs = new_func.instrs.clone();
-                            // dbg!(sig);
-                            while sig.args > 0 {
-                                if let Some(slice) = self.asm.top_slices.last() {
-                                    let instrs = self.asm.instrs(*slice);
-                                    let (i, above_sig) = (0..=instrs.len())
-                                        .rev()
-                                        .find_map(|i| {
-                                            instrs_clean_signature(&instrs[i..])
-                                                .filter(|above_sig| above_sig.outputs == sig.args)
-                                                .map(|sig| (i, sig))
-                                        })
-                                        .unwrap_or_else(|| (0, instrs_signature(instrs).unwrap()));
-                                    // dbg!(i, above_sig);
-                                    sig.args -= above_sig.outputs;
-                                    sig.args += above_sig.args;
-                                    let mut pre_instrs = EcoVec::from(&instrs[i..]);
-                                    pre_instrs.extend(test_instrs);
-                                    test_instrs = pre_instrs;
-                                    if i == 0 {
-                                        self.asm.top_slices.pop();
-                                    } else {
-                                        self.asm.top_slices.last_mut().unwrap().len -= i;
-                                    }
-                                } else {
-                                    break;
-                                }
-                            }
-                            // println!("{:?}", test_instrs);
-                            if sig.args == 0 {
-                                self.run_test(test_instrs, sig);
-                                continue;
+                        // Compile test assert
+                        if can_run && sig.outputs == 0 {
+                            if let Some(Instr::Prim(Primitive::Assert, span)) =
+                                new_func.instrs.last()
+                            {
+                                let span = *span;
+                                new_func.instrs.pop();
+                                new_func
+                                    .instrs
+                                    .push(Instr::ImplPrim(ImplPrimitive::TestAssert, span));
                             }
                         }
                     }
@@ -2031,9 +1979,7 @@ code:
         for (i, branch) in branches.into_iter().enumerate() {
             let span = branch.span.clone();
             let (new_func, sig) = self.compile_operand_word(branch)?;
-            let is_flex = new_func
-                .instrs
-                .iter()
+            let is_flex = (new_func.instrs.iter())
                 .rposition(|instr| matches!(instr, Instr::Prim(Primitive::Assert, _)))
                 .is_some_and(|end| {
                     (0..end).rev().any(|start| {
@@ -2366,8 +2312,14 @@ code:
         span: impl Into<Span>,
     ) {
         let inputs = self.asm.inputs.clone();
-        self.diagnostics
-            .insert(Diagnostic::new(message.into(), span, kind, inputs));
+        self.emit_diagnostic_impl(Diagnostic::new(message.into(), span, kind, inputs));
+    }
+    fn emit_diagnostic_impl(&mut self, diagnostic: Diagnostic) {
+        if self.print_diagnostics {
+            println!("{}", diagnostic.report()); // Allow println
+        } else {
+            self.diagnostics.insert(diagnostic);
+        }
     }
     fn add_error(&mut self, span: impl Into<Span>, message: impl ToString) {
         let e = UiuaErrorKind::Run(
@@ -2526,22 +2478,6 @@ code:
         // }
         new_func.instrs = new_instrs.unwrap_or(new_func.instrs);
         (new_func, errors)
-    }
-    fn run_test(&mut self, instrs: EcoVec<Instr>, _sig: Signature) {
-        let mut asm = self.asm.clone();
-        asm.top_slices.clear();
-        let start = asm.instrs.len();
-        let len = instrs.len();
-        asm.instrs.extend(instrs.iter().cloned());
-        if len > 0 {
-            asm.top_slices.push(FuncSlice { start, len });
-        }
-        #[cfg(feature = "native_sys")]
-        let mut env = Uiua::with_native_sys();
-        #[cfg(not(feature = "native_sys"))]
-        let mut env = Uiua::with_safe_sys();
-        let res = env.run_asm(asm);
-        self.test_results.push(res);
     }
     fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Option<Vec<Value>>> {
         if !self.pre_eval_mode.matches_instrs(&instrs, &self.asm) {

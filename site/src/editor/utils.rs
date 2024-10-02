@@ -938,6 +938,7 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
             output.push(OutputItem::Report(diag.report()));
         }
     }
+    output.extend(rt.take_reports().into_iter().map(OutputItem::Report));
     (output, error)
 }
 

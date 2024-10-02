@@ -1528,10 +1528,13 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Sleep => {
-                let mut seconds = env
-                    .pop(1)?
-                    .as_num(env, "Sleep time must be a number")?
-                    .max(0.0);
+                let mut seconds = env.pop(1)?.as_num(env, "Sleep time must be a number")?;
+                if seconds < 0.0 {
+                    return Err(env.error("Sleep time must be positive"));
+                }
+                if seconds.is_infinite() {
+                    return Err(env.error("Sleep time cannot be infinite"));
+                }
                 if let Some(limit) = env.rt.execution_limit {
                     let elapsed = env.rt.backend.now() - env.rt.execution_start;
                     let max = limit - elapsed;

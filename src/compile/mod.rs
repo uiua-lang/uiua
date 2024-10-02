@@ -72,8 +72,6 @@ pub struct Compiler {
     in_inverse: bool,
     /// Whether the compiler is in a try
     in_try: bool,
-    /// Whether the compiler is in a test
-    in_test: bool,
     /// Map of instructions to undered functions that created them
     ///
     /// This is used to under functions that have already been inlined
@@ -92,6 +90,8 @@ pub struct Compiler {
     pre_eval_mode: PreEvalMode,
     /// The interpreter used for comptime code
     macro_env: Uiua,
+    /// The results of tests
+    test_results: Vec<UiuaResult>,
 }
 
 impl Default for Compiler {
@@ -111,7 +111,6 @@ impl Default for Compiler {
             code_macros: HashMap::new(),
             macro_depth: 0,
             in_inverse: false,
-            in_test: false,
             in_try: false,
             undered_funcs: HashMap::new(),
             errors: Vec::new(),
@@ -121,6 +120,7 @@ impl Default for Compiler {
             comptime: true,
             pre_eval_mode: PreEvalMode::default(),
             macro_env: Uiua::default(),
+            test_results: Vec::new(),
         }
     }
 }
@@ -489,6 +489,31 @@ impl Compiler {
             }
             _ => {}
         }
+        if !self.test_results.is_empty() {
+            let total = self.test_results.len();
+            let mut successes = 0;
+            for res in self.test_results.drain(..) {
+                match res {
+                    Ok(()) => successes += 1,
+                    Err(e) => self.errors.push(e),
+                }
+            }
+            if successes == total {
+                self.emit_diagnostic(
+                    format!(
+                        "{}/{} test{} passed",
+                        successes,
+                        total,
+                        if total == 1 { "" } else { "s" }
+                    ),
+                    DiagnosticKind::Info,
+                    Span::Builtin,
+                );
+            } else {
+                self.errors
+                    .push(UiuaErrorKind::TestsFailed(successes, total - successes).into());
+            }
+        }
         match self.errors.len() {
             0 => Ok(self),
             1 => Err(self.errors.pop().unwrap()),
@@ -552,8 +577,23 @@ code:
 
         let mut prelude = BindingPrelude::default();
         let mut item_errored = false;
-        for item in items {
-            if let Err(e) = self.item(item, &mut prelude) {
+        let mut must_run: Vec<bool> = (items.iter().rev())
+            .scan(false, |acc, item| {
+                *acc = *acc
+                    || match item {
+                        Item::Words(lines) => lines.iter().any(|line| {
+                            line.first().is_some_and(|w| {
+                                matches!(w.value, Word::Primitive(Primitive::Assert))
+                            })
+                        }),
+                        _ => false,
+                    };
+                Some(*acc)
+            })
+            .collect();
+        must_run.reverse();
+        for (item, must_run) in items.into_iter().zip(must_run) {
+            if let Err(e) = self.item(item, must_run, &mut prelude) {
                 if !item_errored {
                     self.errors.push(e);
                 }
@@ -562,7 +602,7 @@ code:
         }
         Ok(())
     }
-    fn item(&mut self, item: Item, prelude: &mut BindingPrelude) -> UiuaResult {
+    fn item(&mut self, item: Item, must_run: bool, prelude: &mut BindingPrelude) -> UiuaResult {
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
             let mut anyway = false;
             recurse_words(words, &mut |w| {
@@ -573,16 +613,18 @@ code:
             });
             anyway
         }
+        let in_test = self.scope.kind == ScopeKind::Test
+            || self.higher_scopes.iter().any(|s| s.kind == ScopeKind::Test);
         let mut lines = match item {
             Item::Module(m) => return self.module(m, take(prelude).comment),
             Item::Words(lines) => lines,
             Item::Binding(binding) => {
                 let can_run = match self.mode {
-                    RunMode::Normal => !self.in_test,
+                    RunMode::Normal => !in_test,
                     RunMode::All | RunMode::Test => true,
                 };
                 let prelude = take(prelude);
-                if can_run || words_should_run_anyway(&binding.words) {
+                if can_run || must_run || words_should_run_anyway(&binding.words) {
                     self.binding(binding, prelude)?;
                 }
                 return Ok(());
@@ -620,13 +662,13 @@ code:
             }
         }
         let can_run = match self.mode {
-            RunMode::Normal => !self.in_test,
-            RunMode::Test => self.in_test,
+            RunMode::Normal => !in_test,
+            RunMode::Test => in_test,
             RunMode::All => true,
         };
         lines = flip_unsplit_lines(lines.into_iter().flat_map(split_words).collect());
         for line in lines {
-            if line.is_empty() || !can_run && !words_should_run_anyway(&line) {
+            if line.is_empty() || !(can_run || must_run || words_should_run_anyway(&line)) {
                 continue;
             }
             let span =
@@ -650,7 +692,7 @@ code:
             let (mut new_func, pre_eval_errors) = self.pre_eval_instrs(new_func);
             let mut line_eval_errored = false;
             match instrs_signature(&new_func.instrs) {
-                Ok(sig) => {
+                Ok(mut sig) => {
                     // Check doc comment sig
                     if let Some(comment_sig) = line_sig_comment {
                         if !comment_sig.value.matches_sig(sig) {
@@ -664,6 +706,47 @@ code:
                     // Update scope stack height
                     if let Ok(height) = &mut self.scope.stack_height {
                         *height = (*height + sig.outputs).saturating_sub(sig.args);
+                        // Run tests
+                        if sig.outputs == 0
+                            && can_run
+                            && new_func.instrs.last().is_some_and(|instr| {
+                                matches!(instr, Instr::Prim(Primitive::Assert, _))
+                            })
+                        {
+                            let mut test_instrs = new_func.instrs.clone();
+                            // dbg!(sig);
+                            while sig.args > 0 {
+                                if let Some(slice) = self.asm.top_slices.last() {
+                                    let instrs = self.asm.instrs(*slice);
+                                    let (i, above_sig) = (0..=instrs.len())
+                                        .rev()
+                                        .find_map(|i| {
+                                            instrs_clean_signature(&instrs[i..])
+                                                .filter(|above_sig| above_sig.outputs == sig.args)
+                                                .map(|sig| (i, sig))
+                                        })
+                                        .unwrap_or_else(|| (0, instrs_signature(instrs).unwrap()));
+                                    // dbg!(i, above_sig);
+                                    sig.args -= above_sig.outputs;
+                                    sig.args += above_sig.args;
+                                    let mut pre_instrs = EcoVec::from(&instrs[i..]);
+                                    pre_instrs.extend(test_instrs);
+                                    test_instrs = pre_instrs;
+                                    if i == 0 {
+                                        self.asm.top_slices.pop();
+                                    } else {
+                                        self.asm.top_slices.last_mut().unwrap().len -= i;
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                            // println!("{:?}", test_instrs);
+                            if sig.args == 0 {
+                                self.run_test(test_instrs, sig);
+                                continue;
+                            }
+                        }
                     }
                     // Try to evaluate at comptime
                     // This can be done when:
@@ -2280,7 +2363,7 @@ code:
         &mut self,
         message: impl Into<String>,
         kind: DiagnosticKind,
-        span: CodeSpan,
+        span: impl Into<Span>,
     ) {
         let inputs = self.asm.inputs.clone();
         self.diagnostics
@@ -2443,6 +2526,22 @@ code:
         // }
         new_func.instrs = new_instrs.unwrap_or(new_func.instrs);
         (new_func, errors)
+    }
+    fn run_test(&mut self, instrs: EcoVec<Instr>, _sig: Signature) {
+        let mut asm = self.asm.clone();
+        asm.top_slices.clear();
+        let start = asm.instrs.len();
+        let len = instrs.len();
+        asm.instrs.extend(instrs.iter().cloned());
+        if len > 0 {
+            asm.top_slices.push(FuncSlice { start, len });
+        }
+        #[cfg(feature = "native_sys")]
+        let mut env = Uiua::with_native_sys();
+        #[cfg(not(feature = "native_sys"))]
+        let mut env = Uiua::with_safe_sys();
+        let res = env.run_asm(asm);
+        self.test_results.push(res);
     }
     fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Option<Vec<Value>>> {
         if !self.pre_eval_mode.matches_instrs(&instrs, &self.asm) {

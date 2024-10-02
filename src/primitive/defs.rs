@@ -1,6 +1,6 @@
 //! All primitive definitions
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{Purity, WILDCARD_NAN};
 
@@ -46,6 +46,13 @@ impl ConstantValue {
         current_file_path: Option<&Path>,
         backend: &dyn SysBackend,
     ) -> Value {
+        let current_file_path = current_file_path.map(|p| {
+            let mut path = PathBuf::new();
+            for comp in p.components() {
+                path.push(comp);
+            }
+            path
+        });
         match self {
             ConstantValue::Static(val) => val.clone(),
             ConstantValue::Music => {

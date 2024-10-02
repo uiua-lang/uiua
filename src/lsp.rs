@@ -1885,12 +1885,14 @@ mod server {
                     | crate::DiagnosticKind::Style
                     | crate::DiagnosticKind::Info => DiagnosticSeverity::INFORMATION,
                 };
-                diagnostics.push(Diagnostic {
-                    severity: Some(sev),
-                    range: uiua_span_to_lsp(&diag.span),
-                    message: diag.message.clone(),
-                    ..Default::default()
-                });
+                if let Span::Code(span) = &diag.span {
+                    diagnostics.push(Diagnostic {
+                        severity: Some(sev),
+                        range: uiua_span_to_lsp(span),
+                        message: diag.message.clone(),
+                        ..Default::default()
+                    });
+                }
             }
 
             Ok(DocumentDiagnosticReportResult::Report(

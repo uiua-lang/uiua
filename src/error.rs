@@ -47,6 +47,8 @@ pub enum UiuaErrorKind {
     CompilerPanic(String),
     /// The program was interrupted
     Interrupted,
+    /// Some tests failed
+    TestsFailed(usize, usize),
 }
 
 impl UiuaErrorKind {
@@ -101,6 +103,18 @@ impl fmt::Display for UiuaError {
             UiuaErrorKind::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaErrorKind::CompilerPanic(message) => message.fmt(f),
             UiuaErrorKind::Interrupted => write!(f, "# Program interrupted"),
+            UiuaErrorKind::TestsFailed(successes, failures) => {
+                let total = successes + failures;
+                write!(
+                    f,
+                    "{}/{} test{} passed, {}/{} failed",
+                    successes,
+                    total,
+                    if total == 1 { "" } else { "s" },
+                    failures,
+                    total
+                )
+            }
         }
     }
 }
@@ -121,7 +135,7 @@ impl UiuaError {
     /// Turn the error into a multi-error
     pub fn into_multi(mut self) -> Vec<Self> {
         let mut multi = take(&mut self.multi);
-        multi.push(self);
+        multi.insert(0, self);
         multi
     }
     /// Create an error from multiple errors
@@ -284,6 +298,28 @@ impl UiuaError {
                     color: true,
                 }
             }
+            UiuaErrorKind::TestsFailed(successes, failures) => {
+                let total = successes + failures;
+                return Report {
+                    fragments: vec![
+                        ReportFragment::Colored(
+                            format!(
+                                "{}/{} test{} passed",
+                                successes,
+                                total,
+                                if total == 1 { "" } else { "s" }
+                            ),
+                            DiagnosticKind::Info.into(),
+                        ),
+                        ReportFragment::Plain(", ".into()),
+                        ReportFragment::Colored(
+                            format!("{}/{} failed", failures, total),
+                            ReportKind::Error,
+                        ),
+                    ],
+                    color: true,
+                };
+            }
         };
         report = report.trace(&self.trace);
         let default_inputs = Inputs::default();
@@ -310,6 +346,10 @@ impl UiuaError {
                 report.fragments.push(ReportFragment::Plain(info.into()));
             }
         }
+        for error in &self.multi {
+            report.fragments.push(ReportFragment::Newline);
+            report.fragments.extend(error.report().fragments);
+        }
         report
     }
 }
@@ -318,7 +358,7 @@ impl UiuaError {
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
     /// The span of the message
-    pub span: CodeSpan,
+    pub span: Span,
     /// The message itself
     pub message: String,
     /// What kind of diagnostic this is
@@ -368,10 +408,15 @@ impl fmt::Display for Diagnostic {
 
 impl Diagnostic {
     /// Create a new diagnostic
-    pub fn new(message: String, span: CodeSpan, kind: DiagnosticKind, inputs: Inputs) -> Self {
+    pub fn new(
+        message: String,
+        span: impl Into<Span>,
+        kind: DiagnosticKind,
+        inputs: Inputs,
+    ) -> Self {
         Self {
             message,
-            span,
+            span: span.into(),
             kind,
             inputs,
         }
@@ -381,7 +426,7 @@ impl Diagnostic {
         Report::new_multi(
             ReportKind::Diagnostic(self.kind),
             &self.inputs,
-            [(&self.message, self.span.clone().into())],
+            [(&self.message, self.span.clone())],
         )
     }
 }
@@ -566,7 +611,7 @@ impl fmt::Display for Report {
                                 g: 150,
                                 b: 255,
                             },
-                            ReportKind::Diagnostic(DiagnosticKind::Info) => Color::Cyan,
+                            ReportKind::Diagnostic(DiagnosticKind::Info) => Color::BrightCyan,
                         });
                         write!(f, "{s}")?
                     } else {

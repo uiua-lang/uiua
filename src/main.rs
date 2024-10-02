@@ -194,6 +194,7 @@ fn run() -> UiuaResult {
                     }
                 };
                 let mut assembly = Compiler::with_backend(NativeSys)
+                    .mode(RunMode::Normal)
                     .print_diagnostics(true)
                     .load_file(&path)?
                     .finish();

@@ -176,7 +176,8 @@ impl fmt::Display for ImplPrimitive {
             UnOnDrop => write!(f, "{Un}{On}{Drop}"),
             UnOnSelect => write!(f, "{Un}{On}{Select}"),
             UnOnPick => write!(f, "{Un}{On}{Pick}"),
-            UnJoin | UnJoinPattern => write!(f, "{Un}{Join}"),
+            UnJoin | UnJoinShape => write!(f, "{Un}{Join}"),
+            UnJoinEnd | UnJoinShapeEnd => write!(f, "{Un}({Join}{Flip})"),
             UnKeep => write!(f, "{Un}{Keep}"),
             UnScan => write!(f, "{Un}{Scan}"),
             UnStack => write!(f, "{Un}{Stack}"),
@@ -1067,18 +1068,31 @@ impl ImplPrimitive {
                 env.push(rest);
                 env.push(first);
             }
+            ImplPrimitive::UnJoinEnd => {
+                let val = env.pop(1)?;
+                let (first, rest) = val.unjoin_end(env)?;
+                env.push(rest);
+                env.push(first);
+            }
+            ImplPrimitive::UnJoinShape => {
+                let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let val = env.pop(2)?;
+                let (first, rest) = val.unjoin_shape(&shape, false, env)?;
+                env.push(rest);
+                env.push(first);
+            }
+            ImplPrimitive::UnJoinShapeEnd => {
+                let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let val = env.pop(2)?;
+                let (first, rest) = val.unjoin_shape(&shape, true, env)?;
+                env.push(rest);
+                env.push(first);
+            }
             ImplPrimitive::UnKeep => {
                 let val = env.pop(1)?;
                 let (counts, dedup) = val.unkeep(env)?;
                 env.push(dedup);
                 env.push(counts);
-            }
-            ImplPrimitive::UnJoinPattern => {
-                let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
-                let val = env.pop(2)?;
-                let (first, rest) = val.unjoin_shape(&shape, env)?;
-                env.push(rest);
-                env.push(first);
             }
             ImplPrimitive::UnAtan => {
                 let x = env.pop(1)?;

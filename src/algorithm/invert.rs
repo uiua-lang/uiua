@@ -289,9 +289,8 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
     use Primitive::*;
     &[
         &InvertPatternFn(invert_under_pattern, "under"),
-        &InvertPatternFn(invert_flip_pattern, "flip"),
-        &InvertPatternFn(invert_join_val_pattern, "join_val"),
         &InvertPatternFn(invert_join_pattern, "join"),
+        &InvertPatternFn(invert_flip_pattern, "flip"),
         &InvertPatternFn(invert_call_pattern, "call"),
         &InvertPatternFn(invert_un_pattern, "un"),
         &InvertPatternFn(invert_dump_pattern, "dump"),
@@ -374,7 +373,7 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
             (
                 CopyToInline(1),
                 Shape,
-                UnJoinPattern,
+                UnJoinShape,
                 PopInline(1),
                 ImplPrimitive::MatchPattern
             )
@@ -1474,60 +1473,130 @@ fn invert_format_pattern<'a>(
 }
 
 fn invert_join_pattern<'a>(
-    input: &'a [Instr],
+    mut input: &'a [Instr],
     comp: &mut Compiler,
 ) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
-    for i in (0..input.len()).rev() {
-        if let &Instr::Prim(Primitive::Join, span) = &input[i] {
-            let Ok(mut inverse) = invert_instrs(&input[..i], comp) else {
-                continue;
+    use ImplPrimitive::*;
+    use Instr::*;
+    use Primitive::*;
+    let Some((join_index, join_span)) = (input.iter().enumerate().rev())
+        .filter_map(|(i, instr)| match instr {
+            Prim(Join, span) => Some((i, *span)),
+            _ => None,
+        })
+        .find(|(i, _)| instrs_clean_signature(&input[..*i]).is_some())
+    else {
+        return generic();
+    };
+    let mut dipped = false;
+    if let Some((inp, mut instrs)) = Val.invert_extract(input, comp).ok().or_else(|| {
+        try_push_temp_wrap(input).and_then(|(input, _, inner, _, depth)| {
+            if depth != 1 {
+                return None;
+            }
+            let Ok(([], val)) = Val.invert_extract(inner, comp) else {
+                return None;
             };
-            let inv_sig = instrs_signature(&inverse)?;
-            let input = &input[i + 1..];
-            let mut shape = EcoVec::new();
-            if inv_sig.outputs > 1 {
-                if inv_sig.args >= 2 && inv_sig.outputs > inv_sig.args {
-                } else {
-                    shape.push(inv_sig.outputs as f64);
+            dipped = true;
+            Some((input, val))
+        })
+    }) {
+        input = inp;
+        if let Some(i) = (1..=input.len())
+            .rev()
+            .find(|&i| instrs_clean_signature(&input[..i]).is_some_and(|sig| sig == (0, 0)))
+        {
+            instrs.extend(invert_instrs(&input[..i], comp)?);
+            input = &input[i..];
+        }
+        let (prim, span) = match *input {
+            [Prim(Join, span), ref inp @ ..] if dipped => {
+                input = inp;
+                (UnJoinShapeEnd, span)
+            }
+            [Prim(Join, span), ref inp @ ..] => {
+                input = inp;
+                (UnJoinShape, span)
+            }
+            [Prim(Flip, _), Prim(Join, span), ref inp @ ..] if !dipped => {
+                input = inp;
+                (UnJoinShapeEnd, span)
+            }
+            _ => return generic(),
+        };
+        instrs.extend([
+            CopyToTemp {
+                stack: TempStack::Inline,
+                count: 1,
+                span,
+            },
+            Prim(Primitive::Shape, span),
+            ImplPrim(prim, span),
+            Instr::pop_inline(1, span),
+            Instr::ImplPrim(ImplPrimitive::MatchPattern, span),
+        ]);
+        Ok((input, instrs))
+    } else {
+        fn invert_inner(
+            mut input: &[Instr],
+            comp: &mut Compiler,
+        ) -> InversionResult<EcoVec<Instr>> {
+            let mut instrs = EcoVec::new();
+            while !input.is_empty() {
+                if let Some((inp, _, inner, ..)) = try_push_temp_wrap(input) {
+                    if inner.iter().any(|instr| matches!(instr, Prim(Join, _))) {
+                        instrs.extend(invert_inner(inner, comp)?);
+                        input = inp;
+                        continue;
+                    }
                 }
+                if let Some((i, _)) = input.iter().enumerate().find(|(i, instr)| {
+                    instrs_clean_signature(&input[..*i]).is_some()
+                        && matches!(
+                            instr,
+                            PushTemp {
+                                stack: TempStack::Inline,
+                                ..
+                            }
+                        )
+                }) {
+                    instrs.extend(invert_instrs(&input[..i], comp)?);
+                    input = &input[i..];
+                    continue;
+                }
+                instrs.extend(invert_instrs(input, comp)?);
+                break;
             }
-            let shape = Value::from(shape);
-            inverse.insert(0, Instr::Push(shape));
-            inverse.insert(1, Instr::ImplPrim(ImplPrimitive::UnJoinPattern, span));
-            return Ok((input, inverse));
+            Ok(instrs)
         }
-    }
-    generic()
-}
 
-fn invert_join_val_pattern<'a>(
-    input: &'a [Instr],
-    comp: &mut Compiler,
-) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
-    for i in 0..input.len() {
-        if let &Instr::Prim(Primitive::Join, span) = &input[i] {
-            let Ok((inp, before)) = Val.invert_extract(&input[..i], comp) else {
-                continue;
-            };
-            if !inp.is_empty() {
-                continue;
+        let flip = join_index > 0 && matches!(input[join_index - 1], Prim(Flip, _));
+        let before = &input[..join_index - flip as usize];
+        println!("before: {:?}", before);
+        input = &input[join_index + 1..];
+        let before_inv = invert_inner(before, comp)?;
+        println!("before_inv: {:?}", before_inv);
+        let before_sig = instrs_clean_signature(&before_inv).ok_or(Generic)?;
+        println!("before_sig: {:?}", before_sig);
+        let mut instrs = EcoVec::new();
+        let prim = if before_sig.outputs <= 1 {
+            if flip {
+                UnJoinEnd
+            } else {
+                UnJoin
             }
-            let mut instrs = before;
-            instrs.extend([
-                Instr::CopyToTemp {
-                    stack: TempStack::Inline,
-                    count: 1,
-                    span,
-                },
-                Instr::Prim(Primitive::Shape, span),
-                Instr::ImplPrim(ImplPrimitive::UnJoinPattern, span),
-                Instr::pop_inline(1, span),
-                Instr::ImplPrim(ImplPrimitive::MatchPattern, span),
-            ]);
-            return Ok((&input[i + 1..], instrs));
-        }
+        } else {
+            instrs.push(Push(before_sig.outputs.into()));
+            if flip {
+                UnJoinShapeEnd
+            } else {
+                UnJoinShape
+            }
+        };
+        instrs.push(ImplPrim(prim, join_span));
+        instrs.extend(before_inv);
+        Ok((input, instrs))
     }
-    generic()
 }
 
 fn invert_insert_pattern<'a>(

@@ -37,7 +37,8 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, SigCheckEr
 /// if the temp stack signatures are `|0.0`
 pub(crate) fn instrs_clean_signature(instrs: &[Instr]) -> Option<Signature> {
     let sig = instrs_all_signatures(instrs).ok()?;
-    if sig.functions_left != 0 || sig.temps.iter().any(|&sig| sig != (0, 0)) {
+    if sig.functions_left != 0 || sig.temps.iter().any(|&sig| sig != (0, 0)) || sig.array_stack != 0
+    {
         return None;
     }
     Some(sig.stack)
@@ -55,6 +56,7 @@ pub(crate) struct AllSignatures {
     pub stack: Signature,
     pub temps: [Signature; TempStack::CARDINALITY],
     pub functions_left: usize,
+    pub array_stack: usize,
 }
 
 pub(crate) fn instrs_all_signatures(instrs: &[Instr]) -> Result<AllSignatures, SigCheckError> {
@@ -74,6 +76,7 @@ pub(crate) fn instrs_all_signatures(instrs: &[Instr]) -> Result<AllSignatures, S
             stack: env.sig(),
             temps: env.temp_signatures(),
             functions_left: env.function_stack.len(),
+            array_stack: env.array_stack.len(),
         };
         cache.borrow_mut().insert(hash, sigs);
         Ok(sigs)

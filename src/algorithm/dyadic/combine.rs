@@ -180,16 +180,29 @@ impl Value {
             .map(|(a, b)| (a.into(), b.into())))
     }
     pub(crate) fn unjoin(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        self.unjoin_depth(0, env)
+        self.unjoin_depth(0, false, env)
     }
-    pub(crate) fn unjoin_depth(self, depth: usize, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn unjoin_end(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        self.unjoin_depth(0, true, env)
+    }
+    pub(crate) fn unjoin_depth(
+        self,
+        depth: usize,
+        end: bool,
+        env: &Uiua,
+    ) -> UiuaResult<(Self, Self)> {
         val_as_arr!(self, |arr| arr
-            .unjoin_depth(depth, env)
+            .unjoin_depth(depth, end, env)
             .map(|(a, b)| (a.into(), b.into())))
     }
-    pub(crate) fn unjoin_shape(self, shape: &[usize], env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn unjoin_shape(
+        self,
+        shape: &[usize],
+        end: bool,
+        env: &Uiua,
+    ) -> UiuaResult<(Self, Self)> {
         val_as_arr!(self, |arr| arr
-            .unjoin_shape(shape, env)
+            .unjoin_shape(shape, end, env)
             .map(|(a, b)| (a.into(), b.into())))
     }
 }
@@ -461,7 +474,12 @@ impl<T: ArrayValue> Array<T> {
             }
         }
     }
-    pub(crate) fn unjoin_depth(mut self, mut depth: usize, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn unjoin_depth(
+        mut self,
+        mut depth: usize,
+        is_end: bool,
+        env: &Uiua,
+    ) -> UiuaResult<(Self, Self)> {
         depth = depth.min(self.rank());
         if depth == self.rank() {
             return Err(env.error("Cannot unjoin scalar"));
@@ -471,8 +489,15 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Cannot unjoin an empty array"));
         }
         Ok(if depth == 0 {
-            let first = self.row(0);
-            self.data = self.data.slice(self.row_len()..);
+            let first;
+            if is_end {
+                let endex = self.row_count() - 1;
+                first = self.row(endex);
+                self.data = self.data.slice(..endex * self.row_len());
+            } else {
+                first = self.row(0);
+                self.data = self.data.slice(self.row_len()..);
+            }
             self.shape[0] -= 1;
             self.validate_shape();
             (first, self)
@@ -484,20 +509,40 @@ impl<T: ArrayValue> Array<T> {
             let mut removed_shape = self.shape.clone();
             remaining_shape[depth] -= 1;
             removed_shape.remove(depth);
-            let removed_data: EcoVec<T> = (0..n)
-                .flat_map(|i| {
-                    let start = i * row_len;
-                    let end = start + stride;
-                    self.data.slice(start..end)
-                })
-                .collect();
-            let remaining_data = (0..n)
-                .flat_map(|i| {
-                    let start = i * row_len + stride;
-                    let end = start + row_len - stride;
-                    self.data.slice(start..end)
-                })
-                .collect();
+            let removed_data: EcoVec<T> = if is_end {
+                (0..n)
+                    .flat_map(|i| {
+                        let end = (i + 1) * row_len;
+                        let start = end - stride;
+                        self.data.slice(start..end)
+                    })
+                    .collect()
+            } else {
+                (0..n)
+                    .flat_map(|i| {
+                        let start = i * row_len;
+                        let end = start + stride;
+                        self.data.slice(start..end)
+                    })
+                    .collect()
+            };
+            let remaining_data = if is_end {
+                (0..n)
+                    .flat_map(|i| {
+                        let start = i * row_len;
+                        let end = start + row_len - stride;
+                        self.data.slice(start..end)
+                    })
+                    .collect()
+            } else {
+                (0..n)
+                    .flat_map(|i| {
+                        let start = i * row_len + stride;
+                        let end = start + row_len - stride;
+                        self.data.slice(start..end)
+                    })
+                    .collect()
+            };
             let removed = Array::new(removed_shape, removed_data);
             self.data = remaining_data;
             self.shape = remaining_shape;
@@ -505,7 +550,12 @@ impl<T: ArrayValue> Array<T> {
             (removed, self)
         })
     }
-    pub(crate) fn unjoin_shape(mut self, shape: &[usize], env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn unjoin_shape(
+        mut self,
+        shape: &[usize],
+        is_end: bool,
+        env: &Uiua,
+    ) -> UiuaResult<(Self, Self)> {
         if self.rank() == 0 {
             return Err(env.error("Cannot unjoin a scalar"));
         }
@@ -535,9 +585,16 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
 
         let unjoin_count = shape.first().copied().unwrap_or(1);
-        let split_pos = unjoin_count * row_len;
-        let unjoined_slice = self.data.slice(..split_pos);
-        self.data = self.data.slice(split_pos..);
+        let unjoined_slice;
+        if is_end {
+            let split_pos = self.element_count() - unjoin_count * row_len;
+            unjoined_slice = self.data.slice(split_pos..);
+            self.data = self.data.slice(..split_pos);
+        } else {
+            let split_pos = unjoin_count * row_len;
+            unjoined_slice = self.data.slice(..split_pos);
+            self.data = self.data.slice(split_pos..);
+        }
         let mut unjoined_shape = self.shape.clone();
         if shape.is_empty() {
             unjoined_shape.make_row();

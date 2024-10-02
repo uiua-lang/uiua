@@ -109,7 +109,8 @@ fn impl_prim_mon2_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMon2F
     use ImplPrimitive::*;
     Some(match prim {
         UnCouple => spanned_mon2_fn(span, |v, d, env| v.uncouple_depth(d, env)),
-        UnJoin => spanned_mon2_fn(span, |v, d, env| v.unjoin_depth(d, env)),
+        UnJoin => spanned_mon2_fn(span, |v, d, env| v.unjoin_depth(d, false, env)),
+        UnJoinEnd => spanned_mon2_fn(span, |v, d, env| v.unjoin_depth(d, true, env)),
         _ => return None,
     })
 }

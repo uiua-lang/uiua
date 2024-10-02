@@ -478,7 +478,13 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
 #[allow(clippy::needless_lifetimes)]
 fn Const<'a>(con: &'a ConstantDef) -> impl IntoView {
     view! {
-        <code class="prim-code" data-title={ con.doc }>{ con.name }</code>
+        <a href={format!("/docs/constants#{}", con.name)} class="prim-code-a">
+            <code
+                id={con.name}
+                class="prim-code stack-function"
+                data-title={ con.doc().lines().next().unwrap_or_default().to_string() }
+            >{ con.name }</code>
+        </a>
     }
 }
 

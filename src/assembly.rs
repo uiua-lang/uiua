@@ -715,18 +715,6 @@ impl Inputs {
     }
 }
 
-impl Serialize for Instr {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        InstrRep::from(self.clone()).serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for Instr {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        InstrRep::deserialize(deserializer).map(Self::from)
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum InstrRep {

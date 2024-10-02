@@ -16,9 +16,7 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{
-    ast::PlaceholderOp, Ident, Inputs, Primitive, WILDCARD_CHAR,
-};
+use crate::{ast::PlaceholderOp, Ident, Inputs, Primitive, WILDCARD_CHAR};
 
 /// Subscript digit characters
 pub const SUBSCRIPT_NUMS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];

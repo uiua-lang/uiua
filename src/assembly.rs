@@ -6,8 +6,8 @@ use serde::*;
 
 use crate::{
     is_ident_char, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc,
-    Instr, IntoInputSrc, LocalName, Module, Primitive, Signature, Span, TempStack,
-    Uiua, UiuaResult, Value,
+    Instr, IntoInputSrc, LocalName, Module, Primitive, Signature, Span, TempStack, Uiua,
+    UiuaResult, Value,
 };
 
 /// A compiled Uiua assembly

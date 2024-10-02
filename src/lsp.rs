@@ -14,9 +14,8 @@ use crate::{
     ident_modifier_args, instrs_are_pure, is_custom_glyph,
     lex::{CodeSpan, Sp},
     parse::parse,
-    Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc,
-    Inputs, PreEvalMode, Primitive, Purity, SafeSys, Shape, Signature, SysBackend,
-    UiuaError, Value, CONSTANTS,
+    Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc, Inputs, PreEvalMode,
+    Primitive, Purity, SafeSys, Shape, Signature, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools

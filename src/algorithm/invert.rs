@@ -10,6 +10,7 @@ use std::{
 
 use ecow::{eco_vec, EcoString, EcoVec};
 use regex::Regex;
+use serde::*;
 
 use crate::{
     check::{instrs_clean_signature, instrs_signature, naive_under_sig, SigCheckError},
@@ -23,6 +24,15 @@ use crate::{
 use super::IgnoreError;
 
 pub(crate) const DEBUG: bool = false;
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CustomInverse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub un: Option<Function>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub under: Option<(Function, Function)>,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum InversionError {
@@ -295,6 +305,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_un_pattern, "un"),
         &InvertPatternFn(invert_dump_pattern, "dump"),
         &InvertPatternFn(invert_fill_pattern, "fill"),
+        &InvertPatternFn(invert_custom_pattern, "custom"),
         &InvertPatternFn(invert_setinv_pattern, "setinv"),
         &InvertPatternFn(invert_setund_setinv_pattern, "setund_setinv"),
         &InvertPatternFn(invert_trivial_pattern, "trivial"),
@@ -621,6 +632,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_rotate_pattern, "rotate"),
         &UnderPatternFn(under_partition_pattern, "partition"),
         &UnderPatternFn(under_group_pattern, "group"),
+        &UnderPatternFn(under_custom_pattern, "custom"),
         &UnderPatternFn(under_setinv_setund_pattern, "setinv setund"), // This must come before setinv
         &maybe_val!(UnderPatternFn(under_setinv_pattern, "setinv")),
         &maybe_val!(UnderPatternFn(under_setund_pattern, "setund")),
@@ -1635,6 +1647,55 @@ fn invert_insert_pattern<'a>(
         instrs.push(Instr::ImplPrim(ImplPrimitive::MatchPattern, span));
     }
     Ok((input, instrs))
+}
+
+fn invert_custom_pattern<'a>(
+    input: &'a [Instr],
+    _: &mut Compiler,
+) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::PushFunc(f), Instr::CustomInverse(cust, span), input @ ..] = input else {
+        return generic();
+    };
+    let mut cust = cust.clone();
+    let inv = cust.un.ok_or(Generic)?;
+    cust.un = Some(f.clone());
+    Ok((
+        input,
+        eco_vec![Instr::PushFunc(inv), Instr::CustomInverse(cust, *span)],
+    ))
+}
+
+fn under_custom_pattern<'a>(
+    input: &'a [Instr],
+    _: Signature,
+    comp: &mut Compiler,
+) -> InversionResult<(&'a [Instr], Under)> {
+    let [Instr::PushFunc(f), Instr::CustomInverse(cust, span), input @ ..] = input else {
+        return generic();
+    };
+    let (before, after) = cust.under.clone().ok_or(Generic)?;
+    if before.signature().outputs < f.signature().outputs {
+        return generic();
+    }
+    let to_save = before.signature().outputs - f.signature().outputs;
+    let mut befores = EcoVec::from(before.instrs(&comp.asm));
+    let mut afters = EcoVec::from(after.instrs(&comp.asm));
+    if to_save > 0 {
+        befores.push(Instr::PushTemp {
+            stack: TempStack::Under,
+            count: to_save,
+            span: *span,
+        });
+        afters.insert(
+            0,
+            Instr::PopTemp {
+                stack: TempStack::Under,
+                count: to_save,
+                span: *span,
+            },
+        );
+    }
+    Ok((input, (befores, afters)))
 }
 
 fn invert_setinv_pattern<'a>(

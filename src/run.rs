@@ -546,7 +546,7 @@ code:
                 &Instr::EndArray { span, boxed } => {
                     self.with_span(span, |env| env.end_array(boxed, None))
                 }
-                &Instr::Call(span) => self
+                &Instr::Call(span) | &Instr::CustomInverse(_, span) => self
                     .pop_function()
                     .and_then(|f| self.call_with_span(f, span)),
                 &Instr::CallRecursive(span) => self.with_span(span, |env| {

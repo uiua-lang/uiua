@@ -1,6 +1,6 @@
 //! Compiler code for modifiers
 
-use crate::algorithm::invert::anti_instrs;
+use crate::algorithm::invert::{anti_instrs, CustomInverse};
 
 use super::*;
 
@@ -152,35 +152,29 @@ impl Compiler {
                         let func = self.make_function(span.into(), sig, nf);
                         funcs.push(func);
                     }
-                    let spandex = self.add_span(modifier.span.clone());
-                    let mut instrs = EcoVec::new();
-                    let sig = match funcs.as_slice() {
+                    let mut cust = CustomInverse::default();
+                    let f;
+                    match funcs.as_slice() {
                         [a, b] => {
-                            instrs.push(Instr::PushFunc(b.clone()));
+                            f = a.clone();
                             if a.signature() == b.signature().inverse() {
-                                instrs.push(Instr::PushFunc(a.clone()));
-                                instrs.push(Instr::Prim(Primitive::SetInverse, spandex));
+                                cust.un = Some(b.clone());
                             } else {
-                                instrs.push(Instr::PushFunc(a.clone()));
-                                instrs.push(Instr::PushFunc(a.clone()));
-                                instrs.push(Instr::Prim(Primitive::SetUnder, spandex));
+                                cust.under = Some((a.clone(), b.clone()));
                             }
-                            a.signature()
                         }
                         [a, b, c] => {
-                            instrs.push(Instr::PushFunc(c.clone()));
-                            instrs.push(Instr::PushFunc(b.clone()));
-                            instrs.push(Instr::PushFunc(a.clone()));
-                            instrs.push(Instr::Prim(Primitive::SetUnder, spandex));
-                            a.signature()
+                            f = a.clone();
+                            if !b.instrs(&self.asm).is_empty() && !c.instrs(&self.asm).is_empty() {
+                                cust.under = Some((b.clone(), c.clone()));
+                            }
                         }
                         [a, b, c, d] => {
-                            instrs.push(Instr::PushFunc(b.clone()));
-                            instrs.push(Instr::PushFunc(a.clone()));
-                            if !a.signature().is_compatible_with(b.signature()) {
+                            f = a.clone();
+                            if !a.signature().is_compatible_with(b.signature().inverse()) {
                                 self.emit_diagnostic(
                                     format!(
-                                        "setinv's functions must have opposite signatures, \
+                                        "First and second functions must have opposite signatures, \
                                         but their signatures are {} and {}",
                                         a.signature(),
                                         b.signature()
@@ -189,29 +183,27 @@ impl Compiler {
                                     modifier.span.clone(),
                                 );
                             }
-                            instrs.push(Instr::Prim(Primitive::SetInverse, spandex));
-                            let set_inv_func = self.make_function(
-                                FunctionId::Anonymous(modifier.span.clone()),
-                                a.signature(),
-                                take(&mut instrs).into(),
-                            );
-                            instrs.push(Instr::PushFunc(d.clone()));
-                            instrs.push(Instr::PushFunc(c.clone()));
-                            instrs.push(Instr::PushFunc(set_inv_func));
-                            instrs.push(Instr::Prim(Primitive::SetUnder, spandex));
-                            a.signature()
+                            if !b.instrs(&self.asm).is_empty() {
+                                cust.un = Some(b.clone());
+                            }
+                            if !c.instrs(&self.asm).is_empty() && !d.instrs(&self.asm).is_empty() {
+                                cust.under = Some((c.clone(), d.clone()));
+                            }
                         }
                         funcs => {
                             return Err(self.fatal_error(
                                 modifier.span.clone(),
                                 format!(
-                                    "Obverse requires 1, 2, or 3 branches, \
+                                    "Obverse requires between 1 and 4 branches, \
                                     but {} were provided",
                                     funcs.len()
                                 ),
                             ))
                         }
                     };
+                    let sig = f.signature();
+                    let spandex = self.add_span(modifier.span.clone());
+                    let instrs = eco_vec![Instr::PushFunc(f), Instr::CustomInverse(cust, spandex)];
                     if call {
                         self.push_all_instrs(instrs);
                     } else {
@@ -1184,16 +1176,11 @@ impl Compiler {
                 let spandex = self.add_span(span.clone());
                 let (func, sig) = self.compile_operand_word(operand)?;
                 let func = self.make_function(span.clone().into(), sig, func);
-                let mut instrs = EcoVec::new();
-                instrs.push(Instr::PushFunc(Function::new(
-                    FunctionId::Unnamed,
-                    Signature::new(0, 0),
-                    (0, 0).into(),
-                    0,
-                )));
-                instrs.push(Instr::PushFunc(func.clone()));
-                instrs.push(Instr::PushFunc(func));
-                instrs.push(Instr::Prim(Primitive::SetUnder, spandex));
+                let cust = CustomInverse {
+                    under: Some((func.clone(), Function::default())),
+                    ..Default::default()
+                };
+                let instrs = eco_vec![Instr::PushFunc(func), Instr::CustomInverse(cust, spandex)];
                 if call {
                     self.push_all_instrs(instrs);
                 } else {

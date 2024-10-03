@@ -12,6 +12,7 @@ use serde::*;
 use serde_tuple::*;
 
 use crate::{
+    algorithm::invert::CustomInverse,
     check::instrs_signature,
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
@@ -20,13 +21,15 @@ use crate::{
 };
 
 macro_rules! instr {
-    ($((
-        $num:literal,
+    ($(
         $(#[$attr:meta])*
-        $name:ident
-        $(($($tup_name:ident($tup_type:ty)),* $(,)?))?
-        $({$($field_name:ident : $field_type:ty),* $(,)?})?
-    )),* $(,)?) => {
+        (
+            $num:literal,
+            $name:ident
+            $(($($tup_name:ident($tup_type:ty)),* $(,)?))?
+            $({$($field_name:ident : $field_type:ty),* $(,)?})?
+        )
+    ),* $(,)?) => {
         /// A Uiua bytecode instruction
         #[derive(Clone, Serialize, Deserialize)]
         #[repr(u8)]
@@ -226,6 +229,8 @@ instr!(
     (23, SetOutputComment { i: usize, n: usize }),
     (24, PushSig(sig(Signature))),
     (25, PopSig),
+    /// Call a function with a custom inverse
+    (26, CustomInverse(cust(CustomInverse), span(usize))),
 );
 
 type FmtParts = EcoVec<EcoString>;
@@ -537,6 +542,7 @@ impl fmt::Display for Instr {
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),
+            Instr::CustomInverse(inv, _) => write!(f, "<custom inverse {inv:?}>"),
         }
     }
 }

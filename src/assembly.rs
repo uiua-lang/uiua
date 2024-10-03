@@ -5,9 +5,8 @@ use ecow::{eco_vec, EcoString, EcoVec};
 use serde::*;
 
 use crate::{
-    is_ident_char, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc,
-    Instr, IntoInputSrc, LocalName, Module, Primitive, Signature, Span, TempStack, Uiua,
-    UiuaResult, Value,
+    is_ident_char, CodeSpan, FuncSlice, Function, InputSrc, Instr, IntoInputSrc, LocalName, Module,
+    Signature, Span, Uiua, UiuaResult, Value,
 };
 
 /// A compiled Uiua assembly
@@ -711,135 +710,6 @@ impl Inputs {
             InputSrc::File(path) => self.files.get(&**path).map(|src| f(&src)),
             InputSrc::Str(index) => self.strings.get(*index).map(|src| f(src)),
             InputSrc::Macro(span) => self.macros.get(span).map(|src| f(&src)),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum InstrRep {
-    #[serde(rename = "#")]
-    Comment(Ident),
-    CallGlobal(usize, bool, Signature),
-    BindGlobal(usize, usize),
-    BeginArray,
-    EndArray(bool, usize),
-    Call(usize),
-    CallRecursive(usize),
-    Recur(usize),
-    PushFunc(Function),
-    Switch(usize, Signature, usize, bool),
-    Format(EcoVec<EcoString>, usize),
-    MatchFormatPattern(EcoVec<EcoString>, usize),
-    Label(EcoString, usize, bool),
-    ValidateType(usize, EcoString, u8, usize),
-    Dynamic(DynamicFunction),
-    Unpack(usize, usize, bool),
-    TouchStack(usize, usize),
-    PushTemp(TempStack, usize, usize),
-    PopTemp(TempStack, usize, usize),
-    CopyToTemp(TempStack, usize, usize),
-    PushSig(Signature),
-    PopSig,
-    SetOutputComment(usize, usize),
-    #[serde(untagged)]
-    Push(Value),
-    #[serde(untagged)]
-    Prim(Primitive, usize),
-    #[serde(untagged)]
-    ImplPrim(ImplPrimitive, usize),
-}
-
-impl From<Instr> for InstrRep {
-    fn from(value: Instr) -> Self {
-        match value {
-            Instr::Comment(ident) => Self::Comment(ident),
-            Instr::Push(value) => Self::Push(value),
-            Instr::CallGlobal { index, call, sig } => Self::CallGlobal(index, call, sig),
-            Instr::BindGlobal { span, index } => Self::BindGlobal(span, index),
-            Instr::BeginArray => Self::BeginArray,
-            Instr::EndArray { boxed, span } => Self::EndArray(boxed, span),
-            Instr::Prim(prim, span) => Self::Prim(prim, span),
-            Instr::ImplPrim(prim, span) => Self::ImplPrim(prim, span),
-            Instr::Call(span) => Self::Call(span),
-            Instr::CallRecursive(span) => Self::CallRecursive(span),
-            Instr::Recur(span) => Self::Recur(span),
-            Instr::PushFunc(func) => Self::PushFunc(func),
-            Instr::Switch {
-                count,
-                sig,
-                span,
-                under_cond,
-            } => Self::Switch(count, sig, span, under_cond),
-            Instr::Format { parts, span } => Self::Format(parts, span),
-            Instr::MatchFormatPattern { parts, span } => Self::MatchFormatPattern(parts, span),
-            Instr::Label {
-                label,
-                span,
-                remove,
-            } => Self::Label(label, span, remove),
-            Instr::ValidateType {
-                index,
-                name,
-                type_num,
-                span,
-            } => Self::ValidateType(index, name, type_num, span),
-            Instr::Dynamic(func) => Self::Dynamic(func),
-            Instr::Unpack { count, span, unbox } => Self::Unpack(count, span, unbox),
-            Instr::TouchStack { count, span } => Self::TouchStack(count, span),
-            Instr::PushTemp { stack, count, span } => Self::PushTemp(stack, count, span),
-            Instr::PopTemp { stack, count, span } => Self::PopTemp(stack, count, span),
-            Instr::CopyToTemp { stack, count, span } => Self::CopyToTemp(stack, count, span),
-            Instr::PushSig(sig) => Self::PushSig(sig),
-            Instr::PopSig => Self::PopSig,
-            Instr::SetOutputComment { i, n } => Self::SetOutputComment(i, n),
-        }
-    }
-}
-
-impl From<InstrRep> for Instr {
-    fn from(value: InstrRep) -> Self {
-        match value {
-            InstrRep::Comment(ident) => Self::Comment(ident),
-            InstrRep::Push(value) => Self::Push(value),
-            InstrRep::CallGlobal(index, call, sig) => Self::CallGlobal { index, call, sig },
-            InstrRep::BindGlobal(span, index) => Self::BindGlobal { span, index },
-            InstrRep::BeginArray => Self::BeginArray,
-            InstrRep::EndArray(boxed, span) => Self::EndArray { boxed, span },
-            InstrRep::Prim(prim, span) => Self::Prim(prim, span),
-            InstrRep::ImplPrim(prim, span) => Self::ImplPrim(prim, span),
-            InstrRep::Call(span) => Self::Call(span),
-            InstrRep::CallRecursive(span) => Self::CallRecursive(span),
-            InstrRep::Recur(span) => Self::Recur(span),
-            InstrRep::PushFunc(func) => Self::PushFunc(func),
-            InstrRep::Switch(count, sig, span, under_cond) => Self::Switch {
-                count,
-                sig,
-                span,
-                under_cond,
-            },
-            InstrRep::Format(parts, span) => Self::Format { parts, span },
-            InstrRep::MatchFormatPattern(parts, span) => Self::MatchFormatPattern { parts, span },
-            InstrRep::Label(label, span, remove) => Self::Label {
-                label,
-                span,
-                remove,
-            },
-            InstrRep::ValidateType(index, name, type_num, span) => Self::ValidateType {
-                index,
-                name,
-                type_num,
-                span,
-            },
-            InstrRep::Dynamic(func) => Self::Dynamic(func),
-            InstrRep::Unpack(count, span, unbox) => Self::Unpack { count, span, unbox },
-            InstrRep::TouchStack(count, span) => Self::TouchStack { count, span },
-            InstrRep::PushTemp(stack, count, span) => Self::PushTemp { stack, count, span },
-            InstrRep::PopTemp(stack, count, span) => Self::PopTemp { stack, count, span },
-            InstrRep::CopyToTemp(stack, count, span) => Self::CopyToTemp { stack, count, span },
-            InstrRep::PushSig(sig) => Self::PushSig(sig),
-            InstrRep::PopSig => Self::PopSig,
-            InstrRep::SetOutputComment(i, n) => Self::SetOutputComment { i, n },
         }
     }
 }

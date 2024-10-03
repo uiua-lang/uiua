@@ -314,7 +314,7 @@ impl VirtualEnv {
                 self.set_min_height();
                 self.stack.push(BasicValue::Other);
             }
-            Instr::Call(_) | Instr::CallRecursive(_) => {
+            Instr::Call(_) | Instr::CallRecursive(_) | Instr::CustomInverse(..) => {
                 let sig = self.pop_func()?;
                 self.handle_sig(sig)?
             }

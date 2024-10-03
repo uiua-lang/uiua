@@ -13,8 +13,9 @@ use serde::{de::DeserializeOwned, *};
 use crate::{
     algorithm::map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
     cowslice::{cowslice, CowSlice},
+    fill::Fill,
     grid_fmt::GridFmt,
-    Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Uiua, Value,
+    Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Value,
 };
 
 /// Uiua's array type
@@ -759,9 +760,9 @@ pub trait ArrayValue:
     /// An ID for the type
     const TYPE_ID: u8;
     /// Get the scalar fill value from the environment
-    fn get_scalar_fill(env: &Uiua) -> Result<Self, &'static str>;
+    fn get_scalar_fill(fill: &Fill) -> Result<Self, &'static str>;
     /// Get the array fill value from the environment
-    fn get_array_fill(env: &Uiua) -> Result<Array<Self>, &'static str>;
+    fn get_array_fill(fill: &Fill) -> Result<Array<Self>, &'static str>;
     /// Hash the value
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
     /// Get the proxy value
@@ -814,11 +815,11 @@ impl ArrayValue for f64 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
     const TYPE_ID: u8 = 0;
-    fn get_scalar_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.num_scalar_fill()
+    fn get_scalar_fill(fill: &Fill) -> Result<Self, &'static str> {
+        fill.num_scalar()
     }
-    fn get_array_fill(env: &Uiua) -> Result<Array<Self>, &'static str> {
-        env.num_array_fill()
+    fn get_array_fill(fill: &Fill) -> Result<Array<Self>, &'static str> {
+        fill.num_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         let v = if self.to_bits() == EMPTY_NAN.to_bits() {
@@ -896,11 +897,11 @@ impl ArrayValue for u8 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
     const TYPE_ID: u8 = 0;
-    fn get_scalar_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.byte_scalar_fill()
+    fn get_scalar_fill(fill: &Fill) -> Result<Self, &'static str> {
+        fill.byte_scalar()
     }
-    fn get_array_fill(env: &Uiua) -> Result<Array<Self>, &'static str> {
-        env.byte_array_fill()
+    fn get_array_fill(fill: &Fill) -> Result<Array<Self>, &'static str> {
+        fill.byte_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         (*self as f64).to_bits().hash(hasher)
@@ -939,11 +940,11 @@ impl ArrayValue for char {
     const NAME: &'static str = "character";
     const SYMBOL: char = '@';
     const TYPE_ID: u8 = 2;
-    fn get_scalar_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.char_scalar_fill()
+    fn get_scalar_fill(fill: &Fill) -> Result<Self, &'static str> {
+        fill.char_scalar()
     }
-    fn get_array_fill(env: &Uiua) -> Result<Array<Self>, &'static str> {
-        env.char_array_fill()
+    fn get_array_fill(fill: &Fill) -> Result<Array<Self>, &'static str> {
+        fill.char_array()
     }
     fn format_delims() -> (&'static str, &'static str) {
         ("", "")
@@ -1043,11 +1044,11 @@ impl ArrayValue for Boxed {
     const NAME: &'static str = "box";
     const SYMBOL: char = '□';
     const TYPE_ID: u8 = 3;
-    fn get_scalar_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.box_scalar_fill()
+    fn get_scalar_fill(fill: &Fill) -> Result<Self, &'static str> {
+        fill.box_scalar()
     }
-    fn get_array_fill(env: &Uiua) -> Result<Array<Self>, &'static str> {
-        env.box_array_fill()
+    fn get_array_fill(fill: &Fill) -> Result<Array<Self>, &'static str> {
+        fill.box_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.0.hash(hasher);
@@ -1070,11 +1071,11 @@ impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
     const SYMBOL: char = 'ℂ';
     const TYPE_ID: u8 = 1;
-    fn get_scalar_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.complex_scalar_fill()
+    fn get_scalar_fill(fill: &Fill) -> Result<Self, &'static str> {
+        fill.complex_scalar()
     }
-    fn get_array_fill(env: &Uiua) -> Result<Array<Self>, &'static str> {
-        env.complex_array_fill()
+    fn get_array_fill(fill: &Fill) -> Result<Array<Self>, &'static str> {
+        fill.complex_array()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         for n in [self.re, self.im] {

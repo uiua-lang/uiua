@@ -23,12 +23,12 @@ use crate::{
     array::Array,
     boxed::Boxed,
     check::instrs_temp_signatures,
+    fill::Fill,
     function::*,
     lex::Span,
     value::Value,
-    Assembly, BindingKind, CodeSpan, Compiler, Complex, Ident, Inputs, IntoSysBackend, LocalName,
-    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult,
-    VERSION,
+    Assembly, BindingKind, CodeSpan, Compiler, Ident, Inputs, IntoSysBackend, LocalName, Primitive,
+    SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, VERSION,
 };
 
 /// The Uiua interpreter
@@ -1228,105 +1228,6 @@ code:
         }
         Ok(self.rt.stack.split_off(len - n))
     }
-    pub(crate) fn num_scalar_fill(&self) -> Result<f64, &'static str> {
-        match self.value_fill() {
-            Some(Value::Num(n)) if n.rank() == 0 => Ok(n.data[0]),
-            Some(Value::Num(_)) => Err(self.fill_error(true)),
-            Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0] as f64),
-            Some(Value::Byte(_)) => Err(self.fill_error(true)),
-            _ => Err(self.fill_error(false)),
-        }
-    }
-    pub(crate) fn num_array_fill(&self) -> Result<Array<f64>, &'static str> {
-        match self.value_fill() {
-            Some(Value::Num(n)) => Ok(n.clone()),
-            Some(Value::Byte(n)) => Ok(n.convert_ref()),
-            _ => Err(self.fill_error(false)),
-        }
-    }
-    pub(crate) fn byte_scalar_fill(&self) -> Result<u8, &'static str> {
-        match self.value_fill() {
-            Some(Value::Num(n))
-                if n.rank() == 0
-                    && n.data[0].fract() == 0.0
-                    && (0.0..=255.0).contains(&n.data[0]) =>
-            {
-                Ok(n.data[0] as u8)
-            }
-            Some(Value::Num(n)) if n.rank() == 0 => Err(self.fill_error(false)),
-            Some(Value::Num(_)) => Err(self.fill_error(true)),
-            Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0]),
-            Some(Value::Byte(_)) => Err(self.fill_error(true)),
-            _ => Err(self.fill_error(false)),
-        }
-    }
-    pub(crate) fn byte_array_fill(&self) -> Result<Array<u8>, &'static str> {
-        match self.value_fill() {
-            Some(Value::Num(n))
-                if n.data
-                    .iter()
-                    .all(|&n| n.fract() == 0.0 && (0.0..=255.0).contains(&n)) =>
-            {
-                Ok(n.data.iter().copied().map(|n| n as u8).collect())
-            }
-            Some(Value::Byte(n)) => Ok(n.clone()),
-            _ => Err(self.fill_error(false)),
-        }
-    }
-    pub(crate) fn char_scalar_fill(&self) -> Result<char, &'static str> {
-        match self.value_fill() {
-            Some(Value::Char(c)) if c.rank() == 0 => Ok(c.data[0]),
-            Some(Value::Char(_)) => Err(self.fill_error(true)),
-            _ => Err(self.fill_error(false)),
-        }
-    }
-    pub(crate) fn char_scalar_unfill(&self) -> Result<char, &'static str> {
-        match self.value_unfill() {
-            Some(Value::Char(c)) if c.rank() == 0 => Ok(c.data[0]),
-            Some(Value::Char(_)) => Err(self.unfill_error(true)),
-            _ => Err(self.unfill_error(false)),
-        }
-    }
-    pub(crate) fn char_array_fill(&self) -> Result<Array<char>, &'static str> {
-        match self.value_fill() {
-            Some(Value::Char(c)) => Ok(c.clone()),
-            _ => Err(self.fill_error(false)),
-        }
-    }
-    pub(crate) fn box_scalar_fill(&self) -> Result<Boxed, &'static str> {
-        match self.value_fill() {
-            Some(Value::Box(b)) if b.rank() == 0 => Ok(b.data[0].clone()),
-            Some(Value::Box(_)) => Err(self.fill_error(true)),
-            Some(val) => Ok(Boxed(val.clone())),
-            None => Err(self.fill_error(false)),
-        }
-    }
-    pub(crate) fn box_array_fill(&self) -> Result<Array<Boxed>, &'static str> {
-        match self.value_fill() {
-            Some(Value::Box(b)) => Ok(b.clone()),
-            Some(val) => Ok(Array::new([], [Boxed(val.clone())])),
-            None => Err(self.fill_error(false)),
-        }
-    }
-    pub(crate) fn complex_scalar_fill(&self) -> Result<Complex, &'static str> {
-        match self.value_fill() {
-            Some(Value::Num(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0], 0.0)),
-            Some(Value::Num(_)) => Err(self.fill_error(true)),
-            Some(Value::Byte(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0] as f64, 0.0)),
-            Some(Value::Byte(_)) => Err(self.fill_error(true)),
-            Some(Value::Complex(c)) if c.rank() == 0 => Ok(c.data[0]),
-            Some(Value::Complex(_)) => Err(self.fill_error(true)),
-            _ => Err(self.fill_error(false)),
-        }
-    }
-    pub(crate) fn complex_array_fill(&self) -> Result<Array<Complex>, &'static str> {
-        match self.value_fill() {
-            Some(Value::Num(n)) => Ok(n.convert_ref()),
-            Some(Value::Byte(n)) => Ok(n.convert_ref()),
-            Some(Value::Complex(c)) => Ok(c.clone()),
-            _ => Err(self.fill_error(false)),
-        }
-    }
     pub(crate) fn value_fill(&self) -> Option<&Value> {
         if (self.rt.fill_boundary_stack.last()).is_some_and(|&(i, _)| i >= self.rt.fill_stack.len())
         {
@@ -1350,63 +1251,11 @@ code:
     pub(crate) fn last_unfill(&self) -> Option<&Value> {
         self.rt.unfill_stack.last()
     }
-    fn fill_error(&self, scalar: bool) -> &'static str {
-        Self::fill_error_impl(
-            self.value_fill(),
-            self.value_unfill(),
-            ". An unfill is set, but not a normal fill.",
-            scalar,
-        )
+    pub(crate) fn fill(&self) -> Fill {
+        Fill::new(self)
     }
-    fn unfill_error(&self, scalar: bool) -> &'static str {
-        Self::fill_error_impl(
-            self.value_unfill(),
-            self.value_fill(),
-            ". A normal fill is set, but not an unfill.",
-            scalar,
-        )
-    }
-    fn fill_error_impl(
-        val: Option<&Value>,
-        other: Option<&Value>,
-        other_available: &'static str,
-        scalar: bool,
-    ) -> &'static str {
-        if scalar {
-            match val {
-                Some(Value::Num(_)) => ". A number fill is set, but is is not a scalar.",
-                Some(Value::Byte(_)) => ". A number fill is set, but is is not a scalar.",
-                Some(Value::Char(_)) => ". A character fill is set, but is is not a scalar.",
-                Some(Value::Complex(_)) => ". A complex fill is set, but is is not a scalar.",
-                Some(Value::Box(_)) => ". A box fill is set, but is is not a scalar.",
-                None => {
-                    if other.is_some() {
-                        other_available
-                    } else {
-                        ""
-                    }
-                }
-            }
-        } else {
-            match val {
-                Some(Value::Num(_)) => ". A number fill is set, but the array is not numbers.",
-                Some(Value::Byte(_)) => ". A number fill is set, but the array is not numbers.",
-                Some(Value::Char(_)) => {
-                    ". A character fill is set, but the array is not characters."
-                }
-                Some(Value::Complex(_)) => {
-                    ". A complex fill is set, but the array is not complex numbers."
-                }
-                Some(Value::Box(_)) => ". A box fill is set, but the array is not boxed values.",
-                None => {
-                    if other.is_some() {
-                        other_available
-                    } else {
-                        ""
-                    }
-                }
-            }
-        }
+    pub(crate) fn unfill(&self) -> Fill {
+        Fill::new_un(self)
     }
     /// Do something with the fill context set
     pub(crate) fn with_fill<T>(

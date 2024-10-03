@@ -792,7 +792,7 @@ pub(super) fn pad_keep_counts<'a>(
     let mut amount = Cow::Borrowed(counts);
     match amount.len().cmp(&len) {
         Ordering::Equal => {}
-        Ordering::Less => match env.num_array_fill() {
+        Ordering::Less => match env.either_array_fill::<f64>() {
             Ok(fill) => {
                 if let Some(n) = fill.data.iter().find(|&&n| n < 0.0 || n.fract() != 0.0) {
                     return Err(env.error(format!(

@@ -294,6 +294,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_call_pattern, "call"),
         &InvertPatternFn(invert_un_pattern, "un"),
         &InvertPatternFn(invert_dump_pattern, "dump"),
+        &InvertPatternFn(invert_fill_pattern, "fill"),
         &InvertPatternFn(invert_setinv_pattern, "setinv"),
         &InvertPatternFn(invert_setund_setinv_pattern, "setund_setinv"),
         &InvertPatternFn(invert_trivial_pattern, "trivial"),
@@ -2415,6 +2416,29 @@ fn under_rotate_pattern<'a>(
     Ok((input, (before, after)))
 }
 
+fn invert_fill_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::PushFunc(f), Instr::PushFunc(get_fill), Instr::Prim(Primitive::Fill, span), input @ ..] =
+        input
+    else {
+        return generic();
+    };
+    if get_fill.signature() != (0, 1) {
+        return generic();
+    }
+    let f_instrs = f.instrs(&comp.asm).to_vec();
+    let f_inv = invert_instrs(&f_instrs, comp).map_err(|e| e.func(f))?;
+    let inverse = make_fn(f_inv, f.flags, *span, comp)?;
+    let instrs = eco_vec![
+        Instr::PushFunc(inverse),
+        Instr::PushFunc(get_fill.clone()),
+        Instr::ImplPrim(ImplPrimitive::UnFill, *span),
+    ];
+    Ok((input, instrs))
+}
+
 fn under_fill_pattern<'a>(
     input: &'a [Instr],
     g_sig: Signature,
@@ -2441,7 +2465,7 @@ fn under_fill_pattern<'a>(
     let afters = eco_vec![
         Instr::PushFunc(f_after),
         Instr::PushFunc(get_fill.clone()),
-        Instr::Prim(Primitive::Fill, span),
+        Instr::ImplPrim(ImplPrimitive::UnFill, span),
     ];
     Ok((input, (befores, afters)))
 }

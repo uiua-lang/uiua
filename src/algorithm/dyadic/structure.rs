@@ -435,7 +435,7 @@ impl<T: ArrayValue> Array<T> {
                 let mut filled = false;
                 if taking >= 0 {
                     if abs_taking > row_count {
-                        match T::get_scalar_fill(env) {
+                        match env.scalar_fill::<T>() {
                             Ok(fill) => {
                                 filled = true;
                                 self.data.extend_from_slice(&vec![
@@ -460,7 +460,7 @@ impl<T: ArrayValue> Array<T> {
                         self.data.truncate(abs_taking * row_len);
                     }
                 } else if abs_taking > row_count {
-                    match T::get_scalar_fill(env) {
+                    match env.scalar_fill::<T>() {
                         Ok(fill) => {
                             filled = true;
                             let new_data =
@@ -522,7 +522,7 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Extend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        match T::get_scalar_fill(env) {
+                        match env.scalar_fill::<T>() {
                             Ok(fill) => {
                                 let row_len: usize = (sub_index.iter())
                                     .chain(repeat(&Err(true)))
@@ -555,7 +555,7 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Prepend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        match T::get_scalar_fill(env) {
+                        match env.scalar_fill::<T>() {
                             Ok(fill) => {
                                 let row_len: usize = (sub_index.iter())
                                     .chain(repeat(&Err(true)))
@@ -942,10 +942,6 @@ impl Value {
             self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
         Ok(match from {
             Value::Num(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            Value::Byte(a) if env.number_only_fill() => a
-                .convert_ref::<f64>()
-                .select(indices_shape, &indices_data, env)?
-                .into(),
             Value::Byte(a) => a.select(indices_shape, &indices_data, env)?.into(),
             Value::Complex(a) => a.select(indices_shape, &indices_data, env)?.into(),
             Value::Char(a) => a.select(indices_shape, &indices_data, env)?.into(),

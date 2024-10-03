@@ -162,7 +162,7 @@ impl Value {
                         }
                         .map(|n| n * mul)
                         .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))
-                        .or_else(|e| env.num_scalar_fill().map_err(|_| e))?
+                        .or_else(|e| env.scalar_fill::<f64>().map_err(|_| e))?
                         .into()
                     }
                 }
@@ -236,7 +236,7 @@ impl Value {
 
         Ok(match self {
             Value::Num(arr) => {
-                if let Ok(c) = env.char_scalar_fill() {
+                if let Ok(c) = env.scalar_fill::<char>() {
                     padded(c, arr, env)?.into()
                 } else {
                     let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
@@ -247,7 +247,7 @@ impl Value {
                 }
             }
             Value::Byte(arr) => {
-                if let Ok(c) = env.char_scalar_fill() {
+                if let Ok(c) = env.scalar_fill::<char>() {
                     padded(c, arr, env)?.into()
                 } else {
                     let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
@@ -1889,10 +1889,15 @@ impl Value {
         return Err(env.error("CSV support is not enabled in this environment"));
         #[cfg(feature = "csv")]
         {
+            let delimiter = u8::try_from(env.scalar_fill::<char>().unwrap_or(','))
+                .map_err(|_| env.error("CSV delimiter must be ASCII"))?;
+
             let mut buf = Vec::new();
             let mut writer = csv::WriterBuilder::new()
                 .flexible(true)
+                .delimiter(delimiter)
                 .from_writer(&mut buf);
+
             match self.rank() {
                 0 => writer
                     .write_record([self.format()])
@@ -1987,15 +1992,20 @@ impl Value {
                 .map_err(|e| env.error(e))
         }
     }
-    pub(crate) fn from_csv(_csv: &str, env: &mut Uiua) -> UiuaResult<Self> {
+    pub(crate) fn from_csv(csv_str: &str, env: &mut Uiua) -> UiuaResult<Self> {
         #[cfg(not(feature = "csv"))]
         return Err(env.error("CSV support is not enabled in this environment"));
         #[cfg(feature = "csv")]
         {
+            let delimiter = u8::try_from(env.scalar_unfill::<char>().unwrap_or(','))
+                .map_err(|_| env.error("CSV delimiter must be ASCII"))?;
+
             let mut reader = csv::ReaderBuilder::new()
                 .has_headers(false)
                 .flexible(true)
-                .from_reader(_csv.as_bytes());
+                .delimiter(delimiter)
+                .from_reader(csv_str.as_bytes());
+
             let fill = env.value_fill().cloned().unwrap_or_else(|| "".into());
             env.with_fill(fill, |env| {
                 let mut rows = Vec::new();

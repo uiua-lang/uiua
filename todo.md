@@ -1,11 +1,7 @@
 # Uiua Todo
 
 - 0.13
-  - `un fill`
-  - Better testing
   - Non-scalar `fill take`
-  - `setinv/setund` unification
-    - Custom `on/by` inverses
   - Document on and by inverses
   - Subscript dropdown
   - Update language tour

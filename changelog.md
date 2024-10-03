@@ -21,6 +21,8 @@ This version is not yet released. If you are reading this on the website, then t
 - "Stack macros" are now called "index macros"
   - Stabilize existing placeholder indexing syntax (`^0`, `^1`, etc.)
   - Deprecate existing stack-based macro placeholders (`^!`, `^.`, etc.)
+- [`assert ⍤`](https://uiua.org/docs/assert) at the beginning of a line is now interpreted as a test in some contexts
+  - See the updated [Testing Tutorial](https://uiua.org/tutorial/testing) for more information
 - [`fold ∧`](https://uiua.org/docs/fold) now works with any signature
   - Excess values are collected into arrays
 - [`parse ⋕`](https://uiua.org/docs/parse) now parses complex values from both `arbi`and `a+bi` formats
@@ -94,6 +96,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the option to decouple running and formatting in the pad
 - Add a dropdown to the pad to insert named functions
 - Add an [RSS Feed](https://uiua.org/blog/feed.rss) for the blog
+- Update the [Testing Tutorial](https://uiua.org/tutorial/testing)
 
 ## 0.12.3 - 2024-08-17
 ### Language

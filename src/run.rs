@@ -265,7 +265,7 @@ impl Uiua {
     /// Print all pending reports
     pub fn print_reports(&mut self) {
         for report in self.take_reports() {
-            println!("{report}");
+            println!("{report}"); // Allow println
         }
     }
     /// Take the assembly

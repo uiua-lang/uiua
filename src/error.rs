@@ -569,31 +569,29 @@ impl Report {
     }
     /// A report that tests have finished
     pub fn tests(successes: usize, failures: usize) -> Self {
-        let total = successes + failures;
         let fragments = if successes == 0 {
             if failures == 0 {
                 vec![]
             } else {
                 vec![ReportFragment::Colored(
-                    format!(
-                        "{}{failures} test{} failed",
-                        if failures > 1 { "All " } else { "" },
-                        if failures == 1 { "" } else { "s" }
-                    ),
+                    match failures {
+                        1 => "Test failed".into(),
+                        2 => "Both tests failed".into(),
+                        _ => format!("All {failures} tests failed"),
+                    },
                     ReportKind::Error,
                 )]
             }
         } else {
             let mut fragments = vec![ReportFragment::Colored(
-                format!(
-                    "{}{successes} test{} passed",
-                    if failures == 0 && successes > 1 {
-                        "All "
-                    } else {
-                        ""
-                    },
-                    if total == 1 { "" } else { "s" }
-                ),
+                match (successes, failures) {
+                    (1, 0) => "Test passed".into(),
+                    (2, 0) => "Both tests passed".into(),
+                    (suc, 0) => format!("All {suc} tests passed"),
+                    (suc, _) => {
+                        format!("{suc} test{} passed", if suc == 1 { "" } else { "s" })
+                    }
+                },
                 DiagnosticKind::Info.into(),
             )];
             if failures > 0 {

@@ -1694,33 +1694,9 @@ fn TutorialModules() -> impl IntoView {
 
 #[component]
 fn TutorialTesting() -> impl IntoView {
-    use Primitive::*;
     view! {
         <Title text="Testing - Uiua Docs"/>
-        <h1>"Testing"</h1>
-        <Hd id="test-scopes">"Test Scopes"</Hd>
-        <p>"A "<A href="/tutorial/modules#scoped-modules">"scoped module"</A>" with the name "<code>"test"</code>" is special in that is only run when the code is run with "<code>"uiua test"</code>". It is meant to be used with "<Prim prim=Assert/>"."</p>
-        <Editor example="Square ← ×.\n---test\n⍤.=9 Square 3\n⍤.=225 Square 15\n---"/>
-        <p><Prim prim=Assert/>" will return an error when its second argument is anything other than "<code>"1"</code>"."</p>
-        <Editor example="Square ← ×.\n---test\n⍤.=25 Square 4\n---"/> // Should fail
-        <p>"The first argument to "<Prim prim=Assert/>" is the value that will be thrown if the assertion fails. In the examples above, we have simply been "<Prim prim=Dup/>"ing the test value. We can throw a message instead."</p>
-        <Editor example=r#"Square ← ×.
----test
-⍤"3² is not 9!" =9 Square 3
-⍤"4² is not 25!" =25 Square 4
----"#/>
-        <p>"One nice pattern for writing tests is to put the expected result before the test computation and use "<Prims prims=[Assert, With, Match]/>"."</p>
-        <p>"If the result does not match the expectation, that incorrect result will be thrown."</p>
-        <Editor example="---test\n⍤⤙≍ 4 +2 2 # Passes\n---"/>
-        <Editor example="---test\n⍤⤙≍ [2 3 5] +1 [1 2 3]\n---\n#     ↓↓↓↓↓↓"/> // Should fail
-
-        <Hd id="run-modes">"Run Modes"</Hd>
-        <p>"Whether tests will run or not depends on how you run the code."</p>
-        <p>"On this website, both test and non-test code will always be run."</p>
-        <p>"However, if you use the "<A href="/docs/install">"native interpreter"</A>", you have a few options."</p>
-        <p><code>"uiua watch"</code>" will run all code, including tests."</p>
-        <p><code>"uiua run"</code>" will only run non-test code."</p>
-        <p><code>"uiua test"</code>" will only run test code, but also any non-test bindings and any non-test code which makes imports."</p>
+        <Markdown src="/text/testing.md"/>
 
         <br/>
         <br/>

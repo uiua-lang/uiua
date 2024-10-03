@@ -684,7 +684,7 @@ code:
                     if let Ok(height) = &mut self.scope.stack_height {
                         *height = (*height + sig.outputs).saturating_sub(sig.args);
                         // Compile test assert
-                        if can_run && sig.outputs == 0 {
+                        if self.mode != RunMode::Normal && sig.outputs == 0 {
                             if let Some(Instr::Prim(Primitive::Assert, span)) =
                                 new_func.instrs.last()
                             {

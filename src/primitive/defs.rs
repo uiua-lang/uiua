@@ -2573,15 +2573,13 @@ primitive!(
     ///
     /// Expects a message and a test value.
     /// If the test value is anything but `1`, then the message will be thrown as an error.
-    ///
     /// ex! ⍤"Oh no!" "any array"
     /// ex: ⍤"Oh no!" 1
     /// ex! ⍤"Oh no!" 0
-    ///
+    /// As you can see, a top-level [assert] is interpreted as a test in some contexts. See the [Testing Tutorial](/tutorial/testing) for more information.
     /// Use [duplicate] if you do not care about the message.
     /// ex: ⍤. =6 6
     /// ex! ⍤. =8 9
-    ///
     /// Errors thrown by [assert] can be caught with [try].
     (2(0), Assert, Misc, ("assert", '⍤'), Impure),
     /// Generate a random number in the range `[0, 1)`

@@ -149,6 +149,10 @@ tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
 web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "uiua-nokhwa"]
 xlsx = ["calamine", "simple_excel_writer"]
+# Use system static libraries instead of building them
+system = [
+  "libffi?/system"
+]
 
 [[bin]]
 name = "uiua"

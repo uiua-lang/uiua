@@ -1544,13 +1544,11 @@ fn invert_join_pattern<'a>(
             let mut instrs = EcoVec::new();
             while !input.is_empty() {
                 if let Some((inp, _, inner, ..)) = try_push_temp_wrap(input) {
-                    if inner.iter().any(|instr| matches!(instr, Prim(Join, _))) {
-                        instrs.extend(invert_inner(inner, comp)?);
-                        input = inp;
-                        continue;
-                    }
+                    instrs.extend(invert_inner(inner, comp)?);
+                    input = inp;
+                    continue;
                 }
-                if let Some((i, _)) = input.iter().enumerate().find(|(i, instr)| {
+                if let Some((i, _)) = input.iter().enumerate().skip(1).find(|(i, instr)| {
                     instrs_clean_signature(&input[..*i]).is_some()
                         && matches!(
                             instr,
@@ -1570,23 +1568,23 @@ fn invert_join_pattern<'a>(
             Ok(instrs)
         }
 
-        let flip = join_index > 0 && matches!(input[join_index - 1], Prim(Flip, _));
-        let before = &input[..join_index - flip as usize];
-        println!("before: {:?}", before);
+        let flip_after = join_index > 0 && matches!(input[join_index - 1], Prim(Flip, _));
+        let flip_before = join_index > 1 && matches!(input[0], Prim(Flip, _));
+        let flip = flip_before ^ flip_after;
+        let before = &input[flip_before as usize..join_index - flip_after as usize];
         input = &input[join_index + 1..];
         let before_inv = invert_inner(before, comp)?;
-        println!("before_inv: {:?}", before_inv);
         let before_sig = instrs_clean_signature(&before_inv).ok_or(Generic)?;
-        println!("before_sig: {:?}", before_sig);
         let mut instrs = EcoVec::new();
-        let prim = if before_sig.outputs <= 1 {
+        let count = before_sig.outputs.saturating_sub(before_sig.args) + 1;
+        let prim = if count <= 1 {
             if flip {
                 UnJoinEnd
             } else {
                 UnJoin
             }
         } else {
-            instrs.push(Push(before_sig.outputs.into()));
+            instrs.push(Push(count.into()));
             if flip {
                 UnJoinShapeEnd
             } else {

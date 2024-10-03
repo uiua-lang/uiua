@@ -992,20 +992,6 @@ code:
                 _ => None,
             };
 
-            // First select diagnostic
-            if let (Some(PrevWord(Some(Primitive::Select), _, b_span)), Some(Primitive::First)) =
-                (&b, prim)
-            {
-                self.emit_diagnostic(
-                    format!(
-                        "Flip the order of {} and {} to improve performance",
-                        Primitive::First.format(),
-                        Primitive::Select.format()
-                    ),
-                    DiagnosticKind::Advice,
-                    b_span.clone().merge(span.clone()),
-                );
-            }
             match (a, &b, prim) {
                 // Flip monadic dup diagnostic
                 (

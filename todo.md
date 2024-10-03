@@ -1,10 +1,9 @@
 # Uiua Todo
 
 - 0.13
+  - `un fill`
   - Better testing
-  - `under (join dip/flip val)`
   - Non-scalar `fill take`
-  - Placeholder spans and highlighting
   - `setinv/setund` unification
     - Custom `on/by` inverses
   - Document on and by inverses

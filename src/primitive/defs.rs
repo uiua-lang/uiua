@@ -3211,6 +3211,14 @@ primitive!(
     /// ex: csv [{"Foo" "Bar"} [1 2] [3 4] [5 6]]
     /// You can use [un][csv] to decode a CSV string back into an array.
     /// ex: °csv "#,Count\n1,5\n2,21\n3,8\n"
+    /// By default, rows of mismatched length are padded with empty strings.
+    /// ex: °csv "1,2,3\n4\n5,6"
+    /// This can be changed with [fill].
+    /// ex: ⬚"x"°csv "1,2,3\n4\n5,6"
+    /// The default delimiter is (of course) a comma. However, [fill] can be used to change it.
+    /// ex: °⬚@;csv "1;2;3\n4\n5,6;7"
+    /// [fill] outside the [un] pads rows of different lengths. [fill] inside the [un] chooses the delimiter.
+    /// ex: ⬚"x"°⬚@;csv "1;2;3\n4\n5,6;7"
     /// The decoding result will always be a rank-`2` array of boxed strings.
     /// You can use `each``try``parse``gap``identity` to convert the strings that represent numbers.
     /// ex: ∵⍣⋕∘ °csv "#,Count\n1,5\n2,21\n3,8\n"

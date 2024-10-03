@@ -12,7 +12,7 @@ use crate::{
     UiuaResult, Value,
 };
 
-use super::{fixed_rows, FixedRowsData};
+use super::{fixed_rows, FillContext, FixedRowsData};
 
 pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
@@ -59,7 +59,7 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
             }
         }
         (Some((prim, flipped)), Value::Byte(bytes)) => {
-            let fill = env.num_scalar_fill().ok();
+            let fill = env.scalar_fill::<f64>().ok();
             env.push::<Value>(match prim {
                 Primitive::Add => {
                     fast_reduce_different(bytes, 0.0, fill, depth, add::num_num, add::num_byte)
@@ -127,7 +127,7 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
                         .into()
                 }
                 Primitive::Max => {
-                    let byte_fill = env.byte_scalar_fill().ok();
+                    let byte_fill = env.scalar_fill::<u8>().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -143,7 +143,7 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
                     }
                 }
                 Primitive::Min => {
-                    let byte_fill = env.byte_scalar_fill().ok();
+                    let byte_fill = env.scalar_fill::<u8>().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -280,7 +280,7 @@ fn reduce_singleton(instrs: &[Instr], val: Value, process: impl Fn(Value) -> Val
 }
 
 macro_rules! reduce_math {
-    ($fname:ident, $ty:ident, $f:ident, $fill:ident) => {
+    ($fname:ident, $ty:ident, $f:ident) => {
         #[allow(clippy::result_large_err)]
         fn $fname(
             prim: Primitive,
@@ -292,7 +292,7 @@ macro_rules! reduce_math {
         where
             $ty: From<f64>,
         {
-            let fill = env.$fill().ok();
+            let fill = env.scalar_fill::<$ty>().ok();
             env.push(match prim {
                 Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, add::$f),
                 #[cfg(feature = "opt")]
@@ -329,8 +329,8 @@ macro_rules! reduce_math {
     };
 }
 
-reduce_math!(reduce_nums, f64, num_num, num_scalar_fill);
-reduce_math!(reduce_coms, Complex, com_x, complex_scalar_fill);
+reduce_math!(reduce_nums, f64, num_num);
+reduce_math!(reduce_coms, Complex, com_x);
 
 fn fast_reduce_different<T, U>(
     arr: Array<T>,

@@ -569,6 +569,15 @@ impl VirtualEnv {
                     let n = self.pop()?;
                     self.repeat(f, n)?;
                 }
+                ImplPrimitive::UnFill => {
+                    let fill_sig = self.pop_func()?;
+                    if fill_sig.outputs > 0 {
+                        self.handle_sig(fill_sig)?;
+                    }
+                    self.handle_args_outputs(fill_sig.outputs, 0)?;
+                    let f = self.pop_func()?;
+                    self.handle_sig(f)?;
+                }
                 prim => {
                     let args = prim.args();
                     for _ in 0..prim.modifier_args().unwrap_or(0) {

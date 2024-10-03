@@ -3,7 +3,7 @@
 use ecow::eco_vec;
 
 use crate::{
-    algorithm::{pervade::*, zip::rows1},
+    algorithm::{pervade::*, zip::rows1, FillContext},
     function::Function,
     random,
     value::Value,
@@ -502,14 +502,14 @@ fn reduce_table_bytes(
                     $ff_complex,
                     complex::$arith,
                     Complex::new($iden, $ciden),
-                    env.complex_scalar_fill().ok(),
+                    env.scalar_fill::<Complex>().ok(),
                 )),
                 Primitive::Couple | Primitive::Join => env.push(frtljc($xs, $ys, $ff, $iden, fill)),
                 _ => return Err((xs, ys)),
             }
         }};
     }
-    let fill = env.num_scalar_fill().ok();
+    let fill = env.scalar_fill::<f64>().ok();
     match fp {
         Primitive::Add => {
             all_gs!(
@@ -538,7 +538,7 @@ fn reduce_table_bytes(
             )
         }
         Primitive::Min => {
-            let byte_fill = env.byte_scalar_fill().ok();
+            let byte_fill = env.scalar_fill::<u8>().ok();
             if xs.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                 all_gs!(
                     xs.convert(),
@@ -566,7 +566,7 @@ fn reduce_table_bytes(
             }
         }
         Primitive::Max => {
-            let byte_fill = env.byte_scalar_fill().ok();
+            let byte_fill = env.scalar_fill::<u8>().ok();
             if xs.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                 all_gs!(
                     xs.convert(),
@@ -656,7 +656,7 @@ where
 }
 
 macro_rules! reduce_table_math {
-    ($fname:ident, $ty:ty, $f:ident, $fill:ident) => {
+    ($fname:ident, $ty:ty, $f:ident) => {
         #[allow(clippy::result_large_err)]
         fn $fname(
             f_prim: Primitive,
@@ -670,7 +670,7 @@ macro_rules! reduce_table_math {
             if f_flipped || g_flipped {
                 return Ok(Err((xs, ys)));
             }
-            let fill = env.$fill().ok();
+            let fill = env.scalar_fill::<$ty>().ok();
             macro_rules! all_gs {
                 ($ff:expr, $ff_complex:expr, $iden:expr, $ciden:expr) => {
                     match g_prim {
@@ -711,7 +711,7 @@ macro_rules! reduce_table_math {
                             $ff_complex,
                             complex::$f,
                             Complex::new($iden, $ciden),
-                            env.complex_scalar_fill().ok(),
+                            env.scalar_fill::<Complex>().ok(),
                         )),
                         Primitive::Couple | Primitive::Join => {
                             env.push(frtljc(xs, ys, $ff, $iden.into(), fill))
@@ -734,8 +734,8 @@ macro_rules! reduce_table_math {
     };
 }
 
-reduce_table_math!(reduce_table_nums, f64, num_num, num_scalar_fill);
-reduce_table_math!(reduce_coms, Complex, com_x, complex_scalar_fill);
+reduce_table_math!(reduce_table_nums, f64, num_num);
+reduce_table_math!(reduce_coms, Complex, com_x);
 
 /// Fast reduce table list
 fn frtl<T, G, F>(

@@ -153,6 +153,7 @@ mod complex;
 mod cowslice;
 mod error;
 mod ffi;
+mod fill;
 pub mod format;
 mod function;
 mod grid_fmt;

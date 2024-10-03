@@ -32,6 +32,8 @@ pub struct CustomInverse {
     pub un: Option<Function>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub under: Option<(Function, Function)>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub anti: Option<Function>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
@@ -360,7 +362,8 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
     &[
         &pat!(Complex, (crate::Complex::I, Mul, Sub)),
         &pat!(Atan, (Flip, UnAtan, Div, Mul)),
-        &InvertPatternFn(invert_repeat_pattern, "repeat"),
+        &InvertPatternFn(anti_repeat_pattern, "repeat"),
+        &InvertPatternFn(anti_custom_pattern, "custom"),
         &(IgnoreMany(Flip), ([Add], [Sub])),
         &([Sub], [Add]),
         &([Flip, Sub], [Flip, Sub]),
@@ -1665,6 +1668,22 @@ fn invert_custom_pattern<'a>(
     ))
 }
 
+fn anti_custom_pattern<'a>(
+    input: &'a [Instr],
+    _: &mut Compiler,
+) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::PushFunc(f), Instr::CustomInverse(cust, span), input @ ..] = input else {
+        return generic();
+    };
+    let mut cust = cust.clone();
+    let anti = cust.anti.ok_or(Generic)?;
+    cust.anti = Some(f.clone());
+    Ok((
+        input,
+        eco_vec![Instr::PushFunc(anti), Instr::CustomInverse(cust, *span)],
+    ))
+}
+
 fn under_custom_pattern<'a>(
     input: &'a [Instr],
     _: Signature,
@@ -2843,7 +2862,7 @@ fn invert_scan_pattern<'a>(
     ))
 }
 
-fn invert_repeat_pattern<'a>(
+fn anti_repeat_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {

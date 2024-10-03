@@ -2251,8 +2251,68 @@ primitive!(
     /// ex: # Experimental!
     ///   : ˜⊂ 1 2
     ([1], Backward, Stack, ("backward", '˜')),
-    /// Set the inverse(s) of a function
-    ([1],Obverse, InversionModifier, ("obverse", '⍛')),
+    /// Define the various inverses of a function
+    ///
+    /// [obverse] defines how a function should interact with [un], [under], and [anti].
+    /// It can either take a single function, or a function pack with up to 5 functions.
+    ///
+    /// If only a single function is provided, it can be used to make a function not run in the "undo" part of [under]. This is useful when a function has to do some setup before the main [under]able part.
+    /// ex! F ← ▽⊸◿2
+    ///   : F [1 2 3 4 5]
+    ///   : ⍜F(×10) [1 2 3 4 5]
+    /// ex: # Experimental!
+    ///   : F ← ▽⍛(⊸◿2)
+    ///   : F [1 2 3 4 5]
+    ///   : ⍜F(×10) [1 2 3 4 5]
+    /// If given 2 functions, which inverse is set depends on the functions' signatures.
+    /// If the functions have opposite signatures, then an [un]-compatible inverse is set.
+    /// ex: # Experimental!
+    ///   : F ← ⍛(+|⊃⌊⌈÷2)
+    ///   : F 1 2
+    ///   : [°F 25]
+    /// If the functions have the same signature, then an [anti]-compatible inverse is set.
+    /// ex: # Experimental!
+    ///   : F ← ⍛(+×10|÷10-)
+    ///   : F 2 3
+    ///   : ˘F 3 23
+    /// Otherwise, an [under]-compatible inverse is set.
+    /// ex: # Experimental!
+    ///   : F ← ⍛(+|¯)
+    ///   : ⍜F? 1 2
+    /// If given 3 functions, an [under]-compatible inverse always set.
+    /// The first function is the normal case.
+    /// The second function is the "do" part of the [under].
+    /// The third function is the "undo" part of the [under].
+    /// ex: # Experimental!
+    ///   : F ← ⍛(⊂10|⊂:1|⊂:2)
+    ///   : F 3
+    ///   : ⍜F⇌ 0_0
+    /// If the second function returns more values than the first function, the excess values will saved as "context". These context values will be passed to the "undo" part of the [under].
+    /// Here is a manual implementation of [add]'s [under] behavior.
+    /// ex: # Experimental!
+    ///   : F ← ⍛(+|⟜+|-)
+    ///   : F 2 5
+    ///   : ⍜F(×10) 2 5
+    /// If given 4 functions, both [un]-compatible and [under]-compatible inverses are set.
+    /// The first function is the normal case.
+    /// The second function is the [un]-compatible inverse.
+    /// The third and fourth functions are for the [under]-compatible inverse.
+    /// If the fourth function has the same signature as the first, it will also be used as the [anti]-compatible inverse.
+    /// Finally, a fifth function can be given to specify the [anti]-compatible inverse.
+    /// Here is our fully-specified [add] implementation.
+    /// ex: # Experimental!
+    ///   : F ← ⍛(+|⊃⌊⌈÷2|⟜+|-|$Anti -)
+    ///   : F 2 5
+    ///   : ˘F 2 5
+    ///   : [°F] 15
+    ///   : ⍜F(÷3) 10 5
+    /// Note that [anti] inverses also work with [un][on].
+    /// ex: # Experimental!
+    ///   : F ← ⍛(×|+÷2)
+    ///   : F 4 10
+    ///   : ˘F 4 10
+    ///   : [°⟜F] 4 10
+    ([1], Obverse, InversionModifier, ("obverse", '⍛')),
     /// Invert the behavior of a function
     ///
     /// A list of all [un]-compatible functions can be found [below](#uns).

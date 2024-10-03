@@ -945,6 +945,14 @@
     "class": "Misc",
     "description": "Get the current time in seconds"
   },
+  "obverse": {
+    "glyph": "⍛",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "InversionModifier",
+    "description": "Define the various inverses of a function",
+    "experimental": true
+  },
   "off": {
     "glyph": "⤚",
     "outputs": 1,
@@ -952,13 +960,6 @@
     "class": "Stack",
     "description": "Call a function but keep its first argument under the outputs on the stack",
     "experimental": true
-  },
-  "obverse": {
-    "glyph": "⍛",
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "InversionModifier",
-    "description": "Set the inverse(s) of a function"
   },
   "on": {
     "glyph": "⟜",

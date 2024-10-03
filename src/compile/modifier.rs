@@ -159,6 +159,8 @@ impl Compiler {
                             f = a.clone();
                             if a.signature() == b.signature().inverse() {
                                 cust.un = Some(b.clone());
+                            } else if a.signature() == b.signature() {
+                                cust.anti = Some(b.clone());
                             } else {
                                 cust.under = Some((a.clone(), b.clone()));
                             }
@@ -171,30 +173,71 @@ impl Compiler {
                         }
                         [a, b, c, d] => {
                             f = a.clone();
-                            if !a.signature().is_compatible_with(b.signature().inverse()) {
-                                self.emit_diagnostic(
-                                    format!(
-                                        "First and second functions must have opposite signatures, \
-                                        but their signatures are {} and {}",
-                                        a.signature(),
-                                        b.signature()
-                                    ),
-                                    DiagnosticKind::Warning,
-                                    modifier.span.clone(),
-                                );
-                            }
                             if !b.instrs(&self.asm).is_empty() {
+                                if !a.signature().is_compatible_with(b.signature().inverse()) {
+                                    self.emit_diagnostic(
+                                        format!(
+                                            "First and second functions must have opposite signatures, \
+                                            but their signatures are {} and {}",
+                                            a.signature(),
+                                            b.signature()
+                                        ),
+                                        DiagnosticKind::Warning,
+                                        modifier.span.clone(),
+                                    );
+                                }
+                                cust.un = Some(b.clone());
+                            }
+                            if !d.instrs(&self.asm).is_empty() {
+                                if !c.instrs(&self.asm).is_empty() {
+                                    cust.under = Some((c.clone(), d.clone()));
+                                }
+                                if a.signature() == d.signature() {
+                                    cust.anti = Some(d.clone());
+                                }
+                            }
+                        }
+                        [a, b, c, d, e] => {
+                            f = a.clone();
+                            if !b.instrs(&self.asm).is_empty() {
+                                if !a.signature().is_compatible_with(b.signature().inverse()) {
+                                    self.emit_diagnostic(
+                                        format!(
+                                            "First and second functions must have opposite signatures, \
+                                            but their signatures are {} and {}",
+                                            a.signature(),
+                                            b.signature()
+                                        ),
+                                        DiagnosticKind::Warning,
+                                        modifier.span.clone(),
+                                    );
+                                }
                                 cust.un = Some(b.clone());
                             }
                             if !c.instrs(&self.asm).is_empty() && !d.instrs(&self.asm).is_empty() {
                                 cust.under = Some((c.clone(), d.clone()));
+                            }
+                            if !e.instrs(&self.asm).is_empty() {
+                                if a.signature() != e.signature() {
+                                    self.emit_diagnostic(
+                                        format!(
+                                            "First and fifth functions must have the same signature, \
+                                            but their signatures are {} and {}",
+                                            a.signature(),
+                                            e.signature()
+                                        ),
+                                        DiagnosticKind::Warning,
+                                        modifier.span.clone(),
+                                    );
+                                }
+                                cust.anti = Some(e.clone());
                             }
                         }
                         funcs => {
                             return Err(self.fatal_error(
                                 modifier.span.clone(),
                                 format!(
-                                    "Obverse requires between 1 and 4 branches, \
+                                    "Obverse requires between 1 and 5 branches, \
                                     but {} were provided",
                                     funcs.len()
                                 ),

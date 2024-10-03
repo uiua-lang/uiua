@@ -182,6 +182,7 @@ impl fmt::Display for ImplPrimitive {
             UnScan => write!(f, "{Un}{Scan}"),
             UnStack => write!(f, "{Un}{Stack}"),
             UnDump => write!(f, "{Un}{Dump}"),
+            UnFill => write!(f, "{Un}{Fill}"),
             UnBox => write!(f, "{Un}{Box}"),
             UnJson => write!(f, "{Un}{Json}"),
             UnCsv => write!(f, "{Un}{Csv}"),
@@ -364,6 +365,37 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
     ]
     .into()
 });
+
+macro_rules! fill {
+    ($env:expr, $with:ident, $without_but:ident) => {{
+        let env = $env;
+        let fill = env.pop_function()?;
+        let f = env.pop_function()?;
+        let outputs = fill.signature().outputs;
+        if outputs > 1 {
+            return Err(env.error(format!(
+                "{} function can have at most 1 output, but its signature is {}",
+                Primitive::Fill.format(),
+                fill.signature()
+            )));
+        }
+        if outputs == 0 {
+            return env.$without_but(
+                fill.signature().args,
+                |env| env.call(fill),
+                |env| env.call(f),
+            );
+        }
+        env.call(fill)?;
+        let fill_value = env.pop("fill value")?;
+        match f.id {
+            FunctionId::Named(_) | FunctionId::Macro(_) => {
+                env.$with(fill_value, |env| env.without_fill(|env| env.call(f)))
+            }
+            _ => env.$with(fill_value, |env| env.call(f)),
+        }?;
+    }};
+}
 
 impl Primitive {
     /// Get an iterator over all primitives
@@ -803,33 +835,7 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop(1)?;
             }
-            Primitive::Fill => {
-                let fill = env.pop_function()?;
-                let f = env.pop_function()?;
-                let outputs = fill.signature().outputs;
-                if outputs > 1 {
-                    return Err(env.error(format!(
-                        "{} function can have at most 1 output, but its signature is {}",
-                        Primitive::Fill.format(),
-                        fill.signature()
-                    )));
-                }
-                if outputs == 0 {
-                    return env.without_fill_but(
-                        fill.signature().args,
-                        |env| env.call(fill),
-                        |env| env.call(f),
-                    );
-                }
-                env.call(fill)?;
-                let fill_value = env.pop("fill value")?;
-                match f.id {
-                    FunctionId::Named(_) | FunctionId::Macro(_) => {
-                        env.with_fill(fill_value, |env| env.without_fill(|env| env.call(f)))
-                    }
-                    _ => env.with_fill(fill_value, |env| env.call(f)),
-                }?;
-            }
+            Primitive::Fill => fill!(env, with_fill, without_fill_but),
             Primitive::Try => algorithm::try_(env)?,
             Primitive::Case => {
                 let f = env.pop_function()?;
@@ -1119,6 +1125,7 @@ impl ImplPrimitive {
             } => trace_n(env, *n, *inverse, *stack_sub)?,
             ImplPrimitive::UnStack => stack(env, true)?,
             ImplPrimitive::UnDump => dump(env, true)?,
+            ImplPrimitive::UnFill => fill!(env, with_unfill, without_unfill_but),
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;

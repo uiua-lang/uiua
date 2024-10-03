@@ -56,8 +56,10 @@ pub(crate) struct Runtime {
     recur_stack: Vec<usize>,
     /// The fill stack
     fill_stack: Vec<Value>,
+    /// The unfill stack
+    unfill_stack: Vec<Value>,
     /// The fill boundary stack
-    fill_boundary_stack: Vec<usize>,
+    fill_boundary_stack: Vec<(usize, usize)>,
     /// A limit on the execution duration in milliseconds
     pub(crate) execution_limit: Option<f64>,
     /// The time at which execution started
@@ -194,6 +196,7 @@ impl Default for Runtime {
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
+            unfill_stack: Vec::new(),
             backend: Arc::new(SafeSys::default()),
             time_instrs: false,
             last_time: 0.0,
@@ -1277,6 +1280,13 @@ code:
             _ => Err(self.fill_error(false)),
         }
     }
+    pub(crate) fn char_scalar_unfill(&self) -> Result<char, &'static str> {
+        match self.value_unfill() {
+            Some(Value::Char(c)) if c.rank() == 0 => Ok(c.data[0]),
+            Some(Value::Char(_)) => Err(self.unfill_error(true)),
+            _ => Err(self.unfill_error(false)),
+        }
+    }
     pub(crate) fn char_array_fill(&self) -> Result<Array<char>, &'static str> {
         match self.value_fill() {
             Some(Value::Char(c)) => Ok(c.clone()),
@@ -1318,27 +1328,67 @@ code:
         }
     }
     pub(crate) fn value_fill(&self) -> Option<&Value> {
-        if (self.rt.fill_boundary_stack.last()).is_some_and(|&i| i >= self.rt.fill_stack.len()) {
+        if (self.rt.fill_boundary_stack.last()).is_some_and(|&(i, _)| i >= self.rt.fill_stack.len())
+        {
             None
         } else {
             self.last_fill()
         }
     }
+    pub(crate) fn value_unfill(&self) -> Option<&Value> {
+        if (self.rt.fill_boundary_stack.last())
+            .is_some_and(|&(_, i)| i >= self.rt.unfill_stack.len())
+        {
+            None
+        } else {
+            self.last_unfill()
+        }
+    }
     pub(crate) fn last_fill(&self) -> Option<&Value> {
         self.rt.fill_stack.last()
     }
+    pub(crate) fn last_unfill(&self) -> Option<&Value> {
+        self.rt.unfill_stack.last()
+    }
     fn fill_error(&self, scalar: bool) -> &'static str {
+        Self::fill_error_impl(
+            self.value_fill(),
+            self.value_unfill(),
+            ". An unfill is set, but not a normal fill.",
+            scalar,
+        )
+    }
+    fn unfill_error(&self, scalar: bool) -> &'static str {
+        Self::fill_error_impl(
+            self.value_unfill(),
+            self.value_fill(),
+            ". A normal fill is set, but not an unfill.",
+            scalar,
+        )
+    }
+    fn fill_error_impl(
+        val: Option<&Value>,
+        other: Option<&Value>,
+        other_available: &'static str,
+        scalar: bool,
+    ) -> &'static str {
         if scalar {
-            match self.value_fill() {
+            match val {
                 Some(Value::Num(_)) => ". A number fill is set, but is is not a scalar.",
                 Some(Value::Byte(_)) => ". A number fill is set, but is is not a scalar.",
                 Some(Value::Char(_)) => ". A character fill is set, but is is not a scalar.",
                 Some(Value::Complex(_)) => ". A complex fill is set, but is is not a scalar.",
                 Some(Value::Box(_)) => ". A box fill is set, but is is not a scalar.",
-                None => "",
+                None => {
+                    if other.is_some() {
+                        other_available
+                    } else {
+                        ""
+                    }
+                }
             }
         } else {
-            match self.value_fill() {
+            match val {
                 Some(Value::Num(_)) => ". A number fill is set, but the array is not numbers.",
                 Some(Value::Byte(_)) => ". A number fill is set, but the array is not numbers.",
                 Some(Value::Char(_)) => {
@@ -1348,7 +1398,13 @@ code:
                     ". A complex fill is set, but the array is not complex numbers."
                 }
                 Some(Value::Box(_)) => ". A box fill is set, but the array is not boxed values.",
-                None => "",
+                None => {
+                    if other.is_some() {
+                        other_available
+                    } else {
+                        ""
+                    }
+                }
             }
         }
     }
@@ -1363,9 +1419,22 @@ code:
         self.rt.fill_stack.pop();
         res
     }
+    /// Do something with the unfill context set
+    pub(crate) fn with_unfill<T>(
+        &mut self,
+        value: Value,
+        in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
+    ) -> UiuaResult<T> {
+        self.rt.unfill_stack.push(value);
+        let res = in_ctx(self);
+        self.rt.unfill_stack.pop();
+        res
+    }
     /// Do something with the top fill context unset
     pub(crate) fn without_fill<T>(&mut self, in_ctx: impl FnOnce(&mut Self) -> T) -> T {
-        self.rt.fill_boundary_stack.push(self.rt.fill_stack.len());
+        self.rt
+            .fill_boundary_stack
+            .push((self.rt.fill_stack.len(), self.rt.unfill_stack.len()));
         let res = in_ctx(self);
         self.rt.fill_boundary_stack.pop();
         res
@@ -1391,6 +1460,30 @@ code:
         let res1 = but(self);
         let res2 = in_ctx(self);
         self.rt.fill_stack.extend(fills.into_iter().rev());
+        res1?;
+        res2
+    }
+    pub(crate) fn without_unfill_but(
+        &mut self,
+        n: usize,
+        but: impl FnOnce(&mut Self) -> UiuaResult,
+        in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
+    ) -> UiuaResult {
+        let fills = self
+            .rt
+            .unfill_stack
+            .split_off(self.rt.unfill_stack.len().max(n) - n);
+        if fills.len() < n {
+            for _ in 0..n - fills.len() {
+                self.push(Value::default());
+            }
+        }
+        for value in fills.iter().rev().cloned() {
+            self.push(value);
+        }
+        let res1 = but(self);
+        let res2 = in_ctx(self);
+        self.rt.unfill_stack.extend(fills.into_iter().rev());
         res1?;
         res2
     }
@@ -1464,6 +1557,7 @@ code:
                 array_stack: Vec::new(),
                 fill_stack: Vec::new(),
                 fill_boundary_stack: Vec::new(),
+                unfill_stack: Vec::new(),
                 recur_stack: self.rt.recur_stack.clone(),
                 call_stack: Vec::new(),
                 time_instrs: self.rt.time_instrs,

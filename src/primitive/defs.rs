@@ -3431,6 +3431,7 @@ impl_primitive!(
     (1(2), UnMap),
     (0(0), UnStack, Impure),
     (0(1)[1], UnDump, Impure),
+    (0[2], UnFill),
     (1, Primes),
     (1, UnBox),
     (2, UnOnDrop),

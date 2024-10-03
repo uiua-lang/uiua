@@ -16,8 +16,8 @@ use uiua::{
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
-    DragEvent, Event, FileReader, HtmlDivElement, HtmlInputElement, HtmlSelectElement,
-    HtmlTextAreaElement, MouseEvent,
+    DragEvent, Event, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement,
+    HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
 };
 
 use crate::{
@@ -222,17 +222,7 @@ pub fn Editor<'a>(
 
         // Update title
         if let EditorMode::Pad = mode {
-            let title = if let Some(line) = (input.lines())
-                .find(|line| line.starts_with('#') && !line.starts_with("# Experimental!"))
-            {
-                line[1..].trim()
-            } else if let Some(line) = (input.lines())
-                .find(|line| !line.trim().is_empty() && !line.starts_with("# Experimental!"))
-            {
-                line.trim()
-            } else {
-                "Pad"
-            };
+            let title = derive_title(&input);
             (window().document().unwrap()).set_title(&format!("Uiua - {title}"));
         }
 
@@ -1350,10 +1340,10 @@ pub fn Editor<'a>(
     };
 
     // Copy a link to the code
-    let copy_link = move |event: MouseEvent| {
+    let copy_link_impl = move |markdown: bool| {
         let encoded = url_encode_code(&clean_code());
         let url = format!("https://uiua.org/pad?src={encoded}");
-        let to_copy = if event.shift_key() {
+        let to_copy = if markdown {
             let text =
                 if let Some((start, end)) = get_code_cursor().filter(|(start, end)| start != end) {
                     let st = start.min(end);
@@ -1381,12 +1371,37 @@ pub fn Editor<'a>(
         }
         set_copied_link.set(true);
     };
+    let copy_link = move |event: MouseEvent| copy_link_impl(event.shift_key());
+    let copy_markdown_link = move |_| copy_link_impl(true);
     let copy_link_title = move || {
         if copied_link.get() {
             "Copied!"
         } else {
             "Copy a link to this code (hold shift for markdown)"
         }
+    };
+
+    // Let the user download the code as a `.ua` file
+    // They can choose where to save it
+    let download_code = move |_| {
+        let code = get_code();
+        let doc = window().document().unwrap();
+        let anchor = doc.create_element("a").unwrap();
+        anchor
+            .set_attribute(
+                "href",
+                &format!(
+                    "data:text/plain;charset=utf-8,{}",
+                    urlencoding::encode(&code)
+                ),
+            )
+            .unwrap();
+        let name = format!("{}.ua", derive_title(&code));
+        anchor.set_attribute("download", &name).unwrap();
+        anchor.set_attribute("style", "display: none").unwrap();
+        doc.body().unwrap().append_child(&anchor).unwrap();
+        anchor.dyn_ref::<HtmlAnchorElement>().unwrap().click();
+        set_timeout(move || anchor.remove(), Duration::from_millis(0));
     };
 
     // Toggle settings
@@ -1543,6 +1558,8 @@ pub fn Editor<'a>(
                                 <option value="Uiua386" selected={get_font_name() == "Uiua386"}>"Uiua386"</option>
                             </select>
                         </div>
+                        <button on:click=download_code>"Download Code"</button>
+                        <button on:click=copy_markdown_link>"Copy Markdown"</button>
                     </div>
                     <div id="settings-right">
                         <div style="display: flex; gap: 0.2em;">

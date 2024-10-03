@@ -1246,3 +1246,17 @@ fn update_style() {
     ));
     document().head().unwrap().append_child(&new_style).unwrap();
 }
+
+pub fn derive_title(input: &str) -> &str {
+    if let Some(line) =
+        (input.lines()).find(|line| line.starts_with('#') && !line.starts_with("# Experimental!"))
+    {
+        line[1..].trim()
+    } else if let Some(line) =
+        (input.lines()).find(|line| !line.trim().is_empty() && !line.starts_with("# Experimental!"))
+    {
+        line.trim()
+    } else {
+        "Pad"
+    }
+}

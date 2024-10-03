@@ -92,11 +92,12 @@ This version is not yet released. If you are reading this on the website, then t
 - After programs finish executing, the terminal raw mode will be automatically disabled if it was left on. 
 ### Website
 - Add [Ranges](https://uiua.org/tutorial/ranges) tutorial
+- Add an [RSS Feed](https://uiua.org/blog/feed.rss) for the blog
+- Update the [Testing Tutorial](https://uiua.org/tutorial/testing)
 - In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
 - Add the option to decouple running and formatting in the pad
 - Add a dropdown to the pad to insert named functions
-- Add an [RSS Feed](https://uiua.org/blog/feed.rss) for the blog
-- Update the [Testing Tutorial](https://uiua.org/tutorial/testing)
+- Add buttons to the pad to download code and copy a markdown link
 
 ## 0.12.3 - 2024-08-17
 ### Language

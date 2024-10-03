@@ -1200,6 +1200,9 @@ impl<'i> Parser<'i> {
             lines.push(Vec::new());
         }
         lines.extend(self.multiline_words(false, true));
+        if lines.is_empty() {
+            lines.push(Vec::new());
+        }
         let start = signature
             .as_ref()
             .map(|sig| sig.span.clone())

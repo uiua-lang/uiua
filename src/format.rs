@@ -682,7 +682,7 @@ impl<'a> Formatter<'a> {
                     self.output.push(' ');
                 }
                 if let Some(sig) = &binding.signature {
-                    self.format_signature('|', sig.value, true);
+                    self.format_signature(sig.value, true);
                 }
                 let span = binding
                     .words
@@ -768,8 +768,8 @@ impl<'a> Formatter<'a> {
             }
         }
     }
-    fn format_signature(&mut self, init_char: char, sig: Signature, trailing_space: bool) {
-        self.output.push(init_char);
+    fn format_signature(&mut self, sig: Signature, trailing_space: bool) {
+        self.output.push('|');
         self.output.push_str(&sig.args.to_string());
         if sig.outputs != 1 {
             self.output.push('.');
@@ -961,7 +961,7 @@ impl<'a> Formatter<'a> {
                 if let Some(sig) = &arr.signature {
                     let trailing_space = arr.lines.len() <= 1
                         && !(arr.lines.iter().flatten()).any(|word| word_is_multiline(&word.value));
-                    self.format_signature('|', sig.value, trailing_space);
+                    self.format_signature(sig.value, trailing_space);
                     if arr.lines.is_empty() {
                         self.output.pop();
                     }
@@ -1005,7 +1005,7 @@ impl<'a> Formatter<'a> {
                     let trailing_space = func.lines.len() <= 1
                         && !(func.lines.iter().flatten())
                             .any(|word| word_is_multiline(&word.value));
-                    self.format_signature('|', sig.value, trailing_space);
+                    self.format_signature(sig.value, trailing_space);
                     if func.lines.is_empty() {
                         self.output.pop();
                     }
@@ -1031,7 +1031,8 @@ impl<'a> Formatter<'a> {
 
                 let any_multiline = pack.branches.iter().any(|br| {
                     br.value.lines.len() > 1
-                        || br.value.lines.iter().any(|line| line.is_empty())
+                        || br.value.lines.len() >= 2
+                            && br.value.lines.iter().any(|line| line.is_empty())
                         || (br.value.lines.iter().flatten())
                             .any(|word| word_is_multiline(&word.value))
                 });
@@ -1058,7 +1059,7 @@ impl<'a> Formatter<'a> {
                         }
                     }
                     if let Some(sig) = &br.value.signature {
-                        self.format_signature('|', sig.value, any_multiline || lines.len() <= 1);
+                        self.format_signature(sig.value, any_multiline || lines.len() <= 1);
                         if lines.is_empty() {
                             self.output.pop();
                         }

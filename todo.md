@@ -3,26 +3,21 @@
 - 0.13
   - Non-scalar `fill take`
   - Document on and by inverses
-  - Subscript dropdown
+  - Subscript dropdown?
   - Update language tour
   - Update design page
 - Possible
-  - `orient` boxed
   - Dynamic modules
   - Channels?
   - Plots?
 - Dead code elimination
 - Possibility Exploration UI?
 - Media window
-- Blog posts -> RSS
-  - Markdown parser
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Multimedia
   - Sound input
 - System APIs
   - UDP Sockets
-- Documentation
-  - System functions
 
 ## Open to Implementation
 

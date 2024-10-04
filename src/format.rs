@@ -1046,11 +1046,10 @@ impl<'a> Formatter<'a> {
                     }
 
                     if i == 0 {
-                        let add_leading_newline = any_multiline
-                            && start_indent > indent + 1
-                            && !(lines.first()).is_some_and(|line| line.is_empty());
+                        let add_leading_newline =
+                            any_multiline && (start_indent > indent + 1 || lines.is_empty());
                         if add_leading_newline {
-                            self.newline(depth + 1);
+                            self.newline(depth + (!lines.is_empty()) as usize);
                         }
                     } else {
                         self.output.push('|');
@@ -1491,6 +1490,20 @@ x ← 2
     2
   )
 ---
+∘⊃(
+| 1
+| 2
+| 3
+)
+⊃(
+| 1
+| 2
+| 3
+)
+⊃(1
+| 2
+| 3
+)
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, input, "{formatted}");

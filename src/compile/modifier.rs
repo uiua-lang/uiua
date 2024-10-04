@@ -1,6 +1,5 @@
 //! Compiler code for modifiers
-
-use crate::algorithm::invert::{anti_instrs, CustomInverse};
+#![allow(clippy::redundant_closure_call)]
 
 use super::*;
 
@@ -357,256 +356,7 @@ impl Compiler {
         let mut prim = match modified.modifier.value {
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {
-                let (path_locals, local) = self.ref_local(&r)?;
-                self.validate_local(&r.name.value, local, &r.name.span);
-                self.code_meta
-                    .global_references
-                    .insert(r.name.span.clone(), local.index);
-                for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                    (self.code_meta.global_references)
-                        .insert(comp.module.span.clone(), local.index);
-                }
-                // Handle recursion depth
-                self.macro_depth += 1;
-                const MAX_MACRO_DEPTH: usize = if cfg!(debug_assertions) { 10 } else { 20 };
-                if self.macro_depth > MAX_MACRO_DEPTH {
-                    return Err(
-                        self.fatal_error(modified.modifier.span.clone(), "Macro recurs too deep")
-                    );
-                }
-                if let Some(mut mac) = self.index_macros.get(&local.index).cloned() {
-                    // Index macros
-                    match self.scope.kind {
-                        ScopeKind::Temp(Some(mac_local))
-                            if mac_local.macro_index == local.index =>
-                        {
-                            // Recursive
-                            let new_func = self.compile_words(modified.operands, false)?;
-                            self.push_all_instrs(new_func);
-                            if let Some(sig) = mac.sig {
-                                self.push_instr(Instr::CallGlobal {
-                                    index: mac_local.expansion_index,
-                                    call,
-                                    sig,
-                                });
-                            }
-                        }
-                        _ => {
-                            // Expand
-                            self.expand_positional_macro(
-                                r.name.value.clone(),
-                                &mut mac.words,
-                                modified.operands,
-                                modified.modifier.span.clone(),
-                                mac.hygenic,
-                            )?;
-                            // Handle recursion
-                            // Recursive macros work by creating a binding for the expansion.
-                            // Recursive calls then call that binding.
-                            // We know that this is a recursive call if the scope tracks
-                            // a macro with the same index.
-                            let macro_local = mac.recursive.then(|| {
-                                let expansion_index = self.next_global;
-                                let count = ident_modifier_args(&r.name.value);
-                                // Add temporary binding
-                                self.asm.add_binding_at(
-                                    LocalName {
-                                        index: expansion_index,
-                                        public: false,
-                                    },
-                                    BindingKind::IndexMacro(count),
-                                    Some(modified.modifier.span.clone()),
-                                    None,
-                                );
-                                self.next_global += 1;
-                                MacroLocal {
-                                    macro_index: local.index,
-                                    expansion_index,
-                                }
-                            });
-                            // Compile
-                            let mut new_func = self.suppress_diagnostics(|comp| {
-                                comp.temp_scope(mac.names, macro_local, |comp| {
-                                    comp.compile_words(mac.words, true)
-                                })
-                            })?;
-                            new_func.flags |= mac.flags;
-                            // Add
-                            let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
-                            let mut func =
-                                self.make_function(FunctionId::Macro(r.name.span), sig, new_func);
-                            if mac.recursive {
-                                func.flags |= FunctionFlags::RECURSIVE;
-                            }
-                            if let Some(macro_local) = macro_local {
-                                self.asm.bindings.make_mut()[macro_local.expansion_index].kind =
-                                    BindingKind::Func(func.clone());
-                            }
-                            self.push_instr(Instr::PushFunc(func));
-                            if call {
-                                let span = self.add_span(modified.modifier.span);
-                                self.push_instr(if mac.recursive {
-                                    Instr::CallRecursive(span)
-                                } else {
-                                    Instr::Call(span)
-                                });
-                            }
-                        }
-                    }
-                } else if let Some(mac) = self.code_macros.get(&local.index).cloned() {
-                    // Code macros
-                    let full_span = (modified.modifier.span.clone())
-                        .merge(modified.operands.last().unwrap().span.clone());
-
-                    // Collect operands as strings
-                    let mut operands: Vec<Sp<Word>> = (modified.operands.into_iter())
-                        .filter(|w| w.value.is_code())
-                        .collect();
-                    if operands.len() == 1 {
-                        let operand = operands.remove(0);
-                        operands = match operand.value {
-                            Word::Pack(pack) => pack
-                                .branches
-                                .into_iter()
-                                .map(|b| b.map(Word::Func))
-                                .collect(),
-                            word => vec![operand.span.sp(word)],
-                        };
-                    }
-                    let op_sigs = if mac.function.signature().args == 2 {
-                        // If the macro function has 2 arguments, we pass the signatures
-                        // of the operands as well
-                        let mut sig_data: EcoVec<u8> = EcoVec::with_capacity(operands.len() * 2);
-                        // Track the length of the instructions and spans so
-                        // they can be discarded after signatures are calculated
-                        let instrs_len = self.asm.instrs.len();
-                        let spans_len = self.asm.spans.len();
-                        for op in &operands {
-                            let (_, sig) = self.compile_operand_word(op.clone()).map_err(|e| {
-                                let message = format!(
-                                    "This error occurred while compiling a macro operand. \
-                                    This was attempted because the macro function's \
-                                    signature is {}.",
-                                    Signature::new(2, 1)
-                                );
-                                e.with_info([(message, None)])
-                            })?;
-                            sig_data.extend_from_slice(&[sig.args as u8, sig.outputs as u8]);
-                        }
-                        // Discard unnecessary instructions and spans
-                        self.asm.instrs.truncate(instrs_len);
-                        self.asm.spans.truncate(spans_len);
-                        Some(Array::<u8>::new([operands.len(), 2], sig_data))
-                    } else {
-                        None
-                    };
-                    let formatted: Array<Boxed> = operands
-                        .iter()
-                        .map(|w| {
-                            let mut formatted = format_word(w, &self.asm.inputs);
-                            if let Word::Func(_) = &w.value {
-                                if formatted.starts_with('(') && formatted.ends_with(')') {
-                                    formatted = formatted[1..formatted.len() - 1].to_string();
-                                }
-                            }
-                            Boxed(formatted.trim().into())
-                        })
-                        .collect();
-
-                    let mut code = String::new();
-                    (|| -> UiuaResult {
-                        if let Some(index) =
-                            instrs_unbound_index(mac.function.instrs(&self.asm), &self.asm)
-                        {
-                            let name = self.scope.names.iter().find_map(|(name, local)| {
-                                if local.index == index {
-                                    Some(name)
-                                } else {
-                                    None
-                                }
-                            });
-                            let message = if let Some(name) = name {
-                                format!("{} references runtime binding `{}`", r.name.value, name)
-                            } else {
-                                format!("{} references runtime binding", r.name.value)
-                            };
-                            return Err(self.fatal_error(modified.modifier.span.clone(), message));
-                        }
-
-                        let span = self.add_span(modified.modifier.span.clone());
-                        let env = &mut self.macro_env;
-                        env.asm = self.asm.clone();
-                        env.rt.call_stack.last_mut().unwrap().call_span = span;
-
-                        // Run the macro function
-                        if let Some(sigs) = op_sigs {
-                            env.push(sigs);
-                        }
-                        env.push(formatted);
-
-                        #[cfg(feature = "native_sys")]
-                        let enabled = crate::sys_native::set_output_enabled(
-                            self.pre_eval_mode != PreEvalMode::Lsp,
-                        );
-                        env.call(mac.function)?;
-                        #[cfg(feature = "native_sys")]
-                        crate::sys_native::set_output_enabled(enabled);
-
-                        let val = env.pop("macro result")?;
-
-                        // Parse the macro output
-                        if let Ok(s) = val.as_string(env, "") {
-                            code = s;
-                        } else {
-                            for row in val.into_rows() {
-                                let s = row.as_string(env, "Macro output rows must be strings")?;
-                                if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
-                                    code.push(' ');
-                                }
-                                code.push_str(&s);
-                            }
-                        }
-                        Ok(())
-                    })()
-                    .map_err(|e| e.trace_macro(modified.modifier.span.clone()))?;
-
-                    // Quote
-                    self.code_meta
-                        .macro_expansions
-                        .insert(full_span, (r.name.value.clone(), code.clone()));
-                    self.suppress_diagnostics(|comp| {
-                        comp.temp_scope(mac.names, None, |comp| {
-                            comp.quote(&code, &modified.modifier.span, call)
-                        })
-                    })?;
-                } else if let Some(m) =
-                    (self.asm.bindings.get(local.index)).and_then(|binfo| match &binfo.kind {
-                        BindingKind::Module(m) => Some(m),
-                        _ => None,
-                    })
-                {
-                    // Module import macro
-                    let names = m.names.clone();
-                    self.in_scope(ScopeKind::AllInModule, move |comp| {
-                        comp.scope.names.extend(names);
-                        comp.words(modified.operands, call)
-                    })?;
-                } else {
-                    // Recursive positional macro inside itself
-                    if !call {
-                        self.new_functions.push(NewFunction::default());
-                    }
-                    self.words(modified.operands, false)?;
-                    self.ident(r.name.value.clone(), r.name.span, true, r.in_macro_arg)?;
-                    if !call {
-                        let new_func = self.new_functions.pop().unwrap();
-                        let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
-                        let func = self.make_function(modified.modifier.span.into(), sig, new_func);
-                        self.push_instr(Instr::PushFunc(func));
-                    }
-                }
-                self.macro_depth -= 1;
-
+                self.modifier_ref(r, modified.modifier.span, modified.operands, call)?;
                 return Ok(());
             }
         };
@@ -796,7 +546,7 @@ impl Compiler {
             Signature::new(sig.args.max(1), sig.outputs + 1)
         }
         match prim {
-            Dip | Gap | On | By | With | Off | Above | Below => {
+            Dip | Gap | On | By | With | Off | Above | Below => wrap!(|| {
                 // Compile operands
                 let (mut new_func, mut sig) =
                     self.compile_operand_word(modified.operands[0].clone())?;
@@ -931,8 +681,8 @@ impl Compiler {
                         self.make_function(modified.modifier.span.clone().into(), sig, new_func);
                     self.push_instr(Instr::PushFunc(func));
                 }
-            }
-            Backward => {
+            }),
+            Backward => wrap!(|| {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (mut new_func, sig) = self.compile_operand_word(operand)?;
                 if sig.args != 2 {
@@ -955,8 +705,8 @@ impl Compiler {
                         self.make_function(modified.modifier.span.clone().into(), sig, new_func);
                     self.push_instr(Instr::PushFunc(func));
                 }
-            }
-            Fork => {
+            }),
+            Fork => wrap!(|| {
                 let mut operands = modified.code_operands().cloned();
                 let first_op = operands.next().unwrap();
                 // ⊃∘ diagnostic
@@ -1011,8 +761,8 @@ impl Compiler {
                         self.make_function(modified.modifier.span.clone().into(), sig, new_func);
                     self.push_instr(Instr::PushFunc(func));
                 }
-            }
-            Bracket => {
+            }),
+            Bracket => wrap!(|| {
                 let mut operands = modified.code_operands().cloned();
                 let (a_nf, a_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 let (b_nf, b_sig) = self.compile_operand_word(operands.next().unwrap())?;
@@ -1040,8 +790,8 @@ impl Compiler {
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
-            }
-            Repeat => {
+            }),
+            Repeat => wrap!(|| {
                 if let Some(n) = subscript {
                     self.push_instr(Instr::push(n));
                 }
@@ -1099,8 +849,8 @@ impl Compiler {
                         self.make_function(modified.modifier.span.clone().into(), sig, new_func);
                     self.push_instr(Instr::PushFunc(func));
                 }
-            }
-            Un if !self.in_inverse => {
+            }),
+            Un if !self.in_inverse => wrap!(|| {
                 let f = modified.code_operands().next().unwrap().clone();
                 let span = f.span.clone();
 
@@ -1119,8 +869,8 @@ impl Compiler {
                     }
                     Err(e) => return Err(self.fatal_error(span, e)),
                 }
-            }
-            Anti if !self.in_inverse => {
+            }),
+            Anti if !self.in_inverse => wrap!(|| {
                 let f = modified.code_operands().next().unwrap().clone();
                 let span = f.span.clone();
 
@@ -1150,8 +900,8 @@ impl Compiler {
                     }
                     Err(e) => return Err(self.fatal_error(span, e)),
                 }
-            }
-            Under if !self.in_inverse => {
+            }),
+            Under if !self.in_inverse => wrap!(|| {
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let f_span = f.span.clone();
@@ -1212,8 +962,8 @@ impl Compiler {
                     }
                     Err(e) => return Err(self.fatal_error(f_span, e)),
                 }
-            }
-            Obverse => {
+            }),
+            Obverse => wrap!(|| {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let span = operand.span.clone();
                 let spandex = self.add_span(span.clone());
@@ -1230,7 +980,7 @@ impl Compiler {
                     let func = self.make_function(FunctionId::Anonymous(span), sig, instrs.into());
                     self.push_instr(Instr::PushFunc(func));
                 }
-            }
+            }),
             SetInverse => {
                 let mut operands = modified.code_operands().cloned();
                 let normal = operands.next().unwrap();
@@ -1269,7 +1019,7 @@ impl Compiler {
                     normal_sig
                 )
             }
-            Try => {
+            Try => wrap!(|| {
                 let mut operands = modified.code_operands().cloned();
                 let tried = operands.next().unwrap();
                 let handler = operands.next().unwrap();
@@ -1327,14 +1077,14 @@ impl Compiler {
                         Instr::Prim(Primitive::Try, span),
                     ],
                     try_sig
-                )
-            }
+                );
+            }),
             Switch => self.switch(
                 modified.code_operands().cloned().collect(),
                 modified.modifier.span.clone(),
                 call,
             )?,
-            Both => {
+            Both => wrap!(|| {
                 let n = subscript.unwrap_or(2);
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (mut new_func, sig) = self.compile_operand_word(operand)?;
@@ -1377,8 +1127,8 @@ impl Compiler {
                         self.push_instr(Instr::PushFunc(func));
                     }
                 }
-            }
-            Fill => {
+            }),
+            Fill => wrap!(|| {
                 let mut operands = modified.code_operands().rev().cloned();
                 if !call {
                     self.new_functions.push(NewFunction::default());
@@ -1424,12 +1174,12 @@ impl Compiler {
                         self.make_function(modified.modifier.span.clone().into(), sig, new_func);
                     self.push_instr(Instr::PushFunc(func));
                 }
-            }
+            }),
             Comptime => {
                 let word = modified.code_operands().next().unwrap().clone();
                 self.do_comptime(prim, word, &modified.modifier.span, call)?;
             }
-            Reduce => {
+            Reduce => wrap!(|| -> UiuaResult<bool> {
                 // Reduce content
                 let operand = modified.code_operands().next().unwrap().clone();
                 let Word::Modified(m) = &operand.value else {
@@ -1451,8 +1201,9 @@ impl Compiler {
                     Instr::ImplPrim(ImplPrimitive::ReduceContent, span),
                 ];
                 finish!(instrs, Signature::new(1, 1));
-            }
-            Each => {
+                Ok(true)
+            }),
+            Each => wrap!(|| -> UiuaResult<bool> {
                 // Each pervasive
                 let operand = modified.code_operands().next().unwrap().clone();
                 if !words_look_pervasive(slice::from_ref(&operand)) {
@@ -1481,8 +1232,9 @@ impl Compiler {
                     span,
                 );
                 finish!(new_func, sig);
-            }
-            Table => {
+                Ok(true)
+            }),
+            Table => wrap!(|| -> UiuaResult<bool> {
                 // Normal table compilation, but get some diagnostics
                 let operand = modified.code_operands().next().unwrap().clone();
                 let op_span = operand.span.clone();
@@ -1507,9 +1259,9 @@ impl Compiler {
                     _ => {}
                 }
                 self.asm.instrs.truncate(instrs_len);
-                return Ok(false);
-            }
-            Content => {
+                Ok(false)
+            }),
+            Content => wrap!(|| {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (mut new_func, sig) = self.compile_operand_word(operand)?;
                 let mut prefix = EcoVec::new();
@@ -1529,8 +1281,8 @@ impl Compiler {
                 prefix.extend(new_func.instrs);
                 new_func.instrs = prefix;
                 finish!(new_func, sig);
-            }
-            Fold => {
+            }),
+            Fold => wrap!(|| {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let op_span = operand.span.clone();
                 let (new_func, sig) = self.compile_operand_word(operand)?;
@@ -1547,14 +1299,14 @@ impl Compiler {
                 let spandex = self.add_span(modified.modifier.span.clone());
                 let instrs = eco_vec![Instr::PushFunc(func), Instr::Prim(Primitive::Fold, spandex)];
                 finish!(instrs, sig);
-            }
-            Stringify => {
+            }),
+            Stringify => wrap!(|| {
                 let operand = modified.code_operands().next().unwrap();
                 let s = format_word(operand, &self.asm.inputs);
                 let instr = Instr::Push(s.into());
                 finish!(eco_vec![instr], Signature::new(0, 1));
-            }
-            Quote => {
+            }),
+            Quote => wrap!(|| {
                 let operand = modified.code_operands().next().unwrap().clone();
                 self.new_functions.push(NewFunction::default());
                 self.do_comptime(prim, operand, &modified.modifier.span, true)?;
@@ -1591,8 +1343,8 @@ impl Compiler {
                     }
                 };
                 self.quote(&code, &modified.modifier.span, call)?;
-            }
-            Sig => {
+            }),
+            Sig => wrap!(|| {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (_, sig) = self.compile_operand_word(operand)?;
                 let instrs = eco_vec![
@@ -1600,7 +1352,7 @@ impl Compiler {
                     Instr::Push(sig.args.into()),
                 ];
                 finish!(instrs, Signature::new(0, 2));
-            }
+            }),
             Struct => self.struct_(
                 &modified.modifier.span,
                 modified.code_operands().next().unwrap(),
@@ -1608,6 +1360,256 @@ impl Compiler {
             _ => return Ok(false),
         }
         Ok(true)
+    }
+    fn modifier_ref(
+        &mut self,
+        r: Ref,
+        modifier_span: CodeSpan,
+        operands: Vec<Sp<Word>>,
+        call: bool,
+    ) -> UiuaResult {
+        let (path_locals, local) = self.ref_local(&r)?;
+        self.validate_local(&r.name.value, local, &r.name.span);
+        self.code_meta
+            .global_references
+            .insert(r.name.span.clone(), local.index);
+        for (local, comp) in path_locals.into_iter().zip(&r.path) {
+            (self.code_meta.global_references).insert(comp.module.span.clone(), local.index);
+        }
+        // Handle recursion depth
+        self.macro_depth += 1;
+        const MAX_MACRO_DEPTH: usize = if cfg!(debug_assertions) { 10 } else { 20 };
+        if self.macro_depth > MAX_MACRO_DEPTH {
+            return Err(self.fatal_error(modifier_span.clone(), "Macro recurs too deep"));
+        }
+        if let Some(mut mac) = self.index_macros.get(&local.index).cloned() {
+            // Index macros
+            match self.scope.kind {
+                ScopeKind::Temp(Some(mac_local)) if mac_local.macro_index == local.index => {
+                    // Recursive
+                    let new_func = self.compile_words(operands, false)?;
+                    self.push_all_instrs(new_func);
+                    if let Some(sig) = mac.sig {
+                        self.push_instr(Instr::CallGlobal {
+                            index: mac_local.expansion_index,
+                            call,
+                            sig,
+                        });
+                    }
+                }
+                _ => {
+                    // Expand
+                    self.expand_positional_macro(
+                        r.name.value.clone(),
+                        &mut mac.words,
+                        operands,
+                        modifier_span.clone(),
+                        mac.hygenic,
+                    )?;
+                    // Handle recursion
+                    // Recursive macros work by creating a binding for the expansion.
+                    // Recursive calls then call that binding.
+                    // We know that this is a recursive call if the scope tracks
+                    // a macro with the same index.
+                    let macro_local = mac.recursive.then(|| {
+                        let expansion_index = self.next_global;
+                        let count = ident_modifier_args(&r.name.value);
+                        // Add temporary binding
+                        self.asm.add_binding_at(
+                            LocalName {
+                                index: expansion_index,
+                                public: false,
+                            },
+                            BindingKind::IndexMacro(count),
+                            Some(modifier_span.clone()),
+                            None,
+                        );
+                        self.next_global += 1;
+                        MacroLocal {
+                            macro_index: local.index,
+                            expansion_index,
+                        }
+                    });
+                    // Compile
+                    let mut new_func = self.suppress_diagnostics(|comp| {
+                        comp.temp_scope(mac.names, macro_local, |comp| {
+                            comp.compile_words(mac.words, true)
+                        })
+                    })?;
+                    new_func.flags |= mac.flags;
+                    // Add
+                    let sig = self.sig_of(&new_func.instrs, &modifier_span)?;
+                    let mut func =
+                        self.make_function(FunctionId::Macro(r.name.span), sig, new_func);
+                    if mac.recursive {
+                        func.flags |= FunctionFlags::RECURSIVE;
+                    }
+                    if let Some(macro_local) = macro_local {
+                        self.asm.bindings.make_mut()[macro_local.expansion_index].kind =
+                            BindingKind::Func(func.clone());
+                    }
+                    self.push_instr(Instr::PushFunc(func));
+                    if call {
+                        let span = self.add_span(modifier_span);
+                        self.push_instr(if mac.recursive {
+                            Instr::CallRecursive(span)
+                        } else {
+                            Instr::Call(span)
+                        });
+                    }
+                }
+            }
+        } else if let Some(mac) = self.code_macros.get(&local.index).cloned() {
+            // Code macros
+            let full_span = (modifier_span.clone()).merge(operands.last().unwrap().span.clone());
+
+            // Collect operands as strings
+            let mut operands: Vec<Sp<Word>> = (operands.into_iter())
+                .filter(|w| w.value.is_code())
+                .collect();
+            if operands.len() == 1 {
+                let operand = operands.remove(0);
+                operands = match operand.value {
+                    Word::Pack(pack) => pack
+                        .branches
+                        .into_iter()
+                        .map(|b| b.map(Word::Func))
+                        .collect(),
+                    word => vec![operand.span.sp(word)],
+                };
+            }
+            let op_sigs = if mac.function.signature().args == 2 {
+                // If the macro function has 2 arguments, we pass the signatures
+                // of the operands as well
+                let mut sig_data: EcoVec<u8> = EcoVec::with_capacity(operands.len() * 2);
+                // Track the length of the instructions and spans so
+                // they can be discarded after signatures are calculated
+                let instrs_len = self.asm.instrs.len();
+                let spans_len = self.asm.spans.len();
+                for op in &operands {
+                    let (_, sig) = self.compile_operand_word(op.clone()).map_err(|e| {
+                        let message = format!(
+                            "This error occurred while compiling a macro operand. \
+                                    This was attempted because the macro function's \
+                                    signature is {}.",
+                            Signature::new(2, 1)
+                        );
+                        e.with_info([(message, None)])
+                    })?;
+                    sig_data.extend_from_slice(&[sig.args as u8, sig.outputs as u8]);
+                }
+                // Discard unnecessary instructions and spans
+                self.asm.instrs.truncate(instrs_len);
+                self.asm.spans.truncate(spans_len);
+                Some(Array::<u8>::new([operands.len(), 2], sig_data))
+            } else {
+                None
+            };
+            let formatted: Array<Boxed> = operands
+                .iter()
+                .map(|w| {
+                    let mut formatted = format_word(w, &self.asm.inputs);
+                    if let Word::Func(_) = &w.value {
+                        if formatted.starts_with('(') && formatted.ends_with(')') {
+                            formatted = formatted[1..formatted.len() - 1].to_string();
+                        }
+                    }
+                    Boxed(formatted.trim().into())
+                })
+                .collect();
+
+            let mut code = String::new();
+            (|| -> UiuaResult {
+                if let Some(index) = instrs_unbound_index(mac.function.instrs(&self.asm), &self.asm)
+                {
+                    let name = self.scope.names.iter().find_map(|(name, local)| {
+                        if local.index == index {
+                            Some(name)
+                        } else {
+                            None
+                        }
+                    });
+                    let message = if let Some(name) = name {
+                        format!("{} references runtime binding `{}`", r.name.value, name)
+                    } else {
+                        format!("{} references runtime binding", r.name.value)
+                    };
+                    return Err(self.fatal_error(modifier_span.clone(), message));
+                }
+
+                let span = self.add_span(modifier_span.clone());
+                let env = &mut self.macro_env;
+                env.asm = self.asm.clone();
+                env.rt.call_stack.last_mut().unwrap().call_span = span;
+
+                // Run the macro function
+                if let Some(sigs) = op_sigs {
+                    env.push(sigs);
+                }
+                env.push(formatted);
+
+                #[cfg(feature = "native_sys")]
+                let enabled =
+                    crate::sys_native::set_output_enabled(self.pre_eval_mode != PreEvalMode::Lsp);
+                env.call(mac.function)?;
+                #[cfg(feature = "native_sys")]
+                crate::sys_native::set_output_enabled(enabled);
+
+                let val = env.pop("macro result")?;
+
+                // Parse the macro output
+                if let Ok(s) = val.as_string(env, "") {
+                    code = s;
+                } else {
+                    for row in val.into_rows() {
+                        let s = row.as_string(env, "Macro output rows must be strings")?;
+                        if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
+                            code.push(' ');
+                        }
+                        code.push_str(&s);
+                    }
+                }
+                Ok(())
+            })()
+            .map_err(|e| e.trace_macro(modifier_span.clone()))?;
+
+            // Quote
+            self.code_meta
+                .macro_expansions
+                .insert(full_span, (r.name.value.clone(), code.clone()));
+            self.suppress_diagnostics(|comp| {
+                comp.temp_scope(mac.names, None, |comp| {
+                    comp.quote(&code, &modifier_span, call)
+                })
+            })?;
+        } else if let Some(m) =
+            (self.asm.bindings.get(local.index)).and_then(|binfo| match &binfo.kind {
+                BindingKind::Module(m) => Some(m),
+                _ => None,
+            })
+        {
+            // Module import macro
+            let names = m.names.clone();
+            self.in_scope(ScopeKind::AllInModule, move |comp| {
+                comp.scope.names.extend(names);
+                comp.words(operands, call)
+            })?;
+        } else {
+            // Recursive positional macro inside itself
+            if !call {
+                self.new_functions.push(NewFunction::default());
+            }
+            self.words(operands, false)?;
+            self.ident(r.name.value.clone(), r.name.span, true, r.in_macro_arg)?;
+            if !call {
+                let new_func = self.new_functions.pop().unwrap();
+                let sig = self.sig_of(&new_func.instrs, &modifier_span)?;
+                let func = self.make_function(modifier_span.into(), sig, new_func);
+                self.push_instr(Instr::PushFunc(func));
+            }
+        }
+        self.macro_depth -= 1;
+        Ok(())
     }
     fn struct_(&mut self, modifier_span: &CodeSpan, operand: &Sp<Word>) -> UiuaResult {
         if !self.current_bindings.is_empty() {

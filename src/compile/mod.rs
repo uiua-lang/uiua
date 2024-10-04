@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     algorithm::{
-        invert::{invert_instrs, under_instrs},
+        invert::{anti_instrs, invert_instrs, under_instrs, CustomInverse},
         IgnoreError,
     },
     ast::*,
@@ -40,6 +40,18 @@ use crate::{
     SemanticComment, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
     EXAMPLE_UA, SUBSCRIPT_NUMS, VERSION,
 };
+
+/// Wrap a block in a closure call to reduce stack size
+macro_rules! wrap {
+    (|| -> $ty:ty { $($tt:tt)* }) => {
+        return (|| -> $ty {$($tt)*})()
+    };
+    (|| { $($tt:tt)* }) => {
+        (|| -> UiuaResult {$($tt)* Ok(())})()?
+    };
+}
+
+use wrap;
 
 /// The Uiua compiler
 #[derive(Clone)]
@@ -669,113 +681,115 @@ code:
             });
             let line_sig_comment = line_sig(&line);
             // Compile the words
-            let instr_count_before = self.asm.instrs.len();
-            let binding_count_before = self.asm.bindings.len();
-            let new_func = self.compile_words(line, true)?;
-            let instr_count_after = self.asm.instrs.len();
-            let binding_count_after = self.asm.bindings.len();
-            let (mut new_func, pre_eval_errors) = self.pre_eval_instrs(new_func);
-            let mut line_eval_errored = false;
-            match instrs_signature(&new_func.instrs) {
-                Ok(sig) => {
-                    // Check doc comment sig
-                    if let Some(comment_sig) = line_sig_comment {
-                        if !comment_sig.value.matches_sig(sig) {
-                            self.emit_diagnostic(
-                                format!("Line signature {sig} does not match comment"),
-                                DiagnosticKind::Warning,
-                                comment_sig.span.clone(),
-                            );
+            wrap!(|| {
+                let instr_count_before = self.asm.instrs.len();
+                let binding_count_before = self.asm.bindings.len();
+                let new_func = self.compile_words(line, true)?;
+                let instr_count_after = self.asm.instrs.len();
+                let binding_count_after = self.asm.bindings.len();
+                let (mut new_func, pre_eval_errors) = self.pre_eval_instrs(new_func);
+                let mut line_eval_errored = false;
+                match instrs_signature(&new_func.instrs) {
+                    Ok(sig) => {
+                        // Check doc comment sig
+                        if let Some(comment_sig) = line_sig_comment {
+                            if !comment_sig.value.matches_sig(sig) {
+                                self.emit_diagnostic(
+                                    format!("Line signature {sig} does not match comment"),
+                                    DiagnosticKind::Warning,
+                                    comment_sig.span.clone(),
+                                );
+                            }
                         }
-                    }
-                    // Update scope stack height
-                    if let Ok(height) = &mut self.scope.stack_height {
-                        *height = (*height + sig.outputs).saturating_sub(sig.args);
-                        // Compile test assert
-                        if self.mode != RunMode::Normal
-                            && sig.outputs == 0
-                            && !self
-                                .scopes()
-                                .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
-                        {
-                            if let Some(Instr::Prim(Primitive::Assert, span)) =
-                                new_func.instrs.last()
+                        // Update scope stack height
+                        if let Ok(height) = &mut self.scope.stack_height {
+                            *height = (*height + sig.outputs).saturating_sub(sig.args);
+                            // Compile test assert
+                            if self.mode != RunMode::Normal
+                                && sig.outputs == 0
+                                && !self
+                                    .scopes()
+                                    .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
                             {
-                                let span = *span;
-                                new_func.instrs.pop();
-                                new_func
-                                    .instrs
-                                    .push(Instr::ImplPrim(ImplPrimitive::TestAssert, span));
+                                if let Some(Instr::Prim(Primitive::Assert, span)) =
+                                    new_func.instrs.last()
+                                {
+                                    let span = *span;
+                                    new_func.instrs.pop();
+                                    new_func
+                                        .instrs
+                                        .push(Instr::ImplPrim(ImplPrimitive::TestAssert, span));
+                                }
+                            }
+                        }
+                        // Try to evaluate at comptime
+                        // This can be done when:
+                        // - the pre-eval mode is not `Line`
+                        // - there are at least as many push instructions preceding the current line as there are arguments to the line
+                        // - the words create no bindings
+                        if self.pre_eval_mode != PreEvalMode::Line
+                            && !new_func.instrs.is_empty()
+                            && instr_count_before >= sig.args
+                            && instr_count_after >= instr_count_before
+                            && binding_count_before == binding_count_after
+                            && (self.asm.instrs.iter().take(instr_count_before).rev())
+                                .take(sig.args)
+                                .all(|instr| matches!(instr, Instr::Push(_)))
+                        {
+                            // The instructions for evaluation are the preceding push
+                            // instructions, followed by the current line
+                            let mut comp_instrs = EcoVec::from(
+                                &self.asm.instrs[instr_count_before.saturating_sub(sig.args)
+                                    ..instr_count_before],
+                            );
+                            comp_instrs.extend(new_func.instrs.iter().cloned());
+                            match self.comptime_instrs(comp_instrs) {
+                                Ok(Some(vals)) => {
+                                    // Track top level values
+                                    if !all_literal {
+                                        self.code_meta.top_level_values.insert(span, vals.clone());
+                                    }
+                                    // Truncate instrs
+                                    self.asm.instrs.truncate(instr_count_before - sig.args);
+                                    // Truncate top slices
+                                    let mut remaining = sig.args;
+                                    while let Some(slice) = self.asm.top_slices.last_mut() {
+                                        let to_sub = slice.len.min(remaining);
+                                        slice.len -= to_sub;
+                                        remaining -= to_sub;
+                                        if remaining == 0 {
+                                            break;
+                                        }
+                                        if slice.len == 0 {
+                                            self.asm.top_slices.pop();
+                                        }
+                                    }
+                                    // Set instrs
+                                    new_func.instrs = vals.into_iter().map(Instr::push).collect();
+                                }
+                                Ok(None) => {}
+                                Err(e) => {
+                                    self.errors.push(e);
+                                    line_eval_errored = true;
+                                }
                             }
                         }
                     }
-                    // Try to evaluate at comptime
-                    // This can be done when:
-                    // - the pre-eval mode is not `Line`
-                    // - there are at least as many push instructions preceding the current line as there are arguments to the line
-                    // - the words create no bindings
-                    if self.pre_eval_mode != PreEvalMode::Line
-                        && !new_func.instrs.is_empty()
-                        && instr_count_before >= sig.args
-                        && instr_count_after >= instr_count_before
-                        && binding_count_before == binding_count_after
-                        && (self.asm.instrs.iter().take(instr_count_before).rev())
-                            .take(sig.args)
-                            .all(|instr| matches!(instr, Instr::Push(_)))
-                    {
-                        // The instructions for evaluation are the preceding push
-                        // instructions, followed by the current line
-                        let mut comp_instrs = EcoVec::from(
-                            &self.asm.instrs
-                                [instr_count_before.saturating_sub(sig.args)..instr_count_before],
-                        );
-                        comp_instrs.extend(new_func.instrs.iter().cloned());
-                        match self.comptime_instrs(comp_instrs) {
-                            Ok(Some(vals)) => {
-                                // Track top level values
-                                if !all_literal {
-                                    self.code_meta.top_level_values.insert(span, vals.clone());
-                                }
-                                // Truncate instrs
-                                self.asm.instrs.truncate(instr_count_before - sig.args);
-                                // Truncate top slices
-                                let mut remaining = sig.args;
-                                while let Some(slice) = self.asm.top_slices.last_mut() {
-                                    let to_sub = slice.len.min(remaining);
-                                    slice.len -= to_sub;
-                                    remaining -= to_sub;
-                                    if remaining == 0 {
-                                        break;
-                                    }
-                                    if slice.len == 0 {
-                                        self.asm.top_slices.pop();
-                                    }
-                                }
-                                // Set instrs
-                                new_func.instrs = vals.into_iter().map(Instr::push).collect();
-                            }
-                            Ok(None) => {}
-                            Err(e) => {
-                                self.errors.push(e);
-                                line_eval_errored = true;
-                            }
-                        }
-                    }
+                    Err(e) => self.scope.stack_height = Err(span.sp(e)),
                 }
-                Err(e) => self.scope.stack_height = Err(span.sp(e)),
-            }
-            if !line_eval_errored {
-                self.errors.extend(pre_eval_errors);
-            }
-            let start = self.asm.instrs.len();
-            self.asm.instrs.extend(new_func.instrs);
-            let end = self.asm.instrs.len();
-            if end != start {
-                self.asm.top_slices.push(FuncSlice {
-                    start,
-                    len: end - start,
-                });
-            }
+                if !line_eval_errored {
+                    self.errors.extend(pre_eval_errors);
+                }
+                let start = self.asm.instrs.len();
+                self.asm.instrs.extend(new_func.instrs);
+                let end = self.asm.instrs.len();
+                if end != start {
+                    self.asm.top_slices.push(FuncSlice {
+                        start,
+                        len: end - start,
+                    });
+                }
+            });
         }
         Ok(())
     }

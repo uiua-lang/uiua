@@ -233,7 +233,7 @@ pub(crate) struct Scope {
     stack_height: Result<usize, Sp<SigCheckError>>,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ScopeKind {
     /// A scope at the top level of a file
     File,
@@ -247,7 +247,7 @@ enum ScopeKind {
     Test,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct MacroLocal {
     macro_index: usize,
     expansion_index: usize,
@@ -1758,6 +1758,7 @@ code:
             }
         } else if let Some(local) = self.find_name(&ident, skip_local) {
             // Name exists in scope
+            self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
             self.global_index(local.index, span, call);
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
@@ -2362,13 +2363,19 @@ code:
         if local.public {
             return;
         }
+        let get = |scope: &Scope| {
+            (scope.names.get(name))
+                .or_else(|| scope.names.get(name.strip_suffix('!')?))
+                .copied()
+        };
         if !local.public
-            && (self.scope.names.get(name))
+            && get(&self.scope)
+                .filter(|l| l.public || !matches!(self.scope.kind, ScopeKind::AllInModule))
                 .or_else(|| {
                     self.higher_scopes
                         .last()
                         .filter(|_| !matches!(self.scope.kind, ScopeKind::Module(_)))
-                        .and_then(|scope| scope.names.get(name))
+                        .and_then(get)
                 })
                 .map_or(true, |l| l.index != local.index)
         {

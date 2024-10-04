@@ -674,7 +674,10 @@ mod server {
                     client,
                     docs: DashMap::new(),
                 });
-                Server::new(stdin, stdout, socket).serve(service).await;
+                Server::new(stdin, stdout, socket)
+                    .concurrency_level(1)
+                    .serve(service)
+                    .await;
             });
     }
 

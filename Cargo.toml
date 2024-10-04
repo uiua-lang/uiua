@@ -86,10 +86,10 @@ sys-locale = {version = "0.3.1", optional = true}
 uiua-nokhwa = {version = "0.10.5", optional = true, features = ["input-native"]}
 
 # Web-only dependencies
+icy_sixel = {version = "0.1.2", optional = true}
 js-sys = {version = "0.3", optional = true}
 wasm-bindgen = {version = "0.2.92", optional = true}
 web-sys = {version = "0.3.60", optional = true}
-icy_sixel = {version = "0.1.2", optional = true}
 
 [features]
 audio = ["hodaun", "lockfree", "audio_encode"]
@@ -150,9 +150,7 @@ web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "uiua-nokhwa"]
 xlsx = ["calamine", "simple_excel_writer"]
 # Use system static libraries instead of building them
-system = [
-  "libffi?/system"
-]
+system = ["libffi?/system"]
 
 [[bin]]
 name = "uiua"

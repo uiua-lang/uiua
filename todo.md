@@ -12,6 +12,8 @@ The next version of Uiua
 - Non-scalar `fill take`
   - Needs an efficient, non-recursive implementation
   - Similar to `antidrop`
+- Make `struct` a dedicated syntax
+  - `~[...] / ~{...}`
 - Update language tour
 - Update design page
   - So much has changed since it was written!
@@ -26,6 +28,7 @@ Things that don't affect the language itself, but are important for the compiler
 - Refine optimization passes
   - Basic pass for combining some instructions
   - Final pass for eliminating compile-only instructions
+- Allow for multi-value constant bindings
 - Dead code elimination
   - Eliminate unused anonymous functions
 - Change how inversion of `under` is implemented

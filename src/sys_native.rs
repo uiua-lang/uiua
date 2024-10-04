@@ -587,6 +587,7 @@ impl SysBackend for NativeSys {
         if std::env::var("TERM")
             .unwrap_or("".to_owned())
             .contains("sixel")
+            || std::env::var("UIUA_ENABLE_SIXEL").is_ok_and(|s| s == "1")
         {
             let img_rgba8 = image.to_rgba8();
             let sixel = icy_sixel::sixel_string(

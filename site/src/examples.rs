@@ -18,11 +18,11 @@ const PRIMES: &str = "\
 deshapebytable*. # List of products
 keepnotbymember  # Keep not in list";
 pub const LOGO: &str = "\
-Xy ← °⍉⊞⊟. ÷⟜-÷2⟜⇡200
-Rgb ← ⊂ ⇌×.Xy 0.5
-u ← ↥<0.2:>0.7.+×2×.:°⊟Xy
-c ← >⌵/ℂ Xy
-⍉⊂:-¬u c1 +0.1 ↧¤c0.95Rgb";
+U ← /=⊞<0.2_0.7 /+×⟜ⁿ1_2
+I ← >⌵/ℂ:
+u ← +0.1↧¤ ⊃(I0.95|⊂⊙0.5⇌°√)
+A ← ×⊃U(I1)
+⍜°⍉(⊂⊃u A) -1÷÷2⟜(⇡↯2) 200";
 const CHORD: &str = "\
 [0 4 7 10]      # Notes
 ×220 ⁿ:2÷12     # Freqs

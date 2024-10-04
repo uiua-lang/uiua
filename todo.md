@@ -3,11 +3,15 @@
 ## 0.13
 The next version of Uiua
 
+- Rework `try` signature coercion
 - Stabilize `anti` and `obverse`
   - Pick a good glyph for `obverse`
   - Deprecate `setinv` and `setund`
   - Add `anti` and `obverse` to the tutorial
   - Let `under obverse` use `un` or `anti` inverses if necessary
+- Metadata for formatting `gen` seeds
+- Don't count tests from Git modules
+- Make new pervasive system work with `each`
 - `un by monadic` for accessing `under`'s undo function
 - Non-scalar `fill take`
   - Needs an efficient, non-recursive implementation

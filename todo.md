@@ -1,23 +1,80 @@
 # Uiua Todo
 
-- 0.13
-  - Non-scalar `fill take`
-  - Document on and by inverses
-  - Subscript dropdown?
-  - Update language tour
-  - Update design page
-- Possible
-  - Dynamic modules
-  - Channels?
-  - Plots?
+## 0.13
+The next version of Uiua
+
+- Stabilize `anti` and `obverse`
+  - Pick a good glyph for `obverse`
+  - Deprecate `setinv` and `setund`
+  - Add `anti` and `obverse` to the tutorial
+  - Let `under obverse` use `un` or `anti` inverses if necessary
+- `un by monadic` for accessing `under`'s undo function
+- Non-scalar `fill take`
+  - Needs an efficient, non-recursive implementation
+  - Similar to `antidrop`
+- Update language tour
+- Update design page
+  - So much has changed since it was written!
+
+## Implementation details
+Things that don't affect the language itself, but are important for the compiler or interpreter.
+
+- Remove recur instructions
+  - Replace with simple calls
+  - Similar to how recursive index macros work
+- Move array depth checks to compile time
+- Refine optimization passes
+  - Basic pass for combining some instructions
+  - Final pass for eliminating compile-only instructions
 - Dead code elimination
-- Possibility Exploration UI?
-- Media window
-- Change how functions are compiled so that compiled-out functions don't end up in the assembly
-- Multimedia
-  - Sound input
+  - Eliminate unused anonymous functions
+- Change how inversion of `under` is implemented
+  - Current implementation is kinda messy
+  - Initial compilation pass of `under` should use some kind of aggregate instruction
+
+## Planned Features
+Features that are planned to be implemented in the future.
+
+- Dynamic modules
+  - A system by which the public interface of a module can be specified
+  - Instances of a dynamic module can be loaded at runtime
+  - Enabled things from simple config files to game mods
 - System APIs
   - UDP Sockets
+    - `&udpb` to bind a socket
+    - `&udpc` to connect a socket?
+    - `&udpr` to receive data from a socket
+      - Returns both data and source address
+    - `&udps` to send data to a socket
+      - Takes both data and destination address
+    - Change `&tcpsnb`, `&tcpsrt`, `&tcpswt` to work for UDP sockets as well
+      - Rename them
+  - File metadata
+    - `&fmeta` to get metadata about a file
+    - Should somehow provide:
+      - size
+      - kind (file, directory, symlink)
+      - create/modify/access times
+      - permissions
+    - It's possible this should be multiple functions
+      - `&fsize`
+      - `&fkind`
+      - `&ftime`
+      - `&fperm`
+
+## Potential Features
+Features that could be implemented, but are not currently planned.
+
+- Plots
+  - Different kinds of plots (line, bar, scatter, pie, etc.)
+- Channels
+- Multimedia
+  - Media window
+    - A place for `&ims`, `&gifs`, etc to display stuff
+  - Sound input
+    - Something akin to `&ast` but for input
+    - `&arec` to record audio for some duration
+      - Maybe it should be a modifier that records until its function returns false?
 
 ## Open to Implementation
 

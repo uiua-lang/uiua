@@ -236,7 +236,7 @@ pub(crate) struct Scope {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ScopeKind {
     /// A scope at the top level of a file
-    File,
+    File(FileScopeKind),
     /// A scope in a named module
     Module(Ident),
     /// A scope that includes all bindings in a module
@@ -248,6 +248,12 @@ enum ScopeKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FileScopeKind {
+    Source,
+    Git,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct MacroLocal {
     macro_index: usize,
     expansion_index: usize,
@@ -256,7 +262,7 @@ struct MacroLocal {
 impl Default for Scope {
     fn default() -> Self {
         Self {
-            kind: ScopeKind::File,
+            kind: ScopeKind::File(FileScopeKind::Source),
             file_path: None,
             comment: None,
             names: IndexMap::new(),
@@ -416,6 +422,9 @@ impl Compiler {
     pub fn load_str_src(&mut self, input: &str, src: impl IntoInputSrc) -> UiuaResult<&mut Self> {
         let src = self.asm.inputs.add_src(src, input);
         self.load_impl(input, src)
+    }
+    fn scopes(&self) -> impl Iterator<Item = &Scope> {
+        once(&self.scope).chain(self.higher_scopes.iter().rev())
     }
     /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
     ///
@@ -585,8 +594,7 @@ code:
             });
             anyway
         }
-        let in_test = self.scope.kind == ScopeKind::Test
-            || self.higher_scopes.iter().any(|s| s.kind == ScopeKind::Test);
+        let in_test = self.scopes().any(|sc| sc.kind == ScopeKind::Test);
         let mut lines = match item {
             Item::Module(m) => return self.module(m, take(prelude).comment),
             Item::Words(lines) => lines,
@@ -684,7 +692,12 @@ code:
                     if let Ok(height) = &mut self.scope.stack_height {
                         *height = (*height + sig.outputs).saturating_sub(sig.args);
                         // Compile test assert
-                        if self.mode != RunMode::Normal && sig.outputs == 0 {
+                        if self.mode != RunMode::Normal
+                            && sig.outputs == 0
+                            && !self
+                                .scopes()
+                                .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
+                        {
                             if let Some(Instr::Prim(Primitive::Assert, span)) =
                                 new_func.instrs.last()
                             {
@@ -853,7 +866,7 @@ code:
     /// Import a module
     pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
         // Resolve path
-        let path = if let Some(mut url) = path_str.trim().strip_prefix("git:") {
+        let (path, file_kind) = if let Some(mut url) = path_str.trim().strip_prefix("git:") {
             if url.contains("branch:") && url.contains("commit:") {
                 return Err(self.fatal_error(
                     span.clone(),
@@ -893,16 +906,18 @@ code:
             self.code_meta
                 .import_srcs
                 .insert(span.clone(), ImportSrc::Git(url.clone()));
-            self.backend()
+            let path = self
+                .backend()
                 .load_git_module(&url, target)
-                .map_err(|e| self.fatal_error(span.clone(), e))?
+                .map_err(|e| self.fatal_error(span.clone(), e))?;
+            (path, FileScopeKind::Git)
         } else {
             // Normal import
             let path = self.resolve_import_path(Path::new(path_str));
             self.code_meta
                 .import_srcs
                 .insert(span.clone(), ImportSrc::File(path.clone()));
-            path
+            (path, FileScopeKind::Source)
         };
         if !self.imports.contains_key(&path) {
             let bytes = self
@@ -925,7 +940,7 @@ code:
                     format!("Cycle detected importing {}", path.to_string_lossy()),
                 ));
             }
-            let import = self.in_scope(ScopeKind::File, |env| {
+            let import = self.in_scope(ScopeKind::File(file_kind), |env| {
                 env.load_str_src(&input, &path).map(drop)
             })?;
             self.imports.insert(path.clone(), import);
@@ -1604,8 +1619,8 @@ code:
         }
         let mut hit_file = false;
         for scope in self.higher_scopes.iter().rev() {
-            if scope.kind == ScopeKind::File {
-                if hit_file || self.scope.kind == ScopeKind::File {
+            if matches!(scope.kind, ScopeKind::File(_)) {
+                if hit_file {
                     break;
                 }
                 hit_file = true;
@@ -1788,7 +1803,7 @@ code:
         Ok(())
     }
     fn scope_file_path(&self) -> Option<&Path> {
-        for scope in once(&self.scope).chain(self.higher_scopes.iter().rev()) {
+        for scope in self.scopes() {
             if let Some(file_path) = &scope.file_path {
                 return Some(file_path);
             }

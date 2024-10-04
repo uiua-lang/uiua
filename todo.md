@@ -10,7 +10,6 @@ The next version of Uiua
   - Add `anti` and `obverse` to the tutorial
   - Let `under obverse` use `un` or `anti` inverses if necessary
 - Metadata for formatting `gen` seeds
-- Don't count tests from Git modules
 - Make new pervasive system work with `each`
 - `un by monadic` for accessing `under`'s undo function
 - Non-scalar `fill take`

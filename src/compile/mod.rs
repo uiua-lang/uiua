@@ -969,10 +969,11 @@ code:
     // Compile a line, checking an end-of-line signature comment
     fn compile_line(&mut self, line: Vec<Sp<Word>>, call: bool) -> UiuaResult<NewFunction> {
         let comment_sig = line_sig(&line);
+        let is_empty = line.iter().all(|w| !w.value.is_code());
         let new_func = self.compile_words(line, call)?;
         if let Some(comment_sig) = comment_sig {
             if let Ok(sig) = instrs_signature(&new_func.instrs) {
-                if !comment_sig.value.matches_sig(sig) {
+                if !is_empty && !comment_sig.value.matches_sig(sig) {
                     self.emit_diagnostic(
                         format!("Line signature {sig} does not match comment"),
                         DiagnosticKind::Warning,

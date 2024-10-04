@@ -172,39 +172,41 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
             Primitive::Lt if flipped => {
                 env.push(fast_table_list(xs, ys, flip(is_lt::generic), env)?)
             }
-            Primitive::Lt => env.push(fast_table_list(xs, ys, is_lt::generic, env)?),
+            Primitive::Lt if !flipped => env.push(fast_table_list(xs, ys, is_lt::generic, env)?),
             #[cfg(feature = "opt")]
             Primitive::Gt if flipped => {
                 env.push(fast_table_list(xs, ys, flip(is_gt::generic), env)?)
             }
-            Primitive::Gt => env.push(fast_table_list(xs, ys, is_gt::generic, env)?),
+            Primitive::Gt if !flipped => env.push(fast_table_list(xs, ys, is_gt::generic, env)?),
             #[cfg(feature = "opt")]
             Primitive::Le if flipped => {
                 env.push(fast_table_list(xs, ys, flip(is_le::generic), env)?)
             }
-            Primitive::Le => env.push(fast_table_list(xs, ys, is_le::generic, env)?),
+            Primitive::Le if !flipped => env.push(fast_table_list(xs, ys, is_le::generic, env)?),
             #[cfg(feature = "opt")]
             Primitive::Ge if flipped => {
                 env.push(fast_table_list(xs, ys, flip(is_ge::generic), env)?)
             }
-            Primitive::Ge => env.push(fast_table_list(xs, ys, is_ge::generic, env)?),
+            Primitive::Ge if !flipped => env.push(fast_table_list(xs, ys, is_ge::generic, env)?),
             Primitive::Add => env.push(fast_table_list(xs, ys, add::byte_byte, env)?),
             #[cfg(feature = "opt")]
             Primitive::Sub if flipped => {
                 env.push(fast_table_list(xs, ys, flip(sub::byte_byte), env)?)
             }
-            Primitive::Sub => env.push(fast_table_list(xs, ys, sub::byte_byte, env)?),
+            Primitive::Sub if !flipped => env.push(fast_table_list(xs, ys, sub::byte_byte, env)?),
             Primitive::Mul => env.push(fast_table_list(xs, ys, mul::byte_byte, env)?),
             #[cfg(feature = "opt")]
             Primitive::Div if flipped => {
                 env.push(fast_table_list(xs, ys, flip(div::byte_byte), env)?)
             }
-            Primitive::Div => env.push(fast_table_list(xs, ys, div::byte_byte, env)?),
+            Primitive::Div if !flipped => env.push(fast_table_list(xs, ys, div::byte_byte, env)?),
             #[cfg(feature = "opt")]
             Primitive::Mod if flipped => {
                 env.push(fast_table_list(xs, ys, flip(modulus::byte_byte), env)?)
             }
-            Primitive::Mod => env.push(fast_table_list(xs, ys, modulus::byte_byte, env)?),
+            Primitive::Mod if !flipped => {
+                env.push(fast_table_list(xs, ys, modulus::byte_byte, env)?)
+            }
             #[cfg(feature = "opt")]
             Primitive::Atan if flipped => env.push(fast_table_list::<f64, _>(
                 xs.convert(),
@@ -212,7 +214,7 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
                 flip(atan2::num_num),
                 env,
             )?),
-            Primitive::Atan => env.push(fast_table_list::<f64, _>(
+            Primitive::Atan if !flipped => env.push(fast_table_list::<f64, _>(
                 xs.convert(),
                 ys.convert(),
                 atan2::num_num,
@@ -222,7 +224,9 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
             Primitive::Complex if flipped => {
                 env.push(fast_table_list(xs, ys, flip(complex::byte_byte), env)?)
             }
-            Primitive::Complex => env.push(fast_table_list(xs, ys, complex::byte_byte, env)?),
+            Primitive::Complex if !flipped => {
+                env.push(fast_table_list(xs, ys, complex::byte_byte, env)?)
+            }
             Primitive::Min => env.push(fast_table_list(xs, ys, min::byte_byte, env)?),
             Primitive::Max => env.push(fast_table_list(xs, ys, max::byte_byte, env)?),
             Primitive::Join | Primitive::Couple => {
@@ -309,19 +313,19 @@ macro_rules! table_math {
                     env.push(fast_table_list(xs, ys, flip(is_lt::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Lt => env.push(fast_table_list(xs, ys, is_lt::$f, env)?),
+                Primitive::Lt if !flipped=> env.push(fast_table_list(xs, ys, is_lt::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Gt if flipped => {
                     env.push(fast_table_list(xs, ys, flip(is_gt::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Gt => env.push(fast_table_list(xs, ys, is_gt::$f, env)?),
+                Primitive::Gt if !flipped => env.push(fast_table_list(xs, ys, is_gt::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Le if flipped => {
                     env.push(fast_table_list(xs, ys, flip(is_le::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Le => env.push(fast_table_list(xs, ys, is_le::$f, env)?),
+                Primitive::Le if !flipped => env.push(fast_table_list(xs, ys, is_le::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Ge if flipped => {
                     env.push(fast_table_list(xs, ys, flip(is_ge::$f), env)?)
@@ -331,17 +335,17 @@ macro_rules! table_math {
                 Primitive::Add => env.push(fast_table_list(xs, ys, add::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Sub if flipped => env.push(fast_table_list(xs, ys, flip(sub::$f), env)?),
-                Primitive::Sub => env.push(fast_table_list(xs, ys, sub::$f, env)?),
+                Primitive::Sub if !flipped => env.push(fast_table_list(xs, ys, sub::$f, env)?),
                 Primitive::Mul => env.push(fast_table_list(xs, ys, mul::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Div if flipped => env.push(fast_table_list(xs, ys, flip(div::$f), env)?),
-                Primitive::Div => env.push(fast_table_list(xs, ys, div::$f, env)?),
+                Primitive::Div if !flipped => env.push(fast_table_list(xs, ys, div::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Mod if flipped => {
                     env.push(fast_table_list(xs, ys, flip(modulus::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Mod => env.push(fast_table_list(xs, ys, modulus::$f, env)?),
+                Primitive::Mod if !flipped => env.push(fast_table_list(xs, ys, modulus::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Atan if flipped => {
                     env.push(fast_table_list(xs, ys, flip(atan2::$f), env)?)
@@ -353,7 +357,7 @@ macro_rules! table_math {
                     env.push(fast_table_list(xs, ys, flip(complex::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Complex => env.push(fast_table_list(xs, ys, complex::$f, env)?),
+                Primitive::Complex if !flipped => env.push(fast_table_list(xs, ys, complex::$f, env)?),
                 Primitive::Min => env.push(fast_table_list(xs, ys, min::$f, env)?),
                 Primitive::Max => env.push(fast_table_list(xs, ys, max::$f, env)?),
                 Primitive::Join | Primitive::Couple => {

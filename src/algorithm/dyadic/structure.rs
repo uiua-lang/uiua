@@ -849,6 +849,12 @@ impl<T: ArrayValue> Array<T> {
         }
         let elem_count = validate_size::<T>(new_shape.iter().copied(), env)?;
         let mut new_data = EcoVec::with_capacity(elem_count);
+        if self.shape.contains(&0) {
+            for _ in 0..elem_count / fill.shape.elements() {
+                new_data.extend_from_slice(&fill.data);
+            }
+            return Ok(Array::new(new_shape, new_data));
+        }
 
         // Calculate padding numbers
         let mut slice_sizes = Vec::with_capacity(n);

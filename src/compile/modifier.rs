@@ -1026,13 +1026,13 @@ impl Compiler {
                 let tried_span = tried.span.clone();
                 let handler_span = handler.span.clone();
                 let in_try = replace(&mut self.in_try, true);
-                let (handler_new_func, handler_sig) = self.compile_operand_word(handler)?;
+                let (mut handler_new_func, mut handler_sig) = self.compile_operand_word(handler)?;
                 let (mut try_new_func, mut try_sig) = self.compile_operand_word(tried)?;
                 let span = self.add_span(modified.modifier.span.clone());
 
-                match handler_sig.outputs.cmp(&try_sig.outputs) {
+                match try_sig.outputs.cmp(&handler_sig.outputs) {
                     Ordering::Equal => {}
-                    Ordering::Greater => {
+                    Ordering::Less => {
                         try_sig.args += handler_sig.outputs - try_sig.outputs;
                         try_sig.outputs = handler_sig.outputs;
                         try_new_func.instrs.insert(
@@ -1043,15 +1043,17 @@ impl Compiler {
                             },
                         );
                     }
-                    Ordering::Less => self.add_error(
-                        handler_span.clone(),
-                        format!(
-                            "Tried function cannot have more outputs \
-                            than the handler function, but their \
-                            signatures are {try_sig} and {handler_sig} \
-                            respectively."
-                        ),
-                    ),
+                    Ordering::Greater => {
+                        handler_sig.args += try_sig.outputs - handler_sig.outputs;
+                        handler_sig.outputs = try_sig.outputs;
+                        handler_new_func.instrs.insert(
+                            0,
+                            Instr::TouchStack {
+                                count: handler_sig.args,
+                                span,
+                            },
+                        );
+                    }
                 }
 
                 if handler_sig.args > try_sig.args + 1 {

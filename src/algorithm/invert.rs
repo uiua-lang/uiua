@@ -1278,6 +1278,53 @@ fn invert_dup_pattern<'a>(
         return generic();
     };
 
+    // As under's undo step
+    for end in (1..=input.len()).rev() {
+        let instrs = &input[..end];
+        if instrs_clean_signature(instrs).map_or(true, |sig| sig != (1, 1)) {
+            continue;
+        }
+        let Ok((_before, after)) = under_instrs(instrs, Signature::new(1, 1), comp) else {
+            continue;
+        };
+        let save_count: usize = after
+            .iter()
+            .map(|instr| match instr {
+                Instr::PopTemp {
+                    stack: TempStack::Under,
+                    count,
+                    ..
+                } => *count,
+                _ => 0,
+            })
+            .sum();
+        if save_count != 2 {
+            continue;
+        }
+        for mid in 1..end {
+            let a = &input[..mid];
+            let b = &input[mid..];
+            if instrs_clean_signature(a).map_or(true, |sig| sig != (0, 1))
+                || instrs_clean_signature(b).map_or(true, |sig| sig != (2, 1))
+            {
+                continue;
+            }
+            let mut instrs = EcoVec::from(a);
+            instrs.extend([
+                Instr::Prim(Primitive::Flip, *dup_span),
+                Instr::push_inline(1, *dup_span),
+                Instr::PushTemp {
+                    stack: TempStack::Under,
+                    count: save_count,
+                    span: *dup_span,
+                },
+                Instr::pop_inline(1, *dup_span),
+            ]);
+            instrs.extend(after);
+            return Ok((&input[end..], instrs));
+        }
+    }
+
     let Some(dyadic_i) = (0..=input.len())
         .find(|&i| instrs_clean_signature(&input[..i]).is_some_and(|sig| sig == (2, 1)))
     else {
@@ -1293,6 +1340,7 @@ fn invert_dup_pattern<'a>(
             generic()
         };
     };
+
     // Special cases
     let dyadic_whole = &input[..dyadic_i];
     let input = &input[dyadic_i..];

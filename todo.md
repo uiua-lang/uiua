@@ -22,13 +22,15 @@ The next version of Uiua
 ## Implementation details
 Things that don't affect the language itself, but are important for the compiler or interpreter.
 
+- A proper IR (Intermediate Representation)
+  - Uiua currently compiles directly from AST to bytecode instructions
+  - This complicates the compiler, especially for inverses and optimizations
+  - Should go AST -> IR -> bytecode
+  - Very big undertaking
 - Remove recur instructions
   - Replace with simple calls
   - Similar to how recursive index macros work
 - Move array depth checks to compile time
-- Refine optimization passes
-  - Basic pass for combining some instructions
-  - Final pass for eliminating compile-only instructions
 - Allow for multi-value constant bindings
 - Dead code elimination
   - Eliminate unused anonymous functions

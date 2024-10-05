@@ -12,7 +12,7 @@ use crate::{
     boxed::Boxed,
     terminal_size, val_as_arr,
     value::Value,
-    Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
+    ArrayFlags, Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -165,6 +165,16 @@ impl GridFmt for Complex {
 
 impl GridFmt for Value {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
+        if self.meta().flags.contains(ArrayFlags::SEED) && self.rank() == 0 {
+            if let Value::Num(arr) = self {
+                let seed = arr.data[0].to_bits();
+                return vec![boxed_scalar(params.boxed)
+                    .chain("(seed ".chars())
+                    .chain(format!("{seed:x}").chars())
+                    .chain([')'])
+                    .collect()];
+            }
+        }
         'box_list: {
             let Value::Box(b) = self else {
                 break 'box_list;

@@ -34,7 +34,7 @@ use crate::{
     lex::{AsciiToken, SUBSCRIPT_NUMS},
     sys::*,
     value::*,
-    FunctionId, Shape, Signature, Uiua, UiuaErrorKind, UiuaResult,
+    ArrayFlags, FunctionId, Shape, Signature, Uiua, UiuaErrorKind, UiuaResult,
 };
 
 /// Categories of primitives
@@ -870,7 +870,8 @@ impl Primitive {
 
                 let elems: usize = algorithm::validate_size::<f64>(shape.iter().copied(), env)?;
                 let data = EcoVec::from_iter((0..elems).map(|_| rng.gen::<f64>()));
-                let next_seed = f64::from_bits(rng.gen::<u64>());
+                let mut next_seed = Array::from(f64::from_bits(rng.gen::<u64>()));
+                next_seed.meta_mut().flags |= ArrayFlags::SEED;
 
                 env.push(Array::new(shape, data));
                 env.push(next_seed);

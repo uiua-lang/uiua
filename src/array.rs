@@ -104,6 +104,8 @@ bitflags! {
         const BOOLEAN = 1;
         /// The array was *created from* a boolean
         const BOOLEAN_LITERAL = 2;
+        /// The array is a seed created by `gen`
+        const SEED = 4;
     }
 }
 

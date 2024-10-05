@@ -1068,7 +1068,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnUtf => env.monadic_ref_env(Value::unutf8)?,
             ImplPrimitive::UnGraphemes => env.monadic_env(Value::ungraphemes)?,
             ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
-            ImplPrimitive::UnOnDrop => env.dyadic_ro_env(Value::un_on_drop)?,
+            ImplPrimitive::UnOnDrop => env.dyadic_ro_env(Value::anti_drop)?,
             ImplPrimitive::UnOnSelect => env.dyadic_oo_env(Value::un_on_select)?,
             ImplPrimitive::UnOnPick => env.dyadic_oo_env(Value::un_on_pick)?,
             ImplPrimitive::UnJoin => {

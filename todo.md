@@ -10,9 +10,6 @@ The next version of Uiua
   - Let `under obverse` use `un` or `anti` inverses if necessary
 - Make new pervasive system work with `each`
 - `un by monadic` for accessing `under`'s undo function
-- Non-scalar `fill take`
-  - Needs an efficient, non-recursive implementation
-  - Similar to `antidrop`
 - Make `struct` a dedicated syntax
   - `~[...] / ~{...}`
 - Update language tour

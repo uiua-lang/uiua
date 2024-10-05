@@ -5,7 +5,6 @@ use std::{
     cmp::Ordering,
     collections::HashSet,
     iter::{once, repeat},
-    mem::replace,
 };
 
 use ecow::EcoVec;
@@ -406,10 +405,10 @@ impl Value {
             },
         )
     }
-    pub(crate) fn un_on_drop(&self, mut target: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn anti_drop(&self, mut target: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = self.as_ints(env, "Index must be an integer or list of integers")?;
         target.match_fill(env);
-        val_as_arr!(target, |a| a.un_on_drop(&index, env).map(Into::into))
+        val_as_arr!(target, |a| a.anti_drop(&index, env).map(Into::into))
     }
     #[track_caller]
     pub(crate) fn drop_n(&mut self, n: usize) {
@@ -420,10 +419,33 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// `take` from this array
     pub fn take(mut self, index: &[Result<isize, bool>], env: &Uiua) -> UiuaResult<Self> {
-        let map_keys = self.take_map_keys();
         if self.rank() == 0 {
             self.shape.push(1);
         }
+
+        if index.len() > self.rank() {
+            return Err(env.error(format!(
+                "Cannot take from rank {} array with index of length {}",
+                self.rank(),
+                index.len()
+            )));
+        }
+
+        let fill = env.array_fill::<T>();
+        if let Ok(fill) = &fill {
+            if !self.shape[index.len()..].ends_with(&fill.shape) {
+                return Err(env.error(format!(
+                    "Cannot take {} {} of array with \
+                    shape {} with fill of shape {}",
+                    index.len(),
+                    if index.len() == 1 { "axis" } else { "axes" },
+                    self.shape,
+                    fill.shape
+                )));
+            }
+        }
+
+        let map_keys = self.take_map_keys();
         let row_count = self.row_count();
         let mut arr = match index {
             [] => self,
@@ -435,14 +457,14 @@ impl<T: ArrayValue> Array<T> {
                 let mut filled = false;
                 if taking >= 0 {
                     if abs_taking > row_count {
-                        match env.scalar_fill::<T>() {
+                        match fill {
                             Ok(fill) => {
                                 filled = true;
-                                self.data.extend_from_slice(&vec![
-                                    fill;
-                                    (abs_taking - row_count)
-                                        * row_len
-                                ]);
+                                let fill_elems = fill.element_count();
+                                if fill_elems > 0 {
+                                    let reps = (abs_taking - row_count) * row_len / fill_elems;
+                                    self.data.extend_repeat_slice(&fill.data, reps);
+                                }
                             }
                             Err(e) => {
                                 return Err(env
@@ -460,13 +482,16 @@ impl<T: ArrayValue> Array<T> {
                         self.data.truncate(abs_taking * row_len);
                     }
                 } else if abs_taking > row_count {
-                    match env.scalar_fill::<T>() {
+                    match fill {
                         Ok(fill) => {
                             filled = true;
-                            let new_data =
-                                EcoVec::from_elem(fill, (abs_taking - row_count) * row_len);
-                            let old_data = replace(&mut self.data, new_data.into());
-                            self.data.extend_from_slice(&old_data);
+                            let fill_elems = fill.element_count();
+                            let diff = abs_taking - row_count;
+                            if fill_elems > 0 {
+                                let reps = diff * row_len / fill_elems;
+                                self.data.extend_repeat_slice(&fill.data, reps);
+                            }
+                            self.data.as_mut_slice().rotate_right(diff * row_len);
                         }
                         Err(e) => {
                             return Err(env
@@ -522,15 +547,18 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Extend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        match env.scalar_fill::<T>() {
+                        match fill {
                             Ok(fill) => {
                                 let row_len: usize = (sub_index.iter())
                                     .chain(repeat(&Err(true)))
                                     .zip(&self.shape[1..])
                                     .map(|(&i, &s)| i.map_or(s, isize::unsigned_abs))
                                     .product();
-                                arr.data
-                                    .extend_repeat(&fill, (abs_taking - arr.row_count()) * row_len);
+                                let fill_elems = fill.element_count();
+                                if fill_elems > 0 {
+                                    let reps = (abs_taking - row_count) * row_len / fill_elems;
+                                    arr.data.extend_repeat_slice(&fill.data, reps);
+                                }
                             }
                             Err(e) => {
                                 return Err(env
@@ -555,17 +583,20 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Prepend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        match env.scalar_fill::<T>() {
+                        match fill {
                             Ok(fill) => {
                                 let row_len: usize = (sub_index.iter())
                                     .chain(repeat(&Err(true)))
                                     .zip(&self.shape[1..])
                                     .map(|(&i, &s)| i.map_or(s, |i| i.unsigned_abs()))
                                     .product();
-                                arr.data = repeat(fill)
-                                    .take((abs_taking - arr.row_count()) * row_len)
-                                    .chain(arr.data)
-                                    .collect();
+                                let fill_elems = fill.element_count();
+                                let diff = abs_taking - row_count;
+                                if fill_elems > 0 {
+                                    let reps = diff * row_len / fill_elems;
+                                    arr.data.extend_repeat_slice(&fill.data, reps);
+                                }
+                                arr.data.as_mut_slice().rotate_right(diff * row_len);
                             }
                             Err(e) => {
                                 return Err(env
@@ -782,7 +813,7 @@ impl<T: ArrayValue> Array<T> {
             .collect();
         self.undo_take_impl("drop", "dropped", &index, into, env)
     }
-    fn un_on_drop(mut self, mut index: &[isize], env: &Uiua) -> UiuaResult<Self> {
+    fn anti_drop(mut self, mut index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         let fill = env.array_fill::<T>().unwrap_or_else(|_| T::proxy().into());
         if self.shape.len() < index.len() {
             return Err(env.error(format!(
@@ -795,7 +826,7 @@ impl<T: ArrayValue> Array<T> {
         // Validate fill shape
         if !self.shape[index.len()..].ends_with(&fill.shape) {
             return Err(env.error(format!(
-                "Cannot undrop {} {} of array with \
+                "Cannot antidrop {} {} of array with \
                 shape {} with fill of shape {}",
                 index.len(),
                 if index.len() == 1 { "axis" } else { "axes" },
@@ -818,7 +849,7 @@ impl<T: ArrayValue> Array<T> {
             let row_shape = self.shape.row();
             if !row_shape.ends_with(&fill.shape) {
                 return Err(env.error(format!(
-                    "Cannot undrop array of shape {} \
+                    "Cannot antidrop array of shape {} \
                     with fill of shape {}",
                     self.shape, fill.shape
                 )));

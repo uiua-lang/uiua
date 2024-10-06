@@ -458,6 +458,7 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
         "Ace" | "Asexual" => code_font!("ace text-gradient"),
         "Aro" | "Aromantic" => code_font!("aro text-gradient"),
         "AroAce" => code_font!("aroace text-gradient"),
+        "Agender" => code_font!("agender text-gradient"),
         "Nb" | "Enby" | "Nonbinary" | "NonBinary" => code_font!("nb text-gradient"),
         "Fluid" | "Genderfluid" | "GenderFluid" => code_font!("fluid text-gradient"),
         "Queer" | "Genderqueer" | "GenderQueer" => code_font!("queer text-gradient"),

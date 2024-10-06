@@ -7,7 +7,6 @@ The next version of Uiua
   - Let `under obverse` use `un` or `anti` inverses if necessary
   - Add `anti` and `obverse` to the tutorial
   - Deprecate `setinv` and `setund`
-- `un by monadic` for accessing `under`'s undo function
 - Make `struct` a dedicated syntax
   - `~[...] / ~{...}`
 - Update language tour

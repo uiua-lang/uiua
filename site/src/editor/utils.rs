@@ -568,6 +568,43 @@ pub fn gen_code_view(code: &str) -> View {
                             .into_view();
                             frag_views.push(view)
                         }
+                        SpanKind::Primitive(Primitive::Un, _)
+                            if frags.peek().is_some_and(|frag| {
+                                matches!(
+                                    frag,
+                                    CodeFragment::Span(_, SpanKind::Primitive(Primitive::By, _))
+                                )
+                            }) =>
+                        {
+                            let Some(CodeFragment::Span(next_text, _)) = frags.next() else {
+                                unreachable!()
+                            };
+                            let title = format!(
+                                "{}{}: Set the value at a static index",
+                                Primitive::Un.name(),
+                                Primitive::By.name()
+                            );
+                            let class = format!(
+                                "code-span code-underline {}",
+                                code_font!("agender2 text-gradient")
+                            );
+                            let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
+                            let onclick = move |event: web_sys::MouseEvent| {
+                                if os_ctrl(&event) {
+                                    window()
+                                        .open_with_url_and_target("/docs/by", "_blank")
+                                        .unwrap();
+                                }
+                            };
+                            let text = format!("{text}{next_text}");
+                            let view = view!(<span
+                                    class=class
+                                    data-title=title
+                                    on:mouseover=onmouseover
+                                    on:click=onclick>{text}</span>)
+                            .into_view();
+                            frag_views.push(view)
+                        }
                         SpanKind::Primitive(prim, _)
                             if frags.peek().is_some_and(|frag| {
                                 matches!(frag, CodeFragment::Span(_, SpanKind::Primitive(next, _))

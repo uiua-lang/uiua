@@ -1378,6 +1378,38 @@ a.clean {
             #a20161 67%);
 }
 
+.agender {
+    background-image: linear-gradient(180deg,
+            #000000 30%,
+            #BCC4C7 30%,
+            #BCC4C7 38%,
+            #FFFFFF 38%,
+            #FFFFFF 46%,
+            #B7F684 46%,
+            #B7F684 54%,
+            #FFFFFF 54%,
+            #FFFFFF 62%,
+            #BCC4C7 62%,
+            #BCC4C7 70%,
+            #000000 70%);
+}
+
+.agender2 {
+    background-image: linear-gradient(40deg,
+            #000000 39%,
+            #BCC4C7 39%,
+            #BCC4C7 46%,
+            #FFFFFF 46%,
+            #FFFFFF 53%,
+            #B7F684 53%,
+            #B7F684 60%,
+            #FFFFFF 60%,
+            #FFFFFF 67%,
+            #BCC4C7 67%,
+            #BCC4C7 74%,
+            #000000 74%);
+}
+
 .caution {
     background-image: linear-gradient(135deg,
             #000000 30%,
@@ -1403,6 +1435,8 @@ a.clean {
     .gay,
     .nb,
     .nb2,
+    .agender,
+    .agender2,
     .fluid,
     .queer,
     .lesbian,
@@ -1419,6 +1453,8 @@ a.clean {
     .ace,
     .aro,
     .aroace,
+    .agender,
+    .agender2,
     .fluid,
     .caution {
         -webkit-text-stroke: 0.01em #fff8;

@@ -1081,7 +1081,7 @@ pub fn Editor<'a>(
             None,
             "tutorial/modules#visibility",
         ),
-        ("~", "import", "", None, "tutorial/modules"),
+        ("~", "module", "", None, "tutorial/modules"),
         (
             "|",
             "signature",

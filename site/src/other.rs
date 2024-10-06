@@ -557,7 +557,7 @@ pub fn Experimental() -> impl IntoView {
                 <td><Editor example="# Experimental!\n⊃+₁×₂ [1 2 3]" nonprogressive=true/></td>
             </tr>
             <tr>
-                <td><Prims prims=[Take, Drop, Join, Rerank, Rotate, Orient, Windows]/></td>
+                <td><Prims prims=[Select, Pick, Take, Drop, Join, Rerank, Rotate, Orient, Windows]/></td>
                 <td>"Constant first argument"</td>
                 <td><Editor example="# Experimental!\n⊃↙₂↻₃ [1 2 3 4 5]" nonprogressive=true/></td>
             </tr>

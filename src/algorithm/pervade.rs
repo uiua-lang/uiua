@@ -208,8 +208,8 @@ where
             }
         }
         ([al, ash @ ..], [bl, bsh @ ..]) => {
-            let a_row_len = a.len() / al;
-            let b_row_len = b.len() / bl;
+            let a_row_len: usize = ash.iter().product();
+            let b_row_len: usize = bsh.iter().product();
             let c_row_len = c.len() / al.max(bl);
             if al == bl {
                 if ash == bsh {
@@ -393,11 +393,18 @@ where
                 }
             }
             ([al, ash @ ..], [bl, bsh @ ..]) => {
-                let a_row_len = a.len() / al;
+                let a_row_len: usize = ash.iter().product();
                 let b_row_len = b.len() / bl;
                 if al == bl {
-                    for (a, b) in a.chunks_exact(a_row_len).zip(b.chunks_exact_mut(b_row_len)) {
-                        reuse_fill(a, b, ash, bsh, fill, f);
+                    if a_row_len == 0 {
+                        let a = vec![fill; b_row_len];
+                        for b in b.chunks_exact_mut(b_row_len) {
+                            reuse_fill(&a, b, ash, bsh, fill, f);
+                        }
+                    } else {
+                        for (a, b) in a.chunks_exact(a_row_len).zip(b.chunks_exact_mut(b_row_len)) {
+                            reuse_fill(a, b, ash, bsh, fill, f);
+                        }
                     }
                 } else {
                     let fill_row = vec![fill; a_row_len];

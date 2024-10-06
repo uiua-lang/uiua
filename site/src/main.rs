@@ -417,7 +417,8 @@ fn prim_sig_class(prim: Primitive, sig: Option<Signature>) -> &'static str {
         Primitive::Member => code_font!("dyadic-function caution text-gradient"),
         Primitive::Couple => match sig.map(|sig| sig.args) {
             None | Some(2) => code_font!("dyadic-function"),
-            Some(0 | 1) => code_font!("monadic-function aroace text-gradient"),
+            Some(0) => code_font!("monadic-function aroace text-gradient"),
+            Some(1) => code_font!("monadic-function aro text-gradient"),
             Some(_) => code_font!("dyadic-function poly text-gradient"),
         },
         prim if matches!(prim.class(), PrimClass::Stack | PrimClass::Debug)

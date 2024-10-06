@@ -1008,6 +1008,7 @@ impl<'a> Lexer<'a> {
                 // Strings
                 "\"" | "$" => {
                     let first_dollar = c == "$";
+                    let reset = self.loc;
                     let format_raw = first_dollar && self.next_char_exact("$");
                     if first_dollar
                         && (self.next_char_exact(" ")
@@ -1015,12 +1016,12 @@ impl<'a> Lexer<'a> {
                     {
                         // Raw strings
                         let mut start = start;
+                        let escape_mode = if format_raw {
+                            EscapeMode::UnderscoreOnly
+                        } else {
+                            EscapeMode::None
+                        };
                         loop {
-                            let escape_mode = if format_raw {
-                                EscapeMode::UnderscoreOnly
-                            } else {
-                                EscapeMode::None
-                            };
                             let inner = self.parse_string_contents(start, None, escape_mode);
                             if format_raw {
                                 let string = parse_format_fragments(&inner);
@@ -1053,6 +1054,7 @@ impl<'a> Lexer<'a> {
                         }
                         continue;
                     }
+                    self.loc = reset;
                     if first_dollar && !self.next_char_exact("\"") {
                         let label = canonicalize_ident(&self.ident(self.loc, ""));
                         self.end(Label(label), start);

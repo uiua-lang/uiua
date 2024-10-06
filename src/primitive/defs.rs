@@ -3177,7 +3177,7 @@ primitive!(
     (0(0)[1], Struct, Misc, "struct"),
     /// Run the Fast Fourier Transform on an array
     ///
-    /// The Fast Fourier Transform (FFT) is an optmized algorithm for computing the Discrete Fourier Transform (DFT). The DFT is a transformation that converts a signal from the time domain to the frequency domain.
+    /// The Fast Fourier Transform (FFT) is an optimized algorithm for computing the Discrete Fourier Transform (DFT). The DFT is a transformation that converts a signal from the time domain to the frequency domain.
     ///
     /// The input array must be either real or complex.
     /// The result will always be complex.

@@ -1307,10 +1307,7 @@ impl<'a> Formatter<'a> {
             if i > 0 || (!allow_compact && allow_leading_space) {
                 if line.is_empty() {
                     if allow_trailing_newline || prevent_compact || i < lines.len() - 1 {
-                        self.output.push('\n');
-                        for _ in 0..indent.saturating_sub(self.config.multiline_indent) {
-                            self.output.push(' ');
-                        }
+                        self.newline(depth.saturating_sub(1));
                     }
                 } else {
                     self.output.push('\n');
@@ -1503,6 +1500,10 @@ x ← 2
 ⊃(1
 | 2
 | 3
+)
+∘∘(
+  (∘
+  )
 )
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;

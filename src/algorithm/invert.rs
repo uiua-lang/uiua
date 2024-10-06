@@ -1018,7 +1018,7 @@ fn get_undered<'a>(
     } else if input.len() < 3 {
         generic()
     } else {
-        (0..=input.len())
+        (1..=input.len())
             .rev()
             .find_map(|i| {
                 comp.undered_funcs

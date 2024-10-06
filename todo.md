@@ -5,10 +5,9 @@ The next version of Uiua
 
 - Optimize filled array creation
 - Stabilize `anti` and `obverse`
-  - Pick a good glyph for `obverse`
-  - Deprecate `setinv` and `setund`
-  - Add `anti` and `obverse` to the tutorial
   - Let `under obverse` use `un` or `anti` inverses if necessary
+  - Add `anti` and `obverse` to the tutorial
+  - Deprecate `setinv` and `setund`
 - `un by monadic` for accessing `under`'s undo function
 - Make `struct` a dedicated syntax
   - `~[...] / ~{...}`

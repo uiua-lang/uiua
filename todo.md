@@ -3,7 +3,6 @@
 ## 0.13
 The next version of Uiua
 
-- Optimize filled array creation
 - Stabilize `anti` and `obverse`
   - Let `under obverse` use `un` or `anti` inverses if necessary
   - Add `anti` and `obverse` to the tutorial

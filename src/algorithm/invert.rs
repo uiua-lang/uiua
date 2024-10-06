@@ -1284,9 +1284,16 @@ fn invert_dup_pattern<'a>(
         if instrs_clean_signature(instrs).map_or(true, |sig| sig != (1, 1)) {
             continue;
         }
-        let Ok((_before, after)) = under_instrs(instrs, Signature::new(1, 1), comp) else {
+        let Ok((_before, mut after)) = under_instrs(instrs, Signature::new(1, 1), comp) else {
             continue;
         };
+        while let [Instr::PushFunc(f), Instr::Call(_)] = after.as_slice() {
+            after = EcoVec::from(f.instrs(&comp.asm));
+        }
+        let mut instrs = &input[..end];
+        while let [Instr::PushFunc(f), Instr::Call(_)] = instrs {
+            instrs = f.instrs(&comp.asm);
+        }
         let save_count: usize = after
             .iter()
             .map(|instr| match instr {
@@ -1302,8 +1309,8 @@ fn invert_dup_pattern<'a>(
             continue;
         }
         for mid in 1..end {
-            let a = &input[..mid];
-            let b = &input[mid..];
+            let a = &instrs[..mid];
+            let b = &instrs[mid..];
             if instrs_clean_signature(a).map_or(true, |sig| sig != (0, 1))
                 || instrs_clean_signature(b).map_or(true, |sig| sig != (2, 1))
             {

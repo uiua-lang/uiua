@@ -5,7 +5,7 @@ use std::{
 };
 
 use serde::*;
-use tinyvec::{tiny_vec, TinyVec};
+use tinyvec::{ArrayVec, TinyVec};
 
 /// Uiua's array shape type
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
@@ -15,10 +15,10 @@ pub struct Shape {
 }
 
 impl Shape {
-    /// Create a new shape with no dimensions
-    pub fn scalar() -> Self {
-        Shape { dims: tiny_vec![] }
-    }
+    /// A shape with no dimensions
+    pub const SCALAR: Self = Shape {
+        dims: TinyVec::Inline(ArrayVec::from_array_empty([0; 3])),
+    };
     /// Create a new scalar shape with the given capacity
     pub fn with_capacity(capacity: usize) -> Self {
         Shape {

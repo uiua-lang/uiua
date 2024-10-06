@@ -15,6 +15,7 @@ The next version of Uiua
 - Update language tour
 - Update design page
   - So much has changed since it was written!
+- Combined glyph tooltips for non-obvious inverses in pad
 
 ## Implementation details
 Things that don't affect the language itself, but are important for the compiler or interpreter.

@@ -384,7 +384,7 @@ impl<T> Array<T> {
 impl<T: ArrayValue> Array<T> {
     /// Create a scalar array
     pub fn scalar(data: T) -> Self {
-        Self::new(Shape::scalar(), cowslice![data])
+        Self::new(Shape::SCALAR, cowslice![data])
     }
     /// Attempt to convert the array into a scalar
     pub fn into_scalar(self) -> Result<T, Self> {
@@ -713,7 +713,7 @@ impl From<Vec<bool>> for Array<u8> {
 
 impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
-        let mut arr = Self::new(Shape::scalar(), cowslice![u8::from(data)]);
+        let mut arr = Self::new(Shape::SCALAR, cowslice![u8::from(data)]);
         arr.meta_mut().flags |= ArrayFlags::BOOLEAN;
         arr
     }

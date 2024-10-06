@@ -1311,7 +1311,7 @@ impl<T: ArrayValue> Array<T> {
                 }
                 into = Array::from_row_arrays_infallible(rows);
                 if into_rank == 0 {
-                    into.shape = Shape::scalar();
+                    into.shape = Shape::SCALAR;
                 }
             }
         }

@@ -255,30 +255,14 @@ impl Value {
             .into(),
         }
     }
-    pub(crate) fn fill_scalar(&self, env: &Uiua) -> Result<Self, &'static str> {
+    pub(crate) fn fill(&mut self, env: &Uiua) -> Result<Value, &'static str> {
+        self.match_fill(env);
         match self {
-            Self::Num(_) | Self::Byte(_) => env.scalar_fill::<f64>().map(Into::into),
-            Self::Complex(_) => env.scalar_fill::<Complex>().map(Into::into),
-            Self::Char(_) => env.scalar_fill::<char>().map(Into::into),
-            Self::Box(_) => env.scalar_fill::<Boxed>().map(Into::into),
-        }
-    }
-    #[allow(dead_code)]
-    pub(crate) fn fill_row(&self, env: &Uiua) -> Result<Self, &'static str> {
-        if self.rank() == 0 {
-            return self.fill_scalar(env);
-        }
-        let shape: Shape = self.shape()[1..].into();
-        let elem_count = shape.iter().product();
-        match self {
-            Value::Num(_) | Self::Byte(_) => (env.scalar_fill::<f64>())
-                .map(|fill| Array::new(shape, CowSlice::from_elem(fill, elem_count)).into()),
-            Self::Complex(_) => (env.scalar_fill::<Complex>())
-                .map(|fill| Array::new(shape, CowSlice::from_elem(fill, elem_count)).into()),
-            Self::Char(_) => (env.scalar_fill::<char>())
-                .map(|fill| Array::new(shape, CowSlice::from_elem(fill, elem_count)).into()),
-            Self::Box(_) => (env.scalar_fill::<Boxed>())
-                .map(|fill| Array::new(shape, CowSlice::from_elem(fill, elem_count)).into()),
+            Value::Num(_) => env.array_fill::<f64>().map(Into::into),
+            Value::Byte(_) => env.array_fill::<u8>().map(Into::into),
+            Value::Complex(_) => env.array_fill::<Complex>().map(Into::into),
+            Value::Char(_) => env.array_fill::<char>().map(Into::into),
+            Value::Box(_) => env.array_fill::<Boxed>().map(Into::into),
         }
     }
     pub(crate) fn first_dim_zero(&self) -> Self {

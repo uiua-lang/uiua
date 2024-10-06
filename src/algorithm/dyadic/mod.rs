@@ -199,6 +199,9 @@ impl Value {
             )))
         }
     }
+    pub(crate) fn reshape_scalar(&mut self, count: Result<isize, bool>, env: &Uiua) -> UiuaResult {
+        val_as_arr!(self, |a| a.reshape_scalar(count, env))
+    }
 }
 
 impl<T: Clone> Array<T> {

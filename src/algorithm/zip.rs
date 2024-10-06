@@ -1,11 +1,11 @@
 //! Algorithms for zipping modifiers
 
-use std::{cell::RefCell, collections::HashMap, iter::repeat, mem::swap, rc::Rc, slice};
+use std::{cell::RefCell, collections::HashMap, iter::repeat, mem::swap, rc::Rc};
 
 use ecow::eco_vec;
 
 use crate::{
-    algorithm::pervade::bin_pervade_generic, check::instrs_clean_signature, cowslice::CowSlice,
+    algorithm::pervade::bin_pervade_values, check::instrs_clean_signature, cowslice::CowSlice,
     function::Function, random, types::push_empty_rows_value, val_as_arr, value::Value, Array,
     Boxed, ImplPrimitive, Instr, PersistentMeta, Primitive, Shape, TempStack, Uiua, UiuaResult,
 };
@@ -429,7 +429,6 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    fill_value_shapes(&mut xs, &mut ys, true, env)?;
     if let Some((f, ..)) = f_dy_fast_fn(f.instrs(&env.asm), env) {
         let xrank = xs.rank();
         let yrank = ys.rank();
@@ -441,7 +440,9 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
         let mut ys_shape = ys.shape().to_vec();
         let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
         let per_meta = xs.take_per_meta().xor(ys.take_per_meta());
-        let (new_shape, new_values) = env.without_fill(|env| {
+        let xs_fill = xs.fill(env);
+        let ys_fill = ys.fill(env);
+        let new_values = env.without_fill(|env| {
             if is_empty {
                 if let Some(r) = xs_shape.first_mut() {
                     *r = 1;
@@ -449,11 +450,12 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
                 if let Some(r) = ys_shape.first_mut() {
                     *r = 1;
                 }
-                bin_pervade_generic(
-                    &xs_shape,
-                    slice::from_ref(&xs.proxy_scalar(env)),
-                    &ys_shape,
-                    slice::from_ref(&ys.proxy_scalar(env)),
+                bin_pervade_values(
+                    xs.proxy_row(env),
+                    ys.proxy_row(env),
+                    xs_fill,
+                    ys_fill,
+                    outputs,
                     env,
                     |x, y, env| {
                         env.push(y);
@@ -468,42 +470,17 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
                     },
                 )
             } else {
-                let xs_values: Vec<_> = xs.into_elements().collect();
-                let ys_values: Vec<_> = ys.into_elements().collect();
-                bin_pervade_generic(
-                    &xs_shape,
-                    xs_values,
-                    &ys_shape,
-                    ys_values,
-                    env,
-                    |x, y, env| {
-                        env.push(y);
-                        env.push(x);
-                        env.call(f.clone())?;
-                        (0..outputs)
-                            .map(|_| env.pop("each's function result"))
-                            .collect::<Result<MultiOutput<_>, _>>()
-                    },
-                )
+                bin_pervade_values(xs, ys, xs_fill, ys_fill, outputs, env, |x, y, env| {
+                    env.push(y);
+                    env.push(x);
+                    env.call(f.clone())?;
+                    (0..outputs)
+                        .map(|_| env.pop("each's function result"))
+                        .collect::<Result<MultiOutput<_>, _>>()
+                })
             }
         })?;
-        let mut transposed = multi_output(outputs, Vec::with_capacity(new_values.len()));
-        for values in new_values {
-            for (i, value) in values.into_iter().enumerate() {
-                transposed[i].push(value);
-            }
-        }
-        for new_values in transposed.into_iter().rev() {
-            let mut new_shape = new_shape.clone();
-            let mut eached = Value::from_row_values(new_values, env)?;
-            if is_empty {
-                eached.pop_row();
-                if let Some(r) = new_shape.first_mut() {
-                    *r -= 1;
-                }
-            }
-            new_shape.extend_from_slice(&eached.shape().row());
-            *eached.shape_mut() = new_shape;
+        for mut eached in new_values.into_iter().rev() {
             eached.set_per_meta(per_meta.clone());
             env.push(eached);
         }

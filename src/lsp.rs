@@ -41,7 +41,7 @@ pub enum SpanKind {
     Delimiter,
     FuncDelim(Signature),
     ImportSrc(ImportSrc),
-    Subscript(Option<Primitive>, usize),
+    Subscript(Option<Primitive>, Option<usize>),
 }
 
 /// Documentation information for a binding

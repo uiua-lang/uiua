@@ -506,7 +506,7 @@ pub enum Token {
     MultilineFormatStr(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
-    Subscript(usize),
+    Subscript(Option<usize>),
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
@@ -577,7 +577,7 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_subscript(&self) -> Option<usize> {
+    pub(crate) fn as_subscript(&self) -> Option<Option<usize>> {
         match self {
             Token::Subscript(n) => Some(*n),
             _ => None,
@@ -627,11 +627,15 @@ impl fmt::Display for Token {
             Token::Newline => write!(f, "newline"),
             Token::Spaces => write!(f, "space(s)"),
             Token::Subscript(n) => {
-                for c in n.to_string().chars() {
-                    let i = (c as u32 as u8 - b'0') as usize;
-                    write!(f, "{}", SUBSCRIPT_NUMS[i])?;
+                if let Some(n) = n {
+                    for c in n.to_string().chars() {
+                        let i = (c as u32 as u8 - b'0') as usize;
+                        write!(f, "{}", SUBSCRIPT_NUMS[i])?;
+                    }
+                    Ok(())
+                } else {
+                    write!(f, "__")
                 }
-                Ok(())
             }
         }
     }
@@ -867,15 +871,17 @@ impl<'a> Lexer<'a> {
                 "⟩" => self.end(CloseAngle, start),
                 "_" => {
                     if self.next_char_exact("_") {
-                        let mut n = 0;
+                        let mut n: Option<usize> = None;
                         loop {
                             if let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                                n = n * 10 + c.parse::<usize>().unwrap();
+                                let n = n.get_or_insert(0);
+                                *n = *n * 10 + c.parse::<usize>().unwrap();
                             } else if let Some(c) =
                                 self.next_char_if_all(|c| SUBSCRIPT_NUMS.contains(&c))
                             {
                                 let c = c.chars().next().unwrap();
-                                n = n * 10 + SUBSCRIPT_NUMS.iter().position(|&d| d == c).unwrap();
+                                let n = n.get_or_insert(0);
+                                *n = *n * 10 + SUBSCRIPT_NUMS.iter().position(|&d| d == c).unwrap();
                             } else {
                                 break;
                             }
@@ -1093,10 +1099,11 @@ impl<'a> Lexer<'a> {
                             break;
                         }
                     }
-                    let mut n = 0;
+                    let mut n: Option<usize> = None;
                     for c in s.chars() {
                         let i = SUBSCRIPT_NUMS.iter().position(|&d| d == c).unwrap();
-                        n = n * 10 + i;
+                        let n = n.get_or_insert(0);
+                        *n = *n * 10 + i;
                     }
                     self.end(Subscript(n), start)
                 }
@@ -1165,7 +1172,7 @@ impl<'a> Lexer<'a> {
                         if !rest.is_empty() {
                             let ident = canonicalize_ident(rest);
                             if let Some(n) = subscript_num(&ident) {
-                                self.end(Subscript(n), start);
+                                self.end(Subscript(Some(n)), start);
                             } else {
                                 self.end(Ident(ident), start);
                             }
@@ -1174,7 +1181,7 @@ impl<'a> Lexer<'a> {
                         // Lone ident
                         let ident = canonicalize_ident(&ident);
                         if let Some(n) = subscript_num(&ident) {
-                            self.end(Subscript(n), start);
+                            self.end(Subscript(Some(n)), start);
                         } else {
                             self.end(Ident(ident), start);
                         }

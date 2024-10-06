@@ -506,7 +506,7 @@ impl Modifier {
 #[derive(Clone)]
 pub struct Subscript {
     /// The subscript number
-    pub n: Sp<usize>,
+    pub n: Sp<Option<usize>>,
     /// The modified word
     pub word: Sp<Word>,
 }
@@ -514,9 +514,13 @@ pub struct Subscript {
 impl Subscript {
     /// Get the subscript number as a string
     pub fn n_string(&self) -> String {
-        (self.n.value.to_string().chars())
-            .map(|c| SUBSCRIPT_NUMS[(c as u32 as u8 - b'0') as usize])
-            .collect()
+        if let Some(n) = &self.n.value {
+            (n.to_string().chars())
+                .map(|c| SUBSCRIPT_NUMS[(c as u32 as u8 - b'0') as usize])
+                .collect()
+        } else {
+            String::new()
+        }
     }
 }
 

@@ -2214,7 +2214,9 @@ code:
                 `# Experimental!` to the top of the file."
             });
         }
-        let n = sub.n.value;
+        let Some(n) = sub.n.value else {
+            return self.word(sub.word, call);
+        };
         match sub.word.value {
             Word::Modified(m) => match m.modifier.value {
                 Modifier::Ref(_) => {
@@ -2247,9 +2249,9 @@ code:
                 let sp = span.clone();
                 match prim {
                     prim if prim.signature().is_some_and(|sig| sig == (2, 1))
-                        && prim.subscript_sig(2).is_some_and(|sig| sig == (1, 1)) =>
+                        && prim.subscript_sig(Some(2)).is_some_and(|sig| sig == (1, 1)) =>
                     {
-                        self.word(sub.n.map(|n| Word::Number(n.to_string(), n as f64)), true)?;
+                        self.word(sub.n.span.sp(Word::Number(n.to_string(), n as f64)), true)?;
                         self.primitive(prim, span, true)?;
                     }
                     Primitive::Transpose => {

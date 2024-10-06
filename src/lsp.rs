@@ -40,6 +40,7 @@ pub enum SpanKind {
     Placeholder(PlaceholderOp),
     Delimiter,
     FuncDelim(Signature),
+    ImportSrc(ImportSrc),
     Subscript(Option<Primitive>, usize),
 }
 
@@ -149,7 +150,7 @@ pub struct SigDecl {
 }
 
 /// The source of an imported module
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ImportSrc {
     /// A Git URL
     Git(String),
@@ -248,7 +249,11 @@ impl Spanner {
                         }));
                     }
                     spans.push(import.tilde_span.clone().sp(SpanKind::Delimiter));
-                    spans.push(import.path.span.clone().sp(SpanKind::String));
+                    spans.push(if let Some(src) = self.code_meta.import_srcs.get(&import.path.span) {
+                        import.path.span.clone().sp(SpanKind::ImportSrc(src.clone()))
+                    } else {
+                        import.path.span.clone().sp(SpanKind::String)
+                    });
                     for line in import.lines.iter().flatten() {
                         spans.push(line.tilde_span.clone().sp(SpanKind::Delimiter));
                         for item in &line.items {

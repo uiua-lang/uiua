@@ -1087,7 +1087,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
                 }),
                 _ => None,
             },
-            SpanKind::String => Some(Color::Cyan),
+            SpanKind::String | SpanKind::ImportSrc(_) => Some(Color::Cyan),
             SpanKind::Number | SpanKind::Subscript(None, _) => Some(Color::TrueColor {
                 r: 235,
                 g: 136,

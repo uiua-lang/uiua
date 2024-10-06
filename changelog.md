@@ -104,6 +104,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the option to decouple running and formatting in the pad
 - Add a dropdown to the pad to insert named functions
 - Add buttons to the pad to download code and copy a markdown link
+- Git import URLs in the pad can now be Ctrl+clicked to open in a new tab
 
 ## 0.12.3 - 2024-08-17
 ### Language

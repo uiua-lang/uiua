@@ -14,7 +14,7 @@ use leptos::*;
 use uiua::{
     ast::Item,
     encode::{image_to_bytes, value_to_gif_bytes, value_to_image, value_to_wav_bytes},
-    lsp::{spans_with_backend, BindingDocsKind},
+    lsp::{spans_with_backend, BindingDocsKind, ImportSrc},
     Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
     SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
@@ -517,7 +517,7 @@ pub fn gen_code_view(code: &str) -> View {
                     let color_class = match &kind {
                         SpanKind::Primitive(prim, sig) => prim_sig_class(*prim, *sig),
                         SpanKind::Number => "number-literal",
-                        SpanKind::String => "string-literal-span",
+                        SpanKind::String | SpanKind::ImportSrc(_) => "string-literal-span",
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(None, _) => "number-literal",
@@ -606,7 +606,7 @@ pub fn gen_code_view(code: &str) -> View {
                             }
                             add_prim_view(prim, text, title, color_class, &mut frag_views);
                         }
-                        SpanKind::String => {
+                        SpanKind::String | SpanKind::ImportSrc(ImportSrc::File(_)) => {
                             let class = format!("code-span {}", color_class);
                             if text == "@ " {
                                 let space_class =
@@ -628,6 +628,23 @@ pub fn gen_code_view(code: &str) -> View {
                                         .into_view(),
                                 )
                             }
+                        }
+                        SpanKind::ImportSrc(ImportSrc::Git(path)) => {
+                            let title = "Git module path (Ctrl+Click to open)";
+                            let class = format!("code-span code-underline {}", color_class);
+                            let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
+                            let onclick = move |event: web_sys::MouseEvent| {
+                                if os_ctrl(&event) {
+                                    window().open_with_url_and_target(&path, "_blank").unwrap();
+                                }
+                            };
+                            let view = view!(<span
+                                class=class
+                                data-title=title
+                                on:mouseover=onmouseover
+                                on:click=onclick>{text}</span>)
+                            .into_view();
+                            frag_views.push(view);
                         }
                         SpanKind::Signature => {
                             let class = format!("code-span {}", color_class);

@@ -84,7 +84,10 @@ This version is not yet released. If you are reading this on the website, then t
   - Pervasive function machinery has been totally rewritten
     - Observed performance improvements of up to 12x
   - [`fill ⬚`](https://uiua.org/docs/fill)ed array creation has been totally rewritten
-    - Observed performance improvements of up to 400x
+    - Observed performance improvements:
+      - ~1.2x in the best case
+      - ~5x in the average case
+      - ~450x in the worst case
   - [`rows ≡`](https://uiua.org/docs/rows) [`on ⟜`](https://uiua.org/docs/on)/[`by ⊸`](https://uiua.org/docs/by) [`random ⚂`](https://uiua.org/docs/random)/`constant`
   - [`memberof ∈`](https://uiua.org/docs/memberof)[`range ⇡`](https://uiua.org/docs/range) for scalar inputs to [`range ⇡`](https://uiua.org/docs/range)
 - Tweak the formatter to reduce excess vertical space

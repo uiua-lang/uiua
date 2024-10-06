@@ -1,6 +1,7 @@
 use std::{
     borrow::Cow,
     cell::Cell,
+    collections::HashMap,
     mem::{replace, take},
     str::FromStr,
     time::Duration,
@@ -433,6 +434,68 @@ fn build_code_lines(code: &str) -> CodeLines {
 }
 
 pub fn gen_code_view(code: &str) -> View {
+    fn pair_aliases() -> HashMap<(Primitive, Primitive), &'static str> {
+        use Primitive::*;
+        [
+            (
+                (Un, Select),
+                "unselect: Enumerate the length of an array, preserving the array",
+            ),
+            (
+                (Un, Pick),
+                "unpick: Enumerate the shape of an array, preserving the array",
+            ),
+            (
+                (Un, Orient),
+                "unorient: Enumerate the rank of an array, preserving the array",
+            ),
+            ((Anti, Drop), "antidrop: Pad an array"),
+            ((Un, Where), "unwhere: Convert lists of indices into a mask"),
+            (
+                (Un, Shape),
+                "unshape: Create an array of incrementing indices with the given shape",
+            ),
+            ((Un, Couple), "uncouple: Split an array into its two rows"),
+            (
+                (Un, Join),
+                "unjoin: Split an array into its first row and the rest",
+            ),
+            (
+                (Un, Keep),
+                "unkeep: Deduplicate adjacent rows and get the duplicate counts",
+            ),
+        ]
+        .into()
+    }
+    thread_local! {
+        static PAIR_ALIASES: HashMap<(Primitive, Primitive), &'static str> = pair_aliases();
+    }
+
+    fn add_prim_view(
+        prim: Primitive,
+        text: String,
+        title: String,
+        color_class: &str,
+        frag_views: &mut Vec<View>,
+    ) {
+        let class = format!("code-span code-underline {}", color_class);
+        let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
+        let onclick = move |event: web_sys::MouseEvent| {
+            if os_ctrl(&event) {
+                window()
+                    .open_with_url_and_target(&format!("/docs/{}", prim.name()), "_blank")
+                    .unwrap();
+            }
+        };
+        let view = view!(<span
+            class=class
+            data-title=title
+            on:mouseover=onmouseover
+            on:click=onclick>{text}</span>)
+        .into_view();
+        frag_views.push(view);
+    }
+
     // logging::log!("gen_code_view({code:?})");
     let CodeLines { frags } = build_code_lines(code);
     let mut line_views = Vec::new();
@@ -505,31 +568,43 @@ pub fn gen_code_view(code: &str) -> View {
                             .into_view();
                             frag_views.push(view)
                         }
+                        SpanKind::Primitive(prim, _)
+                            if frags.peek().is_some_and(|frag| {
+                                matches!(frag, CodeFragment::Span(_, SpanKind::Primitive(next, _))
+                                    if PAIR_ALIASES.with(|map| map.contains_key(&(prim, *next))))
+                            }) =>
+                        {
+                            let Some(CodeFragment::Span(
+                                next_text,
+                                SpanKind::Primitive(next_prim, next_sig),
+                            )) = frags.next()
+                            else {
+                                unreachable!()
+                            };
+                            let next_color_class = prim_sig_class(next_prim, next_sig);
+                            let title =
+                                PAIR_ALIASES.with(|map| *map.get(&(prim, next_prim)).unwrap());
+                            let title = format!("(compound) {title}");
+                            for (prim, text, color_class) in [
+                                (prim, text, color_class),
+                                (next_prim, next_text, next_color_class),
+                            ] {
+                                add_prim_view(
+                                    prim,
+                                    text,
+                                    title.clone(),
+                                    color_class,
+                                    &mut frag_views,
+                                );
+                            }
+                        }
                         SpanKind::Primitive(prim, _) => {
                             let name = prim.name();
                             let mut title = format!("{}: {}", name, prim.doc().short_text());
                             if let Some(ascii) = prim.ascii() {
                                 title = format!("({}) {}", ascii, title);
                             }
-                            let class = format!("code-span code-underline {}", color_class);
-                            let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
-                            let onclick = move |event: web_sys::MouseEvent| {
-                                if os_ctrl(&event) {
-                                    window()
-                                        .open_with_url_and_target(
-                                            &format!("/docs/{}", prim.name()),
-                                            "_blank",
-                                        )
-                                        .unwrap();
-                                }
-                            };
-                            let view = view!(<span
-                                    class=class
-                                    data-title=title
-                                    on:mouseover=onmouseover
-                                    on:click=onclick>{text}</span>)
-                            .into_view();
-                            frag_views.push(view)
+                            add_prim_view(prim, text, title, color_class, &mut frag_views);
                         }
                         SpanKind::String => {
                             let class = format!("code-span {}", color_class);

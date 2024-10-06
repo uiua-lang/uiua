@@ -3,19 +3,18 @@
 ## 0.13
 The next version of Uiua
 
+- Optimize filled array creation
 - Stabilize `anti` and `obverse`
   - Pick a good glyph for `obverse`
   - Deprecate `setinv` and `setund`
   - Add `anti` and `obverse` to the tutorial
   - Let `under obverse` use `un` or `anti` inverses if necessary
-- Make new pervasive system work with `each`
 - `un by monadic` for accessing `under`'s undo function
 - Make `struct` a dedicated syntax
   - `~[...] / ~{...}`
 - Update language tour
 - Update design page
   - So much has changed since it was written!
-- Combined glyph tooltips for non-obvious inverses in pad
 
 ## Implementation details
 Things that don't affect the language itself, but are important for the compiler or interpreter.

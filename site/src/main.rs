@@ -415,6 +415,11 @@ fn prim_sig_class(prim: Primitive, sig: Option<Signature>) -> &'static str {
         Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
         Primitive::Both => code_font!("monadic-modifier bi text-gradient"),
         Primitive::Member => code_font!("dyadic-function caution text-gradient"),
+        Primitive::Couple => match sig.map(|sig| sig.args) {
+            None | Some(2) => code_font!("dyadic-function"),
+            Some(0 | 1) => code_font!("monadic-function aroace text-gradient"),
+            Some(_) => code_font!("dyadic-function poly text-gradient"),
+        },
         prim if matches!(prim.class(), PrimClass::Stack | PrimClass::Debug)
             && prim.modifier_args().is_none() =>
         {
@@ -462,6 +467,7 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
         "Nb" | "Enby" | "Nonbinary" | "NonBinary" => code_font!("nb text-gradient"),
         "Fluid" | "Genderfluid" | "GenderFluid" => code_font!("fluid text-gradient"),
         "Queer" | "Genderqueer" | "GenderQueer" => code_font!("queer text-gradient"),
+        "Poly" | "Polyamorous" => code_font!("poly text-gradient"),
         _ => match docs.kind {
             BindingDocsKind::Constant(_) => code_font!(""),
             BindingDocsKind::Function { sig, .. } => sig_class(sig),

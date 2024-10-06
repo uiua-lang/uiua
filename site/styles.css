@@ -1410,6 +1410,18 @@ a.clean {
             #000000 74%);
 }
 
+.poly {
+    background-image: radial-gradient(ellipse 200% 70% at 0% 30%,
+            #FCBF00 20%,
+            #FFFFFF 20%,
+            #FFFFFF 30%,
+            #009FE3 30%,
+            #009FE3 45%,
+            #E50051 45%,
+            #E50051 60%,
+            #340C46 60%)
+}
+
 .caution {
     background-image: linear-gradient(135deg,
             #000000 30%,
@@ -1437,6 +1449,7 @@ a.clean {
     .nb2,
     .agender,
     .agender2,
+    .poly,
     .fluid,
     .queer,
     .lesbian,
@@ -1455,6 +1468,7 @@ a.clean {
     .aroace,
     .agender,
     .agender2,
+    .poly,
     .fluid,
     .caution {
         -webkit-text-stroke: 0.01em #fff8;

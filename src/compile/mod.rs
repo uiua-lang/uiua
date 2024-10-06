@@ -1315,10 +1315,14 @@ code:
                 let new_func = self.new_functions.last_mut().unwrap();
                 // Inline constant arrays
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
-                    let values = inner.iter().rev().map(|instr| match instr {
-                        Instr::Push(v) => v.clone(),
-                        _ => unreachable!(),
-                    });
+                    let values: Vec<_> = inner
+                        .iter()
+                        .rev()
+                        .map(|instr| match instr {
+                            Instr::Push(v) => v.clone(),
+                            _ => unreachable!(),
+                        })
+                        .collect();
                     match Value::from_row_values(values, &(&word.span, &self.asm.inputs)) {
                         Ok(val) => {
                             new_func.instrs.pop();
@@ -1413,12 +1417,17 @@ code:
                             Ok(Array::<Boxed>::default().into())
                         } else {
                             Value::from_row_values(
-                                values.map(|v| Value::Box(Boxed(v).into())),
+                                values
+                                    .map(|v| Value::Box(Boxed(v).into()))
+                                    .collect::<Vec<_>>(),
                                 &(&word.span, &self.asm.inputs),
                             )
                         }
                     } else {
-                        Value::from_row_values(values, &(&word.span, &self.asm.inputs))
+                        Value::from_row_values(
+                            values.collect::<Vec<_>>(),
+                            &(&word.span, &self.asm.inputs),
+                        )
                     };
                     match res {
                         Ok(val) => {

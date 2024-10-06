@@ -62,7 +62,7 @@ fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueMonFn> {
             v.fix_depth(d);
             Ok(v)
         }),
-        Box => spanned_mon_fn(span, |v, d, _| Ok(v.box_depth(d))),
+        Box => spanned_mon_fn(span, |v, d, _| Ok(v.box_depth(d).into())),
         First => spanned_mon_fn(span, |v, d, env| v.first_depth(d, env)),
         Last => spanned_mon_fn(span, |v, d, env| v.last_depth(d, env)),
         Sort => spanned_mon_fn(span, |mut v, d, _| {

@@ -946,7 +946,7 @@
     "description": "Get the current time in seconds"
   },
   "obverse": {
-    "glyph": "⍛",
+    "glyph": "⌅",
     "outputs": 1,
     "modifier_args": 1,
     "class": "InversionModifier",

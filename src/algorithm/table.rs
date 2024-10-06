@@ -852,7 +852,9 @@ fn triangle1(f: Function, env: &mut Uiua) -> UiuaResult {
                     row
                 });
             if let Some(Primitive::First) = f.as_primitive(&env.asm) {
-                let value = Value::from_row_values_infallible(rows.map(|row| row.row(0)));
+                let value = Value::from_row_values_infallible(
+                    rows.map(|row| row.row(0)).collect::<Vec<_>>(),
+                );
                 env.push(value);
                 return Ok(());
             }

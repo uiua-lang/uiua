@@ -71,7 +71,7 @@ impl Value {
             self.reshape_impl(&spec, env)
         }
     }
-    pub(crate) fn box_depth(mut self, depth: usize) -> Self {
+    pub(crate) fn box_depth(mut self, depth: usize) -> Array<Boxed> {
         let depth = depth.min(self.rank());
         if depth == 0 {
             return Boxed(self).into();
@@ -82,7 +82,7 @@ impl Value {
         let data: EcoVec<Boxed> = self.into_row_shaped_slices(row_shape).map(Boxed).collect();
         let mut arr = Array::new(new_shape, data);
         arr.set_per_meta(per_meta);
-        arr.into()
+        arr
     }
     /// Attempt to parse the value into a number
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
@@ -320,6 +320,29 @@ impl<T: ArrayValue> Array<T> {
             keys.unfix();
         }
         self.shape.unfix();
+    }
+}
+
+impl<T: ArrayValue> Array<T>
+where
+    Value: From<Array<T>>,
+{
+    pub(crate) fn box_depth(mut self, depth: usize) -> Array<Boxed> {
+        let depth = depth.min(self.rank());
+        if depth == 0 {
+            return Boxed(self.into()).into();
+        }
+        let per_meta = self.take_per_meta();
+        let new_shape: Shape = self.shape()[..depth].into();
+        let row_shape: Shape = self.shape()[depth..].into();
+        let data: EcoVec<Boxed> = self
+            .into_row_shaped_slices(row_shape)
+            .map(Value::from)
+            .map(Boxed)
+            .collect();
+        let mut arr = Array::new(new_shape, data);
+        arr.set_per_meta(per_meta);
+        arr
     }
 }
 

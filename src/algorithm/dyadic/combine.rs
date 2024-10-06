@@ -1,13 +1,14 @@
 //! Code for couple, join, and general array creation
 
-use std::{cmp::Ordering, mem::take};
+use std::cmp::Ordering;
 
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::{max_shape, validate_size_impl, FillContext},
+    algorithm::{max_shape, validate_size_impl, FillContext, Indexable},
     cowslice::cowslice,
-    val_as_arr, Array, ArrayValue, FormatShape, Primitive, Uiua, UiuaResult, Value,
+    val_as_arr, Array, ArrayValue, Boxed, Complex, FormatShape, Primitive, Shape, Uiua, UiuaResult,
+    Value,
 };
 
 fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
@@ -365,25 +366,27 @@ impl<T: ArrayValue> Array<T> {
         ctx: &C,
     ) -> Result<(), C::Error> {
         self.combine_meta(other.meta());
-        let target_shape = match ctx.scalar_fill::<T>() {
-            Ok(fill) => {
-                while self.rank() <= other.rank() {
-                    self.shape.push(1);
-                }
-                let target_shape = max_shape(&self.shape, &other.shape);
-                let row_shape = &target_shape[1..];
-                self.fill_to_shape(&target_shape, fill.clone());
-                other.fill_to_shape(row_shape, fill);
-                target_shape
+        if self.shape[1..] == other.shape {
+            self.data.extend_from_cowslice(other.data);
+        } else if allow_ext && self.shape[1..].ends_with(&other.shape) {
+            if !other.shape.contains(&0) {
+                let reps = self.row_len() / other.element_count();
+                self.data.extend_repeat_slice(&other.data, reps);
             }
-            Err(e) => {
-                if allow_ext && self.shape.ends_with(&other.shape) {
-                    for &a_dim in self.shape[1..self.rank() - other.rank()].iter().rev() {
-                        other
-                            .reshape_scalar_integer(a_dim)
-                            .map_err(|e| ctx.error(e))?;
+        } else {
+            match ctx.scalar_fill::<T>() {
+                Ok(fill) => {
+                    while self.rank() <= other.rank() {
+                        self.shape.push(1);
                     }
-                } else {
+                    let target_shape = max_shape(&self.shape, &other.shape);
+                    let row_shape = &target_shape[1..];
+                    self.fill_to_shape(&target_shape, fill.clone());
+                    other.fill_to_shape(row_shape, fill);
+                    self.data.extend_from_cowslice(other.data);
+                    self.shape = target_shape;
+                }
+                Err(e) => {
                     if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot join rank {} array with rank {} array{e}",
@@ -399,14 +402,8 @@ impl<T: ArrayValue> Array<T> {
                         ))));
                     }
                 }
-                take(&mut self.shape)
             }
-        };
-        if let Some(label) = self.take_label().or_else(|| other.take_label()) {
-            self.meta_mut().label = Some(label);
         }
-        self.data.extend_from_cowslice(other.data);
-        self.shape = target_shape;
         self.shape[0] += 1;
         self.validate_shape();
         Ok(())
@@ -812,40 +809,267 @@ impl Value {
     /// Panics if the row values have incompatible shapes
     pub fn from_row_values_infallible<V>(values: V) -> Self
     where
-        V: IntoIterator,
-        V::Item: Into<Value>,
-        V::IntoIter: ExactSizeIterator,
+        V: Indexable<Item = Value>,
     {
-        Self::from_row_values(values.into_iter().map(Into::into), &()).unwrap()
+        Self::from_row_values(values, &()).unwrap()
     }
     /// Create a value from row values
     pub fn from_row_values<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
     where
-        V: IntoIterator<Item = Value>,
+        V: Indexable<Item = Value>,
         C: FillContext,
     {
-        let mut row_values = values.into_iter();
-        let Some(mut value) = row_values.next() else {
-            return Ok(Value::default());
-        };
-        let (min, max) = row_values.size_hint();
-        let to_reserve = max.unwrap_or(min);
-        if let Some(row) = row_values.next() {
-            validate_size_impl(
-                row.elem_size(),
-                [to_reserve, value.shape().iter().product::<usize>()],
-            )
-            .map_err(|e| ctx.error(e))?;
-            let total_elements = to_reserve * value.shape().iter().product::<usize>();
-            value.reserve_min(total_elements);
-            value.couple_impl(row, false, ctx)?;
-            for row in row_values {
-                value.append(row, false, ctx)?;
+        fn max_shape(a: Shape, b: &Shape) -> Shape {
+            if a.starts_with(b) {
+                return a;
             }
-        } else {
-            value.shape_mut().insert(0, 1);
+            let shape_len = a.len().max(b.len());
+            let mut new_shape = Shape::with_capacity(shape_len);
+            for _ in 0..shape_len {
+                new_shape.push(0);
+            }
+            for i in 0..new_shape.len() {
+                let j = new_shape.len() - i - 1;
+                if a.len() > i {
+                    new_shape[j] = a[a.len() - i - 1];
+                }
+                if b.len() > i {
+                    new_shape[j] = new_shape[j].max(b[b.len() - i - 1]);
+                }
+            }
+            new_shape
         }
-        Ok(value)
+
+        if values.is_empty() {
+            return Ok(Value::default());
+        }
+        let to_reserve = values.len();
+        let max_shape = values
+            .iter()
+            .fold(Shape::SCALAR, |a: Shape, b| max_shape(a, b.shape()));
+        let mut row_values;
+        let mut value = match &values[0] {
+            Value::Num(_) => {
+                let mut has_complex = false;
+                let mut box_rank = None;
+                for b in &values[1..] {
+                    match b {
+                        Value::Complex(_) => has_complex = true,
+                        Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
+                        Value::Char(_) => {
+                            return Err(ctx.error("Cannot combine number and character arrays"))
+                        }
+                        _ => {}
+                    }
+                }
+                row_values = values.into_iter();
+                let arr = match row_values.next().unwrap() {
+                    Value::Num(arr) => arr,
+                    _ => unreachable!(),
+                };
+                if let Some(box_rank) = box_rank {
+                    Value::Box(arr.box_depth(box_rank))
+                } else if has_complex {
+                    Value::Complex(arr.convert())
+                } else {
+                    Value::Num(arr)
+                }
+            }
+            Value::Byte(_) => {
+                let mut has_num = false;
+                let mut has_complex = false;
+                let mut box_rank = None;
+                for b in &values[1..] {
+                    match b {
+                        Value::Num(_) => has_num = true,
+                        Value::Complex(_) => has_complex = true,
+                        Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
+                        Value::Char(_) => {
+                            return Err(ctx.error("Cannot combine number and character arrays"))
+                        }
+                        _ => {}
+                    }
+                }
+                row_values = values.into_iter();
+                let arr = match row_values.next().unwrap() {
+                    Value::Byte(arr) => arr,
+                    _ => unreachable!(),
+                };
+                if let Some(box_rank) = box_rank {
+                    Value::Box(arr.box_depth(box_rank))
+                } else if has_complex {
+                    Value::Complex(arr.convert())
+                } else if has_num {
+                    Value::Num(arr.convert())
+                } else {
+                    Value::Byte(arr)
+                }
+            }
+            Value::Complex(_) => {
+                let mut box_rank = None;
+                for b in &values[1..] {
+                    match b {
+                        Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
+                        Value::Char(_) => {
+                            return Err(ctx.error("Cannot combine complex and character arrays"))
+                        }
+                        _ => {}
+                    }
+                }
+                row_values = values.into_iter();
+                let arr = match row_values.next().unwrap() {
+                    Value::Complex(arr) => arr,
+                    _ => unreachable!(),
+                };
+                if let Some(box_rank) = box_rank {
+                    Value::Box(arr.box_depth(box_rank))
+                } else {
+                    Value::Complex(arr)
+                }
+            }
+            Value::Char(_) => {
+                let mut box_rank = None;
+                for b in &values[1..] {
+                    match b {
+                        Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
+                        Value::Num(_) | Value::Byte(_) => {
+                            return Err(ctx.error("Cannot combine character and number arrays"))
+                        }
+                        Value::Complex(_) => {
+                            return Err(ctx.error("Cannot combine character and complex arrays"))
+                        }
+                        _ => {}
+                    }
+                }
+                row_values = values.into_iter();
+                let arr = match row_values.next().unwrap() {
+                    Value::Char(arr) => arr,
+                    _ => unreachable!(),
+                };
+                if let Some(box_rank) = box_rank {
+                    Value::Box(arr.box_depth(box_rank))
+                } else {
+                    Value::Char(arr)
+                }
+            }
+            Value::Box(_) => {
+                row_values = values.into_iter();
+                row_values.next().unwrap()
+            }
+        };
+
+        // Fill value
+        value.match_fill(ctx);
+        if value.shape() != &max_shape {
+            match &mut value {
+                Value::Num(arr) => match ctx.scalar_fill::<f64>() {
+                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
+                    Err(e) => {
+                        return Err(C::fill_error(ctx.error(format!(
+                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
+                            arr.shape()
+                        ))))
+                    }
+                },
+                Value::Byte(arr) => match ctx.scalar_fill::<u8>() {
+                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
+                    Err(e) => {
+                        return Err(C::fill_error(ctx.error(format!(
+                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
+                            arr.shape()
+                        ))))
+                    }
+                },
+                Value::Complex(arr) => match ctx.scalar_fill::<Complex>() {
+                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
+                    Err(e) => {
+                        return Err(C::fill_error(ctx.error(format!(
+                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
+                            arr.shape()
+                        ))))
+                    }
+                },
+                Value::Char(arr) => match ctx.scalar_fill::<char>() {
+                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
+                    Err(e) => {
+                        return Err(C::fill_error(ctx.error(format!(
+                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
+                            arr.shape()
+                        ))))
+                    }
+                },
+                Value::Box(arr) => match ctx.scalar_fill::<Boxed>() {
+                    Ok(fill) => arr.fill_to_shape(&max_shape, fill),
+                    Err(e) => {
+                        return Err(C::fill_error(ctx.error(format!(
+                            "Cannot combine arrays with shapes {} and {max_shape}{e}",
+                            arr.shape()
+                        ))))
+                    }
+                },
+            }
+        }
+
+        // Validate size and reserve space
+        let total_elements = validate_size_impl(
+            value.elem_size(),
+            value.shape().iter().copied().chain([to_reserve]),
+        )
+        .map_err(|e| ctx.error(e))?;
+        value.reserve_min(total_elements);
+
+        // Combine the arrays
+        value.shape_mut().insert(0, 1);
+        Ok(match value {
+            Value::Num(mut a) => {
+                for val in row_values {
+                    match val {
+                        Value::Num(b) => a.append(b, false, ctx)?,
+                        Value::Byte(b) => a.append(b.convert(), false, ctx)?,
+                        _ => unreachable!(),
+                    }
+                }
+                a.into()
+            }
+            Value::Byte(mut a) => {
+                for val in row_values {
+                    match val {
+                        Value::Byte(b) => a.append(b, false, ctx)?,
+                        _ => unreachable!(),
+                    }
+                }
+                a.into()
+            }
+            Value::Complex(mut a) => {
+                for val in row_values {
+                    match val {
+                        Value::Num(b) => a.append(b.convert(), false, ctx)?,
+                        Value::Byte(b) => a.append(b.convert(), false, ctx)?,
+                        Value::Complex(b) => a.append(b, false, ctx)?,
+                        _ => unreachable!(),
+                    }
+                }
+                a.into()
+            }
+            Value::Char(mut a) => {
+                for val in row_values {
+                    match val {
+                        Value::Char(b) => a.append(b, false, ctx)?,
+                        _ => unreachable!(),
+                    }
+                }
+                a.into()
+            }
+            Value::Box(mut a) => {
+                for val in row_values {
+                    match val {
+                        Value::Box(b) => a.append(b, false, ctx)?,
+                        val => a.append(val.box_depth(a.rank()), false, ctx)?,
+                    }
+                }
+                a.into()
+            }
+        })
     }
 }
 

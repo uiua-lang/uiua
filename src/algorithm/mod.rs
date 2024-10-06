@@ -8,6 +8,7 @@ use std::{
     hash::{Hash, Hasher},
     iter,
     mem::{size_of, take},
+    ops::Deref,
     option,
 };
 
@@ -31,6 +32,10 @@ pub mod pervade;
 pub mod reduce;
 pub mod table;
 pub mod zip;
+
+pub trait Indexable: IntoIterator + Deref<Target = [Self::Item]> {}
+
+impl<T> Indexable for T where T: IntoIterator + Deref<Target = [T::Item]> {}
 
 type MultiOutput<T> = TinyVec<[T; 1]>;
 fn multi_output<T: Clone + Default>(n: usize, val: T) -> MultiOutput<T> {
@@ -984,7 +989,8 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
                 backing[b].shape()
             )));
         }
-        Value::from_row_values(path.into_iter().map(|i| backing[i].clone()), env)
+        let path: Vec<_> = path.into_iter().map(|i| backing[i].clone()).collect();
+        Value::from_row_values(path, env)
     };
 
     if first_only {

@@ -1654,7 +1654,9 @@ code:
         }
         // Attempt to look up the identifier as a non-macro
         let as_non_macro = self.find_name(name.strip_suffix('!')?, skip_local)?;
-        if let BindingKind::Module(_) = self.asm.bindings[as_non_macro.index].kind {
+        if let BindingKind::Module(_) | BindingKind::Import(_) =
+            self.asm.bindings[as_non_macro.index].kind
+        {
             // Only allow it if it is a module
             Some(as_non_macro)
         } else {
@@ -1883,7 +1885,21 @@ code:
                     self.push_instr(Instr::Call(span));
                 }
             }
-            BindingKind::Import { .. } => self.add_error(span, "Cannot import module item here."),
+            BindingKind::Import(path) => {
+                if let Some(local) = self.imports.get(&path).and_then(|m| m.names.get("Call")) {
+                    self.code_meta.global_references.remove(&span);
+                    self.code_meta
+                        .global_references
+                        .insert(span.clone(), local.index);
+                    self.global_index(local.index, span, call);
+                } else {
+                    self.add_error(
+                        span,
+                        "Module cannot be called here as \
+                        it has no `Call` function.",
+                    );
+                }
+            }
             BindingKind::Module(m) => {
                 if let Some(local) = m.names.get("Call").or_else(|| m.names.get("New")) {
                     self.code_meta.global_references.remove(&span);
@@ -1892,7 +1908,11 @@ code:
                         .insert(span.clone(), local.index);
                     self.global_index(local.index, span, call);
                 } else {
-                    self.add_error(span, "Cannot import module item here.");
+                    self.add_error(
+                        span,
+                        "Module cannot be called here as \
+                        it has no `Call` or `New` function.",
+                    );
                 }
             }
             BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {

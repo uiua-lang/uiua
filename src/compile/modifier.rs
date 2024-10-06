@@ -1587,6 +1587,7 @@ impl Compiler {
         } else if let Some(m) =
             (self.asm.bindings.get(local.index)).and_then(|binfo| match &binfo.kind {
                 BindingKind::Module(m) => Some(m),
+                BindingKind::Import(path) => self.imports.get(path),
                 _ => None,
             })
         {

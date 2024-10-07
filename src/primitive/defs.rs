@@ -2253,13 +2253,13 @@ primitive!(
     ([1], Both, Planet, ("both", '∩')),
     /// Define the various inverses of a function
     ///
-    /// [obverse] defines how a function should interact with [un], [under], and [anti].
+    /// [obverse] defines how a function should interact with [un], [anti], and [under].
     /// It can either take a single function, or a function pack with up to 5 functions.
     ///
-    /// If only a single function is provided, the function will be called in either direction of an [under].
+    /// If only a single function is provided, the function will be called in both directions of an [under].
     /// This is useful when you want to call one bit of code both before and after some other code.
     /// For example, calculating the standard deviation of some data involves taking the mean twice.
-    /// ex: StdDev ← √÷⧻⟜/+×.-÷⧻⟜/+.
+    /// ex: StdDev ← √ ÷⧻⟜/+ ×.- ÷⧻⟜/+ .
     ///   : StdDev [1 2 3 4]
     /// The averaging section can be factored out using [under][obverse].
     /// ex: # Experimental!
@@ -2276,7 +2276,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : F ← ⌅(+×10:|÷10-)
     ///   : F 2 3
-    ///   : ˘F 3 23
+    ///   : ˘F 2 32
     /// This sort of inverse also works with [under].
     /// ex: # Experimental!
     ///   : F ← ⌅(+×10:|÷10-)

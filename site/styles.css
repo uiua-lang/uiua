@@ -1394,22 +1394,6 @@ a.clean {
             #000000 70%);
 }
 
-.agender2 {
-    background-image: linear-gradient(40deg,
-            #000000 39%,
-            #BCC4C7 39%,
-            #BCC4C7 46%,
-            #FFFFFF 46%,
-            #FFFFFF 53%,
-            #B7F684 53%,
-            #B7F684 60%,
-            #FFFFFF 60%,
-            #FFFFFF 67%,
-            #BCC4C7 67%,
-            #BCC4C7 74%,
-            #000000 74%);
-}
-
 .poly {
     background-image: radial-gradient(ellipse 200% 70% at 0% 30%,
             #FCBF00 20%,
@@ -1448,7 +1432,6 @@ a.clean {
     .nb,
     .nb2,
     .agender,
-    .agender2,
     .poly,
     .fluid,
     .queer,
@@ -1467,7 +1450,6 @@ a.clean {
     .aro,
     .aroace,
     .agender,
-    .agender2,
     .poly,
     .fluid,
     .caution {

@@ -1747,13 +1747,24 @@ fn under_custom_pattern<'a>(
     let [Instr::PushFunc(f), Instr::CustomInverse(cust, span), input @ ..] = input else {
         return generic();
     };
-    let (before, after) = cust.under.clone().ok_or(Generic)?;
-    if before.signature().outputs < f.signature().outputs {
+    let (mut befores, mut afters, to_save) = if let Some((before, after)) = cust.under.clone() {
+        if before.signature().outputs < f.signature().outputs {
+            return generic();
+        }
+        let befores = EcoVec::from(before.instrs(&comp.asm));
+        let afters = EcoVec::from(after.instrs(&comp.asm));
+        let to_save = before.signature().outputs - f.signature().outputs;
+        (befores, afters, to_save)
+    } else if let Some(anti) = cust.anti.clone() {
+        let to_save = anti.signature().args - f.signature().outputs;
+        let mut befores = EcoVec::from(f.instrs(&comp.asm));
+        befores.insert(0, Instr::copy_inline(*span));
+        befores.push(Instr::pop_inline(1, *span));
+        let afters = EcoVec::from(anti.instrs(&comp.asm));
+        (befores, afters, to_save)
+    } else {
         return generic();
-    }
-    let to_save = before.signature().outputs - f.signature().outputs;
-    let mut befores = EcoVec::from(before.instrs(&comp.asm));
-    let mut afters = EcoVec::from(after.instrs(&comp.asm));
+    };
     if to_save > 0 {
         befores.push(Instr::PushTemp {
             stack: TempStack::Under,

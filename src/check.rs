@@ -425,11 +425,11 @@ impl VirtualEnv {
                 }
                 Un => {
                     let sig = self.pop_func()?;
-                    self.handle_args_outputs(sig.outputs, sig.args)?;
+                    self.handle_sig(sig.inverse())?;
                 }
                 Anti => {
                     let sig = self.pop_func()?;
-                    self.handle_args_outputs(sig.args, sig.outputs)?;
+                    self.handle_sig(sig.anti().unwrap_or(sig))?;
                 }
                 Under => {
                     let f = self.pop_func()?;

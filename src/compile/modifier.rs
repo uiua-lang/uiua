@@ -158,7 +158,7 @@ impl Compiler {
                             f = a.clone();
                             if a.signature() == b.signature().inverse() {
                                 cust.un = Some(b.clone());
-                            } else if a.signature() == b.signature() {
+                            } else if a.signature().anti().is_some_and(|sig| sig == b.signature()) {
                                 cust.anti = Some(b.clone());
                             } else {
                                 cust.under = Some((a.clone(), b.clone()));
@@ -191,7 +191,7 @@ impl Compiler {
                                 if !c.instrs(&self.asm).is_empty() {
                                     cust.under = Some((c.clone(), d.clone()));
                                 }
-                                if a.signature() == d.signature() {
+                                if a.signature().anti().is_some_and(|sig| sig == d.signature()) {
                                     cust.anti = Some(d.clone());
                                 }
                             }
@@ -217,17 +217,29 @@ impl Compiler {
                                 cust.under = Some((c.clone(), d.clone()));
                             }
                             if !e.instrs(&self.asm).is_empty() {
-                                if a.signature() != e.signature() {
-                                    self.emit_diagnostic(
+                                match a.signature().anti() {
+                                    None => self.emit_diagnostic(
                                         format!(
-                                            "First and fifth functions must have the same signature, \
-                                            but their signatures are {} and {}",
-                                            a.signature(),
-                                            e.signature()
+                                            "An anti inverse is specified, but the first \
+                                            function's signature {} cannot have an anti inverse",
+                                            a.signature()
                                         ),
                                         DiagnosticKind::Warning,
                                         modifier.span.clone(),
-                                    );
+                                    ),
+                                    Some(sig) if sig != e.signature() => {
+                                        self.emit_diagnostic(
+                                            format!(
+                                                "The first function's signature implies an \
+                                                anti inverse with signature {sig}, but the \
+                                                fifth function's signature is {}",
+                                                e.signature()
+                                            ),
+                                            DiagnosticKind::Warning,
+                                            modifier.span.clone(),
+                                        );
+                                    }
+                                    Some(_) => {}
                                 }
                                 cust.anti = Some(e.clone());
                             }
@@ -970,7 +982,7 @@ impl Compiler {
                 let (func, sig) = self.compile_operand_word(operand)?;
                 let func = self.make_function(span.clone().into(), sig, func);
                 let cust = CustomInverse {
-                    under: Some((func.clone(), Function::default())),
+                    under: Some((func.clone(), func.clone())),
                     ..Default::default()
                 };
                 let instrs = eco_vec![Instr::PushFunc(func), Instr::CustomInverse(cust, spandex)];

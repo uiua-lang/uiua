@@ -2256,29 +2256,43 @@ primitive!(
     /// [obverse] defines how a function should interact with [un], [under], and [anti].
     /// It can either take a single function, or a function pack with up to 5 functions.
     ///
-    /// If only a single function is provided, it can be used to make a function not run in the "undo" part of [under]. This is useful when a function has to do some setup before the main [under]able part.
-    /// ex! F ← ▽⊸◿2
-    ///   : F [1 2 3 4 5]
-    ///   : ⍜F(×10) [1 2 3 4 5]
+    /// If only a single function is provided, the function will be called in either direction of an [under].
+    /// This is useful when you want to call one bit of code both before and after some other code.
+    /// For example, calculating the standard deviation of some data involves taking the mean twice.
+    /// ex: StdDev ← √÷⧻⟜/+×.-÷⧻⟜/+.
+    ///   : StdDev [1 2 3 4]
+    /// The averaging section can be factored out using [under][obverse].
     /// ex: # Experimental!
-    ///   : F ← ▽⌅(⊸◿2)
-    ///   : F [1 2 3 4 5]
-    ///   : ⍜F(×10) [1 2 3 4 5]
+    ///   : StdDev ← √⍜⌅(÷⧻⟜/+)(×.-).
+    ///   : StdDev [1 2 3 4]
     /// If given 2 functions, which inverse is set depends on the functions' signatures.
     /// If the functions have opposite signatures, then an [un]-compatible inverse is set.
     /// ex: # Experimental!
     ///   : F ← ⌅(+|⊃⌊⌈÷2)
     ///   : F 1 2
     ///   : [°F 25]
-    /// If the functions have the same signature, then an [anti]-compatible inverse is set.
+    /// If the functions have signatures `|a.b` and `|(b+1).(a-1)`, then an [anti]-compatible inverse is set.
+    /// The most commonly used signatures for which this holds is when both signatures are `|2.1`.
     /// ex: # Experimental!
-    ///   : F ← ⌅(+×10|÷10-)
+    ///   : F ← ⌅(+×10:|÷10-)
     ///   : F 2 3
     ///   : ˘F 3 23
+    /// This sort of inverse also works with [under].
+    /// ex: # Experimental!
+    ///   : F ← ⌅(+×10:|÷10-)
+    ///   : ⍜F? 2 5
     /// Otherwise, an [under]-compatible inverse is set.
     /// ex: # Experimental!
     ///   : F ← ⌅(+|¯)
     ///   : ⍜F? 1 2
+    /// Leaving the second function empty is useful when a function has to do some setup before the main [under]able part.
+    /// ex! F ← ▽⊸◿2
+    ///   : F [1 2 3 4 5]
+    ///   : ⍜F(×10) [1 2 3 4 5]
+    /// ex: # Experimental!
+    ///   : F ← ▽⌅(⊸◿2|)
+    ///   : F [1 2 3 4 5]
+    ///   : ⍜F(×10) [1 2 3 4 5]
     /// If given 3 functions, an [under]-compatible inverse always set.
     /// The first function is the normal case.
     /// The second function is the "do" part of the [under].

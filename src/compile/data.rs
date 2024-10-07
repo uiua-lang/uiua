@@ -1,7 +1,40 @@
 use super::*;
 
 impl Compiler {
-    pub(super) fn data_def(&mut self, data: DataDef) -> UiuaResult {
+    pub(super) fn data_def(
+        &mut self,
+        mut data: DataDef,
+        prev_com: Option<EcoString>,
+    ) -> UiuaResult {
+        self.experimental_error(&data.tilde_span, || {
+            "Data definitions are experimental. To use them, add \
+            `# Experimental!` to the top of the file."
+        });
+        if let Some(name) = data.name.take() {
+            let module = self.in_scope(ScopeKind::Module(name.value.clone()), |comp| {
+                comp.data_def(data, prev_com.clone())
+            })?;
+
+            // Add global
+            let global_index = self.next_global;
+            self.next_global += 1;
+            let local = LocalName {
+                index: global_index,
+                public: true,
+            };
+            let comment = prev_com.map(|text| DocComment::from(text.as_str()));
+            self.asm.add_binding_at(
+                local,
+                BindingKind::Module(module),
+                Some(name.span.clone()),
+                comment,
+            );
+            // Add local
+            self.scope.names.insert(name.value.clone(), local);
+            (self.code_meta.global_references).insert(name.span.clone(), local.index);
+            return Ok(());
+        }
+
         struct Field {
             name: EcoString,
             name_span: CodeSpan,

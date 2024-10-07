@@ -478,6 +478,8 @@ impl<'i> Parser<'i> {
         let reset = self.index;
         let tilde_span = self.try_exact(Tilde.into())?;
         self.try_spaces();
+        let name = self.try_ident();
+        self.try_spaces();
         let mut boxed = false;
         let open_span = if let Some(span) = self.try_exact(OpenBracket.into()) {
             span
@@ -529,6 +531,7 @@ impl<'i> Parser<'i> {
             .span;
         Some(DataDef {
             tilde_span,
+            name,
             boxed,
             open_span,
             fields,

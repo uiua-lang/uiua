@@ -701,6 +701,10 @@ impl<'a> Formatter<'a> {
             }
             Item::Data(data) => {
                 self.push(&data.tilde_span, "~");
+                if let Some(name) = &data.name {
+                    self.push(&name.span, &name.value);
+                    self.output.push(' ');
+                }
                 self.push(&data.open_span, if data.boxed { "{" } else { "[" });
                 let multiline = data.fields.len() > 1
                     && data.fields.iter().enumerate().any(|(i, f)| {

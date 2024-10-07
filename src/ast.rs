@@ -121,6 +121,8 @@ impl Import {
 pub struct DataDef {
     /// The span of the ~
     pub tilde_span: CodeSpan,
+    /// The name of the module
+    pub name: Option<Sp<Ident>>,
     /// Whether the array is boxed
     pub boxed: bool,
     /// The open delimiter span

@@ -583,8 +583,8 @@ impl<T: ArrayValue> Array<T> {
     }
     /// `keep` this array with some counts
     pub fn keep_list(mut self, counts: &[f64], env: &Uiua) -> UiuaResult<Self> {
-        if counts.iter().any(|&n| n < 0.0 || n.fract() != 0.0) {
-            return Err(env.error("Keep amount must be a list of natural numbers"));
+        if counts.iter().any(|&n| n.fract() != 0.0) {
+            return Err(env.error("Keep amount must be a list of integers"));
         }
         self.take_map_keys();
         let counts = pad_keep_counts(counts, self.row_count(), env)?;
@@ -592,8 +592,9 @@ impl<T: ArrayValue> Array<T> {
             if counts.len() != 1 {
                 return Err(env.error("Scalar array can only be kept with a single number"));
             }
-            let mut new_data = EcoVec::with_capacity(counts[0] as usize);
-            for _ in 0..counts[0] as usize {
+            let count = counts[0].max(0.0) as usize;
+            let mut new_data = EcoVec::with_capacity(count);
+            for _ in 0..count {
                 new_data.push(self.data[0].clone());
             }
             self = new_data.into();
@@ -603,7 +604,7 @@ impl<T: ArrayValue> Array<T> {
             let mut sum: f64 = 0.0;
             for &n in counts.iter() {
                 sum += n;
-                match n as usize {
+                match n.max(0.0) as usize {
                     0 => {}
                     1 => true_count += 1,
                     _ => all_bools = false,
@@ -632,14 +633,14 @@ impl<T: ArrayValue> Array<T> {
                 let mut new_len = 0;
                 if row_len > 0 {
                     for (n, r) in counts.iter().zip(self.data.chunks_exact(row_len)) {
-                        let n = *n as usize;
+                        let n = n.max(0.0) as usize;
                         new_len += n;
                         for _ in 0..n {
                             new_data.extend_from_slice(r);
                         }
                     }
                 } else {
-                    new_len = counts.iter().sum::<f64>() as usize;
+                    new_len = counts.iter().map(|&n| n.max(0.0) as usize).sum();
                 }
                 self.data = new_data;
                 self.shape[0] = new_len;
@@ -718,7 +719,7 @@ impl<T: ArrayValue> Array<T> {
                 for (&count, into_slice) in
                     (counts.iter()).zip(into.data.as_mut_slice().chunks_exact_mut(into_row_len))
                 {
-                    if count == 0.0 {
+                    if count < 1.0 {
                         continue;
                     }
                     into_slice.clone_from_slice(from_rows.next().expect(
@@ -741,7 +742,7 @@ impl<T: ArrayValue> Array<T> {
                     .iter()
                     .zip(into.data.as_mut_slice().chunks_exact_mut(into_row_len))
                 {
-                    if count == 0.0 {
+                    if count < 1.0 {
                         continue;
                     }
                     for i in 0..n {
@@ -770,7 +771,7 @@ impl<T: ArrayValue> Array<T> {
                 );
                 let mut from_rows = from.into_rows();
                 for (&count, into_row) in counts.iter().zip(into.into_rows()) {
-                    if count == 0.0 {
+                    if count < 1.0 {
                         rows.push(into_row);
                     } else {
                         let from_row = from_rows.next().expect(
@@ -797,11 +798,10 @@ pub(super) fn pad_keep_counts<'a>(
         Ordering::Equal => {}
         Ordering::Less => match env.either_array_fill::<f64>() {
             Ok(fill) => {
-                if let Some(n) = fill.data.iter().find(|&&n| n < 0.0 || n.fract() != 0.0) {
+                if let Some(n) = fill.data.iter().find(|&&n| n.fract() != 0.0) {
                     return Err(env.error(format!(
                         "Fill value for keep must be an array of \
-                        non-negative integers, but one of the \
-                        values is {n}"
+                        integers, but one of the values is {n}"
                     )));
                 }
                 match fill.rank() {

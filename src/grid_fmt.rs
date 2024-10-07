@@ -55,7 +55,7 @@ impl GridFmt for f64 {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let f = *self;
         let positive = f.abs();
-        let is_neg = f < 0.0;
+        let is_neg = f.is_sign_negative();
         let minus = if is_neg { "¯" } else { "" };
         let s = if (positive - PI).abs() <= f64::EPSILON {
             format!("{minus}π")

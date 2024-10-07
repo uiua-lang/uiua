@@ -21,6 +21,8 @@ pub enum Item {
     Import(Import),
     /// A scope
     Module(Sp<ScopedModule>),
+    /// A data definition
+    Data(DataDef),
 }
 
 /// A binding
@@ -111,6 +113,48 @@ impl Import {
     /// The imported items
     pub fn items(&self) -> impl Iterator<Item = &Sp<Ident>> {
         self.lines.iter().flatten().flat_map(|line| &line.items)
+    }
+}
+
+#[derive(Debug, Clone)]
+/// A data definition
+pub struct DataDef {
+    /// The span of the ~
+    pub tilde_span: CodeSpan,
+    /// Whether the array is boxed
+    pub boxed: bool,
+    /// The open delimiter span
+    pub open_span: CodeSpan,
+    /// The data fields
+    pub fields: Vec<DataField>,
+    /// The close delimiter span
+    pub close_span: CodeSpan,
+}
+
+#[derive(Debug, Clone)]
+/// A data field
+pub struct DataField {
+    /// The name of the field
+    pub name: Sp<Ident>,
+    /// The default value of the field
+    pub default: Option<FieldDefault>,
+    /// The span of a trailing bar
+    pub bar_span: Option<CodeSpan>,
+}
+
+#[derive(Debug, Clone)]
+/// A data field default value
+pub struct FieldDefault {
+    /// The span of the assignment arrow
+    pub arrow_span: CodeSpan,
+    /// The initializing words
+    pub words: Vec<Sp<Word>>,
+}
+
+impl DataDef {
+    /// Get the span of this data definition
+    pub fn span(&self) -> CodeSpan {
+        (self.tilde_span.clone()).merge(self.close_span.clone())
     }
 }
 

@@ -300,6 +300,21 @@ impl Spanner {
                     }
                     spans.extend(self.words_spans(&binding.words));
                 }
+                Item::Data(data) => {
+                    spans.push(data.tilde_span.clone().sp(SpanKind::Delimiter));
+                    spans.push(data.open_span.clone().sp(SpanKind::Delimiter));
+                    for field in &data.fields {
+                        spans.push(field.name.span.clone().sp(SpanKind::Ident {
+                            docs: self.binding_docs(&field.name.span),
+                            original: true,
+                        }));
+                        if let Some(default) = &field.default {
+                            spans.push(default.arrow_span.clone().sp(SpanKind::Delimiter));
+                            spans.extend(self.words_spans(&default.words));
+                        }
+                    }
+                    spans.push(data.close_span.clone().sp(SpanKind::Delimiter));
+                }
                 Item::Import(import) => {
                     if let Some(name) = &import.name {
                         let binding_docs = self.binding_docs(&name.span);

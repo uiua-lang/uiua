@@ -313,6 +313,8 @@ impl<'i> Parser<'i> {
             Item::Import(import)
         } else if let Some(module) = self.try_module(in_scope) {
             Item::Module(module)
+        } else if let Some(data) = self.try_data_def() {
+            Item::Data(data)
         } else {
             let lines = self.multiline_words(true, false);
             if lines.is_empty() {
@@ -470,6 +472,67 @@ impl<'i> Parser<'i> {
             code_macro: array_macro,
             words,
             signature,
+        })
+    }
+    fn try_data_def(&mut self) -> Option<DataDef> {
+        let reset = self.index;
+        let tilde_span = self.try_exact(Tilde.into())?;
+        self.try_spaces();
+        let mut boxed = false;
+        let open_span = if let Some(span) = self.try_exact(OpenBracket.into()) {
+            span
+        } else if let Some(span) = self.try_exact(OpenCurly.into()) {
+            boxed = true;
+            span
+        } else {
+            self.index = reset;
+            return None;
+        };
+        let mut fields = Vec::new();
+        while let Some(name) = self.try_ident() {
+            self.try_spaces();
+            let mut default = None;
+            let start_arrow_span = self.try_spaces().map(|w| w.span);
+            if let Some(mut arrow_span) = self
+                .try_exact(Equal.into())
+                .or_else(|| self.try_exact(LeftArrow))
+            {
+                arrow_span = if let Some(start) = start_arrow_span {
+                    start.merge(arrow_span)
+                } else {
+                    arrow_span
+                };
+                if let Some(span) = self.try_spaces().map(|w| w.span) {
+                    arrow_span = arrow_span.merge(span);
+                }
+                let words = self.try_words().unwrap_or_else(|| {
+                    self.errors.push(self.expected([Expectation::Term]));
+                    Vec::new()
+                });
+                default = Some(FieldDefault { arrow_span, words })
+            };
+            while self.try_exact(Newline).is_some() {
+                self.try_spaces();
+            }
+            let bar_span = self.try_exact(Bar.into());
+            while self.try_exact(Newline).is_some() {
+                self.try_spaces();
+            }
+            fields.push(DataField {
+                name,
+                default,
+                bar_span,
+            });
+        }
+        let close_span = self
+            .expect_close(if boxed { CloseCurly } else { CloseBracket }.into())
+            .span;
+        Some(DataDef {
+            tilde_span,
+            boxed,
+            open_span,
+            fields,
+            close_span,
         })
     }
     fn validate_binding_name(&mut self, name: &Sp<Ident>) {

@@ -699,6 +699,39 @@ impl<'a> Formatter<'a> {
                     );
                 }
             }
+            Item::Data(data) => {
+                self.push(&data.tilde_span, "~");
+                self.push(&data.open_span, if data.boxed { "{" } else { "[" });
+                let multiline = data.fields.len() > 1
+                    && data.fields.iter().enumerate().any(|(i, f)| {
+                        f.default.is_some() && (f.bar_span.is_none() && i < data.fields.len() - 1)
+                    })
+                    || (data.fields.iter())
+                        .filter_map(|f| f.default.as_ref())
+                        .any(|def| words_are_multiline(&def.words))
+                    || data.fields.len() >= 5 && data.fields.iter().any(|f| f.default.is_some());
+                for (i, field) in data.fields.iter().enumerate() {
+                    self.push(&field.name.span, &field.name.value);
+                    if let Some(default) = &field.default {
+                        self.push(&default.arrow_span, " ← ");
+                        self.format_words(&default.words, true, depth + 1);
+                    }
+                    if i < data.fields.len() - 1 {
+                        if multiline {
+                            self.newline(depth + 1);
+                        } else if field.default.is_some() {
+                            if let Some(span) = &field.bar_span {
+                                self.push(span, "|");
+                            } else {
+                                self.output.push('|');
+                            }
+                        } else {
+                            self.output.push(' ');
+                        }
+                    }
+                }
+                self.push(&data.close_span, if data.boxed { "}" } else { "]" });
+            }
             Item::Import(import) => {
                 self.prev_import_function = None;
                 if let Some(name) = &import.name {

@@ -1,4 +1,5 @@
 mod binding;
+mod data;
 mod modifier;
 
 use std::{
@@ -612,11 +613,9 @@ code:
                 }
                 Ok(())
             }
-            Item::Binding(binding) => {
-                let prelude = take(prelude);
-                self.binding(binding, prelude)
-            }
+            Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
+            Item::Data(data) => self.data_def(data),
         }
     }
     fn lines(

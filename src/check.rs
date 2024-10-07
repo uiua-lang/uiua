@@ -10,12 +10,7 @@ use std::{
 
 use enum_iterator::Sequence;
 
-use crate::{
-    array::Array,
-    function::{Instr, Signature},
-    value::Value,
-    ImplPrimitive, Primitive, TempStack,
-};
+use crate::{function::*, Array, ImplPrimitive, Instr, Primitive, TempStack, Value};
 
 const START_HEIGHT: usize = 16;
 

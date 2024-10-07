@@ -31,6 +31,7 @@ use crate::{
     format::{format_word, format_words},
     function::*,
     ident_modifier_args,
+    instr::*,
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, ImportSrc, SigDecl},
     optimize::{optimize_instrs, optimize_instrs_mut},

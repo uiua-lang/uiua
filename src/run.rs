@@ -20,15 +20,14 @@ use thread_local::ThreadLocal;
 
 use crate::{
     algorithm::{self, invert, validate_size_impl},
-    array::Array,
-    boxed::Boxed,
     check::instrs_temp_signatures,
     fill::Fill,
     function::*,
+    instr::*,
     lex::Span,
-    value::Value,
-    Assembly, BindingKind, CodeSpan, Compiler, Ident, Inputs, IntoSysBackend, LocalName, Primitive,
-    Report, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, VERSION,
+    Array, Assembly, BindingKind, Boxed, CodeSpan, Compiler, Ident, Inputs, IntoSysBackend,
+    LocalName, Primitive, Report, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaErrorKind,
+    UiuaResult, Value, VERSION,
 };
 
 /// The Uiua interpreter

@@ -691,7 +691,7 @@
   },
   "gen": {
     "args": 2,
-    "outputs": 2,
+    "outputs": 1,
     "class": "Misc",
     "description": "Generate an array of random numbers with a seed"
   },

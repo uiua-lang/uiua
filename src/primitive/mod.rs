@@ -34,7 +34,7 @@ use crate::{
     lex::{AsciiToken, SUBSCRIPT_NUMS},
     sys::*,
     value::*,
-    ArrayFlags, FunctionId, Shape, Signature, Uiua, UiuaErrorKind, UiuaResult,
+    FunctionId, Signature, Uiua, UiuaErrorKind, UiuaResult,
 };
 
 /// Categories of primitives
@@ -862,24 +862,7 @@ impl Primitive {
                 }
             }
             Primitive::Rand => env.push(random()),
-            Primitive::Gen => {
-                let shape = env
-                    .pop(1)?
-                    .as_nats(env, "Shape should be a single natural or list of naturals")?;
-                let seed = env.pop(2)?;
-
-                let shape = Shape::from(shape);
-                let mut rng =
-                    SmallRng::seed_from_u64(seed.as_num(env, "Gen expects a number")?.to_bits());
-
-                let elems: usize = algorithm::validate_size::<f64>(shape.iter().copied(), env)?;
-                let data = EcoVec::from_iter((0..elems).map(|_| rng.gen::<f64>()));
-                let mut next_seed = Array::from(f64::from_bits(rng.gen::<u64>()));
-                next_seed.meta_mut().flags |= ArrayFlags::SEED;
-
-                env.push(Array::new(shape, data));
-                env.push(next_seed);
-            }
+            Primitive::Gen => env.dyadic_rr_env(Value::gen)?,
             Primitive::Deal => {
                 let seed = env.pop(1)?.as_num(env, "Deal expects a number")?.to_bits();
                 let arr = env.pop(2)?;

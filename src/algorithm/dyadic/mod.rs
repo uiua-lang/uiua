@@ -8,11 +8,13 @@ use core::f64;
 use std::{
     borrow::Cow,
     cmp::Ordering,
+    hash::{DefaultHasher, Hash, Hasher},
     iter::{once, repeat},
     mem::{replace, take},
 };
 
 use ecow::{eco_vec, EcoVec};
+use rand::prelude::*;
 use rayon::prelude::*;
 
 use crate::{
@@ -1876,6 +1878,61 @@ impl Value {
                 bytes.into()
             }
             from => fallback(self, &from, env)?,
+        })
+    }
+    /// Generate randomly seeded arrays
+    pub fn gen(&self, seed: &Self, env: &Uiua) -> UiuaResult<Value> {
+        let mut hasher = DefaultHasher::new();
+        seed.hash(&mut hasher);
+        let seed = hasher.finish();
+        let mut rng = SmallRng::seed_from_u64(seed);
+
+        const SHAPE_REQ: &str = "Shape must be an array of natural \
+            numbers with at most rank 2";
+
+        let mut gen = |shape: &[usize]| -> UiuaResult<_> {
+            let shape = Shape::from(shape);
+            let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
+            let mut data = eco_vec![0.0; elem_count];
+            for x in data.make_mut() {
+                *x = rng.gen();
+            }
+            Ok(Array::new(shape, data))
+        };
+
+        Ok(match self.as_natural_array(env, SHAPE_REQ) {
+            Ok(nats) => match nats.rank() {
+                0 | 1 => gen(&nats.data)?.into(),
+                2 => {
+                    let mut data = EcoVec::new();
+                    for row in nats.row_slices() {
+                        data.push(Boxed(gen(row)?.into()))
+                    }
+                    data.into()
+                }
+                n => return Err(env.error(format!("{SHAPE_REQ}, but it is rank {n}"))),
+            },
+            Err(e) => {
+                if let Value::Box(arr) = self {
+                    match arr.rank() {
+                        0 => {
+                            let shape = arr.data[0].0.as_nats(env, SHAPE_REQ)?;
+                            gen(&shape)?.into()
+                        }
+                        1 => {
+                            let mut data = EcoVec::new();
+                            for Boxed(row) in &arr.data {
+                                let shape = row.as_nats(env, SHAPE_REQ)?;
+                                data.push(Boxed(gen(&shape)?.into()));
+                            }
+                            data.into()
+                        }
+                        _ => return Err(e),
+                    }
+                } else {
+                    return Err(e);
+                }
+            }
         })
     }
 }

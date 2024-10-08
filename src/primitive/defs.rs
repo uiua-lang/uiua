@@ -538,9 +538,6 @@ primitive!(
     ///
     /// ex: [◌ 1 2 ◌ 3 4]
     /// This is usually used to discard values that are no longer needed.
-    /// For example, [gen] returns both a random number and a seed for the next call.
-    /// When you have all the random numbers you need, you often want to discard the seed.
-    /// ex: ⌊×10 ◌gen10 0
     ///
     /// [un][pop] can be used to retrieve the [fill] value.
     /// ex: ⬚3(+°◌°◌)
@@ -2668,7 +2665,7 @@ primitive!(
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: ⌊×10 [⍥⚂5]
     ///
-    /// `each``gap``rand` and `table``gap``gap``rand` are optimized in the interpreter to generate a lot of random numbers very fast.
+    /// `each``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
     /// ex: ⌊×10 ∵⋅⚂ ⇡10
     /// ex: ⌊×10 ⊞⋅⋅⚂ .⇡10
     (0, Rand, Misc, ("random", '⚂'), Impure),
@@ -2762,25 +2759,24 @@ primitive!(
     /// Generate an array of random numbers with a seed
     ///
     /// The first argument is the shape, the second argument is the seed. The returned array will have the given shape where each element is in the range [0, 1).
-    /// A seed to use for additional calls is also returned.
     /// If you don't care about the seed or shape, you can use [random] instead.
     /// ex: gen [] 0
-    /// ex: gen [] gen [] 0
-    /// The next seed must be [pop]ped if it is not needed.
-    /// ex: gen 2 0
-    /// ex: ◌gen 3 0
-    /// ex: ◌gen 2_3 0
-    /// ex: ◌gen 4 42
-    /// ex: ◌gen 10 42
-    /// ex: ◌gen 1 gen 2 gen 3 10
-    ///
+    /// ex: gen [] 1
+    /// ex: gen 3 0
+    /// ex: gen 3 1
     /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: ⌊×10 ◌gen 2_3 0
-    /// ex: ⌊×10 ◌gen 10 42
-    //
+    /// ex: ⌊×10 gen 10 42
+    /// ex: ⌊×10 gen 2_3 0
+    /// ex: ⌊×10 gen 2_3 1
+    /// A rank-2 array or box array of shapes can be used to generate multiple arrays. The resulting arrays will be in a boxed list
+    /// ex: ⌊×10 gen [2_3 3_4] 0
+    /// ex: ⌊×10 gen {2_2 [] 2_3_3 4} 0
+    /// If you want a seed to use for a subsequent [gen], you can use [fork] and `[]`.
+    /// ex: gen 8 ⊃(gen[]|gen5) 0
+    ///   : ∩(⌊×10)
     /// For non-determinism, [random] can be used as a seed.
-    /// ex: ◌gen 3_4 ⚂
-    (2(2), Gen, Misc, "gen"),
+    /// ex: ⌊×10 gen 3_4 ⚂
+    (2, Gen, Misc, "gen"),
     /// Randomly reorder the rows of an array with a seed
     ///
     /// ex: deal0 [1 2 3 4 5]

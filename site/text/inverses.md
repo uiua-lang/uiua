@@ -162,7 +162,7 @@ F = setinv+-
 
 This example shows how the different inverses get called.
 
-```uiua
+```uiua should fail
 F ← setund(setinv("normal"|"inverse")|"do"|"undo")
 F
 °F

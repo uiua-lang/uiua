@@ -325,19 +325,25 @@ fn text_code_blocks() {
 
         for (block, should_fail) in text_code_blocks(root) {
             eprintln!("Code block:\n{}", block);
+            let mut comp = uiua::Compiler::with_backend(crate::backend::WebBackend::default());
             let mut env = uiua::Uiua::with_backend(crate::backend::WebBackend::default());
-            let res = env.run_str(&block);
-            match res {
-                Ok(_) => {
-                    if should_fail {
-                        panic!("\nBlock should have failed:\n{block}")
-                    }
+            let res = comp
+                .load_str(&block)
+                .and_then(|comp| env.run_compiler(comp));
+            let failure_report = match res {
+                Ok(_) => comp
+                    .take_diagnostics()
+                    .into_iter()
+                    .next()
+                    .map(|diag| diag.report()),
+                Err(e) => Some(e.report()),
+            };
+            if let Some(report) = failure_report {
+                if !should_fail {
+                    panic!("\nBlock failed:\n{block}\n{report}")
                 }
-                Err(e) => {
-                    if !should_fail {
-                        panic!("\nBlock failed:\n{block}\n{e}")
-                    }
-                }
+            } else if should_fail {
+                panic!("\nBlock should have failed:\n{block}")
             }
         }
     }

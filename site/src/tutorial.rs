@@ -1075,80 +1075,10 @@ fn TutorialAdvancedStack() -> impl IntoView {
 
 #[component]
 fn TutorialInverses() -> impl IntoView {
-    use Primitive::*;
     view! {
         <Title text="Inverses - Uiua Docs"/>
-        <h1>"Inverses"</h1>
-        <p>"Uiua has two modifiers, "<Prim prim=Un/>" and "<Prim prim=Under/>", which work with "<em>"inverses"</em>". The inverse of a function is a function that conceptually \"undoes\" it."</p>
-        <p>"Working with inverses is a fundamental part of writing Uiua code. It is an elegant mechanism that captures many different patterns."</p>
 
-        <Hd id="un"><Prim prim=Un/></Hd>
-        <p>"The "<Prim prim=Un/>" modifier inverts the behavior of a function."</p>
-        <Editor example="°(+1) 5"/>
-        <Editor example="°⊟ [1 2]"/>
-        <Editor example="°∿ 1"/>
-        <p>"As discussed "<A href="/tutorial/arrays#array-model">"previously"</A>", "<Prim prim=Un/><Prim prim=Box/>" removes an array from a box."</p>
-        <Editor example=r#"°□ ⊢{"unbox" "me!"}"#/>
-        <p>"One interesting use of "<Prim prim=Un/>" is to put an array's rows onto the stack by "<Prim prim=Un/>"ing stack array notation with "<Prim prim=Dip/>" and "<Prim prim=Identity/>". The number of rows in the array must match though!"</p>
-        <Editor example="[⊙⊙∘] 1 2 3"/>
-        <Editor example="°[⊙⊙∘] [1 2 3]"/>
-        <Editor example="°[⊙⊙⊙∘] [1 2 3]"/> // Should fail
-        <p><Prim prim=Un/>"ing box array notation will unbox the items."</p>
-        <Editor example="°[⊙⊙∘] {1 2_3 \"hmmm\"}"/>
-        <Editor example="°{⊙⊙∘} {1 2_3 \"hmmm\"}"/>
-        <p>"You can find more uses of "<Prim prim=Un/>" in it's documentation, including a list of all "<Prim prim=Un/>"-compatible functions and modifiers."</p>
-
-        <Hd id="under"><Prim prim=Under/></Hd>
-        <p><Prim prim=Under/>" expresses a more powerful inversion pattern. It captures the pattern of doing some transformation, modifying the data, then undoing the transformation."</p>
-        <p>"This may not seem immediately useful, but you'll find it is a pattern you encounter everywhere, even in your everyday life. You might open a drawer, take something out, then close the drawer. You might get on a bus, the bus travels, then you get off the bus."</p>
-        <p><Prim prim=Under/>" takes two functions which we will call "<code>"F"</code>" and "<code>"G"</code>". It calls "<code>"F"</code>", then calls "<code>"G"</code>", then calls an inverse of "<code>"F"</code>"."</p>
-        <p>"Many functions that do not work with "<Prim prim=Un/>" work with "<Prim prim=Under/>" because "<Prim prim=Under/>" can keep track of "<em>"context"</em>". One example of this in action is "<Prim prim=Under/><Prim prim=Pick/>", which allows us to modify an element or row of an array."</p>
-        <Editor example="⍜(⊡2|×10) [1 2 3 4]"/>
-        <p>"This code picks out item "<code>"2"</code>" of the array, multiplies it by "<code>"10"</code>", then puts it back in the array."</p>
-        <p>"If the values passed to "<Prim prim=Under/>"'s functions are not constants, they can also be put outside, albeit in a different order."</p>
-        <Editor example="⍜⊡× 2 [1 2 3 4] 10"/>
-        <p>"This works because "<Prim prim=Under/>" keeps track of the original array and passes it to the inversion of "<Prim prim=Pick/>"."</p>
-        <p>"If you wanted to set a value in an array rather than modifying it, you could use "<Prim prim=Pop/>" or "<Prim prim=Gap/>" instead of "<Prim prim=Mul/>"."</p>
-        <Editor example="⍜(⊡2)⋅∞ [1 2 3 4]\n⍜⊡◌ 2 [1 2 3 4] ∞"/>
-        <p>"It's not just "<Prim prim=Pick/>"! Many functions work with "<Prim prim=Under/>"!"</p>
-        <Editor example="⍜(↙2)/× [3 5 4 2]"/>
-        <Editor example="⍜(↻3|⊂0) [1 2 3 4 5]"/>
-        <Editor example="⍜×⁅ 1e3 π"/>
-        <Editor example=".↯3_4⇡12\n⍜♭⇌"/>
-        <p>"You can even use "<Prim prim=Under/>" on a function that has already been "<Prim prim=Un/>"ed. This is a nice way to work with "<Prim prim=Box/>"ed data."</p>
-        <Editor example=r#"≡⍜°□(⊂:@!) {"wow" "cool" "omg"}"#/>
-        <br/>
-        <p>"Let's say you wanted to utilize a struct-like pattern. Uiua does not have structs or objects with fields like many other languages do, but you can simulate them with box arrays. This can be slow, so you should not do this with any data that needs to accessed in tight loops."</p>
-        <p><Prim prim=Under/>" allows a field getter to also be a setter!"</p>
-        <Editor example=r#"Person ← {⊙⊙∘}
-Name ← °□⊡0
-Surname ← °□⊡1
-Age ← °□⊡2
-
-FmtPerson ← $"_ is _ years old" ⊃(Name|Age)
-PassYear ← ⍜Age(+1)
-
-Dan ← Person "Dan" "Danson" 31
-FmtPerson Dan
-FmtPerson PassYear Dan"#/>
-        <p>"You can find more uses of "<Prim prim=Under/>" in it's documentation, including a list of all "<Prim prim=Under/>"-compatible functions and modifiers."</p>
-
-        <Hd id="setting-inverse">"Setting Inverses"</Hd>
-        <p>"Many functions, especially more complex ones, do not have well-defined inverses. However, you can use the "<Prim prim=SetInverse/>" and "<Prim prim=SetUnder/>" modifiers to define them yourself."</p>
-        <p><Prim prim=SetInverse/>" sets a simple inverse that is compatible with "<Prim prim=Un/>"."</p>
-        <p>"For example, "<Prim prim=First/>" does not have an "<Prim prim=Un/>"-compatible inverse, but we can define one."</p>
-        <Editor example="MyFirst ← setinv(⊢|[∘])\nMyFirst [1 2 3]\n°MyFirst 5"/>
-        <p>"This inverse is also compatible with "<Prim prim=Under/>"."</p>
-        <Editor example="MyFirst ← setinv⊢[∘]\n⍜⊢(×10) [2 3 4]\n⍜MyFirst(×10) [2 3 4]"/>
-        <p>"Inverses should have the opposite signature of function they are the inverse of. If it does not, you will get a warning."</p>
-        <Editor example="F = setinv+-"/> // Should fail
-        <p><Prim prim=SetUnder/>" is more complicated. See its documentation for how to use it."</p>
-        <p><Prim prim=SetInverse/>" and "<Prim prim=SetUnder/>" can be nested so that an inverse can be fully defined in all cases."</p>
-        <p>"This example shows how the different inverses get called."</p>
-        <Editor example=r#"F ← setund(setinv("normal"|"inverse")|"do"|"undo")
-F
-°F
-{⍜F"G"}"#/>
+        <Markdown src="/text/inverses.md"/>
 
         <Hd id="challenges">"Challenges"</Hd>
 

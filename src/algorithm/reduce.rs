@@ -78,6 +78,15 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
                     fast_reduce_different(bytes, 0.0, fill, depth, sub::num_num, sub::num_byte)
                         .into()
                 }
+                Primitive::Mul if bytes.meta().flags.is_boolean() => {
+                    let byte_fill = env.scalar_fill::<u8>().ok();
+                    if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
+                        fast_reduce_different(bytes, 1.0, fill, depth, mul::num_num, mul::num_byte)
+                            .into()
+                    } else {
+                        fast_reduce(bytes, 1, byte_fill, depth, mul::bool_bool).into()
+                    }
+                }
                 Primitive::Mul => {
                     fast_reduce_different(bytes, 1.0, fill, depth, mul::num_num, mul::num_byte)
                         .into()

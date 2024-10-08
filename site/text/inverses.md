@@ -1,6 +1,6 @@
 # Inverses
 
-Uiua has two modifiers, [un](/tutorial/un) and [under](/tutorial/under), which work with *inverses*. The inverse of a function is a function that conceptually "undoes" it.
+Uiua has three modifiers, [un](/tutorial/un), [anti](/tutorial/anti), and [under](/tutorial/under), which work with *inverses*. The inverse of a function is a function that conceptually "undoes" it.
 
 Working with inverses is a fundamental part of writing Uiua code. It is an elegant mechanism that captures many different patterns.
 
@@ -13,11 +13,11 @@ The [un](/tutorial/un) modifier inverts the behavior of a function.
 ```
 
 ```uiua
-°⊟ [1 2]
+°⊟ [1 2] # Very common!
 ```
 
 ```uiua
-°∿ 1
+°∿ 1 # Arcsine
 ```
 
 As discussed [previously](/tutorial/arrays#array-model), [un](/tutorial/un)[box](/tutorial/box) removes an array from a box.
@@ -51,6 +51,50 @@ One interesting use of [un](/tutorial/un) is to put an array's rows onto the sta
 ```
 
 You can find more uses of [un](/tutorial/un) in its documentation, including a list of all [un](/tutorial/un)-compatible functions and modifiers.
+
+## [anti](/tutorial/anti)
+
+The [un](/tutorial/un) inverse of a function must always have the opposite signature of that function. For example, if a function has signature `|2.1` (2 arguments, 1 output), then its inverse must have signature `|1.2`. This makes them easier to reason about, both for the programmer and for the compiler.
+
+This makes some things that *seem* like they have obvious inverses not work. For example, [un](/tutorial/un)[add](/tutorial/add) is *not* just [subtract](/tutorial/sub).
+
+```uiua should fail
+°+ 3 5
+```
+
+One workaround is to put one of the arguments inside the inverted function. This makes the function's signature `|1.1`, which is its own inverse.
+
+```uiua
+°(+3) 5
+```
+
+However, this is not always possible, as the argument may not be static.
+
+The [anti](/tutorial/anti) modifier is similar to [un](/tutorial/un), but it allows the use of external arguments.
+
+```uiua
+˘+ 3 5
+```
+
+[anti](/tutorial/anti) is equivalent to `popunon`, and so the [anti](/tutorial/anti) inverse of a function with signature `|a.b` is `|(b+1).(a-1)`.
+
+[anti](/tutorial/anti) makes some interesting and useful behaviors available.
+
+```uiua
+˘ⁿ 4 81 # Nth root
+```
+
+```uiua
+˘↘ 1_¯2 [1_2 3_4] # Pad
+```
+
+```uiua
+⬚@-˘⊏ 1_2_5 "abc"
+```
+
+```uiua
+⬚0˘⊡ [2_2 0_4] 3_5
+```
 
 ## [under](/tutorial/under)
 

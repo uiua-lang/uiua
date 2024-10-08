@@ -507,9 +507,9 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (Anti | Off | Backward | Above | Around)
+            (Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
-                | (Struct | Obverse)
+                | Struct
                 | (Last | Sort | Chunks | Base | Coordinate | Fft | Case | Layout)
                 | (Astar | Triangle)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)

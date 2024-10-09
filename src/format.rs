@@ -1403,7 +1403,8 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::Subscript(sub) => word_is_multiline(&sub.word.value),
         Word::Comment(_) => true,
         Word::Spaces => false,
-        Word::BreakLine | Word::FlipLine => false,
+        Word::BreakLine => true,
+        Word::FlipLine => false,
         Word::SemanticComment(_) => true,
         Word::OutputComment { .. } => true,
     }

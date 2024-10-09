@@ -54,7 +54,7 @@ pub fn Editor<'a>(
 ) -> impl IntoView {
     let no_run = no_run
         || mode == EditorMode::Pad && !get_autorun()
-        || ["&sl", "&httpsw", "send", "recv", "&ffi", "&clset"]
+        || ["&sl", "&httpsw", "send", "recv", "&ffi"]
             .iter()
             .any(|name| example.contains(name));
     let id = ID.with(|id| {

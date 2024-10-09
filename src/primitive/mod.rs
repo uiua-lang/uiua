@@ -1929,7 +1929,7 @@ mod tests {
             for line in &prim.doc().lines {
                 if let PrimDocLine::Example(ex) = line {
                     if [
-                        "&sl", "&tcpc", "&tlsc", "&ast", "&clset", "&fo", "&fc", "&fde", "&ftr",
+                        "&sl", "&tcpc", "&tlsc", "&ast", "&clip", "&fo", "&fc", "&fde", "&ftr",
                         "&fld", "&fif", "&fras", "&frab", "&fmd", "timezone",
                     ]
                     .iter()

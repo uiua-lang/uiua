@@ -301,8 +301,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([AudioEncode], Optional, "Decodes bytes", None) }
             { inverse_row([ImageEncode], Optional, "Decodes bytes", None) }
             { inverse_row([GifEncode], Optional, "Decodes bytes", None) }
-            { inverse_row([Sys(ClipboardGet)], No, "", None) }
-            { inverse_row([Sys(ClipboardSet)], No, "", None) }
+            { inverse_row([Sys(Clip)], No, "Set the clipboard", None) }
             { inverse_row([Sys(RawMode)], No, "Terminal raw state", None) }
         </table>
     }
@@ -439,7 +438,7 @@ fn prim_docs() {
     for prim in Primitive::non_deprecated() {
         for line in &prim.doc().lines {
             if let PrimDocLine::Example(ex) = line {
-                if ["&sl", "&tcpc", "&tlsc", "&ast", "&clset", "&frab", "&fmd"]
+                if ["&sl", "&tcpc", "&tlsc", "&ast", "&clip", "&frab", "&fmd"]
                     .iter()
                     .any(|prim| ex.input().contains(prim))
                 {

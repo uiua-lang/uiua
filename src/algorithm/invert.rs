@@ -1280,56 +1280,33 @@ fn invert_dup_pattern<'a>(
 
     // As under's undo step
     for end in (1..=input.len()).rev() {
-        let instrs = &input[..end];
-        if instrs_clean_signature(instrs).map_or(true, |sig| sig != (1, 1)) {
+        let mut instrs = &input[..end];
+        let Some(Signature { args: 1, outputs }) = instrs_clean_signature(instrs) else {
+            continue;
+        };
+        if !instrs_are_pure(instrs, &comp.asm, Purity::Impure) {
             continue;
         }
-        let Ok((_before, mut after)) = under_instrs(instrs, Signature::new(1, 1), comp) else {
+        let Ok((before, mut after)) = under_instrs(instrs, Signature::new(1, 1), comp) else {
             continue;
         };
         while let [Instr::PushFunc(f), Instr::Call(_)] = after.as_slice() {
             after = EcoVec::from(f.instrs(&comp.asm));
         }
-        let mut instrs = &input[..end];
         while let [Instr::PushFunc(f), Instr::Call(_)] = instrs {
             instrs = f.instrs(&comp.asm);
         }
-        let save_count: usize = after
-            .iter()
-            .map(|instr| match instr {
-                Instr::PopTemp {
-                    stack: TempStack::Under,
-                    count,
-                    ..
-                } => *count,
-                _ => 0,
-            })
-            .sum();
-        if save_count != 2 {
-            continue;
-        }
-        for mid in 1..end {
-            let a = &instrs[..mid];
-            let b = &instrs[mid..];
-            if instrs_clean_signature(a).map_or(true, |sig| sig != (0, 1))
-                || instrs_clean_signature(b).map_or(true, |sig| sig != (2, 1))
-            {
-                continue;
-            }
-            let mut instrs = EcoVec::from(a);
-            instrs.extend([
-                Instr::Prim(Primitive::Flip, *dup_span),
-                Instr::push_inline(1, *dup_span),
-                Instr::PushTemp {
-                    stack: TempStack::Under,
-                    count: save_count,
-                    span: *dup_span,
-                },
-                Instr::pop_inline(1, *dup_span),
-            ]);
-            instrs.extend(after);
-            return Ok((&input[end..], instrs));
-        }
+        let mut new_instrs = EcoVec::new();
+        // Stash all inputs but the last one
+        new_instrs.push(Instr::push_inline(outputs, *dup_span));
+        // Invoke the "do" step of the original function on the remaining argument
+        new_instrs.extend(before);
+        // Discard the outputs of the function and replace them with the stashed inputs
+        (0..outputs).for_each(|_| new_instrs.push(Instr::Prim(Primitive::Pop, *dup_span)));
+        new_instrs.push(Instr::pop_inline(outputs, *dup_span));
+        // Invoke the "undo" step with the replaced arguments
+        new_instrs.extend(after);
+        return Ok((&input[end..], new_instrs));
     }
 
     let Some(dyadic_i) = (0..=input.len())

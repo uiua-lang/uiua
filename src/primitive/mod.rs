@@ -497,6 +497,7 @@ impl Primitive {
             Choose => format!("use {Tuples}{Lt} instead"),
             Permute => format!("use {Tuples}{Ne} instead"),
             Triangle => format!("use {Tuples} instead"),
+            SetInverse | SetUnder => format!("use {} instead", Obverse.format()),
             _ => return None,
         })
     }

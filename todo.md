@@ -3,10 +3,6 @@
 ## 0.13
 The next version of Uiua
 
-- Stabilize `anti` and `obverse`
-  - Let `under obverse` use `un` or `anti` inverses if necessary
-  - Add `anti` and `obverse` to the tutorial
-  - Deprecate `setinv` and `setund`
 - Make `struct` a dedicated syntax
   - `~[...] / ~{...}`
 - Update language tour

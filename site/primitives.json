@@ -1165,13 +1165,15 @@
     "outputs": 1,
     "modifier_args": 2,
     "class": "InversionModifier",
-    "description": "Set the un-compatible inverse of a function"
+    "description": "Set the un-compatible inverse of a function",
+    "deprecated": true
   },
   "setund": {
     "outputs": 1,
     "modifier_args": 3,
     "class": "InversionModifier",
-    "description": "Set the under-compatible inverse of a function"
+    "description": "Set the under-compatible inverse of a function",
+    "deprecated": true
   },
   "shape": {
     "glyph": "△",

@@ -1284,7 +1284,7 @@ fn invert_dup_pattern<'a>(
         let Some(Signature { args: 1, outputs }) = instrs_clean_signature(instrs) else {
             continue;
         };
-        if !instrs_are_pure(instrs, &comp.asm, Purity::Pure) {
+        if !instrs_are_pure(instrs, &comp.asm, Purity::Impure) {
             continue;
         }
         let Ok((before, mut after)) = under_instrs(instrs, Signature::new(1, 1), comp) else {

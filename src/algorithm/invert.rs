@@ -1297,10 +1297,14 @@ fn invert_dup_pattern<'a>(
             instrs = f.instrs(&comp.asm);
         }
         let mut new_instrs = EcoVec::new();
+        // Stash all inputs but the last one
         new_instrs.push(Instr::push_inline(outputs, *dup_span));
+        // Invoke the "do" step of the original function on the remaining argument
         new_instrs.extend(before);
+        // Discard the outputs of the function and replace them with the stashed inputs
         (0..outputs).for_each(|_| new_instrs.push(Instr::Prim(Primitive::Pop, *dup_span)));
         new_instrs.push(Instr::pop_inline(outputs, *dup_span));
+        // Invoke the "undo" step with the replaced arguments
         new_instrs.extend(after);
         return Ok((&input[end..], new_instrs));
     }

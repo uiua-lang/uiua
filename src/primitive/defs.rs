@@ -3538,6 +3538,7 @@ impl_primitive!(
     (1(2), GifDecode),
     (1(3), AudioDecode),
     (0(1), UnRawMode, Impure),
+    (1(0), UnClip, Mutating),
     // Unders
     (1, UndoFix),
     (2, UndoUnbits),

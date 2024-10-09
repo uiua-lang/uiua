@@ -227,15 +227,9 @@ sys_op! {
     /// Returns a string of the clipboard's contents.
     /// This is not supported on the web.
     ///
-    /// See also: [&clset]
-    (0, ClipboardGet, Misc, "&clget", "get clipboard contents"),
-    /// Set the contents of the clipboard
-    ///
-    /// Expects a string.
-    /// ex: &clset +@A⇡6 # Try running then pasting!
-    ///
-    /// See also: [&clget]
-    (1(0), ClipboardSet, Misc, "&clset", "set clipboard contents", Mutating),
+    /// The inverse sets the clipboard, expecting a string.
+    /// ex: °&clip +@A⇡6 # Try running then pasting!
+    (0, Clip, Misc, "&clip", "get clipboard contents"),
     /// Sleep for n seconds
     ///
     /// On the web, this example will hang for 1 second.
@@ -1517,15 +1511,9 @@ impl SysOp {
                     return Err(env.error(e));
                 }
             }
-            SysOp::ClipboardGet => {
+            SysOp::Clip => {
                 let contents = env.rt.backend.clipboard().map_err(|e| env.error(e))?;
                 env.push(contents);
-            }
-            SysOp::ClipboardSet => {
-                let contents = env.pop(1)?.as_string(env, "Contents must be a string")?;
-                (env.rt.backend)
-                    .set_clipboard(&contents)
-                    .map_err(|e| env.error(e))?;
             }
             SysOp::Sleep => {
                 let mut seconds = env.pop(1)?.as_num(env, "Sleep time must be a number")?;

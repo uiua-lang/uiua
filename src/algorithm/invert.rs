@@ -1290,7 +1290,6 @@ fn invert_dup_pattern<'a>(
         let Ok((before, mut after)) = under_instrs(instrs, Signature::new(1, 1), comp) else {
             continue;
         };
-        println!("before: {before:?}\nafter: {after:?}");
         while let [Instr::PushFunc(f), Instr::Call(_)] = after.as_slice() {
             after = EcoVec::from(f.instrs(&comp.asm));
         }

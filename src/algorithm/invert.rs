@@ -1281,7 +1281,7 @@ fn invert_dup_pattern<'a>(
     // As under's undo step
     for end in (1..=input.len()).rev() {
         let mut instrs = &input[..end];
-        let Some(Signature { args, outputs: 1 }) = instrs_clean_signature(instrs) else {
+        let Some(Signature { args: 1, outputs }) = instrs_clean_signature(instrs) else {
             continue;
         };
         if !instrs_are_pure(instrs, &comp.asm, Purity::Pure) {
@@ -1297,10 +1297,10 @@ fn invert_dup_pattern<'a>(
             instrs = f.instrs(&comp.asm);
         }
         let mut new_instrs = EcoVec::new();
-        new_instrs.push(Instr::push_inline(args, *dup_span));
+        new_instrs.push(Instr::push_inline(outputs, *dup_span));
         new_instrs.extend(before);
-        (0..args).for_each(|_| new_instrs.push(Instr::Prim(Primitive::Pop, *dup_span)));
-        new_instrs.push(Instr::pop_inline(args, *dup_span));
+        (0..outputs).for_each(|_| new_instrs.push(Instr::Prim(Primitive::Pop, *dup_span)));
+        new_instrs.push(Instr::pop_inline(outputs, *dup_span));
         new_instrs.extend(after);
         return Ok((&input[end..], new_instrs));
     }

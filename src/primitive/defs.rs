@@ -2259,49 +2259,41 @@ primitive!(
     /// ex: StdDev ← √ ÷⧻⟜/+ ×.- ÷⧻⟜/+ .
     ///   : StdDev [1 2 3 4]
     /// The averaging section can be factored out using [under][obverse].
-    /// ex: # Experimental!
-    ///   : StdDev ← √⍜⌅(÷⧻⟜/+)(×.-).
+    /// ex: StdDev ← √⍜⌅(÷⧻⟜/+)(×.-).
     ///   : StdDev [1 2 3 4]
     /// If given 2 functions, which inverse is set depends on the functions' signatures.
     /// If the functions have opposite signatures, then an [un]-compatible inverse is set.
-    /// ex: # Experimental!
-    ///   : F ← ⌅(+|⊃⌊⌈÷2)
+    /// ex: F ← ⌅(+|⊃⌊⌈÷2)
     ///   : F 1 2
     ///   : [°F 25]
     /// If the functions have signatures `|a.b` and `|(b+1).(a-1)`, then an [anti]-compatible inverse is set.
     /// The most commonly used signatures for which this holds is when both signatures are `|2.1`.
-    /// ex: # Experimental!
-    ///   : F ← ⌅(+×10:|÷10-)
+    /// ex: F ← ⌅(+×10:|÷10-)
     ///   : F 2 3
     ///   : ˘F 2 32
     /// This sort of inverse also works with [under].
-    /// ex: # Experimental!
-    ///   : F ← ⌅(+×10:|÷10-)
+    /// ex: F ← ⌅(+×10:|÷10-)
     ///   : ⍜F? 2 5
     /// Otherwise, an [under]-compatible inverse is set.
-    /// ex: # Experimental!
-    ///   : F ← ⌅(+|¯)
+    /// ex: F ← ⌅(+|¯)
     ///   : ⍜F? 1 2
     /// Leaving the second function empty is useful when a function has to do some setup before the main [under]able part.
     /// ex! F ← ▽⊸◿2
     ///   : F [1 2 3 4 5]
     ///   : ⍜F(×10) [1 2 3 4 5]
-    /// ex: # Experimental!
-    ///   : F ← ▽⌅(⊸◿2|)
+    /// ex: F ← ▽⌅(⊸◿2|)
     ///   : F [1 2 3 4 5]
     ///   : ⍜F(×10) [1 2 3 4 5]
     /// If given 3 functions, an [under]-compatible inverse always set.
     /// The first function is the normal case.
     /// The second function is the "do" part of the [under].
     /// The third function is the "undo" part of the [under].
-    /// ex: # Experimental!
-    ///   : F ← ⌅(⊂10|⊂:1|⊂:2)
+    /// ex: F ← ⌅(⊂10|⊂:1|⊂:2)
     ///   : F 3
     ///   : ⍜F⇌ 0_0
     /// If the second function returns more values than the first function, the excess values will saved as "context". These context values will be passed to the "undo" part of the [under].
     /// Here is a manual implementation of [add]'s [under] behavior.
-    /// ex: # Experimental!
-    ///   : F ← ⌅(+|⟜+|-)
+    /// ex: F ← ⌅(+|⟜+|-)
     ///   : F 2 5
     ///   : ⍜F(×10) 2 5
     /// If given 4 functions, both [un]-compatible and [under]-compatible inverses are set.
@@ -2311,15 +2303,13 @@ primitive!(
     /// If the fourth function has the same signature as the first, it will also be used as the [anti]-compatible inverse.
     /// Finally, a fifth function can be given to specify the [anti]-compatible inverse.
     /// Here is our fully-specified [add] implementation.
-    /// ex: # Experimental!
-    ///   : F ← ⌅(+|⊃⌊⌈÷2|⟜+|-|$Anti -)
+    /// ex: F ← ⌅(+|⊃⌊⌈÷2|⟜+|-|$Anti -)
     ///   : F 2 5
     ///   : ˘F 2 5
     ///   : [°F] 15
     ///   : ⍜F(÷3) 10 5
     /// Note that [anti] inverses also work with [un][on].
-    /// ex: # Experimental!
-    ///   : F ← ⌅(×|+÷2)
+    /// ex: F ← ⌅(×|+÷2)
     ///   : F 4 10
     ///   : ˘F 4 10
     ///   : [°⟜F] 4 10
@@ -2344,37 +2334,27 @@ primitive!(
     ///   : ◌°⟜↻ 1 [1 2 3]
     /// The first way requires the first argument to be a constant, which is not always applicable. The second way works but it is a bit verbose.
     /// [anti] does the [pop][un][on] for you.
-    /// ex: # Experimental!
-    ///   : ˘↻ 1 [1 2 3]
+    /// ex: ˘↻ 1 [1 2 3]
     /// This simplifies some interesting inverses.
-    /// ex: # Experimental!
-    ///   : ˘+ 1 5
-    /// ex: # Experimental!
-    ///   : ˘↘ 3 [1 2 3]
-    /// ex: # Experimental!
-    ///   : ⬚@-˘⊏ [0 2 5] "abc"
-    /// ex: # Experimental!
-    ///   : ⬚@-˘⊡ [1_2 3_4] "xy"
-    /// ex: # Experimental!
-    ///   : ˘⍥(+1) 3 10
-    /// ex: # Experimental!
-    ///   : ˘⊂ 1 [1 2 3]
-    /// ex! # Experimental!
-    ///   : ˘⊂ 1 [2 3 4]
+    /// ex: ˘+ 1 5
+    /// ex: ˘↘ 3 [1 2 3]
+    /// ex: ⬚@-˘⊏ [0 2 5] "abc"
+    /// ex: ⬚@-˘⊡ [1_2 3_4] "xy"
+    /// ex: ˘⍥(+1) 3 10
+    /// ex: ˘⊂ 1 [1 2 3]
+    /// ex! ˘⊂ 1 [2 3 4]
     ([1], Anti, InversionModifier, ("anti", '˘')),
     /// Set the [un]-compatible inverse of a function
     ///
     /// The first function is the uninverted function, and the second function is the inverse.
-    /// ex: # Experimental!
-    ///   : F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
+    /// ex: F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
     ///   : ◌F   @A
     ///   : ◌°F  @B
     ///   : ◌⍜F∘ @C
     ///
     /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
     /// This can lead to errors if you are unaware of it.
-    /// ex! # Experimental!
-    ///   : F ← setinv+-
+    /// ex! F ← setinv+-
     ///   : ⍜F∘ 3 5
     ///
     /// For [under]-compatible inverse defining, see [setund].
@@ -2388,14 +2368,12 @@ primitive!(
     /// Any outputs of the second function that excede the number of outputs of the first function will be popped and saved as *context* after the "do" part of the [under]. On the "undo" part, the context will be pushed onto the stack before calling the third function.
     ///
     /// For example, here is a manual re-implementation of [add]'s [under] behavior. Note that the second function has 2 outputs. The extra output is saved as context.
-    /// ex: # Experimental!
-    ///   : F ← setund(+|⟜+|-)
+    /// ex: F ← setund(+|⟜+|-)
     ///   : ⍜+(×10) 1 2
     ///   : ⍜F(×10) 1 2
     ///
     /// This example demonstrates the flow of input, output, and context.
-    /// ex: # Experimental!
-    ///   : F ← setund(
+    /// ex: F ← setund(
     ///   :   &p$"Normal _".
     ///   : | &p$"Do:   set ctx = _, value = _" ,, +1.
     ///   : | &p$"Undo: get ctx = _, value = _" ⊙.

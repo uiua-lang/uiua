@@ -3,7 +3,7 @@ use comrak::{
     *,
 };
 use leptos::*;
-use uiua::Primitive;
+use uiua::{Primitive, Token};
 
 use crate::{backend::fetch, editor::Editor, Hd, NotFound, Prim, ScrollToHash};
 
@@ -95,10 +95,23 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::Item(_) => view!(<li>{children}</li>).into_view(),
         NodeValue::Paragraph => view!(<p>{children}</p>).into_view(),
         NodeValue::Code(code) => {
-            if let Some(prim) = Primitive::from_name(&code.literal) {
-                view!(<Prim prim=prim glyph_only=true/>).into_view()
+            let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut Default::default());
+            if errors.is_empty() {
+                let mut frags = Vec::new();
+                for token in tokens {
+                    match token.value {
+                        Token::Glyph(prim) => {
+                            frags.push(view!(<Prim prim=prim glyph_only=true/>).into_view())
+                        }
+                        _ => {
+                            frags = vec![view!(<code>{code.literal.clone()}</code>).into_view()];
+                            break;
+                        }
+                    }
+                }
+                view!(<span>{frags}</span>).into_view()
             } else {
-                view!(<code>{&code.literal}</code>).into_view()
+                view!(<code>{code.literal.clone()}</code>).into_view()
             }
         }
         NodeValue::Link(link) => {
@@ -137,7 +150,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
 
 #[cfg(test)]
 fn node_html<'a>(node: &'a AstNode<'a>) -> String {
-    use uiua::{Compiler, SafeSys, Token, Uiua, UiuaErrorKind, Value};
+    use uiua::{Compiler, SafeSys, Uiua, UiuaErrorKind, Value};
 
     use crate::{prim_class, prim_html};
 

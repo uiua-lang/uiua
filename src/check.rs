@@ -6,13 +6,12 @@ use std::{
     collections::HashMap,
     fmt,
     hash::{DefaultHasher, Hash, Hasher},
+    iter::repeat,
 };
 
 use enum_iterator::Sequence;
 
 use crate::{function::*, Array, ImplPrimitive, Instr, Primitive, TempStack, Value};
-
-const START_HEIGHT: usize = 16;
 
 /// Count the number of arguments and outputs of a function.
 pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, SigCheckError> {
@@ -101,12 +100,13 @@ pub(crate) fn naive_under_sig(f: Signature, g: Signature) -> Signature {
 /// An environment that emulates the runtime but only keeps track of the stack.
 struct VirtualEnv {
     stack: Vec<BasicValue>,
+    height: i32,
     temp_stacks: [Vec<BasicValue>; TempStack::CARDINALITY],
+    temp_heights: [i32; TempStack::CARDINALITY],
     function_stack: Vec<Signature>,
-    array_stack: Vec<usize>,
+    array_stack: Vec<i32>,
     min_height: usize,
     temp_min_heights: [usize; TempStack::CARDINALITY],
-    popped: Vec<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -173,7 +173,6 @@ enum BasicValue {
     Num(f64),
     Arr(Vec<Self>),
     Other,
-    Unknown(usize),
 }
 
 impl BasicValue {
@@ -205,42 +204,39 @@ impl FromIterator<f64> for BasicValue {
     }
 }
 
-fn derive_sig(min_height: usize, final_height: usize) -> Signature {
+fn derive_sig(min_height: usize, final_height: i32) -> Signature {
     Signature {
-        args: START_HEIGHT.saturating_sub(min_height),
-        outputs: final_height - min_height,
+        args: min_height,
+        outputs: (final_height + min_height as i32).max(0) as usize,
     }
 }
 
 impl VirtualEnv {
     fn from_instrs(instrs: &[Instr]) -> Result<Self, SigCheckError> {
-        let mut temp_stacks = <[_; TempStack::CARDINALITY]>::default();
-        for stack in temp_stacks.iter_mut() {
-            *stack = vec![BasicValue::Other; START_HEIGHT];
-        }
         let mut env = VirtualEnv {
-            stack: (0..START_HEIGHT).rev().map(BasicValue::Unknown).collect(),
-            temp_stacks,
+            stack: Vec::new(),
+            height: 0,
+            temp_stacks: Default::default(),
+            temp_heights: Default::default(),
             function_stack: Vec::new(),
             array_stack: Vec::new(),
-            min_height: START_HEIGHT,
-            temp_min_heights: [START_HEIGHT; TempStack::CARDINALITY],
-            popped: Vec::new(),
+            min_height: 0,
+            temp_min_heights: [0; TempStack::CARDINALITY],
         };
         env.instrs(instrs)?;
         Ok(env)
     }
     fn sig(&self) -> Signature {
-        derive_sig(self.min_height, self.stack.len())
+        derive_sig(self.min_height, self.height)
     }
     fn temp_signatures(&self) -> [Signature; TempStack::CARDINALITY] {
         let mut sigs = [Signature::new(0, 0); TempStack::CARDINALITY];
-        for ((sig, min_height), stack) in sigs
+        for ((sig, min_height), height) in sigs
             .iter_mut()
             .zip(&self.temp_min_heights)
-            .zip(&self.temp_stacks)
+            .zip(&self.temp_heights)
         {
-            *sig = derive_sig(*min_height, stack.len());
+            *sig = derive_sig(*min_height, *height);
         }
         sigs
     }
@@ -265,7 +261,7 @@ impl VirtualEnv {
                         }
                         i += 1;
                     }
-                    self.handle_sig(*sig)?;
+                    self.handle_sig(*sig);
                 }
                 Instr::PopSig => {
                     return Err(SigCheckError::from(
@@ -283,64 +279,70 @@ impl VirtualEnv {
         use Primitive::*;
         match instr {
             Instr::Comment(_) => {}
-            Instr::Push(val) => self.stack.push(BasicValue::from_val(val)),
+            Instr::Push(val) => self.push(BasicValue::from_val(val)),
             Instr::CallGlobal { call, sig, .. } => {
                 if *call {
-                    self.handle_sig(*sig)?;
+                    self.handle_sig(*sig);
                 } else {
                     self.function_stack.push(*sig);
                 }
             }
             Instr::BindGlobal { .. } => {
-                self.pop()?;
+                self.pop();
             }
-            Instr::BeginArray => self.array_stack.push(self.stack.len()),
+            Instr::BeginArray => self.array_stack.push(self.height),
             Instr::EndArray { .. } => {
                 let bottom = (self.array_stack.pop()).ok_or("EndArray without BeginArray")?;
-                let mut items: Vec<_> = self.stack.drain(bottom.min(self.stack.len())..).collect();
+                let stack_bottom = (bottom.max(0) as usize).min(self.stack.len());
+                let mut items: Vec<_> = (self.stack.drain(stack_bottom..))
+                    .chain(repeat(BasicValue::Other).take((-bottom).max(0) as usize))
+                    .collect();
+                self.height = bottom;
                 self.set_min_height();
                 items.reverse();
-                self.stack.push(BasicValue::Arr(items));
+                self.push(BasicValue::Arr(items));
             }
             Instr::ImplPrim(ImplPrimitive::EndRandArray, _) => {
-                let _len = self.pop()?;
+                let _len = self.pop();
                 let bottom = (self.array_stack.pop()).ok_or("EndRandArray without BeginArray")?;
-                self.stack.drain(bottom.min(self.stack.len())..);
+                let stack_bottom = (bottom.max(0) as usize).min(self.stack.len());
+                self.stack.drain(stack_bottom..);
+                self.height = bottom;
                 self.set_min_height();
-                self.stack.push(BasicValue::Other);
+                self.push(BasicValue::Other);
             }
             Instr::Call(_) | Instr::CallRecursive(_) | Instr::CustomInverse(..) => {
                 let sig = self.pop_func()?;
-                self.handle_sig(sig)?
+                self.handle_sig(sig)
             }
             Instr::Recur(_) => return Err(SigCheckError::from("recur present").ambiguous()),
             Instr::PushTemp { count, stack, .. } => {
                 for _ in 0..*count {
-                    let val = self.pop()?;
-                    self.temp_stacks[*stack as usize].push(val);
+                    let val = self.pop();
+                    self.push_temp(*stack, val);
                 }
                 self.set_min_height();
             }
             Instr::CopyToTemp { count, stack, .. } => {
                 let mut vals = Vec::with_capacity(*count);
                 for _ in 0..*count {
-                    vals.push(self.pop()?);
+                    vals.push(self.pop());
                 }
                 self.set_min_height();
                 for val in vals {
-                    self.temp_stacks[*stack as usize].push(val.clone());
-                    self.stack.push(val);
+                    self.push_temp(*stack, val.clone());
+                    self.push(val);
                 }
             }
             Instr::PopTemp { count, stack, .. } => {
                 for _ in 0..*count {
-                    let val = self.pop_temp(*stack)?;
-                    self.stack.push(val);
+                    let val = self.pop_temp(*stack);
+                    self.push(val);
                 }
                 self.set_min_height();
             }
-            Instr::Label { .. } => self.handle_args_outputs(1, 1)?,
-            Instr::ValidateType { .. } => self.handle_args_outputs(1, 1)?,
+            Instr::Label { .. } => self.handle_args_outputs(1, 1),
+            Instr::ValidateType { .. } => self.handle_args_outputs(1, 1),
             Instr::PushFunc(f) => self.function_stack.push(f.signature()),
             &Instr::Switch {
                 count,
@@ -351,23 +353,23 @@ impl VirtualEnv {
                 for _ in 0..count {
                     self.pop_func()?;
                 }
-                let cond = self.pop()?;
+                let cond = self.pop();
                 if under_cond {
-                    self.temp_stacks[TempStack::Under as usize].push(cond);
+                    self.push_temp(TempStack::Under, cond);
                 }
-                self.handle_args_outputs(sig.args, sig.outputs)?;
+                self.handle_sig(sig);
             }
             Instr::Format { parts, .. } => {
-                self.handle_args_outputs(parts.len().saturating_sub(1), 1)?
+                self.handle_args_outputs(parts.len().saturating_sub(1), 1)
             }
             Instr::MatchFormatPattern { parts, .. } => {
-                self.handle_args_outputs(1, parts.len().saturating_sub(1))?
+                self.handle_args_outputs(1, parts.len().saturating_sub(1))
             }
-            Instr::Dynamic(f) => self.handle_sig(f.signature)?,
-            Instr::Unpack { count, .. } => self.handle_args_outputs(1, *count)?,
-            Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count)?,
+            Instr::Dynamic(f) => self.handle_sig(f.signature),
+            Instr::Unpack { count, .. } => self.handle_args_outputs(1, *count),
+            Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count),
             Instr::Prim(Astar, _) | Instr::ImplPrim(ImplPrimitive::AstarFirst, _) => {
-                let _start = self.pop()?;
+                let _start = self.pop();
                 let neighbors = self.pop_func()?;
                 let heuristic = self.pop_func()?;
                 let is_goal = self.pop_func()?;
@@ -376,33 +378,33 @@ impl VirtualEnv {
                     .max(heuristic.args)
                     .max(is_goal.args)
                     .saturating_sub(1);
-                self.handle_args_outputs(args, 2)?;
+                self.handle_args_outputs(args, 2);
             }
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => {
                     let sig = self.pop_func()?;
                     let args = sig.args.saturating_sub(sig.outputs);
-                    self.handle_args_outputs(args, sig.outputs)?;
+                    self.handle_args_outputs(args, sig.outputs);
                 }
                 Each | Rows | Inventory => {
                     let sig = self.pop_func()?;
-                    self.handle_sig(sig)?
+                    self.handle_sig(sig)
                 }
                 Table | Tuples | Triangle => {
                     let sig = self.pop_func()?;
-                    self.handle_sig(sig)?;
+                    self.handle_sig(sig);
                 }
                 Group | Partition => {
                     let sig = self.pop_func()?;
-                    self.handle_args_outputs(2, sig.outputs)?;
+                    self.handle_args_outputs(2, sig.outputs);
                 }
                 Spawn | Pool => {
                     let sig = self.pop_func()?;
-                    self.handle_args_outputs(sig.args, 1)?;
+                    self.handle_args_outputs(sig.args, 1);
                 }
                 Repeat => {
                     let f = self.pop_func()?;
-                    let n = self.pop()?;
+                    let n = self.pop();
                     self.repeat(f, n)?;
                 }
                 Do => {
@@ -421,114 +423,112 @@ impl VirtualEnv {
                     self.handle_args_outputs(
                         comp_sig.args,
                         comp_sig.outputs + cond_sub_sig.outputs.saturating_sub(cond.args),
-                    )?;
+                    );
                 }
                 Un => {
                     let sig = self.pop_func()?;
-                    self.handle_sig(sig.inverse())?;
+                    self.handle_sig(sig.inverse());
                 }
                 Anti => {
                     let sig = self.pop_func()?;
-                    self.handle_sig(sig.anti().unwrap_or(sig))?;
+                    self.handle_sig(sig.anti().unwrap_or(sig));
                 }
                 Under => {
                     let f = self.pop_func()?;
                     let g = self.pop_func()?;
-                    self.handle_sig(naive_under_sig(f, g))?;
+                    self.handle_sig(naive_under_sig(f, g));
                 }
                 Fold => {
                     let f = self.pop_func()?;
-                    self.handle_sig(f)?;
+                    self.handle_sig(f);
                 }
                 Try => {
                     let f_sig = self.pop_func()?;
                     let _handler_sig = self.pop_func()?;
-                    self.handle_sig(f_sig)?;
+                    self.handle_sig(f_sig);
                 }
                 Case => {
                     let f_sig = self.pop_func()?;
-                    self.handle_sig(f_sig)?;
+                    self.handle_sig(f_sig);
                 }
                 Fill => {
                     let fill_sig = self.pop_func()?;
                     if fill_sig.outputs > 0 {
-                        self.handle_sig(fill_sig)?;
+                        self.handle_sig(fill_sig);
                     }
-                    self.handle_args_outputs(fill_sig.outputs, 0)?;
+                    self.handle_args_outputs(fill_sig.outputs, 0);
                     let f = self.pop_func()?;
-                    self.handle_sig(f)?;
+                    self.handle_sig(f);
                 }
                 Content | Memo | Comptime => {
                     let f = self.pop_func()?;
-                    self.handle_sig(f)?;
+                    self.handle_sig(f);
                 }
                 Dup => {
-                    let val = self.pop()?;
+                    let val = self.pop();
                     self.set_min_height();
-                    self.stack.push(val.clone());
-                    self.stack.push(val);
+                    self.push(val.clone());
+                    self.push(val);
                 }
                 Flip => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
+                    let a = self.pop();
+                    let b = self.pop();
                     self.set_min_height();
-                    self.stack.push(a);
-                    self.stack.push(b);
+                    self.push(a);
+                    self.push(b);
                 }
                 Pop => {
-                    if let BasicValue::Unknown(i) = self.pop()? {
-                        self.popped.push(i);
-                    }
+                    self.pop();
                     self.set_min_height();
                 }
                 Over => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
+                    let a = self.pop();
+                    let b = self.pop();
                     self.set_min_height();
-                    self.stack.push(b.clone());
-                    self.stack.push(a);
-                    self.stack.push(b);
+                    self.push(b.clone());
+                    self.push(a);
+                    self.push(b);
                 }
                 Around => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
+                    let a = self.pop();
+                    let b = self.pop();
                     self.set_min_height();
-                    self.stack.push(a.clone());
-                    self.stack.push(b);
-                    self.stack.push(a);
+                    self.push(a.clone());
+                    self.push(b);
+                    self.push(a);
                 }
                 Join => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
+                    let a = self.pop();
+                    let b = self.pop();
                     self.set_min_height();
                     match (a, b) {
                         (BasicValue::Arr(mut a), BasicValue::Arr(b)) => {
                             a.extend(b);
-                            self.stack.push(BasicValue::Arr(a));
+                            self.push(BasicValue::Arr(a));
                         }
                         (BasicValue::Arr(mut a), b) => {
                             a.push(b);
-                            self.stack.push(BasicValue::Arr(a));
+                            self.push(BasicValue::Arr(a));
                         }
                         (a, BasicValue::Arr(mut b)) => {
                             b.insert(0, a);
-                            self.stack.push(BasicValue::Arr(b));
+                            self.push(BasicValue::Arr(b));
                         }
                         (a, b) => {
-                            self.stack.push(BasicValue::Arr(vec![a, b]));
+                            self.push(BasicValue::Arr(vec![a, b]));
                         }
                     }
                 }
                 SetInverse => {
                     let f = self.pop_func()?;
                     let _inv = self.pop_func()?;
-                    self.handle_sig(f)?;
+                    self.handle_sig(f);
                 }
                 SetUnder => {
                     let f = self.pop_func()?;
                     let _before = self.pop_func()?;
                     let _after = self.pop_func()?;
-                    self.handle_sig(f)?;
+                    self.handle_sig(f);
                 }
                 Dump => {
                     self.pop_func()?;
@@ -543,14 +543,14 @@ impl VirtualEnv {
                     let outputs = prim
                         .outputs()
                         .ok_or_else(|| format!("{prim} has indeterminate outputs"))?;
-                    self.handle_args_outputs(args, outputs)?;
+                    self.handle_args_outputs(args, outputs);
                 }
             },
             Instr::ImplPrim(prim, _) => match prim {
                 ImplPrimitive::ReduceContent | ImplPrimitive::ReduceDepth(_) => {
                     let sig = self.pop_func()?;
                     let args = sig.args.saturating_sub(sig.outputs);
-                    self.handle_args_outputs(args, sig.outputs)?;
+                    self.handle_args_outputs(args, sig.outputs);
                 }
                 ImplPrimitive::RepeatWithInverse => {
                     let f = self.pop_func()?;
@@ -561,17 +561,17 @@ impl VirtualEnv {
                         )
                         .ambiguous());
                     }
-                    let n = self.pop()?;
+                    let n = self.pop();
                     self.repeat(f, n)?;
                 }
                 ImplPrimitive::UnFill => {
                     let fill_sig = self.pop_func()?;
                     if fill_sig.outputs > 0 {
-                        self.handle_sig(fill_sig)?;
+                        self.handle_sig(fill_sig);
                     }
-                    self.handle_args_outputs(fill_sig.outputs, 0)?;
+                    self.handle_args_outputs(fill_sig.outputs, 0);
                     let f = self.pop_func()?;
-                    self.handle_sig(f)?;
+                    self.handle_sig(f);
                 }
                 prim => {
                     let args = prim.args();
@@ -579,12 +579,12 @@ impl VirtualEnv {
                         self.pop_func()?;
                     }
                     for _ in 0..args {
-                        self.pop()?;
+                        self.pop();
                     }
                     self.set_min_height();
                     let outputs = prim.outputs();
                     for _ in 0..outputs {
-                        self.stack.push(BasicValue::Other);
+                        self.push(BasicValue::Other);
                     }
                 }
             },
@@ -593,17 +593,30 @@ impl VirtualEnv {
             }
             Instr::SetOutputComment { .. } => {}
         }
-        // println!("{instr:?} -> {}/{}", self.min_height, self.stack.len());
+        // println!("{instr:?} -> {}/{}", -(self.min_height as i32), self.height);
         Ok(())
     }
     // Simulate popping a value. Errors if the stack is empty, which means the function has too many args.
-    fn pop(&mut self) -> Result<BasicValue, String> {
-        Ok(self.stack.pop().ok_or("function has too many args")?)
+    fn pop(&mut self) -> BasicValue {
+        self.height -= 1;
+        self.set_min_height();
+        self.stack.pop().unwrap_or(BasicValue::Other)
     }
-    fn pop_temp(&mut self, stack: TempStack) -> Result<BasicValue, String> {
-        Ok(self.temp_stacks[stack as usize]
+    fn push(&mut self, val: BasicValue) {
+        self.height += 1;
+        self.stack.push(val);
+    }
+    fn pop_temp(&mut self, stack: TempStack) -> BasicValue {
+        self.temp_heights[stack as usize] -= 1;
+        self.temp_min_heights[stack as usize] = self.temp_min_heights[stack as usize]
+            .max((-self.temp_heights[stack as usize]).max(0) as usize);
+        self.temp_stacks[stack as usize]
             .pop()
-            .ok_or("function has too many args")?)
+            .unwrap_or(BasicValue::Other)
+    }
+    fn push_temp(&mut self, stack: TempStack, val: BasicValue) {
+        self.temp_heights[stack as usize] += 1;
+        self.temp_stacks[stack as usize].push(val);
     }
     fn pop_func(&mut self) -> Result<Signature, String> {
         self.function_stack
@@ -613,25 +626,23 @@ impl VirtualEnv {
     /// Set the current stack height as a potential minimum.
     /// At the end of checking, the minimum stack height is a component in calculating the signature.
     fn set_min_height(&mut self) {
-        self.min_height = self.min_height.min(self.stack.len());
+        self.min_height = self.min_height.max((-self.height).max(0) as usize);
         if let Some(h) = self.array_stack.last_mut() {
-            *h = (*h).min(self.stack.len());
+            *h = (*h).min(self.height);
         }
-        for (min_height, stack) in self.temp_min_heights.iter_mut().zip(&self.temp_stacks) {
-            *min_height = (*min_height).min(stack.len());
+        for (min_height, height) in self.temp_min_heights.iter_mut().zip(&self.temp_heights) {
+            *min_height = (*min_height).max((-*height).max(0) as usize);
         }
     }
-    fn handle_args_outputs(&mut self, args: usize, outputs: usize) -> Result<(), String> {
+    fn handle_args_outputs(&mut self, args: usize, outputs: usize) {
         for _ in 0..args {
-            self.pop()?;
+            self.pop();
         }
-        self.set_min_height();
         for _ in 0..outputs {
-            self.stack.push(BasicValue::Other);
+            self.push(BasicValue::Other);
         }
-        Ok(())
     }
-    fn handle_sig(&mut self, sig: Signature) -> Result<(), String> {
+    fn handle_sig(&mut self, sig: Signature) {
         self.handle_args_outputs(sig.args, sig.outputs)
     }
     fn repeat(&mut self, sig: Signature, n: BasicValue) -> Result<(), SigCheckError> {
@@ -648,7 +659,7 @@ impl VirtualEnv {
                             ((n - 1) * (sig.args - sig.outputs) + sig.args, sig.outputs)
                         }
                     };
-                    self.handle_args_outputs(args, outputs)?;
+                    self.handle_args_outputs(args, outputs);
                 }
             } else if n.is_infinite() {
                 match sig.args.cmp(&sig.outputs) {
@@ -664,7 +675,7 @@ impl VirtualEnv {
                         ))
                         .loop_variable(sig, true));
                     }
-                    _ => self.handle_sig(sig)?,
+                    _ => self.handle_sig(sig),
                 }
             } else {
                 return Err("repeat without an integer or infinity".into());
@@ -672,7 +683,7 @@ impl VirtualEnv {
         } else {
             // If n is unknown, then what we do depends on the signature
             match sig.args.cmp(&sig.outputs) {
-                Ordering::Equal => self.handle_sig(sig)?,
+                Ordering::Equal => self.handle_sig(sig),
                 Ordering::Greater => {
                     return Err(SigCheckError::from(format!(
                         "repeat with no number and a function with signature {sig}"
@@ -685,7 +696,7 @@ impl VirtualEnv {
                     ))
                     .loop_variable(sig, false));
                 }
-                Ordering::Less => self.handle_sig(sig)?,
+                Ordering::Less => self.handle_sig(sig),
             }
         }
         Ok(())

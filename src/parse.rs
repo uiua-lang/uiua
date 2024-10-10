@@ -77,7 +77,7 @@ impl fmt::Display for ParseError {
                     if found == "\n" {
                         write!(f, ", found newline")?;
                     } else {
-                        write!(f, ", found `{found}`")?;
+                        write!(f, ", found {found}")?;
                     }
                 }
                 Ok(())
@@ -529,6 +529,7 @@ impl<'i> Parser<'i> {
         let close_span = self
             .expect_close(if boxed { CloseCurly } else { CloseBracket }.into())
             .span;
+        let func = self.try_word();
         Some(DataDef {
             tilde_span,
             name,
@@ -536,6 +537,7 @@ impl<'i> Parser<'i> {
             open_span,
             fields,
             close_span,
+            func,
         })
     }
     fn validate_binding_name(&mut self, name: &Sp<Ident>) {

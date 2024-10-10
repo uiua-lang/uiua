@@ -735,6 +735,9 @@ impl<'a> Formatter<'a> {
                     }
                 }
                 self.push(&data.close_span, if data.boxed { "}" } else { "]" });
+                if let Some(func) = &data.func {
+                    self.format_word(func, depth + 1);
+                }
             }
             Item::Import(import) => {
                 self.prev_import_function = None;

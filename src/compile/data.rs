@@ -200,7 +200,8 @@ impl Compiler {
             instrs,
             flags: FunctionFlags::TRACK_CALLER,
         };
-        let func = self.make_function(id, Signature::new(constructor_args, 1), new_func);
+        let constructor_func =
+            self.make_function(id, Signature::new(constructor_args, 1), new_func);
         let local = LocalName {
             index: self.next_global,
             public: true,
@@ -231,7 +232,7 @@ impl Compiler {
                 }
             }
         }
-        self.compile_bind_function(name, local, func, span, Some(&comment))?;
+        self.compile_bind_function(name, local, constructor_func, span, Some(&comment))?;
 
         // Make args
         let args_module = self.in_scope(ScopeKind::Temp(None), |comp| {
@@ -265,6 +266,8 @@ impl Compiler {
             }
             Ok(())
         })?;
+
+        // Make macro
         let args_macro_index = self.next_global;
         self.next_global += 1;
         let span = &data.tilde_span;
@@ -311,6 +314,21 @@ impl Compiler {
                 if fields.len() == 1 { "" } else { "s" }
             ))),
         );
+
+        // Make call
+        if let Some(word) = data.func {
+            let word_span = word.span.clone();
+            let new_func = self.compile_words(vec![word], true)?;
+            let func = self.make_function(word_span.into(), Signature::new(0, 1), new_func);
+            let instrs = eco_vec![Instr::PushFunc(func)];
+            let local = LocalName {
+                index: self.next_global,
+                public: true,
+            };
+            self.next_global += 1;
+            self.scope.names.insert("Call".into(), local);
+        }
+
         Ok(())
     }
 }

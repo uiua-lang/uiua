@@ -2127,14 +2127,12 @@ fn invert_copy_temp_pattern<'a>(
 }
 
 fn invert_flip_pattern<'a>(
-    mut input: &'a [Instr],
+    input: &'a [Instr],
     comp: &mut Compiler,
 ) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
-    let mut instrs = EcoVec::new();
-    if let Ok((inp, ins)) = Val.invert_extract(input, comp) {
-        input = inp;
-        instrs = ins;
-    }
+    let Ok((input, mut instrs)) = Val.invert_extract(input, comp) else {
+        return generic();
+    };
     let [Instr::Prim(Primitive::Flip, span), input @ ..] = input else {
         return generic();
     };

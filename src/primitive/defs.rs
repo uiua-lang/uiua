@@ -2326,7 +2326,7 @@ primitive!(
     /// A function's [un]-inverse can be set with [setinv].
     /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
     ([1], Un, InversionModifier, ("un", '°')),
-    /// Invert the behavior of a function with respect to its first argument
+    /// Invert the behavior of a function, treating its first argument as a constant
     ///
     /// [un] has a guarantee that the inverted function will have a signature that is the inverse of original function's signature. For dyadic functions, if we want the inverse to *also* be dyadic, then we have to do some workarounds. We can either include the first argument in the inverted function, or we can use [on].
     /// For example, here are two ways to invert [rotate].

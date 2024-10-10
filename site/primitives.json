@@ -338,7 +338,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "InversionModifier",
-    "description": "Invert the behavior of a function, but keep its signature"
+    "description": "Invert the behavior of a function, treating its first argument as a constant"
   },
   "around": {
     "ascii": "'",

@@ -998,17 +998,25 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
 
 pub fn adjacent(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
-    let n = env.pop(1)?;
+    let n_arr = env.pop(1)?;
     let xs = env.pop(2)?;
-    if n.rank() != 0 {
-        return adjacent_fallback(f, n, xs, env);
+    if n_arr.rank() != 0 {
+        return adjacent_fallback(f, n_arr, xs, env);
     }
-    let n = n.as_int(env, "Window size must be an integer or list of integers")?;
-    let n_abs = n.unsigned_abs();
-    if n_abs == 0 {
+    let n = n_arr.as_int(env, "Window size must be an integer or list of integers")?;
+    if n == 0 {
         return Err(env.error("Window size cannot be zero"));
     }
-    let n = n_abs;
+    let n = if n > 0 {
+        n.unsigned_abs()
+    } else {
+        let count = n.unsigned_abs();
+        if count <= xs.row_count() {
+            xs.row_count() + 1 - count
+        } else {
+            return adjacent_fallback(f, n_arr, xs, env);
+        }
+    };
     match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
             Primitive::Add => fast_adjacent(nums, n, env, add::num_num),

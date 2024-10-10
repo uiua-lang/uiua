@@ -17,6 +17,10 @@ This version is not yet released. If you are reading this on the website, then t
   - Change its glyph to something with broader font support
   - `⮌` will continue to work and will be formatted as `⤸`
 - Stabilize [`below ◡`](https://uiua.org/docs/below)
+- Add [`anti ⌝`](https://uiua.org/docs/anti) modifier, which simplifies choosing certain inverses
+- Add [`obverse ⌅`](https://uiua.org/docs/obverse) modifier, which unifies the specification of inverses
+  - This unifies, replaces, and extends [`setinv`](https://uiua.org/docs/setinv) and [`setund`](https://uiua.org/docs/setund)
+  - Deprecate [`setinv`](https://uiua.org/docs/setinv) and [`setund`](https://uiua.org/docs/setund)
 - Rename `⤙ but` and `⤚ with` to [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off)
   - [`with ⤙`](https://uiua.org/docs/with) has been stabilized
 - "Stack macros" are now called "index macros"
@@ -59,8 +63,6 @@ This version is not yet released. If you are reading this on the website, then t
 - Add pride flag constants
 - Allow [`&raw`](https://uiua.org/docs/&raw) to be inverted, acting as a getter for the raw state of the terminal
   - [`under ⍜`](https://uiua.org/docs/under)[`&raw`](https://uiua.org/docs/&raw) sets raw mode, and then returns it to the previous state
-- Add experimental [`anti ⌝`](https://uiua.org/docs/anti) modifier, which simplifies choosing certain inverses
-- Add experimental [`obverse ⍛`](https://uiua.org/docs/obverse) modifier, which unifies the specification of inverses
 - Add experimental [`tuples ⧅`](https://uiua.org/docs/tuples) modifier
   - This unifies and extends the behavior of the `choose` and `permute` functions, which are now deprecated
   - This also replaces and deprecates the `triangle` modifier
@@ -99,6 +101,7 @@ This version is not yet released. If you are reading this on the website, then t
 - After programs finish executing, the terminal raw mode will be automatically disabled if it was left on. 
 ### Website
 - Add [Ranges](https://uiua.org/tutorial/ranges) tutorial
+- Update the [Inverses](https://uiua.org/docs/inverses) tutorial with information about [`anti ⌝`](https://uiua.org/docs/anti) and [`obverse ⌅`](https://uiua.org/docs/obverse)
 - Add an [RSS Feed](https://uiua.org/blog/feed.rss) for the blog
 - Update the [Testing Tutorial](https://uiua.org/tutorial/testing)
 - In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs

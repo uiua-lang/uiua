@@ -59,7 +59,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add pride flag constants
 - Allow [`&raw`](https://uiua.org/docs/&raw) to be inverted, acting as a getter for the raw state of the terminal
   - [`under ⍜`](https://uiua.org/docs/under)[`&raw`](https://uiua.org/docs/&raw) sets raw mode, and then returns it to the previous state
-- Add experimental [`anti ˘`](https://uiua.org/docs/anti) modifier, which simplifies choosing certain inverses
+- Add experimental [`anti ⌝`](https://uiua.org/docs/anti) modifier, which simplifies choosing certain inverses
 - Add experimental [`obverse ⍛`](https://uiua.org/docs/obverse) modifier, which unifies the specification of inverses
 - Add experimental [`tuples ⧅`](https://uiua.org/docs/tuples) modifier
   - This unifies and extends the behavior of the `choose` and `permute` functions, which are now deprecated

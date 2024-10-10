@@ -73,7 +73,7 @@ However, this is not always possible, as the argument may not be static.
 The [anti](/docs/anti) modifier is similar to [un](/docs/un), but it allows the use of external arguments.
 
 ```uiua
-˘+ 3 5
+⌝+ 3 5
 ```
 
 [anti](/docs/anti) is equivalent to `popunon`, and so the [anti](/docs/anti) inverse of a function with signature `|a.b` is `|(b+1).(a-1)`.
@@ -81,19 +81,19 @@ The [anti](/docs/anti) modifier is similar to [un](/docs/un), but it allows the 
 [anti](/docs/anti) makes some interesting and useful behaviors available.
 
 ```uiua
-˘ⁿ 4 81 # Nth root
+⌝ⁿ 4 81 # Nth root
 ```
 
 ```uiua
-˘↘ 1_¯2 [1_2 3_4] # Pad
+⌝↘ 1_¯2 [1_2 3_4] # Pad
 ```
 
 ```uiua
-⬚@-˘⊏ 1_2_5 "abc"
+⬚@-⌝⊏ 1_2_5 "abc"
 ```
 
 ```uiua
-⬚0˘⊡ [2_2 0_4] 3_5
+⬚0⌝⊡ [2_2 0_4] 3_5
 ```
 
 ## [under](/docs/under)
@@ -215,7 +215,7 @@ This inverse ends up working with [un](/docs/un), [anti](/docs/anti), *and* [und
 Lerp ← ⌅(+⊃⊢(×/-)|÷⊃/-(-⊢))
 Lerp 10_20 0.5
 °(Lerp 10_20) 30
-˘Lerp 10_20 5
+⌝Lerp 10_20 5
 ⍜Lerp(+5) 10_20 0.5
 ```
 

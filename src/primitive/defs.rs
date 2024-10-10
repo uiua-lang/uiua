@@ -2270,7 +2270,7 @@ primitive!(
     /// The most commonly used signatures for which this holds is when both signatures are `|2.1`.
     /// ex: F ← ⌅(+×10:|÷10-)
     ///   : F 2 3
-    ///   : ˘F 2 32
+    ///   : ⌝F 2 32
     /// This sort of inverse also works with [under].
     /// ex: F ← ⌅(+×10:|÷10-)
     ///   : ⍜F? 2 5
@@ -2305,13 +2305,13 @@ primitive!(
     /// Here is our fully-specified [add] implementation.
     /// ex: F ← ⌅(+|⊃⌊⌈÷2|⟜+|-|$Anti -)
     ///   : F 2 5
-    ///   : ˘F 2 5
+    ///   : ⌝F 2 5
     ///   : [°F] 15
     ///   : ⍜F(÷3) 10 5
     /// Note that [anti] inverses also work with [un][on].
     /// ex: F ← ⌅(×|+÷2)
     ///   : F 4 10
-    ///   : ˘F 4 10
+    ///   : ⌝F 4 10
     ///   : [°⟜F] 4 10
     ([1], Obverse, InversionModifier, ("obverse", '⌅')),
     /// Invert the behavior of a function
@@ -2334,16 +2334,17 @@ primitive!(
     ///   : ◌°⟜↻ 1 [1 2 3]
     /// The first way requires the first argument to be a constant, which is not always applicable. The second way works but it is a bit verbose.
     /// [anti] does the [pop][un][on] for you.
-    /// ex: ˘↻ 1 [1 2 3]
+    /// ex: ⌝↻ 1 [1 2 3]
     /// This simplifies some interesting inverses.
-    /// ex: ˘+ 1 5
-    /// ex: ˘↘ 3 [1 2 3]
-    /// ex: ⬚@-˘⊏ [0 2 5] "abc"
-    /// ex: ⬚@-˘⊡ [1_2 3_4] "xy"
-    /// ex: ˘⍥(+1) 3 10
-    /// ex: ˘⊂ 1 [1 2 3]
-    /// ex! ˘⊂ 1 [2 3 4]
-    ([1], Anti, InversionModifier, ("anti", '˘')),
+    /// ex: ⌝+ 1 5
+    /// ex: ⌝↘ 3 [1 2 3]
+    /// ex: ⬚@-⌝⊏ [0 2 5] "abc"
+    /// ex: ⬚@-⌝⊡ [1_2 3_4] "xy"
+    /// ex: ⌝⍥(+1) 3 10
+    /// ex: ⌝⊂ 1 [1 2 3]
+    /// ex! ⌝⊂ 1 [2 3 4]
+    /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
+    ([1], Anti, InversionModifier, ("anti", '⌝')),
     /// Set the [un]-compatible inverse of a function
     ///
     /// The first function is the uninverted function, and the second function is the inverse.

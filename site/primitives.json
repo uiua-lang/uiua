@@ -334,7 +334,7 @@
     "description": "Add values"
   },
   "anti": {
-    "glyph": "˘",
+    "glyph": "⌝",
     "outputs": 1,
     "modifier_args": 1,
     "class": "InversionModifier",

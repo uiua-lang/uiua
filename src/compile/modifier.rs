@@ -976,15 +976,22 @@ impl Compiler {
                 }
             }),
             Obverse => wrap!(|| {
+                // Rectify case, where only one function is supplied
                 let operand = modified.code_operands().next().unwrap().clone();
                 let span = operand.span.clone();
                 let spandex = self.add_span(span.clone());
                 let (func, sig) = self.compile_operand_word(operand)?;
                 let func = self.make_function(span.clone().into(), sig, func);
-                let cust = CustomInverse {
+                let mut cust = CustomInverse {
                     under: Some((func.clone(), func.clone())),
                     ..Default::default()
                 };
+                if sig == sig.inverse() {
+                    cust.un = Some(func.clone());
+                }
+                if sig.anti() == Some(sig) {
+                    cust.anti = Some(func.clone());
+                }
                 let instrs = eco_vec![Instr::PushFunc(func), Instr::CustomInverse(cust, spandex)];
                 if call {
                     self.push_all_instrs(instrs);

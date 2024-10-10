@@ -313,6 +313,12 @@ impl SysBackend for WebBackend {
     fn now(&self) -> f64 {
         *START_TIME.get_or_init(|| 0.0) + now()
     }
+    fn clipboard(&self) -> Result<String, String> {
+        Ok(window()
+            .prompt_with_message("Paste clipboard contents")
+            .unwrap_or(None)
+            .unwrap_or_default())
+    }
     fn set_clipboard(&self, contents: &str) -> Result<(), String> {
         _ = window().navigator().clipboard().write_text(contents);
         Ok(())

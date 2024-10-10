@@ -193,6 +193,7 @@ impl fmt::Display for ImplPrimitive {
             GifDecode => write!(f, "{Un}{GifEncode}"),
             AudioDecode => write!(f, "{Un}{AudioEncode}"),
             UnRawMode => write!(f, "{Un}{}", Primitive::Sys(SysOp::RawMode)),
+            UnClip => write!(f, "{Un}{}", Primitive::Sys(SysOp::Clip)),
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoUnbits => write!(f, "{Under}{Un}{Bits}"),
             UndoBase => write!(f, "{Under}{Base}"),
@@ -1146,6 +1147,12 @@ impl ImplPrimitive {
                 let raw_mode = env.rt.backend.get_raw_mode().map_err(|e| env.error(e))?;
                 env.push(raw_mode);
             }
+            ImplPrimitive::UnClip => {
+                let contents = env.pop(1)?.as_string(env, "Contents must be a string")?;
+                (env.rt.backend)
+                    .set_clipboard(&contents)
+                    .map_err(|e| env.error(e))?;
+            }
             // Unders
             ImplPrimitive::UndoUnbits => {
                 let orig_shape = env.pop(1)?;
@@ -1922,7 +1929,7 @@ mod tests {
             for line in &prim.doc().lines {
                 if let PrimDocLine::Example(ex) = line {
                     if [
-                        "&sl", "&tcpc", "&tlsc", "&ast", "&clset", "&fo", "&fc", "&fde", "&ftr",
+                        "&sl", "&tcpc", "&tlsc", "&ast", "&clip", "&fo", "&fc", "&fde", "&ftr",
                         "&fld", "&fif", "&fras", "&frab", "&fmd", "timezone",
                     ]
                     .iter()

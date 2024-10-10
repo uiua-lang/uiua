@@ -216,8 +216,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         GifEncode => Instr::ImplPrim(GifDecode, span),
         AudioEncode => Instr::ImplPrim(AudioDecode, span),
         ImageEncode => Instr::ImplPrim(ImageDecode, span),
-        Sys(SysOp::ClipboardSet) => Instr::Prim(Sys(SysOp::ClipboardGet), span),
-        Sys(SysOp::ClipboardGet) => Instr::Prim(Sys(SysOp::ClipboardSet), span),
+        Sys(SysOp::Clip) => Instr::ImplPrim(UnClip, span),
         Sys(SysOp::RawMode) => Instr::ImplPrim(UnRawMode, span),
         Json => Instr::ImplPrim(UnJson, span),
         Csv => Instr::ImplPrim(UnCsv, span),
@@ -270,6 +269,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
             span,
         ),
         UnRawMode => Instr::Prim(Sys(SysOp::RawMode), span),
+        UnClip => Instr::Prim(Sys(SysOp::Clip), span),
         _ => return None,
     })
 }

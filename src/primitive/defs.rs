@@ -1248,6 +1248,22 @@ primitive!(
     /// If the selector's rank is `greater than``1`, then each row of the selector will be selected separately.
     /// ex: ⊏ [0_1 1_2 2_3] [2 3 5 7]
     /// ex: ⊏ [0_1 1_2 2_0] [1_2_3 4_5_6 7_8_9]
+    ///
+    /// [un][select] is equivalent to [range][length][duplicate]. This is a common way to enumerate the indices of the rows an array.
+    /// ex: °⊏ "hello!"
+    /// ex: °⊏ {1 2_3 4_5_6}
+    ///
+    /// [under][select] can be used to modify, replace, insert, or delete the rows of an array.
+    /// ex: ⍜⊏(×10) 1_5 ⇡10
+    /// ex: ⍜⊏⋅π 1_5 ⇡10
+    /// ex: ⍜⊏⋅η_τ 1_5 ⇡10
+    /// ex: ⍜⊏≡⋅[] 1_5 ⇡10
+    /// ex: ⍜⊏≡⋅η_τ_π 1_5 ⇡10
+    ///
+    /// [anti][select] puts the rows of an array at their corresponding indices. This requires a [fill] value if not all indices are present.
+    /// ex: ⌝⊏ 3_1_2_0 "abcd"
+    /// ex: ⬚@-⌝⊏ 1_2_5 "abc"
+    /// ex: ⬚@.⌝⊏ [1_5 7_2] ["ab" "cd"]
     (2, Select, DyadicArray, ("select", '⊏')),
     /// Index a row or elements from an array
     ///
@@ -1258,15 +1274,23 @@ primitive!(
     /// If the index's rank is `2` or greater, then multiple rows or elements will be picked.
     /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
     ///
-    /// [under][pick] can be used to modify the value at an index.
+    /// [un][pick] is equivalent to [range][shape][duplicate]. This is a common way to enumerate the indices of the elements of an array.
+    /// ex: °⊡ "hello!"
+    /// ex: °⊡ ["ab" "cd"]
+    ///
+    /// [under][pick] can be used to modify or replace the value at an index.
     /// ex: ⍜⊡(×10) 2 [8 3 9 2 0]
     /// This works with multiple and/or deeper indices.
     /// ex: ⍜⊡(×10) [2_1 0_2] +1↯3_4⇡12
     /// To simply set a value, you can use [under][pick][pop].
     /// ex: ⍜⊡◌ 2 [8 3 9 2 0] 42
+    /// Or [under][pick][gap] if the replacement is static.
     ///
-    /// For index rank `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
-    /// ex: ⊡⇡△. [1_2_3 4_5_6]
+    /// [anti][pick] puts the values of an array at their corresponding indices. This requires a [fill] value if not all indices are present.
+    /// ex: ⬚0⌝⊡ 1_2 5
+    /// ex: ⬚0⌝⊡ 1_1 1_2
+    /// ex: ⬚@-⌝⊡ [1_2 3_4] "ab"
+    /// ex: ⌝⊡ [1_0 0_0 1_1 0_1] "abcd"
     (2, Pick, DyadicArray, ("pick", '⊡')),
     /// Change the shape of an array
     ///
@@ -1428,6 +1452,22 @@ primitive!(
     /// [orient]`¯1` is equivalent to [un][transpose].
     /// ex: °△ 2_3_4
     ///   : ∩△ ⊃°⍉(⤸¯1)
+    ///
+    /// [anti][orient] moves the axes *to* the given indices.
+    /// ex: △  ⤸ 3_1 °△ 2_3_4_5
+    ///   : △ ⌝⤸ 3_1 °△ 2_3_4_5
+    /// This does not have the requirement that the indices be unique. Repeated indices will retrive the *diagonal* along those axes.
+    /// ex: ⌝⤸ 0_0 . °△ 3_3
+    /// ex: ⌝⤸ 0_0_0 . °△ 3_3_3
+    /// ex: ⌝⤸ 0_0 °△ 3_3_3
+    /// ex: ⌝⤸ 0_1_1 . °△ 2_2_2
+    /// ex: ⌝⤸ 1_1_0 °△ 2_2_2
+    /// ex: ⌝⤸ 1_0_1 °△ 2_2_2
+    ///
+    /// [un][orient] is equivalent to [range][length][shape][duplicate]. This is an easy way to enumerate the indices of the axes of an array.
+    /// ex: °⤸ "hello!"
+    /// ex: °⤸ ["ab" "cd"]
+    /// ex: °⤸ [[1_2 3_4] [5_6 7_8]]
     (2, Orient, DyadicArray, ("orient", '⤸')),
     /// The n-wise windows of an array
     ///
@@ -2131,6 +2171,23 @@ primitive!(
     ///
     /// [on] is equivalent to [fork][identity], but can often be easier to read.
     ([1], On, Stack, ("on", '⟜')),
+    /// Duplicate a function's last argument before calling it
+    ///
+    /// If you want to filter out every element of an array that is not [less than] 10, you can use [keep].
+    /// ex: ▽<10. [1 27 8 3 14 9]
+    /// However, if you want to make this a function, you have to [dip] below the first arguement to [duplicate] the array.
+    /// ex: F ← ▽<⊙.
+    ///   : F 10 [1 27 8 3 14 9]
+    /// While this works, it may take a moment to process in your mind how the stack is changing.
+    /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
+    /// With [by], the filtering function above can be written more simply.
+    /// ex: F ← ▽⊸<
+    ///   : F 10 [1 27 8 3 14 9]
+    /// Here are some more examples of [by] in action.
+    /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
+    ///   : ⊜□⊸≠ @  "Hey there buddy"
+    ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
+    ([1], By, Stack, ("by", '⊸')),
     /// Call a function but keep its last argument on the top of the stack
     ///
     /// ex: [⤙+ 2 5]
@@ -2167,23 +2224,6 @@ primitive!(
     /// ex: # Experimental!
     ///   : [⤚1 2 3]
     ([1], Off, Stack, ("off", '⤚')),
-    /// Duplicate a function's last argument before calling it
-    ///
-    /// If you want to filter out every element of an array that is not [less than] 10, you can use [keep].
-    /// ex: ▽<10. [1 27 8 3 14 9]
-    /// However, if you want to make this a function, you have to [dip] below the first arguement to [duplicate] the array.
-    /// ex: F ← ▽<⊙.
-    ///   : F 10 [1 27 8 3 14 9]
-    /// While this works, it may take a moment to process in your mind how the stack is changing.
-    /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
-    /// With [by], the filtering function above can be written more simply.
-    /// ex: F ← ▽⊸<
-    ///   : F 10 [1 27 8 3 14 9]
-    /// Here are some more examples of [by] in action.
-    /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
-    ///   : ⊜□⊸≠ @  "Hey there buddy"
-    ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
-    ([1], By, Stack, ("by", '⊸')),
     /// Keep all arguments to a function above the outputs on the stack
     ///
     /// ex: # Experimental!
@@ -2436,10 +2476,13 @@ primitive!(
     /// See the [Advanced Stack Manipulation Tutorial](/tutorial/advancedstack) for a more complete understanding as to why.
     ///
     /// ex: ⊃⇌◴ 1_2_2_3
+    /// ex: ⊃(+1)(×2) 5
     /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
     /// ex: [⊃⊃⊃+-×÷ 5 8]
     /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
     /// ex: [⊃+¯ 3 5]
+    /// By default, [fork] can only work with two functions. However, a function pack can be used to pass the same arguments to many functions.
+    /// ex: ⊃(+1|×3|÷|$"_ and _") 6 12
     ([2], Fork, Planet, ("fork", '⊃')),
     /// Call two functions on two distinct sets of values
     ///

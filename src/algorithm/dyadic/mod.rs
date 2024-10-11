@@ -119,7 +119,7 @@ impl<T: Clone + std::fmt::Debug + Send + Sync> Array<T> {
         match a_depth.cmp(&b_depth) {
             Ordering::Equal => {}
             Ordering::Less => {
-                for &b_dim in b.shape[..b_depth - a_depth].iter().rev() {
+                for &b_dim in b.shape[a_depth..b_depth].iter().rev() {
                     let mut new_a_data = EcoVec::with_capacity(a.element_count() * b_dim);
                     for row in a.row_slices() {
                         for _ in 0..b_dim {
@@ -132,7 +132,7 @@ impl<T: Clone + std::fmt::Debug + Send + Sync> Array<T> {
                 }
             }
             Ordering::Greater => {
-                for &a_dim in a.shape[..a_depth - b_depth].iter().rev() {
+                for &a_dim in a.shape[b_depth..a_depth].iter().rev() {
                     let mut new_b_data = EcoVec::with_capacity(b.element_count() * a_dim);
                     for row in b.row_slices() {
                         for _ in 0..a_dim {

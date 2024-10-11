@@ -35,6 +35,7 @@ pub enum Expectation {
     ArgsOutputs,
     ItemName,
     Token(Token),
+    CloseModule,
 }
 
 impl From<AsciiToken> for Expectation {
@@ -51,6 +52,7 @@ impl fmt::Display for Expectation {
             Expectation::ItemName => write!(f, "item name"),
             Expectation::Token(Simple(s)) => write!(f, "`{s}`"),
             Expectation::Token(tok) => write!(f, "{:?}", tok),
+            Expectation::CloseModule => write!(f, "`---`"),
         }
     }
 }
@@ -309,66 +311,70 @@ impl<'i> Parser<'i> {
             Item::Binding(binding)
         } else if let Some(import) = self.try_import() {
             Item::Import(import)
+        } else if let Some(module) = self.try_module(in_scope) {
+            Item::Module(module)
         } else {
             let lines = self.multiline_words(true, false);
-            // Convert multiline words into multiple items
-            if !lines.is_empty() {
-                Item::Words(lines)
+            if lines.is_empty() {
+                return None;
             } else {
-                // Name
-                let backup = self.index;
-                let open_span = self.try_exact(TripleMinus.into())?;
-                self.try_spaces();
-                let name = self.try_ident();
-                if in_scope && name.is_none() {
-                    self.index = backup;
-                    return None;
-                }
-                let kind = match name {
-                    Some(name) if name.value == "test" => ModuleKind::Test,
-                    Some(name) => ModuleKind::Named(name),
-                    None => ModuleKind::Test,
-                };
-                // Imports
-                while self.try_exact(Spaces).is_some() {}
-                let imports = if let Some(tilde_span) = self.try_exact(Tilde.into()) {
-                    let mut items = Vec::new();
-                    loop {
-                        if let Some(ident) = self.try_ident() {
-                            items.push(ident);
-                        } else if self.try_spaces().is_some() {
-                            continue;
-                        } else {
-                            break;
-                        }
-                    }
-                    if items.is_empty() {
-                        None
-                    } else {
-                        Some(ImportLine { tilde_span, items })
-                    }
-                } else {
-                    None
-                };
-                // Items
-                let items = self.items(true);
-                let close_span = self.try_exact(TripleMinus.into());
-                let span = if let Some(end) = close_span.clone() {
-                    open_span.clone().merge(end)
-                } else {
-                    self.errors.push(self.expected([TripleMinus]));
-                    open_span.clone()
-                };
-                let module = ScopedModule {
-                    open_span,
-                    kind,
-                    items,
-                    imports,
-                    close_span,
-                };
-                Item::Module(span.sp(module))
+                Item::Words(lines)
             }
         })
+    }
+    fn try_module(&mut self, in_scope: bool) -> Option<Sp<ScopedModule>> {
+        let backup = self.index;
+        let open_span = self.try_module_delim()?;
+        self.try_spaces();
+        // Name
+        let name = self.try_ident();
+        if in_scope && name.is_none() {
+            self.index = backup;
+            return None;
+        }
+        let kind = match name {
+            Some(name) if name.value == "test" => ModuleKind::Test,
+            Some(name) => ModuleKind::Named(name),
+            None => ModuleKind::Test,
+        };
+        // Imports
+        while self.try_exact(Spaces).is_some() {}
+        let imports = if let Some(tilde_span) = self.try_exact(Tilde.into()) {
+            let mut items = Vec::new();
+            loop {
+                if let Some(ident) = self.try_ident() {
+                    items.push(ident);
+                } else if self.try_spaces().is_some() {
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            if items.is_empty() {
+                None
+            } else {
+                Some(ImportLine { tilde_span, items })
+            }
+        } else {
+            None
+        };
+        // Items
+        let items = self.items(true);
+        let close_span = self.try_module_delim();
+        let span = if let Some(end) = close_span.clone() {
+            open_span.clone().merge(end)
+        } else {
+            self.errors.push(self.expected([Expectation::CloseModule]));
+            open_span.clone()
+        };
+        let module = ScopedModule {
+            open_span,
+            kind,
+            items,
+            imports,
+            close_span,
+        };
+        Some(span.sp(module))
     }
     fn comment(&mut self) -> Option<Sp<String>> {
         let span = self.try_exact(Token::Comment)?;
@@ -703,7 +709,9 @@ impl<'i> Parser<'i> {
         loop {
             let curr = self.index;
             if check_for_bindings
-                && (self.try_binding_init().is_some() || self.try_import_init().is_some())
+                && (self.try_binding_init().is_some()
+                    || self.try_import_init().is_some()
+                    || self.try_module_delim().is_some())
             {
                 self.index = curr;
                 break;
@@ -1218,6 +1226,19 @@ impl<'i> Parser<'i> {
     }
     fn try_spaces(&mut self) -> Option<Sp<Word>> {
         self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))
+    }
+    fn try_module_delim(&mut self) -> Option<CodeSpan> {
+        let reset = self.index;
+        let start = self.try_exact(Primitive::Sub.into())?;
+        if self.try_exact(Primitive::Sub.into()).is_none() {
+            self.index = reset;
+            return None;
+        }
+        let Some(end) = self.try_exact(Primitive::Sub.into()) else {
+            self.index = reset;
+            return None;
+        };
+        Some(start.merge(end))
     }
     fn expect_close(&mut self, token: Token) -> Sp<bool> {
         if let Some(span) = self.try_exact(token.clone()) {

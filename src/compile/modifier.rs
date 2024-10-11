@@ -1212,16 +1212,20 @@ impl Compiler {
                 if m.code_operands().count() != 1 {
                     return Ok(false);
                 }
-                let operand = m.code_operands().next().unwrap().clone();
-                let (content_instrs, sig) = self.compile_operand_word(operand)?;
+                let content_op = m.code_operands().next().unwrap().clone();
+                let (content_instrs, content_sig) = self.compile_operand_word(content_op)?;
                 let content_func =
-                    self.make_function(m.modifier.span.clone().into(), sig, content_instrs);
+                    self.make_function(m.modifier.span.clone().into(), content_sig, content_instrs);
                 let span = self.add_span(modified.modifier.span.clone());
                 let instrs = eco_vec![
                     Instr::PushFunc(content_func),
                     Instr::ImplPrim(ImplPrimitive::ReduceContent, span),
                 ];
-                finish!(instrs, Signature::new(1, 1));
+                let reduce_sig = Signature::new(
+                    content_sig.args.saturating_sub(content_sig.outputs),
+                    content_sig.outputs,
+                );
+                finish!(instrs, reduce_sig);
                 Ok(true)
             }),
             Each => wrap!(|| -> UiuaResult<bool> {

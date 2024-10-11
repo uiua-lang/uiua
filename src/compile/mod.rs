@@ -2510,8 +2510,8 @@ code:
         {
             return (new_func, errors);
         }
+        // println!("pre eval {:?}", new_func.instrs);
         let allow_error = instrs_are_pure(&new_func.instrs, &self.asm, Purity::Pure);
-        // println!("pre eval {:?}", new_func);
         let mut start = 0;
         let mut new_instrs: Option<EcoVec<Instr>> = None;
         'start: while start < new_func.instrs.len() {
@@ -2539,7 +2539,10 @@ code:
                         }
                         Ok(None) => {}
                         Err(e) if !allow_error || e.is_fill || self.in_try => {}
-                        Err(e) => errors.push(e),
+                        Err(e) => {
+                            // println!("error: {e:?}");
+                            errors.push(e)
+                        }
                     }
                     if !success {
                         if let Some(new_instrs) = &mut new_instrs {

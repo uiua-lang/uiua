@@ -7,7 +7,7 @@ use crate::{
     lex::{Sp, Span},
     parse::ParseError,
     value::Value,
-    CodeSpan, InputSrc, Inputs,
+    CodeSpan, Ident, InputSrc, Inputs,
 };
 
 /// An error produced when running/compiling/formatting a Uiua program
@@ -147,9 +147,9 @@ impl UiuaError {
         self.trace.push(frame);
         self
     }
-    pub(crate) fn trace_macro(mut self, span: CodeSpan) -> Self {
+    pub(crate) fn trace_macro(mut self, name: Ident, span: CodeSpan) -> Self {
         let frame = TraceFrame {
-            id: FunctionId::Macro(span.clone()),
+            id: FunctionId::Macro(name, span.clone()),
             span: Span::Code(span),
         };
         self.trace.push(frame);

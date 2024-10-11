@@ -1367,7 +1367,7 @@ impl Compiler {
                         ));
                     }
                 };
-                self.quote(&code, &modified.modifier.span, call)?;
+                self.quote(&code, &"quote".into(), &modified.modifier.span, call)?;
             }),
             Sig => wrap!(|| {
                 let operand = modified.code_operands().next().unwrap().clone();
@@ -1464,8 +1464,11 @@ impl Compiler {
                     new_func.flags |= mac.flags;
                     // Add
                     let sig = self.sig_of(&new_func.instrs, &modifier_span)?;
-                    let mut func =
-                        self.make_function(FunctionId::Macro(r.name.span), sig, new_func);
+                    let mut func = self.make_function(
+                        FunctionId::Macro(r.name.value, r.name.span),
+                        sig,
+                        new_func,
+                    );
                     if mac.recursive {
                         func.flags |= FunctionFlags::RECURSIVE;
                     }
@@ -1596,7 +1599,7 @@ impl Compiler {
                 }
                 Ok(())
             })()
-            .map_err(|e| e.trace_macro(modifier_span.clone()))?;
+            .map_err(|e| e.trace_macro(r.name.value.clone(), modifier_span.clone()))?;
 
             // Quote
             self.code_meta
@@ -1604,7 +1607,7 @@ impl Compiler {
                 .insert(full_span, (r.name.value.clone(), code.clone()));
             self.suppress_diagnostics(|comp| {
                 comp.temp_scope(mac.names, None, |comp| {
-                    comp.quote(&code, &modifier_span, call)
+                    comp.quote(&code, &r.name.value, &modifier_span, call)
                 })
             })?;
         } else if let Some(m) =
@@ -2131,7 +2134,7 @@ impl Compiler {
         words.retain(|word| !matches!(word.value, Word::Placeholder(_)));
         error.map_or(Ok(()), Err)
     }
-    fn quote(&mut self, code: &str, span: &CodeSpan, call: bool) -> UiuaResult {
+    fn quote(&mut self, code: &str, name: &Ident, span: &CodeSpan, call: bool) -> UiuaResult {
         let (items, errors, _) = parse(
             code,
             InputSrc::Macro(span.clone().into()),
@@ -2140,7 +2143,7 @@ impl Compiler {
         if !errors.is_empty() {
             return Err(UiuaErrorKind::Parse(errors, self.asm.inputs.clone().into())
                 .error()
-                .trace_macro(span.clone()));
+                .trace_macro(name.clone(), span.clone()));
         }
 
         let top_slices_start = self.asm.top_slices.len();
@@ -2148,20 +2151,23 @@ impl Compiler {
         let temp_mode = self.pre_eval_mode.min(PreEvalMode::Line);
         let pre_eval_mod = replace(&mut self.pre_eval_mode, temp_mode);
         self.items(items, true)
-            .map_err(|e| e.trace_macro(span.clone()))?;
+            .map_err(|e| e.trace_macro(name.clone(), span.clone()))?;
         self.pre_eval_mode = pre_eval_mod;
         // Extract generated top-level instructions
-        let mut instrs = EcoVec::new();
+        let mut removed_slices = Vec::new();
         for slice in (self.asm.top_slices)
             .split_off(top_slices_start)
             .into_iter()
             .rev()
         {
-            for i in (slice.start..slice.start + slice.len).rev() {
-                instrs.push(self.asm.instrs.remove(i));
-            }
+            removed_slices.push(self.asm.instrs(slice));
         }
-        instrs.make_mut().reverse();
+        let instrs: EcoVec<_> = removed_slices
+            .into_iter()
+            .rev()
+            .flatten()
+            .cloned()
+            .collect();
         if call {
             self.push_all_instrs(instrs);
         } else {

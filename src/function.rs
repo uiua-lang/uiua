@@ -409,7 +409,7 @@ pub enum FunctionId {
     /// An anonymous function
     Anonymous(CodeSpan),
     /// A macro expansion
-    Macro(CodeSpan),
+    Macro(Ident, CodeSpan),
     /// The top-level function
     Main,
     #[doc(hidden)]
@@ -422,7 +422,7 @@ impl FunctionId {
     pub fn span(&self) -> Option<&CodeSpan> {
         match self {
             FunctionId::Anonymous(span) => Some(span),
-            FunctionId::Macro(span) => Some(span),
+            FunctionId::Macro(_, span) => Some(span),
             _ => None,
         }
     }
@@ -461,7 +461,7 @@ impl fmt::Display for FunctionId {
             FunctionId::Named(name) => write!(f, "{name}"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
-            FunctionId::Macro(_) => write!(f, "macro expansion"),
+            FunctionId::Macro(name, span) => write!(f, "macro expansion of {name} at {span}"),
             FunctionId::Main => write!(f, "main"),
             FunctionId::Unnamed => write!(f, "unnamed"),
         }

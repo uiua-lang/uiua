@@ -141,29 +141,35 @@ impl Assembly {
             self.remove_slice(slice);
         }
     }
-    pub(crate) fn remove_slice(&mut self, removed: FuncSlice) {
+    pub(crate) fn remove_slice(&mut self, rem_slice: FuncSlice) -> Vec<Instr> {
         // Remove instrs
-        let after: Vec<_> = self.instrs[removed.end()..].to_vec();
-        self.instrs.truncate(removed.start);
+        let after: Vec<_> = self.instrs[rem_slice.end()..].to_vec();
+        let removed = self.instrs[rem_slice.start..rem_slice.end()].to_vec();
+        // println!(
+        //     "remove {}-{}: {:?}",
+        //     rem_slice.start,
+        //     rem_slice.end(),
+        //     removed
+        // );
+        self.instrs.truncate(rem_slice.start);
         self.instrs.extend(after);
         // Remove top slices
         for slice in &mut self.top_slices {
-            if slice.start > removed.start {
-                slice.start -= removed.len();
+            if slice.start > rem_slice.start {
+                slice.start -= rem_slice.len();
             }
         }
         // Decrement bindings
         for binding in self.bindings.make_mut() {
             match &mut binding.kind {
                 BindingKind::Func(func) => {
-                    if func.slice.start > removed.start {
-                        func.slice.start -= removed.len();
+                    if func.slice.start > rem_slice.start {
+                        func.slice.start -= rem_slice.len();
                     }
                 }
                 BindingKind::CodeMacro(slice) => {
-                    if slice.start > removed.start {
-                        slice.start -= removed.len();
-                        slice.len -= removed.len();
+                    if slice.start > rem_slice.start {
+                        slice.start -= rem_slice.len();
                     }
                 }
                 _ => (),
@@ -172,11 +178,13 @@ impl Assembly {
         // Decrement instrs
         for instr in self.instrs.make_mut() {
             if let Instr::PushFunc(func) = instr {
-                if func.slice.start > removed.start {
-                    func.slice.start -= removed.len();
+                if func.slice.start > rem_slice.start {
+                    func.slice.start -= rem_slice.len();
                 }
             }
         }
+
+        removed
     }
     /// Make top-level expressions not run
     pub fn remove_top_level(&mut self) {

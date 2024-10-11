@@ -391,7 +391,7 @@ macro_rules! fill {
         env.call(fill)?;
         let fill_value = env.pop("fill value")?;
         match f.id {
-            FunctionId::Named(_) | FunctionId::Macro(_) => {
+            FunctionId::Named(_) | FunctionId::Macro(..) => {
                 env.$with(fill_value, |env| env.without_fill(|env| env.call(f)))
             }
             _ => env.$with(fill_value, |env| env.call(f)),

@@ -2224,13 +2224,14 @@ impl Value {
         let mut new_data = eco_vec![0.0; size];
         let slice = new_data.make_mut();
         for (i, &n) in arr.data.iter().enumerate() {
-            let dur = Duration::try_from_secs_f64(n.abs())
-                .map_err(|_| env.error(format!("{n} is not a valid time")))?;
+            let dur = time::Duration::checked_seconds_f64(n)
+                .ok_or_else(|| env.error(format!("{n} is not a valid time")))?;
             let dt = if n >= 0.0 {
-                OffsetDateTime::UNIX_EPOCH + dur
+                OffsetDateTime::UNIX_EPOCH.checked_add(dur)
             } else {
-                OffsetDateTime::UNIX_EPOCH - dur
-            };
+                OffsetDateTime::UNIX_EPOCH.checked_sub(dur)
+            }
+            .ok_or_else(|| env.error(format!("{n} is not a valid time")))?;
             slice[i * 6] = dt.year() as f64;
             slice[i * 6 + 1] = dt.month() as u8 as f64;
             slice[i * 6 + 2] = dt.day() as f64;

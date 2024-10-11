@@ -320,8 +320,8 @@ impl Spanner {
                         }
                     }
                     spans.push(data.close_span.clone().sp(SpanKind::Delimiter));
-                    if let Some(func) = &data.func {
-                        spans.extend(self.words_spans(slice::from_ref(func)));
+                    if let Some(words) = &data.func {
+                        spans.extend(self.words_spans(words));
                     }
                 }
                 Item::Import(import) => {

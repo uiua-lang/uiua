@@ -529,7 +529,8 @@ impl<'i> Parser<'i> {
         let close_span = self
             .expect_close(if boxed { CloseCurly } else { CloseBracket }.into())
             .span;
-        let func = self.try_word();
+        self.try_spaces();
+        let func = self.try_words();
         Some(DataDef {
             tilde_span,
             name,

@@ -1,18 +1,15 @@
 use super::*;
 
 impl Compiler {
-    pub(super) fn data_def(
-        &mut self,
-        mut data: DataDef,
-        prev_com: Option<EcoString>,
-    ) -> UiuaResult {
+    pub(super) fn data_def(&mut self, mut data: DataDef, prelude: BindingPrelude) -> UiuaResult {
         self.experimental_error(&data.tilde_span, || {
             "Data definitions are experimental. To use them, add \
             `# Experimental!` to the top of the file."
         });
         if let Some(name) = data.name.take() {
+            let comment = prelude.comment.clone();
             let module = self.in_scope(ScopeKind::Module(name.value.clone()), |comp| {
-                comp.data_def(data, prev_com.clone())
+                comp.data_def(data, prelude)
             })?;
 
             // Add global
@@ -22,7 +19,7 @@ impl Compiler {
                 index: global_index,
                 public: true,
             };
-            let comment = prev_com.map(|text| DocComment::from(text.as_str()));
+            let comment = comment.map(|text| DocComment::from(text.as_str()));
             self.asm.add_binding_at(
                 local,
                 BindingKind::Module(module),
@@ -232,9 +229,9 @@ impl Compiler {
                 }
             }
         }
-        self.compile_bind_function(name, local, constructor_func, span, Some(&comment))?;
 
-        // Make args
+        // Make args module
+        let mut function_stuff = None;
         let args_module = self.in_scope(ScopeKind::Temp(None), |comp| {
             // Arg getters
             for field in &fields {
@@ -264,8 +261,43 @@ impl Compiler {
                     Some(&comment),
                 )?;
             }
+            // Call function
+            if let Some(words) = data.func {
+                let word_span =
+                    (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
+                let mut filled_func = comp.compile_words(words, true)?;
+                let flags = filled_func.flags;
+                filled_func.flags |= FunctionFlags::TRACK_CALLER;
+                let filled_sig = comp.sig_of(&filled_func.instrs, &word_span)?;
+                let filled_func = comp.make_function(
+                    FunctionId::Anonymous(word_span.clone()),
+                    filled_sig,
+                    filled_func,
+                );
+                let span = comp.add_span(word_span.clone());
+                let instrs = eco_vec![
+                    Instr::PushFunc(filled_func),
+                    Instr::PushFunc(constructor_func.clone()),
+                    Instr::Prim(Primitive::Fill, span)
+                ];
+                let sig = comp.sig_of(&instrs, &word_span)?;
+                let new_func = NewFunction { instrs, flags };
+                let local = LocalName {
+                    index: comp.next_global,
+                    public: true,
+                };
+                comp.next_global += 1;
+                let func = comp.make_function(FunctionId::Named(name.clone()), sig, new_func);
+                function_stuff = Some((local, func, span));
+            }
             Ok(())
         })?;
+
+        if let Some((local, func, span)) = function_stuff {
+            self.compile_bind_function("Call".into(), local, func, span, None)?;
+        }
+
+        self.compile_bind_function(name, local, constructor_func, span, Some(&comment))?;
 
         // Make macro
         let args_macro_index = self.next_global;
@@ -314,21 +346,6 @@ impl Compiler {
                 if fields.len() == 1 { "" } else { "s" }
             ))),
         );
-
-        // Make call
-        if let Some(word) = data.func {
-            let word_span = word.span.clone();
-            let new_func = self.compile_words(vec![word], true)?;
-            let func = self.make_function(word_span.into(), Signature::new(0, 1), new_func);
-            let instrs = eco_vec![Instr::PushFunc(func)];
-            let local = LocalName {
-                index: self.next_global,
-                public: true,
-            };
-            self.next_global += 1;
-            self.scope.names.insert("Call".into(), local);
-        }
-
         Ok(())
     }
 }

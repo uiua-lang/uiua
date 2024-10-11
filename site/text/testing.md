@@ -28,10 +28,10 @@ A [scoped module](/tutorial/modules#scoped-modules) with the name `test` is spec
 
 ```uiua
 Square ← ×.
----test
-⍤. =9 Square 3
-⍤. =225 Square 15
----
+┌─╴test
+  ⍤. =9 Square 3
+  ⍤. =225 Square 15
+└─╴
 ```
 
 Importantly, `uiua run` will not run test scopes, but it will *also* not interpret any [assert](/docs/assert)s as tests.
@@ -65,12 +65,12 @@ Notice how the expected value appears in the error message.
 
 ```uiua
 F ← ⍣⍜⊢(+1)∘
----test
-⍤⤙≍ [2 2 3] F [1 2 3]
-⍤⤙≍ [4 5 7] F [3 5 7]
-⍤⤙≍ "viua" F "uiua"
-⍤⤙≍ [] F []
----
+┌─╴test
+  ⍤⤙≍ [2 2 3] F [1 2 3]
+  ⍤⤙≍ [4 5 7] F [3 5 7]
+  ⍤⤙≍ "viua" F "uiua"
+  ⍤⤙≍ [] F []
+└─╴
 ```
 
 If a function returns multiple values, you can simply box them with `{}`s.

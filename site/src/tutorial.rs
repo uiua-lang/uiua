@@ -1552,24 +1552,26 @@ fn TutorialModules() -> impl IntoView {
         <p>"Modules can be compared to namespaces in other languages."</p>
 
         <Hd id="scoped-modules">"Scoped Modules"</Hd>
-        <p>"Scoped modules are defined between a pair of "<code>"---"</code>"s. The first "<code>"---"</code>" should be immediately followed by a name for the module. Module names follow the same rules as other bindings."</p>
+        <p>"Scoped modules are defined between a "<code>"┌─╴"</code>" and a "<code>"└─╴"</code>"."</p>
+        <p>"Both delimiters format from "<code>"---"</code>"."</p>
+        <p>" The "<code>"┌─╴"</code>" should be immediately followed by a name for the module. Module names follow the same rules as other bindings."</p>
         <p>"Names from inside the module can be referenced by following the module name with a "<code>"~"</code>"."</p>
-        <Editor example="---Mod\n  A ← 5\n  F ← +1\n  G ← F F\n---\nMod~G Mod~A"/>
+        <Editor example="---Mod\n  A ← 5\n  F ← +1\n  G ← F F\n---\nMod~G Mod~A" help={&["", "Try formatting!"]}/>
         <p>"Bindings defined inside a scoped module are only visible inside the module."</p>
-        <Editor example="---Mod\n  A ← 5\n  F ← +1\n  G ← F F\n---\nG A"/> // Should fail
+        <Editor example="┌─╴Mod\n  A ← 5\n  F ← +1\n  G ← F F\n└─╴\nG A"/> // Should fail
         <p>"Names from inside the module can be "<em>"made"</em>" visible by following the module name with a "<code>"~"</code>" and a list of the names to make visible."</p>
-        <Editor example="---Mod ~ A G\n  A ← 5\n  F ← +1\n  G ← F F\n---\nG A"/>
+        <Editor example="┌─╴Mod ~ A G\n  A ← 5\n  F ← +1\n  G ← F F\n└─╴\nG A"/>
         <p>"Names defined above the module can be referenced inside it."</p>
-        <Editor example="B ← 5\n---Mod\n  C ← ×2 B\n---\nMod~C"/>
+        <Editor example="B ← 5\n┌─╴Mod\n  C ← ×2 B\n└─╴\nMod~C"/>
 
         <Hd id="modules-as-functions">"Modules as Functions"</Hd>
         <p>"If a module defines a function called "<code>"Call"</code>" or "<code>"New"</code>", it can be called as a function. This can be useful if your module defines functions that all work on the same kind of data, like methods in some other languages."</p>
-        <Editor example="---Foo\n  New ← {⊓$Bar$Baz}\n  Format ← /$\"_ _\"\n---\nFoo \"Hi!\" 5\nFoo~Format ."/>
+        <Editor example="┌─╴Foo\n  New ← {⊓$Bar$Baz}\n  Format ← /$\"_ _\"\n└─╴\nFoo \"Hi!\" 5\nFoo~Format ."/>
 
         <Hd id="module-import-macros">"Module Import Macros"</Hd>
         <p>"If the name of a module is referenced as a macro (with a trailing "<code>"!"</code>"), names defined in the module will be available in the macro's scope."</p>
         <p>"This is useful if you need to refer to a bunch of bindings from a module without having to prefix them with the module name."</p>
-        <Editor example="---Foo\n  New ← {⊓$Bar$Baz}\n  Format ← /$\"_ _\"\n  Incr ← ⍜(⊢⇌|+1)\n---\nFoo!(Format Incr New) \"Oh\" 10"/>
+        <Editor example="┌─╴Foo\n  New ← {⊓$Bar$Baz}\n  Format ← /$\"_ _\"\n  Incr ← ⍜(⊢⇌|+1)\n└─╴\nFoo!(Format Incr New) \"Oh\" 10"/>
 
         <Hd id="web-files">"Files on the Website"</Hd>
         <p>"Using files as modules involves loading files from the file system."</p>

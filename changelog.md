@@ -58,6 +58,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add unicode escape sequences for entering arbitrary characters
   - A double backslash followed by a unicode hex number will format to the corresponding glyph
 - Add the [`timezone`](https://uiua.org/docs/timezone) function, which gets the local timezone offset in hours
+- Scoped modules are now delimited by `┌─╴` and `└─╴`
+  - These both format from the existing `---` delimiters
 - Add a `Lorem` constant, which contains the Lorem Ipsum text
 - Add several color constants
 - Add pride flag constants

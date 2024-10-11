@@ -614,7 +614,7 @@ impl<'a> Formatter<'a> {
         match item {
             Item::Module(m) => {
                 self.prev_import_function = None;
-                self.output.push_str("---");
+                self.output.push_str("┌─╴");
                 match &m.value.kind {
                     ModuleKind::Named(name) => self.push(&name.span, &name.value),
                     ModuleKind::Test => self.output.push_str("test"),
@@ -629,21 +629,12 @@ impl<'a> Formatter<'a> {
                         self.push(&item.span, &item.value);
                     }
                 }
-                let subdepth = match m.value.kind {
-                    ModuleKind::Named(_) => depth + 1,
-                    ModuleKind::Test => {
-                        if depth == 0 {
-                            self.newline(depth);
-                        }
-                        depth
-                    }
-                };
-                self.format_items(&m.value.items, subdepth);
+                self.format_items(&m.value.items, depth + 1);
                 if self.output.ends_with('\n') {
                     self.output.pop();
                 }
                 self.newline(depth);
-                self.output.push_str("---");
+                self.output.push_str("└─╴");
             }
             Item::Words(lines) => {
                 self.prev_import_function = None;

@@ -324,7 +324,7 @@ impl<'i> Parser<'i> {
     }
     fn try_module(&mut self, in_scope: bool) -> Option<Sp<ScopedModule>> {
         let backup = self.index;
-        let open_span = self.try_module_delim()?;
+        let open_span = self.try_module_open()?;
         self.try_spaces();
         // Name
         let name = self.try_ident();
@@ -360,7 +360,7 @@ impl<'i> Parser<'i> {
         };
         // Items
         let items = self.items(true);
-        let close_span = self.try_module_delim();
+        let close_span = self.try_module_close();
         let span = if let Some(end) = close_span.clone() {
             open_span.clone().merge(end)
         } else {
@@ -711,7 +711,7 @@ impl<'i> Parser<'i> {
             if check_for_bindings
                 && (self.try_binding_init().is_some()
                     || self.try_import_init().is_some()
-                    || self.try_module_delim().is_some())
+                    || self.try_module_delim_hyphens().is_some())
             {
                 self.index = curr;
                 break;
@@ -1227,7 +1227,15 @@ impl<'i> Parser<'i> {
     fn try_spaces(&mut self) -> Option<Sp<Word>> {
         self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))
     }
-    fn try_module_delim(&mut self) -> Option<CodeSpan> {
+    fn try_module_open(&mut self) -> Option<CodeSpan> {
+        self.try_exact(OpenModule)
+            .or_else(|| self.try_module_delim_hyphens())
+    }
+    fn try_module_close(&mut self) -> Option<CodeSpan> {
+        self.try_exact(CloseModule)
+            .or_else(|| self.try_module_delim_hyphens())
+    }
+    fn try_module_delim_hyphens(&mut self) -> Option<CodeSpan> {
         let reset = self.index;
         let start = self.try_exact(Primitive::Sub.into())?;
         if self.try_exact(Primitive::Sub.into()).is_none() {

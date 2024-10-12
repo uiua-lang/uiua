@@ -237,8 +237,8 @@ pub(crate) struct Scope {
     comment: Option<EcoString>,
     /// Map local names to global indices
     names: IndexMap<Ident, LocalName>,
-    /// Named data definitions
-    data_defs: IndexMap<Ident, Function>,
+    /// Number of named data variants
+    data_variants: usize,
     /// Whether to allow experimental features
     pub experimental: bool,
     /// Whether an error has been emitted for experimental features
@@ -282,7 +282,7 @@ impl Default for Scope {
             file_path: None,
             comment: None,
             names: IndexMap::new(),
-            data_defs: IndexMap::new(),
+            data_variants: 0,
             experimental: false,
             experimental_error: false,
             fill_sig_error: false,
@@ -618,7 +618,7 @@ code:
             }
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
-            Item::Data(data) => self.data_def(data, take(prelude)),
+            Item::Data(data) => self.data_def(data, true, take(prelude)),
         }
     }
     fn lines(
@@ -2464,8 +2464,12 @@ code:
     }
     /// Register a span
     pub fn add_span(&mut self, span: impl Into<Span>) -> usize {
+        let span = span.into();
+        if let Some(i) = self.asm.spans.iter().position(|s| *s == span) {
+            return i;
+        }
         let idx = self.asm.spans.len();
-        self.asm.spans.push(span.into());
+        self.asm.spans.push(span);
         idx
     }
     /// Create a function

@@ -141,6 +141,15 @@ impl From<CodeSpan> for Span {
     }
 }
 
+impl PartialEq<CodeSpan> for Span {
+    fn eq(&self, other: &CodeSpan) -> bool {
+        match self {
+            Self::Code(span) => span == other,
+            Self::Builtin => false,
+        }
+    }
+}
+
 impl Span {
     /// Use this span to wrap a value
     pub fn sp<T>(self, value: T) -> Sp<T, Self> {

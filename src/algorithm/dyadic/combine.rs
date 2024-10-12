@@ -229,10 +229,7 @@ impl<T: ArrayValue> Array<T> {
         crate::profile_function!();
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
-                self.combine_meta(other.meta());
-                if let Some(label) = other.take_label().or_else(|| self.take_label()) {
-                    other.meta_mut().label = Some(label);
-                }
+                other.combine_meta(self.meta());
                 if self.shape() == [0] {
                     return Ok(other);
                 }

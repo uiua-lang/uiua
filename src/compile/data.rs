@@ -1,46 +1,42 @@
 use super::*;
 
 impl Compiler {
-    pub(super) fn data_def(&mut self, mut data: DataDef, prelude: BindingPrelude) -> UiuaResult {
-        self.experimental_error(&data.tilde_span, || {
+    pub(super) fn data_def(
+        &mut self,
+        data: DataDef,
+        top_level: bool,
+        prelude: BindingPrelude,
+    ) -> UiuaResult {
+        self.experimental_error(&data.init_span, || {
             "Data definitions are experimental. To use them, add \
             `# Experimental!` to the top of the file."
         });
-        if let Some(name) = data.name.take() {
-            let has_func = data.func.is_some();
-            let comment = prelude.comment.clone();
-            let module = self.in_scope(ScopeKind::Module(name.value.clone()), |comp| {
-                comp.data_def(data, prelude)
-            })?;
+        if top_level {
+            if let Some(name) = data.name.clone() {
+                let comment = prelude.comment.clone();
+                let module = self.in_scope(ScopeKind::Module(name.value.clone()), |comp| {
+                    comp.data_def(data, false, prelude)
+                })?;
 
-            // Add to scope
-            if !has_func {
-                let BindingKind::Func(f) =
-                    self.asm.bindings[module.names["New"].index].kind.clone()
-                else {
-                    unreachable!()
+                // Add global
+                let global_index = self.next_global;
+                self.next_global += 1;
+                let local = LocalName {
+                    index: global_index,
+                    public: true,
                 };
-                self.scope.data_defs.insert(name.value.clone(), f);
+                let comment = comment.map(|text| DocComment::from(text.as_str()));
+                self.asm.add_binding_at(
+                    local,
+                    BindingKind::Module(module),
+                    Some(name.span.clone()),
+                    comment,
+                );
+                // Add local
+                self.scope.names.insert(name.value.clone(), local);
+                (self.code_meta.global_references).insert(name.span.clone(), local.index);
+                return Ok(());
             }
-
-            // Add global
-            let global_index = self.next_global;
-            self.next_global += 1;
-            let local = LocalName {
-                index: global_index,
-                public: true,
-            };
-            let comment = comment.map(|text| DocComment::from(text.as_str()));
-            self.asm.add_binding_at(
-                local,
-                BindingKind::Module(module),
-                Some(name.span.clone()),
-                comment,
-            );
-            // Add local
-            self.scope.names.insert(name.value.clone(), local);
-            (self.code_meta.global_references).insert(name.span.clone(), local.index);
-            return Ok(());
         }
 
         struct Field {
@@ -89,7 +85,10 @@ impl Compiler {
             let name = &field.name;
             let id = FunctionId::Named(name.clone());
             let span = field.span;
-            let mut instrs = eco_vec![Instr::push(i), Instr::Prim(Primitive::Pick, span)];
+            let mut instrs = eco_vec![
+                Instr::push(i + data.variant as usize),
+                Instr::Prim(Primitive::Pick, span)
+            ];
             if data.boxed {
                 instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, span));
                 instrs.push(Instr::Label {
@@ -121,7 +120,7 @@ impl Compiler {
         }
 
         // Make field names
-        let span = self.add_span(data.tilde_span.clone());
+        let span = self.add_span(data.init_span.clone());
         let local = LocalName {
             index: self.next_global,
             public: true,
@@ -202,6 +201,23 @@ impl Compiler {
             boxed: data.boxed,
             span,
         });
+        if data.variant {
+            instrs.push(Instr::push(self.scope.data_variants));
+            self.scope.data_variants += 1;
+            if let Some(name) = data.name {
+                instrs.push(Instr::Label {
+                    label: name.value,
+                    remove: false,
+                    span,
+                });
+            } else {
+                self.add_error(data.init_span.clone(), "Variants must have a name");
+            }
+            if data.boxed {
+                instrs.push(Instr::Prim(Primitive::Box, span));
+            }
+            instrs.push(Instr::Prim(Primitive::Join, span));
+        }
         let name = Ident::from("New");
         let id = FunctionId::Named(name.clone());
         let new_func = NewFunction {
@@ -276,6 +292,9 @@ impl Compiler {
             if let Some(words) = data.func {
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
+                if data.variant {
+                    comp.add_error(word_span.clone(), "Variants may not have functions");
+                }
                 let mut filled_func = comp.compile_words(words, true)?;
                 let flags = filled_func.flags;
                 filled_func.flags |= FunctionFlags::TRACK_CALLER;
@@ -313,7 +332,7 @@ impl Compiler {
         // Make macro
         let args_macro_index = self.next_global;
         self.next_global += 1;
-        let span = &data.tilde_span;
+        let span = &data.init_span;
         self.index_macros.insert(
             args_macro_index,
             IndexMacro {
@@ -357,6 +376,9 @@ impl Compiler {
                 if fields.len() == 1 { "" } else { "s" }
             ))),
         );
+        Ok(())
+    }
+    pub(super) fn end_enum(&mut self) -> UiuaResult {
         Ok(())
     }
 }

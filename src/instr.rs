@@ -531,10 +531,22 @@ impl fmt::Display for Instr {
                 count, unbox: true, ..
             } => write!(f, "<unpack (unbox) {count}>"),
             Instr::TouchStack { count, .. } => write!(f, "<touch {count}>"),
-            Instr::PushTemp { stack, count, .. } => write!(f, "<push {stack} {count}>"),
-            Instr::PopTemp { stack, count, .. } => write!(f, "<pop {stack} {count}>"),
+            Instr::PushTemp { stack, count, .. } => write!(
+                f,
+                "push-{}-{count}",
+                stack.to_string().chars().next().unwrap()
+            ),
+            Instr::PopTemp { stack, count, .. } => write!(
+                f,
+                "pop-{}-{count}",
+                stack.to_string().chars().next().unwrap()
+            ),
             Instr::CopyToTemp { stack, count, .. } => {
-                write!(f, "<copy to {stack} {count}>")
+                write!(
+                    f,
+                    "copy-to-{}-{count}",
+                    stack.to_string().chars().next().unwrap()
+                )
             }
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),

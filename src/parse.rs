@@ -476,7 +476,11 @@ impl<'i> Parser<'i> {
     }
     fn try_data_def(&mut self) -> Option<DataDef> {
         let reset = self.index;
-        let tilde_span = self.try_exact(Tilde.into())?;
+        let mut variant = false;
+        let init_span = self.try_exact(Tilde.into()).or_else(|| {
+            variant = true;
+            self.try_exact(Bar.into())
+        })?;
         self.try_spaces();
         let name = self.try_ident();
         self.try_spaces();
@@ -532,7 +536,8 @@ impl<'i> Parser<'i> {
         self.try_spaces();
         let func = self.try_words();
         Some(DataDef {
-            tilde_span,
+            init_span,
+            variant,
             name,
             boxed,
             open_span,

@@ -301,7 +301,7 @@ impl Spanner {
                     spans.extend(self.words_spans(&binding.words));
                 }
                 Item::Data(data) => {
-                    spans.push(data.tilde_span.clone().sp(SpanKind::Delimiter));
+                    spans.push(data.init_span.clone().sp(SpanKind::Delimiter));
                     if let Some(name) = &data.name {
                         spans.push(name.span.clone().sp(SpanKind::Ident {
                             docs: self.binding_docs(&name.span),

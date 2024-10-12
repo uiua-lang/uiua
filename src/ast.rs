@@ -119,8 +119,10 @@ impl Import {
 #[derive(Debug, Clone)]
 /// A data definition
 pub struct DataDef {
-    /// The span of the ~
-    pub tilde_span: CodeSpan,
+    /// The span of the ~ or |
+    pub init_span: CodeSpan,
+    /// Whether this is a variant
+    pub variant: bool,
     /// The name of the module
     pub name: Option<Sp<Ident>>,
     /// Whether the array is boxed
@@ -158,7 +160,7 @@ pub struct FieldDefault {
 impl DataDef {
     /// Get the span of this data definition
     pub fn span(&self) -> CodeSpan {
-        let mut span = (self.tilde_span.clone()).merge(self.close_span.clone());
+        let mut span = (self.init_span.clone()).merge(self.close_span.clone());
         if let Some(words) = &self.func {
             if let Some(word) = words.last() {
                 span = span.merge(word.span.clone());

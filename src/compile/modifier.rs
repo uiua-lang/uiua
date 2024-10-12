@@ -1456,9 +1456,10 @@ impl Compiler {
                         }
                     });
                     // Compile
-                    let mut new_func = self.suppress_diagnostics(|comp| {
+                    let mut new_func: NewFunction = self.suppress_diagnostics(|comp| {
                         comp.temp_scope(mac.names, macro_local, |comp| {
-                            comp.compile_words(mac.words, true)
+                            comp.lines(vec![mac.words], true, &mut BindingPrelude::default())
+                                .map(Into::into)
                         })
                     })?;
                     new_func.flags |= mac.flags;

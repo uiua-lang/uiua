@@ -597,6 +597,34 @@ code:
         Ok(())
     }
     fn item(&mut self, item: Item, must_run: bool, prelude: &mut BindingPrelude) -> UiuaResult {
+        match item {
+            Item::Module(m) => self.module(m, take(prelude).comment),
+            Item::Words(lines) => {
+                let instrs = self.lines(lines, must_run, prelude)?;
+                let start = self.asm.instrs.len();
+                self.asm.instrs.extend(instrs);
+                let end = self.asm.instrs.len();
+                if end != start {
+                    self.asm.top_slices.push(FuncSlice {
+                        start,
+                        len: end - start,
+                    });
+                }
+                Ok(())
+            }
+            Item::Binding(binding) => {
+                let prelude = take(prelude);
+                self.binding(binding, prelude)
+            }
+            Item::Import(import) => self.import(import, take(prelude).comment),
+        }
+    }
+    fn lines(
+        &mut self,
+        mut lines: Vec<Vec<Sp<Word>>>,
+        must_run: bool,
+        prelude: &mut BindingPrelude,
+    ) -> UiuaResult<EcoVec<Instr>> {
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
             let mut anyway = false;
             recurse_words(words, &mut |w| {
@@ -607,19 +635,6 @@ code:
             });
             anyway
         }
-        let in_test = self.scopes().any(|sc| sc.kind == ScopeKind::Test);
-        let mut lines = match item {
-            Item::Module(m) => return self.module(m, take(prelude).comment),
-            Item::Words(lines) => lines,
-            Item::Binding(binding) => {
-                let prelude = take(prelude);
-                self.binding(binding, prelude)?;
-                return Ok(());
-            }
-            Item::Import(import) => return self.import(import, take(prelude).comment),
-        };
-
-        // Compile top-level words
 
         // Populate prelude
         for line in &mut lines {
@@ -648,6 +663,7 @@ code:
                 *prelude = BindingPrelude::default();
             }
         }
+        let in_test = self.scopes().any(|sc| sc.kind == ScopeKind::Test);
         let can_run = match self.mode {
             RunMode::Normal => !in_test,
             RunMode::Test => in_test,
@@ -656,6 +672,7 @@ code:
         let mut lines = VecDeque::from(flip_unsplit_lines(
             lines.into_iter().flat_map(split_words).collect(),
         ));
+        let mut all_instrs = EcoVec::new();
         while let Some(line) = lines.pop_front() {
             let assert_later = || {
                 lines.iter().any(|line| {
@@ -781,18 +798,10 @@ code:
                 if !line_eval_errored {
                     self.errors.extend(pre_eval_errors);
                 }
-                let start = self.asm.instrs.len();
-                self.asm.instrs.extend(new_func.instrs);
-                let end = self.asm.instrs.len();
-                if end != start {
-                    self.asm.top_slices.push(FuncSlice {
-                        start,
-                        len: end - start,
-                    });
-                }
+                all_instrs.extend(new_func.instrs);
             });
         }
-        Ok(())
+        Ok(all_instrs)
     }
     #[must_use]
     pub(crate) fn make_function(

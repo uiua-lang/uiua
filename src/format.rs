@@ -1131,7 +1131,7 @@ impl<'a> Formatter<'a> {
                 }
             }
             Word::BreakLine => self.output.push_str(";;"),
-            Word::FlipLine => self.output.push_str(";"),
+            Word::FlipLine => self.output.push(';'),
             Word::SemanticComment(sc) => {
                 if !self.output.is_empty() && !self.output.ends_with(['\n', ' ']) {
                     self.output.push(' ');

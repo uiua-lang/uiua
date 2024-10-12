@@ -450,6 +450,7 @@ impl Compiler {
                         sig,
                         explicit: binding.signature.is_some(),
                         inline: false,
+                        set_inverses: Default::default(),
                     },
                 );
             }

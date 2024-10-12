@@ -1,6 +1,8 @@
 //! Compiler code for modifiers
 #![allow(clippy::redundant_closure_call)]
 
+use crate::lsp::SetInverses;
+
 use super::*;
 
 impl Compiler {
@@ -255,6 +257,21 @@ impl Compiler {
                             ))
                         }
                     };
+                    let set_inverses = SetInverses {
+                        un: cust.un.is_some(),
+                        anti: cust.anti.is_some(),
+                        under: cust.under.is_some(),
+                    };
+                    self.code_meta
+                        .obverses
+                        .insert(modifier.span.clone(), set_inverses);
+                    for f in funcs {
+                        if let FunctionId::Anonymous(span) = f.id {
+                            if let Some(sig_decl) = self.code_meta.function_sigs.get_mut(&span) {
+                                sig_decl.set_inverses = set_inverses;
+                            }
+                        }
+                    }
                     let sig = f.signature();
                     let spandex = self.add_span(modifier.span.clone());
                     let instrs = eco_vec![Instr::PushFunc(f), Instr::CustomInverse(cust, spandex)];
@@ -991,6 +1008,19 @@ impl Compiler {
                 }
                 if sig.anti() == Some(sig) {
                     cust.anti = Some(func.clone());
+                }
+                let set_inverses = SetInverses {
+                    un: cust.un.is_some(),
+                    anti: cust.anti.is_some(),
+                    under: cust.under.is_some(),
+                };
+                self.code_meta
+                    .obverses
+                    .insert(modified.modifier.span.clone(), set_inverses);
+                if let FunctionId::Anonymous(span) = &func.id {
+                    if let Some(sig_decl) = self.code_meta.function_sigs.get_mut(span) {
+                        sig_decl.set_inverses = set_inverses;
+                    }
                 }
                 let instrs = eco_vec![Instr::PushFunc(func), Instr::CustomInverse(cust, spandex)];
                 if call {

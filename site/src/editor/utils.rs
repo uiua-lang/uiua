@@ -516,6 +516,7 @@ pub fn gen_code_view(code: &str) -> View {
                 CodeFragment::Span(text, kind) => {
                     let color_class = match &kind {
                         SpanKind::Primitive(prim, sig) => prim_sig_class(*prim, *sig),
+                        SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
                         SpanKind::Number => "number-literal",
                         SpanKind::String | SpanKind::ImportSrc(_) => "string-literal-span",
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
@@ -606,6 +607,16 @@ pub fn gen_code_view(code: &str) -> View {
                             }
                             add_prim_view(prim, text, title, color_class, &mut frag_views);
                         }
+                        SpanKind::Obverse(set_inverses) => {
+                            let prim = Primitive::Obverse;
+                            let name = prim.name();
+                            let mut title = format!("{}: {}", name, prim.doc().short_text());
+                            if !set_inverses.is_empty() {
+                                title.push('\n');
+                                title.push_str(&set_inverses.to_string());
+                            }
+                            add_prim_view(prim, text, title, color_class, &mut frag_views);
+                        }
                         SpanKind::String | SpanKind::ImportSrc(ImportSrc::File(_)) => {
                             let class = format!("code-span {}", color_class);
                             if text == "@ " {
@@ -688,9 +699,13 @@ pub fn gen_code_view(code: &str) -> View {
                                     .into_view(),
                             )
                         }
-                        SpanKind::FuncDelim(sig) => {
+                        SpanKind::FuncDelim(sig, set_inverses) => {
                             let class = format!("code-span {}", color_class);
-                            let title = sig.to_string();
+                            let mut title = sig.to_string();
+                            if !set_inverses.is_empty() {
+                                title.push('\n');
+                                title.push_str(&set_inverses.to_string());
+                            }
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )

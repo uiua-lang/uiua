@@ -4,6 +4,7 @@
 
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
+    fmt,
     path::PathBuf,
     slice,
 };
@@ -39,9 +40,10 @@ pub enum SpanKind {
     Whitespace,
     Placeholder(PlaceholderOp),
     Delimiter,
-    FuncDelim(Signature),
+    FuncDelim(Signature, SetInverses),
     ImportSrc(ImportSrc),
     Subscript(Option<Primitive>, Option<usize>),
+    Obverse(SetInverses),
 }
 
 /// Documentation information for a binding
@@ -136,6 +138,8 @@ pub struct CodeMeta {
     pub array_shapes: BTreeMap<CodeSpan, Shape>,
     /// A map of module spans to their source
     pub import_srcs: HashMap<CodeSpan, ImportSrc>,
+    /// A map of obverse spans to their set inverses
+    pub obverses: HashMap<CodeSpan, SetInverses>,
 }
 
 /// Data for the signature of a function
@@ -147,6 +151,62 @@ pub struct SigDecl {
     pub explicit: bool,
     /// Whether the function is inline
     pub inline: bool,
+    /// Inverses
+    pub set_inverses: SetInverses,
+}
+
+/// Which inverses were set by `obverse`
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SetInverses {
+    pub un: bool,
+    pub anti: bool,
+    pub under: bool,
+}
+
+impl SetInverses {
+    /// Whether no inverses were set
+    pub fn is_empty(&self) -> bool {
+        !(self.un || self.anti || self.under)
+    }
+}
+
+struct FormatSetInverses<'a>(SetInverses, [&'a str; 3]);
+impl<'a> fmt::Display for FormatSetInverses<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let FormatSetInverses(set_inverses, names) = self;
+        let count =
+            set_inverses.un as usize + set_inverses.anti as usize + set_inverses.under as usize;
+        if count == 0 {
+            return Ok(());
+        }
+        write!(f, "Sets ")?;
+        for (i, (is_set, name)) in [set_inverses.un, set_inverses.anti, set_inverses.under]
+            .into_iter()
+            .zip(names)
+            .enumerate()
+        {
+            if !is_set {
+                continue;
+            }
+            if i > 0 {
+                match count {
+                    2 => write!(f, " and ")?,
+                    3 if i == 1 => write!(f, ", ")?,
+                    3 if i == 2 => write!(f, ", and ")?,
+                    _ => {}
+                }
+            }
+            write!(f, "{name}")?;
+        }
+        write!(f, " inverse{} here", if count == 1 { "" } else { "s" })
+    }
+}
+
+impl fmt::Display for SetInverses {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        FormatSetInverses(*self, ["° un", "⌝ anti", "⍜ under"]).fmt(f)
+    }
 }
 
 /// The source of an imported module
@@ -456,7 +516,7 @@ impl Spanner {
                 }
                 Word::Func(func) => {
                     let kind = if let Some(inline) = self.code_meta.function_sigs.get(&word.span) {
-                        SpanKind::FuncDelim(inline.sig)
+                        SpanKind::FuncDelim(inline.sig, inline.set_inverses)
                     } else {
                         SpanKind::Delimiter
                     };
@@ -480,7 +540,7 @@ impl Spanner {
                         .first()
                         .and_then(|br| self.code_meta.function_sigs.get(&br.span))
                     {
-                        SpanKind::FuncDelim(inline.sig)
+                        SpanKind::FuncDelim(inline.sig, inline.set_inverses)
                     } else {
                         SpanKind::Delimiter
                     };
@@ -490,11 +550,12 @@ impl Spanner {
                         if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {
                             let kind = if let Some(SigDecl {
                                 sig,
+                                set_inverses,
                                 explicit: false,
                                 ..
                             }) = self.code_meta.function_sigs.get(&branch.span)
                             {
-                                SpanKind::FuncDelim(*sig)
+                                SpanKind::FuncDelim(*sig, *set_inverses)
                             } else {
                                 SpanKind::Delimiter
                             };
@@ -521,6 +582,17 @@ impl Spanner {
                 ),
                 Word::Modified(m) => {
                     match &m.modifier.value {
+                        Modifier::Primitive(Primitive::Obverse) => {
+                            spans.push(m.modifier.span.clone().sp(
+                                if let Some(set_inverses) =
+                                    self.code_meta.obverses.get(&m.modifier.span)
+                                {
+                                    SpanKind::Obverse(*set_inverses)
+                                } else {
+                                    SpanKind::Primitive(Primitive::Obverse, None)
+                                },
+                            ))
+                        }
                         Modifier::Primitive(p) => spans.push(
                             (m.modifier.span.clone()).sp(SpanKind::Primitive(*p, p.signature())),
                         ),
@@ -824,6 +896,12 @@ mod server {
         }
 
         async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+            const SET_INVERSES_LINKS: [&str; 3] = [
+                "[`° un`](https://uiua.org/docs/un)",
+                "[`⌝ anti`](https://uiua.org/docs/anti)",
+                "[`⍜ under`](https://uiua.org/docs/under)",
+            ];
+
             let Some(doc) =
                 (self.docs).get(&params.text_document_position_params.text_document.uri)
             else {
@@ -831,52 +909,159 @@ mod server {
             };
             let path = uri_path(&params.text_document_position_params.text_document.uri);
             let (line, col) = lsp_pos_to_uiua(params.text_document_position_params.position);
-            let mut prim_range = None;
             // Hovering a primitive
             for sp in &doc.spans {
                 if sp.span.contains_line_col(line, col) && sp.span.src == path {
                     match sp.value {
                         SpanKind::Primitive(prim, _) => {
-                            prim_range = Some((prim, uiua_span_to_lsp(&sp.span)));
+                            return Ok(Some(Hover {
+                                contents: HoverContents::Markup(MarkupContent {
+                                    kind: MarkupKind::Markdown,
+                                    value: full_prim_doc_markdown(prim),
+                                }),
+                                range: Some(uiua_span_to_lsp(&sp.span)),
+                            }));
+                        }
+                        SpanKind::Obverse(set_inverses) => {
+                            let value = if set_inverses.is_empty() {
+                                full_prim_doc_markdown(Primitive::Obverse)
+                            } else {
+                                format!(
+                                    "{}\n\n{}",
+                                    FormatSetInverses(set_inverses, SET_INVERSES_LINKS),
+                                    full_prim_doc_markdown(Primitive::Obverse)
+                                )
+                            };
+                            return Ok(Some(Hover {
+                                contents: HoverContents::Markup(MarkupContent {
+                                    kind: MarkupKind::Markdown,
+                                    value,
+                                }),
+                                range: Some(uiua_span_to_lsp(&sp.span)),
+                            }));
                         }
                         _ => {}
                     }
                 }
             }
             // Hovering a binding
-            let mut binding_docs: Option<Sp<&BindingDocs>> = None;
-            if prim_range.is_none() {
-                for span_kind in &doc.spans {
-                    if let SpanKind::Ident {
-                        docs: Some(docs), ..
-                    } = &span_kind.value
-                    {
-                        if span_kind.span.contains_line_col(line, col) && span_kind.span.src == path
-                        {
-                            binding_docs = Some(span_kind.span.clone().sp(docs));
-                            break;
+            for span_kind in &doc.spans {
+                let SpanKind::Ident {
+                    docs: Some(docs), ..
+                } = &span_kind.value
+                else {
+                    continue;
+                };
+                if span_kind.span.contains_line_col(line, col) && span_kind.span.src == path {
+                    let docs = span_kind.span.clone().sp(docs);
+                    let span = docs.span;
+                    let docs = docs.value;
+                    let mut value = String::new();
+                    value.push_str("```uiua\n");
+                    span.as_str(&doc.asm.inputs, |s| value.push_str(s));
+                    match docs.kind {
+                        BindingDocsKind::Function { sig, .. } => {
+                            value.push_str(&format!(" {sig}"));
                         }
+                        _ => {}
                     }
+                    if !docs.is_public && !matches!(docs.kind, BindingDocsKind::Module { .. }) {
+                        value.push_str(" (private)");
+                    }
+                    match &docs.kind {
+                        BindingDocsKind::Constant(Some(val)) => {
+                            let s = val.show();
+                            value.push('\n');
+                            if s.len() < 250 {
+                                value.push_str(&s);
+                            } else {
+                                value.push_str(&val.shape_string())
+                            }
+                        }
+                        _ => {}
+                    }
+                    value.push_str("\n```");
+                    if let Some(escape) = &docs.escape {
+                        value.push_str(&format!("\n`{escape}`"));
+                    }
+                    match docs.kind {
+                        BindingDocsKind::Function {
+                            invertible,
+                            underable,
+                            pure,
+                            ..
+                        } => {
+                            if pure || invertible || underable {
+                                value.push_str("\n\n");
+                                if pure {
+                                    value.push_str("pure");
+                                }
+                                if invertible {
+                                    if pure {
+                                        value.push_str(" | ");
+                                    }
+                                    value.push_str("[`° un`](https://uiua.org/docs/un)");
+                                }
+                                if underable {
+                                    if pure || invertible {
+                                        value.push_str(" | ");
+                                    }
+                                    value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                    if let Some(comment) = &docs.comment {
+                        value.push_str("\n\n");
+                        if let Some(sig) = &comment.sig {
+                            value.push('`');
+                            value.push_str(&sig.to_string());
+                            value.push_str("`\n\n");
+                        }
+                        value.push_str(&comment.text);
+                    }
+                    return Ok(Some(Hover {
+                        contents: HoverContents::Markup(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value,
+                        }),
+                        range: Some(uiua_span_to_lsp(&span)),
+                    }));
                 }
             }
             // Hovering an inline function
-            let mut inline_function_sig: Option<Sp<Signature>> = None;
-            if prim_range.is_none() && binding_docs.is_none() {
-                if let Some((span, inline)) = (doc.code_meta.function_sigs.iter())
-                    .filter(|(span, inline)| {
-                        !inline.explicit && span.contains_line_col(line, col) && span.src == path
-                    })
-                    .min_by_key(|(span, _)| span.char_count())
-                {
-                    inline_function_sig = Some(span.clone().sp(inline.sig));
+            if let Some((span, sig_decl)) = (doc.code_meta.function_sigs.iter())
+                .filter(|(span, inline)| {
+                    !inline.explicit && span.contains_line_col(line, col) && span.src == path
+                })
+                .min_by_key(|(span, _)| span.char_count())
+            {
+                let mut value = format!("```uiua\n{}\n```", sig_decl.sig);
+                if !sig_decl.set_inverses.is_empty() {
+                    value.push_str("\n\n");
+                    value.push_str(
+                        &FormatSetInverses(sig_decl.set_inverses, SET_INVERSES_LINKS).to_string(),
+                    );
                 }
+                return Ok(Some(Hover {
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value,
+                    }),
+                    range: Some(uiua_span_to_lsp(span)),
+                }));
             }
             // Hovering an array
-            let mut array_shape: Option<Sp<&Shape>> = None;
             for (span, arr_meta) in &doc.code_meta.array_shapes {
                 if span.contains_line_col(line, col) && span.src == path {
-                    array_shape = Some(span.clone().sp(arr_meta));
-                    break;
+                    return Ok(Some(Hover {
+                        contents: HoverContents::Markup(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value: format!("`{}`", arr_meta),
+                        }),
+                        range: Some(uiua_span_to_lsp(span)),
+                    }));
                 }
             }
             // Hovering a git import
@@ -897,108 +1082,7 @@ mod server {
                 }
             }
 
-            Ok(Some(if let Some((prim, range)) = prim_range {
-                Hover {
-                    contents: HoverContents::Markup(MarkupContent {
-                        kind: MarkupKind::Markdown,
-                        value: full_prim_doc_markdown(prim),
-                    }),
-                    range: Some(range),
-                }
-            } else if let Some(docs) = binding_docs {
-                let span = docs.span;
-                let docs = docs.value;
-                let mut value = String::new();
-                value.push_str("```uiua\n");
-                span.as_str(&doc.asm.inputs, |s| value.push_str(s));
-                match docs.kind {
-                    BindingDocsKind::Function { sig, .. } => {
-                        value.push_str(&format!(" {sig}"));
-                    }
-                    _ => {}
-                }
-                if !docs.is_public && !matches!(docs.kind, BindingDocsKind::Module { .. }) {
-                    value.push_str(" (private)");
-                }
-                match &docs.kind {
-                    BindingDocsKind::Constant(Some(val)) => {
-                        let s = val.show();
-                        value.push('\n');
-                        if s.len() < 250 {
-                            value.push_str(&s);
-                        } else {
-                            value.push_str(&val.shape_string())
-                        }
-                    }
-                    _ => {}
-                }
-                value.push_str("\n```");
-                if let Some(escape) = &docs.escape {
-                    value.push_str(&format!("\n`{escape}`"));
-                }
-                match docs.kind {
-                    BindingDocsKind::Function {
-                        invertible,
-                        underable,
-                        pure,
-                        ..
-                    } => {
-                        if pure || invertible || underable {
-                            value.push_str("\n\n");
-                            if pure {
-                                value.push_str("pure");
-                            }
-                            if invertible {
-                                if pure {
-                                    value.push_str(" | ");
-                                }
-                                value.push_str("[`° un`](https://uiua.org/docs/un)");
-                            }
-                            if underable {
-                                if pure || invertible {
-                                    value.push_str(" | ");
-                                }
-                                value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-                if let Some(comment) = &docs.comment {
-                    value.push_str("\n\n");
-                    if let Some(sig) = &comment.sig {
-                        value.push('`');
-                        value.push_str(&sig.to_string());
-                        value.push_str("`\n\n");
-                    }
-                    value.push_str(&comment.text);
-                }
-                Hover {
-                    contents: HoverContents::Markup(MarkupContent {
-                        kind: MarkupKind::Markdown,
-                        value,
-                    }),
-                    range: Some(uiua_span_to_lsp(&span)),
-                }
-            } else if let Some(sig) = inline_function_sig {
-                Hover {
-                    contents: HoverContents::Markup(MarkupContent {
-                        kind: MarkupKind::Markdown,
-                        value: format!("```uiua\n{}\n```", sig.value),
-                    }),
-                    range: Some(uiua_span_to_lsp(&sig.span)),
-                }
-            } else if let Some(shape) = array_shape {
-                Hover {
-                    contents: HoverContents::Markup(MarkupContent {
-                        kind: MarkupKind::Markdown,
-                        value: format!("`{}`", shape.value),
-                    }),
-                    range: Some(uiua_span_to_lsp(&shape.span)),
-                }
-            } else {
-                return Ok(None);
-            }))
+            Ok(None)
         }
 
         async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
@@ -1398,6 +1482,7 @@ mod server {
                         };
                         stt
                     }
+                    SpanKind::Obverse(_) => for_prim(Primitive::Obverse, None).unwrap(),
                     SpanKind::Ident {
                         docs: Some(docs), ..
                     } => match docs.kind {

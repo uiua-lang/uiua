@@ -2034,6 +2034,7 @@ code:
                     sig,
                     explicit: func.signature.is_some(),
                     inline: true,
+                    set_inverses: Default::default(),
                 },
             );
         }

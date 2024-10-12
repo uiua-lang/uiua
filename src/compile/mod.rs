@@ -237,6 +237,8 @@ pub(crate) struct Scope {
     comment: Option<EcoString>,
     /// Map local names to global indices
     names: IndexMap<Ident, LocalName>,
+    /// Named data definitions
+    data_defs: IndexMap<Ident, Function>,
     /// Whether to allow experimental features
     pub experimental: bool,
     /// Whether an error has been emitted for experimental features
@@ -280,6 +282,7 @@ impl Default for Scope {
             file_path: None,
             comment: None,
             names: IndexMap::new(),
+            data_defs: IndexMap::new(),
             experimental: false,
             experimental_error: false,
             fill_sig_error: false,

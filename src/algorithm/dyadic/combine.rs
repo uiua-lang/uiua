@@ -274,7 +274,6 @@ impl<T: ArrayValue> Array<T> {
                 other.data.as_mut_slice().rotate_right(rot_len);
                 other.shape = target_shape;
                 other.shape[0] += 1;
-                other.meta = self.meta;
                 other
             }
             Ordering::Greater => {

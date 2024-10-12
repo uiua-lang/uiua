@@ -7,10 +7,21 @@ impl Compiler {
             `# Experimental!` to the top of the file."
         });
         if let Some(name) = data.name.take() {
+            let has_func = data.func.is_some();
             let comment = prelude.comment.clone();
             let module = self.in_scope(ScopeKind::Module(name.value.clone()), |comp| {
                 comp.data_def(data, prelude)
             })?;
+
+            // Add to scope
+            if !has_func {
+                let BindingKind::Func(f) =
+                    self.asm.bindings[module.names["New"].index].kind.clone()
+                else {
+                    unreachable!()
+                };
+                self.scope.data_defs.insert(name.value.clone(), f);
+            }
 
             // Add global
             let global_index = self.next_global;

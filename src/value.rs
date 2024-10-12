@@ -1145,6 +1145,9 @@ impl Value {
     }
     /// Convert to a box array by boxing every element
     pub fn coerce_to_boxes(self) -> Array<Boxed> {
+        if self.rank() == 0 {
+            return Boxed(self).into();
+        }
         match self {
             Value::Num(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Byte(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
@@ -1155,6 +1158,12 @@ impl Value {
     }
     /// Convert to a box array by boxing every element
     pub fn coerce_as_boxes(&self) -> Cow<Array<Boxed>> {
+        if self.rank() == 0 {
+            return match self {
+                Value::Box(arr) => Cow::Borrowed(arr),
+                val => Cow::Owned(Boxed(val.clone()).into()),
+            };
+        }
         match self {
             Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),

@@ -80,7 +80,7 @@ All‼ ←^ $"⊓(_)" /$"_|_" ↯⋕ °{⊙∘}
 [All‼3+ 1 2 3 4 5 6]
 ```
 
-First, we extract the two operands: the count and the function. The count comes in as a string, so we have to [parse]() it before using [keep]() to make an array of copies of the function.
+First, we extract the two operands: the count and the function. The count comes in as a string, so we have to [parse]() it before using [reshape]() to make an array of copies of the function.
 
 We use [reduce]() with a format string to form the branches of a function pack, then use another format string to put them in [bracket]().
 

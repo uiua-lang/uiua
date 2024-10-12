@@ -364,6 +364,7 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &pat!(Atan, (Flip, UnAtan, Div, Mul)),
         &InvertPatternFn(anti_repeat_pattern, "repeat"),
         &InvertPatternFn(anti_custom_pattern, "custom"),
+        &InvertPatternFn(anti_call_pattern, "call"),
         &(IgnoreMany(Flip), ([Add], [Sub])),
         &([Sub], [Add]),
         &([Flip, Sub], [Flip, Sub]),
@@ -985,6 +986,16 @@ invert_pat!(
     |input, comp| {
         let instrs = f.instrs(&comp.asm).to_vec();
         let inverse = invert_instrs(&instrs, comp)?;
+        (input, inverse)
+    }
+);
+
+invert_pat!(
+    anti_call_pattern,
+    (Instr::PushFunc(f), Instr::Call(_)),
+    |input, comp| {
+        let instrs = f.instrs(&comp.asm).to_vec();
+        let inverse = anti_instrs(&instrs, comp)?;
         (input, inverse)
     }
 );

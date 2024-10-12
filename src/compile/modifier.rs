@@ -1458,7 +1458,7 @@ impl Compiler {
                     // Compile
                     let mut new_func: NewFunction = self.suppress_diagnostics(|comp| {
                         comp.temp_scope(mac.names, macro_local, |comp| {
-                            comp.lines(vec![mac.words], true, &mut BindingPrelude::default())
+                            comp.lines(vec![mac.words], true, false, &mut BindingPrelude::default())
                                 .map(Into::into)
                         })
                     })?;

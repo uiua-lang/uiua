@@ -600,7 +600,7 @@ code:
         match item {
             Item::Module(m) => self.module(m, take(prelude).comment),
             Item::Words(lines) => {
-                let instrs = self.lines(lines, must_run, prelude)?;
+                let instrs = self.lines(lines, must_run, true, prelude)?;
                 let start = self.asm.instrs.len();
                 self.asm.instrs.extend(instrs);
                 let end = self.asm.instrs.len();
@@ -623,6 +623,7 @@ code:
         &mut self,
         mut lines: Vec<Vec<Sp<Word>>>,
         must_run: bool,
+        precomp: bool,
         prelude: &mut BindingPrelude,
     ) -> UiuaResult<EcoVec<Instr>> {
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
@@ -745,7 +746,8 @@ code:
                         // - the pre-eval mode is not `Line`
                         // - there are at least as many push instructions preceding the current line as there are arguments to the line
                         // - the words create no bindings
-                        if self.pre_eval_mode != PreEvalMode::Line
+                        if precomp
+                            && self.pre_eval_mode != PreEvalMode::Line
                             && !new_func.instrs.is_empty()
                             && instr_count_before >= sig.args
                             && instr_count_after >= instr_count_before

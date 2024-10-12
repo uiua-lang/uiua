@@ -676,7 +676,7 @@ code:
         let mut all_instrs = EcoVec::new();
         while let Some(line) = lines.pop_front() {
             let assert_later = || {
-                lines.iter().any(|line| {
+                once(&line).chain(&lines).any(|line| {
                     line.iter()
                         .find(|w| w.value.is_code())
                         .is_some_and(|w| matches!(w.value, Word::Primitive(Primitive::Assert)))

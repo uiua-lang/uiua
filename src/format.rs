@@ -1130,8 +1130,8 @@ impl<'a> Formatter<'a> {
                         .push((line_number, comment.to_string()));
                 }
             }
-            Word::BreakLine => self.output.push('\''),
-            Word::FlipLine => self.output.push_str("''"),
+            Word::BreakLine => self.output.push_str(";;"),
+            Word::FlipLine => self.output.push_str(";"),
             Word::SemanticComment(sc) => {
                 if !self.output.is_empty() && !self.output.ends_with(['\n', ' ']) {
                     self.output.push(' ');

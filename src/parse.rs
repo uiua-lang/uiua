@@ -536,9 +536,8 @@ impl<'i> Parser<'i> {
                 bar_span,
             });
         }
-        let close_span = self
-            .expect_close(if boxed { CloseCurly } else { CloseBracket }.into())
-            .span;
+        let close = self.expect_close(if boxed { CloseCurly } else { CloseBracket }.into());
+        let close_span = close.value.then_some(close.span);
         self.try_spaces();
         let func = self.try_words();
         Some(DataDef {

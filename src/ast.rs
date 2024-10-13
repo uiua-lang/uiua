@@ -132,7 +132,7 @@ pub struct DataDef {
     /// The data fields
     pub fields: Vec<DataField>,
     /// The close delimiter span
-    pub close_span: CodeSpan,
+    pub close_span: Option<CodeSpan>,
     /// The function
     pub func: Option<Vec<Sp<Word>>>,
 }
@@ -160,7 +160,19 @@ pub struct FieldDefault {
 impl DataDef {
     /// Get the span of this data definition
     pub fn span(&self) -> CodeSpan {
-        let mut span = (self.init_span.clone()).merge(self.close_span.clone());
+        let end = self
+            .close_span
+            .clone()
+            .or_else(|| {
+                self.fields.last().map(|field| {
+                    field
+                        .bar_span
+                        .clone()
+                        .unwrap_or_else(|| field.name.span.clone())
+                })
+            })
+            .unwrap_or_else(|| self.open_span.clone());
+        let mut span = (self.init_span.clone()).merge(end);
         if let Some(words) = &self.func {
             if let Some(word) = words.last() {
                 span = span.merge(word.span.clone());

@@ -737,7 +737,9 @@ impl<'a> Formatter<'a> {
                         }
                     }
                 }
-                self.push(&data.close_span, if data.boxed { "}" } else { "]" });
+                if let Some(span) = &data.close_span {
+                    self.push(span, if data.boxed { "}" } else { "]" });
+                }
                 if let Some(words) = &data.func {
                     self.output.push(' ');
                     self.format_words(words, true, depth + 1);

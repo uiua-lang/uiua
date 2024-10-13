@@ -319,7 +319,9 @@ impl Spanner {
                             spans.extend(self.words_spans(&default.words));
                         }
                     }
-                    spans.push(data.close_span.clone().sp(SpanKind::Delimiter));
+                    if let Some(span) = &data.close_span {
+                        spans.push(span.clone().sp(SpanKind::Delimiter));
+                    }
                     if let Some(words) = &data.func {
                         spans.extend(self.words_spans(words));
                     }

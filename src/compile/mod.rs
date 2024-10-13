@@ -692,7 +692,10 @@ code:
             let span =
                 (line.first().unwrap().span.clone()).merge(line.last().unwrap().span.clone());
             if count_placeholders(&line) > 0 {
-                self.add_error(span.clone(), "Cannot use placeholder outside of function");
+                self.add_error(
+                    span.clone(),
+                    "Cannot use placeholder outside of an index macro",
+                );
             }
             let all_literal = line.iter().filter(|w| w.value.is_code()).all(|w| {
                 matches!(
@@ -2764,7 +2767,6 @@ fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
 
 fn recurse_words_mut(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)) {
     for word in words {
-        f(word);
         match &mut word.value {
             Word::Strand(items) => recurse_words_mut(items, f),
             Word::Array(arr) => arr.lines.iter_mut().for_each(|line| {
@@ -2779,6 +2781,7 @@ fn recurse_words_mut(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)
             }),
             _ => {}
         }
+        f(word);
     }
 }
 

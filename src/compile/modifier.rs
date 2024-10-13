@@ -1466,7 +1466,7 @@ impl Compiler {
                 }
                 _ => {
                     // Expand
-                    self.expand_positional_macro(
+                    self.expand_index_macro(
                         r.name.value.clone(),
                         &mut mac.words,
                         operands,
@@ -2054,7 +2054,7 @@ impl Compiler {
         Ok(())
     }
     /// Expand a positional macro
-    fn expand_positional_macro(
+    fn expand_index_macro(
         &mut self,
         name: Ident,
         macro_words: &mut Vec<Sp<Word>>,

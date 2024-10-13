@@ -18,16 +18,16 @@ const PRIMES: &str = "\
 deshapebytable*. # List of products
 keepnotbymember  # Keep not in list";
 pub const LOGO: &str = "\
-Xy ← °⍉⊞⊟. ÷⟜-÷2⟜⇡200
-Rgb ← ⊂ ⇌×.Xy 0.5
-u ← ↥<0.2:>0.7.+×2×.:°⊟Xy
-c ← >⌵/ℂ Xy
-⍉⊂:-¬u c1 +0.1 ↧¤c0.95Rgb";
+U ← /=⊞<0.2_0.7 /+×⟜ⁿ1_2
+I ← >⌵/ℂ: # Circle
+u ← +0.1↧¤ ⊃(I0.95|⊂:0.5⇌°√)
+A ← ×⊃U(I1) # Alpha
+⍜°⍉(⊂⊃u A) -1÷÷2⟜(⇡↯2) 200";
 const CHORD: &str = "\
 [0 4 7 10]      # Notes
 ×220 ⁿ:2÷12     # Freqs
 ∿×τ ⊞× ÷⟜⇡&asr. # Generate
-÷⧻: ≡/+         # Mix";
+÷⊙⧻ ≡/+         # Mix";
 const SPIRAL: &str = "\
 ↯⟜(×20-1×2÷⟜⇡)200 # Xs
 -≡⊃∠(⍜∩°√+)⊸⍉     # Spiral field
@@ -40,24 +40,25 @@ const STRIPES: &str = "\
 [⊞⊃⊃+↥-].⇡300
 ⍉ ÷2 +1.2 ∿ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
-⬚@ ⊜(⊂⊏:"❌✅" ≍⇌..)≠@ ."#;
+⬚@ ⊜(⊂⊏:"❌✅" ≍⊸⇌.)⊸≠@ "#;
 const AUTOMATA: &str = "\
 Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌◫3⇌ ⊂⊂0:0)
-=⌊÷2⟜⇡ 500         # Init
-⇌[⍥⊸(Rule30)⌊÷2⧻.] # Run";
+=⌊÷2⟜⇡ 500          # Init
+⇌[◌⍥⟜⊸Rule⌊÷2⧻,] 30 # Run";
 const ROMAN: &str = r#"k ← "IVXLCDM"
 n ← [1 5 10 50 100 500 1000]
-F ← /+-⊃(↻1×|×¬)≡/>◫2⊂:0.⊏⊗:k:n
+F ← /+-⊃(↻1×|×¬)⊸(≡/>◫2⊂:0)⊏:n⊗:k
 F "LVII"
 F "MCMXCIV""#;
 const MANDELBROT: &str = "\
-×2 ⊞ℂ:-1/4. ÷:-÷2,⇡.300 # Init
->2 ⌵ ⊙◌⍥⊃(+×.)⋅∘ 50 0   # Run";
+×2 ⊞ℂ⤙-1/4 -1/2÷⟜⇡300 # Init
+>2 ⌵ ⊙◌⍥⊸(+×.) 50 0   # Run";
 const LIFE: &str = "\
-Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
-⁅×0.6 ∵⋅⚂ ↯⟜⊚ 30 # Init
+Adj  ← ☇1-1⇡3_3
+Life ← ↥↧⟜(∩=2,3-|/+≡↻Adj¤)
+⁅×0.6 gen⊙⚂ ⊟.30 # Init
 ⇌◌⍥(⟜⊂Life)100⟜¤ # Run
-≡(▽⟜≡▽4)         # Upscale";
+≡(▽⟜≡▽) 4        # Upscale";
 
 pub const EXAMPLES: &[&str] = &[
     AVG, X_MATRIX, UIUA, PRIMES, LOGO, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA,

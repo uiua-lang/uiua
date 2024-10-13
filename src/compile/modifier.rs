@@ -858,6 +858,18 @@ impl Compiler {
                             flags,
                         };
                         let inv = self.make_function(inv_id, inv_sig, inv_new_func);
+                        if func.signature().inverse() != inv.signature() {
+                            self.add_error(
+                                modified.modifier.span.clone(),
+                                format!(
+                                    "Repeated function's inverse must have \
+                                    the inverse signature, but their signatures \
+                                    are {} and {}",
+                                    func.signature(),
+                                    inv.signature()
+                                ),
+                            )
+                        }
                         eco_vec![
                             Instr::PushFunc(inv),
                             Instr::PushFunc(func),

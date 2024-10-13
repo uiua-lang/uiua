@@ -2094,35 +2094,37 @@ fn invert_copy_temp_pattern<'a>(
         return generic();
     };
     // On-inverse
-    for mid in 0..inner.len() {
-        let (before, after) = inner.split_at(mid);
-        let Ok(before_sig) = instrs_signature(before) else {
-            continue;
-        };
-        if before_sig.args == 0 && before_sig.outputs != 0 {
-            continue;
-        }
-        for pat in ON_INVERT_PATTERNS {
-            if let Ok((after, on_inv)) = pat.invert_extract(after, comp) {
-                if let Ok(after_inv) = invert_instrs(after, comp) {
-                    let mut instrs = eco_vec![start_instr.clone()];
+    if count == 1 {
+        for mid in 0..inner.len() {
+            let (before, after) = inner.split_at(mid);
+            let Ok(before_sig) = instrs_signature(before) else {
+                continue;
+            };
+            if before_sig.args == 0 && before_sig.outputs != 0 {
+                continue;
+            }
+            for pat in ON_INVERT_PATTERNS {
+                if let Ok((after, on_inv)) = pat.invert_extract(after, comp) {
+                    if let Ok(after_inv) = invert_instrs(after, comp) {
+                        let mut instrs = eco_vec![start_instr.clone()];
 
-                    if !after_inv.is_empty() {
-                        instrs.push(Instr::PushTemp {
-                            stack: TempStack::Inline,
-                            count,
-                            span: *span,
-                        });
-                        instrs.extend(after_inv);
+                        if !after_inv.is_empty() {
+                            instrs.push(Instr::PushTemp {
+                                stack: TempStack::Inline,
+                                count,
+                                span: *span,
+                            });
+                            instrs.extend(after_inv);
+                            instrs.push(end_instr.clone());
+                        }
+
+                        instrs.extend_from_slice(before);
+
+                        instrs.extend(on_inv);
+
                         instrs.push(end_instr.clone());
+                        return Ok((input, instrs));
                     }
-
-                    instrs.extend_from_slice(before);
-
-                    instrs.extend(on_inv);
-
-                    instrs.push(end_instr.clone());
-                    return Ok((input, instrs));
                 }
             }
         }

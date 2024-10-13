@@ -868,9 +868,13 @@ impl Primitive {
             Primitive::Deal => {
                 let seed = env.pop(1)?.as_num(env, "Deal expects a number")?.to_bits();
                 let arr = env.pop(2)?;
-                let mut rows: Vec<Value> = arr.into_rows().collect();
-                rows.shuffle(&mut SmallRng::seed_from_u64(seed));
-                env.push(Value::from_row_values_infallible(rows));
+                if arr.row_count() == 0 {
+                    env.push(arr);
+                } else {
+                    let mut rows: Vec<Value> = arr.into_rows().collect();
+                    rows.shuffle(&mut SmallRng::seed_from_u64(seed));
+                    env.push(Value::from_row_values_infallible(rows));
+                }
             }
             Primitive::Tag => {
                 static NEXT_TAG: AtomicUsize = AtomicUsize::new(0);

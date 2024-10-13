@@ -162,6 +162,15 @@ pub fn Install() -> impl IntoView {
         <p>"Use "<code>"uiua fmt [PATH]"</code>" to format a file without running it."</p>
         <p>"Use "<code>"uiua test [PATH]"</code>" to run tests."</p>
         <p>"Use "<code>"uiua module update"</code>" to update Git modules."</p>
+
+        <Hd id="local-site">"Running the Site Locally"</Hd>
+        <p>"This website is a static, single-page application. As such, it can be build and run locally, without connecting to a server."</p>
+        <p>"To do this, you will need "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installed. You will also need the "<a href="https://github.com/uiua-lang/uiua">"Uiua repository"</a>" cloned locally."</p>
+        <p>"You need to have both "<a href="https://trunkrs.dev">"Trunk"</a>" and the "<code>"wasm32-unknown-unknown"</code>" target installed. To get both of these, run:"</p>
+        <code class="code-block">"cargo install trunk\nrustup target add wasm32-unknown-unknown"</code>
+        <p>"Then, from the root of the Uiua repository, run:"</p>
+        <code class="code-block">"cd site\ntrunk serve"</code>
+        <p>"The site will be available at "<code>"http://localhost:8080"</code>"."</p>
     }
 }
 

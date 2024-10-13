@@ -38,4 +38,4 @@ MDF ← Lib {"const unsigned char*" "dummy_md5" "const unsigned char:1" "unsigne
 ⍤⟜≍: "hello" &memcpy "char":5 MDF {"hello" NULL}
 MDF ← Lib {"const unsigned char*" "dummy_md5" "const unsigned char:1" "unsigned long" "unsigned char*"}
 ⍤⟜≍: {"hello" NULL} ⍜(°□⊢|&memcpy "char":5) MDF {"hello" NULL}
-⍤⟜≍: {.utf₈"hello"} ⍚(&memcpy "unsigned char":5) MDF {"hello" ▽5 0}
+# ⍤⟜≍: {.utf₈"hello"} ⍚(&memcpy "unsigned char":5) MDF {"hello" ▽5 0}

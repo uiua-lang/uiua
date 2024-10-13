@@ -114,13 +114,15 @@ MyData!(+⊃Foo Bar New) 3 5
 
 If some code immediately follows the data definition, a `Call` function will be generated which uses the constructor as a [fill](/docs/fill) function and in which the field names pull from the fill value.
 
-This essentially allows for named function arguments.
+This is called a *data function* and essentially allows for named function arguments.
 
 ```uiua
 # Experimental!
 ~MyData {Foo Bar} ↯2 Foo_Foo_Bar
 MyData 3 5
 ```
+
+You can mix and match accessed fields and normal function inputs.
 
 ```uiua
 # Experimental!
@@ -133,3 +135,7 @@ Foo 3 5
 ~Quad [a b c] ÷×2a -b ⊟¯.√ℂ0 -/×4_a_c ×.b
 Quad 1 2 0
 ```
+
+Note that in general, functions should not be written this way. Keeping an array as a [fill](/docs/fill) value means it will be duplicated if it is mutated, which is inefficient.
+
+Data functions are mainly useful when your function has a lot of configuration parameters. Arrays that are the primary thing being transformed, as well as arrays that are potentially large, should be kept on the stack.

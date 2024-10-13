@@ -78,6 +78,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental subscript modifiers
   - They modify the behavior of some functions and modifiers
   - You can read more about them [here](https://uiua.org/docs/experimental#subscript-modifiers)
+- Add experimental [data definitions](https://uiua.org/docs/experimental#data-definitions)
+  - These allow for structured data similar to `struct`s and `enum`s in other languages
+  - They also allow a limited form of namable function arguments
+  - The experimental [`struct`](https://uiua.org/docs/struct) modifier/macro has been deprecated in favor of data definitions
 - Add the experimental [`layout`](https://uiua.org/docs/layout) function, which renders text into an image array
 - [`astar`](https://uiua.org/docs/astar) no longer errors in no paths are found
 - Remove previously deprecated function strands

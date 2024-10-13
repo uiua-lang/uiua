@@ -16,35 +16,37 @@ Listener ← &tcpl "0.0.0.0:8080"
 &p $ Server started
 
 # Mime types
-GetExt ← |1 °□⊢⇌ ⊜□ ≠@. .
+GetExt ← °□⊢⇌ ⊜□ ≠@. .
 °⊟⍉[
   {"js" "text/javascript"}
-  {"wasm" "application/wasm"}]
+  {"wasm" "application/wasm"}
+]
 ExtMimeExt  ←
 ExtMimeMime ←
-ExtMime     ← |1 °□⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
+ExtMime     ← °□⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
 
 # ? Status Mime Bytes
 Response ← (
   ⊙⊙(⧻.)
-  ⊂ utf₈ $$ HTTP/1.1 _
-         $$ Content-Type: _
-         $$ Content-Length: _
-         $$ 
-         $$ 
+  $$ HTTP/1.1 _
+  $$ Content-Type: _
+  $$ Content-Length: _
+  $$ 
+  $$ 
+  ⊂ utf₈
 )
 
 # Handlers
-NotFound            ← Response "404 Not Found" "text/plain" utf₈"Not Found"
-ServerError         ← Response "500 Internal Server Error" "text/plain"
-HandlePageLoadError ← ⋅(
+NotFound      ← Response "404 Not Found" "text/plain" utf₈"Not Found"
+ServerError   ← Response "500 Internal Server Error" "text/plain"
+PageLoadError ← ⋅(
   /↥⌕"The system cannot find the file specified".
   ⨬(NotFound◌|ServerError))
-Page ← |1 ⍣(
+Page ← ⍣(
   ExtMime GetExt ⟜&frab
   Response "200 OK"
-)HandlePageLoadError ⊂"docs"
-Home ← |0 Page "/index.html"
+)PageLoadError ⊂"docs"
+Home ← (Page "/index.html")
 
 Respond ← ◌pool(
   &p $"Request from _" &tcpaddr.
@@ -57,6 +59,7 @@ Respond ← ◌pool(
   &p $"Response: _ bytes" ⧻.
 
   # Send response
-  ⊃⋅&cl&w)
+  ⊃⋅&cl&w
+)
 
 ⍢(⍣Respond⋅&p &tcpa Listener)1

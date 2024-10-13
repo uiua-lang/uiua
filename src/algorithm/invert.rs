@@ -1494,6 +1494,13 @@ fn invert_push_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
+    if let Ok((input, mut instrs)) = Val.invert_extract(input, comp) {
+        instrs.push(Instr::ImplPrim(
+            ImplPrimitive::MatchPattern,
+            comp.asm.spans.len() - 1,
+        ));
+        return Ok((input, instrs));
+    }
     let (instr, input) = match input {
         [instr @ Instr::Push(_), input @ ..] => (instr, input),
         [instr @ Instr::CallGlobal { index, .. }, input @ ..]
@@ -3413,7 +3420,7 @@ impl InvertPattern for Val {
         if input.is_empty() {
             return generic();
         }
-        for len in (1..input.len()).rev() {
+        for len in (1..=input.len()).rev() {
             let chunk = &input[..len];
             if let Some(sig) = instrs_clean_signature(chunk) {
                 if sig == (0, 1) && instrs_are_pure(chunk, &comp.asm, Purity::Pure) {

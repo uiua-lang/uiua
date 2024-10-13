@@ -53,31 +53,37 @@ impl Compiler {
             None
         };
         // Collect fields
-        for data_field in data.fields {
-            let span = self.add_span(data_field.name.span.clone());
-            let init = if let Some(default) = data_field.default {
-                let new_func = self.compile_words(default.words, true)?;
-                let sig = self.sig_of(&new_func.instrs, &data_field.name.span)?;
-                if sig.outputs != 1 {
-                    self.add_error(
-                        data_field.name.span.clone(),
-                        format!(
-                            "Default field initializer must have \
-                            1 output, but its signature is {sig}"
-                        ),
-                    );
-                }
-                Some((new_func.instrs, sig))
-            } else {
-                None
-            };
-            fields.push(Field {
-                name: data_field.name.value,
-                name_span: data_field.name.span,
-                global_index: 0,
-                span,
-                init,
-            });
+        let mut boxed = false;
+        let mut has_fields = false;
+        if let Some(data_fields) = data.fields {
+            boxed = data_fields.boxed;
+            has_fields = true;
+            for data_field in data_fields.fields {
+                let span = self.add_span(data_field.name.span.clone());
+                let init = if let Some(default) = data_field.default {
+                    let new_func = self.compile_words(default.words, true)?;
+                    let sig = self.sig_of(&new_func.instrs, &data_field.name.span)?;
+                    if sig.outputs != 1 {
+                        self.add_error(
+                            data_field.name.span.clone(),
+                            format!(
+                                "Default field initializer must have \
+                                1 output, but its signature is {sig}"
+                            ),
+                        );
+                    }
+                    Some((new_func.instrs, sig))
+                } else {
+                    None
+                };
+                fields.push(Field {
+                    name: data_field.name.value,
+                    name_span: data_field.name.span,
+                    global_index: 0,
+                    span,
+                    init,
+                });
+            }
         }
 
         // Make getters
@@ -89,7 +95,7 @@ impl Compiler {
                 Instr::push(i + data.variant as usize),
                 Instr::Prim(Primitive::Pick, span)
             ];
-            if data.boxed {
+            if boxed {
                 instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, span));
                 instrs.push(Instr::Label {
                     label: name.clone(),
@@ -137,13 +143,16 @@ impl Compiler {
         );
 
         // Make constructor
-        let mut instrs = eco_vec![Instr::BeginArray];
+        let mut instrs = EcoVec::new();
+        if has_fields {
+            instrs.push(Instr::BeginArray);
+        }
         let constructor_args: usize = fields
             .iter()
             .map(|f| f.init.as_ref().map(|(_, sig)| sig.args).unwrap_or(1))
             .sum();
         let has_inits = fields.iter().any(|f| f.init.is_some());
-        if data.boxed || constructor_args < fields.len() {
+        if boxed || constructor_args < fields.len() {
             if has_inits {
                 for field in &fields {
                     if let Some((_, sig)) = field.init {
@@ -183,7 +192,7 @@ impl Compiler {
                         .global_references
                         .insert(field.name_span.clone(), field.global_index);
                 }
-                if data.boxed {
+                if boxed {
                     instrs.push(Instr::Label {
                         label: field.name.clone(),
                         span,
@@ -197,10 +206,9 @@ impl Compiler {
                 span,
             });
         }
-        instrs.push(Instr::EndArray {
-            boxed: data.boxed,
-            span,
-        });
+        if has_fields {
+            instrs.push(Instr::EndArray { boxed, span });
+        }
         if data.variant {
             let module_scope = self
                 .higher_scopes
@@ -220,10 +228,12 @@ impl Compiler {
                 } else {
                     self.add_error(data.init_span.clone(), "Variants must have a name");
                 }
-                if data.boxed {
-                    instrs.push(Instr::Prim(Primitive::Box, span));
+                if has_fields {
+                    if boxed {
+                        instrs.push(Instr::Prim(Primitive::Box, span));
+                    }
+                    instrs.push(Instr::Prim(Primitive::Join, span));
                 }
-                instrs.push(Instr::Prim(Primitive::Join, span));
             } else {
                 self.add_error(
                     data.init_span.clone(),

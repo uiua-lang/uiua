@@ -125,6 +125,15 @@ pub struct DataDef {
     pub variant: bool,
     /// The name of the module
     pub name: Option<Sp<Ident>>,
+    /// The fields of the data definition
+    pub fields: Option<DataFields>,
+    /// The function
+    pub func: Option<Vec<Sp<Word>>>,
+}
+
+#[derive(Debug, Clone)]
+/// The fields of a data definition
+pub struct DataFields {
     /// Whether the array is boxed
     pub boxed: bool,
     /// The open delimiter span
@@ -133,8 +142,6 @@ pub struct DataDef {
     pub fields: Vec<DataField>,
     /// The close delimiter span
     pub close_span: Option<CodeSpan>,
-    /// The function
-    pub func: Option<Vec<Sp<Word>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -161,6 +168,29 @@ impl DataDef {
     /// Get the span of this data definition
     pub fn span(&self) -> CodeSpan {
         let end = self
+            .fields
+            .as_ref()
+            .map(|fields| fields.span())
+            .unwrap_or_else(|| {
+                self.name
+                    .as_ref()
+                    .map(|name| name.span.clone())
+                    .unwrap_or_else(|| self.init_span.clone())
+            });
+        let mut span = (self.init_span.clone()).merge(end);
+        if let Some(words) = &self.func {
+            if let Some(word) = words.last() {
+                span = span.merge(word.span.clone());
+            }
+        }
+        span
+    }
+}
+
+impl DataFields {
+    /// Get the span of these fields
+    pub fn span(&self) -> CodeSpan {
+        let end = self
             .close_span
             .clone()
             .or_else(|| {
@@ -172,13 +202,7 @@ impl DataDef {
                 })
             })
             .unwrap_or_else(|| self.open_span.clone());
-        let mut span = (self.init_span.clone()).merge(end);
-        if let Some(words) = &self.func {
-            if let Some(word) = words.last() {
-                span = span.merge(word.span.clone());
-            }
-        }
-        span
+        self.open_span.clone().merge(end)
     }
 }
 

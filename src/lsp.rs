@@ -308,19 +308,21 @@ impl Spanner {
                             original: true,
                         }));
                     }
-                    spans.push(data.open_span.clone().sp(SpanKind::Delimiter));
-                    for field in &data.fields {
-                        spans.push(field.name.span.clone().sp(SpanKind::Ident {
-                            docs: self.binding_docs(&field.name.span),
-                            original: true,
-                        }));
-                        if let Some(default) = &field.default {
-                            spans.push(default.arrow_span.clone().sp(SpanKind::Delimiter));
-                            spans.extend(self.words_spans(&default.words));
+                    if let Some(fields) = &data.fields {
+                        spans.push(fields.open_span.clone().sp(SpanKind::Delimiter));
+                        for field in &fields.fields {
+                            spans.push(field.name.span.clone().sp(SpanKind::Ident {
+                                docs: self.binding_docs(&field.name.span),
+                                original: true,
+                            }));
+                            if let Some(default) = &field.default {
+                                spans.push(default.arrow_span.clone().sp(SpanKind::Delimiter));
+                                spans.extend(self.words_spans(&default.words));
+                            }
                         }
-                    }
-                    if let Some(span) = &data.close_span {
-                        spans.push(span.clone().sp(SpanKind::Delimiter));
+                        if let Some(span) = &fields.close_span {
+                            spans.push(span.clone().sp(SpanKind::Delimiter));
+                        }
                     }
                     if let Some(words) = &data.func {
                         spans.extend(self.words_spans(words));

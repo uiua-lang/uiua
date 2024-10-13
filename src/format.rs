@@ -705,40 +705,44 @@ impl<'a> Formatter<'a> {
                     self.push(&name.span, &name.value);
                     self.output.push(' ');
                 }
-                self.push(&data.open_span, if data.boxed { "{" } else { "[" });
-                let multiline = data.fields.len() > 1
-                    && data.fields.iter().enumerate().any(|(i, f)| {
-                        f.default.is_some() && (f.bar_span.is_none() && i < data.fields.len() - 1)
-                    })
-                    || (data.fields.iter())
-                        .filter_map(|f| f.default.as_ref())
-                        .any(|def| words_are_multiline(&def.words))
-                    || data.fields.len() >= 5 && data.fields.iter().any(|f| f.default.is_some());
-                if multiline {
-                    self.newline(depth + 1);
-                }
-                for (i, field) in data.fields.iter().enumerate() {
-                    self.push(&field.name.span, &field.name.value);
-                    if let Some(default) = &field.default {
-                        self.push(&default.arrow_span, " ← ");
-                        self.format_words(&default.words, true, depth + 1);
+                if let Some(fields) = &data.fields {
+                    self.push(&fields.open_span, if fields.boxed { "{" } else { "[" });
+                    let multiline = fields.fields.len() > 1
+                        && fields.fields.iter().enumerate().any(|(i, f)| {
+                            f.default.is_some()
+                                && (f.bar_span.is_none() && i < fields.fields.len() - 1)
+                        })
+                        || (fields.fields.iter())
+                            .filter_map(|f| f.default.as_ref())
+                            .any(|def| words_are_multiline(&def.words))
+                        || fields.fields.len() >= 5
+                            && fields.fields.iter().any(|f| f.default.is_some());
+                    if multiline {
+                        self.newline(depth + 1);
                     }
-                    if i < data.fields.len() - 1 {
-                        if multiline {
-                            self.newline(depth + 1);
-                        } else if field.default.is_some() {
-                            if let Some(span) = &field.bar_span {
-                                self.push(span, "|");
+                    for (i, field) in fields.fields.iter().enumerate() {
+                        self.push(&field.name.span, &field.name.value);
+                        if let Some(default) = &field.default {
+                            self.push(&default.arrow_span, " ← ");
+                            self.format_words(&default.words, true, depth + 1);
+                        }
+                        if i < fields.fields.len() - 1 {
+                            if multiline {
+                                self.newline(depth + 1);
+                            } else if field.default.is_some() {
+                                if let Some(span) = &field.bar_span {
+                                    self.push(span, "|");
+                                } else {
+                                    self.output.push('|');
+                                }
                             } else {
-                                self.output.push('|');
+                                self.output.push(' ');
                             }
-                        } else {
-                            self.output.push(' ');
                         }
                     }
-                }
-                if let Some(span) = &data.close_span {
-                    self.push(span, if data.boxed { "}" } else { "]" });
+                    if let Some(span) = &fields.close_span {
+                        self.push(span, if fields.boxed { "}" } else { "]" });
+                    }
                 }
                 if let Some(words) = &data.func {
                     self.output.push(' ');

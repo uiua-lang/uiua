@@ -486,68 +486,78 @@ impl<'i> Parser<'i> {
         self.try_spaces();
         let mut boxed = false;
         let open_span = if let Some(span) = self.try_exact(OpenBracket.into()) {
-            span
+            Some(span)
         } else if let Some(span) = self.try_exact(OpenCurly.into()) {
             boxed = true;
-            span
+            Some(span)
+        } else if variant {
+            None
         } else {
             self.index = reset;
             return None;
         };
-        let mut fields = Vec::new();
-        while self.try_exact(Newline).is_some() {
+        let fields = if let Some(open_span) = open_span {
+            let mut fields = Vec::new();
+            while self.try_exact(Newline).is_some() {
+                self.try_spaces();
+            }
             self.try_spaces();
-        }
-        self.try_spaces();
-        while let Some(name) = self.try_ident() {
-            self.try_spaces();
-            let mut default = None;
-            let start_arrow_span = self.try_spaces().map(|w| w.span);
-            if let Some(mut arrow_span) = self
-                .try_exact(Equal.into())
-                .or_else(|| self.try_exact(LeftArrow))
-            {
-                arrow_span = if let Some(start) = start_arrow_span {
-                    start.merge(arrow_span)
-                } else {
-                    arrow_span
+            while let Some(name) = self.try_ident() {
+                self.try_spaces();
+                let mut default = None;
+                let start_arrow_span = self.try_spaces().map(|w| w.span);
+                if let Some(mut arrow_span) = self
+                    .try_exact(Equal.into())
+                    .or_else(|| self.try_exact(LeftArrow))
+                {
+                    arrow_span = if let Some(start) = start_arrow_span {
+                        start.merge(arrow_span)
+                    } else {
+                        arrow_span
+                    };
+                    if let Some(span) = self.try_spaces().map(|w| w.span) {
+                        arrow_span = arrow_span.merge(span);
+                    }
+                    let words = self.try_words().unwrap_or_else(|| {
+                        self.errors.push(self.expected([Expectation::Term]));
+                        Vec::new()
+                    });
+                    default = Some(FieldDefault { arrow_span, words })
                 };
-                if let Some(span) = self.try_spaces().map(|w| w.span) {
-                    arrow_span = arrow_span.merge(span);
+                while self.try_exact(Newline).is_some() {
+                    self.try_spaces();
                 }
-                let words = self.try_words().unwrap_or_else(|| {
-                    self.errors.push(self.expected([Expectation::Term]));
-                    Vec::new()
+                self.try_spaces();
+                let bar_span = self.try_exact(Bar.into());
+                self.try_spaces();
+                while self.try_exact(Newline).is_some() {
+                    self.try_spaces();
+                }
+                fields.push(DataField {
+                    name,
+                    default,
+                    bar_span,
                 });
-                default = Some(FieldDefault { arrow_span, words })
-            };
-            while self.try_exact(Newline).is_some() {
-                self.try_spaces();
             }
+            let close = self.expect_close(if boxed { CloseCurly } else { CloseBracket }.into());
+            let close_span = close.value.then_some(close.span);
             self.try_spaces();
-            let bar_span = self.try_exact(Bar.into());
-            self.try_spaces();
-            while self.try_exact(Newline).is_some() {
-                self.try_spaces();
-            }
-            fields.push(DataField {
-                name,
-                default,
-                bar_span,
-            });
-        }
-        let close = self.expect_close(if boxed { CloseCurly } else { CloseBracket }.into());
-        let close_span = close.value.then_some(close.span);
-        self.try_spaces();
+            Some(DataFields {
+                boxed,
+                open_span,
+                fields,
+                close_span,
+            })
+        } else {
+            None
+        };
+
         let func = self.try_words();
         Some(DataDef {
             init_span,
             variant,
             name,
-            boxed,
-            open_span,
             fields,
-            close_span,
             func,
         })
     }

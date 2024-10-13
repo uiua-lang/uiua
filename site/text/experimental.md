@@ -86,22 +86,27 @@ The constructors for these variants will prepend a tag to the data so that they 
 
 Because the constructed variants are tagged with incrementing integers, they can be [pattern-matched](/tutorial/patternmatching) on, perhaps in [try](/docs/try).
 
+Variants may be empty.
+
 ```uiua
 # Experimental!
 ┌─╴M
   |Foo {Bar Baz}
   |Qux [x y z]
   |Sed {M N}
+  |Wir
   
   Format ← ⍣(
     $"_ and _" °Foo
   | $"⟨_ _ _⟩" °Qux
   | $"_: _" °Sed
+  | "Wir!" °Wir
   )
 └─╴
 M~Format M~Foo 2 5
 M~Format M~Qux 0 4 1
 M~Format M~Sed "Name" "Dan"
+M~Format M~Wir
 ```
 
 A data definition's name can be used as a monadic macro. The field getters will be in scope inside the macro.

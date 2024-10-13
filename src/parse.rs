@@ -1363,6 +1363,10 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
             m.operands = m.operands.into_iter().map(unsplit_word).collect();
             Word::Modified(m)
         }
+        Word::Subscript(mut sub) => {
+            sub.word = unsplit_word(sub.word);
+            Word::Subscript(sub)
+        }
         word => word,
     })
 }
@@ -1399,6 +1403,10 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
         Word::Modified(mut m) => {
             m.operands = m.operands.into_iter().map(split_word).collect();
             Word::Modified(m)
+        }
+        Word::Subscript(mut sub) => {
+            sub.word = split_word(sub.word);
+            Word::Subscript(sub)
         }
         word => word,
     })

@@ -1367,7 +1367,13 @@ fn invert_dup_pattern<'a>(
             }
             inv
         }
-        _ => return generic(),
+        _ => {
+            let mut inv = monadic_inv;
+            inv.extend(invert_instrs(dyadic_part, comp)?);
+            inv.push(Instr::Prim(Primitive::Over, *dup_span));
+            inv.push(Instr::ImplPrim(ImplPrimitive::MatchPattern, *dup_span));
+            inv
+        }
     };
     Ok((input, inverse))
 }

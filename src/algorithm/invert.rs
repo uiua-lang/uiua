@@ -1494,26 +1494,22 @@ fn invert_push_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
-    if let Ok((input, mut instrs)) = Val.invert_extract(input, comp) {
-        instrs.push(Instr::ImplPrim(
-            ImplPrimitive::MatchPattern,
-            comp.asm.spans.len() - 1,
-        ));
-        return Ok((input, instrs));
-    }
-    let (instr, input) = match input {
-        [instr @ Instr::Push(_), input @ ..] => (instr, input),
-        [instr @ Instr::CallGlobal { index, .. }, input @ ..]
-            if matches!(comp.asm.bindings[*index].kind, BindingKind::Const(_)) =>
-        {
-            (instr, input)
+    let (mut instrs, input) = if let Ok((input, instrs)) = Val.invert_extract(input, comp) {
+        (instrs, input)
+    } else {
+        match input {
+            [instr @ Instr::Push(_), input @ ..] => (eco_vec![instr.clone()], input),
+            [instr @ Instr::CallGlobal { index, .. }, input @ ..]
+                if matches!(comp.asm.bindings[*index].kind, BindingKind::Const(_)) =>
+            {
+                (eco_vec![instr.clone()], input)
+            }
+            _ => return generic(),
         }
-        _ => return generic(),
     };
     if let [Instr::ImplPrim(ImplPrimitive::MatchPattern, _), input @ ..] = input {
-        return Ok((input, eco_vec![instr.clone()]));
+        return Ok((input, instrs));
     }
-    let mut instrs = eco_vec![instr.clone()];
     instrs.push(Instr::ImplPrim(
         ImplPrimitive::MatchPattern,
         comp.asm.spans.len() - 1,

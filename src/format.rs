@@ -714,6 +714,9 @@ impl<'a> Formatter<'a> {
                         .filter_map(|f| f.default.as_ref())
                         .any(|def| words_are_multiline(&def.words))
                     || data.fields.len() >= 5 && data.fields.iter().any(|f| f.default.is_some());
+                if multiline {
+                    self.newline(depth + 1);
+                }
                 for (i, field) in data.fields.iter().enumerate() {
                     self.push(&field.name.span, &field.name.value);
                     if let Some(default) = &field.default {

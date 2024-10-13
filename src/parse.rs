@@ -495,6 +495,10 @@ impl<'i> Parser<'i> {
             return None;
         };
         let mut fields = Vec::new();
+        while self.try_exact(Newline).is_some() {
+            self.try_spaces();
+        }
+        self.try_spaces();
         while let Some(name) = self.try_ident() {
             self.try_spaces();
             let mut default = None;
@@ -520,7 +524,9 @@ impl<'i> Parser<'i> {
             while self.try_exact(Newline).is_some() {
                 self.try_spaces();
             }
+            self.try_spaces();
             let bar_span = self.try_exact(Bar.into());
+            self.try_spaces();
             while self.try_exact(Newline).is_some() {
                 self.try_spaces();
             }

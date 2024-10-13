@@ -58,12 +58,12 @@ impl Compiler {
             let init = if let Some(default) = data_field.default {
                 let new_func = self.compile_words(default.words, true)?;
                 let sig = self.sig_of(&new_func.instrs, &data_field.name.span)?;
-                if sig != (0, 1) {
+                if sig.outputs != 1 {
                     self.add_error(
                         data_field.name.span.clone(),
                         format!(
-                            "Default field initializer must have signature \
-                            |0.1, but its signature is {sig}"
+                            "Default field initializer must have \
+                            1 output, but its signature is {sig}"
                         ),
                     );
                 }
@@ -202,21 +202,34 @@ impl Compiler {
             span,
         });
         if data.variant {
-            instrs.push(Instr::push(self.scope.data_variants));
-            self.scope.data_variants += 1;
-            if let Some(name) = data.name {
-                instrs.push(Instr::Label {
-                    label: name.value,
-                    remove: false,
-                    span,
-                });
+            let module_scope = self
+                .higher_scopes
+                .iter_mut()
+                .filter(|scope| !matches!(scope.kind, ScopeKind::File(_)))
+                .fuse()
+                .find(|scope| matches!(&scope.kind, ScopeKind::Module(_)));
+            if let Some(module_scope) = module_scope {
+                instrs.push(Instr::push(module_scope.data_variants));
+                module_scope.data_variants += 1;
+                if let Some(name) = data.name {
+                    instrs.push(Instr::Label {
+                        label: name.value,
+                        remove: false,
+                        span,
+                    });
+                } else {
+                    self.add_error(data.init_span.clone(), "Variants must have a name");
+                }
+                if data.boxed {
+                    instrs.push(Instr::Prim(Primitive::Box, span));
+                }
+                instrs.push(Instr::Prim(Primitive::Join, span));
             } else {
-                self.add_error(data.init_span.clone(), "Variants must have a name");
+                self.add_error(
+                    data.init_span.clone(),
+                    "Variants must be defined in a module",
+                );
             }
-            if data.boxed {
-                instrs.push(Instr::Prim(Primitive::Box, span));
-            }
-            instrs.push(Instr::Prim(Primitive::Join, span));
         }
         let name = Ident::from("New");
         let id = FunctionId::Named(name.clone());
@@ -257,39 +270,38 @@ impl Compiler {
             }
         }
 
-        // Make args module
         let mut function_stuff = None;
-        let args_module = self.in_scope(ScopeKind::Temp(None), |comp| {
-            // Arg getters
-            for field in &fields {
-                let name = &field.name;
-                let id = FunctionId::Named(name.clone());
-                comp.new_functions.push(NewFunction::default());
-                comp.push_instr(Instr::ImplPrim(ImplPrimitive::UnPop, field.span));
-                comp.global_index(field.global_index, field.name_span.clone(), true);
-                let mut new_func = comp.new_functions.pop().unwrap();
-                new_func.flags |= FunctionFlags::TRACK_CALLER;
-                let func = comp.make_function(id, Signature::new(0, 1), new_func);
-                let local = LocalName {
-                    index: comp.next_global,
-                    public: true,
-                };
-                comp.next_global += 1;
-                let comment = if let Some(module_name) = &module_name {
-                    format!("`{module_name}`'s `{name}` argument")
-                } else {
-                    format!("`{name}` argument")
-                };
-                comp.compile_bind_function(
-                    field.name.clone(),
-                    local,
-                    func,
-                    field.span,
-                    Some(&comment),
-                )?;
-            }
-            // Call function
-            if let Some(words) = data.func {
+        // Call function
+        if let Some(words) = data.func {
+            self.in_scope(ScopeKind::Temp(None), |comp| {
+                // Fill getters
+                for field in &fields {
+                    let name = &field.name;
+                    let id = FunctionId::Named(name.clone());
+                    comp.new_functions.push(NewFunction::default());
+                    comp.push_instr(Instr::ImplPrim(ImplPrimitive::UnPop, field.span));
+                    comp.global_index(field.global_index, field.name_span.clone(), true);
+                    let mut new_func = comp.new_functions.pop().unwrap();
+                    new_func.flags |= FunctionFlags::TRACK_CALLER;
+                    let func = comp.make_function(id, Signature::new(0, 1), new_func);
+                    let local = LocalName {
+                        index: comp.next_global,
+                        public: true,
+                    };
+                    comp.next_global += 1;
+                    let comment = if let Some(module_name) = &module_name {
+                        format!("`{module_name}`'s `{name}` argument")
+                    } else {
+                        format!("`{name}` argument")
+                    };
+                    comp.compile_bind_function(
+                        field.name.clone(),
+                        local,
+                        func,
+                        field.span,
+                        Some(&comment),
+                    )?;
+                }
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
                 if data.variant {
@@ -319,63 +331,18 @@ impl Compiler {
                 comp.next_global += 1;
                 let func = comp.make_function(FunctionId::Named(name.clone()), sig, new_func);
                 function_stuff = Some((local, func, span));
-            }
-            Ok(())
-        })?;
+                Ok(())
+            })?;
+        }
 
+        // Bind the call function
         if let Some((local, func, span)) = function_stuff {
             self.compile_bind_function("Call".into(), local, func, span, None)?;
         }
 
+        // Bind the constructor
         self.compile_bind_function(name, local, constructor_func, span, Some(&comment))?;
 
-        // Make macro
-        let args_macro_index = self.next_global;
-        self.next_global += 1;
-        let span = &data.init_span;
-        self.index_macros.insert(
-            args_macro_index,
-            IndexMacro {
-                words: vec![span.clone().sp(Word::Modified(Box::new(Modified {
-                    modifier: span.clone().sp(Modifier::Primitive(Primitive::Fill)),
-                    operands: vec![
-                        span.clone().sp(Word::Ref(Ref {
-                            path: Vec::new(),
-                            name: span.clone().sp("New".into()),
-                            in_macro_arg: false,
-                        })),
-                        span.clone().sp(Word::Placeholder(PlaceholderOp::Nth(0))),
-                    ],
-                })))],
-                names: args_module.names,
-                sig: None,
-                hygenic: false,
-                recursive: false,
-                flags: FunctionFlags::default(),
-            },
-        );
-        let local = LocalName {
-            index: args_macro_index,
-            public: true,
-        };
-        self.scope.names.insert("Args!".into(), local);
-        self.asm.add_binding_at(
-            local,
-            BindingKind::IndexMacro(1),
-            None,
-            Some(DocComment::from(format!(
-                "Take {} argument{} and bind {} to {} field name{}",
-                fields.len(),
-                if fields.len() == 1 { "" } else { "s" },
-                if fields.len() == 1 { "it" } else { "them" },
-                if let Some(name) = &module_name {
-                    format!("`{name}`'s")
-                } else {
-                    "the".into()
-                },
-                if fields.len() == 1 { "" } else { "s" }
-            ))),
-        );
         Ok(())
     }
     pub(super) fn end_enum(&mut self) -> UiuaResult {

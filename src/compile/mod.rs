@@ -10,7 +10,7 @@ use std::{
     fmt, fs,
     hash::{Hash, Hasher},
     iter::{once, repeat},
-    mem::{replace, take},
+    mem::{replace, swap, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     slice,
@@ -454,10 +454,8 @@ impl Compiler {
         kind: ScopeKind,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<Module> {
-        let experimental = self.scope.experimental;
         self.higher_scopes.push(take(&mut self.scope));
         self.scope.kind = kind;
-        self.scope.experimental = experimental;
         let res = f(self);
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
         res?;
@@ -951,6 +949,10 @@ code:
             (path, FileScopeKind::Source)
         };
         if !self.imports.contains_key(&path) {
+            // We cache Git modules on WASM so that the pad doesn't have to recompile big modules constantly
+            thread_local! {
+                static GIT_CACHE: RefCell<HashMap<PathBuf, Compiler>> = RefCell::new(HashMap::new());
+            }
             let bytes = self
                 .backend()
                 .file_read_all(&path)
@@ -962,19 +964,40 @@ code:
                     }
                 })
                 .map_err(|e| self.fatal_error(span.clone(), e))?;
-            let input: EcoString = String::from_utf8(bytes)
-                .map_err(|e| self.fatal_error(span.clone(), format!("Failed to read file: {e}")))?
-                .into();
-            if self.current_imports.iter().any(|p| p == &path) {
-                return Err(self.fatal_error(
-                    span.clone(),
-                    format!("Cycle detected importing {}", path.to_string_lossy()),
-                ));
-            }
-            let import = self.in_scope(ScopeKind::File(file_kind), |env| {
-                env.load_str_src(&input, &path).map(drop)
-            })?;
-            self.imports.insert(path.clone(), import);
+            if let Some(mut comp) = (bytes.len() > 1000)
+                .then(|| GIT_CACHE.with(|cache| cache.borrow().get(&path).cloned()))
+                .flatten()
+            {
+                swap(self, &mut comp);
+                self.macro_env.rt.backend = comp.macro_env.rt.backend;
+                self.asm.inputs.strings = comp.asm.inputs.strings;
+                self.asm.inputs.files.extend(comp.asm.inputs.files);
+                self.scope.experimental = comp.scope.experimental;
+            } else {
+                let input: EcoString = String::from_utf8(bytes)
+                    .map_err(|e| {
+                        self.fatal_error(span.clone(), format!("Failed to read file: {e}"))
+                    })?
+                    .into();
+                if self.current_imports.iter().any(|p| p == &path) {
+                    return Err(self.fatal_error(
+                        span.clone(),
+                        format!("Cycle detected importing {}", path.to_string_lossy()),
+                    ));
+                }
+                let module = self.in_scope(ScopeKind::File(file_kind), |comp| {
+                    comp.load_str_src(&input, &path).map(drop)
+                })?;
+                self.imports.insert(path.clone(), module);
+                #[cfg(target_arch = "wasm32")]
+                if file_kind == FileScopeKind::Git {
+                    GIT_CACHE.with(|cache| {
+                        let mut clone = self.clone();
+                        clone.macro_env.rt.backend = Arc::new(crate::SafeSys::default());
+                        cache.borrow_mut().insert(path.clone(), clone);
+                    });
+                }
+            };
         }
         let module = self.imports.get(&path).unwrap();
         if module.experimental {
@@ -2424,7 +2447,16 @@ code:
     where
         S: ToString,
     {
-        if !self.scope.experimental && !self.scope.experimental_error {
+        let take = self
+            .scopes()
+            .position(|sc| matches!(sc.kind, ScopeKind::File(_)))
+            .map(|i| i + 1)
+            .unwrap_or(usize::MAX);
+        if !self
+            .scopes()
+            .take(take)
+            .any(|sc| sc.experimental || sc.experimental_error)
+        {
             self.scope.experimental_error = true;
             self.add_error(span.clone(), message().to_string());
         }

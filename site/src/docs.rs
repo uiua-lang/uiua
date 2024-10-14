@@ -14,7 +14,7 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 
 use crate::{
     element, markdown::Markdown, other::*, other_tutorial::OtherTutorialPage, primitive::*,
-    tour::Tour, tutorial::TutorialPage, uiuisms::Uiuisms, Hd, Prim,
+    tutorial::TutorialPage, uiuisms::Uiuisms, Hd, Prim, Tour,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -3536,6 +3536,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uiua",
+ "uiua-editor",
  "unicode-segmentation",
  "urlencoding",
  "wasm-bindgen",
@@ -4142,6 +4143,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "uiua-editor"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.0",
+ "console_error_panic_hook",
+ "hound",
+ "image",
+ "js-sys",
+ "leptos",
+ "leptos_router",
+ "log",
+ "uiua",
+ "unicode-segmentation",
+ "urlencoding",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-logger",
+ "web-sys",
+]
+
+[[package]]
 name = "uiua-nokhwa"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4458,6 +4480,17 @@ name = "wasm-bindgen-shared"
 version = "0.2.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c62a0a307cb4a311d3a07867860911ca130c3494e8c2719593806c08bc5d0484"
+
+[[package]]
+name = "wasm-logger"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "074649a66bb306c8f2068c9016395fa65d8e08d2affcbf95acf3c24c3ab19718"
+dependencies = [
+ "log",
+ "wasm-bindgen",
+ "web-sys",
+]
 
 [[package]]
 name = "wasm-streams"

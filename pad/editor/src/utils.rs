@@ -27,10 +27,19 @@ use web_sys::{
 
 use crate::{
     backend::{OutputItem, WebBackend},
-    binding_class, code_font,
-    editor::Editor,
-    element, prim_sig_class,
+    code_font, prim_sig_class, binding_class,
 };
+
+#[derive(Clone)]
+pub struct ChallengeDef {
+    pub example: String,
+    pub intended_answer: String,
+    pub best_answer: Option<String>,
+    pub tests: Vec<String>,
+    pub hidden: String,
+    pub flip: bool,
+    pub did_init_run: Cell<bool>,
+}
 
 /// Handles setting the code in the editor, setting the cursor, and managing the history
 #[derive(Clone)]
@@ -1120,47 +1129,6 @@ pub fn report_view(report: &Report) -> impl IntoView {
     }
 }
 
-#[derive(Clone)]
-pub struct ChallengeDef {
-    pub example: String,
-    pub intended_answer: String,
-    pub best_answer: Option<String>,
-    pub tests: Vec<String>,
-    pub hidden: String,
-    flip: bool,
-    did_init_run: Cell<bool>,
-}
-
-#[component]
-pub fn Challenge<'a, P: IntoView + 'static>(
-    number: u8,
-    prompt: P,
-    example: &'a str,
-    answer: &'a str,
-    tests: &'a [&'a str],
-    hidden: &'a str,
-    #[prop(optional)] default: &'a str,
-    #[prop(optional)] flip: bool,
-    #[prop(optional)] best_answer: &'a str,
-) -> impl IntoView {
-    let def = ChallengeDef {
-        example: example.into(),
-        intended_answer: answer.into(),
-        best_answer: (!best_answer.is_empty()).then(|| best_answer.into()),
-        tests: tests.iter().copied().map(Into::into).collect(),
-        hidden: hidden.into(),
-        flip,
-        did_init_run: Cell::new(false),
-    };
-    view! {
-        <div class="challenge">
-            <h3>"Challenge "{number}</h3>
-            <p>"Write a program that "<strong>{prompt}</strong>"."</p>
-            <Editor challenge=def example=default/>
-        </div>
-    }
-}
-
 pub fn progressive_strings(input: &str) -> Vec<String> {
     let mut inputs = Inputs::default();
     let (items, errors, _) = uiua::parse(input, (), &mut inputs);
@@ -1366,5 +1334,24 @@ pub fn derive_title(input: &str) -> &str {
         line.trim()
     } else {
         "Pad"
+    }
+}
+
+#[track_caller]
+#[allow(clippy::manual_map)]
+pub fn get_element<T: JsCast>(id: &str) -> Option<T> {
+    if let Some(elem) = document().get_element_by_id(id) {
+        Some(elem.dyn_into().unwrap())
+    } else {
+        None
+    }
+}
+
+#[track_caller]
+pub fn element<T: JsCast>(id: &str) -> T {
+    if let Some(elem) = get_element(id) {
+        elem
+    } else {
+        panic!("#{id} not found")
     }
 }

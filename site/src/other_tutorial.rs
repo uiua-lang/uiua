@@ -3,8 +3,9 @@ use leptos::*;
 use leptos_meta::Title;
 use leptos_router::*;
 use uiua::{Primitive, SysOp};
+use uiua_editor::Editor;
 
-use crate::{title_markdown, Challenge, Editor, Hd, Prim, Prims};
+use crate::{title_markdown, Challenge, Hd, Prim, Prims};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum OtherTutorialPage {

@@ -2,8 +2,9 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{PrimClass, PrimDocFragment, PrimDocLine, Primitive, SysOp};
+use uiua_editor::Editor;
 
-use crate::{editor::Editor, Hd, Prim, Prims};
+use crate::{Hd, Prim, Prims};
 
 fn doc_line_fragments_to_view(fragments: &[PrimDocFragment]) -> View {
     if fragments.is_empty() {
@@ -433,8 +434,8 @@ fn inverse_row_impl(
 #[test]
 fn prim_docs() {
     use uiua::{PrimDocLine, Uiua};
-
-    use crate::backend::WebBackend;
+    use uiua_editor::backend::WebBackend;
+    
     for prim in Primitive::non_deprecated() {
         for line in &prim.doc().lines {
             if let PrimDocLine::Example(ex) = line {

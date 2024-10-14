@@ -5,10 +5,11 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{Primitive, SysOp, EXAMPLE_UA};
+use uiua_editor::*;
 
 use crate::{
-    editor::*, markdown::Markdown, other_tutorial::OtherTutorialParams, title_markdown, Hd, Prim,
-    Prims,
+    markdown::Markdown, other_tutorial::OtherTutorialParams, title_markdown, Hd, Prim,
+    Prims, Challenge,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]

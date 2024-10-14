@@ -1,9 +1,7 @@
 #![allow(non_snake_case, clippy::empty_docs, clippy::mutable_key_type)]
 
-mod backend;
 mod blog;
 mod docs;
-mod editor;
 mod examples;
 mod markdown;
 mod other;
@@ -12,21 +10,19 @@ mod primitive;
 mod tutorial;
 mod uiuisms;
 
-use std::{sync::OnceLock, time::Duration};
+use std::{cell::Cell, sync::OnceLock, time::Duration};
 
 use base64::engine::{general_purpose::URL_SAFE, Engine};
 use js_sys::Date;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{
-    lsp::{BindingDocs, BindingDocsKind},
-    now, ConstantDef, PrimClass, Primitive, Signature, SysOp,
-};
+use uiua::{now, ConstantDef, Primitive, SysOp};
+use uiua_editor::{prim_class, utils::ChallengeDef, Editor, EditorMode, EDITOR_SHORTCUTS};
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlAudioElement};
 
-use crate::{blog::*, docs::*, editor::*, other::*, tutorial::Tutorial, uiuisms::*};
+use crate::{blog::*, docs::*, other::*, tutorial::Tutorial, uiuisms::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -179,7 +175,8 @@ pub fn MainPage() -> impl IntoView {
             </div>
         </div>
         <Editor
-            mode=EditorMode::Front
+            mode=EditorMode::Showcase
+            examples=examples::EXAMPLES.iter().map(ToString::to_string).collect()
             help={&[
                 "Type a glyph's name, then run to format the names into glyphs.",
                 "You can run with ctrl/shift + enter.",
@@ -396,91 +393,6 @@ pub fn Prims<const N: usize>(
         .collect::<Vec<_>>()
 }
 
-macro_rules! code_font {
-    ($class:literal) => {
-        concat!("code-font ", $class)
-    };
-}
-
-pub(crate) use code_font;
-
-fn prim_class(prim: Primitive) -> &'static str {
-    prim_sig_class(prim, None)
-}
-
-fn prim_sig_class(prim: Primitive, sig: Option<Signature>) -> &'static str {
-    match prim {
-        Primitive::Identity => code_font!("stack-function"),
-        Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
-        Primitive::Both => code_font!("monadic-modifier bi text-gradient"),
-        Primitive::Member => code_font!("dyadic-function caution text-gradient"),
-        Primitive::Couple => match sig.map(|sig| sig.args) {
-            None | Some(2) => code_font!("dyadic-function"),
-            Some(0) => code_font!("monadic-function aroace text-gradient"),
-            Some(1) => code_font!("monadic-function aro text-gradient"),
-            Some(_) => code_font!("dyadic-function poly text-gradient"),
-        },
-        prim if matches!(prim.class(), PrimClass::Stack | PrimClass::Debug)
-            && prim.modifier_args().is_none() =>
-        {
-            code_font!("stack-function")
-        }
-        prim if prim.class() == PrimClass::Constant => code_font!("number-literal"),
-        prim => {
-            if let Some(m) = prim.modifier_args() {
-                match m {
-                    0 | 1 => code_font!("monadic-modifier"),
-                    2 => code_font!("dyadic-modifier"),
-                    _ => code_font!("triadic-modifier"),
-                }
-            } else {
-                sig.or(prim.signature())
-                    .map(sig_class)
-                    .unwrap_or(code_font!(""))
-            }
-        }
-    }
-}
-
-fn sig_class(sig: Signature) -> &'static str {
-    match sig.args {
-        0 => code_font!("noadic-function"),
-        1 => code_font!("monadic-function"),
-        2 => code_font!("dyadic-function"),
-        3 => code_font!("triadic-function"),
-        4 => code_font!("tetradic-function"),
-        _ => code_font!(""),
-    }
-}
-
-fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
-    match name {
-        "Trans" | "Transgender" => code_font!("trans text-gradient"),
-        "Bi" | "Bisexual" => code_font!("bi text-gradient"),
-        "Pan" | "Pansexual" => code_font!("pan text-gradient"),
-        "Gay" => code_font!("gay text-gradient"),
-        "Lesbian" => code_font!("lesbian text-gradient"),
-        "Ace" | "Asexual" => code_font!("ace text-gradient"),
-        "Aro" | "Aromantic" => code_font!("aro text-gradient"),
-        "AroAce" => code_font!("aroace text-gradient"),
-        "Agender" => code_font!("agender text-gradient"),
-        "Nb" | "Enby" | "Nonbinary" | "NonBinary" => code_font!("nb text-gradient"),
-        "Fluid" | "Genderfluid" | "GenderFluid" => code_font!("fluid text-gradient"),
-        "Queer" | "Genderqueer" | "GenderQueer" => code_font!("queer text-gradient"),
-        "Poly" | "Polyamorous" => code_font!("poly text-gradient"),
-        _ => match docs.kind {
-            BindingDocsKind::Constant(_) => code_font!(""),
-            BindingDocsKind::Function { sig, .. } => sig_class(sig),
-            BindingDocsKind::Modifier(margs) => match margs {
-                1 => code_font!("monadic-modifier"),
-                2 => code_font!("dyadic-modifier"),
-                _ => code_font!("triadic-modifier"),
-            },
-            BindingDocsKind::Module { .. } => code_font!("module"),
-        },
-    }
-}
-
 #[component]
 #[allow(clippy::needless_lifetimes)]
 fn Const<'a>(con: &'a ConstantDef) -> impl IntoView {
@@ -621,8 +533,10 @@ fn site() {
                         code.clone(),
                         std::thread::spawn(move || {
                             (
-                                uiua::Uiua::with_backend(crate::backend::WebBackend::default())
-                                    .run_str(&code),
+                                uiua::Uiua::with_backend(
+                                    uiua_editor::backend::WebBackend::default(),
+                                )
+                                .run_str(&code),
                                 should_fail,
                             )
                         }),
@@ -745,5 +659,35 @@ fn ScrollToHash() -> impl IntoView {
                 )
             }
         });
+    }
+}
+
+#[component]
+pub fn Challenge<'a, P: IntoView + 'static>(
+    number: u8,
+    prompt: P,
+    example: &'a str,
+    answer: &'a str,
+    tests: &'a [&'a str],
+    hidden: &'a str,
+    #[prop(optional)] default: &'a str,
+    #[prop(optional)] flip: bool,
+    #[prop(optional)] best_answer: &'a str,
+) -> impl IntoView {
+    let def = ChallengeDef {
+        example: example.into(),
+        intended_answer: answer.into(),
+        best_answer: (!best_answer.is_empty()).then(|| best_answer.into()),
+        tests: tests.iter().copied().map(Into::into).collect(),
+        hidden: hidden.into(),
+        flip,
+        did_init_run: Cell::new(false),
+    };
+    view! {
+        <div class="challenge">
+            <h3>"Challenge "{number}</h3>
+            <p>"Write a program that "<strong>{prompt}</strong>"."</p>
+            <Editor challenge=def example=default/>
+        </div>
     }
 }

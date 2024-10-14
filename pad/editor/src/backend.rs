@@ -7,13 +7,15 @@ use std::{
     sync::Mutex,
 };
 
-use crate::{editor::get_ast_time, weewuh, START_TIME};
+use crate::{get_ast_time, START_TIME};
 use js_sys::Date;
 use leptos::*;
-use uiua::{now, GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
+use uiua::{
+    now, GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA
+};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{Request, RequestInit, RequestMode, Response};
+use web_sys::{Request, RequestInit, RequestMode, Response, HtmlAudioElement};
 
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
@@ -38,6 +40,18 @@ thread_local! {
         .map(|(path, content)| (PathBuf::from(path), content.as_bytes().to_vec()))
         .into(),
     );
+}
+
+fn weewuh() {
+    let i = (now() % 1.0 * 100.0) as u32;
+    let src = match i {
+        0 => "/assets/ooh-ee-ooh-ah.mp3",
+        1..=4 => "/assets/wee-wah.mp3",
+        _ => "/assets/wee-wuh.mp3",
+    };
+    if let Ok(audio) = HtmlAudioElement::new_with_src(src) {
+        _ = audio.play();
+    }
 }
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {

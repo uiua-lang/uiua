@@ -2175,7 +2175,7 @@ primitive!(
     ///
     /// If you want to filter out every element of an array that is not [less than] 10, you can use [keep].
     /// ex: ▽<10. [1 27 8 3 14 9]
-    /// However, if you want to make this a function, you have to [dip] below the first arguement to [duplicate] the array.
+    /// However, if you want to make this a function, you have to [dip] below the first argument to [duplicate] the array.
     /// ex: F ← ▽<⊙.
     ///   : F 10 [1 27 8 3 14 9]
     /// While this works, it may take a moment to process in your mind how the stack is changing.

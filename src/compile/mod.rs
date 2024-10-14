@@ -793,16 +793,10 @@ code:
                 self.asm.instrs.extend(new_func.instrs);
                 let end = self.asm.instrs.len();
                 if end != start {
-                    if let Some(top_slice) =
-                        (self.asm.top_slices.last_mut()).filter(|ts| ts.end() == start)
-                    {
-                        top_slice.len += end - start;
-                    } else {
-                        self.asm.top_slices.push(FuncSlice {
-                            start,
-                            len: end - start,
-                        });
-                    }
+                    self.asm.top_slices.push(FuncSlice {
+                        start,
+                        len: end - start,
+                    });
                 }
             });
         }

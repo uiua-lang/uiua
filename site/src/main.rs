@@ -9,7 +9,6 @@ mod markdown;
 mod other;
 mod other_tutorial;
 mod primitive;
-mod tour;
 mod tutorial;
 mod uiuisms;
 
@@ -27,7 +26,7 @@ use uiua::{
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlAudioElement};
 
-use crate::{blog::*, docs::*, editor::*, other::*, tour::*, tutorial::Tutorial, uiuisms::*};
+use crate::{blog::*, docs::*, editor::*, other::*, tutorial::Tutorial, uiuisms::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -513,6 +512,11 @@ fn element<T: JsCast>(id: &str) -> T {
     } else {
         panic!("#{id} not found")
     }
+}
+
+#[component]
+pub fn Tour() -> impl IntoView {
+    title_markdown("Language Tour - Uiua Docs", "/text/tour.md", ())
 }
 
 #[component]

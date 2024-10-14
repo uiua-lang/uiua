@@ -3,9 +3,9 @@ use comrak::{
     *,
 };
 use leptos::*;
-use uiua::{Primitive, Token};
+use uiua::{Inputs, Primitive, Token};
 
-use crate::{backend::fetch, editor::Editor, Hd, NotFound, Prim, ScrollToHash};
+use crate::{backend::fetch, editor::Editor, examples::LOGO, Hd, NotFound, Prim, ScrollToHash};
 
 #[component]
 #[allow(unused_braces)]
@@ -95,12 +95,17 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::Item(_) => view!(<li>{children}</li>).into_view(),
         NodeValue::Paragraph => view!(<p>{children}</p>).into_view(),
         NodeValue::Code(code) => {
-            let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut Default::default());
+            let mut inputs = Inputs::default();
+            let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut inputs);
             if errors.is_empty() {
                 let mut frags = Vec::new();
                 for token in tokens {
+                    let text = token.span.as_str(&inputs, |s| s.to_string());
                     match token.value {
-                        Token::Glyph(prim) => {
+                        Token::Glyph(prim)
+                            if prim.name() == text
+                                || prim.glyph().is_some_and(|c| c.to_string() == text) =>
+                        {
                             frags.push(view!(<Prim prim=prim glyph_only=true/>).into_view())
                         }
                         _ => {
@@ -117,7 +122,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::Link(link) => {
             let text = leaf_text(node).unwrap_or_default();
             let name = text.rsplit_once(' ').map(|(name, _)| name).unwrap_or(&text);
-            if let Some(prim) = Primitive::from_name(name) {
+            if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 view!(<Prim prim=prim/>).into_view()
             } else {
                 if name.chars().count() == 1 {
@@ -133,7 +138,9 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::Strikethrough => view!(<del>{children}</del>).into_view(),
         NodeValue::LineBreak => view!(<br/>).into_view(),
         NodeValue::CodeBlock(block) => {
-            if (block.info.is_empty() || block.info.starts_with("uiua"))
+            if block.literal.trim() == "LOGO" {
+                view!(<Editor example=LOGO/>).into_view()
+            } else if (block.info.is_empty() || block.info.starts_with("uiua"))
                 && uiua::parse(&block.literal, (), &mut Default::default())
                     .1
                     .is_empty()
@@ -181,12 +188,19 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         NodeValue::Item(_) => format!("<li>{}</li>", children),
         NodeValue::Paragraph => format!("<p>{}</p>", children),
         NodeValue::Code(code) => {
-            let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut Default::default());
+            let mut inputs = Inputs::default();
+            let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut inputs);
             if errors.is_empty() {
                 let mut s = "<code>".to_string();
                 for token in tokens {
+                    let text = token.span.as_str(&inputs, |s| s.to_string());
                     match token.value {
-                        Token::Glyph(prim) => s.push_str(&prim_html(prim, true, false)),
+                        Token::Glyph(prim)
+                            if prim.name() == text
+                                || prim.glyph().is_some_and(|c| c.to_string() == text) =>
+                        {
+                            s.push_str(&prim_html(prim, true, false))
+                        }
                         _ => return format!("<code>{}</code>", code.literal),
                     }
                 }
@@ -199,7 +213,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         NodeValue::Link(link) => {
             let text = leaf_text(node).unwrap_or_default();
             let name = text.rsplit_once(' ').map(|(name, _)| name).unwrap_or(&text);
-            if let Some(prim) = Primitive::from_name(name) {
+            if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 let symbol_class = format!("prim-glyph {}", prim_class(prim));
                 let symbol = prim.to_string();
                 let name = if symbol != prim.name() {

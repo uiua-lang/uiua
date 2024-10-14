@@ -3,7 +3,6 @@
 ## 0.13
 The next version of Uiua
 
-- Update language tour
 - Update design page
   - So much has changed since it was written!
 

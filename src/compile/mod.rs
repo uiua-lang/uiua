@@ -1806,14 +1806,12 @@ code:
             };
             curr.referenced = true;
             (self.code_meta.global_references).insert(span.clone(), curr.global_index);
-            let instr = Instr::Recur(self.add_span(span.clone()));
-            if call {
-                self.push_all_instrs(eco_vec![Instr::PushSig(sig), instr, Instr::PopSig]);
-            } else {
-                let f =
-                    self.make_function(FunctionId::Anonymous(span), sig, eco_vec![instr].into());
-                self.push_instr(Instr::PushFunc(f));
-            }
+            let instr = Instr::CallGlobal {
+                index: curr.global_index,
+                call,
+                sig,
+            };
+            self.push_instr(instr);
         } else if let Some(local) = self.find_name(&ident, skip_local) {
             // Name exists in scope
             self.validate_local(&ident, local, &span);

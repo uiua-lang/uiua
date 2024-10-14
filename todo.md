@@ -3,8 +3,6 @@
 ## 0.13
 The next version of Uiua
 
-- Make `struct` a dedicated syntax
-  - `~[...] / ~{...}`
 - Update language tour
 - Update design page
   - So much has changed since it was written!
@@ -17,9 +15,6 @@ Things that don't affect the language itself, but are important for the compiler
   - This complicates the compiler, especially for inverses and optimizations
   - Should go AST -> IR -> bytecode
   - Very big undertaking
-- Remove recur instructions
-  - Replace with simple calls
-  - Similar to how recursive index macros work
 - Move array depth checks to compile time
 - Allow for multi-value constant bindings
 - Dead code elimination

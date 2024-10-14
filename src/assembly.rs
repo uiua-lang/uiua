@@ -116,7 +116,8 @@ impl Assembly {
     /// Remove dead code from the assembly
     pub fn remove_dead_code(&mut self) {
         let mut slices = Vec::new();
-        self.bindings.retain(|binding| {
+        let mut bindings = Vec::new();
+        for (i, binding) in self.bindings.iter().enumerate() {
             if let BindingKind::CodeMacro(mut slice) = binding.kind {
                 if slice.start > 0 {
                     if let Some((Instr::Comment(before), Instr::Comment(after))) = self
@@ -131,15 +132,27 @@ impl Assembly {
                     }
                 }
                 slices.push(slice);
-                false
-            } else {
-                true
+                bindings.push(i);
             }
-        });
+        }
+        for i in bindings.into_iter().rev() {
+            self.remove_binding(i);
+        }
         slices.sort();
         for slice in slices.into_iter().rev() {
             self.remove_slice(slice);
         }
+    }
+    fn remove_binding(&mut self, i: usize) -> BindingInfo {
+        for instr in self.instrs.make_mut() {
+            match instr {
+                Instr::CallGlobal { index, .. } | Instr::BindGlobal { index, .. } if *index > i => {
+                    *index -= 1
+                }
+                _ => {}
+            }
+        }
+        self.bindings.remove(i)
     }
     pub(crate) fn remove_slice(&mut self, rem_slice: FuncSlice) -> Vec<Instr> {
         // Remove instrs

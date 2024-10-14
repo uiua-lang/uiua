@@ -287,15 +287,11 @@ impl Compiler {
         let mut new_func = new_func?;
 
         if self_referenced {
-            let name = name.clone();
             let make = make_fn;
             make_fn = Box::new(move |new_func, sig, comp: &mut Compiler| {
                 let mut f = make(new_func, sig, comp);
                 f.flags |= FunctionFlags::RECURSIVE;
-                let flags = f.flags;
-                let instrs = eco_vec![Instr::PushFunc(f), Instr::CallRecursive(spandex)];
-                let new_func = NewFunction { instrs, flags };
-                comp.make_function(FunctionId::Named(name.clone()), sig, new_func)
+                f
             });
         }
 

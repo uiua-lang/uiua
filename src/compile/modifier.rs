@@ -1522,11 +1522,7 @@ impl Compiler {
                     self.push_instr(Instr::PushFunc(func));
                     if call {
                         let span = self.add_span(modifier_span);
-                        self.push_instr(if mac.recursive {
-                            Instr::CallRecursive(span)
-                        } else {
-                            Instr::Call(span)
-                        });
+                        self.push_instr(Instr::Call(span));
                     }
                 }
             }

@@ -140,8 +140,6 @@ instr!(
     (6, Prim(prim(Primitive), span(usize))),
     (7, ImplPrim(prim(ImplPrimitive), span(usize))),
     (8, Call(span(usize))),
-    (9, CallRecursive(span(usize))),
-    (10, Recur(span(usize))),
     (11, PushFunc(func(Function))),
     (
         12,
@@ -224,10 +222,8 @@ instr!(
         }
     ),
     (23, SetOutputComment { i: usize, n: usize }),
-    (24, PushSig(sig(Signature))),
-    (25, PopSig),
     /// Call a function with a custom inverse
-    (26, CustomInverse(cust(CustomInverse), span(usize))),
+    (24, CustomInverse(cust(CustomInverse), span(usize))),
 );
 
 type FmtParts = EcoVec<EcoString>;
@@ -281,9 +277,6 @@ impl Instr {
             span,
         }
     }
-    pub(crate) fn is_compile_only(&self) -> bool {
-        matches!(self, Self::PushSig(_) | Self::PopSig)
-    }
     #[allow(dead_code)]
     pub(crate) fn span(&self) -> Option<usize> {
         self.span_impl().copied()
@@ -301,8 +294,6 @@ macro_rules! instr_span {
                     Self::Call(span) => span,
                     Self::Prim(_, span) => span,
                     Self::ImplPrim(_, span) => span,
-                    Self::CallRecursive(span) => span,
-                    Self::Recur(span) => span,
                     Self::Switch { span, .. } => span,
                     Self::Format { span, .. } => span,
                     Self::MatchFormatPattern { span, .. } => span,
@@ -434,6 +425,13 @@ fn instrs_are_pure_impl<'a>(
 
 /// Whether some instructions can be propertly bounded by the runtime execution limit
 pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], asm: &Assembly) -> bool {
+    instrs_are_limit_bounded_impl(instrs, asm, &mut HashSet::new())
+}
+pub(crate) fn instrs_are_limit_bounded_impl<'a>(
+    instrs: &'a [Instr],
+    asm: &'a Assembly,
+    visited: &mut HashSet<&'a FunctionId>,
+) -> bool {
     use Primitive::*;
     for instr in instrs {
         match instr {
@@ -442,7 +440,9 @@ pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], asm: &Assembly) -> bool
                     match &binding.kind {
                         BindingKind::Const(Some(_)) => {}
                         BindingKind::Func(f) => {
-                            if !instrs_are_limit_bounded(f.instrs(asm), asm) {
+                            if visited.insert(&f.id)
+                                && !instrs_are_limit_bounded_impl(f.instrs(asm), asm, visited)
+                            {
                                 return false;
                             }
                         }
@@ -453,7 +453,7 @@ pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], asm: &Assembly) -> bool
             Instr::Prim(Send | Recv, _) => return false,
             Instr::Prim(Sys(op), _) if op.purity() <= Purity::Mutating => return false,
             Instr::PushFunc(f) => {
-                if f.is_recursive() || !instrs_are_limit_bounded(f.instrs(asm), asm) {
+                if f.is_recursive() || !instrs_are_limit_bounded_impl(f.instrs(asm), asm, visited) {
                     return false;
                 }
             }
@@ -493,8 +493,6 @@ impl fmt::Display for Instr {
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::ImplPrim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "call"),
-            Instr::CallRecursive(_) => write!(f, "call recursive"),
-            Instr::Recur(_) => write!(f, "recur"),
             Instr::PushFunc(func) => write!(f, "push({func})"),
             Instr::Switch { count, .. } => write!(f, "<switch {count}>"),
             Instr::Format { parts, .. } => {
@@ -549,8 +547,6 @@ impl fmt::Display for Instr {
                 )
             }
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
-            Instr::PushSig(sig) => write!(f, "{sig}"),
-            Instr::PopSig => write!(f, "-|"),
             Instr::CustomInverse(inv, _) => write!(f, "<custom inverse {inv:?}>"),
         }
     }

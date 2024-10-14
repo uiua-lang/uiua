@@ -548,11 +548,6 @@ code:
                 &Instr::Call(span) | &Instr::CustomInverse(_, span) => self
                     .pop_function()
                     .and_then(|f| self.call_with_span(f, span)),
-                &Instr::CallRecursive(span) => self.with_span(span, |env| {
-                    let f = env.pop_function()?;
-                    env.call_recursive(f)
-                }),
-                &Instr::Recur(span) => self.with_span(span, |env| env.recur()),
                 Instr::PushFunc(f) => {
                     self.rt.function_stack.push(f.clone());
                     Ok(())
@@ -703,14 +698,6 @@ code:
                     }
                     Ok(())
                 }),
-                Instr::PushSig(_) => Err(self.error(
-                    "PushSig should have been removed before running. \
-                    This is a bug in the interpreter.",
-                )),
-                Instr::PopSig => Err(self.error(
-                    "PopSig should have been removed before running. \
-                    This is a bug in the interpreter.",
-                )),
                 &Instr::SetOutputComment { i, n } => {
                     let values = self.stack()[self.stack().len().saturating_sub(n)..].to_vec();
                     let stack_values = self.rt.output_comments.entry(i).or_default();
@@ -812,11 +799,6 @@ code:
             pc: 0,
         };
         self.exec(frame)
-    }
-    #[inline]
-    fn call_frame(&mut self, frame: StackFrame) -> UiuaResult {
-        let call_span = self.span_index();
-        self.call_with_frame_span(frame, call_span)
     }
     /// Call and truncate the stack to before the args were pushed if the call fails
     pub(crate) fn call_clean_stack(&mut self, f: Function) -> UiuaResult {
@@ -1370,15 +1352,6 @@ code:
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
         self.rt.call_stack.iter()
     }
-    pub(crate) fn call_recursive(&mut self, f: Function) -> UiuaResult {
-        let call_height = self.rt.call_stack.len();
-        let with_height = self.rt.recur_stack.len();
-        self.rt.recur_stack.push(self.rt.call_stack.len());
-        let res = self.call(f);
-        self.rt.call_stack.truncate(call_height);
-        self.rt.recur_stack.truncate(with_height);
-        res
-    }
     pub(crate) fn respect_recursion_limit(&mut self) -> UiuaResult {
         #[cfg(debug_assertions)]
         const RECURSION_LIMIT: usize = 22;
@@ -1389,19 +1362,6 @@ code:
         } else {
             Ok(())
         }
-    }
-    pub(crate) fn recur(&mut self) -> UiuaResult {
-        let Some(i) = self.rt.recur_stack.last().copied() else {
-            return Err(self.error(
-                "No recursion context set. This \
-                is a bug in the interpreter.",
-            ));
-        };
-        self.respect_recursion_limit()?;
-        let mut frame = self.rt.call_stack[i].clone();
-        frame.pc = 0;
-        self.respect_execution_limit()?;
-        self.call_frame(frame)
     }
     /// Spawn a thread
     pub(crate) fn spawn(

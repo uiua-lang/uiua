@@ -241,37 +241,8 @@ impl VirtualEnv {
         sigs
     }
     fn instrs(&mut self, instrs: &[Instr]) -> Result<(), SigCheckError> {
-        let mut i = 0;
-        while i < instrs.len() {
-            match &instrs[i] {
-                Instr::PushSig(sig) => {
-                    let mut depth = 0;
-                    i += 1;
-                    while i < instrs.len() {
-                        match &instrs[i] {
-                            Instr::PushSig(_) => depth += 1,
-                            Instr::PopSig => {
-                                if depth == 0 {
-                                    break;
-                                } else {
-                                    depth -= 1;
-                                }
-                            }
-                            _ => {}
-                        }
-                        i += 1;
-                    }
-                    self.handle_sig(*sig);
-                }
-                Instr::PopSig => {
-                    return Err(SigCheckError::from(
-                        "PopSig without PushSig. \
-                        It is a bug in the interpreter for you to see this message.",
-                    ))
-                }
-                instr => self.instr(instr)?,
-            }
-            i += 1;
+        for instr in instrs {
+            self.instr(instr)?;
         }
         Ok(())
     }
@@ -311,11 +282,10 @@ impl VirtualEnv {
                 self.set_min_height();
                 self.push(BasicValue::Other);
             }
-            Instr::Call(_) | Instr::CallRecursive(_) | Instr::CustomInverse(..) => {
+            Instr::Call(_) | Instr::CustomInverse(..) => {
                 let sig = self.pop_func()?;
                 self.handle_sig(sig)
             }
-            Instr::Recur(_) => return Err(SigCheckError::from("recur present").ambiguous()),
             Instr::PushTemp { count, stack, .. } => {
                 for _ in 0..*count {
                     let val = self.pop();
@@ -588,9 +558,6 @@ impl VirtualEnv {
                     }
                 }
             },
-            Instr::PushSig(_) | Instr::PopSig => {
-                panic!("PushSig and PopSig should have been handled higher up")
-            }
             Instr::SetOutputComment { .. } => {}
         }
         // println!("{instr:?} -> {}/{}", -(self.min_height as i32), self.height);

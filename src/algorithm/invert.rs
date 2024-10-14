@@ -1217,7 +1217,7 @@ fn invert_trivial_pattern<'a>(
                 return Ok((input, inv));
             }
         }
-        [Comment(_) | PushSig(_) | PopSig, input @ ..] => return Ok((input, EcoVec::new())),
+        [Comment(_), input @ ..] => return Ok((input, EcoVec::new())),
         [Label {
             label,
             span,
@@ -1276,7 +1276,7 @@ fn under_trivial_pattern<'a>(
         [instr @ SetOutputComment { .. }, input @ ..] => {
             Ok((input, (eco_vec![instr.clone()], eco_vec![])))
         }
-        [Comment(_) | PushSig(_) | PopSig, input @ ..] => Ok((input, (eco_vec![], eco_vec![]))),
+        [Comment(_), input @ ..] => Ok((input, (eco_vec![], eco_vec![]))),
         _ => generic(),
     }
 }
@@ -2270,11 +2270,9 @@ fn under_push_temp_pattern<'a>(
         return generic();
     };
 
-    let input_iter = input.iter().filter(|instr| !instr.is_compile_only());
-    let inner_iter = inner.iter().filter(|instr| !instr.is_compile_only());
     let both = inner_befores_sig.args == temp_depth
-        && input_iter.clone().count() >= inner_iter.clone().count()
-        && input_iter.zip(inner_iter).all(|(a, b)| a == b);
+        && input.iter().clone().count() >= inner.iter().clone().count()
+        && input.iter().zip(inner.iter()).all(|(a, b)| a == b);
 
     let mut befores = inner_befores;
     befores.insert(0, start_instr.clone());

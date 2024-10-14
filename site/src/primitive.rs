@@ -435,7 +435,7 @@ fn inverse_row_impl(
 fn prim_docs() {
     use uiua::{PrimDocLine, Uiua};
     use uiua_editor::backend::WebBackend;
-    
+
     for prim in Primitive::non_deprecated() {
         for line in &prim.doc().lines {
             if let PrimDocLine::Example(ex) = line {

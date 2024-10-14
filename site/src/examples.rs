@@ -69,7 +69,7 @@ pub const EXAMPLES: &[&str] = &[
 #[test]
 fn test_examples() {
     use uiua_editor::backend::WebBackend;
-    
+
     for example in EXAMPLES {
         match uiua::Uiua::with_backend(WebBackend::default()).run_str(example) {
             Ok(mut comp) => {

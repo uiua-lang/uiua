@@ -27,7 +27,7 @@ use web_sys::{
 
 use crate::{
     backend::{OutputItem, WebBackend},
-    code_font, prim_sig_class, binding_class,
+    binding_class, code_font, prim_sig_class,
 };
 
 #[derive(Clone)]
@@ -894,6 +894,7 @@ impl State {
     }
 }
 
+#[allow(clippy::mutable_key_type)]
 fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
     // Run
     let mut rt = init_rt();

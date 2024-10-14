@@ -10,12 +10,10 @@ use std::{
 use crate::{get_ast_time, START_TIME};
 use js_sys::Date;
 use leptos::*;
-use uiua::{
-    now, GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA
-};
+use uiua::{now, GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{Request, RequestInit, RequestMode, Response, HtmlAudioElement};
+use web_sys::{HtmlAudioElement, Request, RequestInit, RequestMode, Response};
 
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,

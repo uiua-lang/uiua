@@ -1,5 +1,5 @@
-pub mod utils;
 pub mod backend;
+pub mod utils;
 
 use std::{cell::Cell, iter::repeat, mem::take, path::PathBuf, time::Duration};
 
@@ -14,9 +14,9 @@ use leptos::{
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
-    is_ident_char, lex, now, seed_random, Primitive, SysOp, Token,
-    PrimClass, Signature,
+    is_ident_char, lex,
     lsp::{BindingDocs, BindingDocsKind},
+    now, seed_random, PrimClass, Primitive, Signature, SysOp, Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
@@ -25,11 +25,11 @@ use web_sys::{
 };
 
 use utils::*;
-use utils::{get_ast_time, element};
+use utils::{element, get_ast_time};
 
+use backend::{drop_file, OutputItem};
 use js_sys::Date;
 use std::sync::OnceLock;
-use backend::{OutputItem, drop_file};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EditorMode {
@@ -72,7 +72,7 @@ pub fn Editor<'a>(
     // Initialize all the examples
     let examples = match mode {
         EditorMode::Example if !nonprogressive => progressive_strings(example),
-        EditorMode::Showcase => examples.unwrap_or(vec![]),
+        EditorMode::Showcase => examples.unwrap_or_default(),
         _ => vec![example.into()],
     };
     let code_max_lines = if let EditorMode::Pad = mode {

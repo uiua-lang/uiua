@@ -8,8 +8,8 @@ use uiua::{Primitive, SysOp, EXAMPLE_UA};
 use uiua_editor::*;
 
 use crate::{
-    markdown::Markdown, other_tutorial::OtherTutorialParams, title_markdown, Hd, Prim,
-    Prims, Challenge,
+    markdown::Markdown, other_tutorial::OtherTutorialParams, title_markdown, Challenge, Hd, Prim,
+    Prims,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]

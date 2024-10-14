@@ -244,7 +244,14 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         NodeValue::Strikethrough => format!("<del>{}</del>", children),
         NodeValue::LineBreak => "<br/>".into(),
         NodeValue::CodeBlock(block) => {
-            let mut lines: Vec<String> = block.literal.lines().map(Into::into).collect();
+            let mut lines: Vec<String> = if block.literal.trim() == "LOGO" {
+                LOGO
+            } else {
+                block.literal.as_str()
+            }
+            .lines()
+            .map(Into::into)
+            .collect();
             let max_len = lines
                 .iter()
                 .map(|s| {
@@ -342,7 +349,12 @@ fn text_code_blocks() {
                 match &child.data.borrow().value {
                     NodeValue::CodeBlock(block) if block.info.contains("uiua") => {
                         let should_fail = block.info.contains("should fail");
-                        blocks.push((block.literal.clone(), should_fail))
+                        let literal = if block.literal.trim() == "LOGO" {
+                            LOGO
+                        } else {
+                            block.literal.as_str()
+                        };
+                        blocks.push((literal.into(), should_fail))
                     }
                     _ => blocks.extend(text_code_blocks(child)),
                 }

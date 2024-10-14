@@ -68,8 +68,10 @@ pub const EXAMPLES: &[&str] = &[
 #[cfg(test)]
 #[test]
 fn test_examples() {
+    use uiua_editor::backend::WebBackend;
+
     for example in EXAMPLES {
-        match uiua::Uiua::with_backend(crate::backend::WebBackend::default()).run_str(example) {
+        match uiua::Uiua::with_backend(WebBackend::default()).run_str(example) {
             Ok(mut comp) => {
                 if let Some(diag) = comp.take_diagnostics().into_iter().next() {
                     panic!("Example failed:\n{example}\n{diag}");

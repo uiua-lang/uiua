@@ -1,9 +1,9 @@
 use leptos::*;
 use leptos_meta::*;
 use uiua::{Primitive, CONSTANTS};
+use uiua_editor::Editor;
 
 use crate::{
-    editor::Editor,
     markdown::{markdown_view, Markdown},
     Const, Hd, Prim, Prims,
 };

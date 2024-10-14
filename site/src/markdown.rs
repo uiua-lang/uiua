@@ -4,8 +4,9 @@ use comrak::{
 };
 use leptos::*;
 use uiua::{Inputs, Primitive, Token};
+use uiua_editor::{backend::fetch, Editor};
 
-use crate::{backend::fetch, editor::Editor, examples::LOGO, Hd, NotFound, Prim, ScrollToHash};
+use crate::{examples::LOGO, Hd, NotFound, Prim, ScrollToHash};
 
 #[component]
 #[allow(unused_braces)]
@@ -331,6 +332,8 @@ fn all_text<'a>(node: &'a AstNode<'a>) -> String {
 #[cfg(test)]
 #[test]
 fn text_code_blocks() {
+    use uiua_editor::backend::WebBackend;
+
     for entry in std::fs::read_dir("text").unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
@@ -364,8 +367,8 @@ fn text_code_blocks() {
 
         for (block, should_fail) in text_code_blocks(root) {
             eprintln!("Code block:\n{}", block);
-            let mut comp = uiua::Compiler::with_backend(crate::backend::WebBackend::default());
-            let mut env = uiua::Uiua::with_backend(crate::backend::WebBackend::default());
+            let mut comp = uiua::Compiler::with_backend(WebBackend::default());
+            let mut env = uiua::Uiua::with_backend(WebBackend::default());
             let res = comp
                 .load_str(&block)
                 .and_then(|comp| env.run_compiler(comp));

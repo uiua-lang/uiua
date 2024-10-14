@@ -1,4 +1,5 @@
-mod utils;
+pub mod backend;
+pub mod utils;
 
 use std::{cell::Cell, iter::repeat, mem::take, path::PathBuf, time::Duration};
 
@@ -9,10 +10,13 @@ use leptos::{
     ev::{keydown, keyup},
     *,
 };
+
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
-    is_ident_char, lex, now, seed_random, Primitive, SysOp, Token,
+    is_ident_char, lex,
+    lsp::{BindingDocs, BindingDocsKind},
+    now, seed_random, PrimClass, Primitive, Signature, SysOp, Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
@@ -20,27 +24,26 @@ use web_sys::{
     HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
 };
 
-use crate::{
-    backend::{drop_file, OutputItem},
-    element,
-    examples::EXAMPLES,
-    get_element, prim_class, Prim,
-};
-
 use utils::*;
-pub use utils::{get_ast_time, Challenge};
+use utils::{element, get_ast_time};
+
+use backend::{drop_file, OutputItem};
+use js_sys::Date;
+use std::sync::OnceLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EditorMode {
     #[default]
     Example,
-    Front,
+    Showcase,
     Pad,
 }
 
 thread_local! {
     static ID: Cell<u64> = const { Cell::new(0) };
 }
+
+static START_TIME: OnceLock<f64> = OnceLock::new();
 
 /// An editor for Uiua code
 #[component]
@@ -51,7 +54,10 @@ pub fn Editor<'a>(
     #[prop(optional)] no_run: bool,
     #[prop(optional)] challenge: Option<ChallengeDef>,
     #[prop(optional)] nonprogressive: bool,
+    #[prop(optional)] examples: Option<Vec<String>>,
 ) -> impl IntoView {
+    START_TIME.get_or_init(|| Date::now() / 1000.0);
+
     let no_run = no_run
         || mode == EditorMode::Pad && !get_autorun()
         || ["&sl", "&httpsw", "send", "recv", "&ffi", "&clip"]
@@ -66,7 +72,7 @@ pub fn Editor<'a>(
     // Initialize all the examples
     let examples = match mode {
         EditorMode::Example if !nonprogressive => progressive_strings(example),
-        EditorMode::Front => EXAMPLES.iter().map(ToString::to_string).collect(),
+        EditorMode::Showcase => examples.unwrap_or_default(),
         _ => vec![example.into()],
     };
     let code_max_lines = if let EditorMode::Pad = mode {
@@ -1158,7 +1164,7 @@ pub fn Editor<'a>(
         if desc.chars().count() > 30 {
             desc = desc.chars().take(29).chain(['…']).collect();
         }
-        let text = format!("{:max_name_len$} - {desc}", prim.name()).replace(' ', " ");
+        let text = format!("{:max_name_len$} - {desc}", prim.name()).replace(' ', " ");
         options.push(view!(<option
             class=class
             value={prim.name()}>
@@ -1187,7 +1193,7 @@ pub fn Editor<'a>(
     // Select a class for the editor and code area
     let editor_class = match mode {
         EditorMode::Example => "small-editor",
-        EditorMode::Front | EditorMode::Pad => "medium-editor",
+        EditorMode::Showcase | EditorMode::Pad => "medium-editor",
     };
 
     // Hide the example arrows if there is only one example
@@ -1200,7 +1206,7 @@ pub fn Editor<'a>(
     // Show or hide the glyph buttons
     let (show_glyphs, set_show_glyphs) = create_signal(match mode {
         EditorMode::Example => false,
-        EditorMode::Front | EditorMode::Pad => true,
+        EditorMode::Showcase | EditorMode::Pad => true,
     });
 
     // Glyphs toggle button
@@ -1712,6 +1718,142 @@ pub fn Editor<'a>(
                 { help.iter().map(|s| view!(<p>{s}</p>)).collect::<Vec<_>>() }
             </div>
         </div>
+    }
+}
+
+#[component]
+pub fn Prim(
+    prim: Primitive,
+    #[prop(optional)] glyph_only: bool,
+    #[prop(optional)] hide_docs: bool,
+) -> impl IntoView {
+    let symbol_class = format!("prim-glyph {}", prim_class(prim));
+    let symbol = prim.to_string();
+    let name = if !glyph_only && symbol != prim.name() {
+        format!(" {}", prim.name())
+    } else {
+        "".to_string()
+    };
+    let href = format!("/docs/{}", prim.name());
+    let mut title = String::new();
+    if let Some(ascii) = prim.ascii() {
+        title.push_str(&format!("({})", ascii));
+    }
+    if prim.glyph().is_some() && glyph_only {
+        if !title.is_empty() {
+            title.push(' ');
+        }
+        title.push_str(prim.name());
+    }
+    if let Primitive::Sys(op) = prim {
+        title.push_str(op.long_name());
+        title.push(':');
+        title.push('\n');
+    }
+    if !hide_docs {
+        let doc = prim.doc();
+        if glyph_only && !title.is_empty() && !matches!(prim, Primitive::Sys(_)) {
+            title.push_str(": ");
+        }
+        title.push_str(&doc.short_text());
+    }
+    if title.is_empty() {
+        view! {
+            <a href=href class="prim-code-a">
+                <code><span class=symbol_class>{ symbol }</span>{name}</code>
+            </a>
+        }
+    } else {
+        view! {
+            <a href=href class="prim-code-a">
+                <code class="prim-code" data-title=title><span class=symbol_class>{ symbol }</span>{name}</code>
+            </a>
+        }
+    }
+}
+
+pub fn prim_class(prim: Primitive) -> &'static str {
+    prim_sig_class(prim, None)
+}
+
+macro_rules! code_font {
+    ($class:literal) => {
+        concat!("code-font ", $class)
+    };
+}
+
+pub(crate) use code_font;
+
+fn sig_class(sig: Signature) -> &'static str {
+    match sig.args {
+        0 => code_font!("noadic-function"),
+        1 => code_font!("monadic-function"),
+        2 => code_font!("dyadic-function"),
+        3 => code_font!("triadic-function"),
+        4 => code_font!("tetradic-function"),
+        _ => code_font!(""),
+    }
+}
+
+fn prim_sig_class(prim: Primitive, sig: Option<Signature>) -> &'static str {
+    match prim {
+        Primitive::Identity => code_font!("stack-function"),
+        Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
+        Primitive::Both => code_font!("monadic-modifier bi text-gradient"),
+        Primitive::Member => code_font!("dyadic-function caution text-gradient"),
+        Primitive::Couple => match sig.map(|sig| sig.args) {
+            None | Some(2) => code_font!("dyadic-function"),
+            Some(0) => code_font!("monadic-function aroace text-gradient"),
+            Some(1) => code_font!("monadic-function aro text-gradient"),
+            Some(_) => code_font!("dyadic-function poly text-gradient"),
+        },
+        prim if matches!(prim.class(), PrimClass::Stack | PrimClass::Debug)
+            && prim.modifier_args().is_none() =>
+        {
+            code_font!("stack-function")
+        }
+        prim if prim.class() == PrimClass::Constant => code_font!("number-literal"),
+        prim => {
+            if let Some(m) = prim.modifier_args() {
+                match m {
+                    0 | 1 => code_font!("monadic-modifier"),
+                    2 => code_font!("dyadic-modifier"),
+                    _ => code_font!("triadic-modifier"),
+                }
+            } else {
+                sig.or(prim.signature())
+                    .map(sig_class)
+                    .unwrap_or(code_font!(""))
+            }
+        }
+    }
+}
+
+fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
+    match name {
+        "Trans" | "Transgender" => code_font!("trans text-gradient"),
+        "Bi" | "Bisexual" => code_font!("bi text-gradient"),
+        "Pan" | "Pansexual" => code_font!("pan text-gradient"),
+        "Gay" => code_font!("gay text-gradient"),
+        "Lesbian" => code_font!("lesbian text-gradient"),
+        "Ace" | "Asexual" => code_font!("ace text-gradient"),
+        "Aro" | "Aromantic" => code_font!("aro text-gradient"),
+        "AroAce" => code_font!("aroace text-gradient"),
+        "Agender" => code_font!("agender text-gradient"),
+        "Nb" | "Enby" | "Nonbinary" | "NonBinary" => code_font!("nb text-gradient"),
+        "Fluid" | "Genderfluid" | "GenderFluid" => code_font!("fluid text-gradient"),
+        "Queer" | "Genderqueer" | "GenderQueer" => code_font!("queer text-gradient"),
+        "Poly" | "Polyamorous" => code_font!("poly text-gradient"),
+        _ => match docs.kind {
+            BindingDocsKind::Constant(_) => code_font!(""),
+            BindingDocsKind::Function { sig, .. } => sig_class(sig),
+            BindingDocsKind::Modifier(margs) => match margs {
+                1 => code_font!("monadic-modifier"),
+                2 => code_font!("dyadic-modifier"),
+                _ => code_font!("triadic-modifier"),
+            },
+            BindingDocsKind::Module { .. } => code_font!("module"),
+        },
     }
 }
 

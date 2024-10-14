@@ -156,7 +156,7 @@ system = ["libffi?/system"]
 name = "uiua"
 
 [workspace]
-members = ["site", "tests_ffi"]
+members = ["site", "tests_ffi", "pad/editor"]
 
 [profile.dev]
 incremental = true

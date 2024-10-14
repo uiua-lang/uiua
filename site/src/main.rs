@@ -516,7 +516,7 @@ fn element<T: JsCast>(id: &str) -> T {
 
 #[component]
 pub fn Tour() -> impl IntoView {
-    title_markdown("Language Tour - Uiua Docs", "/text/tour.md", ())
+    title_markdown("Language Tour", "/text/tour.md", ())
 }
 
 #[component]

@@ -3,9 +3,6 @@
 ## 0.13
 The next version of Uiua
 
-- Update design page
-  - So much has changed since it was written!
-
 ## Implementation details
 Things that don't affect the language itself, but are important for the compiler or interpreter.
 

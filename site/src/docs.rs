@@ -73,7 +73,7 @@ pub fn Docs() -> impl IntoView {
         let page_view = match page {
             DocsPage::Search(search) => return view!( <DocsHome search=search/>).into_view(),
             DocsPage::Tour => Tour().into_view(),
-            DocsPage::Design => Design().into_view(),
+            DocsPage::Design => title_markdown("Design", "/text/design.md", ()).into_view(),
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
             DocsPage::AllFunctions => AllFunctions().into_view(),

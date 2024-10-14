@@ -601,19 +601,7 @@ code:
     fn item(&mut self, item: Item, must_run: bool, prelude: &mut BindingPrelude) -> UiuaResult {
         match item {
             Item::Module(m) => self.module(m, take(prelude).comment),
-            Item::Words(lines) => {
-                let instrs = self.lines(lines, must_run, true, prelude)?;
-                let start = self.asm.instrs.len();
-                self.asm.instrs.extend(instrs);
-                let end = self.asm.instrs.len();
-                if end != start {
-                    self.asm.top_slices.push(FuncSlice {
-                        start,
-                        len: end - start,
-                    });
-                }
-                Ok(())
-            }
+            Item::Words(lines) => self.lines(lines, must_run, true, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
             Item::Data(data) => self.data_def(data, true, take(prelude)),
@@ -625,7 +613,7 @@ code:
         must_run: bool,
         precomp: bool,
         prelude: &mut BindingPrelude,
-    ) -> UiuaResult<EcoVec<Instr>> {
+    ) -> UiuaResult {
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
             let mut anyway = false;
             recurse_words(words, &mut |w| {
@@ -673,7 +661,6 @@ code:
         let mut lines = VecDeque::from(flip_unsplit_lines(
             lines.into_iter().flat_map(split_words).collect(),
         ));
-        let mut all_instrs = EcoVec::new();
         while let Some(line) = lines.pop_front() {
             let assert_later = || {
                 once(&line).chain(&lines).any(|line| {
@@ -762,8 +749,7 @@ code:
                             // The instructions for evaluation are the preceding push
                             // instructions, followed by the current line
                             let mut comp_instrs = EcoVec::from(
-                                &self.asm.instrs[instr_count_before.saturating_sub(sig.args)
-                                    ..instr_count_before],
+                                &self.asm.instrs[instr_count_before - sig.args..instr_count_before],
                             );
                             comp_instrs.extend(new_func.instrs.iter().cloned());
                             match self.comptime_instrs(comp_instrs) {
@@ -803,10 +789,24 @@ code:
                 if !line_eval_errored {
                     self.errors.extend(pre_eval_errors);
                 }
-                all_instrs.extend(new_func.instrs);
+                let start = self.asm.instrs.len();
+                self.asm.instrs.extend(new_func.instrs);
+                let end = self.asm.instrs.len();
+                if end != start {
+                    if let Some(top_slice) =
+                        (self.asm.top_slices.last_mut()).filter(|ts| ts.end() == start)
+                    {
+                        top_slice.len += end - start;
+                    } else {
+                        self.asm.top_slices.push(FuncSlice {
+                            start,
+                            len: end - start,
+                        });
+                    }
+                }
             });
         }
-        Ok(all_instrs)
+        Ok(())
     }
     #[must_use]
     pub(crate) fn make_function(

@@ -967,6 +967,7 @@ code:
                 self.asm.inputs.strings = comp.asm.inputs.strings;
                 self.asm.inputs.files.extend(comp.asm.inputs.files);
                 self.scope.experimental = comp.scope.experimental;
+                self.diagnostics.extend(comp.diagnostics);
             } else {
                 let input: EcoString = String::from_utf8(bytes)
                     .map_err(|e| {

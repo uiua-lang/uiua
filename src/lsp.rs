@@ -307,10 +307,25 @@ impl Spanner {
                             docs: self.binding_docs(&name.span),
                             original: true,
                         }));
+                        if let Some(fields) = &data.fields {
+                            spans.push(
+                                name.span
+                                    .clone()
+                                    .end_to(&fields.open_span)
+                                    .sp(SpanKind::Whitespace),
+                            );
+                        }
                     }
                     if let Some(fields) = &data.fields {
                         spans.push(fields.open_span.clone().sp(SpanKind::Delimiter));
+                        let mut prev: Option<CodeSpan> = None;
                         for field in &fields.fields {
+                            if let Some(prev) = prev {
+                                let curr = field.span();
+                                if prev.end.line == curr.start.line {
+                                    spans.push(prev.end_to(&curr).sp(SpanKind::Whitespace))
+                                }
+                            }
                             spans.push(field.name.span.clone().sp(SpanKind::Ident {
                                 docs: self.binding_docs(&field.name.span),
                                 original: true,
@@ -319,6 +334,7 @@ impl Spanner {
                                 spans.push(default.arrow_span.clone().sp(SpanKind::Delimiter));
                                 spans.extend(self.words_spans(&default.words));
                             }
+                            prev = Some(field.span());
                         }
                         if let Some(span) = &fields.close_span {
                             spans.push(span.clone().sp(SpanKind::Delimiter));

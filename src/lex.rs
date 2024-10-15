@@ -364,6 +364,13 @@ impl CodeSpan {
         self.start = self.start.min(end.start);
         self.end = self.end.max(end.end);
     }
+    pub(crate) fn end_to(self, other: &Self) -> Self {
+        CodeSpan {
+            start: self.end,
+            end: other.start,
+            ..self
+        }
+    }
     /// Get the text of the span
     pub fn byte_range(&self) -> Range<usize> {
         self.start.byte_pos as usize..self.end.byte_pos as usize

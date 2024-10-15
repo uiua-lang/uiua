@@ -212,6 +212,23 @@ impl DataFields {
     }
 }
 
+impl DataField {
+    /// Get the span of the field
+    pub fn span(&self) -> CodeSpan {
+        let Some(end) = self.bar_span.clone().or_else(|| {
+            self.default.as_ref().map(|d| {
+                d.words
+                    .last()
+                    .map(|w| w.span.clone())
+                    .unwrap_or_else(|| d.arrow_span.clone())
+            })
+        }) else {
+            return self.name.span.clone();
+        };
+        self.name.span.clone().merge(end)
+    }
+}
+
 /// A cluster of comments
 #[derive(Debug, Clone)]
 pub struct Comments {

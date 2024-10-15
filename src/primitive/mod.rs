@@ -1408,6 +1408,7 @@ impl ImplPrimitive {
                         val.rank()
                     )));
                 }
+                env.push(val);
             }
         }
         Ok(())

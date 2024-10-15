@@ -1,7 +1,7 @@
 //! Uiua's abstract syntax tree
 
 use core::mem::discriminant;
-use std::{borrow::Cow, fmt};
+use std::{borrow::Cow, collections::HashMap, fmt};
 
 use ecow::EcoString;
 
@@ -151,8 +151,8 @@ pub struct DataFields {
 #[derive(Debug, Clone)]
 /// A data field
 pub struct DataField {
-    /// A leading comment
-    pub comment: Option<Sp<EcoString>>,
+    /// Leading comments
+    pub comments: Option<Comments>,
     /// The name of the field
     pub name: Sp<Ident>,
     /// The default value of the field
@@ -210,6 +210,15 @@ impl DataFields {
             .unwrap_or_else(|| self.open_span.clone());
         self.open_span.clone().merge(end)
     }
+}
+
+/// A cluster of comments
+#[derive(Debug, Clone)]
+pub struct Comments {
+    /// The normal comment lines
+    pub lines: Vec<Sp<EcoString>>,
+    /// The semantic comments
+    pub semantic: HashMap<SemanticComment, CodeSpan>,
 }
 
 /// A word

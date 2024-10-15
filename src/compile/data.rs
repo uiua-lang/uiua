@@ -44,8 +44,9 @@ impl Compiler {
             name_span: CodeSpan,
             span: usize,
             global_index: usize,
-            comment: Option<EcoString>,
+            comment: Option<String>,
             init: Option<(EcoVec<Instr>, Signature)>,
+            flags: FunctionFlags,
         }
         let mut fields = Vec::new();
         let module_name = if let ScopeKind::Module(name) = &self.scope.kind {
@@ -61,16 +62,37 @@ impl Compiler {
             has_fields = true;
             for mut data_field in data_fields.fields {
                 let span = self.add_span(data_field.name.span.clone());
-                let comment = data_field.default.as_mut().and_then(|default| {
-                    let word = default.words.pop()?;
-                    match word.value {
-                        Word::Comment(comment) => Some(comment.into()),
-                        _ => {
-                            default.words.push(word);
-                            None
+                let mut comment = data_field.comments.as_ref().map(|comments| {
+                    (comments.lines.iter().enumerate())
+                        .flat_map(|(i, com)| {
+                            if i == 0 {
+                                vec![com.value.as_str()]
+                            } else {
+                                vec![com.value.as_str(), "\n"]
+                            }
+                        })
+                        .collect::<String>()
+                });
+                let mut flags = FunctionFlags::default();
+                if let Some(default) = &mut data_field.default {
+                    if let Some(word) = default.words.pop() {
+                        match word.value {
+                            Word::Comment(com) => {
+                                if comment.is_none() {
+                                    comment = Some(com)
+                                }
+                            }
+                            Word::SemanticComment(SemanticComment::NoInline) => {
+                                flags |= FunctionFlags::NO_INLINE;
+                            }
+                            Word::SemanticComment(SemanticComment::TrackCaller) => {
+                                flags |= FunctionFlags::TRACK_CALLER;
+                            }
+                            Word::SemanticComment(sem) => self.semantic_comment(sem, word.span),
+                            _ => default.words.push(word),
                         }
                     }
-                });
+                }
                 if (data_field.default.as_ref())
                     .is_some_and(|default| !default.words.iter().any(|w| w.value.is_code()))
                 {
@@ -92,11 +114,25 @@ impl Compiler {
                 } else {
                     None
                 };
+                if let Some(mut comments) = data_field.comments {
+                    for (sem, flag) in [
+                        (SemanticComment::NoInline, FunctionFlags::NO_INLINE),
+                        (SemanticComment::TrackCaller, FunctionFlags::TRACK_CALLER),
+                    ] {
+                        if comments.semantic.remove(&sem).is_some() {
+                            flags |= flag;
+                        }
+                    }
+                    for (sem, span) in comments.semantic {
+                        self.semantic_comment(sem, span);
+                    }
+                }
                 fields.push(Field {
                     name: data_field.name.value,
                     name_span: data_field.name.span,
                     global_index: 0,
                     comment,
+                    flags,
                     span,
                     init,
                 });
@@ -164,6 +200,7 @@ impl Compiler {
 
         // Make constructor
         let mut instrs = EcoVec::new();
+        let mut flags = FunctionFlags::default();
         if has_fields {
             instrs.push(Instr::BeginArray);
         }
@@ -201,6 +238,7 @@ impl Compiler {
                 }
             }
             for (i, field) in fields.iter().rev().enumerate() {
+                flags |= field.flags;
                 if let Some((init, sig)) = &field.init {
                     if sig.args > 0 {
                         instrs.push(Instr::pop_inline(sig.args, span));
@@ -266,10 +304,7 @@ impl Compiler {
         }
         let name = Ident::from("New");
         let id = FunctionId::Named(name.clone());
-        let new_func = NewFunction {
-            instrs,
-            flags: FunctionFlags::TRACK_CALLER,
-        };
+        let new_func = NewFunction { instrs, flags };
         let constructor_func =
             self.make_function(id, Signature::new(constructor_args, 1), new_func);
         let local = LocalName {

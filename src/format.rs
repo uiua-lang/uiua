@@ -722,9 +722,8 @@ impl<'a> Formatter<'a> {
                         self.newline(depth + 1);
                     }
                     for (i, field) in fields.fields.iter().enumerate() {
-                        if let Some(comment) = &field.comment {
-                            self.push(&comment.span, &format!("# {comment}"));
-                            self.newline(depth);
+                        if let Some(comments) = &field.comments {
+                            self.format_comments(comments, depth + 1);
                         }
                         self.push(&field.name.span, &field.name.value);
                         if let Some(default) = &field.default {
@@ -1400,6 +1399,16 @@ impl<'a> Formatter<'a> {
         self.output.push_str(formatted);
         let end = end_loc(&self.output);
         self.glyph_map.push((span.clone(), (start, end)));
+    }
+    fn format_comments(&mut self, comments: &Comments, depth: usize) {
+        for line in &comments.lines {
+            self.push(&line.span, &format!("# {}", line.value));
+            self.newline(depth);
+        }
+        for (sem, span) in &comments.semantic {
+            self.push(span, &sem.to_string());
+            self.newline(depth);
+        }
     }
     fn output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {

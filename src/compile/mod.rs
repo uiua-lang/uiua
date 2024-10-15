@@ -1515,27 +1515,30 @@ code:
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
-            Word::SemanticComment(sc) => match sc {
-                SemanticComment::Experimental => self.scope.experimental = true,
-                SemanticComment::NoInline => {
-                    if let Some(new_func) = self.new_functions.last_mut() {
-                        new_func.flags |= FunctionFlags::NO_INLINE;
-                    }
-                }
-                SemanticComment::TrackCaller => {
-                    if let Some(new_func) = self.new_functions.last_mut() {
-                        new_func.flags |= FunctionFlags::TRACK_CALLER;
-                    }
-                }
-                SemanticComment::Boo => {
-                    self.add_error(word.span.clone(), "The compiler is scared!")
-                }
-            },
+            Word::SemanticComment(sc) => self.semantic_comment(sc, word.span),
             Word::OutputComment { i, n } => self.push_instr(Instr::SetOutputComment { i, n }),
             Word::Subscript(sub) => self.subscript(*sub, word.span, call)?,
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => {}
         }
         Ok(())
+    }
+    fn semantic_comment(&mut self, comment: SemanticComment, span: CodeSpan) {
+        match comment {
+            SemanticComment::Experimental => {
+                self.scope.experimental = true;
+            }
+            SemanticComment::NoInline => {
+                if let Some(new_func) = self.new_functions.last_mut() {
+                    new_func.flags |= FunctionFlags::NO_INLINE;
+                }
+            }
+            SemanticComment::TrackCaller => {
+                if let Some(new_func) = self.new_functions.last_mut() {
+                    new_func.flags |= FunctionFlags::TRACK_CALLER;
+                }
+            }
+            SemanticComment::Boo => self.add_error(span, "The compiler is scared!"),
+        }
     }
     /// Emit a warning if a loop inside an array could
     /// potentially pull in a variable number of values

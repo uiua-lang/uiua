@@ -1,6 +1,6 @@
 //! The Uiua parser
 
-use std::{error::Error, f64::consts::PI, fmt, mem::replace};
+use std::{collections::HashMap, error::Error, f64::consts::PI, fmt, mem::replace};
 
 use ecow::EcoString;
 
@@ -477,11 +477,10 @@ impl<'i> Parser<'i> {
     fn ignore_whitespace(&mut self) -> bool {
         let mut newline = false;
         self.try_spaces();
-        while self.try_exact(Spaces).is_some() {
+        while self.try_exact(Newline).is_some() {
             newline = true;
             self.try_spaces();
         }
-        self.try_spaces();
         newline
     }
     fn try_data_def(&mut self) -> Option<DataDef> {
@@ -514,16 +513,10 @@ impl<'i> Parser<'i> {
             self.try_spaces();
             let mut trailing_newline = false;
             loop {
-                let mut comment = None;
-                if let Some(comment_span) = self.try_exact(Comment) {
-                    let s = comment_span.as_str(self.inputs, |s| s.trim().into());
-                    comment = Some(comment_span.sp(s));
-                    self.ignore_whitespace();
-                }
+                let comments = self.try_comments();
                 let Some(name) = self.try_ident() else {
                     break;
                 };
-
                 trailing_newline = false;
                 self.try_spaces();
                 let mut default = None;
@@ -557,7 +550,7 @@ impl<'i> Parser<'i> {
                     trailing_newline = false;
                 }
                 fields.push(DataField {
-                    comment,
+                    comments,
                     name,
                     default,
                     bar_span,
@@ -1371,6 +1364,26 @@ impl<'i> Parser<'i> {
                 .push(self.expected([Expectation::Term, Expectation::Token(token)]));
             self.prev_span().sp(false)
         }
+    }
+    fn try_comments(&mut self) -> Option<Comments> {
+        let mut lines = Vec::new();
+        let mut semantic = HashMap::new();
+        loop {
+            self.ignore_whitespace();
+            if let Some(span) = self.try_exact(Comment) {
+                let s = span.as_str(self.inputs, |s| s.trim_start_matches("#").trim().into());
+                lines.push(span.sp(s));
+            } else if let Some(sem) = self.next_token_map(Token::as_semantic_comment) {
+                semantic.insert(sem.value, sem.span);
+            } else {
+                break;
+            }
+        }
+        if lines.is_empty() && semantic.is_empty() {
+            return None;
+        }
+        self.ignore_whitespace();
+        Some(Comments { lines, semantic })
     }
 }
 

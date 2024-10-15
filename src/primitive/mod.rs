@@ -364,6 +364,7 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::ImageEncode, &["&ime", "imen"]),
         (Primitive::GifEncode, &["&gife", "gifen"]),
         (Primitive::AudioEncode, &["&ae", "auden"]),
+        (Primitive::Sys(SysOp::Clip), &["&clget"]),
     ]
     .into()
 });

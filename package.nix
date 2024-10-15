@@ -16,7 +16,6 @@ let
         [
           (lib.fileset.fromSource (craneLib.cleanCargoSource ./.))
           ./src/primitive/assets
-          ./site/Uiua386.ttf
           ./src/algorithm/Uiua386.ttf
         ]
         ++ lib.optionals doCheck [

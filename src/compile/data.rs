@@ -44,6 +44,7 @@ impl Compiler {
             name_span: CodeSpan,
             span: usize,
             global_index: usize,
+            comment: Option<EcoString>,
             init: Option<(EcoVec<Instr>, Signature)>,
         }
         let mut fields = Vec::new();
@@ -58,8 +59,23 @@ impl Compiler {
         if let Some(data_fields) = data.fields {
             boxed = data_fields.boxed;
             has_fields = true;
-            for data_field in data_fields.fields {
+            for mut data_field in data_fields.fields {
                 let span = self.add_span(data_field.name.span.clone());
+                let comment = data_field.default.as_mut().and_then(|default| {
+                    let word = default.words.pop()?;
+                    match word.value {
+                        Word::Comment(comment) => Some(comment.into()),
+                        _ => {
+                            default.words.push(word);
+                            None
+                        }
+                    }
+                });
+                if (data_field.default.as_ref())
+                    .is_some_and(|default| !default.words.iter().any(|w| w.value.is_code()))
+                {
+                    data_field.default = None;
+                }
                 let init = if let Some(default) = data_field.default {
                     let new_func = self.compile_words(default.words, true)?;
                     let sig = self.sig_of(&new_func.instrs, &data_field.name.span)?;
@@ -80,6 +96,7 @@ impl Compiler {
                     name: data_field.name.value,
                     name_span: data_field.name.span,
                     global_index: 0,
+                    comment,
                     span,
                     init,
                 });
@@ -114,10 +131,13 @@ impl Compiler {
             };
             field.global_index = local.index;
             self.next_global += 1;
-            let comment = if let Some(module_name) = &module_name {
-                format!("Get `{module_name}`'s `{name}`")
-            } else {
-                format!("Get `{name}`")
+            let comment = match (&module_name, &field.comment) {
+                (None, None) => format!("Get `{name}`"),
+                (Some(module_name), None) => format!("Get `{module_name}`'s `{name}`"),
+                (None, Some(comment)) => comment.into(),
+                (Some(module_name), Some(comment)) => {
+                    format!("Get `{module_name}`'s `{name}`\n{comment}")
+                }
             };
             self.compile_bind_function(name.clone(), local, func, span, Some(&comment))?;
             self.code_meta

@@ -707,11 +707,12 @@ impl<'a> Formatter<'a> {
                 }
                 if let Some(fields) = &data.fields {
                     self.push(&fields.open_span, if fields.boxed { "{" } else { "[" });
-                    let multiline = fields.fields.len() > 1
-                        && fields.fields.iter().enumerate().any(|(i, f)| {
-                            f.default.is_some()
-                                && (f.bar_span.is_none() && i < fields.fields.len() - 1)
-                        })
+                    let multiline = fields.trailing_newline
+                        || fields.fields.len() > 1
+                            && fields.fields.iter().enumerate().any(|(i, f)| {
+                                f.default.is_some()
+                                    && (f.bar_span.is_none() && i < fields.fields.len() - 1)
+                            })
                         || (fields.fields.iter())
                             .filter_map(|f| f.default.as_ref())
                             .any(|def| words_are_multiline(&def.words))
@@ -721,6 +722,10 @@ impl<'a> Formatter<'a> {
                         self.newline(depth + 1);
                     }
                     for (i, field) in fields.fields.iter().enumerate() {
+                        if let Some(comment) = &field.comment {
+                            self.push(&comment.span, &format!("# {comment}"));
+                            self.newline(depth);
+                        }
                         self.push(&field.name.span, &field.name.value);
                         if let Some(default) = &field.default {
                             self.push(&default.arrow_span, " ← ");
@@ -761,7 +766,7 @@ impl<'a> Formatter<'a> {
                             }
                         }
                     }
-                    if fields.trailing_newline {
+                    if multiline {
                         self.newline(depth);
                     }
                     if let Some(span) = &fields.close_span {

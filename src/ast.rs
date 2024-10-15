@@ -3,6 +3,8 @@
 use core::mem::discriminant;
 use std::{borrow::Cow, fmt};
 
+use ecow::EcoString;
+
 use crate::{
     function::{FunctionId, Signature},
     lex::{CodeSpan, Sp},
@@ -149,6 +151,8 @@ pub struct DataFields {
 #[derive(Debug, Clone)]
 /// A data field
 pub struct DataField {
+    /// A leading comment
+    pub comment: Option<Sp<EcoString>>,
     /// The name of the field
     pub name: Sp<Ident>,
     /// The default value of the field

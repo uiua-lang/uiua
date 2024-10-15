@@ -474,6 +474,16 @@ impl<'i> Parser<'i> {
             signature,
         })
     }
+    fn ignore_whitespace(&mut self) -> bool {
+        let mut newline = false;
+        self.try_spaces();
+        while self.try_exact(Spaces).is_some() {
+            newline = true;
+            self.try_spaces();
+        }
+        self.try_spaces();
+        newline
+    }
     fn try_data_def(&mut self) -> Option<DataDef> {
         let reset = self.index;
         let mut variant = false;
@@ -503,7 +513,17 @@ impl<'i> Parser<'i> {
             }
             self.try_spaces();
             let mut trailing_newline = false;
-            while let Some(name) = self.try_ident() {
+            loop {
+                let mut comment = None;
+                if let Some(comment_span) = self.try_exact(Comment) {
+                    let s = comment_span.as_str(self.inputs, |s| s.trim().into());
+                    comment = Some(comment_span.sp(s));
+                    self.ignore_whitespace();
+                }
+                let Some(name) = self.try_ident() else {
+                    break;
+                };
+
                 trailing_newline = false;
                 self.try_spaces();
                 let mut default = None;
@@ -526,11 +546,7 @@ impl<'i> Parser<'i> {
                     });
                     default = Some(FieldDefault { arrow_span, words })
                 };
-                while self.try_exact(Newline).is_some() {
-                    trailing_newline = true;
-                    self.try_spaces();
-                }
-                self.try_spaces();
+                trailing_newline |= self.ignore_whitespace();
                 let mut bar_span = self.try_exact(Bar.into());
                 if self.try_exact(Newline).is_some()
                     || self.try_exact(DoubleSemicolon.into()).is_some()
@@ -541,15 +557,12 @@ impl<'i> Parser<'i> {
                     trailing_newline = false;
                 }
                 fields.push(DataField {
+                    comment,
                     name,
                     default,
                     bar_span,
                 });
-                self.try_spaces();
-                while self.try_exact(Newline).is_some() {
-                    trailing_newline = true;
-                    self.try_spaces();
-                }
+                trailing_newline |= self.ignore_whitespace();
             }
             let close = self.expect_close(if boxed { CloseCurly } else { CloseBracket }.into());
             let close_span = close.value.then_some(close.span);

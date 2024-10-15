@@ -502,7 +502,9 @@ impl<'i> Parser<'i> {
                 self.try_spaces();
             }
             self.try_spaces();
+            let mut trailing_newline = false;
             while let Some(name) = self.try_ident() {
+                trailing_newline = false;
                 self.try_spaces();
                 let mut default = None;
                 let start_arrow_span = self.try_spaces().map(|w| w.span);
@@ -525,19 +527,29 @@ impl<'i> Parser<'i> {
                     default = Some(FieldDefault { arrow_span, words })
                 };
                 while self.try_exact(Newline).is_some() {
+                    trailing_newline = true;
                     self.try_spaces();
                 }
                 self.try_spaces();
-                let bar_span = self.try_exact(Bar.into());
-                self.try_spaces();
-                while self.try_exact(Newline).is_some() {
-                    self.try_spaces();
+                let mut bar_span = self.try_exact(Bar.into());
+                if self.try_exact(Newline).is_some()
+                    || self.try_exact(DoubleSemicolon.into()).is_some()
+                {
+                    bar_span = None;
+                }
+                if bar_span.is_some() {
+                    trailing_newline = false;
                 }
                 fields.push(DataField {
                     name,
                     default,
                     bar_span,
                 });
+                self.try_spaces();
+                while self.try_exact(Newline).is_some() {
+                    trailing_newline = true;
+                    self.try_spaces();
+                }
             }
             let close = self.expect_close(if boxed { CloseCurly } else { CloseBracket }.into());
             let close_span = close.value.then_some(close.span);
@@ -546,6 +558,7 @@ impl<'i> Parser<'i> {
                 boxed,
                 open_span,
                 fields,
+                trailing_newline,
                 close_span,
             })
         } else {

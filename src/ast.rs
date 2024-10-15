@@ -140,6 +140,8 @@ pub struct DataFields {
     pub open_span: CodeSpan,
     /// The data fields
     pub fields: Vec<DataField>,
+    /// A trailing newline
+    pub trailing_newline: bool,
     /// The close delimiter span
     pub close_span: Option<CodeSpan>,
 }

@@ -724,7 +724,28 @@ impl<'a> Formatter<'a> {
                         self.push(&field.name.span, &field.name.value);
                         if let Some(default) = &field.default {
                             self.push(&default.arrow_span, " ← ");
-                            self.format_words(&default.words, true, depth + 1);
+                            let mut lines = flip_unsplit_lines(split_words(default.words.clone()));
+                            if lines.len() == 1 {
+                                self.format_words(&lines[0], true, depth + 1);
+                            } else {
+                                let span = lines
+                                    .iter()
+                                    .find_map(|l| l.first())
+                                    .zip(lines.iter().rev().find_map(|l| l.last()))
+                                    .map(|(s, e)| s.span.clone().merge(e.span.clone()))
+                                    .unwrap_or_else(|| default.arrow_span.clone());
+                                lines.push(Vec::new());
+                                self.format_words(
+                                    &[span.clone().sp(Word::Func(Func {
+                                        id: FunctionId::Anonymous(span),
+                                        signature: None,
+                                        lines,
+                                        closed: true,
+                                    }))],
+                                    true,
+                                    depth + 1,
+                                );
+                            }
                         }
                         if i < fields.fields.len() - 1 {
                             if multiline {
@@ -739,6 +760,9 @@ impl<'a> Formatter<'a> {
                                 self.output.push(' ');
                             }
                         }
+                    }
+                    if fields.trailing_newline {
+                        self.newline(depth);
                     }
                     if let Some(span) = &fields.close_span {
                         self.push(span, if fields.boxed { "}" } else { "]" });

@@ -6,7 +6,6 @@
   inputs.crane = {
     url = "github:ipetkov/crane";
     inputs.nixpkgs.follows = "nixpkgs";
-    inputs.flake-utils.follows = "flake-utils";
   };
 
   outputs = { self, nixpkgs, flake-utils, crane }: 

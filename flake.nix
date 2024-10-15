@@ -6,36 +6,24 @@
   inputs.crane = {
     url = "github:ipetkov/crane";
     inputs.nixpkgs.follows = "nixpkgs";
+    inputs.flake-utils.follows = "flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils, crane }:
+  outputs = { self, nixpkgs, flake-utils, crane }: 
     flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-
-        jpgFilter = path: type: builtins.match ".*jpg$" path != null;
-        pngFilter = path: type: builtins.match ".*png$" path != null;
-
-        cleanFilter = path: type:
-          (jpgFilter path type)
-          || (pngFilter path type)
-          || (craneLib.filterCargoSources path type);
-
-        craneLib = crane.lib.${system};
-        uiua-crate = craneLib.buildPackage {
-          src = pkgs.lib.cleanSourceWith {
-            src = (craneLib.path ./.);
-            filter = cleanFilter;
-            name = "source";
-          };
-          buildInputs = nixpkgs.lib.optionals pkgs.stdenv.isDarwin [
-            pkgs.iconv
-            pkgs.darwin.apple_sdk.frameworks.AppKit
-            pkgs.darwin.apple_sdk.frameworks.CoreServices
-            pkgs.darwin.apple_sdk.frameworks.Foundation
-          ];
-        };
-      in
+    let 
+      pkgs = nixpkgs.legacyPackages.${system};
+      craneLib = crane.lib.${system};
+      uiua-crate = craneLib.buildPackage {
+        src = craneLib.cleanCargoSource (craneLib.path ./.);
+         buildInputs = nixpkgs.lib.optionals pkgs.stdenv.isDarwin [
+           pkgs.iconv
+           pkgs.darwin.apple_sdk.frameworks.AppKit
+           pkgs.darwin.apple_sdk.frameworks.CoreServices
+           pkgs.darwin.apple_sdk.frameworks.Foundation
+        ];
+      };
+    in
       {
         packages.default = uiua-crate;
         devShell = pkgs.mkShell {

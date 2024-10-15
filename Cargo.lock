@@ -2086,7 +2086,8 @@ checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
 [[package]]
 name = "libffi"
 version = "3.2.0"
-source = "git+https://github.com/tov/libffi-rs?rev=d0704d634b6f3ffef5b6fc7e07fe965a1cff5c7b#d0704d634b6f3ffef5b6fc7e07fe965a1cff5c7b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce826c243048e3d5cec441799724de52e2d42f820468431fc3fceee2341871e2"
 dependencies = [
  "libc",
  "libffi-sys",
@@ -2095,7 +2096,8 @@ dependencies = [
 [[package]]
 name = "libffi-sys"
 version = "2.3.0"
-source = "git+https://github.com/tov/libffi-rs?rev=d0704d634b6f3ffef5b6fc7e07fe965a1cff5c7b#d0704d634b6f3ffef5b6fc7e07fe965a1cff5c7b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f36115160c57e8529781b4183c2bb51fdc1f6d6d1ed345591d84be7703befb3c"
 dependencies = [
  "cc",
 ]
@@ -3971,7 +3973,6 @@ dependencies = [
  "js-sys",
  "json5",
  "libffi",
- "libffi-sys",
  "libloading",
  "lockfree",
  "notify",

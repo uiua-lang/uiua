@@ -18,7 +18,9 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{now, ConstantDef, Primitive, SysOp};
-use uiua_editor::{prim_class, utils::ChallengeDef, Editor, EditorMode, EDITOR_SHORTCUTS};
+use uiua_editor::{
+    binding_name_class, prim_class, utils::ChallengeDef, Editor, EditorMode, EDITOR_SHORTCUTS,
+};
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlAudioElement};
 
@@ -396,11 +398,15 @@ pub fn Prims<const N: usize>(
 #[component]
 #[allow(clippy::needless_lifetimes)]
 fn Const<'a>(con: &'a ConstantDef) -> impl IntoView {
+    let class = format!(
+        "prim-code stack-function {}",
+        binding_name_class(con.name).unwrap_or_default()
+    );
     view! {
         <a href={format!("/docs/constants#{}", con.name)} class="prim-code-a">
             <code
                 id={con.name}
-                class="prim-code stack-function"
+                class=class
                 data-title={ con.doc().lines().next().unwrap_or_default().to_string() }
             >{ con.name }</code>
         </a>

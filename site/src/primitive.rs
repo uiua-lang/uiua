@@ -6,7 +6,7 @@ use uiua_editor::Editor;
 
 use crate::{Hd, Prim, Prims};
 
-fn doc_line_fragments_to_view(fragments: &[PrimDocFragment]) -> View {
+pub fn doc_line_fragments_to_view(fragments: &[PrimDocFragment]) -> View {
     if fragments.is_empty() {
         return view!( <br/>).into_view();
     }

@@ -1822,7 +1822,14 @@ pub enum PrimDocFragment {
     Link { text: String, url: String },
 }
 
-fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
+fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
+    let mut end_link = None;
+    if let Some(link_start) = line.find("https://") {
+        if !line[link_start..].contains(' ') {
+            end_link = Some(&line[link_start..]);
+            line = &line[..link_start];
+        }
+    }
     let mut frags = Vec::new();
     #[derive(PartialEq, Eq)]
     enum FragKind {
@@ -1925,6 +1932,12 @@ fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
     curr.insert_str(0, kind.open());
     if !curr.is_empty() {
         frags.push(PrimDocFragment::Text(curr));
+    }
+    if let Some(url) = end_link {
+        frags.push(PrimDocFragment::Link {
+            text: url.to_string(),
+            url: url.to_string(),
+        });
     }
     frags
 }

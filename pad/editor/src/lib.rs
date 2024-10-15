@@ -1829,8 +1829,8 @@ fn prim_sig_class(prim: Primitive, sig: Option<Signature>) -> &'static str {
     }
 }
 
-fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
-    match name {
+pub fn binding_name_class(name: &str) -> Option<&'static str> {
+    Some(match name {
         "Trans" | "Transgender" => code_font!("trans text-gradient"),
         "Bi" | "Bisexual" => code_font!("bi text-gradient"),
         "Pan" | "Pansexual" => code_font!("pan text-gradient"),
@@ -1844,17 +1844,21 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
         "Fluid" | "Genderfluid" | "GenderFluid" => code_font!("fluid text-gradient"),
         "Queer" | "Genderqueer" | "GenderQueer" => code_font!("queer text-gradient"),
         "Poly" | "Polyamorous" => code_font!("poly text-gradient"),
-        _ => match docs.kind {
-            BindingDocsKind::Constant(_) => code_font!(""),
-            BindingDocsKind::Function { sig, .. } => sig_class(sig),
-            BindingDocsKind::Modifier(margs) => match margs {
-                1 => code_font!("monadic-modifier"),
-                2 => code_font!("dyadic-modifier"),
-                _ => code_font!("triadic-modifier"),
-            },
-            BindingDocsKind::Module { .. } => code_font!("module"),
+        _ => return None,
+    })
+}
+
+fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
+    binding_name_class(name).unwrap_or_else(|| match docs.kind {
+        BindingDocsKind::Constant(_) => code_font!(""),
+        BindingDocsKind::Function { sig, .. } => sig_class(sig),
+        BindingDocsKind::Modifier(margs) => match margs {
+            1 => code_font!("monadic-modifier"),
+            2 => code_font!("dyadic-modifier"),
+            _ => code_font!("triadic-modifier"),
         },
-    }
+        BindingDocsKind::Module { .. } => code_font!("module"),
+    })
 }
 
 pub const EDITOR_SHORTCUTS: &str = " shift Enter   - Run + Format

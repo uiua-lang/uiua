@@ -10,6 +10,8 @@ use super::*;
 pub struct ConstantDef {
     /// The constant's name
     pub name: &'static str,
+    /// The constant's class
+    pub class: ConstClass,
     /// The constant's value
     pub value: Lazy<ConstantValue>,
     /// The constant's documentation
@@ -20,6 +22,10 @@ impl ConstantDef {
     /// Get the constant's documentation
     pub fn doc(&self) -> &str {
         &self.doc
+    }
+    /// Get the constant's documentation as fragments
+    pub fn doc_frags(&self) -> Vec<PrimDocFragment> {
+        parse_doc_line_fragments(self.doc())
     }
 }
 
@@ -89,7 +95,7 @@ where
 }
 
 macro_rules! constant {
-    ($($(#[doc = $doc:literal])+ ($(#[$attr:meta])* $name:literal, $value:expr)),* $(,)?) => {
+    ($($(#[doc = $doc:literal])+ ($(#[$attr:meta])* $name:literal, $class:ident, $value:expr)),* $(,)?) => {
         const COUNT: usize = {
             let mut count = 0;
             $(
@@ -108,6 +114,7 @@ macro_rules! constant {
                 ConstantDef {
                     name: $name,
                     value: Lazy::new(|| {$value.into()}),
+                    class: ConstClass::$class,
                     doc: Lazy::new(|| {
                         let mut s = String::new();
                         $(
@@ -122,50 +129,65 @@ macro_rules! constant {
     };
 }
 
+/// Kinds of shadowable constants
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ConstClass {
+    Math,
+    External,
+    Time,
+    Media,
+    System,
+    Color,
+    Flags,
+    Fun,
+}
+
 constant!(
     /// Euler's constant
-    ("e", std::f64::consts::E),
+    ("e", Math, std::f64::consts::E),
     /// The imaginary unit
-    ("i", crate::Complex::I),
+    ("i", Math, crate::Complex::I),
     /// IEEE 754-2008's `NaN`
-    ("NaN", f64::NAN),
+    ("NaN", Math, f64::NAN),
     /// The wildcard `NaN` value that equals any other number
-    ("W", WILDCARD_NAN),
+    ("W", Math, WILDCARD_NAN),
     /// The maximum integer that can be represented exactly
-    ("MaxInt", 2f64.powi(53)),
+    ("MaxInt", Math, 2f64.powi(53)),
     /// A string identifying the operating system
-    ("Os", std::env::consts::OS),
+    ("Os", System, std::env::consts::OS),
     /// A string identifying family of the operating system
-    ("Family", std::env::consts::FAMILY),
+    ("Family", System, std::env::consts::FAMILY),
     /// A string identifying the architecture of the CPU
-    ("Arch", std::env::consts::ARCH),
+    ("Arch", System, std::env::consts::ARCH),
     /// The executable file extension
-    ("ExeExt", std::env::consts::EXE_EXTENSION),
+    ("ExeExt", System, std::env::consts::EXE_EXTENSION),
     /// The file extension for shared libraries
-    ("DllExt", std::env::consts::DLL_EXTENSION),
+    ("DllExt", System, std::env::consts::DLL_EXTENSION),
     /// The primary path separator character
-    ("Sep", std::path::MAIN_SEPARATOR),
+    ("Sep", System, std::path::MAIN_SEPARATOR),
     /// The path of the current source file relative to `WorkingDir`
-    ("ThisFile", ConstantValue::ThisFile),
+    ("ThisFile", System, ConstantValue::ThisFile),
     /// The name of the current source file
-    ("ThisFileName", ConstantValue::ThisFileName),
+    ("ThisFileName", System, ConstantValue::ThisFileName),
     /// The name of the directory containing the current source file
-    ("ThisFileDir", ConstantValue::ThisFileDir),
+    ("ThisFileDir", System, ConstantValue::ThisFileDir),
     /// The compile-time working directory
-    ("WorkingDir", ConstantValue::WorkingDir),
+    ("WorkingDir", System, ConstantValue::WorkingDir),
     /// The number of processors available
-    ("NumProcs", num_cpus::get() as f64),
+    ("NumProcs", System, num_cpus::get() as f64),
     /// A boolean `true` value for use in `json`
-    ("True", Array::json_bool(true)),
+    ("True", External, Array::json_bool(true)),
     /// A boolean `false` value for use in `json`
-    ("False", Array::json_bool(false)),
-    /// A NULL pointer for use in FFI
-    ("NULL", Value::null()),
+    ("False", External, Array::json_bool(false)),
+    /// A NULL pointer for use in `&ffi`
+    ("NULL", External, Value::null()),
     /// The hexadecimal digits
-    ("HexDigits", "0123456789abcdef"),
+    ("HexDigits", Math, "0123456789abcdef"),
     /// The days of the week
     (
         "Days",
+        Time,
         [
             "Sunday",
             "Monday",
@@ -180,6 +202,7 @@ constant!(
     /// The months of the year
     (
         "Months",
+        Time,
         [
             "January",
             "February",
@@ -199,41 +222,45 @@ constant!(
     /// The number of days in each month in a non-leap year
     (
         "MonthDays",
+        Time,
         [31u8, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     ),
     /// The number of days in each month in a leap year
     (
         "LeapMonthDays",
+        Time,
         [31u8, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     ),
     /// The color white
-    ("White", [1.0, 1.0, 1.0]),
+    ("White", Color, [1.0, 1.0, 1.0]),
     /// The color black
-    ("Black", [0.0, 0.0, 0.0]),
+    ("Black", Color, [0.0, 0.0, 0.0]),
     /// The color red
-    ("Red", [1.0, 0.0, 0.0]),
+    ("Red", Color, [1.0, 0.0, 0.0]),
     /// The color orange
-    ("Orange", [1.0, 0.5, 0.0]),
+    ("Orange", Color, [1.0, 0.5, 0.0]),
     /// The color yellow
-    ("Yellow", [1.0, 1.0, 0.0]),
+    ("Yellow", Color, [1.0, 1.0, 0.0]),
     /// The color green
-    ("Green", [0.0, 1.0, 0.0]),
+    ("Green", Color, [0.0, 1.0, 0.0]),
     /// The color cyan
-    ("Cyan", [0.0, 1.0, 1.0]),
+    ("Cyan", Color, [0.0, 1.0, 1.0]),
     /// The color blue
-    ("Blue", [0.0, 0.0, 1.0]),
+    ("Blue", Color, [0.0, 0.0, 1.0]),
     /// The color purple
-    ("Purple", [0.5, 0.0, 1.0]),
+    ("Purple", Color, [0.5, 0.0, 1.0]),
     /// The color magenta
-    ("Magenta", [1.0, 0.0, 1.0]),
+    ("Magenta", Color, [1.0, 0.0, 1.0]),
     /// The planets of the solar system
     (
         "Planets",
+        Fun,
         ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"].as_slice()
     ),
     /// The symbols of the zodiac
     (
         "Zodiac",
+        Fun,
         [
             "Aries",
             "Taurus",
@@ -251,63 +278,67 @@ constant!(
         .as_slice()
     ),
     /// The suits of a standard deck of playing cards
-    ("Suits", ['♣', '♦', '♥', '♠']),
+    ("Suits", Fun, ['♣', '♦', '♥', '♠']),
     /// The ranks of a standard deck of playing cards
     (
         "Cards",
+        Fun,
         ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"].as_slice()
     ),
     /// The symbols of the standard chess pieces
     (
         "Chess",
+        Fun,
         Array::new(
             [2, 6],
             ['♟', '♜', '♞', '♝', '♛', '♚', '♙', '♖', '♘', '♗', '♕', '♔']
         )
     ),
     /// The phases of the moon
-    ("Moon", "🌑🌒🌓🌔🌕🌖🌗🌘"),
+    ("Moon", Fun, "🌑🌒🌓🌔🌕🌖🌗🌘"),
     /// Skin color modifiers for emoji
-    ("Skin","🏻🏼🏽🏾🏿"),
+    ("Skin", Fun, "🏻🏼🏽🏾🏿"),
     /// People emoji
-    ("People", "👨👩👦👧"),
+    ("People", Fun, "👨👩👦👧"),
     /// Emoji hair components
-    ("Hair", "🦰🦱🦲🦳"),
+    ("Hair", Fun, "🦰🦱🦲🦳"),
     /// The Uiua logo
-    (#[cfg(feature = "image")] "Logo", crate::encode::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
+    (#[cfg(feature = "image")] "Logo", Media, crate::encode::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
     /// Ethically sourced Lena picture
     /// Morten Rieger Hannemose
     /// 2019
     /// https://mortenhannemose.github.io/lena/
-    (#[cfg(feature = "image")] "Lena", crate::encode::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
+    (#[cfg(feature = "image")] "Lena", Media, crate::encode::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
     /// Sample music data
-    ("Music", ConstantValue::Music),
+    ("Music", Media, ConstantValue::Music),
     /// Lorem Ipsum text
-    ("Lorem", "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
+    ("Lorem", Media, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
     /// Gay flag colors
-    ("Gay", [[0.894, 0.012, 0.012], [1.0, 0.647, 0.173], [1.0, 1.0, 0.255], [0.0, 0.502, 0.094], [0.0, 0.0, 0.976], [0.525, 0.0, 0.49]]),
+    ("Gay", Flags, [[0.894, 0.012, 0.012], [1.0, 0.647, 0.173], [1.0, 1.0, 0.255], [0.0, 0.502, 0.094], [0.0, 0.0, 0.976], [0.525, 0.0, 0.49]]),
     /// Lesbian flag colors
-    ("Lesbian", [[0.831, 0.173, 0.0], [0.992, 0.596, 0.333], [1.0, 1.0, 1.0], [0.82, 0.38, 0.635], [0.635, 0.004, 0.38]]),
+    ("Lesbian", Flags, [[0.831, 0.173, 0.0], [0.992, 0.596, 0.333], [1.0, 1.0, 1.0], [0.82, 0.38, 0.635], [0.635, 0.004, 0.38]]),
     /// Bi flag colors
-    ("Bi", [[0.839, 0.008, 0.439], [0.839, 0.008, 0.439], [0.608, 0.31, 0.588], [0.0, 0.22, 0.659], [0.0, 0.22, 0.659]]),
+    ("Bi", Flags, [[0.839, 0.008, 0.439], [0.839, 0.008, 0.439], [0.608, 0.31, 0.588], [0.0, 0.22, 0.659], [0.0, 0.22, 0.659]]),
     /// Trans flag colors
-    ("Trans", [[0.357, 0.808, 0.98], [0.961, 0.663, 0.722], [1.0, 1.0, 1.0], [0.961, 0.663, 0.722], [0.357, 0.808, 0.98]]),
+    ("Trans", Flags, [[0.357, 0.808, 0.98], [0.961, 0.663, 0.722], [1.0, 1.0, 1.0], [0.961, 0.663, 0.722], [0.357, 0.808, 0.98]]),
     /// Pan flag colors
-    ("Pan", [[1.0, 0.129, 0.549], [1.0, 0.847, 0.0], [0.129, 0.694, 1.0]]),
+    ("Pan", Flags, [[1.0, 0.129, 0.549], [1.0, 0.847, 0.0], [0.129, 0.694, 1.0]]),
     /// Ace flag colors
-    ("Ace", [[0.0, 0.0, 0.0], [0.639, 0.639, 0.639], [1.0, 1.0, 1.0], [0.502, 0.0, 0.502]]),
+    ("Ace", Flags, [[0.0, 0.0, 0.0], [0.639, 0.639, 0.639], [1.0, 1.0, 1.0], [0.502, 0.0, 0.502]]),
     /// Aro flag colors
-    ("Aro", [[0.0, 0.0, 0.0], [0.663, 0.663, 0.663], [1.0, 1.0, 1.0], [0.655, 0.827, 0.475], [0.239, 0.647, 0.259]]),
+    ("Aro", Flags, [[0.0, 0.0, 0.0], [0.663, 0.663, 0.663], [1.0, 1.0, 1.0], [0.655, 0.827, 0.475], [0.239, 0.647, 0.259]]),
     /// Aroace flag colors
-    ("AroAce", [[0.937, 0.565, 0.027], [0.965, 0.827, 0.09], [1.0, 1.0, 1.0], [0.271, 0.737, 0.933], [0.118, 0.247, 0.329]]),
+    ("AroAce", Flags, [[0.937, 0.565, 0.027], [0.965, 0.827, 0.09], [1.0, 1.0, 1.0], [0.271, 0.737, 0.933], [0.118, 0.247, 0.329]]),
     /// Enby flag colors
-    ("Enby", [[0.988, 0.957, 0.204], [1.0, 1.0, 1.0], [0.612, 0.349, 0.82], [0.173, 0.173, 0.173]]),
+    ("Enby", Flags, [[0.988, 0.957, 0.204], [1.0, 1.0, 1.0], [0.612, 0.349, 0.82], [0.173, 0.173, 0.173]]),
     /// Genderfluid flag colors
-    ("Fluid", [[1.0, 0.463, 0.643], [1.0, 1.0, 1.0], [0.753, 0.067, 0.843], [0.0, 0.0, 0.0], [0.184, 0.235, 0.745]]),
+    ("Fluid", Flags, [[1.0, 0.463, 0.643], [1.0, 1.0, 1.0], [0.753, 0.067, 0.843], [0.0, 0.0, 0.0], [0.184, 0.235, 0.745]]),
     /// Genderqueer flag colors
-    ("Queer", [[0.71, 0.494, 0.863], [1.0, 1.0, 1.0], [0.29, 0.506, 0.137]]),
+    ("Queer", Flags, [[0.71, 0.494, 0.863], [1.0, 1.0, 1.0], [0.29, 0.506, 0.137]]),
+    /// Agender flag colors
+    ("Agender", Flags, [[0.0; 3], [0.74, 0.77, 0.78], [1.0; 3], [0.72, 0.96, 0.52], [1.0; 3], [0.74, 0.77, 0.78], [0.0; 3],]),
     /// All pride flags
-    ("PrideFlags", {
+    ("PrideFlags", Flags, {
         CONSTANTS
             .iter()
             .skip_while(|def| def.name != "Gay")
@@ -319,7 +350,7 @@ constant!(
             .map(Boxed).collect::<Array<Boxed>>()
     }),
     /// All pride flag names
-    ("PrideFlagNames", {
+    ("PrideFlagNames", Flags, {
         CONSTANTS
             .iter()
             .skip_while(|def| def.name != "Gay")

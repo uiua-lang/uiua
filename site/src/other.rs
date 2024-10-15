@@ -1,10 +1,13 @@
+use std::collections::BTreeMap;
+
 use leptos::*;
 use leptos_meta::*;
-use uiua::{Primitive, CONSTANTS};
+use uiua::{ConstClass, Primitive, CONSTANTS};
 use uiua_editor::Editor;
 
 use crate::{
     markdown::{markdown_view, Markdown},
+    primitive::doc_line_fragments_to_view,
     Const, Hd, Prim, Prims,
 };
 
@@ -128,27 +131,44 @@ pub fn RightToLeft() -> impl IntoView {
 
 #[component]
 pub fn Constants() -> impl IntoView {
+    use ConstClass::*;
     use Primitive::*;
-    let constants = CONSTANTS
-        .iter()
-        .filter(|con| !con.doc.trim().is_empty())
-        .map(|con| {
-            view!(<tr>
-                <td><Const con=con/></td>
-                <td><div class="const-desc">{
-                    if let Some(i) = con.doc().find("https://") {
-                        let url = con.doc()[i..].trim();
-                        view!(
-                            {&con.doc()[..i]}
-                            <a href={url}>{url}</a>
-                        ).into_view()
-                    } else {
-                        con.doc().into_view()
-                    }
-                 }</div></td>
-            </tr>)
-        })
-        .collect::<Vec<_>>();
+    let mut by_class: BTreeMap<ConstClass, Vec<View>> = BTreeMap::new();
+    for con in CONSTANTS.iter().filter(|con| !con.doc.trim().is_empty()) {
+        let view = view!(<tr>
+            <td><Const con=con/></td>
+            <td><div class="const-desc">{
+                doc_line_fragments_to_view(&con.doc_frags())
+            }</div></td>
+        </tr>)
+        .into_view();
+        by_class.entry(con.class).or_default().push(view);
+    }
+    let class_cols = [
+        vec![Math, Time, Color, Flags],
+        vec![External, Media, System, Fun],
+    ];
+    let cols = class_cols.map(|col_classes| {
+        let mut tables = Vec::new();
+        for class in col_classes {
+            let mut rows = Vec::new();
+            for con in CONSTANTS.iter().filter(|con| con.class == class) {
+                let view = view!(<tr>
+                    <td><Const con=con/></td>
+                    <td><div class="const-desc">{
+                        doc_line_fragments_to_view(&con.doc_frags())
+                    }</div></td>
+                </tr>)
+                .into_view();
+                rows.push(view);
+            }
+            tables.push(view!(
+                <h3>{format!("{class:?}")}</h3>
+                <table class="bordered-table" style="width: 100%">{ rows }</table>
+            ));
+        }
+        view!(<div>{tables}</div>)
+    });
     view! {
         <Title text="Constants - Uiua Docs"/>
         <h1>"Constants"</h1>
@@ -156,13 +176,7 @@ pub fn Constants() -> impl IntoView {
         <Editor example="e\ne ← 5\ne"/>
         <br/>
         <div>
-        <table class="bordered-table">
-            <tr>
-                <th>"Name"</th>
-                <th>"Description"</th>
-            </tr>
-            { constants }
-        </table>
+        <div class="features">{ cols }</div>
         </div>
     }
 }

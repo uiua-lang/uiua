@@ -65,6 +65,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add pride flag constants
 - Allow [`&raw`](https://uiua.org/docs/&raw) to be inverted, acting as a getter for the raw state of the terminal
   - [`under ⍜`](https://uiua.org/docs/under)[`&raw`](https://uiua.org/docs/&raw) sets raw mode, and then returns it to the previous state
+- Add the experimental [`around ’`](https://uiua.org/docs/around) function, which duplicates the top value on the stack to the third-to-top position
 - Add experimental [`tuples ⧅`](https://uiua.org/docs/tuples) modifier
   - This unifies and extends the behavior of the `choose` and `permute` functions, which are now deprecated
   - This also replaces and deprecates the `triangle` modifier

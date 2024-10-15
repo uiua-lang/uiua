@@ -3,14 +3,33 @@ use super::*;
 impl Compiler {
     pub(super) fn data_def(
         &mut self,
-        data: DataDef,
+        mut data: DataDef,
         top_level: bool,
-        prelude: BindingPrelude,
+        mut prelude: BindingPrelude,
     ) -> UiuaResult {
         self.experimental_error(&data.init_span, || {
             "Data definitions are experimental. To use them, add \
             `# Experimental!` to the top of the file."
         });
+        if let Some(words) = &mut data.func {
+            let word = words.pop();
+            if let Some(word) = word {
+                match word.value {
+                    Word::Comment(com) => {
+                        let pre_com = prelude.comment.get_or_insert_with(Default::default);
+                        if !pre_com.is_empty() {
+                            pre_com.push('\n');
+                        }
+                        pre_com.push_str(&com);
+                    }
+                    _ => words.push(word),
+                }
+            }
+        }
+        if (data.func.as_ref()).is_some_and(|words| !words.iter().any(|word| word.value.is_code()))
+        {
+            data.func = None;
+        }
         if top_level {
             if let Some(name) = data.name.clone() {
                 let comment = prelude.comment.clone();

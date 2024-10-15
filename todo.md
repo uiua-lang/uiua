@@ -3,7 +3,6 @@
 ## 0.13
 The next version of Uiua
 
-- Data definition comments
 - Constant categories
 
 ## Implementation details

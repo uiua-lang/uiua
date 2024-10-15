@@ -24,10 +24,10 @@ u ← +0.1↧¤ ⊃(I0.95|⊂:0.5⇌°√)
 A ← ×⊃U(I1) # Alpha
 ⍜°⍉(⊂⊃u A) -1÷÷2⟜(⇡↯2) 200";
 const CHORD: &str = "\
-[0 4 7 10]      # Notes
-×220 ⁿ:2÷12     # Freqs
-∿×τ ⊞× ÷⟜⇡&asr. # Generate
-÷⊙⧻ ≡/+         # Mix";
+[0 4 7 10]     # Notes
+×220 ⁿ:2÷12    # Freqs
+∿×τ ⊞× ÷⟜⇡&asr # Generate
+÷⧻⟜/+⍉         # Mix";
 const SPIRAL: &str = "\
 ↯⟜(×20-1×2÷⟜⇡)200 # Xs
 -≡⊃∠(⍜∩°√+)⊸⍉     # Spiral field

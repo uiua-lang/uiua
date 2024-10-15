@@ -297,6 +297,7 @@ impl fmt::Display for ImplPrimitive {
             ValidateType => write!(f, "{Un}…{Type}{Dup}"),
             ValidateTypeConsume => write!(f, "{Un}…{Type}"),
             TestAssert => write!(f, "{Assert}"),
+            ValidateVariant => write!(f, "|…[…]"),
         }
     }
 }
@@ -1392,6 +1393,21 @@ impl ImplPrimitive {
                     .into());
                 }
                 env.rt.test_results.push(res);
+            }
+            ImplPrimitive::ValidateVariant => {
+                let val = env.pop(1)?;
+                if !matches!(val, Value::Num(_) | Value::Byte(_) | Value::Box(_)) {
+                    return Err(env.error(format!(
+                        "Variant field must be numbers or boxes, but it is {}",
+                        val.type_name_plural()
+                    )));
+                }
+                if val.rank() > 1 {
+                    return Err(env.error(format!(
+                        "Non-boxed variant field must be rank 0 or 1, but it is rank {}",
+                        val.rank()
+                    )));
+                }
             }
         }
         Ok(())

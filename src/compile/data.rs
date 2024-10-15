@@ -152,7 +152,7 @@ impl Compiler {
             .map(|f| f.init.as_ref().map(|(_, sig)| sig.args).unwrap_or(1))
             .sum();
         let has_inits = fields.iter().any(|f| f.init.is_some());
-        if boxed || constructor_args < fields.len() {
+        if boxed || fields.iter().any(|f| f.init.is_some()) {
             if has_inits {
                 for field in &fields {
                     if let Some((_, sig)) = field.init {
@@ -186,6 +186,9 @@ impl Compiler {
                         instrs.push(Instr::pop_inline(sig.args, span));
                     }
                     instrs.extend_from_slice(init);
+                    if !boxed {
+                        instrs.push(Instr::ImplPrim(ImplPrimitive::ValidateVariant, field.span));
+                    }
                 } else if i > 0 || has_inits {
                     instrs.push(Instr::pop_inline(1, span));
                     self.code_meta

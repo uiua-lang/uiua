@@ -3458,6 +3458,7 @@ primitive!(
 
 macro_rules! impl_primitive {
     ($(
+        $(#[$attr:meta])*
         (
             $args:literal
             $(($outputs:expr))?
@@ -3471,7 +3472,10 @@ macro_rules! impl_primitive {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
         #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
         pub enum ImplPrimitive {
-            $($variant,)*
+            $(
+                $(#[$attr])*
+                $variant,
+            )*
             TransposeN(i32),
             UndoTransposeN(usize, i32),
             UndoReverse(usize),
@@ -3611,4 +3615,6 @@ impl_primitive!(
     (2(1), ValidateType),
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
+    /// Validate that a non-boxed variant field has a valid type and rank
+    (1, ValidateVariant),
 );

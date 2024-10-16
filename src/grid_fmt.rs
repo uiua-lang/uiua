@@ -22,6 +22,7 @@ type Metagrid = Grid<Grid>;
 pub struct GridFmtParams {
     pub boxed: bool,
     pub label: bool,
+    pub depth: usize,
 }
 
 pub trait GridFmt {
@@ -165,6 +166,9 @@ impl GridFmt for Complex {
 
 impl GridFmt for Value {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
+        if params.depth > 100 {
+            return vec!["…".to_string().chars().collect()];
+        }
         if self.meta().flags.contains(ArrayFlags::SEED) && self.rank() == 0 {
             if let Value::Num(arr) = self {
                 let seed = arr.data[0].to_bits();
@@ -186,6 +190,7 @@ impl GridFmt for Value {
             for Boxed(val) in &b.data {
                 let grid = val.fmt_grid(GridFmtParams {
                     boxed: false,
+                    depth: params.depth + 1,
                     ..params
                 });
                 if grid.len() == 1 {
@@ -214,8 +219,11 @@ impl GridFmt for Value {
             Value::Num(n) => n.fmt_grid(params),
             Value::Byte(b) => b.fmt_grid(params),
             Value::Complex(c) => c.fmt_grid(params),
-            Value::Box(v) => v.fmt_grid(params),
             Value::Char(c) => c.fmt_grid(params),
+            Value::Box(v) => v.fmt_grid(GridFmtParams {
+                depth: params.depth + 1,
+                ..params
+            }),
         }
     }
 }

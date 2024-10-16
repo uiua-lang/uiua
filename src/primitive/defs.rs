@@ -1335,7 +1335,7 @@ primitive!(
     /// Scalar shapes will copy the array as rows of a new array.
     /// ex: ↯ 4 [1 2 3 4 5]
     /// ex: ↯ 2 [1_2_3 4_5_6]
-    /// This is in constrast to scalar [keep], which repeats each row but preserves rank.
+    /// This is in contrast to scalar [keep], which repeats each row but preserves rank.
     /// ex: ▽ 4 [1 2 3 4 5]
     /// ex: ▽ 2 [1_2_3 4_5_6]
     ///
@@ -1576,7 +1576,7 @@ primitive!(
     /// [keep] with a scalar for the first argument repeats each row of the second argument that many times.
     /// ex: ▽ 3 [1 2 3]
     /// ex: ▽ 2 [1_2_3 4_5_6]
-    /// This is in constrast to scalar [reshape], which copies the array as rows of a new array.
+    /// This is in contrast to scalar [reshape], which copies the array as rows of a new array.
     /// ex: ↯ 3 [1 2 3]
     /// ex: ↯ 2 [1_2_3 4_5_6]
     ///

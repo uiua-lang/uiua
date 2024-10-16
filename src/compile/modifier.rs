@@ -302,7 +302,7 @@ impl Compiler {
                 }
                 m => {
                     if let Modifier::Ref(name) = m {
-                        if let Ok((_, local)) = self.ref_local(name) {
+                        if let Ok(Some((_, local))) = self.ref_local(name) {
                             if self.code_macros.contains_key(&local.index) {
                                 return Ok(false);
                             }
@@ -356,10 +356,9 @@ impl Compiler {
         } else {
             let strict_args = match &modified.modifier.value {
                 Modifier::Primitive(_) => true,
-                Modifier::Ref(name) => {
-                    let (_, local) = self.ref_local(name)?;
-                    self.index_macros.contains_key(&local.index)
-                }
+                Modifier::Ref(name) => self
+                    .ref_local(name)?
+                    .is_some_and(|(_, local)| self.index_macros.contains_key(&local.index)),
             };
             if strict_args {
                 // Validate operand count
@@ -507,7 +506,7 @@ impl Compiler {
             Word::Array(arr) => arr.lines.iter().all(|line| self.words_look_pure(line)),
             Word::Strand(items) => self.words_look_pure(items),
             Word::Ref(r) => {
-                if let Ok((_, local)) = self.ref_local(r) {
+                if let Ok(Some((_, local))) = self.ref_local(r) {
                     match &self.asm.bindings[local.index].kind {
                         BindingKind::Const(_) | BindingKind::Module(_) | BindingKind::Import(_) => {
                             true
@@ -1435,7 +1434,9 @@ impl Compiler {
         operands: Vec<Sp<Word>>,
         call: bool,
     ) -> UiuaResult {
-        let (path_locals, local) = self.ref_local(&r)?;
+        let Some((path_locals, local)) = self.ref_local(&r)? else {
+            return Ok(());
+        };
         self.validate_local(&r.name.value, local, &r.name.span);
         self.code_meta
             .global_references

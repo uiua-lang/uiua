@@ -14,7 +14,7 @@ impl Compiler {
                 Word::Ref(r) if ident_modifier_args(&r.name.value) == 0 => Some(r),
                 _ => None,
             }) {
-                if let Ok((path_locals, local)) = self.ref_local(r) {
+                if let Ok(Some((path_locals, local))) = self.ref_local(r) {
                     self.validate_local(&r.name.value, local, &r.name.span);
                     (self.code_meta.global_references)
                         .insert(binding.name.span.clone(), local.index);
@@ -167,10 +167,11 @@ impl Compiler {
                 let mut name_local = None;
                 match &word.value {
                     Word::Ref(r) => match self.ref_local(r) {
-                        Ok((pl, l)) => {
+                        Ok(Some((pl, l))) => {
                             path_locals = Some((&r.path, pl));
                             name_local = Some((&r.name, l));
                         }
+                        Ok(None) => {}
                         Err(e) => self.errors.push(e),
                     },
                     Word::IncompleteRef { path, in_macro_arg } => {
@@ -183,10 +184,11 @@ impl Compiler {
                     Word::Modified(m) => {
                         if let Modifier::Ref(r) = &m.modifier.value {
                             match self.ref_local(r) {
-                                Ok((pl, l)) => {
+                                Ok(Some((pl, l))) => {
                                     path_locals = Some((&r.path, pl));
                                     name_local = Some((&r.name, l));
                                 }
+                                Ok(None) => {}
                                 Err(e) => self.errors.push(e),
                             }
                         }

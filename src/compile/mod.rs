@@ -1647,7 +1647,10 @@ code:
         }
         inner_sig.ok()
     }
-    fn ref_local(&self, r: &Ref) -> UiuaResult<(Vec<LocalName>, LocalName)> {
+    /// Find the [`LocalName`]s of both the name and all parts of the path of a [`Ref`]
+    ///
+    /// Returns [`None`] if the reference is to a constant
+    fn ref_local(&self, r: &Ref) -> UiuaResult<Option<(Vec<LocalName>, LocalName)>> {
         if let Some((module, path_locals)) = self.ref_path(&r.path, r.in_macro_arg)? {
             if let Some(local) = module.names.get(&r.name.value).copied().or_else(|| {
                 (r.name.value.strip_suffix('!')).and_then(|name| {
@@ -1656,7 +1659,7 @@ code:
                     })
                 })
             }) {
-                Ok((path_locals, local))
+                Ok(Some((path_locals, local)))
             } else {
                 Err(self.fatal_error(
                     r.name.span.clone(),
@@ -1664,7 +1667,9 @@ code:
                 ))
             }
         } else if let Some(local) = self.find_name(&r.name.value, r.in_macro_arg) {
-            Ok((Vec::new(), local))
+            Ok(Some((Vec::new(), local)))
+        } else if r.path.is_empty() && CONSTANTS.iter().any(|def| def.name == r.name.value) {
+            Ok(None)
         } else {
             Err(self.fatal_error(
                 r.name.span.clone(),
@@ -1799,8 +1804,7 @@ code:
     fn reference(&mut self, r: Ref, call: bool) -> UiuaResult {
         if r.path.is_empty() {
             self.ident(r.name.value, r.name.span, call, r.in_macro_arg)
-        } else {
-            let (path_locals, local) = self.ref_local(&r)?;
+        } else if let Some((path_locals, local)) = self.ref_local(&r)? {
             self.validate_local(&r.name.value, local, &r.name.span);
             for (local, comp) in path_locals.into_iter().zip(&r.path) {
                 self.validate_local(&comp.module.value, local, &comp.module.span);
@@ -1811,6 +1815,8 @@ code:
                 .insert(r.name.span.clone(), local.index);
             self.global_index(local.index, r.name.span, call);
             Ok(())
+        } else {
+            self.ident(r.name.value, r.name.span, call, r.in_macro_arg)
         }
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool, skip_local: bool) -> UiuaResult {

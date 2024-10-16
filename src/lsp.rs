@@ -23,7 +23,7 @@ use crate::{
 #[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpanKind {
-    Primitive(Primitive, Option<Signature>),
+    Primitive(Primitive, Option<usize>),
     String,
     Number,
     Comment,
@@ -504,11 +504,7 @@ impl Spanner {
                 Word::Number(s, _) => {
                     for prim in Primitive::all().filter(|p| p.is_constant()) {
                         if prim.name().starts_with(s) || prim.to_string() == *s {
-                            spans.push(
-                                word.span
-                                    .clone()
-                                    .sp(SpanKind::Primitive(prim, prim.signature())),
-                            );
+                            spans.push(word.span.clone().sp(SpanKind::Primitive(prim, None)));
                             continue 'words;
                         }
                     }
@@ -619,11 +615,9 @@ impl Spanner {
                         }
                     }
                 }
-                Word::Primitive(prim) => spans.push(
-                    word.span
-                        .clone()
-                        .sp(SpanKind::Primitive(*prim, prim.signature())),
-                ),
+                Word::Primitive(prim) => {
+                    spans.push(word.span.clone().sp(SpanKind::Primitive(*prim, None)))
+                }
                 Word::Modified(m) => {
                     match &m.modifier.value {
                         Modifier::Primitive(Primitive::Obverse) => {
@@ -637,9 +631,9 @@ impl Spanner {
                                 },
                             ))
                         }
-                        Modifier::Primitive(p) => spans.push(
-                            (m.modifier.span.clone()).sp(SpanKind::Primitive(*p, p.signature())),
-                        ),
+                        Modifier::Primitive(p) => {
+                            spans.push((m.modifier.span.clone()).sp(SpanKind::Primitive(*p, None)))
+                        }
                         Modifier::Ref(r) => spans.extend(self.ref_spans(r)),
                     }
                     spans.extend(self.words_spans(&m.operands));
@@ -665,7 +659,7 @@ impl Spanner {
                                     m.modifier
                                         .span
                                         .clone()
-                                        .sp(SpanKind::Primitive(*p, p.signature())),
+                                        .sp(SpanKind::Primitive(*p, sub.n.value)),
                                 );
                                 spans.push(sub.n.clone().map(|n| SpanKind::Subscript(Some(*p), n)));
                             }
@@ -677,10 +671,8 @@ impl Spanner {
                         spans.extend(self.words_spans(&m.operands));
                     }
                     Word::Primitive(p) => {
-                        spans.push(
-                            (sub.word.span.clone())
-                                .sp(SpanKind::Primitive(*p, p.subscript_sig(sub.n.value))),
-                        );
+                        spans
+                            .push((sub.word.span.clone()).sp(SpanKind::Primitive(*p, sub.n.value)));
                         spans.push(sub.n.clone().map(|n| SpanKind::Subscript(Some(*p), n)));
                     }
                     _ => {
@@ -1495,8 +1487,8 @@ mod server {
             let mut tokens = Vec::new();
             let mut prev_line = 0;
             let mut prev_char = 0;
-            let for_prim = |p: Primitive, sig: Option<Signature>| {
-                let args = sig.map(|sig| sig.args).or(p.args());
+            let for_prim = |p: Primitive, sub: Option<usize>| {
+                let args = p.subscript_sig(sub).map(|sig| sig.args).or(p.args());
                 Some(match p.class() {
                     PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
                         if p.modifier_args().is_none() =>
@@ -1520,8 +1512,8 @@ mod server {
                     SpanKind::String => UIUA_STRING_STT,
                     SpanKind::Number => UIUA_NUMBER_STT,
                     SpanKind::Comment => SemanticTokenType::COMMENT,
-                    SpanKind::Primitive(p, sig) => {
-                        let Some(stt) = for_prim(*p, *sig) else {
+                    SpanKind::Primitive(p, sub) => {
+                        let Some(stt) = for_prim(*p, *sub) else {
                             continue;
                         };
                         stt
@@ -1548,7 +1540,7 @@ mod server {
                         BindingDocsKind::Module { .. } => MODULE_STT,
                     },
                     SpanKind::Subscript(Some(prim), n) => {
-                        let Some(stt) = for_prim(*prim, prim.subscript_sig(*n)) else {
+                        let Some(stt) = for_prim(*prim, *n) else {
                             continue;
                         };
                         stt

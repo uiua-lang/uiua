@@ -1795,17 +1795,17 @@ fn sig_class(sig: Signature) -> &'static str {
     }
 }
 
-fn prim_sig_class(prim: Primitive, sig: Option<Signature>) -> &'static str {
+fn prim_sig_class(prim: Primitive, subscript: Option<usize>) -> &'static str {
     match prim {
         Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
         Primitive::Both => code_font!("monadic-modifier bi text-gradient"),
         Primitive::Member => code_font!("dyadic-function caution text-gradient"),
-        Primitive::Couple => match sig.map(|sig| sig.args) {
-            None | Some(2) => code_font!("dyadic-function"),
-            Some(0) => code_font!("monadic-function aroace text-gradient"),
-            Some(1) => code_font!("monadic-function aro text-gradient"),
-            Some(_) => code_font!("dyadic-function poly text-gradient"),
+        Primitive::Couple => match subscript.unwrap_or(2) {
+            0 => code_font!("monadic-function aroace text-gradient"),
+            1 => code_font!("monadic-function aro text-gradient"),
+            2 => code_font!("dyadic-function"),
+            _ => code_font!("dyadic-function poly text-gradient"),
         },
         prim if matches!(prim.class(), PrimClass::Stack | PrimClass::Debug)
             && prim.modifier_args().is_none() =>
@@ -1821,7 +1821,8 @@ fn prim_sig_class(prim: Primitive, sig: Option<Signature>) -> &'static str {
                     _ => code_font!("triadic-modifier"),
                 }
             } else {
-                sig.or(prim.signature())
+                prim.subscript_sig(subscript)
+                    .or(prim.signature())
                     .map(sig_class)
                     .unwrap_or(code_font!(""))
             }

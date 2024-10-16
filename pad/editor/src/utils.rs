@@ -531,9 +531,7 @@ pub fn gen_code_view(code: &str) -> View {
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(None, _) => "number-literal",
-                        SpanKind::Subscript(Some(prim), n) => {
-                            prim_sig_class(*prim, prim.subscript_sig(*n))
-                        }
+                        SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, *n),
                         _ => "",
                     };
                     match kind {

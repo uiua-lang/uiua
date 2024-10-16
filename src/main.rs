@@ -23,8 +23,8 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
-    Assembly, Compiler, NativeSys, PreEvalMode, PrimClass, Primitive, RunMode, Signature, SpanKind,
-    Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
+    Assembly, Compiler, NativeSys, PreEvalMode, PrimClass, Primitive, RunMode, SpanKind, Uiua,
+    UiuaError, UiuaErrorKind, UiuaResult, Value,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -1052,14 +1052,14 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
     let dyadic_mod = Color::Magenta;
     let dyadic = Color::Blue;
 
-    let for_prim = |prim: Primitive, sig: Option<Signature>| match prim.class() {
+    let for_prim = |prim: Primitive, sub: Option<usize>| match prim.class() {
         PrimClass::Stack | PrimClass::Debug if prim.modifier_args().is_none() => None,
         PrimClass::Constant => None,
         _ => {
             if let Some(margs) = prim.modifier_args() {
                 Some(if margs == 1 { monadic_mod } else { dyadic_mod })
             } else {
-                match sig.map(|sig| sig.args).or(prim.args()) {
+                match prim.subscript_sig(sub).map(|sig| sig.args).or(prim.args()) {
                     Some(0) => Some(noadic),
                     Some(1) => Some(monadic),
                     Some(2) => Some(dyadic),
@@ -1093,7 +1093,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
                 g: 136,
                 b: 68,
             }),
-            SpanKind::Subscript(Some(prim), n) => for_prim(prim, prim.subscript_sig(n)),
+            SpanKind::Subscript(Some(prim), n) => for_prim(prim, n),
             SpanKind::Comment | SpanKind::OutputComment | SpanKind::Strand => {
                 Some(Color::BrightBlack)
             }

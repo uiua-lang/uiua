@@ -465,14 +465,14 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     /// The modified signature of the primitive given a subscript
-    #[doc(hidden)]
     pub fn subscript_sig(&self, n: Option<usize>) -> Option<Signature> {
         use Primitive::*;
         Some(match (self, n) {
-            (prim, _) if prim.class() == PrimClass::DyadicPervasive => Signature::new(1, 1),
-            (Select | Pick | Take | Drop | Join | Rerank | Rotate | Orient | Windows | Base, _) => {
-                Signature::new(1, 1)
-            }
+            (prim, Some(_)) if prim.class() == PrimClass::DyadicPervasive => Signature::new(1, 1),
+            (
+                Select | Pick | Take | Drop | Join | Rerank | Rotate | Orient | Windows | Base,
+                Some(_),
+            ) => Signature::new(1, 1),
             (Couple | Box, Some(n)) => Signature::new(n, 1),
             (Couple, None) => Signature::new(2, 1),
             (Box, None) => Signature::new(1, 1),

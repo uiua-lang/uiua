@@ -374,18 +374,23 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 grid[0].insert(0, left);
                 grid[0].push(right);
             } else {
+                let apparent_rank = if self.data.len() > MAX_ELEMS || self.rank() > MAX_RANK {
+                    1
+                } else {
+                    self.rank()
+                };
                 // Add corners to non-vectors
                 let width = grid[0].len();
                 let height = grid.len();
                 pad_grid_center(
                     width + 4,
-                    (height + 2).max(self.rank() + 1),
+                    (height + 2).max(apparent_rank + 1),
                     false,
                     &mut grid,
                 );
                 grid[0][0] = if params.boxed { '╓' } else { '╭' };
                 grid[0][1] = '─';
-                for i in 0..self.rank().saturating_sub(1) {
+                for i in 0..apparent_rank.saturating_sub(1) {
                     grid[i + 1][0] = if params.boxed { '╟' } else { '╷' };
                 }
                 *grid.last_mut().unwrap().last_mut().unwrap() =
@@ -497,11 +502,24 @@ impl Value {
 
 fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
     let mut shape_row = Vec::new();
-    for (i, dim) in shape.iter().enumerate() {
-        if i > 0 {
+    const MAX_RENDERED_RANK: usize = 40;
+    if shape.len() <= MAX_RENDERED_RANK {
+        for (i, dim) in shape.iter().enumerate() {
+            if i > 0 {
+                shape_row.extend("×".chars());
+            }
+            shape_row.extend(dim.to_string().chars());
+        }
+    } else {
+        for dim in shape.iter().take(MAX_RENDERED_RANK / 2) {
+            shape_row.extend(dim.to_string().chars());
             shape_row.extend("×".chars());
         }
-        shape_row.extend(dim.to_string().chars());
+        shape_row.extend([' ', '…', ' ']);
+        for dim in shape.iter().rev().take(MAX_RENDERED_RANK / 2).rev() {
+            shape_row.extend("×".chars());
+            shape_row.extend(dim.to_string().chars());
+        }
     }
     if !shape.is_empty() {
         shape_row.push(' ');
@@ -509,6 +527,9 @@ fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
     shape_row.push(T::SYMBOL);
     shape_row
 }
+
+const MAX_ELEMS: usize = 3600;
+const MAX_RANK: usize = 10;
 
 fn fmt_array<T: GridFmt + ArrayValue>(
     shape: &[usize],
@@ -520,7 +541,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         metagrid.push(vec![vec![shape_row::<T>(shape)]]);
         return;
     }
-    if data.len() > 3600 || shape.len() > 10 {
+    if data.len() > MAX_ELEMS || shape.len() > MAX_RANK {
         let summary = T::summarize(data);
         if !summary.is_empty() {
             metagrid.push(vec![if shape.len() == 1 {
@@ -529,7 +550,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 chars.extend(summary.chars());
                 vec![chars]
             } else {
-                vec![shape_row::<T>(shape), T::summarize(data).chars().collect()]
+                vec![shape_row::<T>(shape), summary.chars().collect()]
             }]);
             return;
         }

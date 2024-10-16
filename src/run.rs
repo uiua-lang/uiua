@@ -212,7 +212,10 @@ impl Default for Runtime {
             #[cfg(debug_assertions)]
             recursion_limit: 20,
             #[cfg(not(debug_assertions))]
-            recursion_limit: 100,
+            recursion_limit: std::env::var("UIUA_RECURSION_LIMIT")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(100),
             interrupted: None,
             thread: ThisThread::default(),
             output_comments: HashMap::new(),
@@ -1366,12 +1369,13 @@ code:
         self.rt.call_stack.iter()
     }
     pub(crate) fn respect_recursion_limit(&mut self) -> UiuaResult {
-        #[cfg(debug_assertions)]
-        const RECURSION_LIMIT: usize = 22;
-        #[cfg(not(debug_assertions))]
-        const RECURSION_LIMIT: usize = 130;
-        if self.rt.call_stack.len() > RECURSION_LIMIT {
-            Err(self.error("Recursion limit reached"))
+        if self.rt.call_stack.len() > self.rt.recursion_limit {
+            Err(self.error(format!(
+                "Recursion limit reached. \
+                You can try setting UIUA_RECURSION_LIMIT to a higher value. \
+                The current limit is {}.",
+                self.rt.recursion_limit
+            )))
         } else {
             Ok(())
         }

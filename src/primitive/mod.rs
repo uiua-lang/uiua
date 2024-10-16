@@ -773,6 +773,9 @@ impl Primitive {
             Primitive::Permute => env.dyadic_ro_env(Value::permute)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
+                if val.box_nesting() > 1000 {
+                    return Err(env.error("Box nesting too deep"));
+                }
                 env.push(val.box_depth(0));
             }
             Primitive::Repr => env.monadic_ref(Value::representation)?,

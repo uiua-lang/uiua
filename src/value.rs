@@ -1245,6 +1245,16 @@ impl Value {
     pub(crate) fn has_wildcard(&self) -> bool {
         val_as_arr!(self, |arr| arr.data.iter().any(ArrayValue::has_wildcard))
     }
+    pub(crate) fn box_nesting(&self) -> usize {
+        let Value::Box(arr) = self else {
+            return 0;
+        };
+        (arr.data.iter())
+            .map(|Boxed(v)| v.box_nesting())
+            .max()
+            .unwrap_or(0)
+            + 1
+    }
 }
 
 macro_rules! value_from {

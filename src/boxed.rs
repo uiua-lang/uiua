@@ -40,10 +40,6 @@ impl Boxed {
     pub fn as_value_mut(&mut self) -> &mut Value {
         &mut self.0
     }
-    /// Unwrap the inner value
-    pub fn into_inner(self) -> Value {
-        self.0
-    }
 }
 
 impl fmt::Debug for Boxed {

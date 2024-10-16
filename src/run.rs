@@ -1381,12 +1381,10 @@ code:
         }
     }
     /// Spawn a thread
-    pub(crate) fn spawn(
-        &mut self,
-        capture_count: usize,
-        _pool: bool,
-        f: impl FnOnce(&mut Self) -> UiuaResult + Send + 'static,
-    ) -> UiuaResult {
+    pub(crate) fn spawn(&mut self, capture_count: usize, _pool: bool, f: Function) -> UiuaResult {
+        if f.is_recursive() {
+            return Err(self.error(format!("Cannot spawn recursive function {}", f.id)));
+        }
         if self.rt.stack.len() < capture_count {
             return Err(self.error(format!(
                 "Expected at least {} value(s) on the stack, but there are {}",
@@ -1437,16 +1435,16 @@ code:
         let recv = {
             let (send, recv) = crossbeam_channel::unbounded();
             if _pool {
-                rayon::spawn(move || _ = send.send(f(&mut env).map(|_| env.take_stack())));
+                rayon::spawn(move || _ = send.send(env.call(f).map(|_| env.take_stack())));
             } else {
                 std::thread::Builder::new()
-                    .spawn(move || _ = send.send(f(&mut env).map(|_| env.take_stack())))
+                    .spawn(move || _ = send.send(env.call(f).map(|_| env.take_stack())))
                     .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
             }
             recv
         };
         #[cfg(target_arch = "wasm32")]
-        let result = f(&mut env).map(|_| env.take_stack());
+        let result = env.call(f).map(|_| env.take_stack());
 
         let id = self.rt.thread.next_child_id;
         self.rt.thread.next_child_id += 1;

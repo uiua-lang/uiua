@@ -920,11 +920,11 @@ impl Primitive {
             }
             Primitive::Spawn => {
                 let f = env.pop_function()?;
-                env.spawn(f.signature().args, false, |env| env.call(f))?;
+                env.spawn(f.signature().args, false, f)?;
             }
             Primitive::Pool => {
                 let f = env.pop_function()?;
-                env.spawn(f.signature().args, true, |env| env.call(f))?;
+                env.spawn(f.signature().args, true, f)?;
             }
             Primitive::Wait => {
                 let id = env.pop(1)?;

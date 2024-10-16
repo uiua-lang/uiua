@@ -805,6 +805,7 @@ pub fn gen_code_view(code: &str) -> View {
 fn init_rt() -> Uiua {
     Uiua::with_backend(WebBackend::default())
         .with_execution_limit(Duration::from_secs_f64(get_execution_limit()))
+        .with_recursion_limit(50)
 }
 
 fn just_values(code: &str) -> UiuaResult<Vec<Value>> {

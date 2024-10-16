@@ -1370,12 +1370,16 @@ code:
     }
     pub(crate) fn respect_recursion_limit(&mut self) -> UiuaResult {
         if self.rt.call_stack.len() > self.rt.recursion_limit {
-            Err(self.error(format!(
-                "Recursion limit reached. \
-                You can try setting UIUA_RECURSION_LIMIT to a higher value. \
-                The current limit is {}.",
-                self.rt.recursion_limit
-            )))
+            Err(self.error(if cfg!(target_arch = "wasm32") {
+                "Recursion limit reached".into()
+            } else {
+                format!(
+                    "Recursion limit reached. \
+                    You can try setting UIUA_RECURSION_LIMIT to a higher value. \
+                    The current limit is {}.",
+                    self.rt.recursion_limit
+                )
+            }))
         } else {
             Ok(())
         }

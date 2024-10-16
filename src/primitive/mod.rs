@@ -1974,7 +1974,7 @@ mod tests {
                         continue;
                     }
                     println!("{prim} example:\n{}", ex.input); // Allow println
-                    let mut env = Uiua::with_safe_sys();
+                    let mut env = Uiua::with_backend(SafeSys::with_thread_spawning());
                     match env.run_str(&ex.input) {
                         Ok(mut comp) => {
                             if let Some(diag) = comp.take_diagnostics().into_iter().next() {

@@ -838,6 +838,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn sleep(&self, seconds: f64) -> Result<(), String> {
         Err("Sleeping is not supported in this environment".into())
     }
+    /// Whether thread spawning is allowed
+    fn allow_thread_spawning(&self) -> bool {
+        false
+    }
     /// Show an image
     #[cfg(feature = "image")]
     fn show_image(&self, image: DynamicImage, label: Option<&str>) -> Result<(), String> {
@@ -1007,6 +1011,8 @@ impl fmt::Debug for dyn SysBackend {
 pub struct SafeSys {
     stdout: Arc<Mutex<Vec<u8>>>,
     stderr: Arc<Mutex<Vec<u8>>>,
+    /// Whether to allow thread spawning
+    pub allow_thread_spawning: bool,
 }
 impl SysBackend for SafeSys {
     fn any(&self) -> &dyn Any {
@@ -1023,12 +1029,22 @@ impl SysBackend for SafeSys {
         self.stderr.lock().extend_from_slice(s.as_bytes());
         Ok(())
     }
+    fn allow_thread_spawning(&self) -> bool {
+        self.allow_thread_spawning
+    }
 }
 
 impl SafeSys {
     /// Create a new safe system backend
     pub fn new() -> Self {
         Self::default()
+    }
+    /// Create a new safe system backend that allows thread spawning
+    pub fn with_thread_spawning() -> Self {
+        Self {
+            allow_thread_spawning: true,
+            ..Self::default()
+        }
     }
     /// Take the captured stdout
     pub fn take_stdout(&self) -> Vec<u8> {

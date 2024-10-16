@@ -340,6 +340,9 @@ impl SysBackend for WebBackend {
         while now() - start < seconds {}
         Ok(())
     }
+    fn allow_thread_spawning(&self) -> bool {
+        true
+    }
     fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
         match target {
             GitTarget::Default => {}

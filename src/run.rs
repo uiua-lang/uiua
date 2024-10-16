@@ -1382,6 +1382,9 @@ code:
     }
     /// Spawn a thread
     pub(crate) fn spawn(&mut self, capture_count: usize, _pool: bool, f: Function) -> UiuaResult {
+        if !self.rt.backend.allow_thread_spawning() {
+            return Err(self.error("Thread spawning is not allowed in this environment"));
+        }
         if f.is_recursive() {
             return Err(self.error(format!("Cannot spawn recursive function {}", f.id)));
         }

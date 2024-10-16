@@ -568,6 +568,9 @@ impl SysBackend for NativeSys {
         sleep(Duration::from_secs_f64(seconds));
         Ok(())
     }
+    fn allow_thread_spawning(&self) -> bool {
+        true
+    }
     #[cfg(all(feature = "terminal_image", feature = "image"))]
     fn show_image(&self, image: image::DynamicImage, _: Option<&str>) -> Result<(), String> {
         let (width, height) = if let Some((w, h)) = terminal_size() {

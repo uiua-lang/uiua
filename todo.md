@@ -3,9 +3,6 @@
 ## 0.13
 The next version of Uiua
 
-- Make `spawn` and `pool` backend-dependent
-- Fix recursive spawning
-
 ## Implementation details
 Things that don't affect the language itself, but are important for the compiler or interpreter.
 

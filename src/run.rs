@@ -63,6 +63,8 @@ pub(crate) struct Runtime {
     pub(crate) execution_limit: Option<f64>,
     /// The time at which execution started
     pub(crate) execution_start: f64,
+    /// The recursion limit
+    recursion_limit: usize,
     /// Whether the program was interrupted
     pub(crate) interrupted: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
     /// Whether to print the time taken to execute each instruction
@@ -207,6 +209,10 @@ impl Default for Runtime {
             cli_file_path: PathBuf::new(),
             execution_limit: None,
             execution_start: 0.0,
+            #[cfg(debug_assertions)]
+            recursion_limit: 20,
+            #[cfg(not(debug_assertions))]
+            recursion_limit: 100,
             interrupted: None,
             thread: ThisThread::default(),
             output_comments: HashMap::new(),
@@ -284,6 +290,13 @@ impl Uiua {
     /// Limit the execution duration
     pub fn maybe_with_execution_limit(mut self, limit: Option<Duration>) -> Self {
         self.rt.execution_limit = limit.map(|limit| limit.as_secs_f64());
+        self
+    }
+    /// Set the recursion limit
+    ///
+    /// Default is 100 for release builds and 20 for debug builds
+    pub fn with_recursion_limit(mut self, limit: usize) -> Self {
+        self.rt.recursion_limit = limit;
         self
     }
     /// Set the interrupted hook
@@ -1407,6 +1420,7 @@ code:
                 backend: self.rt.backend.clone(),
                 execution_limit: self.rt.execution_limit,
                 execution_start: self.rt.execution_start,
+                recursion_limit: self.rt.recursion_limit,
                 interrupted: self.rt.interrupted.clone(),
                 output_comments: HashMap::new(),
                 memo: self.rt.memo.clone(),

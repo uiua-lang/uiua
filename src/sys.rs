@@ -1083,10 +1083,7 @@ impl SysOp {
             SysOp::Show => {
                 let s = env.pop(1)?.show();
                 (env.rt.backend)
-                    .print_str_stdout(&s)
-                    .map_err(|e| env.error(e))?;
-                (env.rt.backend)
-                    .print_str_stdout("\n")
+                    .print_str_stdout(&format!("{s}\n"))
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Prin => {
@@ -1096,12 +1093,9 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Print => {
-                let val = env.pop(1)?;
+                let s = env.pop(1)?.show();
                 (env.rt.backend)
-                    .print_str_stdout(&val.format())
-                    .map_err(|e| env.error(e))?;
-                (env.rt.backend)
-                    .print_str_stdout("\n")
+                    .print_str_stdout(&format!("{s}\n"))
                     .map_err(|e| env.error(e))?;
             }
             SysOp::ScanLine => {

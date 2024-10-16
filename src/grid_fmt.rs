@@ -520,7 +520,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         metagrid.push(vec![vec![shape_row::<T>(shape)]]);
         return;
     }
-    if data.len() > 3600 {
+    if data.len() > 3600 || shape.len() > 10 {
         let summary = T::summarize(data);
         if !summary.is_empty() {
             metagrid.push(vec![if shape.len() == 1 {

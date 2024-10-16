@@ -120,7 +120,7 @@ If the values passed to [under](/docs/under)'s functions are not constants, they
 
 This works because [under](/docs/under) keeps track of the original array and passes it to the inversion of [pick](/docs/pick).
 
-If you wanted to set a value in an array rather than modifying it, you could use [pop](/docs/pop) or [gap](/docs/gap) instead of [mul](/docs/mul).
+If you wanted to set a value in an array rather than modifying it, you could use [pop](/docs/pop) or [gap](/docs/gap) instead of [multiply](/docs/multiply).
 
 ```uiua
 ⍜(⊡2)⋅∞ [1 2 3 4]

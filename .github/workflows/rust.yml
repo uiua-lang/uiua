@@ -14,20 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Cache Cargo registry
-      uses: actions/cache@v3
-      with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-registry-
-    - name: Cache Cargo build
-      uses: actions/cache@v3
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-${{ hashFiles('Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-build-
     - name: sed
       run: sudo sed -i 's/azure\.//' /etc/apt/sources.list
     - name: apt update

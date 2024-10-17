@@ -77,14 +77,14 @@ A common use case for this is to validate the type of a field.
 
 ```uiua should fail
 # Experimental!
-~MyData {Foo: °0type|Bar: °2type}
+~MyData {Foo: °0type|Bar: °1type}
 MyData 1 "hi" # Works
 MyData 3 5    # Fails
 ```
 
 ```uiua should fail
 # Experimental!
-~MyData {Foo: °0type|Bar: °2type}
+~MyData {Foo: °0type|Bar: °1type}
 MyData 1 "hi"
 °⊸MyData~Bar 5
 ```

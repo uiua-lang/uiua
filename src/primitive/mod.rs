@@ -1372,8 +1372,8 @@ impl ImplPrimitive {
                     };
                     let expected = match type_num {
                         0 => "numbers",
-                        1 => "boxes",
-                        2 => "characters",
+                        1 => "characters",
+                        2 => "boxes",
                         3 => "complex numbers",
                         _ => return Err(env.error(format!("Invalid type number {type_num}"))),
                     };

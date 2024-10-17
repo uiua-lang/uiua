@@ -941,7 +941,7 @@ impl ArrayValue for u8 {
 impl ArrayValue for char {
     const NAME: &'static str = "character";
     const SYMBOL: char = '@';
-    const TYPE_ID: u8 = 2;
+    const TYPE_ID: u8 = 1;
     fn get_scalar_fill(fill: &Fill) -> Result<Self, &'static str> {
         fill.char_scalar()
     }
@@ -1045,7 +1045,7 @@ impl ArrayValue for char {
 impl ArrayValue for Boxed {
     const NAME: &'static str = "box";
     const SYMBOL: char = '□';
-    const TYPE_ID: u8 = 3;
+    const TYPE_ID: u8 = 2;
     fn get_scalar_fill(fill: &Fill) -> Result<Self, &'static str> {
         fill.box_scalar()
     }
@@ -1072,7 +1072,7 @@ impl ArrayValue for Boxed {
 impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
     const SYMBOL: char = 'ℂ';
-    const TYPE_ID: u8 = 1;
+    const TYPE_ID: u8 = 3;
     fn get_scalar_fill(fill: &Fill) -> Result<Self, &'static str> {
         fill.complex_scalar()
     }

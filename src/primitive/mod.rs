@@ -1372,9 +1372,9 @@ impl ImplPrimitive {
                     };
                     let expected = match type_num {
                         0 => "numbers",
-                        1 => "complex numbers",
+                        1 => "boxes",
                         2 => "characters",
-                        3 => "boxes",
+                        3 => "complex numbers",
                         _ => return Err(env.error(format!("Invalid type number {type_num}"))),
                     };
                     return Err(env.error(format!("Expected {expected} but found {found}")));

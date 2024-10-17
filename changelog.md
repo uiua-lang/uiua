@@ -9,6 +9,13 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes them consistent with comparison functions like [`less than <`](https://uiua.org/docs/less%20than)
 - **Breaking Change** - [`gen`](https://uiua.org/docs/gen) now takes a shape argument
 - **Breaking Change** - [`&clip`](https://uiua.org/docs/&clip) now unifies `&clget` and `&clset`
+- **Breaking Change** - [`type`](https://uiua.org/docs/type) numbers are now:
+  - `0` for normal numbers
+  - `1` for characters
+  - `2` for boxes
+  - `3` for complex numbers
+  - This orders the types more or less as you're likely to need to handle them
+  - In the future, if another number type is added, it can go at the end next to complex numbers
 - The experimental `chunks ⑄` function's behavior has been moved to an extension on [`windows ◫`](https://uiua.org/docs/windows)
   - This also allows the specification of "stride"
   - This is inspired by APL's `stencil ⌺` behavior

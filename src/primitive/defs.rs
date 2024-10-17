@@ -2887,9 +2887,9 @@ primitive!(
     /// Check the type of an array
     ///
     /// `0` indicates a number array.
-    /// `1` indicates a complex array.
-    /// `2` indicates a character array.
-    /// `3` indicates a box array.
+    /// `1` indicates a character array.
+    /// `2` indicates a box array.
+    /// `3` indicates a complex array.
     /// ex: type 5
     /// ex: type i
     /// ex: type "hello"

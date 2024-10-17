@@ -561,6 +561,22 @@ impl Compiler {
                     self.push_instr(Instr::PushFunc(func));
                 }
             }};
+            ($new_func:expr, $sig:expr, $span:expr) => {{
+                let new_func = $new_func;
+                if call && self.inlinable(&new_func.instrs, new_func.flags) {
+                    self.push_all_instrs(new_func);
+                } else {
+                    let func = self.make_function(
+                        FunctionId::Anonymous(modified.modifier.span.clone()),
+                        $sig,
+                        new_func,
+                    );
+                    self.push_instr(Instr::PushFunc(func));
+                    if call {
+                        self.push_instr(Instr::Call($span));
+                    }
+                }
+            }};
         }
         /// Modify instructions for `on`, and return the new signature
         fn on(instrs: &mut EcoVec<Instr>, sig: Signature, span: usize) -> Signature {
@@ -900,12 +916,12 @@ impl Compiler {
                 self.in_inverse = in_inverse;
                 let (mut new_func, _) = f_res?;
 
-                self.add_span(span.clone());
+                let spandex = self.add_span(span.clone());
                 match invert_instrs(&new_func.instrs, self) {
                     Ok(inverted) => {
                         let sig = self.sig_of(&inverted, &span)?;
                         new_func.instrs = inverted;
-                        finish!(new_func, sig);
+                        finish!(new_func, sig, spandex);
                     }
                     Err(e) => return Err(self.fatal_error(span, e)),
                 }

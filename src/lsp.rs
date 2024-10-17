@@ -330,9 +330,16 @@ impl Spanner {
                                 docs: self.binding_docs(&field.name.span),
                                 original: true,
                             }));
-                            if let Some(default) = &field.default {
-                                spans.push(default.arrow_span.clone().sp(SpanKind::Delimiter));
-                                spans.extend(self.words_spans(&default.words));
+                            if let Some(validator) = &field.validator {
+                                spans.push(validator.open_span.clone().sp(SpanKind::Delimiter));
+                                spans.extend(self.words_spans(&validator.words));
+                                if let Some(close_span) = &validator.close_span {
+                                    spans.push(close_span.clone().sp(SpanKind::Delimiter));
+                                }
+                            }
+                            if let Some(init) = &field.init {
+                                spans.push(init.arrow_span.clone().sp(SpanKind::Delimiter));
+                                spans.extend(self.words_spans(&init.words));
                             }
                             prev = Some(field.span());
                         }

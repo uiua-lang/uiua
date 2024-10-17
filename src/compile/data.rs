@@ -64,6 +64,8 @@ impl Compiler {
             span: usize,
             global_index: usize,
             comment: Option<String>,
+            /// (instrs, validation_only)
+            validator: Option<(EcoVec<Instr>, bool, CodeSpan)>,
             init: Option<(EcoVec<Instr>, Signature)>,
             flags: FunctionFlags,
         }
@@ -92,8 +94,9 @@ impl Compiler {
                         })
                         .collect::<String>()
                 });
+                // Collect flags
                 let mut flags = FunctionFlags::default();
-                if let Some(default) = &mut data_field.default {
+                if let Some(default) = &mut data_field.init {
                     if let Some(word) = default.words.pop() {
                         match word.value {
                             Word::Comment(com) => {
@@ -112,26 +115,67 @@ impl Compiler {
                         }
                     }
                 }
-                if (data_field.default.as_ref())
+                // Compile validator
+                let validator = if let Some(validator) = data_field.validator {
+                    let mut new_func = self.compile_words(validator.words, true)?;
+                    let sig = self.sig_of(&new_func.instrs, &data_field.name.span)?;
+                    if sig.args != 1 {
+                        self.add_error(
+                            data_field.name.span.clone(),
+                            format!(
+                                "Field validator must have 1 \
+                                argument, but its signature is {sig}"
+                            ),
+                        );
+                    }
+                    if sig.outputs > 1 {
+                        self.add_error(
+                            data_field.name.span.clone(),
+                            format!(
+                                "Field validator must have 0 or 1 \
+                                output, but its signature is {sig}"
+                            ),
+                        );
+                    }
+                    let mut validation_only = false;
+                    if sig.outputs == 0 {
+                        validation_only = true;
+                        new_func.instrs.insert(0, Instr::Prim(Primitive::Dup, span));
+                    }
+                    Some((
+                        new_func.instrs,
+                        validation_only,
+                        validator.open_span.clone(),
+                    ))
+                } else {
+                    None
+                };
+                // Compile initializer
+                if (data_field.init.as_ref())
                     .is_some_and(|default| !default.words.iter().any(|w| w.value.is_code()))
                 {
-                    data_field.default = None;
+                    data_field.init = None;
                 }
-                let init = if let Some(default) = data_field.default {
-                    let new_func = self.compile_words(default.words, true)?;
+                let init = if let Some(init) = data_field.init {
+                    let mut new_func = self.compile_words(init.words, true)?;
                     let sig = self.sig_of(&new_func.instrs, &data_field.name.span)?;
+                    if let Some((va_instrs, ..)) = &validator {
+                        new_func.instrs.extend(va_instrs.iter().cloned());
+                    }
                     if sig.outputs != 1 {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
-                                "Default field initializer must have \
+                                "Field initializer must have \
                                 1 output, but its signature is {sig}"
                             ),
                         );
                     }
                     Some((new_func.instrs, sig))
                 } else {
-                    None
+                    validator
+                        .as_ref()
+                        .map(|(va_instrs, ..)| (va_instrs.clone(), Signature::new(1, 1)))
                 };
                 if let Some(mut comments) = data_field.comments {
                     for (sem, flag) in [
@@ -153,6 +197,7 @@ impl Compiler {
                     comment,
                     flags,
                     span,
+                    validator,
                     init,
                 });
             }
@@ -175,11 +220,43 @@ impl Compiler {
                     remove: true,
                 });
             }
+            // Add validator
+            if let Some((va_instrs, validation_only, va_span)) = field.validator.take() {
+                let inverse = invert_instrs(&va_instrs, self);
+                let add = |ins: EcoVec<Instr>| {
+                    let inv_func = self.make_function(
+                        FunctionId::Anonymous(va_span),
+                        Signature::new(1, 1),
+                        NewFunction {
+                            instrs: ins,
+                            flags: FunctionFlags::TRACK_CALLER,
+                        },
+                    );
+                    instrs.extend([
+                        Instr::PushFunc(Function::default()),
+                        Instr::CustomInverse(
+                            CustomInverse {
+                                un: Some(inv_func),
+                                ..Default::default()
+                            },
+                            field.span,
+                        ),
+                    ])
+                };
+                match inverse {
+                    Ok(va_inverse) => add(va_inverse),
+                    Err(_) if validation_only => add(va_instrs),
+                    Err(e) => self.add_error(
+                        field.name_span.clone(),
+                        format!("Transforming validator has no inverse: {e}"),
+                    ),
+                }
+            }
             let new_func = NewFunction {
                 instrs,
                 flags: FunctionFlags::TRACK_CALLER,
             };
-            let func = self.make_function(id, Signature::new(1, 1), new_func);
+            let func = self.make_function(id.clone(), Signature::new(1, 1), new_func);
             let local = LocalName {
                 index: self.next_global,
                 public: true,
@@ -228,7 +305,7 @@ impl Compiler {
             .map(|f| f.init.as_ref().map(|(_, sig)| sig.args).unwrap_or(1))
             .sum();
         let has_inits = fields.iter().any(|f| f.init.is_some());
-        if boxed || fields.iter().any(|f| f.init.is_some()) {
+        if boxed || has_inits {
             if has_inits {
                 for field in &fields {
                     if let Some((_, sig)) = field.init {
@@ -289,6 +366,7 @@ impl Compiler {
         if has_fields {
             instrs.push(Instr::EndArray { boxed, span });
         }
+        // Handle variant
         if data.variant {
             let module_scope = self
                 .higher_scopes
@@ -361,7 +439,7 @@ impl Compiler {
         // Call function
         if let Some(words) = data.func {
             self.in_scope(ScopeKind::Temp(None), |comp| {
-                // Fill getters
+                // Filled getters
                 for field in &fields {
                     let name = &field.name;
                     let id = FunctionId::Named(name.clone());

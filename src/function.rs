@@ -37,7 +37,7 @@ impl Default for Function {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub(crate) struct FunctionFlags(u8);
 
@@ -77,6 +77,25 @@ impl FunctionFlags {
     }
     pub fn no_pre_eval(&self) -> bool {
         self.0 & Self::NO_PRE_EVAL.0 != 0
+    }
+}
+
+impl fmt::Debug for FunctionFlags {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut wrote = false;
+        for (i, name) in ["RECURSIVE", "NO_INLINE", "TRACK_CALLER", "NO_PRE_EVAL"]
+            .into_iter()
+            .enumerate()
+        {
+            if self.0 & (1 << i) != 0 {
+                if wrote {
+                    write!(f, " | ")?;
+                }
+                wrote = true;
+                write!(f, "{name}")?;
+            }
+        }
+        Ok(())
     }
 }
 

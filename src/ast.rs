@@ -92,8 +92,8 @@ pub struct Import {
     pub lines: Vec<Option<ImportLine>>,
 }
 
-#[derive(Debug, Clone)]
 /// A line of imported items
+#[derive(Debug, Clone)]
 pub struct ImportLine {
     /// The span of the ~
     pub tilde_span: CodeSpan,
@@ -118,8 +118,8 @@ impl Import {
     }
 }
 
-#[derive(Debug, Clone)]
 /// A data definition
+#[derive(Debug, Clone)]
 pub struct DataDef {
     /// The span of the ~ or |
     pub init_span: CodeSpan,
@@ -133,8 +133,8 @@ pub struct DataDef {
     pub func: Option<Vec<Sp<Word>>>,
 }
 
-#[derive(Debug, Clone)]
 /// The fields of a data definition
+#[derive(Debug, Clone)]
 pub struct DataFields {
     /// Whether the array is boxed
     pub boxed: bool,
@@ -148,22 +148,35 @@ pub struct DataFields {
     pub close_span: Option<CodeSpan>,
 }
 
-#[derive(Debug, Clone)]
 /// A data field
+#[derive(Debug, Clone)]
 pub struct DataField {
     /// Leading comments
     pub comments: Option<Comments>,
     /// The name of the field
     pub name: Sp<Ident>,
+    /// The validator of the field
+    pub validator: Option<FieldValidator>,
     /// The default value of the field
-    pub default: Option<FieldDefault>,
+    pub init: Option<FieldInit>,
     /// The span of a trailing bar
     pub bar_span: Option<CodeSpan>,
 }
 
+/// A data field validator
 #[derive(Debug, Clone)]
-/// A data field default value
-pub struct FieldDefault {
+pub struct FieldValidator {
+    /// The span of the colon (may be an open paren)
+    pub open_span: CodeSpan,
+    /// The validator function
+    pub words: Vec<Sp<Word>>,
+    /// The closing paren span (if a paren was used to open)
+    pub close_span: Option<CodeSpan>,
+}
+
+/// A data field initializer
+#[derive(Debug, Clone)]
+pub struct FieldInit {
     /// The span of the assignment arrow
     pub arrow_span: CodeSpan,
     /// The initializing words
@@ -216,7 +229,7 @@ impl DataField {
     /// Get the span of the field
     pub fn span(&self) -> CodeSpan {
         let Some(end) = self.bar_span.clone().or_else(|| {
-            self.default.as_ref().map(|d| {
+            self.init.as_ref().map(|d| {
                 d.words
                     .last()
                     .map(|w| w.span.clone())

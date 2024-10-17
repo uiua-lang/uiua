@@ -531,7 +531,32 @@ impl<'i> Parser<'i> {
                 };
                 trailing_newline = false;
                 self.try_spaces();
-                let mut default = None;
+
+                // Validator
+                let mut validator = None;
+                let mut colon = false;
+                if let Some(mut open_span) = self
+                    .try_exact(Colon.into())
+                    .inspect(|_| colon = true)
+                    .or_else(|| self.try_exact(OpenParen.into()))
+                {
+                    if let Some(span) = self.try_spaces().map(|w| w.span) {
+                        open_span = open_span.merge(span);
+                    }
+                    let words = self.try_words().unwrap_or_else(|| {
+                        self.errors.push(self.expected([Expectation::Term]));
+                        Vec::new()
+                    });
+                    let close_span = self.try_exact(CloseParen.into());
+                    validator = Some(FieldValidator {
+                        open_span,
+                        close_span,
+                        words,
+                    });
+                }
+
+                // Initializer
+                let mut init = None;
                 let start_arrow_span = self.try_spaces().map(|w| w.span);
                 if let Some(mut arrow_span) = self
                     .try_exact(Equal.into())
@@ -549,8 +574,9 @@ impl<'i> Parser<'i> {
                         self.errors.push(self.expected([Expectation::Term]));
                         Vec::new()
                     });
-                    default = Some(FieldDefault { arrow_span, words })
+                    init = Some(FieldInit { arrow_span, words })
                 };
+
                 trailing_newline |= self.ignore_whitespace();
                 let mut bar_span = self.try_exact(Bar.into());
                 if self.try_exact(Newline).is_some()
@@ -564,7 +590,8 @@ impl<'i> Parser<'i> {
                 fields.push(DataField {
                     comments,
                     name,
-                    default,
+                    validator,
+                    init,
                     bar_span,
                 });
                 trailing_newline |= self.ignore_whitespace();

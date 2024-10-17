@@ -564,7 +564,7 @@ primitive!(
     /// For example, maybe you want to find all the uppercase letters in a string.
     /// ex: $ Characters On uppercase OnLy
     ///   : ▽ ×≥@A:≤@Z. .
-    (2(2), Flip, Stack, ("flip", ':')),
+    (2(2), Flip, Stack, ("flip", AsciiToken::Colon, ':')),
     /// Discard the top stack value
     ///
     /// ex: [◌ 1 2 ◌ 3 4]

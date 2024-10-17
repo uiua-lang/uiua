@@ -1052,13 +1052,16 @@ code:
         let span = word.span.clone();
         let mut new_func = self.compile_words(vec![word], true)?;
         let mut sig = None;
+        let len = new_func.instrs.len();
         // Extract function instrs if possible
-        if let [Instr::PushFunc(f)] = new_func.instrs.as_slice() {
+        if let [Instr::PushFunc(f)] | [Instr::PushFunc(f), Instr::Call(_)] =
+            new_func.instrs.as_slice()
+        {
             sig = Some(f.signature());
             let slice = f.slice;
             new_func.flags = f.flags;
             new_func.instrs = f.instrs(&self.asm).into();
-            if slice.start + slice.len >= self.asm.instrs.len() - 1 {
+            if len == 1 && slice.start + slice.len >= self.asm.instrs.len() - 1 {
                 self.asm.instrs.truncate(slice.start);
                 if matches!(self.asm.instrs.last(), Some(Instr::Comment(com)) if com.starts_with('('))
                 {

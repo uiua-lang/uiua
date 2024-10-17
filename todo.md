@@ -3,7 +3,6 @@
 ## 0.13
 The next version of Uiua
 
-- Improve struct printing
 - Data def validators
 
 ## Implementation details

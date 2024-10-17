@@ -710,14 +710,14 @@ impl<'a> Formatter<'a> {
                     let multiline = fields.trailing_newline
                         || fields.fields.len() > 1
                             && fields.fields.iter().enumerate().any(|(i, f)| {
-                                f.default.is_some()
+                                f.init.is_some()
                                     && (f.bar_span.is_none() && i < fields.fields.len() - 1)
                             })
                         || (fields.fields.iter())
-                            .filter_map(|f| f.default.as_ref())
+                            .filter_map(|f| f.init.as_ref())
                             .any(|def| words_are_multiline(&def.words))
                         || fields.fields.len() >= 5
-                            && fields.fields.iter().any(|f| f.default.is_some());
+                            && fields.fields.iter().any(|f| f.init.is_some());
                     if multiline {
                         self.newline(depth + 1);
                     }
@@ -726,9 +726,16 @@ impl<'a> Formatter<'a> {
                             self.format_comments(comments, depth + 1);
                         }
                         self.push(&field.name.span, &field.name.value);
-                        if let Some(default) = &field.default {
-                            self.push(&default.arrow_span, " ← ");
-                            let mut lines = flip_unsplit_lines(split_words(default.words.clone()));
+                        let mut parts = Vec::new();
+                        if let Some(validator) = &field.validator {
+                            parts.push((&validator.open_span, ": ", &validator.words));
+                        }
+                        if let Some(default) = &field.init {
+                            parts.push((&default.arrow_span, " ← ", &default.words));
+                        }
+                        for (span, sep, words) in parts {
+                            self.push(span, sep);
+                            let mut lines = flip_unsplit_lines(split_words(words.clone()));
                             if lines.len() == 1 {
                                 self.format_words(&lines[0], true, depth + 1);
                             } else {
@@ -737,7 +744,7 @@ impl<'a> Formatter<'a> {
                                     .find_map(|l| l.first())
                                     .zip(lines.iter().rev().find_map(|l| l.last()))
                                     .map(|(s, e)| s.span.clone().merge(e.span.clone()))
-                                    .unwrap_or_else(|| default.arrow_span.clone());
+                                    .unwrap_or_else(|| span.clone());
                                 lines.push(Vec::new());
                                 self.format_words(
                                     &[span.clone().sp(Word::Func(Func {
@@ -754,7 +761,7 @@ impl<'a> Formatter<'a> {
                         if i < fields.fields.len() - 1 {
                             if multiline {
                                 self.newline(depth + 1);
-                            } else if field.default.is_some() {
+                            } else if field.validator.is_some() || field.init.is_some() {
                                 if let Some(span) = &field.bar_span {
                                     self.push(span, "|");
                                 } else {

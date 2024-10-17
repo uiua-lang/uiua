@@ -713,6 +713,7 @@ pub enum AsciiToken {
     CloseBracket,
     Underscore,
     Bar,
+    Colon,
     Semicolon,
     DoubleSemicolon,
     Star,
@@ -740,6 +741,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::CloseBracket => write!(f, "]"),
             AsciiToken::Underscore => write!(f, "_"),
             AsciiToken::Bar => write!(f, "|"),
+            AsciiToken::Colon => write!(f, ":"),
             AsciiToken::Semicolon => write!(f, ";"),
             AsciiToken::DoubleSemicolon => write!(f, ";;"),
             AsciiToken::Star => write!(f, "*"),
@@ -950,6 +952,7 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 "|" => self.end(Bar, start),
+                ":" => self.end(Colon, start),
                 ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),
                 "~" => self.end(Tilde, start),

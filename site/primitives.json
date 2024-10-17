@@ -648,6 +648,7 @@
     "description": "Add a length-1 axis to an array"
   },
   "flip": {
+    "ascii": ":",
     "glyph": ":",
     "args": 2,
     "outputs": 2,

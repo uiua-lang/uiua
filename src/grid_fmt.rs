@@ -187,33 +187,51 @@ impl GridFmt for Value {
                 break 'box_list;
             }
             let mut item_lines = Vec::new();
-            for Boxed(val) in &b.data {
-                let grid = val.fmt_grid(GridFmtParams {
+            if b.data.iter().all(|Boxed(val)| val.meta().label.is_some())
+                && (b.data.len() >= 4
+                    || (b.data.iter())
+                        .any(|Boxed(val)| val.rank() > 1 || val.meta().map_keys.is_some()))
+            {
+                // Struct
+                let mut b = b.clone();
+                b.shape.push(1);
+                let mut grid = b.fmt_grid(GridFmtParams {
                     boxed: false,
                     depth: params.depth + 1,
                     ..params
                 });
-                if grid.len() == 1 {
-                    item_lines.push(grid.into_iter().next().unwrap());
-                } else {
-                    break 'box_list;
+                grid[1][0] = ' ';
+                return grid;
+            } else {
+                // Normal box list
+                for Boxed(val) in &b.data {
+                    let grid = val.fmt_grid(GridFmtParams {
+                        boxed: false,
+                        depth: params.depth + 1,
+                        ..params
+                    });
+                    if grid.len() == 1 {
+                        item_lines.push(grid.into_iter().next().unwrap());
+                    } else {
+                        break 'box_list;
+                    }
                 }
-            }
-            let mut only_row = Vec::new();
-            if let Some(label) = &b.meta().label {
-                only_row.extend(label.chars());
-                only_row.push(':');
-                only_row.push(' ');
-            }
-            only_row.push('{');
-            for (i, line) in item_lines.into_iter().enumerate() {
-                if i > 0 {
+                let mut only_row = Vec::new();
+                if let Some(label) = &b.meta().label {
+                    only_row.extend(label.chars());
+                    only_row.push(':');
                     only_row.push(' ');
                 }
-                only_row.extend(line);
+                only_row.push('{');
+                for (i, line) in item_lines.into_iter().enumerate() {
+                    if i > 0 {
+                        only_row.push(' ');
+                    }
+                    only_row.extend(line);
+                }
+                only_row.push('}');
+                return vec![only_row];
             }
-            only_row.push('}');
-            return vec![only_row];
         }
         match self {
             Value::Num(n) => n.fmt_grid(params),

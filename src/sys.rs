@@ -1087,13 +1087,13 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Prin => {
-                let val = env.pop(1)?;
+                let s = env.pop(1)?.format();
                 (env.rt.backend)
-                    .print_str_stdout(&val.format())
+                    .print_str_stdout(&s)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Print => {
-                let s = env.pop(1)?.show();
+                let s = env.pop(1)?.format();
                 (env.rt.backend)
                     .print_str_stdout(&format!("{s}\n"))
                     .map_err(|e| env.error(e))?;

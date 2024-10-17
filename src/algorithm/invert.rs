@@ -365,6 +365,7 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(anti_repeat_pattern, "repeat"),
         &InvertPatternFn(anti_custom_pattern, "custom"),
         &InvertPatternFn(anti_call_pattern, "call"),
+        &InvertPatternFn(anti_anti_pattern, "anti anti"),
         &(IgnoreMany(Flip), ([Add], [Sub])),
         &([Sub], [Add]),
         &([Flip, Sub], [Flip, Sub]),
@@ -1002,10 +1003,13 @@ invert_pat!(
 
 invert_pat!(
     invert_un_pattern,
-    (
-        Instr::PushFunc(f),
-        Instr::Prim(Primitive::Un | Primitive::Anti, _)
-    ),
+    (Instr::PushFunc(f), Instr::Prim(Primitive::Un, _)),
+    |input, comp| (input, EcoVec::from(f.instrs(&comp.asm)))
+);
+
+invert_pat!(
+    anti_anti_pattern,
+    (Instr::PushFunc(f), Instr::Prim(Primitive::Anti, _)),
     |input, comp| (input, EcoVec::from(f.instrs(&comp.asm)))
 );
 

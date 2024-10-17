@@ -27,6 +27,42 @@ pub fn lex(
     inputs: &mut Inputs,
 ) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>, InputSrc) {
     let src = inputs.add_src(src, input);
+
+    // Guard against degenerate inputs
+    let mut char_pos = 0;
+    let mut byte_pos = 0;
+    for (i, line) in input.lines().enumerate() {
+        let span = || CodeSpan {
+            start: Loc {
+                line: i as u16,
+                col: 1,
+                char_pos,
+                byte_pos,
+            },
+            end: Loc {
+                line: i as u16,
+                col: 2,
+                char_pos: char_pos + 1,
+                byte_pos: byte_pos + line.chars().next().unwrap().len_utf8() as u32,
+            },
+            src: src.clone(),
+        };
+        if i > u16::MAX as usize {
+            let err = LexError::FileTooLong;
+            let span = span();
+            return (Vec::new(), vec![Sp { value: err, span }], src);
+        }
+        if line.chars().count() > u16::MAX as usize {
+            let err = LexError::LineTooLong(i + 1);
+            let span = span();
+            return (Vec::new(), vec![Sp { value: err, span }], src);
+        }
+        for c in line.chars() {
+            char_pos += 1;
+            byte_pos += c.len_utf8() as u32;
+        }
+    }
+
     // Collect graphemes
     let mut input_segments: Vec<&str> = input.graphemes(true).collect();
     // Split combining characters from some base characters
@@ -71,6 +107,8 @@ pub enum LexError {
     InvalidEscape(String),
     InvalidUnicodeEscape(u32),
     ExpectedNumber,
+    LineTooLong(usize),
+    FileTooLong,
 }
 
 impl fmt::Display for LexError {
@@ -90,6 +128,8 @@ impl fmt::Display for LexError {
             LexError::InvalidEscape(c) => write!(f, "Invalid escape character {c:?}"),
             LexError::InvalidUnicodeEscape(c) => write!(f, "Invalid unicode escape \\\\{c:x}"),
             LexError::ExpectedNumber => write!(f, "Expected number"),
+            LexError::LineTooLong(n) => write!(f, "Line {n} is too long"),
+            LexError::FileTooLong => write!(f, "File is too long"),
         }
     }
 }

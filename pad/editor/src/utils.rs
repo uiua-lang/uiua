@@ -458,13 +458,22 @@ pub fn gen_code_view(code: &str) -> View {
                 (Un, Orient),
                 "unorient: Enumerate the rank of an array, preserving the array",
             ),
-            ((Anti, Drop), "antidrop: Pad an array"),
             ((Un, Where), "unwhere: Convert lists of indices into a mask"),
             (
                 (Un, Shape),
                 "unshape: Create an array of incrementing indices with the given shape",
             ),
+            ((Un, Sin), "unsine: Get the arcsine of a number"),
+            ((Un, Parse), "unparse: Format a number as a string"),
+            ((Un, Sqrt), "unsqrt: Square a number"),
+            ((Un, Fix), "unfix: Remove a length-1 axis from an array"),
             ((Un, Couple), "uncouple: Split an array into its two rows"),
+            ((Un, Bits), "unbits: Decode an array from bits (LSB-first)"),
+            (
+                (Un, Transpose),
+                "untranspose: Bring the last axis of an array to the front",
+            ),
+            ((Un, Box), "unbox: Get the array out of a box"),
             (
                 (Un, Join),
                 "unjoin: Split an array into its first row and the rest",
@@ -473,9 +482,21 @@ pub fn gen_code_view(code: &str) -> View {
                 (Un, Keep),
                 "unkeep: Deduplicate adjacent rows and get the duplicate counts",
             ),
+            ((Anti, Drop), "antidrop: Pad an array"),
+            ((Anti, Pow), "antipower: Get the nth root of a number"),
+            ((Anti, Log), "antilogarithm: Get the nth power of a number"),
+            (
+                (Anti, Orient),
+                "antiorient: Reorder axes by specifying where to send them",
+            ),
+            (
+                (Anti, Join),
+                "antijoin: Trim one array from the start of another",
+            ),
         ]
         .into()
     }
+
     thread_local! {
         static PAIR_ALIASES: HashMap<(Primitive, Primitive), &'static str> = pair_aliases();
     }

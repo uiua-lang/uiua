@@ -142,51 +142,15 @@ fn main() {
                 };
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
-                let mut rt = Uiua::with_native_sys()
-                    .with_file_path(&path)
-                    .with_args(args)
-                    .time_instrs(time_instrs)
-                    .maybe_with_execution_limit(limit.map(Duration::from_secs_f64));
-                if path.extension().is_some_and(|ext| ext == "uasm") {
-                    let uasm = match fs::read_to_string(&path) {
-                        Ok(json) => json,
-                        Err(e) => {
-                            eprintln!("Failed to read assembly: {e}");
-                            return;
-                        }
-                    };
-                    let assembly = match Assembly::from_uasm(&uasm) {
-                        Ok(assembly) => assembly,
-                        Err(e) => {
-                            eprintln!("Failed to parse assembly: {e}");
-                            return;
-                        }
-                    };
-                    rt.run_asm(assembly).unwrap_or_else(fail);
-                } else {
-                    if !no_format {
-                        let config = FormatConfig::from_source(
-                            formatter_options.format_config_source,
-                            Some(&path),
-                        )
-                        .unwrap_or_else(fail);
-                        format_file(&path, &config).unwrap_or_else(fail);
-                    }
-                    let mode = mode.unwrap_or(RunMode::Normal);
-                    let res = rt.compile_run(|comp| {
-                        comp.mode(mode).print_diagnostics(true).load_file(&path)
-                    });
-                    if let Err(e) = &res {
-                        println!("{}", e.report());
-                    }
-                    rt.print_reports();
-                    if res.is_err() {
-                        exit(1);
-                    }
-                }
-                print_stack(&rt.take_stack(), !no_color);
-                #[cfg(feature = "raw_mode")]
-                rawrrr::disable_raw();
+                run(
+                    &path,
+                    args,
+                    time_instrs,
+                    limit,
+                    mode,
+                    (!no_format).then_some(formatter_options),
+                    no_color,
+                );
             }
             App::Build { path, output } => {
                 let path = if let Some(path) = path {
@@ -396,13 +360,17 @@ fn main() {
                     .nth(1)
                     .is_some_and(|path| Path::new(&path).exists()) =>
         {
-            let mut args: Vec<String> = env::args().collect();
-            args[0] = "run".into();
-            let status = Command::new(env::current_exe().unwrap())
-                .args(args)
-                .status()
-                .unwrap();
-            exit(status.code().unwrap_or(1));
+            let mut args: Vec<String> = env::args().skip(1).collect();
+            let path = args.remove(0);
+            run(
+                path.as_ref(),
+                args,
+                false,
+                None,
+                Some(RunMode::Normal),
+                None,
+                false,
+            )
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             let res = match working_file_path() {
@@ -424,6 +392,58 @@ fn main() {
         }
         Err(e) => _ = e.print(),
     }
+}
+
+fn run(
+    path: &Path,
+    args: Vec<String>,
+    time_instrs: bool,
+    limit: Option<f64>,
+    mode: Option<RunMode>,
+    formatter_options: Option<FormatterOptions>,
+    no_color: bool,
+) {
+    let mut rt = Uiua::with_native_sys()
+        .with_file_path(path)
+        .with_args(args)
+        .time_instrs(time_instrs)
+        .maybe_with_execution_limit(limit.map(Duration::from_secs_f64));
+    if path.extension().is_some_and(|ext| ext == "uasm") {
+        let uasm = match fs::read_to_string(path) {
+            Ok(json) => json,
+            Err(e) => {
+                eprintln!("Failed to read assembly: {e}");
+                return;
+            }
+        };
+        let assembly = match Assembly::from_uasm(&uasm) {
+            Ok(assembly) => assembly,
+            Err(e) => {
+                eprintln!("Failed to parse assembly: {e}");
+                return;
+            }
+        };
+        rt.run_asm(assembly).unwrap_or_else(fail);
+    } else {
+        if let Some(formatter_options) = formatter_options {
+            let config =
+                FormatConfig::from_source(formatter_options.format_config_source, Some(path))
+                    .unwrap_or_else(fail);
+            format_file(path, &config).unwrap_or_else(fail);
+        }
+        let mode = mode.unwrap_or(RunMode::Normal);
+        let res = rt.compile_run(|comp| comp.mode(mode).print_diagnostics(true).load_file(path));
+        if let Err(e) = &res {
+            println!("{}", e.report());
+        }
+        rt.print_reports();
+        if res.is_err() {
+            exit(1);
+        }
+    }
+    print_stack(&rt.take_stack(), !no_color);
+    #[cfg(feature = "raw_mode")]
+    rawrrr::disable_raw();
 }
 
 #[derive(Debug)]

@@ -3,6 +3,9 @@
 ## 0.13
 The next version of Uiua
 
+- Improve struct printing
+- Data def validators
+
 ## Implementation details
 Things that don't affect the language itself, but are important for the compiler or interpreter.
 

@@ -458,7 +458,6 @@ pub fn gen_code_view(code: &str) -> View {
                 (Un, Orient),
                 "unorient: Enumerate the rank of an array, preserving the array",
             ),
-            ((Anti, Drop), "antidrop: Pad an array"),
             ((Un, Where), "unwhere: Convert lists of indices into a mask"),
             (
                 (Un, Shape),
@@ -482,6 +481,17 @@ pub fn gen_code_view(code: &str) -> View {
             (
                 (Un, Keep),
                 "unkeep: Deduplicate adjacent rows and get the duplicate counts",
+            ),
+            ((Anti, Drop), "antidrop: Pad an array"),
+            ((Anti, Pow), "antipower: Get the nth root of a number"),
+            ((Anti, Log), "antilogarithm: Get the nth power of a number"),
+            (
+                (Anti, Orient),
+                "antiorient: Reorder axes by specifying where to send them",
+            ),
+            (
+                (Anti, Join),
+                "antijoin: Trim one array from the start of another",
             ),
         ]
         .into()

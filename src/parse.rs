@@ -112,6 +112,11 @@ const ADVICE_MAX_WIDTH: usize = 53;
 const WARNING_MAX_WIDTH: usize = 67;
 const ERROR_MAX_WIDTH: usize = 80;
 
+#[cfg(debug_assertions)]
+const MAX_RECURSION_DEPTH: usize = 25;
+#[cfg(not(debug_assertions))]
+const MAX_RECURSION_DEPTH: usize = 100;
+
 impl Error for ParseError {}
 
 /// Parse Uiua code into an AST
@@ -306,8 +311,12 @@ impl<'i> Parser<'i> {
         items
     }
     fn try_item(&mut self, in_scope: bool) -> Option<Item> {
+        if self.too_deep() {
+            return None;
+        }
+        self.depth += 1;
         self.try_spaces();
-        Some(if let Some(binding) = self.try_binding() {
+        let item = if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
         } else if let Some(import) = self.try_import() {
             Item::Import(import)
@@ -318,11 +327,14 @@ impl<'i> Parser<'i> {
         } else {
             let lines = self.multiline_words(true, false);
             if lines.is_empty() {
+                self.depth -= 1;
                 return None;
             } else {
                 Item::Words(lines)
             }
-        })
+        };
+        self.depth -= 1;
+        Some(item)
     }
     fn try_module(&mut self, in_scope: bool) -> Option<Sp<ScopedModule>> {
         let backup = self.index;
@@ -894,11 +906,6 @@ impl<'i> Parser<'i> {
         Some(span.sp(Word::Strand(items)))
     }
     fn try_modified(&mut self) -> Option<Sp<Word>> {
-        if self.depth > 50 {
-            self.errors
-                .push(self.prev_span().sp(ParseError::RecursionLimit));
-            return None;
-        }
         let (modifier, mod_span) = if let Some(prim) = Primitive::all()
             .filter(|prim| prim.is_modifier())
             .find_map(|prim| {
@@ -928,7 +935,6 @@ impl<'i> Parser<'i> {
             self.try_spaces();
         }
         let mut args = Vec::new();
-        self.depth += 1;
         for i in 0..modifier.args() {
             loop {
                 args.extend(self.try_spaces());
@@ -955,7 +961,6 @@ impl<'i> Parser<'i> {
                 break;
             }
         }
-        self.depth -= 1;
 
         let span = if let Some(last) = args.last() {
             mod_span.clone().merge(last.span.clone())
@@ -1024,7 +1029,20 @@ impl<'i> Parser<'i> {
 
         Some(word)
     }
+    fn too_deep(&mut self) -> bool {
+        if self.depth > MAX_RECURSION_DEPTH {
+            self.errors
+                .push(self.prev_span().sp(ParseError::RecursionLimit));
+            true
+        } else {
+            false
+        }
+    }
     fn try_term(&mut self) -> Option<Sp<Word>> {
+        if self.too_deep() {
+            return None;
+        }
+        self.depth += 1;
         let mut word = if let Some(prim) = self.try_prim() {
             prim.map(Word::Primitive)
         } else if let Some(refer) = self.try_ref() {
@@ -1111,8 +1129,10 @@ impl<'i> Parser<'i> {
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
         } else {
+            self.depth -= 1;
             return None;
         };
+        self.depth -= 1;
         loop {
             let reset = self.index;
             self.try_spaces();

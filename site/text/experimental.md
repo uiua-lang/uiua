@@ -51,7 +51,7 @@ MyData "wow" 5
 °⊸MyData~Foo "cool"
 ```
 
-You can set a default value for a field by writing it like a binding.
+You can set an initial value for a field by writing it like a binding.
 
 ```uiua
 # Experimental!
@@ -59,14 +59,34 @@ You can set a default value for a field by writing it like a binding.
 MyData 5
 ```
 
-The default can be a function. This will pre-process the value before construction.
+The initializer can be a function. This will pre-process the value before construction.
 
-Multiple defaults can be separated by newlines or `|`s.
+Multiple initialized fields can be separated by newlines or `|`s.
 
 ```uiua
 # Experimental!
 ~MyData {Foo ← ⊂5⇌|Bar ← 0}
 MyData 1_2_3
+```
+
+You can also add validation functions to a field. This function will be called both upon construction (after the initializer) and upon mutation.
+
+The function should come after the name and a `:`, but before the initializer.
+
+A common use case for this is to validate the type of a field.
+
+```uiua should fail
+# Experimental!
+~MyData {Foo: °0type|Bar: °2type}
+MyData 1 "hi" # Works
+MyData 3 5    # Fails
+```
+
+```uiua should fail
+# Experimental!
+~MyData {Foo: °0type|Bar: °2type}
+MyData 1 "hi"
+°⊸MyData~Bar 5
 ```
 
 You can put a data definition inside a scoped module if you'd like to define other functions that use the data. If the name is omitted, the name of the module will be used.

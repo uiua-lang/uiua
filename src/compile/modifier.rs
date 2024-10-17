@@ -932,6 +932,34 @@ impl Compiler {
                     );
                 }
 
+                // Anti math diagnostic
+                if let [Instr::Prim(prim, _)] = new_func.instrs.as_slice() {
+                    for (a, b) in [
+                        (Primitive::Add, Primitive::Sub),
+                        (Primitive::Mul, Primitive::Div),
+                    ] {
+                        if *prim == a {
+                            self.emit_diagnostic(
+                                format!(
+                                    "Prefer `{b}` over `{}{prim}` for clarity",
+                                    Primitive::Anti
+                                ),
+                                DiagnosticKind::Style,
+                                modified.modifier.span.clone().merge(span.clone()),
+                            );
+                        } else if *prim == b {
+                            self.emit_diagnostic(
+                                format!(
+                                    "Prefer `{a}` over `{}{prim}` for clarity",
+                                    Primitive::Anti
+                                ),
+                                DiagnosticKind::Style,
+                                modified.modifier.span.clone().merge(span.clone()),
+                            );
+                        }
+                    }
+                }
+
                 match anti_instrs(&new_func.instrs, self) {
                     Ok(inverted) => {
                         let sig = self.sig_of(&inverted, &span)?;

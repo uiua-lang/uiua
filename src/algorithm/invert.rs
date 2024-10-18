@@ -1537,7 +1537,10 @@ fn invert_push_pattern<'a>(
         match input {
             [instr @ Instr::Push(_), input @ ..] => (eco_vec![instr.clone()], input),
             [instr @ Instr::CallGlobal { index, .. }, input @ ..]
-                if matches!(comp.asm.bindings[*index].kind, BindingKind::Const(_)) =>
+                if matches!(
+                    comp.asm.bindings.get(*index).map(|b| &b.kind),
+                    Some(BindingKind::Const(_))
+                ) =>
             {
                 (eco_vec![instr.clone()], input)
             }

@@ -2,7 +2,9 @@
 compile_error!("To compile the uiua interpreter binary, you must enable the `binary` feature flag");
 
 use std::{
-    env, fmt, fs,
+    env,
+    error::Error,
+    fmt, fs,
     io::{self, stderr, stdin, BufRead, Write},
     path::{Path, PathBuf},
     process::{exit, Child, Command, Stdio},
@@ -520,7 +522,7 @@ impl Default for WatchArgs {
 }
 
 impl WatchArgs {
-    fn watch(self) -> io::Result<()> {
+    fn watch(self) -> Result<(), Box<dyn Error>> {
         let WatchArgs {
             initial_path,
             format,
@@ -531,10 +533,8 @@ impl WatchArgs {
             stdin_file,
         } = self;
         let (send, recv) = channel();
-        let mut watcher = notify::recommended_watcher(send).unwrap();
-        watcher
-            .watch(Path::new("."), RecursiveMode::Recursive)
-            .unwrap_or_else(|e| panic!("Failed to watch directory: {e}"));
+        let mut watcher = notify::recommended_watcher(send)?;
+        watcher.watch(Path::new("."), RecursiveMode::Recursive)?;
 
         println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
 

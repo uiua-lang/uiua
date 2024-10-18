@@ -349,6 +349,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &pat!(Orient, (Dup, Shape, Len, Range)),
         &pat!(Sort, (Rand, Deal)),
         &pat!(SortDown, (Rand, Deal)),
+        &(Val, pat!(ValidateType, ValidateType)),
         &InvertPatternFn(invert_on_inv_pattern, "on inverse"),
         &InvertPatternFn(invert_push_temp_pattern, "push temp"),
         &InvertPatternFn(invert_copy_temp_pattern, "copy temp"),
@@ -1212,8 +1213,7 @@ fn invert_trivial_pattern<'a>(
                 return Ok((input, eco_vec![inv]));
             }
         }
-        [instr @ (SetOutputComment { .. } | TouchStack { .. } | ValidateType { .. }), input @ ..] =>
-        {
+        [instr @ (SetOutputComment { .. } | TouchStack { .. }), input @ ..] => {
             return Ok((input, eco_vec![instr.clone()]));
         }
         [ImplPrim(prim, span), input @ ..] => {

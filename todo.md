@@ -3,6 +3,8 @@
 ## 0.13
 The next version of Uiua
 
+- Add data definition tests
+
 ## Implementation details
 Things that don't affect the language itself, but are important for the compiler or interpreter.
 
@@ -52,10 +54,9 @@ Features that are planned to be implemented in the future.
 ## Potential Features
 Features that could be implemented, but are not currently planned.
 
-- Plots
-  - Different kinds of plots (line, bar, scatter, pie, etc.)
 - Channels
 - Multimedia
+  - WEBP
   - Media window
     - A place for `&ims`, `&gifs`, etc to display stuff
   - Sound input

@@ -223,29 +223,41 @@ impl Compiler {
             // Add validator
             if let Some((va_instrs, validation_only, va_span)) = field.validator.take() {
                 let inverse = invert_instrs(&va_instrs, self);
-                let add = |ins: EcoVec<Instr>| {
-                    let inv_func = self.make_function(
-                        FunctionId::Anonymous(va_span),
-                        Signature::new(1, 1),
-                        NewFunction {
-                            instrs: ins,
-                            flags: FunctionFlags::TRACK_CALLER,
-                        },
-                    );
-                    instrs.extend([
-                        Instr::PushFunc(Function::default()),
-                        Instr::CustomInverse(
-                            CustomInverse {
-                                un: Some(inv_func),
-                                ..Default::default()
-                            },
-                            field.span,
-                        ),
-                    ])
+                let id = FunctionId::Anonymous(va_span);
+                let sig = Signature::new(1, 1);
+                let make_new_func = |instrs: EcoVec<Instr>| NewFunction {
+                    instrs,
+                    flags: FunctionFlags::TRACK_CALLER,
                 };
                 match inverse {
-                    Ok(va_inverse) => add(va_inverse),
-                    Err(_) if validation_only => add(va_instrs),
+                    Ok(va_inverse) => {
+                        let va_func =
+                            self.make_function(id.clone(), sig, make_new_func(va_inverse));
+                        let va_inv = self.make_function(id, sig, make_new_func(va_instrs));
+                        instrs.extend([
+                            Instr::PushFunc(va_func),
+                            Instr::CustomInverse(
+                                CustomInverse {
+                                    un: Some(va_inv),
+                                    ..Default::default()
+                                },
+                                field.span,
+                            ),
+                        ])
+                    }
+                    Err(_) if validation_only => {
+                        let func = self.make_function(id, sig, make_new_func(va_instrs));
+                        instrs.extend([
+                            Instr::PushFunc(Function::default()),
+                            Instr::CustomInverse(
+                                CustomInverse {
+                                    un: Some(func),
+                                    ..Default::default()
+                                },
+                                field.span,
+                            ),
+                        ])
+                    }
                     Err(e) => self.add_error(
                         field.name_span.clone(),
                         format!("Transforming validator has no inverse: {e}"),

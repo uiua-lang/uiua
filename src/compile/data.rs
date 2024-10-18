@@ -203,15 +203,40 @@ impl Compiler {
             }
         }
 
+        let mut variant_index = 0;
+        if data.variant {
+            let module_scope = self
+                .higher_scopes
+                .iter_mut()
+                .filter(|scope| !matches!(scope.kind, ScopeKind::File(_)))
+                .fuse()
+                .find(|scope| matches!(&scope.kind, ScopeKind::Module(_)));
+            if let Some(module_scope) = module_scope {
+                variant_index = module_scope.data_variants;
+                module_scope.data_variants += 1;
+            } else {
+                self.add_error(data.init_span.clone(), "Variants must have a name");
+            }
+        }
+
         // Make getters
         for (i, field) in fields.iter_mut().enumerate() {
             let name = &field.name;
             let id = FunctionId::Named(name.clone());
             let span = field.span;
-            let mut instrs = eco_vec![
-                Instr::push(i + data.variant as usize),
-                Instr::Prim(Primitive::Pick, span)
-            ];
+            let mut instrs = EcoVec::new();
+            if data.variant {
+                instrs.push(Instr::push(variant_index));
+                if let Some(name) = &data.name {
+                    instrs.push(Instr::Label {
+                        label: name.value.clone(),
+                        span,
+                        remove: false,
+                    });
+                }
+                instrs.push(Instr::ImplPrim(ImplPrimitive::ValidateVariant, span));
+            }
+            instrs.extend([Instr::push(i), Instr::Prim(Primitive::Pick, span)]);
             if boxed {
                 instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, span));
                 instrs.push(Instr::Label {
@@ -353,7 +378,10 @@ impl Compiler {
                     }
                     instrs.extend_from_slice(init);
                     if !boxed {
-                        instrs.push(Instr::ImplPrim(ImplPrimitive::ValidateVariant, field.span));
+                        instrs.push(Instr::ImplPrim(
+                            ImplPrimitive::ValidateNonBoxedVariant,
+                            field.span,
+                        ));
                     }
                 } else if i > 0 || has_inits {
                     instrs.push(Instr::pop_inline(1, span));
@@ -369,7 +397,7 @@ impl Compiler {
                     });
                 }
             }
-        } else {
+        } else if !fields.is_empty() {
             instrs.push(Instr::TouchStack {
                 count: fields.len(),
                 span,
@@ -380,35 +408,18 @@ impl Compiler {
         }
         // Handle variant
         if data.variant {
-            let module_scope = self
-                .higher_scopes
-                .iter_mut()
-                .filter(|scope| !matches!(scope.kind, ScopeKind::File(_)))
-                .fuse()
-                .find(|scope| matches!(&scope.kind, ScopeKind::Module(_)));
-            if let Some(module_scope) = module_scope {
-                instrs.push(Instr::push(module_scope.data_variants));
-                module_scope.data_variants += 1;
-                if let Some(name) = data.name {
-                    instrs.push(Instr::Label {
-                        label: name.value,
-                        remove: false,
-                        span,
-                    });
-                } else {
-                    self.add_error(data.init_span.clone(), "Variants must have a name");
-                }
-                if has_fields {
-                    if boxed {
-                        instrs.push(Instr::Prim(Primitive::Box, span));
-                    }
-                    instrs.push(Instr::Prim(Primitive::Join, span));
-                }
+            instrs.push(Instr::push(variant_index));
+            if let Some(name) = data.name {
+                instrs.push(Instr::Label {
+                    label: name.value,
+                    remove: false,
+                    span,
+                });
             } else {
-                self.add_error(
-                    data.init_span.clone(),
-                    "Variants must be defined in a module",
-                );
+                self.add_error(data.init_span.clone(), "Variants must have a name");
+            }
+            if has_fields {
+                instrs.push(Instr::ImplPrim(ImplPrimitive::TagVariant, span));
             }
         }
         let name = Ident::from("New");

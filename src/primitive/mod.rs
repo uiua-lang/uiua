@@ -297,7 +297,9 @@ impl fmt::Display for ImplPrimitive {
             ValidateType => write!(f, "{Un}…{Type}{Dup}"),
             ValidateTypeConsume => write!(f, "{Un}…{Type}"),
             TestAssert => write!(f, "{Assert}"),
-            ValidateVariant => write!(f, "|…[…]"),
+            ValidateNonBoxedVariant => write!(f, "|…[…]"),
+            ValidateVariant => write!(f, "|…°[…]"),
+            TagVariant => write!(f, "<tag variant>"),
         }
     }
 }
@@ -1398,7 +1400,7 @@ impl ImplPrimitive {
                 }
                 env.rt.test_results.push(res);
             }
-            ImplPrimitive::ValidateVariant => {
+            ImplPrimitive::ValidateNonBoxedVariant => {
                 let val = env.pop(1)?;
                 if !matches!(val, Value::Num(_) | Value::Byte(_) | Value::Box(_)) {
                     return Err(env.error(format!(
@@ -1413,6 +1415,31 @@ impl ImplPrimitive {
                     )));
                 }
                 env.push(val);
+            }
+            ImplPrimitive::ValidateVariant => {
+                let tag = env.pop(1)?;
+                let val = env.pop(2)?;
+                if val.row_count() == 0 {
+                    return Err(env.error("Variant must have at least one row"));
+                }
+                if val.rank() == 0 {
+                    return Err(env.error(format!("Variant tag is {val} instead of {tag}")));
+                }
+                let (head, tail) = val.unjoin(env).unwrap();
+                let set_tag = head.unboxed();
+                if tag != set_tag {
+                    return Err(env.error(format!("Variant tag is {set_tag} instead of {tag}")));
+                }
+                env.push(tail);
+            }
+            ImplPrimitive::TagVariant => {
+                let mut tag = env.pop(1)?;
+                let val = env.pop(2)?;
+                if let Value::Box(_) = &val {
+                    tag.box_if_not();
+                }
+                let res = tag.join(val, false, env)?;
+                env.push(res);
             }
         }
         Ok(())

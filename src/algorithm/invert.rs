@@ -350,6 +350,8 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &pat!(Sort, (Rand, Deal)),
         &pat!(SortDown, (Rand, Deal)),
         &(Val, pat!(ValidateType, ValidateType)),
+        &(Val, pat!(TagVariant, ValidateVariant)),
+        &(Val, pat!(ValidateVariant, TagVariant)),
         &InvertPatternFn(invert_on_inv_pattern, "on inverse"),
         &InvertPatternFn(invert_push_temp_pattern, "push temp"),
         &InvertPatternFn(invert_copy_temp_pattern, "copy temp"),

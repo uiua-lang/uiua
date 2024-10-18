@@ -81,3 +81,9 @@ D! ←^ $"_" d ◌
 
 F ← |0 spawnF
 F
+
+┌─╴Foo
+  |Bar {a}
+  |Baz {a}
+└─╴
+⍤⤙≍ 5 Foo~Baz~a Foo~Bar 5

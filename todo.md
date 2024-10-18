@@ -3,8 +3,6 @@
 ## 0.13
 The next version of Uiua
 
-- Add data definition tests
-
 ## Implementation details
 Things that don't affect the language itself, but are important for the compiler or interpreter.
 

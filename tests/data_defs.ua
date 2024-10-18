@@ -29,3 +29,9 @@
 
 ~Foo [Bar Baz ← +]
 ⍤⤙≍ [5 5] Foo 5 2 3
+
+┌─╴Foo
+  |Bar {a}
+  |Baz {a}
+└─╴
+⍤⤙≍ 5 Foo~Bar~a Foo~Bar 5

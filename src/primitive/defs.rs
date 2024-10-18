@@ -3647,5 +3647,7 @@ impl_primitive!(
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
     /// Validate that a non-boxed variant field has a valid type and rank
-    (1, ValidateVariant),
+    (1, ValidateNonBoxedVariant),
+    (2(1), ValidateVariant),
+    (2(1), TagVariant),
 );

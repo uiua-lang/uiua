@@ -1647,7 +1647,8 @@ fn invert_join_pattern<'a>(
     } else if let Some(i) = (0..join_index)
         .find(|&i| instrs_clean_signature(&input[i..join_index]).is_some_and(|sig| sig == (0, 1)))
     {
-        let mut instrs = invert_instrs(&input[i..=join_index], comp)?;
+        let mut instrs = eco_vec![Instr::ImplPrim(ImplPrimitive::UnJoin, join_span)];
+        instrs.extend(invert_instrs(&input[i..join_index], comp)?);
         instrs.extend(invert_instrs(&input[..i], comp)?);
         Ok((&input[join_index + 1..], instrs))
     } else {

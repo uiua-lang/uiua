@@ -2490,7 +2490,7 @@ code:
                 .or_else(|| {
                     self.higher_scopes
                         .last()
-                        .filter(|_| !matches!(self.scope.kind, ScopeKind::Module(_)))
+                        .filter(|_| !matches!(self.scope.kind, ScopeKind::File(_)))
                         .and_then(get)
                 })
                 .map_or(true, |l| l.index != local.index)

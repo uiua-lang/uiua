@@ -11,7 +11,12 @@ impl Compiler {
             && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
         {
             if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
-                Word::Ref(r) if ident_modifier_args(&r.name.value) == 0 => Some(r),
+                Word::Ref(r)
+                    if ident_modifier_args(&r.name.value) == 0
+                        && !(r.path.is_empty() && r.name.value == binding.name.value) =>
+                {
+                    Some(r)
+                }
                 _ => None,
             }) {
                 if let Ok(Some((path_locals, local))) = self.ref_local(r) {

@@ -35,7 +35,7 @@ const SPIRAL: &str = "\
 const QUADRATIC: &str = "\
 Disc ← -⊃(××4⊙⋅∘)⋅(×.)
 Quad ← ÷⊃(×2|-⊃⋅∘(⊟¯.√ℂ0 Disc))
-Quad 1 2 0";
+Quad 1 ¯3 2";
 const STRIPES: &str = "\
 [⊞⊃⊃+↥-].⇡300
 ⍉ ÷2 +1.2 ∿ ÷10";

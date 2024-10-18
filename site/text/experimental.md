@@ -158,7 +158,7 @@ Foo 3 5
 ```uiua
 # Experimental!
 ~Quad [a b c] ÷×2a -b ⊟¯.√ℂ0 -/×4_a_c ×.b
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 Note that in general, functions should not be written this way. Keeping an array as a [fill](/docs/fill) value means it will be duplicated if it is mutated, which is inefficient.

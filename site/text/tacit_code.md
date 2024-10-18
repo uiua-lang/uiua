@@ -44,7 +44,7 @@ Let's start with the discriminant term ` b² - 4ac`.
 
 ```uiua
 Disc ← # Code goes here
-Disc 1 2 0
+Disc 1 ¯3 2
 ```
 
 To show how you might build up a solution with only stack reordering, we'll only use [`duplicate`](), [`flip`](), [`over`](), and [`dip`]() to attempt to get all the arguments in the right order.
@@ -53,35 +53,35 @@ First, we'll might try to get `a` and `c` next to each other above `b` on the st
 
 ```uiua
 Disc ← ⊙:
-Disc 1 2 0
+Disc 1 ¯3 2
 ```
 
 Because `a` and `c` are on top of the stack, making the `4ac` term is easy.
 
 ```uiua
 Disc ← ××4 ⊙:
-Disc 1 2 0
+Disc 1 ¯3 2
 ```
 
 We can get down to `b` with [dip](), create the `b²` term, and [subtract]().
 
 ```uiua
 Disc ← -⊙(ⁿ2)××4 ⊙:
-Disc 1 2 0
+Disc 1 ¯3 2
 ```
 
 That finishes the discriminant. Next, we'll account for [complex]() roots and take the [sqrt]().
 
 ```uiua
 Disc ← √ℂ0 -⊙(ⁿ2)××4 ⊙:
-Disc 1 2 0
+Disc 1 ¯3 2
 ```
 
 We can implement `±` by [couple]()ing the value with itself [negate]()d.
 
 ```uiua
 Quad ← ⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 And now we have a problem. We still need to use `a` and `b` one more time, but they have already been consumed.
@@ -89,28 +89,28 @@ And now we have a problem. We still need to use `a` and `b` one more time, but t
 
 ```uiua
 Quad ← ⊙⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:),,
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 Then we'll [subtract]() `b`... 
 
 ```uiua
 Quad ← ⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)),,
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 ...and [divide]() by `2a`.
 
 ```uiua
 Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)),,
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 And there we have it, the quadratic formula.
 
 ```uiua
 Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)),,
-Quad 1 2 0
+Quad 1 ¯3 2
 Quad 1 2 5
 Quad 2 3 1
 ```
@@ -145,7 +145,7 @@ We'll start again with the discriminant.
 
 ```uiua
 Disc ← -⊃(××4⊙⋅∘)⋅(ⁿ2)
-Disc 1 2 0
+Disc 1 ¯3 2
 ```
 
 Notice that when we use planet notation, it is easier to tell which functions are being applied to which values.
@@ -154,21 +154,21 @@ We'll implement the `√` and `±` in the same way as before.
 
 ```uiua
 Disc ← ⊟¯. √ℂ0 -⊃(××4⊙⋅∘)⋅(ⁿ2)
-Disc 1 2 0
+Disc 1 ¯3 2
 ```
 
 Even though `b` has been consumed, we can gain access to it again using another [fork]() and implement the `-b` term.
 
 ```uiua
 Quad ← -⊃⋅∘(⊟¯. √ℂ0 -⊃(××4⊙⋅∘)⋅(ⁿ2))
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 Then, we can use another [fork]() to add the `/ 2a` part.
 
 ```uiua
 Quad ← ÷⊃(×2|-⊃⋅∘(⊟¯. √ℂ0 -⊃(××4⊙⋅∘)⋅(ⁿ2)))
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 Long lines like this can hurt readability. One thing we can do to alleviate this is split the discriminant onto its own line.
@@ -180,7 +180,7 @@ Quad ← ÷⊃(×2)(
     ⊟¯. √ℂ0
   )
 )
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 Alternatively, we can pull the discriminant into its own function.
@@ -189,7 +189,7 @@ Alternatively, we can pull the discriminant into its own function.
 # A thing of beauty
 Disc ← -⊃(××4⊙⋅∘)⋅(ⁿ2)
 Quad ← ÷⊃(×2|-⊃⋅∘(⊟¯. √ℂ0 Disc))
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 Let's compare this solution to the previous one. To improve the comparison, we'll make the discriminant its own function here as well.
@@ -197,7 +197,7 @@ Let's compare this solution to the previous one. To improve the comparison, we'l
 ```uiua
 Disc ← -⊙(ⁿ2)××4 ⊙:
 Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 Disc)),,
-Quad 1 2 0
+Quad 1 ¯3 2
 ```
 
 The difference is night-and-day. The old, naive solution, even with the benefit of being broken up, still has all of its same issues.

@@ -3,6 +3,7 @@
 //! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
 
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, HashMap, HashSet},
     fmt,
     path::PathBuf,
@@ -10,7 +11,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::invert::{invert_instrs, under_instrs},
+    algorithm::invert::{instrs_are_invertible, under_instrs},
     ast::{Item, Modifier, ModuleKind, PlaceholderOp, Ref, RefComponent, Word},
     ident_modifier_args, instrs_are_pure, is_custom_glyph,
     lex::{CodeSpan, Sp},
@@ -103,6 +104,7 @@ pub fn spans_with_compiler(input: &str, compiler: &Compiler) -> (Vec<Sp<SpanKind
         code_meta: compiler.code_meta,
         errors: Vec::new(),
         diagnostics: Vec::new(),
+        inversion_compiler: ThreadLocal::new(),
     };
     (spanner.items_spans(&items), spanner.asm.inputs.clone())
 }
@@ -228,6 +230,7 @@ struct Spanner {
     errors: Vec<UiuaError>,
     #[allow(dead_code)]
     diagnostics: Vec<crate::Diagnostic>,
+    inversion_compiler: ThreadLocal<RefCell<Compiler>>,
 }
 
 impl Spanner {
@@ -245,6 +248,7 @@ impl Spanner {
             code_meta: compiler.code_meta,
             errors,
             diagnostics,
+            inversion_compiler: ThreadLocal::new(),
         }
     }
     fn inputs(&self) -> &Inputs {
@@ -396,13 +400,12 @@ impl Spanner {
 
     fn reference_docs(&self, span: &CodeSpan) -> Option<BindingDocs> {
         // Look in global references
-        for (name_span, index) in &self.code_meta.global_references {
-            let Some(binding) = self.asm.bindings.get(*index) else {
-                continue;
-            };
-            if name_span != span {
-                continue;
-            }
+        if let Some(binding) = self
+            .code_meta
+            .global_references
+            .get(span)
+            .and_then(|i| self.asm.bindings.get(*i))
+        {
             return Some(self.make_binding_docs(binding));
         }
         // Look in constant references
@@ -465,13 +468,29 @@ impl Spanner {
                 sig: f.signature(),
                 invertible: {
                     let instrs = f.instrs(&self.asm);
-                    let mut compiler = Compiler::new().with_assembly(self.asm.clone());
-                    invert_instrs(instrs, &mut compiler).is_ok()
+                    let compiler = self
+                        .inversion_compiler
+                        .get_or(|| Compiler::new().with_assembly(self.asm.clone()).into());
+                    let mut compiler = compiler.borrow_mut();
+                    let instr_count = compiler.asm.instrs.len();
+                    let invertible = instrs_are_invertible(instrs, &mut compiler);
+                    if compiler.asm.instrs.len() > instr_count {
+                        compiler.asm.instrs.truncate(instr_count);
+                    }
+                    invertible
                 },
                 underable: {
                     let instrs = f.instrs(&self.asm);
-                    let mut compiler = Compiler::new().with_assembly(self.asm.clone());
-                    under_instrs(instrs, (1, 1).into(), &mut compiler).is_ok()
+                    let compiler = self
+                        .inversion_compiler
+                        .get_or(|| Compiler::new().with_assembly(self.asm.clone()).into());
+                    let mut compiler = compiler.borrow_mut();
+                    let instr_count = compiler.asm.instrs.len();
+                    let underable = under_instrs(instrs, (1, 1).into(), &mut compiler).is_ok();
+                    if compiler.asm.instrs.len() > instr_count {
+                        compiler.asm.instrs.truncate(instr_count);
+                    }
+                    underable
                 },
                 pure: instrs_are_pure(f.instrs(&self.asm), &self.asm, Purity::Pure),
             },
@@ -718,6 +737,7 @@ impl Spanner {
 #[cfg(feature = "lsp")]
 #[doc(hidden)]
 pub use server::run_language_server;
+use thread_local::ThreadLocal;
 
 #[cfg(feature = "lsp")]
 mod server {

@@ -421,15 +421,37 @@ static BY_INVERT_PATTERNS: &[&dyn InvertPattern] = {
     ]
 };
 
-/// Invert a sequence of instructions
 pub(crate) fn invert_instrs(
     instrs: &[Instr],
     comp: &mut Compiler,
+) -> InversionResult<EcoVec<Instr>> {
+    invert_instrs_cache(instrs, comp, false)
+}
+
+pub(crate) fn instrs_are_invertible(instrs: &[Instr], comp: &mut Compiler) -> bool {
+    invert_instrs_cache(instrs, comp, true).is_ok()
+}
+
+/// Invert a sequence of instructions
+pub(crate) fn invert_instrs_cache(
+    instrs: &[Instr],
+    comp: &mut Compiler,
+    cache: bool,
 ) -> InversionResult<EcoVec<Instr>> {
     if instrs.is_empty() {
         return Ok(EcoVec::new());
     }
     dbgln!("inverting {:?}", FmtInstrs(instrs, &comp.asm));
+
+    type InverseCache = HashMap<EcoVec<Instr>, InversionResult<EcoVec<Instr>>>;
+    thread_local! {
+        static INVERT_CACHE: RefCell<InverseCache> = RefCell::new(HashMap::new());
+    }
+    if cache {
+        if let Some(inverse) = INVERT_CACHE.with(|cache| cache.borrow().get(instrs).cloned()) {
+            return inverse;
+        }
+    }
 
     let mut inverted = EcoVec::new();
     let mut curr_instrs = instrs;
@@ -452,7 +474,13 @@ pub(crate) fn invert_instrs(
                             FmtInstrs(instrs, &comp.asm),
                             FmtInstrs(&inverted, &comp.asm)
                         );
-                        return resolve_uns(inverted, comp);
+                        let inverse = resolve_uns(inverted, comp);
+                        if cache {
+                            INVERT_CACHE.with(|cache| {
+                                cache.borrow_mut().insert(instrs.into(), inverse.clone())
+                            });
+                        }
+                        return inverse;
                     }
                     curr_instrs = input;
                     continue 'find_pattern;
@@ -469,6 +497,9 @@ pub(crate) fn invert_instrs(
         FmtInstrs(curr_instrs, &comp.asm)
     );
 
+    if cache {
+        INVERT_CACHE.with(|cache| cache.borrow_mut().insert(instrs.into(), Err(error.clone())));
+    }
     Err(error)
 }
 

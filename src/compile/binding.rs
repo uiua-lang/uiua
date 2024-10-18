@@ -576,9 +576,7 @@ impl Compiler {
         }
         // Bind items
         for item in import.items() {
-            if let Some(local) = self
-                .imports
-                .get(&module_path)
+            if let Some(local) = (self.imports.get(&module_path))
                 .and_then(|i| i.names.get(item.value.as_str()))
                 .copied()
             {

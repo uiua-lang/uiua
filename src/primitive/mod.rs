@@ -184,6 +184,7 @@ impl fmt::Display for ImplPrimitive {
             UnDump => write!(f, "{Un}{Dump}"),
             UnFill => write!(f, "{Un}{Fill}"),
             UnBox => write!(f, "{Un}{Box}"),
+            UnSort => write!(f, "{Un}{Sort}"),
             UnJson => write!(f, "{Un}{Json}"),
             UnCsv => write!(f, "{Un}{Csv}"),
             UnXlsx => write!(f, "{Un}{Xlsx}"),
@@ -497,7 +498,6 @@ impl Primitive {
             ),
             Chunks => format!("use {Windows} with a rank-2 window size instead"),
             Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
-            Deal => format!("use {Select}{Rise}{Rows}{By}{Rand} instead"),
             Choose => format!("use {Tuples}{Lt} instead"),
             Permute => format!("use {Tuples}{Ne} instead"),
             Triangle => format!("use {Tuples} instead"),
@@ -873,17 +873,6 @@ impl Primitive {
             }
             Primitive::Rand => env.push(random()),
             Primitive::Gen => env.dyadic_rr_env(Value::gen)?,
-            Primitive::Deal => {
-                let seed = env.pop(1)?.as_num(env, "Deal expects a number")?.to_bits();
-                let arr = env.pop(2)?;
-                if arr.row_count() == 0 {
-                    env.push(arr);
-                } else {
-                    let mut rows: Vec<Value> = arr.into_rows().collect();
-                    rows.shuffle(&mut SmallRng::seed_from_u64(seed));
-                    env.push(Value::from_row_values_infallible(rows));
-                }
-            }
             Primitive::Tag => {
                 static NEXT_TAG: AtomicUsize = AtomicUsize::new(0);
                 let tag = NEXT_TAG.fetch_add(1, atomic::Ordering::Relaxed);
@@ -1134,6 +1123,16 @@ impl ImplPrimitive {
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
                 env.push(val.unboxed());
+            }
+            ImplPrimitive::UnSort => {
+                let arr = env.pop(1)?;
+                if arr.row_count() < 2 {
+                    env.push(arr);
+                } else {
+                    let mut rows: Vec<Value> = arr.into_rows().collect();
+                    RNG.with(|rng| rows.shuffle(&mut (*rng.borrow_mut())));
+                    env.push(Value::from_row_values_infallible(rows));
+                }
             }
             ImplPrimitive::UnJson => {
                 let json = env.pop(1)?.as_string(env, "JSON expects a string")?;

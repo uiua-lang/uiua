@@ -2830,14 +2830,6 @@ primitive!(
     /// For non-determinism, [random] can be used as a seed.
     /// ex: ⌊×10 gen 3_4 ⚂
     (2, Gen, Misc, "gen"),
-    /// Randomly reorder the rows of an array with a seed
-    ///
-    /// ex: deal0 [1 2 3 4 5]
-    /// ex: deal5 [1_2 3_4 5_6 7_8]
-    /// If you don't care about a seed, just seed with [random].
-    /// ex: deal⚂ [1 2 3 4 5]
-    /// ex: deal⚂ [1_2 3_4 5_6 7_8]
-    (2, Deal, Misc, "deal", Impure),
     /// Match a regex pattern
     ///
     /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match
@@ -3584,6 +3576,7 @@ impl_primitive!(
     (2(2), UnJoinShape),
     (2(2), UnJoinShapeEnd),
     (1(2), UnKeep),
+    (1, UnSort, Impure),
     (1, UnJson),
     (1, UnCsv),
     (1, UnXlsx),

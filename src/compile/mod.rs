@@ -2018,13 +2018,13 @@ code:
                     if declared_sig.value == sig {
                         sig = declared_sig.value;
                     } else {
-                        return Err(self.fatal_error(
+                        self.add_error(
                             declared_sig.span.clone(),
                             format!(
                                 "Function signature mismatch: declared {} but inferred {}",
                                 declared_sig.value, sig
                             ),
-                        ));
+                        );
                     }
                 }
                 Some(sig)
@@ -2568,7 +2568,7 @@ code:
         {
             return (new_func, errors);
         }
-        // println!("pre eval {:?}", new_func.instrs);
+        // println!("pre eval {:?}", FmtInstrs(&new_func.instrs, &self.asm));
         let allow_error = instrs_are_pure(&new_func.instrs, &self.asm, Purity::Pure);
         let mut start = 0;
         let mut new_instrs: Option<EcoVec<Instr>> = None;
@@ -2731,10 +2731,10 @@ fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
         return false;
     }
     for instr in instrs {
-        if let Instr::PushFunc(f) = instr {
-            if !instrs_can_pre_eval(f.instrs(asm), asm) {
-                return false;
-            }
+        match instr {
+            Instr::PushFunc(f) if !instrs_can_pre_eval(f.instrs(asm), asm) => return false,
+            Instr::CallGlobal { index, .. } if *index >= asm.bindings.len() => return false,
+            _ => (),
         }
     }
     true

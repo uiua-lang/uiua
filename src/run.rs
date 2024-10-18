@@ -502,7 +502,13 @@ code:
                     Ok(())
                 }
                 &Instr::CallGlobal { index, call, .. } => {
-                    match self.asm.bindings[index].kind.clone() {
+                    let binding = self.asm.bindings.get(index).ok_or_else(|| {
+                        self.error(
+                            "Called out-of-bounds binding. \
+                            This is a bug in the interpreter.",
+                        )
+                    })?;
+                    match binding.kind.clone() {
                         BindingKind::Const(Some(val)) => {
                             self.rt.stack.push(val);
                             Ok(())

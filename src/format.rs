@@ -1006,6 +1006,12 @@ impl<'a> Formatter<'a> {
                 {
                     self.output.push(' ');
                 }
+                if self.output.ends_with(' ')
+                    && (self.output.chars().rev().nth(1))
+                        .is_some_and(|c| Primitive::from_glyph(c).is_some())
+                {
+                    self.output.pop();
+                }
                 self.format_ref(r);
             }
             Word::IncompleteRef { path, .. } => {

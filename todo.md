@@ -6,18 +6,17 @@ The next version of Uiua
 ## Implementation details
 Things that don't affect the language itself, but are important for the compiler or interpreter.
 
-- A proper IR (Intermediate Representation)
-  - Uiua currently compiles directly from AST to bytecode instructions
-  - This complicates the compiler, especially for inverses and optimizations
-  - Should go AST -> IR -> bytecode
-  - Very big undertaking
+- Change how inlining modifiers works
+  - Make all (or most) modifiers emit themselves as instructions
+  - This allows inverses to be smarter about what they are working on
+  - Add an inlining step between compilation and execution
+  - Change how inversion of `under` is implemented
+    - Current implementation is kinda messy
+    - New system should make it simpler
 - Move array depth checks to compile time
 - Allow for multi-value constant bindings
 - Dead code elimination
   - Eliminate unused anonymous functions
-- Change how inversion of `under` is implemented
-  - Current implementation is kinda messy
-  - Initial compilation pass of `under` should use some kind of aggregate instruction
 
 ## Planned Features
 Features that are planned to be implemented in the future.

@@ -500,6 +500,7 @@ impl Primitive {
             Permute => format!("use {Tuples}{Ne} instead"),
             Triangle => format!("use {Tuples} instead"),
             SetInverse | SetUnder => format!("use {} instead", Obverse.format()),
+            Struct => "use new data definitions instead".into(),
             _ => return None,
         })
     }

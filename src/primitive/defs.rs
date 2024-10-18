@@ -1926,7 +1926,7 @@ primitive!(
     ///
     /// When given a dyadic function, [tuples] takes two arguments.
     /// The first argument must be a natural number. The second argument may be any array.
-    /// The function must take 2 arguments. Combinations of rows from the array whose indices pass the function will be returned.
+    /// If the function takes 2 arguments, combinations of rows from the array whose indices pass the function will be returned.
     /// The most common functions to use are `less than`, `less or equal`, `greater than`, `greater or equal`, and `not equals`.
     ///
     /// The examples here are [transpose]d to take up less vertical space.

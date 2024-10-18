@@ -137,6 +137,13 @@ A data definition's name can be used as a monadic macro. The field getters will 
 MyData!(+⊃Foo Bar New) 3 5
 ```
 
+A `Fields` item is generated which contains the field names as boxed strings.
+```uiua
+# Experimental!
+~Foo {Bar Baz Qux}
+Foo~Fields
+```
+
 If some code immediately follows the data definition, a `Call` function will be generated which uses the constructor as a [fill](/docs/fill) function and in which the field names pull from the fill value.
 
 This is called a *data function* and essentially allows for named function arguments.

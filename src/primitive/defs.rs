@@ -1905,8 +1905,6 @@ primitive!(
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to each combination of rows of some arrays
     ///
-    /// This is often what you want instead of [each].
-    ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
     /// ex: ⊞⊂ 1_2 3_4
     ///

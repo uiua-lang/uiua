@@ -7,7 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - **Breaking Change** - [`minimum ↧`](https://uiua.org/docs/minimum) and [`maximum ↥`](https://uiua.org/docs/maximum) now compare boxes lexicographically
   - This makes them consistent with comparison functions like [`less than <`](https://uiua.org/docs/less%20than)
-- **Breaking Change** - [`gen`](https://uiua.org/docs/gen) now takes a shape argument
+- **Breaking Change** - [`gen`](https://uiua.org/docs/gen) now takes a shape argument and no longer outputs a new seed
 - **Breaking Change** - [`&clip`](https://uiua.org/docs/&clip) now unifies `&clget` and `&clset`
 - **Breaking Change** - [`type`](https://uiua.org/docs/type) numbers are now:
   - `0` for normal numbers

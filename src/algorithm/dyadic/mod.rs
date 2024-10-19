@@ -24,7 +24,7 @@ use crate::{
     cowslice::{cowslice, CowSlice, Repeat},
     val_as_arr,
     value::Value,
-    Primitive, Shape, Uiua, UiuaResult, RNG,
+    Shape, Uiua, UiuaResult, RNG,
 };
 
 use super::{
@@ -1938,12 +1938,7 @@ impl Value {
     /// Pick a random row of an array
     pub fn random_row(&self, env: &Uiua) -> UiuaResult<Value> {
         match self.row_count() {
-            0 => Err(env
-                .error(format!(
-                    "Cannot take {} of an empty array",
-                    Primitive::First
-                ))
-                .fill()),
+            0 => Err(env.error("Cannot pick random row of an empty array").fill()),
             1 => Ok(self.row(0)),
             len => {
                 let i = RNG.with_borrow_mut(|rng| rng.gen_range(0..len));

@@ -1474,6 +1474,7 @@ impl Value {
                 if let Some(&min) = min_size.first() {
                     size = size.max(min);
                 }
+                validate_size::<f64>([size], env)?;
                 let mut data = eco_vec![0.0; size];
                 let data_slice = data.make_mut();
                 if is_sorted {

@@ -424,7 +424,7 @@ sys_op! {
     ///   : Hat ← ×0.3×↯:Noise △.<0.1 ÷⟜◿0.25
     ///   : &ast(÷3/+[⊃(Hat|Kick|Hit|Bass)]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
-    /// How long the audio is can be configure in the editor settings.
+    /// How long the audio is can be configured in the editor settings.
     (0(0)[1], AudioStream, Media, "&ast", "audio - stream", Mutating),
     /// Create a TCP listener and bind it to an address
     ///

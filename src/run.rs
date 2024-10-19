@@ -337,6 +337,7 @@ impl Uiua {
         let mut comp = Compiler::with_backend(self.rt.backend.clone());
         let asm = compile(&mut comp)?.finish();
         self.run_asm(&asm)?;
+        comp.set_backend(SafeSys::default());
         Ok(comp)
     }
     /// Run a string as Uiua code

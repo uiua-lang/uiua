@@ -420,6 +420,10 @@ impl Compiler {
     pub fn take_backend<T: SysBackend + Default>(&mut self) -> Option<T> {
         self.macro_env.take_backend()
     }
+    /// Set the system backend
+    pub fn set_backend<T: SysBackend>(&mut self, backend: T) {
+        self.macro_env.rt.backend = Arc::new(backend);
+    }
     /// Compile a Uiua file from a file at a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
         let path = path.as_ref();

@@ -1016,6 +1016,7 @@ impl Value {
 
         // Combine the arrays
         value.shape_mut().insert(0, 1);
+        value.take_label();
         Ok(match value {
             Value::Num(mut a) => {
                 for val in row_values {

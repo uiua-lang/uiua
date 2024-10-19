@@ -231,6 +231,7 @@ impl fmt::Display for ImplPrimitive {
             LastWhere => write!(f, "{First}{Reverse}{Where}"),
             LenWhere => write!(f, "{Len}{Where}"),
             MemberOfRange => write!(f, "{MemberOf}{Range}"),
+            RandomRow => write!(f, "{First}{Un}{Sort}"),
             SortDown => write!(f, "{Select}{Fall}{Dup}"),
             Primes => write!(f, "{Un}{Reduce}{Mul}"),
             ReplaceRand => write!(f, "{Gap}{Rand}"),
@@ -1130,7 +1131,7 @@ impl ImplPrimitive {
                     env.push(arr);
                 } else {
                     let mut rows: Vec<Value> = arr.into_rows().collect();
-                    RNG.with(|rng| rows.shuffle(&mut (*rng.borrow_mut())));
+                    RNG.with_borrow_mut(|rng| rows.shuffle(rng));
                     env.push(Value::from_row_values_infallible(rows));
                 }
             }
@@ -1332,6 +1333,7 @@ impl ImplPrimitive {
             ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
             ImplPrimitive::LenWhere => env.monadic_ref_env(Value::len_where)?,
             ImplPrimitive::MemberOfRange => env.dyadic_ro_env(Value::memberof_range)?,
+            ImplPrimitive::RandomRow => env.monadic_ref_env(Value::random_row)?,
             ImplPrimitive::LastWhere => env.monadic_ref_env(Value::last_where)?,
             ImplPrimitive::SortDown => env.monadic_mut(Value::sort_down)?,
             ImplPrimitive::ReduceContent => reduce::reduce_content(env)?,
@@ -1483,7 +1485,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
 }
 
 thread_local! {
-    static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
+    pub(crate) static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
 }
 
 /// Generate a random number, equivalent to [`Primitive::Rand`]

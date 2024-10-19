@@ -2205,8 +2205,9 @@ impl Compiler {
         // Compile the generated items
         let temp_mode = self.pre_eval_mode.min(PreEvalMode::Line);
         let pre_eval_mod = replace(&mut self.pre_eval_mode, temp_mode);
-        self.items(items, true)
-            .map_err(|e| e.trace_macro(name.clone(), span.clone()))?;
+        let res = self
+            .items(items, true)
+            .map_err(|e| e.trace_macro(name.clone(), span.clone()));
         self.pre_eval_mode = pre_eval_mod;
         // Extract generated top-level instructions
         let mut removed_slices = Vec::new();
@@ -2217,6 +2218,7 @@ impl Compiler {
         {
             removed_slices.push(self.asm.instrs(slice));
         }
+        res?;
         let instrs: EcoVec<_> = removed_slices
             .into_iter()
             .rev()
@@ -2274,7 +2276,7 @@ impl Compiler {
         let len = new_func.instrs.len();
         comp.asm.instrs.extend(new_func.instrs);
         if len > 0 {
-            comp.asm.top_slices.push(FuncSlice { start, len });
+            comp.asm.top_slices = vec![FuncSlice { start, len }];
         }
         let values = match comp.macro_env.run_asm(&comp.asm) {
             Ok(_) => comp.macro_env.take_stack(),

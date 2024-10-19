@@ -9,7 +9,8 @@ CFlag  ← ⍜∩°⍉(↧¤I0.95)Coords ⟜Flag
 
 512 # Size
 ⊃(≡◇CFlag:PrideFlags|⊢⇌°⍉.Logo)
-≡⍜°⍉⊂⊙¤               # Apply logo alpha to flags
-⊸(≡(+∩×⊙:¬.) ⊙⊙¤) 0.3 # Tint flags with logo
-⊂:                    # Add logo
+≡⍜°⍉⊂⊙¤            # Apply logo alpha to flags
++∩×≡(⊙:¬.)⊸⊙⊙¤ 0.3 # Tint flags with logo
++☇3[..0.05 0]      # Lighten
+⊂:                 # Add logo
 &gifs 1

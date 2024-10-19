@@ -107,6 +107,7 @@ This version is not yet released. If you are reading this on the website, then t
       - ~450x in the worst case
   - [`rows ≡`](https://uiua.org/docs/rows) [`on ⟜`](https://uiua.org/docs/on)/[`by ⊸`](https://uiua.org/docs/by) [`random ⚂`](https://uiua.org/docs/random)/`constant`
   - [`memberof ∈`](https://uiua.org/docs/memberof)[`range ⇡`](https://uiua.org/docs/range) for scalar inputs to [`range ⇡`](https://uiua.org/docs/range)
+  - [`first ⊢`](https://uiua.org/docs/first)[`un °`](https://uiua.org/docs/un)[`sort ⍆`](https://uiua.org/docs/sort) to just pick an element
 - Tweak the formatter to reduce excess vertical space
 - The formatter now aligns consecutive single-line bindings
 - `uiua repl` now has a `-s`/`--stack` flag to disable clearing the stack after each line

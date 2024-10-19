@@ -57,6 +57,11 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(MemberOfRange, span))
         }
+        // First UnSort = random row
+        ([.., Instr::ImplPrim(UnSort, _)], Instr::Prim(First | Last, span)) => {
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(RandomRow, span))
+        }
         // First Reverse = last
         ([.., Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
             instrs.pop();

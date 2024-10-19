@@ -361,7 +361,7 @@ where
             identity.into()
         } else {
             let first = arr.data[0].into();
-            arr.data.into_iter().skip(1).fold(first, fut).into()
+            arr.data[1..].iter().copied().fold(first, fut).into()
         };
     }
     fast_reduce(arr.convert(), identity, default, depth, fuu)
@@ -380,12 +380,12 @@ where
     depth = depth.min(arr.rank());
     if depth == 0 && arr.rank() == 1 {
         return if let Some(default) = default {
-            arr.data.into_iter().fold(default, f).into()
+            arr.data.iter().copied().fold(default, f).into()
         } else if arr.row_count() == 0 {
             identity.into()
         } else {
             let first = arr.data[0];
-            arr.data.into_iter().skip(1).fold(first, f).into()
+            arr.data[1..].iter().copied().fold(first, f).into()
         };
     }
     match (arr.rank(), depth) {
@@ -719,7 +719,7 @@ where
                 return arr;
             }
             let mut acc = arr.data[0];
-            for val in arr.data.as_mut_slice().iter_mut().skip(1) {
+            for val in arr.data.as_mut_slice()[1..].iter_mut() {
                 acc = f(acc, *val);
                 *val = acc;
             }
@@ -895,7 +895,7 @@ where
                 return arr;
             }
             let mut acc = arr.data[0];
-            for val in arr.data.as_mut_slice().iter_mut().skip(1) {
+            for val in arr.data.as_mut_slice()[1..].iter_mut() {
                 let temp = *val;
                 *val = f(acc, *val);
                 acc = temp;

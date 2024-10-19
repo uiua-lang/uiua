@@ -205,18 +205,9 @@ impl Compiler {
 
         let mut variant_index = 0;
         if data.variant {
-            let module_scope = self
-                .higher_scopes
-                .iter_mut()
-                .filter(|scope| !matches!(scope.kind, ScopeKind::File(_)))
-                .fuse()
-                .find(|scope| matches!(&scope.kind, ScopeKind::Module(_)));
-            if let Some(module_scope) = module_scope {
-                variant_index = module_scope.data_variants;
-                module_scope.data_variants += 1;
-            } else {
-                self.add_error(data.init_span.clone(), "Variants must have a name");
-            }
+            let module_scope = self.higher_scopes.last_mut().unwrap_or(&mut self.scope);
+            variant_index = module_scope.data_variants;
+            module_scope.data_variants += 1;
         }
 
         // Make getters

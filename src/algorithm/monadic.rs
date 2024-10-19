@@ -1506,16 +1506,15 @@ impl Value {
                 for row in indices.row_slices() {
                     *counts.entry(row).or_default() += 1;
                 }
-                let mut init = Shape::with_capacity(*trailing);
+                let mut shape = Shape::with_capacity(*trailing);
                 for _ in 0..*trailing {
-                    init.push(0);
+                    shape.push(0);
                 }
-                let mut shape = counts.keys().fold(init, |mut acc, row| {
-                    for (a, r) in acc.iter_mut().zip(row.iter()) {
+                for row in counts.keys() {
+                    for (a, r) in shape.iter_mut().zip(*row) {
                         *a = (*a).max(*r + 1);
                     }
-                    acc
-                });
+                }
                 for (s, &m) in shape.iter_mut().zip(min_size) {
                     *s = (*s).max(m);
                 }

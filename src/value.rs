@@ -882,6 +882,15 @@ impl Value {
         env: &Uiua,
         requirement: &'static str,
     ) -> UiuaResult<Array<usize>> {
+        if let Value::Num(arr) = self {
+            if let Some(&(mut n)) =
+                (arr.data.iter()).find(|&&n| n > usize::MAX as f64 && n.fract() == 0.0)
+            {
+                let power = n.log10().floor() as i32;
+                n /= 10f64.powi(power);
+                return Err(env.error(format!("{requirement}, but {n}e{power} is too large")));
+            }
+        }
         self.as_number_array(
             env,
             requirement,

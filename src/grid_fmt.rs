@@ -396,11 +396,15 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let grid_row_count = grid.len();
             if grid_row_count == 1 && self.rank() == 1 {
                 // Add brackets to lists
-                let (left, right) = T::grid_fmt_delims(params.boxed);
+                let (left, right) = if requires_summary(&self.shape) {
+                    ('[', ']')
+                } else {
+                    T::grid_fmt_delims(params.boxed)
+                };
                 grid[0].insert(0, left);
                 grid[0].push(right);
             } else {
-                let apparent_rank = if self.data.len() > MAX_ELEMS || self.rank() > MAX_RANK {
+                let apparent_rank = if requires_summary(&self.shape) {
                     1
                 } else {
                     self.rank()
@@ -557,6 +561,10 @@ fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
 const MAX_ELEMS: usize = 3600;
 const MAX_RANK: usize = 10;
 
+fn requires_summary(shape: &[usize]) -> bool {
+    shape.iter().product::<usize>() > MAX_ELEMS || shape.len() > MAX_RANK
+}
+
 fn fmt_array<T: GridFmt + ArrayValue>(
     shape: &[usize],
     data: &[T],
@@ -567,7 +575,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         metagrid.push(vec![vec![shape_row::<T>(shape)]]);
         return;
     }
-    if data.len() > MAX_ELEMS || shape.len() > MAX_RANK {
+    if requires_summary(shape) {
         let summary = T::summarize(data);
         if !summary.is_empty() {
             metagrid.push(vec![if shape.len() == 1 {

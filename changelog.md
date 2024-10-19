@@ -110,7 +110,7 @@ This version is not yet released. If you are reading this on the website, then t
   - [`first ⊢`](https://uiua.org/docs/first)[`un °`](https://uiua.org/docs/un)[`sort ⍆`](https://uiua.org/docs/sort) to just pick an element
 - Tweak the formatter to reduce excess vertical space
 - The formatter now aligns consecutive single-line bindings
-- `uiua repl` now has a `-s`/`--stack` flag to disable clearing the stack after each line
+- `uiua repl` now has a `-s/--stack` flag to disable clearing the stack after each line
   - Clearing the stack is now the default
   - The `-c/--clear` has been removed
 - After programs finish executing, the terminal raw mode will be automatically disabled if it was left on. 

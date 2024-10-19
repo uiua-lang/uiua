@@ -1587,6 +1587,7 @@ fn invert_join_pattern<'a>(
     use ImplPrimitive::*;
     use Instr::*;
     use Primitive::*;
+    let orig_input = input;
     let Some((join_index, join_span)) = (input.iter().enumerate().rev())
         .filter_map(|(i, instr)| match instr {
             Prim(Join, span) => Some((i, *span)),
@@ -1597,18 +1598,19 @@ fn invert_join_pattern<'a>(
         return generic();
     };
     let mut dipped = false;
-    if let Some((inp, mut instrs)) = Val.invert_extract(input, comp).ok().or_else(|| {
-        try_push_temp_wrap(input).and_then(|(input, _, inner, _, depth)| {
-            if depth != 1 {
-                return None;
-            }
-            let Ok(([], val)) = Val.invert_extract(inner, comp) else {
-                return None;
-            };
-            dipped = true;
-            Some((input, val))
-        })
-    }) {
+    let instrs = if let Some((inp, mut instrs)) =
+        Val.invert_extract(input, comp).ok().or_else(|| {
+            try_push_temp_wrap(input).and_then(|(input, _, inner, _, depth)| {
+                if depth != 1 {
+                    return None;
+                }
+                let Ok(([], val)) = Val.invert_extract(inner, comp) else {
+                    return None;
+                };
+                dipped = true;
+                Some((input, val))
+            })
+        }) {
         input = inp;
         if let Some(i) = (1..=input.len())
             .rev()
@@ -1643,14 +1645,15 @@ fn invert_join_pattern<'a>(
             Instr::pop_inline(1, span),
             Instr::ImplPrim(ImplPrimitive::MatchPattern, span),
         ]);
-        Ok((input, instrs))
+        instrs
     } else if let Some(i) = (0..join_index)
         .find(|&i| instrs_clean_signature(&input[i..join_index]).is_some_and(|sig| sig == (0, 1)))
     {
         let mut instrs = eco_vec![Instr::ImplPrim(ImplPrimitive::UnJoin, join_span)];
         instrs.extend(invert_instrs(&input[i..join_index], comp)?);
         instrs.extend(invert_instrs(&input[..i], comp)?);
-        Ok((&input[join_index + 1..], instrs))
+        input = &input[join_index + 1..];
+        instrs
     } else {
         fn invert_inner(
             mut input: &[Instr],
@@ -1708,8 +1711,14 @@ fn invert_join_pattern<'a>(
         };
         instrs.push(ImplPrim(prim, join_span));
         instrs.extend(before_inv);
-        Ok((input, instrs))
+        instrs
+    };
+    let orig_sig = instrs_signature(&orig_input[..orig_input.len() - input.len()])?;
+    let inverted_sig = instrs_signature(&instrs)?;
+    if orig_sig.inverse() != inverted_sig {
+        return generic();
     }
+    Ok((input, instrs))
 }
 
 fn invert_insert_pattern<'a>(

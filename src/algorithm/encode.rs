@@ -269,7 +269,7 @@ pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
         2 => (
             audio.row_len(),
             unrolled
-                .chunks_exact(audio.row_len())
+                .chunks_exact(audio.row_len().max(1))
                 .map(|c| c.to_vec())
                 .collect(),
         ),
@@ -309,7 +309,7 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
         2 => (
             audio.row_len(),
             interleaved
-                .chunks_exact(audio.row_len())
+                .chunks_exact(audio.row_len().max(1))
                 .map(|c| c.to_vec())
                 .collect(),
         ),

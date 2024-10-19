@@ -971,7 +971,8 @@ mod server {
                 return Ok(None);
             };
             let path = uri_path(&params.text_document_position_params.text_document.uri);
-            let (line, col) = lsp_pos_to_uiua(params.text_document_position_params.position);
+            let (line, col) =
+                lsp_pos_to_uiua(params.text_document_position_params.position, &doc.input);
             // Hovering a primitive
             for sp in &doc.spans {
                 if sp.span.contains_line_col(line, col) && sp.span.src == path {
@@ -982,7 +983,7 @@ mod server {
                                     kind: MarkupKind::Markdown,
                                     value: full_prim_doc_markdown(prim),
                                 }),
-                                range: Some(uiua_span_to_lsp(&sp.span)),
+                                range: Some(uiua_span_to_lsp(&sp.span, &doc.asm.inputs)),
                             }));
                         }
                         SpanKind::Obverse(set_inverses) => {
@@ -1000,7 +1001,7 @@ mod server {
                                     kind: MarkupKind::Markdown,
                                     value,
                                 }),
-                                range: Some(uiua_span_to_lsp(&sp.span)),
+                                range: Some(uiua_span_to_lsp(&sp.span, &doc.asm.inputs)),
                             }));
                         }
                         _ => {}
@@ -1089,7 +1090,7 @@ mod server {
                             kind: MarkupKind::Markdown,
                             value,
                         }),
-                        range: Some(uiua_span_to_lsp(&span)),
+                        range: Some(uiua_span_to_lsp(&span, &doc.asm.inputs)),
                     }));
                 }
             }
@@ -1112,7 +1113,7 @@ mod server {
                         kind: MarkupKind::Markdown,
                         value,
                     }),
-                    range: Some(uiua_span_to_lsp(span)),
+                    range: Some(uiua_span_to_lsp(span, &doc.asm.inputs)),
                 }));
             }
             // Hovering an array
@@ -1123,7 +1124,7 @@ mod server {
                             kind: MarkupKind::Markdown,
                             value: format!("`{}`", arr_meta),
                         }),
-                        range: Some(uiua_span_to_lsp(span)),
+                        range: Some(uiua_span_to_lsp(span, &doc.asm.inputs)),
                     }));
                 }
             }
@@ -1137,7 +1138,7 @@ mod server {
                                     kind: MarkupKind::Markdown,
                                     value: format!("[View Git repository]({url})"),
                                 }),
-                                range: Some(uiua_span_to_lsp(span)),
+                                range: Some(uiua_span_to_lsp(span, &doc.asm.inputs)),
                             }))
                         }
                         ImportSrc::File(_) => {}
@@ -1150,6 +1151,7 @@ mod server {
 
         async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
             fn make_completion(
+                doc: &LspDoc,
                 name: String,
                 span: &CodeSpan,
                 binding: &BindingInfo,
@@ -1180,7 +1182,7 @@ mod server {
                         })
                     }),
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: uiua_span_to_lsp(span),
+                        range: uiua_span_to_lsp(span, &doc.asm.inputs),
                         new_text: name,
                     })),
                     ..Default::default()
@@ -1193,7 +1195,7 @@ mod server {
             } else {
                 return Ok(None);
             };
-            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
 
             // Find an incomplete ref path at the cursor position
             if let Some((span, index)) =
@@ -1211,7 +1213,7 @@ mod server {
                                 continue;
                             }
                             let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-                            completions.push(make_completion(item_name, &span, &binding));
+                            completions.push(make_completion(&doc, item_name, &span, &binding));
                         }
                         return Ok(Some(CompletionResponse::Array(completions)));
                     }
@@ -1225,7 +1227,7 @@ mod server {
                             }
                             let item_name = name.to_string();
                             let binfo = doc.asm.bindings.get(local.index).unwrap();
-                            completions.push(make_completion(item_name, &span, binfo));
+                            completions.push(make_completion(&doc, item_name, &span, binfo));
                         }
                         return Ok(Some(CompletionResponse::Array(completions)));
                     }
@@ -1280,7 +1282,7 @@ mod server {
                             value: full_prim_doc_markdown(prim),
                         })),
                         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                            range: uiua_span_to_lsp(&sp.span),
+                            range: uiua_span_to_lsp(&sp.span, &doc.asm.inputs),
                             new_text: prim
                                 .glyph()
                                 .map(|c| c.to_string())
@@ -1318,6 +1320,7 @@ mod server {
                             continue;
                         }
                         completions.push(make_completion(
+                            &doc,
                             format!("{name}~{item_name}"),
                             &sp.span,
                             &binding,
@@ -1328,7 +1331,7 @@ mod server {
                 if !name.to_lowercase().starts_with(&token.to_lowercase()) {
                     continue;
                 }
-                completions.push(make_completion(name, &sp.span, &binding));
+                completions.push(make_completion(&doc, name, &sp.span, &binding));
             }
 
             // Collect constant completions
@@ -1345,7 +1348,7 @@ mod server {
                     kind: Some(CompletionItemKind::CONSTANT),
                     detail: Some(constant.doc().into()),
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: uiua_span_to_lsp(&sp.span),
+                        range: uiua_span_to_lsp(&sp.span, &doc.asm.inputs),
                         new_text: constant.name.into(),
                     })),
                     ..Default::default()
@@ -1412,7 +1415,7 @@ mod server {
             };
 
             // Check if in a string or comment
-            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
             for span in &doc.spans {
                 if matches!(
                     span.value,
@@ -1434,19 +1437,20 @@ mod server {
             let Some(line_str) = doc.input.lines().nth(line as usize) else {
                 return Ok(None);
             };
+            let line16: Vec<u16> = line_str.encode_utf16().collect();
             let col = if is_newline {
-                line_str.chars().count() as u32
+                line16.len() as u32
             } else {
                 pos.character.saturating_sub(1)
             };
-            let before = line_str.chars().take(col as usize).collect::<String>();
+            let before = String::from_utf16(&line16[..col as usize]).unwrap();
             let mut ident = (before.chars().rev())
                 .take_while(|&c| is_ident_char(c))
                 .collect::<String>();
             ident = ident.chars().rev().collect();
 
             // Get formatted
-            let mut start = col.saturating_sub(ident.chars().count() as u32);
+            let mut start = col.saturating_sub(ident.encode_utf16().count() as u32);
             let mut formatted = String::new();
             if ident.is_empty() {
                 let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
@@ -1457,7 +1461,7 @@ mod server {
                 for (prim, ascii) in ascii_prims {
                     if before.ends_with(&ascii) {
                         formatted.push_str(&prim.to_string());
-                        start = start.saturating_sub(ascii.chars().count() as u32);
+                        start = start.saturating_sub(ascii.encode_utf16().count() as u32);
                         break;
                     }
                 }
@@ -1582,13 +1586,13 @@ mod server {
                     token_type += UIUA_SEMANTIC_TOKEN_TYPES.len() as u32;
                 }
                 let span = &sp.span;
-                let start = uiua_loc_to_lsp(span.start);
+                let start = uiua_span_to_lsp(span, &doc.asm.inputs).start;
                 let delta_start = if start.line == prev_line {
                     start.character - prev_char
                 } else {
                     start.character
                 };
-                let length = span.end.char_pos - span.start.char_pos;
+                let length = span.as_str(&doc.asm.inputs, |s| s.encode_utf16().count()) as u32;
                 let token = SemanticToken {
                     delta_line: start.line - prev_line,
                     delta_start,
@@ -1613,7 +1617,7 @@ mod server {
             let Some(doc) = self.doc(&params.text_document.uri) else {
                 return Ok(None);
             };
-            let (line, col) = lsp_pos_to_uiua(params.range.start);
+            let (line, col) = lsp_pos_to_uiua(params.range.start, &doc.input);
             let path = uri_path(&params.text_document.uri);
             let mut actions = Vec::new();
 
@@ -1645,7 +1649,7 @@ mod server {
                             [(
                                 params.text_document.uri.clone(),
                                 vec![TextEdit {
-                                    range: uiua_span_to_lsp(&insertion_span),
+                                    range: uiua_span_to_lsp(&insertion_span, &doc.asm.inputs),
                                     new_text: format!("{} ", inline.sig),
                                 }],
                             )]
@@ -1670,7 +1674,7 @@ mod server {
                             [(
                                 params.text_document.uri.clone(),
                                 vec![TextEdit {
-                                    range: uiua_span_to_lsp(span),
+                                    range: uiua_span_to_lsp(span, &doc.asm.inputs),
                                     new_text: expanded.clone(),
                                 }],
                             )]
@@ -1696,7 +1700,7 @@ mod server {
                                 [(
                                     params.text_document.uri.clone(),
                                     vec![TextEdit {
-                                        range: uiua_span_to_lsp(&span.span),
+                                        range: uiua_span_to_lsp(&span.span, &doc.asm.inputs),
                                         new_text: "".into(),
                                     }],
                                 )]
@@ -1730,7 +1734,7 @@ mod server {
                             [(
                                 params.text_document.uri.clone(),
                                 vec![TextEdit {
-                                    range: uiua_span_to_lsp(span),
+                                    range: uiua_span_to_lsp(span, &doc.asm.inputs),
                                     new_text,
                                 }],
                             )]
@@ -1762,7 +1766,7 @@ mod server {
                             [(
                                 params.text_document.uri.clone(),
                                 vec![TextEdit {
-                                    range: uiua_span_to_lsp(span),
+                                    range: uiua_span_to_lsp(span, &doc.asm.inputs),
                                     new_text,
                                 }],
                             )]
@@ -1819,7 +1823,7 @@ mod server {
             else {
                 return Ok(None);
             };
-            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
             let path = uri_path(&params.text_document_position.text_document.uri);
             let mut binding: Option<(&BindingInfo, usize)> = None;
             // Check for span in bindings
@@ -1851,7 +1855,7 @@ mod server {
                     InputSrc::File(file) => path_to_uri(file)?,
                 },
                 vec![TextEdit {
-                    range: uiua_span_to_lsp(&binding.span),
+                    range: uiua_span_to_lsp(&binding.span, &doc.asm.inputs),
                     new_text: params.new_name.clone(),
                 }],
             );
@@ -1865,7 +1869,7 @@ mod server {
                             InputSrc::File(file) => path_to_uri(file)?,
                         };
                         changes.entry(uri).or_default().push(TextEdit {
-                            range: uiua_span_to_lsp(name_span),
+                            range: uiua_span_to_lsp(name_span, &doc.asm.inputs),
                             new_text: params.new_name.clone(),
                         });
                     }
@@ -1888,7 +1892,7 @@ mod server {
                 return Ok(None);
             };
             let position = params.text_document_position_params.position;
-            let (line, col) = lsp_pos_to_uiua(position);
+            let (line, col) = lsp_pos_to_uiua(position, &doc.input);
             let path = uri_path(&params.text_document_position_params.text_document.uri);
             // Check global references
             for (name_span, idx) in &doc.code_meta.global_references {
@@ -1902,7 +1906,7 @@ mod server {
                     };
                     return Ok(Some(GotoDefinitionResponse::Scalar(Location {
                         uri,
-                        range: uiua_span_to_lsp(&binding.span),
+                        range: uiua_span_to_lsp(&binding.span, &doc.asm.inputs),
                     })));
                 }
             }
@@ -1933,7 +1937,7 @@ mod server {
                 return Ok(None);
             };
             let position = params.text_document_position_params.position;
-            let (line, col) = lsp_pos_to_uiua(position);
+            let (line, col) = lsp_pos_to_uiua(position, &doc.input);
             let path = uri_path(&params.text_document_position_params.text_document.uri);
             for (name_span, idx) in &doc.code_meta.global_references {
                 if name_span.contains_line_col(line, col) && name_span.src == path {
@@ -1946,7 +1950,7 @@ mod server {
                     };
                     return Ok(Some(GotoDeclarationResponse::Scalar(Location {
                         uri,
-                        range: uiua_span_to_lsp(&binding.span),
+                        range: uiua_span_to_lsp(&binding.span, &doc.asm.inputs),
                     })));
                 }
             }
@@ -1970,10 +1974,10 @@ mod server {
                 ));
             };
 
-            fn path_locs(span: &CodeSpan, path: &Path) -> Option<(Loc, Loc)> {
+            fn path_locs<'a>(span: &'a CodeSpan, path: &Path) -> Option<&'a CodeSpan> {
                 match &span.src {
                     InputSrc::File(file) if file.canonicalize().ok().as_deref() == Some(path) => {
-                        Some((span.start, span.end))
+                        Some(span)
                     }
                     InputSrc::Macro(span) => path_locs(span, path),
                     _ => None,
@@ -1982,17 +1986,14 @@ mod server {
 
             let path = uri_path(&params.text_document.uri);
             let range = |err: &UiuaError, span: &Span| -> Option<Range> {
-                let (start, end) = match span {
+                let span = match span {
                     Span::Code(span) => path_locs(span, &path)?,
-                    Span::Builtin => {
-                        let span = err.trace.iter().find_map(|frame| match &frame.span {
-                            Span::Code(span) => Some(span),
-                            _ => None,
-                        })?;
-                        (span.start, span.end)
-                    }
+                    Span::Builtin => err.trace.iter().find_map(|frame| match &frame.span {
+                        Span::Code(span) => Some(span),
+                        _ => None,
+                    })?,
                 };
-                Some(Range::new(uiua_loc_to_lsp(start), uiua_loc_to_lsp(end)))
+                Some(uiua_span_to_lsp(span, &doc.asm.inputs))
             };
             for err in &doc.errors {
                 match &err.kind {
@@ -2046,7 +2047,7 @@ mod server {
                 if let Span::Code(span) = &diag.span {
                     diagnostics.push(Diagnostic {
                         severity: Some(sev),
-                        range: uiua_span_to_lsp(span),
+                        range: uiua_span_to_lsp(span, &doc.asm.inputs),
                         message: diag.message.clone(),
                         ..Default::default()
                     });
@@ -2146,7 +2147,7 @@ mod server {
                     continue;
                 }
                 let sig = decl.sig.to_string();
-                let mut position = uiua_loc_to_lsp(span.start);
+                let mut position = uiua_span_to_lsp(span, &doc.asm.inputs).start;
                 if decl.inline {
                     if span.as_str(&doc.asm.inputs, |s| s.starts_with(['(', '⟨', '|'])) {
                         position.character += 1;
@@ -2200,7 +2201,7 @@ mod server {
                     };
                     hints.push(InlayHint {
                         text_edits: None,
-                        position: uiua_loc_to_lsp(span.end),
+                        position: uiua_span_to_lsp(span, &doc.asm.inputs).end,
                         label,
                         kind: None,
                         tooltip: Some(tooltip),
@@ -2219,7 +2220,7 @@ mod server {
             else {
                 return Ok(None);
             };
-            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
             let path = uri_path(&params.text_document_position.text_document.uri);
             for (i, binfo) in doc.asm.bindings.iter().enumerate() {
                 if binfo.span.contains_line_col(line, col) && binfo.span.src == path {
@@ -2233,7 +2234,7 @@ mod server {
                                     InputSrc::Str(_) | InputSrc::Macro(_) => uri.clone(),
                                     InputSrc::File(file) => path_to_uri(file)?,
                                 };
-                                let range = uiua_span_to_lsp(name_span);
+                                let range = uiua_span_to_lsp(name_span, &doc.asm.inputs);
                                 locations.push(Location { uri, range });
                             }
                         }
@@ -2257,7 +2258,7 @@ mod server {
                     continue;
                 };
                 inline_values.push(InlineValue::Text(InlineValueText {
-                    range: uiua_span_to_lsp(span),
+                    range: uiua_span_to_lsp(span, &doc.asm.inputs),
                     text: value.show(),
                 }));
             }
@@ -2314,23 +2315,36 @@ mod server {
         path.canonicalize().unwrap_or(path)
     }
 
-    fn lsp_pos_to_uiua(pos: Position) -> (usize, usize) {
-        (pos.line as usize + 1, pos.character as usize + 1)
+    fn lsp_pos_to_uiua(pos: Position, input: &str) -> (usize, usize) {
+        let line_no = pos.line as usize;
+        let line = input.split('\n').nth(line_no).unwrap();
+        let mut lsp_col = pos.character as usize;
+        let mut uiua_col = 1;
+        for c in line.chars() {
+            if lsp_col == 0 {
+                break;
+            }
+            lsp_col -= c.len_utf16();
+            uiua_col += 1;
+        }
+        (line_no + 1, uiua_col)
     }
 
-    fn uiua_loc_to_lsp(loc: Loc) -> Position {
-        Position::new(
-            (loc.line as u32).saturating_sub(1),
-            (loc.col as u32).saturating_sub(1),
-        )
+    fn uiua_loc_to_lsp(loc: Loc, input: &str) -> Position {
+        let line_no = loc.line.saturating_sub(1) as usize;
+        let line = input.split('\n').nth(line_no).unwrap();
+        let line_start = line.as_ptr() as usize - input.as_ptr() as usize;
+        let end = loc.byte_pos as usize - line_start;
+        let col = line[..end].encode_utf16().count() as u32;
+        Position::new(line_no as u32, col)
     }
 
-    fn uiua_locs_to_lsp(start: Loc, end: Loc) -> Range {
-        Range::new(uiua_loc_to_lsp(start), uiua_loc_to_lsp(end))
+    fn uiua_locs_to_lsp(start: Loc, end: Loc, input: &str) -> Range {
+        Range::new(uiua_loc_to_lsp(start, input), uiua_loc_to_lsp(end, input))
     }
 
-    fn uiua_span_to_lsp(span: &CodeSpan) -> Range {
-        uiua_locs_to_lsp(span.start, span.end)
+    fn uiua_span_to_lsp(span: &CodeSpan, inputs: &Inputs) -> Range {
+        uiua_locs_to_lsp(span.start, span.end, &inputs.get(&span.src))
     }
 
     fn doc_frag_markdown(md: &mut String, frag: &PrimDocFragment) {

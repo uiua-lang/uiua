@@ -445,7 +445,6 @@ option,
     border-radius: 0.5em;
     border: none;
     margin-left: 0.5em;
-    font-family: "Code Font", monospace;
 }
 
 #settings>*>*>input[type=number] {
@@ -892,6 +891,10 @@ option,
 
 .additional-functions::-ms-expand {
     display: none;
+}
+
+.additional-functions>* {
+    font-family: "Code Font", monospace;
 }
 
 .named-function-button {

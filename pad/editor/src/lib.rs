@@ -1560,8 +1560,9 @@ pub fn Editor<'a>(
                             "Font:"
                             <select
                                 on:change=on_select_font>
-                                <option value="DejaVuSansMono" selected={get_font_name() == "DejaVuSansMono"}>"DejaVu"</option>
                                 <option value="Uiua386" selected={get_font_name() == "Uiua386"}>"Uiua386"</option>
+                                <option value="Pixua" selected={get_font_name() == "Pixua"}>"Pixua"</option>
+                                <option value="DejaVuSansMono" selected={get_font_name() == "DejaVuSansMono"}>"DejaVu"</option>
                             </select>
                         </div>
                         <button on:click=download_code>"Download Code"</button>

@@ -1043,6 +1043,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
             prompt="moves the 4th value on the stack to the top"
             example="1 2 3 4"
             answer="⊃⋅⋅⋅∘⊙⊙∘"
+            best_answer="⤙⊙⊙⊙◌"
             tests={&["@x [1 2 3] □5 27"]}
             hidden="3 3 3 4"/>
 

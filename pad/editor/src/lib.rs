@@ -76,7 +76,7 @@ pub fn Editor<'a>(
         _ => vec![example.into()],
     };
     let code_max_lines = if let EditorMode::Pad = mode {
-        10
+        6
     } else if let Some(chal) = &challenge {
         chal.intended_answer.lines().count()
     } else {

@@ -70,6 +70,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add a `Lorem` constant, which contains the Lorem Ipsum text
 - Add several color constants
 - Add pride flag constants
+- Add `Cats` image constant
 - Allow [`&raw`](https://uiua.org/docs/&raw) to be inverted, acting as a getter for the raw state of the terminal
   - [`under ⍜`](https://uiua.org/docs/under)[`&raw`](https://uiua.org/docs/&raw) sets raw mode, and then returns it to the previous state
 - Add the experimental [`around ’`](https://uiua.org/docs/around) function, which duplicates the top value on the stack to the third-to-top position

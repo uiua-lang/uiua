@@ -309,6 +309,10 @@ constant!(
     /// 2019
     /// https://mortenhannemose.github.io/lena/
     (#[cfg(feature = "image")] "Lena", Media, crate::encode::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
+    /// A picture of two cats
+    ///
+    /// Their names are Murphy and Louie
+    ("Cats", Media, crate::encode::image_bytes_to_array(include_bytes!("assets/cats.webp"), false).unwrap()),
     /// Sample music data
     ("Music", Media, ConstantValue::Music),
     /// Lorem Ipsum text

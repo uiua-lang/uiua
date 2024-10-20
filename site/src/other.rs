@@ -271,6 +271,7 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[Rows, Box, Windows]/></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Box/>" each row"</td><td><Prim prim=Box/>" each window"</td></tr>
             <tr><th><Prims prims=[Len, Where]/></th><td>"Make "<Prim prim=Where/>" then get "<Prim prim=Len/></td><td>"Just count"</td></tr>
             <tr><th><Prims prims=[MemberOf, Range]/></th><td>"Make "<Prim prim=Range/>" then check "<Prim prim=MemberOf/></td><td>"Just check bounds"</td></tr>
+            <tr><th><Prims prims=[MemberOf, Rerank]/><code>"1"</code><Prims prims=[Range]/></th><td>"Make "<Prim prim=Range/>" then "<Prim prim=Rerank/>" then check "<Prim prim=MemberOf/></td><td>"Just check bounds"</td></tr>
             <tr><th><Prim prim=First glyph_only=true/>"/"<Prim prim=Last glyph_only=true/> <Prims prims=[Un, Sort]/></th><td><Prims prims=[Un, Sort] show_names=true/>" then take the "<Prim prim=First/>"/"<Prim prim=Last/></td><td>"Just pick a random row"</td></tr>
         </table>
 

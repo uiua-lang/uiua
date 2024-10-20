@@ -1888,16 +1888,13 @@ impl Value {
             b.member(&range, env)
         }
 
-        let Ok(range_bound) = self.as_nums(env, "") else {
-            return fallback(self, &from, env);
-        };
-
-        if range_bound
-            .iter()
-            .any(|v| v.fract() != 0.0 || v.is_infinite() || v.is_nan())
-        {
+        if self.rank() != 1 {
             return fallback(self, &from, env);
         }
+
+        let Ok(range_bound) = self.as_number_list(env, "", |v| v.fract() == 0.0, |v| v) else {
+            return fallback(self, &from, env);
+        };
 
         if !from.shape().ends_with(&[range_bound.len()]) {
             let shape = from.shape();

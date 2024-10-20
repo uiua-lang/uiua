@@ -231,6 +231,7 @@ impl fmt::Display for ImplPrimitive {
             LastWhere => write!(f, "{First}{Reverse}{Where}"),
             LenWhere => write!(f, "{Len}{Where}"),
             MemberOfRange => write!(f, "{MemberOf}{Range}"),
+            MultidimMemberOfRange => write!(f, "{MemberOf}{Rerank}1{Range}"),
             RandomRow => write!(f, "{First}{Un}{Sort}"),
             SortDown => write!(f, "{Select}{Fall}{Dup}"),
             Primes => write!(f, "{Un}{Reduce}{Mul}"),
@@ -1333,6 +1334,9 @@ impl ImplPrimitive {
             ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
             ImplPrimitive::LenWhere => env.monadic_ref_env(Value::len_where)?,
             ImplPrimitive::MemberOfRange => env.dyadic_ro_env(Value::memberof_range)?,
+            ImplPrimitive::MultidimMemberOfRange => {
+                env.dyadic_ro_env(Value::multidim_memberof_range)?
+            }
             ImplPrimitive::RandomRow => env.monadic_ref_env(Value::random_row)?,
             ImplPrimitive::LastWhere => env.monadic_ref_env(Value::last_where)?,
             ImplPrimitive::SortDown => env.monadic_mut(Value::sort_down)?,

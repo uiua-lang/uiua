@@ -509,10 +509,13 @@ pub fn Editor<'a>(
                             None
                         };
                         let right_char = code.chars().nth(start as usize);
-                        let (start_line, _) = line_col(&code, start as usize);
+                        let (start_line, start_col) = line_col(&code, start as usize);
                         let curr_line = code.lines().nth(start_line - 1).unwrap_or_default();
-                        let curr_line_indent =
-                            curr_line.chars().take_while(|c| c.is_whitespace()).count();
+                        let curr_line_indent = curr_line
+                            .chars()
+                            .take(start_col - 1)
+                            .take_while(|c| c.is_whitespace())
+                            .count();
                         let line_start = code
                             .lines()
                             .take(start_line - 1)

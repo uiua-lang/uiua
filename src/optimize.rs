@@ -57,6 +57,16 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(MemberOfRange, span))
         }
+        // MemberOf Rerank 1 Range
+        (
+            [.., Instr::Prim(Range, _), Instr::Push(crate::Value::Byte(val)), Instr::Prim(Rerank, _)],
+            Instr::Prim(MemberOf, span),
+        ) if val.as_scalar() == Some(&1) => {
+            instrs.pop();
+            instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(MultidimMemberOfRange, span))
+        }
         // First UnSort = random row
         ([.., Instr::ImplPrim(UnSort, _)], Instr::Prim(First | Last, span)) => {
             instrs.pop();

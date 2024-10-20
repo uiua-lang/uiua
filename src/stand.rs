@@ -34,8 +34,14 @@ fn load_asm() -> io::Result<Option<Assembly>> {
     let start = bytes.len() - asm_len as usize;
     // Deserialize the files
     let uasm: String = std::str::from_utf8(&bytes[start..]).unwrap().to_string();
-    let asm = Assembly::from_uasm(&uasm).unwrap();
+    let asm = Assembly::from_uasm(&uasm).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Failed to deserialize assembly: {e}\n\nuasm text:\n{uasm}"),
+        )
+    })?;
     Ok(Some(asm))
 }
 
-pub static STAND_ASM: Lazy<Option<Assembly>> = Lazy::new(|| load_asm().unwrap());
+pub static STAND_ASM: Lazy<Option<Assembly>> =
+    Lazy::new(|| load_asm().unwrap_or_else(|e| panic!("{e}")));

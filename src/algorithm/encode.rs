@@ -22,6 +22,7 @@ pub(crate) fn image_encode(env: &mut Uiua) -> UiuaResult {
             "gif" => ImageOutputFormat::Gif,
             "ico" => ImageOutputFormat::Ico,
             "qoi" => ImageOutputFormat::Qoi,
+            "webp" => ImageOutputFormat::WebP,
             format => return Err(env.error(format!("Invalid image format: {}", format))),
         };
         let bytes =

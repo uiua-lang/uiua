@@ -97,6 +97,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the `uiua find` command, which finds Uiua code that matches the given unformatted text
 - Add checking for end-of-line signature comments
   - These are documented in the [Documenting Code](https://uiua.org/tutorial/documentation) tutorial
+- Add `webp` support to [`img`](https://uiua.org/docs/img)
 - Some optimizations
   - Pervasive function machinery has been totally rewritten
     - Observed performance improvements of up to 12x

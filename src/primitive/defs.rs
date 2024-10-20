@@ -2360,7 +2360,7 @@ primitive!(
     /// ex: F ← ⌅(⊂10|⊂:1|⊂:2)
     ///   : F 3
     ///   : ⍜F⇌ 0_0
-    /// If the second function returns more values than the first function, the excess values will saved as "context". These context values will be passed to the "undo" part of the [under].
+    /// If the second function returns more values than the first function, the excess values will be saved as "context". These context values will be passed to the "undo" part of the [under].
     /// Here is a manual implementation of [add]'s [under] behavior.
     /// ex: F ← ⌅(+|⟜+|-)
     ///   : F 2 5

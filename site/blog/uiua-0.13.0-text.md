@@ -191,4 +191,4 @@ Thanks as always to everyone in the Uiua community, and to Uiua's generous [GitH
 
 Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.12.0---2024-08-16).
 
-You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help. We also to code challenges and brainstorm language features!
+You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help. We also do code challenges and brainstorm language features!

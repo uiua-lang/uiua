@@ -4,7 +4,11 @@
 The next version of Uiua
 
 ## 0.14
+- Module constants
+  - Periodic table
+  - World map data
 - Inline code macros
+- Compile-time string evaluation
 - `do` function pack
 - Change how inlining modifiers works
   - Make all (or most) modifiers emit themselves as instructions

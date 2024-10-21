@@ -5,7 +5,7 @@ use std::{
     env,
     error::Error,
     fmt, fs,
-    io::{self, stderr, stdin, BufRead, Write},
+    io::{self, stderr, stdin, stdout, BufRead, Write},
     path::{Path, PathBuf},
     process::{exit, Child, Command, Stdio},
     sync::{
@@ -25,8 +25,9 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
-    Assembly, Compiler, NativeSys, PreEvalMode, PrimClass, Primitive, RunMode, SpanKind, Uiua,
-    UiuaError, UiuaErrorKind, UiuaResult, Value,
+    Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDocFragment, PrimDocLine,
+    Primitive, RunMode, SafeSys, SpanKind, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
+    CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -354,6 +355,7 @@ fn main() {
                     }
                 }
             }
+            App::Doc { name } => doc(&name),
             App::Find { path, text, raw } => find(path, text, raw).unwrap_or_else(fail),
         },
         Err(e)
@@ -746,6 +748,11 @@ enum App {
         #[clap(long, help = "Format lines read from stdin")]
         io: bool,
     },
+    #[clap(about = "Show the documentation for a function, modifier, or constant")]
+    Doc {
+        #[clap(help = "The name of the function, modifier, or constant")]
+        name: String,
+    },
     #[clap(about = "Find some Uiua code that matches the given unformatted text")]
     Find {
         text: String,
@@ -1062,48 +1069,57 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, stack: bool, config:
     }
 }
 
-fn color_code(code: &str, compiler: &Compiler) -> String {
-    let mut colored = String::new();
-    let (spans, inputs) = uiua::lsp::spans_with_compiler(code, compiler);
+const NOADIC: Color = Color::Red;
+const MONADIC: Color = Color::Green;
+const DYADIC: Color = Color::Blue;
+const MONADIC_MOD: Color = Color::Yellow;
+const DYADIC_MOD: Color = Color::Magenta;
 
-    let noadic = Color::Red;
-    let monadic = Color::Green;
-    let monadic_mod = Color::Yellow;
-    let dyadic_mod = Color::Magenta;
-    let dyadic = Color::Blue;
-
-    let for_prim = |prim: Primitive, sub: Option<usize>| match prim.class() {
+fn color_prim(prim: Primitive, sub: Option<usize>) -> Option<Color> {
+    match prim.class() {
         PrimClass::Stack | PrimClass::Debug if prim.modifier_args().is_none() => None,
         PrimClass::Constant => None,
         _ => {
             if let Some(margs) = prim.modifier_args() {
-                Some(if margs == 1 { monadic_mod } else { dyadic_mod })
+                Some(if margs == 1 { MONADIC_MOD } else { DYADIC_MOD })
             } else {
                 match prim.subscript_sig(sub).map(|sig| sig.args).or(prim.args()) {
-                    Some(0) => Some(noadic),
-                    Some(1) => Some(monadic),
-                    Some(2) => Some(dyadic),
+                    Some(0) => Some(NOADIC),
+                    Some(1) => Some(MONADIC),
+                    Some(2) => Some(DYADIC),
                     _ => None,
                 }
             }
         }
-    };
+    }
+}
 
+fn color_code(code: &str, compiler: &Compiler) -> String {
+    let mut colored = String::new();
+    let (spans, inputs) = uiua::lsp::spans_with_compiler(code, compiler);
+
+    let mut prev: Option<CodeSpan> = None;
     for span in spans {
+        if let Some(prev) = prev {
+            if prev.end.byte_pos < span.span.start.byte_pos {
+                colored
+                    .push_str(&code[prev.end.byte_pos as usize..span.span.start.byte_pos as usize]);
+            }
+        }
         let color = match span.value {
-            SpanKind::Primitive(prim, sig) => for_prim(prim, sig),
+            SpanKind::Primitive(prim, sig) => color_prim(prim, sig),
             SpanKind::Ident {
                 docs: Some(docs), ..
             } => match docs.kind {
                 BindingDocsKind::Function { sig, .. } => match sig.args {
-                    0 => Some(noadic),
-                    1 => Some(monadic),
-                    2 => Some(dyadic),
+                    0 => Some(NOADIC),
+                    1 => Some(MONADIC),
+                    2 => Some(DYADIC),
                     _ => None,
                 },
                 BindingDocsKind::Modifier(margs) => Some(match margs {
-                    1 => monadic_mod,
-                    _ => dyadic_mod,
+                    1 => MONADIC_MOD,
+                    _ => DYADIC_MOD,
                 }),
                 _ => None,
             },
@@ -1113,7 +1129,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
                 g: 136,
                 b: 68,
             }),
-            SpanKind::Subscript(Some(prim), n) => for_prim(prim, n),
+            SpanKind::Subscript(Some(prim), n) => color_prim(prim, n),
             SpanKind::Comment | SpanKind::OutputComment | SpanKind::Strand => {
                 Some(Color::BrightBlack)
             }
@@ -1132,7 +1148,8 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             } else {
                 s.to_string()
             });
-        })
+        });
+        prev = Some(span.span);
     }
     colored
 }
@@ -1241,4 +1258,97 @@ fn find(path: Option<PathBuf>, mut text: String, raw: bool) -> UiuaResult {
         }
     }
     Ok(())
+}
+
+fn doc(name: &str) {
+    fn print_doc_frag(frag: &PrimDocFragment) {
+        match frag {
+            PrimDocFragment::Text(s) => print!("{s}"),
+            PrimDocFragment::Code(s) => print!("{s}"),
+            PrimDocFragment::Emphasis(s) => print!("{}", s.italic()),
+            PrimDocFragment::Strong(s) => print!("{}", s.bold()),
+            PrimDocFragment::Primitive { prim, named } => {
+                if *named {
+                    if let Some(color) = color_prim(*prim, None) {
+                        print!("{}", prim.format().to_string().color(color))
+                    } else {
+                        print!("{}", prim.format())
+                    }
+                } else if let Some(color) = color_prim(*prim, None) {
+                    print!("{}", prim.to_string().color(color))
+                } else {
+                    print!("{prim}")
+                }
+            }
+            PrimDocFragment::Link { text, url } => {
+                print!("{text}({url})")
+            }
+        }
+    }
+
+    fn print_doc_line(line: &PrimDocLine, comp: &Compiler) {
+        match line {
+            PrimDocLine::Text(vec) => {
+                for frag in vec {
+                    print_doc_frag(frag)
+                }
+                println!();
+            }
+            PrimDocLine::Example(prim_example) => {
+                println!();
+                let ex = color_code(prim_example.input(), comp);
+                for line in ex.lines() {
+                    println!("  {line}");
+                }
+                println!();
+                match prim_example.output() {
+                    Ok(vals) => {
+                        for val in vals {
+                            for line in val.lines() {
+                                println!("    {line}")
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        let report = e.report().to_string();
+                        for line in report.lines() {
+                            println!("    {line}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(prim) = Primitive::from_format_name(name).or_else(|| {
+        let mut chars = name.chars();
+        (chars.next())
+            .filter(|_| chars.next().is_none())
+            .and_then(Primitive::from_glyph)
+    }) {
+        // Primitives
+        println!();
+        if let Some(color) = color_prim(prim, None) {
+            println!("{}", prim.format().to_string().color(color));
+        } else {
+            println!("{}", prim.format());
+        }
+        println!();
+        for frag in &prim.doc().short {
+            print_doc_frag(frag);
+        }
+        println!();
+        let comp = Compiler::with_backend(SafeSys::default());
+        for line in &prim.doc().lines {
+            print_doc_line(line, &comp);
+        }
+    } else if let Some(def) = CONSTANTS.iter().find(|def| def.name == name) {
+        // Constants
+        for frag in def.doc_frags() {
+            print_doc_frag(&frag);
+        }
+    } else {
+        eprintln!("No documentation found for `{name}`");
+    }
+    stdout().flush().unwrap();
 }

@@ -1825,7 +1825,7 @@ impl PrimDoc {
 pub struct PrimExample {
     input: String,
     should_error: bool,
-    output: OnceLock<Result<Vec<String>, String>>,
+    output: OnceLock<UiuaResult<Vec<String>>>,
 }
 
 impl PrimExample {
@@ -1838,21 +1838,26 @@ impl PrimExample {
         self.should_error
     }
     /// Get the example's output
-    pub fn output(&self) -> &Result<Vec<String>, String> {
+    pub fn output(&self) -> &UiuaResult<Vec<String>> {
         self.output.get_or_init(|| {
             let mut env = Uiua::with_safe_sys();
             match env.run_str(&self.input) {
                 Ok(_) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
-                Err(e) => Err(e
-                    .to_string()
-                    .lines()
-                    .next()
-                    .unwrap_or_default()
-                    .split_once(' ')
-                    .unwrap_or_default()
-                    .1
-                    .into()),
+                Err(e) => Err(e),
             }
+        })
+    }
+    /// Get the example's output as strings
+    pub fn output_strings(&self) -> Result<&Vec<String>, String> {
+        self.output().as_ref().map_err(|e| {
+            e.to_string()
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .split_once(' ')
+                .unwrap_or_default()
+                .1
+                .into()
         })
     }
 }

@@ -2404,7 +2404,7 @@ mod server {
 ",
                         ex.input()
                     ));
-                    match ex.output() {
+                    match ex.output_strings() {
                         Ok(lines) => {
                             for line in lines.iter().flat_map(|l| l.lines()) {
                                 value.push_str(&format!("> {line}\n"));

@@ -569,6 +569,14 @@ impl Primitive {
     }
     /// Try to parse multiple primitives from the concatenation of their name prefixes
     pub fn from_format_name_multi(name: &str) -> Option<Vec<(Self, &str)>> {
+        fn alias(name: &str) -> Option<Vec<(Primitive, &str)>> {
+            use Primitive::*;
+            Some(match name {
+                "kork" => vec![(Keep, "k"), (On, "o"), (Rows, "r"), (Keep, "k")],
+                _ => return None,
+            })
+        }
+
         let mut indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
         if indices.len() < 2 {
             return None;
@@ -636,6 +644,12 @@ impl Primitive {
                     start += len;
                     continue 'outer;
                 }
+                // Aliases
+                if let Some(ps) = alias(sub_name) {
+                    prims.extend(ps);
+                    start += len;
+                    continue 'outer;
+                }
             }
             break;
         }
@@ -696,6 +710,12 @@ impl Primitive {
                         };
                         prims.push((prim, &sub_name[i..i + 1]))
                     }
+                    end -= len;
+                    continue 'outer;
+                }
+                // Aliases
+                if let Some(ps) = alias(sub_name) {
+                    prims.extend(ps);
                     end -= len;
                     continue 'outer;
                 }

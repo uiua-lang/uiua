@@ -193,7 +193,8 @@ sys_op! {
     /// Get the command line arguments
     ///
     /// The first element will always be the name of your script
-    (0, Args, Env, "&args", "arguments"),
+    // Doesn't actually mutate, but this is necessary for the LSP
+    (0, Args, Env, "&args", "arguments", Mutating),
     /// Get the value of an environment variable
     ///
     /// Expects a string and returns a string.

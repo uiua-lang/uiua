@@ -2,7 +2,7 @@ use std::fmt;
 
 use ecow::EcoVec;
 
-use crate::{Assembly, ImplPrimitive, Instr, Primitive, TempStack};
+use crate::{check::instrs_clean_signature, Assembly, ImplPrimitive, Instr, Primitive, TempStack};
 
 pub(crate) fn optimize_instrs_mut(
     instrs: &mut EcoVec<Instr>,
@@ -165,6 +165,43 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.pop();
             instrs.push(Instr::TouchStack { count, span });
+        }
+        // By dup
+        (
+            &mut [.., Instr::PushTemp {
+                stack: TempStack::Inline,
+                count: 1,
+                span: push_temp_span,
+            }, Instr::Prim(Dup, dup_span)],
+            Instr::PopTemp {
+                stack: TempStack::Inline,
+                count: 1,
+                span: pop_temp_span,
+            },
+        ) => {
+            let end = instrs.len() - 2;
+            let pop_temp = Instr::PopTemp {
+                stack: TempStack::Inline,
+                count: 1,
+                span: pop_temp_span,
+            };
+            if let Some(i) = (0..end)
+                .find(|&i| instrs_clean_signature(&instrs[i..end]).is_some_and(|sig| sig == (1, 1)))
+            {
+                instrs.truncate(end);
+                let one_one = instrs[i..].to_vec();
+                instrs.truncate(i);
+                instrs.push(Instr::PushTemp {
+                    stack: TempStack::Inline,
+                    count: 1,
+                    span: push_temp_span,
+                });
+                instrs.push(Instr::Prim(Dup, dup_span));
+                instrs.push(pop_temp);
+                instrs.extend(one_one);
+            } else {
+                instrs.push(pop_temp);
+            }
         }
         // Tranposes
         ([.., Instr::Prim(Transpose, span)], Instr::Prim(Transpose, _)) => {

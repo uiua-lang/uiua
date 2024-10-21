@@ -3627,7 +3627,7 @@ impl_primitive!(
     (1, LenWhere),
     (2, MemberOfRange),
     (2, MultidimMemberOfRange),
-    (1, RandomRow),
+    (1, RandomRow, Impure),
     (1, SortDown),
     (1[1], ReduceContent),
     (2[2], ReduceTable),

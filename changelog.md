@@ -96,6 +96,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Remove previously deprecated function strands
 ### Interpreter
 - Add the `uiua find` command, which finds Uiua code that matches the given unformatted text
+- Add the `uiua doc` command, which shows the documentation for a function or modifier
 - Add checking for end-of-line signature comments
   - These are documented in the [Documenting Code](https://uiua.org/tutorial/documentation) tutorial
 - Add `webp` support to [`img`](https://uiua.org/docs/img)

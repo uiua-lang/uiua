@@ -1316,6 +1316,7 @@ fn doc(name: &str) {
                         }
                     }
                 }
+                println!();
             }
         }
     }

@@ -396,15 +396,19 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let grid_row_count = grid.len();
             if grid_row_count == 1 && self.rank() == 1 {
                 // Add brackets to lists
-                let (left, right) = if requires_summary(&self.shape) {
-                    ('[', ']')
+                let (left, right) = if requires_summary::<T>(&self.shape) {
+                    if params.boxed {
+                        Boxed::grid_fmt_delims(params.boxed)
+                    } else {
+                        ('[', ']')
+                    }
                 } else {
                     T::grid_fmt_delims(params.boxed)
                 };
                 grid[0].insert(0, left);
                 grid[0].push(right);
             } else {
-                let apparent_rank = if requires_summary(&self.shape) {
+                let apparent_rank = if requires_summary::<T>(&self.shape) {
                     1
                 } else {
                     self.rank()
@@ -558,11 +562,10 @@ fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
     shape_row
 }
 
-const MAX_ELEMS: usize = 3600;
 const MAX_RANK: usize = 10;
 
-fn requires_summary(shape: &[usize]) -> bool {
-    shape.iter().product::<usize>() > MAX_ELEMS || shape.len() > MAX_RANK
+fn requires_summary<T: ArrayValue>(shape: &[usize]) -> bool {
+    shape.iter().product::<usize>() > T::summary_min_elems() || shape.len() > MAX_RANK
 }
 
 fn fmt_array<T: GridFmt + ArrayValue>(
@@ -575,7 +578,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         metagrid.push(vec![vec![shape_row::<T>(shape)]]);
         return;
     }
-    if requires_summary(shape) {
+    if requires_summary::<T>(shape) {
         let summary = T::summarize(data);
         if !summary.is_empty() {
             metagrid.push(vec![if shape.len() == 1 {

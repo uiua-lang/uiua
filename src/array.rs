@@ -805,6 +805,10 @@ pub trait ArrayValue:
     fn summarize(elems: &[Self]) -> String {
         String::new()
     }
+    /// The minimum number of elements that require a summary
+    fn summary_min_elems() -> usize {
+        3600
+    }
 }
 
 /// A NaN value that always compares as equal
@@ -1066,6 +1070,33 @@ impl ArrayValue for Boxed {
     }
     fn has_wildcard(&self) -> bool {
         self.0.has_wildcard()
+    }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        let smallest_rank = elems.iter().map(|e| e.0.rank()).min().unwrap();
+        let largest_rank = elems.iter().map(|e| e.0.rank()).max().unwrap();
+        let smallest_shape = (elems.iter().map(|e| e.0.shape()))
+            .min_by_key(|s| s.elements())
+            .unwrap();
+        let largest_shape = (elems.iter().map(|e| e.0.shape()))
+            .max_by_key(|s| s.elements())
+            .unwrap();
+        let rank_summary = if smallest_rank == largest_rank {
+            format!("all rank {smallest_rank}")
+        } else {
+            format!("ranks {smallest_rank}-{largest_rank}")
+        };
+        let shape_summary = if smallest_shape == largest_shape {
+            format!("all shape {smallest_shape}")
+        } else {
+            format!("shapes {smallest_shape}-{largest_shape}")
+        };
+        format!("{rank_summary}, {shape_summary}")
+    }
+    fn summary_min_elems() -> usize {
+        1000
     }
 }
 

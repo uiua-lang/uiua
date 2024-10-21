@@ -165,57 +165,9 @@ impl Compiler {
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
             );
-            let mut words = binding.words.clone();
+            let words = binding.words.clone();
             let mut recursive = false;
-            recurse_words_mut(&mut words, &mut |word| {
-                let mut path_locals = None;
-                let mut name_local = None;
-                match &word.value {
-                    Word::Ref(r) => match self.ref_local(r) {
-                        Ok(Some((pl, l))) => {
-                            path_locals = Some((&r.path, pl));
-                            name_local = Some((&r.name, l));
-                        }
-                        Ok(None) => {}
-                        Err(e) => self.errors.push(e),
-                    },
-                    Word::IncompleteRef { path, in_macro_arg } => {
-                        match self.ref_path(path, *in_macro_arg) {
-                            Ok(Some((_, pl))) => path_locals = Some((path, pl)),
-                            Ok(None) => {}
-                            Err(e) => self.errors.push(e),
-                        }
-                    }
-                    Word::Modified(m) => {
-                        if let Modifier::Ref(r) = &m.modifier.value {
-                            match self.ref_local(r) {
-                                Ok(Some((pl, l))) => {
-                                    path_locals = Some((&r.path, pl));
-                                    name_local = Some((&r.name, l));
-                                }
-                                Ok(None) => {}
-                                Err(e) => self.errors.push(e),
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-                if let Some((nm, local)) = name_local {
-                    if nm.value == name
-                        && path_locals.as_ref().map_or(true, |(pl, _)| pl.is_empty())
-                    {
-                        recursive = true;
-                    }
-                    self.validate_local(&nm.value, local, &nm.span);
-                    (self.code_meta.global_references).insert(nm.span.clone(), local.index);
-                }
-                if let Some((path, locals)) = path_locals {
-                    for (local, comp) in locals.into_iter().zip(path) {
-                        (self.code_meta.global_references)
-                            .insert(comp.module.span.clone(), local.index);
-                    }
-                }
-            });
+            self.analyze_macro_body(&name, &words, &mut recursive);
             if recursive {
                 self.experimental_error(span, || {
                     "Recursive positional macros are experimental. \
@@ -606,5 +558,86 @@ impl Compiler {
             }
         }
         Ok(())
+    }
+    fn analyze_macro_body(&mut self, macro_name: &str, words: &[Sp<Word>], recursive: &mut bool) {
+        for word in words {
+            let mut path_locals = None;
+            let mut name_local = None;
+            match &word.value {
+                Word::Strand(items) => self.analyze_macro_body(macro_name, items, recursive),
+                Word::Array(arr) => arr.lines.iter().for_each(|line| {
+                    self.analyze_macro_body(macro_name, line, recursive);
+                }),
+                Word::Func(func) => func.lines.iter().for_each(|line| {
+                    self.analyze_macro_body(macro_name, line, recursive);
+                }),
+                Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
+                    (branch.value.lines.iter())
+                        .for_each(|line| self.analyze_macro_body(macro_name, line, recursive))
+                }),
+                Word::Ref(r) => match self.ref_local(r) {
+                    Ok(Some((pl, l))) => {
+                        path_locals = Some((&r.path, pl));
+                        name_local = Some((&r.name, l));
+                    }
+                    Ok(None) => {}
+                    Err(e) => self.errors.push(e),
+                },
+                Word::IncompleteRef { path, in_macro_arg } => {
+                    match self.ref_path(path, *in_macro_arg) {
+                        Ok(Some((_, pl))) => path_locals = Some((path, pl)),
+                        Ok(None) => {}
+                        Err(e) => self.errors.push(e),
+                    }
+                }
+                Word::Modified(m) => {
+                    if let Modifier::Ref(r) = &m.modifier.value {
+                        match self.ref_local(r) {
+                            Ok(Some((pl, l))) => {
+                                path_locals = Some((&r.path, pl));
+                                name_local = Some((&r.name, l));
+                            }
+                            Ok(None) => {}
+                            Err(e) => self.errors.push(e),
+                        }
+                        if let Some(BindingKind::Module(module)) = name_local
+                            .as_ref()
+                            .and_then(|(_, local)| self.asm.bindings.get(local.index))
+                            .map(|b| &b.kind)
+                        {
+                            let names = module.names.clone();
+                            let recursive = &mut *recursive;
+                            if let Err(e) = self.in_scope(ScopeKind::AllInModule, move |comp| {
+                                comp.scope.names.extend(names);
+                                comp.analyze_macro_body(macro_name, &m.operands, recursive);
+                                Ok(())
+                            }) {
+                                self.errors.push(e);
+                            }
+                        } else {
+                            self.analyze_macro_body(macro_name, &m.operands, recursive)
+                        }
+                    } else {
+                        self.analyze_macro_body(macro_name, &m.operands, recursive)
+                    }
+                }
+                _ => {}
+            }
+            if let Some((nm, local)) = name_local {
+                if nm.value == macro_name
+                    && path_locals.as_ref().map_or(true, |(pl, _)| pl.is_empty())
+                {
+                    *recursive = true;
+                }
+                self.validate_local(&nm.value, local, &nm.span);
+                (self.code_meta.global_references).insert(nm.span.clone(), local.index);
+            }
+            if let Some((path, locals)) = path_locals {
+                for (local, comp) in locals.into_iter().zip(path) {
+                    (self.code_meta.global_references)
+                        .insert(comp.module.span.clone(), local.index);
+                }
+            }
+        }
     }
 }

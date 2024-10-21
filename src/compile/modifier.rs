@@ -1024,7 +1024,9 @@ impl Compiler {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let span = operand.span.clone();
                 let spandex = self.add_span(span.clone());
+                let in_inverse = replace(&mut self.in_inverse, false);
                 let (func, sig) = self.compile_operand_word(operand)?;
+                self.in_inverse = in_inverse;
                 let func = self.make_function(span.clone().into(), sig, func);
                 let mut cust = CustomInverse {
                     under: Some((func.clone(), func.clone())),

@@ -1163,7 +1163,7 @@ impl Value {
     }
     /// Convert to a box array by boxing every element
     pub fn coerce_to_boxes(self) -> Array<Boxed> {
-        if self.rank() == 0 {
+        if self.rank() == 0 && !matches!(self, Value::Box(_)) {
             return Boxed(self).into();
         }
         match self {

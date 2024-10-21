@@ -43,6 +43,8 @@ MapsII ← ∩(remove 1) MapsI
 ⍤⤙≍ 0 ≍ ⟜map [1 2 3] [4 5 6]
 ⍤⤙≍ 1 ≍ .map [1 2 3] [4 5 6]
 
+⍤⤙≍ ⤙insert 1□"a" map 1 □"a"
+
 # Empty keys
 ⍤⟜≍ insert[][]map[][] insert[][][]
 ⍤⤙≍ 5 get [] insert [] 5 map[][]

@@ -5,6 +5,7 @@ The next version of Uiua
 
 ## 0.14
 - Inline code macros
+- `do` function pack
 - Change how inlining modifiers works
   - Make all (or most) modifiers emit themselves as instructions
   - This allows inverses to be smarter about what they are working on
@@ -15,6 +16,7 @@ The next version of Uiua
 - Move array depth checks to compile time
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)
+- Replace `viuer`
 
 ## Planned Features
 Features that are planned to be implemented in the future.

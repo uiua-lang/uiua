@@ -568,8 +568,8 @@ impl Report {
         }
     }
     /// A report that tests have finished
-    pub fn tests(successes: usize, failures: usize) -> Self {
-        let fragments = if successes == 0 {
+    pub fn tests(successes: usize, failures: usize, not_run: usize) -> Self {
+        let mut fragments = if successes == 0 && not_run == 0 {
             if failures == 0 {
                 vec![]
             } else {
@@ -585,9 +585,9 @@ impl Report {
         } else {
             let mut fragments = vec![ReportFragment::Colored(
                 match (successes, failures) {
-                    (1, 0) => "Test passed".into(),
-                    (2, 0) => "Both tests passed".into(),
-                    (suc, 0) => format!("All {suc} tests passed"),
+                    (1, 0) if not_run == 0 => "Test passed".into(),
+                    (2, 0) if not_run == 0 => "Both tests passed".into(),
+                    (suc, 0) if not_run == 0 => format!("All {suc} tests passed"),
                     (suc, _) => {
                         format!("{suc} test{} passed", if suc == 1 { "" } else { "s" })
                     }
@@ -602,6 +602,20 @@ impl Report {
             }
             fragments
         };
+        if not_run > 0 {
+            if fragments.is_empty() {
+                fragments.push(ReportFragment::Colored(
+                    format!("0 of {not_run} tests ran"),
+                    ReportKind::Error,
+                ));
+            } else {
+                fragments.push(ReportFragment::Plain(", ".into()));
+                fragments.push(ReportFragment::Colored(
+                    format!("{not_run} didn't run"),
+                    DiagnosticKind::Warning.into(),
+                ));
+            }
+        }
         Report {
             fragments,
             color: true,

@@ -25,9 +25,9 @@ use crate::{
     function::*,
     instr::*,
     lex::Span,
-    Array, Assembly, BindingKind, Boxed, CodeSpan, Compiler, Ident, Inputs, IntoSysBackend,
-    LocalName, Primitive, Report, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaErrorKind,
-    UiuaResult, Value, VERSION,
+    Array, Assembly, BindingKind, Boxed, CodeSpan, Compiler, Ident, ImplPrimitive, Inputs,
+    IntoSysBackend, LocalName, Primitive, Report, SafeSys, SysBackend, SysOp, TraceFrame,
+    UiuaError, UiuaErrorKind, UiuaResult, Value, VERSION,
 };
 
 /// The Uiua interpreter
@@ -378,8 +378,13 @@ impl Uiua {
                 Ok(()) => res = Err(te),
                 Err(e) => e.multi.push(te),
             };
-            if !env.rt.test_results.is_empty() {
-                let total = env.rt.test_results.len();
+            let total_assert_tests = (env.asm.top_slices.iter())
+                .flat_map(|s| &env.asm.instrs[s.start..s.end()])
+                .filter(|instr| matches!(instr, Instr::ImplPrim(ImplPrimitive::TestAssert, _)))
+                .count();
+            if total_assert_tests > 0 {
+                let total_run = env.rt.test_results.len();
+                let not_run = total_assert_tests.saturating_sub(total_run);
                 let mut successes = 0;
                 for res in env.rt.test_results.drain(..) {
                     match res {
@@ -387,7 +392,7 @@ impl Uiua {
                         Err(e) => push_error(e),
                     }
                 }
-                (env.rt.reports).push(Report::tests(successes, total - successes));
+                (env.rt.reports).push(Report::tests(successes, total_run - successes, not_run));
             }
             if res.is_err() {
                 env.rt = Runtime {

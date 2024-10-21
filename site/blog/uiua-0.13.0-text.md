@@ -101,6 +101,14 @@ Modules now use fancy delimiters. They format from the existing `---`s. Try it o
 ---
 ```
 
+## New CLI Commands
+
+The native interpreter has two new commands: `uiua find` and `uiua doc`.
+
+`uiua find` searches a file or directory for a string of formatted uiua code. This is useful when you cannot easily type some glyphs in your editor's default find interface.
+
+`uiua doc` prints documentation for a function or modifier. That's it! It is the same documentation that is present on the website.
+
 ## `# Experimental!`
 
 This release added a lot of experimental features. Experimental features are not guaranteed to make it into the stable language, but they are added so they can be tried out.

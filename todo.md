@@ -3,9 +3,8 @@
 ## 0.13
 The next version of Uiua
 
-## Implementation details
-Things that don't affect the language itself, but are important for the compiler or interpreter.
-
+## 0.14
+- Inline code macros
 - Change how inlining modifiers works
   - Make all (or most) modifiers emit themselves as instructions
   - This allows inverses to be smarter about what they are working on
@@ -15,12 +14,13 @@ Things that don't affect the language itself, but are important for the compiler
     - New system should make it simpler
 - Move array depth checks to compile time
 - Allow for multi-value constant bindings
-- Dead code elimination
-  - Eliminate unused anonymous functions
+- Animated WEBP support? (`&webp`)
 
 ## Planned Features
 Features that are planned to be implemented in the future.
 
+- Dead code elimination
+  - Eliminate unused anonymous functions
 - Dynamic modules
   - A system by which the public interface of a module can be specified
   - Instances of a dynamic module can be loaded at runtime

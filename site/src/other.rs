@@ -65,9 +65,9 @@ pub fn Install() -> impl IntoView {
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
 
         <Hd id="fonts">"Fonts"</Hd>
-        <p>"Uiua supports a few custom fonts, but "<a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" is the primary one."</p>
+        <p>"Uiua supports a few custom fonts, but "<a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">"Uiua386"</a>" is the primary one."</p>
         <ul>
-            <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
+            <li><a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">"Uiua386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
             <li>"Jonathan Perret's "<a href="https://github.com/jonathanperret/uiua386color">"Uiua386Color"</a>" - a colored version of Uiua386"</li>
             <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/DejaVuSansMono.ttf">"DejaVuSansMono"</a>" - a modified version"</li>
         </ul>

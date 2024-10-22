@@ -191,7 +191,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         NodeValue::Code(code) => {
             let mut inputs = Inputs::default();
             let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut inputs);
-            if errors.is_empty() {
+            if errors.is_empty() && code.literal != "---" {
                 let mut s = "<code>".to_string();
                 for token in tokens {
                     let text = token.span.as_str(&inputs, |s| s.to_string());

@@ -1,12 +1,12 @@
 # Announcing Uiua 0.13.0
 
-2024-10-??
+2024-10-21
 
 ---
 
 Uiua 0.13.0 is now available!
 
-You can find the full changelog [here](https://uiua.org/docs/changelog#0.13.0---2024-10-??).
+You can find the full changelog [here](https://uiua.org/docs/changelog#0.13.0---2024-10-21).
 
 Uiua is a general purpose, stack-based, array-oriented programming language with a focus on tacit code.
 
@@ -36,6 +36,20 @@ It allows you set multiple kinds of inverses at once.
 
 The [Inverses Tutorial](https://uiua.org/tutorial/inverses) has been updated to include [`anti ⌝`](https://uiua.org/docs/anti) and [`obverse ⌅`](https://uiua.org/docs/obverse).
 
+[`un °`](https://uiua.org/docs/un) [`by ⊸`](https://uiua.org/docs/by) can now be used to access the "undo" part of a function's [`under ⍜`](https://uiua.org/docs/under) functionality.
+
+This allows for "setter"-type behavior. For example, you can set the [`first ⊢`](https://uiua.org/docs/first) row of an array:
+
+```uiua
+°⊸⊢ 5 [1 2 3 4]
+```
+
+Or set the magnitude of a complex number:
+
+```uiua
+°⊸⌵ 10 . ℂ3 4
+```
+
 ## New Stack Manipulation Modifiers
 
 The [`with ⤙`](https://uiua.org/docs/with) and [`below ◡`](https://uiua.org/docs/below) modifiers have been stabilized.
@@ -63,7 +77,7 @@ The [`with ⤙`](https://uiua.org/docs/with) and [`below ◡`](https://uiua.org/
 
 ```uiua
 °△3_3_2
-{⊙∘} ⤸1 .
+{⊙∘} ⤙⤸1
 ```
 
 [`anti ⌝`](https://uiua.org/docs/anti)[`orient ⤸`](https://uiua.org/docs/orient) allows you to combine axes, which is equivalent to taking the diagonal along those axes.
@@ -101,6 +115,20 @@ Modules now use fancy delimiters. They format from the existing `---`s. Try it o
 ---
 ```
 
+## Line Manipulation
+
+The behavior of `;` and `;;` has been changed.
+
+The main useful change is the formatter will reverse code that is separated by `;`s, so you don't have to press `←` quite as much.
+
+Try it out:
+
+```uiua
+1 2;+; *10 # Format!
+```
+
+You can read more about this functionality [here](https://uiua.org/tutorial/codetactility#line-manipulation).
+
 ## New CLI Commands
 
 The native interpreter has two new commands: `uiua find` and `uiua doc`.
@@ -131,6 +159,7 @@ Subscript numbers may immediately follow a glyph. These can be typed with `__` f
 ```
 
 ```uiua
+# Experimental!
 ⁅₃ π
 ```
 
@@ -182,21 +211,27 @@ Foo~Qux
 
 You can read about everything data definitions can do [here](https://uiua.org/docs/experimental#data-definitions).
 
-# Contributors
+## Contributors
 
-No previous Uiua release has had so many direct code contributions.
+No previous Uiua release has had so many direct code contributions!
 
 In particular, I'd like to thank:
-- Omnikar for implementing [`un °`](https://uiua.org/docs/un)[`by ⊸`](https://uiua.org/docs/by)
-- amatgil for implementing the new behavior for [`gen`](https://uiua.org/docs/gen) and the experimental [`around ’`](https://uiua.org/docs/around) function
-- Marcos-cat for implementing [`fill ⬚`](https://uiua.org/docs/fill)ed [`csv`](https://uiua.org/docs/csv), [`memberof ∈`](https://uiua.org/docs/memberof)[`range ⇡`](https://uiua.org/docs/range) optimization, and a more persistent pad virtual filesystem
+- [Omnikar](https://github.com/omnikar/) for implementing [`un °`](https://uiua.org/docs/un)[`by ⊸`](https://uiua.org/docs/by)
+- [amatgil](https://github.com/amatgil) for implementing the new behavior for [`gen`](https://uiua.org/docs/gen) and the experimental [`around ’`](https://uiua.org/docs/around) function
+- [Marcos-cat](https://github.com/Marcos-cat/) for implementing [`fill ⬚`](https://uiua.org/docs/fill)ed [`csv`](https://uiua.org/docs/csv), [`memberof ∈`](https://uiua.org/docs/memberof)[`range ⇡`](https://uiua.org/docs/range) optimization, and a more persistent pad virtual filesystem
 
-Also, check out Omnikar's awesome [`uiua-plot`](https://github.com/omnikar/uiua-plot) library for making plots and graphs in Uiua!
+Also, check out [Omnikar](https://github.com/omnikar/)'s awesome [`uiua-plot`](https://github.com/omnikar/uiua-plot) library for making plots and graphs in Uiua!
 
-# 💟
+## 💟
 
 Thanks as always to everyone in the Uiua community, and to Uiua's generous [GitHub Sponsors](https://github.com/sponsors/uiua-lang)!
 
-Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.12.0---2024-08-16).
+Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.13.0---2024-10-21).
 
-You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help. We also do code challenges and brainstorm language features!
+You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!
+
+## 🐈‍⬛🐈
+
+```uiua
+▽⟜≡▽ 0.5 Cats
+```

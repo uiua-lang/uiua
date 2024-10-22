@@ -57,15 +57,15 @@ Foo!(G F ×A) [1 2 3]
 
 ## [`switch ⨬`]()
 
-Dedicated switch function syntax has been replaced with the [`switch ⨬`]() modifier.
+Dedicated switch function syntax has been replaced with the [`switch ⨬`](https://uiua.org/docs/switch) modifier.
 
-In addition, it has been expanded to do an implicit [`rows ≡`]().
+In addition, it has been expanded to do an implicit [`rows ≡`](https://uiua.org/docs/rows).
 
 ```uiua
 ⨬(∘|+1|×2) [0 1 2] 5
 ```
 
-Existing `⟨⟩`s will continue to parse and will format to [`switch ⨬`]() with a function pack.
+Existing `⟨⟩`s will continue to parse and will format to [`switch ⨬`](https://uiua.org/docs/switch) with a function pack.
 
 ## Subscript digits in identifiers
 
@@ -84,13 +84,13 @@ Sha₂₅₆ ← "todo"   # Formats to this
 
 Several primitive functions have new functionality
 
-[`un °`]() [`shape △`]() now generates a [`range ⇡`]() array with the given shape.
+[`un °`](https://uiua.org/docs/un) [`shape △`](https://uiua.org/docs/shape) now generates a [`range ⇡`](https://uiua.org/docs/range) array with the given shape.
 
 ```uiua
 °△ 2_3_4
 ```
 
-[`couple ⊟`]() and [`join ⊂`]() are now more permissive of arguments with different ranks. The array with a smaller rank will be repeated.
+[`couple ⊟`](https://uiua.org/docs/couple) and [`join ⊂`](https://uiua.org/docs/join) are now more permissive of arguments with different ranks. The array with a smaller rank will be repeated.
 
 ```uiua
 ⊟ 1_2_3 4
@@ -99,30 +99,30 @@ Several primitive functions have new functionality
 ⊂ [1_2_3 4_5_6] 7
 ```
 
-[`keep ▽`]() will now cycle the counts array.
+[`keep ▽`](https://uiua.org/docs/keep) will now cycle the counts array.
 
 ```uiua
 ▽ 0_1_2 [1 2 3 4 5 6]
 ```
 
-[`keep ▽`]() also now allows a scalar non-integer to scale an array. This is useful for image and audio arrays.
+[`keep ▽`](https://uiua.org/docs/keep) also now allows a scalar non-integer to scale an array. This is useful for image and audio arrays.
 
 ```uiua
 ▽ 0.5 [1 2 3 4 5 6]
 ▽ 1.5 [1 2 3 4 5 6]
 ```
-## [`memberof ∈`]()
+## [`memberof ∈`](https://uiua.org/docs/memberof)
 
 [`member ∊`]() is now deprecated. It was almost always used along with [`flip :`]().
 
-It has been replaced with [`memberof ∈`](), which has the exact same functionality, except its arguments are flipped.
+It has been replaced with [`memberof ∈`](https://uiua.org/docs/memberof), which has the exact same functionality, except its arguments are flipped.
 
 ```uiua
 F ← ∈"abc"
 F "beefcake"
 ```
 
-This makes it work nicely with [`by ⊸`]()!
+This makes it work nicely with [`by ⊸`](https://uiua.org/docs/by)!
 
 ```uiua
 ⊜□¬⊸∈ " ," "To be, or not"
@@ -138,9 +138,9 @@ You can view to full list of experimental features [here](https://uiua.org/docs/
 
 ### More Stack Modifiers
 
-The [`but ⤙`]() and [`with ⤚`]() modifiers are complements to [`on ⟜`]() and [`by ⊸`]().
+The [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off) modifiers are complements to [`on ⟜`](https://uiua.org/docs/on) and [`by ⊸`](https://uiua.org/docs/by).
 
-[`but ⤙`]() keeps its function's *last* argument on *top* of the stack while [`with ⤚`]() keeps its function's *first* argument *below* the outputs on the stack.
+[`with ⤙`](https://uiua.org/docs/with) keeps its function's *last* argument on *top* of the stack while [`off ⤚`](https://uiua.org/docs/off) keeps its function's *first* argument *below* the outputs on the stack.
 
 ```uiua
 # Experimental!
@@ -148,7 +148,7 @@ The [`but ⤙`]() and [`with ⤚`]() modifiers are complements to [`on ⟜`]() a
 [⤚+ 2 5]
 ```
 
-The [`above ◠`]() and [`below ◡`]() modifiers keep *all* of a function's arguments above or below the outputs on the stack.
+The [`above ◠`](https://uiua.org/docs/above) and [`below ◡`](https://uiua.org/docs/below) modifiers keep *all* of a function's arguments above or below the outputs on the stack.
 
 ```uiua
 # Experimental!
@@ -156,17 +156,17 @@ The [`above ◠`]() and [`below ◡`]() modifiers keep *all* of a function's arg
 [◡(++) 1 2 3]
 ```
 
-[`chunks ⑄`]() is similar to [`windows ◫`]() except the parts of the array do not overlap.
+`chunks ⑄` is similar to [`windows ◫`](https://uiua.org/docs/windows) except the parts of the array do not overlap.
 
-```uiua
+```old-uiua
 # Experimental!
 ⑄ 2_3 °△ 4_9
 ≡≡□
 ```
 
-[`orient ⤸`]() transposes an array's axes by moving the axes at the given indices to the front of the [`shape △`]().
+[`orient ⤸`](https://uiua.org/docs/orient) transposes an array's axes by moving the axes at the given indices to the front of the [`shape △`](https://uiua.org/docs/shape).
 
-This simplifies complex shape transformations that would otherwise be done with several [`transpose ⍉`]()s and [`rows ≡`]()s.
+This simplifies complex shape transformations that would otherwise be done with several [`transpose ⍉`](https://uiua.org/docs/transpose)s and [`rows ≡`](https://uiua.org/docs/rows)s.
 
 ```uiua
 # Experimental!
@@ -192,7 +192,8 @@ A few built-in image and audio constants have been added. These are useful for t
 
 ```uiua
 Logo
-Lena
 ▽⟜≡▽ 0.5 # Scales the image down
+Lena
+▽⟜≡▽ 0.5
 Music
 ```

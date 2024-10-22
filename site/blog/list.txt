@@ -1,3 +1,4 @@
+uiua-0.13.0(666c3590-e42d-4e75-a7bf-1552a098ccd2): 2024-10-21 - Announcing Uiua 0.13.0
 uiua-0.12.0(95d63645-10e4-4312-bbe3-f0a6254c0144): 2024-08-16 - Announcing Uiua 0.12.0
 uiua-0.11.0(32cba0cb-2378-4cf9-894c-ea65e2a3ffda): 2024-06-02 - Announcing Uiua 0.11.0
 uiua-0.10.0(6841da9d-9b35-4992-92b3-0c6820606733): 2024-04-04 - Announcing Uiua 0.10.0

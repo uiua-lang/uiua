@@ -1,9 +1,10 @@
 # Uiua Changelog
 
 Uiua is not yet stable.
+<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.13.0 - 2024-10-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
+## 0.13.0 - 2024-10-21
+You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
 ### Language
 - **Breaking Change** - [`minimum ↧`](https://uiua.org/docs/minimum) and [`maximum ↥`](https://uiua.org/docs/maximum) now compare boxes lexicographically
   - This makes them consistent with comparison functions like [`less than <`](https://uiua.org/docs/less%20than)
@@ -23,11 +24,13 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`orient ⤸`](https://uiua.org/docs/orient)
   - Change its glyph to something with broader font support
   - `⮌` will continue to work and will be formatted as `⤸`
-- Stabilize [`below ◡`](https://uiua.org/docs/below)
 - Add [`anti ⌝`](https://uiua.org/docs/anti) modifier, which simplifies choosing certain inverses
+  - Add related new [`anti ⌝`](https://uiua.org/docs/anti) inverses for [`drop ↘`](https://uiua.org/docs/drop), [`select ⊏`](https://uiua.org/docs/select), and [`pick ⊡`](https://uiua.org/docs/pick) (though many more already existed)
 - Add [`obverse ⌅`](https://uiua.org/docs/obverse) modifier, which unifies the specification of inverses
   - This unifies, replaces, and extends [`setinv`](https://uiua.org/docs/setinv) and [`setund`](https://uiua.org/docs/setund)
   - Deprecate [`setinv`](https://uiua.org/docs/setinv) and [`setund`](https://uiua.org/docs/setund)
+- [`un °`](https://uiua.org/docs/un) [`by ⊸`](https://uiua.org/docs/by) can now be used to access the "undo" part of a function's [`under ⍜`](https://uiua.org/docs/under) functionality
+- Stabilize [`below ◡`](https://uiua.org/docs/below)
 - Rename `⤙ but` and `⤚ with` to [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off)
   - [`with ⤙`](https://uiua.org/docs/with) has been stabilized
 - "Stack macros" are now called "index macros"
@@ -35,15 +38,13 @@ This version is not yet released. If you are reading this on the website, then t
   - Deprecate existing stack-based macro placeholders (`^!`, `^.`, etc.)
 - [`assert ⍤`](https://uiua.org/docs/assert) at the beginning of a line is now interpreted as a test in some contexts
   - See the updated [Testing Tutorial](https://uiua.org/tutorial/testing) for more information
-- [`fold ∧`](https://uiua.org/docs/fold) now works with any signature
-  - Excess values are collected into arrays
 - [`parse ⋕`](https://uiua.org/docs/parse) now parses complex values from both `arbi`and `a+bi` formats
   - [`un °`](https://uiua.org/docs/un)[`parse ⋕`](https://uiua.org/docs/parse)'s return value uses the `arbi` format
 - [`un °`](https://uiua.org/docs/un) [`orient ⤸`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
   - This is analogous to the behavior of [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select)
 - Add a feature to some [`under ⍜`](https://uiua.org/docs/under) functions that makes them more permissive of changes in rank
   - Applies to [`select ⊏`](https://uiua.org/docs/select), [`keep ▽`](https://uiua.org/docs/keep), [`first ⊢`](https://uiua.org/docs/first), [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
-  - If the value that is "put back" can have its rank changes
+  - The value that is "put back" can have its rank changed
   - Lower rank arrays get repeated to match the original shape
   - Higher rank arrays extend the length of the array
 - [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) now preserves a minimum bit length
@@ -55,8 +56,6 @@ This version is not yet released. If you are reading this on the website, then t
   - The behavior is similar to the analogous behavior for [`reduce /`](https://uiua.org/docs/reduce)
 - Allow [`on ⟜`](https://uiua.org/docs/on) to use function packs
 - Allow [`under ⍜`](https://uiua.org/docs/under) of scalar [`keep ▽`](https://uiua.org/docs/keep)
-- Add [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) [`drop ↘`](https://uiua.org/docs/drop), which pads an array
-- Add [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) [`select ⊏`](https://uiua.org/docs/select) and [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) [`pick ⊡`](https://uiua.org/docs/pick)
 - Add the [`graphemes`](https://uiua.org/docs/graphemes) function, which splits a string into unicode grapheme clusters
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
 - Very large arrays are now displayed more concisely in output
@@ -73,6 +72,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `Cats` image constant
 - Allow [`&raw`](https://uiua.org/docs/&raw) to be inverted, acting as a getter for the raw state of the terminal
   - [`under ⍜`](https://uiua.org/docs/under)[`&raw`](https://uiua.org/docs/&raw) sets raw mode, and then returns it to the previous state
+- Experimentally allow [`fold ∧`](https://uiua.org/docs/fold) to work with any signature
+  - Excess values are collected into arrays
 - Add the experimental [`around ’`](https://uiua.org/docs/around) function, which duplicates the top value on the stack to the third-to-top position
 - Add experimental [`tuples ⧅`](https://uiua.org/docs/tuples) modifier
   - This unifies and extends the behavior of the `choose` and `permute` functions, which are now deprecated
@@ -92,7 +93,7 @@ This version is not yet released. If you are reading this on the website, then t
   - They also allow a limited form of namable function arguments
   - The experimental [`struct`](https://uiua.org/docs/struct) modifier/macro has been deprecated in favor of data definitions
 - Add the experimental [`layout`](https://uiua.org/docs/layout) function, which renders text into an image array
-- [`astar`](https://uiua.org/docs/astar) no longer errors in no paths are found
+- [`astar`](https://uiua.org/docs/astar) no longer errors if no paths are found
 - Remove previously deprecated function strands
 ### Interpreter
 - Add the `uiua find` command, which finds Uiua code that matches the given unformatted text

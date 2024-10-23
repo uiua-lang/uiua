@@ -20,6 +20,7 @@ use crate::{
 macro_rules! instr {
     ($(
         $(#[$attr:meta])*
+        $((#[$rep_attr:meta] rep),)?
         (
             $num:literal,
             $name:ident
@@ -112,6 +113,7 @@ macro_rules! instr {
         #[derive(Serialize, Deserialize)]
         pub(crate) enum InstrRep {
             $(
+                $(#[$rep_attr])?
                 $name(
                     $($($tup_type),*)?
                     $($($field_type),*)?
@@ -149,7 +151,6 @@ macro_rules! instr {
 
 instr!(
     (0, Comment(text(Ident))),
-    (1, Push(val(Value))),
     (
         2,
         CallGlobal {
@@ -173,8 +174,6 @@ instr!(
             span: usize,
         }
     ),
-    (6, Prim(prim(Primitive), span(usize))),
-    (7, ImplPrim(prim(ImplPrimitive), span(usize))),
     (8, Call(span(usize))),
     (11, PushFunc(func(Function))),
     (
@@ -260,6 +259,12 @@ instr!(
     (23, SetOutputComment { i: usize, n: usize }),
     /// Call a function with a custom inverse
     (24, CustomInverse(cust(CustomInverse), span(usize))),
+    (#[serde(untagged)] rep),
+    (1, Push(val(Value))),
+    (#[serde(untagged)] rep),
+    (6, Prim(prim(Primitive), span(usize))),
+    (#[serde(untagged)] rep),
+    (7, ImplPrim(prim(ImplPrimitive), span(usize))),
 );
 
 type FmtParts = EcoVec<EcoString>;

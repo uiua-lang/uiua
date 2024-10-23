@@ -508,6 +508,8 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
             }
         }
     }
+    let mut opaque_colors = opaque_colors.into_iter().collect::<Vec<_>>();
+    opaque_colors.sort_unstable();
     let mut reduced_colors = HashSet::new();
     let mut color_reduction = HashMap::new();
     if opaque_colors.len() <= 255 {
@@ -530,6 +532,8 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
             color_reduction.insert(color, reduced);
         }
     }
+    let mut reduced_colors = reduced_colors.into_iter().collect::<Vec<_>>();
+    reduced_colors.sort_unstable();
     let mut palette = Vec::with_capacity(reduced_colors.len() * 3);
     let mut color_map: HashMap<[u8; 3], u8> = HashMap::new();
     for color in reduced_colors {

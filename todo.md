@@ -4,7 +4,6 @@
 The next version of Uiua
 
 ## 0.14
-- Fix GIF encoding non-determinism
 - Inline code macros
 - Compile-time string evaluation
 - `do` function pack

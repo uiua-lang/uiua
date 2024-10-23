@@ -1712,7 +1712,7 @@ primitive!(
     /// [base] is compatible with [under].
     /// ex: # Experimental!
     ///   : ⍜(°⍉base4|⬚0↙3) [10 100 1000]
-    /// It can also be used with [un][on] to convert digits in a certain base back to numbers.
+    /// It can also be used with [anti] to convert digits in a certain base back to numbers.
     /// ex: # Experimental!
     ///   : ⌝base 2 [1 0 0 1 0]
     ///   : ⌝base 2 [1_0_0 0_1_1 1_1_1]

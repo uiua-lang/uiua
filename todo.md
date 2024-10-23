@@ -4,10 +4,14 @@
 The next version of Uiua
 
 ## 0.14
+- Fix GIF encoding non-determinism
 - Inline code macros
 - Compile-time string evaluation
 - `do` function pack
 - Range optimizations
+  - Math, `take`, `drop`
+  - Infinite ranges
+    - `rows`/`each`
 - Change how inlining modifiers works
   - Make all (or most) modifiers emit themselves as instructions
   - This allows inverses to be smarter about what they are working on

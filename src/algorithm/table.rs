@@ -65,6 +65,8 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
     let sig = f.signature();
     match sig.args {
         2 => {
+            let x_scalar = xs.rank() == 0;
+            let y_scalar = ys.rank() == 0;
             validate_size::<f64>([sig.outputs, xs.row_count(), ys.row_count()], env)?;
             let new_shape = Shape::from([xs.row_count(), ys.row_count()]);
             let outputs = sig.outputs;
@@ -86,6 +88,12 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
             for items in items.into_iter().rev() {
                 let mut tabled = items.finish();
                 let mut new_shape = new_shape.clone();
+                if y_scalar {
+                    new_shape.remove(1);
+                }
+                if x_scalar {
+                    new_shape.remove(0);
+                }
                 new_shape.extend_from_slice(&tabled.shape()[1..]);
                 *tabled.shape_mut() = new_shape;
                 tabled.validate_shape();

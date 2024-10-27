@@ -451,7 +451,7 @@ Any array whose rows can all be turned into images can be turned into a GIF.
 
 On this site, arrays that look like they should be GIFs will be displayed as GIFs. You can see some on the [main page](/).
 
-GIFs can be explicitly rendered with the [&gifs](/docs/&gifs) function.
+GIFs can be explicitly rendered with the [`&gifs`](/docs/&gifs) function.
 
 ## Next Steps
 If you want a more in-depth introduction to Uiua, you can check out the [tutorial](/tutorial/introduction).

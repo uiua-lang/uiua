@@ -18,7 +18,8 @@ pub struct Assembly {
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
     pub(crate) spans: EcoVec<Span>,
-    pub(crate) inputs: Inputs,
+    /// Inputs used to build the assembly
+    pub inputs: Inputs,
     pub(crate) dynamic_functions: EcoVec<DynFn>,
 }
 

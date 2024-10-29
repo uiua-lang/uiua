@@ -19,7 +19,8 @@ use crate::{
 pub struct Function {
     /// The function's id
     pub id: FunctionId,
-    signature: Signature,
+    /// The function's signature
+    pub signature: Signature,
     pub(crate) slice: FuncSlice,
     hash: u64,
     pub(crate) flags: FunctionFlags,

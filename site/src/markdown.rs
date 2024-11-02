@@ -34,9 +34,11 @@ pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> im
 pub fn markdown_view(text: &str) -> View {
     let arena = Arena::new();
     let text = text
+        .replace("`` ` ``", "<code backtick>")
         .replace("```", "<code block delim>")
         .replace("``", "` `")
-        .replace("<code block delim>", "```");
+        .replace("<code block delim>", "```")
+        .replace("<code backtick>", "`` ` ``");
     let root = parse_document(&arena, &text, &ComrakOptions::default());
     node_view(root)
 }

@@ -85,7 +85,7 @@ If you want them to work the other way, you can use [flip](/docs/flip), which sw
 -:3 10
 ```
 
-By the way, since `-` is for [sub](/docs/sub), use `` ` `` for negative numbers. The formatter will turn it into a nice `¯`.
+By the way, since `-` is for [subtract](/docs/subtract), use `` ` `` for negative numbers. The formatter will turn it into a nice `¯`.
 
 ```uiua
 `10

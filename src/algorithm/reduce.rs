@@ -52,7 +52,6 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
                 return generic_reduce(f, Value::Num(nums), depth, env);
             }
         }
-
         (Some((prim, flipped)), Value::Complex(nums)) => {
             if let Err(nums) = reduce_coms(prim, flipped, nums, depth, env) {
                 return generic_reduce(f, Value::Complex(nums), depth, env);
@@ -60,6 +59,9 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
         }
         (Some((prim, flipped)), Value::Byte(bytes)) => {
             let fill = env.scalar_fill::<f64>().ok();
+            if fill.is_none() && env.value_fill().is_some() {
+                return generic_reduce(f, Value::Byte(bytes), depth, env);
+            }
             env.push::<Value>(match prim {
                 Primitive::Add => {
                     fast_reduce_different(bytes, 0.0, fill, depth, add::num_num, add::num_byte)
@@ -302,6 +304,9 @@ macro_rules! reduce_math {
             $ty: From<f64>,
         {
             let fill = env.scalar_fill::<$ty>().ok();
+            if fill.is_none() && env.value_fill().is_some() {
+                return Err(xs);
+            }
             env.push(match prim {
                 Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, add::$f),
                 #[cfg(feature = "opt")]

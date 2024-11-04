@@ -255,7 +255,7 @@ impl<'i> Parser<'i> {
             None
         }
     }
-    fn try_exact(&mut self, token: Token) -> Option<CodeSpan> {
+    fn exact(&mut self, token: Token) -> Option<CodeSpan> {
         self.next_token_map(|t| (t == &token).then_some(()))
             .map(|t| t.span)
     }
@@ -286,21 +286,21 @@ impl<'i> Parser<'i> {
     }
     fn items(&mut self, in_scope: bool) -> Vec<Item> {
         let mut items = Vec::new();
-        while self.try_exact(Newline).is_some() {
-            self.try_spaces();
+        while self.exact(Newline).is_some() {
+            self.spaces();
         }
         loop {
-            match self.try_item(in_scope) {
+            match self.item(in_scope) {
                 Some(item) => items.push(item),
                 None => {
-                    if self.try_exact(Newline).is_none() {
+                    if self.exact(Newline).is_none() {
                         break;
                     }
-                    self.try_spaces();
+                    self.spaces();
                     let mut extra_newlines = false;
-                    while self.try_exact(Newline).is_some() {
+                    while self.exact(Newline).is_some() {
                         extra_newlines = true;
-                        self.try_spaces();
+                        self.spaces();
                     }
                     if extra_newlines {
                         items.push(Item::Words(vec![Vec::new()]));
@@ -310,19 +310,19 @@ impl<'i> Parser<'i> {
         }
         items
     }
-    fn try_item(&mut self, in_scope: bool) -> Option<Item> {
+    fn item(&mut self, in_scope: bool) -> Option<Item> {
         if self.too_deep() {
             return None;
         }
         self.depth += 1;
-        self.try_spaces();
-        let item = if let Some(binding) = self.try_binding() {
+        self.spaces();
+        let item = if let Some(binding) = self.binding() {
             Item::Binding(binding)
-        } else if let Some(import) = self.try_import() {
+        } else if let Some(import) = self.import() {
             Item::Import(import)
-        } else if let Some(module) = self.try_module(in_scope) {
+        } else if let Some(module) = self.module(in_scope) {
             Item::Module(module)
-        } else if let Some(data) = self.try_data_def() {
+        } else if let Some(data) = self.data_def() {
             Item::Data(data)
         } else {
             let lines = self.multiline_words(true, false);
@@ -336,12 +336,12 @@ impl<'i> Parser<'i> {
         self.depth -= 1;
         Some(item)
     }
-    fn try_module(&mut self, in_scope: bool) -> Option<Sp<ScopedModule>> {
+    fn module(&mut self, in_scope: bool) -> Option<Sp<ScopedModule>> {
         let backup = self.index;
-        let open_span = self.try_module_open()?;
-        self.try_spaces();
+        let open_span = self.module_open()?;
+        self.spaces();
         // Name
-        let name = self.try_ident();
+        let name = self.ident();
         if in_scope && name.is_none() {
             self.index = backup;
             return None;
@@ -352,13 +352,13 @@ impl<'i> Parser<'i> {
             None => ModuleKind::Test,
         };
         // Imports
-        while self.try_exact(Spaces).is_some() {}
-        let imports = if let Some(tilde_span) = self.try_exact(Tilde.into()) {
+        while self.exact(Spaces).is_some() {}
+        let imports = if let Some(tilde_span) = self.exact(Tilde.into()) {
             let mut items = Vec::new();
             loop {
-                if let Some(ident) = self.try_ident() {
+                if let Some(ident) = self.ident() {
                     items.push(ident);
-                } else if self.try_spaces().is_some() {
+                } else if self.spaces().is_some() {
                     continue;
                 } else {
                     break;
@@ -374,7 +374,7 @@ impl<'i> Parser<'i> {
         };
         // Items
         let items = self.items(true);
-        let close_span = self.try_module_close();
+        let close_span = self.module_close();
         let span = if let Some(end) = close_span.clone() {
             open_span.clone().merge(end)
         } else {
@@ -391,7 +391,7 @@ impl<'i> Parser<'i> {
         Some(span.sp(module))
     }
     fn comment(&mut self) -> Option<Sp<String>> {
-        let span = self.try_exact(Token::Comment)?;
+        let span = self.exact(Token::Comment)?;
         let s = &self.input[span.byte_range()];
         let s = s.strip_prefix('#').unwrap_or(s).into();
         Some(span.sp(s))
@@ -402,64 +402,62 @@ impl<'i> Parser<'i> {
         self.next_output_comment += 1;
         Some(n.span.sp(Word::OutputComment { i, n: n.value }))
     }
-    fn try_binding_init(&mut self) -> Option<(Sp<Ident>, CodeSpan, bool, bool)> {
+    fn binding_init(&mut self) -> Option<(Sp<Ident>, CodeSpan, bool, bool)> {
         let start = self.index;
-        let name = self.try_ident()?;
+        let name = self.ident()?;
         // Left arrow
-        let arrow_span = self.try_spaces().map(|w| w.span);
-        let (glyph_span, public) = if let Some(span) = self
-            .try_exact(Equal.into())
-            .or_else(|| self.try_exact(LeftArrow))
-        {
-            (span, true)
-        } else if let Some(span) = self
-            .try_exact(EqualTilde.into())
-            .or_else(|| self.try_exact(LeftArrowTilde))
-            .or_else(|| self.try_exact(LeftStrokeArrow))
-        {
-            (span, false)
-        } else {
-            self.index = start;
-            return None;
-        };
+        let arrow_span = self.spaces().map(|w| w.span);
+        let (glyph_span, public) =
+            if let Some(span) = self.exact(Equal.into()).or_else(|| self.exact(LeftArrow)) {
+                (span, true)
+            } else if let Some(span) = self
+                .exact(EqualTilde.into())
+                .or_else(|| self.exact(LeftArrowTilde))
+                .or_else(|| self.exact(LeftStrokeArrow))
+            {
+                (span, false)
+            } else {
+                self.index = start;
+                return None;
+            };
         let mut arrow_span = if let Some(arrow_span) = arrow_span {
             arrow_span.merge(glyph_span)
         } else {
             glyph_span
         };
-        let array_macro = if let Some(span) = self.try_exact(Caret.into()) {
+        let array_macro = if let Some(span) = self.exact(Caret.into()) {
             arrow_span = arrow_span.merge(span);
             true
         } else {
             false
         };
-        if let Some(span) = self.try_spaces().map(|w| w.span) {
+        if let Some(span) = self.spaces().map(|w| w.span) {
             arrow_span = arrow_span.merge(span);
         }
         Some((name, arrow_span, public, array_macro))
     }
-    fn try_import_init(&mut self) -> Option<(Option<Sp<Ident>>, CodeSpan, Sp<String>)> {
+    fn import_init(&mut self) -> Option<(Option<Sp<Ident>>, CodeSpan, Sp<String>)> {
         let start = self.index;
         // Name
-        let name = self.try_ident();
-        self.try_spaces();
+        let name = self.ident();
+        self.spaces();
         // Tilde
-        let Some(tilde_span) = self.try_exact(Tilde.into()) else {
+        let Some(tilde_span) = self.exact(Tilde.into()) else {
             self.index = start;
             return None;
         };
-        self.try_spaces();
+        self.spaces();
         // Path
         let Some(path) = self.next_token_map(Token::as_string) else {
             self.index = start;
             return None;
         };
         let path = path.map(Into::into);
-        self.try_spaces();
+        self.spaces();
         Some((name, tilde_span, path))
     }
-    fn try_binding(&mut self) -> Option<Binding> {
-        let (name, arrow_span, public, array_macro) = self.try_binding_init()?;
+    fn binding(&mut self) -> Option<Binding> {
+        let (name, arrow_span, public, array_macro) = self.binding_init()?;
         // Bad name advice
         if ["\u{200b}", "\u{200c}", "\u{200d}"]
             .iter()
@@ -473,9 +471,9 @@ impl<'i> Parser<'i> {
             ));
         }
         // Signature
-        let signature = self.try_signature(true);
+        let signature = self.signature(true);
         // Words
-        let words = self.try_words().unwrap_or_default();
+        let words = self.words().unwrap_or_default();
         self.validate_binding_name(&name);
         Some(Binding {
             name,
@@ -488,27 +486,27 @@ impl<'i> Parser<'i> {
     }
     fn ignore_whitespace(&mut self) -> bool {
         let mut newline = false;
-        self.try_spaces();
-        while self.try_exact(Newline).is_some() {
+        self.spaces();
+        while self.exact(Newline).is_some() {
             newline = true;
-            self.try_spaces();
+            self.spaces();
         }
         newline
     }
-    fn try_data_def(&mut self) -> Option<DataDef> {
+    fn data_def(&mut self) -> Option<DataDef> {
         let reset = self.index;
         let mut variant = false;
-        let init_span = self.try_exact(Tilde.into()).or_else(|| {
+        let init_span = self.exact(Tilde.into()).or_else(|| {
             variant = true;
-            self.try_exact(Bar.into())
+            self.exact(Bar.into())
         })?;
-        self.try_spaces();
-        let name = self.try_ident();
-        self.try_spaces();
+        self.spaces();
+        let name = self.ident();
+        self.spaces();
         let mut boxed = false;
-        let open_span = if let Some(span) = self.try_exact(OpenBracket.into()) {
+        let open_span = if let Some(span) = self.exact(OpenBracket.into()) {
             Some(span)
-        } else if let Some(span) = self.try_exact(OpenCurly.into()) {
+        } else if let Some(span) = self.exact(OpenCurly.into()) {
             boxed = true;
             Some(span)
         } else if variant {
@@ -519,35 +517,35 @@ impl<'i> Parser<'i> {
         };
         let fields = if let Some(open_span) = open_span {
             let mut fields = Vec::new();
-            while self.try_exact(Newline).is_some() {
-                self.try_spaces();
+            while self.exact(Newline).is_some() {
+                self.spaces();
             }
-            self.try_spaces();
+            self.spaces();
             let mut trailing_newline = false;
             loop {
-                let comments = self.try_comments();
-                let Some(name) = self.try_ident() else {
+                let comments = self.comments();
+                let Some(name) = self.ident() else {
                     break;
                 };
                 trailing_newline = false;
-                self.try_spaces();
+                self.spaces();
 
                 // Validator
                 let mut validator = None;
                 let mut colon = false;
                 if let Some(mut open_span) = self
-                    .try_exact(Colon.into())
+                    .exact(Colon.into())
                     .inspect(|_| colon = true)
-                    .or_else(|| self.try_exact(OpenParen.into()))
+                    .or_else(|| self.exact(OpenParen.into()))
                 {
-                    if let Some(span) = self.try_spaces().map(|w| w.span) {
+                    if let Some(span) = self.spaces().map(|w| w.span) {
                         open_span = open_span.merge(span);
                     }
-                    let words = self.try_words().unwrap_or_else(|| {
+                    let words = self.words().unwrap_or_else(|| {
                         self.errors.push(self.expected([Expectation::Term]));
                         Vec::new()
                     });
-                    let close_span = self.try_exact(CloseParen.into());
+                    let close_span = self.exact(CloseParen.into());
                     validator = Some(FieldValidator {
                         open_span,
                         close_span,
@@ -557,20 +555,19 @@ impl<'i> Parser<'i> {
 
                 // Initializer
                 let mut init = None;
-                let start_arrow_span = self.try_spaces().map(|w| w.span);
-                if let Some(mut arrow_span) = self
-                    .try_exact(Equal.into())
-                    .or_else(|| self.try_exact(LeftArrow))
+                let start_arrow_span = self.spaces().map(|w| w.span);
+                if let Some(mut arrow_span) =
+                    self.exact(Equal.into()).or_else(|| self.exact(LeftArrow))
                 {
                     arrow_span = if let Some(start) = start_arrow_span {
                         start.merge(arrow_span)
                     } else {
                         arrow_span
                     };
-                    if let Some(span) = self.try_spaces().map(|w| w.span) {
+                    if let Some(span) = self.spaces().map(|w| w.span) {
                         arrow_span = arrow_span.merge(span);
                     }
-                    let words = self.try_words().unwrap_or_else(|| {
+                    let words = self.words().unwrap_or_else(|| {
                         self.errors.push(self.expected([Expectation::Term]));
                         Vec::new()
                     });
@@ -578,10 +575,8 @@ impl<'i> Parser<'i> {
                 };
 
                 trailing_newline |= self.ignore_whitespace();
-                let mut bar_span = self.try_exact(Bar.into());
-                if self.try_exact(Newline).is_some()
-                    || self.try_exact(DoubleSemicolon.into()).is_some()
-                {
+                let mut bar_span = self.exact(Bar.into());
+                if self.exact(Newline).is_some() || self.exact(DoubleSemicolon.into()).is_some() {
                     bar_span = None;
                 }
                 if bar_span.is_some() {
@@ -598,7 +593,7 @@ impl<'i> Parser<'i> {
             }
             let close = self.expect_close(if boxed { CloseCurly } else { CloseBracket }.into());
             let close_span = close.value.then_some(close.span);
-            self.try_spaces();
+            self.spaces();
             Some(DataFields {
                 boxed,
                 open_span,
@@ -610,7 +605,7 @@ impl<'i> Parser<'i> {
             None
         };
 
-        let func = self.try_words();
+        let func = self.words();
         Some(DataDef {
             init_span,
             variant,
@@ -648,12 +643,12 @@ impl<'i> Parser<'i> {
             ));
         }
     }
-    fn try_import(&mut self) -> Option<Import> {
-        let (name, tilde_span, path) = self.try_import_init()?;
+    fn import(&mut self) -> Option<Import> {
+        let (name, tilde_span, path) = self.import_init()?;
         // Items
         let mut lines: Vec<Option<ImportLine>> = Vec::new();
         let mut line: Option<ImportLine> = None;
-        self.try_exact(Newline);
+        self.exact(Newline);
         let mut last_tilde_index = self.index;
         while let Some(token) = self.tokens.get(self.index).cloned() {
             let span = token.span;
@@ -703,21 +698,21 @@ impl<'i> Parser<'i> {
             lines,
         })
     }
-    fn try_ident(&mut self) -> Option<Sp<Ident>> {
+    fn ident(&mut self) -> Option<Sp<Ident>> {
         self.next_token_map(Token::as_ident)
     }
-    fn try_ref(&mut self) -> Option<Sp<Word>> {
+    fn ref_(&mut self) -> Option<Sp<Word>> {
         let mut checkpoint = self.index;
-        let mut name = self.try_ident()?;
+        let mut name = self.ident()?;
         let start_span = name.span.clone();
         let mut path = Vec::new();
-        while let Some(tilde_span) = self.try_exact(Tilde.into()) {
+        while let Some(tilde_span) = self.exact(Tilde.into()) {
             let comp = RefComponent {
                 module: name,
                 tilde_span,
             };
-            let Some(next) = self.try_ident() else {
-                self.try_spaces();
+            let Some(next) = self.ident() else {
+                self.spaces();
                 if self
                     .tokens
                     .get(self.index)
@@ -744,9 +739,9 @@ impl<'i> Parser<'i> {
             in_macro_arg: false,
         })))
     }
-    fn try_signature(&mut self, error_on_invalid: bool) -> Option<Sp<Signature>> {
+    fn signature(&mut self, error_on_invalid: bool) -> Option<Sp<Signature>> {
         let reset = self.index;
-        let start = self.try_exact(Bar.into())?;
+        let start = self.exact(Bar.into())?;
         let inner = self.sig_inner();
         if inner.is_none() {
             if error_on_invalid {
@@ -756,14 +751,14 @@ impl<'i> Parser<'i> {
         }
         let (args, outs) = inner?;
         let mut end = self.prev_span();
-        if let Some(sp) = self.try_spaces() {
+        if let Some(sp) = self.spaces() {
             end = sp.span;
         }
         let span = start.merge(end);
         Some(span.sp(Signature::new(args, outs)))
     }
     fn sig_inner(&mut self) -> Option<(usize, usize)> {
-        let sn = self.try_num()?;
+        let sn = self.num()?;
         Some(if let Some((a, o)) = sn.value.0.split_once('.') {
             let a = match a.parse() {
                 Ok(a) => a,
@@ -794,9 +789,9 @@ impl<'i> Parser<'i> {
             (a, 1)
         })
     }
-    fn try_words(&mut self) -> Option<Vec<Sp<Word>>> {
+    fn words(&mut self) -> Option<Vec<Sp<Word>>> {
         let mut words: Vec<Sp<Word>> = Vec::new();
-        while let Some(word) = self.try_word() {
+        while let Some(word) = self.word() {
             if let Some(prev) = words.iter().filter(|w| w.value.is_code()).nth_back(0) {
                 // Diagnostics
                 use Primitive::*;
@@ -851,24 +846,24 @@ impl<'i> Parser<'i> {
         extra_newline: bool,
     ) -> Vec<Vec<Sp<Word>>> {
         let mut lines = Vec::new();
-        while self.try_spaces().is_some() {}
+        while self.spaces().is_some() {}
         let mut newlines: usize = 0;
         loop {
             let curr = self.index;
             if check_for_bindings
-                && (self.try_binding_init().is_some()
-                    || self.try_import_init().is_some()
-                    || self.try_module_delim_hyphens().is_some())
+                && (self.binding_init().is_some()
+                    || self.import_init().is_some()
+                    || self.module_delim_hyphens().is_some())
             {
                 self.index = curr;
                 break;
             }
-            if let Some(words) = self.try_words() {
+            if let Some(words) = self.words() {
                 newlines = 0;
                 lines.push(words);
-                while self.try_exact(Newline).is_some() {
+                while self.exact(Newline).is_some() {
                     newlines += 1;
-                    self.try_spaces();
+                    self.spaces();
                 }
                 if newlines > 1 {
                     lines.push(Vec::new());
@@ -882,28 +877,28 @@ impl<'i> Parser<'i> {
         }
         lines
     }
-    fn try_word(&mut self) -> Option<Sp<Word>> {
+    fn word(&mut self) -> Option<Sp<Word>> {
         self.comment()
             .map(|c| c.map(Word::Comment))
             .or_else(|| self.output_comment())
-            .or_else(|| self.try_strand())
+            .or_else(|| self.strand())
     }
-    fn try_strand(&mut self) -> Option<Sp<Word>> {
-        let word = self.try_modified()?;
+    fn strand(&mut self) -> Option<Sp<Word>> {
+        let word = self.modified()?;
         if let Word::Spaces = word.value {
             return Some(word);
         }
         // Collect items
         let mut items = Vec::new();
-        while self.try_exact(Underscore.into()).is_some() {
-            let item = match self.try_modified() {
+        while self.exact(Underscore.into()).is_some() {
+            let item = match self.modified() {
                 Some(mut item) => {
                     if let Word::Spaces = item.value {
                         if items.is_empty() {
                             break;
                         }
                         self.errors.push(self.expected([Expectation::Term]));
-                        item = match self.try_modified() {
+                        item = match self.modified() {
                             Some(item) => item,
                             None => {
                                 self.errors.push(self.expected([Expectation::Term]));
@@ -932,20 +927,17 @@ impl<'i> Parser<'i> {
             .merge(items.last().unwrap().span.clone());
         Some(span.sp(Word::Strand(items)))
     }
-    fn try_modified(&mut self) -> Option<Sp<Word>> {
+    fn modified(&mut self) -> Option<Sp<Word>> {
         let (modifier, mod_span) = if let Some(prim) = Primitive::all()
             .filter(|prim| prim.is_modifier())
             .find_map(|prim| {
-                self.try_exact(prim.into())
-                    .or_else(|| {
-                        prim.ascii()
-                            .and_then(|simple| self.try_exact(simple.into()))
-                    })
+                self.exact(prim.into())
+                    .or_else(|| prim.ascii().and_then(|simple| self.exact(simple.into())))
                     .map(|span| span.sp(prim))
             }) {
             (Modifier::Primitive(prim.value), prim.span)
         } else {
-            let term = self.try_term()?;
+            let term = self.term()?;
             if let Word::Ref(item) = term.value {
                 if item.modifier_args() == 0 {
                     return Some(term.span.sp(Word::Ref(item)));
@@ -955,27 +947,27 @@ impl<'i> Parser<'i> {
                 return Some(term);
             }
         };
-        self.try_spaces();
+        self.spaces();
         let mut subscript = None;
         if let Some(n) = self.next_token_map(Token::as_subscript) {
             subscript = Some(n);
-            self.try_spaces();
+            self.spaces();
         }
         let mut args = Vec::new();
         for i in 0..modifier.args() {
             loop {
-                args.extend(self.try_spaces());
-                if let Some(span) = self.try_exact(DoubleSemicolon.into()) {
+                args.extend(self.spaces());
+                if let Some(span) = self.exact(DoubleSemicolon.into()) {
                     self.errors.push(span.sp(ParseError::SplitInModifier));
                     continue;
                 }
-                if let Some(span) = self.try_exact(Semicolon.into()) {
+                if let Some(span) = self.exact(Semicolon.into()) {
                     self.errors.push(span.sp(ParseError::FlipInModifier));
                     continue;
                 }
                 break;
             }
-            if let Some(arg) = self.try_func().or_else(|| self.try_strand()) {
+            if let Some(arg) = self.func().or_else(|| self.strand()) {
                 // Parse pack syntax
                 if let Word::Pack(_) = &arg.value {
                     if i == 0 {
@@ -1065,16 +1057,16 @@ impl<'i> Parser<'i> {
             false
         }
     }
-    fn try_term(&mut self) -> Option<Sp<Word>> {
+    fn term(&mut self) -> Option<Sp<Word>> {
         if self.too_deep() {
             return None;
         }
         self.depth += 1;
-        let mut word = if let Some(prim) = self.try_prim() {
+        let mut word = if let Some(prim) = self.prim() {
             prim.map(Word::Primitive)
-        } else if let Some(refer) = self.try_ref() {
+        } else if let Some(refer) = self.ref_() {
             refer
-        } else if let Some(sn) = self.try_num() {
+        } else if let Some(sn) = self.num() {
             sn.map(|(s, n)| Word::Number(s, n))
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
@@ -1104,10 +1096,10 @@ impl<'i> Parser<'i> {
             }
             let span = start.merge(end);
             span.sp(Word::MultilineFormatString(lines))
-        } else if let Some(start) = self.try_exact(OpenBracket.into()) {
-            while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
-            let signature = self.try_signature(true);
-            while self.try_exact(Newline).is_some() {}
+        } else if let Some(start) = self.exact(OpenBracket.into()) {
+            while self.exact(Newline).is_some() || self.exact(Spaces).is_some() {}
+            let signature = self.signature(true);
+            while self.exact(Newline).is_some() {}
             let items = self.multiline_words(false, true);
             let end = self.expect_close(CloseBracket.into());
             let span = start.merge(end.span);
@@ -1132,10 +1124,10 @@ impl<'i> Parser<'i> {
                 ));
             }
             span.sp(Word::Array(arr))
-        } else if let Some(start) = self.try_exact(OpenCurly.into()) {
-            while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
-            let signature = self.try_signature(true);
-            while self.try_exact(Newline).is_some() {}
+        } else if let Some(start) = self.exact(OpenCurly.into()) {
+            while self.exact(Newline).is_some() || self.exact(Spaces).is_some() {}
+            let signature = self.signature(true);
+            while self.exact(Newline).is_some() {}
             let items = self.multiline_words(false, true);
             let end = self.expect_close(CloseCurly.into());
             let span = start.merge(end.span);
@@ -1145,13 +1137,13 @@ impl<'i> Parser<'i> {
                 boxes: true,
                 closed: end.value,
             }))
-        } else if let Some(spaces) = self.try_spaces() {
+        } else if let Some(spaces) = self.spaces() {
             spaces
-        } else if let Some(word) = self.try_func() {
+        } else if let Some(word) = self.func() {
             word
-        } else if let Some(span) = self.try_exact(Semicolon.into()) {
+        } else if let Some(span) = self.exact(Semicolon.into()) {
             span.sp(Word::FlipLine)
-        } else if let Some(span) = self.try_exact(DoubleSemicolon.into()) {
+        } else if let Some(span) = self.exact(DoubleSemicolon.into()) {
             span.sp(Word::BreakLine)
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
@@ -1162,7 +1154,7 @@ impl<'i> Parser<'i> {
         self.depth -= 1;
         loop {
             let reset = self.index;
-            self.try_spaces();
+            self.spaces();
             if let Some(n) = self.next_token_map(Token::as_subscript) {
                 let span = word.span.clone().merge(n.span.clone());
                 word = span.sp(Word::Subscript(Box::new(crate::ast::Subscript { n, word })));
@@ -1173,8 +1165,8 @@ impl<'i> Parser<'i> {
         }
         Some(word)
     }
-    fn try_num(&mut self) -> Option<Sp<(String, f64)>> {
-        let span = self.try_exact(Token::Number)?;
+    fn num(&mut self) -> Option<Sp<(String, f64)>> {
+        let span = self.exact(Token::Number)?;
         let s = self.input[span.byte_range()].to_string();
         fn parse(s: &str) -> Option<f64> {
             let mut s = s.replace(['`', '¯'], "-");
@@ -1213,25 +1205,24 @@ impl<'i> Parser<'i> {
         };
         Some(span.sp((s, n)))
     }
-    fn try_prim(&mut self) -> Option<Sp<Primitive>> {
+    fn prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::all() {
-            let op_span = self.try_exact(prim.into()).or_else(|| {
-                prim.ascii()
-                    .and_then(|simple| self.try_exact(simple.into()))
-            });
+            let op_span = self
+                .exact(prim.into())
+                .or_else(|| prim.ascii().and_then(|simple| self.exact(simple.into())));
             if let Some(span) = op_span {
                 return Some(span.sp(prim));
             }
         }
         None
     }
-    fn try_func(&mut self) -> Option<Sp<Word>> {
-        Some(if let Some(mut start) = self.try_exact(OpenParen.into()) {
+    fn func(&mut self) -> Option<Sp<Word>> {
+        Some(if let Some(mut start) = self.exact(OpenParen.into()) {
             // Match initial function contents
             let first = self.func_contents();
             // Try to match pack branches
             let mut branches = Vec::new();
-            while let Some(start) = self.try_exact(Bar.into()) {
+            while let Some(start) = self.exact(Bar.into()) {
                 let (signature, lines, span) = self.func_contents();
                 let span = if let Some(span) = span {
                     start.merge(span)
@@ -1289,22 +1280,22 @@ impl<'i> Parser<'i> {
     fn func_contents(&mut self) -> FunctionContents {
         let mut starts_with_newline = false;
         loop {
-            if self.try_exact(Newline).is_some() {
+            if self.exact(Newline).is_some() {
                 starts_with_newline = true;
                 continue;
             }
-            if self.try_spaces().is_some() {
+            if self.spaces().is_some() {
                 continue;
             }
             break;
         }
-        let signature = self.try_signature(false);
+        let signature = self.signature(false);
         loop {
-            if self.try_exact(Newline).is_some() {
+            if self.exact(Newline).is_some() {
                 starts_with_newline = true;
                 continue;
             }
-            if self.try_spaces().is_some() {
+            if self.spaces().is_some() {
                 continue;
             }
             break;
@@ -1330,32 +1321,32 @@ impl<'i> Parser<'i> {
         let span = start.zip(end).map(|(start, end)| start.merge(end));
         (signature, lines, span)
     }
-    fn try_spaces(&mut self) -> Option<Sp<Word>> {
-        self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))
+    fn spaces(&mut self) -> Option<Sp<Word>> {
+        self.exact(Spaces).map(|span| span.sp(Word::Spaces))
     }
-    fn try_module_open(&mut self) -> Option<CodeSpan> {
-        self.try_exact(OpenModule)
-            .or_else(|| self.try_module_delim_hyphens())
+    fn module_open(&mut self) -> Option<CodeSpan> {
+        self.exact(OpenModule)
+            .or_else(|| self.module_delim_hyphens())
     }
-    fn try_module_close(&mut self) -> Option<CodeSpan> {
-        self.try_exact(CloseModule)
-            .or_else(|| self.try_module_delim_hyphens())
+    fn module_close(&mut self) -> Option<CodeSpan> {
+        self.exact(CloseModule)
+            .or_else(|| self.module_delim_hyphens())
     }
-    fn try_module_delim_hyphens(&mut self) -> Option<CodeSpan> {
+    fn module_delim_hyphens(&mut self) -> Option<CodeSpan> {
         let reset = self.index;
-        let start = self.try_exact(Primitive::Sub.into())?;
-        if self.try_exact(Primitive::Sub.into()).is_none() {
+        let start = self.exact(Primitive::Sub.into())?;
+        if self.exact(Primitive::Sub.into()).is_none() {
             self.index = reset;
             return None;
         }
-        let Some(end) = self.try_exact(Primitive::Sub.into()) else {
+        let Some(end) = self.exact(Primitive::Sub.into()) else {
             self.index = reset;
             return None;
         };
         Some(start.merge(end))
     }
     fn expect_close(&mut self, token: Token) -> Sp<bool> {
-        if let Some(span) = self.try_exact(token.clone()) {
+        if let Some(span) = self.exact(token.clone()) {
             span.sp(true)
         } else {
             self.errors
@@ -1363,12 +1354,12 @@ impl<'i> Parser<'i> {
             self.prev_span().sp(false)
         }
     }
-    fn try_comments(&mut self) -> Option<Comments> {
+    fn comments(&mut self) -> Option<Comments> {
         let mut lines = Vec::new();
         let mut semantic = HashMap::new();
         loop {
             self.ignore_whitespace();
-            if let Some(span) = self.try_exact(Comment) {
+            if let Some(span) = self.exact(Comment) {
                 let s = span.as_str(self.inputs, |s| s.trim_start_matches("#").trim().into());
                 lines.push(span.sp(s));
             } else if let Some(sem) = self.next_token_map(Token::as_semantic_comment) {

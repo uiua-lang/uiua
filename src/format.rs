@@ -1053,35 +1053,7 @@ impl<'a> Formatter<'a> {
                     self.output.push(']');
                 }
             }
-            Word::Func(func) => {
-                let start_indent =
-                    (self.output.split('\n').last()).map_or(0, |line| line.chars().count());
-                let indent = self.config.multiline_indent * depth;
-                let allow_compact = start_indent <= indent + 1;
-
-                self.output.push('(');
-
-                // Signature
-                if let Some(sig) = &func.signature {
-                    let trailing_space = func.lines.len() <= 1
-                        && !(func.lines.iter().flatten())
-                            .any(|word| word_is_multiline(&word.value));
-                    self.format_signature(sig.value, trailing_space);
-                    if func.lines.is_empty() {
-                        self.output.pop();
-                    }
-                }
-
-                self.format_multiline_words(
-                    &func.lines,
-                    allow_compact,
-                    true,
-                    true,
-                    true,
-                    depth + 1,
-                );
-                self.output.push(')');
-            }
+            Word::Func(func) => self.func(func, depth),
             Word::Pack(pack) => {
                 let start_indent =
                     (self.output.lines().last()).map_or(0, |line| line.chars().count());
@@ -1151,13 +1123,13 @@ impl<'a> Formatter<'a> {
             }
             Word::Primitive(prim) => self.format_primitive(*prim, &word.span),
             Word::Modified(m) => {
-                self.format_modifier(&m.modifier);
+                self.format_modifier(&m.modifier, depth);
                 self.format_words(&m.operands, true, depth);
             }
             Word::Placeholder(i) => self.push(&word.span, &format!("^{i}")),
             Word::Subscript(sub) => match &sub.word.value {
                 Word::Modified(m) => {
-                    self.format_modifier(&m.modifier);
+                    self.format_modifier(&m.modifier, depth);
                     self.push(&sub.n.span, &sub.n_string());
                     self.format_words(&m.operands, true, depth);
                 }
@@ -1305,6 +1277,10 @@ impl<'a> Formatter<'a> {
                 }
                 self.push(&word.span, &s);
             }
+            Word::InlineMacro(ident, func) => {
+                self.func(func, depth);
+                self.push(&ident.span, &ident.value);
+            }
         }
     }
     fn format_primitive(&mut self, prim: Primitive, span: &CodeSpan) {
@@ -1377,10 +1353,14 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
     }
-    fn format_modifier(&mut self, modifier: &Sp<Modifier>) {
+    fn format_modifier(&mut self, modifier: &Sp<Modifier>, depth: usize) {
         match &modifier.value {
             Modifier::Primitive(prim) => self.push(&modifier.span, &prim.to_string()),
             Modifier::Ref(r) => self.format_ref(r),
+            Modifier::Macro(ident, func) => {
+                self.func(func, depth);
+                self.push(&ident.span, &ident.value);
+            }
         }
     }
     fn push(&mut self, span: &CodeSpan, formatted: &str) {
@@ -1426,6 +1406,26 @@ impl<'a> Formatter<'a> {
         });
         values.remove(&index).unwrap_or_default()
     }
+    fn func(&mut self, func: &Func, depth: usize) {
+        let start_indent = (self.output.split('\n').last()).map_or(0, |line| line.chars().count());
+        let indent = self.config.multiline_indent * depth;
+        let allow_compact = start_indent <= indent + 1;
+
+        self.output.push('(');
+
+        // Signature
+        if let Some(sig) = &func.signature {
+            let trailing_space = func.lines.len() <= 1
+                && !(func.lines.iter().flatten()).any(|word| word_is_multiline(&word.value));
+            self.format_signature(sig.value, trailing_space);
+            if func.lines.is_empty() {
+                self.output.pop();
+            }
+        }
+
+        self.format_multiline_words(&func.lines, allow_compact, true, true, true, depth + 1);
+        self.output.push(')');
+    }
 }
 
 fn words_are_multiline(words: &[Sp<Word>]) -> bool {
@@ -1455,7 +1455,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
                     words.len() > 1 && words.iter().any(|word| word_is_multiline(&word.value))
                 })
         }
-        Word::Func(func) => {
+        Word::Func(func) | Word::InlineMacro(_, func) => {
             func.lines.len() > 1
                 || (func.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
@@ -1466,7 +1466,18 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }),
         Word::Primitive(_) => false,
-        Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
+        Word::Modified(m) => {
+            m.operands.iter().any(|word| word_is_multiline(&word.value))
+                || match &m.modifier.value {
+                    Modifier::Macro(_, func) => {
+                        func.lines.len() > 1
+                            || (func.lines.iter()).any(|words| {
+                                words.iter().any(|word| word_is_multiline(&word.value))
+                            })
+                    }
+                    _ => false,
+                }
+        }
         Word::Placeholder(_) => false,
         Word::Subscript(sub) => word_is_multiline(&sub.word.value),
         Word::Comment(_) => true,

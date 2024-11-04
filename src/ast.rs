@@ -284,6 +284,7 @@ pub enum Word {
         n: usize,
     },
     Subscript(Box<Subscript>),
+    InlineMacro(Sp<Ident>, Func),
 }
 
 impl PartialEq for Word {
@@ -404,6 +405,7 @@ impl fmt::Debug for Word {
             Word::SemanticComment(comment) => write!(f, "{comment}"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
             Word::Subscript(sub) => sub.fmt(f),
+            Word::InlineMacro(ident, func) => write!(f, "func_macro({ident:?}, {func:?})"),
         }
     }
 }
@@ -497,7 +499,7 @@ impl fmt::Debug for Arr {
 }
 
 /// An inline function
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Func {
     /// The function's signature
     pub signature: Option<Sp<Signature>>,
@@ -559,12 +561,14 @@ impl fmt::Debug for Modified {
 }
 
 /// A modifier
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq)]
 pub enum Modifier {
     /// A primitive modifier
     Primitive(Primitive),
     /// A user-defined modifier
     Ref(Ref),
+    /// An inline macro
+    Macro(Sp<Ident>, Func),
 }
 
 impl fmt::Debug for Modifier {
@@ -572,6 +576,7 @@ impl fmt::Debug for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.fmt(f),
             Modifier::Ref(refer) => write!(f, "ref({refer:?})"),
+            Modifier::Macro(_, func) => write!(f, "macro({func:?})"),
         }
     }
 }
@@ -581,6 +586,7 @@ impl fmt::Display for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.format().fmt(f),
             Modifier::Ref(refer) => write!(f, "{refer}"),
+            Modifier::Macro(_, func) => write!(f, "{func:?}"),
         }
     }
 }
@@ -591,6 +597,7 @@ impl Modifier {
         match self {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
             Modifier::Ref(r) => r.modifier_args(),
+            Modifier::Macro(ident, _) => ident_modifier_args(&ident.value),
         }
     }
 }

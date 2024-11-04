@@ -938,13 +938,15 @@ impl<'i> Parser<'i> {
             (Modifier::Primitive(prim.value), prim.span)
         } else {
             let term = self.term()?;
-            if let Word::Ref(item) = term.value {
-                if item.modifier_args() == 0 {
-                    return Some(term.span.sp(Word::Ref(item)));
+            match term.value {
+                Word::Ref(item) => {
+                    if item.modifier_args() == 0 {
+                        return Some(term.span.sp(Word::Ref(item)));
+                    }
+                    (Modifier::Ref(item), term.span)
                 }
-                (Modifier::Ref(item), term.span)
-            } else {
-                return Some(term);
+                Word::InlineMacro(ident, func) => (Modifier::Macro(ident, func), term.span),
+                _ => return Some(term),
             }
         };
         self.spaces();
@@ -1240,14 +1242,27 @@ impl<'i> Parser<'i> {
                 last.span.merge_with(end.span.clone());
             }
             let (first_sig, first_lines, first_func_span) = first;
-            let outer_span = start.clone().merge(end.span);
+            let mut outer_span = start.clone().merge(end.span);
             if branches.is_empty() {
-                outer_span.sp(Word::Func(Func {
+                // Normal func
+                let func = Func {
                     signature: first_sig,
                     lines: first_lines,
                     closed: end.value,
-                }))
+                };
+                let reset = self.index;
+                if let Some(ident) = self
+                    .ident()
+                    .filter(|ident| ident.value.chars().all(|c| "!‼".contains(c)))
+                {
+                    outer_span = outer_span.merge(ident.span.clone());
+                    outer_span.sp(Word::InlineMacro(ident, func))
+                } else {
+                    self.index = reset;
+                    outer_span.sp(Word::Func(func))
+                }
             } else {
+                // Function pack
                 let first_span = if first_lines.len() > 1 {
                     let code_words = first_lines
                         .iter()

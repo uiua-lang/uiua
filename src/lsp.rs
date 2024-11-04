@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    ast::{Item, Modifier, ModuleKind, Ref, RefComponent, Word},
+    ast::{Func, Item, Modifier, ModuleKind, Ref, RefComponent, Word},
     ident_modifier_args, is_custom_glyph,
     lex::{CodeSpan, Sp},
     parse::parse,
@@ -587,26 +587,7 @@ impl Spanner {
                         }
                     }
                 }
-                Word::Func(func) => {
-                    let kind = if let Some(inline) = self.code_meta.function_sigs.get(&word.span) {
-                        SpanKind::FuncDelim(inline.sig, inline.set_inverses)
-                    } else {
-                        SpanKind::Delimiter
-                    };
-                    spans.push(word.span.just_start(self.inputs()).sp(kind.clone()));
-                    if let Some(sig) = &func.signature {
-                        spans.push(sig.span.clone().sp(SpanKind::Signature));
-                    }
-                    spans.extend(func.lines.iter().flat_map(|w| self.words_spans(w)));
-                    if func.closed {
-                        let end = word.span.just_end(self.inputs());
-                        if end.as_str(self.inputs(), |s| s == ")")
-                            || end.as_str(self.inputs(), |s| s == "}")
-                        {
-                            spans.push(end.sp(kind));
-                        }
-                    }
-                }
+                Word::Func(func) => spans.extend(self.func_spans(func, &word.span)),
                 Word::Pack(pack) => {
                     let kind = if let Some(inline) = pack
                         .branches
@@ -666,6 +647,10 @@ impl Spanner {
                             spans.push((m.modifier.span.clone()).sp(SpanKind::Primitive(*p, None)))
                         }
                         Modifier::Ref(r) => spans.extend(self.ref_spans(r)),
+                        Modifier::Macro(ident, func) => {
+                            spans.push(ident.span.clone().sp(SpanKind::Delimiter));
+                            spans.extend(self.func_spans(func, &m.modifier.span));
+                        }
                     }
                     spans.extend(self.words_spans(&m.operands));
                 }
@@ -698,6 +683,11 @@ impl Spanner {
                                 spans.extend(self.ref_spans(r));
                                 spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                             }
+                            Modifier::Macro(ident, func) => {
+                                spans.push(ident.span.clone().sp(SpanKind::Delimiter));
+                                spans.extend(self.func_spans(func, &sub.word.span));
+                                spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
+                            }
                         }
                         spans.extend(self.words_spans(&m.operands));
                     }
@@ -711,6 +701,10 @@ impl Spanner {
                         spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                     }
                 },
+                Word::InlineMacro(ident, func) => {
+                    spans.push(ident.span.clone().sp(SpanKind::Delimiter));
+                    spans.extend(self.func_spans(func, &word.span));
+                }
             }
         }
         spans.retain(|sp| !sp.span.as_str(self.inputs(), str::is_empty));
@@ -734,6 +728,26 @@ impl Spanner {
                 original: false,
             }));
             spans.push(comp.tilde_span.clone().sp(SpanKind::Delimiter));
+        }
+        spans
+    }
+    fn func_spans(&self, func: &Func, span: &CodeSpan) -> Vec<Sp<SpanKind>> {
+        let mut spans = Vec::new();
+        let kind = if let Some(inline) = self.code_meta.function_sigs.get(span) {
+            SpanKind::FuncDelim(inline.sig, inline.set_inverses)
+        } else {
+            SpanKind::Delimiter
+        };
+        spans.push(span.just_start(self.inputs()).sp(kind.clone()));
+        if let Some(sig) = &func.signature {
+            spans.push(sig.span.clone().sp(SpanKind::Signature));
+        }
+        spans.extend(func.lines.iter().flat_map(|w| self.words_spans(w)));
+        if func.closed {
+            let end = span.just_end(self.inputs());
+            if end.as_str(self.inputs(), |s| s == ")") || end.as_str(self.inputs(), |s| s == "}") {
+                spans.push(end.sp(kind));
+            }
         }
         spans
     }

@@ -1262,6 +1262,14 @@ code:
             Word::OutputComment { i, n } => Node::SetOutputComment { i, n },
             Word::Subscript(sub) => self.subscript(*sub, word.span)?,
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => Node::empty(),
+            Word::InlineMacro(..) => {
+                self.add_error(
+                    word.span.clone(),
+                    "Inline macro was not parsed as a modifier.\
+                    This is a bug in the interpreter",
+                );
+                Node::empty()
+            }
         })
     }
     #[must_use]
@@ -1717,7 +1725,7 @@ code:
         };
         Ok(match sub.word.value {
             Word::Modified(m) => match m.modifier.value {
-                Modifier::Ref(_) => {
+                Modifier::Ref(_) | Modifier::Macro(..) => {
                     self.add_error(span, "Subscripts are not implemented for macros");
                     self.modified(*m, Some(n))?
                 }

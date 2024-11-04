@@ -324,10 +324,10 @@ impl Compiler {
             }
         } else {
             let strict_args = match &modified.modifier.value {
-                Modifier::Primitive(_) => true,
                 Modifier::Ref(name) => self
                     .ref_local(name)?
                     .is_some_and(|(_, local)| self.index_macros.contains_key(&local.index)),
+                _ => true,
             };
             if strict_args {
                 // Validate operand count
@@ -354,6 +354,12 @@ impl Compiler {
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {
                 return self.modifier_ref(r, modified.modifier.span, modified.operands)
+            }
+            Modifier::Macro(..) => {
+                return Err(self.error(
+                    modified.modifier.span.clone(),
+                    "Inline macros are not yet implemented",
+                ));
             }
         };
 

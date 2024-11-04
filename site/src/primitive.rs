@@ -333,7 +333,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Sub], Optional, view!("Optional "<Prim prim=Flip/>), "⍜-(×2) 1 5") }
             { inverse_row([Mul], Optional, view!("Optional "<Prim prim=Flip/>), "⍜×(+1) 2 5") }
             { inverse_row([Div], Optional, view!("Optional "<Prim prim=Flip/>), "⍜÷(+1) 2 5") }
-            { inverse_row([Mod], Optional, view!("Optional "<Prim prim=Flip/>), "⍜◿(×10) 4 9") }
+            { inverse_row([Modulus], Optional, view!("Optional "<Prim prim=Flip/>), "⍜◿(×10) 4 9") }
             { inverse_row([Pow], Optional, view!("Optional "<Prim prim=Flip/>), "⍜ⁿ(-9) 2 5") }
             { inverse_row([Log], Optional, view!("Optional "<Prim prim=Flip/>), "⍜ₙ(+1) 3 8") }
             { inverse_row([Get], Optional, "", "⍜get(×10) @b map \"abc\" 1_2_3") }
@@ -375,7 +375,6 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Fold], No, "Inner function must be invertible", "⍜∧⊏(×10) [0 2] ↯2_3⇡6") }
             { inverse_row([Repeat], Optional, "Inner function must be invertible", "⍜⍥(×2). 5 1") }
             { inverse_row([Switch], No, "", "⍜(⨬⊢(⊢⇌)|×10) 1 [1 2 3 4]") }
-            { inverse_row([By], Optional, "Does nothing on undo", "⍜(▽⊸◿|×10) 2 [1 2 3 4 5]") }
             { inverse_row([Now], No, "Times execution", "⍜now(&sl 0.005)") }
             { inverse_row([Sys(FOpen)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
             { inverse_row([Sys(FCreate)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
@@ -464,6 +463,43 @@ fn prim_docs() {
                     }
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn listed_examples() {
+    use uiua::Uiua;
+    use uiua_editor::backend::WebBackend;
+
+    let text = std::fs::read_to_string("src/primitive.rs").unwrap();
+    for mut line in text.lines() {
+        line = line.trim();
+        if !line.starts_with("{ ") {
+            continue;
+        }
+        if line.ends_with(", None) }") {
+            continue;
+        }
+        let line = line.replace("\\\"", "<double quote>");
+        let Some(end) = line.rfind("\"#").or_else(|| line.rfind('"')) else {
+            continue;
+        };
+        eprintln!("{line}");
+        let Some(start) = line[..end]
+            .rfind("r#\"")
+            .map(|i| i + 3)
+            .or_else(|| line[..end].rfind('"').map(|i| i + 1))
+        else {
+            panic!("No start quote in line: {line}");
+        };
+        let example = line[start..end]
+            .replace("<double quote>", "\"")
+            .replace("\\\\", "\\");
+        let mut env = Uiua::with_backend(WebBackend::default());
+        if let Err(e) = env.run_str(&example) {
+            panic!("Example failed: {example}\n{e}");
         }
     }
 }

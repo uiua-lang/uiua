@@ -311,7 +311,7 @@ impl<T: ArrayValue> Array<T> {
             Some(d) => Err(env.error(format!("Cannot unfix array with length {d}"))),
             None if self.shape.contains(&0) => Err(env.error("Cannot unfix empty array")),
             None if self.shape.is_empty() => Err(env.error("Cannot unfix scalar")),
-            None => Err(env.pattern_match_error()),
+            None => Err(env.error(format!("Cannot unfix array with shape {:?}", self.shape))),
         }
     }
     /// Collapse the top two dimensions of the array's shape
@@ -924,6 +924,16 @@ impl Value {
     /// Count the unique rows of the value
     pub fn count_unique(&self) -> usize {
         val_as_arr!(self, Array::count_unique)
+    }
+    /// Check that all values are true
+    pub fn all_true(&self) -> bool {
+        match self {
+            Value::Num(arr) => arr.data.iter().all(|&n| n == 1.0),
+            Value::Byte(arr) => arr.data.iter().all(|&b| b == 1),
+            Value::Char(_) => false,
+            Value::Box(arr) => arr.data.iter().all(|Boxed(val)| val.all_true()),
+            Value::Complex(arr) => arr.data.iter().all(|&c| c.re == 1.0 && c.im == 1.0),
+        }
     }
 }
 

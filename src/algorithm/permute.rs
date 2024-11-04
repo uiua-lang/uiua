@@ -1,41 +1,42 @@
 use ecow::EcoVec;
 
 use crate::{
-    types::push_empty_rows_value, val_as_arr, Array, ArrayValue, Function, Primitive, Uiua,
-    UiuaResult, Value,
+    get_ops, types::push_empty_rows_value, val_as_arr, Array, ArrayValue, Ops, Primitive, SigNode,
+    Uiua, UiuaResult, Value,
 };
 
 use super::{monadic::range, table::table_impl, validate_size};
 
-pub fn tuples(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    let sig = f.signature();
-    if sig.outputs != 1 {
+pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f] = get_ops(ops, env)?;
+    if f.sig.outputs != 1 {
         return Err(env.error(format!(
             "{}'s function must have 1 output, \
-            but its signature is {sig}",
-            Primitive::Tuples.format()
+            but its signature is {}",
+            Primitive::Tuples.format(),
+            f.sig
         )));
     }
-    match sig.args {
+    match f.sig.args {
         1 => tuple1(f, env)?,
         2 => tuple2(f, env)?,
         _ => {
             return Err(env.error(format!(
                 "{}'s function must have 1 or 2 arguments, \
-                but its signature is {sig}",
-                Primitive::Tuples.format()
+                but its signature is {}",
+                Primitive::Tuples.format(),
+                f.sig
             )))
         }
     }
     Ok(())
 }
 
-fn tuple1(f: Function, env: &mut Uiua) -> UiuaResult {
+fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
     let mut xs = env.pop(1)?;
     if xs.rank() == 0 {
         env.push(xs);
-        return env.call(f);
+        return env.exec(f);
     }
     let mut results = Vec::new();
     let mut per_meta = xs.take_per_meta();
@@ -44,14 +45,14 @@ fn tuple1(f: Function, env: &mut Uiua) -> UiuaResult {
             let mut proxy = xs.proxy_row(env);
             proxy.fix();
             env.push(proxy);
-            _ = env.call_maintain_sig(f);
+            _ = env.exec_maintain_sig(f);
             results.push(env.pop("rows' function result")?);
         }
     } else {
         env.without_fill(|env| -> UiuaResult {
             for n in 0..=xs.row_count() {
                 env.push(xs.slice_rows(0, n));
-                env.call(f.clone())?;
+                env.exec(f.clone())?;
                 results.push(env.pop("tuples's function result")?);
             }
             Ok(())
@@ -65,11 +66,11 @@ fn tuple1(f: Function, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
+fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
     let k = env.pop(1)?;
     let mut xs = env.pop(2)?;
     'blk: {
-        if let Some(prim) = f.as_primitive(&env.asm) {
+        if let Some(prim) = f.node.as_primitive() {
             let res = match prim {
                 Primitive::Lt => k.choose(&xs, false, false, env)?,
                 Primitive::Le => k.choose(&xs, false, true, env)?,
@@ -139,7 +140,7 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
             fn inner<T: Clone>(
                 arr: &Array<T>,
                 k: usize,
-                f: Function,
+                f: SigNode,
                 is_scalar: bool,
                 scalar: UiuaResult<usize>,
                 env: &mut Uiua,
@@ -160,7 +161,7 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
                             // println!("i: {i}, j: {j}");
                             env.push(i);
                             env.push(j);
-                            env.call(f.clone())?;
+                            env.exec(f.node.clone())?;
                             add_it &= env
                                 .pop("tuples's function result")?
                                 .as_bool(env, "tuples of 3 or more must return a boolean")?;

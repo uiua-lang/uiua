@@ -3,27 +3,26 @@
 use ecow::eco_vec;
 
 use crate::{
-    algorithm::{pervade::*, zip::rows1, FillContext},
-    function::Function,
+    algorithm::{get_ops, pervade::*, zip::rows1, FillContext},
     random,
     value::Value,
-    Array, ArrayValue, Complex, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
+    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
+    UiuaResult,
 };
 
 #[cfg(feature = "opt")]
 use super::loops::flip;
 use super::{multi_output, reduce::reduce_impl, validate_size};
 
-pub fn table(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
+pub fn table(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f] = get_ops(ops, env)?;
     table_impl(f, env)
 }
 
-pub(crate) fn table_impl(f: Function, env: &mut Uiua) -> UiuaResult {
+pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let sig = f.signature();
-    match sig.args {
-        0 => env.call(f),
+    match f.sig.args {
+        0 => env.exec(f),
         1 => rows1(f, env.pop(1)?, false, env),
         n => {
             let xs = env.pop(1)?;
@@ -31,27 +30,34 @@ pub(crate) fn table_impl(f: Function, env: &mut Uiua) -> UiuaResult {
             if n == 2 && xs.rank() <= 1 && ys.rank() <= 1 {
                 table_list(f, xs, ys, env)
             } else {
-                if let [Instr::Prim(Primitive::Mul, _), Instr::PushFunc(f), Instr::Prim(Primitive::Reduce, _)] =
-                    f.instrs(&env.asm)
+                if let [Node::Prim(Primitive::Mul, _), Node::Mod(Primitive::Reduce, args, _)] =
+                    f.node.as_slice()
                 {
-                    if let Some((Primitive::Add, _)) = f.as_flipped_primitive(&env.asm) {
-                        match (&xs, &ys) {
-                            (Value::Num(a), Value::Num(b)) => {
-                                return a.matrix_mul(b, env).map(|val| env.push(val))
+                    if let [sn] = args.as_slice() {
+                        if let Some((Primitive::Add, _)) = sn.node.as_flipped_primitive() {
+                            match (&xs, &ys) {
+                                (Value::Num(a), Value::Num(b)) => {
+                                    return a.matrix_mul(b, env).map(|val| env.push(val))
+                                }
+                                (Value::Num(a), Value::Byte(b)) => {
+                                    return a
+                                        .matrix_mul(&b.convert_ref(), env)
+                                        .map(|val| env.push(val))
+                                }
+                                (Value::Byte(a), Value::Num(b)) => {
+                                    return a
+                                        .convert_ref()
+                                        .matrix_mul(b, env)
+                                        .map(|val| env.push(val))
+                                }
+                                (Value::Byte(a), Value::Byte(b)) => {
+                                    return a
+                                        .convert_ref()
+                                        .matrix_mul(&b.convert_ref(), env)
+                                        .map(|val| env.push(val))
+                                }
+                                _ => {}
                             }
-                            (Value::Num(a), Value::Byte(b)) => {
-                                return a.matrix_mul(&b.convert_ref(), env).map(|val| env.push(val))
-                            }
-                            (Value::Byte(a), Value::Num(b)) => {
-                                return a.convert_ref().matrix_mul(b, env).map(|val| env.push(val))
-                            }
-                            (Value::Byte(a), Value::Byte(b)) => {
-                                return a
-                                    .convert_ref()
-                                    .matrix_mul(&b.convert_ref(), env)
-                                    .map(|val| env.push(val))
-                            }
-                            _ => {}
                         }
                     }
                 }
@@ -61,8 +67,8 @@ pub(crate) fn table_impl(f: Function, env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
-    let sig = f.signature();
+fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+    let sig = f.sig;
     match sig.args {
         2 => {
             let x_scalar = xs.rank() == 0;
@@ -77,7 +83,7 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
                     for y_row in y_rows.iter().cloned() {
                         env.push(y_row);
                         env.push(x_row.clone());
-                        env.call(f.clone())?;
+                        env.exec(f.clone())?;
                         for i in 0..outputs {
                             items[i].add_row(env.pop("tabled function result")?, env)?;
                         }
@@ -141,7 +147,7 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
                                 env.push(z_row.clone());
                                 env.push(y_row.clone());
                                 env.push(x_row.clone());
-                                env.call(f.clone())?;
+                                env.exec(f.clone())?;
                                 for i in 0..outputs {
                                     items[i].add_row(env.pop("crossed function result")?, env)?;
                                 }
@@ -164,10 +170,10 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
     Ok(())
 }
 
-pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    validate_size::<f64>([f.signature().outputs, xs.row_count(), ys.row_count()], env)?;
-    match (f.as_flipped_primitive(&env.asm), xs, ys) {
+    validate_size::<f64>([f.sig.outputs, xs.row_count(), ys.row_count()], env)?;
+    match (f.node.as_flipped_primitive(), xs, ys) {
         (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env)? {
                 return generic_table(f, Value::Num(xs), Value::Num(ys), env);
@@ -178,24 +184,32 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
             Primitive::Ne => env.push(fast_table_list(xs, ys, is_ne::generic, env)?),
             #[cfg(feature = "opt")]
             Primitive::Lt if flipped => {
-                env.push(fast_table_list(xs, ys, flip(is_lt::generic), env)?)
+                env.push(fast_table_list(xs, ys, flip(other_is_lt::generic), env)?)
             }
-            Primitive::Lt if !flipped => env.push(fast_table_list(xs, ys, is_lt::generic, env)?),
+            Primitive::Lt if !flipped => {
+                env.push(fast_table_list(xs, ys, other_is_lt::generic, env)?)
+            }
             #[cfg(feature = "opt")]
             Primitive::Gt if flipped => {
-                env.push(fast_table_list(xs, ys, flip(is_gt::generic), env)?)
+                env.push(fast_table_list(xs, ys, flip(other_is_gt::generic), env)?)
             }
-            Primitive::Gt if !flipped => env.push(fast_table_list(xs, ys, is_gt::generic, env)?),
+            Primitive::Gt if !flipped => {
+                env.push(fast_table_list(xs, ys, other_is_gt::generic, env)?)
+            }
             #[cfg(feature = "opt")]
             Primitive::Le if flipped => {
-                env.push(fast_table_list(xs, ys, flip(is_le::generic), env)?)
+                env.push(fast_table_list(xs, ys, flip(other_is_le::generic), env)?)
             }
-            Primitive::Le if !flipped => env.push(fast_table_list(xs, ys, is_le::generic, env)?),
+            Primitive::Le if !flipped => {
+                env.push(fast_table_list(xs, ys, other_is_le::generic, env)?)
+            }
             #[cfg(feature = "opt")]
             Primitive::Ge if flipped => {
-                env.push(fast_table_list(xs, ys, flip(is_ge::generic), env)?)
+                env.push(fast_table_list(xs, ys, flip(other_is_ge::generic), env)?)
             }
-            Primitive::Ge if !flipped => env.push(fast_table_list(xs, ys, is_ge::generic, env)?),
+            Primitive::Ge if !flipped => {
+                env.push(fast_table_list(xs, ys, other_is_ge::generic, env)?)
+            }
             Primitive::Add => env.push(fast_table_list(xs, ys, add::byte_byte, env)?),
             #[cfg(feature = "opt")]
             Primitive::Sub if flipped => {
@@ -209,10 +223,10 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
             }
             Primitive::Div if !flipped => env.push(fast_table_list(xs, ys, div::byte_byte, env)?),
             #[cfg(feature = "opt")]
-            Primitive::Mod if flipped => {
+            Primitive::Modulus if flipped => {
                 env.push(fast_table_list(xs, ys, flip(modulus::byte_byte), env)?)
             }
-            Primitive::Mod if !flipped => {
+            Primitive::Modulus if !flipped => {
                 env.push(fast_table_list(xs, ys, modulus::byte_byte, env)?)
             }
             #[cfg(feature = "opt")]
@@ -287,7 +301,7 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
             Value::Char(xs),
             Value::Char(ys),
         ) => env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?),
-        (_, xs, ys) => match f.as_flipped_impl_primitive(&env.asm) {
+        (_, xs, ys) => match f.node.as_flipped_impl_primitive() {
             // Random
             Some((ImplPrimitive::ReplaceRand2, _)) => {
                 let shape = [xs.row_count(), ys.row_count()];
@@ -318,28 +332,28 @@ macro_rules! table_math {
                 Primitive::Ne => env.push(fast_table_list(xs, ys, is_ne::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Lt if flipped => {
-                    env.push(fast_table_list(xs, ys, flip(is_lt::$f), env)?)
+                    env.push(fast_table_list(xs, ys, flip(other_is_lt::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Lt if !flipped=> env.push(fast_table_list(xs, ys, is_lt::$f, env)?),
+                Primitive::Lt if !flipped=> env.push(fast_table_list(xs, ys, other_is_lt::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Gt if flipped => {
-                    env.push(fast_table_list(xs, ys, flip(is_gt::$f), env)?)
+                    env.push(fast_table_list(xs, ys, flip(other_is_gt::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Gt if !flipped => env.push(fast_table_list(xs, ys, is_gt::$f, env)?),
+                Primitive::Gt if !flipped => env.push(fast_table_list(xs, ys, other_is_gt::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Le if flipped => {
-                    env.push(fast_table_list(xs, ys, flip(is_le::$f), env)?)
+                    env.push(fast_table_list(xs, ys, flip(other_is_le::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Le if !flipped => env.push(fast_table_list(xs, ys, is_le::$f, env)?),
+                Primitive::Le if !flipped => env.push(fast_table_list(xs, ys, other_is_le::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Ge if flipped => {
-                    env.push(fast_table_list(xs, ys, flip(is_ge::$f), env)?)
+                    env.push(fast_table_list(xs, ys, flip(other_is_ge::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Ge => env.push(fast_table_list(xs, ys, is_ge::$f, env)?),
+                Primitive::Ge => env.push(fast_table_list(xs, ys, other_is_ge::$f, env)?),
                 Primitive::Add => env.push(fast_table_list(xs, ys, add::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Sub if flipped => env.push(fast_table_list(xs, ys, flip(sub::$f), env)?),
@@ -349,11 +363,11 @@ macro_rules! table_math {
                 Primitive::Div if flipped => env.push(fast_table_list(xs, ys, flip(div::$f), env)?),
                 Primitive::Div if !flipped => env.push(fast_table_list(xs, ys, div::$f, env)?),
                 #[cfg(feature = "opt")]
-                Primitive::Mod if flipped => {
+                Primitive::Modulus if flipped => {
                     env.push(fast_table_list(xs, ys, flip(modulus::$f), env)?)
                 }
                 $(#[$attr])*
-                Primitive::Mod if !flipped => env.push(fast_table_list(xs, ys, modulus::$f, env)?),
+                Primitive::Modulus if !flipped => env.push(fast_table_list(xs, ys, modulus::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Atan if flipped => {
                     env.push(fast_table_list(xs, ys, flip(atan2::$f), env)?)
@@ -437,15 +451,12 @@ fn fast_table_list_join_or_couple<T: ArrayValue + Default>(
     Ok(Array::new(new_shape, new_data))
 }
 
-pub fn reduce_table(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    let g = env.pop_function()?;
+pub fn reduce_table(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f, g] = get_ops(ops, env)?;
     let xs = env.pop(1)?;
     let ys = env.pop(2)?;
     if xs.rank() == 1 && ys.rank() == 1 {
-        let prims = f
-            .as_flipped_primitive(&env.asm)
-            .zip(g.as_flipped_primitive(&env.asm));
+        let prims = (f.node.as_flipped_primitive()).zip(g.node.as_flipped_primitive());
         match (prims, xs, ys) {
             (Some(((fp, f_flip), (gp, g_flip))), Value::Num(xs), Value::Num(ys)) => {
                 if let Err((xs, ys)) = reduce_table_nums(fp, gp, f_flip, g_flip, xs, ys, env)? {
@@ -497,15 +508,15 @@ fn reduce_table_bytes(
                 Primitive::Sub => env.push(frtl($xs, $ys, $ff, sub::$arith, $iden, fill)),
                 Primitive::Mul => env.push(frtl($xs, $ys, $ff, mul::$arith, $iden, fill)),
                 Primitive::Div => env.push(frtl($xs, $ys, $ff, div::$arith, $iden, fill)),
-                Primitive::Mod => env.push(frtl($xs, $ys, $ff, modulus::$arith, $iden, fill)),
+                Primitive::Modulus => env.push(frtl($xs, $ys, $ff, modulus::$arith, $iden, fill)),
                 #[cfg(feature = "opt")]
                 Primitive::Atan => env.push(frtl($xs, $ys, $ff, atan2::$arith, $iden, fill)),
                 Primitive::Eq => env.push(frtl($xs, $ys, $ff, to(is_eq::$cmp), $iden, fill)),
                 Primitive::Ne => env.push(frtl($xs, $ys, $ff, to(is_ne::$cmp), $iden, fill)),
-                Primitive::Lt => env.push(frtl($xs, $ys, $ff, to(is_lt::$cmp), $iden, fill)),
-                Primitive::Gt => env.push(frtl($xs, $ys, $ff, to(is_gt::$cmp), $iden, fill)),
-                Primitive::Le => env.push(frtl($xs, $ys, $ff, to(is_le::$cmp), $iden, fill)),
-                Primitive::Ge => env.push(frtl($xs, $ys, $ff, to(is_ge::$cmp), $iden, fill)),
+                Primitive::Lt => env.push(frtl($xs, $ys, $ff, to(other_is_lt::$cmp), $iden, fill)),
+                Primitive::Gt => env.push(frtl($xs, $ys, $ff, to(other_is_gt::$cmp), $iden, fill)),
+                Primitive::Le => env.push(frtl($xs, $ys, $ff, to(other_is_le::$cmp), $iden, fill)),
+                Primitive::Ge => env.push(frtl($xs, $ys, $ff, to(other_is_ge::$cmp), $iden, fill)),
                 Primitive::Min => env.push(frtl($xs, $ys, $ff, min::$arith, $iden, fill)),
                 Primitive::Max => env.push(frtl($xs, $ys, $ff, max::$arith, $iden, fill)),
                 Primitive::Complex => env.push(frtl(
@@ -611,8 +622,8 @@ fn reduce_table_bytes(
 }
 
 fn generic_reduce_table(
-    f: Function,
-    g: Function,
+    f: SigNode,
+    g: SigNode,
     xs: Value,
     ys: Value,
     env: &mut Uiua,
@@ -632,7 +643,7 @@ fn generic_reduce_table(
     for y in ys.rows() {
         env.push(y);
         env.push(acc.clone());
-        env.call(g.clone())?;
+        env.exec(g.clone())?;
         g_rows.add_row(env.pop("reduced function result")?, env)?;
     }
     acc = g_rows.finish();
@@ -641,12 +652,12 @@ fn generic_reduce_table(
         for y in ys.rows() {
             env.push(y);
             env.push(x.clone());
-            env.call(g.clone())?;
+            env.exec(g.clone())?;
             g_rows.add_row(env.pop("reduced function result")?, env)?;
         }
         env.push(g_rows.finish());
         env.push(acc);
-        env.call(f.clone())?;
+        env.exec(f.clone())?;
         acc = env.pop("reduced function result")?;
     }
     env.push(acc);
@@ -690,7 +701,7 @@ macro_rules! reduce_table_math {
                         Primitive::Sub => env.push(frtl(xs, ys, $ff, sub::$f, $iden.into(), fill)),
                         Primitive::Mul => env.push(frtl(xs, ys, $ff, mul::$f, $iden.into(), fill)),
                         Primitive::Div => env.push(frtl(xs, ys, $ff, div::$f, $iden.into(), fill)),
-                        Primitive::Mod => {
+                        Primitive::Modulus => {
                             env.push(frtl(xs, ys, $ff, modulus::$f, $iden.into(), fill))
                         }
                         #[cfg(feature = "opt")]
@@ -704,16 +715,16 @@ macro_rules! reduce_table_math {
                             env.push(frtl(xs, ys, $ff, to(is_ne::$f), $iden.into(), fill))
                         }
                         Primitive::Lt => {
-                            env.push(frtl(xs, ys, $ff, to(is_lt::$f), $iden.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(other_is_lt::$f), $iden.into(), fill))
                         }
                         Primitive::Gt => {
-                            env.push(frtl(xs, ys, $ff, to(is_gt::$f), $iden.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(other_is_gt::$f), $iden.into(), fill))
                         }
                         Primitive::Le => {
-                            env.push(frtl(xs, ys, $ff, to(is_le::$f), $iden.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(other_is_le::$f), $iden.into(), fill))
                         }
                         Primitive::Ge => {
-                            env.push(frtl(xs, ys, $ff, to(is_ge::$f), $iden.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(other_is_ge::$f), $iden.into(), fill))
                         }
                         Primitive::Min => env.push(frtl(xs, ys, $ff, min::$f, $iden.into(), fill)),
                         Primitive::Max => env.push(frtl(xs, ys, $ff, max::$f, $iden.into(), fill)),
@@ -799,196 +810,4 @@ where
     let mut new_shape = b.shape.clone();
     new_shape.push(2);
     Array::new(new_shape, acc)
-}
-
-pub fn triangle(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    match f.signature().args {
-        0 => env.call(f),
-        1 => triangle1(f, env),
-        2 => triangle2(f, env),
-        3 => triangle3(f, env),
-        _ => Err(env.error(format!(
-            "{} of more than 3 arrays is not supported",
-            Primitive::Triangle.format()
-        ))),
-    }
-}
-
-fn triangle1(f: Function, env: &mut Uiua) -> UiuaResult {
-    let xs = env.pop(1)?;
-    let outputs = f.signature().outputs;
-    match &**xs.shape() {
-        [] => {
-            env.push(xs);
-            env.call(f)
-        }
-        [_] => {
-            if let Some(Primitive::First) = f.as_primitive(&env.asm) {
-                env.push(xs);
-                return Ok(());
-            }
-            let rows = (0..xs.row_count()).map(|r| {
-                let mut row = xs.clone();
-                row.drop_n(r);
-                row
-            });
-            let outputs = f.signature().outputs;
-            let mut new_values = multi_output(outputs, Vec::new());
-            env.without_fill(|env| -> UiuaResult {
-                for row in rows {
-                    env.push(row);
-                    env.call(f.clone())?;
-                    for i in 0..outputs {
-                        new_values[i].push(env.pop("triangle's function result")?);
-                    }
-                }
-                Ok(())
-            })?;
-            for values in new_values.into_iter().rev() {
-                env.push(Value::from_row_values(values, env)?);
-            }
-            Ok(())
-        }
-        &[_, second_dim, ..] => {
-            let rows = xs
-                .into_rows()
-                .take(second_dim)
-                .enumerate()
-                .map(|(r, mut row)| {
-                    row.drop_n(r);
-                    row
-                });
-            if let Some(Primitive::First) = f.as_primitive(&env.asm) {
-                let value = Value::from_row_values_infallible(
-                    rows.map(|row| row.row(0)).collect::<Vec<_>>(),
-                );
-                env.push(value);
-                return Ok(());
-            }
-            let mut new_values = multi_output(outputs, Vec::new());
-            env.without_fill(|env| -> UiuaResult {
-                for row in rows {
-                    env.push(row);
-                    env.call(f.clone())?;
-                    for i in 0..outputs {
-                        new_values[i].push(env.pop("triangle's function result")?);
-                    }
-                }
-                Ok(())
-            })?;
-            for values in new_values.into_iter().rev() {
-                env.push(Value::from_row_values(values, env)?);
-            }
-            Ok(())
-        }
-    }
-}
-
-fn triangle2(f: Function, env: &mut Uiua) -> UiuaResult {
-    let mut xs = env.pop(1)?;
-    let mut ys = env.pop(2)?;
-    let both_scalar = xs.rank() == 0 && ys.rank() == 0;
-    if xs.rank() == 0 {
-        xs.fix();
-    }
-    if ys.rank() == 0 {
-        ys.fix();
-    }
-    let outputs = f.signature().outputs;
-    let new_values = env.without_fill(|env| -> UiuaResult<_> {
-        match f.as_primitive(&env.asm) {
-            Some(Primitive::Join) => {
-                let mut new_rows = Vec::new();
-                for x in xs.into_rows().take(ys.row_count()) {
-                    for y in ys.rows() {
-                        let row = x.clone().join(y, true, env)?;
-                        new_rows.push(row);
-                    }
-                    ys.drop_n(1);
-                }
-                let mut val = Value::from_row_values(new_rows, env)?;
-                if both_scalar {
-                    val.shape_mut().remove(0);
-                }
-                env.push(val);
-                return Ok(None);
-            }
-            Some(Primitive::Couple) => {
-                let mut new_rows = Vec::new();
-                for x in xs.into_rows().take(ys.row_count()) {
-                    for y in ys.rows() {
-                        let row = x.clone().couple(y, true, env)?;
-                        new_rows.push(row);
-                    }
-                    ys.drop_n(1);
-                }
-                let mut val = Value::from_row_values(new_rows, env)?;
-                if both_scalar {
-                    val.shape_mut().remove(0);
-                }
-                env.push(val);
-                return Ok(None);
-            }
-            _ => {}
-        }
-        let mut new_values = multi_output(outputs, Vec::new());
-        for x in xs.into_rows().take(ys.row_count()) {
-            for y in ys.rows() {
-                env.push(y);
-                env.push(x.clone());
-                env.call(f.clone())?;
-                for i in 0..outputs {
-                    new_values[i].push(env.pop("triangle's function result")?);
-                }
-            }
-            ys.drop_n(1);
-        }
-        Ok(Some(new_values))
-    })?;
-    if let Some(new_values) = new_values {
-        for values in new_values.into_iter().rev() {
-            let mut val = Value::from_row_values(values, env)?;
-            if both_scalar {
-                val.shape_mut().remove(0);
-            }
-            env.push(val);
-        }
-    }
-    Ok(())
-}
-
-fn triangle3(f: Function, env: &mut Uiua) -> UiuaResult {
-    let sig = f.signature();
-    let xs = env.pop(1)?;
-    let ys = env.pop(2)?;
-    let zs = env.pop(3)?;
-    let outputs = sig.outputs;
-    let mut new_values = multi_output(
-        outputs,
-        Vec::with_capacity(xs.row_count() * ys.row_count() * zs.row_count() / 2),
-    );
-    env.without_fill(|env| -> UiuaResult {
-        for (i, x) in xs.into_rows().take(ys.row_count()).enumerate() {
-            for (j, y) in ys.rows().take(zs.row_count()).enumerate() {
-                for (k, z) in zs.rows().enumerate() {
-                    if i + j > k {
-                        continue;
-                    }
-                    env.push(z);
-                    env.push(y.clone());
-                    env.push(x.clone());
-                    env.call(f.clone())?;
-                    for i in 0..outputs {
-                        new_values[i].push(env.pop("triangle's function result")?);
-                    }
-                }
-            }
-        }
-        Ok(())
-    })?;
-    for values in new_values.into_iter().rev() {
-        env.push(Value::from_row_values(values, env)?);
-    }
-    Ok(())
 }

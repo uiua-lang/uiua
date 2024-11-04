@@ -1,7 +1,21 @@
 # Uiua Changelog
 
 Uiua is not yet stable.
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+
+## 0.14.0 - 202?-??-??
+This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- Remove the previously deprecated experimental `coordinate ⟔` function
+- Remove the previously deprecated experimental `struct` modifier
+- Remove the previously deprecated `setinv` and `setund` modifiers
+### Interpreter
+- The compiler and interpreter have been almost entirely rewritten to use a tree-based execution model rather than a bytecode model
+  - This massively simplifies compilation as well as optimizations and the derivation of inverses
+  - This should not affect any language semantics
+- Improve pattern matching error messages
+- Optimize the pattern `ⁿ%:1`
+### Website
+- Add a new pad setting to show line values to the right of the code
 
 ## 0.13.0 - 2024-10-21
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).

@@ -1046,6 +1046,10 @@ option,
     color: #888;
 }
 
+.value-hint {
+    color: #8888;
+}
+
 @media (prefers-color-scheme: dark) {
     .output-a {
         color: #cff;

@@ -62,6 +62,7 @@ E! ←^ $"_" e ◌
 ◌B!2
 ◌C!3
 ◌E!5
+◌E!5 # Ensure evaluated constant is set
 
 F! ←^ {"+" "1"}◌
 ⍤⤙≍ [2 3 4] ≡F!∘ [1 2 3]

@@ -10,12 +10,12 @@ use std::{
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
-    algorithm::{fixed_rows, FixedRowsData},
+    algorithm::{fixed_rows, get_ops, FixedRowsData},
     array::{Array, ArrayValue},
     cowslice::CowSlice,
     val_as_arr,
     value::Value,
-    Boxed, Function, Instr, Primitive, Shape, Signature, TempStack, Uiua, UiuaResult,
+    Boxed, Node, Ops, Primitive, Shape, SigNode, Signature, Uiua, UiuaResult,
 };
 
 use super::{multi_output, validate_size_impl};
@@ -24,10 +24,15 @@ pub fn flip<A, B, C>(f: impl Fn(A, B) -> C + Copy) -> impl Fn(B, A) -> C + Copy 
     move |b, a| f(a, b)
 }
 
-pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
+pub fn repeat(ops: Ops, with_inverse: bool, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop_function()?;
-    let inv = with_inverse.then(|| env.pop_function()).transpose()?;
+    let (f, inv) = if with_inverse {
+        let [f, inv] = get_ops(ops, env)?;
+        (f, Some(inv))
+    } else {
+        let [f] = get_ops(ops, env)?;
+        (f, None)
+    };
     let n = env.pop("repetition count")?;
     fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
         Ok(match value {
@@ -49,7 +54,7 @@ pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
         repeat_impl(f, inv, n.data[0], env)
     } else {
         // Array
-        let sig = f.signature();
+        let sig = f.sig;
         if sig.args != sig.outputs {
             return Err(env.error(format!(
                 "{} with a non-scalar repetition count \
@@ -140,8 +145,8 @@ pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn repeat_impl(f: Function, inv: Option<Function>, n: f64, env: &mut Uiua) -> UiuaResult {
-    let sig = f.signature();
+fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> UiuaResult {
+    let sig = f.sig;
     let (f, n) = if n >= 0.0 {
         (f, n)
     } else {
@@ -156,24 +161,10 @@ fn repeat_impl(f: Function, inv: Option<Function>, n: f64, env: &mut Uiua) -> Ui
                 Primitive::Repeat.format()
             )));
         }
-        if !env.rt.array_stack.is_empty() && sig.args > sig.outputs {
-            return Err(env.error(format!(
-                "Converging {}'s function must have a net positive stack \
-                change inside an array, but its signature is {sig}",
-                Primitive::Repeat.format()
-            )));
-        }
-        if env.rt.array_stack.is_empty() && sig.args != sig.outputs {
-            return Err(env.error(format!(
-                "Converging {}'s function must have a net stack change of 0 \
-                outside an array, but its signature is {sig}",
-                Primitive::Repeat.format()
-            )));
-        }
         let mut prev = env.pop(1)?;
         env.push(prev.clone());
         loop {
-            env.call(f.clone())?;
+            env.exec(f.clone())?;
             let next = env.pop("converging function result")?;
             let converged = next == prev;
             if converged {
@@ -200,40 +191,40 @@ fn repeat_impl(f: Function, inv: Option<Function>, n: f64, env: &mut Uiua) -> Ui
             }
         }
         for _ in 0..n {
-            env.call(f.clone())?;
+            env.exec(f.clone())?;
         }
     }
     Ok(())
 }
 
-pub fn do_(env: &mut Uiua) -> UiuaResult {
+pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let body = env.pop_function()?;
-    let cond = env.pop_function()?;
-    let body_sig = body.signature();
-    let cond_sig = cond.signature();
-    if cond_sig.outputs < 1 {
+    let [body, cond] = get_ops(ops, env)?;
+    if cond.sig.outputs < 1 {
         return Err(env.error(format!(
             "Do's condition function must return at least 1 value, \
-            but its signature is {cond_sig}"
+            but its signature is {}",
+            cond.sig
         )));
     }
-    let copy_count = cond_sig.args.saturating_sub(cond_sig.outputs - 1);
-    let cond_sub_sig = Signature::new(cond_sig.args, cond_sig.outputs + copy_count - 1);
-    let comp_sig = body_sig.compose(cond_sub_sig);
+    let copy_count = cond.sig.args.saturating_sub(cond.sig.outputs - 1);
+    let cond_sub_sig = Signature::new(cond.sig.args, cond.sig.outputs + copy_count - 1);
+    let comp_sig = body.sig.compose(cond_sub_sig);
     match comp_sig.args.cmp(&comp_sig.outputs) {
-        Ordering::Less if env.rt.array_stack.is_empty() => {
+        Ordering::Less if env.rt.array_depth == 0 => {
             return Err(env.error(format!(
                 "Do's functions cannot have a positive net stack \
                 change outside an array, but the composed signature of \
-                {body_sig} and {cond_sig}, minus the condition, is {comp_sig}"
+                {} and {}, minus the condition, is {comp_sig}",
+                body.sig, cond.sig
             )))
         }
         Ordering::Greater => {
             return Err(env.error(format!(
                 "Do's functions cannot have a negative net stack \
-                change, but the composed signature of {body_sig} and \
-                {cond_sig}, minus the condition, is {comp_sig}"
+                change, but the composed signature of {} and \
+                {}, minus the condition, is {comp_sig}",
+                body.sig, cond.sig
             )))
         }
         _ => {}
@@ -247,24 +238,25 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
             }
         }
         // Copy necessary condition args
-        env.dup_n(copy_count)?;
+        env.dup_values(copy_count, copy_count)?;
         // Call condition
-        env.call(cond.clone())?;
+        env.exec(cond.clone())?;
         // Break if condition is false
         let cond = (env.pop("do condition")?).as_bool(env, "Do condition must be a boolean")?;
         if !cond {
             break;
         }
         // Call body
-        env.call(body.clone())?;
+        env.exec(body.clone())?;
     }
     Ok(())
 }
 
-pub fn partition(env: &mut Uiua) -> UiuaResult {
+pub fn partition(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     collapse_groups(
         Primitive::Partition,
+        ops,
         Value::partition_groups,
         |val, markers, _| Ok(val.partition_firsts(markers)),
         |val, markers, _| Ok(val.partition_lasts(markers)),
@@ -570,10 +562,10 @@ fn multi_partition_indices(markers: Array<isize>) -> Vec<(isize, Vec<usize>)> {
         .collect()
 }
 
-pub fn undo_partition_part1(env: &mut Uiua) -> UiuaResult {
+pub fn undo_partition_part1(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop_function()?;
-    let sig = f.signature();
+    let [f] = get_ops(ops, env)?;
+    let sig = f.sig;
     if sig != (1, 1) {
         return Err(env.error(format!(
             "Cannot undo {} on function with signature {sig}",
@@ -585,7 +577,7 @@ pub fn undo_partition_part1(env: &mut Uiua) -> UiuaResult {
     let mut untransformed = Vec::with_capacity(partitioned.row_count());
     for row in partitioned.into_rows().rev() {
         env.push(row);
-        env.call(f.clone())?;
+        env.exec(f.clone())?;
         untransformed.push(Boxed(env.pop("unpartitioned row")?));
     }
     untransformed.reverse();
@@ -684,10 +676,11 @@ fn update_array_at<T: Clone>(arr: &mut Array<T>, start: usize, new: &[T]) {
     arr.data.as_mut_slice()[start..end].clone_from_slice(new);
 }
 
-pub fn group(env: &mut Uiua) -> UiuaResult {
+pub fn group(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     collapse_groups(
         Primitive::Group,
+        ops,
         Value::group_groups,
         Value::group_firsts,
         Value::group_lasts,
@@ -859,10 +852,10 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-pub fn undo_group_part1(env: &mut Uiua) -> UiuaResult {
+pub fn undo_group_part1(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop_function()?;
-    let sig = f.signature();
+    let [f] = get_ops(ops, env)?;
+    let sig = f.sig;
     if sig != (1, 1) {
         return Err(env.error(format!(
             "Cannot undo {} on function with signature {sig}",
@@ -875,7 +868,7 @@ pub fn undo_group_part1(env: &mut Uiua) -> UiuaResult {
     let mut ungrouped_rows = Vec::with_capacity(grouped.row_count());
     for mut row in grouped.into_rows().rev() {
         env.push(row);
-        env.call(f.clone())?;
+        env.exec(f.clone())?;
         row = env.pop("ungrouped row")?;
         ungrouped_rows.push(Boxed(row));
     }
@@ -935,6 +928,7 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
 #[allow(clippy::too_many_arguments)]
 fn collapse_groups<I>(
     prim: Primitive,
+    ops: Ops,
     get_groups: impl Fn(Value, Array<isize>) -> I,
     firsts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
     lasts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
@@ -948,8 +942,8 @@ where
     I: IntoIterator<Item = Value>,
     I::IntoIter: ExactSizeIterator,
 {
-    let f = env.pop_function()?;
-    let sig = f.signature();
+    let [f] = get_ops(ops, env)?;
+    let sig = f.sig;
     let indices = env.pop(1)?.as_integer_array(env, indices_error)?;
     let values = env.pop(2)?;
 
@@ -964,9 +958,9 @@ where
 
     // Optimizations
     if indices.rank() == 1 {
-        use Instr::*;
+        use Node::*;
         use Primitive::*;
-        match f.instrs(&env.asm) {
+        match f.node.as_slice() {
             [Prim(First, _)] => {
                 let val = firsts(values, &indices.data, env)?;
                 env.push(val);
@@ -999,15 +993,7 @@ where
                 env.push(val);
                 return Ok(());
             }
-            [PushTemp {
-                stack: TempStack::Inline,
-                count: 1,
-                ..
-            }, Prim(Pop, _), PopTemp {
-                stack: TempStack::Inline,
-                count: 1,
-                ..
-            }] => {
+            [Mod(Dip, args, _)] if matches!(args[0].node, Prim(Pop, _)) => {
                 let val = first_group(values, &indices.data).ok_or_else(|| {
                     env.error(format!(
                         "Cannot do aggregating {} with no groups",
@@ -1037,7 +1023,7 @@ where
             env.without_fill(|env| -> UiuaResult {
                 for group in groups {
                     env.push(group);
-                    env.call(f.clone())?;
+                    env.exec(f.clone())?;
                     for i in 0..outputs {
                         let value = env.pop(|| format!("{}'s function result", prim.format()))?;
                         rows[i].push(value);
@@ -1071,7 +1057,7 @@ where
                 for row in groups {
                     env.push(row);
                     env.push(acc);
-                    env.call(f.clone())?;
+                    env.exec(f.clone())?;
                     acc = env.pop("reduced function result")?;
                 }
                 env.push(acc);

@@ -38,7 +38,14 @@ pub enum UiuaErrorKind {
     /// An error occurred while parsing a file
     Parse(Vec<Sp<ParseError>>, Box<Inputs>),
     /// An error occurred while compiling or executing a program
-    Run(Sp<String, Span>, Box<Inputs>),
+    Run {
+        /// The error message
+        message: Sp<String, Span>,
+        /// Associated information
+        info: Vec<Sp<String, Span>>,
+        /// The inputs
+        inputs: Box<Inputs>,
+    },
     /// An error thrown by `assert`
     Throw(Box<Value>, Span, Box<Inputs>),
     /// Maximum execution time exceeded
@@ -76,7 +83,7 @@ pub type UiuaResult<T = ()> = Result<T, UiuaError>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraceFrame {
     /// The function that was called
-    pub id: FunctionId,
+    pub id: Option<FunctionId>,
     /// The span of the call
     pub span: Span,
 }
@@ -96,7 +103,7 @@ impl fmt::Display for UiuaError {
                 }
                 Ok(())
             }
-            UiuaErrorKind::Run(error, _) => write!(f, "{error}"),
+            UiuaErrorKind::Run { message: error, .. } => write!(f, "{error}"),
             UiuaErrorKind::Throw(value, span, _) => write!(f, "{span}: {value}"),
             UiuaErrorKind::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaErrorKind::CompilerPanic(message) => message.fmt(f),
@@ -141,7 +148,7 @@ impl UiuaError {
     /// Add a span to the trace of the error
     pub fn trace(mut self, span: CodeSpan) -> Self {
         let frame = TraceFrame {
-            id: FunctionId::Anonymous(span.clone()),
+            id: None,
             span: Span::Code(span),
         };
         self.trace.push(frame);
@@ -149,7 +156,7 @@ impl UiuaError {
     }
     pub(crate) fn trace_macro(mut self, name: Ident, span: CodeSpan) -> Self {
         let frame = TraceFrame {
-            id: FunctionId::Macro(name, span.clone()),
+            id: Some(FunctionId::Macro(name, span.clone())),
             span: Span::Code(span),
         };
         self.trace.push(frame);
@@ -158,7 +165,7 @@ impl UiuaError {
     pub(crate) fn track_caller(&mut self, new_span: impl Into<Span>) {
         self.trace.clear();
         match &mut self.kind {
-            UiuaErrorKind::Run(message, _) => message.span = new_span.into(),
+            UiuaErrorKind::Run { message, .. } => message.span = new_span.into(),
             UiuaErrorKind::Throw(_, span, _) => *span = new_span.into(),
             _ => {}
         }
@@ -177,7 +184,7 @@ fn format_trace(trace: &[TraceFrame]) -> Vec<String> {
     let max_id_length = trace
         .iter()
         .filter(|frame| frame.span != Span::Builtin)
-        .map(|frame| frame.id.to_string().chars().count())
+        .map(|frame| (frame.id.as_ref()).map_or(0, |id| id.to_string().chars().count()))
         .max()
         .unwrap_or(0);
     let max_span_length = trace
@@ -192,7 +199,7 @@ fn format_trace(trace: &[TraceFrame]) -> Vec<String> {
     let mut i = 0;
     'outer: while i < trace.len() {
         let frame = &trace[i];
-        if frame.id == FunctionId::Main {
+        if frame.id == Some(FunctionId::Main) {
             i += 1;
             continue;
         }
@@ -230,13 +237,18 @@ fn format_trace(trace: &[TraceFrame]) -> Vec<String> {
                 continue 'outer;
             }
         }
-        lines.push(match &frame.span {
-            Span::Code(span) => format!(
-                "  in {:max_id_length$} at {:max_span_length$}",
-                frame.id.to_string(),
-                span
-            ),
-            Span::Builtin => format!("  in {:max_id_length$}", frame.id.to_string()),
+        lines.push(match (&frame.id, &frame.span) {
+            (Some(id), Span::Code(span)) => {
+                format!("  in {id:max_id_length$} at {span:max_span_length$}")
+            }
+            (Some(id), Span::Builtin) => format!("  in {id:max_id_length$}"),
+            (None, Span::Code(span)) => {
+                format!("  at {span:max_span_length$}")
+            }
+            (None, Span::Builtin) => {
+                i += 1;
+                continue;
+            }
         });
         i += 1;
     }
@@ -263,8 +275,25 @@ impl UiuaError {
                     .iter()
                     .map(|error| (error.value.to_string(), error.span.clone().into())),
             ),
-            UiuaErrorKind::Run(error, inputs) => {
-                Report::new_multi(kind, inputs, [(&error.value, error.span.clone())])
+            UiuaErrorKind::Run {
+                message,
+                info,
+                inputs,
+            } => {
+                let mut report =
+                    Report::new_multi(kind, inputs, [(&message.value, message.span.clone())]);
+                for info in info {
+                    report.fragments.push(ReportFragment::Newline);
+                    report.fragments.extend(
+                        Report::new_multi(
+                            DiagnosticKind::Info.into(),
+                            inputs,
+                            [(&info.value, info.span.clone())],
+                        )
+                        .fragments,
+                    );
+                }
+                report
             }
             UiuaErrorKind::Throw(message, span, inputs) => {
                 Report::new_multi(kind, inputs, [(&message, span.clone())])
@@ -289,7 +318,7 @@ impl UiuaError {
         let default_inputs = Inputs::default();
         let inputs = match &self.kind {
             UiuaErrorKind::Parse(_, inputs)
-            | UiuaErrorKind::Run(_, inputs)
+            | UiuaErrorKind::Run { inputs, .. }
             | UiuaErrorKind::Throw(_, _, inputs)
             | UiuaErrorKind::Timeout(_, inputs) => inputs,
             _ => &default_inputs,

@@ -1656,6 +1656,7 @@ value_bin_math_impl!(
 value_bin_math_impl!(div, (Num, Char, num_char), (Byte, Char, byte_char),);
 value_bin_math_impl!(modulus, (Complex, Complex, com_com));
 value_bin_math_impl!(pow);
+value_bin_math_impl!(root);
 value_bin_math_impl!(log);
 value_bin_math_impl!(atan2);
 value_bin_math_impl!(
@@ -1743,7 +1744,7 @@ macro_rules! cmp_impls {
 }
 
 eq_impls!(is_eq, is_ne);
-cmp_impls!(is_lt, is_le, is_gt, is_ge);
+cmp_impls!(other_is_lt, other_is_le, other_is_gt, other_is_ge);
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
@@ -1834,6 +1835,19 @@ impl fmt::Display for Value {
             Value::Char(c) if c.rank() < 2 => c.fmt(f),
             Value::Box(arr) if arr.rank() == 0 => arr.fmt(f),
             value => value.grid_string(true).fmt(f),
+        }
+    }
+}
+
+impl PartialEq<i32> for Value {
+    fn eq(&self, other: &i32) -> bool {
+        if self.rank() > 0 {
+            return false;
+        }
+        match self {
+            Value::Num(arr) => arr.data[0] == (*other as f64),
+            Value::Byte(arr) => arr.data[0] as i32 == *other,
+            _ => false,
         }
     }
 }

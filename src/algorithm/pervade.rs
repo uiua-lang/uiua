@@ -1087,10 +1087,10 @@ macro_rules! cmp_impl {
 
 eq_impl!(is_eq == Ordering::Equal);
 eq_impl!(is_ne != Ordering::Equal);
-cmp_impl!(is_lt == Ordering::Less);
-cmp_impl!(is_le != Ordering::Greater);
-cmp_impl!(is_gt == Ordering::Greater);
-cmp_impl!(is_ge != Ordering::Less);
+cmp_impl!(other_is_lt == Ordering::Less);
+cmp_impl!(other_is_le != Ordering::Greater);
+cmp_impl!(other_is_gt == Ordering::Greater);
+cmp_impl!(other_is_ge != Ordering::Less);
 
 pub mod add {
     use super::*;
@@ -1344,6 +1344,30 @@ pub mod pow {
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the power of {a} to {b}"))
+    }
+}
+pub mod root {
+    use super::*;
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        b.powf(1.0 / a)
+    }
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
+        f64::from(b).powf(1.0 / f64::from(a))
+    }
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        b.powf(1.0 / a as f64)
+    }
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        f64::from(b).powf(1.0 / a)
+    }
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        b.into().powc(1.0 / a)
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b.powc(1.0 / a.into())
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the {a} root of {b}"))
     }
 }
 bin_op_mod!(

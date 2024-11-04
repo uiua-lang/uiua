@@ -1,144 +1,146 @@
 //! Signature checker implementation
 
 use std::{
+    array,
     cell::RefCell,
     cmp::Ordering,
     collections::HashMap,
     fmt,
     hash::{DefaultHasher, Hash, Hasher},
     iter::repeat,
+    slice,
 };
 
-use enum_iterator::Sequence;
+use serde::*;
 
-use crate::{function::*, Array, ImplPrimitive, Instr, Primitive, TempStack, Value};
+use crate::{Array, ArrayLen, ImplPrimitive, Node, Primitive, SigNode, Signature, Value};
 
-/// Count the number of arguments and outputs of a function.
-pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, SigCheckError> {
-    if let [Instr::Prim(prim, _)] = instrs {
-        if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
-            return Ok(Signature {
-                args: args + prim.modifier_args().unwrap_or(0),
-                outputs,
-            });
-        }
+impl Node {
+    /// Get the signature of this node
+    pub fn sig(&self) -> Result<Signature, SigCheckError> {
+        VirtualEnv::from_node(self).map(|env| env.stack.sig())
     }
-    let env = VirtualEnv::from_instrs(instrs)?;
-    Ok(env.sig())
-}
-
-/// The the signature of some instructions, but only
-/// if the temp stack signatures are `|0.0`
-pub(crate) fn instrs_clean_signature(instrs: &[Instr]) -> Option<Signature> {
-    let sig = instrs_all_signatures(instrs).ok()?;
-    if sig.functions_left != 0 || sig.temps.iter().any(|&sig| sig != (0, 0)) || sig.array_stack != 0
-    {
-        return None;
+    /// Get the signature of this node on the under stack
+    pub fn under_sig(&self) -> Result<Signature, SigCheckError> {
+        VirtualEnv::from_node(self).map(|env| env.under.sig())
     }
-    Some(sig.stack)
+    /// Convert this node to a [`SigNode`]
+    pub fn sig_node(self) -> Result<SigNode, SigCheckError> {
+        let sig = self.sig()?;
+        Ok(SigNode::new(self.clone(), sig))
+    }
+    /// Get the signature of this node if there is no net temp stack change
+    pub fn clean_sig(&self) -> Option<Signature> {
+        nodes_clean_sig(slice::from_ref(self))
+    }
 }
 
-pub(crate) fn instrs_temp_signatures(
-    instrs: &[Instr],
-) -> Result<[Signature; TempStack::CARDINALITY], SigCheckError> {
-    let env = VirtualEnv::from_instrs(instrs)?;
-    Ok(env.temp_signatures())
+pub fn nodes_sig(nodes: &[Node]) -> Result<Signature, SigCheckError> {
+    VirtualEnv::from_nodes(nodes).map(|env| env.stack.sig())
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct AllSignatures {
-    pub stack: Signature,
-    pub temps: [Signature; TempStack::CARDINALITY],
-    pub functions_left: usize,
-    pub array_stack: usize,
-}
-
-pub(crate) fn instrs_all_signatures(instrs: &[Instr]) -> Result<AllSignatures, SigCheckError> {
+pub fn nodes_all_sigs(nodes: &[Node]) -> Result<AllSignatures, SigCheckError> {
     type AllSigsCache = HashMap<u64, AllSignatures>;
     thread_local! {
         static CACHE: RefCell<AllSigsCache> = RefCell::new(AllSigsCache::new());
     }
     let mut hasher = DefaultHasher::new();
-    instrs.hash(&mut hasher);
+    nodes.hash(&mut hasher);
     let hash = hasher.finish();
     CACHE.with(|cache| {
         if let Some(sigs) = cache.borrow().get(&hash) {
             return Ok(*sigs);
         }
-        let env = VirtualEnv::from_instrs(instrs)?;
+        let env = VirtualEnv::from_nodes(nodes)?;
         let sigs = AllSignatures {
-            stack: env.sig(),
-            temps: env.temp_signatures(),
-            functions_left: env.function_stack.len(),
-            array_stack: env.array_stack.len(),
+            stack: env.stack.sig(),
+            under: env.under.sig(),
         };
         cache.borrow_mut().insert(hash, sigs);
         Ok(sigs)
     })
 }
 
-pub(crate) fn naive_under_sig(f: Signature, g: Signature) -> Signature {
-    let f_inv = if f.outputs > 1 {
-        f.inverse()
+pub fn nodes_clean_sig(nodes: &[Node]) -> Option<Signature> {
+    let sigs = nodes_all_sigs(nodes).ok()?;
+    if sigs.under != (0, 0) {
+        None
     } else {
-        Signature::new(f.args.min(1), f.outputs)
-    };
-    let mut curr = 0i32;
-    let mut min = 0i32;
-    curr -= f.args as i32;
-    min = min.min(curr);
-    curr += f.outputs as i32;
-    curr -= g.args as i32;
-    min = min.min(curr);
-    curr += g.outputs as i32;
-    curr -= f_inv.args as i32;
-    min = min.min(curr);
-    curr += f_inv.outputs as i32;
-    Signature::new(min.unsigned_abs() as usize, (curr - min) as usize)
+        Some(sigs.stack)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AllSignatures {
+    pub stack: Signature,
+    pub under: Signature,
 }
 
 /// An environment that emulates the runtime but only keeps track of the stack.
 struct VirtualEnv {
-    stack: Vec<BasicValue>,
-    height: i32,
-    temp_stacks: [Vec<BasicValue>; TempStack::CARDINALITY],
-    temp_heights: [i32; TempStack::CARDINALITY],
-    function_stack: Vec<Signature>,
-    array_stack: Vec<i32>,
-    min_height: usize,
-    temp_min_heights: [usize; TempStack::CARDINALITY],
+    stack: Stack,
+    under: Stack,
+    array_depth: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default)]
+struct Stack {
+    stack: Vec<BasicValue>,
+    height: i32,
+    min_height: usize,
+}
+
+impl Stack {
+    // Simulate popping a value. Errors if the stack is empty, which means the function has too many args.
+    fn pop(&mut self) -> BasicValue {
+        self.height -= 1;
+        self.set_min_height();
+        self.stack.pop().unwrap_or(BasicValue::Other)
+    }
+    fn push(&mut self, val: BasicValue) {
+        self.height += 1;
+        self.stack.push(val);
+    }
+    /// Set the current stack height as a potential minimum.
+    /// At the end of checking, the minimum stack height is a component in calculating the signature.
+    fn set_min_height(&mut self) {
+        self.min_height = self.min_height.max((-self.height).max(0) as usize);
+    }
+    fn sig(&self) -> Signature {
+        derive_sig(self.min_height, self.height)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct SigCheckError {
     pub message: String,
     pub kind: SigCheckErrorKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum SigCheckErrorKind {
     Incorrect,
-    Ambiguous,
     LoopOverreach,
-    LoopVariable { sig: Signature, inf: bool },
+    LoopVariable { args: usize },
+    NoInverse,
 }
 
 impl SigCheckError {
-    pub fn ambiguous(self) -> Self {
-        Self {
-            kind: SigCheckErrorKind::Ambiguous,
-            ..self
-        }
-    }
     pub fn loop_overreach(self) -> Self {
         Self {
             kind: SigCheckErrorKind::LoopOverreach,
             ..self
         }
     }
-    pub fn loop_variable(self, sig: Signature, inf: bool) -> Self {
+    pub fn loop_variable(self, args: usize) -> Self {
         Self {
-            kind: SigCheckErrorKind::LoopVariable { sig, inf },
+            kind: SigCheckErrorKind::LoopVariable { args },
+            ..self
+        }
+    }
+    pub fn no_inverse(self) -> Self {
+        Self {
+            kind: SigCheckErrorKind::NoInverse,
             ..self
         }
     }
@@ -212,137 +214,66 @@ fn derive_sig(min_height: usize, final_height: i32) -> Signature {
 }
 
 impl VirtualEnv {
-    fn from_instrs(instrs: &[Instr]) -> Result<Self, SigCheckError> {
+    fn from_nodes(nodes: &[Node]) -> Result<Self, SigCheckError> {
         let mut env = VirtualEnv {
-            stack: Vec::new(),
-            height: 0,
-            temp_stacks: Default::default(),
-            temp_heights: Default::default(),
-            function_stack: Vec::new(),
-            array_stack: Vec::new(),
-            min_height: 0,
-            temp_min_heights: [0; TempStack::CARDINALITY],
+            stack: Stack::default(),
+            under: Stack::default(),
+            array_depth: 0,
         };
-        env.instrs(instrs)?;
+        env.nodes(nodes)?;
         Ok(env)
     }
-    fn sig(&self) -> Signature {
-        derive_sig(self.min_height, self.height)
+    fn from_node(node: &Node) -> Result<Self, SigCheckError> {
+        Self::from_nodes(slice::from_ref(node))
     }
-    fn temp_signatures(&self) -> [Signature; TempStack::CARDINALITY] {
-        let mut sigs = [Signature::new(0, 0); TempStack::CARDINALITY];
-        for ((sig, min_height), height) in sigs
-            .iter_mut()
-            .zip(&self.temp_min_heights)
-            .zip(&self.temp_heights)
-        {
-            *sig = derive_sig(*min_height, *height);
-        }
-        sigs
+    fn nodes(&mut self, nodes: &[Node]) -> Result<(), SigCheckError> {
+        nodes.iter().try_for_each(|node| self.node(node))
     }
-    fn instrs(&mut self, instrs: &[Instr]) -> Result<(), SigCheckError> {
-        for instr in instrs {
-            self.instr(instr)?;
-        }
-        Ok(())
-    }
-    fn instr(&mut self, instr: &Instr) -> Result<(), SigCheckError> {
+    fn node(&mut self, node: &Node) -> Result<(), SigCheckError> {
         use Primitive::*;
-        match instr {
-            Instr::Comment(_) => {}
-            Instr::Push(val) => self.push(BasicValue::from_val(val)),
-            Instr::CallGlobal { call, sig, .. } => {
-                if *call {
-                    self.handle_sig(*sig);
-                } else {
-                    self.function_stack.push(*sig);
+        match node {
+            Node::Run(nodes) => nodes.iter().try_for_each(|node| self.node(node))?,
+            Node::Push(val) => self.push(BasicValue::from_val(val)),
+            Node::Array { len, inner, .. } => match len {
+                ArrayLen::Static(len) => {
+                    self.array_depth += 1;
+                    self.node(inner)?;
+                    self.array_depth -= 1;
+                    let bottom = self.stack.height - *len as i32;
+                    let stack_bottom = (bottom.max(0) as usize).min(self.stack.stack.len());
+                    let mut items: Vec<_> = (self.stack.stack.drain(stack_bottom..))
+                        .chain(repeat(BasicValue::Other).take((-bottom).max(0) as usize))
+                        .collect();
+                    self.stack.height = bottom;
+                    self.stack.set_min_height();
+                    items.reverse();
+                    self.push(BasicValue::Arr(items));
                 }
-            }
-            Instr::BindGlobal { .. } => {
-                self.pop();
-            }
-            Instr::BeginArray => self.array_stack.push(self.height),
-            Instr::EndArray { .. } => {
-                let bottom = (self.array_stack.pop()).ok_or("EndArray without BeginArray")?;
-                let stack_bottom = (bottom.max(0) as usize).min(self.stack.len());
-                let mut items: Vec<_> = (self.stack.drain(stack_bottom..))
-                    .chain(repeat(BasicValue::Other).take((-bottom).max(0) as usize))
-                    .collect();
-                self.height = bottom;
-                self.set_min_height();
-                items.reverse();
-                self.push(BasicValue::Arr(items));
-            }
-            Instr::ImplPrim(ImplPrimitive::EndRandArray, _) => {
-                let _len = self.pop();
-                let bottom = (self.array_stack.pop()).ok_or("EndRandArray without BeginArray")?;
-                let stack_bottom = (bottom.max(0) as usize).min(self.stack.len());
-                self.stack.drain(stack_bottom..);
-                self.height = bottom;
-                self.set_min_height();
-                self.push(BasicValue::Other);
-            }
-            Instr::Call(_) | Instr::CustomInverse(..) => {
-                let sig = self.pop_func()?;
-                self.handle_sig(sig)
-            }
-            Instr::PushTemp { count, stack, .. } => {
-                for _ in 0..*count {
-                    let val = self.pop();
-                    self.push_temp(*stack, val);
-                }
-                self.set_min_height();
-            }
-            Instr::CopyToTemp { count, stack, .. } => {
-                let mut vals = Vec::with_capacity(*count);
-                for _ in 0..*count {
-                    vals.push(self.pop());
-                }
-                self.set_min_height();
-                for val in vals {
-                    self.push_temp(*stack, val.clone());
-                    self.push(val);
-                }
-            }
-            Instr::PopTemp { count, stack, .. } => {
-                for _ in 0..*count {
-                    let val = self.pop_temp(*stack);
-                    self.push(val);
-                }
-                self.set_min_height();
-            }
-            Instr::Label { .. } => self.handle_args_outputs(1, 1),
-            Instr::ValidateType { .. } => self.handle_args_outputs(1, 1),
-            Instr::PushFunc(f) => self.function_stack.push(f.signature()),
-            &Instr::Switch {
-                count,
-                sig,
-                under_cond,
-                ..
+                ArrayLen::Dynamic(len) => self.handle_args_outputs(*len, 1),
+            },
+            Node::Label(..) | Node::RemoveLabel(..) => self.handle_args_outputs(1, 1),
+            Node::Call(func, _) => self.handle_sig(func.sig),
+            Node::CallMacro { sig, .. } | Node::CallGlobal(_, sig) => self.handle_sig(*sig),
+            Node::BindGlobal { .. } => self.handle_args_outputs(1, 0),
+            Node::CustomInverse(cust, _) => self.handle_sig(cust.sig()?),
+            Node::Dynamic(dy) => self.handle_sig(dy.sig),
+            &Node::Switch {
+                sig, under_cond, ..
             } => {
-                for _ in 0..count {
-                    self.pop_func()?;
-                }
                 let cond = self.pop();
                 if under_cond {
-                    self.push_temp(TempStack::Under, cond);
+                    self.under.push(cond);
                 }
                 self.handle_sig(sig);
             }
-            Instr::Format { parts, .. } => {
-                self.handle_args_outputs(parts.len().saturating_sub(1), 1)
-            }
-            Instr::MatchFormatPattern { parts, .. } => {
+            Node::Format(parts, ..) => self.handle_args_outputs(parts.len().saturating_sub(1), 1),
+            Node::MatchFormatPattern(parts, ..) => {
                 self.handle_args_outputs(1, parts.len().saturating_sub(1))
             }
-            Instr::Dynamic(f) => self.handle_sig(f.signature),
-            Instr::Unpack { count, .. } => self.handle_args_outputs(1, *count),
-            Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count),
-            Instr::Prim(Astar, _) | Instr::ImplPrim(ImplPrimitive::AstarFirst, _) => {
+            Node::Unpack { count, .. } => self.handle_args_outputs(1, *count),
+            Node::Mod(Astar, args, _) | Node::ImplMod(ImplPrimitive::AstarFirst, args, _) => {
                 let _start = self.pop();
-                let neighbors = self.pop_func()?;
-                let heuristic = self.pop_func()?;
-                let is_goal = self.pop_func()?;
+                let [neighbors, heuristic, is_goal] = get_args(args)?;
                 let args = neighbors
                     .args
                     .max(heuristic.args)
@@ -350,111 +281,24 @@ impl VirtualEnv {
                     .saturating_sub(1);
                 self.handle_args_outputs(args, 2);
             }
-            Instr::Prim(prim, _) => match prim {
-                Reduce | Scan => {
-                    let sig = self.pop_func()?;
-                    let args = sig.args.saturating_sub(sig.outputs);
-                    self.handle_args_outputs(args, sig.outputs);
-                }
-                Each | Rows | Inventory => {
-                    let sig = self.pop_func()?;
-                    self.handle_sig(sig)
-                }
-                Table | Tuples | Triangle => {
-                    let sig = self.pop_func()?;
-                    self.handle_sig(sig);
-                }
-                Group | Partition => {
-                    let sig = self.pop_func()?;
-                    self.handle_args_outputs(2, sig.outputs);
-                }
-                Spawn | Pool => {
-                    let sig = self.pop_func()?;
-                    self.handle_args_outputs(sig.args, 1);
-                }
-                Repeat => {
-                    let f = self.pop_func()?;
-                    let n = self.pop();
-                    self.repeat(f, n)?;
-                }
-                Do => {
-                    let body = self.pop_func()?;
-                    let cond = self.pop_func()?;
-                    let copy_count = cond.args.saturating_sub(cond.outputs.saturating_sub(1));
-                    let cond_sub_sig =
-                        Signature::new(cond.args, (cond.outputs + copy_count).saturating_sub(1));
-                    let comp_sig = body.compose(cond_sub_sig);
-                    if comp_sig.args < comp_sig.outputs && self.array_stack.is_empty() {
-                        return Err(SigCheckError::from(format!(
-                            "do with a function with signature {comp_sig}"
-                        ))
-                        .loop_variable(comp_sig, false));
-                    }
-                    self.handle_args_outputs(
-                        comp_sig.args,
-                        comp_sig.outputs + cond_sub_sig.outputs.saturating_sub(cond.args),
-                    );
-                }
-                Un => {
-                    let sig = self.pop_func()?;
-                    self.handle_sig(sig.inverse());
-                }
-                Anti => {
-                    let sig = self.pop_func()?;
-                    self.handle_sig(sig.anti().unwrap_or(sig));
-                }
-                Under => {
-                    let f = self.pop_func()?;
-                    let g = self.pop_func()?;
-                    self.handle_sig(naive_under_sig(f, g));
-                }
-                Fold => {
-                    let f = self.pop_func()?;
-                    self.handle_sig(f);
-                }
-                Try => {
-                    let f_sig = self.pop_func()?;
-                    let _handler_sig = self.pop_func()?;
-                    self.handle_sig(f_sig);
-                }
-                Case => {
-                    let f_sig = self.pop_func()?;
-                    self.handle_sig(f_sig);
-                }
-                Fill => {
-                    let fill_sig = self.pop_func()?;
-                    if fill_sig.outputs > 0 {
-                        self.handle_sig(fill_sig);
-                    }
-                    self.handle_args_outputs(fill_sig.outputs, 0);
-                    let f = self.pop_func()?;
-                    self.handle_sig(f);
-                }
-                Content | Memo | Comptime => {
-                    let f = self.pop_func()?;
-                    self.handle_sig(f);
-                }
+            Node::Prim(prim, _) => match prim {
                 Dup => {
                     let val = self.pop();
-                    self.set_min_height();
                     self.push(val.clone());
                     self.push(val);
                 }
                 Flip => {
                     let a = self.pop();
                     let b = self.pop();
-                    self.set_min_height();
                     self.push(a);
                     self.push(b);
                 }
                 Pop => {
                     self.pop();
-                    self.set_min_height();
                 }
                 Over => {
                     let a = self.pop();
                     let b = self.pop();
-                    self.set_min_height();
                     self.push(b.clone());
                     self.push(a);
                     self.push(b);
@@ -462,7 +306,6 @@ impl VirtualEnv {
                 Around => {
                     let a = self.pop();
                     let b = self.pop();
-                    self.set_min_height();
                     self.push(a.clone());
                     self.push(b);
                     self.push(a);
@@ -470,7 +313,6 @@ impl VirtualEnv {
                 Join => {
                     let a = self.pop();
                     let b = self.pop();
-                    self.set_min_height();
                     match (a, b) {
                         (BasicValue::Arr(mut a), BasicValue::Arr(b)) => {
                             a.extend(b);
@@ -489,117 +331,245 @@ impl VirtualEnv {
                         }
                     }
                 }
-                SetInverse => {
-                    let f = self.pop_func()?;
-                    let _inv = self.pop_func()?;
-                    self.handle_sig(f);
-                }
-                SetUnder => {
-                    let f = self.pop_func()?;
-                    let _before = self.pop_func()?;
-                    let _after = self.pop_func()?;
-                    self.handle_sig(f);
-                }
-                Dump => {
-                    self.pop_func()?;
-                }
                 prim => {
                     let args = prim
                         .args()
                         .ok_or_else(|| format!("{prim} has indeterminate args"))?;
-                    for _ in 0..prim.modifier_args().unwrap_or(0) {
-                        self.pop_func()?;
-                    }
                     let outputs = prim
                         .outputs()
                         .ok_or_else(|| format!("{prim} has indeterminate outputs"))?;
                     self.handle_args_outputs(args, outputs);
                 }
             },
-            Instr::ImplPrim(prim, _) => match prim {
+            Node::ImplPrim(prim, _) => {
+                let args = prim.args();
+                let outputs = prim.outputs();
+                self.handle_args_outputs(args, outputs);
+            }
+            Node::Mod(prim, args, _) => match prim {
+                Reduce | Scan => {
+                    let [sig] = get_args(args)?;
+                    let args = sig.args.saturating_sub(sig.outputs);
+                    self.handle_args_outputs(args, sig.outputs);
+                }
+                Each | Rows | Inventory => {
+                    let [sig] = get_args(args)?;
+                    self.handle_sig(sig)
+                }
+                Table | Tuples | Triangle => {
+                    let [sig] = get_args(args)?;
+                    self.handle_sig(sig);
+                }
+                Group | Partition => {
+                    let [sig] = get_args(args)?;
+                    self.handle_args_outputs(2, sig.outputs);
+                }
+                Spawn | Pool => {
+                    let [sig] = get_args(args)?;
+                    self.handle_args_outputs(sig.args, 1);
+                }
+                Repeat => {
+                    let [f] = get_args(args)?;
+                    let n = self.pop();
+                    self.repeat(f, n)?;
+                }
+                Do => {
+                    let [body, cond] = get_args(args)?;
+                    let copy_count = cond.args.saturating_sub(cond.outputs.saturating_sub(1));
+                    let cond_sub_sig =
+                        Signature::new(cond.args, (cond.outputs + copy_count).saturating_sub(1));
+                    let comp_sig = body.compose(cond_sub_sig);
+                    if comp_sig.args < comp_sig.outputs && self.array_depth == 0 {
+                        self.handle_args_outputs(comp_sig.args, comp_sig.outputs);
+                        return Err(SigCheckError::from(format!(
+                            "do with a function with signature {comp_sig}"
+                        ))
+                        .loop_variable(self.stack.sig().args));
+                    }
+                    self.handle_args_outputs(
+                        comp_sig.args,
+                        comp_sig.outputs + cond_sub_sig.outputs.saturating_sub(cond.args),
+                    );
+                }
+                Un => {
+                    let [sig] = get_args(args)?;
+                    self.handle_sig(sig.inverse());
+                }
+                Anti => {
+                    let [sig] = get_args(args)?;
+                    self.handle_sig(sig.anti().unwrap_or(sig));
+                }
+                Fold => {
+                    let [f] = get_args(args)?;
+                    self.handle_sig(f);
+                }
+                Try => {
+                    let [f_sig, _handler_sig] = get_args(args)?;
+                    self.handle_sig(f_sig);
+                }
+                Case => {
+                    let [f] = get_args(args)?;
+                    self.handle_sig(f);
+                }
+                Fill => {
+                    let [fill, f] = get_args(args)?;
+                    if fill.outputs > 0 {
+                        self.handle_sig(fill);
+                    }
+                    self.handle_args_outputs(fill.outputs, 0);
+                    self.handle_sig(f);
+                }
+                Content | Memo | Comptime => {
+                    let [f] = get_args(args)?;
+                    self.handle_sig(f);
+                }
+                Dump => {
+                    let [_] = get_args(args)?;
+                }
+                Fork => {
+                    let [f, g] = get_args(args)?;
+                    self.handle_args_outputs(f.args.max(g.args), f.outputs + g.outputs);
+                }
+                Bracket => {
+                    let [f, g] = get_args(args)?;
+                    self.handle_args_outputs(f.args + g.args, f.outputs + g.outputs);
+                }
+                Both => {
+                    let [f] = get_args_nodes(args)?;
+                    let mut args = Vec::with_capacity(f.sig.args);
+                    for _ in 0..f.sig.args {
+                        args.push(self.pop());
+                    }
+                    self.node(&f.node)?;
+                    for arg in args.into_iter().rev() {
+                        self.push(arg);
+                    }
+                    self.node(&f.node)?;
+                }
+                Dip => {
+                    let [f] = get_args_nodes(args)?;
+                    let x = self.pop();
+                    self.node(&f.node)?;
+                    self.push(x);
+                }
+                Gap => {
+                    let [f] = get_args_nodes(args)?;
+                    _ = self.pop();
+                    self.node(&f.node)?;
+                }
+                On => {
+                    let [f] = get_args_nodes(args)?;
+                    let x = self.pop();
+                    self.push(x.clone());
+                    self.node(&f.node)?;
+                    self.push(x);
+                }
+                By => {
+                    let [f] = get_args_nodes(args)?;
+                    let mut args = Vec::with_capacity(f.sig.args);
+                    for _ in 0..f.sig.args {
+                        args.push(self.pop());
+                    }
+                    let x = args.last().cloned();
+                    for arg in args.into_iter().rev() {
+                        self.push(arg);
+                    }
+                    self.node(&f.node)?;
+                    if let Some(x) = x {
+                        self.push(x);
+                    }
+                }
+                Above | Below => {
+                    let [f] = get_args(args)?;
+                    self.handle_args_outputs(f.args, f.args + f.outputs);
+                }
+                With | Off => {
+                    let [f] = get_args(args)?;
+                    self.handle_args_outputs(f.args, f.outputs + 1);
+                }
+                prim if prim.modifier_args().is_some() => {
+                    return Err(SigCheckError::from(format!(
+                        "{} was not checked. This is a bug in the interpreter",
+                        prim.format()
+                    )))
+                }
+                prim => {
+                    return Err(SigCheckError::from(format!(
+                        "{} was checked as a modifier. This is a bug in the interpreter",
+                        prim.format()
+                    )))
+                }
+            },
+            Node::ImplMod(prim, args, _) => match prim {
                 ImplPrimitive::ReduceContent | ImplPrimitive::ReduceDepth(_) => {
-                    let sig = self.pop_func()?;
+                    let [sig] = get_args(args)?;
                     let args = sig.args.saturating_sub(sig.outputs);
                     self.handle_args_outputs(args, sig.outputs);
                 }
                 ImplPrimitive::RepeatWithInverse => {
-                    let f = self.pop_func()?;
-                    let inv = self.pop_func()?;
+                    let [f, inv] = get_args(args)?;
                     if f.inverse() != inv {
                         return Err(SigCheckError::from(
                             "repeat inverse does not have inverse signature",
-                        )
-                        .ambiguous());
+                        ));
                     }
                     let n = self.pop();
                     self.repeat(f, n)?;
                 }
                 ImplPrimitive::UnFill => {
-                    let fill_sig = self.pop_func()?;
-                    if fill_sig.outputs > 0 {
-                        self.handle_sig(fill_sig);
+                    let [fill, f] = get_args(args)?;
+                    if fill.outputs > 0 {
+                        self.handle_sig(fill);
                     }
-                    self.handle_args_outputs(fill_sig.outputs, 0);
-                    let f = self.pop_func()?;
+                    self.handle_args_outputs(fill.outputs, 0);
                     self.handle_sig(f);
+                }
+                ImplPrimitive::UnBoth => {
+                    let [f] = get_args(args)?;
+                    self.handle_args_outputs(f.args * 2, f.outputs * 2);
                 }
                 prim => {
                     let args = prim.args();
-                    for _ in 0..prim.modifier_args().unwrap_or(0) {
-                        self.pop_func()?;
-                    }
                     for _ in 0..args {
                         self.pop();
                     }
-                    self.set_min_height();
                     let outputs = prim.outputs();
                     for _ in 0..outputs {
                         self.push(BasicValue::Other);
                     }
                 }
             },
-            Instr::SetOutputComment { .. } => {}
+            Node::SetOutputComment { .. } => {}
+            Node::ValidateType { .. } => self.handle_args_outputs(1, 1),
+            Node::PushUnder(n, _) => {
+                for _ in 0..*n {
+                    self.under.push(self.stack.pop());
+                }
+            }
+            Node::CopyToUnder(n, _) => {
+                for val in self.stack.stack.iter().rev().take(*n).cloned() {
+                    self.under.push(val);
+                }
+            }
+            Node::PopUnder(n, _) => {
+                for _ in 0..*n {
+                    self.stack.push(self.under.pop());
+                }
+            }
+            Node::TrackCaller(inner) | Node::NoInline(inner) => self.node(inner)?,
         }
-        // println!("{instr:?} -> {}/{}", -(self.min_height as i32), self.height);
+        // println!(
+        //     "{node:?} -> {}/{}",
+        //     -(self.stack.min_height as i32),
+        //     self.stack.height
+        // );
         Ok(())
     }
-    // Simulate popping a value. Errors if the stack is empty, which means the function has too many args.
-    fn pop(&mut self) -> BasicValue {
-        self.height -= 1;
-        self.set_min_height();
-        self.stack.pop().unwrap_or(BasicValue::Other)
-    }
     fn push(&mut self, val: BasicValue) {
-        self.height += 1;
         self.stack.push(val);
     }
-    fn pop_temp(&mut self, stack: TempStack) -> BasicValue {
-        self.temp_heights[stack as usize] -= 1;
-        self.temp_min_heights[stack as usize] = self.temp_min_heights[stack as usize]
-            .max((-self.temp_heights[stack as usize]).max(0) as usize);
-        self.temp_stacks[stack as usize]
-            .pop()
-            .unwrap_or(BasicValue::Other)
-    }
-    fn push_temp(&mut self, stack: TempStack, val: BasicValue) {
-        self.temp_heights[stack as usize] += 1;
-        self.temp_stacks[stack as usize].push(val);
-    }
-    fn pop_func(&mut self) -> Result<Signature, String> {
-        self.function_stack
-            .pop()
-            .ok_or_else(|| "expected function. This is an interpreter bug".into())
-    }
-    /// Set the current stack height as a potential minimum.
-    /// At the end of checking, the minimum stack height is a component in calculating the signature.
-    fn set_min_height(&mut self) {
-        self.min_height = self.min_height.max((-self.height).max(0) as usize);
-        if let Some(h) = self.array_stack.last_mut() {
-            *h = (*h).min(self.height);
-        }
-        for (min_height, height) in self.temp_min_heights.iter_mut().zip(&self.temp_heights) {
-            *min_height = (*min_height).max((-*height).max(0) as usize);
-        }
+    fn pop(&mut self) -> BasicValue {
+        self.stack.pop()
     }
     fn handle_args_outputs(&mut self, args: usize, outputs: usize) {
         for _ in 0..args {
@@ -636,11 +606,12 @@ impl VirtualEnv {
                         ))
                         .loop_overreach());
                     }
-                    Ordering::Less if self.array_stack.is_empty() => {
+                    Ordering::Less if self.array_depth == 0 => {
+                        self.handle_args_outputs(sig.args, sig.outputs);
                         return Err(SigCheckError::from(format!(
                             "repeat with infinity and a function with signature {sig}"
                         ))
-                        .loop_variable(sig, true));
+                        .loop_variable(self.stack.sig().args));
                     }
                     _ => self.handle_sig(sig),
                 }
@@ -657,11 +628,12 @@ impl VirtualEnv {
                     ))
                     .loop_overreach());
                 }
-                Ordering::Less if self.array_stack.is_empty() => {
+                Ordering::Less if self.array_depth == 0 => {
+                    self.handle_args_outputs(sig.args, sig.outputs);
                     return Err(SigCheckError::from(format!(
                         "repeat with no number and a function with signature {sig}"
                     ))
-                    .loop_variable(sig, false));
+                    .loop_variable(self.stack.sig().args));
                 }
                 Ordering::Less => self.handle_sig(sig),
             }
@@ -670,64 +642,20 @@ impl VirtualEnv {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use crate::value::Value;
-
-    use super::*;
-    use Instr::*;
-    use Primitive::*;
-    fn push<T>(val: T) -> Instr
-    where
-        T: Into<Value>,
-    {
-        Push(val.into())
+fn get_args_nodes<const N: usize>(args: &[SigNode]) -> Result<[&SigNode; N], SigCheckError> {
+    if args.len() != N {
+        return Err(format!("Expected {} arguments, but got {}", N, args.len()).into());
     }
-    #[test]
-    fn instrs_signature() {
-        let check = super::instrs_signature;
-        fn sig(a: usize, o: usize) -> Signature {
-            Signature {
-                args: a,
-                outputs: o,
-            }
-        }
-        assert_eq!(Ok(sig(0, 0)), check(&[]));
-        assert_eq!(Ok(sig(1, 1)), check(&[Prim(Identity, 0)]));
+    Ok(array::from_fn(|i| &args[i]))
+}
 
-        assert_eq!(Ok(sig(0, 1)), check(&[push(10), push(2), Prim(Pow, 0)]));
-        assert_eq!(
-            Ok(sig(1, 1)),
-            check(&[push(10), push(2), Prim(Pow, 0), Prim(Add, 0)])
-        );
-        assert_eq!(Ok(sig(1, 1)), check(&[push(1), Prim(Add, 0)]));
-
-        assert_eq!(
-            Ok(sig(0, 1)),
-            check(&[
-                BeginArray,
-                push(3),
-                push(2),
-                push(1),
-                EndArray {
-                    span: 0,
-                    boxed: false
-                }
-            ])
-        );
-        assert_eq!(
-            Ok(sig(1, 1)),
-            check(&[
-                BeginArray,
-                push(3),
-                push(2),
-                push(1),
-                EndArray {
-                    span: 0,
-                    boxed: false
-                },
-                Prim(Add, 0)
-            ])
-        );
+fn get_args<const N: usize>(args: &[SigNode]) -> Result<[Signature; N], SigCheckError> {
+    let mut res = [Signature::default(); N];
+    if args.len() != N {
+        return Err(format!("Expected {} arguments, but got {}", N, args.len()).into());
     }
+    for (i, arg) in args.iter().enumerate() {
+        res[i] = arg.sig;
+    }
+    Ok(res)
 }

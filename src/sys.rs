@@ -17,8 +17,8 @@ use serde::*;
 use time::UtcOffset;
 
 use crate::{
-    algorithm::validate_size, cowslice::cowslice, primitive::PrimDoc, Array, Boxed, FfiType,
-    Purity, Signature, Uiua, UiuaResult, Value,
+    algorithm::validate_size, cowslice::cowslice, get_ops, primitive::PrimDoc, Array, Boxed,
+    FfiType, Ops, Primitive, Purity, Signature, Uiua, UiuaResult, Value,
 };
 
 /// The text of Uiua's example module
@@ -1484,44 +1484,6 @@ impl SysOp {
                 let sample_rate = env.rt.backend.audio_sample_rate();
                 env.push(f64::from(sample_rate));
             }
-            SysOp::AudioStream => {
-                let f = env.pop_function()?;
-                if f.signature() != (1, 1) {
-                    return Err(env.error(format!(
-                        "&ast's function's signature must be {}, but it is {}",
-                        Signature::new(1, 1),
-                        f.signature()
-                    )));
-                }
-                let mut stream_env = env.clone();
-                if let Err(e) = env.rt.backend.stream_audio(Box::new(move |time_array| {
-                    let time_array = Array::<f64>::from(time_array);
-                    stream_env.push(time_array);
-                    stream_env.call(f.clone())?;
-                    let samples = &stream_env.pop(1)?;
-                    let samples = samples.as_num_array().ok_or_else(|| {
-                        stream_env.error("Audio stream function must return a numeric array")
-                    })?;
-                    match samples.shape().dims() {
-                        [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
-                        &[2, n] => {
-                            let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
-                            for i in 0..n {
-                                samps.push([samples.data[i], samples.data[i + n]]);
-                            }
-                            Ok(samps)
-                        }
-                        _ => Err(stream_env.error(format!(
-                            "Audio stream function must return either a \
-                            rank 1 array or a rank 2 array with 2 rows, \
-                            but its shape is {}",
-                            samples.shape()
-                        ))),
-                    }
-                })) {
-                    return Err(env.error(e));
-                }
-            }
             SysOp::Clip => {
                 let contents = env.rt.backend.clipboard().map_err(|e| env.error(e))?;
                 env.push(contents);
@@ -1764,6 +1726,79 @@ impl SysOp {
                     .map(|p| p.get())
                     .ok_or_else(|| env.error("Freed pointer must be a pointer value"))?;
                 (env.rt.backend).mem_free(ptr).map_err(|e| env.error(e))?;
+            }
+            prim => {
+                return Err(env.error(if prim.modifier_args().is_some() {
+                    format!(
+                        "{} was not handled as a modifier. \
+                        This is a bug in the interpreter",
+                        Primitive::Sys(*prim)
+                    )
+                } else {
+                    format!(
+                        "{} was not handled as a function. \
+                        This is a bug in the interpreter",
+                        Primitive::Sys(*prim)
+                    )
+                }))
+            }
+        }
+        Ok(())
+    }
+    pub(crate) fn run_mod(&self, ops: Ops, env: &mut Uiua) -> UiuaResult {
+        match self {
+            SysOp::AudioStream => {
+                let [f] = get_ops(ops, env)?;
+                if f.sig != (1, 1) {
+                    return Err(env.error(format!(
+                        "&ast's function's signature must be {}, but it is {}",
+                        Signature::new(1, 1),
+                        f.sig
+                    )));
+                }
+                let mut stream_env = env.clone();
+                if let Err(e) = env.rt.backend.stream_audio(Box::new(move |time_array| {
+                    let time_array = Array::<f64>::from(time_array);
+                    stream_env.push(time_array);
+                    stream_env.exec(f.clone())?;
+                    let samples = &stream_env.pop(1)?;
+                    let samples = samples.as_num_array().ok_or_else(|| {
+                        stream_env.error("Audio stream function must return a numeric array")
+                    })?;
+                    match samples.shape().dims() {
+                        [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
+                        &[2, n] => {
+                            let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
+                            for i in 0..n {
+                                samps.push([samples.data[i], samples.data[i + n]]);
+                            }
+                            Ok(samps)
+                        }
+                        _ => Err(stream_env.error(format!(
+                            "Audio stream function must return either a \
+                            rank 1 array or a rank 2 array with 2 rows, \
+                            but its shape is {}",
+                            samples.shape()
+                        ))),
+                    }
+                })) {
+                    return Err(env.error(e));
+                }
+            }
+            prim => {
+                return Err(env.error(if prim.modifier_args().is_some() {
+                    format!(
+                        "{} was not handled as a modifier. \
+                        This is a bug in the interpreter",
+                        Primitive::Sys(*prim)
+                    )
+                } else {
+                    format!(
+                        "{} was handled as a modifier. \
+                        This is a bug in the interpreter",
+                        Primitive::Sys(*prim)
+                    )
+                }))
             }
         }
         Ok(())

@@ -49,7 +49,7 @@ comp.print_diagnostics(true);
 let asm = comp.load_str("+ 3 5").unwrap().finish();
 
 let mut uiua = Uiua::with_native_sys();
-uiua.run_asm(&asm).unwrap();
+uiua.run_asm(asm).unwrap();
 let res = uiua.pop_int().unwrap();
 assert_eq!(res, 8);
 ```
@@ -100,8 +100,8 @@ assert_eq!(x.as_int(&uiua, "").unwrap(), 5);
 let f = uiua.bound_functions().remove("F").unwrap();
 let mut comp = Compiler::new().with_assembly(uiua.take_asm());
 comp.create_bind_function("AddTwo", (1, 1), move |uiua| {
-    uiua.call(f.clone())?;
-    uiua.call(f.clone())
+    uiua.call(&f)?;
+    uiua.call(&f)
 }).unwrap();
 comp.load_str("AddTwo 3").unwrap();
 uiua.run_asm(comp.finish()).unwrap();
@@ -158,10 +158,8 @@ mod fill;
 pub mod format;
 mod function;
 mod grid_fmt;
-mod instr;
 mod lex;
 pub mod lsp;
-mod optimize;
 mod parse;
 mod primitive;
 #[doc(hidden)]
@@ -174,6 +172,7 @@ pub mod stand;
 mod sys;
 #[cfg(feature = "native_sys")]
 mod sys_native;
+mod tree;
 mod types;
 mod value;
 
@@ -184,25 +183,26 @@ pub use self::{
     assembly::*,
     boxed::*,
     compile::*,
+    complex::*,
     error::*,
     ffi::*,
     function::*,
-    instr::*,
     lex::is_ident_char,
     lex::*,
-    lsp::{spans, SpanKind},
+    lsp::{SpanKind, Spans},
     parse::{ident_modifier_args, parse, ParseError},
     primitive::*,
     run::*,
     shape::*,
     sys::*,
+    tree::*,
     value::*,
 };
 
+use self::algorithm::get_ops;
 #[cfg(feature = "native_sys")]
 pub use self::sys_native::*;
 
-pub use complex::*;
 use ecow::EcoString;
 
 /// The Uiua version
@@ -226,8 +226,6 @@ mod tests {
     #[test]
     #[cfg(feature = "native_sys")]
     fn suite() {
-        use enum_iterator::all;
-
         use super::*;
         for path in test_files(|path| {
             !(path.file_stem().unwrap())
@@ -238,10 +236,10 @@ mod tests {
             // Test running
             let mut env = Uiua::with_native_sys();
             let mut comp = Compiler::new();
-            if let Err(e) = comp.load_str_src(&code, &path).and_then(|comp| {
-                comp.asm.remove_dead_code();
-                env.run_asm(&comp.asm)
-            }) {
+            if let Err(e) = comp
+                .load_str_src(&code, &path)
+                .and_then(|comp| env.run_asm(comp.asm.clone()))
+            {
                 panic!("Test failed in {}:\n{}", path.display(), e.report());
             }
             if let Some(diag) = comp
@@ -251,18 +249,16 @@ mod tests {
             {
                 panic!("Test failed in {}:\n{}", path.display(), diag.report());
             }
-            let (stack, temp_stacks) = env.take_stacks();
+            let (stack, under_stack) = env.take_stacks();
             if !stack.is_empty() {
                 panic!("{} had a non-empty stack", path.display());
             }
-            for (stack, temp_stack) in temp_stacks.into_iter().zip(all::<TempStack>()) {
-                if !stack.is_empty() {
-                    panic!("{} had a non-empty {} stack", path.display(), temp_stack);
-                }
+            if !under_stack.is_empty() {
+                panic!("{} had a non-empty under stack", path.display());
             }
 
             // Make sure lsp spans doesn't panic
-            _ = spans(&code);
+            _ = Spans::from_input(&code);
         }
         _ = std::fs::remove_file("example.ua");
     }
@@ -309,7 +305,7 @@ mod tests {
         use super::*;
         for path in test_files(|_| true) {
             let code = std::fs::read_to_string(&path).unwrap();
-            spans(&code);
+            Spans::from_input(&code);
         }
     }
 
@@ -344,11 +340,14 @@ mod tests {
                 }
             }
         });
-        if crate::algorithm::invert::DEBUG {
+        if crate::compile::invert::DEBUG {
             panic!("invert::DEBUG is true");
         }
         if crate::ffi::DEBUG {
             panic!("ffi::DEBUG is true");
+        }
+        if crate::compile::optimize::DEBUG {
+            panic!("compile::optimize::DEBUG is true");
         }
     }
 

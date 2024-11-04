@@ -9,12 +9,10 @@ use enum_iterator::Sequence;
 use serde::*;
 
 use crate::{
-    algorithm::invert::CustomInverse,
-    check::instrs_signature,
     function::*,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
-    Assembly, BindingKind, Ident,
+    Assembly, BindingKind, Function, Ident,
 };
 
 macro_rules! instr {
@@ -269,28 +267,6 @@ instr!(
 
 type FmtParts = EcoVec<EcoString>;
 
-/// A type of temporary stacks
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize,
-)]
-pub enum TempStack {
-    /// A stack used to hold values need to undo a function
-    #[serde(rename = "u")]
-    Under,
-    /// A stack used when inlining some functions
-    #[serde(rename = "i")]
-    Inline,
-}
-
-impl fmt::Display for TempStack {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Under => write!(f, "under"),
-            Self::Inline => write!(f, "inline"),
-        }
-    }
-}
-
 impl Instr {
     /// Create a new push instruction
     pub fn push(val: impl Into<Value>) -> Self {
@@ -352,17 +328,6 @@ impl<'a> fmt::Display for FmtInstrs<'a> {
         }
         Ok(())
     }
-}
-
-/// Levels of purity for an operation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Purity {
-    /// The operation visibly affects the environment
-    Mutating,
-    /// The operation reads from the environment but does not visibly affect it
-    Impure,
-    /// The operation is completely pure
-    Pure,
 }
 
 /// Whether some instructions are pure

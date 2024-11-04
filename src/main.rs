@@ -26,8 +26,8 @@ use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
     Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDocFragment, PrimDocLine,
-    Primitive, RunMode, SafeSys, SpanKind, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
-    CONSTANTS,
+    Primitive, RunMode, SafeSys, SpanKind, Spans, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
+    Value, CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -73,7 +73,7 @@ fn main() {
     #[cfg(feature = "stand")]
     if let Some(asm) = &*uiua::stand::STAND_ASM {
         let mut rt = Uiua::with_native_sys().with_args(env::args().skip(1).collect());
-        rt.run_asm(asm).unwrap_or_else(fail);
+        rt.run_asm(asm.clone()).unwrap_or_else(fail);
         print_stack(&rt.take_stack(), true);
         return;
     }
@@ -167,13 +167,12 @@ fn main() {
                         }
                     }
                 };
-                let mut assembly = Compiler::with_backend(NativeSys)
+                let assembly = Compiler::with_backend(NativeSys)
                     .mode(RunMode::Normal)
                     .print_diagnostics(true)
                     .load_file(&path)
                     .unwrap_or_else(fail)
                     .finish();
-                assembly.remove_dead_code();
                 let output = output.unwrap_or_else(|| path.with_extension("uasm"));
                 let uasm = assembly.to_uasm();
                 if let Err(e) = fs::write(output, uasm) {
@@ -1096,10 +1095,10 @@ fn color_prim(prim: Primitive, sub: Option<usize>) -> Option<Color> {
 
 fn color_code(code: &str, compiler: &Compiler) -> String {
     let mut colored = String::new();
-    let (spans, inputs) = uiua::lsp::spans_with_compiler(code, compiler);
+    let spans = Spans::with_compiler(code, compiler);
 
     let mut prev: Option<CodeSpan> = None;
-    for span in spans {
+    for span in spans.spans {
         if let Some(prev) = prev {
             if prev.end.byte_pos < span.span.start.byte_pos {
                 colored
@@ -1142,7 +1141,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             | SpanKind::FuncDelim(..)
             | SpanKind::Obverse(_) => None,
         };
-        span.span.as_str(&inputs, |s| {
+        span.span.as_str(&spans.inputs, |s| {
             colored.push_str(&if let Some(color) = color {
                 s.color(color).to_string()
             } else {

@@ -3,7 +3,6 @@
 //! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
 
 use std::{
-    cell::RefCell,
     collections::{BTreeMap, HashMap, HashSet},
     fmt,
     path::PathBuf,
@@ -11,9 +10,8 @@ use std::{
 };
 
 use crate::{
-    algorithm::invert::{instrs_are_invertible, under_instrs},
-    ast::{Item, Modifier, ModuleKind, PlaceholderOp, Ref, RefComponent, Word},
-    ident_modifier_args, instrs_are_pure, is_custom_glyph,
+    ast::{Item, Modifier, ModuleKind, Ref, RefComponent, Word},
+    ident_modifier_args, is_custom_glyph,
     lex::{CodeSpan, Sp},
     parse::parse,
     Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc, Inputs, PreEvalMode,
@@ -39,7 +37,7 @@ pub enum SpanKind {
     Label,
     Signature,
     Whitespace,
-    Placeholder(PlaceholderOp),
+    Placeholder(usize),
     Delimiter,
     FuncDelim(Signature, SetInverses),
     ImportSrc(ImportSrc),
@@ -87,34 +85,67 @@ pub enum BindingDocsKind {
     },
 }
 
-/// Get spans and their kinds from Uiua code
-pub fn spans(input: &str) -> (Vec<Sp<SpanKind>>, Inputs) {
-    spans_with_backend(input, SafeSys::default())
+/// Span data extracted from Uiua code
+pub struct Spans {
+    /// The spans
+    pub spans: Vec<Sp<SpanKind>>,
+    /// The inputs used to build the spans
+    pub inputs: Inputs,
+    /// Top-level values for lines
+    pub top_level_values: BTreeMap<usize, Vec<Value>>,
 }
 
-#[doc(hidden)]
-/// Used for coloring code in the REPL
-pub fn spans_with_compiler(input: &str, compiler: &Compiler) -> (Vec<Sp<SpanKind>>, Inputs) {
-    let mut compiler = compiler.clone();
-    let src = InputSrc::Str(compiler.asm.inputs.strings.len().saturating_sub(1));
-    let (items, _, _) = parse(input, src.clone(), &mut compiler.asm.inputs);
-    let spanner = Spanner {
-        src,
-        asm: compiler.asm,
-        code_meta: compiler.code_meta,
-        errors: Vec::new(),
-        diagnostics: Vec::new(),
-        inversion_compiler: ThreadLocal::new(),
-    };
-    (spanner.items_spans(&items), spanner.asm.inputs.clone())
-}
-
-/// Get spans and their kinds from Uiua code with a custom backend
-pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<SpanKind>>, Inputs) {
-    let src = InputSrc::Str(0);
-    let (items, _, _) = parse(input, src.clone(), &mut Inputs::default());
-    let spanner = Spanner::new(src, input, backend);
-    (spanner.items_spans(&items), spanner.asm.inputs)
+impl Spans {
+    /// Get spans and their kinds from Uiua code
+    pub fn from_input(input: &str) -> Self {
+        Self::with_backend(input, SafeSys::default())
+    }
+    /// Get spans and their kinds from Uiua code with a custom backend
+    pub fn with_backend(input: &str, backend: impl SysBackend) -> Self {
+        let src = InputSrc::Str(0);
+        let (items, _, _) = parse(input, src.clone(), &mut Inputs::default());
+        let spanner = Spanner::new(src, input, backend);
+        let spans = spanner.items_spans(&items);
+        let inputs = spanner.asm.inputs;
+        let top_level_values = spanner
+            .code_meta
+            .top_level_values
+            .into_iter()
+            .map(|(span, vals)| (span.start.line as usize, vals))
+            .collect();
+        Spans {
+            spans,
+            inputs,
+            top_level_values,
+        }
+    }
+    #[doc(hidden)]
+    /// Get spans using the given compiler
+    pub fn with_compiler(input: &str, compiler: &Compiler) -> Self {
+        let mut compiler = compiler.clone();
+        let src = InputSrc::Str(compiler.asm.inputs.strings.len().saturating_sub(1));
+        let (items, _, _) = parse(input, src.clone(), &mut compiler.asm.inputs);
+        let spanner = Spanner {
+            src,
+            asm: compiler.asm,
+            code_meta: compiler.code_meta,
+            errors: Vec::new(),
+            diagnostics: Vec::new(),
+        };
+        let spans = spanner.items_spans(&items);
+        let inputs = spanner.asm.inputs;
+        let top_level_values = spanner
+            .code_meta
+            .top_level_values
+            .into_iter()
+            .map(|(span, vals)| (span.start.line as usize, vals))
+            .collect();
+        Spans {
+            spans,
+            inputs,
+            top_level_values,
+        }
+    }
 }
 
 /// Code metadata for use in IDE tools
@@ -230,7 +261,6 @@ struct Spanner {
     errors: Vec<UiuaError>,
     #[allow(dead_code)]
     diagnostics: Vec<crate::Diagnostic>,
-    inversion_compiler: ThreadLocal<RefCell<Compiler>>,
 }
 
 impl Spanner {
@@ -248,7 +278,6 @@ impl Spanner {
             code_meta: compiler.code_meta,
             errors,
             diagnostics,
-            inversion_compiler: ThreadLocal::new(),
         }
     }
     fn inputs(&self) -> &Inputs {
@@ -465,34 +494,12 @@ impl Spanner {
         let kind = match &binfo.kind {
             BindingKind::Const(val) => BindingDocsKind::Constant(val.clone()),
             BindingKind::Func(f) => BindingDocsKind::Function {
-                sig: f.signature(),
-                invertible: {
-                    let instrs = f.instrs(&self.asm);
-                    let compiler = self
-                        .inversion_compiler
-                        .get_or(|| Compiler::new().with_assembly(self.asm.clone()).into());
-                    let mut compiler = compiler.borrow_mut();
-                    let instr_count = compiler.asm.instrs.len();
-                    let invertible = instrs_are_invertible(instrs, &mut compiler);
-                    if compiler.asm.instrs.len() > instr_count {
-                        compiler.asm.instrs.truncate(instr_count);
-                    }
-                    invertible
-                },
-                underable: {
-                    let instrs = f.instrs(&self.asm);
-                    let compiler = self
-                        .inversion_compiler
-                        .get_or(|| Compiler::new().with_assembly(self.asm.clone()).into());
-                    let mut compiler = compiler.borrow_mut();
-                    let instr_count = compiler.asm.instrs.len();
-                    let underable = under_instrs(instrs, (1, 1).into(), &mut compiler).is_ok();
-                    if compiler.asm.instrs.len() > instr_count {
-                        compiler.asm.instrs.truncate(instr_count);
-                    }
-                    underable
-                },
-                pure: instrs_are_pure(f.instrs(&self.asm), &self.asm, Purity::Pure),
+                sig: f.sig,
+                invertible: self.asm[f].un_inverse(&self.asm).is_ok(),
+                underable: self.asm[f]
+                    .under_inverse(Signature::new(1, 1), &self.asm)
+                    .is_ok(),
+                pure: self.asm[f].is_pure(Purity::Pure, &self.asm),
             },
             BindingKind::IndexMacro(args) => BindingDocsKind::Modifier(*args),
             BindingKind::CodeMacro(_) => {
@@ -501,7 +508,7 @@ impl Spanner {
             BindingKind::Import(_) => BindingDocsKind::Module { sig: None },
             BindingKind::Module(m) => {
                 let sig = if let Some(local) = m.names.get("Call").or_else(|| m.names.get("New")) {
-                    self.asm.bindings[local.index].kind.signature()
+                    self.asm.bindings[local.index].kind.sig()
                 } else {
                     None
                 };
@@ -634,9 +641,7 @@ impl Spanner {
                     }
                     if pack.closed {
                         let end = word.span.just_end(self.inputs());
-                        if end.as_str(self.inputs(), |s| {
-                            s == if pack.angled { "⟩" } else { ")" }
-                        }) {
+                        if end.as_str(self.inputs(), |s| s == ")") {
                             spans.push(end.sp(SpanKind::Delimiter));
                         }
                     }
@@ -737,7 +742,6 @@ impl Spanner {
 #[cfg(feature = "lsp")]
 #[doc(hidden)]
 pub use server::run_language_server;
-use thread_local::ThreadLocal;
 
 #[cfg(feature = "lsp")]
 mod server {
@@ -1171,7 +1175,7 @@ mod server {
                     label: name.clone(),
                     kind: Some(kind),
                     label_details: Some(CompletionItemLabelDetails {
-                        description: (binding.kind.signature())
+                        description: (binding.kind.sig())
                             .map(|sig| format!("{:<4}", sig.to_string())),
                         ..Default::default()
                     }),
@@ -1265,7 +1269,7 @@ mod server {
                                 ..Default::default()
                             })
                         } else {
-                            prim.signature().map(|sig| CompletionItemLabelDetails {
+                            prim.sig().map(|sig| CompletionItemLabelDetails {
                                 description: Some(format!("{:<4}", sig.to_string())),
                                 ..Default::default()
                             })
@@ -1781,7 +1785,7 @@ mod server {
             // Add experimental
             if !doc.input.contains("# Experimental!") {
                 for error in &doc.errors {
-                    let UiuaErrorKind::Run(message, _) = &error.kind else {
+                    let UiuaErrorKind::Run { message, .. } = &error.kind else {
                         continue;
                     };
                     let Span::Code(span) = &message.span else {
@@ -1997,7 +2001,7 @@ mod server {
             };
             for err in &doc.errors {
                 match &err.kind {
-                    UiuaErrorKind::Run(message, _) => {
+                    UiuaErrorKind::Run { message, .. } => {
                         let Some(range) = range(err, &message.span) else {
                             continue;
                         };
@@ -2371,7 +2375,7 @@ mod server {
 
     fn full_prim_doc_markdown(prim: Primitive) -> String {
         let sig = prim
-            .signature()
+            .sig()
             .map(|sig| format!(" {}", sig))
             .unwrap_or_default();
         let mut value = format!("```uiua\n{}{}\n```", prim.format(), sig);

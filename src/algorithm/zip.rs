@@ -5,9 +5,9 @@ use std::{cell::RefCell, collections::HashMap, iter::repeat, mem::swap, rc::Rc};
 use ecow::eco_vec;
 
 use crate::{
-    algorithm::pervade::bin_pervade_values, check::instrs_clean_signature, cowslice::CowSlice,
-    function::Function, random, types::push_empty_rows_value, val_as_arr, value::Value, Array,
-    Boxed, ImplPrimitive, Instr, PersistentMeta, Primitive, Shape, TempStack, Uiua, UiuaResult,
+    algorithm::pervade::bin_pervade_values, cowslice::CowSlice, get_ops, random,
+    types::push_empty_rows_value, val_as_arr, value::Value, Array, Boxed, ImplPrimitive, Node, Ops,
+    PersistentMeta, Primitive, Shape, SigNode, Uiua, UiuaResult,
 };
 
 use super::{fill_value_shapes, fixed_rows, multi_output, FixedRowsData, MultiOutput};
@@ -115,36 +115,36 @@ fn impl_prim_mon2_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMon2F
     })
 }
 
-fn f_mon_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueMonFn, usize)> {
+fn f_mon_fast_fn(node: &Node, env: &Uiua) -> Option<(ValueMonFn, usize)> {
     thread_local! {
-        static CACHE: RefCell<HashMap<u64, Option<(ValueMonFn, usize)>>>
+        static CACHE: RefCell<HashMap<Node, Option<(ValueMonFn, usize)>>>
             = RefCell::new(HashMap::new());
     }
     CACHE.with(|cache| {
-        if !cache.borrow().contains_key(&f.hash()) {
-            let f_and_depth = f_mon_fast_fn_impl(f.instrs(&env.asm), false, env);
-            cache.borrow_mut().insert(f.hash(), f_and_depth);
+        if !cache.borrow().contains_key(node) {
+            let f_and_depth = f_mon_fast_fn_impl(node, false, env);
+            cache.borrow_mut().insert(node.clone(), f_and_depth);
         }
-        cache.borrow()[&f.hash()].clone()
+        cache.borrow()[node].clone()
     })
 }
 
-fn f_mon_fast_fn_impl(instrs: &[Instr], deep: bool, env: &Uiua) -> Option<(ValueMonFn, usize)> {
+fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMonFn, usize)> {
     use Primitive::*;
-    Some(match instrs {
-        &[Instr::Prim(prim, span)] => {
+    Some(match nodes {
+        &[Node::Prim(prim, span)] => {
             let f = prim_mon_fast_fn(prim, span)?;
             (f, 0)
         }
-        &[Instr::ImplPrim(prim, span)] => {
+        &[Node::ImplPrim(prim, span)] => {
             let f = impl_prim_mon_fast_fn(prim, span)?;
             (f, 0)
         }
-        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            let (f, d) = f_mon_fast_fn(f, env)?;
+        [Node::Mod(Rows, args, _)] => {
+            let (f, d) = f_mon_fast_fn(&args[0].node, env)?;
             (f, d + 1)
         }
-        [Instr::Prim(Pop, _), Instr::Push(repl)] => {
+        [Node::Prim(Pop, _), Node::Push(repl)] => {
             let replacement = repl.clone();
             (
                 Rc::new(move |val, depth, _| Ok(val.replace_depth(replacement.clone(), depth))),
@@ -161,8 +161,8 @@ fn f_mon_fast_fn_impl(instrs: &[Instr], deep: bool, env: &Uiua) -> Option<(Value
                     if end > instrs.len() {
                         break 'outer;
                     }
-                    let instrs = &instrs[start..end];
-                    let Some((f, d)) = f_mon_fast_fn_impl(instrs, true, env) else {
+                    let nodes = &instrs[start..end];
+                    let Some((f, d)) = f_mon_fast_fn_impl(nodes, true, env) else {
                         continue;
                     };
                     depth += d;
@@ -185,52 +185,42 @@ fn f_mon_fast_fn_impl(instrs: &[Instr], deep: bool, env: &Uiua) -> Option<(Value
     })
 }
 
-fn f_mon2_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueMon2Fn, usize)> {
-    f_mon2_fast_fn_impl(f.instrs(&env.asm), env)
+fn f_mon2_fast_fn(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize)> {
+    f_mon2_fast_fn_impl(nodes, env)
 }
-fn f_mon2_fast_fn_impl(instrs: &[Instr], env: &Uiua) -> Option<(ValueMon2Fn, usize)> {
+fn f_mon2_fast_fn_impl(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize)> {
     use Primitive::*;
-    Some(match instrs {
-        &[Instr::Prim(prim, span)] => {
+    Some(match nodes {
+        &[Node::Prim(prim, span)] => {
             let f = prim_mon2_fast_fn(prim, span)?;
             (f, 0)
         }
-        &[Instr::ImplPrim(prim, span)] => {
+        &[Node::ImplPrim(prim, span)] => {
             let f = impl_prim_mon2_fast_fn(prim, span)?;
             (f, 0)
         }
-        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            let (f, d) = f_mon2_fast_fn(f, env)?;
+        [Node::Mod(Rows, args, _)] => {
+            let (f, d) = f_mon2_fast_fn(args[0].node.as_slice(), env)?;
             (f, d + 1)
         }
         // By monadic
-        [Instr::Prim(Dup, _), rest @ ..]
-            if instrs_clean_signature(rest).is_some_and(|sig| sig == (1, 1)) =>
-        {
-            let get_second = f_mon_fast_fn_impl(rest, false, env)?;
+        [Node::Mod(By, args, _)] if args[0].sig == (1, 1) => {
+            let get_second = f_mon_fast_fn_impl(args[0].node.as_slice(), false, env)?;
             let f = std::boxed::Box::new(move |val: Value, depth: usize, env: &mut Uiua| {
                 Ok((get_second.0(val.clone(), depth, env)?, val))
             });
             (f, 0)
         }
         // On monadic
-        [Instr::CopyToTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            ..
-        }, rest @ .., Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            ..
-        }] if instrs_clean_signature(rest).is_some_and(|sig| sig == (1, 1)) => {
-            let get_second = f_mon_fast_fn_impl(rest, false, env)?;
+        [Node::Mod(On, args, _)] if args[0].sig == (1, 1) => {
+            let get_second = f_mon_fast_fn_impl(args[0].node.as_slice(), false, env)?;
             let f = std::boxed::Box::new(move |val: Value, depth: usize, env: &mut Uiua| {
                 Ok((val.clone(), get_second.0(val, depth, env)?))
             });
             (f, 0)
         }
         // By constant
-        [Instr::TouchStack { count: 1, .. }, Instr::Push(repl)] => {
+        [Node::Prim(Identity, _), Node::Push(repl)] => {
             let repl = repl.clone();
             let f = std::boxed::Box::new(move |val: Value, depth: usize, _: &mut Uiua| {
                 let replaced = val.replace_depth(repl.clone(), depth);
@@ -239,15 +229,7 @@ fn f_mon2_fast_fn_impl(instrs: &[Instr], env: &Uiua) -> Option<(ValueMon2Fn, usi
             (f, 0)
         }
         // On constant
-        [Instr::PushTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            ..
-        }, Instr::Push(repl), Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            ..
-        }] => {
+        [Node::Push(repl), Node::Prim(Flip, _)] => {
             let repl = repl.clone();
             let f = std::boxed::Box::new(move |val: Value, depth: usize, _: &mut Uiua| {
                 let replaced = val.replace_depth(repl.clone(), depth);
@@ -307,14 +289,14 @@ fn prim_dy_fast_fn(prim: Primitive, span: usize) -> Option<ValueDyFn> {
         Mul => spanned_dy_fn(span, Value::mul),
         Div => spanned_dy_fn(span, Value::div),
         Pow => spanned_dy_fn(span, Value::pow),
-        Mod => spanned_dy_fn(span, Value::modulus),
+        Modulus => spanned_dy_fn(span, Value::modulus),
         Log => spanned_dy_fn(span, Value::log),
         Eq => spanned_dy_fn(span, Value::is_eq),
         Ne => spanned_dy_fn(span, Value::is_ne),
-        Lt => spanned_dy_fn(span, Value::is_lt),
-        Gt => spanned_dy_fn(span, Value::is_gt),
-        Le => spanned_dy_fn(span, Value::is_le),
-        Ge => spanned_dy_fn(span, Value::is_ge),
+        Lt => spanned_dy_fn(span, Value::other_is_lt),
+        Gt => spanned_dy_fn(span, Value::other_is_gt),
+        Le => spanned_dy_fn(span, Value::other_is_le),
+        Ge => spanned_dy_fn(span, Value::other_is_ge),
         Complex => spanned_dy_fn(span, Value::complex),
         Max => spanned_dy_fn(span, Value::max),
         Min => spanned_dy_fn(span, Value::min),
@@ -329,7 +311,7 @@ fn prim_dy_fast_fn(prim: Primitive, span: usize) -> Option<ValueDyFn> {
     })
 }
 
-pub(crate) fn f_dy_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueDyFn, usize, usize)> {
+pub(crate) fn f_dy_fast_fn(nodes: &[Node]) -> Option<(ValueDyFn, usize, usize)> {
     use std::boxed::Box;
     use Primitive::*;
 
@@ -344,16 +326,16 @@ pub(crate) fn f_dy_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueDyFn, u
         Some((f, ad1 + ad2, bd1 + bd2))
     }
 
-    match instrs {
-        &[Instr::Prim(prim, span)] => {
+    match nodes {
+        &[Node::Prim(prim, span)] => {
             let f = prim_dy_fast_fn(prim, span)?;
             return Some((f, 0, 0));
         }
-        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            return nest_dy_fast(f_dy_fast_fn(f.instrs(&env.asm), env)?, 1, 1)
+        [Node::Mod(Rows, args, _)] => {
+            return nest_dy_fast(f_dy_fast_fn(args[0].node.as_slice())?, 1, 1)
         }
-        [Instr::Prim(Flip, _), rest @ ..] => {
-            let (f, a, b) = f_dy_fast_fn(rest, env)?;
+        [Node::Prim(Flip, _), rest @ ..] => {
+            let (f, a, b) = f_dy_fast_fn(rest)?;
             let f = Box::new(move |a, b, ad, bd, env: &mut Uiua| f(b, a, bd, ad, env));
             return Some((f, a, b));
         }
@@ -362,12 +344,12 @@ pub(crate) fn f_dy_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueDyFn, u
     None
 }
 
-pub fn each(env: &mut Uiua) -> UiuaResult {
+pub fn each(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop_function()?;
-    let sig = f.signature();
+    let [f] = get_ops(ops, env)?;
+    let sig = f.sig;
     match sig.args {
-        0 => env.without_fill(|env| env.call(f)),
+        0 => env.without_fill(|env| env.exec(f)),
         1 => each1(f, env.pop(1)?, env),
         2 => each2(f, env.pop(1)?, env.pop(2)?, env),
         n => {
@@ -380,8 +362,8 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, ..)) = f_mon_fast_fn(&f, env) {
+fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
+    if let Some((f, ..)) = f_mon_fast_fn(&f.node, env) {
         let maybe_through_boxes = matches!(&xs, Value::Box(..));
         if !maybe_through_boxes {
             let rank = xs.rank();
@@ -390,7 +372,7 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
             return Ok(());
         }
     }
-    let outputs = f.signature().outputs;
+    let outputs = f.sig.outputs;
     let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
     let new_shape = xs.shape().clone();
     let is_empty = outputs > 0 && xs.row_count() == 0;
@@ -398,14 +380,14 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     env.without_fill(|env| -> UiuaResult {
         if is_empty {
             env.push(xs.proxy_scalar(env));
-            _ = env.call_maintain_sig(f);
+            _ = env.exec_maintain_sig(f);
             for i in 0..outputs {
                 new_values[i].push(env.pop("each's function result")?);
             }
         } else {
             for val in xs.into_elements() {
                 env.push(val);
-                env.call(f.clone())?;
+                env.exec(f.clone())?;
                 for i in 0..outputs {
                     new_values[i].push(env.pop("each's function result")?);
                 }
@@ -428,14 +410,14 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, ..)) = f_dy_fast_fn(f.instrs(&env.asm), env) {
+fn each2(f: SigNode, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
+    if let Some((f, ..)) = f_dy_fast_fn(f.node.as_slice()) {
         let xrank = xs.rank();
         let yrank = ys.rank();
         let val = f(xs, ys, xrank, yrank, env)?;
         env.push(val);
     } else {
-        let outputs = f.signature().outputs;
+        let outputs = f.sig.outputs;
         let mut xs_shape = xs.shape().to_vec();
         let mut ys_shape = ys.shape().to_vec();
         let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
@@ -460,7 +442,7 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
                     |x, y, env| {
                         env.push(y);
                         env.push(x);
-                        if env.call_maintain_sig(f.clone()).is_ok() {
+                        if env.exec_maintain_sig(f.clone()).is_ok() {
                             (0..outputs)
                                 .map(|_| env.pop("each's function result"))
                                 .collect::<Result<MultiOutput<_>, _>>()
@@ -473,7 +455,7 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
                 bin_pervade_values(xs, ys, xs_fill, ys_fill, outputs, env, |x, y, env| {
                     env.push(y);
                     env.push(x);
-                    env.call(f.clone())?;
+                    env.exec(f.clone())?;
                     (0..outputs)
                         .map(|_| env.pop("each's function result"))
                         .collect::<Result<MultiOutput<_>, _>>()
@@ -488,7 +470,7 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
     Ok(())
 }
 
-fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for a in 0..args.len() - 1 {
         let (a, b) = args.split_at_mut(a + 1);
         let a = a.last_mut().unwrap();
@@ -496,7 +478,7 @@ fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             fill_value_shapes(a, b, true, env)?;
         }
     }
-    let outputs = f.signature().outputs;
+    let outputs = f.sig.outputs;
     let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
     let elem_count = args.iter().map(Value::element_count).max().unwrap() + is_empty as usize;
     let mut new_values = multi_output(outputs, Vec::with_capacity(elem_count));
@@ -512,7 +494,7 @@ fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             for arg in args.into_iter().rev() {
                 env.push(arg.proxy_scalar(env));
             }
-            _ = env.call_maintain_sig(f);
+            _ = env.exec_maintain_sig(f);
             for i in 0..outputs {
                 new_values[i].push(env.pop("each's function result")?);
             }
@@ -529,7 +511,7 @@ fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 for arg in arg_elems.iter_mut().rev() {
                     env.push(arg.next().unwrap());
                 }
-                env.call(f.clone())?;
+                env.exec(f.clone())?;
                 for i in 0..outputs {
                     new_values[i].push(env.pop("each's function result")?);
                 }
@@ -551,12 +533,11 @@ fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn rows(inv: bool, env: &mut Uiua) -> UiuaResult {
+pub fn rows(ops: Ops, inv: bool, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop_function()?;
-    let sig = f.signature();
-    match sig.args {
-        0 => env.without_fill(|env| env.call(f)),
+    let [f] = get_ops(ops, env)?;
+    match f.sig.args {
+        0 => env.without_fill(|env| env.exec(f)),
         1 => rows1(f, env.pop(1)?, inv, env),
         2 => rows2(f, env.pop(1)?, env.pop(2)?, inv, env),
         n => {
@@ -589,9 +570,9 @@ fn collect_outputs(
     Ok(())
 }
 
-pub fn rows1(f: Function, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
+pub fn rows1(f: SigNode, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
     if !inv {
-        if let Some((f, d)) = f_mon_fast_fn(&f, env) {
+        if let Some((f, d)) = f_mon_fast_fn(&f.node, env) {
             let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
             if !maybe_through_boxes {
                 let val = f(xs, d + 1, env)?;
@@ -599,7 +580,7 @@ pub fn rows1(f: Function, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResul
                 return Ok(());
             }
         }
-        if let Some((f, d)) = f_mon2_fast_fn(&f, env) {
+        if let Some((f, d)) = f_mon2_fast_fn(&f.node, env) {
             let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
             if !maybe_through_boxes {
                 let (xs, ys) = f(xs, d + 1, env)?;
@@ -609,7 +590,7 @@ pub fn rows1(f: Function, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResul
             }
         }
     }
-    let outputs = f.signature().outputs;
+    let outputs = f.sig.outputs;
     let is_scalar = xs.rank() == 0;
     let is_empty = outputs > 0 && xs.row_count() == 0;
     let mut new_rows = multi_output(
@@ -623,7 +604,7 @@ pub fn rows1(f: Function, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResul
                 new_rows.clear();
             } else {
                 env.push(xs.proxy_row(env));
-                _ = env.call_maintain_sig(f);
+                _ = env.exec_maintain_sig(f);
                 for i in 0..outputs {
                     new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
                 }
@@ -631,7 +612,7 @@ pub fn rows1(f: Function, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResul
         } else {
             for row in xs.into_rows() {
                 env.push(row.unboxed_if(inv));
-                env.call(f.clone())?;
+                env.exec(f.clone())?;
                 for i in 0..outputs {
                     new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
                 }
@@ -642,8 +623,8 @@ pub fn rows1(f: Function, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResul
     collect_outputs(new_rows, is_scalar, is_empty, per_meta, env)
 }
 
-fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.signature().outputs;
+fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
+    let outputs = f.sig.outputs;
     let both_scalar = xs.rank() == 0 && ys.rank() == 0;
     match (xs.row_count(), ys.row_count()) {
         (_, 1) => {
@@ -658,7 +639,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
                     } else {
                         env.push(ys.unboxed_if(inv));
                         env.push(xs.proxy_row(env));
-                        _ = env.call_maintain_sig(f);
+                        _ = env.exec_maintain_sig(f);
                         for i in 0..outputs {
                             new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                         }
@@ -667,7 +648,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
                     for x in xs.into_rows() {
                         env.push(ys.clone().unboxed_if(inv));
                         env.push(x.unboxed_if(inv));
-                        env.call(f.clone())?;
+                        env.exec(f.clone())?;
                         for i in 0..outputs {
                             new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                         }
@@ -689,7 +670,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
                     } else {
                         env.push(ys.proxy_row(env));
                         env.push(xs.unboxed_if(inv));
-                        _ = env.call_maintain_sig(f);
+                        _ = env.exec_maintain_sig(f);
                         for i in 0..outputs {
                             new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                         }
@@ -698,7 +679,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
                     for y in ys.into_rows() {
                         env.push(y.unboxed_if(inv));
                         env.push(xs.clone());
-                        env.call(f.clone())?;
+                        env.exec(f.clone())?;
                         for i in 0..outputs {
                             new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                         }
@@ -721,7 +702,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
                 )));
             }
             if !inv {
-                if let Some((f, a, b)) = f_dy_fast_fn(f.instrs(&env.asm), env) {
+                if let Some((f, a, b)) = f_dy_fast_fn(f.node.as_slice()) {
                     let val = f(xs, ys, a + 1, b + 1, env)?;
                     env.push(val);
                     return Ok(());
@@ -748,7 +729,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
                         } else {
                             xs
                         });
-                        _ = env.call_maintain_sig(f);
+                        _ = env.exec_maintain_sig(f);
                         for i in 0..outputs {
                             new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                         }
@@ -757,7 +738,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
                     for (x, y) in xs.into_rows().zip(ys.into_rows()) {
                         env.push(y.unboxed_if(inv));
                         env.push(x.unboxed_if(inv));
-                        env.call(f.clone())?;
+                        env.exec(f.clone())?;
                         for i in 0..outputs {
                             new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                         }
@@ -770,8 +751,8 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
     }
 }
 
-fn rowsn(f: Function, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.signature().outputs;
+fn rowsn(f: SigNode, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult {
+    let outputs = f.sig.outputs;
     let prim = if inv {
         Primitive::Inventory
     } else {
@@ -794,7 +775,7 @@ fn rowsn(f: Function, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult
                     Err(row) => env.push(row.clone().unboxed_if(inv)),
                 }
             }
-            env.call(f.clone())?;
+            env.exec(f.clone())?;
             for i in 0..outputs {
                 new_values[i].push(env.pop("rows's function result")?.boxed_if(inv));
             }
@@ -815,9 +796,9 @@ fn rowsn(f: Function, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult
     Ok(())
 }
 
-pub fn rows_windows(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    if f.signature() != (1, 1) {
+pub fn rows_windows(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f] = get_ops(ops, env)?;
+    if f.sig != (1, 1) {
         return Err(
             env.error("rows windows's function is not |1. This is a bug in the interpreter")
         );
@@ -838,7 +819,7 @@ pub fn rows_windows(env: &mut Uiua) -> UiuaResult {
         env.push(xs.first_dim_zero());
         return Ok(());
     }
-    if let Some(Primitive::Box) = f.as_primitive(&env.asm) {
+    if let Some(Primitive::Box) = f.node.as_primitive() {
         let win_count = xs.row_count() - (n - 1);
         let arr = Array::from_iter(
             (0..win_count).map(|win_start| Boxed(xs.slice_rows(win_start, win_start + n))),

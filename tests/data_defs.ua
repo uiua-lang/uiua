@@ -27,6 +27,9 @@
 ~Foo [x] +x
 ⍤⤙≍ 8 Foo 3 5
 
+~Foo [x] ⊟ x /+ 1_2_3
+⍤⤙≍ [10 6] Foo 10
+
 ~Foo [Bar Baz ← +]
 ⍤⤙≍ [5 5] Foo 5 2 3
 
@@ -35,3 +38,14 @@
   |Baz {a}
 └─╴
 ⍤⤙≍ 5 Foo~Bar~a Foo~Bar 5
+
+# Experimental!
+┌─╴S
+  ~{A B C}
+  PopA  ← :⍜A(:°(⊂:))
+  PushB ← ⍜⊙B(⊂:)
+└─╴
+S [1 2 3] [4 5 6] [7 8 9]
+S~PopA
+S~PushB
+⍤⤙≍ S [1 2] [4 5 6 3] [7 8 9]

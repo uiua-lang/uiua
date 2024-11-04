@@ -5,32 +5,32 @@ use std::{collections::VecDeque, convert::identity, iter::repeat};
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
-    algorithm::{loops::flip, multi_output, pervade::*},
-    check::instrs_signature,
+    algorithm::{get_ops, loops::flip, multi_output, pervade::*},
+    check::nodes_sig,
     cowslice::cowslice,
-    Array, ArrayValue, Complex, Function, ImplPrimitive, Instr, Primitive, Shape, Signature, Uiua,
-    UiuaResult, Value,
+    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Signature,
+    Uiua, UiuaResult, Value,
 };
 
 use super::{fixed_rows, FillContext, FixedRowsData};
 
-pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
+pub fn reduce(ops: Ops, depth: usize, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop_function()?;
+    let [f] = get_ops(ops, env)?;
     reduce_impl(f, depth, env)
 }
 
-pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResult {
-    if f.signature().args < 2 {
+pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResult {
+    if f.sig.args < 2 {
         return Err(env.error(format!(
             "{}'s function must have at least 2 arguments, \
             but its signature is {}",
             Primitive::Reduce.format(),
-            f.signature()
+            f.sig
         )));
     }
     let xs = env.pop(1)?;
-    match (f.as_flipped_primitive(&env.asm), xs) {
+    match (f.node.as_flipped_primitive(), xs) {
         (Some((Primitive::Join, false)), mut xs)
             if env.value_fill().is_none() && env.value_fill().is_none() =>
         {
@@ -106,7 +106,7 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
                     fast_reduce_different(bytes, 1.0, fill, depth, div::num_num, div::num_byte)
                         .into()
                 }
-                Primitive::Mod if flipped => fast_reduce_different(
+                Primitive::Modulus if flipped => fast_reduce_different(
                     bytes,
                     1.0,
                     fill,
@@ -115,7 +115,7 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
                     flip(modulus::byte_num),
                 )
                 .into(),
-                Primitive::Mod => fast_reduce_different(
+                Primitive::Modulus => fast_reduce_different(
                     bytes,
                     1.0,
                     fill,
@@ -172,10 +172,10 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
                 _ => return generic_reduce(f, Value::Byte(bytes), depth, env),
             })
         }
-        (_, xs) if f.signature() == (2, 1) => {
+        (_, xs) if f.sig == (2, 1) => {
             if depth == 0 && env.value_fill().is_none() {
                 if xs.row_count() == 0 {
-                    let val = reduce_identity(f.instrs(&env.asm), xs).ok_or_else(|| {
+                    let val = reduce_identity(&f.node, xs).ok_or_else(|| {
                         env.error(format!(
                             "Cannot {} empty array. Function has no identity value.",
                             Primitive::Reduce.format()
@@ -185,7 +185,7 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
                     return Ok(());
                 }
                 if xs.row_count() == 1 {
-                    let val = reduce_singleton(f.instrs(&env.asm), xs, identity);
+                    let val = reduce_singleton(&f.node, xs, identity);
                     env.push(val);
                     return Ok(());
                 }
@@ -197,36 +197,37 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
     Ok(())
 }
 
-fn trim_instrs(mut instrs: &[Instr]) -> &[Instr] {
+fn trim_node(node: &Node) -> &[Node] {
+    let mut nodes = node.as_slice();
     use ImplPrimitive::*;
     use Primitive::*;
-    let trim = |instr: &Instr| {
+    let trim = |node: &Node| {
         matches!(
-            instr,
-            Instr::Prim(Stack | Trace, _) | Instr::ImplPrim(UnStack | TraceN { .. }, _)
+            node,
+            Node::Prim(Stack | Trace, _) | Node::ImplPrim(UnStack | TraceN { .. }, _)
         )
     };
-    while instrs.first().is_some_and(trim) {
-        instrs = &instrs[1..];
+    while nodes.first().is_some_and(trim) {
+        nodes = &nodes[1..];
     }
-    while instrs.last().is_some_and(trim) {
-        instrs = &instrs[..instrs.len() - 1];
+    while nodes.last().is_some_and(trim) {
+        nodes = &nodes[..nodes.len() - 1];
     }
-    instrs
+    nodes
 }
 
-fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
+fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
     use Primitive::*;
-    let instrs = trim_instrs(instrs);
+    let nodes = trim_node(node);
     let mut shape = val.shape().clone();
     shape.make_row();
     let len: usize = shape.iter().product();
-    let (first, tail) = instrs.split_first()?;
-    let (last, init) = instrs.split_last()?;
-    let init_sig = || instrs_signature(init).is_ok_and(|sig| sig.args == sig.outputs);
-    let tail_sig = || instrs_signature(tail).is_ok_and(|sig| sig.args == 1 && sig.outputs == 1);
+    let (first, tail) = nodes.split_first()?;
+    let (last, init) = nodes.split_last()?;
+    let init_sig = || nodes_sig(init).is_ok_and(|sig| sig.args == sig.outputs);
+    let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args == 1 && sig.outputs == 1);
     Some(match first {
-        Instr::Prim(Join, _) if tail_sig() => {
+        Node::Prim(Join, _) if tail_sig() => {
             if val.rank() < 2 {
                 val.shape_mut()[0] = 0;
             } else {
@@ -236,18 +237,18 @@ fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
             val
         }
         _ => match last {
-            Instr::Prim(Add | Sub, _) if init_sig() => Array::new(shape, eco_vec![0u8; len]).into(),
-            Instr::Prim(Mul | Div | Mod, _) if init_sig() => {
+            Node::Prim(Add | Sub, _) if init_sig() => Array::new(shape, eco_vec![0u8; len]).into(),
+            Node::Prim(Mul | Div | Modulus, _) if init_sig() => {
                 Array::new(shape, eco_vec![1u8; len]).into()
             }
-            Instr::Prim(Max, _) if init_sig() => {
+            Node::Prim(Max, _) if init_sig() => {
                 Array::new(shape, eco_vec![f64::NEG_INFINITY; len]).into()
             }
-            Instr::Prim(Min, _) if init_sig() => {
+            Node::Prim(Min, _) if init_sig() => {
                 Array::new(shape, eco_vec![f64::INFINITY; len]).into()
             }
-            Instr::Prim(Atan, _) if init_sig() => Array::new(shape, eco_vec![0.0; len]).into(),
-            Instr::Prim(Join, _) if init_sig() => {
+            Node::Prim(Atan, _) if init_sig() => Array::new(shape, eco_vec![0.0; len]).into(),
+            Node::Prim(Join, _) if init_sig() => {
                 if val.rank() < 2 {
                     val.shape_mut()[0] = 0;
                 } else {
@@ -256,7 +257,7 @@ fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
                 }
                 val
             }
-            Instr::Format { parts, .. } if parts.len() == 3 && init_sig() => {
+            Node::Format(parts, _) if parts.len() == 3 && init_sig() => {
                 EcoVec::<char>::new().into()
             }
             _ => return None,
@@ -264,27 +265,27 @@ fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
     })
 }
 
-fn reduce_singleton(instrs: &[Instr], val: Value, process: impl Fn(Value) -> Value) -> Value {
+fn reduce_singleton(node: &Node, val: Value, process: impl Fn(Value) -> Value) -> Value {
     use Primitive::*;
-    let instrs = trim_instrs(instrs);
+    let nodes = trim_node(node);
     let row = process(val.row(0));
-    let Some((first, tail)) = instrs.split_first() else {
+    let Some((first, tail)) = nodes.split_first() else {
         return val;
     };
-    let (last, init) = instrs.split_last().unwrap();
-    let init_sig = || instrs_signature(init).is_ok_and(|sig| sig.args == sig.outputs);
-    let tail_sig = || instrs_signature(tail).is_ok_and(|sig| sig.args == 1 && sig.outputs == 1);
+    let (last, init) = nodes.split_last().unwrap();
+    let init_sig = || nodes_sig(init).is_ok_and(|sig| sig.args == sig.outputs);
+    let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args == 1 && sig.outputs == 1);
     match first {
-        Instr::Prim(Join, _) if tail_sig() => val,
+        Node::Prim(Join, _) if tail_sig() => val,
         _ => match last {
-            Instr::Prim(Join, _) if init_sig() => {
+            Node::Prim(Join, _) if init_sig() => {
                 if val.rank() < 2 {
                     val
                 } else {
                     row
                 }
             }
-            Instr::Format { parts, .. } if init_sig() && parts.len() == 3 => row.format().into(),
+            Node::Format(parts, _) if init_sig() && parts.len() == 3 => row.format().into(),
             _ => row,
         },
     }
@@ -323,11 +324,11 @@ macro_rules! reduce_math {
                 #[cfg(feature = "opt")]
                 Primitive::Div => fast_reduce(xs, 1.0.into(), fill, depth, div::$f),
                 #[cfg(feature = "opt")]
-                Primitive::Mod if _flipped => {
+                Primitive::Modulus if _flipped => {
                     fast_reduce(xs, 1.0.into(), fill, depth, flip(modulus::$f))
                 }
                 #[cfg(feature = "opt")]
-                Primitive::Mod => fast_reduce(xs, 1.0.into(), fill, depth, modulus::$f),
+                Primitive::Modulus => fast_reduce(xs, 1.0.into(), fill, depth, modulus::$f),
                 #[cfg(feature = "opt")]
                 Primitive::Atan if _flipped => {
                     fast_reduce(xs, 0.0.into(), fill, depth, flip(atan2::$f))
@@ -478,17 +479,17 @@ where
     }
 }
 
-fn generic_reduce(f: Function, xs: Value, depth: usize, env: &mut Uiua) -> UiuaResult {
+fn generic_reduce(f: SigNode, xs: Value, depth: usize, env: &mut Uiua) -> UiuaResult {
     env.push(xs);
     let val = generic_reduce_inner(f, depth, identity, env)?;
     env.push(val);
     Ok(())
 }
 
-pub fn reduce_content(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
+pub fn reduce_content(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f] = get_ops(ops, env)?;
     let xs = env.pop(1)?;
-    if let (1, Some((Primitive::Join, false))) = (xs.rank(), f.as_flipped_primitive(&env.asm)) {
+    if let (1, Some((Primitive::Join, false))) = (xs.rank(), f.node.as_flipped_primitive()) {
         if xs.row_count() == 0 {
             env.push(match xs {
                 Value::Box(_) => Value::default(),
@@ -514,12 +515,12 @@ pub fn reduce_content(env: &mut Uiua) -> UiuaResult {
 }
 
 fn generic_reduce_inner(
-    f: Function,
+    f: SigNode,
     depth: usize,
     process: impl Fn(Value) -> Value + Copy,
     env: &mut Uiua,
 ) -> UiuaResult<Value> {
-    let sig = f.signature();
+    let sig = f.sig;
     if sig.outputs != 1 {
         return Err(env.error(format!(
             "{}'s function must have exactly 1 output, \
@@ -539,7 +540,7 @@ fn generic_reduce_inner(
                 let value_fill = env.value_fill();
                 if value_fill.is_none() {
                     if xs.row_count() == 0 {
-                        return reduce_identity(f.instrs(&env.asm), xs).ok_or_else(|| {
+                        return reduce_identity(&f.node, xs).ok_or_else(|| {
                             env.error(format!(
                                 "Cannot {} empty array. Function has no identity value.",
                                 Primitive::Reduce.format()
@@ -555,7 +556,7 @@ fn generic_reduce_inner(
                         if let Some(row_count) = row_count {
                             xs.shape_mut().insert(0, row_count);
                         }
-                        return Ok(reduce_singleton(f.instrs(&env.asm), xs, process));
+                        return Ok(reduce_singleton(&f.node, xs, process));
                     }
                 }
                 let mut rows = xs.into_rows();
@@ -569,7 +570,7 @@ fn generic_reduce_inner(
                     for row in rows {
                         env.push(process(row));
                         env.push(acc);
-                        env.call(f.clone())?;
+                        env.exec(f.clone())?;
                         acc = env.pop("reduced function result")?;
                     }
                     Ok(acc)
@@ -608,7 +609,7 @@ fn generic_reduce_inner(
                             env.push(val.clone());
                         }
                         env.push(acc);
-                        env.call(f.clone())?;
+                        env.exec(f.clone())?;
                         acc = env.pop("reduced function result")?;
                     }
                     Ok(acc)
@@ -652,14 +653,14 @@ fn generic_reduce_inner(
     }
 }
 
-pub fn scan(env: &mut Uiua) -> UiuaResult {
+pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop_function()?;
+    let [f] = get_ops(ops, env)?;
     let xs = env.pop(1)?;
-    if xs.rank() == 0 && f.signature().args <= 2 {
+    if xs.rank() == 0 && f.sig.args <= 2 {
         return Err(env.error(format!("Cannot {} rank 0 array", Primitive::Scan.format())));
     }
-    match (f.as_flipped_primitive(&env.asm), xs) {
+    match (f.node.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
             let arr = match prim {
                 Primitive::Eq => fast_scan(nums, |a, b| is_eq::num_num(a, b) as f64),
@@ -670,8 +671,8 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
                 Primitive::Mul => fast_scan(nums, mul::num_num),
                 Primitive::Div if flipped => fast_scan(nums, flip(div::num_num)),
                 Primitive::Div => fast_scan(nums, div::num_num),
-                Primitive::Mod if flipped => fast_scan(nums, flip(modulus::num_num)),
-                Primitive::Mod => fast_scan(nums, modulus::num_num),
+                Primitive::Modulus if flipped => fast_scan(nums, flip(modulus::num_num)),
+                Primitive::Modulus => fast_scan(nums, modulus::num_num),
                 Primitive::Atan if flipped => fast_scan(nums, flip(atan2::num_num)),
                 Primitive::Atan => fast_scan(nums, atan2::num_num),
                 Primitive::Max => fast_scan(nums, max::num_num),
@@ -695,10 +696,10 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
                     env.push(fast_scan::<f64>(bytes.convert(), flip(div::num_num)))
                 }
                 Primitive::Div => env.push(fast_scan::<f64>(bytes.convert(), div::num_num)),
-                Primitive::Mod if flipped => {
+                Primitive::Modulus if flipped => {
                     env.push(fast_scan::<f64>(bytes.convert(), flip(modulus::num_num)))
                 }
-                Primitive::Mod => env.push(fast_scan::<f64>(bytes.convert(), modulus::num_num)),
+                Primitive::Modulus => env.push(fast_scan::<f64>(bytes.convert(), modulus::num_num)),
                 Primitive::Atan if flipped => {
                     env.push(fast_scan::<f64>(bytes.convert(), flip(atan2::num_num)))
                 }
@@ -750,8 +751,8 @@ where
     }
 }
 
-fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let sig = f.signature();
+fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
+    let sig = f.sig;
     if sig.outputs != 1 {
         return Err(env.error(format!(
             "{}'s function must have 1 output, \
@@ -779,7 +780,7 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
                 for row in rows.by_ref() {
                     env.push(row);
                     env.push(acc.clone());
-                    env.call(f.clone())?;
+                    env.exec(f.clone())?;
                     acc = env.pop("scanned function result")?;
                     scanned.push(acc.clone());
                 }
@@ -797,7 +798,7 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
             }
             let xs = repeated.pop().unwrap();
             if xs.row_count() == 0 {
-                let val = reduce_identity(f.instrs(&env.asm), xs.clone())
+                let val = reduce_identity(&f.node, xs.clone())
                     .map(|v| v.first_dim_zero())
                     .unwrap_or(xs);
                 env.push(val);
@@ -814,7 +815,7 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
                         env.push(val.clone());
                     }
                     env.push(acc);
-                    env.call(f.clone())?;
+                    env.exec(f.clone())?;
                     acc = env.pop("reduced function result")?;
                     scanned.push(acc.clone());
                 }
@@ -827,13 +828,13 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     }
 }
 
-pub fn unscan(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
+pub fn unscan(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f] = get_ops(ops, env)?;
     let mut xs = env.pop(1)?;
     if xs.rank() == 0 {
         return Err(env.error(format!("Cannot {} rank 0 array", ImplPrimitive::UnScan,)));
     }
-    let sig = f.signature();
+    let sig = f.sig;
     if sig != (2, 1) {
         return Err(env.error(format!(
             "{} unscan's function's signature must be |2.1, but it is {sig}",
@@ -846,7 +847,7 @@ pub fn unscan(env: &mut Uiua) -> UiuaResult {
     }
 
     match xs {
-        Value::Num(nums) => match f.as_flipped_primitive(&env.asm) {
+        Value::Num(nums) => match f.node.as_flipped_primitive() {
             Some((Primitive::Sub, false)) => {
                 env.push(fast_invscan(nums, sub::num_num));
                 return Ok(());
@@ -857,7 +858,7 @@ pub fn unscan(env: &mut Uiua) -> UiuaResult {
             }
             _ => xs = Value::Num(nums),
         },
-        Value::Byte(bytes) => match f.as_flipped_primitive(&env.asm) {
+        Value::Byte(bytes) => match f.node.as_flipped_primitive() {
             Some((Primitive::Sub, false)) => {
                 env.push(fast_invscan(bytes.convert(), sub::num_num));
                 return Ok(());
@@ -879,7 +880,7 @@ pub fn unscan(env: &mut Uiua) -> UiuaResult {
         for row in rows {
             env.push(row.clone());
             env.push(curr);
-            env.call(f.clone())?;
+            env.exec(f.clone())?;
             unscanned.push(env.pop("unscanned function result")?);
             curr = row;
         }
@@ -927,10 +928,10 @@ where
     }
 }
 
-pub fn fold(env: &mut Uiua) -> UiuaResult {
+pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop_function()?;
-    let sig = f.signature();
+    let [f] = get_ops(ops, env)?;
+    let sig = f.sig;
     let (iterable_count, acc_count, collect_count) = if sig.args > sig.outputs {
         (sig.args - sig.outputs, sig.outputs, 0)
     } else {
@@ -985,7 +986,7 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
                 Err(arr) => arr.clone(),
             });
         }
-        env.call(f.clone())?;
+        env.exec(f.clone())?;
         for collected in &mut collect {
             collected.push(env.remove_nth_back(acc_count)?);
         }
@@ -1001,8 +1002,8 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn adjacent(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
+pub fn adjacent(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f] = get_ops(ops, env)?;
     let n_arr = env.pop(1)?;
     let xs = env.pop(2)?;
     if n_arr.rank() != 0 {
@@ -1022,7 +1023,7 @@ pub fn adjacent(env: &mut Uiua) -> UiuaResult {
             return adjacent_fallback(f, n_arr, xs, env);
         }
     };
-    match (f.as_flipped_primitive(&env.asm), xs) {
+    match (f.node.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
             Primitive::Add => fast_adjacent(nums, n, env, add::num_num),
             Primitive::Sub if flipped => fast_adjacent(nums, n, env, flip(sub::num_num)),
@@ -1030,8 +1031,8 @@ pub fn adjacent(env: &mut Uiua) -> UiuaResult {
             Primitive::Mul => fast_adjacent(nums, n, env, mul::num_num),
             Primitive::Div if flipped => fast_adjacent(nums, n, env, flip(div::num_num)),
             Primitive::Div => fast_adjacent(nums, n, env, div::num_num),
-            Primitive::Mod if flipped => fast_adjacent(nums, n, env, flip(modulus::num_num)),
-            Primitive::Mod => fast_adjacent(nums, n, env, modulus::num_num),
+            Primitive::Modulus if flipped => fast_adjacent(nums, n, env, flip(modulus::num_num)),
+            Primitive::Modulus => fast_adjacent(nums, n, env, modulus::num_num),
             Primitive::Atan if flipped => fast_adjacent(nums, n, env, flip(atan2::num_num)),
             Primitive::Atan => fast_adjacent(nums, n, env, atan2::num_num),
             Primitive::Max => fast_adjacent(nums, n, env, max::num_num),
@@ -1049,10 +1050,10 @@ pub fn adjacent(env: &mut Uiua) -> UiuaResult {
                 fast_adjacent(bytes.convert(), n, env, flip(div::num_num))?.into()
             }
             Primitive::Div => fast_adjacent(bytes.convert(), n, env, div::num_num)?.into(),
-            Primitive::Mod if flipped => {
+            Primitive::Modulus if flipped => {
                 fast_adjacent(bytes.convert(), n, env, flip(modulus::num_num))?.into()
             }
-            Primitive::Mod => fast_adjacent(bytes.convert(), n, env, modulus::num_num)?.into(),
+            Primitive::Modulus => fast_adjacent(bytes.convert(), n, env, modulus::num_num)?.into(),
             Primitive::Atan if flipped => {
                 fast_adjacent(bytes.convert(), n, env, flip(atan2::num_num))?.into()
             }
@@ -1066,13 +1067,12 @@ pub fn adjacent(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn adjacent_fallback(f: Function, n: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn adjacent_fallback(f: SigNode, n: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let windows = n.windows(xs, env)?;
     let mut new_rows = Vec::with_capacity(windows.row_count());
     for window in windows.into_rows() {
         env.push(window);
-        env.push_func(f.clone());
-        reduce(0, env)?;
+        reduce_impl(f.clone(), 0, env)?;
         new_rows.push(env.pop("adjacent function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);
@@ -1132,8 +1132,8 @@ where
     }
 }
 
-fn generic_adjacent(f: Function, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult {
-    let sig = f.signature();
+fn generic_adjacent(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult {
+    let sig = f.sig;
     if sig != (2, 1) {
         return Err(env.error(format!(
             "Adjacent's function's signature must be {}, but it is {}",
@@ -1155,7 +1155,7 @@ fn generic_adjacent(f: Function, xs: Value, n: usize, env: &mut Uiua) -> UiuaRes
         for row in &window {
             env.push(row.clone());
             env.push(acc);
-            env.call(f.clone())?;
+            env.exec(f.clone())?;
             acc = env.pop("adjacent function result")?;
         }
         new_rows.push(acc);

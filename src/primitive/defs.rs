@@ -825,7 +825,7 @@ primitive!(
     /// ex: ◿ 4 ¯21
     /// If you prefer the negative modulo instead of the remainder, you may use [under]:
     /// ex: ⍜⊙⌵◿ 4 ¯21
-    (2, Mod, DyadicPervasive, ("modulus", '◿')),
+    (2, Modulus, DyadicPervasive, ("modulus", '◿')),
     /// Raise a value to a power
     ///
     /// The second value is raised to the power of the first.
@@ -1750,30 +1750,6 @@ primitive!(
     ///
     /// See also: [choose]
     (2, Permute, DyadicArray, "permute"),
-    /// Find the first deep index of one array in another
-    ///
-    /// While [indexof] returns an array of top-level indices into the searched-in array, [coordinate] returns an array of multi-dimensional coordinates.
-    /// ex: # Experimental!
-    ///   : ⟔,, 14 ↯2_3_4⇡24
-    /// ex: # Experimental!
-    ///   : ⟔,, [4 5 6 7] ↯2_3_4⇡24
-    /// ex: # Experimental!
-    ///   : ⟔,, +12↯3_4⇡12 ↯2_3_4⇡24
-    /// ex: # Experimental!
-    ///   : ⟔,, [1 2 3] [2 1 4 5 3]
-    /// If the index cannot be found, the [shape] of the searched-in array is returned.
-    /// ex: # Experimental!
-    ///   : ⟔,, 100 ↯2_3_4⇡24
-    /// If you want to get multiple coordinates from an array, you may need to use [rows] and [fix].
-    /// ex: # Experimental!
-    ///   : ≡⟔⊙¤,, [1 2 3 4 5] [1_5_3 6_2_4]
-    /// You can use the returned indices with [pick] to get the rows that were found.
-    /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
-    /// ex: # Experimental!
-    ///   : A ← [2 3 5 7 11 13]
-    ///   : .≡⟔⊙¤,A [1_2_3 4_5_6]
-    ///   : ⬚∞⊡:A
-    (2, Coordinate, DyadicArray, ("coordinate", '⟔')),
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].
@@ -2418,59 +2394,6 @@ primitive!(
     /// ex! ⌝⊂ 1 [2 3 4]
     /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
     ([1], Anti, InversionModifier, ("anti", '⌝')),
-    /// Set the [un]-compatible inverse of a function
-    ///
-    /// The first function is the uninverted function, and the second function is the inverse.
-    /// ex: F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
-    ///   : ◌F   @A
-    ///   : ◌°F  @B
-    ///   : ◌⍜F∘ @C
-    ///
-    /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
-    /// This can lead to errors if you are unaware of it.
-    /// ex! F ← setinv+-
-    ///   : ⍜F∘ 3 5
-    ///
-    /// For [under]-compatible inverse defining, see [setund].
-    ([2], SetInverse, InversionModifier, "setinv"),
-    /// Set the [under]-compatible inverse of a function
-    ///
-    /// The first function will be called if the function is *outside* an [under].
-    /// The second function will be called in the "do" part of an [under].
-    /// The third function will be called in the "undo" part of an [under].
-    ///
-    /// Any outputs of the second function that excede the number of outputs of the first function will be popped and saved as *context* after the "do" part of the [under]. On the "undo" part, the context will be pushed onto the stack before calling the third function.
-    ///
-    /// For example, here is a manual re-implementation of [add]'s [under] behavior. Note that the second function has 2 outputs. The extra output is saved as context.
-    /// ex: F ← setund(+|⟜+|-)
-    ///   : ⍜+(×10) 1 2
-    ///   : ⍜F(×10) 1 2
-    ///
-    /// This example demonstrates the flow of input, output, and context.
-    /// ex: F ← setund(
-    ///   :   &p$"Normal _".
-    ///   : | &p$"Do:   set ctx = _, value = _" ,, +1.
-    ///   : | &p$"Undo: get ctx = _, value = _" ⊙.
-    ///   : )
-    ///   : ◌F 5
-    ///   : ◌⍜F(×10) 5
-    ///
-    /// [setund] is often good for making a function [under]-compatible by nullifying the inverse for some part of the function.
-    /// For example, we can write a simple function that removes all instances of a character from a string.
-    /// ex: F ← ▽⊸≠
-    ///   : F @a "abra"
-    /// This works, but it does not work with [under].
-    /// ex! F ← ▽⊸≠
-    ///   : ⍜F⌵ @a "abra"
-    /// This is because the `⊸``≠` part is not [under]-compatible.
-    /// By wrapping that part in [setund], we can make the [under] work.
-    /// Here, we use a function pack with only two branches. [setund] reuses the first branch for both the "normal" and "do" branches. The second branch is empty.
-    /// ex: F ← ▽setund(⊸≠|)
-    ///   : F @a "abra"
-    ///   : ⍜F⌵ @a "abra"
-    ///
-    /// Inverses set with [setund] cannot be used with [un]. For simpler inverse defining, see [setinv].
-    ([3], SetUnder, InversionModifier, "setund"),
     /// Operate on a transformed array, then reverse the transformation
     ///
     /// This is a more powerful version of [un].
@@ -2585,9 +2508,9 @@ primitive!(
     /// [fill][pop] can be used to temporarily remove the fill value.
     /// ex: ⬚0  ↻ 2 [1 2 3 4 5]
     ///   : ⬚0⬚◌↻ 2 [1 2 3 4 5]
-    /// This *does* affect [un][pop].
+    /// This does not affect [un][pop].
     /// ex: ⬚0  °◌
-    /// ex! ⬚0⬚◌°◌
+    /// ex: ⬚0⬚◌°◌
     ///
     /// [fill] and [un][pop] can be used to make a sort of ad-hoc variable system.
     /// ex: a ← (°□⊡0°◌)
@@ -3173,65 +3096,6 @@ primitive!(
     /// At the moment, this is only useful for debugging.
     /// While theoretically, it could be used in a macro to choose a branch of a [switch] appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
     (0(2)[1], Sig, Comptime, "signature"),
-    /// Generate a constructor and getters for a struct
-    ///
-    /// The argument must be stack array syntax using either `[]` or `{}`.
-    /// The array must contain only names.
-    /// A `New` function will be generated, as well as a getter for each name.
-    /// The `New` function creates an array of as many items as there are names.
-    /// Because the functions are created in the current scope, [struct] is meant to be used in a module.
-    /// ex: # Experimental!
-    ///   : ---Person
-    ///   :   struct{Name Age}
-    ///   : ---
-    ///   : Person~New "Dan" 31
-    ///   : Person~Name .
-    /// You can use [under] to turn the getters into setters.
-    /// You can simulate "methods" by adding functions to the module.
-    /// ex: # Experimental!
-    ///   : ---Person
-    ///   :   struct{Name Age}
-    ///   :   PassYear ← ⍜Age(+1)
-    ///   : ---
-    ///   : Person~New "Dan" 31
-    ///   : Person~PassYear
-    ///   : ⍜Person~Name⋅"Daniel"
-    /// The created struct objects are just normal arrays that can be used like any other array.
-    /// ex: # Experimental!
-    ///   : ---Color
-    ///   :   struct[r g b a]
-    ///   : ---
-    ///   : ⇌ Color~New 0.1 0.2 0.3 1
-    /// Additionally, a `Fields` constant is created that contains the names of the struct's fields.
-    /// ex: # Experimental!
-    ///   : ---User
-    ///   :   struct{Username Salt Hashed Email}
-    ///   : ---
-    ///   : User~Fields
-    /// If a field name is followed by a function in `()`s, the field will be initialized with that value rather than by the `New` function.
-    /// ex: # Experimental!
-    ///   : ---Foo
-    ///   :   struct{Name Count(0)}
-    ///   : ---
-    ///   : Foo "Uiua"
-    /// If a field name is followed by a number, the constructor will validate that field's [type] against it.
-    /// ex! # Experimental!
-    ///   : ---Foo
-    ///   :   struct{Name 2 Count(0)}
-    ///   : ---
-    ///   : Foo "Uiua"
-    ///   : Foo 5
-    /// An `Args!` macro is generated that allows fields to be used as pseudo-arguments.
-    /// By using this macro in the a `Call` function, you can simulate local variables.
-    /// ex: # Experimental!
-    ///   : ---Foo
-    ///   :   struct[a b c]
-    ///   :   Call ← Args![a c c b b a]
-    ///   : ---
-    ///   : Foo 1 2 3
-    ///
-    /// The syntax using `[]` and `{}` was developed by Uiua community member *janMakoso*.
-    (0(0)[1], Struct, Misc, "struct"),
     /// Run the Fast Fourier Transform on an array
     ///
     /// The Fast Fourier Transform (FFT) is an optimized algorithm for computing the Discrete Fourier Transform (DFT). The DFT is a transformation that converts a signal from the time domain to the frequency domain.
@@ -3299,7 +3163,7 @@ primitive!(
     /// If pathing on a grid like the examples above, we can use [un][where] to visualize the path that was taken!
     /// ex: # Experimental!
     ///   : Neis ← [∩¯,,⇌.⇡2]
-    ///   : °□⊢ astar(+Neis¤|⌵/ℂ-|≍) 3_4 13_20
+    ///   : °□⊢ astar(+Neis¤|⌵/ℂ-|≍) 3_4 10_14
     ///   : °⊚
     ///   : ▽⟜≡▽8 # Upscale
     ///
@@ -3503,7 +3367,7 @@ macro_rules! impl_primitive {
             )*
             TransposeN(i32),
             UndoTransposeN(usize, i32),
-            UndoReverse(usize),
+            UndoReverse { n: usize, all: bool },
             UndoRotate(usize),
             ReduceDepth(usize),
             TraceN { n: usize, inverse: bool, stack_sub: bool},
@@ -3515,7 +3379,7 @@ macro_rules! impl_primitive {
                     $(ImplPrimitive::$variant => $args,)*
                     ImplPrimitive::TransposeN(_) => 1,
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
-                    ImplPrimitive::UndoReverse(n) => *n,
+                    ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n + 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
                     ImplPrimitive::TraceN { n, .. } => *n,
@@ -3525,7 +3389,7 @@ macro_rules! impl_primitive {
                 match self {
                     $($(ImplPrimitive::$variant => $outputs,)?)*
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
-                    ImplPrimitive::UndoReverse(n) => *n,
+                    ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n,
                     ImplPrimitive::TraceN { n, .. } => *n,
                     _ => 1
@@ -3570,9 +3434,9 @@ impl_primitive!(
     (0[2], UnFill),
     (1, Primes),
     (1, UnBox),
-    (2, UnOnDrop),
-    (2, UnOnSelect),
-    (2, UnOnPick),
+    (2, AntiDrop),
+    (2, AntiSelect),
+    (2, AntiPick),
     (1(2), UnJoin),
     (1(2), UnJoinEnd),
     (2(2), UnJoinShape),
@@ -3586,6 +3450,8 @@ impl_primitive!(
     (1, UnDatetime),
     (2, ProgressiveIndexOf),
     (2(0), MatchPattern),
+    (2(1), MatchLe),
+    (2(1), MatchGe),
     (1(2), ImageDecode),
     (1(2), GifDecode),
     (1(3), AudioDecode),
@@ -3594,7 +3460,7 @@ impl_primitive!(
     // Unders
     (1, UndoFix),
     (2, UndoUnbits),
-    (2, UndoBase),
+    (2, AntiBase),
     (2, UndoDeshape),
     (3, UndoSelect),
     (3, UndoPick),
@@ -3608,7 +3474,7 @@ impl_primitive!(
     (2, UndoWindows),
     (2, UndoChunks),
     (2, UndoWhere),
-    (2, UndoOrient),
+    (2, AntiOrient),
     (3(2), UndoJoin),
     (1[1], UndoPartition1),
     (3, UndoPartition2),
@@ -3617,6 +3483,7 @@ impl_primitive!(
     (4, UndoInsert),
     (3, UndoRemove),
     (1(0), TryClose),
+    (2[1], UnBoth),
     // Optimizations
     (1, FirstMinIndex),
     (1, FirstMaxIndex),
@@ -3636,8 +3503,8 @@ impl_primitive!(
     (2[1], Adjacent),
     (2[1], RowsWindows),
     (1, CountUnique),
-    (1, EndRandArray, Impure),
     (1(2)[3], AstarFirst),
+    (2, Root),
     // Implementation details
     (1[2], RepeatWithInverse),
     (2(1), ValidateType),

@@ -1454,6 +1454,13 @@ pub fn Editor<'a>(
         set_show_experimental(!get_show_experimental());
     };
     let toggle_run_on_format = move |_| set_run_on_format(!get_run_on_format());
+    let toggle_inlay_values = move |_| {
+        set_timeout(
+            move || get_state.get().refresh_code(),
+            Duration::from_millis(0),
+        );
+        set_inlay_values(!get_inlay_values());
+    };
     let on_select_font = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let name = input.value();
@@ -1539,6 +1546,13 @@ pub fn Editor<'a>(
                                 type="checkbox"
                                 checked=get_run_on_format
                                 on:change=toggle_run_on_format/>
+                        </div>
+                        <div title="Show line values to the right of the code">
+                            "Show values:"
+                            <input
+                                type="checkbox"
+                                checked=get_inlay_values
+                                on:change=toggle_inlay_values/>
                         </div>
                         <div>
                             "Stack:"
@@ -1826,7 +1840,7 @@ fn prim_sig_class(prim: Primitive, subscript: Option<usize>) -> &'static str {
                 }
             } else {
                 prim.subscript_sig(subscript)
-                    .or(prim.signature())
+                    .or(prim.sig())
                     .map(sig_class)
                     .unwrap_or(code_font!(""))
             }

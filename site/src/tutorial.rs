@@ -373,7 +373,7 @@ fn primitive_rows(prims: impl IntoIterator<Item = Primitive>) -> Vec<impl IntoVi
 fn TutorialMath() -> impl IntoView {
     use Primitive::*;
     let math_table = primitive_rows([
-        Add, Sub, Mul, Div, Mod, Pow, Log, Neg, Abs, Ceil, Floor, Round, Sqrt, Sign,
+        Add, Sub, Mul, Div, Modulus, Pow, Log, Neg, Abs, Ceil, Floor, Round, Sqrt, Sign,
     ]);
     let comp_table = primitive_rows([
         Eq, Ne, Lt, Gt, Le, Ge, Min, Max, Floor, Ceil, Round, Sin, Atan,

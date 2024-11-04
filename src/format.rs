@@ -19,8 +19,8 @@ use crate::{
     is_ident_start,
     lex::{CodeSpan, Loc, Sp},
     parse::{flip_unsplit_lines, parse, split_words, trim_spaces},
-    Compiler, FunctionId, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys,
-    Signature, Uiua, UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_NUMS,
+    Compiler, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys, Signature, Uiua,
+    UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_NUMS,
 };
 
 trait ConfigValue: Sized {
@@ -136,7 +136,7 @@ The following configuration options are available:
                 fn from_file(file_path: PathBuf) -> UiuaResult<Self> {
                     let asm = Compiler::new().print_diagnostics(false).load_file(file_path)?.finish();
                     let mut env = Uiua::with_backend(SafeSys::default());
-                    env.run_asm(&asm)?;
+                    env.run_asm(asm)?;
                     let mut bindings = env.bound_values();
                     $(
                         let $name = {
@@ -688,8 +688,7 @@ impl<'a> Formatter<'a> {
                 } else {
                     lines.push(Vec::new());
                     self.format_words(
-                        &[span.clone().sp(Word::Func(Func {
-                            id: FunctionId::Anonymous(span),
+                        &[span.sp(Word::Func(Func {
                             signature: None,
                             lines,
                             closed: true,
@@ -747,8 +746,7 @@ impl<'a> Formatter<'a> {
                                     .unwrap_or_else(|| span.clone());
                                 lines.push(Vec::new());
                                 self.format_words(
-                                    &[span.clone().sp(Word::Func(Func {
-                                        id: FunctionId::Anonymous(span),
+                                    &[span.sp(Word::Func(Func {
                                         signature: None,
                                         lines,
                                         closed: true,
@@ -1056,19 +1054,6 @@ impl<'a> Formatter<'a> {
                 }
             }
             Word::Func(func) => {
-                // Handle nested pack conversion to angle brackets
-                let mut code_words =
-                    (func.lines.iter().flatten()).filter(|word| word.value.is_code());
-                if code_words.clone().count() == 1 {
-                    let word = code_words.next().unwrap();
-                    if let Word::Pack(_) = &word.value {
-                        if word.span.as_str(self.inputs, |s| s.starts_with('(')) {
-                            self.format_word(word, depth);
-                            return;
-                        }
-                    }
-                }
-
                 let start_indent =
                     (self.output.split('\n').last()).map_or(0, |line| line.chars().count());
                 let indent = self.config.multiline_indent * depth;
@@ -1098,9 +1083,6 @@ impl<'a> Formatter<'a> {
                 self.output.push(')');
             }
             Word::Pack(pack) => {
-                if pack.angled {
-                    self.output.push_str(&Primitive::Switch.to_string());
-                }
                 let start_indent =
                     (self.output.lines().last()).map_or(0, |line| line.chars().count());
                 let indent = self.config.multiline_indent * depth;
@@ -1172,7 +1154,7 @@ impl<'a> Formatter<'a> {
                 self.format_modifier(&m.modifier);
                 self.format_words(&m.operands, true, depth);
             }
-            Word::Placeholder(op) => self.push(&word.span, &op.to_string()),
+            Word::Placeholder(i) => self.push(&word.span, &format!("^{i}")),
             Word::Subscript(sub) => match &sub.word.value {
                 Word::Modified(m) => {
                     self.format_modifier(&m.modifier);

@@ -6,7 +6,7 @@ use ecow::EcoString;
 
 use crate::{
     ast::*,
-    function::{FunctionId, Signature},
+    function::Signature,
     lex::{AsciiToken::*, Token::*, *},
     Diagnostic, DiagnosticKind, Ident, Inputs, Primitive,
 };
@@ -977,8 +977,8 @@ impl<'i> Parser<'i> {
             }
             if let Some(arg) = self.try_func().or_else(|| self.try_strand()) {
                 // Parse pack syntax
-                if let Word::Pack(pack) = &arg.value {
-                    if i == 0 && !pack.angled {
+                if let Word::Pack(_) = &arg.value {
+                    if i == 0 {
                         args.push(arg);
                         break;
                     }
@@ -1238,9 +1238,7 @@ impl<'i> Parser<'i> {
                 } else {
                     start
                 };
-                let id = FunctionId::Anonymous(span.clone());
                 branches.push(span.sp(Func {
-                    id,
                     signature,
                     lines,
                     closed: true,
@@ -1253,9 +1251,7 @@ impl<'i> Parser<'i> {
             let (first_sig, first_lines, first_func_span) = first;
             let outer_span = start.clone().merge(end.span);
             if branches.is_empty() {
-                let id = FunctionId::Anonymous(outer_span.clone());
                 outer_span.sp(Word::Func(Func {
-                    id,
                     signature: first_sig,
                     lines: first_lines,
                     closed: end.value,
@@ -1275,9 +1271,7 @@ impl<'i> Parser<'i> {
                 } else {
                     first_func_span.unwrap_or(start)
                 };
-                let first_id = FunctionId::Anonymous(first_span.clone());
                 let first = first_span.sp(Func {
-                    id: first_id,
                     signature: first_sig,
                     lines: first_lines,
                     closed: true,
@@ -1286,51 +1280,8 @@ impl<'i> Parser<'i> {
                 outer_span.sp(Word::Pack(FunctionPack {
                     branches,
                     closed: end.value,
-                    angled: false,
                 }))
             }
-        } else if let Some(start) = self.try_exact(OpenAngle) {
-            let first = self.func_contents();
-            let mut branches = Vec::new();
-            while let Some(start) = self.try_exact(Bar.into()) {
-                let (signature, lines, span) = self.func_contents();
-                let span = if let Some(span) = span {
-                    start.merge(span)
-                } else {
-                    start
-                };
-                let id = FunctionId::Anonymous(span.clone());
-                branches.push(span.sp(Func {
-                    id,
-                    signature,
-                    lines,
-                    closed: true,
-                }))
-            }
-            let end = self.expect_close(CloseAngle);
-            if let Some(last) = branches.last_mut() {
-                last.span.merge_with(end.span.clone());
-            }
-            let (first_sig, first_lines, first_span) = first;
-            let outer_span = start.clone().merge(end.span);
-            let first_span = if let Some(span) = first_span {
-                start.merge(span)
-            } else {
-                start
-            };
-            let first_id = FunctionId::Anonymous(first_span.clone());
-            let first = first_span.sp(Func {
-                id: first_id,
-                signature: first_sig,
-                lines: first_lines,
-                closed: true,
-            });
-            branches.insert(0, first);
-            outer_span.sp(Word::Pack(FunctionPack {
-                branches,
-                closed: end.value,
-                angled: true,
-            }))
         } else {
             return None;
         })

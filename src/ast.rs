@@ -1,12 +1,12 @@
 //! Uiua's abstract syntax tree
 
 use core::mem::discriminant;
-use std::{borrow::Cow, collections::HashMap, fmt};
+use std::{collections::HashMap, fmt};
 
 use ecow::EcoString;
 
 use crate::{
-    function::{FunctionId, Signature},
+    function::Signature,
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
     Ident, Primitive, SemanticComment, SUBSCRIPT_NUMS,
@@ -273,7 +273,7 @@ pub enum Word {
     Pack(FunctionPack),
     Primitive(Primitive),
     Modified(Box<Modified>),
-    Placeholder(PlaceholderOp),
+    Placeholder(usize),
     Comment(String),
     Spaces,
     BreakLine,
@@ -408,46 +408,6 @@ impl fmt::Debug for Word {
     }
 }
 
-/// A placeholder operation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PlaceholderOp {
-    /// Pop and inline the top operand
-    Call,
-    /// Duplicate the top operand
-    Dup,
-    /// Swap the top two operands
-    Flip,
-    /// Copy the 2nd-to-top operand to the top
-    Over,
-    /// Inline the nth operand
-    Nth(u8),
-}
-
-impl PlaceholderOp {
-    /// Get the name of this placeholder operation
-    pub fn name(&self) -> Cow<'static, str> {
-        match self {
-            PlaceholderOp::Call => Cow::Borrowed("call"),
-            PlaceholderOp::Dup => Cow::Borrowed("dup"),
-            PlaceholderOp::Flip => Cow::Borrowed("flip"),
-            PlaceholderOp::Over => Cow::Borrowed("over"),
-            PlaceholderOp::Nth(n) => Cow::Owned(format!("nth({n})")),
-        }
-    }
-}
-
-impl fmt::Display for PlaceholderOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PlaceholderOp::Call => write!(f, "^!"),
-            PlaceholderOp::Dup => write!(f, "^."),
-            PlaceholderOp::Flip => write!(f, "^:"),
-            PlaceholderOp::Over => write!(f, "^,"),
-            PlaceholderOp::Nth(n) => write!(f, "^{n}"),
-        }
-    }
-}
-
 /// A refered-to item
 #[derive(Clone)]
 pub struct Ref {
@@ -539,8 +499,6 @@ impl fmt::Debug for Arr {
 /// An inline function
 #[derive(Clone)]
 pub struct Func {
-    /// The function's id
-    pub id: FunctionId,
     /// The function's signature
     pub signature: Option<Sp<Signature>>,
     /// The function's code
@@ -572,8 +530,6 @@ pub struct FunctionPack {
     pub branches: Vec<Sp<Func>>,
     /// Whether a closing parenthesis was found
     pub closed: bool,
-    /// Whether the switch uses angle brackets
-    pub angled: bool,
 }
 
 /// A modifier with operands

@@ -328,24 +328,12 @@ impl Value {
     pub fn take(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = self.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
         from.match_fill(env);
-        Ok(match from {
-            Value::Num(a) => Value::Num(a.take(&index, env)?),
-            Value::Byte(a) => Value::Byte(a.take(&index, env)?),
-            Value::Complex(a) => Value::Complex(a.take(&index, env)?),
-            Value::Char(a) => Value::Char(a.take(&index, env)?),
-            Value::Box(a) => Value::Box(a.take(&index, env)?),
-        })
+        val_as_arr!(from, |a| a.take(&index, env).map(Into::into))
     }
     /// Use this value to `drop` from another
     pub fn drop(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = self.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
-        Ok(match from {
-            Value::Num(a) => Value::Num(a.drop(&index, env)?),
-            Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
-            Value::Complex(a) => Value::Complex(a.drop(&index, env)?),
-            Value::Char(a) => Value::Char(a.drop(&index, env)?),
-            Value::Box(a) => Value::Box(a.drop(&index, env)?),
-        })
+        val_as_arr!(from, |a| a.drop(&index, env).map(Into::into))
     }
     pub(crate) fn undo_take(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = match index.as_ints(env, "") {

@@ -1069,6 +1069,10 @@ impl<T: ArrayValue> Array<T> {
         );
         new_shape.extend(size_spec.iter().map(|&s| s.max(0) as usize));
         new_shape.extend_from_slice(&self.shape[size_spec.len()..]);
+        // Early return if empty
+        if self.shape.contains(&0) {
+            return Ok(Self::new(new_shape, CowSlice::new()));
+        }
         // Check if the window size is too large
         for (size, sh) in size_spec.iter().zip(&self.shape) {
             if *size <= 0 || *size > *sh as isize {

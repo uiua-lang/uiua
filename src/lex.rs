@@ -15,7 +15,7 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ast::PlaceholderOp, Ident, Inputs, Primitive, WILDCARD_CHAR};
+use crate::{Ident, Inputs, Primitive, WILDCARD_CHAR};
 
 /// Subscript digit characters
 pub const SUBSCRIPT_NUMS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
@@ -562,6 +562,7 @@ pub enum Token {
     MultilineFormatStr(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
+    Placeholder(usize),
     Subscript(Option<usize>),
     LeftArrow,
     LeftStrokeArrow,
@@ -623,9 +624,9 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_placeholder(&self) -> Option<PlaceholderOp> {
+    pub(crate) fn as_placeholder(&self) -> Option<usize> {
         match self {
-            Token::Simple(AsciiToken::Placeholder(op)) => Some(*op),
+            Token::Placeholder(i) => Some(*i),
             _ => None,
         }
     }
@@ -697,6 +698,7 @@ impl fmt::Display for Token {
             }
             Token::OpenModule => write!(f, "┌─╴"),
             Token::CloseModule => write!(f, "└─╴"),
+            Token::Placeholder(i) => write!(f, "^{i}"),
         }
     }
 }
@@ -727,7 +729,6 @@ pub enum AsciiToken {
     Backtick,
     Tilde,
     Quote,
-    Placeholder(PlaceholderOp),
 }
 
 impl fmt::Display for AsciiToken {
@@ -755,7 +756,6 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Backtick => write!(f, "`"),
             AsciiToken::Tilde => write!(f, "~"),
             AsciiToken::Quote => write!(f, "'"),
-            AsciiToken::Placeholder(op) => write!(f, "{op}"),
         }
     }
 }
@@ -974,21 +974,9 @@ impl<'a> Lexer<'a> {
                 }
                 "*" => self.end(Star, start),
                 "%" => self.end(Percent, start),
-                "^" if self.next_char_exact("!") => {
-                    self.end(Placeholder(PlaceholderOp::Call), start)
-                }
-                "^" if self.next_char_exact(".") => {
-                    self.end(Placeholder(PlaceholderOp::Dup), start)
-                }
-                "^" if self.next_char_exact(":") => {
-                    self.end(Placeholder(PlaceholderOp::Flip), start)
-                }
-                "^" if self.next_char_exact(",") => {
-                    self.end(Placeholder(PlaceholderOp::Over), start)
-                }
                 "^" => {
                     if let Some(x) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_digit())) {
-                        self.end(Placeholder(PlaceholderOp::Nth(x.parse().unwrap())), start)
+                        self.end(Placeholder(x.parse().unwrap()), start)
                     } else {
                         self.end(Caret, start)
                     }
@@ -1607,7 +1595,7 @@ fn canonicalize_exclams(ident: &str) -> Ident {
 
 /// Rewrite an identifier with the given amount of double and single exclamation points
 fn place_exclams(ident: &str, count: usize) -> Ident {
-    let mut new: Ident = ident.trim_end_matches(&['!', '‼']).into();
+    let mut new: Ident = ident.trim_end_matches(['!', '‼']).into();
     let num_double = count / 2;
     let trailing_single = count % 2 == 1;
     for _ in 0..num_double {

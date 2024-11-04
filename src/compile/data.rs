@@ -1,3 +1,5 @@
+use crate::ArrayLen;
+
 use super::*;
 
 impl Compiler {
@@ -33,9 +35,10 @@ impl Compiler {
         if top_level {
             if let Some(name) = data.name.clone() {
                 let comment = prelude.comment.clone();
-                let module = self.in_scope(ScopeKind::Module(name.value.clone()), |comp| {
-                    comp.data_def(data, false, prelude)
-                })?;
+                let (module, ()) = self
+                    .in_scope(ScopeKind::Module(name.value.clone()), |comp| {
+                        comp.data_def(data, false, prelude)
+                    })?;
 
                 // Add global
                 let global_index = self.next_global;
@@ -64,10 +67,8 @@ impl Compiler {
             span: usize,
             global_index: usize,
             comment: Option<String>,
-            /// (instrs, validation_only)
-            validator: Option<(EcoVec<Instr>, bool, CodeSpan)>,
-            init: Option<(EcoVec<Instr>, Signature)>,
-            flags: FunctionFlags,
+            validator: Option<(Node, bool, CodeSpan)>,
+            init: Option<SigNode>,
         }
         let mut fields = Vec::new();
         let module_name = if let ScopeKind::Module(name) = &self.scope.kind {
@@ -94,59 +95,35 @@ impl Compiler {
                         })
                         .collect::<String>()
                 });
-                // Collect flags
-                let mut flags = FunctionFlags::default();
-                if let Some(default) = &mut data_field.init {
-                    if let Some(word) = default.words.pop() {
-                        match word.value {
-                            Word::Comment(com) => {
-                                if comment.is_none() {
-                                    comment = Some(com)
-                                }
-                            }
-                            Word::SemanticComment(SemanticComment::NoInline) => {
-                                flags |= FunctionFlags::NO_INLINE;
-                            }
-                            Word::SemanticComment(SemanticComment::TrackCaller) => {
-                                flags |= FunctionFlags::TRACK_CALLER;
-                            }
-                            Word::SemanticComment(sem) => self.semantic_comment(sem, word.span),
-                            _ => default.words.push(word),
-                        }
-                    }
-                }
                 // Compile validator
                 let validator = if let Some(validator) = data_field.validator {
-                    let mut new_func = self.compile_words(validator.words, true)?;
-                    let sig = self.sig_of(&new_func.instrs, &data_field.name.span)?;
-                    if sig.args != 1 {
+                    let mut sn = self.words_sig(validator.words)?;
+                    if sn.sig.args != 1 {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
                                 "Field validator must have 1 \
-                                argument, but its signature is {sig}"
+                                argument, but its signature is {}",
+                                sn.sig
                             ),
                         );
                     }
-                    if sig.outputs > 1 {
+                    if sn.sig.outputs > 1 {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
                                 "Field validator must have 0 or 1 \
-                                output, but its signature is {sig}"
+                                output, but its signature is {}",
+                                sn.sig
                             ),
                         );
                     }
                     let mut validation_only = false;
-                    if sig.outputs == 0 {
+                    if sn.sig.outputs == 0 {
                         validation_only = true;
-                        new_func.instrs.insert(0, Instr::Prim(Primitive::Dup, span));
+                        sn.node.prepend(Node::Prim(Primitive::Dup, span));
                     }
-                    Some((
-                        new_func.instrs,
-                        validation_only,
-                        validator.open_span.clone(),
-                    ))
+                    Some((sn.node, validation_only, validator.open_span.clone()))
                 } else {
                     None
                 };
@@ -156,46 +133,52 @@ impl Compiler {
                 {
                     data_field.init = None;
                 }
-                let init = if let Some(init) = data_field.init {
-                    let mut new_func = self.compile_words(init.words, true)?;
-                    let sig = self.sig_of(&new_func.instrs, &data_field.name.span)?;
-                    if let Some((va_instrs, ..)) = &validator {
-                        new_func.instrs.extend(va_instrs.iter().cloned());
+                let init = if let Some(mut init) = data_field.init {
+                    // Process comment
+                    let mut sem = None;
+                    if let Some(word) = init.words.pop() {
+                        match word.value {
+                            Word::Comment(com) => {
+                                if comment.is_none() {
+                                    comment = Some(com)
+                                }
+                            }
+                            Word::SemanticComment(com) => sem = Some(word.span.sp(com)),
+                            _ => init.words.push(word),
+                        }
                     }
-                    if sig.outputs != 1 {
+                    // Compile words
+                    let mut sn = self.words_sig(init.words)?;
+                    if let Some((va_node, ..)) = &validator {
+                        sn.node.push(va_node.clone());
+                    }
+                    if sn.sig.outputs != 1 {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
                                 "Field initializer must have \
-                                1 output, but its signature is {sig}"
+                                1 output, but its signature is {}",
+                                sn.sig
                             ),
                         );
                     }
-                    Some((new_func.instrs, sig))
+                    if let Some(sem) = sem {
+                        sn = SigNode::new(
+                            self.semantic_comment(sem.value, sem.span, sn.node),
+                            sn.sig,
+                        );
+                    }
+                    Some(sn)
                 } else {
                     validator
                         .as_ref()
-                        .map(|(va_instrs, ..)| (va_instrs.clone(), Signature::new(1, 1)))
+                        .map(|(va_node, ..)| SigNode::new(va_node.clone(), Signature::new(1, 1)))
                 };
-                if let Some(mut comments) = data_field.comments {
-                    for (sem, flag) in [
-                        (SemanticComment::NoInline, FunctionFlags::NO_INLINE),
-                        (SemanticComment::TrackCaller, FunctionFlags::TRACK_CALLER),
-                    ] {
-                        if comments.semantic.remove(&sem).is_some() {
-                            flags |= flag;
-                        }
-                    }
-                    for (sem, span) in comments.semantic {
-                        self.semantic_comment(sem, span);
-                    }
-                }
                 fields.push(Field {
                     name: data_field.name.value,
                     name_span: data_field.name.span,
                     global_index: 0,
                     comment,
-                    flags,
                     span,
                     validator,
                     init,
@@ -215,76 +198,53 @@ impl Compiler {
             let name = &field.name;
             let id = FunctionId::Named(name.clone());
             let span = field.span;
-            let mut instrs = EcoVec::new();
+            let mut node = Node::empty();
             if data.variant {
-                instrs.push(Instr::push(variant_index));
+                node.push(Node::new_push(variant_index));
                 if let Some(name) = &data.name {
-                    instrs.push(Instr::Label {
-                        label: name.value.clone(),
-                        span,
-                        remove: false,
-                    });
+                    node.push(Node::Label(name.value.clone(), span));
                 }
-                instrs.push(Instr::ImplPrim(ImplPrimitive::ValidateVariant, span));
+                node.push(Node::ImplPrim(ImplPrimitive::ValidateVariant, span));
             }
-            instrs.extend([Instr::push(i), Instr::Prim(Primitive::Pick, span)]);
+            node.push(Node::new_push(i));
+            node.push(Node::Prim(Primitive::Pick, span));
             if boxed {
-                instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, span));
-                instrs.push(Instr::Label {
-                    label: name.clone(),
-                    span,
-                    remove: true,
-                });
+                node.push(Node::ImplPrim(ImplPrimitive::UnBox, span));
+                node.push(Node::RemoveLabel(Some(field.name.clone()), span));
             }
             // Add validator
-            if let Some((va_instrs, validation_only, va_span)) = field.validator.take() {
-                let inverse = invert_instrs(&va_instrs, self);
-                let id = FunctionId::Anonymous(va_span);
-                let sig = Signature::new(1, 1);
-                let make_new_func = |instrs: EcoVec<Instr>| NewFunction {
-                    instrs,
-                    flags: FunctionFlags::TRACK_CALLER,
-                };
+            if let Some((va_instrs, validation_only, _va_span)) = field.validator.take() {
+                let inverse = va_instrs.un_inverse(&self.asm);
+                let make_node = |node: Node| SigNode::new(node, Signature::new(1, 1));
                 match inverse {
-                    Ok(va_inverse) => {
-                        let va_func =
-                            self.make_function(id.clone(), sig, make_new_func(va_inverse));
-                        let va_inv = self.make_function(id, sig, make_new_func(va_instrs));
-                        instrs.extend([
-                            Instr::PushFunc(va_func),
-                            Instr::CustomInverse(
-                                CustomInverse {
-                                    un: Some(va_inv),
-                                    ..Default::default()
-                                },
-                                field.span,
-                            ),
-                        ])
-                    }
-                    Err(_) if validation_only => {
-                        let func = self.make_function(id, sig, make_new_func(va_instrs));
-                        instrs.extend([
-                            Instr::PushFunc(Function::default()),
-                            Instr::CustomInverse(
-                                CustomInverse {
-                                    un: Some(func),
-                                    ..Default::default()
-                                },
-                                field.span,
-                            ),
-                        ])
-                    }
+                    Ok(va_inverse) => node.push(Node::CustomInverse(
+                        CustomInverse {
+                            normal: Ok(make_node(va_inverse.clone())),
+                            un: Some(make_node(va_instrs.clone())),
+                            under: Some((make_node(va_inverse), make_node(va_instrs))),
+                            ..Default::default()
+                        }
+                        .into(),
+                        field.span,
+                    )),
+                    Err(_) if validation_only => node.push(Node::CustomInverse(
+                        CustomInverse {
+                            un: Some(make_node(va_instrs.clone())),
+                            under: Some((Default::default(), make_node(va_instrs))),
+                            ..Default::default()
+                        }
+                        .into(),
+                        field.span,
+                    )),
                     Err(e) => self.add_error(
                         field.name_span.clone(),
                         format!("Transforming validator has no inverse: {e}"),
                     ),
                 }
             }
-            let new_func = NewFunction {
-                instrs,
-                flags: FunctionFlags::TRACK_CALLER,
-            };
-            let func = self.make_function(id.clone(), Signature::new(1, 1), new_func);
+            let func = self
+                .asm
+                .add_function(id.clone(), Signature::new(1, 1), node);
             let local = LocalName {
                 index: self.next_global,
                 public: true,
@@ -323,101 +283,70 @@ impl Compiler {
         );
 
         // Make constructor
-        let mut instrs = EcoVec::new();
-        let mut flags = FunctionFlags::default();
-        if has_fields {
-            instrs.push(Instr::BeginArray);
-        }
         let constructor_args: usize = fields
             .iter()
-            .map(|f| f.init.as_ref().map(|(_, sig)| sig.args).unwrap_or(1))
+            .map(|f| f.init.as_ref().map(|sn| sn.sig.args).unwrap_or(1))
             .sum();
-        let has_inits = fields.iter().any(|f| f.init.is_some());
-        if boxed || has_inits {
-            if has_inits {
-                for field in &fields {
-                    if let Some((_, sig)) = field.init {
-                        if sig.args > 0 {
-                            instrs.push(Instr::PushTemp {
-                                stack: TempStack::Inline,
-                                count: sig.args,
-                                span,
-                            })
-                        }
-                    } else {
-                        instrs.push(Instr::PushTemp {
-                            stack: TempStack::Inline,
-                            count: 1,
-                            span,
-                        });
-                    }
-                }
-            } else if fields.len() > 1 {
-                for _ in 0..fields.len() - 1 {
-                    instrs.push(Instr::PushTemp {
-                        stack: TempStack::Inline,
-                        count: 1,
-                        span,
-                    });
-                }
-            }
-            for (i, field) in fields.iter().rev().enumerate() {
-                flags |= field.flags;
-                if let Some((init, sig)) = &field.init {
-                    if sig.args > 0 {
-                        instrs.push(Instr::pop_inline(sig.args, span));
-                    }
-                    instrs.extend_from_slice(init);
+        let mut node = if has_fields {
+            let mut inner = Node::default();
+            for field in fields.iter().rev() {
+                let mut arg = if let Some(sn) = &field.init {
+                    let mut arg = sn.clone();
                     if !boxed {
-                        instrs.push(Instr::ImplPrim(
+                        arg.node.push(Node::ImplPrim(
                             ImplPrimitive::ValidateNonBoxedVariant,
                             field.span,
                         ));
                     }
-                } else if i > 0 || has_inits {
-                    instrs.push(Instr::pop_inline(1, span));
+                    arg
+                } else {
                     self.code_meta
                         .global_references
                         .insert(field.name_span.clone(), field.global_index);
-                }
+                    SigNode::new(Node::empty(), Signature::new(1, 1))
+                };
                 if boxed {
-                    instrs.push(Instr::Label {
-                        label: field.name.clone(),
-                        span,
-                        remove: false,
-                    });
+                    arg.node.push(Node::Label(field.name.clone(), span));
                 }
+                if !inner.is_empty() {
+                    for _ in 0..arg.sig.args {
+                        inner = Node::Mod(
+                            Primitive::Dip,
+                            eco_vec![inner
+                                .sig_node()
+                                .expect("Field initializer should have a signature")],
+                            span,
+                        );
+                    }
+                }
+                inner.push(arg.node);
             }
-        } else if !fields.is_empty() {
-            instrs.push(Instr::TouchStack {
-                count: fields.len(),
+            Node::Array {
+                len: ArrayLen::Static(fields.len()),
+                inner: inner.into(),
+                boxed,
                 span,
-            });
-        }
-        if has_fields {
-            instrs.push(Instr::EndArray { boxed, span });
-        }
+            }
+        } else {
+            Node::empty()
+        };
         // Handle variant
         if data.variant {
-            instrs.push(Instr::push(variant_index));
+            node.push(Node::new_push(variant_index));
             if let Some(name) = data.name {
-                instrs.push(Instr::Label {
-                    label: name.value,
-                    remove: false,
-                    span,
-                });
+                node.push(Node::Label(name.value, span));
             } else {
                 self.add_error(data.init_span.clone(), "Variants must have a name");
             }
             if has_fields {
-                instrs.push(Instr::ImplPrim(ImplPrimitive::TagVariant, span));
+                node.push(Node::ImplPrim(ImplPrimitive::TagVariant, span));
             }
         }
         let name = Ident::from("New");
         let id = FunctionId::Named(name.clone());
-        let new_func = NewFunction { instrs, flags };
-        let constructor_func =
-            self.make_function(id, Signature::new(constructor_args, 1), new_func);
+        let constructor_func = self
+            .asm
+            .add_function(id, Signature::new(constructor_args, 1), node);
         let local = LocalName {
             index: self.next_global,
             public: true,
@@ -429,7 +358,7 @@ impl Compiler {
             .unwrap_or_default();
         comment.push('?');
         for field in &fields {
-            match field.init.as_ref().map(|(_, sig)| sig.args) {
+            match field.init.as_ref().map(|sn| sn.sig.args) {
                 Some(0) => continue,
                 Some(1) | None => {
                     comment.push(' ');
@@ -457,12 +386,11 @@ impl Compiler {
                 for field in &fields {
                     let name = &field.name;
                     let id = FunctionId::Named(name.clone());
-                    comp.new_functions.push(NewFunction::default());
-                    comp.push_instr(Instr::ImplPrim(ImplPrimitive::UnPop, field.span));
-                    comp.global_index(field.global_index, field.name_span.clone(), true);
-                    let mut new_func = comp.new_functions.pop().unwrap();
-                    new_func.flags |= FunctionFlags::TRACK_CALLER;
-                    let func = comp.make_function(id, Signature::new(0, 1), new_func);
+                    let node = Node::from_iter([
+                        Node::ImplPrim(ImplPrimitive::UnPop, field.span),
+                        comp.global_index(field.global_index, field.name_span.clone()),
+                    ]);
+                    let func = comp.asm.add_function(id, Signature::new(0, 1), node);
                     let local = LocalName {
                         index: comp.next_global,
                         public: true,
@@ -486,29 +414,29 @@ impl Compiler {
                 if data.variant {
                     comp.add_error(word_span.clone(), "Variants may not have functions");
                 }
-                let mut filled_func = comp.compile_words(words, true)?;
-                let flags = filled_func.flags;
-                filled_func.flags |= FunctionFlags::TRACK_CALLER;
-                let filled_sig = comp.sig_of(&filled_func.instrs, &word_span)?;
-                let filled_func = comp.make_function(
-                    FunctionId::Anonymous(word_span.clone()),
-                    filled_sig,
-                    filled_func,
-                );
+                let filled = comp.words_sig(words)?;
                 let span = comp.add_span(word_span.clone());
-                let instrs = eco_vec![
-                    Instr::PushFunc(filled_func),
-                    Instr::PushFunc(constructor_func.clone()),
-                    Instr::Prim(Primitive::Fill, span)
-                ];
-                let sig = comp.sig_of(&instrs, &word_span)?;
-                let new_func = NewFunction { instrs, flags };
+                let fill_construct = SigNode::new(
+                    Node::Call(constructor_func.clone(), span),
+                    constructor_func.sig,
+                );
+                let fill_pop = Node::Prim(Primitive::Pop, span).sig_node().unwrap();
+                let mut node = Node::Mod(Primitive::Fill, eco_vec![fill_pop, filled], span);
+                let sig = comp.sig_of(&node, &word_span)?;
+                node = Node::Mod(
+                    Primitive::Fill,
+                    eco_vec![fill_construct, SigNode::new(node, sig)],
+                    span,
+                );
+                let sig = comp.sig_of(&node, &word_span)?;
                 let local = LocalName {
                     index: comp.next_global,
                     public: true,
                 };
                 comp.next_global += 1;
-                let func = comp.make_function(FunctionId::Named(name.clone()), sig, new_func);
+                let func = comp
+                    .asm
+                    .add_function(FunctionId::Named(name.clone()), sig, node);
                 function_stuff = Some((local, func, span));
                 Ok(())
             })?;

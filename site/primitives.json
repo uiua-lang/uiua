@@ -491,15 +491,6 @@
     "class": "OtherModifier",
     "description": "Unbox the arguments to a function before calling it"
   },
-  "coordinate": {
-    "glyph": "⟔",
-    "args": 2,
-    "outputs": 1,
-    "class": "DyadicArray",
-    "description": "Find the first deep index of one array in another",
-    "experimental": true,
-    "deprecated": true
-  },
   "couple": {
     "glyph": "⊟",
     "args": 2,
@@ -1155,20 +1146,6 @@
     "class": "Thread",
     "description": "Send a value to a thread"
   },
-  "setinv": {
-    "outputs": 1,
-    "modifier_args": 2,
-    "class": "InversionModifier",
-    "description": "Set the un-compatible inverse of a function",
-    "deprecated": true
-  },
-  "setund": {
-    "outputs": 1,
-    "modifier_args": 3,
-    "class": "InversionModifier",
-    "description": "Set the under-compatible inverse of a function",
-    "deprecated": true
-  },
   "shape": {
     "glyph": "△",
     "args": 1,
@@ -1233,15 +1210,6 @@
     "class": "Comptime",
     "description": "Convert code into a string instead of compiling it",
     "experimental": true
-  },
-  "struct": {
-    "args": 0,
-    "outputs": 0,
-    "modifier_args": 1,
-    "class": "Misc",
-    "description": "Generate a constructor and getters for a struct",
-    "experimental": true,
-    "deprecated": true
   },
   "subtract": {
     "glyph": "-",

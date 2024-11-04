@@ -1,20 +1,29 @@
-use std::{fmt, path::PathBuf, str::FromStr, sync::Arc};
+use std::{
+    fmt,
+    hash::{DefaultHasher, Hash, Hasher},
+    ops::{Index, IndexMut},
+    path::PathBuf,
+    str::FromStr,
+    sync::Arc,
+};
 
 use dashmap::DashMap;
 use ecow::{eco_vec, EcoString, EcoVec};
 use serde::*;
 
 use crate::{
-    is_ident_char, CodeSpan, FuncSlice, Function, InputSrc, Instr, IntoInputSrc, LocalName, Module,
-    Signature, Span, Uiua, UiuaResult, Value,
+    compile::{LocalName, Module},
+    is_ident_char, CodeSpan, FunctionId, InputSrc, IntoInputSrc, Node, SigNode, Signature, Span,
+    Uiua, UiuaResult, Value,
 };
 
 /// A compiled Uiua assembly
 #[derive(Clone)]
 pub struct Assembly {
-    pub(crate) instrs: EcoVec<Instr>,
-    /// The sections of the instructions that are top-level expressions
-    pub(crate) top_slices: Vec<FuncSlice>,
+    /// The top-level node
+    pub root: Node,
+    /// Functions
+    pub(crate) functions: EcoVec<Node>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
     pub(crate) spans: EcoVec<Span>,
@@ -23,69 +32,85 @@ pub struct Assembly {
     pub(crate) dynamic_functions: EcoVec<DynFn>,
 }
 
-type DynFn = Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static>;
+/// A Uiua function
+///
+/// This does not actually contain the function's code.
+/// It is a lightweight handle that can be used to look up the function's code in an [`Assembly`].
+///
+/// It also contains the function's [`FunctionId`] and [`Signature`].
+#[derive(Clone)]
+pub struct Function {
+    /// The function's id
+    pub id: FunctionId,
+    /// The function's signature
+    pub sig: Signature,
+    index: usize,
+    hash: u64,
+}
 
-impl Default for Assembly {
-    fn default() -> Self {
-        Self {
-            instrs: EcoVec::new(),
-            top_slices: Vec::new(),
-            spans: eco_vec![Span::Builtin],
-            bindings: EcoVec::new(),
-            dynamic_functions: EcoVec::new(),
-            inputs: Inputs::default(),
-        }
+impl fmt::Debug for Function {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ← {}", self.id, self.sig)
     }
 }
 
-impl From<&Assembly> for Assembly {
-    fn from(asm: &Assembly) -> Self {
-        asm.clone()
+impl PartialEq for Function {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.sig == other.sig && self.hash == other.hash
+    }
+}
+
+impl Eq for Function {}
+
+impl Hash for Function {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.hash.hash(state);
+    }
+}
+
+impl Serialize for Function {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        (&self.id, &self.sig, &self.index, &self.hash).serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Function {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let (id, sig, index, hash) =
+            <(FunctionId, Signature, usize, u64)>::deserialize(deserializer)?;
+        Ok(Function {
+            id,
+            sig,
+            index,
+            hash,
+        })
     }
 }
 
 impl Assembly {
-    /// Get the instructions of a function slice
-    #[track_caller]
-    pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
-        let end = slice.end();
-        assert!(
-            slice.start <= self.instrs.len(),
-            "Func slice start {} out of bounds of {} instrs",
-            slice.start,
-            self.instrs.len()
-        );
-        assert!(
-            end <= self.instrs.len(),
-            "Func slice end {} out of bounds of {} instrs",
-            end,
-            self.instrs.len()
-        );
-        &self.instrs[slice.start..end]
+    /// Get the [`SigNode`] for a function
+    pub fn sig_node(&self, f: &Function) -> SigNode {
+        SigNode::new(self[f].clone(), f.sig)
     }
-    /// Get the mutable instructions of a function slice
-    pub fn instrs_mut(&mut self, slice: FuncSlice) -> &mut [Instr] {
-        &mut self.instrs.make_mut()[slice.start..slice.end()]
-    }
-    pub(crate) fn bind_function(
-        &mut self,
-        local: LocalName,
-        function: Function,
-        span: usize,
-        comment: Option<DocComment>,
-    ) {
-        let span = self.spans[span].clone();
-        self.add_binding_at(local, BindingKind::Func(function), span.code(), comment);
-    }
-    pub(crate) fn bind_const(
-        &mut self,
-        local: LocalName,
-        value: Option<Value>,
-        span: usize,
-        comment: Option<DocComment>,
-    ) {
-        let span = self.spans[span].clone();
-        self.add_binding_at(local, BindingKind::Const(value), span.code(), comment);
+    /// Add a function to the assembly
+    pub fn add_function(&mut self, id: FunctionId, sig: Signature, root: Node) -> Function {
+        let mut hasher = DefaultHasher::new();
+        root.hash(&mut hasher);
+        let hash = hasher.finish();
+        self.functions.push(root);
+        let index = self.functions.len() - 1;
+        Function {
+            id,
+            sig,
+            index,
+            hash,
+        }
     }
     pub(crate) fn add_binding_at(
         &mut self,
@@ -114,105 +139,32 @@ impl Assembly {
             self.bindings.push(binding);
         }
     }
-    /// Remove dead code from the assembly
-    pub fn remove_dead_code(&mut self) {
-        let mut slices = Vec::new();
-        let mut bindings = Vec::new();
-        for (i, binding) in self.bindings.iter().enumerate() {
-            if let BindingKind::CodeMacro(mut slice) = binding.kind {
-                if slice.start > 0 {
-                    if let Some((Instr::Comment(before), Instr::Comment(after))) = self
-                        .instrs
-                        .get(slice.start - 1)
-                        .zip(self.instrs.get(slice.end()))
-                    {
-                        if before.starts_with('(') && after.ends_with(')') {
-                            slice.start -= 1;
-                            slice.len += 2;
-                        }
-                    }
-                }
-                slices.push(slice);
-                bindings.push(i);
-            }
-        }
-        for i in bindings.into_iter().rev() {
-            self.remove_binding(i);
-        }
-        slices.sort();
-        for slice in slices.into_iter().rev() {
-            self.remove_slice(slice);
-        }
+    pub(crate) fn bind_function(
+        &mut self,
+        local: LocalName,
+        function: Function,
+        span: usize,
+        comment: Option<DocComment>,
+    ) {
+        let span = self.spans[span].clone();
+        self.add_binding_at(local, BindingKind::Func(function), span.code(), comment);
     }
-    fn remove_binding(&mut self, i: usize) -> BindingInfo {
-        for instr in self.instrs.make_mut() {
-            match instr {
-                Instr::CallGlobal { index, .. } | Instr::BindGlobal { index, .. } if *index > i => {
-                    *index -= 1
-                }
-                _ => {}
-            }
-        }
-        self.bindings.remove(i)
-    }
-    pub(crate) fn remove_slice(&mut self, rem_slice: FuncSlice) -> Vec<Instr> {
-        // Remove instrs
-        let after: Vec<_> = self.instrs[rem_slice.end()..].to_vec();
-        let removed = self.instrs[rem_slice.start..rem_slice.end()].to_vec();
-        // println!(
-        //     "remove {}-{}: {:?}",
-        //     rem_slice.start,
-        //     rem_slice.end(),
-        //     removed
-        // );
-        self.instrs.truncate(rem_slice.start);
-        self.instrs.extend(after);
-        // Remove top slices
-        for slice in &mut self.top_slices {
-            if slice.start > rem_slice.start {
-                slice.start -= rem_slice.len();
-            }
-        }
-        // Decrement bindings
-        for binding in self.bindings.make_mut() {
-            match &mut binding.kind {
-                BindingKind::Func(func) => {
-                    if func.slice.start > rem_slice.start {
-                        func.slice.start -= rem_slice.len();
-                    }
-                }
-                BindingKind::CodeMacro(slice) => {
-                    if slice.start > rem_slice.start {
-                        slice.start -= rem_slice.len();
-                    }
-                }
-                _ => (),
-            }
-        }
-        // Decrement instrs
-        for instr in self.instrs.make_mut() {
-            if let Instr::PushFunc(func) = instr {
-                if func.slice.start > rem_slice.start {
-                    func.slice.start -= rem_slice.len();
-                }
-            }
-        }
-
-        removed
-    }
-    /// Make top-level expressions not run
-    pub fn remove_top_level(&mut self) {
-        self.top_slices.clear();
+    pub(crate) fn bind_const(
+        &mut self,
+        local: LocalName,
+        value: Option<Value>,
+        span: usize,
+        comment: Option<DocComment>,
+    ) {
+        let span = self.spans[span].clone();
+        self.add_binding_at(local, BindingKind::Const(value), span.code(), comment);
     }
     /// Parse a `.uasm` file into an assembly
     pub fn from_uasm(src: &str) -> Result<Self, String> {
         let rest = src;
-        let (instrs_src, rest) = rest
-            .trim()
-            .split_once("TOP SLICES")
-            .ok_or("No top slices")?;
-        let (top_slices_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
-        let (bindings_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
+        let (root_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
+        let (bindings_src, rest) = rest.trim().split_once("FUNCTIONS").ok_or("No functions")?;
+        let (functions_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
         let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
         let (files_src, rest) = rest
             .trim()
@@ -220,33 +172,10 @@ impl Assembly {
             .unwrap_or((rest, ""));
         let strings_src = rest.trim();
 
-        let mut instrs = EcoVec::new();
-        for line in instrs_src.lines().filter(|line| !line.trim().is_empty()) {
-            let instr: Instr = serde_json::from_str(line)
-                .or_else(|e| {
-                    let (key, val) = line.split_once(' ').ok_or("No key")?;
-                    let json = format!("{{{key:?}: {val}}}");
-                    serde_json::from_str(&json).map_err(|_| e.to_string())
-                })
-                .or_else(|e| {
-                    let (key, val) = line.split_once(' ').ok_or("No key")?;
-                    let json = format!("[{key:?},{val}]");
-                    serde_json::from_str(&json).map_err(|_| e)
-                })
-                .or_else(|e| serde_json::from_str(&format!("\"{line}\"")).map_err(|_| e))
-                .unwrap();
-            instrs.push(instr);
-        }
-
-        let mut top_slices = Vec::new();
-        for line in top_slices_src
-            .lines()
-            .filter(|line| !line.trim().is_empty())
-        {
-            let (start, len) = line.split_once(' ').ok_or("No start")?;
-            let start = start.parse::<usize>().map_err(|e| e.to_string())?;
-            let len = len.parse::<usize>().map_err(|e| e.to_string())?;
-            top_slices.push(FuncSlice { start, len });
+        let mut root = Node::empty();
+        for line in root_src.lines().filter(|line| !line.trim().is_empty()) {
+            let node: Node = serde_json::from_str(line).unwrap();
+            root.push(node);
         }
 
         let mut bindings = EcoVec::new();
@@ -274,6 +203,12 @@ impl Assembly {
                 span: CodeSpan::dummy(),
                 comment: None,
             });
+        }
+
+        let mut functions = EcoVec::new();
+        for line in functions_src.lines().filter(|line| !line.trim().is_empty()) {
+            let func: Node = serde_json::from_str(line).unwrap();
+            functions.push(func);
         }
 
         let mut spans = EcoVec::new();
@@ -306,9 +241,9 @@ impl Assembly {
         }
 
         Ok(Self {
-            instrs,
-            top_slices,
+            root,
             bindings,
+            functions,
             spans,
             inputs: Inputs {
                 files,
@@ -321,41 +256,9 @@ impl Assembly {
     /// Serialize the assembly into a `.uasm` file
     pub fn to_uasm(&self) -> String {
         let mut uasm = String::new();
-
-        for instr in &self.instrs {
-            let json = serde_json::to_value(instr).unwrap();
-            match &json {
-                serde_json::Value::Object(map) => {
-                    if map.len() == 1 {
-                        let key = map.keys().next().unwrap();
-                        let value = map.values().next().unwrap();
-                        uasm.push_str(&format!("{} {}\n", key, value));
-                        continue;
-                    }
-                }
-                serde_json::Value::Array(arr) => {
-                    if arr.len() == 2 {
-                        if let serde_json::Value::String(key) = &arr[0] {
-                            let value = &arr[1];
-                            uasm.push_str(&format!("{} {}\n", key, value));
-                            continue;
-                        }
-                    }
-                }
-                serde_json::Value::String(s) => {
-                    uasm.push_str(&format!("{s:?}"));
-                    uasm.push('\n');
-                    continue;
-                }
-                _ => (),
-            }
-            uasm.push_str(&json.to_string());
+        for node in self.root.iter() {
+            uasm.push_str(&serde_json::to_string(node).unwrap());
             uasm.push('\n');
-        }
-
-        uasm.push_str("\nTOP SLICES\n");
-        for slice in &self.top_slices {
-            uasm.push_str(&format!("{} {}\n", slice.start, slice.len));
         }
 
         uasm.push_str("\nBINDINGS\n");
@@ -372,6 +275,12 @@ impl Assembly {
                 }
             }
             uasm.push_str(&serde_json::to_string(&binding.kind).unwrap());
+            uasm.push('\n');
+        }
+
+        uasm.push_str("\nFUNCTIONS\n");
+        for func in &self.functions {
+            uasm.push_str(&serde_json::to_string(&func).unwrap());
             uasm.push('\n');
         }
 
@@ -406,15 +315,45 @@ impl Assembly {
     }
 }
 
-impl AsRef<Assembly> for Assembly {
-    fn as_ref(&self) -> &Self {
-        self
+impl Index<&Function> for Assembly {
+    type Output = Node;
+    #[track_caller]
+    fn index(&self, func: &Function) -> &Self::Output {
+        match self.functions.get(func.index) {
+            Some(node) => node,
+            None => panic!("{}({:?}) not found in assembly", func.id, func.index),
+        }
     }
 }
 
-impl AsMut<Assembly> for Assembly {
-    fn as_mut(&mut self) -> &mut Self {
-        self
+impl IndexMut<&Function> for Assembly {
+    #[track_caller]
+    fn index_mut(&mut self, func: &Function) -> &mut Self::Output {
+        match self.functions.make_mut().get_mut(func.index) {
+            Some(node) => node,
+            None => panic!("{}({:?}) not found in assembly", func.id, func.index),
+        }
+    }
+}
+
+type DynFn = Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static>;
+
+impl Default for Assembly {
+    fn default() -> Self {
+        Self {
+            root: Node::default(),
+            functions: EcoVec::new(),
+            spans: eco_vec![Span::Builtin],
+            bindings: EcoVec::new(),
+            dynamic_functions: EcoVec::new(),
+            inputs: Inputs::default(),
+        }
+    }
+}
+
+impl From<&Assembly> for Assembly {
+    fn from(asm: &Assembly) -> Self {
+        asm.clone()
     }
 }
 
@@ -448,15 +387,15 @@ pub enum BindingKind {
     /// Contains the number of arguments
     IndexMacro(usize),
     /// A code macro
-    CodeMacro(FuncSlice),
+    CodeMacro(Node),
 }
 
 impl BindingKind {
     /// Get the signature of the binding
-    pub fn signature(&self) -> Option<Signature> {
+    pub fn sig(&self) -> Option<Signature> {
         match self {
             Self::Const(_) => Some(Signature::new(0, 1)),
-            Self::Func(func) => Some(func.signature()),
+            Self::Func(func) => Some(func.sig),
             Self::Import { .. } => None,
             Self::Module(_) => None,
             Self::IndexMacro(_) => None,
@@ -733,5 +672,28 @@ impl Inputs {
             InputSrc::Str(index) => self.strings.get(*index).map(|src| f(src)),
             InputSrc::Macro(span) => self.macros.get(span).map(|src| f(&src)),
         }
+    }
+}
+
+impl fmt::Debug for Assembly {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        struct FmtFunctions<'a>(&'a Assembly);
+        impl<'a> fmt::Debug for FmtFunctions<'a> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_list()
+                    .entries(self.0.bindings.iter().filter_map(|b| {
+                        if let BindingKind::Func(func) = &b.kind {
+                            Some((func, &self.0[func]))
+                        } else {
+                            None
+                        }
+                    }))
+                    .finish()
+            }
+        }
+        f.debug_struct("Assembly")
+            .field("root", &self.root)
+            .field("functions", &FmtFunctions(self))
+            .finish()
     }
 }

@@ -16,14 +16,13 @@ use ecow::EcoVec;
 use tinyvec::TinyVec;
 
 use crate::{
-    Array, ArrayCmp, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Function, Inputs,
-    PersistentMeta, Shape, Signature, Span, TempStack, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
+    Array, ArrayCmp, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops,
+    PersistentMeta, Shape, SigNode, Signature, Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
     Value,
 };
 
 mod dyadic;
 pub mod encode;
-pub mod invert;
 pub mod loops;
 pub mod map;
 mod monadic;
@@ -32,6 +31,22 @@ pub mod pervade;
 pub mod reduce;
 pub mod table;
 pub mod zip;
+
+pub(crate) fn get_ops<const N: usize>(
+    ops: EcoVec<SigNode>,
+    env: &Uiua,
+) -> UiuaResult<[SigNode; N]> {
+    ops.try_into().map_err(|ops: EcoVec<SigNode>| {
+        env.error(if ops.len() < N {
+            #[cfg(debug_assertions)]
+            panic!("Not enough operands");
+            #[cfg(not(debug_assertions))]
+            "Not enough operands. This is a bug in the interpreter."
+        } else {
+            "Too many operands.  This is a bug in the interpreter."
+        })
+    })
+}
 
 pub trait Indexable: IntoIterator + Deref<Target = [Self::Item]> {}
 
@@ -146,10 +161,11 @@ impl ErrorContext for Uiua {
 impl ErrorContext for (&CodeSpan, &Inputs) {
     type Error = UiuaError;
     fn error(&self, msg: impl ToString) -> Self::Error {
-        UiuaErrorKind::Run(
-            Span::Code(self.0.clone()).sp(msg.to_string()),
-            self.1.clone().into(),
-        )
+        UiuaErrorKind::Run {
+            message: Span::Code(self.0.clone()).sp(msg.to_string()),
+            info: Vec::new(),
+            inputs: self.1.clone().into(),
+        }
         .into()
     }
 }
@@ -418,7 +434,7 @@ where
 }
 
 pub fn switch(
-    count: usize,
+    branches: Ops,
     sig: Signature,
     copy_condition_under: bool,
     env: &mut Uiua,
@@ -435,19 +451,15 @@ pub fn switch(
         // Scalar
         let selector =
             selector.as_natural_array(env, "Switch index must be an array of naturals")?;
-        if let Some(i) = selector.data.iter().find(|&&i| i >= count) {
+        if let Some(i) = selector.data.iter().find(|&&i| i >= branches.len()) {
             return Err(env.error(format!(
-                "Switch index {i} is out of bounds for switch of size {count}"
+                "Switch index {i} is out of bounds for switch of size {}",
+                branches.len()
             )));
         }
         let i = selector.data[0];
         // Get function
-        let Some(f) = env
-            .rt
-            .function_stack
-            .drain(env.rt.function_stack.len() - count..)
-            .nth(i)
-        else {
+        let Some(f) = branches.into_iter().nth(i) else {
             return Err(env.error(
                 "Function stack was empty when getting switch function. \
                 This is a bug in the interpreter.",
@@ -459,14 +471,14 @@ pub fn switch(
             return Err(env.error("Stack was empty when discarding excess switch arguments."));
         }
         // `saturating_sub` and `max` handle incorrect explicit signatures
-        let discard_end = (discard_start + sig.args + f.signature().outputs)
-            .saturating_sub(f.signature().args + sig.outputs)
+        let discard_end = (discard_start + sig.args + f.sig.outputs)
+            .saturating_sub(f.sig.args + sig.outputs)
             .max(discard_start);
         if discard_end > env.rt.stack.len() {
             return Err(env.error("Stack was empty when discarding excess switch arguments."));
         }
         env.rt.stack.drain(discard_start..discard_end);
-        env.call(f)?;
+        env.exec(f)?;
     } else {
         // Array
         // Collect arguments
@@ -485,15 +497,14 @@ pub fn switch(
             ..
         } = fixed_rows("switch", sig.outputs, args, env)?;
         // Collect functions
-        let functions: Vec<(Function, usize)> = (env.rt.function_stack)
-            .drain(env.rt.function_stack.len() - count..)
-            .map(|f| {
-                let args = if f.signature().outputs < sig.outputs {
-                    f.signature().args + sig.outputs - f.signature().outputs
+        let args: Vec<usize> = branches
+            .iter()
+            .map(|sn| {
+                if sn.sig.outputs < sig.outputs {
+                    sn.sig.args + sig.outputs - sn.sig.outputs
                 } else {
-                    f.signature().args
-                };
-                (f, args)
+                    sn.sig.args
+                }
             })
             .collect();
 
@@ -506,9 +517,10 @@ pub fn switch(
                 Err(selector) => selector.clone(),
             }
             .as_natural_array(env, "Switch index must be an array of naturals")?;
-            if let Some(i) = selector.data.iter().find(|&&i| i >= count) {
+            if let Some(i) = selector.data.iter().find(|&&i| i >= branches.len()) {
                 return Err(env.error(format!(
-                    "Switch index {i} is out of bounds for switch of size {count}"
+                    "Switch index {i} is out of bounds for switch of size {}",
+                    branches.len()
                 )));
             }
             // println!("selector: {} {:?}", selector.shape, selector.data);
@@ -529,18 +541,19 @@ pub fn switch(
             for sel_row_slice in selector.row_slices() {
                 for &elem in sel_row_slice {
                     // println!("  elem: {}", elem);
-                    let (f, arg_count) = &functions[elem];
+                    let node = &branches[elem];
+                    let arg_count = args[elem];
                     for (i, row) in rows_to_sel.iter_mut().rev().enumerate().rev() {
                         let row = match row {
                             Ok(row) => row.next().unwrap(),
                             Err(row) => row.clone(),
                         };
                         // println!("  row: {:?}", row);
-                        if i < *arg_count {
+                        if i < arg_count {
                             env.push(row);
                         }
                     }
-                    env.call(f.clone())?;
+                    env.exec(node.clone())?;
                     for i in 0..sig.outputs {
                         outputs[i].push(env.pop("switch output")?);
                     }
@@ -561,24 +574,22 @@ pub fn switch(
         }
     }
     if let Some(selector) = copied_selector {
-        env.push_temp(TempStack::Under, selector);
+        env.push_under(selector);
     }
     Ok(())
 }
 
-pub fn try_(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    let handler = env.pop_function()?;
-    let f_sig = f.signature();
-    env.touch_array_stack(f_sig.args)?;
-    let handler_sig = handler.signature();
+pub fn try_(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f, handler] = get_ops(ops, env)?;
+    let f_sig = f.sig;
+    let handler_sig = handler.sig;
     if env.stack_height() < f_sig.args {
         for i in 0..f_sig.args {
             env.pop(i + 1)?;
         }
     }
     let backup = env.clone_stack_top(f_sig.args.min(handler_sig.args))?;
-    if let Err(mut err) = env.call_clean_stack(f) {
+    if let Err(mut err) = env.exec_clean_stack(f) {
         if err.is_case {
             err.is_case = false;
             return Err(err);
@@ -590,7 +601,7 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
         for val in backup {
             env.push(val);
         }
-        env.call(handler)?;
+        env.exec(handler)?;
     }
     Ok(())
 }
@@ -761,41 +772,36 @@ fn fft_impl(
     Ok(())
 }
 
-pub fn astar(env: &mut Uiua) -> UiuaResult {
-    astar_impl(false, env)
+pub fn astar(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    astar_impl(ops, false, env)
 }
 
-pub fn astar_first(env: &mut Uiua) -> UiuaResult {
-    astar_impl(true, env)
+pub fn astar_first(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    astar_impl(ops, true, env)
 }
 
-fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
+fn astar_impl(ops: Ops, first_only: bool, env: &mut Uiua) -> UiuaResult {
     let start = env.pop("start")?;
-    let neighbors = env.pop_function()?;
-    let heuristic = env.pop_function()?;
-    let is_goal = env.pop_function()?;
-    let nei_sig = neighbors.signature();
-    let heu_sig = heuristic.signature();
-    let isg_sig = is_goal.signature();
+    let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
+    let nei_sig = neighbors.sig;
+    let heu_sig = heuristic.sig;
+    let isg_sig = is_goal.sig;
     for (name, f, req_out) in &[
         ("neighbors", &neighbors, [1, 2].as_slice()),
         ("heuristic", &heuristic, &[1]),
         ("goal", &is_goal, &[1]),
     ] {
-        let sig = f.signature();
+        let sig = f.sig;
         if !req_out.contains(&sig.outputs) {
             let count = if req_out.len() == 1 {
                 "1"
             } else {
                 "either 1 or 2"
             };
-            return Err(env.error_maybe_span(
-                f.id.span(),
-                format!(
-                    "A* {name} function must return {count} outputs \
-                    but its signature is {sig}",
-                ),
-            ));
+            return Err(env.error(format!(
+                "A* {name} function must return {count} outputs \
+                but its signature is {sig}",
+            )));
         }
     }
     let arg_count = nei_sig.args.max(heu_sig.args).max(isg_sig.args) - 1;
@@ -827,59 +833,52 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
 
     struct AstarEnv<'a> {
         env: &'a mut Uiua,
-        neighbors: Function,
-        heuristic: Function,
-        is_goal: Function,
+        neighbors: SigNode,
+        heuristic: SigNode,
+        is_goal: SigNode,
         args: Vec<Value>,
     }
 
     impl<'a> AstarEnv<'a> {
         fn heuristic(&mut self, node: &Value) -> UiuaResult<f64> {
-            let heu_args = self.heuristic.signature().args;
+            let heu_args = self.heuristic.sig.args;
             for arg in (self.args.iter()).take(heu_args.saturating_sub(1)).rev() {
                 self.env.push(arg.clone());
             }
             if heu_args > 0 {
                 self.env.push(node.clone());
             }
-            self.env.call(self.heuristic.clone())?;
+            self.env.exec(self.heuristic.clone())?;
             let h = (self.env.pop("heuristic")?).as_num(self.env, "Heuristic must be a number")?;
             if h < 0.0 {
-                return Err(self.env.error_maybe_span(
-                    self.heuristic.id.span(),
-                    "Negative heuristic values are not allowed in A*",
-                ));
+                return Err(self
+                    .env
+                    .error("Negative heuristic values are not allowed in A*"));
             }
             Ok(h)
         }
         fn neighbors(&mut self, node: &Value) -> UiuaResult<Vec<(Value, f64)>> {
-            let nei_args = self.neighbors.signature().args;
+            let nei_args = self.neighbors.sig.args;
             for arg in (self.args.iter()).take(nei_args.saturating_sub(1)).rev() {
                 self.env.push(arg.clone());
             }
             if nei_args > 0 {
                 self.env.push(node.clone());
             }
-            self.env.call(self.neighbors.clone())?;
-            let (nodes, costs) = if self.neighbors.signature().outputs == 2 {
+            self.env.exec(self.neighbors.clone())?;
+            let (nodes, costs) = if self.neighbors.sig.outputs == 2 {
                 let costs = (self.env.pop("neighbors costs")?)
                     .as_nums(self.env, "Costs must be a list of numbers")?;
                 let nodes = self.env.pop("neighbors nodes")?;
                 if costs.len() != nodes.row_count() {
-                    return Err(self.env.error_maybe_span(
-                        self.neighbors.id.span(),
-                        format!(
-                            "Number of nodes {} does not match number of costs {}",
-                            nodes.row_count(),
-                            costs.len(),
-                        ),
-                    ));
+                    return Err(self.env.error(format!(
+                        "Number of nodes {} does not match number of costs {}",
+                        nodes.row_count(),
+                        costs.len(),
+                    )));
                 }
                 if costs.iter().any(|&c| c < 0.0) {
-                    return Err(self.env.error_maybe_span(
-                        self.neighbors.id.span(),
-                        "Negative costs are not allowed in A*",
-                    ));
+                    return Err(self.env.error("Negative costs are not allowed in A*"));
                 }
                 (nodes, costs)
             } else {
@@ -890,14 +889,14 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
             Ok(nodes.into_rows().zip(costs).collect())
         }
         fn is_goal(&mut self, node: &Value) -> UiuaResult<bool> {
-            let isg_args = self.is_goal.signature().args;
+            let isg_args = self.is_goal.sig.args;
             for arg in (self.args.iter()).take(isg_args.saturating_sub(1)).rev() {
                 self.env.push(arg.clone());
             }
             if isg_args > 0 {
                 self.env.push(node.clone());
             }
-            self.env.call(self.is_goal.clone())?;
+            self.env.exec(self.is_goal.clone())?;
             let is_goal = (self.env.pop("is_goal")?)
                 .as_bool(self.env, "A* goal function must return a boolean")?;
             Ok(is_goal)

@@ -1,11 +1,11 @@
 # Uiua Todo
 
-## 0.13
+## 0.14
 The next version of Uiua
 
-## 0.14
 - Inline code macros
-- Compile-time string evaluation
+- Compile-time code string evaluation
+- Auto-bracket format strings
 - `do` function pack
 - Range optimizations
   - Math, `take`, `drop`

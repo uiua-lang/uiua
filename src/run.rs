@@ -4,7 +4,6 @@ use std::{
     cell::RefCell,
     cmp::Ordering,
     collections::HashMap,
-    fmt,
     hash::Hash,
     mem::{size_of, take},
     panic::{catch_unwind, AssertUnwindSafe},
@@ -15,19 +14,16 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use enum_iterator::{all, Sequence};
 use thread_local::ThreadLocal;
 
 use crate::{
-    algorithm::{self, invert, validate_size_impl},
-    check::instrs_temp_signatures,
+    algorithm::{self, validate_size_impl},
     fill::Fill,
-    function::*,
-    instr::*,
+    invert::match_format_pattern,
     lex::Span,
-    Array, Assembly, BindingKind, Boxed, CodeSpan, Compiler, Ident, ImplPrimitive, Inputs,
-    IntoSysBackend, LocalName, Primitive, Report, SafeSys, SysBackend, SysOp, TraceFrame,
-    UiuaError, UiuaErrorKind, UiuaResult, Value, VERSION,
+    Array, ArrayLen, Assembly, BindingKind, Boxed, CodeSpan, Compiler, Function, FunctionId, Ident,
+    ImplPrimitive, Inputs, IntoSysBackend, LocalName, Node, Primitive, Report, SafeSys, SigNode,
+    Signature, SysBackend, SysOp, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, Value, VERSION,
 };
 
 /// The Uiua interpreter
@@ -43,12 +39,8 @@ pub struct Uiua {
 pub(crate) struct Runtime {
     /// The thread's stack
     pub(crate) stack: Vec<Value>,
-    /// The thread's function stack
-    pub(crate) function_stack: Vec<Function>,
-    /// The thread's temp stack for inlining
-    temp_stacks: [Vec<Value>; TempStack::CARDINALITY],
-    /// The stack height at the start of each array currently being built
-    pub(crate) array_stack: Vec<usize>,
+    /// The thread's under stack
+    pub(crate) under_stack: Vec<Value>,
     /// The call stack
     pub(crate) call_stack: Vec<StackFrame>,
     /// The stack for tracking recursion points
@@ -59,6 +51,8 @@ pub(crate) struct Runtime {
     unfill_stack: Vec<Value>,
     /// The fill boundary stack
     fill_boundary_stack: Vec<(usize, usize)>,
+    /// The depth of arrays under construction
+    pub(crate) array_depth: usize,
     /// A limit on the execution duration in milliseconds
     pub(crate) execution_limit: Option<f64>,
     /// The time at which execution started
@@ -75,6 +69,10 @@ pub(crate) struct Runtime {
     cli_arguments: Vec<String>,
     /// File that was passed to the interpreter for execution
     cli_file_path: PathBuf,
+    /// Code for unevaluated pure constants, in case they are needed for macros
+    ///
+    /// This should only be used in the compile-time environment
+    pub(crate) unevaluated_constants: HashMap<usize, Node>,
     /// The system backend
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The thread interface
@@ -89,7 +87,7 @@ pub(crate) struct Runtime {
     pub(crate) reports: Vec<Report>,
 }
 
-type MemoMap = HashMap<FunctionId, HashMap<Vec<Value>, Vec<Value>>>;
+type MemoMap = HashMap<Node, HashMap<Vec<Value>, Vec<Value>>>;
 
 impl AsRef<Assembly> for Uiua {
     fn as_ref(&self) -> &Assembly {
@@ -103,17 +101,13 @@ impl AsMut<Assembly> for Uiua {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct StackFrame {
-    /// The function being executed
-    pub(crate) slice: FuncSlice,
-    pub(crate) id: FunctionId,
     pub(crate) sig: Signature,
+    pub(crate) id: Option<FunctionId>,
     track_caller: bool,
     /// The span at which the function was called
     pub(crate) call_span: usize,
-    /// The program counter for the function
-    pub(crate) pc: usize,
     /// Additional spans for error reporting
     spans: Vec<(usize, Option<Primitive>)>,
 }
@@ -186,22 +180,16 @@ impl Default for Runtime {
     fn default() -> Self {
         Runtime {
             stack: Vec::new(),
-            function_stack: Vec::new(),
-            temp_stacks: [Vec::new(), Vec::new()],
-            array_stack: Vec::new(),
+            under_stack: Vec::new(),
             call_stack: vec![StackFrame {
-                slice: FuncSlice::default(),
-                id: FunctionId::Main,
-                sig: Signature::new(0, 0),
-                track_caller: false,
-                call_span: 0,
-                pc: 0,
-                spans: Vec::new(),
+                id: Some(FunctionId::Main),
+                ..Default::default()
             }],
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
             unfill_stack: Vec::new(),
+            array_depth: 0,
             backend: Arc::new(SafeSys::default()),
             time_instrs: false,
             last_time: 0.0,
@@ -220,6 +208,7 @@ impl Default for Runtime {
             thread: ThisThread::default(),
             output_comments: HashMap::new(),
             memo: Arc::new(ThreadLocal::new()),
+            unevaluated_constants: HashMap::new(),
             test_results: Vec::new(),
             reports: Vec::new(),
         }
@@ -336,7 +325,7 @@ impl Uiua {
     ) -> UiuaResult<Compiler> {
         let mut comp = Compiler::with_backend(self.rt.backend.clone());
         let asm = compile(&mut comp)?.finish();
-        self.run_asm(&asm)?;
+        self.run_asm(asm)?;
         comp.set_backend(SafeSys::default());
         Ok(comp)
     }
@@ -355,10 +344,9 @@ impl Uiua {
         let backup = compiler.clone();
         self.rt.backend = compiler.backend();
         let res = self.run_asm(compiler.finish());
-        let mut asm = self.take_asm();
+        let asm = self.take_asm();
         match res {
             Ok(()) => {
-                asm.top_slices.clear();
                 *compiler.assembly_mut() = asm;
                 Ok(())
             }
@@ -369,18 +357,19 @@ impl Uiua {
         }
     }
     /// Run a Uiua assembly
-    pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult {
+    pub fn run_asm(&mut self, asm: Assembly) -> UiuaResult {
         fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {
             env.asm = asm;
             env.rt.execution_start = env.rt.backend.now();
-            let mut res = env.run_top_slices();
+            let mut res = env
+                .catching_crash(|env| env.exec(env.asm.root.clone()))
+                .unwrap_or_else(Err);
             let mut push_error = |te: UiuaError| match &mut res {
                 Ok(()) => res = Err(te),
                 Err(e) => e.multi.push(te),
             };
-            let total_assert_tests = (env.asm.top_slices.iter())
-                .flat_map(|s| &env.asm.instrs[s.start..s.end()])
-                .filter(|instr| matches!(instr, Instr::ImplPrim(ImplPrimitive::TestAssert, _)))
+            let total_assert_tests = (env.asm.root.iter())
+                .filter(|node| matches!(node, Node::ImplPrim(ImplPrimitive::TestAssert, _)))
                 .count();
             if total_assert_tests > 0 {
                 let total_run = env.rt.test_results.len();
@@ -406,29 +395,9 @@ impl Uiua {
             }
             res
         }
-        run_asm(self, asm.into())
+        run_asm(self, asm)
     }
-    pub(crate) fn run_top_slices(&mut self) -> UiuaResult {
-        let top_slices = take(&mut self.asm.top_slices);
-        let mut res = Ok(());
-        if let Err(e) = self.catching_crash("", |env| {
-            for &slice in &top_slices {
-                res = env.call_slice(slice);
-                if res.is_err() {
-                    break;
-                }
-            }
-        }) {
-            res = Err(e);
-        }
-        self.asm.top_slices = top_slices;
-        res
-    }
-    fn catching_crash<T>(
-        &mut self,
-        input: impl fmt::Display,
-        f: impl FnOnce(&mut Self) -> T,
-    ) -> UiuaResult<T> {
+    fn catching_crash<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> UiuaResult<T> {
         match catch_unwind(AssertUnwindSafe(|| f(self))) {
             Ok(res) => Ok(res),
             Err(_) => Err(self.error(format!(
@@ -440,333 +409,308 @@ or on Discord at https://discord.gg/9CU2ME4kmn.
 
 Uiua version {VERSION}
 
-code:
-{}
-{}",
-                self.span(),
-                input
+at {}",
+                self.span()
             ))),
         }
     }
-    fn exec(&mut self, frame: StackFrame) -> UiuaResult {
-        let slice = frame.slice;
-        self.rt.call_stack.push(frame);
-        let mut formatted_instr = String::new();
-        for i in slice.start..slice.end() {
-            let instr = &self.asm.instrs[i];
+    /// Execute a [`Node`]
+    pub fn exec(&mut self, node: impl Into<Node>) -> UiuaResult {
+        self.exec_impl(node.into())
+    }
+    fn exec_impl(&mut self, node: Node) -> UiuaResult {
+        let mut formatted_node = String::new();
 
-            // Uncomment to debug
-            // for val in &self.rt.stack {
-            //     print!("{:?} ", val);
-            // }
-            // if self.rt.stack.is_empty() {
-            //     print!("(empty) ");
-            // }
-            // println!();
-            // if !self.rt.array_stack.is_empty() {
-            //     print!("array: ");
-            //     for val in &self.rt.array_stack {
-            //         print!("{:?} ", val);
-            //     }
-            //     println!();
-            // }
-            // if !self.rt.function_stack.is_empty() {
-            //     println!("{} function(s)", self.rt.function_stack.len());
-            // }
-            // for temp in enum_iterator::all::<TempStack>() {
-            //     if !self.rt.temp_stacks[temp as usize].is_empty() {
-            //         print!("{temp}: ");
-            //         for val in &self.rt.temp_stacks[temp as usize] {
-            //             print!("{:?} ", val);
-            //         }
-            //         println!();
-            //     }
-            // }
-            // println!("\n    {:?}", instr);
+        // Uncomment to debug
+        // for val in self.rt.stack.iter().rev() {
+        //     print!("{:?} ", val);
+        // }
+        // if self.rt.stack.is_empty() {
+        //     print!("(empty) ");
+        // }
+        // println!();
+        // if !self.rt.under_stack.is_empty() {
+        //     print!("under: ");
+        //     for val in self.rt.under_stack.iter().rev() {
+        //         print!("{:?} ", val);
+        //     }
+        //     println!();
+        // }
+        // println!("\n    {node:?}");
 
-            if self.rt.time_instrs {
-                formatted_instr = format!("{instr:?}");
-                self.rt.last_time = self.rt.backend.now();
+        if self.rt.time_instrs {
+            formatted_node = format!("{node:?}");
+            self.rt.last_time = self.rt.backend.now();
+        }
+        let res = match node {
+            // Pause execution timer during &sc
+            Node::Prim(prim @ Primitive::Sys(SysOp::ScanLine), span) => {
+                self.with_prim_span(span, Some(prim), |env| {
+                    let start = env.rt.backend.now();
+                    let res = prim.run(env);
+                    env.rt.execution_start += env.rt.backend.now() - start;
+                    res
+                })
             }
-            let res = match instr {
-                Instr::Comment(_) => Ok(()),
-                // Pause execution timer during &sc
-                &Instr::Prim(prim @ Primitive::Sys(SysOp::ScanLine), span) => {
-                    self.with_prim_span(span, Some(prim), |env| {
-                        let start = env.rt.backend.now();
-                        let res = prim.run(env);
-                        env.rt.execution_start += env.rt.backend.now() - start;
-                        res
-                    })
+            Node::Run(nodes) => (|| {
+                for node in nodes {
+                    self.exec(node)?;
                 }
-                &Instr::Prim(prim, span) => {
-                    self.with_prim_span(span, Some(prim), |env| prim.run(env))
-                }
-                &Instr::ImplPrim(prim, span) => self.with_span(span, |env| prim.run(env)),
-                Instr::Push(val) => {
-                    self.rt.stack.push(Value::clone(val));
-                    Ok(())
-                }
-                &Instr::CallGlobal { index, call, .. } => {
-                    let binding = self.asm.bindings.get(index).ok_or_else(|| {
-                        self.error(
-                            "Called out-of-bounds binding. \
-                            This is a bug in the interpreter.",
-                        )
-                    })?;
-                    match binding.kind.clone() {
-                        BindingKind::Const(Some(val)) => {
-                            self.rt.stack.push(val);
-                            Ok(())
-                        }
-                        BindingKind::Const(None) => Err(self.error(
-                            "Called unbound constant. \
-                            This is a bug in the interpreter.",
-                        )),
-                        BindingKind::Func(f) if call => {
-                            self.respect_recursion_limit().and_then(|_| self.call(f))
-                        }
-                        BindingKind::Func(f) => self
-                            .respect_recursion_limit()
-                            .map(|_| self.rt.function_stack.push(f)),
-                        BindingKind::Import { .. } | BindingKind::Module(_) => Err(self.error(
-                            "Called module global. \
-                            This is a bug in the interpreter.",
-                        )),
-                        BindingKind::IndexMacro(_) => Err(self.error(
-                            "Called index macro global. \
-                            This is a bug in the interpreter.",
-                        )),
-                        BindingKind::CodeMacro(_) => Err(self.error(
-                            "Called code macro global. \
-                            This is a bug in the interpreter.",
-                        )),
-                    }
-                }
-                &Instr::BindGlobal { span, index } => {
-                    let local = LocalName {
-                        index,
-                        public: false,
-                    };
-                    if let Some(f) = self.rt.function_stack.pop() {
-                        // Binding is an imported function
-                        self.asm.bind_function(local, f, span, None);
-                    } else if let Some(mut value) = self.rt.stack.pop() {
-                        value.compress();
-                        // Binding is a constant
-                        self.asm.bind_const(local, Some(value), span, None);
-                    } else {
-                        // Binding is an empty function
-                        let id = match self.get_span(span) {
-                            Span::Code(span) => FunctionId::Anonymous(span),
-                            Span::Builtin => FunctionId::Unnamed,
-                        };
-                        let func = Function::new(id, Signature::new(0, 0), FuncSlice::default(), 0);
-                        self.asm.bind_function(local, func, span, None);
-                    }
-                    Ok(())
-                }
-                Instr::BeginArray => {
-                    self.rt.array_stack.push(self.rt.stack.len());
-                    Ok(())
-                }
-                &Instr::EndArray { span, boxed } => {
-                    self.with_span(span, |env| env.end_array(boxed, None))
-                }
-                &Instr::Call(span) | &Instr::CustomInverse(_, span) => self
-                    .pop_function()
-                    .and_then(|f| self.call_with_span(f, span)),
-                Instr::PushFunc(f) => {
-                    self.rt.function_stack.push(f.clone());
-                    Ok(())
-                }
-                &Instr::Switch {
-                    count,
-                    sig,
-                    span,
-                    under_cond,
-                } => self.with_span(span, |env| algorithm::switch(count, sig, under_cond, env)),
-                Instr::Format { parts, span } => {
-                    let parts = parts.clone();
-                    self.with_span(*span, |env| {
-                        let mut s = String::new();
-                        for (i, part) in parts.into_iter().enumerate() {
-                            if i > 0 {
-                                s.push_str(&env.pop(("format argument", i))?.format());
-                            }
-                            s.push_str(&part);
-                        }
-                        env.push(s);
+                Ok(())
+            })(),
+            Node::Prim(prim, span) => self.with_prim_span(span, Some(prim), |env| prim.run(env)),
+            Node::ImplPrim(prim, span) => self.with_span(span, |env| prim.run(env)),
+            Node::Mod(prim, args, span) => {
+                self.with_prim_span(span, Some(prim), |env| prim.run_mod(args, env))
+            }
+            Node::ImplMod(prim, args, span) => self.with_span(span, |env| prim.run_mod(args, env)),
+            Node::Push(val) => {
+                self.rt.stack.push(val);
+                Ok(())
+            }
+            Node::CallGlobal(index, _) => {
+                let binding = self.asm.bindings.get(index).ok_or_else(|| {
+                    self.error(
+                        "Called out-of-bounds binding. \
+                        This is a bug in the interpreter.",
+                    )
+                })?;
+                match binding.kind.clone() {
+                    BindingKind::Const(Some(val)) => {
+                        self.rt.stack.push(val);
                         Ok(())
-                    })
+                    }
+                    BindingKind::Const(None) => {
+                        if let Some(node) = self.rt.unevaluated_constants.remove(&index) {
+                            (|| -> UiuaResult {
+                                self.exec(node)?;
+                                let val = self.pop("constant")?;
+                                self.push(val.clone());
+                                self.asm.bindings.make_mut()[index].kind =
+                                    BindingKind::Const(Some(val));
+                                Ok(())
+                            })()
+                        } else {
+                            Err(self.error(
+                                "Called unbound constant. \
+                                This is a bug in the interpreter.",
+                            ))
+                        }
+                    }
+                    BindingKind::Func(f) => {
+                        self.respect_recursion_limit().and_then(|_| self.call(&f))
+                    }
+                    BindingKind::Import { .. } | BindingKind::Module(_) => Err(self.error(
+                        "Called module global. \
+                        This is a bug in the interpreter.",
+                    )),
+                    BindingKind::IndexMacro(_) => Err(self.error(
+                        "Called index macro global. \
+                        This is a bug in the interpreter.",
+                    )),
+                    BindingKind::CodeMacro(_) => Err(self.error(
+                        "Called code macro global. \
+                        This is a bug in the interpreter.",
+                    )),
                 }
-                Instr::MatchFormatPattern { parts, span } => {
-                    let parts = parts.clone();
-                    self.with_span(*span, |env| invert::match_format_pattern(parts, env))
-                }
-                &Instr::Label {
-                    ref label,
-                    span,
-                    remove,
-                } => {
-                    let label = label.clone();
-                    self.with_span(span, |env| {
-                        env.monadic_mut(|val| {
-                            let label = if label.is_empty() {
-                                None
-                            } else if remove {
-                                if val.meta().label.as_ref().map_or(true, |l| l == &label) {
-                                    None
-                                } else {
-                                    Some(label)
-                                }
-                            } else {
-                                Some(label)
-                            };
-                            val.set_label(label);
-                        })
-                    })
-                }
-                &Instr::ValidateType {
+            }
+            Node::CallMacro { index, span, .. } => self.with_span(span, |env| {
+                let binding = env.asm.bindings.get(index).ok_or_else(|| {
+                    env.error(
+                        "Called out-of-bounds binding. \
+                        This is a bug in the interpreter.",
+                    )
+                })?;
+                let func = match &binding.kind {
+                    BindingKind::Func(f) => f.clone(),
+                    _ => {
+                        return Err(env.error(
+                            "Recursive macro is not bound as a function. \
+                            This is a bug in the interpreter.",
+                        ))
+                    }
+                };
+                env.call(&func)
+            }),
+            Node::BindGlobal { span, index } => {
+                let local = LocalName {
                     index,
-                    ref name,
-                    type_num,
-                    span,
-                } => {
-                    let name = name.clone();
-                    self.with_span(span, |env| {
-                        let val = env.pop(index)?;
-                        if val.type_id() != type_num {
-                            let found = if val.element_count() == 1 {
-                                val.type_name()
-                            } else {
-                                val.type_name_plural()
-                            };
-                            let expected = match type_num {
-                                0 => "numbers",
-                                1 => "complex numbers",
-                                2 => "characters",
-                                3 => "boxes",
-                                _ => {
-                                    return Err(env.error(format!(
-                                        "Invalid type number {type_num}. \
-                                        This is a bug in the interpreter."
-                                    )));
-                                }
-                            };
-                            return Err(env.error(format!(
-                                "Field `{name}` should be {expected} but found {found}"
-                            )));
+                    public: false,
+                };
+                let Some(mut value) = self.rt.stack.pop() else {
+                    return Err(self.error(
+                        "No values on the stack for binding. \
+                        This is a bug in the interpreter",
+                    ));
+                };
+                value.compress();
+                // Binding is a constant
+                self.asm.bind_const(local, Some(value), span, None);
+                Ok(())
+            }
+            Node::Array {
+                len,
+                inner,
+                boxed,
+                span,
+            } => self.with_span(span, |env| env.make_array(len, *inner, boxed)),
+            Node::Call(f, span) => self.call_with_span(&f, span),
+            Node::CustomInverse(cust, span) => match cust.normal {
+                Ok(normal) => self.exec_with_span(normal, span),
+                Err(e) => self.with_span(span, |env| Err(env.error(e))),
+            },
+            Node::Switch {
+                branches,
+                sig,
+                span,
+                under_cond,
+            } => self.with_span(span, |env| {
+                algorithm::switch(branches, sig, under_cond, env)
+            }),
+            Node::Format(parts, span) => {
+                let parts = parts.clone();
+                self.with_span(span, |env| {
+                    let mut s = String::new();
+                    for (i, part) in parts.into_iter().enumerate() {
+                        if i > 0 {
+                            s.push_str(&env.pop(("format argument", i))?.format());
                         }
-                        env.push(val);
-                        Ok(())
-                    })
-                }
-                &Instr::Dynamic(df) => (|| {
-                    self.asm
-                        .dynamic_functions
-                        .get(df.index)
-                        .ok_or_else(|| {
-                            self.error(format!("Dynamic function index {} out of range", df.index))
-                        })?
-                        .clone()(self)
-                })(),
-                &Instr::Unpack { count, span, unbox } => self.with_span(span, |env| {
-                    let arr = env.pop(1)?;
-                    if arr.row_count() != count {
+                        s.push_str(&part);
+                    }
+                    env.push(s);
+                    Ok(())
+                })
+            }
+            Node::MatchFormatPattern(parts, span) => {
+                self.with_span(span, |env| match_format_pattern(parts, env))
+            }
+            Node::Label(label, span) => self.with_span(span, |env| {
+                env.monadic_mut(|val| {
+                    val.set_label(if label.is_empty() { None } else { Some(label) });
+                })
+            }),
+            Node::RemoveLabel(_, span) => {
+                self.with_span(span, |env| env.monadic_mut(|val| val.set_label(None)))
+            }
+            Node::ValidateType {
+                index,
+                name,
+                type_num,
+                span,
+            } => {
+                let name = name.clone();
+                self.with_span(span, |env| {
+                    let val = env.pop(index)?;
+                    if val.type_id() != type_num {
+                        let found = if val.element_count() == 1 {
+                            val.type_name()
+                        } else {
+                            val.type_name_plural()
+                        };
+                        let expected = match type_num {
+                            0 => "numbers",
+                            1 => "complex numbers",
+                            2 => "characters",
+                            3 => "boxes",
+                            _ => {
+                                return Err(env.error(format!(
+                                    "Invalid type number {type_num}. \
+                                        This is a bug in the interpreter."
+                                )));
+                            }
+                        };
                         return Err(env.error(format!(
-                            "This °{} expects an array with {} rows, \
-                            but the array has {}",
-                            if unbox { "{}" } else { "[]" },
-                            count,
-                            arr.row_count()
+                            "Field `{name}` should be {expected} but found {found}"
                         )));
                     }
-                    if unbox {
-                        for val in arr.into_rows().rev() {
-                            env.push(val.unboxed());
-                        }
-                    } else {
-                        for val in arr.into_rows().rev() {
-                            env.push(val);
-                        }
-                    }
+                    env.push(val);
                     Ok(())
-                }),
-                &Instr::TouchStack { count, span } => {
-                    self.with_span(span, |env| env.touch_array_stack(count))
+                })
+            }
+            Node::Dynamic(df) => (|| {
+                self.asm
+                    .dynamic_functions
+                    .get(df.index)
+                    .ok_or_else(|| {
+                        self.error(format!("Dynamic function index {} out of range", df.index))
+                    })?
+                    .clone()(self)
+            })(),
+            Node::Unpack { count, span, unbox } => self.with_span(span, |env| {
+                let arr = env.pop(1)?;
+                if arr.row_count() != count {
+                    return Err(env.error(format!(
+                        "This °{} expects an array with {} rows, \
+                            but the array has {}",
+                        if unbox { "{}" } else { "[]" },
+                        count,
+                        arr.row_count()
+                    )));
                 }
-                &Instr::PushTemp { stack, count, span } => self.with_span(span, |env| {
-                    for i in 0..count {
-                        let value = env.pop(i + 1)?;
-                        env.rt.temp_stacks[stack as usize].push(value);
+                if unbox {
+                    for val in arr.into_rows().rev() {
+                        env.push(val.unboxed());
                     }
-                    Ok(())
-                }),
-                &Instr::PopTemp {
-                    stack, count, span, ..
-                } => self.with_span(span, |env| {
-                    for _ in 0..count {
-                        let value = env.rt.temp_stacks[stack as usize].pop().ok_or_else(|| {
-                            env.error(format!(
-                                "Stack was empty when getting saved {} value",
-                                format!("{stack:?}").to_lowercase()
-                            ))
-                        })?;
-                        env.push(value);
+                } else {
+                    for val in arr.into_rows().rev() {
+                        env.push(val);
                     }
-
-                    Ok(())
-                }),
-                &Instr::CopyToTemp { stack, count, span } => self.with_span(span, |env| {
-                    env.touch_array_stack(count)?;
-                    for i in 0..count {
-                        let value = env.rt.stack[env.rt.stack.len() - i - 1].clone();
-                        env.rt.temp_stacks[stack as usize].push(value);
-                    }
-                    Ok(())
-                }),
-                &Instr::SetOutputComment { i, n } => {
-                    let values = self.stack()[self.stack().len().saturating_sub(n)..].to_vec();
-                    let stack_values = self.rt.output_comments.entry(i).or_default();
-                    if stack_values.is_empty() {
-                        *stack_values = values.into_iter().map(|v| vec![v]).collect();
-                    } else {
-                        for (stack_values, value) in stack_values.iter_mut().zip(values) {
-                            stack_values.push(value);
-                        }
-                    }
-                    Ok(())
                 }
-            };
-            if self.rt.time_instrs {
-                let end_time = self.rt.backend.now();
-                let padding = self.rt.call_stack.len().saturating_sub(1) * 2;
-                #[rustfmt::skip]
+                Ok(())
+            }),
+            Node::SetOutputComment { i, n } => {
+                let values = self.stack()[self.stack().len().saturating_sub(n)..].to_vec();
+                let stack_values = self.rt.output_comments.entry(i).or_default();
+                if stack_values.is_empty() {
+                    *stack_values = values.into_iter().map(|v| vec![v]).collect();
+                } else {
+                    for (stack_values, value) in stack_values.iter_mut().zip(values) {
+                        stack_values.push(value);
+                    }
+                }
+                Ok(())
+            }
+            Node::PushUnder(n, span) => self.with_span(span, |env| {
+                env.require_height(n)?;
+                let start = env.rt.stack.len() - n;
+                env.rt.under_stack.extend(env.rt.stack.drain(start..).rev());
+                Ok(())
+            }),
+            Node::CopyToUnder(n, span) => self.with_span(span, |env| {
+                env.require_height(n)?;
+                env.rt
+                    .under_stack
+                    .extend(env.rt.stack.iter().rev().take(n).cloned());
+                Ok(())
+            }),
+            Node::PopUnder(n, span) => self.with_span(span, |env| {
+                if env.under_stack_height() < n {
+                    return Err(env.error("Stack was empty when getting context value"));
+                }
+                let start = env.under_stack_height() - n;
+                env.rt.stack.extend(env.rt.under_stack.drain(start..).rev());
+                Ok(())
+            }),
+            Node::NoInline(inner) => self.exec(*inner),
+            Node::TrackCaller(inner) => {
+                self.rt.call_stack.last_mut().unwrap().track_caller = true;
+                self.exec(*inner)
+            }
+        };
+        if self.rt.time_instrs {
+            let end_time = self.rt.backend.now();
+            let padding = self.rt.call_stack.len().saturating_sub(1) * 2;
+            #[rustfmt::skip]
                 println!( // Allow println
                     "  ⏲{:padding$}{:.2}ms - {}",
                     "",
                     end_time - self.rt.last_time,
-                    formatted_instr
+                    formatted_node
                 );
-                self.rt.last_time = self.rt.backend.now();
-            }
-            if let Err(mut err) = res {
-                // Trace errors
-                let frame = self.rt.call_stack.pop().unwrap();
-                let span = self.asm.spans[frame.call_span].clone();
-                if frame.track_caller {
-                    err.track_caller(span);
-                } else {
-                    err.trace.push(TraceFrame { id: frame.id, span });
-                }
-                return Err(err);
-            }
-            self.rt.call_stack.last_mut().unwrap().pc += 1;
-            self.respect_execution_limit()?;
+            self.rt.last_time = self.rt.backend.now();
         }
-        self.rt.call_stack.pop();
-        Ok(())
+        self.respect_execution_limit()?;
+        res
     }
     /// Timeout if an execution limit is set and has been exceeded
     pub fn respect_execution_limit(&self) -> UiuaResult {
@@ -810,59 +754,32 @@ code:
     }
     /// Call a function
     #[inline]
-    pub fn call(&mut self, f: Function) -> UiuaResult {
+    pub fn call(&mut self, f: &Function) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_span(f, call_span)
     }
-    #[inline]
-    fn call_slice(&mut self, slice: FuncSlice) -> UiuaResult {
-        let call_span = self.span_index();
-        let frame = StackFrame {
-            slice,
-            sig: Signature::new(0, 0),
-            track_caller: false,
-            id: FunctionId::Main,
-            call_span,
-            spans: Vec::new(),
-            pc: 0,
-        };
-        self.exec(frame)
-    }
     /// Call and truncate the stack to before the args were pushed if the call fails
-    pub(crate) fn call_clean_stack(&mut self, f: Function) -> UiuaResult {
-        let sig = f.signature();
-        let temp_sigs = instrs_temp_signatures(f.instrs(&self.asm))
-            .unwrap_or([Signature::new(0, 0); TempStack::CARDINALITY]);
+    pub(crate) fn exec_clean_stack(&mut self, sn: SigNode) -> UiuaResult {
+        let sig = sn.sig;
+        let under_sig = sn.node.under_sig().unwrap_or(Signature::new(0, 0));
         let bottom = self.stack_height().saturating_sub(sig.args);
-        let mut temp_bottoms: [usize; TempStack::CARDINALITY] = [0; TempStack::CARDINALITY];
-        for (i, stack) in self.rt.temp_stacks.iter().enumerate() {
-            temp_bottoms[i] = stack.len().saturating_sub(temp_sigs[i].args);
-        }
-        let array_stack_height = self.rt.array_stack.len();
-        let res = self.call(f);
+        let under_bottom = self.rt.under_stack.len().saturating_sub(under_sig.args);
+        let res = self.exec(sn.node);
         if res.is_err() {
             self.truncate_stack(bottom);
-            for (stack, bottom) in self.rt.temp_stacks.iter_mut().zip(temp_bottoms) {
-                stack.truncate(bottom);
-            }
-            self.rt.array_stack.truncate(array_stack_height);
+            self.rt.under_stack.truncate(under_bottom);
         }
         res
     }
-    /// Call and maintaint the stack delta if the call fails
-    pub(crate) fn call_maintain_sig(&mut self, f: Function) -> UiuaResult {
-        let sig = f.signature();
-        let mut args = self.stack()[self.stack().len().saturating_sub(sig.args)..].to_vec();
+    /// Call and maintain the stack delta if the call fails
+    pub(crate) fn exec_maintain_sig(&mut self, sn: SigNode) -> UiuaResult {
+        let mut args = self.stack()[self.stack().len().saturating_sub(sn.sig.args)..].to_vec();
         args.reverse();
-        let temp_sigs = instrs_temp_signatures(f.instrs(&self.asm))
-            .unwrap_or([Signature::new(0, 0); TempStack::CARDINALITY]);
-        let target_height = (self.stack_height() + sig.outputs).saturating_sub(sig.args);
-        let mut temp_target_heights: [usize; TempStack::CARDINALITY] = [0; TempStack::CARDINALITY];
-        for (temp, temp_sig) in all::<TempStack>().zip(&temp_sigs) {
-            temp_target_heights[temp as usize] =
-                (self.temp_stack_height(temp) + temp_sig.outputs).saturating_sub(temp_sig.args);
-        }
-        let res = self.call(f);
+        let under_sig = sn.node.under_sig().unwrap_or(Signature::new(0, 0));
+        let target_height = (self.stack_height() + sn.sig.outputs).saturating_sub(sn.sig.args);
+        let under_target_height =
+            (self.rt.under_stack.len() + under_sig.outputs).saturating_sub(under_sig.args);
+        let res = self.exec(sn);
         match self.stack_height().cmp(&target_height) {
             Ordering::Equal => {}
             Ordering::Greater => {
@@ -875,50 +792,77 @@ code:
                 }
             }
         }
-        for (temp, target_height) in all::<TempStack>().zip(&temp_target_heights) {
-            match self.temp_stack_height(temp).cmp(target_height) {
-                Ordering::Equal => {}
-                Ordering::Greater => self.truncate_temp_stack(temp, *target_height),
-                Ordering::Less => {
-                    let diff = target_height - self.temp_stack_height(temp);
-                    for _ in 0..diff {
-                        self.push_temp(temp, args.pop().unwrap_or_default());
-                    }
+        match self.rt.under_stack.len().cmp(&under_target_height) {
+            Ordering::Equal => {}
+            Ordering::Greater => self.truncate_under_stack(under_target_height),
+            Ordering::Less => {
+                let diff = under_target_height - self.rt.under_stack.len();
+                for _ in 0..diff {
+                    self.push_under(args.pop().unwrap_or_default());
                 }
             }
         }
         res
     }
-    #[inline]
-    fn call_with_span(&mut self, f: Function, call_span: usize) -> UiuaResult {
-        self.call_with_frame_span(
-            StackFrame {
-                slice: f.slice(),
-                sig: f.signature(),
-                id: f.id,
-                track_caller: f.flags.track_caller(),
+    fn call_with_span(&mut self, f: &Function, call_span: usize) -> UiuaResult {
+        self.without_fill(|env| {
+            env.exec_with_frame_span(
+                env.asm[f].clone(),
+                StackFrame {
+                    sig: f.sig,
+                    id: Some(f.id.clone()),
+                    call_span,
+                    ..Default::default()
+                },
                 call_span,
-                spans: Vec::new(),
-                pc: 0,
+            )
+        })
+    }
+    fn exec_with_span(&mut self, sn: SigNode, call_span: usize) -> UiuaResult {
+        self.exec_with_frame_span(
+            sn.node,
+            StackFrame {
+                sig: sn.sig,
+                call_span,
+                ..Default::default()
             },
             call_span,
         )
     }
-    #[inline]
-    fn call_with_frame_span(&mut self, frame: StackFrame, call_span: usize) -> UiuaResult {
+    fn exec_with_frame_span(
+        &mut self,
+        node: Node,
+        frame: StackFrame,
+        _call_span: usize,
+    ) -> UiuaResult {
         let start_height = self.rt.stack.len();
         let sig = frame.sig;
-        self.exec(frame)?;
+        self.rt.call_stack.push(frame);
+        let res = self.exec(node);
+        let frame = self.rt.call_stack.pop().unwrap();
+        if let Err(mut err) = res {
+            // Trace errors
+            let span = self.asm.spans[frame.call_span].clone();
+            if frame.track_caller {
+                err.track_caller(span);
+            } else {
+                err.trace.push(TraceFrame { id: frame.id, span });
+            }
+            return Err(err);
+        }
         let height_diff = self.rt.stack.len() as isize - start_height as isize;
         let sig_diff = sig.outputs as isize - sig.args as isize;
         if height_diff != sig_diff {
-            return Err(self.error_with_span(
-                self.asm.spans[call_span].clone(),
-                format!(
-                    "Function modified the stack by {height_diff} values, but its \
-                    signature of {sig} implies a change of {sig_diff}"
-                ),
-            ));
+            let message = format!(
+                "Function modified the stack by {height_diff} values, but its \
+                signature of {sig} implies a change of {sig_diff}"
+            );
+            #[cfg(debug_assertions)]
+            {
+                panic!("{message}");
+            }
+            #[cfg(not(debug_assertions))]
+            return Err(self.error_with_span(self.asm.spans[_call_span].clone(), message));
         }
         Ok(())
     }
@@ -947,15 +891,21 @@ code:
     }
     /// Construct an error with the current span
     pub fn error(&self, message: impl ToString) -> UiuaError {
-        UiuaErrorKind::Run(
-            self.span().clone().sp(message.to_string()),
-            self.inputs().clone().into(),
-        )
+        UiuaErrorKind::Run {
+            message: self.span().clone().sp(message.to_string()),
+            info: Vec::new(),
+            inputs: self.inputs().clone().into(),
+        }
         .into()
     }
     /// Construct an error with a custom span
     pub fn error_with_span(&self, span: Span, message: impl ToString) -> UiuaError {
-        UiuaErrorKind::Run(span.sp(message.to_string()), self.inputs().clone().into()).into()
+        UiuaErrorKind::Run {
+            message: span.sp(message.to_string()),
+            info: Vec::new(),
+            inputs: self.inputs().clone().into(),
+        }
+        .into()
     }
     #[allow(dead_code)]
     pub(crate) fn error_maybe_span(
@@ -969,25 +919,14 @@ code:
             self.error(message)
         }
     }
-    pub(crate) fn pattern_match_error(&self) -> UiuaError {
-        UiuaErrorKind::Run(
-            self.span().sp("Pattern match failed".into()),
-            self.inputs().clone().into(),
-        )
-        .into()
-    }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
-        let res = self.rt.stack.pop().ok_or_else(|| {
+        self.rt.stack.pop().ok_or_else(|| {
             self.error(format!(
                 "Stack was empty when evaluating {}",
                 arg.arg_name()
             ))
-        });
-        for bottom in &mut self.rt.array_stack {
-            *bottom = (*bottom).min(self.rt.stack.len());
-        }
-        res
+        })
     }
     /// Pop a value and try to convert it
     pub fn pop_convert<T>(
@@ -1029,27 +968,26 @@ code:
         self.pop_convert(Value::as_string)
     }
     /// Simulates popping a value and immediately pushing it back
-    pub(crate) fn touch_array_stack(&mut self, n: usize) -> UiuaResult {
-        if self.rt.stack.len() < n {
-            return Err(self.error(format!(
-                "Stack was empty evaluating argument {}",
-                self.rt.stack.len() + 1
-            )));
-        }
-        for bottom in &mut self.rt.array_stack {
-            *bottom = (*bottom).min(self.rt.stack.len().saturating_sub(n));
-        }
-        Ok(())
+    pub(crate) fn touch_stack(&self, n: usize) -> UiuaResult {
+        self.require_height(n).map(drop)
     }
-    pub(crate) fn end_array(&mut self, boxed: bool, initial_value: Option<Value>) -> UiuaResult {
-        let start = self.rt.array_stack.pop().unwrap();
+    pub(crate) fn make_array(&mut self, len: ArrayLen, inner: Node, boxed: bool) -> UiuaResult {
+        let start_height = self.stack_height();
+        self.rt.array_depth += 1;
+        let res = self.exec(inner);
+        self.rt.array_depth -= 1;
+        res?;
+        let start = match len {
+            ArrayLen::Static(len) => self.stack_height() - len,
+            ArrayLen::Dynamic(len) => start_height - len,
+        };
         let values = self.rt.stack.drain(start..).rev();
         let values: Vec<Value> = if boxed {
             values.map(Boxed).map(Value::from).collect()
         } else {
             values.collect()
         };
-        let mut val = if values.is_empty() && boxed {
+        let val = if values.is_empty() && boxed {
             Array::<Boxed>::default().into()
         } else {
             let elems: usize = values.iter().map(Value::element_count).sum();
@@ -1057,13 +995,6 @@ code:
             validate_size_impl(elem_size, [elems]).map_err(|e| self.error(e))?;
             Value::from_row_values(values, self)?
         };
-        if let Some(init) = initial_value {
-            if val.shape() == [0] {
-                val = init;
-            } else {
-                val = init.join(val, false, self)?;
-            }
-        }
         self.push(val);
         Ok(())
     }
@@ -1071,30 +1002,95 @@ code:
     pub fn push<V: Into<Value>>(&mut self, val: V) {
         self.rt.stack.push(val.into());
     }
-    pub(crate) fn push_temp(&mut self, temp: TempStack, val: Value) {
-        self.rt.temp_stacks[temp as usize].push(val);
+    pub(crate) fn push_under(&mut self, val: Value) {
+        self.rt.under_stack.push(val);
     }
-    /// Push a function onto the function stack
-    pub fn push_func(&mut self, f: Function) {
-        self.rt.function_stack.push(f);
-    }
-    /// Get a slice of instructions
-    pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
-        &self.asm.instrs[slice.start..][..slice.len]
+    /// Push several values onto the stack
+    pub fn push_all<V: Into<Value>>(&mut self, vals: impl IntoIterator<Item = V>) {
+        self.rt.stack.extend(vals.into_iter().map(Into::into));
     }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
-        for stack in &mut self.rt.temp_stacks {
-            stack.clear();
-        }
-        self.rt.function_stack.clear();
+        self.rt.under_stack.clear();
         take(&mut self.rt.stack)
     }
-    /// Take all stacks
-    pub fn take_stacks(&mut self) -> (Vec<Value>, [Vec<Value>; TempStack::CARDINALITY]) {
-        let temp_stacks = take(&mut self.rt.temp_stacks);
+    /// Take the main stack and under stack
+    pub fn take_stacks(&mut self) -> (Vec<Value>, Vec<Value>) {
         let stack = take(&mut self.rt.stack);
-        (stack, temp_stacks)
+        let under = take(&mut self.rt.under_stack);
+        (stack, under)
+    }
+    /// Take some values from the stack
+    pub fn take_n(&mut self, n: usize) -> UiuaResult<Vec<Value>> {
+        let height = self.require_height(n)?;
+        Ok(self.rt.stack.split_off(height))
+    }
+    /// Copy some values from the stack
+    pub fn copy_n(&self, n: usize) -> UiuaResult<Vec<Value>> {
+        let height = self.require_height(n)?;
+        Ok(self.rt.stack[height..].to_vec())
+    }
+    /// Prepare to fork and return the arguments to f
+    pub fn prepare_fork(&mut self, f_args: usize, g_args: usize) -> UiuaResult<Vec<Value>> {
+        if f_args > g_args {
+            self.require_height(f_args)?;
+            let mut vals = Vec::with_capacity(f_args);
+            let len = self.rt.stack.len();
+            vals.extend(self.rt.stack.drain(len - f_args..(len - g_args)));
+            vals.extend(
+                self.rt.stack[self.rt.stack.len() - g_args..]
+                    .iter()
+                    .cloned(),
+            );
+            debug_assert_eq!(vals.len(), f_args);
+            Ok(vals)
+        } else {
+            self.copy_n(f_args)
+        }
+    }
+    /// Get a value some amount from the top of the stack
+    pub fn copy_nth(&self, n: usize) -> UiuaResult<Value> {
+        let height = self.require_height(n + 1)?;
+        Ok(self.rt.stack[height].clone())
+    }
+    /// Duplicate some values down the stack
+    ///
+    /// `depth` must be greater than or equal to `n`
+    pub fn dup_values(&mut self, n: usize, depth: usize) -> UiuaResult {
+        let start = self.require_height(depth)?;
+        for i in 0..n {
+            self.rt.stack.push(self.rt.stack[start + i].clone());
+        }
+        if n != depth {
+            self.rt.stack[start..].rotate_right(n);
+        }
+        Ok(())
+    }
+    /// Rotate the stack up at some depth
+    pub fn rotate_up(&mut self, n: usize, depth: usize) -> UiuaResult {
+        let start = self.require_height(depth)?;
+        self.rt.stack[start..].rotate_right(n);
+        Ok(())
+    }
+    /// Rotate the stack down at some depth
+    pub fn rotate_down(&mut self, n: usize, depth: usize) -> UiuaResult {
+        let start = self.require_height(depth)?;
+        self.rt.stack[start..].rotate_left(n);
+        Ok(())
+    }
+    /// Access n stack values mutably
+    pub fn n_mut(&mut self, n: usize) -> UiuaResult<&mut [Value]> {
+        let start = self.require_height(n)?;
+        Ok(&mut self.rt.stack[start..])
+    }
+    pub(crate) fn require_height(&self, n: usize) -> UiuaResult<usize> {
+        if self.rt.stack.len() < n {
+            return Err(self.error(format!(
+                "Stack was empty when getting argument {}",
+                self.rt.stack.len() + 1
+            )));
+        }
+        Ok(self.rt.stack.len() - n)
     }
     /// Get a reference to the stack
     pub fn stack(&self) -> &[Value] {
@@ -1103,15 +1099,6 @@ code:
     /// Get a mutable reference to the stack data
     pub fn stack_mut(&mut self) -> &mut [Value] {
         &mut self.rt.stack
-    }
-    /// Pop a function from the function stack
-    pub fn pop_function(&mut self) -> UiuaResult<Function> {
-        self.rt.function_stack.pop().ok_or_else(|| {
-            self.error(
-                "Function stack was empty when popping. \
-                This is a bug in the interpreter.",
-            )
-        })
     }
     /// Get all bound values in the assembly
     ///
@@ -1148,22 +1135,6 @@ code:
             )));
         }
         Ok(self.rt.stack.iter().rev().take(n).rev().cloned().collect())
-    }
-    pub(crate) fn dup_n(&mut self, n: usize) -> UiuaResult {
-        if self.rt.stack.len() < n {
-            return Err(self.error(format!(
-                "Stack was empty evaluating argument {}",
-                n - self.rt.stack.len()
-            )));
-        }
-        let start = self.rt.stack.len() - n;
-        for bottom in &mut self.rt.array_stack {
-            *bottom = (*bottom).min(start);
-        }
-        for i in 0..n {
-            self.push(self.rt.stack[start + i].clone());
-        }
-        Ok(())
     }
     pub(crate) fn monadic_ref<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
         let value = self.pop(1)?;
@@ -1246,14 +1217,14 @@ code:
     pub(crate) fn stack_height(&self) -> usize {
         self.rt.stack.len()
     }
-    pub(crate) fn temp_stack_height(&self, stack: TempStack) -> usize {
-        self.rt.temp_stacks[stack as usize].len()
+    pub(crate) fn under_stack_height(&self) -> usize {
+        self.rt.under_stack.len()
     }
     pub(crate) fn truncate_stack(&mut self, size: usize) -> Vec<Value> {
         self.rt.stack.split_off(size)
     }
-    pub(crate) fn truncate_temp_stack(&mut self, stack: TempStack, size: usize) {
-        self.rt.temp_stacks[stack as usize].truncate(size);
+    pub(crate) fn truncate_under_stack(&mut self, size: usize) {
+        self.rt.under_stack.truncate(size);
     }
     pub(crate) fn remove_nth_back(&mut self, n: usize) -> UiuaResult<Value> {
         let len = self.rt.stack.len();
@@ -1335,23 +1306,17 @@ code:
         but: impl FnOnce(&mut Self) -> UiuaResult,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
-        let fills = self
-            .rt
-            .fill_stack
-            .split_off(self.rt.fill_stack.len().max(n) - n);
+        let fills = self.rt.fill_stack[self.rt.fill_stack.len().max(n) - n..].to_vec();
         if fills.len() < n {
             for _ in 0..n - fills.len() {
                 self.push(Value::default());
             }
         }
-        for value in fills.iter().rev().cloned() {
+        for value in fills.into_iter().rev() {
             self.push(value);
         }
-        let res1 = but(self);
-        let res2 = in_ctx(self);
-        self.rt.fill_stack.extend(fills.into_iter().rev());
-        res1?;
-        res2
+        but(self)?;
+        self.without_fill(|env| in_ctx(env))
     }
     pub(crate) fn without_unfill_but(
         &mut self,
@@ -1359,23 +1324,17 @@ code:
         but: impl FnOnce(&mut Self) -> UiuaResult,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
-        let fills = self
-            .rt
-            .unfill_stack
-            .split_off(self.rt.unfill_stack.len().max(n) - n);
+        let fills = self.rt.unfill_stack[self.rt.unfill_stack.len().max(n) - n..].to_vec();
         if fills.len() < n {
             for _ in 0..n - fills.len() {
                 self.push(Value::default());
             }
         }
-        for value in fills.iter().rev().cloned() {
+        for value in fills.into_iter().rev() {
             self.push(value);
         }
-        let res1 = but(self);
-        let res2 = in_ctx(self);
-        self.rt.unfill_stack.extend(fills.into_iter().rev());
-        res1?;
-        res2
+        but(self)?;
+        self.without_fill(|env| in_ctx(env))
     }
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
         self.rt.call_stack.iter()
@@ -1397,12 +1356,9 @@ code:
         }
     }
     /// Spawn a thread
-    pub(crate) fn spawn(&mut self, capture_count: usize, _pool: bool, f: Function) -> UiuaResult {
+    pub(crate) fn spawn(&mut self, capture_count: usize, _pool: bool, f: SigNode) -> UiuaResult {
         if !self.rt.backend.allow_thread_spawning() {
             return Err(self.error("Thread spawning is not allowed in this environment"));
-        }
-        if f.is_recursive() {
-            return Err(self.error(format!("Cannot spawn recursive function {}", f.id)));
         }
         if self.rt.stack.len() < capture_count {
             return Err(self.error(format!(
@@ -1426,14 +1382,13 @@ code:
                 stack: (self.rt.stack)
                     .drain(self.rt.stack.len() - capture_count..)
                     .collect(),
-                function_stack: Vec::new(),
-                temp_stacks: [Vec::new(), Vec::new()],
-                array_stack: Vec::new(),
+                under_stack: Vec::new(),
                 fill_stack: Vec::new(),
                 fill_boundary_stack: Vec::new(),
                 unfill_stack: Vec::new(),
                 recur_stack: self.rt.recur_stack.clone(),
-                call_stack: Vec::new(),
+                call_stack: Vec::from_iter(self.rt.call_stack.last().cloned()),
+                array_depth: 0,
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,
                 cli_arguments: self.rt.cli_arguments.clone(),
@@ -1445,6 +1400,7 @@ code:
                 interrupted: self.rt.interrupted.clone(),
                 output_comments: HashMap::new(),
                 memo: self.rt.memo.clone(),
+                unevaluated_constants: HashMap::new(),
                 test_results: Vec::new(),
                 reports: Vec::new(),
                 thread,
@@ -1454,16 +1410,16 @@ code:
         let recv = {
             let (send, recv) = crossbeam_channel::unbounded();
             if _pool {
-                rayon::spawn(move || _ = send.send(env.call(f).map(|_| env.take_stack())));
+                rayon::spawn(move || _ = send.send(env.exec(f).map(|_| env.take_stack())));
             } else {
                 std::thread::Builder::new()
-                    .spawn(move || _ = send.send(env.call(f).map(|_| env.take_stack())))
+                    .spawn(move || _ = send.send(env.exec(f).map(|_| env.take_stack())))
                     .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
             }
             recv
         };
         #[cfg(target_arch = "wasm32")]
-        let result = env.call(f).map(|_| env.take_stack());
+        let result = env.exec(f).map(|_| env.take_stack());
 
         let id = self.rt.thread.next_child_id;
         self.rt.thread.next_child_id += 1;

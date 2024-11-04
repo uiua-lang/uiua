@@ -26,15 +26,14 @@ use rand::prelude::*;
 use serde::*;
 
 use crate::{
-    algorithm::{self, invert, loops, reduce, table, zip, *},
+    algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
-    check::instrs_signature,
     encode,
     lex::{AsciiToken, SUBSCRIPT_NUMS},
     sys::*,
     value::*,
-    FunctionId, Signature, Uiua, UiuaErrorKind, UiuaResult,
+    FunctionId, Ops, Signature, Uiua, UiuaErrorKind, UiuaResult,
 };
 
 /// Categories of primitives
@@ -173,9 +172,9 @@ impl fmt::Display for ImplPrimitive {
             UnParse => write!(f, "{Un}{Parse}"),
             UnFix => write!(f, "{Un}{Fix}"),
             UnShape => write!(f, "{Un}{Shape}"),
-            UnOnDrop => write!(f, "{Un}{On}{Drop}"),
-            UnOnSelect => write!(f, "{Un}{On}{Select}"),
-            UnOnPick => write!(f, "{Un}{On}{Pick}"),
+            AntiDrop => write!(f, "{Anti}{Drop}"),
+            AntiSelect => write!(f, "{Anti}{Select}"),
+            AntiPick => write!(f, "{Anti}{Pick}"),
             UnJoin | UnJoinShape => write!(f, "{Un}{Join}"),
             UnJoinEnd | UnJoinShapeEnd => write!(f, "{Un}({Join}{Flip})"),
             UnKeep => write!(f, "{Un}{Keep}"),
@@ -190,6 +189,7 @@ impl fmt::Display for ImplPrimitive {
             UnXlsx => write!(f, "{Un}{Xlsx}"),
             UnFft => write!(f, "{Un}{Fft}"),
             UnDatetime => write!(f, "{Un}{DateTime}"),
+            UnBoth => write!(f, "{Un}{Both}"),
             ImageDecode => write!(f, "{Un}{ImageEncode}"),
             GifDecode => write!(f, "{Un}{GifEncode}"),
             AudioDecode => write!(f, "{Un}{AudioEncode}"),
@@ -197,16 +197,16 @@ impl fmt::Display for ImplPrimitive {
             UnClip => write!(f, "{Un}{}", Primitive::Sys(SysOp::Clip)),
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoUnbits => write!(f, "{Under}{Un}{Bits}"),
-            UndoBase => write!(f, "{Under}{Base}"),
-            UndoReverse(_) => write!(f, "{Under}{Reverse}"),
-            UndoTransposeN(..) => write!(f, "{Under}{Transpose}"),
+            AntiBase => write!(f, "{Under}{Base}"),
+            UndoReverse { .. } => write!(f, "{Under}{Reverse}"),
+            UndoTransposeN(n, _) => write!(f, "{Under}{Transpose}({n})"),
             UndoRotate(_) => write!(f, "{Under}{Rotate}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
             UndoSelect => write!(f, "{Under}{Select}"),
             UndoPick => write!(f, "{Under}{Pick}"),
             UndoWhere => write!(f, "{Under}{Where}"),
-            UndoOrient => write!(f, "{Under}{Orient}"),
+            AntiOrient => write!(f, "{Under}{Orient}"),
             UndoInsert => write!(f, "{Under}{Insert}"),
             UndoRemove => write!(f, "{Under}{Remove}"),
             UndoPartition1 | UndoPartition2 => write!(f, "{Under}{Partition}"),
@@ -238,12 +238,14 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand => write!(f, "{Gap}{Rand}"),
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
-            ReduceTable => write!(f, "{Reduce}(…){Content}"),
+            ReduceTable => write!(f, "{Reduce}(…){Table}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}"),
             RowsWindows => write!(f, "{Rows}(…){Windows}"),
             CountUnique => write!(f, "{Len}{Deduplicate}"),
+            Root => write!(f, "{Pow}{Div}{Flip}1"),
             MatchPattern => write!(f, "pattern match"),
-            EndRandArray => write!(f, "[{Repeat}{Rand}"),
+            MatchLe => write!(f, "match ≤"),
+            MatchGe => write!(f, "match ≥"),
             AstarFirst => write!(f, "{First}{Astar}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
@@ -376,33 +378,23 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
 });
 
 macro_rules! fill {
-    ($env:expr, $with:ident, $without_but:ident) => {{
+    ($ops:expr, $env:expr, $with:ident, $without_but:ident) => {{
         let env = $env;
-        let fill = env.pop_function()?;
-        let f = env.pop_function()?;
-        let outputs = fill.signature().outputs;
+        let [fill, f] = get_ops($ops, env)?;
+        let outputs = fill.sig.outputs;
         if outputs > 1 {
             return Err(env.error(format!(
                 "{} function can have at most 1 output, but its signature is {}",
                 Primitive::Fill.format(),
-                fill.signature()
+                fill.sig
             )));
         }
         if outputs == 0 {
-            return env.$without_but(
-                fill.signature().args,
-                |env| env.call(fill),
-                |env| env.call(f),
-            );
+            return env.$without_but(fill.sig.args, |env| env.exec(fill), |env| env.exec(f));
         }
-        env.call(fill)?;
+        env.exec(fill)?;
         let fill_value = env.pop("fill value")?;
-        match f.id {
-            FunctionId::Named(_) | FunctionId::Macro(..) => {
-                env.$with(fill_value, |env| env.without_fill(|env| env.call(f)))
-            }
-            _ => env.$with(fill_value, |env| env.call(f)),
-        }?;
+        env.$with(fill_value, |env| env.exec(f))?;
     }};
 }
 
@@ -442,7 +434,7 @@ impl Primitive {
         Self::all().find(|p| p.glyph() == Some(c))
     }
     /// Get the primitive's signature, if it is always well-defined
-    pub fn signature(&self) -> Option<Signature> {
+    pub fn sig(&self) -> Option<Signature> {
         let (args, outputs) = self.args().zip(self.outputs())?;
         Some(Signature { args, outputs })
     }
@@ -481,7 +473,7 @@ impl Primitive {
             (Couple | Box, Some(n)) => Signature::new(n, 1),
             (Couple, None) => Signature::new(2, 1),
             (Box, None) => Signature::new(1, 1),
-            (Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8, _) => return self.signature(),
+            (Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8, _) => return self.sig(),
             _ => return None,
         })
     }
@@ -492,19 +484,11 @@ impl Primitive {
                 "use new {} instead, which has its arguments flipped",
                 MemberOf.format()
             ),
-            Coordinate => format!(
-                "use {} {} {} instead",
-                First.format(),
-                Where.format(),
-                Find.format(),
-            ),
             Chunks => format!("use {Windows} with a rank-2 window size instead"),
             Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
             Choose => format!("use {Tuples}{Lt} instead"),
             Permute => format!("use {Tuples}{Ne} instead"),
             Triangle => format!("use {Tuples} instead"),
-            SetInverse | SetUnder => format!("use {} instead", Obverse.format()),
-            Struct => "use new data definitions instead".into(),
             _ => return None,
         })
     }
@@ -517,8 +501,7 @@ impl Primitive {
             self,
             (Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
-                | Struct
-                | (Last | Sort | Chunks | Base | Coordinate | Fft | Case | Layout)
+                | (Last | Sort | Chunks | Base | Fft | Case | Layout)
                 | (Astar | Triangle)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
@@ -573,6 +556,7 @@ impl Primitive {
             use Primitive::*;
             Some(match name {
                 "kork" => vec![(Keep, "k"), (On, "o"), (Rows, "r"), (Keep, "k")],
+                "awm" => vec![(Assert, "a"), (With, "w"), (Match, "m")],
                 _ => return None,
             })
         }
@@ -731,7 +715,7 @@ impl Primitive {
             Primitive::Pi => env.push(pi()),
             Primitive::Tau => env.push(tau()),
             Primitive::Infinity => env.push(inf()),
-            Primitive::Identity => env.touch_array_stack(1)?,
+            Primitive::Identity => env.touch_stack(1)?,
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,
             Primitive::Abs => env.monadic_env(Value::abs)?,
@@ -743,15 +727,15 @@ impl Primitive {
             Primitive::Round => env.monadic_env(Value::round)?,
             Primitive::Eq => env.dyadic_oo_00_env(Value::is_eq)?,
             Primitive::Ne => env.dyadic_oo_00_env(Value::is_ne)?,
-            Primitive::Lt => env.dyadic_oo_00_env(Value::is_lt)?,
-            Primitive::Le => env.dyadic_oo_00_env(Value::is_le)?,
-            Primitive::Gt => env.dyadic_oo_00_env(Value::is_gt)?,
-            Primitive::Ge => env.dyadic_oo_00_env(Value::is_ge)?,
+            Primitive::Lt => env.dyadic_oo_00_env(Value::other_is_lt)?,
+            Primitive::Le => env.dyadic_oo_00_env(Value::other_is_le)?,
+            Primitive::Gt => env.dyadic_oo_00_env(Value::other_is_gt)?,
+            Primitive::Ge => env.dyadic_oo_00_env(Value::other_is_ge)?,
             Primitive::Add => env.dyadic_oo_00_env(Value::add)?,
             Primitive::Sub => env.dyadic_oo_00_env(Value::sub)?,
             Primitive::Mul => env.dyadic_oo_00_env(Value::mul)?,
             Primitive::Div => env.dyadic_oo_00_env(Value::div)?,
-            Primitive::Mod => env.dyadic_oo_00_env(Value::modulus)?,
+            Primitive::Modulus => env.dyadic_oo_00_env(Value::modulus)?,
             Primitive::Pow => env.dyadic_oo_00_env(Value::pow)?,
             Primitive::Log => env.dyadic_oo_00_env(Value::log)?,
             Primitive::Min => env.dyadic_oo_00_env(Value::min)?,
@@ -791,7 +775,6 @@ impl Primitive {
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
-            Primitive::Coordinate => env.dyadic_rr_env(Value::coordinate)?,
             Primitive::Choose => {
                 env.dyadic_rr_env(|k, val, env| k.choose(val, false, false, env))?
             }
@@ -819,19 +802,6 @@ impl Primitive {
             }
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
             Primitive::Base => env.dyadic_rr_env(Value::base)?,
-            Primitive::Reduce => reduce::reduce(0, env)?,
-            Primitive::Scan => reduce::scan(env)?,
-            Primitive::Fold => reduce::fold(env)?,
-            Primitive::Each => zip::each(env)?,
-            Primitive::Rows => zip::rows(false, env)?,
-            Primitive::Table => table::table(env)?,
-            Primitive::Inventory => zip::rows(true, env)?,
-            Primitive::Tuples => permute::tuples(env)?,
-            Primitive::Repeat => loops::repeat(false, env)?,
-            Primitive::Do => loops::do_(env)?,
-            Primitive::Group => loops::group(env)?,
-            Primitive::Partition => loops::partition(env)?,
-            Primitive::Triangle => table::triangle(env)?,
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;
@@ -872,15 +842,6 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop(1)?;
             }
-            Primitive::Fill => fill!(env, with_fill, without_fill_but),
-            Primitive::Try => algorithm::try_(env)?,
-            Primitive::Case => {
-                let f = env.pop_function()?;
-                env.call(f).map_err(|mut e| {
-                    e.is_case = true;
-                    e
-                })?;
-            }
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
@@ -903,45 +864,6 @@ impl Primitive {
             Primitive::Type => {
                 let val = env.pop(1)?;
                 env.push(val.type_id());
-            }
-            Primitive::Memo => {
-                let f = env.pop_function()?;
-                let sig = f.signature();
-                let mut args = Vec::with_capacity(sig.args);
-                for i in 0..sig.args {
-                    args.push(env.pop(i + 1)?);
-                }
-                let mut memo = env.rt.memo.get_or_default().borrow_mut();
-                if let Some(f_memo) = memo.get_mut(&f.id) {
-                    if let Some(outputs) = f_memo.get(&args) {
-                        let outputs = outputs.clone();
-                        drop(memo);
-                        for val in outputs {
-                            env.push(val);
-                        }
-                        return Ok(());
-                    }
-                }
-                drop(memo);
-                for arg in args.iter().rev() {
-                    env.push(arg.clone());
-                }
-                let id = f.id.clone();
-                env.call(f)?;
-                let outputs = env.clone_stack_top(sig.outputs)?;
-                let mut memo = env.rt.memo.get_or_default().borrow_mut();
-                memo.borrow_mut()
-                    .entry(id)
-                    .or_default()
-                    .insert(args, outputs.clone());
-            }
-            Primitive::Spawn => {
-                let f = env.pop_function()?;
-                env.spawn(f.signature().args, false, f)?;
-            }
-            Primitive::Pool => {
-                let f = env.pop_function()?;
-                env.spawn(f.signature().args, true, f)?;
             }
             Primitive::Wait => {
                 let id = env.pop(1)?;
@@ -966,17 +888,6 @@ impl Primitive {
                 env.push(o);
             }
             Primitive::DateTime => env.monadic_ref_env(Value::datetime)?,
-            Primitive::SetInverse => {
-                let f = env.pop_function()?;
-                let _inv = env.pop_function()?;
-                env.call(f)?;
-            }
-            Primitive::SetUnder => {
-                let f = env.pop_function()?;
-                let _before = env.pop_function()?;
-                let _after = env.pop_function()?;
-                env.call(f)?;
-            }
             Primitive::Insert => {
                 let key = env.pop("key")?;
                 let val = env.pop("value")?;
@@ -1009,7 +920,6 @@ impl Primitive {
             }
             Primitive::Trace => trace(env, false)?,
             Primitive::Stack => stack(env, false)?,
-            Primitive::Dump => dump(env, false)?,
             Primitive::Regex => regex(env)?,
             Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
             Primitive::Csv => env.monadic_ref_env(Value::to_csv)?,
@@ -1020,37 +930,193 @@ impl Primitive {
             Primitive::GifEncode => encode::gif_encode(env)?,
             Primitive::AudioEncode => encode::audio_encode(env)?,
             Primitive::Layout => env.dyadic_oo_env(encode::layout_text)?,
-            Primitive::Astar => algorithm::astar(env)?,
             Primitive::Fft => algorithm::fft(env)?,
             Primitive::Stringify
             | Primitive::Quote
             | Primitive::Sig
             | Primitive::Comptime
-            | Primitive::Dip
-            | Primitive::Gap
-            | Primitive::On
-            | Primitive::With
-            | Primitive::Off
-            | Primitive::By
-            | Primitive::Backward
-            | Primitive::Above
-            | Primitive::Below
             | Primitive::Un
             | Primitive::Anti
             | Primitive::Under
             | Primitive::Obverse
-            | Primitive::Content
-            | Primitive::Both
-            | Primitive::Fork
-            | Primitive::Bracket
-            | Primitive::Switch
-            | Primitive::Struct => {
+            | Primitive::Switch => {
                 return Err(env.error(format!(
                     "{} was not inlined. This is a bug in the interpreter",
                     self.format()
                 )))
             }
             Primitive::Sys(io) => io.run(env)?,
+            prim => {
+                return Err(env.error(if prim.modifier_args().is_some() {
+                    format!(
+                        "{} was not handled as a modifier. \
+                        This is a bug in the interpreter",
+                        prim.format()
+                    )
+                } else {
+                    format!(
+                        "{} was not handled as a function. \
+                        This is a bug in the interpreter",
+                        prim.format()
+                    )
+                }))
+            }
+        }
+        Ok(())
+    }
+    /// Run a primitive as a modifier
+    pub fn run_mod(&self, ops: Ops, env: &mut Uiua) -> UiuaResult {
+        match self {
+            // Looping
+            Primitive::Reduce => reduce::reduce(ops, 0, env)?,
+            Primitive::Scan => reduce::scan(ops, env)?,
+            Primitive::Fold => reduce::fold(ops, env)?,
+            Primitive::Each => zip::each(ops, env)?,
+            Primitive::Rows => zip::rows(ops, false, env)?,
+            Primitive::Table => table::table(ops, env)?,
+            Primitive::Inventory => zip::rows(ops, true, env)?,
+            Primitive::Repeat => loops::repeat(ops, false, env)?,
+            Primitive::Do => loops::do_(ops, env)?,
+            Primitive::Group => loops::group(ops, env)?,
+            Primitive::Partition => loops::partition(ops, env)?,
+            Primitive::Tuples => permute::tuples(ops, env)?,
+
+            // Stack
+            Primitive::Fork => {
+                let [f, g] = get_ops(ops, env)?;
+                let f_args = env.prepare_fork(f.sig.args, g.sig.args)?;
+                env.exec(g)?;
+                env.push_all(f_args);
+                env.exec(f)?;
+            }
+            Primitive::Bracket => {
+                let [f, g] = get_ops(ops, env)?;
+                let vals = env.take_n(f.sig.args)?;
+                env.exec(g)?;
+                env.push_all(vals);
+                env.exec(f)?;
+            }
+            Primitive::Both => {
+                let [f] = get_ops(ops, env)?;
+                let vals = env.take_n(f.sig.args)?;
+                env.exec(f.node.clone())?;
+                env.push_all(vals);
+                env.exec(f.node)?;
+            }
+            Primitive::Dip => {
+                let [f] = get_ops(ops, env)?;
+                let val = env.pop(1)?;
+                env.exec(f)?;
+                env.push(val);
+            }
+            Primitive::On => {
+                let [f] = get_ops(ops, env)?;
+                let val = env.copy_nth(0)?;
+                env.exec(f)?;
+                env.push(val);
+            }
+            Primitive::By => {
+                let [f] = get_ops(ops, env)?;
+                env.dup_values(1, f.sig.args.max(1))?;
+                env.exec(f)?;
+            }
+            Primitive::Above => {
+                let [f] = get_ops(ops, env)?;
+                let vals = env.copy_n(f.sig.args)?;
+                env.exec(f)?;
+                env.push_all(vals);
+            }
+            Primitive::Below => {
+                let [f] = get_ops(ops, env)?;
+                env.dup_values(f.sig.args, f.sig.args)?;
+                env.exec(f)?;
+            }
+            Primitive::With => {
+                let [f] = get_ops(ops, env)?;
+                let val = env.copy_nth(f.sig.args.max(2) - 1)?;
+                env.exec(f)?;
+                env.push(val);
+            }
+            Primitive::Off => {
+                let [f] = get_ops(ops, env)?;
+                let val = env.copy_nth(0)?;
+                env.exec(f.node)?;
+                env.push(val);
+                env.rotate_up(1, f.sig.outputs + 1)?;
+            }
+            Primitive::Content => {
+                let [f] = get_ops(ops, env)?;
+                for val in env.n_mut(f.sig.args)? {
+                    val.unbox();
+                }
+                env.exec(f)?;
+            }
+
+            // Misc
+            Primitive::Fill => fill!(ops, env, with_fill, without_fill_but),
+            Primitive::Try => algorithm::try_(ops, env)?,
+            Primitive::Case => {
+                let [f] = get_ops(ops, env)?;
+                env.exec(f).map_err(|mut e| {
+                    e.is_case = true;
+                    e
+                })?;
+            }
+            Primitive::Dump => dump(ops, env, false)?,
+            Primitive::Astar => algorithm::astar(ops, env)?,
+            Primitive::Memo => {
+                let [f] = get_ops(ops, env)?;
+                let mut args = Vec::with_capacity(f.sig.args);
+                for i in 0..f.sig.args {
+                    args.push(env.pop(i + 1)?);
+                }
+                let mut memo = env.rt.memo.get_or_default().borrow_mut();
+                if let Some(f_memo) = memo.get_mut(&f.node) {
+                    if let Some(outputs) = f_memo.get(&args) {
+                        let outputs = outputs.clone();
+                        drop(memo);
+                        for val in outputs {
+                            env.push(val);
+                        }
+                        return Ok(());
+                    }
+                }
+                drop(memo);
+                for arg in args.iter().rev() {
+                    env.push(arg.clone());
+                }
+                env.exec(f.node.clone())?;
+                let outputs = env.clone_stack_top(f.sig.outputs)?;
+                let mut memo = env.rt.memo.get_or_default().borrow_mut();
+                memo.borrow_mut()
+                    .entry(f.node)
+                    .or_default()
+                    .insert(args, outputs.clone());
+            }
+            Primitive::Spawn => {
+                let [f] = get_ops(ops, env)?;
+                env.spawn(f.sig.args, false, f)?;
+            }
+            Primitive::Pool => {
+                let [f] = get_ops(ops, env)?;
+                env.spawn(f.sig.args, true, f)?;
+            }
+            Primitive::Sys(op) => op.run_mod(ops, env)?,
+            prim => {
+                return Err(env.error(if prim.modifier_args().is_some() {
+                    format!(
+                        "{} was not handled as a modifier. \
+                        This is a bug in the interpreter",
+                        prim.format()
+                    )
+                } else {
+                    format!(
+                        "{} was called as a modifier. \
+                        This is a bug in the interpreter",
+                        prim.format()
+                    )
+                }))
+            }
         }
         Ok(())
     }
@@ -1080,9 +1146,9 @@ impl ImplPrimitive {
             ImplPrimitive::UnUtf => env.monadic_ref_env(Value::unutf8)?,
             ImplPrimitive::UnGraphemes => env.monadic_env(Value::ungraphemes)?,
             ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
-            ImplPrimitive::UnOnDrop => env.dyadic_ro_env(Value::anti_drop)?,
-            ImplPrimitive::UnOnSelect => env.dyadic_oo_env(Value::un_on_select)?,
-            ImplPrimitive::UnOnPick => env.dyadic_oo_env(Value::un_on_pick)?,
+            ImplPrimitive::AntiDrop => env.dyadic_ro_env(Value::anti_drop)?,
+            ImplPrimitive::AntiSelect => env.dyadic_oo_env(Value::un_on_select)?,
+            ImplPrimitive::AntiPick => env.dyadic_oo_env(Value::un_on_pick)?,
             ImplPrimitive::UnJoin => {
                 let val = env.pop(1)?;
                 let (first, rest) = val.unjoin(env)?;
@@ -1132,15 +1198,12 @@ impl ImplPrimitive {
             ImplPrimitive::UnParse => env.monadic_ref_env(Value::unparse)?,
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
-            ImplPrimitive::UnScan => reduce::unscan(env)?,
             ImplPrimitive::TraceN {
                 n,
                 inverse,
                 stack_sub,
             } => trace_n(env, *n, *inverse, *stack_sub)?,
             ImplPrimitive::UnStack => stack(env, true)?,
-            ImplPrimitive::UnDump => dump(env, true)?,
-            ImplPrimitive::UnFill => fill!(env, with_unfill, without_unfill_but),
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
@@ -1193,20 +1256,26 @@ impl ImplPrimitive {
                 let val = env.pop(2)?;
                 env.push(val.undo_un_bits(&orig_shape, env)?);
             }
-            ImplPrimitive::UndoBase => env.dyadic_rr_env(Value::antibase)?,
-            &ImplPrimitive::UndoReverse(n) => {
-                env.touch_array_stack(n)?;
+            ImplPrimitive::AntiBase => env.dyadic_rr_env(Value::antibase)?,
+            &ImplPrimitive::UndoReverse { n, all } => {
+                env.require_height(n)?;
                 let end = env.stack_height() - n;
                 let vals = &mut env.stack_mut()[end..];
-                let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
-                for val in vals {
-                    if val.rank() == max_rank {
+                if all {
+                    for val in vals {
                         val.reverse();
+                    }
+                } else {
+                    let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
+                    for val in vals {
+                        if val.rank() == max_rank {
+                            val.reverse();
+                        }
                     }
                 }
             }
             &ImplPrimitive::UndoTransposeN(n, amnt) => {
-                env.touch_array_stack(n)?;
+                env.touch_stack(n)?;
                 let end = env.stack_height() - n;
                 let vals = &mut env.stack_mut()[end..];
                 let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
@@ -1217,7 +1286,7 @@ impl ImplPrimitive {
                 }
             }
             &ImplPrimitive::UndoRotate(n) => {
-                env.touch_array_stack(n + 1)?;
+                env.touch_stack(n + 1)?;
                 let mut amount = env.pop(1)?.scalar_neg(env)?;
                 if n == 1 {
                     let mut val = env.pop(2)?;
@@ -1267,7 +1336,7 @@ impl ImplPrimitive {
                 let mask = indices.undo_where(&shape, env)?;
                 env.push(mask);
             }
-            ImplPrimitive::UndoOrient => env.dyadic_ro_env(Value::anti_orient)?,
+            ImplPrimitive::AntiOrient => env.dyadic_ro_env(Value::anti_orient)?,
             ImplPrimitive::UndoRerank => {
                 let rank = env.pop(1)?;
                 let shape = env.pop(2)?;
@@ -1318,9 +1387,7 @@ impl ImplPrimitive {
                 val.undo_deshape(&shape, env)?;
                 env.push(val)
             }
-            ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(env)?,
             ImplPrimitive::UndoPartition2 => loops::undo_partition_part2(env)?,
-            ImplPrimitive::UndoGroup1 => loops::undo_group_part1(env)?,
             ImplPrimitive::UndoGroup2 => loops::undo_group_part2(env)?,
             ImplPrimitive::UndoJoin => {
                 let a_shape = env.pop(1)?;
@@ -1360,8 +1427,6 @@ impl ImplPrimitive {
             ImplPrimitive::RandomRow => env.monadic_ref_env(Value::random_row)?,
             ImplPrimitive::LastWhere => env.monadic_ref_env(Value::last_where)?,
             ImplPrimitive::SortDown => env.monadic_mut(Value::sort_down)?,
-            ImplPrimitive::ReduceContent => reduce::reduce_content(env)?,
-            ImplPrimitive::ReduceTable => table::reduce_table(env)?,
             ImplPrimitive::ReplaceRand => {
                 env.pop(1)?;
                 env.push(random());
@@ -1371,22 +1436,97 @@ impl ImplPrimitive {
                 env.pop(2)?;
                 env.push(random());
             }
-            ImplPrimitive::Adjacent => reduce::adjacent(env)?,
-            ImplPrimitive::RowsWindows => zip::rows_windows(env)?,
             ImplPrimitive::CountUnique => env.monadic_ref(Value::count_unique)?,
-            ImplPrimitive::MatchPattern => invert::match_pattern(env)?,
-            ImplPrimitive::EndRandArray => {
-                let n = env
-                    .pop(1)?
-                    .as_nat(env, "Repetition count must be a natural number")?;
-                let arr: Array<f64> = (0..n).map(|_| random()).collect();
-                env.end_array(false, Some(arr.into()))?;
+            ImplPrimitive::Root => env.dyadic_oo_00_env(Value::root)?,
+            ImplPrimitive::MatchPattern => {
+                let expected = env.pop(1)?;
+                let got = env.pop(2)?;
+                if expected == got {
+                    return Ok(());
+                }
+                let message = match (
+                    expected.rank() <= 1 && expected.row_count() <= 10,
+                    got.rank() <= 1 && got.row_count() <= 10,
+                ) {
+                    (true, true) => format!("expected {expected} but got {got}"),
+                    (true, false) if expected.type_id() != got.type_id() => {
+                        format!("expected {expected} but got {}", got.type_name_plural())
+                    }
+                    (true, false) if expected.shape() != got.shape() => format!(
+                        "expected {expected} but got array with shape {}",
+                        got.shape()
+                    ),
+                    (true, false) => format!(
+                        "expected {expected} but found {} array with shape {}",
+                        got.type_name(),
+                        got.rank()
+                    ),
+                    (false, true) if expected.type_id() != got.type_id() => {
+                        format!("expected {} but got {got}", expected.type_name_plural())
+                    }
+                    (false, true) if expected.shape() != got.shape() => format!(
+                        "expected array with shape {} but got {got}",
+                        expected.shape()
+                    ),
+                    (false, true) => format!(
+                        "expected {} array with shape {} but got {got}",
+                        expected.type_name(),
+                        expected.rank()
+                    ),
+                    (false, false) if expected.type_id() != got.type_id() => {
+                        format!(
+                            "expected {} but got {}",
+                            expected.type_name_plural(),
+                            got.type_name_plural()
+                        )
+                    }
+                    (false, false) if expected.shape() != got.shape() => format!(
+                        "expected shape {} but got shape {}",
+                        expected.shape(),
+                        got.shape()
+                    ),
+                    (false, false) => format!(
+                        "expected {} array with shape {} but got {} array with shape {}",
+                        expected.type_name(),
+                        expected.rank(),
+                        got.type_name(),
+                        got.rank()
+                    ),
+                };
+                return Err(env.error(env.error(format!("Pattern match failed: {message}"))));
             }
-            ImplPrimitive::AstarFirst => algorithm::astar_first(env)?,
-            &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(depth, env)?,
+            ImplPrimitive::MatchLe => {
+                let max = env.pop(1)?;
+                let val = env.pop(2)?;
+                let le = max.clone().other_is_le(val.clone(), 0, 0, env)?;
+                if le.all_true() {
+                    env.push(val);
+                    return Ok(());
+                }
+                let message = if max.rank() <= 1 && max.row_count() <= 10 {
+                    format!("Not all values are {} {max}", Primitive::Le)
+                } else {
+                    format!("Not all values are {}", Primitive::Le)
+                };
+                return Err(env.error(env.error(format!("Pattern match failed: {message}"))));
+            }
+            ImplPrimitive::MatchGe => {
+                let min = env.pop(1)?;
+                let val = env.pop(2)?;
+                let ge = min.clone().other_is_ge(val.clone(), 0, 0, env)?;
+                if ge.all_true() {
+                    env.push(val);
+                    return Ok(());
+                }
+                let message = if min.rank() <= 1 && min.row_count() <= 10 {
+                    format!("Not all values are {} {min}", Primitive::Ge)
+                } else {
+                    format!("Not all values are {}", Primitive::Ge)
+                };
+                return Err(env.error(env.error(format!("Pattern match failed: {message}"))));
+            }
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
             // Implementation details
-            ImplPrimitive::RepeatWithInverse => loops::repeat(true, env)?,
             ImplPrimitive::ValidateType | ImplPrimitive::ValidateTypeConsume => {
                 let type_num = env
                     .pop(1)?
@@ -1465,6 +1605,56 @@ impl ImplPrimitive {
                 }
                 let res = tag.join(val, false, env)?;
                 env.push(res);
+            }
+            prim => {
+                return Err(env.error(if prim.modifier_args().is_some() {
+                    format!(
+                        "{prim} was handled as a function. \
+                        This is a bug in the interpreter"
+                    )
+                } else {
+                    format!(
+                        "{prim} was not handled as a function. \
+                        This is a bug in the interpreter"
+                    )
+                }))
+            }
+        }
+        Ok(())
+    }
+    pub(crate) fn run_mod(&self, ops: Ops, env: &mut Uiua) -> UiuaResult {
+        match self {
+            ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(ops, env)?,
+            ImplPrimitive::UndoGroup1 => loops::undo_group_part1(ops, env)?,
+            ImplPrimitive::ReduceContent => reduce::reduce_content(ops, env)?,
+            ImplPrimitive::Adjacent => reduce::adjacent(ops, env)?,
+            ImplPrimitive::AstarFirst => algorithm::astar_first(ops, env)?,
+            &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(ops, depth, env)?,
+            ImplPrimitive::RepeatWithInverse => loops::repeat(ops, true, env)?,
+            ImplPrimitive::UnScan => reduce::unscan(ops, env)?,
+            ImplPrimitive::UnDump => dump(ops, env, true)?,
+            ImplPrimitive::UnFill => fill!(ops, env, with_unfill, without_unfill_but),
+            ImplPrimitive::ReduceTable => table::reduce_table(ops, env)?,
+            ImplPrimitive::RowsWindows => zip::rows_windows(ops, env)?,
+            ImplPrimitive::UnBoth => {
+                let [f] = get_ops(ops, env)?;
+                env.exec(f.node.clone())?;
+                let vals = env.take_n(f.sig.outputs)?;
+                env.exec(f.node)?;
+                env.push_all(vals);
+            }
+            prim => {
+                return Err(env.error(if prim.modifier_args().is_some() {
+                    format!(
+                        "{prim} was not handled as a modifier. \
+                        This is a bug in the interpreter"
+                    )
+                } else {
+                    format!(
+                        "{prim} was handled as a modifier. \
+                        This is a bug in the interpreter"
+                    )
+                }))
             }
         }
         Ok(())
@@ -1570,6 +1760,7 @@ fn trace_n(env: &mut Uiua, n: usize, inverse: bool, stack_sub: bool) -> UiuaResu
         .enumerate()
         .flat_map(|(i, lines)| {
             if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
+                let id = id.as_ref().map_or_else(String::new, ToString::to_string);
                 vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
             } else {
                 vec![lines]
@@ -1608,6 +1799,7 @@ fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
         .enumerate()
         .flat_map(|(i, lines)| {
             if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
+                let id = id.as_ref().map_or_else(String::new, ToString::to_string);
                 vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
             } else {
                 vec![lines]
@@ -1626,13 +1818,13 @@ fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
     Ok(())
 }
 
-fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
-    let f = env.pop_function()?;
-    if f.signature() != (1, 1) {
+fn dump(ops: Ops, env: &mut Uiua, inverse: bool) -> UiuaResult {
+    let [f] = get_ops(ops, env)?;
+    if f.sig != (1, 1) {
         return Err(env.error(format!(
             "{}'s function's signature must be |1, but it is {}",
             Primitive::Dump.format(),
-            f.signature()
+            f.sig
         )));
     }
     let span = if inverse {
@@ -1644,7 +1836,7 @@ fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
     let mut items = Vec::new();
     for item in unprocessed {
         env.push(item);
-        match env.call(f.clone()) {
+        match env.exec(f.clone()) {
             Ok(()) => items.push(env.pop("dump's function's processed result")?),
             Err(e) => items.push(e.value()),
         }
@@ -1659,6 +1851,7 @@ fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
         .enumerate()
         .flat_map(|(i, lines)| {
             if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
+                let id = id.as_ref().map_or_else(String::new, ToString::to_string);
                 vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
             } else {
                 vec![lines]
@@ -1677,19 +1870,17 @@ fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
     Ok(())
 }
 
-fn stack_boundaries(env: &Uiua) -> Vec<(usize, &FunctionId)> {
-    let mut boundaries: Vec<(usize, &FunctionId)> = Vec::new();
+fn stack_boundaries(env: &Uiua) -> Vec<(usize, &Option<FunctionId>)> {
+    let mut boundaries: Vec<(usize, &Option<FunctionId>)> = Vec::new();
     let mut height = 0;
     let mut reduced = 0;
     for (i, frame) in env.call_frames().rev().enumerate() {
         if i == 0 {
-            let before_sig = instrs_signature(&env.instrs(frame.slice)[..frame.pc])
-                .ok()
-                .unwrap_or(frame.sig);
+            let before_sig = frame.sig;
             reduced = before_sig.args as isize - before_sig.outputs as isize;
         }
         height = height.max(((frame.sig.args as isize) - reduced).max(0) as usize);
-        if matches!(frame.id, FunctionId::Main) {
+        if matches!(frame.id, Some(FunctionId::Main)) {
             break;
         }
         boundaries.push((env.stack_height().saturating_sub(height), &frame.id));

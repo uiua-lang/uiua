@@ -14,9 +14,9 @@ use leptos::*;
 use uiua::{
     ast::Item,
     encode::{image_to_bytes, value_to_gif_bytes, value_to_image, value_to_wav_bytes},
-    lsp::{spans_with_backend, BindingDocsKind, ImportSrc},
+    lsp::{BindingDocsKind, ImportSrc},
     Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
-    SysBackend, Uiua, UiuaError, UiuaResult, Value,
+    Spans, SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
@@ -300,6 +300,7 @@ enum CodeFragment {
     Unspanned(String),
     Br,
     Span(String, SpanKind),
+    Ghost(String, Option<String>),
 }
 
 struct CodeLines {
@@ -403,7 +404,8 @@ fn build_code_lines(code: &str) -> CodeLines {
     };
 
     let mut end = 0;
-    for span in spans_with_backend(code, WebBackend::default()).0 {
+    let spans = Spans::with_backend(code, WebBackend::default());
+    for span in spans.spans {
         let kind = span.value;
         let span = span.span;
         push_unspanned(&mut lines, span.start.char_pos as usize, &mut end);
@@ -437,6 +439,54 @@ fn build_code_lines(code: &str) -> CodeLines {
 
     for line in &mut lines.frags {
         line.retain(|frag| !matches!(frag, CodeFragment::Unspanned(s) if s.is_empty()));
+    }
+
+    if get_inlay_values() {
+        let line_lengths: Vec<usize> = code.split('\n').map(|line| line.chars().count()).collect();
+        let max_val_line_len = line_lengths
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| spans.top_level_values.contains_key(&(i + 1)))
+            .map(|(_, len)| *len)
+            .max()
+            .unwrap_or(0);
+
+        fn make_long(long: String) -> Option<String> {
+            let mut long_height = 0;
+            let mut long_width = 0;
+            for line in long.split('\n') {
+                let line_len = line.chars().count();
+                long_width = long_width.max(line_len);
+                long_height += 1;
+            }
+            (long_width < 100 && long_height < 25).then_some(long)
+        }
+
+        for (i, line) in lines.frags.iter_mut().enumerate() {
+            let Some(values) = spans.top_level_values.get(&(i + 1)) else {
+                continue;
+            };
+            for (j, val) in values.iter().rev().enumerate() {
+                let (short, long) = if val.rank() > 1 || val.element_count() > 1000 {
+                    (val.shape_string(), make_long(val.show()))
+                } else {
+                    let long = val.show();
+                    let short = if long.split('\n').count() > 1 || long.len() > 20 {
+                        val.shape_string()
+                    } else {
+                        long.clone()
+                    };
+                    (short, make_long(long))
+                };
+                let padding = if j == 0 {
+                    max_val_line_len - line_lengths[i]
+                } else {
+                    0
+                };
+                let short = format!("  {:padding$}{short}", "");
+                line.push(CodeFragment::Ghost(short, long));
+            }
+        }
     }
 
     lines
@@ -542,6 +592,12 @@ pub fn gen_code_view(code: &str) -> View {
                     // logging::log!("unspanned escaped: `{}`", s);
                     frag_views.push(view!(<span class="code-span">{s}</span>).into_view())
                 }
+                CodeFragment::Ghost(short, Some(long)) => frag_views.push(
+                    view!(<span class="code-span value-hint" data-title=long>{short}</span>)
+                        .into_view(),
+                ),
+                CodeFragment::Ghost(short, None) => frag_views
+                    .push(view!(<span class="code-span value-hint">{short}</span>).into_view()),
                 CodeFragment::Br => frag_views.push(view!(<br/>).into_view()),
                 CodeFragment::Span(text, kind) => {
                     let color_class = match &kind {
@@ -692,9 +748,9 @@ pub fn gen_code_view(code: &str) -> View {
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
-                        SpanKind::Placeholder(op) => {
+                        SpanKind::Placeholder(_) => {
                             let class = format!("code-span {}", color_class);
-                            let title = format!("placeholder {}", op.name());
+                            let title = "placeholder";
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
@@ -1313,6 +1369,13 @@ pub fn get_run_on_format() -> bool {
 pub fn set_run_on_format(run_on_format: bool) {
     set_local_var("run-on-format", run_on_format);
     update_style();
+}
+
+pub fn get_inlay_values() -> bool {
+    get_local_var("inlay-values", || false)
+}
+pub fn set_inlay_values(inlay_values: bool) {
+    set_local_var("inlay-values", inlay_values);
 }
 
 fn update_style() {

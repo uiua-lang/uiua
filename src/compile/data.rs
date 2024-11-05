@@ -164,15 +164,15 @@ impl Compiler {
                     }
                     if let Some(sem) = sem {
                         sn = SigNode::new(
-                            self.semantic_comment(sem.value, sem.span, sn.node),
                             sn.sig,
+                            self.semantic_comment(sem.value, sem.span, sn.node),
                         );
                     }
                     Some(sn)
                 } else {
                     validator
                         .as_ref()
-                        .map(|(va_node, ..)| SigNode::new(va_node.clone(), Signature::new(1, 1)))
+                        .map(|(va_node, ..)| SigNode::new(Signature::new(1, 1), va_node.clone()))
                 };
                 fields.push(Field {
                     name: data_field.name.value,
@@ -215,7 +215,7 @@ impl Compiler {
             // Add validator
             if let Some((va_instrs, validation_only, _va_span)) = field.validator.take() {
                 let inverse = va_instrs.un_inverse(&self.asm);
-                let make_node = |node: Node| SigNode::new(node, Signature::new(1, 1));
+                let make_node = |node: Node| SigNode::new(Signature::new(1, 1), node);
                 match inverse {
                     Ok(va_inverse) => node.push(Node::CustomInverse(
                         CustomInverse {
@@ -303,7 +303,7 @@ impl Compiler {
                     self.code_meta
                         .global_references
                         .insert(field.name_span.clone(), field.global_index);
-                    SigNode::new(Node::empty(), Signature::new(1, 1))
+                    SigNode::new(Signature::new(1, 1), Node::empty())
                 };
                 if boxed {
                     arg.node.push(Node::Label(field.name.clone(), span));
@@ -417,15 +417,15 @@ impl Compiler {
                 let filled = comp.words_sig(words)?;
                 let span = comp.add_span(word_span.clone());
                 let fill_construct = SigNode::new(
-                    Node::Call(constructor_func.clone(), span),
                     constructor_func.sig,
+                    Node::Call(constructor_func.clone(), span),
                 );
                 let fill_pop = Node::Prim(Primitive::Pop, span).sig_node().unwrap();
                 let mut node = Node::Mod(Primitive::Fill, eco_vec![fill_pop, filled], span);
                 let sig = comp.sig_of(&node, &word_span)?;
                 node = Node::Mod(
                     Primitive::Fill,
-                    eco_vec![fill_construct, SigNode::new(node, sig)],
+                    eco_vec![fill_construct, SigNode::new(sig, node)],
                     span,
                 );
                 let sig = comp.sig_of(&node, &word_span)?;

@@ -96,7 +96,7 @@ impl<'de> Deserialize<'de> for Function {
 impl Assembly {
     /// Get the [`SigNode`] for a function
     pub fn sig_node(&self, f: &Function) -> SigNode {
-        SigNode::new(self[f].clone(), f.sig)
+        SigNode::new(f.sig, self[f].clone())
     }
     /// Add a function to the assembly
     pub fn add_function(&mut self, id: FunctionId, sig: Signature, root: Node) -> Function {

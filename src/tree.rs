@@ -65,7 +65,7 @@ pub struct SigNode {
 
 impl SigNode {
     /// Create a new signature node
-    pub fn new(node: impl Into<Node>, sig: impl Into<Signature>) -> Self {
+    pub fn new(sig: impl Into<Signature>, node: impl Into<Node>) -> Self {
         Self {
             node: node.into(),
             sig: sig.into(),
@@ -85,7 +85,7 @@ impl SigNode {
                     sig.args *= 2;
                     sig.outputs *= 2;
                     let node = Node::Mod(Primitive::Both, eco_vec![sn], span);
-                    sn = SigNode::new(node, sig);
+                    sn = SigNode::new(sig, node);
                 }
                 let remain = n - 2usize.pow(prev_pow_2 as u32);
                 if remain > 0 {
@@ -95,7 +95,7 @@ impl SigNode {
                     for _ in 0..remain {
                         for _ in 0..args {
                             both =
-                                Node::Mod(Primitive::Dip, eco_vec![SigNode::new(both, sig)], span);
+                                Node::Mod(Primitive::Dip, eco_vec![SigNode::new(sig, both)], span);
                         }
                         both.push(inner.node.clone());
                         sig.args += 1;
@@ -125,7 +125,7 @@ impl Serialize for SigNode {
 impl<'de> Deserialize<'de> for SigNode {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let (args, outputs, node) = <(usize, usize, Node)>::deserialize(deserializer)?;
-        Ok(SigNode::new(node, Signature::new(args, outputs)))
+        Ok(SigNode::new(Signature::new(args, outputs), node))
     }
 }
 

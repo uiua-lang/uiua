@@ -370,79 +370,12 @@ impl Compiler {
             }
         };
 
-        // De-sugar loop fork
-        if let Primitive::Rows
-        | Primitive::Each
-        | Primitive::Table
-        | Primitive::Group
-        | Primitive::Partition
-        | Primitive::Inventory = prim
-        {
-            let mut op = modified.code_operands().next().unwrap();
-            if let Word::Func(func) = &op.value {
-                if func.lines.len() == 1 && func.lines[0].len() == 1 {
-                    op = &func.lines[0][0];
-                }
-            }
-            if let Word::Modified(m) = &op.value {
-                if (matches!(m.modifier.value, Modifier::Primitive(Primitive::Fork))
-                    || matches!(m.modifier.value, Modifier::Primitive(Primitive::Bracket))
-                        && prim != Primitive::Table)
-                    && self.words_look_pure(&m.operands)
-                {
-                    let mut m = (**m).clone();
-                    if m.operands.iter().filter(|w| w.value.is_code()).count() == 1 {
-                        let op = m.operands.iter().find(|w| w.value.is_code()).unwrap();
-                        if let Some(new) = self.desugar_function_pack_inner(&m.modifier, op)? {
-                            modified.operands = vec![op.span.clone().sp(new)];
-                            return self.modified(modified, subscript);
-                        }
-                    }
-                    for op in m.operands.iter_mut().filter(|w| w.value.is_code()) {
-                        op.value = Word::Modified(
-                            Modified {
-                                modifier: modified.modifier.clone(),
-                                operands: vec![op.clone()],
-                            }
-                            .into(),
-                        );
-                    }
-                    return self.modified(m, subscript);
-                }
-            }
-        }
-
         let span = self.add_span(modified.modifier.span.clone());
 
         // Compile operands
         let ops = self.args(modified.operands)?;
 
         Ok(Node::Mod(prim, ops, span))
-    }
-    fn words_look_pure(&self, words: &[Sp<Word>]) -> bool {
-        words.iter().all(|word| match &word.value {
-            Word::Primitive(p) => p.purity() == Purity::Pure,
-            Word::Func(func) => func.lines.iter().all(|line| self.words_look_pure(line)),
-            Word::Pack(pack) => (pack.branches.iter())
-                .all(|branch| (branch.value.lines.iter()).all(|line| self.words_look_pure(line))),
-            Word::Modified(m) => self.words_look_pure(&m.operands),
-            Word::Array(arr) => arr.lines.iter().all(|line| self.words_look_pure(line)),
-            Word::Strand(items) => self.words_look_pure(items),
-            Word::Ref(r) => {
-                if let Ok(Some((_, local))) = self.ref_local(r) {
-                    match &self.asm.bindings[local.index].kind {
-                        BindingKind::Const(_) | BindingKind::Module(_) | BindingKind::Import(_) => {
-                            true
-                        }
-                        BindingKind::Func(f) => self.asm[f].is_pure(Purity::Pure, &self.asm),
-                        _ => false,
-                    }
-                } else {
-                    true
-                }
-            }
-            _ => true,
-        })
     }
     fn suppress_diagnostics<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
         let diagnostics = take(&mut self.diagnostics);
@@ -603,7 +536,7 @@ impl Compiler {
                     }
                     Node::ImplMod(
                         ImplPrimitive::RepeatWithInverse,
-                        eco_vec![sn, SigNode::new(inv, inv_sig)],
+                        eco_vec![sn, SigNode::new(inv_sig, inv)],
                         spandex,
                     )
                 } else {
@@ -825,7 +758,24 @@ impl Compiler {
                     ),
                     _ => {}
                 }
-                return Ok(None);
+
+                fn table_fork(sn: SigNode, table_span: usize, asm: &Assembly) -> Node {
+                    match sn.node {
+                        Node::Mod(Fork, args, fork_span)
+                            if (args.iter()).all(|arg| arg.node.is_pure(Purity::Pure, asm))
+                                && args.windows(2).all(|w| w[0].sig.args == w[1].sig.args) =>
+                        {
+                            let args: EcoVec<SigNode> = args
+                                .into_iter()
+                                .map(|arg| SigNode::new(arg.sig, table_fork(arg, table_span, asm)))
+                                .collect();
+                            Node::Mod(Fork, args, fork_span)
+                        }
+                        node => Node::Mod(Table, eco_vec![SigNode::new(sn.sig, node)], table_span),
+                    }
+                }
+                let table_span = self.add_span(modified.modifier.span.clone());
+                table_fork(sn, table_span, &self.asm)
             }
             Fold => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;

@@ -123,7 +123,7 @@ impl Compiler {
                 comment.map(|text| DocComment::from(text.as_str())),
             );
             let mac = CodeMacro {
-                root: SigNode::new(node, sig),
+                root: SigNode::new(sig, node),
                 names: self.scope.names.clone(),
             };
             self.code_macros.insert(local.index, mac);

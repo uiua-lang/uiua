@@ -911,7 +911,7 @@ code:
         } else {
             Signature::new(0, 0)
         };
-        Ok(SigNode::new(node, sig))
+        Ok(SigNode::new(sig, node))
     }
     fn words(&mut self, mut words: Vec<Sp<Word>>) -> UiuaResult<Node> {
         words.retain(|word| word.value.is_code());
@@ -996,7 +996,7 @@ code:
         let span = word.span.clone();
         let node = self.word(word)?;
         let sig = self.sig_of(&node, &span)?;
-        Ok(SigNode::new(node, sig))
+        Ok(SigNode::new(sig, node))
     }
     fn word(&mut self, word: Sp<Word>) -> UiuaResult<Node> {
         Ok(match word.value {
@@ -1627,7 +1627,7 @@ code:
                             || !sub.sig().is_ok_and(|sig| sig == (0, 2))
                     })
                 });
-            br.push((SigNode::new(node, sig), span));
+            br.push((SigNode::new(sig, node), span));
             if is_flex {
                 flex_indices.push(i);
             } else {

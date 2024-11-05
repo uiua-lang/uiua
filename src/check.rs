@@ -27,7 +27,7 @@ impl Node {
     /// Convert this node to a [`SigNode`]
     pub fn sig_node(self) -> Result<SigNode, SigCheckError> {
         let sig = self.sig()?;
-        Ok(SigNode::new(self.clone(), sig))
+        Ok(SigNode::new(sig, self.clone()))
     }
     /// Get the signature of this node if there is no net temp stack change
     pub fn clean_sig(&self) -> Option<Signature> {

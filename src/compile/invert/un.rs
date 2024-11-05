@@ -19,13 +19,13 @@ impl SigNode {
     /// Get the un-inverse of this node
     pub fn un_inverse(&self, asm: &Assembly) -> InversionResult<SigNode> {
         let inv = self.node.un_inverse(asm)?;
-        Ok(SigNode::new(inv, self.sig.inverse()))
+        Ok(SigNode::new(self.sig.inverse(), inv))
     }
     /// Get the anti inverse of this node
     pub fn anti_inverse(&self, asm: &Assembly) -> InversionResult<SigNode> {
         let inv = self.node.anti_inverse(asm)?;
         let sig = self.sig.anti().ok_or(Generic)?;
-        Ok(SigNode::new(inv, sig))
+        Ok(SigNode::new(sig, inv))
     }
 }
 

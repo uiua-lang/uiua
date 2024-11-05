@@ -10,14 +10,9 @@ The next version of Uiua
   - Math, `take`, `drop`
   - Infinite ranges
     - `rows`/`each`
-- Change how inlining modifiers works
-  - Make all (or most) modifiers emit themselves as instructions
-  - This allows inverses to be smarter about what they are working on
-  - Add an inlining step between compilation and execution
-  - Change how inversion of `under` is implemented
-    - Current implementation is kinda messy
-    - New system should make it simpler
-- Move array depth checks to compile time
+- `gpu` modifier
+- Algebra system?
+- `un` `under`
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)
 - Split up sys backend?

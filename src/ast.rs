@@ -284,7 +284,7 @@ pub enum Word {
         n: usize,
     },
     Subscript(Box<Subscript>),
-    InlineMacro(Sp<Ident>, Func),
+    InlineMacro(Sp<Ident>, Sp<Func>),
 }
 
 impl PartialEq for Word {
@@ -405,7 +405,9 @@ impl fmt::Debug for Word {
             Word::SemanticComment(comment) => write!(f, "{comment}"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
             Word::Subscript(sub) => sub.fmt(f),
-            Word::InlineMacro(ident, func) => write!(f, "func_macro({ident:?}, {func:?})"),
+            Word::InlineMacro(ident, func) => {
+                write!(f, "func_macro({:?}{}))", func.value, ident.value)
+            }
         }
     }
 }
@@ -568,7 +570,7 @@ pub enum Modifier {
     /// A user-defined modifier
     Ref(Ref),
     /// An inline macro
-    Macro(Sp<Ident>, Func),
+    Macro(Sp<Ident>, Sp<Func>),
 }
 
 impl fmt::Debug for Modifier {

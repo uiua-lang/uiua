@@ -462,6 +462,7 @@ impl Compiler {
         let b = self.word_sig(b_op)?;
         Ok((a, b, a_span, b_span))
     }
+    /// Inline a modifier
     pub(super) fn inline_modifier(
         &mut self,
         modified: &Modified,
@@ -918,17 +919,22 @@ impl Compiler {
             _ => return Ok(None),
         }))
     }
+    // Compile an inline macro
     fn inline_macro(
         &mut self,
-        func: Func,
+        func: Sp<Func>,
         span: CodeSpan,
         operands: Vec<Sp<Word>>,
     ) -> UiuaResult<Node> {
         let mut words: Vec<_> =
-            flip_unsplit_lines(func.lines.into_iter().flat_map(split_words).collect())
+            flip_unsplit_lines(func.value.lines.into_iter().flat_map(split_words).collect())
                 .into_iter()
                 .flatten()
                 .collect();
+        // Track
+        self.code_meta
+            .inline_macros
+            .insert(func.span, operands.len());
         // Expand
         self.expand_index_macro(None, &mut words, operands, span.clone(), true)?;
         // Compile
@@ -1018,11 +1024,8 @@ impl Compiler {
                     })?;
                     // Add
                     let sig = self.sig_of(&node, &modifier_span)?;
-                    let func = self.asm.add_function(
-                        FunctionId::Macro(Some(r.name.value), r.name.span),
-                        sig,
-                        node,
-                    );
+                    let id = FunctionId::Macro(Some(r.name.value), r.name.span);
+                    let func = self.asm.add_function(id, sig, node);
                     if let Some(macro_local) = macro_local {
                         self.asm.bindings.make_mut()[macro_local.expansion_index].kind =
                             BindingKind::Func(func.clone());
@@ -1148,7 +1151,7 @@ impl Compiler {
             // Quote
             self.code_meta
                 .macro_expansions
-                .insert(full_span, (r.name.value.clone(), code.clone()));
+                .insert(full_span, (Some(r.name.value.clone()), code.clone()));
             self.suppress_diagnostics(|comp| {
                 comp.temp_scope(mac.names, None, |comp| {
                     comp.quote(&code, &r.name.value, &modifier_span)
@@ -1213,9 +1216,7 @@ impl Compiler {
             }
         }
         let formatted = format_words(&words_to_format, &self.asm.inputs);
-        if let Some(name) = name {
-            (self.code_meta.macro_expansions).insert(span, (name, formatted));
-        }
+        (self.code_meta.macro_expansions).insert(span, (name, formatted));
         Ok(())
     }
     fn replace_placeholders(&self, words: &mut Vec<Sp<Word>>, initial: &[Sp<Word>]) -> UiuaResult {

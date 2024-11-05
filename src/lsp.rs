@@ -40,6 +40,7 @@ pub enum SpanKind {
     Placeholder(usize),
     Delimiter,
     FuncDelim(Signature, SetInverses),
+    MacroDelim(usize),
     ImportSrc(ImportSrc),
     Subscript(Option<Primitive>, Option<usize>),
     Obverse(SetInverses),
@@ -158,7 +159,9 @@ pub struct CodeMeta {
     /// Spans of functions and their signatures and whether they are explicit
     pub function_sigs: SigDecls,
     /// A map of macro invocations to their expansions
-    pub macro_expansions: HashMap<CodeSpan, (Ident, String)>,
+    pub macro_expansions: HashMap<CodeSpan, (Option<Ident>, String)>,
+    /// A map of inline macro functions to their number of arguments
+    pub inline_macros: HashMap<CodeSpan, usize>,
     /// A map of incomplete ref paths to their module's index
     pub incomplete_refs: HashMap<CodeSpan, usize>,
     /// A map of the spans of top-level lines to values
@@ -589,7 +592,7 @@ impl Spanner {
                 }
                 Word::Func(func) => spans.extend(self.func_spans(func, &word.span)),
                 Word::Pack(pack) => {
-                    let kind = if let Some(inline) = pack
+                    let mut kind = if let Some(inline) = pack
                         .branches
                         .first()
                         .and_then(|br| self.code_meta.function_sigs.get(&br.span))
@@ -598,11 +601,11 @@ impl Spanner {
                     } else {
                         SpanKind::Delimiter
                     };
-                    spans.push(word.span.just_start(self.inputs()).sp(kind));
+                    spans.push(word.span.just_start(self.inputs()).sp(kind.clone()));
                     for (i, branch) in pack.branches.iter().enumerate() {
                         let start_span = branch.span.just_start(self.inputs());
                         if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {
-                            let kind = if let Some(SigDecl {
+                            kind = if let Some(SigDecl {
                                 sig,
                                 set_inverses,
                                 explicit: false,
@@ -613,7 +616,7 @@ impl Spanner {
                             } else {
                                 SpanKind::Delimiter
                             };
-                            spans.push(start_span.sp(kind));
+                            spans.push(start_span.sp(kind.clone()));
                         }
                         if let Some(sig) = &branch.value.signature {
                             spans.push(sig.span.clone().sp(SpanKind::Signature));
@@ -623,7 +626,7 @@ impl Spanner {
                     if pack.closed {
                         let end = word.span.just_end(self.inputs());
                         if end.as_str(self.inputs(), |s| s == ")") {
-                            spans.push(end.sp(SpanKind::Delimiter));
+                            spans.push(end.sp(kind));
                         }
                     }
                 }
@@ -648,8 +651,10 @@ impl Spanner {
                         }
                         Modifier::Ref(r) => spans.extend(self.ref_spans(r)),
                         Modifier::Macro(ident, func) => {
-                            spans.push(ident.span.clone().sp(SpanKind::Delimiter));
-                            spans.extend(self.func_spans(func, &m.modifier.span));
+                            spans.extend(self.func_spans(&func.value, &func.span));
+                            let ident_span = (ident.span.clone())
+                                .sp(SpanKind::MacroDelim(ident_modifier_args(&ident.value)));
+                            spans.push(ident_span);
                         }
                     }
                     spans.extend(self.words_spans(&m.operands));
@@ -684,8 +689,10 @@ impl Spanner {
                                 spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                             }
                             Modifier::Macro(ident, func) => {
-                                spans.push(ident.span.clone().sp(SpanKind::Delimiter));
-                                spans.extend(self.func_spans(func, &sub.word.span));
+                                spans.extend(self.func_spans(&func.value, &func.span));
+                                let ident_span = (ident.span.clone())
+                                    .sp(SpanKind::MacroDelim(ident_modifier_args(&ident.value)));
+                                spans.push(ident_span);
                                 spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                             }
                         }
@@ -702,8 +709,10 @@ impl Spanner {
                     }
                 },
                 Word::InlineMacro(ident, func) => {
-                    spans.push(ident.span.clone().sp(SpanKind::Delimiter));
-                    spans.extend(self.func_spans(func, &word.span));
+                    let ident_span = (ident.span.clone())
+                        .sp(SpanKind::MacroDelim(ident_modifier_args(&ident.value)));
+                    spans.push(ident_span);
+                    spans.extend(self.func_spans(&func.value, &func.span));
                 }
             }
         }
@@ -735,6 +744,8 @@ impl Spanner {
         let mut spans = Vec::new();
         let kind = if let Some(inline) = self.code_meta.function_sigs.get(span) {
             SpanKind::FuncDelim(inline.sig, inline.set_inverses)
+        } else if let Some(margs) = self.code_meta.inline_macros.get(span) {
+            SpanKind::MacroDelim(*margs)
         } else {
             SpanKind::Delimiter
         };
@@ -1685,7 +1696,11 @@ mod server {
                     continue;
                 }
                 actions.push(CodeActionOrCommand::CodeAction(CodeAction {
-                    title: format!("Expand macro {name}"),
+                    title: if let Some(name) = name {
+                        format!("Expand macro {name}")
+                    } else {
+                        "Expand macro".into()
+                    },
                     kind: Some(CodeActionKind::REFACTOR_INLINE),
                     edit: Some(WorkspaceEdit {
                         changes: Some(

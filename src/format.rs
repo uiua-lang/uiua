@@ -1278,7 +1278,7 @@ impl<'a> Formatter<'a> {
                 self.push(&word.span, &s);
             }
             Word::InlineMacro(ident, func) => {
-                self.func(func, depth);
+                self.func(&func.value, depth);
                 self.push(&ident.span, &ident.value);
             }
         }
@@ -1358,7 +1358,7 @@ impl<'a> Formatter<'a> {
             Modifier::Primitive(prim) => self.push(&modifier.span, &prim.to_string()),
             Modifier::Ref(r) => self.format_ref(r),
             Modifier::Macro(ident, func) => {
-                self.func(func, depth);
+                self.func(&func.value, depth);
                 self.push(&ident.span, &ident.value);
             }
         }
@@ -1455,9 +1455,14 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
                     words.len() > 1 && words.iter().any(|word| word_is_multiline(&word.value))
                 })
         }
-        Word::Func(func) | Word::InlineMacro(_, func) => {
+        Word::Func(func) => {
             func.lines.len() > 1
                 || (func.lines.iter())
+                    .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
+        }
+        Word::InlineMacro(_, func) => {
+            func.value.lines.len() > 1
+                || (func.value.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }
         Word::Pack(pack) => pack.branches.iter().any(|br| {
@@ -1470,8 +1475,8 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
             m.operands.iter().any(|word| word_is_multiline(&word.value))
                 || match &m.modifier.value {
                     Modifier::Macro(_, func) => {
-                        func.lines.len() > 1
-                            || (func.lines.iter()).any(|words| {
+                        func.value.lines.len() > 1
+                            || (func.value.lines.iter()).any(|words| {
                                 words.iter().any(|word| word_is_multiline(&word.value))
                             })
                     }

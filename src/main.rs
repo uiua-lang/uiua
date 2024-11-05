@@ -1080,16 +1080,31 @@ fn color_prim(prim: Primitive, sub: Option<usize>) -> Option<Color> {
         PrimClass::Constant => None,
         _ => {
             if let Some(margs) = prim.modifier_args() {
-                Some(if margs == 1 { MONADIC_MOD } else { DYADIC_MOD })
+                Some(color_mod(margs))
             } else {
                 match prim.subscript_sig(sub).map(|sig| sig.args).or(prim.args()) {
-                    Some(0) => Some(NOADIC),
-                    Some(1) => Some(MONADIC),
-                    Some(2) => Some(DYADIC),
+                    Some(n) => color_func(n),
                     _ => None,
                 }
             }
         }
+    }
+}
+
+fn color_func(args: usize) -> Option<Color> {
+    match args {
+        0 => Some(NOADIC),
+        1 => Some(MONADIC),
+        2 => Some(DYADIC),
+        _ => None,
+    }
+}
+
+fn color_mod(margs: usize) -> Color {
+    if margs == 1 {
+        MONADIC_MOD
+    } else {
+        DYADIC_MOD
     }
 }
 
@@ -1132,13 +1147,14 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             SpanKind::Comment | SpanKind::OutputComment | SpanKind::Strand => {
                 Some(Color::BrightBlack)
             }
+            SpanKind::FuncDelim(sig, _) => color_func(sig.args),
+            SpanKind::MacroDelim(margs) => Some(color_mod(margs)),
             SpanKind::Ident { .. }
             | SpanKind::Label
             | SpanKind::Signature
             | SpanKind::Whitespace
             | SpanKind::Placeholder(_)
             | SpanKind::Delimiter
-            | SpanKind::FuncDelim(..)
             | SpanKind::Obverse(_) => None,
         };
         span.span.as_str(&spans.inputs, |s| {

@@ -1255,6 +1255,7 @@ impl<'i> Parser<'i> {
                     .ident()
                     .filter(|ident| ident.value.chars().all(|c| "!‼".contains(c)))
                 {
+                    let func = outer_span.clone().sp(func);
                     outer_span = outer_span.merge(ident.span.clone());
                     outer_span.sp(Word::InlineMacro(ident, func))
                 } else {

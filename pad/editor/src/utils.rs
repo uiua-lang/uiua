@@ -27,7 +27,7 @@ use web_sys::{
 
 use crate::{
     backend::{OutputItem, WebBackend},
-    binding_class, code_font, prim_sig_class,
+    binding_class, code_font, modifier_class, prim_sig_class, sig_class,
 };
 
 #[derive(Clone)]
@@ -609,6 +609,8 @@ pub fn gen_code_view(code: &str) -> View {
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(None, _) => "number-literal",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, *n),
+                        SpanKind::FuncDelim(sig, _) => sig_class(*sig),
+                        SpanKind::MacroDelim(margs) => modifier_class(*margs),
                         _ => "",
                     };
                     match kind {

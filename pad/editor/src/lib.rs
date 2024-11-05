@@ -1813,6 +1813,14 @@ fn sig_class(sig: Signature) -> &'static str {
     }
 }
 
+fn modifier_class(margs: usize) -> &'static str {
+    match margs {
+        0 | 1 => code_font!("monadic-modifier"),
+        2 => code_font!("dyadic-modifier"),
+        _ => code_font!("triadic-modifier"),
+    }
+}
+
 fn prim_sig_class(prim: Primitive, subscript: Option<usize>) -> &'static str {
     match prim {
         Primitive::Identity => code_font!("stack-function"),
@@ -1833,11 +1841,7 @@ fn prim_sig_class(prim: Primitive, subscript: Option<usize>) -> &'static str {
         prim if prim.class() == PrimClass::Constant => code_font!("number-literal"),
         prim => {
             if let Some(m) = prim.modifier_args() {
-                match m {
-                    0 | 1 => code_font!("monadic-modifier"),
-                    2 => code_font!("dyadic-modifier"),
-                    _ => code_font!("triadic-modifier"),
-                }
+                modifier_class(m)
             } else {
                 prim.subscript_sig(subscript)
                     .or(prim.sig())

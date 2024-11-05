@@ -341,13 +341,16 @@ mod tests {
             }
         });
         if crate::compile::invert::DEBUG {
-            panic!("invert::DEBUG is true");
+            panic!("compile::invert::DEBUG is true");
         }
         if crate::ffi::DEBUG {
             panic!("ffi::DEBUG is true");
         }
         if crate::compile::optimize::DEBUG {
             panic!("compile::optimize::DEBUG is true");
+        }
+        if crate::compile::algebra::DEBUG {
+            panic!("compile::algebra::DEBUG is true");
         }
     }
 

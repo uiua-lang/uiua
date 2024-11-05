@@ -1,3 +1,4 @@
+pub(crate) mod algebra;
 mod binding;
 mod data;
 pub(crate) mod invert;
@@ -514,13 +515,14 @@ code:
     fn item(&mut self, item: Item, must_run: bool, prelude: &mut BindingPrelude) -> UiuaResult {
         match item {
             Item::Module(m) => self.module(m, take(prelude).comment),
-            Item::Words(lines) => self.lines(lines, must_run, true, prelude),
+            Item::Words(lines) => self.top_level_words(lines, must_run, true, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
             Item::Data(data) => self.data_def(data, true, take(prelude)),
         }
     }
-    fn lines(
+    /// Compile top-level words
+    fn top_level_words(
         &mut self,
         mut lines: Vec<Vec<Sp<Word>>>,
         must_run: bool,
@@ -555,7 +557,7 @@ code:
                     }
                     Word::SemanticComment(SemanticComment::NoInline) => prelude.no_inline = true,
                     Word::SemanticComment(SemanticComment::TrackCaller) => {
-                        prelude.track_caller = true;
+                        prelude.track_caller = true
                     }
                     _ => *prelude = BindingPrelude::default(),
                 }

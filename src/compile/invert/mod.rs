@@ -177,6 +177,7 @@ pub enum InversionError {
     AsymmetricUnderSig(Signature),
     ComplexInvertedUnder,
     UnderExperimental,
+    AlgebraError(AlgebraError),
 }
 
 pub type InversionResult<T = ()> = Result<T, InversionError>;
@@ -215,6 +216,7 @@ impl fmt::Display for InversionError {
                     Primitive::Under.format()
                 )
             }
+            InversionError::AlgebraError(e) => e.fmt(f),
         }
     }
 }
@@ -247,6 +249,8 @@ impl Error for InversionError {}
 use ecow::{EcoString, EcoVec};
 use regex::Regex;
 use InversionError::Generic;
+
+use super::algebra::AlgebraError;
 /// A generic inversion error
 fn generic<T>() -> InversionResult<T> {
     Err(InversionError::Generic)

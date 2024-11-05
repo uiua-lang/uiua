@@ -1,4 +1,4 @@
-use crate::check::nodes_sig;
+use crate::{check::nodes_sig, compile::algebra::algebraic_inverse};
 
 use super::*;
 
@@ -144,6 +144,7 @@ pub fn anti_inverse(mut input: &[Node], asm: &Assembly) -> InversionResult<Node>
 }
 
 pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
+    &AlgebraPat,
     &InnerAnti,
     &InnerContraDip,
     &JoinPat,
@@ -772,6 +773,19 @@ inverse!(DupPat, input, asm, Prim(Dup, dup_span), {
 
 inverse!(DumpPat, input, _, ref, Mod(Dump, args, span), {
     Ok((input, ImplMod(UnDump, args.clone(), *span)))
+});
+
+inverse!(AlgebraPat, input, asm, {
+    let mut error = Generic;
+    for end in (1..=input.len()).rev() {
+        let chunk = &input[..end];
+        match algebraic_inverse(chunk, asm) {
+            Ok(inv) => return Ok((&input[end..], inv)),
+            Err(Some(e)) => error = error.max(InversionError::AlgebraError(e)),
+            Err(None) => {}
+        }
+    }
+    Err(error)
 });
 
 #[derive(Debug)]

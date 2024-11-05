@@ -1147,7 +1147,6 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             SpanKind::Comment | SpanKind::OutputComment | SpanKind::Strand => {
                 Some(Color::BrightBlack)
             }
-            SpanKind::FuncDelim(sig, _) => color_func(sig.args),
             SpanKind::MacroDelim(margs) => Some(color_mod(margs)),
             SpanKind::Ident { .. }
             | SpanKind::Label
@@ -1155,6 +1154,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             | SpanKind::Whitespace
             | SpanKind::Placeholder(_)
             | SpanKind::Delimiter
+            | SpanKind::FuncDelim(..)
             | SpanKind::Obverse(_) => None,
         };
         span.span.as_str(&spans.inputs, |s| {

@@ -1,3 +1,19 @@
+## Inline Macros
+
+Following an inline function's `()`s with one or more `!`s will make it an inline index macro.
+This allows `^` placeholders to be used inside the function.
+
+```uiua
+# Experimental!
+(^0^0)!↯ 2 3 4
+```
+
+```uiua
+# Experimental!
+StdDev ← √(^0^1^0)‼(÷⧻⟜/+|×.-).
+StdDev [1 2 3 4]
+```
+
 ## Data Definitions
 
 Data definitions allow you to define structured data whose fields can be accessed by name.

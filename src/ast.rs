@@ -588,7 +588,13 @@ impl fmt::Display for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.format().fmt(f),
             Modifier::Ref(refer) => write!(f, "{refer}"),
-            Modifier::Macro(_, func) => write!(f, "{func:?}"),
+            Modifier::Macro(ident, _) => match ident_modifier_args(&ident.value) {
+                0 | 1 => write!(f, "monadic inline macro"),
+                2 => write!(f, "dyadic inline macro"),
+                3 => write!(f, "triadic inline macro"),
+                4 => write!(f, "tetradic inline macro"),
+                _ => write!(f, "inline macro"),
+            },
         }
     }
 }

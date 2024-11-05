@@ -11,13 +11,22 @@ impl Compiler {
         operand: &Sp<Word>,
     ) -> UiuaResult<Option<Word>> {
         let Sp {
-            value: Word::Pack(pack @ FunctionPack { .. }),
+            value: Word::Pack(pack),
             span,
         } = operand
         else {
             return Ok(None);
         };
         match &modifier.value {
+            Modifier::Macro(..) => {
+                let new = Modified {
+                    modifier: modifier.clone(),
+                    operands: (pack.branches.iter())
+                        .map(|b| b.clone().map(Word::Func))
+                        .collect(),
+                };
+                Ok(Some(Word::Modified(new.into())))
+            }
             Modifier::Primitive(Primitive::Dip) => {
                 let mut branches = pack.branches.iter().cloned().rev();
                 let mut new = Modified {
@@ -324,10 +333,11 @@ impl Compiler {
             }
         } else {
             let strict_args = match &modified.modifier.value {
+                Modifier::Primitive(_) => true,
+                Modifier::Macro(..) => false,
                 Modifier::Ref(name) => self
                     .ref_local(name)?
                     .is_some_and(|(_, local)| self.index_macros.contains_key(&local.index)),
-                _ => true,
             };
             if strict_args {
                 // Validate operand count
@@ -926,6 +936,10 @@ impl Compiler {
         span: CodeSpan,
         operands: Vec<Sp<Word>>,
     ) -> UiuaResult<Node> {
+        self.experimental_error(&span, || {
+            "Inline macros are experimental. \
+            To use them, add `# Experimental!` to the top of the file."
+        });
         let mut words: Vec<_> =
             flip_unsplit_lines(func.value.lines.into_iter().flat_map(split_words).collect())
                 .into_iter()
@@ -1229,8 +1243,9 @@ impl Compiler {
                     error = Some(self.error(
                         word.span.clone(),
                         format!(
-                            "Placeholder index {n} is out of bounds of {} operands",
-                            initial.len()
+                            "Placeholder index {n} is out of bounds of {} operand{}",
+                            initial.len(),
+                            if initial.len() == 1 { "" } else { "s" }
                         ),
                     ))
                 }

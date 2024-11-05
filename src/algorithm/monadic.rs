@@ -1446,21 +1446,18 @@ impl Value {
         match self {
             Value::Num(nums) => {
                 let mut len = 0.0;
+                let mut ok = true;
                 for &n in &nums.data {
                     if n.fract() != 0.0 || n < 0.0 {
-                        return Err(env.error("Argument to where must be an array of naturals"));
+                        ok = false;
+                        break;
                     }
                     len += n;
                 }
-                Ok(len)
+                ok.then_some(len)
+                    .ok_or_else(|| env.error("Argument to where must be an array of naturals"))
             }
-            Value::Byte(bytes) => {
-                let mut len = 0.0;
-                for &n in &bytes.data {
-                    len += n as f64;
-                }
-                Ok(len)
-            }
+            Value::Byte(bytes) => Ok(bytes.data.iter().map(|&n| n as f64).sum()),
             value => Err(env.error(format!(
                 "Argument to where must be an array of naturals, but it is {}",
                 value.type_name_plural()

@@ -71,6 +71,43 @@ impl SigNode {
             sig: sig.into(),
         }
     }
+    /// Call this node on N sets of arguments
+    pub fn on_all(self, n: usize, span: usize) -> Node {
+        match n {
+            0 => Node::empty(),
+            1 => self.node,
+            n => {
+                let mut sn = self;
+                let inner = sn.clone();
+                let prev_pow_2 = (n as f64).log2() as usize;
+                for _ in 0..prev_pow_2 {
+                    let mut sig = sn.sig;
+                    sig.args *= 2;
+                    sig.outputs *= 2;
+                    let node = Node::Mod(Primitive::Both, eco_vec![sn], span);
+                    sn = SigNode::new(node, sig);
+                }
+                let remain = n - 2usize.pow(prev_pow_2 as u32);
+                if remain > 0 {
+                    let SigNode { mut sig, node } = sn;
+                    let args = inner.sig.args;
+                    let mut both = node.clone();
+                    for _ in 0..remain {
+                        for _ in 0..args {
+                            both =
+                                Node::Mod(Primitive::Dip, eco_vec![SigNode::new(both, sig)], span);
+                        }
+                        both.push(inner.node.clone());
+                        sig.args += 1;
+                        sig.outputs += 1;
+                    }
+                    both
+                } else {
+                    sn.node
+                }
+            }
+        }
+    }
 }
 
 impl From<SigNode> for Node {

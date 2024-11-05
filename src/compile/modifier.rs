@@ -530,40 +530,8 @@ impl Compiler {
                 let Some(n) = subscript else {
                     return Ok(None);
                 };
-                match n {
-                    0 => Node::empty(),
-                    1 => self.monadic_modifier_op(modified)?.0.node,
-                    n => {
-                        let mut sn = self.monadic_modifier_op(modified)?.0;
-                        let inner = sn.clone();
-                        let span = self.add_span(modified.modifier.span.clone());
-                        let prev_pow_2 = (n as f64).log2() as usize;
-                        for _ in 0..prev_pow_2 {
-                            let mut sig = sn.sig;
-                            sig.args *= 2;
-                            sig.outputs *= 2;
-                            let node = Node::Mod(Both, eco_vec![sn], span);
-                            sn = SigNode::new(node, sig);
-                        }
-                        let remain = n - 2usize.pow(prev_pow_2 as u32);
-                        if remain > 0 {
-                            let SigNode { mut sig, node } = sn;
-                            let args = inner.sig.args;
-                            let mut both = node.clone();
-                            for _ in 0..remain {
-                                for _ in 0..args {
-                                    both = Node::Mod(Dip, eco_vec![SigNode::new(both, sig)], span);
-                                }
-                                both.push(inner.node.clone());
-                                sig.args += 1;
-                                sig.outputs += 1;
-                            }
-                            both
-                        } else {
-                            sn.node
-                        }
-                    }
-                }
+                let span = self.add_span(modified.modifier.span.clone());
+                self.monadic_modifier_op(modified)?.0.on_all(n, span)
             }
             prim @ (With | Off) => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
@@ -598,6 +566,17 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 node.prepend(Node::Prim(Flip, span));
                 node
+            }
+            Content => {
+                let mut sn = self.monadic_modifier_op(modified)?.0;
+                let span = self.add_span(modified.modifier.span.clone());
+                sn.node.prepend(
+                    Node::ImplPrim(ImplPrimitive::UnBox, span)
+                        .sig_node()
+                        .unwrap()
+                        .on_all(sn.sig.args, span),
+                );
+                sn.node
             }
             Repeat => {
                 let (sn, span) = self.monadic_modifier_op(modified)?;

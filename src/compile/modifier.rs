@@ -355,11 +355,8 @@ impl Compiler {
             Modifier::Ref(r) => {
                 return self.modifier_ref(r, modified.modifier.span, modified.operands)
             }
-            Modifier::Macro(..) => {
-                return Err(self.error(
-                    modified.modifier.span.clone(),
-                    "Inline macros are not yet implemented",
-                ));
+            Modifier::Macro(_, func) => {
+                return self.inline_macro(func, modified.modifier.span, modified.operands);
             }
         };
 
@@ -921,6 +918,29 @@ impl Compiler {
             _ => return Ok(None),
         }))
     }
+    fn inline_macro(
+        &mut self,
+        func: Func,
+        span: CodeSpan,
+        operands: Vec<Sp<Word>>,
+    ) -> UiuaResult<Node> {
+        let mut words: Vec<_> =
+            flip_unsplit_lines(func.lines.into_iter().flat_map(split_words).collect())
+                .into_iter()
+                .flatten()
+                .collect();
+        // Expand
+        self.expand_index_macro(None, &mut words, operands, span.clone(), true)?;
+        // Compile
+        let node = self.suppress_diagnostics(|comp| comp.words(words))?;
+        // Add
+        let sig = self.sig_of(&node, &span)?;
+        let func = self
+            .asm
+            .add_function(FunctionId::Macro(None, span.clone()), sig, node);
+        let span = self.add_span(span);
+        Ok(Node::Call(func, span))
+    }
     fn modifier_ref(
         &mut self,
         r: Ref,
@@ -962,7 +982,7 @@ impl Compiler {
                 _ => {
                     // Expand
                     self.expand_index_macro(
-                        r.name.value.clone(),
+                        Some(r.name.value.clone()),
                         &mut mac.words,
                         operands,
                         modifier_span.clone(),
@@ -999,7 +1019,7 @@ impl Compiler {
                     // Add
                     let sig = self.sig_of(&node, &modifier_span)?;
                     let func = self.asm.add_function(
-                        FunctionId::Macro(r.name.value, r.name.span),
+                        FunctionId::Macro(Some(r.name.value), r.name.span),
                         sig,
                         node,
                     );
@@ -1171,7 +1191,7 @@ impl Compiler {
     /// Expand a index macro
     fn expand_index_macro(
         &mut self,
-        name: Ident,
+        name: Option<Ident>,
         macro_words: &mut Vec<Sp<Word>>,
         mut operands: Vec<Sp<Word>>,
         span: CodeSpan,
@@ -1193,7 +1213,9 @@ impl Compiler {
             }
         }
         let formatted = format_words(&words_to_format, &self.asm.inputs);
-        (self.code_meta.macro_expansions).insert(span, (name, formatted));
+        if let Some(name) = name {
+            (self.code_meta.macro_expansions).insert(span, (name, formatted));
+        }
         Ok(())
     }
     fn replace_placeholders(&self, words: &mut Vec<Sp<Word>>, initial: &[Sp<Word>]) -> UiuaResult {

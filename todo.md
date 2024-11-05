@@ -3,6 +3,7 @@
 ## 0.14
 The next version of Uiua
 
+- Stabilize `sort` and `last`
 - Inline code macros
 - Compile-time code string evaluation
 - Auto-bracket format strings

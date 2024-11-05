@@ -156,7 +156,7 @@ impl UiuaError {
     }
     pub(crate) fn trace_macro(mut self, name: Ident, span: CodeSpan) -> Self {
         let frame = TraceFrame {
-            id: Some(FunctionId::Macro(name, span.clone())),
+            id: Some(FunctionId::Macro(Some(name), span.clone())),
             span: Span::Code(span),
         };
         self.trace.push(frame);

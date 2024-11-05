@@ -131,7 +131,7 @@ pub enum FunctionId {
     /// A named function
     Named(Ident),
     /// A macro expansion
-    Macro(Ident, CodeSpan),
+    Macro(Option<Ident>, CodeSpan),
     /// The top-level function
     Main,
     #[doc(hidden)]
@@ -165,7 +165,8 @@ impl fmt::Display for FunctionId {
         match self {
             FunctionId::Named(name) => write!(f, "{name}"),
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
-            FunctionId::Macro(name, span) => write!(f, "macro expansion of {name} at {span}"),
+            FunctionId::Macro(Some(name), span) => write!(f, "macro expansion of {name} at {span}"),
+            FunctionId::Macro(None, span) => write!(f, "macro expansion of at {span}"),
             FunctionId::Main => write!(f, "main"),
             FunctionId::Unnamed => write!(f, "unnamed"),
         }

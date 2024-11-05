@@ -495,18 +495,10 @@ impl Compiler {
                 node
             }
             On => {
-                let (mut sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
-                if sn.sig.args == 0 {
-                    if sn.sig.outputs == 0 {
-                        sn.node.push(Node::Prim(Identity, span));
-                    } else {
-                        sn.node.push(Node::Prim(Flip, span));
-                    }
-                    sn.node
-                } else {
-                    Node::Mod(On, eco_vec![sn], span)
-                }
+                let prim = if sn.sig.args == 0 { Dip } else { On };
+                Node::Mod(prim, eco_vec![sn], span)
             }
             By => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
@@ -516,6 +508,22 @@ impl Compiler {
                     sn.node
                 } else {
                     Node::Mod(By, eco_vec![sn], span)
+                }
+            }
+            Fork => {
+                let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
+                if f.node.as_primitive() == Some(Primitive::Identity) {
+                    self.emit_diagnostic(
+                        "Prefer `⟜` over `⊃∘` for clarity",
+                        DiagnosticKind::Style,
+                        modified.modifier.span.clone().merge(f_span),
+                    );
+                }
+                let span = self.add_span(modified.modifier.span.clone());
+                match f.sig.args {
+                    0 => Node::from_iter([g.node, f.node]),
+                    1 => Node::from_iter([Node::Mod(On, eco_vec![g], span), f.node]),
+                    _ => Node::Mod(Fork, eco_vec![f, g], span),
                 }
             }
             Both => {
@@ -574,18 +582,6 @@ impl Compiler {
                 }
                 let span = self.add_span(modified.modifier.span.clone());
                 Node::Mod(prim, eco_vec![sn], span)
-            }
-            Fork => {
-                let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
-                if f.node.as_primitive() == Some(Primitive::Identity) {
-                    self.emit_diagnostic(
-                        "Prefer `⟜` over `⊃∘` for clarity",
-                        DiagnosticKind::Style,
-                        modified.modifier.span.clone().merge(f_span),
-                    );
-                }
-                let span = self.add_span(modified.modifier.span.clone());
-                Node::Mod(Primitive::Fork, eco_vec![f, g], span)
             }
             Backward => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;

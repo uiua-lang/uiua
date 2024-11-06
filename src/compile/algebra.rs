@@ -1,5 +1,6 @@
-use std::{array, cmp::Ordering, collections::BTreeMap, fmt, ops};
+use std::{array, cmp::Ordering, collections::BTreeMap, fmt, mem::take, ops};
 
+use ecow::eco_vec;
 use serde::*;
 
 use crate::{
@@ -19,10 +20,14 @@ macro_rules! dbgln {
     }
 }
 
-pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> AlgebraResult<Node> {
+pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<AlgebraError>> {
     dbgln!("algebraic inverse of {nodes:?}");
-    let mut expr = nodes_expr(nodes, asm).inspect_err(|e| dbgln!("{e:?}"))?;
-    dbgln!("{:#?}", &expr);
+    let (expr, handled) = nodes_expr(nodes, asm);
+    if !handled {
+        return Err(None);
+    }
+    let mut expr = expr.inspect_err(|e| dbgln!("{e:?}")).map_err(Some)?;
+    dbgln!("expression: {expr:?}");
 
     let c = expr.0.remove(&Term::new(Base::X, 0.0)).unwrap_or(0.0);
     let b = expr.0.remove(&Term::new(Base::X, 1.0)).unwrap_or(0.0);
@@ -94,12 +99,94 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> AlgebraResult<Node> 
     Ok(node)
 }
 
-fn nodes_expr(node: &[Node], asm: &Assembly) -> AlgebraResult<Expr> {
+pub fn derivative(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
+    dbgln!("derivative of {node:?}");
+    let expr = (nodes_expr(node, asm).0).inspect_err(|e| dbgln!("{e:?}"))?;
+    dbgln!("experession: {expr:?}");
+    let mut deriv = Expr::default();
+    for (mut term, mut coef) in expr.0 {
+        match term.base {
+            Base::X => {}
+            Base::Expr(_) => return Err(AlgebraError::TooComplex),
+        }
+        coef *= term.power;
+        if coef == 0.0 {
+            continue;
+        }
+        term.power -= 1.0;
+        deriv.0.insert(term, coef);
+    }
+    dbgln!("derivative: {deriv:?}");
+    let node = expr_to_node(deriv, asm);
+    dbgln!("derivative node: {node:?}");
+    Ok(node)
+}
+
+pub fn integral(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
+    dbgln!("integral of {node:?}");
+    let expr = (nodes_expr(node, asm).0).inspect_err(|e| dbgln!("{e:?}"))?;
+    dbgln!("experession: {expr:?}");
+    let mut deriv = Expr::default();
+    for (mut term, mut coef) in expr.0 {
+        match term.base {
+            Base::X => {}
+            Base::Expr(_) => return Err(AlgebraError::TooComplex),
+        }
+        term.power += 1.0;
+        coef /= term.power;
+        deriv.0.insert(term, coef);
+    }
+    dbgln!("integral: {deriv:?}");
+    let node = expr_to_node(deriv, asm);
+    dbgln!("integral node: {node:?}");
+    Ok(node)
+}
+
+fn expr_to_node(expr: Expr, asm: &Assembly) -> Node {
+    let span = asm.spans.len() - 1;
+    let mut node = Node::empty();
+    fn recur(node: &mut Node, expr: Expr, span: usize) {
+        for (i, (term, coef)) in expr.0.into_iter().enumerate() {
+            if term.power == 0.0 {
+                node.push(Prim(Pop, span));
+                node.push(Node::new_push(1.0));
+            } else {
+                match term.base {
+                    Base::X => {
+                        if !node.is_empty() {
+                            *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
+                        }
+                    }
+                    Base::Expr(expr) => recur(node, expr, span),
+                }
+                if term.power != 1.0 {
+                    node.push(Node::new_push(term.power));
+                    node.push(Prim(Pow, span));
+                }
+            }
+            if coef != 1.0 {
+                node.push(Node::new_push(coef));
+                node.push(Prim(Mul, span));
+            }
+            if i > 0 {
+                node.push(Prim(Add, span));
+            }
+        }
+    }
+    recur(&mut node, expr, span);
+    node
+}
+
+fn nodes_expr(node: &[Node], asm: &Assembly) -> (AlgebraResult<Expr>, bool) {
     let mut env = AlgebraEnv::new(asm);
     for node in node {
-        env.node(node)?;
+        if let Err(e) = env.node(node) {
+            let handled = env.handled >= 2 || env.stack.iter().any(Expr::is_complex);
+            return (Err(e), handled);
+        }
     }
-    env.result()
+    let handled = env.handled >= 2 || env.stack.iter().any(Expr::is_complex);
+    (env.result(), handled)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -111,6 +198,7 @@ pub enum AlgebraError {
     NonScalar,
     NonReal,
     TooComplex,
+    InterpreterBug,
 }
 
 impl fmt::Display for AlgebraError {
@@ -127,11 +215,12 @@ impl fmt::Display for AlgebraError {
             Self::NonScalar => write!(f, "The algebra system only supports scalars"),
             Self::NonReal => write!(f, "The algebra system only supports reals"),
             Self::TooComplex => write!(f, "Algebraic expression is too complex"),
+            Self::InterpreterBug => write!(f, "Bug in the interpreter"),
         }
     }
 }
 
-pub type AlgebraResult<T = ()> = Result<T, Option<AlgebraError>>;
+pub type AlgebraResult<T = ()> = Result<T, AlgebraError>;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Base {
@@ -255,7 +344,7 @@ impl fmt::Debug for Expr {
             } else {
                 write!(f, "{coef}{:?}", term.base)?;
             }
-            if term.power != 1.0 {
+            if term.power != 1.0 && term.power != 0.0 {
                 write!(f, "^{}", term.power)?;
             }
         }
@@ -449,11 +538,11 @@ impl<'a> AlgebraEnv<'a> {
                 }
             }
             Call(f, _) => self.node(&self.asm[f])?,
-            Push(val) if val.rank() > 0 => return Err(self.error(AlgebraError::NonScalar)),
+            Push(val) if val.rank() > 0 => return Err(AlgebraError::NonScalar),
             Push(val) => match val {
                 Value::Num(arr) => self.stack.push(arr.data[0].into()),
                 Value::Byte(arr) => self.stack.push((arr.data[0] as f64).into()),
-                _ => return Err(self.error(AlgebraError::NonReal)),
+                _ => return Err(AlgebraError::NonReal),
             },
             Prim(prim, _) => match prim {
                 Identity => {
@@ -531,28 +620,20 @@ impl<'a> AlgebraEnv<'a> {
                 Pow => {
                     let a = self.pop()?;
                     let b = self.pop()?;
-                    let res = b
-                        .pow(a)
-                        .ok_or_else(|| self.error(AlgebraError::NonScalar))?;
+                    let res = b.pow(a).ok_or(AlgebraError::NonScalar)?;
                     self.stack.push(res);
                     self.handled += 1;
                 }
                 Log => {
                     let a = self.pop()?;
                     let b = self.pop()?;
-                    let res = b
-                        .log(a)
-                        .ok_or_else(|| self.error(AlgebraError::NonScalar))?;
+                    let res = b.log(a).ok_or(AlgebraError::NonScalar)?;
                     self.stack.push(res);
                     self.handled += 1;
                 }
-                prim => {
-                    return Err(self.error(AlgebraError::NotSupported(prim.format().to_string())))
-                }
+                prim => return Err(AlgebraError::NotSupported(prim.format().to_string())),
             },
-            ImplPrim(prim, _) => {
-                return Err(self.error(AlgebraError::NotSupported(prim.to_string())))
-            }
+            ImplPrim(prim, _) => return Err(AlgebraError::NotSupported(prim.to_string())),
             Mod(prim, args, _) => match prim {
                 Pop => _ = self.pop()?,
                 Dip => {
@@ -639,42 +720,29 @@ impl<'a> AlgebraEnv<'a> {
                         self.node(&f.node)?;
                     }
                 }
-                prim => return Err(self.error(AlgebraError::NotSupported(prim.to_string()))),
+                prim => return Err(AlgebraError::NotSupported(prim.to_string())),
             },
-            ImplMod(prim, ..) => {
-                return Err(self.error(AlgebraError::NotSupported(prim.to_string())))
-            }
-            CustomInverse(..) => {
-                return Err(self.error(AlgebraError::NotSupported("custom inverses".into())))
-            }
-            node => return Err(self.error(AlgebraError::NotSupported(format!("{node:?}")))),
+            ImplMod(prim, ..) => return Err(AlgebraError::NotSupported(prim.to_string())),
+            CustomInverse(..) => return Err(AlgebraError::NotSupported("custom inverses".into())),
+            node => return Err(AlgebraError::NotSupported(format!("{node:?}"))),
         }
         Ok(())
     }
     fn pop(&mut self) -> AlgebraResult<Expr> {
-        self.stack
-            .pop()
-            .ok_or_else(|| self.error(AlgebraError::TooManyVariables))
-    }
-    fn error(&self, err: AlgebraError) -> Option<AlgebraError> {
-        if self.handled >= 2 || self.stack.iter().any(Expr::is_complex) {
-            Some(err)
-        } else {
-            None
-        }
+        self.stack.pop().ok_or(AlgebraError::TooManyVariables)
     }
     fn result(mut self) -> AlgebraResult<Expr> {
         match self.stack.len() {
-            0 => Err(self.error(AlgebraError::NoOutput)),
+            0 => Err(AlgebraError::NoOutput),
             1 => Ok(self.stack.pop().unwrap()),
-            _ => Err(None),
+            _ => Err(AlgebraError::TooManyOutputs),
         }
     }
 }
 
 fn get_ops<const N: usize>(ops: &[SigNode]) -> AlgebraResult<[&SigNode; N]> {
     if ops.len() != N {
-        return Err(None);
+        return Err(AlgebraError::InterpreterBug);
     }
     Ok(array::from_fn(|i| &ops[i]))
 }

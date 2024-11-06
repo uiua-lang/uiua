@@ -3169,6 +3169,10 @@ primitive!(
     ///
     /// [astar] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[3], Astar, Misc, "astar"),
+    /// Calculate the derivative of a mathematical expression
+    ([1], Derivative, Misc, ("derivative", '∂')),
+    /// Calculate the integral of a mathematical expression
+    ([1], Integral, Misc, ("integral", '∫')),
     /// Encode an array into a JSON string
     ///
     /// ex: json [1 2 3]

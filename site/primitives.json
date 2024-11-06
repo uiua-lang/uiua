@@ -517,6 +517,14 @@
     "class": "MonadicArray",
     "description": "Remove duplicate rows from an array"
   },
+  "derivative": {
+    "glyph": "∂",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Misc",
+    "description": "Calculate the derivative of a mathematical expression",
+    "experimental": true
+  },
   "deshape": {
     "glyph": "♭",
     "args": 1,
@@ -752,6 +760,14 @@
     "outputs": 1,
     "class": "Map",
     "description": "Insert a key-value pair into a map array"
+  },
+  "integral": {
+    "glyph": "∫",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Misc",
+    "description": "Calculate the integral of a mathematical expression",
+    "experimental": true
   },
   "inventory": {
     "glyph": "⍚",

@@ -503,6 +503,7 @@ impl Primitive {
                 | (Tuples | Choose | Permute)
                 | (Last | Sort | Chunks | Base | Fft | Case | Layout)
                 | (Astar | Triangle)
+                | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )

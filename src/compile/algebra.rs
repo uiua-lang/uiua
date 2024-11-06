@@ -116,6 +116,9 @@ pub fn derivative(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
         term.power -= 1.0;
         deriv.0.insert(term, coef);
     }
+    if deriv.0.is_empty() {
+        deriv = 0.0.into();
+    }
     dbgln!("derivative: {deriv:?}");
     let node = expr_to_node(deriv, asm);
     dbgln!("derivative node: {node:?}");
@@ -147,7 +150,10 @@ fn expr_to_node(expr: Expr, asm: &Assembly) -> Node {
     let mut node = Node::empty();
     fn recur(node: &mut Node, expr: Expr, span: usize) {
         for (i, (term, coef)) in expr.0.into_iter().enumerate() {
-            if term.power == 0.0 {
+            if coef == 0.0 {
+                node.push(Node::new_push(0.0));
+                node.push(Prim(Mul, span));
+            } else if term.power == 0.0 {
                 node.push(Prim(Pop, span));
                 node.push(Node::new_push(1.0));
             } else {
@@ -164,7 +170,7 @@ fn expr_to_node(expr: Expr, asm: &Assembly) -> Node {
                     node.push(Prim(Pow, span));
                 }
             }
-            if coef != 1.0 {
+            if coef != 0.0 && coef != 1.0 {
                 node.push(Node::new_push(coef));
                 node.push(Prim(Mul, span));
             }

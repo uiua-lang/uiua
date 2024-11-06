@@ -199,6 +199,7 @@ pub enum AlgebraError {
     NonReal,
     TooComplex,
     InterpreterBug,
+    NoInverse,
 }
 
 impl fmt::Display for AlgebraError {
@@ -216,6 +217,7 @@ impl fmt::Display for AlgebraError {
             Self::NonReal => write!(f, "The algebra system only supports reals"),
             Self::TooComplex => write!(f, "Algebraic expression is too complex"),
             Self::InterpreterBug => write!(f, "Bug in the interpreter"),
+            Self::NoInverse => write!(f, "No inverse found"),
         }
     }
 }
@@ -549,6 +551,7 @@ impl<'a> AlgebraEnv<'a> {
                     let a = self.pop()?;
                     self.stack.push(a);
                 }
+                Pop => _ = self.pop()?,
                 Dup => {
                     let a = self.pop()?;
                     self.stack.push(a.clone());
@@ -635,7 +638,6 @@ impl<'a> AlgebraEnv<'a> {
             },
             ImplPrim(prim, _) => return Err(AlgebraError::NotSupported(prim.to_string())),
             Mod(prim, args, _) => match prim {
-                Pop => _ = self.pop()?,
                 Dip => {
                     let [f] = get_ops(args)?;
                     let a = self.pop()?;
@@ -723,7 +725,15 @@ impl<'a> AlgebraEnv<'a> {
                 prim => return Err(AlgebraError::NotSupported(prim.to_string())),
             },
             ImplMod(prim, ..) => return Err(AlgebraError::NotSupported(prim.to_string())),
-            CustomInverse(..) => return Err(AlgebraError::NotSupported("custom inverses".into())),
+            CustomInverse(cust, _) => {
+                if cust.is_obverse {
+                    return Err(AlgebraError::NotSupported("custom inverses".into()));
+                } else if let Ok(normal) = &cust.normal {
+                    self.node(&normal.node)?;
+                } else {
+                    return Err(AlgebraError::NoInverse);
+                }
+            }
             node => return Err(AlgebraError::NotSupported(format!("{node:?}"))),
         }
         Ok(())

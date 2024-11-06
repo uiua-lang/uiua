@@ -174,6 +174,18 @@ impl Complex {
     pub fn acos(self) -> Self {
         -Self::I * (Self::I * (Self::ONE - self * self).sqrt() + self).ln()
     }
+    /// Check if either real or imaginary part is NaN
+    pub fn is_nan(&self) -> bool {
+        self.re.is_nan() || self.im.is_nan()
+    }
+    /// Get the complex number as a real number
+    pub fn into_real(self) -> Option<f64> {
+        if self.im.abs() < f64::EPSILON {
+            Some(self.re)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<f64> for Complex {
@@ -354,5 +366,41 @@ impl Neg for Complex {
             re: -self.re,
             im: -self.im,
         }
+    }
+}
+
+impl<T> AddAssign<T> for Complex
+where
+    Complex: Add<T, Output = Complex>,
+{
+    fn add_assign(&mut self, rhs: T) {
+        *self = *self + rhs;
+    }
+}
+
+impl<T> SubAssign<T> for Complex
+where
+    Complex: Sub<T, Output = Complex>,
+{
+    fn sub_assign(&mut self, rhs: T) {
+        *self = *self - rhs;
+    }
+}
+
+impl<T> MulAssign<T> for Complex
+where
+    Complex: Mul<T, Output = Complex>,
+{
+    fn mul_assign(&mut self, rhs: T) {
+        *self = *self * rhs;
+    }
+}
+
+impl<T> DivAssign<T> for Complex
+where
+    Complex: Div<T, Output = Complex>,
+{
+    fn div_assign(&mut self, rhs: T) {
+        *self = *self / rhs;
     }
 }

@@ -765,7 +765,7 @@ fn fft_impl(
         let slice: &mut [Complex64] = unsafe { transmute::<&mut [Complex], &mut [Complex64]>(row) };
         fft.process(slice);
         for c in row {
-            *c = *c * scaling_factor;
+            *c *= scaling_factor;
         }
     }
     env.push(arr);

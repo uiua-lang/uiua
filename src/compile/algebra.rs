@@ -4,7 +4,7 @@ use ecow::eco_vec;
 use serde::*;
 
 use crate::{
-    Assembly,
+    Assembly, Complex,
     Node::{self, *},
     Primitive::*,
     SigNode, Value,
@@ -20,80 +20,86 @@ macro_rules! dbgln {
     }
 }
 
+const ZERO: Complex = Complex::ZERO;
+const ONE: Complex = Complex::ONE;
+
 pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<AlgebraError>> {
     dbgln!("algebraic inverse of {nodes:?}");
-    let (expr, handled) = nodes_expr(nodes, asm);
-    if !handled {
+    let data = nodes_expr(nodes, asm);
+    if !data.handled {
         return Err(None);
     }
-    let mut expr = expr.inspect_err(|e| dbgln!("{e:?}")).map_err(Some)?;
+    let mut expr = data.expr.inspect_err(|e| dbgln!("{e:?}")).map_err(Some)?;
     dbgln!("expression: {expr:?}");
 
-    let c = expr.0.remove(&Term::new(Base::X, 0.0)).unwrap_or(0.0);
-    let b = expr.0.remove(&Term::new(Base::X, 1.0)).unwrap_or(0.0);
+    let c = expr.0.remove(&Term::new(Base::X, 0.0)).unwrap_or(ZERO);
+    let b = expr.0.remove(&Term::new(Base::X, 1.0)).unwrap_or(ZERO);
     let a = (expr.0)
         .remove(&Term::new(Base::X, 2.0))
-        .filter(|&a| a != 0.0);
+        .filter(|&a| a != ZERO);
 
     if !expr.0.is_empty() {
         return Err(Some(AlgebraError::TooComplex));
     }
 
+    let push = |x: Complex| {
+        if data.any_complex {
+            Node::new_push(x)
+        } else {
+            Node::new_push(x.into_real().unwrap_or(f64::NAN))
+        }
+    };
+
     let span = asm.spans.len() - 1;
     let node = if let Some(a) = a {
         // Quadratic
-        if b == 0.0 {
+        if b == ZERO {
             // Simple
             Node::from_iter([
-                Node::new_push(c),
+                push(c),
                 Prim(Sub, span),
-                Node::new_push(a),
+                push(a),
                 Prim(Div, span),
                 Prim(Sqrt, span),
             ])
         } else {
             // Full quadratic
             Node::from_iter([
-                Node::new_push(c),
+                push(c),
                 Prim(Flip, span),
                 Prim(Sub, span),
-                Node::new_push(-4.0 * a),
+                push(-4.0 * a),
                 Prim(Mul, span),
-                Node::new_push(b * b),
+                push(b * b),
                 Prim(Add, span),
                 Prim(Sqrt, span),
                 Prim(Dup, span),
-                Node::new_push(b),
+                push(b),
                 Prim(Sub, span),
                 Prim(Flip, span),
                 Prim(Neg, span),
-                Node::new_push(b),
+                push(b),
                 Prim(Sub, span),
                 Prim(Max, span),
-                Node::new_push(2.0 * a),
+                push(2.0 * a),
                 Prim(Div, span),
             ])
         }
-    } else if b == 0.0 {
+    } else if b == ZERO {
         // Constant
         Node::from_iter([Prim(Pop, span), Node::new_push(c)])
-    } else if c == 0.0 {
+    } else if c == ZERO {
         // Linear origin
-        if b == 1.0 {
+        if b == ONE {
             Prim(Identity, span)
         } else if b.abs() > 1.0 {
-            Node::from_iter([Node::new_push(b), Prim(Div, span)])
+            Node::from_iter([push(b), Prim(Div, span)])
         } else {
-            Node::from_iter([Node::new_push(1.0 / b), Prim(Mul, span)])
+            Node::from_iter([push(1.0 / b), Prim(Mul, span)])
         }
     } else {
         // Linear
-        Node::from_iter([
-            Node::new_push(c),
-            Prim(Sub, span),
-            Node::new_push(b),
-            Prim(Div, span),
-        ])
+        Node::from_iter([push(c), Prim(Sub, span), push(b), Prim(Div, span)])
     };
     dbgln!("algebraic inverted to {node:?}");
     Ok(node)
@@ -101,7 +107,8 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
 
 pub fn derivative(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
     dbgln!("derivative of {node:?}");
-    let expr = (nodes_expr(node, asm).0).inspect_err(|e| dbgln!("{e:?}"))?;
+    let data = nodes_expr(node, asm);
+    let expr = data.expr.inspect_err(|e| dbgln!("{e:?}"))?;
     dbgln!("experession: {expr:?}");
     let mut deriv = Expr::default();
     for (mut term, mut coef) in expr.0 {
@@ -110,7 +117,7 @@ pub fn derivative(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
             Base::Expr(_) => return Err(AlgebraError::TooComplex),
         }
         coef *= term.power;
-        if coef == 0.0 {
+        if coef == ZERO {
             continue;
         }
         term.power -= 1.0;
@@ -120,14 +127,15 @@ pub fn derivative(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
         deriv = 0.0.into();
     }
     dbgln!("derivative: {deriv:?}");
-    let node = expr_to_node(deriv, asm);
+    let node = expr_to_node(deriv, data.any_complex, asm);
     dbgln!("derivative node: {node:?}");
     Ok(node)
 }
 
 pub fn integral(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
     dbgln!("integral of {node:?}");
-    let expr = (nodes_expr(node, asm).0).inspect_err(|e| dbgln!("{e:?}"))?;
+    let data = nodes_expr(node, asm);
+    let expr = data.expr.inspect_err(|e| dbgln!("{e:?}"))?;
     dbgln!("experession: {expr:?}");
     let mut deriv = Expr::default();
     for (mut term, mut coef) in expr.0 {
@@ -140,17 +148,17 @@ pub fn integral(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
         deriv.0.insert(term, coef);
     }
     dbgln!("integral: {deriv:?}");
-    let node = expr_to_node(deriv, asm);
+    let node = expr_to_node(deriv, data.any_complex, asm);
     dbgln!("integral node: {node:?}");
     Ok(node)
 }
 
-fn expr_to_node(expr: Expr, asm: &Assembly) -> Node {
+fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
     let span = asm.spans.len() - 1;
     let mut node = Node::empty();
-    fn recur(node: &mut Node, expr: Expr, span: usize) {
+    fn recur(node: &mut Node, expr: Expr, any_complex: bool, span: usize) {
         for (i, (term, coef)) in expr.0.into_iter().enumerate() {
-            if coef == 0.0 {
+            if coef == ZERO {
                 node.push(Node::new_push(0.0));
                 node.push(Prim(Mul, span));
             } else if term.power == 0.0 {
@@ -163,15 +171,19 @@ fn expr_to_node(expr: Expr, asm: &Assembly) -> Node {
                             *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
                         }
                     }
-                    Base::Expr(expr) => recur(node, expr, span),
+                    Base::Expr(expr) => recur(node, expr, any_complex, span),
                 }
                 if term.power != 1.0 {
                     node.push(Node::new_push(term.power));
                     node.push(Prim(Pow, span));
                 }
             }
-            if coef != 0.0 && coef != 1.0 {
-                node.push(Node::new_push(coef));
+            if coef != ZERO && coef != ONE {
+                node.push(if any_complex {
+                    Node::new_push(coef)
+                } else {
+                    Node::new_push(coef.into_real().unwrap_or(f64::NAN))
+                });
                 node.push(Prim(Mul, span));
             }
             if i > 0 {
@@ -179,20 +191,34 @@ fn expr_to_node(expr: Expr, asm: &Assembly) -> Node {
             }
         }
     }
-    recur(&mut node, expr, span);
+    recur(&mut node, expr, any_complex, span);
     node
 }
 
-fn nodes_expr(node: &[Node], asm: &Assembly) -> (AlgebraResult<Expr>, bool) {
+struct AlgebraData {
+    expr: AlgebraResult<Expr>,
+    handled: bool,
+    any_complex: bool,
+}
+
+fn nodes_expr(node: &[Node], asm: &Assembly) -> AlgebraData {
     let mut env = AlgebraEnv::new(asm);
     for node in node {
         if let Err(e) = env.node(node) {
             let handled = env.handled >= 2 || env.stack.iter().any(Expr::is_complex);
-            return (Err(e), handled);
+            return AlgebraData {
+                expr: Err(e),
+                handled,
+                any_complex: env.any_complex,
+            };
         }
     }
     let handled = env.handled >= 2 || env.stack.iter().any(Expr::is_complex);
-    (env.result(), handled)
+    AlgebraData {
+        any_complex: env.any_complex,
+        expr: env.result(),
+        handled,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -288,7 +314,7 @@ impl Ord for Term {
 
 /// A map of terms to coefficients
 #[derive(Clone, Default)]
-struct Expr(BTreeMap<Term, f64>);
+struct Expr(BTreeMap<Term, Complex>);
 
 impl Expr {
     fn is_complex(&self) -> bool {
@@ -298,13 +324,16 @@ impl Expr {
                 || matches!(&term.base, Base::Expr(expr) if expr.is_complex())
         })
     }
-    fn single(self) -> Option<(Term, f64)> {
+    fn single(&self) -> Option<(Term, Complex)> {
         if self.0.len() != 1 {
             return None;
         }
-        self.0.into_iter().next()
+        self.0
+            .iter()
+            .next()
+            .map(|(term, coef)| (term.clone(), *coef))
     }
-    fn into_constant(self) -> Option<f64> {
+    fn as_constant(&self) -> Option<Complex> {
         let (term, coef) = self.single()?;
         if term.base == Base::X && term.power == 0.0 {
             Some(coef)
@@ -313,7 +342,7 @@ impl Expr {
         }
     }
     fn pow(self, power: Self) -> Option<Self> {
-        let power = power.into_constant()?;
+        let power = power.as_constant()?.into_real()?;
         Some(Expr(
             (self.0.into_iter())
                 .map(|(mut term, coef)| {
@@ -324,7 +353,7 @@ impl Expr {
         ))
     }
     fn log(self, base: Self) -> Option<Self> {
-        let base = base.into_constant()?;
+        let base = base.as_constant()?.into_real()?;
         Some(Expr(
             (self.0.into_iter())
                 .map(|(mut term, coef)| {
@@ -345,9 +374,9 @@ impl fmt::Debug for Expr {
             }
             if term.power == 0.0 {
                 write!(f, "{coef}")?;
-            } else if *coef == 1.0 {
+            } else if *coef == ONE {
                 write!(f, "{:?}", term.base)?;
-            } else if *coef == -1.0 {
+            } else if *coef == -ONE {
                 write!(f, "-{:?}", term.base)?;
             } else {
                 write!(f, "{coef}{:?}", term.base)?;
@@ -395,13 +424,19 @@ impl Ord for Expr {
 impl From<Term> for Expr {
     fn from(term: Term) -> Self {
         let mut expr = Expr::default();
-        expr.0.insert(term, 1.0);
+        expr.0.insert(term, 1.0.into());
         expr
     }
 }
 
 impl From<f64> for Expr {
     fn from(val: f64) -> Self {
+        Complex::from(val).into()
+    }
+}
+
+impl From<Complex> for Expr {
+    fn from(val: Complex) -> Self {
         let mut expr = Expr::default();
         expr.0.insert(Term::new(Base::X, 0.0), val);
         expr
@@ -515,6 +550,7 @@ struct AlgebraEnv<'a> {
     stack: Vec<Expr>,
     call_stack: Vec<usize>,
     handled: usize,
+    any_complex: bool,
 }
 
 impl<'a> AlgebraEnv<'a> {
@@ -524,6 +560,7 @@ impl<'a> AlgebraEnv<'a> {
             stack: vec![Expr::from(Term::from(Base::X))],
             call_stack: Vec::new(),
             handled: 0,
+            any_complex: false,
         }
     }
     fn node(&mut self, node: &Node) -> AlgebraResult {
@@ -550,6 +587,10 @@ impl<'a> AlgebraEnv<'a> {
             Push(val) => match val {
                 Value::Num(arr) => self.stack.push(arr.data[0].into()),
                 Value::Byte(arr) => self.stack.push((arr.data[0] as f64).into()),
+                Value::Complex(arr) => {
+                    self.stack.push(arr.data[0].into());
+                    self.any_complex = true;
+                }
                 _ => return Err(AlgebraError::NonReal),
             },
             Prim(prim, _) => match prim {
@@ -639,6 +680,18 @@ impl<'a> AlgebraEnv<'a> {
                     let res = b.log(a).ok_or(AlgebraError::NonScalar)?;
                     self.stack.push(res);
                     self.handled += 1;
+                }
+                Complex => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    match (a.as_constant(), b.as_constant()) {
+                        (Some(a), Some(b)) => self.stack.push((a * Complex::I + b).into()),
+                        _ => {
+                            let im = a * Expr::from(Complex::I);
+                            self.stack.push(b + im);
+                        }
+                    }
+                    self.any_complex = true;
                 }
                 prim => return Err(AlgebraError::NotSupported(prim.format().to_string())),
             },

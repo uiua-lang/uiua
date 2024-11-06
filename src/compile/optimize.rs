@@ -18,6 +18,9 @@ impl Node {
         dbgln!("optimizing {self:?}");
         match self {
             Run(nodes) => {
+                for node in nodes.make_mut() {
+                    node.optimize();
+                }
                 while OPTIMIZATIONS.iter().any(|op| {
                     if !op.match_and_replace(nodes) {
                         return false;

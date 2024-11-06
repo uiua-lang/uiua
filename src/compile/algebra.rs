@@ -9,7 +9,7 @@ use crate::{
     SigNode, Value,
 };
 
-pub const DEBUG: bool = false;
+pub const DEBUG: bool = true;
 
 macro_rules! dbgln {
     ($($arg:tt)*) => {
@@ -200,6 +200,42 @@ impl Expr {
                 || term.power != 1.0
                 || matches!(&term.base, Base::Expr(expr) if expr.is_complex())
         })
+    }
+    fn single(self) -> Option<(Term, f64)> {
+        if self.0.len() != 1 {
+            return None;
+        }
+        self.0.into_iter().next()
+    }
+    fn into_constant(self) -> Option<f64> {
+        let (term, coef) = self.single()?;
+        if term.base == Base::X && term.power == 0.0 {
+            Some(coef)
+        } else {
+            None
+        }
+    }
+    fn pow(self, power: Self) -> Option<Self> {
+        let power = power.into_constant()?;
+        Some(Expr(
+            (self.0.into_iter())
+                .map(|(mut term, coef)| {
+                    term.power *= power;
+                    (term, coef.powf(power))
+                })
+                .collect(),
+        ))
+    }
+    fn log(self, base: Self) -> Option<Self> {
+        let base = base.into_constant()?;
+        Some(Expr(
+            (self.0.into_iter())
+                .map(|(mut term, coef)| {
+                    term.power /= base;
+                    (term, coef.log(base))
+                })
+                .collect(),
+        ))
     }
 }
 
@@ -455,9 +491,13 @@ impl<'a> AlgebraEnv<'a> {
                 Sqrt => {
                     let mut a = self.pop()?;
                     if a.0.len() <= 1 {
-                        for coef in a.0.values_mut() {
-                            *coef /= 2.0;
-                        }
+                        a.0 =
+                            a.0.into_iter()
+                                .map(|(mut term, coeff)| {
+                                    term.power *= 0.5;
+                                    (term, coeff.sqrt())
+                                })
+                                .collect();
                     } else {
                         a = Term::new(Base::Expr(a), 0.5).into();
                     }
@@ -488,6 +528,24 @@ impl<'a> AlgebraEnv<'a> {
                     self.stack.push(b / a);
                     self.handled += 1;
                 }
+                Pow => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    let res = b
+                        .pow(a)
+                        .ok_or_else(|| self.error(AlgebraError::NonScalar))?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
+                Log => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    let res = b
+                        .log(a)
+                        .ok_or_else(|| self.error(AlgebraError::NonScalar))?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
                 prim => {
                     return Err(self.error(AlgebraError::NotSupported(prim.format().to_string())))
                 }
@@ -496,6 +554,7 @@ impl<'a> AlgebraEnv<'a> {
                 return Err(self.error(AlgebraError::NotSupported(prim.to_string())))
             }
             Mod(prim, args, _) => match prim {
+                Pop => _ = self.pop()?,
                 Dip => {
                     let [f] = get_ops(args)?;
                     let a = self.pop()?;
@@ -521,6 +580,30 @@ impl<'a> AlgebraEnv<'a> {
                         args.push(self.pop()?);
                     }
                     self.stack.extend(args.last().cloned());
+                    for arg in args.into_iter().rev() {
+                        self.stack.push(arg);
+                    }
+                    self.node(&f.node)?;
+                }
+                Both => {
+                    let [f] = get_ops(args)?;
+                    let mut args = Vec::with_capacity(f.sig.args);
+                    for _ in 0..f.sig.args {
+                        args.push(self.pop()?);
+                    }
+                    self.node(&f.node)?;
+                    for arg in args.into_iter().rev() {
+                        self.stack.push(arg);
+                    }
+                    self.node(&f.node)?;
+                }
+                Bracket => {
+                    let [f, g] = get_ops(args)?;
+                    let mut args = Vec::with_capacity(f.sig.args);
+                    for _ in 0..f.sig.args {
+                        args.push(self.pop()?);
+                    }
+                    self.node(&g.node)?;
                     for arg in args.into_iter().rev() {
                         self.stack.push(arg);
                     }

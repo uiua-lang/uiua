@@ -153,7 +153,7 @@ fn expr_to_node(expr: Expr, asm: &Assembly) -> Node {
             } else {
                 match term.base {
                     Base::X => {
-                        if !node.is_empty() {
+                        if i > 0 {
                             *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
                         }
                     }

@@ -11,7 +11,6 @@ The next version of Uiua
   - Infinite ranges
     - `rows`/`each`
 - `gpu` modifier
-- Algebra system?
 - `un` `under`
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)

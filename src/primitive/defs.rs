@@ -3171,6 +3171,7 @@ primitive!(
     ((2)[3], Astar, Misc, "astar"),
     /// Calculate the derivative of a mathematical expression
     ///
+    /// Currently, only polynomials are supported.
     /// ex: # Experimental!
     ///   : # x² → 2x
     ///   : 10 ∂(×.) 5
@@ -3185,6 +3186,7 @@ primitive!(
     ([1], Derivative, Misc, ("derivative", '∂')),
     /// Calculate the integral of a mathematical expression
     ///
+    /// Currently, only polynomials are supported.
     /// The constant integration term is not included.
     /// ex: # Experimental!
     ///   : # x² → x³/3

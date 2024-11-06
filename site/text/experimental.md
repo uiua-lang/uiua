@@ -30,7 +30,7 @@ Currently, only polynomials are supported.
 ```uiua
 # Experimental!
 ∫(×.) 3   # x² → x³/3
-∫√ 1      # √x → (2x^⅔)/3
+∫√ 1      # √x → (2x^1.5)/3
 ∫(+5×2) 2 # 2x + 5  →  x² + 5x
 ```
 

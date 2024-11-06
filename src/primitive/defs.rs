@@ -3192,7 +3192,7 @@ primitive!(
     ///   : # x² → x³/3
     ///   : ∫(×.) 3
     /// ex: # Experimental!
-    ///   : # √x → (2x^⅔)/3
+    ///   : # √x → (2x^1.5)/3
     ///   : ∫√ 1
     /// ex: # Experimental!
     ///   : # 2x + 5  →  x² + 5x

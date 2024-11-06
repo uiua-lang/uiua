@@ -453,9 +453,10 @@ impl Compiler {
                     );
                 }
                 let span = self.add_span(modified.modifier.span.clone());
-                match f.sig.args {
-                    0 => Node::from_iter([g.node, f.node]),
-                    1 => Node::from_iter([Node::Mod(On, eco_vec![g], span), f.node]),
+                match (f.sig.args, g.sig.args) {
+                    (0, _) => Node::from_iter([g.node, f.node]),
+                    (1, 0) => Node::from_iter([Node::Mod(Dip, eco_vec![g], span), f.node]),
+                    (1, _) => Node::from_iter([Node::Mod(On, eco_vec![g], span), f.node]),
                     _ => Node::Mod(Fork, eco_vec![f, g], span),
                 }
             }

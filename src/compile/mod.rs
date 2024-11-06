@@ -598,8 +598,13 @@ code:
             // Compile the words
             let binding_count_before = self.asm.bindings.len();
             let root_len_before = self.asm.root.len();
+            let error_count_before = self.errors.len();
+
             let mut line_node = self.line(line, true)?;
+
             let binding_count_after = self.asm.bindings.len();
+            let error_count_after = self.errors.len();
+
             line_node.optimize();
             match line_node.sig() {
                 Ok(sig) => {
@@ -626,6 +631,7 @@ code:
                     // - there are at least as many push nodes preceding the current line as there are arguments to the line
                     // - the words create no bindings
                     if precomp
+                        && error_count_after == error_count_before
                         && self.pre_eval_mode != PreEvalMode::Line
                         && !line_node.is_empty()
                         && binding_count_before == binding_count_after

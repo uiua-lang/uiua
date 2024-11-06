@@ -978,7 +978,10 @@ at {}",
         self.rt.array_depth -= 1;
         res?;
         let start = match len {
-            ArrayLen::Static(len) => self.stack_height() - len,
+            ArrayLen::Static(len) => {
+                self.require_height(len)?;
+                self.stack_height() - len
+            }
             ArrayLen::Dynamic(len) => start_height - len,
         };
         let values = self.rt.stack.drain(start..).rev();

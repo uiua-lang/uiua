@@ -9,7 +9,7 @@ use crate::{
     SigNode, Value,
 };
 
-pub const DEBUG: bool = true;
+pub const DEBUG: bool = false;
 
 macro_rules! dbgln {
     ($($arg:tt)*) => {

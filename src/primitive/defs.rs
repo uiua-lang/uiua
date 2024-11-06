@@ -3174,13 +3174,13 @@ primitive!(
     /// Currently, only polynomials are supported.
     /// ex: # Experimental!
     ///   : # x² → 2x
-    ///   : 10 ∂(×.) 5
+    ///   : ∂(×.) 5
     /// ex: # Experimental!
     ///   : # √x → 1/(2√x)
-    ///   : 1.5 ∂√ 1/9
+    ///   : ∂√ 1/9
     /// ex: # Experimental!
     ///   : # x² - 2x - 4  →  2x² - 2x
-    ///   : [¯2 0 2] ∂(++⊃(ⁿ2|×¯2|¯4)) [0 1 2]
+    ///   : ∂(++⊃(ⁿ2|×¯2|¯4)) [0 1 2]
     ///
     /// See also: [integral]
     ([1], Derivative, Misc, ("derivative", '∂')),
@@ -3190,13 +3190,13 @@ primitive!(
     /// The constant integration term is not included.
     /// ex: # Experimental!
     ///   : # x² → x³/3
-    ///   : 9 ∫(×.) 3
+    ///   : ∫(×.) 3
     /// ex: # Experimental!
     ///   : # √x → (2x^⅔)/3
-    ///   : 2/3 ∫√ 1
+    ///   : ∫√ 1
     /// ex: # Experimental!
     ///   : # 2x + 5  →  x² + 5x
-    ///   : 14 ∫(+5×2) 2
+    ///   : ∫(+5×2) 2
     ///
     /// See also: [derivative]
     ([1], Integral, Misc, ("integral", '∫')),

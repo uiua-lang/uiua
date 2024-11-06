@@ -1103,11 +1103,18 @@ impl Compiler {
                     code = s;
                 } else {
                     for row in val.into_rows() {
-                        let s = row.as_string(env, "Macro output rows must be strings")?;
-                        if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
-                            code.push(' ');
+                        match row.as_string(env, "Code macro output rows must be strings") {
+                            Ok(s) => {
+                                if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
+                                    code.push(' ');
+                                }
+                                code.push_str(&s);
+                            }
+                            Err(e) => {
+                                self.errors.push(e);
+                                break;
+                            }
                         }
-                        code.push_str(&s);
                     }
                 }
 

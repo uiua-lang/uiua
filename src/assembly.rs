@@ -640,6 +640,7 @@ impl Inputs {
         }
     }
     /// Get an input string and perform an operation on it
+    #[track_caller]
     pub fn get_with<T>(&self, src: &InputSrc, f: impl FnOnce(&str) -> T) -> T {
         match src {
             InputSrc::File(path) => {

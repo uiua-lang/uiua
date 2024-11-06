@@ -428,6 +428,7 @@ impl CodeSpan {
         }
     }
     /// Get the text of the span from the inputs
+    #[track_caller]
     pub fn as_str<T>(&self, inputs: &Inputs, f: impl FnOnce(&str) -> T) -> T {
         inputs.get_with(&self.src, |input| f(&input[self.byte_range()]))
     }

@@ -854,18 +854,7 @@ impl Compiler {
                 Node::from_iter([Node::new_push(sn.sig.outputs), Node::new_push(sn.sig.args)])
             }
             Derivative => {
-                let (sn, span) = self.monadic_modifier_op(modified)?;
-                if sn.sig != (1, 1) {
-                    self.add_error(
-                        span,
-                        format!(
-                            "Only {} functions can be differentiated \
-                            but this function has signature {}",
-                            Signature::new(1, 1),
-                            sn.sig
-                        ),
-                    )
-                }
+                let (sn, _) = self.monadic_modifier_op(modified)?;
                 match derivative(&sn.node, &self.asm) {
                     Ok(node) => node,
                     Err(e) => {
@@ -878,18 +867,7 @@ impl Compiler {
                 }
             }
             Integral => {
-                let (sn, span) = self.monadic_modifier_op(modified)?;
-                if sn.sig != (1, 1) {
-                    self.add_error(
-                        span,
-                        format!(
-                            "Only {} functions can be integrated \
-                            but this function has signature {}",
-                            Signature::new(1, 1),
-                            sn.sig
-                        ),
-                    )
-                }
+                let (sn, _) = self.monadic_modifier_op(modified)?;
                 match integral(&sn.node, &self.asm) {
                     Ok(node) => node,
                     Err(e) => {

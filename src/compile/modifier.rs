@@ -365,8 +365,8 @@ impl Compiler {
             Modifier::Ref(r) => {
                 return self.modifier_ref(r, modified.modifier.span, modified.operands)
             }
-            Modifier::Macro(_, func) => {
-                return self.inline_macro(func, modified.modifier.span, modified.operands);
+            Modifier::Macro(ident, func) => {
+                return self.inline_macro(func, ident, modified.modifier.span, modified.operands);
             }
         };
 
@@ -859,6 +859,7 @@ impl Compiler {
     fn inline_macro(
         &mut self,
         func: Sp<Func>,
+        ident: Sp<Ident>,
         span: CodeSpan,
         operands: Vec<Sp<Word>>,
     ) -> UiuaResult<Node> {
@@ -874,7 +875,7 @@ impl Compiler {
         // Track
         self.code_meta
             .inline_macros
-            .insert(func.span, operands.len());
+            .insert(func.span, ident_modifier_args(&ident.value));
         // Expand
         self.expand_index_macro(None, &mut words, operands, span.clone(), true)?;
         // Compile

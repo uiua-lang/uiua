@@ -789,6 +789,7 @@ impl Uiua {
                 self.rt.set_args.clear();
                 Ok(())
             }
+            Node::Gpu(op, span) => self.with_span(span, |env| op.exec(env)),
         };
         if self.rt.time_instrs {
             let end_time = self.rt.backend.now();

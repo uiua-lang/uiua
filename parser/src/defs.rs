@@ -3469,6 +3469,8 @@ primitive!(
     /// ex: # Experimental!
     ///   : layout 100 Color:Green Bg:Red "Green on Red!"
     (2, Layout, Encoding, "layout", Impure, { experimental: true }),
+    /// Run some code on the GPU
+    ([1], Gpu, Misc, "gpu"),
 );
 
 macro_rules! sys_op {

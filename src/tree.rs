@@ -17,6 +17,7 @@ use serde::*;
 use crate::{
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
+    gpu::GpuOp,
     Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive, Purity, Signature,
     Value,
 };
@@ -81,6 +82,8 @@ node!(
     UseArgs { size: usize, span: usize },
     /// Clear optional arguments
     ClearArgs,
+    /// Execute a GPU operation
+    Gpu(op(Box<GpuOp>), span(usize)),
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),
@@ -785,6 +788,7 @@ impl fmt::Debug for Node {
             Node::SortArgs { indices: rise, .. } => write!(f, "sort-args {rise:?}"),
             Node::UseArgs { .. } => write!(f, "use-args"),
             Node::ClearArgs => write!(f, "clear-args"),
+            Node::Gpu(op, _) => op.fmt(f),
         }
     }
 }

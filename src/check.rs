@@ -560,6 +560,7 @@ impl VirtualEnv {
             Node::SetArg { .. } => self.handle_args_outputs(1, 0),
             Node::UseArgs { .. } => self.handle_args_outputs(1, 1),
             Node::ClearArgs | Node::SortArgs { .. } => {}
+            Node::Gpu(op, _) => self.handle_sig(op.node.sig),
         }
         self.node_depth -= 1;
         // println!("{node:?} -> {} ({})", self.stack.sig(), self.under.sig());

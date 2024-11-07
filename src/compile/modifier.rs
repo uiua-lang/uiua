@@ -2,6 +2,7 @@
 #![allow(clippy::redundant_closure_call)]
 
 use crate::algorithm::ga;
+use crate::gpu::GpuOp;
 
 use super::*;
 use algebra::{derivative, integral};
@@ -1464,6 +1465,12 @@ impl Compiler {
             Geometric => {
                 let op = modified.code_operands().next().unwrap().clone();
                 self.geometric(op, subscript, None)?
+            }
+            Gpu => {
+                let (sn, span) = self.monadic_modifier_op(modified)?;
+                let op = GpuOp::new(sn, &self.asm).map_err(|e| self.error(span.clone(), e))?;
+                let span = self.add_span(span);
+                Node::Gpu(op.into(), span)
             }
             _ => return Ok(None),
         }))

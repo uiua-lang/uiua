@@ -4,9 +4,14 @@ use super::*;
 
 impl Node {
     /// Get both parts of this node's under inverse
-    pub fn under_inverse(&self, g_sig: Signature, asm: &Assembly) -> InversionResult<(Node, Node)> {
+    pub fn under_inverse(
+        &self,
+        g_sig: Signature,
+        inverse: bool,
+        asm: &Assembly,
+    ) -> InversionResult<(Node, Node)> {
         dbgln!("under-inverting {self:?}");
-        under_inverse(self.as_slice(), g_sig, asm)
+        under_inverse(self.as_slice(), g_sig, inverse, asm)
     }
 }
 
@@ -15,9 +20,10 @@ impl SigNode {
     pub fn under_inverse(
         &self,
         g_sig: Signature,
+        inverse: bool,
         asm: &Assembly,
     ) -> InversionResult<(SigNode, SigNode)> {
-        let (before, after) = self.node.under_inverse(g_sig, asm)?;
+        let (before, after) = self.node.under_inverse(g_sig, inverse, asm)?;
         let (before, after) = (before.sig_node()?, after.sig_node()?);
         Ok((before, after))
     }
@@ -26,6 +32,7 @@ impl SigNode {
 fn under_inverse(
     input: &[Node],
     g_sig: Signature,
+    inverse: bool,
     asm: &Assembly,
 ) -> InversionResult<(Node, Node)> {
     if input.is_empty() {
@@ -37,7 +44,7 @@ fn under_inverse(
     let mut error = Generic;
     'find_pattern: loop {
         for pattern in UNDER_PATTERNS {
-            match pattern.under_extract(curr, g_sig, asm) {
+            match pattern.under_extract(curr, g_sig, inverse, asm) {
                 Ok((new, bef, aft)) => {
                     dbgln!(
                         "matched pattern {pattern:?}\n  on {curr:?}\n  to  {bef:?}\n  and {aft:?}"
@@ -229,6 +236,7 @@ trait UnderPattern: fmt::Debug + Sync {
         &self,
         input: &'a [Node],
         g_sig: Signature,
+        inverse: bool,
         asm: &Assembly,
     ) -> InversionResult<(&'a [Node], Node, Node)>;
 }
@@ -243,7 +251,7 @@ macro_rules! under {
         under!($(#[$attr])* $($doc,)? $($tt)*, ref, $pat, $body);
     };
     // Main impl
-    ($(#[$attr:meta])* $($doc:literal,)? $name:ident, $input:ident, $g_sig:tt, $asm:tt, $body:expr) => {
+    ($(#[$attr:meta])* $($doc:literal,)? $name:ident, $input:ident, $g_sig:tt, $inverse:tt, $asm:tt, $body:expr) => {
         #[derive(Debug)]
         $(#[$attr])*
         $(#[doc = $doc])?
@@ -253,6 +261,7 @@ macro_rules! under {
                 &self,
                 $input: &'a [Node],
                 $g_sig: Signature,
+                $inverse: bool,
                 $asm: &Assembly,
             ) -> InversionResult<(&'a [Node], Node, Node)> {
                 $body
@@ -260,8 +269,8 @@ macro_rules! under {
         }
     };
     // Ref pattern
-    ($(#[$attr:meta])* $($doc:literal)? $name:ident, $input:ident, $g_sig:tt, $asm:tt, ref, $pat:pat, $body:expr) => {
-        under!($([$attr])* $($doc)? $name, $input, $g_sig, $asm, {
+    ($(#[$attr:meta])* $($doc:literal)? $name:ident, $input:ident, $g_sig:tt, $inverse:tt, $asm:tt, ref, $pat:pat, $body:expr) => {
+        under!($([$attr])* $($doc)? $name, $input, $g_sig, $inverse, $asm, {
             let [$pat, ref $input @ ..] = $input else {
                 return generic();
             };
@@ -269,8 +278,8 @@ macro_rules! under {
         });
     };
     // Non-ref pattern
-    ($(#[$attr:meta])* $($doc:literal)? $name:ident, $input:ident, $g_sig:tt, $asm:tt, $pat:pat, $body:expr) => {
-        under!($([$attr])* $($doc)? $name, $input, $g_sig, $asm, {
+    ($(#[$attr:meta])* $($doc:literal)? $name:ident, $input:ident, $g_sig:tt, $inverse:tt, $asm:tt, $pat:pat, $body:expr) => {
+        under!($([$attr])* $($doc)? $name, $input, $g_sig, $inverse, $asm, {
             let &[$pat, ref $input @ ..] = $input else {
                 return generic();
             };
@@ -278,8 +287,8 @@ macro_rules! under {
         });
     };
     // Mod pattern
-    ($(#[$attr:meta])* $($doc:literal)? $name:ident, $input:ident, $g_sig:tt, $asm:tt, $prim:ident, $span:ident, $args:pat, $body:expr) => {
-        under!($([$attr])* $($doc)? $name, $input, $g_sig, $asm, ref, Mod($prim, args, $span), {
+    ($(#[$attr:meta])* $($doc:literal)? $name:ident, $input:ident, $g_sig:tt, $inverse:tt, $asm:tt, $prim:ident, $span:ident, $args:pat, $body:expr) => {
+        under!($([$attr])* $($doc)? $name, $input, $g_sig, $inverse, $asm, ref, Mod($prim, args, $span), {
             let $args = args.as_slice() else {
                 return generic();
             };
@@ -289,24 +298,34 @@ macro_rules! under {
     };
 }
 
-under!(DipPat, input, g_sig, asm, Dip, span, [f], {
+under!(DipPat, input, g_sig, inverse, asm, Dip, span, [f], {
     if f.sig.args == 0 {
         return generic();
     }
     // F inverse
-    let inner_g_sig = Signature::new(g_sig.args.saturating_sub(1), g_sig.outputs);
-    let (f_before, f_after) = f.under_inverse(inner_g_sig, asm)?;
+    let inner_g_sig = if inverse {
+        Signature::new(g_sig.args, g_sig.outputs.saturating_sub(1))
+    } else {
+        Signature::new(g_sig.args.saturating_sub(1), g_sig.outputs)
+    };
+    let (f_before, f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
     // Rest inverse
-    let (rest_before, rest_after) = under_inverse(input, g_sig, asm)?;
+    let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;
     let rest_before_sig = rest_before.sig()?;
     let rest_after_sig = rest_after.sig()?;
+
+    let balanced = g_sig.args + rest_before_sig.args <= g_sig.outputs + rest_after_sig.outputs;
+
     // Make before
-    let mut before = Mod(Dip, eco_vec![f_before], span);
+    let mut before = if !inverse || balanced {
+        Mod(Dip, eco_vec![f_before], span)
+    } else {
+        f_before.node
+    };
     before.push(rest_before);
     // Make after
     let mut after = rest_after;
-    let after_inner = if g_sig.args + rest_before_sig.args <= g_sig.outputs + rest_after_sig.outputs
-    {
+    let after_inner = if inverse || balanced {
         Mod(Dip, eco_vec![f_after], span)
     } else {
         f_after.node
@@ -315,15 +334,53 @@ under!(DipPat, input, g_sig, asm, Dip, span, [f], {
     Ok((&[], before, after))
 });
 
-under!(OnPat, input, g_sig, asm, On, span, [f], {
-    // if g_sig.args <= g_sig.outputs {
-    //     return generic();
-    // }
+under!(BothPat, input, g_sig, inverse, asm, Both, span, [f], {
+    let inner_g_sig = Signature::new(
+        g_sig.args.saturating_sub(1),
+        g_sig.outputs.saturating_sub(1),
+    );
+    let (f_before, mut f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
+
+    let balanced = g_sig.args <= g_sig.outputs;
+    // Make before
+    let before = if !inverse || balanced {
+        Mod(Both, eco_vec![f_before], span)
+    } else {
+        let node = f_before.node;
+        let (mut node, val) = if let Ok((nodes, val)) = Val.invert_extract(&node, asm) {
+            (nodes.into(), Some(val))
+        } else {
+            (node, None)
+        };
+        let to_copy = f_after.node.under_sig()?.args;
+        if to_copy > 0 {
+            node.prepend(CopyToUnder(to_copy, span));
+        }
+        if let Some(val) = val {
+            node.prepend(val);
+        }
+        node
+    };
+    // Make after
+    let after = if inverse || balanced {
+        ImplMod(UnBoth, eco_vec![f_after], span)
+    } else {
+        let to_discard = f_after.node.under_sig()?.args;
+        if to_discard > 0 {
+            f_after.node.push(PopUnder(to_discard, span));
+            (0..to_discard).for_each(|_| f_after.node.push(Prim(Pop, span)));
+        }
+        f_after.node
+    };
+    Ok((input, before, after))
+});
+
+under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {
     // F inverse
     let inner_g_sig = Signature::new(g_sig.args.saturating_sub(1), g_sig.outputs);
-    let (f_before, f_after) = f.under_inverse(inner_g_sig, asm)?;
+    let (f_before, f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
     // Rest inverse
-    let (rest_before, rest_after) = under_inverse(input, g_sig, asm)?;
+    let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;
     let rest_before_sig = rest_before.sig()?;
     let rest_after_sig = rest_after.sig()?;
     // Make before
@@ -342,27 +399,9 @@ under!(OnPat, input, g_sig, asm, On, span, [f], {
     Ok((&[], before, after))
 });
 
-under!(BothPat, input, g_sig, asm, Both, span, [f], {
-    let inner_g_sig = Signature::new(
-        g_sig.args.saturating_sub(1),
-        g_sig.outputs.saturating_sub(1),
-    );
-    let (f_before, mut f_after) = f.under_inverse(inner_g_sig, asm)?;
-    let before = Mod(Both, eco_vec![f_before], span);
-    let after = if g_sig.args > g_sig.outputs {
-        let to_discard = f_after.node.under_sig()?.args;
-        f_after.node.push(PopUnder(to_discard, span));
-        (0..to_discard).for_each(|_| f_after.node.push(Prim(Pop, span)));
-        f_after.node
-    } else {
-        ImplMod(UnBoth, eco_vec![f_after], span)
-    };
-    Ok((input, before, after))
-});
-
 under!(
     "Derives under inverses from un inverses",
-    (FromUnPat, input, _, asm),
+    (FromUnPat, input, _, _, asm),
     {
         for pat in UN_PATTERNS {
             if let Ok((inp, inv)) = pat.invert_extract(input, asm) {
@@ -377,7 +416,7 @@ under!(
 
 under!(
     "Derives under inverses from anti inverses",
-    (StashAntiPat, input, _, asm),
+    (StashAntiPat, input, _, _, asm),
     {
         for pat in ANTI_PATTERNS {
             if let Ok((new, inv)) = pat.invert_extract(input, asm) {
@@ -399,7 +438,7 @@ under!(
 
 under!(
     "Derives under inverses from contra inverses",
-    (StashContraPat, input, _, asm),
+    (StashContraPat, input, _, _, asm),
     {
         for pat in CONTRA_PATTERNS {
             if let Ok((new, inv)) = pat.invert_extract(input, asm) {
@@ -420,21 +459,21 @@ under!(
     }
 );
 
-under!(EachPat, input, g_sig, asm, Each, span, [f], {
-    let (f_before, f_after) = f.under_inverse(g_sig, asm)?;
+under!(EachPat, input, g_sig, inverse, asm, Each, span, [f], {
+    let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
     let befores = Mod(Each, eco_vec![f_before], span);
     let afters = Mod(Each, eco_vec![f_after], span);
     Ok((input, befores, afters))
 });
 
-under!(RowsPat, input, g_sig, asm, {
+under!(RowsPat, input, g_sig, inverse, asm, {
     let [Mod(prim @ (Rows | Inventory), args, span), input @ ..] = input else {
         return generic();
     };
     let [f] = args.as_slice() else {
         return generic();
     };
-    let (f_before, f_after) = f.under_inverse(g_sig, asm)?;
+    let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
     let befores = Mod(*prim, eco_vec![f_before], *span);
     let after_sig = f_after.sig;
     let mut afters = Node::from_iter([Prim(Reverse, *span), Mod(*prim, eco_vec![f_after], *span)]);
@@ -448,7 +487,7 @@ under!(RowsPat, input, g_sig, asm, {
     Ok((input, befores, afters))
 });
 
-under!(RepeatPat, input, g_sig, asm, {
+under!(RepeatPat, input, g_sig, inverse, asm, {
     let (f, span, input) = match input {
         [Mod(Repeat, args, span), input @ ..] => {
             let [f] = args.as_slice() else {
@@ -464,14 +503,14 @@ under!(RepeatPat, input, g_sig, asm, {
         }
         _ => return generic(),
     };
-    let (f_before, f_after) = f.under_inverse(g_sig, asm)?;
+    let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
     let befores = Node::from_iter([CopyToUnder(1, span), Mod(Repeat, eco_vec![f_before], span)]);
     let afters = Node::from_iter([PopUnder(1, span), Mod(Repeat, eco_vec![f_after], span)]);
     Ok((input, befores, afters))
 });
 
-under!(FoldPat, input, g_sig, asm, Fold, span, [f], {
-    let (f_before, f_after) = f.under_inverse(g_sig, asm)?;
+under!(FoldPat, input, g_sig, inverse, asm, Fold, span, [f], {
+    let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
     if f_before.sig.outputs > f_before.sig.args || f_after.sig.outputs > f_after.sig.args {
         return generic();
     }
@@ -490,7 +529,7 @@ under!(FoldPat, input, g_sig, asm, Fold, span, [f], {
 });
 
 under!(
-    (CustomPat, input, g_sig, asm),
+    (CustomPat, input, g_sig, inverse, asm),
     ref,
     CustomInverse(cust, span),
     {
@@ -511,7 +550,7 @@ under!(
         } else if !cust.is_obverse {
             // The custom inverses were not created with obverse
             // This means that a supplied un inverse can be overridden
-            match normal.node.under_inverse(g_sig, asm) {
+            match normal.node.under_inverse(g_sig, inverse, asm) {
                 Ok((before, after)) => (before, after, 0),
                 Err(e) => {
                     if let Some(un) = cust.un.as_ref().filter(|un| un.sig == normal.sig) {
@@ -524,7 +563,7 @@ under!(
         } else if let Some(un) = cust.un.as_ref().filter(|un| un.sig == normal.sig.inverse()) {
             // A compatible un inverse is defined
             (normal.node.clone(), un.node.clone(), 0)
-        } else if let Ok((before, after)) = normal.node.under_inverse(g_sig, asm) {
+        } else if let Ok((before, after)) = normal.node.under_inverse(g_sig, inverse, asm) {
             // An under inverse exists
             (before, after, 0)
         } else {
@@ -538,7 +577,7 @@ under!(
     }
 );
 
-under!(DupPat, input, g_sig, asm, Prim(Dup, dup_span), {
+under!(DupPat, input, g_sig, inverse, asm, Prim(Dup, dup_span), {
     let dyadic_i = (0..=input.len())
         .find(|&i| nodes_clean_sig(&input[..i]).is_some_and(|sig| sig == (2, 1)))
         .ok_or(Generic)?;
@@ -553,7 +592,7 @@ under!(DupPat, input, g_sig, asm, Prim(Dup, dup_span), {
     let dyadic_part = &dyadic_whole[monadic_i..];
     dbgln!("under monadic part: {monadic_part:?}");
     dbgln!("under dyadic part: {dyadic_part:?}");
-    let (monadic_before, monadic_after) = under_inverse(monadic_part, g_sig, asm)?;
+    let (monadic_before, monadic_after) = under_inverse(monadic_part, g_sig, inverse, asm)?;
 
     let mut before = Prim(Dup, dup_span);
     let mut after = Node::empty();
@@ -609,22 +648,25 @@ impl UnderPattern for Trivial {
         &self,
         input: &'a [Node],
         g_sig: Signature,
+        inverse: bool,
         asm: &Assembly,
     ) -> InversionResult<(&'a [Node], Node, Node)> {
         match input {
             [NoInline(inner), input @ ..] => {
-                let (before, after) = inner.under_inverse(g_sig, asm)?;
+                let (before, after) = inner.under_inverse(g_sig, inverse, asm)?;
                 Ok((input, NoInline(before.into()), NoInline(after.into())))
             }
             [TrackCaller(inner), input @ ..] => {
-                let (before, after) = inner.under_inverse(g_sig, asm)?;
+                let (before, after) = inner.under_inverse(g_sig, inverse, asm)?;
                 Ok((input, TrackCaller(before.into()), TrackCaller(after.into())))
             }
             [node @ SetOutputComment { .. }, input @ ..] => {
                 Ok((input, node.clone(), Node::empty()))
             }
             [Call(f, _), input @ ..] => {
-                let (before, after) = asm[f].under_inverse(g_sig, asm).map_err(|e| e.func(f))?;
+                let (before, after) = asm[f]
+                    .under_inverse(g_sig, inverse, asm)
+                    .map_err(|e| e.func(f))?;
                 Ok((input, before, after))
             }
             _ => generic(),
@@ -633,7 +675,7 @@ impl UnderPattern for Trivial {
 }
 
 under!(
-    (SwitchPat, input, g_sig, asm),
+    (SwitchPat, input, g_sig, inverse, asm),
     ref,
     Node::Switch {
         branches,
@@ -647,7 +689,7 @@ under!(
         let mut undo_sig: Option<Signature> = None;
         for branch in branches {
             // Calc under f
-            let (before, after) = branch.under_inverse(g_sig, asm)?;
+            let (before, after) = branch.under_inverse(g_sig, inverse, asm)?;
             let after_sig = after.sig;
             befores.push(before);
             afters.push(after);
@@ -682,8 +724,8 @@ under!(
 
 macro_rules! partition_group {
     ($name:ident, $prim:ident, $impl_prim1:ident, $impl_prim2:ident) => {
-        under!($name, input, g_sig, asm, $prim, span, [f], {
-            let (f_before, f_after) = f.under_inverse(g_sig, asm)?;
+        under!($name, input, g_sig, inverse, asm, $prim, span, [f], {
+            let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
             let before =
                 Node::from_iter([CopyToUnder(2, span), Mod($prim, eco_vec![f_before], span)]);
             let after = Node::from_iter([
@@ -699,7 +741,7 @@ macro_rules! partition_group {
 partition_group!(PartitionPat, Partition, UndoPartition1, UndoPartition2);
 partition_group!(GroupPat, Group, UndoGroup1, UndoGroup2);
 
-under!(ReversePat, input, g_sig, _, Prim(Reverse, span), {
+under!(ReversePat, input, g_sig, _, _, Prim(Reverse, span), {
     if g_sig.outputs == 1 {
         return generic();
     }
@@ -718,7 +760,7 @@ under!(ReversePat, input, g_sig, _, Prim(Reverse, span), {
     Ok((input, Prim(Reverse, span), after))
 });
 
-under!(TransposePat, input, g_sig, _, {
+under!(TransposePat, input, g_sig, _, _, {
     if g_sig.outputs == 1 {
         return generic();
     }
@@ -736,7 +778,7 @@ under!(TransposePat, input, g_sig, _, {
     Ok((input, before.clone(), after))
 });
 
-under!(RotatePat, input, g_sig, _, Prim(Rotate, span), {
+under!(RotatePat, input, g_sig, _, _, Prim(Rotate, span), {
     let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
         g_sig.outputs.max(1)
     } else {
@@ -747,18 +789,28 @@ under!(RotatePat, input, g_sig, _, Prim(Rotate, span), {
     Ok((input, before, after))
 });
 
-under!(FillPat, input, g_sig, asm, Fill, span, [fill, f], {
-    if fill.sig != (0, 1) {
-        return generic();
+under!(
+    FillPat,
+    input,
+    g_sig,
+    inverse,
+    asm,
+    Fill,
+    span,
+    [fill, f],
+    {
+        if fill.sig != (0, 1) {
+            return generic();
+        }
+        let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
+        let before = Mod(Fill, eco_vec![fill.clone(), f_before], span);
+        let after = ImplMod(UnFill, eco_vec![fill.clone(), f_after], span);
+        Ok((input, before, after))
     }
-    let (f_before, f_after) = f.under_inverse(g_sig, asm)?;
-    let before = Mod(Fill, eco_vec![fill.clone(), f_before], span);
-    let after = ImplMod(UnFill, eco_vec![fill.clone(), f_after], span);
-    Ok((input, before, after))
-});
+);
 
-under!(FlipPat, input, g_sig, asm, Prim(Flip, span), {
-    let (rest_before, rest_after) = under_inverse(input, g_sig, asm)?;
+under!(FlipPat, input, g_sig, inverse, asm, Prim(Flip, span), {
+    let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;
     let rest_before_sig = nodes_sig(&rest_before)?;
     let rest_after_sig = nodes_sig(&rest_after)?;
     let total_args = g_sig.args + rest_before_sig.args + rest_after_sig.args;
@@ -787,14 +839,15 @@ where
         &self,
         input: &'a [Node],
         g_sig: Signature,
+        inverse: bool,
         asm: &Assembly,
     ) -> InversionResult<(&'a [Node], Node, Node)> {
         let &Stash(n, a, b) = self;
         let pat = (a, (CopyUnd(n), a), (PopUnd(n), b));
         if n >= 2 {
-            MaybeVal(pat).under_extract(input, g_sig, asm)
+            MaybeVal(pat).under_extract(input, g_sig, inverse, asm)
         } else {
-            pat.under_extract(input, g_sig, asm)
+            pat.under_extract(input, g_sig, inverse, asm)
         }
     }
 }
@@ -803,6 +856,7 @@ impl<P: UnderPattern> UnderPattern for MaybeVal<P> {
         &self,
         mut input: &'a [Node],
         g_sig: Signature,
+        inverse: bool,
         asm: &Assembly,
     ) -> InversionResult<(&'a [Node], Node, Node)> {
         let val = if let Ok((inp, val)) = Val.invert_extract(input, asm) {
@@ -812,7 +866,7 @@ impl<P: UnderPattern> UnderPattern for MaybeVal<P> {
             None
         };
         let MaybeVal(p) = self;
-        let (input, mut before, after) = p.under_extract(input, g_sig, asm)?;
+        let (input, mut before, after) = p.under_extract(input, g_sig, inverse, asm)?;
         if let Some(val) = val {
             before.prepend(val);
         }
@@ -831,10 +885,11 @@ where
         &self,
         input: &'a [Node],
         g_sig: Signature,
+        inverse: bool,
         asm: &Assembly,
     ) -> InversionResult<(&'a [Node], Node, Node)> {
         let &Store1Copy(a, b) = self;
-        MaybeVal((a, (a, CopyUnd(1)), (PopUnd(1), b))).under_extract(input, g_sig, asm)
+        MaybeVal((a, (a, CopyUnd(1)), (PopUnd(1), b))).under_extract(input, g_sig, inverse, asm)
     }
 }
 
@@ -848,6 +903,7 @@ where
         &self,
         input: &'a [Node],
         _: Signature,
+        _: bool,
         asm: &Assembly,
     ) -> InversionResult<(&'a [Node], Node, Node)> {
         let (a, b, c) = self;

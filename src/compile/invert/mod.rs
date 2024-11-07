@@ -178,6 +178,7 @@ pub enum InversionError {
     ComplexInvertedUnder,
     UnderExperimental,
     AlgebraError(AlgebraError),
+    UnUnderExperimental,
 }
 
 pub type InversionResult<T = ()> = Result<T, InversionError>;
@@ -217,6 +218,15 @@ impl fmt::Display for InversionError {
                 )
             }
             InversionError::AlgebraError(e) => e.fmt(f),
+            InversionError::UnUnderExperimental => {
+                write!(
+                    f,
+                    "{} {} is experimental. To enable it, \
+                    add `# Experimental!` to the top of the file.",
+                    Primitive::Un.format(),
+                    Primitive::Under.format()
+                )
+            }
         }
     }
 }

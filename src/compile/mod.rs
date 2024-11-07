@@ -66,8 +66,6 @@ pub struct Compiler {
     code_macros: HashMap<usize, CodeMacro>,
     /// The depth of macro expansion
     macro_depth: usize,
-    /// Whether the compiler is in an inverse
-    in_inverse: bool,
     /// Whether the compiler is in a try
     in_try: bool,
     /// Accumulated errors
@@ -101,7 +99,6 @@ impl Default for Compiler {
             index_macros: HashMap::new(),
             code_macros: HashMap::new(),
             macro_depth: 0,
-            in_inverse: false,
             in_try: false,
             errors: Vec::new(),
             deprecated_prim_errors: HashSet::new(),

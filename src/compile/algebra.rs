@@ -793,6 +793,7 @@ impl<'a> AlgebraEnv<'a> {
                     return Err(AlgebraError::NoInverse);
                 }
             }
+            CopyToUnder(..) | PushUnder(..) | PopUnder(..) => {}
             node => return Err(AlgebraError::NotSupported(format!("{node:?}"))),
         }
         Ok(())

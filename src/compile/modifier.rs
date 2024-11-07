@@ -3,6 +3,7 @@
 
 use super::*;
 use algebra::{derivative, integral};
+use invert::InversionError;
 use pre_eval::PreEvalMode;
 
 impl Compiler {
@@ -579,14 +580,45 @@ impl Compiler {
             }
             Under => {
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
-                let (f_before, f_after) = f
-                    .node
-                    .under_inverse(g.sig, &self.asm)
-                    .map_err(|e| self.error(f_span.clone(), e))?;
-                let mut node = f_before;
-                node.push(g.node);
-                node.push(f_after);
-                node
+                let normal = {
+                    let (f_before, f_after) = f
+                        .node
+                        .under_inverse(g.sig, false, &self.asm)
+                        .map_err(|e| self.error(f_span.clone(), e))?;
+                    let mut node = f_before;
+                    node.push(g.node.clone());
+                    node.push(f_after);
+                    node.sig_node().unwrap()
+                };
+                let span = self.add_span(modified.modifier.span.clone());
+                let un = if self.scope.experimental {
+                    let (f_before, f_after) = f
+                        .node
+                        .under_inverse(g.sig, true, &self.asm)
+                        .map_err(|e| self.error(f_span.clone(), e))?;
+                    g.node.un_inverse(&self.asm).ok().map(|g_inv| {
+                        let mut node = f_before;
+                        node.push(g_inv);
+                        node.push(f_after);
+                        node.sig_node().unwrap()
+                    })
+                } else {
+                    let cust = CustomInverse {
+                        normal: Err(InversionError::UnUnderExperimental),
+                        ..Default::default()
+                    };
+                    Some(SigNode::new(
+                        normal.sig.inverse(),
+                        Node::CustomInverse(cust.into(), span),
+                    ))
+                };
+                let cust = CustomInverse {
+                    normal: Ok(normal),
+                    un,
+                    ..Default::default()
+                };
+                let span = self.add_span(modified.modifier.span.clone());
+                Node::CustomInverse(cust.into(), span)
             }
             Obverse => {
                 // Rectify case, where only one function is supplied
@@ -666,12 +698,9 @@ impl Compiler {
                 let f = f?;
 
                 // Get-fill function
-                let in_inverse = replace(&mut self.in_inverse, false);
                 let fill_word = operands.next().unwrap();
                 let fill_span = fill_word.span.clone();
-                let fill = self.word_sig(fill_word);
-                self.in_inverse = in_inverse;
-                let fill = fill?;
+                let fill = self.word_sig(fill_word)?;
                 if fill.sig.outputs > 1 && !self.scope.fill_sig_error {
                     self.scope.fill_sig_error = true;
                     self.add_error(

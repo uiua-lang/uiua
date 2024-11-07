@@ -3,6 +3,8 @@
 ## 0.14
 The next version of Uiua
 
+- `un` `under`
+- `gpu` modifier
 - Stabilize `sort` and `last`
 - Compile-time code string evaluation
 - `do` function pack
@@ -10,8 +12,6 @@ The next version of Uiua
   - Math, `take`, `drop`
   - Infinite ranges
     - `rows`/`each`
-- `gpu` modifier
-- `un` `under`
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)
 - Split up sys backend?

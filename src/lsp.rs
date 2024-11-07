@@ -500,7 +500,7 @@ impl Spanner {
                 sig: f.sig,
                 invertible: self.asm[f].un_inverse(&self.asm).is_ok(),
                 underable: self.asm[f]
-                    .under_inverse(Signature::new(1, 1), &self.asm)
+                    .under_inverse(Signature::new(1, 1), false, &self.asm)
                     .is_ok(),
                 pure: self.asm[f].is_pure(Purity::Pure, &self.asm),
             },

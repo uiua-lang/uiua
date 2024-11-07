@@ -1,6 +1,8 @@
 //! Compiler code for modifiers
 #![allow(clippy::redundant_closure_call)]
 
+use crate::gpu::GpuOp;
+
 use super::*;
 use algebra::{derivative, integral};
 use invert::InversionError;
@@ -912,6 +914,12 @@ impl Compiler {
                         sn.node
                     }
                 }
+            }
+            Gpu => {
+                let (sn, span) = self.monadic_modifier_op(modified)?;
+                let op = GpuOp::new(sn, &self.asm).map_err(|e| self.error(span.clone(), e))?;
+                let span = self.add_span(span);
+                Node::Gpu(op.into(), span)
             }
             _ => return Ok(None),
         }))

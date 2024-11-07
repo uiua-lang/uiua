@@ -15,6 +15,7 @@ use serde::*;
 use crate::{
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
+    gpu::GpuOp,
     Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive, Signature, Value,
 };
 
@@ -38,6 +39,7 @@ node!(
     PopUnder(n(usize), span(usize)),
     NoInline(inner(Box<Node>)),
     TrackCaller(inner(Box<Node>)),
+    Gpu(op(Box<GpuOp>), span(usize)),
     (#[serde(untagged)] rep),
     Run(nodes(EcoVec<Node>)),
     (#[serde(untagged)] rep),
@@ -550,6 +552,7 @@ impl fmt::Debug for Node {
             Node::TrackCaller(inner) => {
                 f.debug_tuple("track-caller").field(inner.as_ref()).finish()
             }
+            Node::Gpu(op, _) => op.fmt(f),
         }
     }
 }

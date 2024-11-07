@@ -91,6 +91,11 @@ js-sys = {version = "0.3", optional = true}
 wasm-bindgen = {version = "0.2.92", optional = true}
 web-sys = {version = "0.3.60", optional = true}
 
+# Gpu dependencies
+bytemuck = {version = "1.19.0", features = ["derive"], optional = true}
+pollster = {version = "0.4.0", optional = true}
+wgpu = {version = "23.0.0", optional = true}
+
 [features]
 audio = ["hodaun", "lockfree", "audio_encode"]
 audio_encode = ["hound"]
@@ -130,6 +135,7 @@ default = [
   "raw_mode",
   "clipboard",
   "opt",
+  "gpu",
   "batteries",
 ]
 ffi = ["libffi", "libloading"]
@@ -137,6 +143,7 @@ fft = ["rustfft"]
 font_shaping = ["cosmic-text", "sys-locale"]
 full = ["audio", "webcam"] # Enables all optional features
 gif = ["dep:gif", "image", "color_quant"]
+gpu = ["wgpu", "pollster", "bytemuck"]
 invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]
 native_sys = []

@@ -3374,6 +3374,8 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⬚[1 0 0] layout {100 0_1_0} "Green on Red!"
     (2, Layout, Encoding, "layout", Impure),
+    /// Run some code on the GPU
+    ([1], Gpu, Misc, "gpu"),
 );
 
 macro_rules! impl_primitive {

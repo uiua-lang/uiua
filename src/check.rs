@@ -565,6 +565,7 @@ impl VirtualEnv {
                 }
             }
             Node::TrackCaller(inner) | Node::NoInline(inner) => self.node(inner)?,
+            Node::Gpu(op, _) => self.handle_sig(op.node.sig),
         }
         // println!(
         //     "{node:?} -> {}/{}",

@@ -696,6 +696,7 @@ at {}",
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
                 self.exec(*inner)
             }
+            Node::Gpu(op, span) => self.with_span(span, |env| op.exec(env)),
         };
         if self.rt.time_instrs {
             let end_time = self.rt.backend.now();

@@ -157,6 +157,8 @@ mod ffi;
 mod fill;
 pub mod format;
 mod function;
+#[cfg(feature = "gpu")]
+mod gpu;
 mod grid_fmt;
 mod lex;
 pub mod lsp;

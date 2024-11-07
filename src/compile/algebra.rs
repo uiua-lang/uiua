@@ -254,6 +254,278 @@ impl fmt::Display for AlgebraError {
     }
 }
 
+struct AlgebraEnv<'a> {
+    asm: &'a Assembly,
+    stack: Vec<Expr>,
+    call_stack: Vec<usize>,
+    handled: usize,
+    any_complex: bool,
+}
+
+impl<'a> AlgebraEnv<'a> {
+    fn new(asm: &'a Assembly) -> Self {
+        Self {
+            asm,
+            stack: vec![Expr::from(Term::from(Base::X))],
+            call_stack: Vec::new(),
+            handled: 0,
+            any_complex: false,
+        }
+    }
+    fn node(&mut self, node: &Node) -> AlgebraResult {
+        let mut has_span = false;
+        if let Some(span) = node.span() {
+            has_span = true;
+            self.call_stack.push(span);
+        }
+        self.node_impl(node)?;
+        if has_span {
+            self.call_stack.pop();
+        }
+        Ok(())
+    }
+    fn node_impl(&mut self, node: &Node) -> AlgebraResult {
+        match node {
+            Run(nodes) => {
+                for node in nodes {
+                    self.node(node)?;
+                }
+            }
+            Call(f, _) => self.node(&self.asm[f])?,
+            Push(val) if val.rank() > 0 => return Err(AlgebraError::NonScalar),
+            Push(val) => match val {
+                Value::Num(arr) => self.stack.push(arr.data[0].into()),
+                Value::Byte(arr) => self.stack.push((arr.data[0] as f64).into()),
+                Value::Complex(arr) => {
+                    self.stack.push(arr.data[0].into());
+                    self.any_complex = true;
+                }
+                _ => return Err(AlgebraError::NonReal),
+            },
+            Prim(prim, _) => match prim {
+                Identity => {
+                    let a = self.pop()?;
+                    self.stack.push(a);
+                }
+                Pop => _ = self.pop()?,
+                Dup => {
+                    let a = self.pop()?;
+                    self.stack.push(a.clone());
+                    self.stack.push(a);
+                }
+                Flip => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.stack.push(a);
+                    self.stack.push(b);
+                }
+                Over => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.stack.push(b.clone());
+                    self.stack.push(a);
+                    self.stack.push(b);
+                }
+                Neg => {
+                    let a = self.pop()?;
+                    self.stack.push(-a);
+                    self.handled += 1;
+                }
+                Not => {
+                    let a = self.pop()?;
+                    self.stack.push(Expr::from(1.0) - a);
+                    self.handled += 1;
+                }
+                Sqrt => {
+                    let mut a = self.pop()?;
+                    if a.0.len() <= 1 {
+                        a.0 =
+                            a.0.into_iter()
+                                .map(|(mut term, coeff)| {
+                                    term.power *= 0.5;
+                                    (term, coeff.sqrt())
+                                })
+                                .collect();
+                    } else {
+                        a = Term::new(Base::Expr(a), 0.5).into();
+                    }
+                    self.stack.push(a);
+                    self.handled += 1;
+                }
+                Add => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.stack.push(b + a);
+                    self.handled += 1;
+                }
+                Sub => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.stack.push(b - a);
+                    self.handled += 1;
+                }
+                Mul => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.stack.push(b * a);
+                    self.handled += 1;
+                }
+                Div => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.stack.push(b / a);
+                    self.handled += 1;
+                }
+                Pow => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    let res = b.pow(a).ok_or(AlgebraError::NonScalar)?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
+                Log => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    let res = b.log(a).ok_or(AlgebraError::NonScalar)?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
+                Complex => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    match (a.as_constant(), b.as_constant()) {
+                        (Some(a), Some(b)) => self.stack.push((a * Complex::I + b).into()),
+                        _ => {
+                            let im = a * Expr::from(Complex::I);
+                            self.stack.push(b + im);
+                        }
+                    }
+                    self.any_complex = true;
+                }
+                prim => return Err(AlgebraError::NotSupported(prim.format().to_string())),
+            },
+            ImplPrim(prim, _) => return Err(AlgebraError::NotSupported(prim.to_string())),
+            Mod(prim, args, _) => match prim {
+                Dip => {
+                    let [f] = get_ops(args)?;
+                    let a = self.pop()?;
+                    self.node(&f.node)?;
+                    self.stack.push(a);
+                }
+                Gap => {
+                    let [f] = get_ops(args)?;
+                    let _a = self.pop()?;
+                    self.node(&f.node)?;
+                }
+                On => {
+                    let [f] = get_ops(args)?;
+                    let a = self.pop()?;
+                    self.stack.push(a.clone());
+                    self.node(&f.node)?;
+                    self.stack.push(a);
+                }
+                By => {
+                    let [f] = get_ops(args)?;
+                    let mut args = Vec::with_capacity(f.sig.args);
+                    for _ in 0..f.sig.args {
+                        args.push(self.pop()?);
+                    }
+                    self.stack.extend(args.last().cloned());
+                    for arg in args.into_iter().rev() {
+                        self.stack.push(arg);
+                    }
+                    self.node(&f.node)?;
+                }
+                Both => {
+                    let [f] = get_ops(args)?;
+                    let mut args = Vec::with_capacity(f.sig.args);
+                    for _ in 0..f.sig.args {
+                        args.push(self.pop()?);
+                    }
+                    self.node(&f.node)?;
+                    for arg in args.into_iter().rev() {
+                        self.stack.push(arg);
+                    }
+                    self.node(&f.node)?;
+                }
+                Bracket => {
+                    let [f, g] = get_ops(args)?;
+                    let mut args = Vec::with_capacity(f.sig.args);
+                    for _ in 0..f.sig.args {
+                        args.push(self.pop()?);
+                    }
+                    self.node(&g.node)?;
+                    for arg in args.into_iter().rev() {
+                        self.stack.push(arg);
+                    }
+                    self.node(&f.node)?;
+                }
+                Fork => {
+                    let [f, g] = get_ops(args)?;
+                    if f.sig.args > g.sig.args {
+                        let mut f_args = Vec::with_capacity(f.sig.args);
+                        for _ in 0..f.sig.args {
+                            f_args.push(self.pop()?);
+                        }
+                        for arg in f_args.iter().rev().take(g.sig.args) {
+                            self.stack.push(arg.clone());
+                        }
+                        self.node(&g.node)?;
+                        for arg in f_args {
+                            self.stack.push(arg);
+                        }
+                        self.node(&f.node)?;
+                    } else {
+                        let mut f_args = Vec::with_capacity(f.sig.args);
+                        for _ in 0..f.sig.args {
+                            f_args.push(self.pop()?);
+                        }
+                        for arg in f_args.iter().rev() {
+                            self.stack.push(arg.clone());
+                        }
+                        self.node(&g.node)?;
+                        for arg in f_args {
+                            self.stack.push(arg);
+                        }
+                        self.node(&f.node)?;
+                    }
+                }
+                prim => return Err(AlgebraError::NotSupported(prim.to_string())),
+            },
+            ImplMod(prim, ..) => return Err(AlgebraError::NotSupported(prim.to_string())),
+            CustomInverse(cust, _) => {
+                if cust.is_obverse {
+                    return Err(AlgebraError::NotSupported("custom inverses".into()));
+                } else if let Ok(normal) = &cust.normal {
+                    self.node(&normal.node)?;
+                } else {
+                    return Err(AlgebraError::NoInverse);
+                }
+            }
+            CopyToUnder(..) | PushUnder(..) | PopUnder(..) => {}
+            node => return Err(AlgebraError::NotSupported(format!("{node:?}"))),
+        }
+        Ok(())
+    }
+    fn pop(&mut self) -> AlgebraResult<Expr> {
+        self.stack.pop().ok_or(AlgebraError::TooManyVariables)
+    }
+    fn result(mut self) -> AlgebraResult<Expr> {
+        match self.stack.len() {
+            0 => Err(AlgebraError::NoOutput),
+            1 => Ok(self.stack.pop().unwrap()),
+            _ => Err(AlgebraError::TooManyOutputs),
+        }
+    }
+}
+
+fn get_ops<const N: usize>(ops: &[SigNode]) -> AlgebraResult<[&SigNode; N]> {
+    if ops.len() != N {
+        return Err(AlgebraError::InterpreterBug);
+    }
+    Ok(array::from_fn(|i| &ops[i]))
+}
+
 pub type AlgebraResult<T = ()> = Result<T, AlgebraError>;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -543,276 +815,4 @@ impl ops::Div for Expr {
         }
         product
     }
-}
-
-struct AlgebraEnv<'a> {
-    asm: &'a Assembly,
-    stack: Vec<Expr>,
-    call_stack: Vec<usize>,
-    handled: usize,
-    any_complex: bool,
-}
-
-impl<'a> AlgebraEnv<'a> {
-    fn new(asm: &'a Assembly) -> Self {
-        Self {
-            asm,
-            stack: vec![Expr::from(Term::from(Base::X))],
-            call_stack: Vec::new(),
-            handled: 0,
-            any_complex: false,
-        }
-    }
-    fn node(&mut self, node: &Node) -> AlgebraResult {
-        let mut has_span = false;
-        if let Some(span) = node.span() {
-            has_span = true;
-            self.call_stack.push(span);
-        }
-        self.node_impl(node)?;
-        if has_span {
-            self.call_stack.pop();
-        }
-        Ok(())
-    }
-    fn node_impl(&mut self, node: &Node) -> AlgebraResult {
-        match node {
-            Run(nodes) => {
-                for node in nodes {
-                    self.node(node)?;
-                }
-            }
-            Call(f, _) => self.node(&self.asm[f])?,
-            Push(val) if val.rank() > 0 => return Err(AlgebraError::NonScalar),
-            Push(val) => match val {
-                Value::Num(arr) => self.stack.push(arr.data[0].into()),
-                Value::Byte(arr) => self.stack.push((arr.data[0] as f64).into()),
-                Value::Complex(arr) => {
-                    self.stack.push(arr.data[0].into());
-                    self.any_complex = true;
-                }
-                _ => return Err(AlgebraError::NonReal),
-            },
-            Prim(prim, _) => match prim {
-                Identity => {
-                    let a = self.pop()?;
-                    self.stack.push(a);
-                }
-                Pop => _ = self.pop()?,
-                Dup => {
-                    let a = self.pop()?;
-                    self.stack.push(a.clone());
-                    self.stack.push(a);
-                }
-                Flip => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(a);
-                    self.stack.push(b);
-                }
-                Over => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(b.clone());
-                    self.stack.push(a);
-                    self.stack.push(b);
-                }
-                Neg => {
-                    let a = self.pop()?;
-                    self.stack.push(-a);
-                    self.handled += 1;
-                }
-                Not => {
-                    let a = self.pop()?;
-                    self.stack.push(Expr::from(1.0) - a);
-                    self.handled += 1;
-                }
-                Sqrt => {
-                    let mut a = self.pop()?;
-                    if a.0.len() <= 1 {
-                        a.0 =
-                            a.0.into_iter()
-                                .map(|(mut term, coeff)| {
-                                    term.power *= 0.5;
-                                    (term, coeff.sqrt())
-                                })
-                                .collect();
-                    } else {
-                        a = Term::new(Base::Expr(a), 0.5).into();
-                    }
-                    self.stack.push(a);
-                    self.handled += 1;
-                }
-                Add => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(b + a);
-                    self.handled += 1;
-                }
-                Sub => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(b - a);
-                    self.handled += 1;
-                }
-                Mul => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(b * a);
-                    self.handled += 1;
-                }
-                Div => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(b / a);
-                    self.handled += 1;
-                }
-                Pow => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    let res = b.pow(a).ok_or(AlgebraError::NonScalar)?;
-                    self.stack.push(res);
-                    self.handled += 1;
-                }
-                Log => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    let res = b.log(a).ok_or(AlgebraError::NonScalar)?;
-                    self.stack.push(res);
-                    self.handled += 1;
-                }
-                Complex => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    match (a.as_constant(), b.as_constant()) {
-                        (Some(a), Some(b)) => self.stack.push((a * Complex::I + b).into()),
-                        _ => {
-                            let im = a * Expr::from(Complex::I);
-                            self.stack.push(b + im);
-                        }
-                    }
-                    self.any_complex = true;
-                }
-                prim => return Err(AlgebraError::NotSupported(prim.format().to_string())),
-            },
-            ImplPrim(prim, _) => return Err(AlgebraError::NotSupported(prim.to_string())),
-            Mod(prim, args, _) => match prim {
-                Dip => {
-                    let [f] = get_ops(args)?;
-                    let a = self.pop()?;
-                    self.node(&f.node)?;
-                    self.stack.push(a);
-                }
-                Gap => {
-                    let [f] = get_ops(args)?;
-                    let _a = self.pop()?;
-                    self.node(&f.node)?;
-                }
-                On => {
-                    let [f] = get_ops(args)?;
-                    let a = self.pop()?;
-                    self.stack.push(a.clone());
-                    self.node(&f.node)?;
-                    self.stack.push(a);
-                }
-                By => {
-                    let [f] = get_ops(args)?;
-                    let mut args = Vec::with_capacity(f.sig.args);
-                    for _ in 0..f.sig.args {
-                        args.push(self.pop()?);
-                    }
-                    self.stack.extend(args.last().cloned());
-                    for arg in args.into_iter().rev() {
-                        self.stack.push(arg);
-                    }
-                    self.node(&f.node)?;
-                }
-                Both => {
-                    let [f] = get_ops(args)?;
-                    let mut args = Vec::with_capacity(f.sig.args);
-                    for _ in 0..f.sig.args {
-                        args.push(self.pop()?);
-                    }
-                    self.node(&f.node)?;
-                    for arg in args.into_iter().rev() {
-                        self.stack.push(arg);
-                    }
-                    self.node(&f.node)?;
-                }
-                Bracket => {
-                    let [f, g] = get_ops(args)?;
-                    let mut args = Vec::with_capacity(f.sig.args);
-                    for _ in 0..f.sig.args {
-                        args.push(self.pop()?);
-                    }
-                    self.node(&g.node)?;
-                    for arg in args.into_iter().rev() {
-                        self.stack.push(arg);
-                    }
-                    self.node(&f.node)?;
-                }
-                Fork => {
-                    let [f, g] = get_ops(args)?;
-                    if f.sig.args > g.sig.args {
-                        let mut f_args = Vec::with_capacity(f.sig.args);
-                        for _ in 0..f.sig.args {
-                            f_args.push(self.pop()?);
-                        }
-                        for arg in f_args.iter().rev().take(g.sig.args) {
-                            self.stack.push(arg.clone());
-                        }
-                        self.node(&g.node)?;
-                        for arg in f_args {
-                            self.stack.push(arg);
-                        }
-                        self.node(&f.node)?;
-                    } else {
-                        let mut f_args = Vec::with_capacity(f.sig.args);
-                        for _ in 0..f.sig.args {
-                            f_args.push(self.pop()?);
-                        }
-                        for arg in f_args.iter().rev() {
-                            self.stack.push(arg.clone());
-                        }
-                        self.node(&g.node)?;
-                        for arg in f_args {
-                            self.stack.push(arg);
-                        }
-                        self.node(&f.node)?;
-                    }
-                }
-                prim => return Err(AlgebraError::NotSupported(prim.to_string())),
-            },
-            ImplMod(prim, ..) => return Err(AlgebraError::NotSupported(prim.to_string())),
-            CustomInverse(cust, _) => {
-                if cust.is_obverse {
-                    return Err(AlgebraError::NotSupported("custom inverses".into()));
-                } else if let Ok(normal) = &cust.normal {
-                    self.node(&normal.node)?;
-                } else {
-                    return Err(AlgebraError::NoInverse);
-                }
-            }
-            CopyToUnder(..) | PushUnder(..) | PopUnder(..) => {}
-            node => return Err(AlgebraError::NotSupported(format!("{node:?}"))),
-        }
-        Ok(())
-    }
-    fn pop(&mut self) -> AlgebraResult<Expr> {
-        self.stack.pop().ok_or(AlgebraError::TooManyVariables)
-    }
-    fn result(mut self) -> AlgebraResult<Expr> {
-        match self.stack.len() {
-            0 => Err(AlgebraError::NoOutput),
-            1 => Ok(self.stack.pop().unwrap()),
-            _ => Err(AlgebraError::TooManyOutputs),
-        }
-    }
-}
-
-fn get_ops<const N: usize>(ops: &[SigNode]) -> AlgebraResult<[&SigNode; N]> {
-    if ops.len() != N {
-        return Err(AlgebraError::InterpreterBug);
-    }
-    Ok(array::from_fn(|i| &ops[i]))
 }

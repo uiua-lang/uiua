@@ -5,7 +5,7 @@ use std::{f64::consts::E, fmt, ops::*};
 use serde::*;
 
 /// Uiua's complex number type
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialOrd, Default, Serialize, Deserialize)]
 #[serde(from = "(f64, f64)", into = "(f64, f64)")]
 #[repr(C)]
 pub struct Complex {
@@ -26,6 +26,14 @@ impl From<Complex> for (f64, f64) {
         (c.re, c.im)
     }
 }
+
+impl PartialEq for Complex {
+    fn eq(&self, other: &Self) -> bool {
+        self.re == other.re && self.im == other.im
+    }
+}
+
+impl Eq for Complex {}
 
 impl Complex {
     /// The complex number 0 + 0i

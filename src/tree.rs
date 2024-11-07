@@ -608,6 +608,9 @@ impl Node {
                         false
                     }
                 }
+                Node::Switch { branches, .. } => branches
+                    .iter()
+                    .any(|br| recurse(&br.node, purity, asm, visited)),
                 _ => true,
             };
             visited.truncate(len);
@@ -645,6 +648,9 @@ impl Node {
                         false
                     }
                 }
+                Node::Switch { branches, .. } => {
+                    branches.iter().any(|br| recurse(&br.node, asm, visited))
+                }
                 _ => true,
             };
             visited.truncate(len);
@@ -666,6 +672,9 @@ impl Node {
                     args.iter().any(|sn| recurse(&sn.node, asm, visited))
                 }
                 Node::Call(f, _) => !visited.insert(f) || recurse(&asm[f], asm, visited),
+                Node::Switch { branches, .. } => {
+                    branches.iter().any(|br| recurse(&br.node, asm, visited))
+                }
                 _ => false,
             };
             visited.truncate(len);
@@ -702,6 +711,9 @@ impl Node {
                     spans.push(*span);
                     (e, None)
                 }),
+                Node::Switch { branches, .. } => branches
+                    .iter()
+                    .find_map(|br| recurse(&br.node, asm, spans, visited)),
                 _ => None,
             };
             visited.truncate(len);

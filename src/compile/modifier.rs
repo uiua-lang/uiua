@@ -592,21 +592,26 @@ impl Compiler {
                 };
                 let span = self.add_span(modified.modifier.span.clone());
                 let un = if self.scope.experimental {
-                    let (f_before, f_after) = f
-                        .node
-                        .under_inverse(g.sig, true, &self.asm)
-                        .map_err(|e| self.error(f_span.clone(), e))?;
-                    g.node.un_inverse(&self.asm).ok().map(|g_inv| {
-                        let mut node = f_before;
-                        node.push(g_inv);
-                        node.push(f_after);
-                        node.sig_node().unwrap()
-                    })
+                    if f.sig.args == f.sig.outputs {
+                        let (f_before, f_after) = f
+                            .node
+                            .under_inverse(g.sig, true, &self.asm)
+                            .map_err(|e| self.error(f_span.clone(), e))?;
+                        g.node.un_inverse(&self.asm).ok().map(|g_inv| {
+                            let mut node = f_before;
+                            node.push(g_inv);
+                            node.push(f_after);
+                            node.sig_node().unwrap()
+                        })
+                    } else {
+                        let cust = CustomInverse::from(InversionError::UnUnderSignature(f.sig));
+                        Some(SigNode::new(
+                            normal.sig.inverse(),
+                            Node::CustomInverse(cust.into(), span),
+                        ))
+                    }
                 } else {
-                    let cust = CustomInverse {
-                        normal: Err(InversionError::UnUnderExperimental),
-                        ..Default::default()
-                    };
+                    let cust = CustomInverse::from(InversionError::UnUnderExperimental);
                     Some(SigNode::new(
                         normal.sig.inverse(),
                         Node::CustomInverse(cust.into(), span),

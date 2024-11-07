@@ -525,8 +525,16 @@ impl VirtualEnv {
                     self.handle_sig(f);
                 }
                 ImplPrimitive::UnBoth => {
-                    let [f] = get_args(args)?;
-                    self.handle_args_outputs(f.args * 2, f.outputs * 2);
+                    let [f] = get_args_nodes(args)?;
+                    let mut args = Vec::with_capacity(f.sig.args);
+                    for _ in 0..f.sig.args {
+                        args.push(self.pop());
+                    }
+                    self.node(&f.node)?;
+                    for arg in args.into_iter().rev() {
+                        self.push(arg);
+                    }
+                    self.node(&f.node)?;
                 }
                 prim => {
                     let args = prim.args();

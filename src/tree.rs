@@ -184,6 +184,15 @@ impl Default for CustomInverse {
     }
 }
 
+impl From<InversionError> for CustomInverse {
+    fn from(e: InversionError) -> Self {
+        Self {
+            normal: Err(e),
+            ..Default::default()
+        }
+    }
+}
+
 impl fmt::Debug for CustomInverse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut s = f.debug_struct("custom inverse");

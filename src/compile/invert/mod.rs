@@ -179,6 +179,7 @@ pub enum InversionError {
     UnderExperimental,
     AlgebraError(AlgebraError),
     UnUnderExperimental,
+    UnUnderSignature(Signature),
 }
 
 pub type InversionResult<T = ()> = Result<T, InversionError>;
@@ -225,6 +226,16 @@ impl fmt::Display for InversionError {
                     add `# Experimental!` to the top of the file.",
                     Primitive::Un.format(),
                     Primitive::Under.format()
+                )
+            }
+            InversionError::UnUnderSignature(sig) => {
+                write!(
+                    f,
+                    "{} {}'s first function must have a net-zero \
+                    signature, but its signature is {}",
+                    Primitive::Un.format(),
+                    Primitive::Under.format(),
+                    sig
                 )
             }
         }

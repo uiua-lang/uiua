@@ -2078,8 +2078,9 @@ pub enum PrimDocFragment {
 fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
     let mut end_link = None;
     if let Some(link_start) = line.find("https://") {
-        if !line[link_start..].contains(' ') {
-            end_link = Some(&line[link_start..]);
+        let end = &line[link_start..];
+        if !end.contains(' ') && !end.contains(')') {
+            end_link = Some(end);
             line = &line[..link_start];
         }
     }
@@ -2159,10 +2160,7 @@ fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
                     }
                     url.push(c);
                 }
-                frags.push(PrimDocFragment::Link {
-                    text: curr,
-                    url: url.trim().to_owned(),
-                });
+                frags.push(PrimDocFragment::Link { text: curr, url });
                 curr = String::new();
                 kind = FragKind::Text;
             }

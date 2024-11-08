@@ -610,7 +610,7 @@ impl Node {
                 }
                 Node::Switch { branches, .. } => branches
                     .iter()
-                    .any(|br| recurse(&br.node, purity, asm, visited)),
+                    .all(|br| recurse(&br.node, purity, asm, visited)),
                 _ => true,
             };
             visited.truncate(len);
@@ -649,7 +649,7 @@ impl Node {
                     }
                 }
                 Node::Switch { branches, .. } => {
-                    branches.iter().any(|br| recurse(&br.node, asm, visited))
+                    branches.iter().all(|br| recurse(&br.node, asm, visited))
                 }
                 _ => true,
             };

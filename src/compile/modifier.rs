@@ -1122,35 +1122,33 @@ impl Compiler {
                 #[cfg(feature = "native_sys")]
                 let enabled =
                     crate::sys_native::set_output_enabled(self.pre_eval_mode != PreEvalMode::Lsp);
-                let res = env.exec(mac.root);
-                #[cfg(feature = "native_sys")]
-                crate::sys_native::set_output_enabled(enabled);
-                if let Err(e) = res {
-                    swap(&mut env.asm, &mut self.asm);
-                    return Err(e);
-                }
 
-                let val = env.pop("macro result")?;
+                let res = (|| -> UiuaResult {
+                    env.exec(mac.root)?;
 
-                // Parse the macro output
-                if let Ok(s) = val.as_string(env, "") {
-                    code = s;
-                } else {
-                    for row in val.into_rows() {
-                        match row.as_string(env, "Code macro output rows must be strings") {
-                            Ok(s) => {
-                                if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
-                                    code.push(' ');
-                                }
-                                code.push_str(&s);
+                    let val = env.pop("macro result")?;
+
+                    // Parse the macro output
+                    if let Ok(s) = val.as_string(env, "") {
+                        code = s;
+                    } else {
+                        for row in val.into_rows() {
+                            let s = row.as_string(env, "Code macro output rows must be strings")?;
+                            if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
+                                code.push(' ');
                             }
-                            Err(e) => {
-                                self.errors.push(e);
-                                break;
-                            }
+                            code.push_str(&s);
                         }
                     }
+                    Ok(())
+                })();
+
+                if let Err(e) = res {
+                    self.errors.push(e);
                 }
+
+                #[cfg(feature = "native_sys")]
+                crate::sys_native::set_output_enabled(enabled);
 
                 swap(&mut env.asm, &mut self.asm);
                 Ok(())

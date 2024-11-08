@@ -79,10 +79,10 @@ impl Hash for GpuOp {
 #[derive(Debug, Clone, PartialEq)]
 enum GpuNode {
     NoOp,
-    Const(usize, Shape, Arc<[f32]>),
-    Var(usize, usize),
-    Mon(usize, GpuMon, Box<Self>),
-    Dy(usize, GpuDy, Box<Self>, Box<Self>),
+    Const(u32, Shape, Arc<[f32]>),
+    Var(u32, usize),
+    Mon(u32, GpuMon, Box<Self>),
+    Dy(u32, GpuDy, Box<Self>, Box<Self>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -106,7 +106,7 @@ impl GpuNode {
         match self {
             GpuNode::NoOp => 0,
             GpuNode::Const(..) => 0,
-            GpuNode::Var(_, i) => *i,
+            GpuNode::Var(_, i) => *i + 1,
             GpuNode::Mon(_, _, a) => a.max_args(),
             GpuNode::Dy(_, _, a, b) => a.max_args().max(b.max_args()),
         }
@@ -116,7 +116,7 @@ impl GpuNode {
 struct GpuDeriver<'a> {
     stack: Vec<GpuNode>,
     next_var: usize,
-    next_buffer: usize,
+    next_buffer: u32,
     asm: &'a Assembly,
 }
 
@@ -242,8 +242,7 @@ mod imp {
 
 #[cfg(feature = "gpu")]
 mod imp {
-
-    use std::collections::{BTreeMap, HashMap};
+    use std::collections::HashMap;
 
     use crate::Array;
 
@@ -256,7 +255,7 @@ mod imp {
     pub struct GpuPipeline {
         arg_count: usize,
         return_constants: Option<Vec<Array<f64>>>,
-        constants: Vec<(Buffer, Buffer)>,
+        constants: HashMap<u32, (Buffer, Buffer)>,
     }
     pub fn build_pipeline(node: &GpuNode) -> GpuResult<GpuPipeline> {
         let arg_count = node.max_args();
@@ -264,7 +263,7 @@ mod imp {
 
         let mut pipeline = GpuPipeline {
             arg_count,
-            constants: Vec::new(),
+            constants: HashMap::new(),
             return_constants: None,
         };
 
@@ -286,13 +285,25 @@ mod imp {
 
         #[derive(Default)]
         struct Cache {
-            mon: HashMap<GpuMon, ShaderModule>,
-            dy: HashMap<GpuDy, ShaderModule>,
-            consts: BTreeMap<usize, (Buffer, Buffer)>,
-            layouts: BTreeMap<usize, BindGroupLayout>,
+            mon: HashMap<GpuMon, (ShaderModule, BindGroupLayout)>,
+            dy: HashMap<GpuDy, (ShaderModule, BindGroupLayout)>,
+            consts: HashMap<u32, (Buffer, Buffer)>,
         }
 
-        fn recur(device: &Device, node: &GpuNode, cache: &mut Cache) -> usize {
+        fn recur(device: &Device, node: &GpuNode, cache: &mut Cache) -> u32 {
+            fn entry(binding: u32) -> BindGroupLayoutEntry {
+                BindGroupLayoutEntry {
+                    binding,
+                    visibility: ShaderStages::COMPUTE,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            }
+
             match node {
                 GpuNode::Const(i, shape, data) => {
                     let shape_buf = device.create_buffer_init(&BufferInitDescriptor {
@@ -315,44 +326,38 @@ mod imp {
                             GpuMon::Neg => include_str!("neg.wgsl"),
                             _ => todo!(),
                         };
-                        device.create_shader_module(ShaderModuleDescriptor {
+                        let shader_module = device.create_shader_module(ShaderModuleDescriptor {
                             label: None,
                             source: wgpu::ShaderSource::Wgsl(src.into()),
-                        })
-                    });
-                    let mut entries = Vec::new();
-                    for binding in [a, *i] {
-                        entries.push(BindGroupLayoutEntry {
-                            binding,
-                            visibility: ShaderStages::COMPUTE,
-                            ty: BindingType::Buffer {
-                                ty: BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
                         });
-                    }
-                    let layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                        label: None,
-                        entries: &entries,
+                        let entries = (0..4).map(entry).collect::<Vec<_>>();
+                        let layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                            label: None,
+                            entries: &entries,
+                        });
+                        (shader_module, layout)
                     });
-                    cache.layouts.insert(*i, layout);
                     *i
                 }
                 GpuNode::Dy(i, op, a, b) => {
-                    recur(device, a, cache);
-                    recur(device, b, cache);
+                    let a = recur(device, a, cache);
+                    let b = recur(device, b, cache);
                     cache.dy.entry(*op).or_insert_with(|| {
                         let src = match op {
                             GpuDy::Add => include_str!("add.wgsl"),
                             GpuDy::Mul => include_str!("mul.wgsl"),
                             _ => todo!(),
                         };
-                        device.create_shader_module(ShaderModuleDescriptor {
+                        let shader_module = device.create_shader_module(ShaderModuleDescriptor {
                             label: None,
                             source: wgpu::ShaderSource::Wgsl(src.into()),
-                        })
+                        });
+                        let entries = (0..6).map(entry).collect::<Vec<_>>();
+                        let layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                            label: None,
+                            entries: &entries,
+                        });
+                        (shader_module, layout)
                     });
                     *i
                 }
@@ -364,7 +369,7 @@ mod imp {
         let mut cache = Cache::default();
         recur(device, node, &mut cache);
 
-        pipeline.constants = cache.consts.into_values().collect();
+        pipeline.constants = cache.consts;
 
         Ok(pipeline)
     }

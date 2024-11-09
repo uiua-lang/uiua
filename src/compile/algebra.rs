@@ -32,11 +32,9 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
     let mut expr = data.expr.inspect_err(|e| dbgln!("{e:?}")).map_err(Some)?;
     dbgln!("expression: {expr:?}");
 
-    let c = expr.0.remove(&Term::new(Base::X, 0.0)).unwrap_or(ZERO);
-    let b = expr.0.remove(&Term::new(Base::X, 1.0)).unwrap_or(ZERO);
-    let a = (expr.0)
-        .remove(&Term::new(Base::X, 2.0))
-        .filter(|&a| a != ZERO);
+    let c = expr.0.remove(&Term::new(0.0)).unwrap_or(ZERO);
+    let b = expr.0.remove(&Term::new(1.0)).unwrap_or(ZERO);
+    let a = (expr.0).remove(&Term::new(2.0)).filter(|&a| a != ZERO);
 
     if !expr.0.is_empty() {
         return Err(Some(AlgebraError::TooComplex));
@@ -110,22 +108,7 @@ pub fn derivative(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
     let data = nodes_expr(node, asm);
     let expr = data.expr.inspect_err(|e| dbgln!("{e:?}"))?;
     dbgln!("experession: {expr:?}");
-    let mut deriv = Expr::default();
-    for (mut term, mut coef) in expr.0 {
-        match term.base {
-            Base::X => {}
-            Base::Expr(_) => return Err(AlgebraError::TooComplex),
-        }
-        coef *= term.power;
-        if coef == ZERO {
-            continue;
-        }
-        term.power -= 1.0;
-        deriv.0.insert(term, coef);
-    }
-    if deriv.0.is_empty() {
-        deriv = 0.0.into();
-    }
+    let deriv = expr_deriv(expr).ok_or(AlgebraError::TooComplex)?;
     dbgln!("derivative: {deriv:?}");
     let node = expr_to_node(deriv, data.any_complex, asm);
     dbgln!("derivative node: {node:?}");
@@ -137,20 +120,46 @@ pub fn integral(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
     let data = nodes_expr(node, asm);
     let expr = data.expr.inspect_err(|e| dbgln!("{e:?}"))?;
     dbgln!("experession: {expr:?}");
-    let mut deriv = Expr::default();
-    for (mut term, mut coef) in expr.0 {
-        match term.base {
-            Base::X => {}
-            Base::Expr(_) => return Err(AlgebraError::TooComplex),
-        }
-        term.power += 1.0;
-        coef /= term.power;
-        deriv.0.insert(term, coef);
-    }
-    dbgln!("integral: {deriv:?}");
-    let node = expr_to_node(deriv, data.any_complex, asm);
+    let integral = expr_integral(expr).ok_or(AlgebraError::TooComplex)?;
+    dbgln!("integral: {integral:?}");
+    let node = expr_to_node(integral, data.any_complex, asm);
     dbgln!("integral node: {node:?}");
     Ok(node)
+}
+
+fn expr_deriv(expr: Expr) -> Option<Expr> {
+    let mut deriv = Expr::default();
+    for (mut term, mut coef) in expr.0 {
+        if term.div.is_some() {
+            return None;
+        }
+
+        // X
+        coef *= term.x;
+        if coef == ZERO {
+            continue;
+        }
+        term.x -= 1.0;
+
+        deriv.0.insert(term, coef);
+    }
+    if deriv.0.is_empty() {
+        deriv = 0.0.into();
+    }
+    Some(deriv)
+}
+
+fn expr_integral(expr: Expr) -> Option<Expr> {
+    let mut deriv = Expr::default();
+    for (mut term, mut coef) in expr.0 {
+        if term.div.is_some() {
+            return None;
+        }
+        term.x += 1.0;
+        coef /= term.x;
+        deriv.0.insert(term, coef);
+    }
+    Some(deriv)
 }
 
 fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
@@ -161,20 +170,15 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
             if coef == ZERO {
                 node.push(Node::new_push(0.0));
                 node.push(Prim(Mul, span));
-            } else if term.power == 0.0 {
+            } else if term.x == 0.0 {
                 node.push(Prim(Pop, span));
                 node.push(Node::new_push(1.0));
             } else {
-                match term.base {
-                    Base::X => {
-                        if i > 0 {
-                            *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
-                        }
-                    }
-                    Base::Expr(expr) => recur(node, expr, any_complex, span),
+                if i > 0 {
+                    *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
                 }
-                if term.power != 1.0 {
-                    node.push(Node::new_push(term.power));
+                if term.x != 1.0 {
+                    node.push(Node::new_push(term.x));
                     node.push(Prim(Pow, span));
                 }
             }
@@ -266,7 +270,7 @@ impl<'a> AlgebraEnv<'a> {
     fn new(asm: &'a Assembly) -> Self {
         Self {
             asm,
-            stack: vec![Expr::from(Term::from(Base::X))],
+            stack: vec![Expr::from(Term::new(1.0))],
             call_stack: Vec::new(),
             handled: 0,
             any_complex: false,
@@ -337,19 +341,9 @@ impl<'a> AlgebraEnv<'a> {
                     self.handled += 1;
                 }
                 Sqrt => {
-                    let mut a = self.pop()?;
-                    if a.0.len() <= 1 {
-                        a.0 =
-                            a.0.into_iter()
-                                .map(|(mut term, coeff)| {
-                                    term.power *= 0.5;
-                                    (term, coeff.sqrt())
-                                })
-                                .collect();
-                    } else {
-                        a = Term::new(Base::Expr(a), 0.5).into();
-                    }
-                    self.stack.push(a);
+                    let a = self.pop()?;
+                    let sqrt = a.pow(0.5.into()).ok_or(AlgebraError::TooComplex)?;
+                    self.stack.push(sqrt);
                     self.handled += 1;
                 }
                 Add => {
@@ -370,23 +364,10 @@ impl<'a> AlgebraEnv<'a> {
                     self.stack.push(b * a);
                     self.handled += 1;
                 }
-                Div => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(b / a);
-                    self.handled += 1;
-                }
                 Pow => {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     let res = b.pow(a).ok_or(AlgebraError::NonScalar)?;
-                    self.stack.push(res);
-                    self.handled += 1;
-                }
-                Log => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    let res = b.log(a).ok_or(AlgebraError::NonScalar)?;
                     self.stack.push(res);
                     self.handled += 1;
                 }
@@ -528,41 +509,41 @@ fn get_ops<const N: usize>(ops: &[SigNode]) -> AlgebraResult<[&SigNode; N]> {
 
 pub type AlgebraResult<T = ()> = Result<T, AlgebraError>;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-enum Base {
-    X,
-    Expr(Expr),
-}
-
 #[derive(Clone)]
 struct Term {
-    base: Base,
-    power: f64,
+    /// The power of x
+    x: f64,
+    /// A divided expression
+    div: Option<Expr>,
 }
 
 impl fmt::Debug for Term {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.base.fmt(f)?;
-        write!(f, "^{}", self.power)
+        if self.x == 0.0 {
+            write!(f, "_")
+        } else if self.x == 1.0 {
+            write!(f, "x")
+        } else {
+            write!(f, "x^{}", self.x)
+        }
     }
 }
 
 impl Term {
-    fn new(base: Base, power: f64) -> Self {
-        Self { base, power }
+    fn new(x: f64) -> Self {
+        Self { x, div: None }
     }
-}
-
-impl From<Base> for Term {
-    fn from(base: Base) -> Self {
-        Self { base, power: 1.0 }
+    fn pow(self, power: f64) -> Self {
+        Self {
+            x: self.x * power,
+            div: self.div.and_then(|div| div.pow(power.into())),
+        }
     }
 }
 
 impl PartialEq for Term {
     fn eq(&self, other: &Self) -> bool {
-        self.base == other.base
-            && (self.power == other.power || self.power.is_nan() == other.power.is_nan())
+        self.x == other.x || self.x.is_nan() == other.x.is_nan()
     }
 }
 
@@ -576,11 +557,9 @@ impl PartialOrd for Term {
 
 impl Ord for Term {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.base.cmp(&other.base).then_with(|| {
-            self.power
-                .partial_cmp(&other.power)
-                .unwrap_or_else(|| self.power.is_nan().cmp(&other.power.is_nan()))
-        })
+        self.x
+            .partial_cmp(&other.x)
+            .unwrap_or_else(|| self.x.is_nan().cmp(&other.x.is_nan()))
     }
 }
 
@@ -589,12 +568,13 @@ impl Ord for Term {
 struct Expr(BTreeMap<Term, Complex>);
 
 impl Expr {
+    fn new_single(term: Term, coef: Complex) -> Self {
+        let mut expr = Expr::default();
+        expr.0.insert(term, coef);
+        expr
+    }
     fn is_complex(&self) -> bool {
-        self.0.keys().any(|term| {
-            term.power != 0.0
-                || term.power != 1.0
-                || matches!(&term.base, Base::Expr(expr) if expr.is_complex())
-        })
+        self.0.keys().any(|term| term.x != 0.0 && term.x != 1.0)
     }
     fn single(&self) -> Option<(Term, Complex)> {
         if self.0.len() != 1 {
@@ -607,7 +587,7 @@ impl Expr {
     }
     fn as_constant(&self) -> Option<Complex> {
         let (term, coef) = self.single()?;
-        if term.base == Base::X && term.power == 0.0 {
+        if term.x == 0.0 {
             Some(coef)
         } else {
             None
@@ -615,25 +595,24 @@ impl Expr {
     }
     fn pow(self, power: Self) -> Option<Self> {
         let power = power.as_constant()?.into_real()?;
-        Some(Expr(
-            (self.0.into_iter())
-                .map(|(mut term, coef)| {
-                    term.power *= power;
-                    (term, coef.powf(power))
-                })
-                .collect(),
-        ))
-    }
-    fn log(self, base: Self) -> Option<Self> {
-        let base = base.as_constant()?.into_real()?;
-        Some(Expr(
-            (self.0.into_iter())
-                .map(|(mut term, coef)| {
-                    term.power /= base;
-                    (term, coef.log(base))
-                })
-                .collect(),
-        ))
+        if power.fract() == 0.0 && power >= 0.0 {
+            let n = power as usize;
+            Some(if n == 0 {
+                0.0.into()
+            } else {
+                let mut acc = self.clone();
+                for _ in 1..n {
+                    acc = acc * self.clone();
+                }
+                acc
+            })
+        } else if let Some((term, coef)) = self.single() {
+            Some(Expr::new_single(term.pow(power), coef.powf(power)))
+        } else if self.0.is_empty() {
+            Some(self)
+        } else {
+            None
+        }
     }
 }
 
@@ -644,17 +623,17 @@ impl fmt::Debug for Expr {
             if i > 0 {
                 write!(f, " + ")?;
             }
-            if term.power == 0.0 {
+            if term.x == 0.0 {
                 write!(f, "{coef}")?;
             } else if *coef == ONE {
-                write!(f, "{:?}", term.base)?;
+                write!(f, "{:?}", term)?;
             } else if *coef == -ONE {
-                write!(f, "-{:?}", term.base)?;
+                write!(f, "-{term:?}")?;
             } else {
-                write!(f, "{coef}{:?}", term.base)?;
+                write!(f, "{coef}{term:?}")?;
             }
-            if term.power != 1.0 && term.power != 0.0 {
-                write!(f, "^{}", term.power)?;
+            if term.x != 1.0 && term.x != 0.0 {
+                write!(f, "^{}", term.x)?;
             }
         }
         write!(f, ")")
@@ -709,9 +688,7 @@ impl From<f64> for Expr {
 
 impl From<Complex> for Expr {
     fn from(val: Complex) -> Self {
-        let mut expr = Expr::default();
-        expr.0.insert(Term::new(Base::X, 0.0), val);
-        expr
+        Expr::new_single(Term::new(0.0), val)
     }
 }
 
@@ -745,72 +722,29 @@ impl ops::Sub for Expr {
     }
 }
 
+#[allow(clippy::suspicious_arithmetic_impl)]
+impl ops::Mul for Term {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            div: match (self.div, rhs.div) {
+                (None, None) => None,
+                (Some(a), Some(b)) => Some(a * b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+            },
+        }
+    }
+}
+
 impl ops::Mul for Expr {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         let mut product = Expr::default();
         for (ta, &ca) in &self.0 {
             for (tb, &cb) in &rhs.0 {
-                match (ta.base.clone(), tb.base.clone()) {
-                    (Base::X, Base::X) => {
-                        let term = Term::new(Base::X, ta.power + tb.power);
-                        *product.0.entry(term).or_default() += ca * cb;
-                    }
-                    (Base::X, Base::Expr(expr)) => {
-                        for (mut tb, cb) in expr.0 {
-                            tb.power += ta.power;
-                            *product.0.entry(tb).or_default() += ca * cb;
-                        }
-                    }
-                    (Base::Expr(expr), Base::X) => {
-                        for (mut ta, ca) in expr.0 {
-                            ta.power += tb.power;
-                            *product.0.entry(ta).or_default() += ca * cb;
-                        }
-                    }
-                    (Base::Expr(a), Base::Expr(b)) => {
-                        let prod = a * b;
-                        for (term, coef) in prod.0 {
-                            *product.0.entry(term).or_default() += coef * ca * cb;
-                        }
-                    }
-                }
-            }
-        }
-        product
-    }
-}
-
-impl ops::Div for Expr {
-    type Output = Self;
-    fn div(self, rhs: Self) -> Self::Output {
-        let mut product = Expr::default();
-        for (ta, &ca) in &self.0 {
-            for (tb, &cb) in &rhs.0 {
-                match (ta.base.clone(), tb.base.clone()) {
-                    (Base::X, Base::X) => {
-                        let term = Term::new(Base::X, ta.power - tb.power);
-                        *product.0.entry(term).or_default() += ca / cb;
-                    }
-                    (Base::X, Base::Expr(expr)) => {
-                        for (mut tb, cb) in expr.0 {
-                            tb.power += ta.power;
-                            *product.0.entry(tb).or_default() += ca / cb;
-                        }
-                    }
-                    (Base::Expr(expr), Base::X) => {
-                        for (mut ta, ca) in expr.0 {
-                            ta.power += tb.power;
-                            *product.0.entry(ta).or_default() += ca / cb;
-                        }
-                    }
-                    (Base::Expr(a), Base::Expr(b)) => {
-                        let prod = a / b;
-                        for (term, coef) in prod.0 {
-                            *product.0.entry(term).or_default() += coef * ca / cb;
-                        }
-                    }
-                }
+                *product.0.entry(ta.clone() * tb.clone()).or_default() += ca * cb;
             }
         }
         product

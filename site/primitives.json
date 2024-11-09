@@ -766,7 +766,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Misc",
-    "description": "Calculate the integral of a mathematical expression",
+    "description": "Calculate an antiderivative of a mathematical expression",
     "experimental": true
   },
   "inventory": {

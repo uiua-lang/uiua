@@ -3189,8 +3189,9 @@ primitive!(
     /// ex! # Experimental!
     ///   : # xsin(x)  →  sin(x) + xcos(x)
     ///   : ∂(×∿.) ×τ÷⟜⇡8
-    /// ex: They do work if the inner derivative is a constant.
-    ///   : # sin(2x)  →  2cos(2x)
+    /// They do work if the inner derivative is a constant.
+    /// ex: # Experimental!
+    ///   : # sin(2x) → 2cos(2x)
     ///   : ∂(∿×2) ×τ÷⟜⇡8
     ///
     /// See also: [integral]

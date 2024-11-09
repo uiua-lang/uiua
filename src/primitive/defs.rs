@@ -3185,7 +3185,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : # sin(x) → cos(x)
     ///   : ⍜×⁅1e3 ∂∿ ×τ÷⟜⇡8
-    /// Most derivatives that would require the chain rule are not supported.
+    /// Most derivatives that would require the chain or product rule are not supported.
     /// ex! # Experimental!
     ///   : # xsin(x)  →  sin(x) + xcos(x)
     ///   : ∂(×∿.) ×τ÷⟜⇡8

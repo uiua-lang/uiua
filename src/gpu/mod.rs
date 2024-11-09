@@ -6,13 +6,13 @@ use std::{
 
 use serde::*;
 
-use crate::{Assembly, Node, Primitive, Shape, SigNode, Uiua, UiuaResult, Value};
-
-const DEBUG: bool = true;
+use crate::{
+    invert::InversionError, Assembly, Node, Primitive, Shape, SigNode, Uiua, UiuaResult, Value,
+};
 
 macro_rules! dbgln {
     ($($arg:tt)*) => {
-        if DEBUG {
+        if cfg!(debug_assertions) {
             println!($($arg)*); // Allow println
         }
     }
@@ -41,7 +41,9 @@ impl GpuOp {
         self.gpu_node.get_or_init(|| -> GpuResult<GpuNode> {
             let mut env = GpuDeriver::new(asm);
             env.node(&self.node.node)?;
-            Ok(env.stack.pop().unwrap_or(GpuNode::NoOp))
+            let gpu_node = env.stack.pop().unwrap_or(GpuNode::NoOp);
+            dbgln!("gpu_node: {gpu_node:?}");
+            Ok(gpu_node)
         })
     }
     pub fn init_pipeline(&self, asm: &Assembly) {
@@ -237,6 +239,10 @@ impl<'a> GpuDeriver<'a> {
                 }
                 prim => return Err(GpuError::NotSupported(format!("{} is", prim.format()))),
             },
+            Node::CustomInverse(cust, _) => match &cust.normal {
+                Ok(normal) => self.node(&normal.node)?,
+                Err(e) => return Err(GpuError::Inversion(e.clone())),
+            },
             node => return Err(GpuError::NotSupported(format!("{node:?} is"))),
         }
         Ok(())
@@ -254,6 +260,7 @@ pub enum GpuError {
     NotEnabled,
     NotSupported(String),
     GpuConnection,
+    Inversion(InversionError),
 }
 
 impl fmt::Display for GpuError {
@@ -262,6 +269,7 @@ impl fmt::Display for GpuError {
             GpuError::NotSupported(s) => write!(f, "{s} not supported in gpu"),
             GpuError::NotEnabled => write!(f, "GPU support is not enabled"),
             GpuError::GpuConnection => write!(f, "Unable to connect to GPU"),
+            GpuError::Inversion(e) => write!(f, "{e}"),
         }
     }
 }
@@ -284,10 +292,11 @@ mod imp {
 mod imp {
     use std::{
         collections::{BTreeMap, HashMap},
+        mem::take,
         time::Instant,
     };
 
-    use crate::Array;
+    use crate::{algorithm::pervade, Array};
 
     use super::*;
     use ecow::{eco_vec, EcoVec};
@@ -303,7 +312,7 @@ mod imp {
         return_constants: Option<Vec<Array<f64>>>,
         mon: HashMap<GpuMon, (ShaderModule, BindGroupLayout, PipelineLayout)>,
         dy: HashMap<GpuDy, (ShaderModule, BindGroupLayout, PipelineLayout)>,
-        consts: HashMap<u32, (ArrayBuffers, Vec<u32>)>,
+        consts: HashMap<u32, (ArrayBuffers, Shape)>,
         input_bindings: HashMap<usize, u32>,
         result_bindings: BTreeMap<u32, ResultShape>,
         output_buffer: u32,
@@ -323,29 +332,30 @@ mod imp {
     }
 
     impl ArrayBuffers {
-        fn rank_entry(&self, n: u32) -> BindGroupEntry {
+        fn rank_entry(&self, n: u32, m: u32) -> BindGroupEntry {
             BindGroupEntry {
-                binding: n * 3,
+                binding: n * m,
                 resource: self.rank.as_entire_binding(),
             }
         }
-        fn shape_entry(&self, n: u32) -> BindGroupEntry {
+        fn shape_entry(&self, n: u32, m: u32) -> BindGroupEntry {
             BindGroupEntry {
-                binding: n * 3 + 1,
+                binding: n * m + 1,
                 resource: self.shape.as_entire_binding(),
             }
         }
-        fn data_entry(&self, n: u32) -> BindGroupEntry {
+        fn data_entry(&self, n: u32, m: u32) -> BindGroupEntry {
             BindGroupEntry {
-                binding: n * 3 + 2,
+                binding: n * m + 2,
                 resource: self.data.as_entire_binding(),
             }
         }
     }
 
+    #[derive(Debug)]
     enum GpuInstr {
         Mon(GpuMon, u32, u32),
-        Dy(GpuDy, u32, u32, u32),
+        Dy { dy: GpuDy, a: u32, b: u32, c: u32 },
     }
 
     pub fn build_pipeline(node: &GpuNode) -> GpuResult<GpuPipeline> {
@@ -374,12 +384,18 @@ mod imp {
         }
 
         fn recur(device: &Device, node: &GpuNode, pl: &mut GpuPipeline) -> u32 {
-            fn bgl_entry(binding: u32) -> BindGroupLayoutEntry {
+            fn bgl_entry(binding: u32, dy: bool) -> BindGroupLayoutEntry {
                 BindGroupLayoutEntry {
                     binding,
                     visibility: ShaderStages::COMPUTE,
                     ty: BindingType::Buffer {
-                        ty: if binding % 3 == 0 {
+                        ty: if dy {
+                            if binding % 5 == 0 || binding % 5 == 3 || binding % 5 == 4 {
+                                BufferBindingType::Uniform
+                            } else {
+                                BufferBindingType::Storage { read_only: false }
+                            }
+                        } else if binding % 3 == 0 {
                             BufferBindingType::Uniform
                         } else {
                             BufferBindingType::Storage { read_only: false }
@@ -392,16 +408,20 @@ mod imp {
             }
 
             match node {
-                GpuNode::Const(i, shape, data) => {
-                    let ushape: Vec<u32> = shape.iter().map(|&n| n as u32).collect();
+                GpuNode::Const(i, sh, data) => {
                     let rank = device.create_buffer_init(&BufferInitDescriptor {
                         label: None,
-                        contents: bytemuck::bytes_of::<u32>(&(shape.len() as u32)),
+                        contents: bytemuck::bytes_of::<u32>(&(sh.len() as u32)),
                         usage: BufferUsages::UNIFORM,
                     });
+                    let ushape: Vec<u32> = sh.iter().map(|&n| n as u32).collect();
                     let shape = device.create_buffer_init(&BufferInitDescriptor {
                         label: None,
-                        contents: bytemuck::cast_slice(shape.as_ref()),
+                        contents: bytemuck::cast_slice(if ushape.is_empty() {
+                            &[1]
+                        } else {
+                            &ushape
+                        }),
                         usage: BufferUsages::STORAGE,
                     });
                     let data = device.create_buffer_init(&BufferInitDescriptor {
@@ -410,7 +430,7 @@ mod imp {
                         usage: BufferUsages::STORAGE,
                     });
                     pl.consts
-                        .insert(*i, (ArrayBuffers { rank, shape, data }, ushape));
+                        .insert(*i, (ArrayBuffers { rank, shape, data }, sh.clone()));
                     *i
                 }
                 GpuNode::Mon(i, op, a) => {
@@ -429,12 +449,12 @@ mod imp {
                             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                                 label: Some(&label),
                                 entries: &[
-                                    bgl_entry(0),
-                                    bgl_entry(1),
-                                    bgl_entry(2),
-                                    bgl_entry(3),
-                                    bgl_entry(4),
-                                    bgl_entry(5),
+                                    bgl_entry(0, false),
+                                    bgl_entry(1, false),
+                                    bgl_entry(2, false),
+                                    bgl_entry(3, false),
+                                    bgl_entry(4, false),
+                                    bgl_entry(5, false),
                                 ],
                             });
                         let pl_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
@@ -444,7 +464,7 @@ mod imp {
                         });
                         (shader_module, bg_layout, pl_layout)
                     });
-                    pl.instrs.push(GpuInstr::Mon(*op, *i, a));
+                    pl.instrs.push(GpuInstr::Mon(*op, a, *i));
                     pl.result_bindings.insert(*i, ResultShape::Mon(a));
                     *i
                 }
@@ -454,6 +474,7 @@ mod imp {
                     pl.dy.entry(*op).or_insert_with(|| {
                         let src = match op {
                             GpuDy::Add => include_str!("add.wgsl"),
+                            GpuDy::Sub => include_str!("sub.wgsl"),
                             GpuDy::Mul => include_str!("mul.wgsl"),
                             _ => todo!(),
                         };
@@ -466,15 +487,22 @@ mod imp {
                             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                                 label: Some(&label),
                                 entries: &[
-                                    bgl_entry(0),
-                                    bgl_entry(1),
-                                    bgl_entry(2),
-                                    bgl_entry(3),
-                                    bgl_entry(4),
-                                    bgl_entry(5),
-                                    bgl_entry(6),
-                                    bgl_entry(7),
-                                    bgl_entry(8),
+                                    // a
+                                    bgl_entry(0, true),
+                                    bgl_entry(1, true),
+                                    bgl_entry(2, true),
+                                    bgl_entry(3, true),
+                                    bgl_entry(4, true),
+                                    // b
+                                    bgl_entry(5, true),
+                                    bgl_entry(6, true),
+                                    bgl_entry(7, true),
+                                    bgl_entry(8, true),
+                                    bgl_entry(9, true),
+                                    // c
+                                    bgl_entry(10, true),
+                                    bgl_entry(11, true),
+                                    bgl_entry(12, true),
                                 ],
                             });
                         let pl_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
@@ -484,7 +512,12 @@ mod imp {
                         });
                         (shader_module, bg_layout, pl_layout)
                     });
-                    pl.instrs.push(GpuInstr::Dy(*op, a, b, *i));
+                    pl.instrs.push(GpuInstr::Dy {
+                        dy: *op,
+                        a,
+                        b,
+                        c: *i,
+                    });
                     pl.result_bindings.insert(*i, ResultShape::Dy(a, b));
                     *i
                 }
@@ -524,13 +557,8 @@ mod imp {
         let mut start = Instant::now();
 
         // Bind args
-        let mut buffers: HashMap<u32, (ArrayBuffers, Vec<u32>)> = HashMap::new();
-        let mut max_rank = 0;
-        let mut max_elems = 0;
-        for (i, val) in args.into_iter().enumerate() {
-            max_rank = max_rank.max(val.rank());
-            max_elems = max_elems.max(val.element_count());
-
+        let mut buffers: HashMap<u32, (ArrayBuffers, Shape)> = HashMap::new();
+        for (i, mut val) in args.into_iter().rev().enumerate() {
             let ushape: Vec<u32> = val.shape().iter().map(|&n| n as u32).collect();
             let data: Vec<f32> = match &val {
                 Value::Num(arr) => arr.data.iter().map(|&n| n as f32).collect(),
@@ -558,7 +586,8 @@ mod imp {
                 usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
             });
             let b = pipeline.input_bindings[&i];
-            buffers.insert(b, (ArrayBuffers { rank, shape, data }, ushape));
+            let array_buffers = ArrayBuffers { rank, shape, data };
+            buffers.insert(b, (array_buffers, take(val.shape_mut())));
         }
 
         dbgln!("bind args: {:?}", start.elapsed());
@@ -566,45 +595,48 @@ mod imp {
 
         // Create result buffers
         for (&i, res_shape) in &pipeline.result_bindings {
-            let ushape = match res_shape {
+            let sh = match res_shape {
                 ResultShape::Mon(a) => buffers[a].1.clone(),
                 ResultShape::Dy(a, b) => {
-                    let a = &buffers[a].1;
-                    let b = &buffers[b].1;
-                    let mut c = if a.len() > b.len() {
-                        a.clone()
-                    } else {
-                        b.clone()
-                    };
-                    for i in 0..a.len().min(b.len()) {
-                        let ci = c.len() - i - 1;
-                        c[ci] = a[a.len() - i - 1].max(b[b.len() - i - 1]);
+                    let ash = &buffers.get(a).or_else(|| pipeline.consts.get(a)).unwrap().1;
+                    let bsh = &buffers.get(b).or_else(|| pipeline.consts.get(b)).unwrap().1;
+                    let c = pervade::derive_new_shape(ash, bsh, Err(""), Err(""), env)?;
+                    for (&a, &c) in ash.iter().zip(&c) {
+                        if a == 1 && c != 1 && bsh.len() < ash.len() {
+                            return Err(env.error("gpu does not currently support broadcasting"));
+                        }
+                    }
+                    for (&b, &c) in bsh.iter().zip(&c) {
+                        if b == 1 && c != 1 && ash.len() < bsh.len() {
+                            return Err(env.error("gpu does not currently support broadcasting"));
+                        }
                     }
                     c
                 }
             };
             let rank = device.create_buffer_init(&BufferInitDescriptor {
                 label: Some(&format!("{i} rank")),
-                contents: bytemuck::bytes_of::<u32>(&(ushape.len() as u32)),
+                contents: bytemuck::bytes_of::<u32>(&(sh.len() as u32)),
                 usage: BufferUsages::UNIFORM,
             });
             let shape = device.create_buffer_init(&BufferInitDescriptor {
                 label: Some(&format!("{i} shape")),
-                contents: bytemuck::cast_slice(if ushape.is_empty() { &[1] } else { &ushape }),
+                contents: bytemuck::cast_slice(if sh.is_empty() { &[1] } else { &sh }),
                 usage: BufferUsages::STORAGE,
             });
             let data = device.create_buffer(&BufferDescriptor {
                 label: None,
-                size: max_elems as u64 * size_of::<f32>() as u64,
+                size: sh.elements() as u64 * size_of::<f32>() as u64,
                 usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
                 mapped_at_creation: false,
             });
-            buffers.insert(i, (ArrayBuffers { rank, shape, data }, ushape));
+            buffers.insert(i, (ArrayBuffers { rank, shape, data }, sh));
         }
         // Create output buffers
+        let output_data_size = buffers[&pipeline.output_buffer].1.elements();
         let output_data_buffer = device.create_buffer(&BufferDescriptor {
             label: Some("output data"),
-            size: max_elems as u64 * size_of::<f32>() as u64,
+            size: output_data_size as u64 * size_of::<f32>() as u64,
             usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -614,27 +646,28 @@ mod imp {
 
         // Create bind groups and pipelines
         let mut bg_pipelines = Vec::new();
-        let get_buffers = |i: &u32| -> &(ArrayBuffers, Vec<u32>) {
+        let get_buffers = |i: &u32| -> &(ArrayBuffers, Shape) {
             buffers.get(i).or_else(|| pipeline.consts.get(i)).unwrap()
         };
         for instr in &pipeline.instrs {
+            dbgln!("instr: {instr:?}");
             match instr {
                 GpuInstr::Mon(gpu_mon, a, b) => {
                     let (module, bg_layout, pl_layout) = &pipeline.mon[gpu_mon];
                     let label = format!("{gpu_mon:?} {a} -> {b}");
 
-                    let (a, _) = get_buffers(a);
-                    let (b, _) = get_buffers(b);
+                    let (a, ash) = get_buffers(a);
+                    let (b, bsh) = get_buffers(b);
                     let bind_group = device.create_bind_group(&BindGroupDescriptor {
                         label: Some(&label),
                         layout: bg_layout,
                         entries: &[
-                            a.rank_entry(0),
-                            a.shape_entry(0),
-                            a.data_entry(0),
-                            b.rank_entry(1),
-                            b.shape_entry(1),
-                            b.data_entry(1),
+                            a.rank_entry(0, 3),
+                            a.shape_entry(0, 3),
+                            a.data_entry(0, 3),
+                            b.rank_entry(1, 3),
+                            b.shape_entry(1, 3),
+                            b.data_entry(1, 3),
                         ],
                     });
 
@@ -647,28 +680,58 @@ mod imp {
                         cache: None,
                     });
 
-                    bg_pipelines.push((bind_group, pipeline));
+                    bg_pipelines.push((
+                        bind_group,
+                        pipeline,
+                        ash.elements().max(bsh.elements()) as u32,
+                    ));
                 }
-                GpuInstr::Dy(gpu_dy, a, b, c) => {
-                    let (module, bg_layout, pl_layout) = &pipeline.dy[gpu_dy];
-                    let label = format!("{gpu_dy:?} {a} {b} -> {c}");
+                GpuInstr::Dy { dy, a, b, c } => {
+                    let (module, bg_layout, pl_layout) = &pipeline.dy[dy];
+                    let label = format!("{dy:?} {a} {b} -> {c}");
 
-                    let (a, _) = get_buffers(a);
-                    let (b, _) = get_buffers(b);
-                    let (c, _) = get_buffers(c);
+                    let (a, ash) = get_buffers(a);
+                    let (b, bsh) = get_buffers(b);
+                    let (c, csh) = get_buffers(c);
+                    let (adiv, amod) = derive_shape_div_mod(ash, csh);
+                    let (bdiv, bmod) = derive_shape_div_mod(bsh, csh);
+                    let uni_buf = |u: u32| -> Buffer {
+                        device.create_buffer_init(&BufferInitDescriptor {
+                            label: None,
+                            contents: bytemuck::bytes_of::<u32>(&u),
+                            usage: BufferUsages::UNIFORM,
+                        })
+                    };
+                    let adiv_buf = uni_buf(adiv);
+                    let amod_buf = uni_buf(amod);
+                    let bdiv_buf = uni_buf(bdiv);
+                    let bmod_buf = uni_buf(bmod);
+                    fn uni_bge(n: u32, i: u32, buf: &Buffer) -> BindGroupEntry {
+                        BindGroupEntry {
+                            binding: n * 5 + i,
+                            resource: buf.as_entire_binding(),
+                        }
+                    }
                     let bind_group = device.create_bind_group(&BindGroupDescriptor {
                         label: Some(&label),
                         layout: bg_layout,
                         entries: &[
-                            a.rank_entry(0),
-                            a.shape_entry(0),
-                            a.data_entry(0),
-                            b.rank_entry(1),
-                            b.shape_entry(1),
-                            b.data_entry(1),
-                            c.rank_entry(2),
-                            c.shape_entry(2),
-                            c.data_entry(2),
+                            // a
+                            a.rank_entry(0, 5),
+                            a.shape_entry(0, 5),
+                            a.data_entry(0, 5),
+                            uni_bge(0, 3, &adiv_buf),
+                            uni_bge(0, 4, &amod_buf),
+                            // b
+                            b.rank_entry(1, 5),
+                            b.shape_entry(1, 5),
+                            b.data_entry(1, 5),
+                            uni_bge(1, 3, &bdiv_buf),
+                            uni_bge(1, 4, &bmod_buf),
+                            // c
+                            c.rank_entry(2, 5),
+                            c.shape_entry(2, 5),
+                            c.data_entry(2, 5),
                         ],
                     });
 
@@ -681,7 +744,11 @@ mod imp {
                         cache: None,
                     });
 
-                    bg_pipelines.push((bind_group, pipeline));
+                    bg_pipelines.push((
+                        bind_group,
+                        pipeline,
+                        ash.elements().max(bsh.elements()).max(csh.elements()) as u32,
+                    ));
                 }
             }
         }
@@ -691,22 +758,18 @@ mod imp {
 
         // Execute
         let mut encoder = device.create_command_encoder(&Default::default());
-        for (bind_group, pipeline) in bg_pipelines {
+        for (bind_group, pipeline, elems) in bg_pipelines {
             let mut pass = encoder.begin_compute_pass(&Default::default());
             pass.set_pipeline(&pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
-            pass.dispatch_workgroups(
-                (max_elems as u32).min(65535),
-                ((max_elems as u32) / 65536) + 1,
-                1,
-            );
+            pass.dispatch_workgroups(elems.min(65535), elems / 65536 + 1, 1);
         }
         encoder.copy_buffer_to_buffer(
             &buffers[&pipeline.output_buffer].0.data,
             0,
             &output_data_buffer,
             0,
-            max_elems as u64 * size_of::<f32>() as u64,
+            output_data_size as u64 * size_of::<f32>() as u64,
         );
         queue.submit([encoder.finish()]);
         dbgln!("sumbit command buffer: {:?}", start.elapsed());
@@ -727,11 +790,7 @@ mod imp {
         }
         dbgln!("operation complete: {:?}", start.elapsed());
         start = Instant::now();
-        let shape: Shape = buffers[&pipeline.output_buffer]
-            .1
-            .iter()
-            .map(|&n| n as usize)
-            .collect();
+        let shape: Shape = buffers[&pipeline.output_buffer].1.clone();
         let mut data = eco_vec![0.0; shape.elements()];
         let slice = data.make_mut();
         let output_slice = output_data_buffer.slice(..).get_mapped_range();
@@ -765,5 +824,19 @@ mod imp {
             })
             .as_ref()
             .map(|(d, q)| (d, q))
+    }
+
+    fn derive_shape_div_mod(a: &Shape, c: &Shape) -> (u32, u32) {
+        let unfixed_elems = a.elements();
+        let fix_amnt = a.iter().take_while(|&&n| n == 1).count();
+        let shared_prefix_len = a
+            .iter()
+            .zip(c)
+            .skip(fix_amnt)
+            .take_while(|(a, c)| a == c)
+            .count()
+            + fix_amnt;
+        let div: usize = c[shared_prefix_len..].iter().product();
+        (div as u32, unfixed_elems as u32)
     }
 }

@@ -19,7 +19,7 @@ pathdiff = "0.2.1"
 rand = {version = "0.8.5", features = ["small_rng"]}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"
-uiua = {path = "..", default-features = false, features = ["batteries", "web"]}
+uiua = {path = "..", default-features = false, features = ["batteries", "web", "gpu"]}
 uiua-editor = {path = "../pad/editor"}
 unicode-segmentation = "1.10"
 urlencoding = "2"

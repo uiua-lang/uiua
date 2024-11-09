@@ -180,7 +180,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
 ];
 
 pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
-    &(Complex, (crate::Complex::I, Mul, Sub)),
+    &NoUnder((Complex, (crate::Complex::I, Mul, Sub))),
     &(Atan, (Flip, UnAtan, Div, Mul)),
     &((IgnoreMany(Flip), Add), Sub),
     &(Sub, Add),
@@ -198,7 +198,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &((Flip, Log), (Flip, Root)),
     &((Flip, Root), (Flip, Log)),
     &((Flip, 1, Flip, Div, Pow), (Flip, Log)),
-    &(Complex, (crate::Complex::I, Mul, Sub)),
+    &NoUnder((Complex, (crate::Complex::I, Mul, Sub))),
     &(Min, MatchLe),
     &(Max, MatchGe),
     &(Orient, AntiOrient),
@@ -206,6 +206,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &(Select, AntiSelect),
     &(Pick, AntiPick),
     &(Base, AntiBase),
+    &NoUnder(AntiCouplePat),
     &AntiFillPat,
     &AntiTrivial,
     &AntiRepeatPat,
@@ -229,6 +230,7 @@ pub static CONTRA_PATTERNS: &[&dyn InvertPattern] = &[
     &(Max, Max),
     &(Select, IndexOf),
     &(IndexOf, Select),
+    &NoUnder(ContraCouplePat),
 ];
 
 pub trait InvertPattern: fmt::Debug + Sync {
@@ -237,6 +239,9 @@ pub trait InvertPattern: fmt::Debug + Sync {
         input: &'a [Node],
         asm: &Assembly,
     ) -> InversionResult<(&'a [Node], Node)>;
+    fn allowed_in_under(&self) -> bool {
+        true
+    }
 }
 
 macro_rules! inverse {
@@ -717,6 +722,23 @@ inverse!(AntiInsertPat, input, _, Prim(Insert, span), {
     Ok((input, inv))
 });
 
+inverse!(AntiCouplePat, input, _, Prim(Couple, span), {
+    let inv = Node::from_iter([
+        Mod(Dip, eco_vec![ImplPrim(UnCouple, span).sig_node()?], span),
+        ImplPrim(MatchPattern, span),
+    ]);
+    Ok((input, inv))
+});
+
+inverse!(ContraCouplePat, input, _, Prim(Couple, span), {
+    let inner = Node::from_iter([ImplPrim(UnCouple, span), Prim(Flip, span)]);
+    let inv = Node::from_iter([
+        Mod(Dip, eco_vec![inner.sig_node()?], span),
+        ImplPrim(MatchPattern, span),
+    ]);
+    Ok((input, inv))
+});
+
 inverse!(DupPat, input, asm, Prim(Dup, dup_span), {
     let Some(dyadic_i) =
         (0..=input.len()).find(|&i| nodes_clean_sig(&input[..i]).is_some_and(|sig| sig == (2, 1)))
@@ -1020,5 +1042,20 @@ impl<P: InvertPattern> InvertPattern for RequireVal<P> {
         let (input, mut inv) = self.0.invert_extract(input, asm)?;
         inv.prepend(val);
         Ok((input, inv))
+    }
+}
+
+#[derive(Debug)]
+struct NoUnder<P>(P);
+impl<P: InvertPattern> InvertPattern for NoUnder<P> {
+    fn invert_extract<'a>(
+        &self,
+        input: &'a [Node],
+        asm: &Assembly,
+    ) -> InversionResult<(&'a [Node], Node)> {
+        self.0.invert_extract(input, asm)
+    }
+    fn allowed_in_under(&self) -> bool {
+        false
     }
 }

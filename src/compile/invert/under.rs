@@ -418,7 +418,7 @@ under!(
     "Derives under inverses from anti inverses",
     (StashAntiPat, input, _, _, asm),
     {
-        for pat in ANTI_PATTERNS {
+        for pat in ANTI_PATTERNS.iter().filter(|pat| pat.allowed_in_under()) {
             if let Ok((new, inv)) = pat.invert_extract(input, asm) {
                 let nodes = &input[..input.len() - new.len()];
                 let span = nodes
@@ -440,7 +440,7 @@ under!(
     "Derives under inverses from contra inverses",
     (StashContraPat, input, _, _, asm),
     {
-        for pat in CONTRA_PATTERNS {
+        for pat in CONTRA_PATTERNS.iter().filter(|pat| pat.allowed_in_under()) {
             if let Ok((new, inv)) = pat.invert_extract(input, asm) {
                 let nodes = &input[..input.len() - new.len()];
                 let span = nodes

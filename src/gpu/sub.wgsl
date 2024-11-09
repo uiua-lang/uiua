@@ -16,5 +16,5 @@
 
 @compute @workgroup_size(256)fn main(@builtin(global_invocation_id) thread: vec3<u32>) {
     let i = thread.x + thread.y * 65536;
-    cdata[i] = bdata[i / bdiv % bmod] * adata[i / adiv % amod];
+    cdata[i] = bdata[i / bdiv % bmod] - adata[i / adiv % amod];
 }

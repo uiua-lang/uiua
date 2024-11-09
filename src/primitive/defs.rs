@@ -3212,10 +3212,10 @@ primitive!(
     /// ex: # Experimental!
     ///   : # 1/x → ln(x)
     ///   : -∩∫(÷:1) 1 e
-    /// Most integrals that would require the u-substitution are not supported.
+    /// Most integrals that would require u-substitution or integration by parts are not supported.
     /// ex! # Experimental!
     ///   : # xsin(x)  →  sin(x) - xcos(x)
-    ///   : ∂(×∿.) ×τ÷⟜⇡8
+    ///   : ∫(×∿.) ×τ÷⟜⇡8
     ///
     /// See also: [derivative]
     ([1], Integral, Misc, ("integral", '∫')),

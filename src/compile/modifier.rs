@@ -1469,6 +1469,7 @@ impl Compiler {
             Gpu => {
                 let (sn, span) = self.monadic_modifier_op(modified)?;
                 let op = GpuOp::new(sn, &self.asm).map_err(|e| self.error(span.clone(), e))?;
+                op.init_pipeline(&self.asm);
                 let span = self.add_span(span);
                 Node::Gpu(op.into(), span)
             }

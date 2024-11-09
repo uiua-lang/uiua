@@ -1458,6 +1458,7 @@ value_un_impl!(
 value_un_impl!(sin, [Num, num], (Byte, byte), [Complex, com]);
 value_un_impl!(cos, [Num, num], (Byte, byte), [Complex, com]);
 value_un_impl!(asin, [Num, num], (Byte, byte), [Complex, com]);
+value_un_impl!(acos, [Num, num], (Byte, byte), [Complex, com]);
 value_un_impl!(floor, [Num, num], [Byte, byte], [Complex, com]);
 value_un_impl!(ceil, [Num, num], [Byte, byte], [Complex, com]);
 value_un_impl!(round, [Num, num], [Byte, byte], [Complex, com]);

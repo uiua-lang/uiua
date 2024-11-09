@@ -1,16 +1,18 @@
-use std::{array, cmp::Ordering, collections::BTreeMap, fmt, mem::take, ops};
+use core::f64;
+use std::{array, cmp::Ordering, collections::BTreeMap, f64::consts::E, fmt, mem::take, ops};
 
 use ecow::eco_vec;
 use serde::*;
 
 use crate::{
     Assembly, Complex,
+    ImplPrimitive::*,
     Node::{self, *},
     Primitive::*,
     SigNode, Value,
 };
 
-pub const DEBUG: bool = true;
+pub const DEBUG: bool = false;
 
 macro_rules! dbgln {
     ($($arg:tt)*) => {
@@ -142,6 +144,19 @@ fn expr_deriv(expr: Expr) -> Option<Expr> {
             Term::Div(expr) => {
                 *deriv.0.entry(Term::Div(expr.pow(2.0.into())?)).or_default() += coef
             }
+            Term::Log(base, expr) => {
+                let prime = expr_deriv(expr.clone())?.as_constant()?;
+                let term = Term::Div(expr);
+                *deriv.0.entry(term).or_default() += coef * prime / base.ln();
+            }
+            Term::Sin(expr) => {
+                let prime = expr_deriv(expr.clone())?.as_constant()?;
+                *deriv.0.entry(Term::Cos(expr)).or_default() += coef * prime;
+            }
+            Term::Cos(expr) => {
+                let prime = expr_deriv(expr.clone())?.as_constant()?;
+                *deriv.0.entry(Term::Sin(expr)).or_default() -= coef * prime;
+            }
         }
     }
     if deriv.0.is_empty() {
@@ -157,10 +172,17 @@ fn expr_integral(expr: Expr) -> Option<Expr> {
             Term::X(mut x) => {
                 x += 1.0;
                 if x == 0.0 {
-                    return None;
+                    deriv.0.insert(Term::Log(E, Term::X(1.0).into()), coef);
+                } else {
+                    coef /= x;
+                    deriv.0.insert(Term::X(x), coef);
                 }
-                coef /= x;
-                deriv.0.insert(Term::X(x), coef);
+            }
+            Term::Sin(expr) if expr == Term::X(1.0).into() => {
+                deriv.0.insert(Term::Cos(Term::X(1.0).into()), -coef);
+            }
+            Term::Cos(expr) if expr == Term::X(1.0).into() => {
+                deriv.0.insert(Term::Sin(Term::X(1.0).into()), coef);
             }
             _ => return None,
         }
@@ -180,8 +202,9 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                 match term {
                     Term::X(x) => {
                         if x == 0.0 {
-                            node.push(Prim(Pop, span));
-                            node.push(Node::new_push(1.0));
+                            node.push(Node::new_push(f64::INFINITY));
+                            node.push(Prim(Add, span));
+                            node.push(Prim(Sign, span));
                         } else {
                             if i > 0 {
                                 *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
@@ -197,6 +220,19 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                         node.push(Node::new_push(1.0));
                         node.push(Prim(Flip, span));
                         node.push(Prim(Div, span));
+                    }
+                    Term::Log(base, expr) => {
+                        recur(node, expr, any_complex, span);
+                        node.push(Node::new_push(base));
+                        node.push(Prim(Log, span));
+                    }
+                    Term::Sin(expr) => {
+                        recur(node, expr, any_complex, span);
+                        node.push(Prim(Sin, span));
+                    }
+                    Term::Cos(expr) => {
+                        recur(node, expr, any_complex, span);
+                        node.push(ImplPrim(Cos, span));
                     }
                 }
             }
@@ -391,8 +427,20 @@ impl<'a> AlgebraEnv<'a> {
                 Pow => {
                     let a = self.pop()?;
                     let b = self.pop()?;
-                    let res = b.pow(a).ok_or(AlgebraError::NonScalar)?;
+                    let res = b.pow(a).ok_or(AlgebraError::TooComplex)?;
                     self.stack.push(res);
+                    self.handled += 1;
+                }
+                Log => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    let res = b.log(a).ok_or(AlgebraError::TooComplex)?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
+                Sin => {
+                    let a = self.pop()?;
+                    self.stack.push(Term::Sin(a).into());
                     self.handled += 1;
                 }
                 Complex => {
@@ -410,7 +458,14 @@ impl<'a> AlgebraEnv<'a> {
                 }
                 prim => return Err(AlgebraError::NotSupported(prim.format().to_string())),
             },
-            ImplPrim(prim, _) => return Err(AlgebraError::NotSupported(prim.to_string())),
+            ImplPrim(prim, _) => match prim {
+                Cos => {
+                    let a = self.pop()?;
+                    self.stack.push(Term::Cos(a).into());
+                    self.handled += 1;
+                }
+                _ => return Err(AlgebraError::NotSupported(prim.to_string())),
+            },
             Mod(prim, args, _) => match prim {
                 Dip => {
                     let [f] = get_ops(args)?;
@@ -537,8 +592,10 @@ pub type AlgebraResult<T = ()> = Result<T, AlgebraError>;
 #[derive(Clone, PartialEq, PartialOrd)]
 enum Term {
     X(f64),
-    #[allow(dead_code)]
     Div(Expr),
+    Log(f64, Expr),
+    Sin(Expr),
+    Cos(Expr),
 }
 
 impl fmt::Debug for Term {
@@ -547,9 +604,21 @@ impl fmt::Debug for Term {
             &Term::X(x) if x == 0.0 => write!(f, "1"),
             &Term::X(x) if x == 1.0 => write!(f, "x"),
             &Term::X(x) => write!(f, "x^{}", x),
-            Term::Div(div) => {
+            Term::Div(expr) => {
                 write!(f, "1/")?;
-                div.fmt(f)
+                expr.fmt(f)
+            }
+            Term::Log(base, expr) => {
+                write!(f, "log_{base}")?;
+                expr.fmt(f)
+            }
+            Term::Sin(expr) => {
+                write!(f, "sin")?;
+                expr.fmt(f)
+            }
+            Term::Cos(expr) => {
+                write!(f, "cos")?;
+                expr.fmt(f)
             }
         }
     }
@@ -560,6 +629,7 @@ impl Term {
         Some(match self {
             Term::X(x) => Term::X(x * power),
             Term::Div(expr) => Term::Div(expr.pow(power.into())?),
+            _ => return None,
         })
     }
 }
@@ -591,7 +661,9 @@ impl Expr {
     fn is_complex(&self) -> bool {
         self.0.keys().any(|term| match term {
             Term::X(x) => *x != 0.0 && *x != 1.0,
-            Term::Div(_) => true,
+            Term::Div(expr) | Term::Log(_, expr) | Term::Sin(expr) | Term::Cos(expr) => {
+                expr.is_complex()
+            }
         })
     }
     fn single(&self) -> Option<(Term, Complex)> {
@@ -631,6 +703,10 @@ impl Expr {
         } else {
             None
         }
+    }
+    fn log(self, base: Self) -> Option<Self> {
+        let base = base.as_constant()?.into_real()?;
+        Some(Term::Log(base, self).into())
     }
 }
 
@@ -780,7 +856,7 @@ impl ops::Div for Expr {
             let mut quotient = Expr::default();
             for (ta, ca) in self.0 {
                 for (term, coef) in (ta / b.clone())?.0 {
-                    *quotient.0.entry(term).or_default() += ca * cb * coef;
+                    *quotient.0.entry(term).or_default() += ca / cb * coef;
                 }
             }
             Some(quotient)

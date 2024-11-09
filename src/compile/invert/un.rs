@@ -912,6 +912,8 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
     let inv = match prim {
         UnPop => Prim(Pop, span),
         Asin => Prim(Sin, span),
+        Cos => ImplPrim(Acos, span),
+        Acos => ImplPrim(Cos, span),
         TransposeN(n) => ImplPrim(TransposeN(-n), span),
         UnWhere => Prim(Where, span),
         UnUtf => Prim(Utf8, span),

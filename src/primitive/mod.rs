@@ -160,6 +160,10 @@ impl fmt::Display for ImplPrimitive {
         use ImplPrimitive::*;
         use Primitive::*;
         match self {
+            Root => write!(f, "{Pow}{Div}{Flip}1"),
+            Cos => write!(f, "cos"),
+            Asin => write!(f, "{Un}{Sin}"),
+            Acos => write!(f, "{Un}{Cos}"),
             UnPop => write!(f, "{Un}{Pop}"),
             UnBits => write!(f, "{Un}{Bits}"),
             UnWhere => write!(f, "{Un}{Where}"),
@@ -212,7 +216,6 @@ impl fmt::Display for ImplPrimitive {
             UndoPartition1 | UndoPartition2 => write!(f, "{Under}{Partition}"),
             UndoGroup1 | UndoGroup2 => write!(f, "{Under}{Group}"),
             TryClose => write!(f, "{}", Sys(SysOp::Close)),
-            Asin => write!(f, "{Un}{Sin}"),
             UndoFix => write!(f, "{Under}{Fix}"),
             UndoDeshape => write!(f, "{Under}{Deshape}"),
             UndoFirst => write!(f, "{Under}{First}"),
@@ -242,7 +245,6 @@ impl fmt::Display for ImplPrimitive {
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}"),
             RowsWindows => write!(f, "{Rows}(…){Windows}"),
             CountUnique => write!(f, "{Len}{Deduplicate}"),
-            Root => write!(f, "{Pow}{Div}{Flip}1"),
             MatchPattern => write!(f, "pattern match"),
             MatchLe => write!(f, "match ≤"),
             MatchGe => write!(f, "match ≥"),
@@ -1126,11 +1128,14 @@ impl Primitive {
 impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
+            ImplPrimitive::Root => env.dyadic_oo_00_env(Value::root)?,
+            ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
+            ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
+            ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
             ImplPrimitive::UnPop => {
                 let val = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
                 env.push(val.clone());
             }
-            ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::UnCouple => {
                 let coupled = env.pop(1)?;
                 let (a, b) = coupled.uncouple(env)?;
@@ -1438,7 +1443,6 @@ impl ImplPrimitive {
                 env.push(random());
             }
             ImplPrimitive::CountUnique => env.monadic_ref(Value::count_unique)?,
-            ImplPrimitive::Root => env.dyadic_oo_00_env(Value::root)?,
             ImplPrimitive::MatchPattern => {
                 let expected = env.pop(1)?;
                 let got = env.pop(2)?;

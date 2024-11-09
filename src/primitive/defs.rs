@@ -3171,7 +3171,7 @@ primitive!(
     ((2)[3], Astar, Misc, "astar"),
     /// Calculate the derivative of a mathematical expression
     ///
-    /// Currently, only polynomials are supported.
+    /// Basic polynomials are supported, along with [sine] and [logarithm].
     /// ex: # Experimental!
     ///   : # x² → 2x
     ///   : ∂(×.) 5
@@ -3181,13 +3181,23 @@ primitive!(
     /// ex: # Experimental!
     ///   : # x² - 2x - 4  →  2x² - 2x
     ///   : ∂(++⊃(ⁿ2|×¯2|¯4)) [0 1 2]
+    /// [derivative][sine] is a simple way to make a cosine function.
+    /// ex: # Experimental!
+    ///   : # sin(x) → cos(x)
+    ///   : ⍜×⁅1e3 ∂∿ ×τ÷⟜⇡8
+    /// Most derivatives that would require the chain rule are not supported.
+    /// ex! # Experimental!
+    ///   : # xsin(x)  →  sin(x) + xcos(x)
+    ///   : ∂(×∿.) ×τ÷⟜⇡8
+    /// ex: They do work if the inner derivative is a constant.
+    ///   : # sin(2x)  →  2cos(2x)
+    ///   : ∂(∿×2) ×τ÷⟜⇡8
     ///
     /// See also: [integral]
     ([1], Derivative, Misc, ("derivative", '∂')),
-    /// Calculate the integral of a mathematical expression
+    /// Calculate an antiderivative of a mathematical expression
     ///
-    /// Currently, only polynomials are supported.
-    /// The constant integration term is not included.
+    /// Basic polynomials are supported, along with [sine] and [logarithm].
     /// ex: # Experimental!
     ///   : # x² → x³/3
     ///   : ∫(×.) 3
@@ -3197,6 +3207,14 @@ primitive!(
     /// ex: # Experimental!
     ///   : # 2x + 5  →  x² + 5x
     ///   : ∫(+5×2) 2
+    /// You can compute the integral over a range with [subtract][both].
+    /// ex: # Experimental!
+    ///   : # 1/x → ln(x)
+    ///   : -∩∫(÷:1) 1 e
+    /// Most integrals that would require the u-substitution are not supported.
+    /// ex! # Experimental!
+    ///   : # xsin(x)  →  sin(x) - xcos(x)
+    ///   : ∂(×∿.) ×τ÷⟜⇡8
     ///
     /// See also: [derivative]
     ([1], Integral, Misc, ("integral", '∫')),
@@ -3446,8 +3464,11 @@ macro_rules! impl_primitive {
 
 impl_primitive!(
     // Inverses
-    (0, UnPop),
+    (2, Root),
+    (1, Cos),
     (1, Asin),
+    (1, Acos),
+    (0, UnPop),
     (1, UnBits),
     (1, UnWhere),
     (1(2), UnCouple),
@@ -3535,7 +3556,6 @@ impl_primitive!(
     (2[1], RowsWindows),
     (1, CountUnique),
     (1(2)[3], AstarFirst),
-    (2, Root),
     // Implementation details
     (1[2], RepeatWithInverse),
     (2(1), ValidateType),

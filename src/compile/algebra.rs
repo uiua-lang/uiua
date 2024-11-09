@@ -10,7 +10,7 @@ use crate::{
     SigNode, Value,
 };
 
-pub const DEBUG: bool = false;
+pub const DEBUG: bool = true;
 
 macro_rules! dbgln {
     ($($arg:tt)*) => {
@@ -32,9 +32,9 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
     let mut expr = data.expr.inspect_err(|e| dbgln!("{e:?}")).map_err(Some)?;
     dbgln!("expression: {expr:?}");
 
-    let c = expr.0.remove(&Term::new(0.0)).unwrap_or(ZERO);
-    let b = expr.0.remove(&Term::new(1.0)).unwrap_or(ZERO);
-    let a = (expr.0).remove(&Term::new(2.0)).filter(|&a| a != ZERO);
+    let c = expr.0.remove(&Term::X(0.0)).unwrap_or(ZERO);
+    let b = expr.0.remove(&Term::X(1.0)).unwrap_or(ZERO);
+    let a = (expr.0).remove(&Term::X(2.0)).filter(|&a| a != ZERO);
 
     if !expr.0.is_empty() {
         return Err(Some(AlgebraError::TooComplex));
@@ -129,19 +129,20 @@ pub fn integral(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
 
 fn expr_deriv(expr: Expr) -> Option<Expr> {
     let mut deriv = Expr::default();
-    for (mut term, mut coef) in expr.0 {
-        if term.div.is_some() {
-            return None;
+    for (term, mut coef) in expr.0 {
+        match term {
+            Term::X(mut x) => {
+                coef *= x;
+                if coef == ZERO {
+                    continue;
+                }
+                x -= 1.0;
+                *deriv.0.entry(Term::X(x)).or_default() += coef;
+            }
+            Term::Div(expr) => {
+                *deriv.0.entry(Term::Div(expr.pow(2.0.into())?)).or_default() += coef
+            }
         }
-
-        // X
-        coef *= term.x;
-        if coef == ZERO {
-            continue;
-        }
-        term.x -= 1.0;
-
-        deriv.0.insert(term, coef);
     }
     if deriv.0.is_empty() {
         deriv = 0.0.into();
@@ -151,13 +152,18 @@ fn expr_deriv(expr: Expr) -> Option<Expr> {
 
 fn expr_integral(expr: Expr) -> Option<Expr> {
     let mut deriv = Expr::default();
-    for (mut term, mut coef) in expr.0 {
-        if term.div.is_some() {
-            return None;
+    for (term, mut coef) in expr.0 {
+        match term {
+            Term::X(mut x) => {
+                x += 1.0;
+                if x == 0.0 {
+                    return None;
+                }
+                coef /= x;
+                deriv.0.insert(Term::X(x), coef);
+            }
+            _ => return None,
         }
-        term.x += 1.0;
-        coef /= term.x;
-        deriv.0.insert(term, coef);
     }
     Some(deriv)
 }
@@ -170,16 +176,28 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
             if coef == ZERO {
                 node.push(Node::new_push(0.0));
                 node.push(Prim(Mul, span));
-            } else if term.x == 0.0 {
-                node.push(Prim(Pop, span));
-                node.push(Node::new_push(1.0));
             } else {
-                if i > 0 {
-                    *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
-                }
-                if term.x != 1.0 {
-                    node.push(Node::new_push(term.x));
-                    node.push(Prim(Pow, span));
+                match term {
+                    Term::X(x) => {
+                        if x == 0.0 {
+                            node.push(Prim(Pop, span));
+                            node.push(Node::new_push(1.0));
+                        } else {
+                            if i > 0 {
+                                *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
+                            }
+                            if x != 1.0 {
+                                node.push(Node::new_push(x));
+                                node.push(Prim(Pow, span));
+                            }
+                        }
+                    }
+                    Term::Div(expr) => {
+                        recur(node, expr, any_complex, span);
+                        node.push(Node::new_push(1.0));
+                        node.push(Prim(Flip, span));
+                        node.push(Prim(Div, span));
+                    }
                 }
             }
             if coef != ZERO && coef != ONE {
@@ -270,7 +288,7 @@ impl<'a> AlgebraEnv<'a> {
     fn new(asm: &'a Assembly) -> Self {
         Self {
             asm,
-            stack: vec![Expr::from(Term::new(1.0))],
+            stack: vec![Expr::from(Term::X(1.0))],
             call_stack: Vec::new(),
             handled: 0,
             any_complex: false,
@@ -361,7 +379,13 @@ impl<'a> AlgebraEnv<'a> {
                 Mul => {
                     let a = self.pop()?;
                     let b = self.pop()?;
-                    self.stack.push(b * a);
+                    self.stack.push((b * a).ok_or(AlgebraError::TooComplex)?);
+                    self.handled += 1;
+                }
+                Div => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.stack.push((b / a).ok_or(AlgebraError::TooComplex)?);
                     self.handled += 1;
                 }
                 Pow => {
@@ -377,7 +401,8 @@ impl<'a> AlgebraEnv<'a> {
                     match (a.as_constant(), b.as_constant()) {
                         (Some(a), Some(b)) => self.stack.push((a * Complex::I + b).into()),
                         _ => {
-                            let im = a * Expr::from(Complex::I);
+                            let im =
+                                (a * Expr::from(Complex::I)).ok_or(AlgebraError::TooComplex)?;
                             self.stack.push(b + im);
                         }
                     }
@@ -509,57 +534,47 @@ fn get_ops<const N: usize>(ops: &[SigNode]) -> AlgebraResult<[&SigNode; N]> {
 
 pub type AlgebraResult<T = ()> = Result<T, AlgebraError>;
 
-#[derive(Clone)]
-struct Term {
-    /// The power of x
-    x: f64,
-    /// A divided expression
-    div: Option<Expr>,
+#[derive(Clone, PartialEq, PartialOrd)]
+enum Term {
+    X(f64),
+    #[allow(dead_code)]
+    Div(Expr),
 }
 
 impl fmt::Debug for Term {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.x == 0.0 {
-            write!(f, "_")
-        } else if self.x == 1.0 {
-            write!(f, "x")
-        } else {
-            write!(f, "x^{}", self.x)
+        match self {
+            &Term::X(x) if x == 0.0 => write!(f, "1"),
+            &Term::X(x) if x == 1.0 => write!(f, "x"),
+            &Term::X(x) => write!(f, "x^{}", x),
+            Term::Div(div) => {
+                write!(f, "1/")?;
+                div.fmt(f)
+            }
         }
     }
 }
 
 impl Term {
-    fn new(x: f64) -> Self {
-        Self { x, div: None }
-    }
-    fn pow(self, power: f64) -> Self {
-        Self {
-            x: self.x * power,
-            div: self.div.and_then(|div| div.pow(power.into())),
-        }
-    }
-}
-
-impl PartialEq for Term {
-    fn eq(&self, other: &Self) -> bool {
-        self.x == other.x || self.x.is_nan() == other.x.is_nan()
+    fn pow(self, power: f64) -> Option<Self> {
+        Some(match self {
+            Term::X(x) => Term::X(x * power),
+            Term::Div(expr) => Term::Div(expr.pow(power.into())?),
+        })
     }
 }
 
 impl std::cmp::Eq for Term {}
 
-impl PartialOrd for Term {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
+#[allow(clippy::derive_ord_xor_partial_ord)]
 impl Ord for Term {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.x
-            .partial_cmp(&other.x)
-            .unwrap_or_else(|| self.x.is_nan().cmp(&other.x.is_nan()))
+        match (self, other) {
+            (Term::X(a), Term::X(b)) => a
+                .partial_cmp(b)
+                .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan())),
+            (a, b) => a.partial_cmp(b).unwrap(),
+        }
     }
 }
 
@@ -574,7 +589,10 @@ impl Expr {
         expr
     }
     fn is_complex(&self) -> bool {
-        self.0.keys().any(|term| term.x != 0.0 && term.x != 1.0)
+        self.0.keys().any(|term| match term {
+            Term::X(x) => *x != 0.0 && *x != 1.0,
+            Term::Div(_) => true,
+        })
     }
     fn single(&self) -> Option<(Term, Complex)> {
         if self.0.len() != 1 {
@@ -587,7 +605,7 @@ impl Expr {
     }
     fn as_constant(&self) -> Option<Complex> {
         let (term, coef) = self.single()?;
-        if term.x == 0.0 {
+        if term == Term::X(0.0) {
             Some(coef)
         } else {
             None
@@ -602,12 +620,12 @@ impl Expr {
             } else {
                 let mut acc = self.clone();
                 for _ in 1..n {
-                    acc = acc * self.clone();
+                    acc = (acc * self.clone())?;
                 }
                 acc
             })
         } else if let Some((term, coef)) = self.single() {
-            Some(Expr::new_single(term.pow(power), coef.powf(power)))
+            Some(Expr::new_single(term.pow(power)?, coef.powf(power)))
         } else if self.0.is_empty() {
             Some(self)
         } else {
@@ -623,17 +641,12 @@ impl fmt::Debug for Expr {
             if i > 0 {
                 write!(f, " + ")?;
             }
-            if term.x == 0.0 {
-                write!(f, "{coef}")?;
-            } else if *coef == ONE {
+            if *coef == ONE {
                 write!(f, "{:?}", term)?;
             } else if *coef == -ONE {
                 write!(f, "-{term:?}")?;
             } else {
                 write!(f, "{coef}{term:?}")?;
-            }
-            if term.x != 1.0 && term.x != 0.0 {
-                write!(f, "^{}", term.x)?;
             }
         }
         write!(f, ")")
@@ -688,7 +701,7 @@ impl From<f64> for Expr {
 
 impl From<Complex> for Expr {
     fn from(val: Complex) -> Self {
-        Expr::new_single(Term::new(0.0), val)
+        Expr::new_single(Term::X(0.0), val)
     }
 }
 
@@ -724,29 +737,59 @@ impl ops::Sub for Expr {
 
 #[allow(clippy::suspicious_arithmetic_impl)]
 impl ops::Mul for Term {
-    type Output = Self;
-    fn mul(self, rhs: Self) -> Self::Output {
-        Self {
-            x: self.x + rhs.x,
-            div: match (self.div, rhs.div) {
-                (None, None) => None,
-                (Some(a), Some(b)) => Some(a * b),
-                (Some(a), None) => Some(a),
-                (None, Some(b)) => Some(b),
-            },
-        }
+    type Output = Option<Self>;
+    fn mul(self, other: Self) -> Self::Output {
+        Some(match (self, other) {
+            (Term::X(a), Term::X(b)) => Term::X(a + b),
+            (Term::Div(a), Term::Div(b)) => Term::Div((a * b)?),
+            _ => return None,
+        })
     }
 }
 
 impl ops::Mul for Expr {
-    type Output = Self;
+    type Output = Option<Self>;
     fn mul(self, rhs: Self) -> Self::Output {
         let mut product = Expr::default();
         for (ta, &ca) in &self.0 {
             for (tb, &cb) in &rhs.0 {
-                *product.0.entry(ta.clone() * tb.clone()).or_default() += ca * cb;
+                *product.0.entry((ta.clone() * tb.clone())?).or_default() += ca * cb;
             }
         }
-        product
+        Some(product)
+    }
+}
+
+impl ops::Div for Term {
+    type Output = Option<Expr>;
+    fn div(self, other: Self) -> Self::Output {
+        Some(match (self, other) {
+            (Term::X(a), Term::X(b)) => Term::X(a - b).into(),
+            (Term::X(0.0), Term::Div(b)) => b,
+            (a @ Term::X(_), Term::Div(b)) => (Expr::from(a) * b)?,
+            (a, b) if a == b => Term::X(1.0).into(),
+            _ => return None,
+        })
+    }
+}
+
+impl ops::Div for Expr {
+    type Output = Option<Self>;
+    fn div(self, b: Self) -> Self::Output {
+        if let Some((b, cb)) = b.single() {
+            let mut quotient = Expr::default();
+            for (ta, ca) in self.0 {
+                for (term, coef) in (ta / b.clone())?.0 {
+                    *quotient.0.entry(term).or_default() += ca * cb * coef;
+                }
+            }
+            Some(quotient)
+        } else if self.as_constant() == Some(ZERO) {
+            Some(self)
+        } else if self.as_constant() == Some(ONE) {
+            Some(Term::Div(b).into())
+        } else {
+            None
+        }
     }
 }

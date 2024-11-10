@@ -731,10 +731,13 @@ inverse!(AntiCouplePat, input, _, Prim(Couple, span), {
 });
 
 inverse!(ContraCouplePat, input, _, Prim(Couple, span), {
-    let inner = Node::from_iter([ImplPrim(UnCouple, span), Prim(Flip, span)]);
     let inv = Node::from_iter([
-        Mod(Dip, eco_vec![inner.sig_node()?], span),
-        ImplPrim(MatchPattern, span),
+        ImplPrim(UnCouple, span),
+        Mod(
+            Dip,
+            eco_vec![ImplPrim(MatchPattern, span).sig_node()?],
+            span,
+        ),
     ]);
     Ok((input, inv))
 });

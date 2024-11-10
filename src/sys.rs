@@ -449,8 +449,12 @@ sys_op! {
     /// Returns a stream handle
     /// You can make a request with [&w] and read the response with [&rs], [&rb], or [&ru].
     /// [under][&tcpc] calls [&cl] automatically.
-    /// ex: "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n"
-    ///   : ⍜(&tlsc "example.com:443"|&rs∞⊸&w:)
+    /// ex: $ GET / HTTP/1.1
+    ///   : $ Host: example.com
+    ///   : $ Connection: close
+    ///   : $
+    ///   : $
+    ///   : ⍜(&tcpc "example.com:80"|&rs∞⊸&w:)
     ///
     /// See also: [&tlsc]
     (1, TcpConnect, Tcp, "&tcpc", "tcp - connect", Mutating),
@@ -459,7 +463,12 @@ sys_op! {
     /// Returns a stream handle
     /// You can make a request with [&w] and read the response with [&rs], [&rb], or [&ru].
     /// [under][&tlsc] calls [&cl] automatically.
-    /// ex:
+    /// ex: $ GET / HTTP/1.1
+    ///   : $ Host: example.com
+    ///   : $ Connection: close
+    ///   : $
+    ///   : $
+    ///   : ⍜(&tlsc "example.com:443"|&rs∞⊸&w:)
     ///
     /// See also: [&tcpc]
     (1, TlsConnect, Tcp, "&tlsc", "tls - connect", Mutating),

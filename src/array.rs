@@ -96,7 +96,7 @@ impl Eq for MetaPtr {}
 
 bitflags! {
     /// Flags for an array
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
     pub struct ArrayFlags: u8 {
         /// No flags
         const NONE = 0;
@@ -104,8 +104,6 @@ bitflags! {
         const BOOLEAN = 1;
         /// The array was *created from* a boolean
         const BOOLEAN_LITERAL = 2;
-        /// The array is a seed created by `gen`
-        const SEED = 4;
     }
 }
 

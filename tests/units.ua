@@ -396,6 +396,11 @@ F ← ⌅(+|-) # Track Caller!
 F ← ⌅⍜⊢¯ ⊏⊙"nubtqphsoe" -@0 °⋕
 ⍤⤙≍ ⟜(°F F) 118
 
+# Contra flip as anti inverse
+⍤⤙≍ 2 ⌝(⊏:) [10 11 12 13] 12
+⍤⤙≍ {[10 11 12 13] 2} {°⟜(⊏:)} [10 11 12 13] 12
+⍤⤙≍ 2 °(⊏:[1 2 3 4]) 3
+
 # ThisFile
 ⍤⤙≍ $"tests_units.ua" Sep ThisFile
 ⍤⤙≍ ThisFile /◇⊂ {ThisFileDir Sep ThisFileName}

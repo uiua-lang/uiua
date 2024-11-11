@@ -212,6 +212,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &AntiRepeatPat,
     &AntiInsertPat,
     &AntiJoinPat,
+    &AntiContraFlip,
     &AntiCustomPat,
 ];
 
@@ -811,6 +812,19 @@ inverse!(AlgebraPat, input, asm, {
         }
     }
     Err(error)
+});
+
+inverse!(AntiContraFlip, input, asm, Prim(Flip, span), {
+    if !nodes_clean_sig(input).is_some_and(|sig| sig == (2, 1)) {
+        return generic();
+    }
+    for pat in CONTRA_PATTERNS.iter() {
+        if let Ok((inp, mut inv)) = pat.invert_extract(input, asm) {
+            inv.prepend(Prim(Flip, span));
+            return Ok((inp, inv));
+        }
+    }
+    generic()
 });
 
 #[derive(Debug)]

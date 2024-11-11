@@ -3304,7 +3304,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : °binary . binary . {1 η_π_τ 4_5_6 "wow!"}
     ///
-    /// [binary] adds at *least* 6 bytes of overhead to the encoded array. The includes at least 6 bytes for every box element.
+    /// [binary] adds at *least* 6 bytes of overhead to the encoded array. This includes at least 6 bytes for every box element.
     /// The overhead is type, shape, and metadata information.
     /// ex: # Experimental!
     ///   : binary [1 2 3 4 5]

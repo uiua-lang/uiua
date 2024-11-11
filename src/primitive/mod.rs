@@ -189,6 +189,7 @@ impl fmt::Display for ImplPrimitive {
             UnBox => write!(f, "{Un}{Box}"),
             UnSort => write!(f, "{Un}{Sort}"),
             UnJson => write!(f, "{Un}{Json}"),
+            UnBinary => write!(f, "{Un}{Binary}"),
             UnCsv => write!(f, "{Un}{Csv}"),
             UnXlsx => write!(f, "{Un}{Xlsx}"),
             UnFft => write!(f, "{Un}{Fft}"),
@@ -503,7 +504,7 @@ impl Primitive {
             self,
             (Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
-                | (Last | Sort | Chunks | Base | Fft | Case | Layout)
+                | (Last | Sort | Chunks | Base | Fft | Case | Layout | Binary)
                 | (Astar | Triangle)
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
@@ -925,6 +926,7 @@ impl Primitive {
             Primitive::Stack => stack(env, false)?,
             Primitive::Regex => regex(env)?,
             Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
+            Primitive::Binary => env.monadic_ref_env(Value::to_binary)?,
             Primitive::Csv => env.monadic_ref_env(Value::to_csv)?,
             Primitive::Xlsx => {
                 env.monadic_ref_env(|value, env| value.to_xlsx(env).map(EcoVec::from))?
@@ -1228,6 +1230,11 @@ impl ImplPrimitive {
             ImplPrimitive::UnJson => {
                 let json = env.pop(1)?.as_string(env, "JSON expects a string")?;
                 let val = Value::from_json_string(&json, env)?;
+                env.push(val);
+            }
+            ImplPrimitive::UnBinary => {
+                let bytes = env.pop(1)?.as_bytes(env, "Binary expects bytes")?;
+                let val = Value::from_binary(&bytes, env)?;
                 env.push(val);
             }
             ImplPrimitive::UnCsv => {

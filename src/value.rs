@@ -1388,6 +1388,14 @@ impl From<i32> for Value {
     }
 }
 
+impl From<Vec<u8>> for Value {
+    fn from(vec: Vec<u8>) -> Self {
+        let mut data = CowSlice::new();
+        data.extend_from_vec(vec);
+        Self::from(data)
+    }
+}
+
 macro_rules! value_un_impl {
     ($name:ident, $(
         $([$(|$meta:ident| $pred:expr,)* $in_place:ident, $f:ident])?

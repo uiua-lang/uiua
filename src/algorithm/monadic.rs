@@ -1,5 +1,6 @@
 //! Algorithms for monadic array operations
 
+use core::str;
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
@@ -15,6 +16,7 @@ use std::{
 };
 
 use ecow::{eco_vec, EcoVec};
+use enum_iterator::{all, Sequence};
 use rayon::prelude::*;
 use time::{Date, Month, OffsetDateTime, Time};
 use unicode_segmentation::UnicodeSegmentation;
@@ -2369,5 +2371,327 @@ impl Value {
         arr.shape.pop();
         arr.validate_shape();
         Ok(arr)
+    }
+}
+
+#[derive(Clone, Copy, Sequence)]
+#[repr(u8)]
+enum BinType {
+    U8 = 0,
+    U16 = 1,
+    U32 = 2,
+    U64 = 3,
+    I8 = 4,
+    I16 = 5,
+    I32 = 6,
+    I64 = 7,
+    F32 = 8,
+    F64 = 9,
+    Char = 16,
+    Box = 32,
+    Complex = 48,
+}
+
+impl Value {
+    pub(crate) fn to_binary(&self, env: &Uiua) -> UiuaResult<Vec<u8>> {
+        let mut bytes = Vec::new();
+        self.to_binary_impl(&mut bytes, env)?;
+        Ok(bytes)
+    }
+    fn to_binary_impl(&self, bytes: &mut Vec<u8>, env: &Uiua) -> UiuaResult {
+        if self.rank() > u8::MAX as usize {
+            return Err(env.error(format!("Rank {} is too large", self.rank())));
+        }
+        fn write_shape(shape: &Shape, bytes: &mut Vec<u8>) {
+            bytes.push(shape.len() as u8);
+            for &dim in shape {
+                bytes.extend((dim as u32).to_le_bytes());
+            }
+        }
+        fn write_ty_meta(
+            ty: BinType,
+            meta: &ArrayMeta,
+            bytes: &mut Vec<u8>,
+            env: &Uiua,
+        ) -> UiuaResult {
+            let mut ty_u = ty as u8;
+            if meta == &ArrayMeta::default() {
+                bytes.push(ty_u);
+            } else {
+                ty_u |= 128u8;
+                bytes.push(ty_u);
+                // Flags
+                bytes.push(meta.flags.bits());
+                // Label
+                let label = meta.label.as_deref().unwrap_or("");
+                bytes.extend((label.len() as u32).to_le_bytes());
+                bytes.extend(label.as_bytes());
+                // Pointer
+                if meta.pointer.is_some() {
+                    return Err(env.error("Cannot serialize pointers"));
+                }
+                // Handle kind
+                if meta.handle_kind.is_some() {
+                    return Err(env.error("Cannot serialize I/O handles"));
+                }
+                // Map keys
+                bytes.push(meta.map_keys.is_some() as u8);
+                if let Some(keys) = &meta.map_keys {
+                    keys.clone().normalized().to_binary_impl(bytes, env)?;
+                }
+            }
+            Ok(())
+        }
+        match self {
+            Value::Num(arr) => {
+                let mut all_non_neg = true;
+                let mut all_int = true;
+                let mut all_f32 = true;
+                let mut min = 0f64;
+                let mut max = 0f64;
+                for &n in &arr.data {
+                    all_non_neg &= n >= 0.0;
+                    all_int &= n.fract() == 0.0;
+                    all_f32 &= (n as f32 as f64).to_bits() == n.to_bits();
+                    min = min.min(n);
+                    max = max.max(n);
+                }
+                let ty = if all_non_neg && all_int {
+                    if max <= u8::MAX as f64 {
+                        BinType::U8
+                    } else if max <= u16::MAX as f64 {
+                        BinType::U16
+                    } else if max <= u32::MAX as f64 {
+                        BinType::U32
+                    } else if max <= u64::MAX as f64 {
+                        BinType::U64
+                    } else if max <= 2f32.powf(24.0) as f64 {
+                        BinType::F32
+                    } else {
+                        BinType::F64
+                    }
+                } else if all_int {
+                    if min >= i8::MIN as f64 && max <= i8::MAX as f64 {
+                        BinType::I8
+                    } else if min >= i16::MIN as f64 && max <= i16::MAX as f64 {
+                        BinType::I16
+                    } else if min >= i32::MIN as f64 && max <= i32::MAX as f64 {
+                        BinType::I32
+                    } else if min >= i64::MIN as f64 && max <= i64::MAX as f64 {
+                        BinType::I64
+                    } else if min >= -(2f32.powf(24.0)) as f64 && max <= 2f32.powf(24.0) as f64 {
+                        BinType::F32
+                    } else {
+                        BinType::F64
+                    }
+                } else if all_f32 {
+                    BinType::F32
+                } else {
+                    BinType::F64
+                };
+                write_ty_meta(ty, arr.meta(), bytes, env)?;
+                write_shape(&arr.shape, bytes);
+                fn write(nums: &[f64], bytes: &mut Vec<u8>, f: impl Fn(f64, &mut Vec<u8>)) {
+                    for &n in nums {
+                        f(n, bytes);
+                    }
+                }
+                let data = &arr.data;
+                match ty {
+                    BinType::U8 => write(data, bytes, |n, b| b.extend((n as u8).to_le_bytes())),
+                    BinType::U16 => write(data, bytes, |n, b| b.extend((n as u16).to_le_bytes())),
+                    BinType::U32 => write(data, bytes, |n, b| b.extend((n as u32).to_le_bytes())),
+                    BinType::U64 => write(data, bytes, |n, b| b.extend((n as u64).to_le_bytes())),
+                    BinType::I8 => write(data, bytes, |n, b| b.extend((n as i8).to_le_bytes())),
+                    BinType::I16 => write(data, bytes, |n, b| b.extend((n as i16).to_le_bytes())),
+                    BinType::I32 => write(data, bytes, |n, b| b.extend((n as i32).to_le_bytes())),
+                    BinType::I64 => write(data, bytes, |n, b| b.extend((n as i64).to_le_bytes())),
+                    BinType::F32 => write(data, bytes, |n, b| b.extend((n as f32).to_le_bytes())),
+                    BinType::F64 => write(data, bytes, |n, b| b.extend(n.to_le_bytes())),
+                    _ => unreachable!(),
+                }
+            }
+            Value::Byte(arr) => {
+                write_ty_meta(BinType::U8, arr.meta(), bytes, env)?;
+                write_shape(&arr.shape, bytes);
+                bytes.extend(&arr.data);
+            }
+            Value::Char(arr) => {
+                write_ty_meta(BinType::Char, arr.meta(), bytes, env)?;
+                write_shape(&arr.shape, bytes);
+                let s: String = arr.data.iter().copied().collect();
+                bytes.extend((s.as_bytes().len() as u32).to_le_bytes());
+                bytes.extend(s.as_bytes());
+            }
+            Value::Box(arr) => {
+                write_ty_meta(BinType::Box, arr.meta(), bytes, env)?;
+                write_shape(&arr.shape, bytes);
+                for Boxed(v) in &arr.data {
+                    v.to_binary_impl(bytes, env)?;
+                }
+            }
+            Value::Complex(arr) => {
+                write_ty_meta(BinType::Complex, arr.meta(), bytes, env)?;
+                write_shape(&arr.shape, bytes);
+                for Complex { re, im } in &arr.data {
+                    bytes.extend(re.to_le_bytes());
+                    bytes.extend(im.to_le_bytes());
+                }
+            }
+        }
+        Ok(())
+    }
+    pub(crate) fn from_binary(mut bytes: &[u8], env: &Uiua) -> UiuaResult<Self> {
+        Self::from_binary_impl(&mut bytes, env)
+    }
+    fn from_binary_impl(bytes: &mut &[u8], env: &Uiua) -> UiuaResult<Self> {
+        // Type
+        let mut ty_u = *bytes
+            .first()
+            .ok_or_else(|| env.error("Missing type identifier"))?;
+        let has_meta = ty_u & 128u8 != 0;
+        ty_u &= 127u8;
+        let ty = all::<BinType>()
+            .find(|&ty| ty as u8 == ty_u)
+            .ok_or_else(|| env.error(format!("Invalid binary type {ty_u}")))?;
+        *bytes = &bytes[1..];
+
+        let meta = if has_meta {
+            let mut meta = ArrayMeta::default();
+            // Flags
+            if bytes.is_empty() {
+                return Err(env.error("Missing flags length"));
+            }
+            let flags_u = *bytes.first().unwrap();
+            *bytes = &bytes[1..];
+            let flags = ArrayFlags::from_bits(flags_u)
+                .ok_or_else(|| env.error(format!("Invalid array flags {:08b}", flags_u)))?;
+            meta.flags = flags;
+
+            // Label
+            if bytes.len() < size_of::<u32>() {
+                return Err(env.error("Missing label length"));
+            }
+            let label_len = u32::from_le_bytes(bytes[..size_of::<u32>()].try_into().unwrap());
+            *bytes = &bytes[size_of::<u32>()..];
+            if label_len > 0 {
+                if bytes.len() < label_len as usize {
+                    return Err(env.error("Missing label data"));
+                }
+                let label = str::from_utf8(&bytes[..label_len as usize])
+                    .map_err(|e| env.error(format!("Failed to parse label: {e}")))?;
+                *bytes = &bytes[label_len as usize..];
+                meta.label = Some(label.into());
+            }
+
+            // Map keys
+            if bytes.is_empty() {
+                return Err(env.error("Missing map keys check"));
+            }
+            let has_map_keys = *bytes.first().unwrap() != 0;
+            *bytes = &bytes[1..];
+            let keys = if has_map_keys {
+                Some(Self::from_binary_impl(bytes, env)?)
+            } else {
+                None
+            };
+
+            Some((meta, keys))
+        } else {
+            None
+        };
+
+        // Rank
+        if bytes.is_empty() {
+            return Err(env.error("Missing rank"));
+        }
+        let rank = *bytes.first().unwrap();
+        *bytes = &bytes[1..];
+
+        // Shape
+        let mut shape = Shape::with_capacity(rank as usize);
+        for _ in 0..rank {
+            let len = u32::from_le_bytes(bytes[..size_of::<u32>()].try_into().unwrap());
+            shape.push(len as usize);
+            *bytes = &bytes[size_of::<u32>()..];
+        }
+
+        // Data
+        fn make<'a, A: TryFrom<&'a [u8]>, T, E: Clone>(
+            bytes: &mut &'a [u8],
+            shape: Shape,
+            env: &Uiua,
+            f: impl Fn(A) -> T,
+            g: impl Fn(T) -> E,
+        ) -> UiuaResult<Array<E>> {
+            validate_size::<E>(shape.iter().copied(), env)?;
+            let mut data = EcoVec::with_capacity(shape.elements());
+            for i in 0..shape.elements() {
+                if bytes.len() < size_of::<A>() {
+                    return Err(env.error(format!("Missing data for element {i}")));
+                }
+                let elem =
+                    f(A::try_from(&bytes[..size_of::<A>()]).unwrap_or_else(|_| unreachable!()));
+                data.push(g(elem));
+                *bytes = &bytes[size_of::<A>()..];
+            }
+            Ok(Array::new(shape, data))
+        }
+        let mut val: Value = match ty {
+            BinType::U8 => make(bytes, shape, env, u8::from_le_bytes, |x| x)?.into(),
+            BinType::U16 => make(bytes, shape, env, u16::from_le_bytes, |x| x as f64)?.into(),
+            BinType::U32 => make(bytes, shape, env, u32::from_le_bytes, |x| x as f64)?.into(),
+            BinType::U64 => make(bytes, shape, env, u64::from_le_bytes, |x| x as f64)?.into(),
+            BinType::I8 => make(bytes, shape, env, i8::from_le_bytes, |x| x as f64)?.into(),
+            BinType::I16 => make(bytes, shape, env, i16::from_le_bytes, |x| x as f64)?.into(),
+            BinType::I32 => make(bytes, shape, env, i32::from_le_bytes, |x| x as f64)?.into(),
+            BinType::I64 => make(bytes, shape, env, i64::from_le_bytes, |x| x as f64)?.into(),
+            BinType::F32 => make(bytes, shape, env, f32::from_le_bytes, |x| x as f64)?.into(),
+            BinType::F64 => make(bytes, shape, env, f64::from_le_bytes, |x| x)?.into(),
+            BinType::Char => {
+                if bytes.len() < size_of::<u32>() {
+                    return Err(env.error("Missing byte count"));
+                }
+                let byte_count = u32::from_le_bytes(bytes[..size_of::<u32>()].try_into().unwrap());
+                *bytes = &bytes[size_of::<u32>()..];
+                if bytes.len() < byte_count as usize {
+                    return Err(env.error("Missing character bytes"));
+                }
+                let s = str::from_utf8(&bytes[..byte_count as usize])
+                    .map_err(|e| env.error(format!("Failed to parse string: {e}")))?;
+                *bytes = &bytes[byte_count as usize..];
+                let data: EcoVec<char> = s.chars().collect();
+                if shape.elements() != data.len() {
+                    return Err(env.error(format!(
+                        "Shape implies {shape} characters, but got {}",
+                        data.len()
+                    )));
+                }
+                Array::new(shape, data).into()
+            }
+            BinType::Complex => make(bytes, shape, env, u128::from_le_bytes, |u| {
+                let bytes = u.to_le_bytes();
+                let re = f64::from_le_bytes(bytes[..size_of::<f64>()].try_into().unwrap());
+                let im = f64::from_le_bytes(bytes[size_of::<f64>()..].try_into().unwrap());
+                Complex::new(re, im)
+            })?
+            .into(),
+            BinType::Box => {
+                let mut data = EcoVec::with_capacity(shape.elements());
+                for i in 0..shape.elements() {
+                    let val = Self::from_binary_impl(bytes, env)
+                        .map_err(|e| env.error(format!("Failed to parse box element {i}: {e}")))?;
+                    data.push(Boxed(val));
+                }
+                Array::new(shape, data).into()
+            }
+        };
+        if let Some((meta, map_keys)) = meta {
+            *val.meta_mut() = meta;
+            if let Some(keys) = map_keys {
+                val.map(keys, env)?;
+            }
+        }
+        Ok(val)
     }
 }

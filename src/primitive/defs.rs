@@ -3283,6 +3283,45 @@ primitive!(
     /// While it is not useful to display the output bytes here, we can see how the result of decoding works:
     /// ex: °xlsx xlsx . ↯3_6⇡18
     (1, Xlsx, Encoding, "xlsx"),
+    /// Encode an array into a compact binary representation
+    ///
+    /// This is useful for saving arrays to files.
+    /// Being `# Experimental`, the format is currently subject to backward-incompatible changes.
+    /// Any array can be encoded unless it:
+    /// - contains an I/O handle or FFI pointer
+    /// - has a rank `greater than``256`
+    ///
+    /// ex: # Experimental!
+    ///   : binary [1 2 3 4]
+    /// ex: # Experimental!
+    ///   : binary {"Hello" "World!"}
+    /// ex: # Experimental!
+    ///   : binary {1 η_π_τ 4_5_6 "wow!"}
+    ///
+    /// You can use [un][binary] to decode a binary byte array into its original value.
+    /// ex: # Experimental!
+    ///   : °binary . binary . map [1 2 3] [4 5 6]
+    /// ex: # Experimental!
+    ///   : °binary . binary . {1 η_π_τ 4_5_6 "wow!"}
+    ///
+    /// [binary] adds at *least* 6 bytes of overhead to the encoded array. The includes at least 6 bytes for every box element.
+    /// The overhead is type, shape, and metadata information.
+    /// ex: # Experimental!
+    ///   : binary [1 2 3 4 5]
+    ///   : binary.
+    ///   : binary.
+    ///
+    /// For number arrays, the smallest type that can represent all the numbers is used so that the encoded array is as small as possible.
+    /// ex: # Experimental!
+    ///   : ÷∩⧻⟜binary ⇡256    # u8s
+    ///   : ÷∩⧻⟜binary ⇡257    # u16s
+    ///   : ÷∩⧻⟜binary ÷⟜⇡256  # f32s
+    ///   : ÷∩⧻⟜binary ×π ⇡256 # f64s
+    ///
+    /// Complex arrays are always encoded as f64 pairs.
+    /// ex: # Experimental!
+    ///   : ÷∩⧻⟜binary ℂ0 ⇡256
+    (1, Binary, Encoding, "binary"),
     /// Convert a value to its code representation
     ///
     /// ex: repr π
@@ -3500,6 +3539,7 @@ impl_primitive!(
     (1(2), UnKeep),
     (1, UnSort, Impure),
     (1, UnJson),
+    (1, UnBinary),
     (1, UnCsv),
     (1, UnXlsx),
     (1, UnFft),

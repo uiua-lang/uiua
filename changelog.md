@@ -5,9 +5,10 @@ Uiua is not yet stable.
 ## 0.14.0 - 202?-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- **Breaking Change**: [`un °`](https://uiua.org/docs/un) [`json`](https://uiua.org/docs/language/json) no longer attempts to form multidimensional arrays
+- **Breaking Change**: [`un °`](https://uiua.org/docs/un) [`json`](https://uiua.org/docs/json) no longer attempts to form multidimensional arrays
   - This makes deserializing JSON more consistent
 - Add experimental inline macros
+- Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation
 - Remove the previously deprecated experimental `coordinate ⟔` function
 - Remove the previously deprecated experimental `struct` modifier
 - Remove the previously deprecated `setinv` and `setund` modifiers

@@ -3,9 +3,7 @@
 ## 0.14
 The next version of Uiua
 
-- `un` `under`
-- `gpu` modifier
-- Stabilize `sort` and `last`
+- Stabilize `sort`, `last`, `backward`, `case`
 - Compile-time code string evaluation
 - `do` function pack
 - Range optimizations

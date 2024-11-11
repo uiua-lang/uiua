@@ -105,3 +105,16 @@ repr[{[[1 2][2 3]][3 4]}{[[1 2][2 3]]□{[[1 2][2 3]]□□[3 4]}}]
 ⍤⤙≍ "{¯i ¯π}" repr {¯i ¯π}
 ⍤⤙≍ "[True False]" repr [True False]
 ⍤⤙≍ "$x 5" repr $x 5
+
+# Experimental!
+
+# Binary round-trip
+⍤⤙≍ ⟜⍜binary∘ [1 2 3 4]
+⍤⤙≍ ⟜⍜binary∘ {"Hello" "World!"}
+⍤⤙≍ ⟜⍜binary∘ °△2_3_4_5
+⍤⤙≍ ⟜⍜binary∘ {1 η_π_τ 4_5_6 "wow!"}
+⍤⤙≍ ⟜⍜binary∘ map [1 2 3] [4 5 6]
+⍤⤙≍ ⟜⍜binary∘ ⇡256
+⍤⤙≍ ⟜⍜binary∘ ⇡257
+⍤⤙≍ ⟜⍜binary∘ ÷⟜⇡256
+⍤⤙≍ ⟜⍜binary∘ ×π ⇡256

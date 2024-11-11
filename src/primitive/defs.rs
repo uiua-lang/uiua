@@ -3289,7 +3289,7 @@ primitive!(
     /// Being `# Experimental`, the format is currently subject to backward-incompatible changes.
     /// Any array can be encoded unless it:
     /// - contains an I/O handle or FFI pointer
-    /// - has a rank `greater than``256`
+    /// - has a rank `greater than``255`
     ///
     /// ex: # Experimental!
     ///   : binary [1 2 3 4]

@@ -117,6 +117,16 @@ impl<'a> Fill<'a> {
             _ => Err(self.error(false)),
         }
     }
+    pub(crate) fn value_for(&self, val: &Value) -> Option<&Value> {
+        let fill = self.value()?;
+        match (val, fill) {
+            (Value::Num(_) | Value::Byte(_), Value::Num(_) | Value::Byte(_))
+            | (Value::Char(_), Value::Char(_))
+            | (Value::Complex(_), Value::Complex(_))
+            | (Value::Box(_), Value::Box(_)) => Some(fill),
+            _ => None,
+        }
+    }
     fn error(&self, scalar: bool) -> &'static str {
         if scalar {
             match self.value() {

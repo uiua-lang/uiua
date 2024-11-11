@@ -189,9 +189,11 @@ impl Value {
             return Err(env.error("Cannot undo scalar reshape"));
         }
         let orig_shape = old_shape.as_nats(env, "Shape should be a list of integers")?;
-        if orig_shape.iter().product::<usize>() == self.shape().iter().product::<usize>() {
-            *self.shape_mut() = Shape::from(orig_shape.as_slice());
-            Ok(())
+        if env.fill().value_for(self).is_some()
+            || orig_shape.iter().product::<usize>() == self.shape().iter().product::<usize>()
+        {
+            let orig_shape_spec: Vec<_> = orig_shape.iter().map(|&d| Ok(d as isize)).collect();
+            self.reshape_impl(&orig_shape_spec, env)
         } else {
             Err(env.error(format!(
                 "Cannot unreshape array because its old shape was {}, \

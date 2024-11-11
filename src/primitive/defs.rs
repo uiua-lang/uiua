@@ -3232,6 +3232,9 @@ primitive!(
     /// While the number literals `0` and `1` are converted to their number equivalents in JSON, the shadowable constants `True` and `False` are converted to JSON `true` and `false`.
     /// ex: json {0 1 2 3 True False}
     ///
+    /// [un][json] will never form multidimensional arrays, as the shape data is lost.
+    /// ex: °json json [1_2_3 4_5_6]
+    ///
     /// While [json] always produces ECMA-compliant JSON, [un][json] can parse [JSON5](https://json5.org/).
     /// This means that you can use single quotes, unquoted keys, trailing commas, and comments.
     /// ex: °json $ {foo: 'bar', /* cool */ baz: [1, 2, 3,],}

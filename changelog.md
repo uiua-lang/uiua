@@ -5,6 +5,8 @@ Uiua is not yet stable.
 ## 0.14.0 - 202?-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- **Breaking Change**: [`un °`](https://uiua.org/docs/un) [`json`](https://uiua.org/docs/language/json) no longer attempts to form multidimensional arrays
+  - This makes deserializing JSON more consistent
 - Add experimental inline macros
 - Remove the previously deprecated experimental `coordinate ⟔` function
 - Remove the previously deprecated experimental `struct` modifier
@@ -14,7 +16,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This massively simplifies compilation as well as optimizations and the derivation of inverses
   - This should not affect any language semantics
 - Improve pattern matching error messages
-- Optimize the pattern `ⁿ%:1`
+- Optimize the "root" pattern `ⁿ%:1`
 ### Website
 - Add a new pad setting to show line values to the right of the code
 

@@ -232,6 +232,13 @@ impl CustomInverse {
             }
         })
     }
+    /// Iterate over all nodes
+    pub fn nodes(&self) -> impl Iterator<Item = &SigNode> {
+        (self.normal.as_ref().into_iter())
+            .chain(self.un.as_ref())
+            .chain(self.anti.as_ref())
+            .chain(self.under.as_ref().into_iter().flat_map(|(b, a)| [a, b]))
+    }
 }
 
 impl Default for Node {
@@ -611,6 +618,9 @@ impl Node {
                 Node::Switch { branches, .. } => branches
                     .iter()
                     .all(|br| recurse(&br.node, purity, asm, visited)),
+                Node::CustomInverse(cust, _) => (cust.normal.as_ref().ok())
+                    .or(cust.un.as_ref())
+                    .is_some_and(|sn| recurse(&sn.node, purity, asm, visited)),
                 _ => true,
             };
             visited.truncate(len);
@@ -651,6 +661,9 @@ impl Node {
                 Node::Switch { branches, .. } => {
                     branches.iter().all(|br| recurse(&br.node, asm, visited))
                 }
+                Node::CustomInverse(cust, _) => (cust.normal.as_ref().ok())
+                    .or(cust.un.as_ref())
+                    .is_some_and(|sn| recurse(&sn.node, asm, visited)),
                 _ => true,
             };
             visited.truncate(len);
@@ -675,6 +688,9 @@ impl Node {
                 Node::Switch { branches, .. } => {
                     branches.iter().any(|br| recurse(&br.node, asm, visited))
                 }
+                Node::CustomInverse(cust, _) => (cust.normal.as_ref().ok())
+                    .or(cust.un.as_ref())
+                    .is_some_and(|sn| recurse(&sn.node, asm, visited)),
                 _ => false,
             };
             visited.truncate(len);

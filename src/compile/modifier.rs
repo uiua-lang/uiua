@@ -588,7 +588,8 @@ impl Compiler {
                     let mut node = f_before;
                     node.push(g.node.clone());
                     node.push(f_after);
-                    node.sig_node().unwrap()
+                    let sig = self.sig_of(&node, &f_span)?;
+                    SigNode::new(sig, node)
                 };
                 let span = self.add_span(modified.modifier.span.clone());
                 let un = if self.scope.experimental {
@@ -597,12 +598,15 @@ impl Compiler {
                             .node
                             .under_inverse(g.sig, true, &self.asm)
                             .map_err(|e| self.error(f_span.clone(), e))?;
-                        g.node.un_inverse(&self.asm).ok().map(|g_inv| {
-                            let mut node = f_before;
-                            node.push(g_inv);
-                            node.push(f_after);
-                            node.sig_node().unwrap()
-                        })
+                        (g.node.un_inverse(&self.asm).ok())
+                            .map(|g_inv| -> UiuaResult<SigNode> {
+                                let mut node = f_before;
+                                node.push(g_inv);
+                                node.push(f_after);
+                                let sig = self.sig_of(&node, &f_span)?;
+                                Ok(SigNode::new(sig, node))
+                            })
+                            .transpose()?
                     } else {
                         let cust = CustomInverse::from(InversionError::UnUnderSignature(f.sig));
                         Some(SigNode::new(

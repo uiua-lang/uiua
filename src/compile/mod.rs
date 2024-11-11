@@ -167,7 +167,7 @@ struct CurrentBinding {
 }
 
 /// A scope where names are defined
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct Scope {
     kind: ScopeKind,
     /// The name of the current file, if any
@@ -341,6 +341,22 @@ impl Compiler {
     }
     fn scopes(&self) -> impl Iterator<Item = &Scope> {
         once(&self.scope).chain(self.higher_scopes.iter().rev())
+    }
+    fn scopes_to_file(&self) -> impl Iterator<Item = &Scope> {
+        let already_file = matches!(self.scope.kind, ScopeKind::File(_));
+        once(&self.scope).chain(
+            (!already_file)
+                .then(|| {
+                    let file_index = self
+                        .higher_scopes
+                        .iter()
+                        .rposition(|s| matches!(s.kind, ScopeKind::File(_)))?;
+                    Some(self.higher_scopes[file_index..].iter().rev())
+                })
+                .flatten()
+                .into_iter()
+                .flatten(),
+        )
     }
     /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
     ///
@@ -1928,12 +1944,7 @@ code:
         if !local.public
             && get(&self.scope)
                 .filter(|l| l.public || !matches!(self.scope.kind, ScopeKind::AllInModule))
-                .or_else(|| {
-                    self.higher_scopes
-                        .last()
-                        .filter(|_| !matches!(self.scope.kind, ScopeKind::File(_)))
-                        .and_then(get)
-                })
+                .or_else(|| self.scopes_to_file().skip(1).find_map(get))
                 .map_or(true, |l| l.index != local.index)
         {
             self.add_error(span.clone(), format!("`{}` is private", name));

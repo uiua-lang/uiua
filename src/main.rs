@@ -182,6 +182,7 @@ fn main() {
             App::Eval {
                 code,
                 no_color,
+                experimental,
                 #[cfg(feature = "audio")]
                 audio_options,
                 args,
@@ -191,6 +192,7 @@ fn main() {
                 let mut rt = Uiua::with_native_sys().with_args(args);
                 rt.compile_run(|comp| {
                     comp.mode(RunMode::Normal)
+                        .experimental(experimental)
                         .print_diagnostics(true)
                         .load_str(&code)
                 })
@@ -710,6 +712,8 @@ enum App {
         code: String,
         #[clap(long, help = "Don't colorize stack output")]
         no_color: bool,
+        #[clap(short, long, help = "Enable experimental features")]
+        experimental: bool,
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,

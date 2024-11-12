@@ -299,6 +299,11 @@ impl Compiler {
         self.mode = mode;
         self
     }
+    /// Enable experimental features
+    pub fn experimental(&mut self, experimental: bool) -> &mut Self {
+        self.scope.experimental = experimental;
+        self
+    }
     /// Get the backend
     pub fn backend(&self) -> Arc<dyn SysBackend> {
         self.macro_env.rt.backend.clone()

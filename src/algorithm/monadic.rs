@@ -2395,10 +2395,13 @@ enum BinType {
 impl Value {
     pub(crate) fn to_binary(&self, env: &Uiua) -> UiuaResult<Vec<u8>> {
         let mut bytes = Vec::new();
-        self.to_binary_impl(&mut bytes, env)?;
+        self.to_binary_impl(&mut bytes, 0, env)?;
         Ok(bytes)
     }
-    fn to_binary_impl(&self, bytes: &mut Vec<u8>, env: &Uiua) -> UiuaResult {
+    fn to_binary_impl(&self, bytes: &mut Vec<u8>, depth: usize, env: &Uiua) -> UiuaResult {
+        if depth > 20 {
+            return Err(env.error("Nested structure is too deep"));
+        }
         if self.rank() > u8::MAX as usize {
             return Err(env.error(format!("Rank {} is too large", self.rank())));
         }
@@ -2412,6 +2415,7 @@ impl Value {
             ty: BinType,
             meta: &ArrayMeta,
             bytes: &mut Vec<u8>,
+            depth: usize,
             env: &Uiua,
         ) -> UiuaResult {
             let mut ty_u = ty as u8;
@@ -2437,7 +2441,9 @@ impl Value {
                 // Map keys
                 bytes.push(meta.map_keys.is_some() as u8);
                 if let Some(keys) = &meta.map_keys {
-                    keys.clone().normalized().to_binary_impl(bytes, env)?;
+                    keys.clone()
+                        .normalized()
+                        .to_binary_impl(bytes, depth + 1, env)?;
                 }
             }
             Ok(())
@@ -2489,7 +2495,7 @@ impl Value {
                 } else {
                     BinType::F64
                 };
-                write_ty_meta(ty, arr.meta(), bytes, env)?;
+                write_ty_meta(ty, arr.meta(), bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 fn write(nums: &[f64], bytes: &mut Vec<u8>, f: impl Fn(f64, &mut Vec<u8>)) {
                     for &n in nums {
@@ -2512,26 +2518,26 @@ impl Value {
                 }
             }
             Value::Byte(arr) => {
-                write_ty_meta(BinType::U8, arr.meta(), bytes, env)?;
+                write_ty_meta(BinType::U8, arr.meta(), bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 bytes.extend(&arr.data);
             }
             Value::Char(arr) => {
-                write_ty_meta(BinType::Char, arr.meta(), bytes, env)?;
+                write_ty_meta(BinType::Char, arr.meta(), bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 let s: String = arr.data.iter().copied().collect();
                 bytes.extend((s.as_bytes().len() as u32).to_le_bytes());
                 bytes.extend(s.as_bytes());
             }
             Value::Box(arr) => {
-                write_ty_meta(BinType::Box, arr.meta(), bytes, env)?;
+                write_ty_meta(BinType::Box, arr.meta(), bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 for Boxed(v) in &arr.data {
-                    v.to_binary_impl(bytes, env)?;
+                    v.to_binary_impl(bytes, depth + 1, env)?;
                 }
             }
             Value::Complex(arr) => {
-                write_ty_meta(BinType::Complex, arr.meta(), bytes, env)?;
+                write_ty_meta(BinType::Complex, arr.meta(), bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 for Complex { re, im } in &arr.data {
                     bytes.extend(re.to_le_bytes());
@@ -2542,9 +2548,12 @@ impl Value {
         Ok(())
     }
     pub(crate) fn from_binary(mut bytes: &[u8], env: &Uiua) -> UiuaResult<Self> {
-        Self::from_binary_impl(&mut bytes, env)
+        Self::from_binary_impl(&mut bytes, 0, env)
     }
-    fn from_binary_impl(bytes: &mut &[u8], env: &Uiua) -> UiuaResult<Self> {
+    fn from_binary_impl(bytes: &mut &[u8], depth: usize, env: &Uiua) -> UiuaResult<Self> {
+        if depth > 20 {
+            return Err(env.error("Nested structure is too deep"));
+        }
         // Type
         let mut ty_u = *bytes
             .first()
@@ -2591,7 +2600,7 @@ impl Value {
             let has_map_keys = *bytes.first().unwrap() != 0;
             *bytes = &bytes[1..];
             let keys = if has_map_keys {
-                Some(Self::from_binary_impl(bytes, env)?)
+                Some(Self::from_binary_impl(bytes, depth + 1, env)?)
             } else {
                 None
             };
@@ -2679,7 +2688,7 @@ impl Value {
             BinType::Box => {
                 let mut data = EcoVec::with_capacity(shape.elements());
                 for i in 0..shape.elements() {
-                    let val = Self::from_binary_impl(bytes, env)
+                    let val = Self::from_binary_impl(bytes, depth + 1, env)
                         .map_err(|e| env.error(format!("Failed to parse box element {i}: {e}")))?;
                     data.push(Boxed(val));
                 }

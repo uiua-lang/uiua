@@ -3290,6 +3290,7 @@ primitive!(
     /// Any array can be encoded unless it:
     /// - contains an I/O handle or FFI pointer
     /// - has a rank `greater than``255`
+    /// - has a very high nesting via [box] or [map]
     ///
     /// ex: # Experimental!
     ///   : binary [1 2 3 4]

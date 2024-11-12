@@ -1,11 +1,11 @@
 //! Code for couple, join, and general array creation
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, iter::once};
 
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::{max_shape, validate_size_impl, FillContext, Indexable},
+    algorithm::{max_shape, validate_size_impl, validate_size_of, FillContext, Indexable},
     cowslice::cowslice,
     val_as_arr, Array, ArrayValue, Boxed, Complex, FormatShape, Primitive, Shape, Uiua, UiuaResult,
     Value,
@@ -229,10 +229,14 @@ impl<T: ArrayValue> Array<T> {
         crate::profile_function!();
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
-                other.combine_meta(self.meta());
                 if self.shape() == [0] {
                     return Ok(other);
                 }
+                if other.shape.row_count() == 0 {
+                    validate_size_of::<T>(once(1).chain(other.shape[1..].iter().copied()))
+                        .map_err(|e| ctx.error(e))?;
+                }
+                other.combine_meta(self.meta());
                 let target_shape = match ctx.scalar_fill::<T>() {
                     Ok(fill) => {
                         let target_shape = max_shape(&self.shape, &other.shape);
@@ -361,6 +365,10 @@ impl<T: ArrayValue> Array<T> {
         allow_ext: bool,
         ctx: &C,
     ) -> Result<(), C::Error> {
+        if self.shape.row_count() == 0 {
+            validate_size_of::<T>(once(1).chain(self.shape[1..].iter().copied()))
+                .map_err(|e| ctx.error(e))?;
+        }
         self.combine_meta(other.meta());
         if self.shape[1..] == other.shape {
             self.data.extend_from_cowslice(other.data);

@@ -100,17 +100,9 @@ impl Stack {
         self.set_min_height();
         self.stack.pop().unwrap_or(BasicValue::Other)
     }
-    fn pop_n(&mut self, n: usize) {
-        self.height = self.height.saturating_sub(n as i32);
-        self.stack.truncate(self.stack.len().saturating_sub(n));
-    }
     fn push(&mut self, val: BasicValue) {
         self.height += 1;
         self.stack.push(val);
-    }
-    pub fn push_n(&mut self, n: usize) {
-        self.height = self.height.saturating_add(n as i32);
-        self.stack.extend(repeat(BasicValue::Other).take(n));
     }
     /// Set the current stack height as a potential minimum.
     /// At the end of checking, the minimum stack height is a component in calculating the signature.
@@ -591,8 +583,12 @@ impl VirtualEnv {
         self.stack.pop()
     }
     fn handle_args_outputs(&mut self, args: usize, outputs: usize) {
-        self.stack.pop_n(args);
-        self.stack.push_n(outputs);
+        for _ in 0..args {
+            self.pop();
+        }
+        for _ in 0..outputs {
+            self.push(BasicValue::Other);
+        }
     }
     fn handle_sig(&mut self, sig: Signature) {
         self.handle_args_outputs(sig.args, sig.outputs)

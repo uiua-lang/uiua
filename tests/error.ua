@@ -86,3 +86,5 @@ F
 
 # Experimental!
 quote(⊂⊂:⊂⊂,⊸:-7’+1⊡5."quote(⊂⊂:⊂⊂,⊸:-7’+1⊡5.")
+
+°binary 0_1_10

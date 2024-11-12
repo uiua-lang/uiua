@@ -2621,7 +2621,10 @@ impl Value {
 
         // Shape
         let mut shape = Shape::with_capacity(rank as usize);
-        for _ in 0..rank {
+        for i in 0..rank {
+            if bytes.len() < size_of::<u32>() {
+                return Err(env.error(format!("Missing shape dimension {i}")));
+            }
             let len = u32::from_le_bytes(bytes[..size_of::<u32>()].try_into().unwrap());
             shape.push(len as usize);
             *bytes = &bytes[size_of::<u32>()..];

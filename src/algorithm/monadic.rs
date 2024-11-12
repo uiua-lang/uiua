@@ -2392,6 +2392,8 @@ enum BinType {
     Complex = 48,
 }
 
+const MAX_BINARY_DEPTH: usize = if cfg!(debug_assertions) { 10 } else { 32 };
+
 impl Value {
     pub(crate) fn to_binary(&self, env: &Uiua) -> UiuaResult<Vec<u8>> {
         let mut bytes = Vec::new();
@@ -2399,7 +2401,7 @@ impl Value {
         Ok(bytes)
     }
     fn to_binary_impl(&self, bytes: &mut Vec<u8>, depth: usize, env: &Uiua) -> UiuaResult {
-        if depth > 20 {
+        if depth > MAX_BINARY_DEPTH {
             return Err(env.error("Nested structure is too deep"));
         }
         if self.rank() > u8::MAX as usize {
@@ -2551,7 +2553,7 @@ impl Value {
         Self::from_binary_impl(&mut bytes, 0, env)
     }
     fn from_binary_impl(bytes: &mut &[u8], depth: usize, env: &Uiua) -> UiuaResult<Self> {
-        if depth > 20 {
+        if depth > MAX_BINARY_DEPTH {
             return Err(env.error("Nested structure is too deep"));
         }
         // Type

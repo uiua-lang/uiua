@@ -2613,13 +2613,13 @@ primitive!(
     /// We can then arrange our [try] pattern matching with a [case] for each branch. The code in each branch that comes after the pattern match is wrapped in a [case].
     /// ex! # Experimental!
     ///   : F ← ⍣(
-    ///   :   case(⊏3) °(⊂1)
-    ///   : | case(⊏1) °(⊂2)
+    ///   :   ⍩(⊏3) °(⊂1)
+    ///   : | ⍩(⊏1) °(⊂2)
     ///   : | 0
     ///   : )
     ///   : F [1 2 3 4]
     /// And there we go. Task failed successfully!
-    ([1], Case, Misc, "case"),
+    ([1], Case, Misc, ("case", '⍩')),
     /// Throw an error if a condition is not met
     ///
     /// Expects a message and a test value.

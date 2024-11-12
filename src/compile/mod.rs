@@ -64,8 +64,8 @@ pub struct Compiler {
     index_macros: HashMap<usize, IndexMacro>,
     /// Unexpanded code macros
     code_macros: HashMap<usize, CodeMacro>,
-    /// The depth of macro expansion
-    macro_depth: usize,
+    /// The depth of compile-time evaluation
+    comptime_depth: usize,
     /// Whether the compiler is in a try
     in_try: bool,
     /// Accumulated errors
@@ -98,7 +98,7 @@ impl Default for Compiler {
             imports: HashMap::new(),
             index_macros: HashMap::new(),
             code_macros: HashMap::new(),
-            macro_depth: 0,
+            comptime_depth: 0,
             in_try: false,
             errors: Vec::new(),
             deprecated_prim_errors: HashSet::new(),

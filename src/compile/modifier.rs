@@ -6,6 +6,8 @@ use algebra::{derivative, integral};
 use invert::InversionError;
 use pre_eval::PreEvalMode;
 
+const MAX_COMPTIME_DEPTH: usize = if cfg!(debug_assertions) { 5 } else { 20 };
+
 impl Compiler {
     fn desugar_function_pack_inner(
         &mut self,
@@ -970,10 +972,12 @@ impl Compiler {
             (self.code_meta.global_references).insert(comp.module.span.clone(), local.index);
         }
         // Handle recursion depth
-        self.macro_depth += 1;
-        const MAX_MACRO_DEPTH: usize = if cfg!(debug_assertions) { 10 } else { 20 };
-        if self.macro_depth > MAX_MACRO_DEPTH {
-            return Err(self.error(modifier_span.clone(), "Macro recurs too deep"));
+        self.comptime_depth += 1;
+        if self.comptime_depth > MAX_COMPTIME_DEPTH {
+            return Err(self.error(
+                modifier_span.clone(),
+                "Macro makes compilation recur too deep",
+            ));
         }
         let node = if let Some(mut mac) = self.index_macros.get(&local.index).cloned() {
             // Index macros
@@ -1185,7 +1189,7 @@ impl Compiler {
         } else {
             Node::empty()
         };
-        self.macro_depth -= 1;
+        self.comptime_depth -= 1;
         Ok(node)
     }
     fn node_unbound_index(&self, node: &Node) -> Option<usize> {
@@ -1268,9 +1272,14 @@ impl Compiler {
         // Compile the generated items
         let temp_mode = self.pre_eval_mode.min(PreEvalMode::Line);
         let pre_eval_mod = replace(&mut self.pre_eval_mode, temp_mode);
+        self.comptime_depth += 1;
+        if self.comptime_depth > MAX_COMPTIME_DEPTH {
+            return Err(self.error(span.clone(), "Compile-time evaluation recurs too deep"));
+        }
         let res = self
             .items(items, true)
             .map_err(|e| e.trace_macro(name.clone(), span.clone()));
+        self.comptime_depth -= 1;
         self.pre_eval_mode = pre_eval_mod;
         // Extract generated root node
         let node = self.asm.root.split_off(root_node_len);

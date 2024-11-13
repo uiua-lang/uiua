@@ -1295,7 +1295,7 @@ impl Compiler {
         if self.pre_eval_mode == PreEvalMode::Lsp {
             return self.word(operand);
         }
-        let mut comp = self.clone();
+        let orig_spans_len = self.asm.spans.len();
         let sn = self.word_sig(operand)?;
         if sn.sig.args > 0 {
             return Err(self.error(
@@ -1307,6 +1307,7 @@ impl Compiler {
                 ),
             ));
         }
+        let mut comp = self.clone();
         if let Some(index) = comp.node_unbound_index(&sn.node) {
             let name = comp.scope.names.iter().find_map(|(ident, local)| {
                 if local.index == index {
@@ -1324,15 +1325,17 @@ impl Compiler {
         }
         let asm_root_len = comp.asm.root.len();
         comp.asm.root.push(sn.node);
-        let values = match comp.macro_env.run_asm(comp.asm.clone()) {
-            Ok(_) => comp.macro_env.take_stack(),
-            Err(e) => {
-                if self.errors.is_empty() {
-                    self.add_error(span.clone(), format!("Compile-time evaluation failed: {e}"));
-                }
-                vec![Value::default(); sn.sig.outputs]
+        let res = comp.macro_env.run_asm(comp.asm.clone());
+        let stack = comp.macro_env.take_stack();
+        let values = if let Err(e) = res {
+            if self.errors.is_empty() {
+                self.add_error(span.clone(), format!("Compile-time evaluation failed: {e}"));
             }
+            vec![Value::default(); sn.sig.outputs]
+        } else {
+            stack
         };
+        self.asm.spans.truncate(orig_spans_len);
         comp.asm.root.truncate(asm_root_len);
         let val_count = sn.sig.outputs;
         let mut node = Node::empty();

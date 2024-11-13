@@ -874,10 +874,12 @@ at {}",
         })
     }
     /// Get the span of the current function call
+    #[track_caller]
     pub fn span(&self) -> Span {
         self.get_span(self.span_index())
     }
     /// Get a span by its index
+    #[track_caller]
     pub fn get_span(&self, span: usize) -> Span {
         self.asm.spans[span].clone()
     }

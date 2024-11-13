@@ -359,7 +359,7 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::Box, &["bx"]),
         (Primitive::IndexOf, &["idx"]),
         (Primitive::Switch, &["sw"]),
-        (Primitive::Floor, &["flr"]),
+        (Primitive::Floor, &["flr", "flor"]),
         (Primitive::Range, &["ran"]),
         (Primitive::Transpose, &["tra"]),
         (Primitive::Partition, &["par"]),
@@ -372,6 +372,8 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::Gt, &["gt"]),
         (Primitive::Ge, &["ge", "geq"]),
         (Primitive::Utf8, &["utf", "utf__8"]),
+        (Primitive::First, &["fst"]),
+        (Primitive::Last, &["lst"]),
         (Primitive::ImageEncode, &["&ime", "imen"]),
         (Primitive::GifEncode, &["&gife", "gifen"]),
         (Primitive::AudioEncode, &["&ae", "auden"]),
@@ -560,6 +562,8 @@ impl Primitive {
             use Primitive::*;
             Some(match name {
                 "kork" => vec![(Keep, "k"), (On, "o"), (Rows, "r"), (Keep, "k")],
+                "rkok" => vec![(Rows, "r"), (Keep, "k"), (On, "o"), (Keep, "k")],
+                "dor" => vec![(Div, "d"), (On, "o"), (Range, "r")],
                 "awm" => vec![(Assert, "a"), (With, "w"), (Match, "m")],
                 _ => return None,
             })

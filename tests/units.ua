@@ -295,6 +295,10 @@ F ← G
 F ←
 ≡F
 
+4
+a ← ()
+⍤⤙≍ 4
+
 # Constant vs Noadic function
 F ← ⚂
 G ← (⚂)

@@ -250,6 +250,7 @@ impl Compiler {
             recurses: 0,
             global_index: local.index,
         });
+        let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
         let node = self.words(binding.words);
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
         let node = node?;
@@ -289,7 +290,7 @@ impl Compiler {
                             span: spandex,
                         });
                     }
-                } else if node.is_empty() {
+                } else if node.is_empty() && no_code_words {
                     // Binding binds the value above
                     match &mut self.scope.stack_height {
                         Ok(height) => {

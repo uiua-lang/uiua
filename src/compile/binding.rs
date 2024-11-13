@@ -54,9 +54,9 @@ impl Compiler {
 
         // Handle macro
         let ident_margs = ident_modifier_args(&name);
-        let placeholder_count = count_placeholders(&binding.words);
+        let max_placeholder = max_placeholder(&binding.words);
         if binding.code_macro {
-            if placeholder_count > 0 {
+            if max_placeholder.is_some() {
                 return Err(self.error(span.clone(), "Code macros may not contain placeholders"));
             }
             // Code macro
@@ -130,9 +130,9 @@ impl Compiler {
             return Ok(());
         }
         // Index macro
-        match (ident_margs > 0, placeholder_count > 0) {
-            (true, true) | (false, false) => {}
-            (true, false) => {
+        match (ident_margs, max_placeholder) {
+            (0, None) => {}
+            (_, None) => {
                 self.add_error(
                     span.clone(),
                     format!(
@@ -141,7 +141,7 @@ impl Compiler {
                     ),
                 );
             }
-            (false, true) => {
+            (0, Some(_)) => {
                 self.add_error(
                     span.clone(),
                     format!(
@@ -151,8 +151,21 @@ impl Compiler {
                 );
                 return Ok(());
             }
+            (n, Some(max)) => {
+                if max + 1 > n {
+                    self.emit_diagnostic(
+                        format!(
+                            "`{name}`'s name suggest at most ^{}, \
+                            but it contains a ^{max}",
+                            n - 1
+                        ),
+                        DiagnosticKind::Warning,
+                        span.clone(),
+                    );
+                }
+            }
         }
-        if placeholder_count > 0 || ident_margs > 0 {
+        if max_placeholder.is_some() || ident_margs > 0 {
             self.scope.names.insert(name.clone(), local);
             self.asm.add_binding_at(
                 local,

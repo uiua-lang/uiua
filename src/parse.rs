@@ -1560,34 +1560,40 @@ pub fn ident_modifier_args(ident: &str) -> usize {
     count
 }
 
-pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {
-    let mut count = 0;
+pub(crate) fn max_placeholder(words: &[Sp<Word>]) -> Option<usize> {
+    let mut max: Option<usize> = None;
+    let mut set = |i: Option<usize>| {
+        if let Some(i) = i {
+            let max = max.get_or_insert(0);
+            *max = (*max).max(i);
+        }
+    };
     for word in words {
         match &word.value {
-            Word::Placeholder(_) => count += 1,
-            Word::Strand(items) => count += count_placeholders(items),
+            Word::Placeholder(i) => set(Some(*i)),
+            Word::Strand(items) => set(max_placeholder(items)),
             Word::Array(arr) => {
                 for line in &arr.lines {
-                    count += count_placeholders(line);
+                    set(max_placeholder(line));
                 }
             }
             Word::Func(func) => {
                 for line in &func.lines {
-                    count += count_placeholders(line);
+                    set(max_placeholder(line));
                 }
             }
-            Word::Modified(m) => count += count_placeholders(&m.operands),
+            Word::Modified(m) => set(max_placeholder(&m.operands)),
             Word::Pack(pack) => {
                 for branch in &pack.branches {
                     for line in &branch.value.lines {
-                        count += count_placeholders(line);
+                        set(max_placeholder(line));
                     }
                 }
             }
             _ => {}
         }
     }
-    count
+    max
 }
 
 pub(crate) fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {

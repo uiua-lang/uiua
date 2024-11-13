@@ -32,7 +32,7 @@ use crate::{
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, ImportSrc, SetInverses, SigDecl},
-    parse::{count_placeholders, flip_unsplit_lines, parse, split_words},
+    parse::{flip_unsplit_lines, max_placeholder, parse, split_words},
     Array, ArrayLen, Assembly, BindingKind, Boxed, CustomInverse, Diagnostic, DiagnosticKind,
     DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc,
     IntoInputSrc, IntoSysBackend, Node, Primitive, Purity, RunMode, SemanticComment, SigNode,
@@ -607,7 +607,7 @@ code:
             }
             let span =
                 (line.first().unwrap().span.clone()).merge(line.last().unwrap().span.clone());
-            if count_placeholders(&line) > 0 {
+            if max_placeholder(&line).is_some() {
                 self.add_error(
                     span.clone(),
                     "Cannot use placeholder outside of an index macro",

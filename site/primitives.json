@@ -441,6 +441,7 @@
     "description": "Duplicate a function's last argument before calling it"
   },
   "case": {
+    "glyph": "⍩",
     "outputs": 1,
     "modifier_args": 1,
     "class": "Misc",

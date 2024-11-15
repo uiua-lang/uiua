@@ -177,7 +177,7 @@ sys_op! {
     (1(0), Prin, StdIO, "&pf", "print and flush", Mutating),
     /// Print a value to stdout followed by a newline
     ///
-    /// [&p] differs from [&s] when printing rank 1 or 2 character arrays, and when printing scalar number types
+    /// [&p] differs from [&s] when printing rank 0 or 1 character arrays, and when printing scalar number types
     /// ex: &p ℂ0 1
     ///   : &p "hello,\tworld"
     ///   : &p 1/3

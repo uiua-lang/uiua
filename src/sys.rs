@@ -183,6 +183,8 @@ sys_op! {
     ///   : &p 1/3
     ///   : &p π
     ///   : &p @U
+    /// [&p] will ignore any level of [box]ing
+    /// ex: &p □□□"In a box"
     (1(0), Print, StdIO, "&p", "print with newline", Mutating),
     /// Read a line from stdin
     ///

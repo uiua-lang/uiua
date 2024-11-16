@@ -161,10 +161,30 @@ impl SysOpClass {
 
 sys_op! {
     /// Print a nicely formatted representation of a value to stdout
+    ///
+    /// [&s] will print the value the same way it would appear at the end of a program, or from [?].
+    /// ex: &s ℂ0 1
+    ///   : &s "hello,\tworld"
+    ///   : &s 1/3
+    ///   : &s π
+    ///   : &s @U
+    ///
+    /// To print values in a more standard way, see [&p].
     (1(0), Show, StdIO, "&s", "show", Mutating),
     /// Print a value to stdout
+    ///
+    /// Exactly like [&p], except that there is no trailing newline.
     (1(0), Prin, StdIO, "&pf", "print and flush", Mutating),
     /// Print a value to stdout followed by a newline
+    ///
+    /// [&p] differs from [&s] when printing rank 0 or 1 character arrays, and when printing scalar number types.
+    /// ex: &p ℂ0 1
+    ///   : &p "hello,\tworld"
+    ///   : &p 1/3
+    ///   : &p π
+    ///   : &p @U
+    /// [&p] will ignore any level of [box]ing.
+    /// ex: &p □□□"In a box"
     (1(0), Print, StdIO, "&p", "print with newline", Mutating),
     /// Read a line from stdin
     ///

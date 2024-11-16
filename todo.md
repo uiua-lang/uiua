@@ -3,6 +3,8 @@
 ## 0.14
 The next version of Uiua
 
+- Change how multi-input `group`/`partition` works
+  - Optimize reduction replacement
 - Stabilize `sort`, `last`, `backward`, `case`
 - Compile-time code string evaluation
 - `do` function pack

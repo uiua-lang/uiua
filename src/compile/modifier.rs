@@ -9,11 +9,12 @@ use pre_eval::PreEvalMode;
 const MAX_COMPTIME_DEPTH: usize = if cfg!(debug_assertions) { 5 } else { 20 };
 
 impl Compiler {
-    fn desugar_function_pack_inner(
+    fn desugar_function_pack(
         &mut self,
         modifier: &Sp<Modifier>,
         operand: &Sp<Word>,
-    ) -> UiuaResult<Option<Word>> {
+        subscript: Option<usize>,
+    ) -> UiuaResult<Option<Node>> {
         let Sp {
             value: Word::Pack(pack),
             span,
@@ -28,14 +29,16 @@ impl Compiler {
                     operands: (pack.branches.iter())
                         .map(|b| b.clone().map(Word::Func))
                         .collect(),
+                    pack_expansion: true,
                 };
-                Ok(Some(Word::Modified(new.into())))
+                 self.modified(new, subscript)
             }
             Modifier::Primitive(Primitive::Dip) => {
                 let mut branches = pack.branches.iter().cloned().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),
                     operands: vec![branches.next().unwrap().map(Word::Func)],
+                    pack_expansion: true,
                 };
                 for branch in branches {
                     let mut lines = branch.value.lines;
@@ -48,15 +51,17 @@ impl Compiler {
                             lines,
                             closed: true,
                         }))],
+                    pack_expansion: true,
                     };
                 }
-                Ok(Some(Word::Modified(Box::new(new))))
+                self.modified(new, subscript)
             }
             Modifier::Primitive(Primitive::Rows | Primitive::Inventory) => {
                 let mut branches = pack.branches.iter().cloned();
                 let mut new = Modified {
                     modifier: modifier.clone(),
                     operands: vec![branches.next().unwrap().map(Word::Func)],
+                    pack_expansion: true,
                 };
                 for branch in branches {
                     let mut lines = branch.value.lines;
@@ -72,9 +77,10 @@ impl Compiler {
                             lines,
                             closed: true,
                         }))],
+                    pack_expansion: true,
                     };
                 }
-                Ok(Some(Word::Modified(Box::new(new))))
+                self.modified(new, subscript)
             }
             Modifier::Primitive(
                 Primitive::Fork | Primitive::Bracket | Primitive::Try | Primitive::Fill,
@@ -91,6 +97,7 @@ impl Compiler {
                         ops.reverse();
                         ops
                     },
+                    pack_expansion: true,
                 };
                 for branch in branches {
                     new = Modified {
@@ -99,9 +106,10 @@ impl Compiler {
                             branch.map(Word::Func),
                             span.clone().sp(Word::Modified(Box::new(new))),
                         ],
+                    pack_expansion: true,
                     };
                 }
-                Ok(Some(Word::Modified(Box::new(new))))
+                self.modified(new, subscript)
             }
             Modifier::Primitive(Primitive::On) => {
                 let mut words = Vec::new();
@@ -109,70 +117,53 @@ impl Compiler {
                     words.push(branch.span.clone().sp(Word::Modified(Box::new(Modified {
                         modifier: modifier.clone(),
                         operands: vec![branch.map(Word::Func)],
+                    pack_expansion: true,
                     }))));
                 }
-                Ok(Some(Word::Func(Func {
-                    signature: None,
-                    lines: vec![words],
-                    closed: true,
-                })))
+                self.words(words)
             }
-            _ => Ok(None),
-        }
-    }
-    fn desugar_function_pack(
-        &mut self,
-        modifier: &Sp<Modifier>,
-        operand: &Sp<Word>,
-        subscript: Option<usize>,
-    ) -> UiuaResult<Option<Node>> {
-        let node = if let Some(word) = self.desugar_function_pack_inner(modifier, operand)? {
-            let span = modifier.span.clone().merge(operand.span.clone());
-            self.word(span.sp(word))?
-        } else if let Word::Pack(pack @ FunctionPack { .. }) = &operand.value {
-            match &modifier.value {
-                Modifier::Primitive(Primitive::Switch) => self.switch(
-                    (pack.branches.iter().cloned())
-                        .map(|sp| sp.map(Word::Func))
-                        .collect(),
-                    modifier.span.clone(),
-                )?,
-                Modifier::Primitive(Primitive::Obverse) => {
-                    let mut nodes = Vec::new();
-                    let mut spans = Vec::new();
-                    for br in &pack.branches {
-                        let word = br.clone().map(Word::Func);
-                        let span = word.span.clone();
-                        let sn = self.word_sig(word)?;
-                        nodes.push(sn);
-                        spans.push(span);
+            Modifier::Primitive(Primitive::Switch) => self.switch(
+                (pack.branches.iter().cloned())
+                    .map(|sp| sp.map(Word::Func))
+                    .collect(),
+                modifier.span.clone(),
+            ),
+            Modifier::Primitive(Primitive::Obverse) => {
+                let mut nodes = Vec::new();
+                let mut spans = Vec::new();
+                for br in &pack.branches {
+                    let word = br.clone().map(Word::Func);
+                    let span = word.span.clone();
+                    let sn = self.word_sig(word)?;
+                    nodes.push(sn);
+                    spans.push(span);
+                }
+                let mut cust = CustomInverse {
+                    is_obverse: true,
+                    ..Default::default()
+                };
+                match nodes.as_slice() {
+                    [a, b] => {
+                        cust.normal = Ok(a.clone());
+                        if a.sig == b.sig.inverse() {
+                            cust.un = Some(b.clone());
+                        } else if a.sig.anti().is_some_and(|sig| sig == b.sig) {
+                            cust.anti = Some(b.clone());
+                        } else {
+                            cust.under = Some((a.clone(), b.clone()));
+                        }
                     }
-                    let mut cust = CustomInverse {
-                        is_obverse: true,
-                        ..Default::default()
-                    };
-                    match nodes.as_slice() {
-                        [a, b] => {
-                            cust.normal = Ok(a.clone());
-                            if a.sig == b.sig.inverse() {
-                                cust.un = Some(b.clone());
-                            } else if a.sig.anti().is_some_and(|sig| sig == b.sig) {
-                                cust.anti = Some(b.clone());
-                            } else {
-                                cust.under = Some((a.clone(), b.clone()));
-                            }
+                    [a, b, c] => {
+                        cust.normal = Ok(a.clone());
+                        if !b.node.is_empty() && !c.node.is_empty() {
+                            cust.under = Some((b.clone(), c.clone()));
                         }
-                        [a, b, c] => {
-                            cust.normal = Ok(a.clone());
-                            if !b.node.is_empty() && !c.node.is_empty() {
-                                cust.under = Some((b.clone(), c.clone()));
-                            }
-                        }
-                        [a, b, c, d] => {
-                            cust.normal = Ok(a.clone());
-                            if !b.node.is_empty() {
-                                if !a.sig.is_compatible_with(b.sig.inverse()) {
-                                    self.emit_diagnostic(
+                    }
+                    [a, b, c, d] => {
+                        cust.normal = Ok(a.clone());
+                        if !b.node.is_empty() {
+                            if !a.sig.is_compatible_with(b.sig.inverse()) {
+                                self.emit_diagnostic(
                                         format!(
                                             "First and second functions must have opposite signatures, \
                                             but their signatures are {} and {}",
@@ -182,123 +173,120 @@ impl Compiler {
                                         DiagnosticKind::Warning,
                                         modifier.span.clone(),
                                     );
-                                }
-                                cust.un = Some(b.clone());
                             }
-                            if !d.node.is_empty() {
-                                if !c.node.is_empty() {
-                                    cust.under = Some((c.clone(), d.clone()));
-                                }
-                                if a.sig.anti().is_some_and(|sig| sig == d.sig) {
-                                    cust.anti = Some(d.clone());
-                                }
-                            }
+                            cust.un = Some(b.clone());
                         }
-                        [a, b, c, d, e] => {
-                            cust.normal = Ok(a.clone());
-                            if !b.node.is_empty() {
-                                if !a.sig.is_compatible_with(b.sig.inverse()) {
-                                    self.emit_diagnostic(
-                                        format!(
-                                            "First and second functions must have opposite signatures, \
-                                            but their signatures are {} and {}",
-                                            a.sig,
-                                            b.sig
-                                        ),
-                                        DiagnosticKind::Warning,
-                                        modifier.span.clone(),
-                                    );
-                                }
-                                cust.un = Some(b.clone());
-                            }
-                            if !c.node.is_empty() && !d.node.is_empty() {
+                        if !d.node.is_empty() {
+                            if !c.node.is_empty() {
                                 cust.under = Some((c.clone(), d.clone()));
                             }
-                            if !e.node.is_empty() {
-                                match a.sig.anti() {
-                                    None => self.emit_diagnostic(
+                            if a.sig.anti().is_some_and(|sig| sig == d.sig) {
+                                cust.anti = Some(d.clone());
+                            }
+                        }
+                    }
+                    [a, b, c, d, e] => {
+                        cust.normal = Ok(a.clone());
+                        if !b.node.is_empty() {
+                            if !a.sig.is_compatible_with(b.sig.inverse()) {
+                                self.emit_diagnostic(
                                         format!(
-                                            "An anti inverse is specified, but the first \
-                                            function's signature {} cannot have an anti inverse",
-                                            a.sig
+                                            "First and second functions must have opposite signatures, \
+                                            but their signatures are {} and {}",
+                                            a.sig,
+                                            b.sig
                                         ),
                                         DiagnosticKind::Warning,
                                         modifier.span.clone(),
+                                    );
+                            }
+                            cust.un = Some(b.clone());
+                        }
+                        if !c.node.is_empty() && !d.node.is_empty() {
+                            cust.under = Some((c.clone(), d.clone()));
+                        }
+                        if !e.node.is_empty() {
+                            match a.sig.anti() {
+                                None => self.emit_diagnostic(
+                                    format!(
+                                        "An anti inverse is specified, but the first \
+                                            function's signature {} cannot have an anti inverse",
+                                        a.sig
                                     ),
-                                    Some(sig) if sig != e.sig => {
-                                        self.emit_diagnostic(
-                                            format!(
-                                                "The first function's signature implies an \
+                                    DiagnosticKind::Warning,
+                                    modifier.span.clone(),
+                                ),
+                                Some(sig) if sig != e.sig => {
+                                    self.emit_diagnostic(
+                                        format!(
+                                            "The first function's signature implies an \
                                                 anti inverse with signature {sig}, but the \
                                                 fifth function's signature is {}",
-                                                e.sig
-                                            ),
-                                            DiagnosticKind::Warning,
-                                            modifier.span.clone(),
-                                        );
-                                    }
-                                    Some(_) => {}
+                                            e.sig
+                                        ),
+                                        DiagnosticKind::Warning,
+                                        modifier.span.clone(),
+                                    );
                                 }
-                                cust.anti = Some(e.clone());
+                                Some(_) => {}
                             }
+                            cust.anti = Some(e.clone());
                         }
-                        funcs => {
-                            return Err(self.error(
-                                modifier.span.clone(),
-                                format!(
-                                    "Obverse requires between 1 and 5 branches, \
+                    }
+                    funcs => {
+                        return Err(self.error(
+                            modifier.span.clone(),
+                            format!(
+                                "Obverse requires between 1 and 5 branches, \
                                     but {} were provided",
-                                    funcs.len()
-                                ),
-                            ))
-                        }
-                    };
-                    let set_inverses = SetInverses {
-                        un: cust.un.is_some(),
-                        anti: cust.anti.is_some(),
-                        under: cust.under.is_some(),
-                    };
-                    self.code_meta
-                        .obverses
-                        .insert(modifier.span.clone(), set_inverses);
-                    for span in spans {
-                        if let Some(sig_decl) = self.code_meta.function_sigs.get_mut(&span) {
-                            sig_decl.set_inverses = set_inverses;
-                        }
+                                funcs.len()
+                            ),
+                        ))
                     }
-                    let span = self.add_span(modifier.span.clone());
-                    Node::CustomInverse(cust.into(), span)
-                }
-                m if m.args() >= 2 => {
-                    let new = Modified {
-                        modifier: modifier.clone(),
-                        operands: pack
-                            .branches
-                            .iter()
-                            .cloned()
-                            .map(|w| w.map(Word::Func))
-                            .collect(),
-                    };
-                    self.modified(new, subscript)?
-                }
-                m => {
-                    if let Modifier::Ref(name) = m {
-                        if let Ok(Some((_, local))) = self.ref_local(name) {
-                            if self.code_macros.contains_key(&local.index) {
-                                return Ok(None);
-                            }
-                        }
+                };
+                let set_inverses = SetInverses {
+                    un: cust.un.is_some(),
+                    anti: cust.anti.is_some(),
+                    under: cust.under.is_some(),
+                };
+                self.code_meta
+                    .obverses
+                    .insert(modifier.span.clone(), set_inverses);
+                for span in spans {
+                    if let Some(sig_decl) = self.code_meta.function_sigs.get_mut(&span) {
+                        sig_decl.set_inverses = set_inverses;
                     }
-                    return Err(self.error(
-                        modifier.span.clone().merge(operand.span.clone()),
-                        format!("{m} cannot use a function pack"),
-                    ));
                 }
+                let span = self.add_span(modifier.span.clone());
+                Ok(Node::CustomInverse(cust.into(), span))
             }
-        } else {
-            return Ok(None);
-        };
-        Ok(Some(node))
+            m if m.args() >= 2 => {
+                let new = Modified {
+                    modifier: modifier.clone(),
+                    operands: pack
+                        .branches
+                        .iter()
+                        .cloned()
+                        .map(|w| w.map(Word::Func))
+                        .collect(),
+                    pack_expansion: true,
+                };
+                self.modified(new, subscript, )
+            }
+            m => {
+                if let Modifier::Ref(name) = m {
+                    if let Ok(Some((_, local))) = self.ref_local(name) {
+                        if self.code_macros.contains_key(&local.index) {
+                            return Ok(None);
+                        }
+                    }
+                }
+                return Err(self.error(
+                    modifier.span.clone().merge(operand.span.clone()),
+                    format!("{m} cannot use a function pack"),
+                ));
+            }
+        }.map(Some)
     }
     #[allow(clippy::collapsible_match)]
     pub(crate) fn modified(
@@ -449,7 +437,7 @@ impl Compiler {
             }
             Fork => {
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
-                if f.node.as_primitive() == Some(Primitive::Identity) {
+                if !modified.pack_expansion && f.node.as_primitive() == Some(Primitive::Identity) {
                     self.emit_diagnostic(
                         "Prefer `⟜` over `⊃∘` for clarity",
                         DiagnosticKind::Style,

@@ -1041,6 +1041,7 @@ impl<'i> Parser<'i> {
         let mut word = span.sp(Word::Modified(Box::new(Modified {
             modifier: mod_span.sp(modifier),
             operands: args,
+            pack_expansion: false,
         })));
 
         if let Some(n) = subscript {
@@ -1639,7 +1640,9 @@ fn arr_is_normal_di(arr: &Arr) -> bool {
     let mut is_di = false;
     single_word_and(arr.lines.iter().flatten(), |m| {
         if let Word::Modified(m) = &m.value {
-            let Modified { modifier, operands } = &**m;
+            let Modified {
+                modifier, operands, ..
+            } = &**m;
             if let Modifier::Primitive(Primitive::Dip) = modifier.value {
                 single_word_and(operands, |f| {
                     is_di = matches!(f.value, Word::Primitive(Primitive::Identity));

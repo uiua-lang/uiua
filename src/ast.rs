@@ -543,6 +543,8 @@ pub struct Modified {
     pub modifier: Sp<Modifier>,
     /// The operands
     pub operands: Vec<Sp<Word>>,
+    /// Whether this was generated with a function pack
+    pub pack_expansion: bool,
 }
 
 impl Modified {

@@ -2372,7 +2372,7 @@ primitive!(
     /// ex: °(+1√) 5
     /// Most functions are not invertible.
     /// [under] also uses inverses, but expresses a different pattern and is generally more powerful.
-    /// A function's [un]-inverse can be set with [setinv].
+    /// A function's [un]-inverse can be set with [obverse].
     /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
     ([1], Un, InversionModifier, ("un", '°')),
     /// Invert the behavior of a function, treating its first argument as a constant
@@ -2392,6 +2392,7 @@ primitive!(
     /// ex: ⌝⍥(+1) 3 10
     /// ex: ⌝⊂ 1 [1 2 3]
     /// ex! ⌝⊂ 1 [2 3 4]
+    /// A function's [anti]-inverse can be set with [obverse].
     /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
     ([1], Anti, InversionModifier, ("anti", '⌝')),
     /// Operate on a transformed array, then reverse the transformation
@@ -2422,7 +2423,7 @@ primitive!(
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
     /// ex: ⍜∩°□(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
     ///
-    /// [setund] can be used to define a function's [under] behavior.
+    /// [obverse] can be used to define a function's [under] behavior.
     ///
     /// For more about [under] and inverses, see the [Inverse Tutorial](/tutorial/inverses).
     ([2], Under, InversionModifier, ("under", '⍜')),

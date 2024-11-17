@@ -969,7 +969,7 @@ impl<'i> Parser<'i> {
                 }
                 break;
             }
-            if let Some(arg) = self.func().or_else(|| self.strand()) {
+            if let Some(arg) = self.strand() {
                 // Parse pack syntax
                 if let Word::Pack(_) = &arg.value {
                     if i == 0 {

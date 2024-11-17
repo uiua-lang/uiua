@@ -100,9 +100,18 @@ impl Stack {
         self.set_min_height();
         self.stack.pop().unwrap_or(BasicValue::Other)
     }
+    fn pop_n(&mut self, n: usize) {
+        self.height -= n as i32;
+        self.set_min_height();
+        self.stack.truncate(self.stack.len().saturating_sub(n));
+    }
     fn push(&mut self, val: BasicValue) {
         self.height += 1;
         self.stack.push(val);
+    }
+    fn push_n(&mut self, n: usize) {
+        self.height += n as i32;
+        self.stack.extend(repeat(BasicValue::Other).take(n));
     }
     /// Set the current stack height as a potential minimum.
     /// At the end of checking, the minimum stack height is a component in calculating the signature.
@@ -238,7 +247,7 @@ impl VirtualEnv {
             Node::Run(nodes) => nodes.iter().try_for_each(|node| self.node(node))?,
             Node::Push(val) => self.push(BasicValue::from_val(val)),
             Node::Array { len, inner, .. } => match len {
-                ArrayLen::Static(len) => {
+                ArrayLen::Static(len) if *len < 100 => {
                     self.array_depth += 1;
                     self.node(inner)?;
                     self.array_depth -= 1;
@@ -252,6 +261,7 @@ impl VirtualEnv {
                     items.reverse();
                     self.push(BasicValue::Arr(items));
                 }
+                ArrayLen::Static(len) => self.handle_args_outputs(*len, 1),
                 ArrayLen::Dynamic(len) => self.handle_args_outputs(*len, 1),
             },
             Node::Label(..) | Node::RemoveLabel(..) => self.handle_args_outputs(1, 1),
@@ -583,11 +593,16 @@ impl VirtualEnv {
         self.stack.pop()
     }
     fn handle_args_outputs(&mut self, args: usize, outputs: usize) {
-        for _ in 0..args {
-            self.pop();
-        }
-        for _ in 0..outputs {
-            self.push(BasicValue::Other);
+        if args < 100 && outputs < 100 {
+            for _ in 0..args {
+                self.pop();
+            }
+            for _ in 0..outputs {
+                self.push(BasicValue::Other);
+            }
+        } else {
+            self.stack.pop_n(args);
+            self.stack.push_n(outputs);
         }
     }
     fn handle_sig(&mut self, sig: Signature) {

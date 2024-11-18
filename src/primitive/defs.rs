@@ -1029,13 +1029,16 @@ primitive!(
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
     /// Sort an array
     ///
-    /// ex: # Experimental!
-    ///   : ⍆ [3 9 1 8 2 7]
-    /// ex: # Experimental!
-    ///   : ⍆ "uiua"
+    /// ex: ⍆ [3 9 1 8 2 7]
+    /// ex: ⍆ "uiua"
     /// Multidimensional arrays have their rows sorted lexicographically.
-    /// ex: # Experimental!
-    ///   : ⍆ . [1_5_3 4_3_2 1_5_2]
+    /// ex: ⍆ . [1_5_3 4_3_2 1_5_2]
+    /// [sort] is equivalent to [select][by][rise]
+    /// ex:   ⍆ "uiua"
+    ///   : ⊏⊸⍏ "uiua"
+    /// [un][sort] shuffles an array.
+    /// ex: °⍆ [1 2 3 4]
+    ///   : °⍆ [1 2 3 4]
     /// If you want to sort by some key rather than the data itself, use [rise] or [fall].
     (1, Sort, MonadicArray, ("sort", '⍆')),
     /// Get the indices into an array if it were sorted ascending

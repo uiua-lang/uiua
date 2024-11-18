@@ -10,6 +10,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This new behavior is more useful
 - **Breaking Change**: [`un °`](https://uiua.org/docs/un) [`json`](https://uiua.org/docs/json) no longer attempts to form multidimensional arrays
   - This makes deserializing JSON more consistent
+- Stabilize [`sort ⍆`](https://uiua.org/docs/sort)
+  - Sorting is a very common operation, and it's useful to have such simple access to it
 - Add experimental inline macros
 - Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation
 - Remove the previously deprecated experimental `coordinate ⟔` function

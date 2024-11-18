@@ -265,6 +265,7 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[First, Reverse, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from back"</td></tr>
             <tr><th><Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></th><td>"Create intermediate "<Prim prim=Rise/>" array"</td><td>"Just sort"</td></tr>
             <tr><th><Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></th><td>"Create intermediate "<Prim prim=Fall/>" array"</td><td>"Just sort"</td></tr>
+            <tr><th><Prims prims=[Reverse, Sort]/></th><td>"Sort then reverse"</td><td>"Sort backwards"</td></tr>
             <tr><th><Prims prims=[Dip, Dip, Dip]/>"…"</th><td><Prim prim=Dip/>" n times"</td><td>"Single "<Prim prim=Dip/>" of n values"</td></tr>
             <tr><th><Prims prims=[Transpose, Transpose, Transpose]/>"…"</th><td><Prim prim=Transpose/>" n times"</td><td>"Single "<Prim prim=Transpose/></td></tr>
             <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code><Prims prims=[Windows]/></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Reduce/>" each row"</td><td>"Apply "<code>"F"</code>" to adjacent rows"</td></tr>

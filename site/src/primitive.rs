@@ -281,6 +281,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Where], No, "", "°⊚ [1 4]") }
             { inverse_row([Parse], No, "", "°⋕ [8 9 10 11 12]") }
             { inverse_row([Fix], No, "", "°¤ [[1 2 3]]") }
+            { inverse_row([Sort], No, "Shuffle", "°⍆ [1 2 3 4]") }
             { inverse_row([Utf8], No, "", "°utf [240 159 145 139 32 72 105 33]") }
             { inverse_row([Csv], No, "", "°csv \"1,2\\n3,4\"") }
             { inverse_row([Rotate], Required, "", "°(↻1) [1 2 3 4]") }
@@ -347,6 +348,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Deshape], No, "", "⍜♭⇌ ↯3_3⇡9") }
             { inverse_row([Rise], No, "", "⍜⍏(↻¯1). [1 4 2 3 5]") }
             { inverse_row([Fall], No, "", "⍜⍖(↻¯1). [1 4 2 3 5]") }
+            { inverse_row([Sort], No, "", "⍜⍆(↻¯1). [1 4 2 3 5]") }
             { inverse_row([Select, By, Rise], No, "Shuffle", "°(⊏⊸⍏) [1 2 3 4 5]") }
             { inverse_row([Select, By, Fall], No, "Shuffle", "°(⊏⊸⍖) [1 2 3 4 5]") }
             { inverse_row([Where], No, "Maintains minumum shape", "⍜⊚⊂ [1 0 0 0 0] 3") }

@@ -506,7 +506,7 @@ impl Primitive {
             self,
             (Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
-                | (Last | Sort | Chunks | Base | Fft | Case | Layout | Binary)
+                | (Last | Chunks | Base | Fft | Case | Layout | Binary)
                 | (Astar | Triangle)
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)

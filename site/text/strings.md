@@ -35,15 +35,12 @@ First, we create a mask of places where the delimiter is *not* using [`by`]() [`
 ```
 Notice that this reads almost as a description of what it does: "Partition box by not equals space"
 
-[`partition`]() has an alternate functionality when its function has signature `|2.1` instead of `|1.1`. This will perform a reduction operation, similar to [`reduce`]().
+This can be nested to split by multiple delimiters.
+```uiua
+"A string\nwith multiple\nlines"
+⊜(□⊜□⊸≠@ )⊸≠@\n
+```
 
-Using [planet notation](/tutorial/advancedstack#planet-notation), we can select the first or last split section.
-```uiua
-⊜⊙◌ ⊸≠@  "Split this string"
-```
-```uiua
-⊜⋅∘ ⊸≠@  "Split this string"
-```
 For parts of the string that are not the first or last, we can simply [`box`]() and [`select`]().
 ```uiua
 ⊏1_3 ⊜□⊸≠@, "lorem,ipsum,dolor,sit,amet"

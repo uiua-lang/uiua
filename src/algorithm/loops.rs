@@ -261,15 +261,13 @@ pub fn partition(ops: Ops, env: &mut Uiua) -> UiuaResult {
         |val, markers, _| Ok(val.partition_firsts(markers)),
         |val, markers, _| Ok(val.partition_lasts(markers)),
         partition_lens,
-        Value::first_partition,
-        Value::last_partition,
         "⊜ partition indices array must be a list of integers",
         env,
     )
 }
 
 impl Value {
-    fn partition_groups(self, markers: Array<isize>) -> Box<dyn ExactSizeIterator<Item = Self>> {
+    fn partition_groups(self, markers: &Array<isize>) -> Box<dyn ExactSizeIterator<Item = Self>> {
         val_as_arr!(self, |arr| arr.partition_groups(markers))
     }
     fn partition_firsts(self, markers: &[isize]) -> Self {
@@ -277,14 +275,6 @@ impl Value {
     }
     fn partition_lasts(self, markers: &[isize]) -> Self {
         val_as_arr!(self, |arr| arr.partition_lasts(markers).into())
-    }
-    fn first_partition(self, markers: &[isize]) -> Option<Self> {
-        Some(val_as_arr!(self, |arr| arr
-            .first_partition(markers)?
-            .into()))
-    }
-    fn last_partition(self, markers: &[isize]) -> Option<Self> {
-        Some(val_as_arr!(self, |arr| arr.last_partition(markers)?.into()))
     }
 }
 
@@ -338,7 +328,7 @@ impl<T: ArrayValue> Array<T>
 where
     Array<T>: Into<Value>,
 {
-    fn partition_groups(self, markers: Array<isize>) -> Box<dyn ExactSizeIterator<Item = Value>> {
+    fn partition_groups(self, markers: &Array<isize>) -> Box<dyn ExactSizeIterator<Item = Value>> {
         let mut groups = Vec::new();
         if markers.rank() == 1 {
             let mut count = 0;
@@ -352,7 +342,7 @@ where
             Box::new(PartitionIter {
                 len: count,
                 curr: 0,
-                markers: markers.data,
+                markers: markers.data.clone(),
                 source: self,
             })
         } else {
@@ -435,30 +425,6 @@ where
         self.validate_shape();
         self
     }
-    fn first_partition(mut self, markers: &[isize]) -> Option<Self> {
-        let first_marker = markers.first().copied()?;
-        let count = markers
-            .iter()
-            .take_while(|&&marker| marker == first_marker)
-            .count();
-        let row_len = self.row_len();
-        self.data.truncate(count * row_len);
-        self.shape[0] = count;
-        self.validate_shape();
-        Some(self)
-    }
-    fn last_partition(mut self, markers: &[isize]) -> Option<Self> {
-        let last_marker = markers.last().copied()?;
-        let count = (markers.iter().rev())
-            .take_while(|&&marker| marker == last_marker)
-            .count();
-        let row_len = self.row_len();
-        self.data.as_mut_slice().rotate_right(count * row_len);
-        self.data.truncate(count * row_len);
-        self.shape[0] = count;
-        self.validate_shape();
-        Some(self)
-    }
 }
 
 fn partition_lens(markers: &[isize]) -> Array<f64> {
@@ -489,7 +455,7 @@ fn partition_lens(markers: &[isize]) -> Array<f64> {
     lens.into()
 }
 
-fn multi_partition_indices(markers: Array<isize>) -> Vec<(isize, Vec<usize>)> {
+fn multi_partition_indices(markers: &Array<isize>) -> Vec<(isize, Vec<usize>)> {
     if markers.element_count() == 0 {
         return Vec::new();
     }
@@ -634,7 +600,7 @@ pub fn undo_partition_part2(env: &mut Uiua) -> UiuaResult {
         env.push(Value::from_row_values(unpartitioned, env)?);
     } else {
         let row_shape: Shape = original.shape()[markers.rank()..].into();
-        let indices = multi_partition_indices(markers);
+        let indices = multi_partition_indices(&markers);
         let row_elem_count: usize = row_shape.iter().product();
         let untransformed_rows = untransformed.into_rows().map(Value::unboxed);
         for ((_, indices), untransformed_row) in indices.into_iter().zip(untransformed_rows) {
@@ -699,15 +665,13 @@ pub fn group(ops: Ops, env: &mut Uiua) -> UiuaResult {
             }
             lens.into()
         },
-        Value::first_group,
-        Value::last_group,
         "⊕ group indices array must be an array of integers",
         env,
     )
 }
 
 impl Value {
-    fn group_groups(self, indices: Array<isize>) -> Vec<Self> {
+    fn group_groups(self, indices: &Array<isize>) -> Vec<Self> {
         val_as_arr!(self, |arr| arr
             .group_groups(indices)
             .map(Into::into)
@@ -723,16 +687,10 @@ impl Value {
             .group_lasts(indices, env)?
             .into()))
     }
-    fn first_group(self, indices: &[isize]) -> Option<Self> {
-        Some(val_as_arr!(self, |arr| arr.first_group(indices)?.into()))
-    }
-    fn last_group(self, indices: &[isize]) -> Option<Self> {
-        Some(val_as_arr!(self, |arr| arr.last_group(indices)?.into()))
-    }
 }
 
 impl<T: ArrayValue> Array<T> {
-    fn group_groups(self, indices: Array<isize>) -> impl Iterator<Item = Self> {
+    fn group_groups(self, indices: &Array<isize>) -> impl Iterator<Item = Self> {
         let Some(&max_index) = indices.data.iter().max() else {
             return Vec::<Vec<Self>>::new()
                 .into_iter()
@@ -741,7 +699,7 @@ impl<T: ArrayValue> Array<T> {
         let buckets = (max_index.max(-1) + 1).max(0) as usize;
         let mut groups: Vec<Vec<Self>> = vec![Vec::new(); buckets];
         let row_shape = self.shape()[indices.rank()..].into();
-        for (g, r) in (indices.data.into_iter()).zip(self.into_row_shaped_slices(row_shape)) {
+        for (&g, r) in (indices.data.iter()).zip(self.into_row_shaped_slices(row_shape)) {
             if g >= 0 && g < buckets as isize {
                 groups[g as usize].push(r);
             }
@@ -803,52 +761,6 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Cannot take last because a group was empty"));
         }
         Ok(Array::new(shape, data))
-    }
-    fn first_group(mut self, indices: &[isize]) -> Option<Self> {
-        if indices.is_empty() {
-            return None;
-        }
-        let mut dest = 0;
-        let row_len = self.row_len();
-        let slice = self.data.as_mut_slice();
-        for (src, &index) in indices.iter().enumerate() {
-            if index == 0 {
-                if src != dest {
-                    let src_start = src * row_len;
-                    let dest_start = dest * row_len;
-                    for i in 0..row_len {
-                        slice[dest_start + i] = slice[src_start + i].clone();
-                    }
-                }
-                dest += 1;
-            }
-        }
-        self.data.truncate(dest * row_len);
-        self.shape[0] = dest;
-        self.validate_shape();
-        Some(self)
-    }
-    fn last_group(mut self, indices: &[isize]) -> Option<Self> {
-        let last_group = indices.iter().max().copied()?;
-        let mut dest = 0;
-        let row_len = self.row_len();
-        let slice = self.data.as_mut_slice();
-        for (src, &index) in indices.iter().enumerate() {
-            if index == last_group {
-                if src != dest {
-                    let src_start = src * row_len;
-                    let dest_start = dest * row_len;
-                    for i in 0..row_len {
-                        slice[dest_start + i] = slice[src_start + i].clone();
-                    }
-                }
-                dest += 1;
-            }
-        }
-        self.data.truncate(dest * row_len);
-        self.shape[0] = dest;
-        self.validate_shape();
-        Some(self)
     }
 }
 
@@ -929,12 +841,10 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
 fn collapse_groups<I>(
     prim: Primitive,
     ops: Ops,
-    get_groups: impl Fn(Value, Array<isize>) -> I,
+    get_groups: impl Fn(Value, &Array<isize>) -> I,
     firsts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
     lasts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
     lens: impl Fn(&[isize]) -> Array<f64>,
-    first_group: impl Fn(Value, &[isize]) -> Option<Value>,
-    last_group: impl Fn(Value, &[isize]) -> Option<Value>,
     indices_error: &'static str,
     env: &mut Uiua,
 ) -> UiuaResult
@@ -945,131 +855,97 @@ where
     let [f] = get_ops(ops, env)?;
     let sig = f.sig;
     let indices = env.pop(1)?.as_integer_array(env, indices_error)?;
-    let values = env.pop(2)?;
+    let values: Vec<Value> = (0..sig.args.max(1))
+        .map(|i| env.pop(i + 2))
+        .collect::<UiuaResult<_>>()?;
 
-    if !values.shape().starts_with(indices.shape()) {
-        return Err(env.error(format!(
-            "Cannot {} array of shape {} with indices of shape {}",
-            prim.format(),
-            values.shape(),
-            indices.shape()
-        )));
+    for xs in &values {
+        if !xs.shape().starts_with(indices.shape()) {
+            return Err(env.error(format!(
+                "Cannot {} array of shape {} with indices of shape {}",
+                prim.format(),
+                xs.shape(),
+                indices.shape()
+            )));
+        }
     }
 
     // Optimizations
-    if indices.rank() == 1 {
+    if indices.rank() == 1 && values.len() == 1 {
         use Node::*;
         use Primitive::*;
-        match f.node.as_slice() {
-            [Prim(First, _)] => {
-                let val = firsts(values, &indices.data, env)?;
+        match &f.node {
+            Prim(First, _) => {
+                let xs = values.into_iter().next().unwrap();
+                let val = firsts(xs, &indices.data, env)?;
                 env.push(val);
                 return Ok(());
             }
-            [Prim(Last, _)] => {
-                let val = lasts(values, &indices.data, env)?;
+            Prim(Last, _) => {
+                let xs = values.into_iter().next().unwrap();
+                let val = lasts(xs, &indices.data, env)?;
                 env.push(val);
                 return Ok(());
             }
-            [Prim(Len, _)] => {
-                if indices.row_count() != values.row_count() {
+            Prim(Len, _) => {
+                let xs = values.into_iter().next().unwrap();
+                if indices.row_count() != xs.row_count() {
                     return Err(env.error(format!(
                         "Cannot {} array of shape {} with indices of shape {}",
                         prim.format(),
-                        values.shape(),
+                        xs.shape(),
                         indices.shape()
                     )));
                 }
                 env.push(lens(&indices.data));
                 return Ok(());
             }
-            [Prim(Pop, _), Prim(Identity, _)] => {
-                let val = last_group(values, &indices.data).ok_or_else(|| {
-                    env.error(format!(
-                        "Cannot do aggregating {} with no groups",
-                        prim.format()
-                    ))
-                })?;
-                env.push(val);
-                return Ok(());
-            }
-            [Mod(Dip, args, _)] if matches!(args[0].node, Prim(Pop, _)) => {
-                let val = first_group(values, &indices.data).ok_or_else(|| {
-                    env.error(format!(
-                        "Cannot do aggregating {} with no groups",
-                        prim.format()
-                    ))
-                })?;
-                env.push(val);
-                return Ok(());
-            }
             _ => {}
         }
     }
 
-    match (sig.args, sig.outputs) {
-        (0 | 1, outputs) => {
-            let mut empty_shape = values.shape().clone();
-            let is_scalar = empty_shape.is_empty();
+    let mut is_scalar = false;
+    let mut group_count = 0;
+    let mut groups: Vec<_> = values
+        .into_iter()
+        .map(|xs| {
+            let mut empty_shape = xs.shape().clone();
+            is_scalar |= empty_shape.is_empty();
             *empty_shape.row_count_mut() = 0;
-            let groups = get_groups(values, indices).into_iter().map(|mut group| {
+            let groups = get_groups(xs, &indices).into_iter();
+            group_count = groups.size_hint().0;
+            groups.map(move |mut group| {
                 if group.row_count() == 0 {
                     group.shape_mut().clone_from(&empty_shape);
                     group.validate_shape();
                 }
                 group
-            });
-            let mut rows = multi_output(outputs, Vec::with_capacity(groups.len()));
-            env.without_fill(|env| -> UiuaResult {
-                for group in groups {
-                    env.push(group);
-                    env.exec(f.clone())?;
-                    for i in 0..outputs {
-                        let value = env.pop(|| format!("{}'s function result", prim.format()))?;
-                        rows[i].push(value);
-                    }
-                    if sig.args == 0 {
-                        env.pop("excess value")?;
-                    }
-                }
-                Ok(())
-            })?;
-            for rows in rows.into_iter().rev() {
-                let mut val = Value::from_row_values(rows, env)?;
-                if is_scalar {
-                    val.undo_fix();
-                }
-                env.push(val);
+            })
+        })
+        .collect();
+    let mut rows = multi_output(sig.outputs, Vec::with_capacity(groups.len()));
+    env.without_fill(|env| -> UiuaResult {
+        for _ in 0..group_count {
+            for group in groups.iter_mut().rev() {
+                env.push(group.next().unwrap());
+            }
+            env.exec(f.clone())?;
+            for i in 0..sig.outputs {
+                let value = env.pop(|| format!("{}'s function result", prim.format()))?;
+                rows[i].push(value);
+            }
+            if sig.args == 0 {
+                env.pop("excess value")?;
             }
         }
-        (2, 1) => {
-            let mut groups = get_groups(values, indices).into_iter();
-            let mut acc = match env.value_fill().cloned() {
-                Some(acc) => acc,
-                None => groups.next().ok_or_else(|| {
-                    env.error(format!(
-                        "Cannot do aggregating {} with no groups",
-                        prim.format()
-                    ))
-                })?,
-            };
-            env.without_fill(|env| -> UiuaResult {
-                for row in groups {
-                    env.push(row);
-                    env.push(acc);
-                    env.exec(f.clone())?;
-                    acc = env.pop("reduced function result")?;
-                }
-                env.push(acc);
-                Ok(())
-            })?;
+        Ok(())
+    })?;
+    for rows in rows.into_iter().rev() {
+        let mut val = Value::from_row_values(rows, env)?;
+        if is_scalar {
+            val.undo_fix();
         }
-        _ => {
-            return Err(env.error(format!(
-                "Cannot {} with a function with signature {sig}",
-                prim.format()
-            )))
-        }
+        env.push(val);
     }
     Ok(())
 }

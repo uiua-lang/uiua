@@ -5,6 +5,9 @@ Uiua is not yet stable.
 ## 0.14.0 - 202?-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- **Breaking Change**: Multi-argument [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) no longer do reduction. Instead, multiple groups are passed to the function.
+  - The reducing versions were rarely used
+  - This new behavior is more useful
 - **Breaking Change**: [`un °`](https://uiua.org/docs/un) [`json`](https://uiua.org/docs/json) no longer attempts to form multidimensional arrays
   - This makes deserializing JSON more consistent
 - Add experimental inline macros

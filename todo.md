@@ -3,9 +3,8 @@
 ## 0.14
 The next version of Uiua
 
-- Change how multi-input `group`/`partition` works
-  - Optimize reduction replacement
 - Stabilize `sort`, `last`, `backward`, `case`
+- Optimize `group`/`partition` reduction replacement
 - Compile-time code string evaluation
 - `do` function pack
 - Range optimizations
@@ -15,6 +14,8 @@ The next version of Uiua
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)
 - Split up sys backend?
+- Media window
+  - A place for `&ims`, `&gifs`, etc to display stuff
 
 ## Planned Features
 Features that are planned to be implemented in the future.
@@ -53,9 +54,6 @@ Features that could be implemented, but are not currently planned.
 
 - Channels
 - Multimedia
-  - WEBP
-  - Media window
-    - A place for `&ims`, `&gifs`, etc to display stuff
   - Sound input
     - Something akin to `&ast` but for input
     - `&arec` to record audio for some duration

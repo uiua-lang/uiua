@@ -380,15 +380,20 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .map(Vec::as_slice),
                 );
                 column_widths[col] = max_col_width;
-                match first_align.filter(|_| col == 0).unwrap_or(T::alignment()) {
-                    ElemAlignment::CharOrRight(c) => {
+                let align = first_align.filter(|_| col == 0).unwrap_or(T::alignment());
+                match align {
+                    ElemAlignment::DelimOrRight(s) | ElemAlignment::DelimOrLeft(s) => {
                         for row in metagrid.iter().filter_map(|row| row.get(col)).flatten() {
-                            if let Some(pos) = row.iter().position(|&c2| c2 == c) {
-                                let right_len = row.len() - pos - 1;
+                            if let Some(pos) = (0..row.len().saturating_sub(s.chars().count()))
+                                .find(|&i| row[i..].iter().zip(s.chars()).all(|(&a, b)| a == b))
+                            {
+                                let right_len = row.len() - pos - s.chars().count();
                                 max_lr_lens[col].0 = max_lr_lens[col].0.max(pos);
                                 max_lr_lens[col].1 = max_lr_lens[col].1.max(right_len);
-                            } else {
+                            } else if let ElemAlignment::DelimOrRight(_) = align {
                                 max_lr_lens[col].0 = max_lr_lens[col].0.max(row.len());
+                            } else {
+                                max_lr_lens[col].1 = max_lr_lens[col].1.max(row.len());
                             }
                         }
                     }
@@ -693,7 +698,8 @@ pub enum ElemAlignment {
     None,
     Left,
     Right,
-    CharOrRight(char),
+    DelimOrRight(&'static str),
+    DelimOrLeft(&'static str),
 }
 
 fn pad_grid_center(
@@ -726,9 +732,11 @@ fn pad_grid_center(
                     let pre = diff - post;
                     (pre, post)
                 }
-                ElemAlignment::CharOrRight(c) => {
+                ElemAlignment::DelimOrRight(s) => {
                     let (left, right) = lr_lens.unwrap();
-                    if let Some(pos) = row.iter().position(|&c2| c2 == c) {
+                    if let Some(pos) = (0..row.len())
+                        .find(|i| row[*i..].iter().zip(s.chars()).all(|(&a, b)| a == b))
+                    {
                         let pre = left - pos;
                         let post = diff - pre;
                         (pre, post)
@@ -738,6 +746,22 @@ fn pad_grid_center(
                         (pre, post)
                     } else {
                         (diff, 0)
+                    }
+                }
+                ElemAlignment::DelimOrLeft(s) => {
+                    let (left, right) = lr_lens.unwrap();
+                    if let Some(pos) = (0..row.len().saturating_sub(s.chars().count()))
+                        .find(|i| row[*i..].iter().zip(s.chars()).all(|(&a, b)| a == b))
+                    {
+                        let pre = left - pos;
+                        let post = diff - pre;
+                        (pre, post)
+                    } else if left > 0 {
+                        let post = right.saturating_sub(row.len());
+                        let pre = diff - post;
+                        (pre, post)
+                    } else {
+                        (0, diff)
                     }
                 }
             };

@@ -898,7 +898,7 @@ impl ArrayValue for f64 {
         }
     }
     fn alignment() -> ElemAlignment {
-        ElemAlignment::CharOrRight('.')
+        ElemAlignment::DelimOrRight(".")
     }
     fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
         let mut max_whole_len = 0;
@@ -1126,6 +1126,26 @@ impl ArrayValue for Boxed {
     }
     fn summary_min_elems() -> usize {
         1000
+    }
+    fn alignment() -> ElemAlignment {
+        ElemAlignment::DelimOrLeft(": ")
+    }
+    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
+        let mut max_val_len = 0;
+        let mut max_label_len: Option<usize> = None;
+        for row in rows {
+            if let Some(delim_pos) = (0..row.len()).find(|&i| row[i..].starts_with(&[':', ' '])) {
+                max_val_len = max_val_len.max(row.len() - delim_pos - 2);
+                max_label_len = max_label_len.max(Some(delim_pos));
+            } else {
+                max_val_len = max_val_len.max(row.len());
+            }
+        }
+        if let Some(label_len) = max_label_len {
+            max_val_len + label_len + 2
+        } else {
+            max_val_len
+        }
     }
 }
 

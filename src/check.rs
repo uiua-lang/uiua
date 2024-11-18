@@ -261,7 +261,12 @@ impl VirtualEnv {
                     items.reverse();
                     self.push(BasicValue::Arr(items));
                 }
-                ArrayLen::Static(len) => self.handle_args_outputs(*len, 1),
+                ArrayLen::Static(len) => {
+                    self.array_depth += 1;
+                    self.node(inner)?;
+                    self.array_depth -= 1;
+                    self.handle_args_outputs(*len, 1)
+                }
                 ArrayLen::Dynamic(len) => self.handle_args_outputs(*len, 1),
             },
             Node::Label(..) | Node::RemoveLabel(..) => self.handle_args_outputs(1, 1),

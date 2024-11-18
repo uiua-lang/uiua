@@ -14,7 +14,7 @@ use crate::{
     algorithm::map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
     cowslice::{cowslice, CowSlice},
     fill::Fill,
-    grid_fmt::GridFmt,
+    grid_fmt::{ElemAlignment, GridFmt},
     Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Value,
 };
 
@@ -807,6 +807,10 @@ pub trait ArrayValue:
     fn summary_min_elems() -> usize {
         3600
     }
+    /// How to align elements when formatting
+    fn alignment() -> ElemAlignment {
+        ElemAlignment::Left
+    }
 }
 
 /// A NaN value that always compares as equal
@@ -889,6 +893,9 @@ impl ArrayValue for f64 {
             s
         }
     }
+    fn alignment() -> ElemAlignment {
+        ElemAlignment::Right
+    }
 }
 
 #[cfg(test)]
@@ -937,6 +944,9 @@ impl ArrayValue for u8 {
                 mean.grid_string(false)
             )
         }
+    }
+    fn alignment() -> ElemAlignment {
+        ElemAlignment::Right
     }
 }
 

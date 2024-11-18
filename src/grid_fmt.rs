@@ -375,7 +375,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 let row_height = row_heights[row];
                 let mut subrows = vec![vec![]; row_height];
                 for (col_width, cell) in column_widths.iter().zip(&mut metagrid[row]) {
-                    pad_grid_center(*col_width, row_height, true, cell);
+                    pad_grid_center(*col_width, row_height, T::alignment(), cell);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
                         subrow.extend(cell_row);
                     }
@@ -409,7 +409,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 pad_grid_center(
                     width + 4,
                     (height + 2).max(apparent_rank + 1),
-                    false,
+                    ElemAlignment::None,
                     &mut grid,
                 );
                 grid[0][0] = if params.boxed { '╓' } else { '╭' };
@@ -657,7 +657,14 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     }
 }
 
-fn pad_grid_center(width: usize, height: usize, align: bool, grid: &mut Grid) {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ElemAlignment {
+    None,
+    Left,
+    Right,
+}
+
+fn pad_grid_center(width: usize, height: usize, align: ElemAlignment, grid: &mut Grid) {
     grid.truncate(height);
     if grid.len() < height {
         let diff = height - grid.len();
@@ -671,28 +678,32 @@ fn pad_grid_center(width: usize, height: usize, align: bool, grid: &mut Grid) {
         }
     }
     for row in grid.iter_mut() {
-        row.truncate(width);
         if row.len() < width {
-            let no_left = row.strip_prefix(&[' ']).unwrap_or(row);
             let diff = width - row.len();
-            let (pre_pad, post_pad) = if align
-                && row
-                    .last()
-                    .is_some_and(|c| c.is_ascii_digit() || "ηπτ∞…".contains(*c))
-            {
-                (diff, 0)
-            } else if align && (no_left.starts_with(&['⟦']) || no_left.starts_with(&['⌜'])) {
-                (0, diff)
-            } else {
-                let post = (diff + 1) / 2;
-                (diff - post, post)
-            };
-            for _ in 0..pre_pad {
-                row.insert(0, ' ');
+            match align {
+                ElemAlignment::Left => {
+                    for _ in 0..diff {
+                        row.push(' ');
+                    }
+                }
+                ElemAlignment::Right => {
+                    for _ in 0..diff {
+                        row.insert(0, ' ');
+                    }
+                }
+                ElemAlignment::None => {
+                    let post = (diff + 1) / 2;
+                    let pre = diff - post;
+                    for _ in 0..pre {
+                        row.insert(0, ' ');
+                    }
+                    for _ in 0..post {
+                        row.push(' ');
+                    }
+                }
             }
-            for _ in 0..post_pad {
-                row.push(' ');
-            }
+        } else {
+            row.truncate(width);
         }
     }
 }

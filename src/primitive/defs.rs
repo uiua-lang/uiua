@@ -1036,10 +1036,12 @@ primitive!(
     /// [sort] is equivalent to [select][by][rise]
     /// ex:   ⍆ "uiua"
     ///   : ⊏⊸⍏ "uiua"
+    /// If you want to sort by some key rather than the data itself, use [rise] or [fall].
     /// [un][sort] shuffles an array.
     /// ex: °⍆ [1 2 3 4]
     ///   : °⍆ [1 2 3 4]
-    /// If you want to sort by some key rather than the data itself, use [rise] or [fall].
+    /// [under][sort] sort reverses the sorting operation when undoing.
+    /// ex: ⍜⍆(↻1). [3 1 5 2 4]
     (1, Sort, MonadicArray, ("sort", '⍆')),
     /// Get the indices into an array if it were sorted ascending
     ///
@@ -1048,6 +1050,7 @@ primitive!(
     /// Using the [rise] as a selector in [select] yields the sorted array.
     /// ex: ⊏⍏. 6_2_7_0_¯1_5
     /// ex: ⊏⊸⍏ 6_2_7_0_¯1_5
+    /// This can also be done with [sort].
     /// If we transform the array before [rise]ing, we can sort by a key.
     /// Here, we sort the array ascending by the [absolute value] of its elements.
     /// ex: ⊏⍏⌵. 6_2_7_0_¯1_5
@@ -1061,6 +1064,7 @@ primitive!(
     /// Using the [fall] as a selector in [select] yields the sorted array.
     /// ex: ⊏⍖. 6_2_7_0_¯1_5
     /// ex: ⊏⊸⍖ 6_2_7_0_¯1_5
+    /// This can also be done with [reverse][sort].
     /// If we transform the array before [fall]ing, we can sort by a key.
     /// Here, we sort the array descending by the [absolute value] of its elements.
     /// ex: ⊏⍖⌵. 6_2_7_0_¯1_5

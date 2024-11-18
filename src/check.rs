@@ -380,7 +380,7 @@ impl VirtualEnv {
                 }
                 Group | Partition => {
                     let [sig] = get_args(args)?;
-                    self.handle_args_outputs(2, sig.outputs);
+                    self.handle_args_outputs(sig.args.max(1) + 1, sig.outputs);
                 }
                 Spawn | Pool => {
                     let [sig] = get_args(args)?;

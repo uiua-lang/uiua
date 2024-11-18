@@ -1117,7 +1117,7 @@ impl Compiler {
 
                 #[cfg(feature = "native_sys")]
                 let enabled =
-                    crate::sys_native::set_output_enabled(self.pre_eval_mode != PreEvalMode::Lsp);
+                    crate::sys::native::set_output_enabled(self.pre_eval_mode != PreEvalMode::Lsp);
 
                 let res = (|| -> UiuaResult {
                     env.exec(mac.root)?;
@@ -1144,7 +1144,7 @@ impl Compiler {
                 }
 
                 #[cfg(feature = "native_sys")]
-                crate::sys_native::set_output_enabled(enabled);
+                crate::sys::native::set_output_enabled(enabled);
 
                 swap(&mut env.asm, &mut self.asm);
                 Ok(())

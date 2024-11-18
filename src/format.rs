@@ -1387,7 +1387,7 @@ impl<'a> Formatter<'a> {
             let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_secs(2));
 
             #[cfg(feature = "native_sys")]
-            let enabled = crate::sys_native::set_output_enabled(false);
+            let enabled = crate::sys::native::set_output_enabled(false);
             let res = env.compile_run(|comp| {
                 comp.print_diagnostics(false)
                     .mode(RunMode::All)
@@ -1395,7 +1395,7 @@ impl<'a> Formatter<'a> {
                     .load_str_src(&self.inputs.get(&self.src), self.src.clone())
             });
             #[cfg(feature = "native_sys")]
-            crate::sys_native::set_output_enabled(enabled);
+            crate::sys::native::set_output_enabled(enabled);
 
             let mut values = env.rt.output_comments;
             if let Err(e) = res {

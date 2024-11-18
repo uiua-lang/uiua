@@ -1,3 +1,6 @@
+#[cfg(feature = "native_sys")]
+pub(crate) mod native;
+
 use std::{
     any::Any,
     fmt,
@@ -16,6 +19,8 @@ use parking_lot::Mutex;
 use serde::*;
 use time::UtcOffset;
 
+#[cfg(feature = "native_sys")]
+pub use self::native::*;
 use crate::{
     algorithm::validate_size, cowslice::cowslice, get_ops, primitive::PrimDoc, Array, Boxed,
     FfiType, Ops, Primitive, Purity, Signature, Uiua, UiuaResult, Value,

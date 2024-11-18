@@ -830,7 +830,7 @@ mod server {
     #[doc(hidden)]
     pub fn run_language_server() {
         #[cfg(feature = "native_sys")]
-        crate::sys_native::set_output_enabled(false);
+        crate::sys::native::set_output_enabled(false);
 
         tokio::runtime::Builder::new_current_thread()
             .build()

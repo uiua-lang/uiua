@@ -170,8 +170,6 @@ mod shape;
 #[doc(hidden)]
 pub mod stand;
 mod sys;
-#[cfg(feature = "native_sys")]
-mod sys_native;
 mod tree;
 mod types;
 mod value;
@@ -200,8 +198,6 @@ pub use self::{
 };
 
 use self::algorithm::get_ops;
-#[cfg(feature = "native_sys")]
-pub use self::sys_native::*;
 
 use ecow::EcoString;
 

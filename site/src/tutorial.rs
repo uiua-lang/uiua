@@ -1562,6 +1562,10 @@ fn TutorialModules() -> impl IntoView {
         <Editor example="┌─╴Mod\n  A ← 5\n  F ← +1\n  G ← F F\n└─╴\nG A"/> // Should fail
         <p>"Names from inside the module can be "<em>"made"</em>" visible by following the module name with a "<code>"~"</code>" and a list of the names to make visible."</p>
         <Editor example="┌─╴Mod ~ A G\n  A ← 5\n  F ← +1\n  G ← F F\n└─╴\nG A"/>
+        <p>"Note that these names are brought into the module's parent scope as private bindings, so they cannot be referenced from outside the parent."</p>
+        <Editor example="┌─╴Mod\n  ┌─╴SubMod ~ X\n    X ← 5\n  └─╴\n└─╴\nMod~X"/> // Should fail
+        <p>"Names must be re-bound in the parent to be made visible."</p>
+        <Editor example="┌─╴Mod\n  ┌─╴SubMod\n    X ← 5\n  └─╴\n  X ← SubMod~X\n└─╴\nMod~X"/>
         <p>"Names defined above the module can be referenced inside it."</p>
         <Editor example="B ← 5\n┌─╴Mod\n  C ← ×2 B\n└─╴\nMod~C"/>
 

@@ -293,6 +293,7 @@ impl GridFmt for Boxed {
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
+        let mut first_align: Option<ElemAlignment> = None;
         let mut grid = if let Some(pointer) = self.meta().pointer.filter(|p| p.raw) {
             vec![boxed_scalar(params.boxed)
                 .chain(format!("0x{:x}", pointer.ptr).chars())
@@ -311,6 +312,13 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         } else {
             // Hashmap
             if let Some(keys) = &self.meta().map_keys {
+                first_align = Some(match &keys.keys {
+                    Value::Num(_) => f64::alignment(),
+                    Value::Byte(_) => u8::alignment(),
+                    Value::Complex(_) => Complex::alignment(),
+                    Value::Char(_) => char::alignment(),
+                    Value::Box(_) => Boxed::alignment(),
+                });
                 let metagrid = metagrid.get_or_insert_with(Metagrid::new);
                 let params = GridFmtParams {
                     boxed: false,
@@ -352,8 +360,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             // Determine max row heights and column widths
             let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
             let metagrid_height = metagrid.len();
-            let mut column_widths = vec![0; metagrid_width];
             let mut row_heights = vec![0; metagrid_height];
+            let mut column_widths = vec![0; metagrid_width];
+            let mut max_lr_lens = vec![(0, 0); metagrid_width];
             for row in 0..metagrid_height {
                 let max_row_height = metagrid[row]
                     .iter()
@@ -363,19 +372,40 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 row_heights[row] = max_row_height;
             }
             for col in 0..metagrid_width {
-                let max_col_width = metagrid
-                    .iter_mut()
-                    .flat_map(|row| row.get(col)?.iter().map(|cell| cell.len()).max())
-                    .max()
-                    .unwrap_or(0);
+                let max_col_width = T::max_col_width(
+                    metagrid
+                        .iter()
+                        .filter_map(|row| row.get(col))
+                        .flatten()
+                        .map(Vec::as_slice),
+                );
                 column_widths[col] = max_col_width;
+                match first_align.filter(|_| col == 0).unwrap_or(T::alignment()) {
+                    ElemAlignment::CharOrRight(c) => {
+                        for row in metagrid.iter().filter_map(|row| row.get(col)).flatten() {
+                            if let Some(pos) = row.iter().position(|&c2| c2 == c) {
+                                let right_len = row.len() - pos - 1;
+                                max_lr_lens[col].0 = max_lr_lens[col].0.max(pos);
+                                max_lr_lens[col].1 = max_lr_lens[col].1.max(right_len);
+                            } else {
+                                max_lr_lens[col].0 = max_lr_lens[col].0.max(row.len());
+                            }
+                        }
+                    }
+                    _ => {}
+                }
             }
             // Pad each metagrid cell to its row's max height and column's max width
             for row in 0..metagrid_height {
                 let row_height = row_heights[row];
                 let mut subrows = vec![vec![]; row_height];
-                for (col_width, cell) in column_widths.iter().zip(&mut metagrid[row]) {
-                    pad_grid_center(*col_width, row_height, T::alignment(), cell);
+                for (i, ((col_width, max_lr_lens), cell)) in (column_widths.iter())
+                    .zip(&max_lr_lens)
+                    .zip(&mut metagrid[row])
+                    .enumerate()
+                {
+                    let align = first_align.filter(|_| i == 0).unwrap_or(T::alignment());
+                    pad_grid_center(*col_width, row_height, align, Some(*max_lr_lens), cell);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
                         subrow.extend(cell_row);
                     }
@@ -410,6 +440,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     width + 4,
                     (height + 2).max(apparent_rank + 1),
                     ElemAlignment::None,
+                    None,
                     &mut grid,
                 );
                 grid[0][0] = if params.boxed { '╓' } else { '╭' };
@@ -662,9 +693,16 @@ pub enum ElemAlignment {
     None,
     Left,
     Right,
+    CharOrRight(char),
 }
 
-fn pad_grid_center(width: usize, height: usize, align: ElemAlignment, grid: &mut Grid) {
+fn pad_grid_center(
+    width: usize,
+    height: usize,
+    align: ElemAlignment,
+    lr_lens: Option<(usize, usize)>,
+    grid: &mut Grid,
+) {
     grid.truncate(height);
     if grid.len() < height {
         let diff = height - grid.len();
@@ -680,27 +718,34 @@ fn pad_grid_center(width: usize, height: usize, align: ElemAlignment, grid: &mut
     for row in grid.iter_mut() {
         if row.len() < width {
             let diff = width - row.len();
-            match align {
-                ElemAlignment::Left => {
-                    for _ in 0..diff {
-                        row.push(' ');
-                    }
-                }
-                ElemAlignment::Right => {
-                    for _ in 0..diff {
-                        row.insert(0, ' ');
-                    }
-                }
+            let (pre, post) = match align {
+                ElemAlignment::Left => (0, diff),
+                ElemAlignment::Right => (diff, 0),
                 ElemAlignment::None => {
                     let post = (diff + 1) / 2;
                     let pre = diff - post;
-                    for _ in 0..pre {
-                        row.insert(0, ' ');
-                    }
-                    for _ in 0..post {
-                        row.push(' ');
+                    (pre, post)
+                }
+                ElemAlignment::CharOrRight(c) => {
+                    let (left, right) = lr_lens.unwrap();
+                    if let Some(pos) = row.iter().position(|&c2| c2 == c) {
+                        let pre = left - pos;
+                        let post = diff - pre;
+                        (pre, post)
+                    } else if right > 0 {
+                        let pre = left.saturating_sub(row.len());
+                        let post = diff - pre;
+                        (pre, post)
+                    } else {
+                        (diff, 0)
                     }
                 }
+            };
+            for _ in 0..pre {
+                row.insert(0, ' ');
+            }
+            for _ in 0..post {
+                row.push(' ');
             }
         } else {
             row.truncate(width);

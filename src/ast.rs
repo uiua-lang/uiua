@@ -251,6 +251,15 @@ pub struct Comments {
     pub semantic: HashMap<SemanticComment, CodeSpan>,
 }
 
+/// An inline macro
+#[derive(Clone, PartialEq)]
+pub struct InlineMacro {
+    /// The function
+    pub func: Sp<Func>,
+    /// The identifier, which consists of only exclamation marks
+    pub ident: Sp<Ident>,
+}
+
 /// A word
 #[derive(Clone)]
 #[allow(missing_docs)]
@@ -284,7 +293,7 @@ pub enum Word {
         n: usize,
     },
     Subscript(Box<Subscript>),
-    InlineMacro(Sp<Ident>, Sp<Func>),
+    InlineMacro(InlineMacro),
 }
 
 impl PartialEq for Word {
@@ -405,7 +414,7 @@ impl fmt::Debug for Word {
             Word::SemanticComment(comment) => write!(f, "{comment}"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
             Word::Subscript(sub) => sub.fmt(f),
-            Word::InlineMacro(ident, func) => {
+            Word::InlineMacro(InlineMacro { ident, func }) => {
                 write!(f, "func_macro({:?}{}))", func.value, ident.value)
             }
         }
@@ -572,7 +581,7 @@ pub enum Modifier {
     /// A user-defined modifier
     Ref(Ref),
     /// An inline macro
-    Macro(Sp<Ident>, Sp<Func>),
+    Macro(InlineMacro),
 }
 
 impl fmt::Debug for Modifier {
@@ -580,7 +589,7 @@ impl fmt::Debug for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.fmt(f),
             Modifier::Ref(refer) => write!(f, "ref({refer:?})"),
-            Modifier::Macro(_, func) => write!(f, "macro({func:?})"),
+            Modifier::Macro(mac) => write!(f, "macro({:?})", mac.func),
         }
     }
 }
@@ -590,7 +599,7 @@ impl fmt::Display for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.format().fmt(f),
             Modifier::Ref(refer) => write!(f, "{refer}"),
-            Modifier::Macro(ident, _) => match ident_modifier_args(&ident.value) {
+            Modifier::Macro(mac) => match ident_modifier_args(&mac.ident.value) {
                 0 | 1 => write!(f, "monadic inline macro"),
                 2 => write!(f, "dyadic inline macro"),
                 3 => write!(f, "triadic inline macro"),
@@ -607,7 +616,7 @@ impl Modifier {
         match self {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
             Modifier::Ref(r) => r.modifier_args(),
-            Modifier::Macro(ident, _) => ident_modifier_args(&ident.value),
+            Modifier::Macro(mac) => ident_modifier_args(&mac.ident.value),
         }
     }
 }

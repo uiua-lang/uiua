@@ -945,7 +945,7 @@ impl<'i> Parser<'i> {
                     }
                     (Modifier::Ref(item), term.span)
                 }
-                Word::InlineMacro(ident, func) => (Modifier::Macro(ident, func), term.span),
+                Word::InlineMacro(mac) => (Modifier::Macro(mac), term.span),
                 _ => return Some(term),
             }
         };
@@ -1258,7 +1258,7 @@ impl<'i> Parser<'i> {
                 {
                     let func = outer_span.clone().sp(func);
                     outer_span = outer_span.merge(ident.span.clone());
-                    outer_span.sp(Word::InlineMacro(ident, func))
+                    outer_span.sp(Word::InlineMacro(InlineMacro { ident, func }))
                 } else {
                     self.index = reset;
                     outer_span.sp(Word::Func(func))

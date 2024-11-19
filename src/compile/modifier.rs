@@ -357,8 +357,8 @@ impl Compiler {
             Modifier::Ref(r) => {
                 return self.modifier_ref(r, modified.modifier.span, modified.operands)
             }
-            Modifier::Macro(ident, func) => {
-                return self.inline_macro(func, ident, modified.modifier.span, modified.operands);
+            Modifier::Macro(mac) => {
+                return self.inline_macro(mac, modified.modifier.span, modified.operands);
             }
         };
 
@@ -913,8 +913,7 @@ impl Compiler {
     // Compile an inline macro
     fn inline_macro(
         &mut self,
-        func: Sp<Func>,
-        ident: Sp<Ident>,
+        mac: InlineMacro,
         span: CodeSpan,
         operands: Vec<Sp<Word>>,
     ) -> UiuaResult<Node> {
@@ -922,15 +921,18 @@ impl Compiler {
             "Inline macros are experimental. \
             To use them, add `# Experimental!` to the top of the file."
         });
-        let mut words: Vec<_> =
-            flip_unsplit_lines(func.value.lines.into_iter().flat_map(split_words).collect())
-                .into_iter()
-                .flatten()
-                .collect();
+        let mut words: Vec<_> = flip_unsplit_lines(
+            (mac.func.value.lines.into_iter())
+                .flat_map(split_words)
+                .collect(),
+        )
+        .into_iter()
+        .flatten()
+        .collect();
         // Track
         self.code_meta
             .inline_macros
-            .insert(func.span, ident_modifier_args(&ident.value));
+            .insert(mac.func.span, ident_modifier_args(&mac.ident.value));
         // Expand
         self.expand_index_macro(None, &mut words, operands, span.clone(), true)?;
         // Compile

@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    ast::{Func, Item, Modifier, ModuleKind, Ref, RefComponent, Word},
+    ast::{Func, InlineMacro, Item, Modifier, ModuleKind, Ref, RefComponent, Word},
     ident_modifier_args, is_custom_glyph,
     lex::{CodeSpan, Sp},
     parse::parse,
@@ -650,10 +650,10 @@ impl Spanner {
                             spans.push((m.modifier.span.clone()).sp(SpanKind::Primitive(*p, None)))
                         }
                         Modifier::Ref(r) => spans.extend(self.ref_spans(r)),
-                        Modifier::Macro(ident, func) => {
-                            spans.extend(self.func_spans(&func.value, &func.span));
-                            let ident_span = (ident.span.clone())
-                                .sp(SpanKind::MacroDelim(ident_modifier_args(&ident.value)));
+                        Modifier::Macro(mac) => {
+                            spans.extend(self.func_spans(&mac.func.value, &mac.func.span));
+                            let ident_span = (mac.ident.span.clone())
+                                .sp(SpanKind::MacroDelim(ident_modifier_args(&mac.ident.value)));
                             spans.push(ident_span);
                         }
                     }
@@ -688,10 +688,11 @@ impl Spanner {
                                 spans.extend(self.ref_spans(r));
                                 spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                             }
-                            Modifier::Macro(ident, func) => {
-                                spans.extend(self.func_spans(&func.value, &func.span));
-                                let ident_span = (ident.span.clone())
-                                    .sp(SpanKind::MacroDelim(ident_modifier_args(&ident.value)));
+                            Modifier::Macro(mac) => {
+                                spans.extend(self.func_spans(&mac.func.value, &mac.func.span));
+                                let ident_span = (mac.ident.span.clone()).sp(SpanKind::MacroDelim(
+                                    ident_modifier_args(&mac.ident.value),
+                                ));
                                 spans.push(ident_span);
                                 spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                             }
@@ -708,7 +709,7 @@ impl Spanner {
                         spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                     }
                 },
-                Word::InlineMacro(ident, func) => {
+                Word::InlineMacro(InlineMacro { ident, func }) => {
                     let ident_span = (ident.span.clone())
                         .sp(SpanKind::MacroDelim(ident_modifier_args(&ident.value)));
                     spans.push(ident_span);

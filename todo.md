@@ -3,7 +3,7 @@
 ## 0.14
 The next version of Uiua
 
-- Stabilize `sort`, `last`, `backward`, `case`
+- Stabilize `last`, `backward`, `case`
 - Optimize `group`/`partition` reduction replacement
 - Compile-time code string evaluation
 - `do` function pack

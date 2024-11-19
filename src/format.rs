@@ -12,6 +12,7 @@ use std::{
 };
 
 use paste::paste;
+use InlineMacro;
 
 use crate::{
     ast::*,
@@ -1277,7 +1278,7 @@ impl<'a> Formatter<'a> {
                 }
                 self.push(&word.span, &s);
             }
-            Word::InlineMacro(ident, func) => {
+            Word::InlineMacro(InlineMacro { ident, func }) => {
                 self.func(&func.value, depth);
                 self.push(&ident.span, &ident.value);
             }
@@ -1357,9 +1358,9 @@ impl<'a> Formatter<'a> {
         match &modifier.value {
             Modifier::Primitive(prim) => self.push(&modifier.span, &prim.to_string()),
             Modifier::Ref(r) => self.format_ref(r),
-            Modifier::Macro(ident, func) => {
-                self.func(&func.value, depth);
-                self.push(&ident.span, &ident.value);
+            Modifier::Macro(mac) => {
+                self.func(&mac.func.value, depth);
+                self.push(&mac.ident.span, &mac.ident.value);
             }
         }
     }
@@ -1460,7 +1461,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
                 || (func.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }
-        Word::InlineMacro(_, func) => {
+        Word::InlineMacro(InlineMacro { func, .. }) => {
             func.value.lines.len() > 1
                 || (func.value.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
@@ -1474,9 +1475,9 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::Modified(m) => {
             m.operands.iter().any(|word| word_is_multiline(&word.value))
                 || match &m.modifier.value {
-                    Modifier::Macro(_, func) => {
-                        func.value.lines.len() > 1
-                            || (func.value.lines.iter()).any(|words| {
+                    Modifier::Macro(mac) => {
+                        mac.func.value.lines.len() > 1
+                            || (mac.func.value.lines.iter()).any(|words| {
                                 words.iter().any(|word| word_is_multiline(&word.value))
                             })
                     }

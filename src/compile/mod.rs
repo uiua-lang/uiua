@@ -1288,7 +1288,7 @@ code:
             Word::OutputComment { i, n } => Node::SetOutputComment { i, n },
             Word::Subscript(sub) => self.subscript(*sub, word.span)?,
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => Node::empty(),
-            Word::InlineMacro(..) => {
+            Word::InlineMacro(_) => {
                 self.add_error(
                     word.span.clone(),
                     "Inline macro was not parsed as a modifier.\

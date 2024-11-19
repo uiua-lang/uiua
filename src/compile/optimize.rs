@@ -59,6 +59,7 @@ impl Node {
 
 static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &((Reverse, First), Last),
+    &((Reverse, Last), First),
     &((Rise, First), FirstMinIndex),
     &((Fall, Last), LastMinIndex),
     &((Fall, First), FirstMaxIndex),

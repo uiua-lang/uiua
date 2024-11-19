@@ -943,19 +943,22 @@ primitive!(
     /// ex: ⊢1
     /// ex! ⊢[]
     ///
-    /// [first][reverse] is optimized in the interpreter to be O(1).
-    /// ex: ⊢⇌ [1 8 4 9 2 3]
+    /// [under][first] allows you to modify the first row of an array.
+    /// ex: ⍜⊢(×10) [2 3 4]
+    ///
+    /// See also: [last]
     (1, First, MonadicArray, ("first", '⊢')),
     /// Get the last row of an array
     ///
-    /// ex: # Experimental!
-    ///   : ⊣1_2_3
-    /// ex: # Experimental!
-    ///   : ⊣[1_2 3_4 5_6]
-    /// ex: # Experimental!
-    ///   : ⊣1
-    /// ex! # Experimental!
-    ///   : ⊣[]
+    /// ex: ⊣1_2_3
+    /// ex: ⊣[1_2 3_4 5_6]
+    /// ex: ⊣1
+    /// ex! ⊣[]
+    ///
+    /// [under][last] allows you to modify the last row of an array.
+    /// ex: ⍜⊣(×10) [2 3 4]
+    ///
+    /// See also: [first]
     (1, Last, MonadicArray, ("last", '⊣')),
     /// Reverse the rows of an array
     ///

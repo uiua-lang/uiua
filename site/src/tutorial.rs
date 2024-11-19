@@ -535,9 +535,10 @@ fn TutorialArrays() -> impl IntoView {
         <p>"You can also click the names of functions in the site text to see their documentation."</p>
         <p><Prim prim=Couple/>" turns two arrays into rows of a new array."</p>
         <Editor example="⊟ 1_2_3 [4 5 6]"/>
-        <p><Prim prim=First/>" gets the first row of an array."</p>
+        <p><Prim prim=First/>" and "<Prim prim=Last/>" get the first or last row of an array."</p>
         <Editor example="⊢ [4 7 1]"/>
         <Editor example="⊢ [1_2 3_4 5_6]"/>
+        <Editor example="⊣ \"hello\""/>
         <p><Prim prim=Reverse/>" reverses the rows of an array."</p>
         <Editor example="⇌ [4 7 1]"/>
         <Editor example="⇌ [1_2 3_4 5_6]"/>
@@ -857,8 +858,8 @@ fn TutorialFunctions() -> impl IntoView {
         <Hd id="inline-functions">"Inline Functions"</Hd>
         <p>"In addition to creating a new function with a capitalized binding name, as discussed in the "<A href="/tutorial/bindings">"previous section"</A>", functions in Uiua can also be created by surrounding code with "<code>"()"</code>"s."</p>
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
-        <p>"For example, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
-        <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
+        <p>"For example, if you wanted to add each row of an array to its reverse, you could use "<Prim prim=Add/><Prim prim=Reverse/><Prim prim=Dup/>"."</p>
+        <Editor example="≡(+⇌.) .[2_5_3 0_2_1 0_0_2]"/>
         <p>"Inline functions may span multiple lines. Unlike multiline stack notation arrays, which run bottom-to-top, multiline inline functions run top-to-bottom as other code does."</p>
         <Editor example="\
 X ← (
@@ -1576,7 +1577,7 @@ fn TutorialModules() -> impl IntoView {
         <Hd id="module-import-macros">"Module Import Macros"</Hd>
         <p>"If the name of a module is referenced as a macro (with a trailing "<code>"!"</code>"), names defined in the module will be available in the macro's scope."</p>
         <p>"This is useful if you need to refer to a bunch of bindings from a module without having to prefix them with the module name."</p>
-        <Editor example="┌─╴Foo\n  New ← {⊓$Bar$Baz}\n  Format ← /$\"_ _\"\n  Incr ← ⍜(⊢⇌|+1)\n└─╴\nFoo!(Format Incr New) \"Oh\" 10"/>
+        <Editor example="┌─╴Foo\n  New ← {⊓$Bar$Baz}\n  Format ← /$\"_ _\"\n  Incr ← ⍜⊣(+1)\n└─╴\nFoo!(Format Incr New) \"Oh\" 10"/>
 
         <Hd id="web-files">"Files on the Website"</Hd>
         <p>"Using files as modules involves loading files from the file system."</p>

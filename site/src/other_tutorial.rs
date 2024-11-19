@@ -184,9 +184,9 @@ fn strings_challenges() -> impl IntoView {
             number=2
             prompt="finds the first and last number in a string and adds them together"
             example="\"1foo2bar3\""
-            answer="+⊃⊢(⊢⇌) ⋕♭regex\"\\\\d+\""
+            answer="+⊃⊢⊣ ⋕♭regex\"\\\\d+\""
             tests={&["\"What is 1 + 2?\"", "\"99 bottles of beer on the wall, 99 bottles of beer\"", "\"(555) 555-5555\""]}
-            best_answer="+∩⊢⇌. ⊜⋕ ×⊓≥≤@0,@9."
+            best_answer="+∩⊣. ⊜⋕ ×⊓≥≤@0,@9."
             hidden="\"123\""/>
     }
 }

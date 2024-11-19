@@ -8,7 +8,7 @@ Flag   ← ▽⊃(÷⧻:)≡↯
 CFlag  ← ⍜∩°⍉(↧¤I0.95)Coords ⟜Flag
 
 512 # Size
-⊃(≡◇CFlag:PrideFlags|⊢⇌°⍉.Logo)
+⊃(≡◇CFlag:PrideFlags|⊣°⍉.Logo)
 ≡⍜°⍉⊂⊙¤            # Apply logo alpha to flags
 +∩×≡(⊙:¬.)⊸⊙⊙¤ 0.3 # Tint flags with logo
 +☇3[..0.05 0]      # Lighten

@@ -215,7 +215,7 @@ You can make two arrays the rows of a new array with [couple](/docs/couple).
 ⊟[1 2 3] [4 5 6]
 ```
 
-You can get the first element of an array with [first](/docs/first).
+You can get the first row of an array with [first](/docs/first) (or the last row with [last](/docs/last)).
 
 ```uiua
 ⊢[1 2 3]
@@ -223,6 +223,10 @@ You can get the first element of an array with [first](/docs/first).
 
 ```uiua
 fir[1_2_3 4_5_6]
+```
+
+```uiua
+lst "hello"
 ```
 
 [take](/docs/take) and [drop](/docs/drop) can be used to get just part of an array.

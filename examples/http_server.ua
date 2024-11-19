@@ -16,7 +16,7 @@ Listener ← &tcpl "0.0.0.0:8080"
 &p $ Server started
 
 # Mime types
-GetExt ← °□⊢⇌ ⊜□ ≠@. .
+GetExt ← °□⊣ ⊜□ ≠@. .
 °⊟⍉[
   {"js" "text/javascript"}
   {"wasm" "application/wasm"}

@@ -1252,13 +1252,18 @@ impl<'i> Parser<'i> {
                     closed: end.value,
                 };
                 let reset = self.index;
+                let caret_span = self.exact(Caret.into());
                 if let Some(ident) = self
                     .ident()
                     .filter(|ident| ident.value.chars().all(|c| "!‼".contains(c)))
                 {
                     let func = outer_span.clone().sp(func);
                     outer_span = outer_span.merge(ident.span.clone());
-                    outer_span.sp(Word::InlineMacro(InlineMacro { ident, func }))
+                    outer_span.sp(Word::InlineMacro(InlineMacro {
+                        func,
+                        caret_span,
+                        ident,
+                    }))
                 } else {
                     self.index = reset;
                     outer_span.sp(Word::Func(func))

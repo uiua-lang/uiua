@@ -875,7 +875,7 @@ impl Compiler {
                         ));
                     }
                 };
-                self.quote(&code, &"quote".into(), &modified.modifier.span)?
+                self.quote(&code, Some("quote".into()), &modified.modifier.span)?
             }
             Sig => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
@@ -933,17 +933,24 @@ impl Compiler {
         self.code_meta
             .inline_macros
             .insert(mac.func.span, ident_modifier_args(&mac.ident.value));
-        // Expand
-        self.expand_index_macro(None, &mut words, operands, span.clone(), true)?;
-        // Compile
-        let node = self.suppress_diagnostics(|comp| comp.words(words))?;
-        // Add
-        let sig = self.sig_of(&node, &span)?;
-        let func = self
-            .asm
-            .add_function(FunctionId::Macro(None, span.clone()), sig, node);
-        let span = self.add_span(span);
-        Ok(Node::Call(func, span))
+        Ok(if mac.caret_span.is_some() {
+            let root = self.words_sig(words)?;
+            let code_mac = CodeMacro {
+                root,
+                names: Default::default(),
+            };
+            self.code_macro(None, span, operands, code_mac)?
+        } else {
+            // Expand
+            self.expand_index_macro(None, &mut words, operands, span.clone(), true)?;
+            // Compile
+            let node = self.suppress_diagnostics(|comp| comp.words(words))?;
+            // Add
+            let sig = self.sig_of(&node, &span)?;
+            let func = (self.asm).add_function(FunctionId::Macro(None, span.clone()), sig, node);
+            let span = self.add_span(span);
+            Node::Call(func, span)
+        })
     }
     fn modifier_ref(
         &mut self,
@@ -1035,133 +1042,7 @@ impl Compiler {
             }
         } else if let Some(mac) = self.code_macros.get(&local.index).cloned() {
             // Code macros
-            let full_span = (modifier_span.clone()).merge(operands.last().unwrap().span.clone());
-
-            // Collect operands as strings
-            let mut operands: Vec<Sp<Word>> = (operands.into_iter())
-                .filter(|w| w.value.is_code())
-                .collect();
-            if operands.len() == 1 {
-                let operand = operands.remove(0);
-                operands = match operand.value {
-                    Word::Pack(pack) => pack
-                        .branches
-                        .into_iter()
-                        .map(|b| b.map(Word::Func))
-                        .collect(),
-                    word => vec![operand.span.sp(word)],
-                };
-            }
-            let op_sigs = if mac.root.sig.args == 2 {
-                // If the macro function has 2 arguments, we pass the signatures
-                // of the operands as well
-                let mut sig_data: EcoVec<u8> = EcoVec::with_capacity(operands.len() * 2);
-                // Track the length of the instructions and spans so
-                // they can be discarded after signatures are calculated
-                for op in &operands {
-                    let sn = self.word_sig(op.clone()).map_err(|e| {
-                        let message = format!(
-                            "This error occurred while compiling a macro operand. \
-                            This was attempted because the macro function's \
-                            signature is {}.",
-                            Signature::new(2, 1)
-                        );
-                        e.with_info([(message, None)])
-                    })?;
-                    sig_data.extend_from_slice(&[sn.sig.args as u8, sn.sig.outputs as u8]);
-                }
-                // Discard unnecessary instructions and spans
-                Some(Array::<u8>::new([operands.len(), 2], sig_data))
-            } else {
-                None
-            };
-            let formatted: Array<Boxed> = operands
-                .iter()
-                .map(|w| {
-                    let mut formatted = format_word(w, &self.asm.inputs);
-                    if let Word::Func(_) = &w.value {
-                        if formatted.starts_with('(') && formatted.ends_with(')') {
-                            formatted = formatted[1..formatted.len() - 1].to_string();
-                        }
-                    }
-                    Boxed(formatted.trim().into())
-                })
-                .collect();
-
-            let mut code = String::new();
-            (|| -> UiuaResult {
-                if let Some(index) = self.node_unbound_index(&mac.root.node) {
-                    let name = self.scope.names.iter().find_map(|(name, local)| {
-                        if local.index == index {
-                            Some(name)
-                        } else {
-                            None
-                        }
-                    });
-                    let message = if let Some(name) = name {
-                        format!("{} references runtime binding `{}`", r.name.value, name)
-                    } else {
-                        format!("{} references runtime binding", r.name.value)
-                    };
-                    return Err(self.error(modifier_span.clone(), message));
-                }
-
-                let span = self.add_span(modifier_span.clone());
-                let env = &mut self.macro_env;
-                swap(&mut env.asm, &mut self.asm);
-                env.rt.call_stack.last_mut().unwrap().call_span = span;
-
-                // Run the macro function
-                if let Some(sigs) = op_sigs {
-                    env.push(sigs);
-                }
-                env.push(formatted);
-
-                #[cfg(feature = "native_sys")]
-                let enabled =
-                    crate::sys::native::set_output_enabled(self.pre_eval_mode != PreEvalMode::Lsp);
-
-                let res = (|| -> UiuaResult {
-                    env.exec(mac.root)?;
-
-                    let val = env.pop("macro result")?;
-
-                    // Parse the macro output
-                    if let Ok(s) = val.as_string(env, "") {
-                        code = s;
-                    } else {
-                        for row in val.into_rows() {
-                            let s = row.as_string(env, "Code macro output rows must be strings")?;
-                            if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
-                                code.push(' ');
-                            }
-                            code.push_str(&s);
-                        }
-                    }
-                    Ok(())
-                })();
-
-                if let Err(e) = res {
-                    self.errors.push(e);
-                }
-
-                #[cfg(feature = "native_sys")]
-                crate::sys::native::set_output_enabled(enabled);
-
-                swap(&mut env.asm, &mut self.asm);
-                Ok(())
-            })()
-            .map_err(|e| e.trace_macro(r.name.value.clone(), modifier_span.clone()))?;
-
-            // Quote
-            self.code_meta
-                .macro_expansions
-                .insert(full_span, (Some(r.name.value.clone()), code.clone()));
-            self.suppress_diagnostics(|comp| {
-                comp.temp_scope(mac.names, None, |comp| {
-                    comp.quote(&code, &r.name.value, &modifier_span)
-                })
-            })?
+            self.code_macro(Some(r.name.value), modifier_span, operands, mac)?
         } else if let Some(m) =
             (self.asm.bindings.get(local.index)).and_then(|binfo| match &binfo.kind {
                 BindingKind::Module(m) => Some(m),
@@ -1181,6 +1062,143 @@ impl Compiler {
         };
         self.comptime_depth -= 1;
         Ok(node)
+    }
+    fn code_macro(
+        &mut self,
+        mac_name: Option<Ident>,
+        modifier_span: CodeSpan,
+        operands: Vec<Sp<Word>>,
+        mac: CodeMacro,
+    ) -> UiuaResult<Node> {
+        let full_span = (modifier_span.clone()).merge(operands.last().unwrap().span.clone());
+        // Collect operands as strings
+        let mut operands: Vec<Sp<Word>> = (operands.into_iter())
+            .filter(|w| w.value.is_code())
+            .collect();
+        if operands.len() == 1 {
+            let operand = operands.remove(0);
+            operands = match operand.value {
+                Word::Pack(pack) => pack
+                    .branches
+                    .into_iter()
+                    .map(|b| b.map(Word::Func))
+                    .collect(),
+                word => vec![operand.span.sp(word)],
+            };
+        }
+        let op_sigs = if mac.root.sig.args == 2 {
+            // If the macro function has 2 arguments, we pass the signatures
+            // of the operands as well
+            let mut sig_data: EcoVec<u8> = EcoVec::with_capacity(operands.len() * 2);
+            // Track the length of the instructions and spans so
+            // they can be discarded after signatures are calculated
+            for op in &operands {
+                let sn = self.word_sig(op.clone()).map_err(|e| {
+                    let message = format!(
+                        "This error occurred while compiling a macro operand. \
+                            This was attempted because the macro function's \
+                            signature is {}.",
+                        Signature::new(2, 1)
+                    );
+                    e.with_info([(message, None)])
+                })?;
+                sig_data.extend_from_slice(&[sn.sig.args as u8, sn.sig.outputs as u8]);
+            }
+            // Discard unnecessary instructions and spans
+            Some(Array::<u8>::new([operands.len(), 2], sig_data))
+        } else {
+            None
+        };
+        let formatted: Array<Boxed> = operands
+            .iter()
+            .map(|w| {
+                let mut formatted = format_word(w, &self.asm.inputs);
+                if let Word::Func(_) = &w.value {
+                    if formatted.starts_with('(') && formatted.ends_with(')') {
+                        formatted = formatted[1..formatted.len() - 1].to_string();
+                    }
+                }
+                Boxed(formatted.trim().into())
+            })
+            .collect();
+
+        let mut code = String::new();
+        (|| -> UiuaResult {
+            if let Some(index) = self.node_unbound_index(&mac.root.node) {
+                let name = self.scope.names.iter().find_map(|(name, local)| {
+                    if local.index == index {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                });
+                let message = match (&mac_name, name) {
+                    (Some(mac_name), Some(name)) => {
+                        format!("{} references runtime binding `{}`", mac_name, name)
+                    }
+                    (Some(mac_name), None) => format!("{} references runtime binding", mac_name),
+                    (None, Some(name)) => format!("macro references runtime binding `{}`", name),
+                    (None, None) => "macro references runtime binding".into(),
+                };
+                return Err(self.error(modifier_span.clone(), message));
+            }
+
+            let span = self.add_span(modifier_span.clone());
+            let env = &mut self.macro_env;
+            swap(&mut env.asm, &mut self.asm);
+            env.rt.call_stack.last_mut().unwrap().call_span = span;
+
+            // Run the macro function
+            if let Some(sigs) = op_sigs {
+                env.push(sigs);
+            }
+            env.push(formatted);
+
+            #[cfg(feature = "native_sys")]
+            let enabled =
+                crate::sys::native::set_output_enabled(self.pre_eval_mode != PreEvalMode::Lsp);
+
+            let res = (|| -> UiuaResult {
+                env.exec(mac.root)?;
+
+                let val = env.pop("macro result")?;
+
+                // Parse the macro output
+                if let Ok(s) = val.as_string(env, "") {
+                    code = s;
+                } else {
+                    for row in val.into_rows() {
+                        let s = row.as_string(env, "Code macro output rows must be strings")?;
+                        if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
+                            code.push(' ');
+                        }
+                        code.push_str(&s);
+                    }
+                }
+                Ok(())
+            })();
+
+            if let Err(e) = res {
+                self.errors.push(e);
+            }
+
+            #[cfg(feature = "native_sys")]
+            crate::sys::native::set_output_enabled(enabled);
+
+            swap(&mut env.asm, &mut self.asm);
+            Ok(())
+        })()
+        .map_err(|e| e.trace_macro(mac_name.clone(), modifier_span.clone()))?;
+
+        // Quote
+        self.code_meta
+            .macro_expansions
+            .insert(full_span, (mac_name.clone(), code.clone()));
+        self.suppress_diagnostics(|comp| {
+            comp.temp_scope(mac.names, None, |comp| {
+                comp.quote(&code, mac_name, &modifier_span)
+            })
+        })
     }
     fn node_unbound_index(&self, node: &Node) -> Option<usize> {
         match node {
@@ -1246,7 +1264,7 @@ impl Compiler {
         words.retain(|word| !matches!(word.value, Word::Placeholder(_)));
         error.map_or(Ok(()), Err)
     }
-    fn quote(&mut self, code: &str, name: &Ident, span: &CodeSpan) -> UiuaResult<Node> {
+    fn quote(&mut self, code: &str, name: Option<Ident>, span: &CodeSpan) -> UiuaResult<Node> {
         let (items, errors, _) = parse(
             code,
             InputSrc::Macro(span.clone().into()),
@@ -1255,7 +1273,7 @@ impl Compiler {
         if !errors.is_empty() {
             return Err(UiuaErrorKind::Parse(errors, self.asm.inputs.clone().into())
                 .error()
-                .trace_macro(name.clone(), span.clone()));
+                .trace_macro(name, span.clone()));
         }
 
         let root_node_len = self.asm.root.len();
@@ -1268,7 +1286,7 @@ impl Compiler {
         }
         let res = self
             .items(items, true)
-            .map_err(|e| e.trace_macro(name.clone(), span.clone()));
+            .map_err(|e| e.trace_macro(name, span.clone()));
         self.comptime_depth -= 1;
         self.pre_eval_mode = pre_eval_mod;
         // Extract generated root node

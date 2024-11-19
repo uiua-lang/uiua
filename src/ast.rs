@@ -256,6 +256,8 @@ pub struct Comments {
 pub struct InlineMacro {
     /// The function
     pub func: Sp<Func>,
+    /// The span of a `^` that makes this an array macro
+    pub caret_span: Option<CodeSpan>,
     /// The identifier, which consists of only exclamation marks
     pub ident: Sp<Ident>,
 }
@@ -414,7 +416,7 @@ impl fmt::Debug for Word {
             Word::SemanticComment(comment) => write!(f, "{comment}"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
             Word::Subscript(sub) => sub.fmt(f),
-            Word::InlineMacro(InlineMacro { ident, func }) => {
+            Word::InlineMacro(InlineMacro { ident, func, .. }) => {
                 write!(f, "func_macro({:?}{}))", func.value, ident.value)
             }
         }
@@ -589,7 +591,7 @@ impl fmt::Debug for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.fmt(f),
             Modifier::Ref(refer) => write!(f, "ref({refer:?})"),
-            Modifier::Macro(mac) => write!(f, "macro({:?})", mac.func),
+            Modifier::Macro(mac) => write!(f, "macro({:?}{})", mac.func, mac.ident),
         }
     }
 }

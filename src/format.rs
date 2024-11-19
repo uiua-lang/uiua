@@ -1278,8 +1278,15 @@ impl<'a> Formatter<'a> {
                 }
                 self.push(&word.span, &s);
             }
-            Word::InlineMacro(InlineMacro { ident, func }) => {
+            Word::InlineMacro(InlineMacro {
+                func,
+                caret_span,
+                ident,
+            }) => {
                 self.func(&func.value, depth);
+                if let Some(span) = caret_span {
+                    self.push(span, "^");
+                }
                 self.push(&ident.span, &ident.value);
             }
         }
@@ -1360,6 +1367,9 @@ impl<'a> Formatter<'a> {
             Modifier::Ref(r) => self.format_ref(r),
             Modifier::Macro(mac) => {
                 self.func(&mac.func.value, depth);
+                if let Some(span) = &mac.caret_span {
+                    self.push(span, "^");
+                }
                 self.push(&mac.ident.span, &mac.ident.value);
             }
         }

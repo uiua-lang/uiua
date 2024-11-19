@@ -14,6 +14,25 @@ StdDev ← √(^0^1^0)‼(÷⧻⟜/+|×.-).
 StdDev [1 2 3 4]
 ```
 
+An inline code macro can be specified by putting a `^` between the `)` and the first `!`.
+
+```uiua
+# Experimental!
+(⇌)^‼(⊂1|⊂2) []
+```
+
+```uiua
+# Experimental!
+($"_ ← 5"⊢)^!X
+X
+```
+
+```uiua
+# Experimental!
+(repr⋅⊢)^!+
+(repr⋅⊢)^!⊓+¯
+```
+
 ## [derivative](/docs/derivative) and [integral](/docs/integral)
 
 These modifiers transform a mathematical expression.

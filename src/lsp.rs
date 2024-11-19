@@ -652,8 +652,12 @@ impl Spanner {
                         Modifier::Ref(r) => spans.extend(self.ref_spans(r)),
                         Modifier::Macro(mac) => {
                             spans.extend(self.func_spans(&mac.func.value, &mac.func.span));
-                            let ident_span = (mac.ident.span.clone())
-                                .sp(SpanKind::MacroDelim(ident_modifier_args(&mac.ident.value)));
+                            let mac_delim_kind =
+                                SpanKind::MacroDelim(ident_modifier_args(&mac.ident.value));
+                            if let Some(span) = &mac.caret_span {
+                                spans.push(span.clone().sp(mac_delim_kind.clone()));
+                            }
+                            let ident_span = (mac.ident.span.clone()).sp(mac_delim_kind);
                             spans.push(ident_span);
                         }
                     }
@@ -690,9 +694,12 @@ impl Spanner {
                             }
                             Modifier::Macro(mac) => {
                                 spans.extend(self.func_spans(&mac.func.value, &mac.func.span));
-                                let ident_span = (mac.ident.span.clone()).sp(SpanKind::MacroDelim(
-                                    ident_modifier_args(&mac.ident.value),
-                                ));
+                                let mac_delim_kind =
+                                    SpanKind::MacroDelim(ident_modifier_args(&mac.ident.value));
+                                if let Some(span) = &mac.caret_span {
+                                    spans.push(span.clone().sp(mac_delim_kind.clone()));
+                                }
+                                let ident_span = (mac.ident.span.clone()).sp(mac_delim_kind);
                                 spans.push(ident_span);
                                 spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                             }
@@ -709,11 +716,17 @@ impl Spanner {
                         spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                     }
                 },
-                Word::InlineMacro(InlineMacro { ident, func }) => {
-                    let ident_span = (ident.span.clone())
-                        .sp(SpanKind::MacroDelim(ident_modifier_args(&ident.value)));
-                    spans.push(ident_span);
+                Word::InlineMacro(InlineMacro {
+                    ident,
+                    caret_span,
+                    func,
+                }) => {
                     spans.extend(self.func_spans(&func.value, &func.span));
+                    let mac_delim_kind = SpanKind::MacroDelim(ident_modifier_args(&ident.value));
+                    if let Some(span) = caret_span {
+                        spans.push(span.clone().sp(mac_delim_kind.clone()));
+                    }
+                    spans.push(ident.span.clone().sp(mac_delim_kind));
                 }
             }
         }

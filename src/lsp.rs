@@ -473,15 +473,20 @@ impl Spanner {
         let mut comment = binfo.comment.clone();
         if comment.is_none() {
             let name = binfo.span.as_str(&self.asm.inputs, |s| s.to_string());
-            match name.as_str() {
-                "🦈" | "🏳️‍⚧️" => comment = Some("Trans rights".into()),
-                "🤠" => comment = Some("This town ain't big enough for the ∩ of us".into()),
-                "👽" => comment = Some("Ayy, lmao".into()),
-                "🐈" | "😺" | "😸" | "😹" | "😻" | "😼" | "😽" | "🙀" => {
-                    comment = Some("Meow".into())
+            comment = match name.as_str() {
+                "🦈" | "🏳️‍⚧️" => Some("Trans rights".into()),
+                "🤠" => Some("This town ain't big enough for the ∩ of us".into()),
+                "👽" => Some("Ayy, lmao".into()),
+                "🐈" | "😺" | "😸" | "😹" | "😻" | "😼" | "😽" | "🙀" | "🐱‍👤" => {
+                    Some("Meow".into())
                 }
-                _ => {}
-            }
+                "🐕" | "🐶" | "🦮" | "🐕‍🦺" => Some("Woof".into()),
+                "🐖" | "🐷" | "🐽" /* | "👮" */ => Some("Oink".into()),
+                "🐄" | "🐮" => Some("Moo".into()),
+                "🐸" => Some("Ribbit".into()),
+                "ඞ" => Some("AMOGUS".into()),
+                _ => None,
+            };
         }
         if comment.is_none() {
             match &binfo.kind {

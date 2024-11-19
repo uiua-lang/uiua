@@ -3,14 +3,10 @@
 ## 0.14
 The next version of Uiua
 
-- Stabilize `last`, `backward`, `case`
+- Stabilize `backward`, `case`
 - Optimize `group`/`partition` reduction replacement
 - Compile-time code string evaluation
 - `do` function pack
-- Range optimizations
-  - Math, `take`, `drop`
-  - Infinite ranges
-    - `rows`/`each`
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)
 - Split up sys backend?

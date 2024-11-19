@@ -465,9 +465,9 @@ option,
     border: none;
     padding: 0.3em;
     min-height: 1.8em;
-    overflow-y: auto;
     display: flex;
     gap: 0.1em;
+    overflow-x: auto;
     overflow-y: hidden;
 }
 

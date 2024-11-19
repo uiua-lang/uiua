@@ -484,7 +484,7 @@ impl Spanner {
                 "🐖" | "🐷" | "🐽" /* | "👮" */ => Some("Oink".into()),
                 "🐄" | "🐮" => Some("Moo".into()),
                 "🐸" => Some("Ribbit".into()),
-                "ඞ" => Some("AMOGUS".into()),
+                "ඞ" => Some("SUS".into()),
                 _ => None,
             };
         }

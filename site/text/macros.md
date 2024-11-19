@@ -96,6 +96,33 @@ Def‼(X|5)
 
 This is a simple example, but this concept can be used to create very powerful meta-programming tools.
 
+If a code macro's function takes 2 arguments, the second argument will be an array of the signatures of the functions passed to the macro.
+
+```uiua
+Sigs! ←^ ⍚$"\"_ is |_._\"" ⊙≡°⊟
+Sigs!(+|∿|⊓+¯)
+```
+
+[repr]() converts a value into a string that is the code that would create that value.
+
+```uiua
+repr ⇡5
+repr °△2_3
+```
+
+Because a code macro's output must be a string or list of strings, you cannot directly return a *value* from one unless you use [repr]().
+
+```uiua should fail
+SigOf! ←^ ⋅⊢
+SigOf!+
+```
+
+```uiua
+SigOf! ←^ repr⋅⊢
+SigOf!+
+SigOf!⊓+¯
+```
+
 ## Compile Time vs Run Time
 The body of a code macro is always evaluated at compile time. One consequence of this is that bindings whose values cannot be known at compile time cannot be used in a code macro.
 

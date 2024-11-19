@@ -494,6 +494,8 @@ impl Primitive {
             Choose => format!("use {Tuples}{Lt} instead"),
             Permute => format!("use {Tuples}{Ne} instead"),
             Triangle => format!("use {Tuples} instead"),
+            Sig => "use (repr⋅⊢)^! instead".into(),
+            Stringify => "use (◇repr⊢)^! instead".into(),
             _ => return None,
         })
     }

@@ -1189,7 +1189,8 @@
     "modifier_args": 1,
     "class": "Comptime",
     "description": "Get the signature of a function",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "sine": {
     "glyph": "∿",
@@ -1231,7 +1232,8 @@
     "modifier_args": 1,
     "class": "Comptime",
     "description": "Convert code into a string instead of compiling it",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "subtract": {
     "glyph": "-",

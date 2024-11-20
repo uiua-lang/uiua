@@ -229,7 +229,21 @@ impl eframe::App for App {
         while let Ok(req) = self.recv.try_recv() {
             if self.clear_before_next {
                 self.clear_before_next = false;
-                self.items.clear();
+                for item in self.items.drain(..) {
+                    match item {
+                        OutputItem::Image { tex_id, .. } => ctx.tex_manager().write().free(tex_id),
+                        OutputItem::Gif { frames, .. } => {
+                            for (tex_id, _) in frames {
+                                ctx.tex_manager().write().free(tex_id);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                #[cfg(feature = "audio")]
+                {
+                    self.audio_output = hodaun::default_output().ok();
+                }
             }
             match req {
                 Request::ShowText(text) => self.items.push(OutputItem::Text(text)),
@@ -323,21 +337,21 @@ impl App {
                     }
                     ui.horizontal(|ui| {
                         let render_size = *resize / self.ppp;
-                        let resp = (Resize::default().id_salt(*id).default_size(render_size)).show(
-                            ui,
-                            |ui| {
-                                let available_width = ui.available_width();
-                                let available_height = ui.available_height();
-                                let aspect_ratio = true_size[0] as f32 / true_size[1] as f32;
-                                let use_height =
-                                    (available_width / aspect_ratio).min(available_height);
-                                let use_width = (use_height * aspect_ratio).min(available_width);
-                                ui.image(SizedTexture {
-                                    id: *tex_id,
-                                    size: vec2(use_width, use_height),
-                                })
-                            },
-                        );
+                        let resp = (Resize::default()
+                            .id_salt(*id)
+                            .with_stroke(false)
+                            .default_size(render_size))
+                        .show(ui, |ui| {
+                            let available_width = ui.available_width();
+                            let available_height = ui.available_height();
+                            let aspect_ratio = true_size[0] as f32 / true_size[1] as f32;
+                            let use_height = (available_width / aspect_ratio).min(available_height);
+                            let use_width = (use_height * aspect_ratio).min(available_width);
+                            ui.image(SizedTexture {
+                                id: *tex_id,
+                                size: vec2(use_width, use_height),
+                            })
+                        });
                         let chng = resp.rect.width() != render_size.x
                             && resp.rect.height() != render_size.y;
                         *changing |= chng;
@@ -375,32 +389,32 @@ impl App {
                     let total_time: f32 = frames.iter().map(|(_, d)| d).sum();
                     ui.horizontal(|ui| {
                         let render_size = *resize / self.ppp;
-                        let resp = (Resize::default().id_salt(*id).default_size(render_size)).show(
-                            ui,
-                            |ui| {
-                                let available_width = ui.available_width();
-                                let available_height = ui.available_height();
-                                let aspect_ratio = true_size[0] as f32 / true_size[1] as f32;
-                                let use_height =
-                                    (available_width / aspect_ratio).min(available_height);
-                                let use_width = (use_height * aspect_ratio).min(available_width);
-                                let mut t = 0.0;
-                                for (tex_id, delay) in &*frames {
-                                    if t < *curr {
-                                        t += delay;
-                                        continue;
-                                    }
-                                    return ui.image(SizedTexture {
-                                        id: *tex_id,
-                                        size: vec2(use_width, use_height),
-                                    });
+                        let resp = (Resize::default()
+                            .id_salt(*id)
+                            .with_stroke(false)
+                            .default_size(render_size))
+                        .show(ui, |ui| {
+                            let available_width = ui.available_width();
+                            let available_height = ui.available_height();
+                            let aspect_ratio = true_size[0] as f32 / true_size[1] as f32;
+                            let use_height = (available_width / aspect_ratio).min(available_height);
+                            let use_width = (use_height * aspect_ratio).min(available_width);
+                            let mut t = 0.0;
+                            for (tex_id, delay) in &*frames {
+                                if t < *curr {
+                                    t += delay;
+                                    continue;
                                 }
                                 return ui.image(SizedTexture {
-                                    id: frames.last().unwrap().0,
+                                    id: *tex_id,
                                     size: vec2(use_width, use_height),
                                 });
-                            },
-                        );
+                            }
+                            return ui.image(SizedTexture {
+                                id: frames.last().unwrap().0,
+                                size: vec2(use_width, use_height),
+                            });
+                        });
                         let chng = resp.rect.width() != render_size.x
                             && resp.rect.height() != render_size.y;
                         *changing |= chng;

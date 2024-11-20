@@ -153,7 +153,7 @@ terminal_image = ["viuer", "image", "icy_sixel"]
 tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
 web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "uiua-nokhwa"]
-window = ["eframe", "rmp-serde"]
+window = ["eframe", "rmp-serde", "image"]
 xlsx = ["calamine", "simple_excel_writer"]
 # Use system static libraries instead of building them
 system = ["libffi?/system"]

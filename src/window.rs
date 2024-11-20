@@ -118,9 +118,19 @@ pub fn run_window() {
             };
         }
     });
+    let icon =
+        image::load_from_memory(include_bytes!("primitive/assets/uiua-logo-512.png")).unwrap();
+    let icon = IconData {
+        width: icon.width(),
+        height: icon.height(),
+        rgba: icon.into_rgba8().into_raw(),
+    };
     eframe::run_native(
         "Uiua",
-        eframe::NativeOptions::default(),
+        eframe::NativeOptions {
+            viewport: ViewportBuilder::default().with_icon(icon),
+            ..Default::default()
+        },
         Box::new(|cc| {
             cc.egui_ctx.set_theme(Theme::Dark);
             let mut fonts = FontDefinitions::default();
@@ -128,8 +138,7 @@ pub fn run_window() {
                 "Uiua386".into(),
                 FontData::from_static(include_bytes!("algorithm/Uiua386.ttf")),
             );
-            fonts
-                .families
+            (fonts.families)
                 .entry(FontFamily::Monospace)
                 .or_default()
                 .insert(0, "Uiua386".into());

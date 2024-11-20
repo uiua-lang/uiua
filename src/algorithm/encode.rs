@@ -34,8 +34,8 @@ impl SmartOutput {
             }
         }
         // Try to convert the value to an image
-        #[cfg(feature = "image")]
         const MIN_AUTO_IMAGE_DIM: usize = 30;
+        #[cfg(feature = "image")]
         if let Ok(image) = value_to_image(&value) {
             if image.width() >= MIN_AUTO_IMAGE_DIM as u32
                 && image.height() >= MIN_AUTO_IMAGE_DIM as u32

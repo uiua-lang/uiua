@@ -555,9 +555,7 @@ impl WatchArgs {
         let mut watcher = notify::recommended_watcher(send)?;
         watcher.watch(Path::new("."), RecursiveMode::Recursive)?;
 
-        if !use_window() {
-            println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
-        }
+        println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
 
         let config = FormatConfig::from_source(format_config_source, initial_path.as_deref()).ok();
         #[cfg(feature = "audio")]

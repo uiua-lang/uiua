@@ -660,20 +660,31 @@ impl SysBackend for NativeSys {
         .map_err(|e| e.to_string())
     }
     #[cfg(feature = "audio")]
-    fn play_audio(&self, wav_bytes: Vec<u8>, _: Option<&str>) -> Result<(), String> {
-        use hodaun::*;
-        match default_output::<Stereo>() {
-            Ok(mut mixer) => {
-                match wav::WavSource::new(std::collections::VecDeque::from(wav_bytes)) {
-                    Ok(source) => {
-                        mixer.add(source.resample());
-                        mixer.block();
-                        Ok(())
+    fn play_audio(&self, wav_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+        #[cfg(feature = "audio")]
+        {
+            crate::window::Request::Show(crate::encode::SmartOutput::Wav(
+                wav_bytes,
+                label.map(Into::into),
+            ))
+            .send()
+        }
+        #[cfg(not(feature = "audio"))]
+        {
+            use hodaun::*;
+            match default_output::<Stereo>() {
+                Ok(mut mixer) => {
+                    match wav::WavSource::new(std::collections::VecDeque::from(wav_bytes)) {
+                        Ok(source) => {
+                            mixer.add(source.resample());
+                            mixer.block();
+                            Ok(())
+                        }
+                        Err(e) => Err(format!("Failed to read wav bytes: {e}")),
                     }
-                    Err(e) => Err(format!("Failed to read wav bytes: {e}")),
                 }
+                Err(e) => Err(format!("Failed to initialize audio output stream: {e}").to_string()),
             }
-            Err(e) => Err(format!("Failed to initialize audio output stream: {e}").to_string()),
         }
     }
     #[cfg(feature = "audio")]

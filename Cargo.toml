@@ -118,7 +118,6 @@ binary = [
   "ffi",
   "terminal-light",
   "terminal_size",
-  "window",
 ]
 bytes = [] # No longer used
 clipboard = ["arboard"]
@@ -136,6 +135,7 @@ default = [
   "clipboard",
   "opt",
   "batteries",
+  "window",
 ]
 ffi = ["libffi", "libloading"]
 fft = ["rustfft"]

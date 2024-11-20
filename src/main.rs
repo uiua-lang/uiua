@@ -68,6 +68,11 @@ fn main() {
                 }
                 _ => {}
             }
+            #[cfg(feature = "window")]
+            if use_window() {
+                _ = uiua::window::Request::Shutdown.send();
+                sleep(Duration::from_millis(100));
+            }
             exit(0);
         }
     });

@@ -39,6 +39,7 @@ pub enum Request {
     ShowAll(Vec<SmartOutput>),
     Separator,
     ClearBeforeNext,
+    Shutdown,
 }
 
 const RETRIES: usize = 10;
@@ -167,6 +168,7 @@ enum OutputItem {
         id: u64,
         tex_id: TextureId,
         true_size: [u32; 2],
+        resize: Vec2,
         label: Option<String>,
     },
     Separator,
@@ -216,6 +218,7 @@ impl eframe::App for App {
                 }
                 Request::Separator => self.items.push(OutputItem::Separator),
                 Request::ClearBeforeNext => self.clear_before_next = self.clear,
+                Request::Shutdown => ctx.send_viewport_cmd(ViewportCommand::Close),
             }
         }
         TopBottomPanel::top("top bar").show(ctx, |ui| {
@@ -274,19 +277,17 @@ impl App {
                     id,
                     tex_id,
                     true_size,
+                    resize,
                     label,
                 } => {
                     if let Some(label) = label {
                         ui.code(format!("{label}:"));
                     }
                     ui.horizontal(|ui| {
-                        let size = self
-                            .size_map
-                            .get(true_size)
-                            .copied()
-                            .unwrap_or_else(|| vec2(true_size[0] as f32, true_size[1] as f32));
-                        let resp =
-                            (Resize::default().id_salt(*id).default_size(size)).show(ui, |ui| {
+                        let render_size = *resize / self.ppp;
+                        let resp = (Resize::default().id_salt(*id).default_size(render_size)).show(
+                            ui,
+                            |ui| {
                                 let available_width = ui.available_width();
                                 let available_height = ui.available_height();
                                 let aspect_ratio = true_size[0] as f32 / true_size[1] as f32;
@@ -297,14 +298,19 @@ impl App {
                                     id: *tex_id,
                                     size: vec2(use_width, use_height),
                                 })
-                            });
-                        let changed = resp.rect.width() != size.x && resp.rect.height() != size.y;
+                            },
+                        );
+                        let changed = resp.rect.width() != render_size.x
+                            && resp.rect.height() != render_size.y;
                         if changed {
-                            self.size_map.insert(*true_size, resp.rect.size());
+                            *resize = resp.rect.size() * self.ppp;
+                            self.size_map.insert(*true_size, *resize);
                         }
                         if ui.button("↻").on_hover_text("Reset size").clicked() {
                             *id = self.next_id;
                             self.next_id += 1;
+                            *resize = vec2(true_size[0] as f32, true_size[1] as f32);
+                            self.size_map.remove(true_size);
                         }
                     });
                 }
@@ -338,6 +344,11 @@ impl App {
                     id: unique,
                     tex_id: text_id,
                     true_size: [width, height],
+                    resize: self
+                        .size_map
+                        .get(&[width, height])
+                        .copied()
+                        .unwrap_or(vec2(width as f32, height as f32)),
                     label,
                 }
             }

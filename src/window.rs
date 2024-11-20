@@ -405,15 +405,20 @@ impl App {
                                     t += delay;
                                     continue;
                                 }
+                                ui.ctx()
+                                    .request_repaint_after(Duration::from_secs_f32(*delay));
                                 return ui.image(SizedTexture {
                                     id: *tex_id,
                                     size: vec2(use_width, use_height),
                                 });
                             }
-                            return ui.image(SizedTexture {
-                                id: frames.last().unwrap().0,
+                            let (text_id, delay) = frames.last().unwrap();
+                            ui.ctx()
+                                .request_repaint_after(Duration::from_secs_f32(*delay));
+                            ui.image(SizedTexture {
+                                id: *text_id,
                                 size: vec2(use_width, use_height),
-                            });
+                            })
                         });
                         let chng = resp.rect.width() != render_size.x
                             && resp.rect.height() != render_size.y;
@@ -492,6 +497,9 @@ impl App {
                         }
                         src_play.set(*play && !done && (!dragged || t != orig_t));
                     });
+                    if src_play.get() {
+                        ui.ctx().request_repaint();
+                    }
                 }
             }
         }

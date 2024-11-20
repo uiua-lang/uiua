@@ -9,7 +9,7 @@ use std::{
         Arc,
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use crossbeam_channel::Receiver;
@@ -54,6 +54,9 @@ impl Request {
         let mut stream = match TcpStream::connect_timeout(&socket_addr, timeout) {
             Ok(stream) => stream,
             Err(e) if retries > 0 && e.kind() == ErrorKind::TimedOut => {
+                if let Request::Shutdown = self {
+                    return Ok(());
+                }
                 if cfg!(debug_assertions) {
                     eprintln!("Uiua window not found, creating...");
                 }
@@ -158,6 +161,7 @@ struct App {
     clear: bool,
     clear_before_next: bool,
     size_map: HashMap<[u32; 2], Vec2>,
+    last_frame: Instant,
 }
 
 enum OutputItem {
@@ -165,13 +169,24 @@ enum OutputItem {
     Code(String),
     Error(String),
     Image {
-        id: u64,
         tex_id: TextureId,
-        true_size: [u32; 2],
-        resize: Vec2,
-        label: Option<String>,
+        state: ImageState,
+    },
+    Gif {
+        frames: Vec<(TextureId, f32)>,
+        curr: f32,
+        play: bool,
+        state: ImageState,
     },
     Separator,
+}
+
+struct ImageState {
+    id: u64,
+    true_size: [u32; 2],
+    resize: Vec2,
+    label: Option<String>,
+    changing: bool,
 }
 
 impl App {
@@ -189,8 +204,9 @@ impl App {
             next_id: 0,
             ppp,
             clear,
-            clear_before_next: false,
+            clear_before_next: true,
             size_map: HashMap::new(),
+            last_frame: Instant::now(),
         }
     }
 }
@@ -216,7 +232,11 @@ impl eframe::App for App {
                     }
                     self.clear_before_next = false;
                 }
-                Request::Separator => self.items.push(OutputItem::Separator),
+                Request::Separator => {
+                    if !self.clear {
+                        self.items.push(OutputItem::Separator)
+                    }
+                }
                 Request::ClearBeforeNext => self.clear_before_next = self.clear,
                 Request::Shutdown => ctx.send_viewport_cmd(ViewportCommand::Close),
             }
@@ -254,6 +274,7 @@ impl eframe::App for App {
             });
         }
         ctx.request_repaint_after_secs(0.1);
+        self.last_frame = Instant::now();
     }
 }
 
@@ -274,14 +295,18 @@ impl App {
                     ui.separator();
                 }
                 OutputItem::Image {
-                    id,
                     tex_id,
-                    true_size,
-                    resize,
-                    label,
+                    state:
+                        ImageState {
+                            id,
+                            true_size,
+                            resize,
+                            label,
+                            changing,
+                        },
                 } => {
                     if let Some(label) = label {
-                        ui.code(format!("{label}:"));
+                        ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                     }
                     ui.horizontal(|ui| {
                         let render_size = *resize / self.ppp;
@@ -300,11 +325,15 @@ impl App {
                                 })
                             },
                         );
-                        let changed = resp.rect.width() != render_size.x
+                        let chng = resp.rect.width() != render_size.x
                             && resp.rect.height() != render_size.y;
-                        if changed {
+                        *changing |= chng;
+                        if *changing && !ui.input(|i| i.pointer.primary_down()) {
                             *resize = resp.rect.size() * self.ppp;
                             self.size_map.insert(*true_size, *resize);
+                            *id = self.next_id;
+                            self.next_id += 1;
+                            *changing = false;
                         }
                         if ui.button("↻").on_hover_text("Reset size").clicked() {
                             *id = self.next_id;
@@ -314,12 +343,95 @@ impl App {
                         }
                     });
                 }
+                OutputItem::Gif {
+                    frames,
+                    curr,
+                    play,
+                    state:
+                        ImageState {
+                            id,
+                            true_size,
+                            resize,
+                            label,
+                            changing,
+                        },
+                } => {
+                    if let Some(label) = label {
+                        ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
+                    }
+                    let total_time: f32 = frames.iter().map(|(_, d)| d).sum();
+                    ui.horizontal(|ui| {
+                        let render_size = *resize / self.ppp;
+                        let resp = (Resize::default().id_salt(*id).default_size(render_size)).show(
+                            ui,
+                            |ui| {
+                                let available_width = ui.available_width();
+                                let available_height = ui.available_height();
+                                let aspect_ratio = true_size[0] as f32 / true_size[1] as f32;
+                                let use_height =
+                                    (available_width / aspect_ratio).min(available_height);
+                                let use_width = (use_height * aspect_ratio).min(available_width);
+                                let mut t = 0.0;
+                                for (tex_id, delay) in &*frames {
+                                    if t < *curr {
+                                        t += delay;
+                                        continue;
+                                    }
+                                    return ui.image(SizedTexture {
+                                        id: *tex_id,
+                                        size: vec2(use_width, use_height),
+                                    });
+                                }
+                                return ui.image(SizedTexture {
+                                    id: frames.last().unwrap().0,
+                                    size: vec2(use_width, use_height),
+                                });
+                            },
+                        );
+                        let chng = resp.rect.width() != render_size.x
+                            && resp.rect.height() != render_size.y;
+                        *changing |= chng;
+                        if *changing && !ui.input(|i| i.pointer.primary_down()) {
+                            *resize = resp.rect.size() * self.ppp;
+                            self.size_map.insert(*true_size, *resize);
+                            *id = self.next_id;
+                            self.next_id += 1;
+                            *changing = false;
+                        }
+                        ui.vertical(|ui| {
+                            ui.horizontal(|ui| {
+                                let play_text = if *play { "⏸" } else { "▶" };
+                                ui.toggle_value(play, play_text).on_hover_text(if *play {
+                                    "Pause"
+                                } else {
+                                    "Play"
+                                });
+                                Slider::new(curr, 0.0..=total_time)
+                                    .custom_formatter(|curr, _| {
+                                        format!("{curr:.2}/{total_time:.2}")
+                                    })
+                                    .ui(ui);
+                            });
+                            if ui.button("↻").on_hover_text("Reset size").clicked() {
+                                *id = self.next_id;
+                                self.next_id += 1;
+                                *resize = vec2(true_size[0] as f32, true_size[1] as f32);
+                                self.size_map.remove(true_size);
+                            }
+                        });
+                    });
+                    if *play {
+                        *curr += self.last_frame.elapsed().as_secs_f32();
+                        *curr %= total_time;
+                    }
+                }
             }
         }
     }
     fn convert_smart_output(&mut self, output: SmartOutput, ctx: &Context) -> OutputItem {
         match output {
             SmartOutput::Normal(value) => OutputItem::Code(value.show()),
+            #[cfg(feature = "image")]
             SmartOutput::Png(bytes, label) => {
                 let img = image::load_from_memory_with_format(&bytes, ImageFormat::Png).unwrap();
                 let (width, height) = img.dimensions();
@@ -341,18 +453,92 @@ impl App {
                 let unique = self.next_id;
                 self.next_id += 1;
                 OutputItem::Image {
-                    id: unique,
                     tex_id: text_id,
-                    true_size: [width, height],
-                    resize: self
-                        .size_map
-                        .get(&[width, height])
-                        .copied()
-                        .unwrap_or(vec2(width as f32, height as f32)),
-                    label,
+                    state: ImageState {
+                        id: unique,
+                        true_size: [width, height],
+                        resize: self
+                            .size_map
+                            .get(&[width, height])
+                            .copied()
+                            .unwrap_or(vec2(width as f32, height as f32)),
+                        label,
+                        changing: false,
+                    },
                 }
             }
-            SmartOutput::Gif(..) => OutputItem::Error("Gif not yet implemented".into()),
+            #[cfg(not(feature = "image"))]
+            SmartOutput::Png(..) => {
+                OutputItem::Error("Images are not supported in this environment".into())
+            }
+            #[cfg(feature = "gif")]
+            SmartOutput::Gif(bytes, label) => {
+                let mut decoder = gif::DecodeOptions::new();
+                decoder.set_color_output(gif::ColorOutput::RGBA);
+                let mut decoder = decoder.read_info(bytes.as_slice()).unwrap();
+                let first_frame = decoder.read_next_frame().unwrap().unwrap();
+                let gif_width = first_frame.width as u32;
+                let gif_height = first_frame.height as u32;
+                // Init frame data with the first frame
+                let mut tex_ids = Vec::new();
+                tex_ids.push((
+                    ctx.tex_manager().write().alloc(
+                        String::new(),
+                        ImageData::Color(Arc::new(ColorImage {
+                            size: [gif_width as usize, gif_height as usize],
+                            pixels: first_frame
+                                .buffer
+                                .chunks(4)
+                                .map(|w| Color32::from_rgba_unmultiplied(w[0], w[1], w[2], w[3]))
+                                .collect(),
+                        })),
+                        Default::default(),
+                    ),
+                    first_frame.delay as f32 / 100.0,
+                ));
+                for frame in decoder {
+                    let frame = frame.unwrap();
+                    tex_ids.push((
+                        ctx.tex_manager().write().alloc(
+                            String::new(),
+                            ImageData::Color(Arc::new(ColorImage {
+                                size: [gif_width as usize, gif_height as usize],
+                                pixels: frame
+                                    .buffer
+                                    .chunks(4)
+                                    .map(|w| {
+                                        Color32::from_rgba_unmultiplied(w[0], w[1], w[2], w[3])
+                                    })
+                                    .collect(),
+                            })),
+                            Default::default(),
+                        ),
+                        frame.delay as f32 / 100.0,
+                    ));
+                }
+                let id = self.next_id;
+                self.next_id += 1;
+                OutputItem::Gif {
+                    frames: tex_ids,
+                    curr: 0.0,
+                    play: true,
+                    state: ImageState {
+                        id,
+                        true_size: [gif_width, gif_height],
+                        resize: self
+                            .size_map
+                            .get(&[gif_width, gif_height])
+                            .copied()
+                            .unwrap_or(vec2(gif_width as f32, gif_height as f32)),
+                        label,
+                        changing: false,
+                    },
+                }
+            }
+            #[cfg(not(feature = "gif"))]
+            SmartOutput::Gif(..) => {
+                OutputItem::Error("Gifs are not supported in this environment".into())
+            }
             SmartOutput::Wav(..) => OutputItem::Error("Audio not yet implemented".into()),
         }
     }

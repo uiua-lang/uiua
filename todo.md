@@ -10,8 +10,6 @@ The next version of Uiua
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)
 - Split up sys backend?
-- Media window
-  - A place for `&ims`, `&gifs`, etc to display stuff
 
 ## Planned Features
 Features that are planned to be implemented in the future.

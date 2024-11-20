@@ -45,7 +45,7 @@ struct GlobalNativeSys {
     colored_errors: DashMap<String, String>,
     #[cfg(feature = "ffi")]
     ffi: crate::FfiState,
-    #[cfg(all(feature = "gif", feature = "invoke"))]
+    #[cfg(all(feature = "gif", feature = "invoke", not(feature = "window")))]
     gifs_child: parking_lot::Mutex<Option<Child>>,
 }
 
@@ -220,7 +220,7 @@ impl Default for GlobalNativeSys {
             colored_errors: DashMap::new(),
             #[cfg(feature = "ffi")]
             ffi: Default::default(),
-            #[cfg(all(feature = "gif", feature = "invoke"))]
+            #[cfg(all(feature = "gif", feature = "invoke", not(feature = "window")))]
             gifs_child: parking_lot::Mutex::new(None),
         }
     }
@@ -632,7 +632,16 @@ impl SysBackend for NativeSys {
         }
     }
     #[cfg(all(feature = "gif", feature = "invoke"))]
-    fn show_gif(&self, gif_bytes: Vec<u8>, _: Option<&str>) -> Result<(), String> {
+    fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+        #[cfg(feature = "window")]
+        {
+            crate::window::Request::Show(crate::encode::SmartOutput::Gif(
+                gif_bytes,
+                label.map(Into::into),
+            ))
+            .send()
+        }
+        #[cfg(not(feature = "window"))]
         (move || -> std::io::Result<()> {
             let temp_path = std::env::temp_dir().join("show.gif");
             fs::write(&temp_path, gif_bytes)?;

@@ -1,5 +1,6 @@
 //! Algorithms for reducing modifiers
 
+use core::f64;
 use std::{collections::VecDeque, convert::identity, iter::repeat};
 
 use ecow::{eco_vec, EcoVec};
@@ -108,7 +109,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                 }
                 Primitive::Modulus if flipped => fast_reduce_different(
                     bytes,
-                    1.0,
+                    f64::INFINITY,
                     fill,
                     depth,
                     flip(modulus::num_num),
@@ -117,7 +118,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                 .into(),
                 Primitive::Modulus => fast_reduce_different(
                     bytes,
-                    1.0,
+                    f64::INFINITY,
                     fill,
                     depth,
                     modulus::num_num,
@@ -239,7 +240,7 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
         _ => match last {
             Node::Prim(Add | Sub, _) if init_sig() => Array::new(shape, eco_vec![0u8; len]).into(),
             Node::Prim(Mul | Div | Modulus, _) if init_sig() => {
-                Array::new(shape, eco_vec![1u8; len]).into()
+                Array::new(shape, eco_vec![f64::INFINITY; len]).into()
             }
             Node::Prim(Max, _) if init_sig() => {
                 Array::new(shape, eco_vec![f64::NEG_INFINITY; len]).into()
@@ -325,10 +326,12 @@ macro_rules! reduce_math {
                 Primitive::Div => fast_reduce(xs, 1.0.into(), fill, depth, div::$f),
                 #[cfg(feature = "opt")]
                 Primitive::Modulus if _flipped => {
-                    fast_reduce(xs, 1.0.into(), fill, depth, flip(modulus::$f))
+                    fast_reduce(xs, f64::INFINITY.into(), fill, depth, flip(modulus::$f))
                 }
                 #[cfg(feature = "opt")]
-                Primitive::Modulus => fast_reduce(xs, 1.0.into(), fill, depth, modulus::$f),
+                Primitive::Modulus => {
+                    fast_reduce(xs, f64::INFINITY.into(), fill, depth, modulus::$f)
+                }
                 #[cfg(feature = "opt")]
                 Primitive::Atan if _flipped => {
                     fast_reduce(xs, 0.0.into(), fill, depth, flip(atan2::$f))

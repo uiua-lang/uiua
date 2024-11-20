@@ -162,11 +162,14 @@ struct App {
     clear_before_next: bool,
     size_map: HashMap<[u32; 2], Vec2>,
     last_frame: Instant,
+    #[cfg(feature = "audio")]
+    audio_output: Option<hodaun::OutputDeviceMixer<hodaun::Stereo>>,
 }
 
 enum OutputItem {
     Text(String),
     Code(String),
+    #[allow(dead_code)]
     Error(String),
     Image {
         tex_id: TextureId,
@@ -177,6 +180,14 @@ enum OutputItem {
         curr: f32,
         play: bool,
         state: ImageState,
+    },
+    #[cfg(feature = "audio")]
+    Audio {
+        curr: hodaun::Shared<f64>,
+        play: bool,
+        src_play: hodaun::Shared<bool>,
+        label: Option<String>,
+        total_time: f64,
     },
     Separator,
 }
@@ -207,6 +218,8 @@ impl App {
             clear_before_next: true,
             size_map: HashMap::new(),
             last_frame: Instant::now(),
+            #[cfg(feature = "audio")]
+            audio_output: hodaun::default_output().ok(),
         }
     }
 }
@@ -425,6 +438,47 @@ impl App {
                         *curr %= total_time;
                     }
                 }
+                #[cfg(feature = "audio")]
+                OutputItem::Audio {
+                    curr,
+                    play,
+                    src_play,
+                    label,
+                    total_time,
+                } => {
+                    ui.horizontal(|ui| {
+                        if let Some(label) = label {
+                            ui.label(
+                                RichText::new(format!("{label}:")).font(FontId::monospace(14.0)),
+                            );
+                        }
+                        let mut done = !src_play.get() && curr.get() == 0.0;
+                        if done {
+                            *play = false;
+                        }
+                        let play_text = if *play { "⏸" } else { "▶" };
+                        let play_hint = if *play { "Pause" } else { "Play" };
+                        if ui
+                            .toggle_value(play, play_text)
+                            .on_hover_text(play_hint)
+                            .clicked()
+                            && *play
+                        {
+                            done = false;
+                        }
+                        let mut t = curr.get();
+                        let orig_t = t;
+                        let dragged = Slider::new(&mut t, 0.0..=*total_time)
+                            .custom_formatter(|t, _| format!("{t:.2}/{total_time:.2}"))
+                            .ui(ui)
+                            .dragged;
+                        done |= dragged;
+                        if t != orig_t {
+                            curr.set(t);
+                        }
+                        src_play.set(*play && !done && (!dragged || t != orig_t));
+                    });
+                }
             }
         }
     }
@@ -539,7 +593,69 @@ impl App {
             SmartOutput::Gif(..) => {
                 OutputItem::Error("Gifs are not supported in this environment".into())
             }
+            #[cfg(feature = "audio")]
+            SmartOutput::Wav(bytes, label) => {
+                let src = audio::SeekBufferSource::from_wav_bytes(&bytes);
+                let curr = src.curr.clone();
+                let src_play = src.play.clone();
+                let total_time = src.total_time;
+                if let Some(output) = &self.audio_output {
+                    output.add(src);
+                }
+                OutputItem::Audio {
+                    curr,
+                    play: src_play.get(),
+                    src_play,
+                    label,
+                    total_time,
+                }
+            }
+            #[cfg(not(feature = "audio"))]
             SmartOutput::Wav(..) => OutputItem::Error("Audio not yet implemented".into()),
+        }
+    }
+}
+
+#[cfg(feature = "audio")]
+mod audio {
+    use hodaun::*;
+    pub struct SeekBufferSource {
+        pub buffer: Vec<Stereo>,
+        pub curr: Shared<f64>,
+        pub play: Shared<bool>,
+        pub total_time: f64,
+    }
+
+    impl SeekBufferSource {
+        pub fn from_wav_bytes(bytes: &[u8]) -> Self {
+            let mut wav_source = wav::WavSource::new(bytes).unwrap().resample::<Stereo>();
+            let sr = crate::SysBackend::audio_sample_rate(&crate::NativeSys) as f64;
+            let mut buffer = Vec::new();
+            while let Some(frame) = wav_source.next(sr) {
+                buffer.push(frame);
+            }
+            Self {
+                total_time: buffer.len() as f64 / sr,
+                buffer,
+                curr: Shared::new(0.0),
+                play: Shared::new(true),
+            }
+        }
+    }
+
+    impl Source for SeekBufferSource {
+        type Frame = Stereo;
+        fn next(&mut self, sample_rate: f64) -> Option<Self::Frame> {
+            Some(if !self.play.get() {
+                0.0.into()
+            } else if let Some(sample) = self.buffer.get((self.curr.get() * sample_rate) as usize) {
+                self.curr.with(|curr| *curr += 1.0 / sample_rate);
+                *sample
+            } else {
+                self.play.set(false);
+                self.curr.set(0.0);
+                0.0.into()
+            })
         }
     }
 }

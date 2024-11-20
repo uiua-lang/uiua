@@ -572,8 +572,8 @@ impl SysBackend for NativeSys {
         true
     }
     #[cfg(all(feature = "terminal_image", feature = "image"))]
-    fn show_image(&self, image: image::DynamicImage, _: Option<&str>) -> Result<(), String> {
-        let (width, height) = if let Some((w, h)) = terminal_size() {
+    fn show_image(&self, image: image::DynamicImage, label: Option<&str>) -> Result<(), String> {
+        let (_width, _height) = if let Some((w, h)) = terminal_size() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), (image.height() / 2).max(1));
             let scaled_to_height = (iw * th / ih.max(1), th);
@@ -607,11 +607,21 @@ impl SysBackend for NativeSys {
             print!("{s}");
             Ok(())
         } else {
+            #[cfg(feature = "window")]
+            {
+                crate::window::Request::Show(crate::encode::SmartOutput::Png(
+                    crate::encode::image_to_bytes(&image, image::ImageOutputFormat::Png)
+                        .map_err(|e| e.to_string())?,
+                    label.map(Into::into),
+                ))
+                .send()
+            }
+            #[cfg(not(feature = "window"))]
             viuer::print(
                 &image,
                 &viuer::Config {
-                    width,
-                    height,
+                    width: _width,
+                    height: _height,
                     absolute_offset: false,
                     transparent: true,
                     ..Default::default()

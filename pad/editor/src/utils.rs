@@ -8,15 +8,14 @@ use std::{
 };
 
 use base64::engine::{general_purpose::URL_SAFE, Engine};
-use image::ImageOutputFormat;
 use leptos::*;
 
 use uiua::{
     ast::Item,
-    encode::{image_to_bytes, value_to_gif_bytes, value_to_image, value_to_wav_bytes},
+    encode::SmartOutput,
     lsp::{BindingDocsKind, ImportSrc},
     Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
-    Spans, SysBackend, Uiua, UiuaError, UiuaResult, Value,
+    Spans, Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
@@ -1005,52 +1004,21 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
     let mut stack = Vec::new();
     let value_count = values.len();
     for (i, value) in values.into_iter().enumerate() {
-        // Try to convert the value to audio
-        if value.shape().last().is_some_and(|&n| n >= 44100 / 4)
-            && matches!(&value, Value::Num(arr) if arr.elements().all(|x| x.abs() <= 5.0))
-        {
-            if let Ok(bytes) = value_to_wav_bytes(&value, io.audio_sample_rate()) {
-                let label = value.meta().label.as_ref().map(Into::into);
+        let value = match SmartOutput::from_value(value, io) {
+            SmartOutput::Png(bytes, label) => {
+                stack.push(OutputItem::Image(bytes, label));
+                continue;
+            }
+            SmartOutput::Gif(bytes, label) => {
+                stack.push(OutputItem::Gif(bytes, label));
+                continue;
+            }
+            SmartOutput::Wav(bytes, label) => {
                 stack.push(OutputItem::Audio(bytes, label));
                 continue;
             }
-        }
-        // Try to convert the value to an image
-        const MIN_AUTO_IMAGE_DIM: usize = 30;
-        if let Ok(image) = value_to_image(&value) {
-            if image.width() >= MIN_AUTO_IMAGE_DIM as u32
-                && image.height() >= MIN_AUTO_IMAGE_DIM as u32
-            {
-                if let Ok(bytes) = image_to_bytes(&image, ImageOutputFormat::Png) {
-                    let label = value.meta().label.as_ref().map(Into::into);
-                    stack.push(OutputItem::Image(bytes, label));
-                    continue;
-                }
-            }
-        }
-        // Try to convert the value to a gif
-        if let Ok(bytes) = value_to_gif_bytes(&value, 16.0) {
-            match value.shape().dims() {
-                &[f, h, w] | &[f, h, w, _]
-                    if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
-                {
-                    let label = value.meta().label.as_ref().map(Into::into);
-                    stack.push(OutputItem::Gif(bytes, label));
-                    continue;
-                }
-                _ => {}
-            }
-        }
-        // Try to convert the value to SVG
-        if let Ok(mut str) = value.as_string(&rt, "") {
-            if str.starts_with("<svg") && str.ends_with("</svg>") {
-                if !str.contains("xmlns") {
-                    str = str.replacen("<svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"", 1);
-                }
-                stack.push(OutputItem::Svg(str));
-                continue;
-            }
-        }
+            SmartOutput::Normal(value) => value,
+        };
         // Otherwise, just show the value
         let class = if value_count == 1 {
             ""

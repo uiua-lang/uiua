@@ -4,9 +4,65 @@
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 #[cfg(feature = "image")]
 use image::{DynamicImage, ImageOutputFormat};
+use serde::*;
 
+use crate::SysBackend;
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
+
+/// Conversion of a value to some media format based on the value's shape
+#[derive(Clone, Serialize, Deserialize)]
+#[allow(missing_docs)]
+pub enum SmartOutput {
+    Normal(Value),
+    Png(Vec<u8>, Option<String>),
+    Gif(Vec<u8>, Option<String>),
+    Wav(Vec<u8>, Option<String>),
+}
+
+impl SmartOutput {
+    /// Convert a value to a SmartOutput
+    pub fn from_value(value: Value, backend: &dyn SysBackend) -> Self {
+        // Try to convert the value to audio
+        #[cfg(feature = "audio_encode")]
+        if value.shape().last().is_some_and(|&n| n >= 44100 / 4)
+            && matches!(&value, Value::Num(arr) if arr.elements().all(|x| x.abs() <= 5.0))
+        {
+            if let Ok(bytes) = value_to_wav_bytes(&value, backend.audio_sample_rate()) {
+                let label = value.meta().label.as_ref().map(Into::into);
+                return Self::Wav(bytes, label);
+            }
+        }
+        // Try to convert the value to an image
+        #[cfg(feature = "image")]
+        const MIN_AUTO_IMAGE_DIM: usize = 30;
+        if let Ok(image) = value_to_image(&value) {
+            if image.width() >= MIN_AUTO_IMAGE_DIM as u32
+                && image.height() >= MIN_AUTO_IMAGE_DIM as u32
+            {
+                if let Ok(bytes) = image_to_bytes(&image, ImageOutputFormat::Png) {
+                    let label = value.meta().label.as_ref().map(Into::into);
+                    return Self::Png(bytes, label);
+                }
+            }
+        }
+        // Try to convert the value to a gif
+        #[cfg(feature = "gif")]
+        if let Ok(bytes) = value_to_gif_bytes(&value, 16.0) {
+            match value.shape().dims() {
+                &[f, h, w] | &[f, h, w, _]
+                    if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
+                {
+                    let label = value.meta().label.as_ref().map(Into::into);
+                    return Self::Gif(bytes, label);
+                }
+                _ => {}
+            }
+        }
+        // Otherwise, just show the value
+        Self::Normal(value)
+    }
+}
 
 pub(crate) fn image_encode(env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "image")]
@@ -186,6 +242,18 @@ pub fn rgb_image_to_array(image: image::RgbImage) -> Array<f64> {
 
 #[doc(hidden)]
 #[cfg(feature = "image")]
+pub fn rgba_image_to_array(image: image::RgbaImage) -> Array<f64> {
+    let shape = crate::Shape::from([image.height() as usize, image.width() as usize, 4]);
+    Array::new(
+        shape,
+        (image.into_raw().into_iter())
+            .map(|b| b as f64 / 255.0)
+            .collect::<crate::cowslice::CowSlice<_>>(),
+    )
+}
+
+#[doc(hidden)]
+#[cfg(feature = "image")]
 pub fn image_bytes_to_array(bytes: &[u8], alpha: bool) -> Result<Array<f64>, String> {
     Ok(if alpha {
         let image = image::load_from_memory(bytes)
@@ -339,11 +407,11 @@ pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, St
     if sample_rate == 0 {
         return Err("Sample rate must not be 0".to_string());
     }
-
+    let channels = value_to_audio_channels(audio)?;
     #[cfg(not(feature = "audio"))]
     {
-        value_to_wav_bytes_impl(
-            audio,
+        channels_to_wav_bytes_impl(
+            channels,
             |f| (f * i16::MAX as f64) as i16,
             16,
             SampleFormat::Int,
@@ -352,20 +420,19 @@ pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, St
     }
     #[cfg(feature = "audio")]
     {
-        value_to_wav_bytes_impl(audio, |f| f as f32, 32, SampleFormat::Float, sample_rate)
+        channels_to_wav_bytes_impl(channels, |f| f as f32, 32, SampleFormat::Float, sample_rate)
     }
 }
 
 #[cfg(feature = "audio_encode")]
-fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
-    audio: &Value,
+fn channels_to_wav_bytes_impl<T: hound::Sample + Copy>(
+    channels: Vec<Vec<f64>>,
     convert_samples: impl Fn(f64) -> T + Copy,
     bits_per_sample: u16,
     sample_format: SampleFormat,
     sample_rate: u32,
 ) -> Result<Vec<u8>, String> {
     // We use i16 samples for compatibility with Firefox (if I remember correctly)
-    let channels = value_to_audio_channels(audio)?;
     let channels: Vec<Vec<T>> = channels
         .into_iter()
         .map(|c| c.into_iter().map(convert_samples).collect())

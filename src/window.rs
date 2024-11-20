@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     env::current_exe,
+    fs,
     io::{ErrorKind, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
     process::{exit, Command, Stdio},
@@ -164,6 +165,7 @@ struct App {
     last_frame: Instant,
     #[cfg(feature = "audio")]
     audio_output: Option<hodaun::OutputDeviceMixer<hodaun::Stereo>>,
+    errors: Vec<String>,
 }
 
 enum OutputItem {
@@ -174,12 +176,14 @@ enum OutputItem {
     Image {
         tex_id: TextureId,
         state: ImageState,
+        bytes: Vec<u8>,
     },
     Gif {
         frames: Vec<(TextureId, f32)>,
         curr: f32,
         play: bool,
         state: ImageState,
+        bytes: Vec<u8>,
     },
     #[cfg(feature = "audio")]
     Audio {
@@ -188,6 +192,7 @@ enum OutputItem {
         src_play: hodaun::Shared<bool>,
         label: Option<String>,
         total_time: f64,
+        bytes: Vec<u8>,
     },
     Separator,
 }
@@ -220,6 +225,7 @@ impl App {
             last_frame: Instant::now(),
             #[cfg(feature = "audio")]
             audio_output: hodaun::default_output().ok(),
+            errors: Vec::new(),
         }
     }
 }
@@ -331,6 +337,7 @@ impl App {
                             label,
                             changing,
                         },
+                    bytes,
                 } => {
                     if let Some(label) = label {
                         ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
@@ -362,12 +369,61 @@ impl App {
                             self.next_id += 1;
                             *changing = false;
                         }
-                        if ui.button("↻").on_hover_text("Reset size").clicked() {
-                            *id = self.next_id;
-                            self.next_id += 1;
-                            *resize = vec2(true_size[0] as f32, true_size[1] as f32);
-                            self.size_map.remove(true_size);
-                        }
+                        ui.vertical(|ui| {
+                            if ui.button("↻").on_hover_text("Reset size").clicked() {
+                                *id = self.next_id;
+                                self.next_id += 1;
+                                *resize = vec2(true_size[0] as f32, true_size[1] as f32);
+                                self.size_map.remove(true_size);
+                            }
+                            if ui.button("Save").clicked() {
+                                match native_dialog::FileDialog::new()
+                                    .set_title("Save Image")
+                                    .set_filename("image.png")
+                                    .add_filter("PNG Image", &["png"])
+                                    .add_filter("JPEG Image", &["jpg", "jpeg"])
+                                    .add_filter("BMP Image", &["bmp"])
+                                    .add_filter("WebP Image", &["webp"])
+                                    .add_filter("QOI Image", &["qoi"])
+                                    .add_filter("All Files", &["*"])
+                                    .show_save_single_file()
+                                {
+                                    Ok(Some(path)) => {
+                                        let res =
+                                            match path.extension().and_then(|ext| ext.to_str()) {
+                                                Some("png") | None => fs::write(path, bytes)
+                                                    .map_err(|e| e.to_string()),
+                                                Some(ext) => {
+                                                    if let Some((_, format)) = [
+                                                        ("jpg", image::ImageFormat::Jpeg),
+                                                        ("jpeg", image::ImageFormat::Jpeg),
+                                                        ("bmp", image::ImageFormat::Bmp),
+                                                        ("webp", image::ImageFormat::WebP),
+                                                        ("qoi", image::ImageFormat::Qoi),
+                                                    ]
+                                                    .into_iter()
+                                                    .find(|(s, _)| ext == *s)
+                                                    {
+                                                        image::load_from_memory(bytes)
+                                                            .unwrap()
+                                                            .save_with_format(path, format)
+                                                            .map_err(|e| e.to_string())
+                                                    } else {
+                                                        Err(format!(
+                                                            "Unsupported image format: {ext}"
+                                                        ))
+                                                    }
+                                                }
+                                            };
+                                        if let Err(e) = res {
+                                            self.errors.push(e);
+                                        }
+                                    }
+                                    Ok(None) => {}
+                                    Err(e) => self.errors.push(e.to_string()),
+                                }
+                            }
+                        });
                     });
                 }
                 OutputItem::Gif {
@@ -382,6 +438,7 @@ impl App {
                             label,
                             changing,
                         },
+                    bytes: _,
                 } => {
                     if let Some(label) = label {
                         ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
@@ -464,6 +521,7 @@ impl App {
                     src_play,
                     label,
                     total_time,
+                    bytes: _,
                 } => {
                     ui.horizontal(|ui| {
                         if let Some(label) = label {
@@ -541,6 +599,7 @@ impl App {
                         label,
                         changing: false,
                     },
+                    bytes,
                 }
             }
             #[cfg(not(feature = "image"))]
@@ -609,6 +668,7 @@ impl App {
                         label,
                         changing: false,
                     },
+                    bytes,
                 }
             }
             #[cfg(not(feature = "gif"))]
@@ -630,6 +690,7 @@ impl App {
                     src_play,
                     label,
                     total_time,
+                    bytes,
                 }
             }
             #[cfg(not(feature = "audio"))]

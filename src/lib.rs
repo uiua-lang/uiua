@@ -173,6 +173,9 @@ mod sys;
 mod tree;
 mod types;
 mod value;
+#[cfg(feature = "window")]
+#[doc(hidden)]
+pub mod window;
 
 #[allow(unused_imports)]
 pub use self::{

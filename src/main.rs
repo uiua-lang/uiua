@@ -358,6 +358,8 @@ fn main() {
             }
             App::Doc { name } => doc(&name),
             App::Find { path, text, raw } => find(path, text, raw).unwrap_or_else(fail),
+            #[cfg(feature = "window")]
+            App::Window => uiua::window::run_window(),
         },
         Err(e)
             if e.kind() == ErrorKind::InvalidSubcommand
@@ -801,6 +803,8 @@ enum App {
     #[cfg(feature = "lsp")]
     #[clap(about = "Run the Language Server")]
     Lsp,
+    #[cfg(feature = "window")]
+    Window,
 }
 
 #[derive(Subcommand)]

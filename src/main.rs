@@ -745,7 +745,7 @@ enum Comm {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
-        #[clap(long, help = "Use a window for output instead of stdout")]
+        #[clap(short, long, help = "Use a window for output instead of stdout")]
         window: bool,
         #[clap(trailing_var_arg = true, help = "Arguments to pass to the program")]
         args: Vec<String>,

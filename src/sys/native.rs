@@ -661,7 +661,7 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "audio")]
     fn play_audio(&self, wav_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
-        #[cfg(feature = "audio")]
+        #[cfg(feature = "window")]
         {
             crate::window::Request::Show(crate::encode::SmartOutput::Wav(
                 wav_bytes,
@@ -669,7 +669,7 @@ impl SysBackend for NativeSys {
             ))
             .send()
         }
-        #[cfg(not(feature = "audio"))]
+        #[cfg(not(feature = "window"))]
         {
             use hodaun::*;
             match default_output::<Stereo>() {

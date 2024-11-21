@@ -212,7 +212,7 @@ pub(crate) fn audio_decode(env: &mut Uiua) -> UiuaResult {
             _ => return Err(env.error("Audio bytes must be a numeric array")),
         };
         let (array, sample_rate) =
-            crate::encode::array_from_wav_bytes(&bytes, env).map_err(|e| env.error(e))?;
+            crate::encode::array_from_wav_bytes(&bytes).map_err(|e| env.error(e))?;
         env.push(array);
         env.push(sample_rate as usize);
         env.push("wav");
@@ -490,24 +490,22 @@ pub fn stereo_to_wave_bytes<T: hound::Sample + Copy>(
 
 #[cfg(feature = "audio_encode")]
 #[doc(hidden)]
-pub fn array_from_wav_bytes(bytes: &[u8], env: &Uiua) -> UiuaResult<(Array<f64>, u32)> {
+pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
     let mut reader: WavReader<std::io::Cursor<&[u8]>> =
-        WavReader::new(std::io::Cursor::new(bytes)).map_err(|e| env.error(e.to_string()))?;
+        WavReader::new(std::io::Cursor::new(bytes)).map_err(|e| e.to_string())?;
     let spec = reader.spec();
     match (spec.sample_format, spec.bits_per_sample) {
         (SampleFormat::Int, 16) => {
-            array_from_wav_bytes_impl::<i16>(&mut reader, |i| i as f64 / i16::MAX as f64, env)
+            array_from_wav_bytes_impl::<i16>(&mut reader, |i| i as f64 / i16::MAX as f64)
         }
         (SampleFormat::Int, 32) => {
-            array_from_wav_bytes_impl::<i32>(&mut reader, |i| i as f64 / i32::MAX as f64, env)
+            array_from_wav_bytes_impl::<i32>(&mut reader, |i| i as f64 / i32::MAX as f64)
         }
-        (SampleFormat::Float, 32) => {
-            array_from_wav_bytes_impl::<f32>(&mut reader, |f| f as f64, env)
-        }
-        (sample_format, bits_per_sample) => Err(env.error(format!(
+        (SampleFormat::Float, 32) => array_from_wav_bytes_impl::<f32>(&mut reader, |f| f as f64),
+        (sample_format, bits_per_sample) => Err(format!(
             "Unsupported sample format: {:?} {} bits per sample",
             sample_format, bits_per_sample
-        ))),
+        )),
     }
 }
 
@@ -515,25 +513,24 @@ pub fn array_from_wav_bytes(bytes: &[u8], env: &Uiua) -> UiuaResult<(Array<f64>,
 fn array_from_wav_bytes_impl<T: hound::Sample>(
     reader: &mut WavReader<std::io::Cursor<&[u8]>>,
     sample_to_f64: impl Fn(T) -> f64,
-    env: &Uiua,
-) -> UiuaResult<(Array<f64>, u32)> {
+) -> Result<(Array<f64>, u32), String> {
     let channel_count = reader.spec().channels as usize;
     let mut channels = vec![ecow::EcoVec::new(); channel_count];
     let mut curr_channel = 0;
     for sample in reader.samples::<T>() {
-        let sample = sample.map_err(|e| env.error(e.to_string()))?;
+        let sample = sample.map_err(|e| e.to_string())?;
         channels[curr_channel].push(sample_to_f64(sample));
         curr_channel = (curr_channel + 1) % channel_count;
     }
 
     let sample_rate = reader.spec().sample_rate;
-    if channel_count == 1 {
+    Ok(if channel_count == 1 {
         let channel = channels.pop().unwrap();
-        Ok((channel.into(), sample_rate))
+        (channel.into(), sample_rate)
     } else {
-        Array::from_row_arrays(channels.into_iter().map(|ch| ch.into()), env)
-            .map(|arr| (arr, sample_rate))
-    }
+        let arr = Array::from_row_arrays_infallible(channels.into_iter().map(|ch| ch.into()));
+        (arr, sample_rate)
+    })
 }
 
 #[doc(hidden)]

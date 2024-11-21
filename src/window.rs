@@ -157,16 +157,16 @@ struct App {
     cache: Cache,
     clear: bool,
     clear_before_next: bool,
-    last_frame: Instant,
     #[cfg(feature = "audio")]
     audio_output: Option<hodaun::OutputDeviceMixer<hodaun::Stereo>>,
-    errors: Vec<String>,
 }
 
 struct Cache {
     ppp: f32,
     next_id: u64,
     size_map: HashMap<[u32; 2], Vec2>,
+    last_frame: Instant,
+    errors: Vec<String>,
 }
 
 impl Cache {
@@ -263,13 +263,13 @@ impl App {
                 ppp,
                 next_id: 0,
                 size_map: HashMap::new(),
+                last_frame: Instant::now(),
+                errors: Vec::new(),
             },
             clear,
             clear_before_next: true,
-            last_frame: Instant::now(),
             #[cfg(feature = "audio")]
             audio_output: hodaun::default_output().ok(),
-            errors: Vec::new(),
         }
     }
 }
@@ -318,6 +318,8 @@ impl eframe::App for App {
                 Request::Shutdown => ctx.send_viewport_cmd(ViewportCommand::Close),
             }
         }
+
+        // Top bar
         TopBottomPanel::top("top bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ComboBox::new("ppp", "🔍")
@@ -342,11 +344,32 @@ impl eframe::App for App {
                 }
             })
         });
+
+        // Main content
         CentralPanel::default().show(ctx, |ui| {
-            ScrollArea::both()
+            ScrollArea::vertical()
                 .auto_shrink([false; 2])
                 .show(ui, |ui| self.inner(ui))
         });
+
+        // Error window
+        if !self.cache.errors.is_empty() {
+            let mut open = true;
+            Window::new(format!(
+                "Error{}",
+                if self.cache.errors.len() > 1 { "s" } else { "" }
+            ))
+            .open(&mut open)
+            .show(ctx, |ui| {
+                for error in &self.cache.errors {
+                    ui.label(RichText::new(error.as_str()).color(Color32::RED));
+                }
+            });
+            if !open {
+                self.cache.errors.clear();
+            }
+        }
+
         if ctx.input(|input| input.viewport().close_requested()) {
             ctx.data_mut(|data| {
                 data.clear();
@@ -355,275 +378,292 @@ impl eframe::App for App {
             });
         }
         ctx.request_repaint_after_secs(0.1);
-        self.last_frame = Instant::now();
+        self.cache.last_frame = Instant::now();
     }
 }
 
 impl App {
     fn inner(&mut self, ui: &mut Ui) {
-        for item in self.items.iter_mut().rev() {
-            match item {
-                OutputItem::Text(text) => {
-                    ui.label(&*text);
+        for (i, item) in self.items.iter_mut().enumerate().rev() {
+            ScrollArea::horizontal().id_salt(i).show(ui, |ui| {
+                Self::item(&mut self.cache, item, ui);
+                ui.add_space(3.0);
+            });
+        }
+    }
+    fn item(cache: &mut Cache, item: &mut OutputItem, ui: &mut Ui) {
+        match item {
+            OutputItem::Text(text) => {
+                ui.label(&*text);
+            }
+            OutputItem::Code(code) => {
+                ui.label(RichText::new(code.as_str()).font(FontId::monospace(14.0)));
+            }
+            OutputItem::Error(error) => {
+                ui.label(RichText::new(error.as_str()).color(Color32::RED));
+            }
+            OutputItem::Separator => {
+                ui.separator();
+            }
+            OutputItem::Image {
+                tex_id,
+                state,
+                bytes,
+            } => {
+                if let Some(label) = &state.label {
+                    ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                 }
-                OutputItem::Code(code) => {
-                    ui.label(RichText::new(code.as_str()).font(FontId::monospace(14.0)));
-                }
-                OutputItem::Error(error) => {
-                    ui.label(RichText::new(error.as_str()).color(Color32::RED));
-                }
-                OutputItem::Separator => {
-                    ui.separator();
-                }
-                OutputItem::Image {
-                    tex_id,
-                    state,
-                    bytes,
-                } => {
-                    if let Some(label) = &state.label {
-                        ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
-                    }
-                    ui.horizontal(|ui| {
-                        let render_size = state.resize / self.cache.ppp;
-                        let resp = (Resize::default()
-                            .id_salt(state.id)
-                            .with_stroke(false)
-                            .default_size(render_size))
-                        .show(ui, |ui| {
-                            let available_width = ui.available_width();
-                            let available_height = ui.available_height();
-                            let aspect_ratio =
-                                state.true_size[0] as f32 / state.true_size[1] as f32;
-                            let use_height = (available_width / aspect_ratio).max(available_height);
-                            let use_width = (use_height * aspect_ratio).max(available_width);
-                            ui.image(SizedTexture {
-                                id: *tex_id,
-                                size: vec2(use_width, use_height),
-                            })
-                        });
-                        let chng = resp.rect.width() != render_size.x
-                            && resp.rect.height() != render_size.y;
-                        state.changing |= chng;
-                        ui.vertical(|ui| {
-                            state.show_reset(&mut self.cache, ui);
-                            if ui.button("Save").clicked() {
-                                match native_dialog::FileDialog::new()
-                                    .set_title("Save Image")
-                                    .set_filename(&format!(
-                                        "{}.png",
-                                        state.label.as_deref().unwrap_or("image")
-                                    ))
-                                    .add_filter("PNG Image", &["png"])
-                                    .add_filter("JPEG Image", &["jpg", "jpeg"])
-                                    .add_filter("BMP Image", &["bmp"])
-                                    .add_filter("WebP Image", &["webp"])
-                                    .add_filter("QOI Image", &["qoi"])
-                                    .add_filter("All Files", &["*"])
-                                    .show_save_single_file()
-                                {
-                                    Ok(Some(path)) => {
-                                        let res =
-                                            match path.extension().and_then(|ext| ext.to_str()) {
-                                                Some("png") | None => fs::write(path, bytes)
-                                                    .map_err(|e| e.to_string()),
-                                                Some(ext) => {
-                                                    if let Some((_, format)) = [
-                                                        ("jpg", image::ImageFormat::Jpeg),
-                                                        ("jpeg", image::ImageFormat::Jpeg),
-                                                        ("bmp", image::ImageFormat::Bmp),
-                                                        ("webp", image::ImageFormat::WebP),
-                                                        ("qoi", image::ImageFormat::Qoi),
-                                                    ]
-                                                    .into_iter()
-                                                    .find(|(s, _)| ext == *s)
-                                                    {
-                                                        image::load_from_memory(bytes)
-                                                            .unwrap()
-                                                            .save_with_format(path, format)
-                                                            .map_err(|e| e.to_string())
-                                                    } else {
-                                                        Err(format!(
-                                                            "Unsupported image format: {ext}"
-                                                        ))
-                                                    }
-                                                }
-                                            };
-                                        if let Err(e) = res {
-                                            self.errors.push(e);
-                                        }
-                                    }
-                                    Ok(None) => {}
-                                    Err(e) => self.errors.push(e.to_string()),
-                                }
-                            }
-                            state.handle_resize(&mut self.cache, ui, resp.rect);
-                        });
+                ui.horizontal(|ui| {
+                    // Image
+                    let render_size = state.resize / cache.ppp;
+                    let resp = (Resize::default()
+                        .id_salt(state.id)
+                        .with_stroke(false)
+                        .default_size(render_size))
+                    .show(ui, |ui| {
+                        let available_width = ui.available_width();
+                        let available_height = ui.available_height();
+                        let aspect_ratio = state.true_size[0] as f32 / state.true_size[1] as f32;
+                        let use_height = (available_width / aspect_ratio).max(available_height);
+                        let use_width = (use_height * aspect_ratio).max(available_width);
+                        ui.image(SizedTexture {
+                            id: *tex_id,
+                            size: vec2(use_width, use_height),
+                        })
                     });
-                }
-                OutputItem::Gif {
-                    frames,
-                    curr,
-                    play,
-                    state,
-                    bytes,
-                } => {
-                    if let Some(label) = &state.label {
-                        ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
-                    }
-                    let total_time: f32 = frames.iter().map(|(_, d)| d).sum();
-                    ui.horizontal(|ui| {
-                        let render_size = state.resize / self.cache.ppp;
-                        let resp = (Resize::default()
-                            .id_salt(state.id)
-                            .with_stroke(false)
-                            .default_size(render_size))
-                        .show(ui, |ui| {
-                            let available_width = ui.available_width();
-                            let available_height = ui.available_height();
-                            let aspect_ratio =
-                                state.true_size[0] as f32 / state.true_size[1] as f32;
-                            let use_height = (available_width / aspect_ratio).max(available_height);
-                            let use_width = (use_height * aspect_ratio).max(available_width);
-                            let mut t = 0.0;
-                            for (tex_id, delay) in &*frames {
-                                if t < *curr {
-                                    t += delay;
-                                    continue;
-                                }
-                                ui.ctx()
-                                    .request_repaint_after(Duration::from_secs_f32(*delay));
-                                return ui.image(SizedTexture {
-                                    id: *tex_id,
-                                    size: vec2(use_width, use_height),
-                                });
-                            }
-                            let (text_id, delay) = frames.last().unwrap();
-                            ui.ctx()
-                                .request_repaint_after(Duration::from_secs_f32(*delay));
-                            ui.image(SizedTexture {
-                                id: *text_id,
-                                size: vec2(use_width, use_height),
-                            })
-                        });
-                        let chng = resp.rect.width() != render_size.x
-                            && resp.rect.height() != render_size.y;
-                        state.changing |= chng;
-                        state.handle_resize(&mut self.cache, ui, resp.rect);
-                        ui.vertical(|ui| {
-                            ui.horizontal(|ui| {
-                                let play_text = if *play { "⏸" } else { "▶" };
-                                ui.toggle_value(play, play_text).on_hover_text(if *play {
-                                    "Pause"
-                                } else {
-                                    "Play"
-                                });
-                                Slider::new(curr, 0.0..=total_time)
-                                    .min_decimals(2)
-                                    .max_decimals(2)
-                                    .suffix(format!("/{total_time:.2}"))
-                                    .ui(ui);
-                            });
-                            if ui.button("Save").clicked() {
-                                match native_dialog::FileDialog::new()
-                                    .set_title("Save Gif")
-                                    .set_filename(&format!(
-                                        "{}.gif",
-                                        state.label.as_deref().unwrap_or("gif")
-                                    ))
-                                    .add_filter("GIF Image", &["gif"])
-                                    .add_filter("All Files", &["*"])
-                                    .show_save_single_file()
-                                {
-                                    Ok(Some(path)) => {
-                                        if let Err(e) = fs::write(path, bytes) {
-                                            self.errors.push(e.to_string());
-                                        }
-                                    }
-                                    Ok(None) => {}
-                                    Err(e) => self.errors.push(e.to_string()),
-                                }
-                            }
-                            state.show_reset(&mut self.cache, ui);
-                        });
-                    });
-                    if *play {
-                        *curr += self.last_frame.elapsed().as_secs_f32();
-                        *curr %= total_time;
-                    }
-                }
-                #[cfg(feature = "audio")]
-                OutputItem::Audio {
-                    curr,
-                    play,
-                    src_play,
-                    label,
-                    total_time,
-                    bytes,
-                } => {
-                    ui.horizontal(|ui| {
-                        if let Some(label) = label {
-                            ui.label(
-                                RichText::new(format!("{label}:")).font(FontId::monospace(14.0)),
-                            );
-                        }
-                        let mut done = !src_play.get() && curr.get() == 0.0;
-                        if done {
-                            *play = false;
-                        }
-                        let play_text = if *play { "⏸" } else { "▶" };
-                        let play_hint = if *play { "Pause" } else { "Play" };
-                        if ui
-                            .toggle_value(play, play_text)
-                            .on_hover_text(play_hint)
-                            .clicked()
-                            && *play
-                        {
-                            done = false;
-                        }
-                        let mut t = curr.get();
-                        let orig_t = t;
-                        let dragged = Slider::new(&mut t, 0.0..=*total_time)
-                            .min_decimals(2)
-                            .max_decimals(2)
-                            .suffix(format!("/{total_time:.2}"))
-                            .ui(ui)
-                            .dragged;
-                        done |= dragged;
-                        if t != orig_t {
-                            curr.set(t);
-                        }
-                        let should_play = *play && !done && (!dragged || t != orig_t);
-                        src_play.set(should_play);
-                        if should_play {
-                            ui.ctx().request_repaint();
-                        }
-
+                    ui.vertical(|ui| {
+                        ui.label(format!("{}×{}", state.true_size[0], state.true_size[1]));
+                        // Save
                         if ui.button("Save").clicked() {
                             match native_dialog::FileDialog::new()
-                                .set_title("Save Audio")
+                                .set_title("Save Image")
                                 .set_filename(&format!(
-                                    "{}.wav",
-                                    label.as_deref().unwrap_or("audio")
+                                    "{}.png",
+                                    state.label.as_deref().unwrap_or("image")
                                 ))
-                                .add_filter("WAV Audio", &["wav"])
+                                .add_filter("PNG Image", &["png"])
+                                .add_filter("JPEG Image", &["jpg", "jpeg"])
+                                .add_filter("BMP Image", &["bmp"])
+                                .add_filter("WebP Image", &["webp"])
+                                .add_filter("QOI Image", &["qoi"])
+                                .add_filter("All Files", &["*"])
+                                .show_save_single_file()
+                            {
+                                Ok(Some(path)) => {
+                                    let res = match path.extension().and_then(|ext| ext.to_str()) {
+                                        Some("png") | None => {
+                                            fs::write(path, bytes).map_err(|e| e.to_string())
+                                        }
+                                        Some(ext) => {
+                                            if let Some((_, format)) = [
+                                                ("jpg", image::ImageFormat::Jpeg),
+                                                ("jpeg", image::ImageFormat::Jpeg),
+                                                ("bmp", image::ImageFormat::Bmp),
+                                                ("webp", image::ImageFormat::WebP),
+                                                ("qoi", image::ImageFormat::Qoi),
+                                            ]
+                                            .into_iter()
+                                            .find(|(s, _)| ext == *s)
+                                            {
+                                                image::load_from_memory(bytes)
+                                                    .unwrap()
+                                                    .save_with_format(path, format)
+                                                    .map_err(|e| e.to_string())
+                                            } else {
+                                                Err(format!("Unsupported image format: {ext}"))
+                                            }
+                                        }
+                                    };
+                                    if let Err(e) = res {
+                                        cache.errors.push(e);
+                                    }
+                                }
+                                Ok(None) => {}
+                                Err(e) => cache.errors.push(e.to_string()),
+                            }
+                        }
+                        // Reset
+                        state.show_reset(cache, ui);
+                        // Resize
+                        let chng = resp.rect.width() != render_size.x
+                            && resp.rect.height() != render_size.y;
+                        state.changing |= chng;
+                        state.handle_resize(cache, ui, resp.rect);
+                    });
+                });
+            }
+            OutputItem::Gif {
+                frames,
+                curr,
+                play,
+                state,
+                bytes,
+            } => {
+                if let Some(label) = &state.label {
+                    ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
+                }
+                let total_time: f32 = frames.iter().map(|(_, d)| d).sum();
+                ui.horizontal(|ui| {
+                    // Frames
+                    let render_size = state.resize / cache.ppp;
+                    let resp = (Resize::default()
+                        .id_salt(state.id)
+                        .with_stroke(false)
+                        .default_size(render_size))
+                    .show(ui, |ui| {
+                        let available_width = ui.available_width();
+                        let available_height = ui.available_height();
+                        let aspect_ratio = state.true_size[0] as f32 / state.true_size[1] as f32;
+                        let use_height = (available_width / aspect_ratio).max(available_height);
+                        let use_width = (use_height * aspect_ratio).max(available_width);
+                        let mut t = 0.0;
+                        for (tex_id, delay) in &*frames {
+                            if t < *curr {
+                                t += delay;
+                                continue;
+                            }
+                            ui.ctx()
+                                .request_repaint_after(Duration::from_secs_f32(*delay));
+                            return ui.image(SizedTexture {
+                                id: *tex_id,
+                                size: vec2(use_width, use_height),
+                            });
+                        }
+                        let (text_id, delay) = frames.last().unwrap();
+                        ui.ctx()
+                            .request_repaint_after(Duration::from_secs_f32(*delay));
+                        ui.image(SizedTexture {
+                            id: *text_id,
+                            size: vec2(use_width, use_height),
+                        })
+                    });
+                    let chng =
+                        resp.rect.width() != render_size.x && resp.rect.height() != render_size.y;
+                    state.changing |= chng;
+                    state.handle_resize(cache, ui, resp.rect);
+                    ui.vertical(|ui| {
+                        ui.label(format!(
+                            "{}×{}, {} frames",
+                            state.true_size[0],
+                            state.true_size[1],
+                            frames.len()
+                        ));
+                        ui.horizontal(|ui| {
+                            // Play/pause
+                            let play_text = if *play { "⏸" } else { "▶" };
+                            ui.toggle_value(play, play_text).on_hover_text(if *play {
+                                "Pause"
+                            } else {
+                                "Play"
+                            });
+                            // Time slider
+                            Slider::new(curr, 0.0..=total_time)
+                                .min_decimals(2)
+                                .max_decimals(2)
+                                .suffix(format!("/{total_time:.2}"))
+                                .ui(ui);
+                        });
+                        // Save
+                        if ui.button("Save").clicked() {
+                            match native_dialog::FileDialog::new()
+                                .set_title("Save Gif")
+                                .set_filename(&format!(
+                                    "{}.gif",
+                                    state.label.as_deref().unwrap_or("gif")
+                                ))
+                                .add_filter("GIF Image", &["gif"])
                                 .add_filter("All Files", &["*"])
                                 .show_save_single_file()
                             {
                                 Ok(Some(path)) => {
                                     if let Err(e) = fs::write(path, bytes) {
-                                        self.errors.push(e.to_string());
+                                        cache.errors.push(e.to_string());
                                     }
                                 }
                                 Ok(None) => {}
-                                Err(e) => self.errors.push(e.to_string()),
+                                Err(e) => cache.errors.push(e.to_string()),
                             }
                         }
+                        // Reset
+                        state.show_reset(cache, ui);
                     });
+                });
+                if *play {
+                    *curr += cache.last_frame.elapsed().as_secs_f32();
+                    *curr %= total_time;
                 }
+            }
+            #[cfg(feature = "audio")]
+            OutputItem::Audio {
+                curr,
+                play,
+                src_play,
+                label,
+                total_time,
+                bytes,
+            } => {
+                ui.horizontal(|ui| {
+                    if let Some(label) = label {
+                        ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
+                    }
+                    let mut done = !src_play.get() && curr.get() == 0.0;
+                    if done {
+                        *play = false;
+                    }
+                    let play_text = if *play { "⏸" } else { "▶" };
+                    let play_hint = if *play { "Pause" } else { "Play" };
+                    if ui
+                        .toggle_value(play, play_text)
+                        .on_hover_text(play_hint)
+                        .clicked()
+                        && *play
+                    {
+                        done = false;
+                    }
+                    let mut t = curr.get();
+                    let orig_t = t;
+                    let dragged = Slider::new(&mut t, 0.0..=*total_time)
+                        .min_decimals(2)
+                        .max_decimals(2)
+                        .suffix(format!("/{total_time:.2}"))
+                        .ui(ui)
+                        .dragged;
+                    done |= dragged;
+                    if t != orig_t {
+                        curr.set(t);
+                    }
+                    let should_play = *play && !done && (!dragged || t != orig_t);
+                    src_play.set(should_play);
+                    if should_play {
+                        ui.ctx().request_repaint();
+                    }
+
+                    if ui.button("Save").clicked() {
+                        match native_dialog::FileDialog::new()
+                            .set_title("Save Audio")
+                            .set_filename(&format!("{}.wav", label.as_deref().unwrap_or("audio")))
+                            .add_filter("WAV Audio", &["wav"])
+                            .add_filter("All Files", &["*"])
+                            .show_save_single_file()
+                        {
+                            Ok(Some(path)) => {
+                                if let Err(e) = fs::write(path, bytes) {
+                                    cache.errors.push(e.to_string());
+                                }
+                            }
+                            Ok(None) => {}
+                            Err(e) => cache.errors.push(e.to_string()),
+                        }
+                    }
+                });
             }
         }
     }
     fn convert_smart_output(&mut self, output: SmartOutput, ctx: &Context) -> OutputItem {
+        const TEXTURE_OPTIONS: TextureOptions = TextureOptions {
+            magnification: TextureFilter::Nearest,
+            ..TextureOptions::LINEAR
+        };
         match output {
             SmartOutput::Normal(value) => OutputItem::Code(value.show()),
             #[cfg(feature = "image")]
@@ -643,7 +683,7 @@ impl App {
                 let text_id = ctx.tex_manager().write().alloc(
                     String::new(),
                     ImageData::Color(Arc::new(color_image)),
-                    Default::default(),
+                    TEXTURE_OPTIONS,
                 );
                 OutputItem::Image {
                     tex_id: text_id,
@@ -676,7 +716,7 @@ impl App {
                                 .map(|w| Color32::from_rgba_unmultiplied(w[0], w[1], w[2], w[3]))
                                 .collect(),
                         })),
-                        Default::default(),
+                        TEXTURE_OPTIONS,
                     ),
                     first_frame.delay as f32 / 100.0,
                 ));
@@ -695,7 +735,7 @@ impl App {
                                     })
                                     .collect(),
                             })),
-                            Default::default(),
+                            TEXTURE_OPTIONS,
                         ),
                         frame.delay as f32 / 100.0,
                     ));
@@ -730,8 +770,17 @@ impl App {
                     bytes,
                 }
             }
-            #[cfg(not(feature = "audio"))]
-            SmartOutput::Wav(..) => OutputItem::Error("Audio not yet implemented".into()),
+            #[cfg(all(not(feature = "audio"), feature = "audio_encode"))]
+            SmartOutput::Wav(bytes, label) => {
+                let mut value =
+                    crate::Value::from(crate::encode::array_from_wav_bytes(&bytes).unwrap().0);
+                value.set_label(label.map(Into::into));
+                OutputItem::Code(value.show())
+            }
+            #[cfg(not(any(feature = "audio", feature = "audio_encode")))]
+            SmartOutput::Wav(..) => {
+                OutputItem::Error("Audio is not supported in this environment".into())
+            }
         }
     }
 }

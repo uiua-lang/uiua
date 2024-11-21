@@ -145,6 +145,10 @@ pub fn run_window() {
                 .or_default()
                 .insert(0, "Uiua386".into());
             cc.egui_ctx.set_fonts(fonts);
+            cc.egui_ctx
+                .send_viewport_cmd(ViewportCommand::RequestUserAttention(
+                    UserAttentionType::Informational,
+                ));
             Ok(Box::new(App::new(recv, &cc.egui_ctx)))
         }),
     )
@@ -323,11 +327,12 @@ impl eframe::App for App {
 
         // Top bar
         TopBottomPanel::top("top bar").show(ctx, |ui| {
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 ComboBox::new("ppp", "🔍")
+                    .width(60.0)
                     .selected_text(format!("{:.0}%", self.cache.ppp * 100.0))
                     .show_ui(ui, |ui| {
-                        for ppp in [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0] {
+                        for ppp in [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0] {
                             let label = format!("{:.0}%", ppp * 100.0);
                             if ui
                                 .selectable_value(&mut self.cache.ppp, ppp, label)
@@ -336,8 +341,12 @@ impl eframe::App for App {
                                 ui.ctx().set_pixels_per_point(ppp);
                             }
                         }
-                    });
+                    })
+                    .response
+                    .on_hover_text("UI Scale");
+                ui.add_space(10.0);
                 global_theme_preference_switch(ui);
+                ui.add_space(10.0);
                 Checkbox::new(&mut self.clear, "Clear")
                     .ui(ui)
                     .on_hover_text("Clear on each run");
@@ -415,7 +424,7 @@ impl App {
                 if let Some(label) = &state.label {
                     ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                 }
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     // Image
                     let render_size = state.resize / cache.ppp;
                     let resp = (Resize::default()
@@ -505,7 +514,7 @@ impl App {
                     ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                 }
                 let total_time: f32 = frames.iter().map(|(_, d)| d).sum();
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     // Frames
                     let render_size = state.resize / cache.ppp;
                     let resp = (Resize::default()
@@ -550,7 +559,7 @@ impl App {
                             state.true_size[1],
                             frames.len()
                         ));
-                        ui.horizontal(|ui| {
+                        ui.horizontal_wrapped(|ui| {
                             // Play/pause
                             let play_text = if *play { "⏸" } else { "▶" };
                             ui.toggle_value(play, play_text).on_hover_text(if *play {
@@ -604,7 +613,7 @@ impl App {
                 sample_count,
                 bytes,
             } => {
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     if let Some(label) = label {
                         ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                     }
@@ -856,6 +865,9 @@ mod audio {
                     }
                 });
                 *sample
+            } else if self.controls.repeat.get() && !self.buffer.is_empty() {
+                self.controls.curr.set(0.0);
+                return self.next(sample_rate);
             } else {
                 self.controls.play.set(false);
                 self.controls.curr.set(0.0);

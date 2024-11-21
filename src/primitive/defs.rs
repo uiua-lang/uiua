@@ -1852,6 +1852,13 @@ primitive!(
     /// ex: ⊕□\+=@    . "Everyday man's on the block"
     ///   : ⊕□\+↻¯1=@ . "Everyday man's on the block"
     ///
+    /// [fill] both sets the initial value and fills mismatched shapes if necessary.
+    /// ex:    \+ [1 2 3 4 5]
+    ///   : ⬚@a\+ [1 2 3 4 5]
+    /// ex: +1⇡5
+    ///   : ⬚0\⊂ .
+    ///   : ↘1_1 .
+    ///
     /// If the function takes more than 2 arguments, additional arguments above the array on the stack will be passed to the function on every iteration.
     /// ex: \(+×) 10 [1 2 3 4]
     /// ex: ⬚@ \(⊂⊂) @, "abcd"

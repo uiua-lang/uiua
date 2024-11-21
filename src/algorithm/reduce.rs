@@ -663,6 +663,9 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
     if xs.rank() == 0 && f.sig.args <= 2 {
         return Err(env.error(format!("Cannot {} rank 0 array", Primitive::Scan.format())));
     }
+    if env.value_fill().is_some() {
+        return generic_scan(f, xs, env);
+    }
     match (f.node.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
             let arr = match prim {
@@ -771,12 +774,19 @@ fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
         ))),
         2 => {
             if xs.row_count() == 0 {
-                env.push(xs.first_dim_zero());
+                env.push(
+                    env.value_fill()
+                        .cloned()
+                        .unwrap_or_else(|| (xs.first_dim_zero())),
+                );
                 return Ok(());
             }
             let row_count = xs.row_count();
             let mut rows = xs.into_rows();
-            let mut acc = rows.next().unwrap();
+            let mut acc = env
+                .value_fill()
+                .cloned()
+                .unwrap_or_else(|| rows.next().unwrap());
             let mut scanned = Vec::with_capacity(row_count);
             scanned.push(acc.clone());
             env.without_fill(|env| -> UiuaResult {

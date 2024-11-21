@@ -10,6 +10,9 @@ This version is not yet released. If you are reading this on the website, then t
   - This new behavior is more useful
 - **Breaking Change**: [`un °`](https://uiua.org/docs/un) [`json`](https://uiua.org/docs/json) no longer attempts to form multidimensional arrays
   - This makes deserializing JSON more consistent
+- **Breaking Change**: [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) now sets the initial value as well as filling row shapes
+  - This behavior is hard to get otherwise
+  - Fixes to existing code should be simple
 - Stabilize [`sort ⍆`](https://uiua.org/docs/sort)
   - Sorting is a very common operation, and it's useful to have such simple access to it
 - Stabilize [`last ⊣`](https://uiua.org/docs/last)

@@ -333,6 +333,7 @@ impl eframe::App for App {
                             }
                         }
                     });
+                global_theme_preference_switch(ui);
                 Checkbox::new(&mut self.clear, "Clear")
                     .ui(ui)
                     .on_hover_text("Clear on each run");
@@ -393,8 +394,8 @@ impl App {
                             let available_height = ui.available_height();
                             let aspect_ratio =
                                 state.true_size[0] as f32 / state.true_size[1] as f32;
-                            let use_height = (available_width / aspect_ratio).min(available_height);
-                            let use_width = (use_height * aspect_ratio).min(available_width);
+                            let use_height = (available_width / aspect_ratio).max(available_height);
+                            let use_width = (use_height * aspect_ratio).max(available_width);
                             ui.image(SizedTexture {
                                 id: *tex_id,
                                 size: vec2(use_width, use_height),
@@ -481,8 +482,8 @@ impl App {
                             let available_height = ui.available_height();
                             let aspect_ratio =
                                 state.true_size[0] as f32 / state.true_size[1] as f32;
-                            let use_height = (available_width / aspect_ratio).min(available_height);
-                            let use_width = (use_height * aspect_ratio).min(available_width);
+                            let use_height = (available_width / aspect_ratio).max(available_height);
+                            let use_width = (use_height * aspect_ratio).max(available_width);
                             let mut t = 0.0;
                             for (tex_id, delay) in &*frames {
                                 if t < *curr {
@@ -517,9 +518,9 @@ impl App {
                                     "Play"
                                 });
                                 Slider::new(curr, 0.0..=total_time)
-                                    .custom_formatter(|curr, _| {
-                                        format!("{curr:.2}/{total_time:.2}")
-                                    })
+                                    .min_decimals(2)
+                                    .max_decimals(2)
+                                    .suffix(format!("/{total_time:.2}"))
                                     .ui(ui);
                             });
                             if ui.button("Save").clicked() {
@@ -582,7 +583,9 @@ impl App {
                         let mut t = curr.get();
                         let orig_t = t;
                         let dragged = Slider::new(&mut t, 0.0..=*total_time)
-                            .custom_formatter(|t, _| format!("{t:.2}/{total_time:.2}"))
+                            .min_decimals(2)
+                            .max_decimals(2)
+                            .suffix(format!("/{total_time:.2}"))
                             .ui(ui)
                             .dragged;
                         done |= dragged;

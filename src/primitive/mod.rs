@@ -250,6 +250,7 @@ impl fmt::Display for ImplPrimitive {
             MatchLe => write!(f, "match ≤"),
             MatchGe => write!(f, "match ≥"),
             AstarFirst => write!(f, "{First}{Astar}"),
+            AstarPop => write!(f, "{Pop}{Astar}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -1647,6 +1648,7 @@ impl ImplPrimitive {
             ImplPrimitive::ReduceContent => reduce::reduce_content(ops, env)?,
             ImplPrimitive::Adjacent => reduce::adjacent(ops, env)?,
             ImplPrimitive::AstarFirst => algorithm::astar_first(ops, env)?,
+            ImplPrimitive::AstarPop => algorithm::astar_pop(ops, env)?,
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(ops, depth, env)?,
             ImplPrimitive::RepeatWithInverse => loops::repeat(ops, true, env)?,
             ImplPrimitive::UnScan => reduce::unscan(ops, env)?,

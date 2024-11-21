@@ -3620,6 +3620,7 @@ impl_primitive!(
     (2[1], RowsWindows),
     (1, CountUnique),
     (1(2)[3], AstarFirst),
+    (1[3], AstarPop),
     // Implementation details
     (1[2], RepeatWithInverse),
     (2(1), ValidateType),

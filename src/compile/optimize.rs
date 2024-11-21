@@ -209,11 +209,8 @@ opt!(
         ImplMod(AstarFirst, args.clone(), *span)
     ),
     (
-        [Mod(Astar, args, span), Prim(Pop, pop_span)],
-        [
-            ImplMod(AstarFirst, args.clone(), *span),
-            Prim(Pop, *pop_span)
-        ]
+        [Mod(Astar, args, span), Prim(Pop, _)],
+        ImplMod(AstarPop, args.clone(), *span)
     ),
 );
 

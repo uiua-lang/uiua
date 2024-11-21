@@ -773,14 +773,24 @@ fn fft_impl(
 }
 
 pub fn astar(ops: Ops, env: &mut Uiua) -> UiuaResult {
-    astar_impl(ops, false, env)
+    astar_impl(ops, AstarMode::All, env)
 }
 
 pub fn astar_first(ops: Ops, env: &mut Uiua) -> UiuaResult {
-    astar_impl(ops, true, env)
+    astar_impl(ops, AstarMode::First, env)
 }
 
-fn astar_impl(ops: Ops, first_only: bool, env: &mut Uiua) -> UiuaResult {
+pub fn astar_pop(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    astar_impl(ops, AstarMode::CostOnly, env)
+}
+
+enum AstarMode {
+    All,
+    First,
+    CostOnly,
+}
+
+fn astar_impl(ops: Ops, mode: AstarMode, env: &mut Uiua) -> UiuaResult {
     let start = env.pop("start")?;
     let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
     let nei_sig = neighbors.sig;
@@ -935,10 +945,10 @@ fn astar_impl(ops: Ops, first_only: bool, env: &mut Uiua) -> UiuaResult {
         if env.is_goal(&backing[curr])? {
             ends.insert(curr);
             shortest_cost = curr_cost;
-            if first_only {
-                break;
-            } else {
+            if let AstarMode::All = mode {
                 continue;
+            } else {
+                break;
             }
         }
         // Check neighbors
@@ -992,57 +1002,61 @@ fn astar_impl(ops: Ops, first_only: bool, env: &mut Uiua) -> UiuaResult {
         Value::from_row_values(path, env)
     };
 
-    if first_only {
-        let mut curr = ends
-            .into_iter()
-            .next()
-            .ok_or_else(|| env.error("No path found"))?;
-        let mut path = vec![curr];
-        while let Some(from) = came_from.get(&curr) {
-            path.push(from[0]);
-            curr = from[0];
-        }
-        path.reverse();
-        env.push(make_path(path)?);
-    } else {
-        for end in ends {
-            let mut currs = vec![vec![end]];
-            let mut these_paths = Vec::new();
-            while !currs.is_empty() {
-                let mut new_paths = Vec::new();
-                currs.retain_mut(|path| {
-                    let parents = came_from
-                        .get(path.last().unwrap())
-                        .map(|p| p.as_slice())
-                        .unwrap_or(&[]);
-                    match parents {
-                        [] => {
-                            these_paths.push(take(path));
-                            false
-                        }
-                        &[parent] => {
-                            path.push(parent);
-                            true
-                        }
-                        &[parent, ref rest @ ..] => {
-                            for &parent in rest {
-                                let mut path = path.clone();
-                                path.push(parent);
-                                new_paths.push(path);
+    match mode {
+        AstarMode::All => {
+            for end in ends {
+                let mut currs = vec![vec![end]];
+                let mut these_paths = Vec::new();
+                while !currs.is_empty() {
+                    let mut new_paths = Vec::new();
+                    currs.retain_mut(|path| {
+                        let parents = came_from
+                            .get(path.last().unwrap())
+                            .map(|p| p.as_slice())
+                            .unwrap_or(&[]);
+                        match parents {
+                            [] => {
+                                these_paths.push(take(path));
+                                false
                             }
-                            path.push(parent);
-                            true
+                            &[parent] => {
+                                path.push(parent);
+                                true
+                            }
+                            &[parent, ref rest @ ..] => {
+                                for &parent in rest {
+                                    let mut path = path.clone();
+                                    path.push(parent);
+                                    new_paths.push(path);
+                                }
+                                path.push(parent);
+                                true
+                            }
                         }
-                    }
-                });
-                currs.extend(new_paths);
+                    });
+                    currs.extend(new_paths);
+                }
+                for mut path in these_paths {
+                    path.reverse();
+                    paths.push(Boxed(make_path(path)?));
+                }
             }
-            for mut path in these_paths {
-                path.reverse();
-                paths.push(Boxed(make_path(path)?));
-            }
+            env.push(paths);
         }
-        env.push(paths);
+        AstarMode::First => {
+            let mut curr = ends
+                .into_iter()
+                .next()
+                .ok_or_else(|| env.error("No path found"))?;
+            let mut path = vec![curr];
+            while let Some(from) = came_from.get(&curr) {
+                path.push(from[0]);
+                curr = from[0];
+            }
+            path.reverse();
+            env.push(make_path(path)?);
+        }
+        AstarMode::CostOnly => {}
     }
     Ok(())
 }

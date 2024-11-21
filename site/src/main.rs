@@ -448,7 +448,7 @@ pub fn PadPage() -> impl IntoView {
             let date = Date::new_0();
             if date.get_month() == 11 || date.get_month() == 10 && date.get_date() > 15 {
                 let year = date.get_full_year();
-                const CODE: &str = "2861476-31474540";
+                const CODE: &str = "6680-a10280cf";
                 let copy_code = move |_| {
                      _ = window().navigator().clipboard().write_text(CODE)
                 };

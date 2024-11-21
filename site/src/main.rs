@@ -137,9 +137,6 @@ pub fn Site() -> impl IntoView {
                     <Route path="*" view=NotFound/>
                 </Route>
             </Routes>
-            <br/>
-            <br/>
-            <br/>
         </Router>
     }
 }
@@ -447,6 +444,21 @@ pub fn PadPage() -> impl IntoView {
         <Editor mode=EditorMode::Pad example={ &src } help=help/>
         <br/>
         <br/>
+        {
+            let date = Date::new_0();
+            if date.get_month() == 11 || date.get_month() == 10 && date.get_date() > 15 {
+                let year = date.get_full_year();
+                const CODE: &str = "2861476-31474540";
+                let copy_code = move |_| {
+                     _ = window().navigator().clipboard().write_text(CODE)
+                };
+                Some(view! {
+                    <p>"Join the official "<a href="https://adventofcode.com">"Advent of Code "{year}</a>" Uiua community leaderboard "<a href="https://adventofcode.com/2024/leaderboard/private">"here!"</a>"  "<button on:click=copy_code>"Copy code"</button></p>
+                })
+            } else {
+                None
+            }
+        }
         <br/>
         <p>"You can load files into the pad by dragging and dropping them into the window."</p>
         <p>"Replace "<code>"pad"</code>" in links with "<code>"embed"</code>" or "<code>"embedpad"</code>" to embed the editor."</p>
@@ -454,6 +466,7 @@ pub fn PadPage() -> impl IntoView {
         <code class="code-block">
             { EDITOR_SHORTCUTS }
         </code>
+        <p>"Want a pad-like experience in the native interpreter? Try the "<code>"uiua -w"</code>" command to show output in a window."</p>
     }
 }
 

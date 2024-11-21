@@ -49,3 +49,10 @@ MapsII ← ∩(remove 1) MapsI
 ⍤⟜≍ insert[][]map[][] insert[][][]
 ⍤⤙≍ 5 get [] insert [] 5 map[][]
 ⍤⤙≍ 5 get [] insert [] 5 insert[]3map[][]
+
+# Weird probe patterns
+map {"x" "y" "z"} [1 2 3]
+remove "y"
+insert "z" 4
+⍤⤙≍ map {"x" "z"} [1 4]
+⍤⤙≍ ⤙⍜remove∘ @a map "abc" [1 2 3]

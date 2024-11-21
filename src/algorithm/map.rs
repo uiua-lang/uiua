@@ -364,13 +364,36 @@ impl MapKeys {
             let key_row_len = keys.row_len();
             let key_data = keys.data.as_mut_slice();
             loop {
-                let cell_key =
-                    &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
+                let cell_key = &key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
                 let present = if cell_key.is_empty() {
                     *len == 1
+                } else if cell_key[0].is_any_empty_cell() {
+                    false
+                } else if cell_key[0].is_any_tombstone() {
+                    // Probe for the matching key
+                    let orig = key_index;
+                    loop {
+                        key_index = (key_index + 1) % capacity;
+                        let cell_key =
+                            &key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
+                        if cell_key[0].is_any_tombstone() {
+                            continue;
+                        } else if cell_key[0].is_any_empty_cell() {
+                            key_index = orig;
+                            break false;
+                        } else {
+                            let found = ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data);
+                            if !found {
+                                key_index = orig;
+                            }
+                            break found;
+                        }
+                    }
                 } else {
-                    !(cell_key[0].is_any_empty_cell() || cell_key[0].is_any_tombstone())
+                    true
                 };
+                let cell_key =
+                    &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
                 if !present || ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
                     if !present {
                         *len += 1;

@@ -169,6 +169,7 @@ struct Cache {
     ppp: f32,
     next_id: u64,
     size_map: HashMap<[u32; 2], Vec2>,
+    #[cfg(feature = "audio")]
     samples_map: HashMap<usize, bool>,
     last_frame: Instant,
     errors: Vec<String>,
@@ -268,6 +269,7 @@ impl App {
                 ppp,
                 next_id: 0,
                 size_map: HashMap::new(),
+                #[cfg(feature = "audio")]
                 samples_map: HashMap::new(),
                 last_frame: Instant::now(),
                 errors: Vec::new(),

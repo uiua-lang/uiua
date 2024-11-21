@@ -102,10 +102,7 @@ pub fn run_window() {
         }
         loop {
             match listener.accept() {
-                Ok((mut stream, addr)) => {
-                    if cfg!(debug_assertions) {
-                        eprintln!("Accepted connection from {addr}");
-                    }
+                Ok((mut stream, _)) => {
                     let mut buffer = Vec::new();
                     stream.read_to_end(&mut buffer).unwrap();
                     match rmp_serde::from_slice(&buffer) {
@@ -157,15 +154,27 @@ pub fn run_window() {
 struct App {
     items: Vec<OutputItem>,
     recv: Receiver<Request>,
-    next_id: u64,
-    ppp: f32,
+    cache: Cache,
     clear: bool,
     clear_before_next: bool,
-    size_map: HashMap<[u32; 2], Vec2>,
     last_frame: Instant,
     #[cfg(feature = "audio")]
     audio_output: Option<hodaun::OutputDeviceMixer<hodaun::Stereo>>,
     errors: Vec<String>,
+}
+
+struct Cache {
+    ppp: f32,
+    next_id: u64,
+    size_map: HashMap<[u32; 2], Vec2>,
+}
+
+impl Cache {
+    fn next_id(&mut self) -> u64 {
+        let id = self.next_id;
+        self.next_id += 1;
+        id
+    }
 }
 
 enum OutputItem {
@@ -205,6 +214,39 @@ struct ImageState {
     changing: bool,
 }
 
+impl ImageState {
+    fn new(cache: &mut Cache, true_size: [u32; 2], label: Option<String>) -> Self {
+        Self {
+            id: cache.next_id(),
+            true_size,
+            resize: cache
+                .size_map
+                .get(&true_size)
+                .copied()
+                .unwrap_or(vec2(true_size[0] as f32, true_size[1] as f32)),
+            label,
+            changing: false,
+        }
+    }
+    fn show_reset(&mut self, cache: &mut Cache, ui: &mut Ui) {
+        if (self.true_size[0] as f32 != self.resize.x || self.true_size[1] as f32 != self.resize.y)
+            && ui.button("↻").on_hover_text("Reset size").clicked()
+        {
+            self.id = cache.next_id();
+            self.resize = vec2(self.true_size[0] as f32, self.true_size[1] as f32);
+            cache.size_map.remove(&self.true_size);
+        }
+    }
+    fn handle_resize(&mut self, cache: &mut Cache, ui: &mut Ui, rect: Rect) {
+        if self.changing && !ui.input(|i| i.pointer.primary_down()) {
+            self.resize = rect.size() * cache.ppp;
+            cache.size_map.insert(self.true_size, self.resize);
+            self.id = cache.next_id();
+            self.changing = false;
+        }
+    }
+}
+
 impl App {
     fn new(recv: Receiver<Request>, ctx: &Context) -> Self {
         let (ppp, clear) = ctx.memory_mut(|mem| {
@@ -217,11 +259,13 @@ impl App {
         App {
             items: Vec::new(),
             recv,
-            next_id: 0,
-            ppp,
+            cache: Cache {
+                ppp,
+                next_id: 0,
+                size_map: HashMap::new(),
+            },
             clear,
             clear_before_next: true,
-            size_map: HashMap::new(),
             last_frame: Instant::now(),
             #[cfg(feature = "audio")]
             audio_output: hodaun::default_output().ok(),
@@ -277,11 +321,14 @@ impl eframe::App for App {
         TopBottomPanel::top("top bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ComboBox::new("ppp", "🔍")
-                    .selected_text(format!("{:.0}%", self.ppp * 100.0))
+                    .selected_text(format!("{:.0}%", self.cache.ppp * 100.0))
                     .show_ui(ui, |ui| {
                         for ppp in [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0] {
                             let label = format!("{:.0}%", ppp * 100.0);
-                            if ui.selectable_value(&mut self.ppp, ppp, label).clicked() {
+                            if ui
+                                .selectable_value(&mut self.cache.ppp, ppp, label)
+                                .clicked()
+                            {
                                 ui.ctx().set_pixels_per_point(ppp);
                             }
                         }
@@ -302,7 +349,7 @@ impl eframe::App for App {
         if ctx.input(|input| input.viewport().close_requested()) {
             ctx.data_mut(|data| {
                 data.clear();
-                data.insert_persisted(Id::new("ppp"), self.ppp);
+                data.insert_persisted(Id::new("ppp"), self.cache.ppp);
                 data.insert_persisted(Id::new("clear"), self.clear);
             });
         }
@@ -329,29 +376,23 @@ impl App {
                 }
                 OutputItem::Image {
                     tex_id,
-                    state:
-                        ImageState {
-                            id,
-                            true_size,
-                            resize,
-                            label,
-                            changing,
-                        },
+                    state,
                     bytes,
                 } => {
-                    if let Some(label) = label {
+                    if let Some(label) = &state.label {
                         ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                     }
                     ui.horizontal(|ui| {
-                        let render_size = *resize / self.ppp;
+                        let render_size = state.resize / self.cache.ppp;
                         let resp = (Resize::default()
-                            .id_salt(*id)
+                            .id_salt(state.id)
                             .with_stroke(false)
                             .default_size(render_size))
                         .show(ui, |ui| {
                             let available_width = ui.available_width();
                             let available_height = ui.available_height();
-                            let aspect_ratio = true_size[0] as f32 / true_size[1] as f32;
+                            let aspect_ratio =
+                                state.true_size[0] as f32 / state.true_size[1] as f32;
                             let use_height = (available_width / aspect_ratio).min(available_height);
                             let use_width = (use_height * aspect_ratio).min(available_width);
                             ui.image(SizedTexture {
@@ -361,27 +402,15 @@ impl App {
                         });
                         let chng = resp.rect.width() != render_size.x
                             && resp.rect.height() != render_size.y;
-                        *changing |= chng;
-                        if *changing && !ui.input(|i| i.pointer.primary_down()) {
-                            *resize = resp.rect.size() * self.ppp;
-                            self.size_map.insert(*true_size, *resize);
-                            *id = self.next_id;
-                            self.next_id += 1;
-                            *changing = false;
-                        }
+                        state.changing |= chng;
                         ui.vertical(|ui| {
-                            if ui.button("↻").on_hover_text("Reset size").clicked() {
-                                *id = self.next_id;
-                                self.next_id += 1;
-                                *resize = vec2(true_size[0] as f32, true_size[1] as f32);
-                                self.size_map.remove(true_size);
-                            }
+                            state.show_reset(&mut self.cache, ui);
                             if ui.button("Save").clicked() {
                                 match native_dialog::FileDialog::new()
                                     .set_title("Save Image")
                                     .set_filename(&format!(
                                         "{}.png",
-                                        label.as_deref().unwrap_or("image")
+                                        state.label.as_deref().unwrap_or("image")
                                     ))
                                     .add_filter("PNG Image", &["png"])
                                     .add_filter("JPEG Image", &["jpg", "jpeg"])
@@ -426,6 +455,7 @@ impl App {
                                     Err(e) => self.errors.push(e.to_string()),
                                 }
                             }
+                            state.handle_resize(&mut self.cache, ui, resp.rect);
                         });
                     });
                 }
@@ -433,30 +463,24 @@ impl App {
                     frames,
                     curr,
                     play,
-                    state:
-                        ImageState {
-                            id,
-                            true_size,
-                            resize,
-                            label,
-                            changing,
-                        },
+                    state,
                     bytes,
                 } => {
-                    if let Some(label) = label {
+                    if let Some(label) = &state.label {
                         ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                     }
                     let total_time: f32 = frames.iter().map(|(_, d)| d).sum();
                     ui.horizontal(|ui| {
-                        let render_size = *resize / self.ppp;
+                        let render_size = state.resize / self.cache.ppp;
                         let resp = (Resize::default()
-                            .id_salt(*id)
+                            .id_salt(state.id)
                             .with_stroke(false)
                             .default_size(render_size))
                         .show(ui, |ui| {
                             let available_width = ui.available_width();
                             let available_height = ui.available_height();
-                            let aspect_ratio = true_size[0] as f32 / true_size[1] as f32;
+                            let aspect_ratio =
+                                state.true_size[0] as f32 / state.true_size[1] as f32;
                             let use_height = (available_width / aspect_ratio).min(available_height);
                             let use_width = (use_height * aspect_ratio).min(available_width);
                             let mut t = 0.0;
@@ -482,14 +506,8 @@ impl App {
                         });
                         let chng = resp.rect.width() != render_size.x
                             && resp.rect.height() != render_size.y;
-                        *changing |= chng;
-                        if *changing && !ui.input(|i| i.pointer.primary_down()) {
-                            *resize = resp.rect.size() * self.ppp;
-                            self.size_map.insert(*true_size, *resize);
-                            *id = self.next_id;
-                            self.next_id += 1;
-                            *changing = false;
-                        }
+                        state.changing |= chng;
+                        state.handle_resize(&mut self.cache, ui, resp.rect);
                         ui.vertical(|ui| {
                             ui.horizontal(|ui| {
                                 let play_text = if *play { "⏸" } else { "▶" };
@@ -504,18 +522,12 @@ impl App {
                                     })
                                     .ui(ui);
                             });
-                            if ui.button("↻").on_hover_text("Reset size").clicked() {
-                                *id = self.next_id;
-                                self.next_id += 1;
-                                *resize = vec2(true_size[0] as f32, true_size[1] as f32);
-                                self.size_map.remove(true_size);
-                            }
                             if ui.button("Save").clicked() {
                                 match native_dialog::FileDialog::new()
                                     .set_title("Save Gif")
                                     .set_filename(&format!(
                                         "{}.gif",
-                                        label.as_deref().unwrap_or("gif")
+                                        state.label.as_deref().unwrap_or("gif")
                                     ))
                                     .add_filter("GIF Image", &["gif"])
                                     .add_filter("All Files", &["*"])
@@ -530,6 +542,7 @@ impl App {
                                     Err(e) => self.errors.push(e.to_string()),
                                 }
                             }
+                            state.show_reset(&mut self.cache, ui);
                         });
                     });
                     if *play {
@@ -629,21 +642,9 @@ impl App {
                     ImageData::Color(Arc::new(color_image)),
                     Default::default(),
                 );
-                let unique = self.next_id;
-                self.next_id += 1;
                 OutputItem::Image {
                     tex_id: text_id,
-                    state: ImageState {
-                        id: unique,
-                        true_size: [width, height],
-                        resize: self
-                            .size_map
-                            .get(&[width, height])
-                            .copied()
-                            .unwrap_or(vec2(width as f32, height as f32)),
-                        label,
-                        changing: false,
-                    },
+                    state: ImageState::new(&mut self.cache, [width, height], label),
                     bytes,
                 }
             }
@@ -696,23 +697,11 @@ impl App {
                         frame.delay as f32 / 100.0,
                     ));
                 }
-                let id = self.next_id;
-                self.next_id += 1;
                 OutputItem::Gif {
                     frames: tex_ids,
                     curr: 0.0,
                     play: true,
-                    state: ImageState {
-                        id,
-                        true_size: [gif_width, gif_height],
-                        resize: self
-                            .size_map
-                            .get(&[gif_width, gif_height])
-                            .copied()
-                            .unwrap_or(vec2(gif_width as f32, gif_height as f32)),
-                        label,
-                        changing: false,
-                    },
+                    state: ImageState::new(&mut self.cache, [gif_width, gif_height], label),
                     bytes,
                 }
             }

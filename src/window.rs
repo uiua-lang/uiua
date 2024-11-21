@@ -22,17 +22,16 @@ use serde::*;
 use crate::encode::SmartOutput;
 
 static USE_WINDOW: AtomicBool = AtomicBool::new(false);
-
 pub fn use_window() -> bool {
     USE_WINDOW.load(atomic::Ordering::Relaxed)
 }
-
 pub fn set_use_window(use_window: bool) {
     USE_WINDOW.store(use_window, atomic::Ordering::Relaxed);
 }
 
 const PORT: u16 = 8482;
 
+/// A request to the window process
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Request {
     ShowText(String),
@@ -46,6 +45,7 @@ pub enum Request {
 const RETRIES: usize = 10;
 
 impl Request {
+    /// Send the request
     pub fn send(self) -> Result<(), String> {
         self.send_impl(RETRIES)
     }
@@ -210,7 +210,7 @@ impl App {
         let (ppp, clear) = ctx.memory_mut(|mem| {
             (
                 mem.data.get_persisted(Id::new("ppp")).unwrap_or(1.5),
-                mem.data.get_persisted(Id::new("clear")).unwrap_or(false),
+                mem.data.get_persisted(Id::new("clear")).unwrap_or(true),
             )
         });
         ctx.set_pixels_per_point(ppp);
@@ -379,7 +379,10 @@ impl App {
                             if ui.button("Save").clicked() {
                                 match native_dialog::FileDialog::new()
                                     .set_title("Save Image")
-                                    .set_filename("image.png")
+                                    .set_filename(&format!(
+                                        "{}.png",
+                                        label.as_deref().unwrap_or("image")
+                                    ))
                                     .add_filter("PNG Image", &["png"])
                                     .add_filter("JPEG Image", &["jpg", "jpeg"])
                                     .add_filter("BMP Image", &["bmp"])
@@ -438,7 +441,7 @@ impl App {
                             label,
                             changing,
                         },
-                    bytes: _,
+                    bytes,
                 } => {
                     if let Some(label) = label {
                         ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
@@ -507,6 +510,26 @@ impl App {
                                 *resize = vec2(true_size[0] as f32, true_size[1] as f32);
                                 self.size_map.remove(true_size);
                             }
+                            if ui.button("Save").clicked() {
+                                match native_dialog::FileDialog::new()
+                                    .set_title("Save Gif")
+                                    .set_filename(&format!(
+                                        "{}.gif",
+                                        label.as_deref().unwrap_or("gif")
+                                    ))
+                                    .add_filter("GIF Image", &["gif"])
+                                    .add_filter("All Files", &["*"])
+                                    .show_save_single_file()
+                                {
+                                    Ok(Some(path)) => {
+                                        if let Err(e) = fs::write(path, bytes) {
+                                            self.errors.push(e.to_string());
+                                        }
+                                    }
+                                    Ok(None) => {}
+                                    Err(e) => self.errors.push(e.to_string()),
+                                }
+                            }
                         });
                     });
                     if *play {
@@ -521,7 +544,7 @@ impl App {
                     src_play,
                     label,
                     total_time,
-                    bytes: _,
+                    bytes,
                 } => {
                     ui.horizontal(|ui| {
                         if let Some(label) = label {
@@ -553,11 +576,33 @@ impl App {
                         if t != orig_t {
                             curr.set(t);
                         }
-                        src_play.set(*play && !done && (!dragged || t != orig_t));
+                        let should_play = *play && !done && (!dragged || t != orig_t);
+                        src_play.set(should_play);
+                        if should_play {
+                            ui.ctx().request_repaint();
+                        }
+
+                        if ui.button("Save").clicked() {
+                            match native_dialog::FileDialog::new()
+                                .set_title("Save Audio")
+                                .set_filename(&format!(
+                                    "{}.wav",
+                                    label.as_deref().unwrap_or("audio")
+                                ))
+                                .add_filter("WAV Audio", &["wav"])
+                                .add_filter("All Files", &["*"])
+                                .show_save_single_file()
+                            {
+                                Ok(Some(path)) => {
+                                    if let Err(e) = fs::write(path, bytes) {
+                                        self.errors.push(e.to_string());
+                                    }
+                                }
+                                Ok(None) => {}
+                                Err(e) => self.errors.push(e.to_string()),
+                            }
+                        }
                     });
-                    if src_play.get() {
-                        ui.ctx().request_repaint();
-                    }
                 }
             }
         }

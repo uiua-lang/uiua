@@ -165,6 +165,7 @@ struct Cache {
     ppp: f32,
     next_id: u64,
     size_map: HashMap<[u32; 2], Vec2>,
+    samples_map: HashMap<usize, bool>,
     last_frame: Instant,
     errors: Vec<String>,
 }
@@ -196,11 +197,11 @@ enum OutputItem {
     },
     #[cfg(feature = "audio")]
     Audio {
-        curr: hodaun::Shared<f64>,
+        controls: audio::AudioControls,
         play: bool,
-        src_play: hodaun::Shared<bool>,
         label: Option<String>,
         total_time: f64,
+        sample_count: usize,
         bytes: Vec<u8>,
     },
     Separator,
@@ -263,6 +264,7 @@ impl App {
                 ppp,
                 next_id: 0,
                 size_map: HashMap::new(),
+                samples_map: HashMap::new(),
                 last_frame: Instant::now(),
                 errors: Vec::new(),
             },
@@ -595,18 +597,19 @@ impl App {
             }
             #[cfg(feature = "audio")]
             OutputItem::Audio {
-                curr,
+                controls,
                 play,
-                src_play,
                 label,
                 total_time,
+                sample_count,
                 bytes,
             } => {
                 ui.horizontal(|ui| {
                     if let Some(label) = label {
                         ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                     }
-                    let mut done = !src_play.get() && curr.get() == 0.0;
+                    // Play/pause
+                    let mut done = !controls.play.get() && controls.curr.get() == 0.0;
                     if done {
                         *play = false;
                     }
@@ -620,7 +623,8 @@ impl App {
                     {
                         done = false;
                     }
-                    let mut t = curr.get();
+                    // Time slider
+                    let mut t = controls.curr.get();
                     let orig_t = t;
                     let dragged = Slider::new(&mut t, 0.0..=*total_time)
                         .min_decimals(2)
@@ -630,14 +634,25 @@ impl App {
                         .dragged;
                     done |= dragged;
                     if t != orig_t {
-                        curr.set(t);
+                        controls.curr.set(t);
                     }
                     let should_play = *play && !done && (!dragged || t != orig_t);
-                    src_play.set(should_play);
+                    controls.play.set(should_play);
                     if should_play {
                         ui.ctx().request_repaint();
                     }
-
+                    // Repeat
+                    if ui
+                        .selectable_label(controls.repeat.get(), "🔁")
+                        .on_hover_text("Repeat")
+                        .clicked()
+                    {
+                        controls.repeat.with(|r| *r = !*r);
+                        cache
+                            .samples_map
+                            .insert(*sample_count, controls.repeat.get());
+                    }
+                    // Save
                     if ui.button("Save").clicked() {
                         match native_dialog::FileDialog::new()
                             .set_title("Save Audio")
@@ -754,19 +769,21 @@ impl App {
             }
             #[cfg(feature = "audio")]
             SmartOutput::Wav(bytes, label) => {
-                let src = audio::SeekBufferSource::from_wav_bytes(&bytes);
-                let curr = src.curr.clone();
-                let src_play = src.play.clone();
+                let (src, sample_count) = audio::SeekBufferSource::from_wav_bytes(&bytes);
+                let mut controls = src.controls.clone();
                 let total_time = src.total_time;
                 if let Some(output) = &self.audio_output {
                     output.add(src);
                 }
+                if let Some(repeat) = self.cache.samples_map.get(&sample_count) {
+                    controls.repeat.set(*repeat);
+                }
                 OutputItem::Audio {
-                    curr,
-                    play: src_play.get(),
-                    src_play,
+                    play: controls.play.get(),
+                    controls,
                     label,
                     total_time,
+                    sample_count,
                     bytes,
                 }
             }
@@ -790,39 +807,58 @@ mod audio {
     use hodaun::*;
     pub struct SeekBufferSource {
         pub buffer: Vec<Stereo>,
-        pub curr: Shared<f64>,
-        pub play: Shared<bool>,
+        pub controls: AudioControls,
         pub total_time: f64,
     }
 
+    #[derive(Clone)]
+    pub struct AudioControls {
+        pub play: Shared<bool>,
+        pub curr: Shared<f64>,
+        pub repeat: Shared<bool>,
+    }
+
     impl SeekBufferSource {
-        pub fn from_wav_bytes(bytes: &[u8]) -> Self {
+        pub fn from_wav_bytes(bytes: &[u8]) -> (Self, usize) {
             let mut wav_source = wav::WavSource::new(bytes).unwrap().resample::<Stereo>();
             let sr = crate::SysBackend::audio_sample_rate(&crate::NativeSys) as f64;
             let mut buffer = Vec::new();
             while let Some(frame) = wav_source.next(sr) {
                 buffer.push(frame);
             }
-            Self {
+            let sample_count = buffer.len();
+            let src = Self {
                 total_time: buffer.len() as f64 / sr,
                 buffer,
-                curr: Shared::new(0.0),
-                play: Shared::new(true),
-            }
+                controls: AudioControls {
+                    curr: Shared::new(0.0),
+                    play: Shared::new(true),
+                    repeat: Shared::new(false),
+                },
+            };
+            (src, sample_count)
         }
     }
 
     impl Source for SeekBufferSource {
         type Frame = Stereo;
         fn next(&mut self, sample_rate: f64) -> Option<Self::Frame> {
-            Some(if !self.play.get() {
+            Some(if !self.controls.play.get() {
                 0.0.into()
-            } else if let Some(sample) = self.buffer.get((self.curr.get() * sample_rate) as usize) {
-                self.curr.with(|curr| *curr += 1.0 / sample_rate);
+            } else if let Some(sample) = self
+                .buffer
+                .get((self.controls.curr.get() * sample_rate) as usize)
+            {
+                self.controls.curr.with(|curr| {
+                    *curr += 1.0 / sample_rate;
+                    if self.controls.repeat.get() {
+                        *curr %= self.total_time;
+                    }
+                });
                 *sample
             } else {
-                self.play.set(false);
-                self.curr.set(0.0);
+                self.controls.play.set(false);
+                self.controls.curr.set(0.0);
                 0.0.into()
             })
         }

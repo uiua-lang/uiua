@@ -303,11 +303,10 @@ under!(DipPat, input, g_sig, inverse, asm, Dip, span, [f], {
         return generic();
     }
     // F inverse
-    let inner_g_sig = if inverse {
-        Signature::new(g_sig.args, g_sig.outputs.saturating_sub(1))
-    } else {
-        Signature::new(g_sig.args.saturating_sub(1), g_sig.outputs)
-    };
+    let inner_g_sig = Signature::new(
+        g_sig.args.saturating_sub(1),
+        g_sig.outputs.saturating_sub(1),
+    );
     let (f_before, f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
     // Rest inverse
     let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;

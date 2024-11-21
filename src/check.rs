@@ -299,6 +299,16 @@ impl VirtualEnv {
                     .saturating_sub(1);
                 self.handle_args_outputs(args, 2);
             }
+            Node::ImplMod(ImplPrimitive::AstarPop, args, _) => {
+                let _start = self.pop();
+                let [neighbors, heuristic, is_goal] = get_args(args)?;
+                let args = neighbors
+                    .args
+                    .max(heuristic.args)
+                    .max(is_goal.args)
+                    .saturating_sub(1);
+                self.handle_args_outputs(args, 1);
+            }
             Node::Prim(prim, _) => match prim {
                 Dup => {
                     let val = self.pop();

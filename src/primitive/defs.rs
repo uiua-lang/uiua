@@ -3350,15 +3350,6 @@ primitive!(
     /// ex: &p repr ↯2_2_2 0
     /// ex: &p repr {"Uiua" @A [1 2 3] □4}
     ///
-    /// [repr] can be used in code macros to make the macro generate code that produces the same array.
-    /// ex! F! ←^ ⧻°□⊢
-    ///   : F!+
-    /// ex: F! ←^ repr ⧻°□⊢
-    ///   : F!+
-    ///   : F!≡(¬×)
-    ///   : F!repr
-    ///   : F!(.....)
-    ///
     /// Append commas to whitespace for a more traditional notation:
     /// ex: -5↯2_2_3⇡12
     ///   : ⍜⊜□⍚(⊂@,)∈" \n". repr # add commas

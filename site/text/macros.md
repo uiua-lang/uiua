@@ -103,22 +103,10 @@ Sigs! ←^ ⍚$"\"_ is |_._\"" ⊙≡°⊟
 Sigs!(+|∿|⊓+¯)
 ```
 
-[repr]() converts a value into a string that is the code that would create that value.
+Non-string values returned from a code macro will be implicitly converted to strings via [repr]().
 
 ```uiua
-repr ⇡5
-repr °△2_3
-```
-
-Because a code macro's output must be a string or list of strings, you cannot directly return a *value* from one unless you use [repr]().
-
-```uiua should fail
-SigOf! ←^ ⋅⊢
-SigOf!+
-```
-
-```uiua
-SigOf! ←^ repr⋅⊢
+SigOf! ←^ ⋅⊢ # Gets the signature
 SigOf!+
 SigOf!⊓+¯
 ```

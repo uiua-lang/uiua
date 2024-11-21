@@ -963,26 +963,54 @@ impl Value {
         if requirement.is_empty() {
             requirement = "Expected value to be a string";
         }
-        match self {
-            Value::Char(chars) => {
-                if chars.rank() > 1 {
-                    return Err(
-                        env.error(format!("{requirement}, but its rank is {}", chars.rank()))
-                    );
-                }
-                return Ok(chars.data.iter().collect());
-            }
-            Value::Box(boxes) => {
-                if let Some(bx) = boxes.as_scalar() {
-                    return bx.as_value().as_string(env, requirement);
-                }
-            }
-            _ => {}
+        match (self, self.rank()) {
+            (Value::Char(chars), 0 | 1) => Ok(chars.data.iter().collect()),
+            (Value::Char(_), n) => Err(env.error(format!("{requirement}, but its rank is {n}"))),
+            (Value::Box(boxes), 0) => boxes.data[0].0.as_string(env, requirement),
+            (val, _) => Err(env.error(format!(
+                "{requirement}, but it is {}",
+                val.type_name_plural()
+            ))),
         }
-        Err(env.error(format!(
-            "{requirement}, but its type is {}",
-            self.type_name()
-        )))
+    }
+    /// Attempt to convert the array to a list of strings
+    ///
+    /// A rank-1 character array is treated as a single string.
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_strings(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<Vec<String>> {
+        if requirement.is_empty() {
+            requirement = "Expected value to be a string or list of strings";
+        }
+
+        match (self, self.rank()) {
+            (Value::Char(chars), 0 | 1) => Ok(vec![chars.data.iter().collect()]),
+            (Value::Char(chars), 2) => {
+                let mut strings = Vec::with_capacity(self.row_count());
+                for row in chars.row_slices() {
+                    strings.push(row.iter().copied().collect());
+                }
+                Ok(strings)
+            }
+            (Value::Char(_), n) => Err(env.error(format!(
+                "{requirement}, but it is a rank-{n} character array"
+            ))),
+            (Value::Box(boxes), 0) => boxes.data[0].0.as_strings(env, requirement),
+            (Value::Box(boxes), 1) => {
+                let mut strings = Vec::with_capacity(boxes.row_count());
+                for Boxed(val) in &boxes.data {
+                    strings.push(val.as_string(env, requirement)?);
+                }
+                Ok(strings)
+            }
+            (Value::Box(_), n) => {
+                Err(env.error(format!("{requirement}, but it is a rank-{n} box array")))
+            }
+            (val, _) => Err(env.error(format!(
+                "{requirement}, but it is {}",
+                val.type_name_plural()
+            ))),
+        }
     }
     /// Attempt to convert the array to a list of bytes
     ///

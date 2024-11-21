@@ -1096,8 +1096,8 @@ impl Compiler {
                 let sn = self.word_sig(op.clone()).map_err(|e| {
                     let message = format!(
                         "This error occurred while compiling a macro operand. \
-                            This was attempted because the macro function's \
-                            signature is {}.",
+                        This was attempted because the macro function's \
+                        signature is {}.",
                         Signature::new(2, 1)
                     );
                     e.with_info([(message, None)])
@@ -1164,16 +1164,17 @@ impl Compiler {
                 let val = env.pop("macro result")?;
 
                 // Parse the macro output
-                if let Ok(s) = val.as_string(env, "") {
-                    code = s;
-                } else {
-                    for row in val.into_rows() {
-                        let s = row.as_string(env, "Code macro output rows must be strings")?;
-                        if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
-                            code.push(' ');
-                        }
-                        code.push_str(&s);
+                let strings = match val
+                    .as_strings(env, "Code macro output must be a string or list of strings")
+                {
+                    Ok(strings) => strings,
+                    Err(_) => val.representation().lines().map(Into::into).collect(),
+                };
+                for s in strings {
+                    if s.chars().last().is_some_and(|c| !c.is_whitespace()) {
+                        code.push(' ');
                     }
+                    code.push_str(&s);
                 }
                 Ok(())
             })();

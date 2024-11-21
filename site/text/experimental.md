@@ -29,8 +29,8 @@ X
 
 ```uiua
 # Experimental!
-(repr⋅⊢)^!+
-(repr⋅⊢)^!⊓+¯
+(⋅⊢)^!+
+(⋅⊢)^!⊓+¯
 ```
 
 ## [derivative](/docs/derivative) and [integral](/docs/integral)

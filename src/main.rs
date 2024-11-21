@@ -23,7 +23,6 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
-    encode::SmartOutput,
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
     Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDocFragment, PrimDocLine,
@@ -46,6 +45,20 @@ fn use_window() -> bool {
     }
     #[cfg(not(feature = "window"))]
     false
+}
+
+fn set_use_window(use_window: bool) {
+    #[cfg(feature = "window")]
+    {
+        uiua::window::set_use_window(use_window);
+    }
+    #[cfg(not(feature = "window"))]
+    if use_window {
+        eprintln!(
+            "{}: Window output is not supported in this environment. Compile with `-F full` or `-F window` to enable it.",
+            "Warning".bright_yellow()
+        );
+    }
 }
 
 fn main() {
@@ -143,7 +156,6 @@ fn main() {
             mode,
             #[cfg(feature = "audio")]
             audio_options,
-            #[cfg(feature = "window")]
             window,
             args,
         }) => {
@@ -160,8 +172,7 @@ fn main() {
             };
             #[cfg(feature = "audio")]
             setup_audio(audio_options);
-            #[cfg(feature = "window")]
-            uiua::window::set_use_window(window);
+            set_use_window(window);
             run(
                 &path,
                 args,
@@ -257,13 +268,11 @@ fn main() {
             no_color,
             formatter_options,
             clear,
-            #[cfg(feature = "window")]
             window,
             args,
             stdin_file,
         }) => {
-            #[cfg(feature = "window")]
-            uiua::window::set_use_window(window);
+            set_use_window(window);
             if let Err(e) = (WatchArgs {
                 initial_path: working_file_path().ok(),
                 format: !no_format,
@@ -305,7 +314,11 @@ fn main() {
             }
             repl(rt, compiler, true, stack, config);
         }
-        Some(Comm::Update { main, check }) => update(main, check),
+        Some(Comm::Update {
+            main,
+            check,
+            features,
+        }) => update(main, check, features),
         Some(Comm::Module { command }) => {
             let paths = match list_modules() {
                 Ok(paths) => paths,
@@ -706,7 +719,6 @@ struct App {
     #[clap(subcommand)]
     command: Option<Comm>,
     file: Option<PathBuf>,
-    #[cfg(feature = "window")]
     #[clap(short, long, help = "Use a window for output instead of stdout")]
     window: bool,
 }
@@ -733,7 +745,6 @@ enum Comm {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
-        #[cfg(feature = "window")]
         #[clap(long, help = "Use a window for output instead of stdout")]
         window: bool,
         #[clap(trailing_var_arg = true, help = "Arguments to pass to the program")]
@@ -776,7 +787,6 @@ enum Comm {
         formatter_options: FormatterOptions,
         #[clap(long, help = "Clear the terminal on file change")]
         clear: bool,
-        #[cfg(feature = "window")]
         #[clap(short, long, help = "Use a window for output instead of stdout")]
         window: bool,
         #[clap(long, help = "Read stdin from file")]
@@ -825,6 +835,8 @@ enum Comm {
         main: bool,
         #[clap(long, help = "Only check for updates")]
         check: bool,
+        #[clap(short = 'F', long, help = "Enable features")]
+        features: Vec<String>,
     },
     #[clap(about = "Manage Git modules. Requires Git")]
     Module {
@@ -935,7 +947,7 @@ fn clear_watching_with(s: &str, end: &str) {
     );
 }
 
-fn update(main: bool, check: bool) {
+fn update(main: bool, check: bool, mut features: Vec<String>) {
     if !main || check {
         let output = match Command::new("cargo").args(["search", "uiua"]).output() {
             Ok(output) => output,
@@ -990,13 +1002,17 @@ fn update(main: bool, check: bool) {
     } else {
         args.push("uiua");
     }
-    let mut features = Vec::new();
     if cfg!(feature = "audio") {
-        features.push("audio");
+        features.push("audio".into());
     }
     if cfg!(feature = "webcam") {
-        features.push("webcam");
+        features.push("webcam".into());
     }
+    if cfg!(feature = "window") {
+        features.push("window".into());
+    }
+    features.sort();
+    features.dedup();
     let feature_str;
     if !features.is_empty() {
         args.push("--features");
@@ -1024,15 +1040,15 @@ fn format_multi_files(config: &FormatConfig) -> Result<(), UiuaError> {
 fn print_stack(stack: &[Value], color: bool) {
     #[cfg(feature = "window")]
     if uiua::window::use_window() {
-        _ = uiua::window::Request::Separator.send();
-        _ = uiua::window::Request::ShowAll(
-            stack
-                .iter()
+        use uiua::{encode::SmartOutput, window::Request};
+        _ = Request::Separator.send();
+        _ = Request::ShowAll(
+            (stack.iter())
                 .map(|v| SmartOutput::from_value(v.clone(), &NativeSys))
                 .collect(),
         )
         .send();
-        _ = uiua::window::Request::ClearBeforeNext.send();
+        _ = Request::ClearBeforeNext.send();
         return;
     }
     if stack.len() == 1 || !color {

@@ -50,6 +50,7 @@ pub fn Install() -> impl IntoView {
         <code class="code-block">"apt install libx11-dev"</code>
         <p>"The "<code>"-F full"</code>" flag enables all optional features. If you need more control over which features are installed, enable only the only the ones you want by passing "<code>"--features <feature>"</code>"):"</p>
         <ul>
+            <li><code>"full"</code>" - Enables all optional features below."</li>
             <li>
                 <p><code>"audio"</code>" - Enables audio system functions."</p>
                 <p>"On Linux, this may require installing some dependencies:"</p>
@@ -59,6 +60,9 @@ pub fn Install() -> impl IntoView {
                 <p><code>"webcam"</code>" - Enables webcam system functions."</p>
                 <p>"On Linux, this may require installing some dependencies:"</p>
                 <code class="code-block">"apt install libjpeg-dev"</code>
+            </li>
+            <li>
+                <p><code>"window"</code>" - Enables output in a window."</p>
             </li>
         </ul>
         <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>

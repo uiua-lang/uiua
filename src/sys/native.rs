@@ -572,7 +572,7 @@ impl SysBackend for NativeSys {
         true
     }
     #[cfg(all(feature = "terminal_image", feature = "image"))]
-    fn show_image(&self, image: image::DynamicImage, label: Option<&str>) -> Result<(), String> {
+    fn show_image(&self, image: image::DynamicImage, _label: Option<&str>) -> Result<(), String> {
         let (_width, _height) = if let Some((w, h)) = terminal_size() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), (image.height() / 2).max(1));
@@ -612,7 +612,7 @@ impl SysBackend for NativeSys {
                 crate::window::Request::Show(crate::encode::SmartOutput::Png(
                     crate::encode::image_to_bytes(&image, image::ImageOutputFormat::Png)
                         .map_err(|e| e.to_string())?,
-                    label.map(Into::into),
+                    _label.map(Into::into),
                 ))
                 .send()
             }
@@ -632,12 +632,12 @@ impl SysBackend for NativeSys {
         }
     }
     #[cfg(all(feature = "gif", feature = "invoke"))]
-    fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+    fn show_gif(&self, gif_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
         #[cfg(feature = "window")]
         {
             crate::window::Request::Show(crate::encode::SmartOutput::Gif(
                 gif_bytes,
-                label.map(Into::into),
+                _label.map(Into::into),
             ))
             .send()
         }
@@ -660,12 +660,12 @@ impl SysBackend for NativeSys {
         .map_err(|e| e.to_string())
     }
     #[cfg(feature = "audio")]
-    fn play_audio(&self, wav_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+    fn play_audio(&self, wav_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
         #[cfg(feature = "window")]
         {
             crate::window::Request::Show(crate::encode::SmartOutput::Wav(
                 wav_bytes,
-                label.map(Into::into),
+                _label.map(Into::into),
             ))
             .send()
         }

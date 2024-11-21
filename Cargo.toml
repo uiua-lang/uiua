@@ -136,12 +136,11 @@ default = [
   "clipboard",
   "opt",
   "batteries",
-  "window",
 ]
 ffi = ["libffi", "libloading"]
 fft = ["rustfft"]
 font_shaping = ["cosmic-text", "sys-locale"]
-full = ["audio", "webcam"] # Enables all optional features
+full = ["audio", "webcam", "window"] # Enables all optional features
 gif = ["dep:gif", "image", "color_quant"]
 invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]

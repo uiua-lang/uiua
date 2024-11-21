@@ -20,9 +20,10 @@ If you want to install the interpreter locally there are 2 options:
 - If not, you will need to install via Cargo.
 This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be installed.
 
-  You can install with:
+  You can install with one of the following commands:
   ```
-  cargo install uiua
+  cargo install uiua -F full # Installs all features
+  cargo install uiua         # No audio, webcam, or window features
   ```
   On Linux, you may need to install some dependencies first:
   ```
@@ -30,11 +31,14 @@ This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be ins
   ```
 
   The following optional features are available but not enabled by default (enabled by passing `--features <feature>`):
+  - `full`: Enables all optional features below
   - `audio`: Enables audio system functions (may require `libasound2-dev libudev-dev pkg-config` on Linux)
   - `webcam`: Enables webcam system functions (may require `libjpeg-dev` on Linux)
+  - `window`: Enables output in a window
 
 - If you want the most recent development version of Uiua, you can install from the git repository.
   ```
+  cargo install --git https://github.com/uiua-lang/uiua uiua -F full
   cargo install --git https://github.com/uiua-lang/uiua uiua
   ```
 - If you use Nix or NixOS, you can clone this repo and do following:

@@ -453,7 +453,7 @@ pub fn PadPage() -> impl IntoView {
                      _ = window().navigator().clipboard().write_text(CODE)
                 };
                 Some(view! {
-                    <p>"Join the official "<a href="https://adventofcode.com">"Advent of Code "{year}</a>" Uiua community leaderboard "<a href="https://adventofcode.com/2024/leaderboard/private">"here!"</a>"  "<button on:click=copy_code>"Copy code"</button></p>
+                    <p>"Join the official "<a href={format!("https://adventofcode.com/{year}")}>"Advent of Code "{year}</a>" Uiua community leaderboard "<a href={format!("https://adventofcode.com/{year}/leaderboard/private")}>"here!"</a>"  "<button on:click=copy_code>"Copy code"</button></p>
                 })
             } else {
                 None

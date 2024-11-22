@@ -743,6 +743,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     /// Print a string that was create by `trace`
     fn print_str_trace(&self, s: &str) {}
+    /// Show a value
+    fn show(&self, value: Value) -> Result<(), String> {
+        self.print_str_stdout(&format!("{}\n", value.show()))
+    }
     /// Read a line from stdin
     ///
     /// Should return `Ok(None)` if EOF is reached.
@@ -1116,10 +1120,8 @@ impl SysOp {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             SysOp::Show => {
-                let s = env.pop(1)?.show();
-                (env.rt.backend)
-                    .print_str_stdout(&format!("{s}\n"))
-                    .map_err(|e| env.error(e))?;
+                let val = env.pop(1)?;
+                env.rt.backend.show(val).map_err(|e| env.error(e))?;
             }
             SysOp::Prin => {
                 let s = env.pop(1)?.format();

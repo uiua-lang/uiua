@@ -15,7 +15,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{terminal_size, GitTarget, Handle, SysBackend};
+use crate::{terminal_size, GitTarget, Handle, SysBackend, Value};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
@@ -332,6 +332,13 @@ impl SysBackend for NativeSys {
         }
         eprint!("{s}");
         _ = stderr().flush();
+    }
+    fn show(&self, value: Value) -> Result<(), String> {
+        #[cfg(feature = "window")]
+        if crate::window::use_window() {
+            return crate::window::Request::Show(crate::encode::SmartOutput::Normal(value)).send();
+        }
+        self.print_str_stdout(&format!("{}\n", value.show()))
     }
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
         if !output_enabled() {

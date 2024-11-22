@@ -6,6 +6,7 @@
   libffi,
   libiconv,
   darwin,
+  rustPlatform,
   doCheck ? true,
 }:
 let
@@ -25,9 +26,12 @@ let
       );
     };
     strictDeps = true;
-    cargoExtraArgs = "--features system";
+    cargoExtraArgs = "--features system,full";
     inherit doCheck;
-    nativeBuildInputs = [ pkg-config ];
+    nativeBuildInputs = [
+      pkg-config
+      rustPlatform.bindgenHook
+    ];
     buildInputs =
       [ libffi ]
       ++ lib.optionals stdenv.isDarwin (
@@ -36,8 +40,13 @@ let
           libiconv
           AppKit
           Foundation
+          CoreAudio
+          CoreMedia
+          AVFoundation
         ]
       );
+    # https://crane.dev/faq/rebuilds-bindgen.html
+    env.NIX_OUTPATH_USED_AS_RANDOM_SEED = "uiuarustbg";
   };
   cargoArtifacts = craneLib.buildDepsOnly commonArgs;
   totalArgs = commonArgs // {

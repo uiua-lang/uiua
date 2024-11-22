@@ -386,7 +386,6 @@ where
         fill: T,
         f: impl Fn(T, T) -> T + Copy,
     ) {
-        println!("reuse_fill {ash:?} {bsh:?}");
         match (ash, bsh) {
             ([], _) => {
                 for b in b {

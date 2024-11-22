@@ -63,8 +63,18 @@ impl<T: ArrayValue> Array<T> {
             len: 0,
             fix_stack: Vec::new(),
         };
+        let mut to_remove = Vec::new();
         for (i, key) in keys.into_rows().enumerate() {
-            map_keys.insert(key, i, ctx)?;
+            let replaced = map_keys.insert(key, i, ctx)?;
+            to_remove.extend(replaced);
+        }
+        for i in to_remove.into_iter().rev() {
+            values.remove_row(i);
+            for index in &mut map_keys.indices {
+                if *index > i {
+                    *index -= 1;
+                }
+            }
         }
         values.meta_mut().map_keys = Some(map_keys);
         Ok(())

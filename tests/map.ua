@@ -56,3 +56,6 @@ remove "y"
 insert "z" 4
 ⍤⤙≍ map {"x" "z"} [1 4]
 ⍤⤙≍ ⤙⍜remove∘ @a map "abc" [1 2 3]
+
+# Duplicate init keys
+⍤⤙≍ map [0 1] [3 4] map [0 0 0 1] [1 2 3 4]

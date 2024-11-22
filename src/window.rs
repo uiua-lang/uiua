@@ -9,7 +9,7 @@ use std::{
         atomic::{self, AtomicBool},
         Arc,
     },
-    thread,
+    thread::{self, sleep},
     time::{Duration, Instant},
 };
 
@@ -48,7 +48,7 @@ pub enum Request {
     Shutdown,
 }
 
-const RETRIES: usize = 10;
+const RETRIES: usize = 20;
 
 impl Request {
     /// Send the request
@@ -57,7 +57,7 @@ impl Request {
     }
     fn send_impl(self, retries: usize) -> Result<(), String> {
         let socket_addr = ([127, 0, 0, 1], PORT).into();
-        let timeout = Duration::from_secs_f32(if retries + 1 == RETRIES { 1.0 } else { 0.1 });
+        let timeout = Duration::from_secs_f32(0.1);
         let mut stream = match TcpStream::connect_timeout(&socket_addr, timeout) {
             Ok(stream) => stream,
             Err(e)
@@ -67,20 +67,25 @@ impl Request {
                 if let Request::Shutdown = self {
                     return Ok(());
                 }
-                if cfg!(debug_assertions) {
-                    eprintln!("Uiua window not found, creating...");
+                if retries + 1 == RETRIES {
+                    if cfg!(debug_assertions) {
+                        eprintln!("Uiua window not found, creating...");
+                    }
+                    Command::new(current_exe().unwrap())
+                        .arg("window")
+                        .stdout(if cfg!(debug_assertions) {
+                            Stdio::inherit()
+                        } else {
+                            Stdio::null()
+                        })
+                        .spawn()
+                        .unwrap();
+                    if cfg!(debug_assertions) {
+                        eprintln!("Uiua window created, waiting for connection...");
+                    }
                 }
-                Command::new(current_exe().unwrap())
-                    .arg("window")
-                    .stdout(if cfg!(debug_assertions) {
-                        Stdio::inherit()
-                    } else {
-                        Stdio::null()
-                    })
-                    .spawn()
-                    .unwrap();
-                if cfg!(debug_assertions) {
-                    eprintln!("Uiua window created, waiting for connection...");
+                if e.kind() != ErrorKind::TimedOut {
+                    sleep(timeout);
                 }
                 return self.send_impl(retries - 1);
             }

@@ -60,7 +60,10 @@ impl Request {
         let timeout = Duration::from_secs_f32(if retries + 1 == RETRIES { 1.0 } else { 0.1 });
         let mut stream = match TcpStream::connect_timeout(&socket_addr, timeout) {
             Ok(stream) => stream,
-            Err(e) if retries > 0 && e.kind() == ErrorKind::TimedOut => {
+            Err(e)
+                if retries > 0
+                    && [ErrorKind::TimedOut, ErrorKind::ConnectionRefused].contains(&e.kind()) =>
+            {
                 if let Request::Shutdown = self {
                     return Ok(());
                 }

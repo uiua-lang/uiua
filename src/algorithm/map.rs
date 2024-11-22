@@ -391,12 +391,10 @@ impl MapKeys {
                         } else if cell_key[0].is_any_empty_cell() {
                             key_index = orig;
                             break false;
+                        } else if ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
+                            break true;
                         } else {
-                            let found = ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data);
-                            if !found {
-                                key_index = orig;
-                            }
-                            break found;
+                            continue;
                         }
                     }
                 } else {

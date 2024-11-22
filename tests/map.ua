@@ -56,6 +56,11 @@ remove "y"
 insert "z" 4
 ⍤⤙≍ map {"x" "z"} [1 4]
 ⍤⤙≍ ⤙⍜remove∘ @a map "abc" [1 2 3]
+{"a" "b" "f" "v" "r" "l" "c" "d" "e" "g" "h" "i" "j" "k" "m" "18" "1" "zh" "qvq" "dp" "sh" "D" "C" "A" "B" "kmsq"}
+map ⟜(⇡⧻)
+remove "zh"
+insert "kmsq" 0
+⍤⤙≍ ∩⧻°map
 
 # Duplicate init keys
 ⍤⤙≍ map [0 1] [3 4] map [0 0 0 1] [1 2 3 4]

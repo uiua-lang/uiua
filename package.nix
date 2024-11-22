@@ -5,6 +5,7 @@
   pkg-config,
   libffi,
   libiconv,
+  alsa-lib,
   darwin,
   rustPlatform,
   doCheck ? true,
@@ -34,6 +35,7 @@ let
     ];
     buildInputs =
       [ libffi ]
+      ++ lib.optionals stdenv.isLinux [ alsa-lib ]
       ++ lib.optionals stdenv.isDarwin (
         with darwin.apple_sdk.frameworks;
         [

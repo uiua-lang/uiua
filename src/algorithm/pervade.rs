@@ -386,6 +386,7 @@ where
         fill: T,
         f: impl Fn(T, T) -> T + Copy,
     ) {
+        println!("reuse_fill {ash:?} {bsh:?}");
         match (ash, bsh) {
             ([], _) => {
                 for b in b {
@@ -406,7 +407,7 @@ where
                             reuse_fill(a, b, ash, bsh, fill, f);
                         }
                     }
-                } else {
+                } else if a_row_len != 0 {
                     let fill_row = vec![fill; a_row_len];
                     for (a, b) in a
                         .chunks_exact(a_row_len)

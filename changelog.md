@@ -17,6 +17,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Sorting is a very common operation, and it's useful to have such simple access to it
 - Stabilize [`last ⊣`](https://uiua.org/docs/last)
   - Getting the last row is a very common operation
+- Change [`backward 𝄈`](https://uiua.org/docs/backward)'s glyph to `𝄈`. Code using `˜` will continue to work and will be formatted as `𝄈`.
 - Add experimental [inline macros](https://www.uiua.org/docs/experimental#inline-macros)
   - Deprecate the experimental `stringify` and `signature` modifiers in favor of inline code macros
 - Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation

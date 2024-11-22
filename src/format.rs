@@ -1128,7 +1128,7 @@ impl<'a> Formatter<'a> {
                 self.format_words(&m.operands, true, depth);
             }
             Word::Placeholder(i) => self.push(&word.span, &format!("^{i}")),
-            Word::Subscript(sub) => match &sub.word.value {
+            Word::Subscripted(sub) => match &sub.word.value {
                 Word::Modified(m) => {
                     self.format_modifier(&m.modifier, depth);
                     self.push(&sub.n.span, &sub.n_string());
@@ -1495,7 +1495,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
                 }
         }
         Word::Placeholder(_) => false,
-        Word::Subscript(sub) => word_is_multiline(&sub.word.value),
+        Word::Subscripted(sub) => word_is_multiline(&sub.word.value),
         Word::Comment(_) => true,
         Word::Spaces => false,
         Word::BreakLine => true,

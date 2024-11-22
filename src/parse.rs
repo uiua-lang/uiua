@@ -1046,7 +1046,10 @@ impl<'i> Parser<'i> {
 
         if let Some(n) = subscript {
             let span = word.span.clone().merge(n.span.clone());
-            word = span.sp(Word::Subscript(Box::new(crate::ast::Subscript { n, word })));
+            word = span.sp(Word::Subscripted(Box::new(crate::ast::Subscripted {
+                n,
+                word,
+            })));
         }
 
         Some(word)
@@ -1160,7 +1163,10 @@ impl<'i> Parser<'i> {
             self.spaces();
             if let Some(n) = self.next_token_map(Token::as_subscript) {
                 let span = word.span.clone().merge(n.span.clone());
-                word = span.sp(Word::Subscript(Box::new(crate::ast::Subscript { n, word })));
+                word = span.sp(Word::Subscripted(Box::new(crate::ast::Subscripted {
+                    n,
+                    word,
+                })));
             } else {
                 self.index = reset;
                 break;
@@ -1502,9 +1508,9 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
             m.operands = m.operands.into_iter().map(unsplit_word).collect();
             Word::Modified(m)
         }
-        Word::Subscript(mut sub) => {
+        Word::Subscripted(mut sub) => {
             sub.word = unsplit_word(sub.word);
-            Word::Subscript(sub)
+            Word::Subscripted(sub)
         }
         word => word,
     })
@@ -1543,9 +1549,9 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
             m.operands = m.operands.into_iter().map(split_word).collect();
             Word::Modified(m)
         }
-        Word::Subscript(mut sub) => {
+        Word::Subscripted(mut sub) => {
             sub.word = split_word(sub.word);
-            Word::Subscript(sub)
+            Word::Subscripted(sub)
         }
         word => word,
     })

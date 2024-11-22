@@ -294,7 +294,7 @@ pub enum Word {
         i: usize,
         n: usize,
     },
-    Subscript(Box<Subscript>),
+    Subscripted(Box<Subscripted>),
     InlineMacro(InlineMacro),
 }
 
@@ -415,7 +415,7 @@ impl fmt::Debug for Word {
             Word::FlipLine => write!(f, "unbreak_line"),
             Word::SemanticComment(comment) => write!(f, "{comment}"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
-            Word::Subscript(sub) => sub.fmt(f),
+            Word::Subscripted(sub) => sub.fmt(f),
             Word::InlineMacro(InlineMacro { ident, func, .. }) => {
                 write!(f, "func_macro({:?}{}))", func.value, ident.value)
             }
@@ -625,14 +625,14 @@ impl Modifier {
 
 /// A subscript
 #[derive(Clone)]
-pub struct Subscript {
+pub struct Subscripted {
     /// The subscript number
     pub n: Sp<Option<usize>>,
     /// The modified word
     pub word: Sp<Word>,
 }
 
-impl Subscript {
+impl Subscripted {
     /// Get the subscript number as a string
     pub fn n_string(&self) -> String {
         if let Some(n) = &self.n.value {
@@ -645,7 +645,7 @@ impl Subscript {
     }
 }
 
-impl fmt::Debug for Subscript {
+impl fmt::Debug for Subscripted {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.word.value.fmt(f)?;
         write!(f, "{}", self.n_string())

@@ -1286,7 +1286,7 @@ code:
                 Node::empty()
             }
             Word::OutputComment { i, n } => Node::SetOutputComment { i, n },
-            Word::Subscript(sub) => self.subscript(*sub, word.span)?,
+            Word::Subscripted(sub) => self.subscript(*sub, word.span)?,
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => Node::empty(),
             Word::InlineMacro(_) => {
                 self.add_error(
@@ -1739,7 +1739,7 @@ code:
         Node::Prim(prim, span)
     }
     #[allow(clippy::match_single_binding)]
-    fn subscript(&mut self, sub: Subscript, span: CodeSpan) -> UiuaResult<Node> {
+    fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
         if !matches!(sub.word.value, Word::Primitive(Primitive::Utf8)) {
             self.experimental_error(&span, || {
                 "Subscripts are experimental. To use them, add \

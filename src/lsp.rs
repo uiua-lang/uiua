@@ -681,7 +681,7 @@ impl Spanner {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
                 }
                 #[allow(clippy::match_single_binding)]
-                Word::Subscript(sub) => match &sub.word.value {
+                Word::Subscripted(sub) => match &sub.word.value {
                     Word::Modified(m) => {
                         match &m.modifier.value {
                             Modifier::Primitive(p) => {

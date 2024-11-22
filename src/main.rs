@@ -398,10 +398,9 @@ fn main() {
             #[cfg(feature = "window")]
             uiua::window::set_use_window(app.window);
             if let Some(path) = app.file {
-                let args: Vec<String> = env::args().skip(2).collect();
                 run(
                     path.as_ref(),
-                    args,
+                    app.args,
                     false,
                     None,
                     Some(RunMode::Normal),
@@ -721,6 +720,8 @@ struct App {
     file: Option<PathBuf>,
     #[clap(short, long, help = "Use a window for output instead of stdout")]
     window: bool,
+    #[clap(trailing_var_arg = true, help = "Arguments to pass to the program")]
+    args: Vec<String>,
 }
 
 #[derive(Subcommand)]

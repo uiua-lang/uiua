@@ -45,7 +45,7 @@ struct GlobalNativeSys {
     colored_errors: DashMap<String, String>,
     #[cfg(feature = "ffi")]
     ffi: crate::FfiState,
-    #[cfg(all(feature = "gif", feature = "invoke", not(feature = "window")))]
+    #[cfg(all(feature = "gif", feature = "invoke"))]
     gifs_child: parking_lot::Mutex<Option<Child>>,
 }
 
@@ -220,7 +220,7 @@ impl Default for GlobalNativeSys {
             colored_errors: DashMap::new(),
             #[cfg(feature = "ffi")]
             ffi: Default::default(),
-            #[cfg(all(feature = "gif", feature = "invoke", not(feature = "window")))]
+            #[cfg(all(feature = "gif", feature = "invoke"))]
             gifs_child: parking_lot::Mutex::new(None),
         }
     }
@@ -608,15 +608,14 @@ impl SysBackend for NativeSys {
             Ok(())
         } else {
             #[cfg(feature = "window")]
-            {
-                crate::window::Request::Show(crate::encode::SmartOutput::Png(
+            if crate::window::use_window() {
+                return crate::window::Request::Show(crate::encode::SmartOutput::Png(
                     crate::encode::image_to_bytes(&image, image::ImageOutputFormat::Png)
                         .map_err(|e| e.to_string())?,
                     _label.map(Into::into),
                 ))
-                .send()
+                .send();
             }
-            #[cfg(not(feature = "window"))]
             viuer::print(
                 &image,
                 &viuer::Config {
@@ -634,14 +633,13 @@ impl SysBackend for NativeSys {
     #[cfg(all(feature = "gif", feature = "invoke"))]
     fn show_gif(&self, gif_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
         #[cfg(feature = "window")]
-        {
-            crate::window::Request::Show(crate::encode::SmartOutput::Gif(
+        if crate::window::use_window() {
+            return crate::window::Request::Show(crate::encode::SmartOutput::Gif(
                 gif_bytes,
                 _label.map(Into::into),
             ))
-            .send()
+            .send();
         }
-        #[cfg(not(feature = "window"))]
         (move || -> std::io::Result<()> {
             let temp_path = std::env::temp_dir().join("show.gif");
             fs::write(&temp_path, gif_bytes)?;
@@ -661,30 +659,27 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "audio")]
     fn play_audio(&self, wav_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
+        use hodaun::*;
         #[cfg(feature = "window")]
-        {
-            crate::window::Request::Show(crate::encode::SmartOutput::Wav(
+        if crate::window::use_window() {
+            return crate::window::Request::Show(crate::encode::SmartOutput::Wav(
                 wav_bytes,
                 _label.map(Into::into),
             ))
-            .send()
+            .send();
         }
-        #[cfg(not(feature = "window"))]
-        {
-            use hodaun::*;
-            match default_output::<Stereo>() {
-                Ok(mut mixer) => {
-                    match wav::WavSource::new(std::collections::VecDeque::from(wav_bytes)) {
-                        Ok(source) => {
-                            mixer.add(source.resample());
-                            mixer.block();
-                            Ok(())
-                        }
-                        Err(e) => Err(format!("Failed to read wav bytes: {e}")),
+        match default_output::<Stereo>() {
+            Ok(mut mixer) => {
+                match wav::WavSource::new(std::collections::VecDeque::from(wav_bytes)) {
+                    Ok(source) => {
+                        mixer.add(source.resample());
+                        mixer.block();
+                        Ok(())
                     }
+                    Err(e) => Err(format!("Failed to read wav bytes: {e}")),
                 }
-                Err(e) => Err(format!("Failed to initialize audio output stream: {e}").to_string()),
             }
+            Err(e) => Err(format!("Failed to initialize audio output stream: {e}").to_string()),
         }
     }
     #[cfg(feature = "audio")]

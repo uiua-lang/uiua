@@ -26,7 +26,12 @@ pub fn use_window() -> bool {
     USE_WINDOW.load(atomic::Ordering::Relaxed)
 }
 pub fn set_use_window(use_window: bool) {
-    USE_WINDOW.store(use_window, atomic::Ordering::Relaxed);
+    if use_window {
+        if Request::Ping.send().is_err() {
+            return;
+        }
+        USE_WINDOW.store(true, atomic::Ordering::Relaxed);
+    }
 }
 
 const PORT: u16 = 8482;
@@ -34,6 +39,7 @@ const PORT: u16 = 8482;
 /// A request to the window process
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Request {
+    Ping,
     ShowText(String),
     Show(SmartOutput),
     ShowAll(Vec<SmartOutput>),
@@ -304,6 +310,7 @@ impl eframe::App for App {
                 }
             }
             match req {
+                Request::Ping => {}
                 Request::ShowText(text) => self.items.push(OutputItem::Text(text)),
                 Request::Show(so) => {
                     let item = self.convert_smart_output(so, ctx);

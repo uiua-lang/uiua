@@ -940,31 +940,54 @@ code:
         Ok(SigNode::new(sig, node))
     }
     fn words(&mut self, mut words: Vec<Sp<Word>>) -> UiuaResult<Node> {
+        // Filter out non-code words
         words.retain(|word| word.value.is_code());
+        // Extract semantic comment
         let mut sem = None;
         if let Some(word) = words.last() {
             if let Word::SemanticComment(com) = word.value {
                 sem = Some(words.pop().unwrap().span.sp(com));
             }
         }
+        // Right-to-left
         words.reverse();
+
+        // We keep track of some data from previous words so we can emit
+        // diagnostics about suggested changes
         #[derive(Debug, Clone)]
-        struct PrevWord(Option<Primitive>, Option<Signature>, CodeSpan);
+        struct PrevWord(
+            Option<Primitive>,
+            Option<Primitive>,
+            Option<Signature>,
+            CodeSpan,
+        );
         let mut a: Option<PrevWord> = None;
         let mut b: Option<PrevWord> = None;
         let mut nodes = Node::empty();
         for word in flip_unsplit_lines(split_words(words)).into_iter().flatten() {
             let span = word.span.clone();
-            let prim = match word.value {
-                Word::Primitive(prim) => Some(prim),
-                _ => None,
-            };
+            let (mut modif, mut prim) = (None, None);
+            match &word.value {
+                Word::Primitive(p) => prim = Some(*p),
+                Word::Modified(m) => {
+                    if let Modifier::Primitive(mprim) = &m.modifier.value {
+                        if let Some(first) = m.operands.first() {
+                            if let Word::Primitive(p) = first.value {
+                                modif = Some(*mprim);
+                                prim = Some(p);
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
 
             match (a, &b, prim) {
                 // Flip monadic dup diagnostic
                 (
-                    Some(PrevWord(Some(Primitive::Dup), _, a_span)),
+                    Some(PrevWord(None, Some(Primitive::Dup), _, a_span)),
                     Some(PrevWord(
+                        _,
                         _,
                         Some(Signature {
                             args: 1,
@@ -987,8 +1010,8 @@ code:
                 }
                 // Keep unique dup diagnostic
                 (
-                    Some(PrevWord(Some(Primitive::Dup), _, a_span)),
-                    Some(PrevWord(Some(Primitive::Unique), _, _)),
+                    Some(PrevWord(None, Some(Primitive::Dup), _, a_span)),
+                    Some(PrevWord(None, Some(Primitive::Unique), _, _)),
                     Some(Primitive::Keep),
                 ) => {
                     self.emit_diagnostic(
@@ -1003,6 +1026,58 @@ code:
                         a_span.merge(span.clone()),
                     );
                 }
+                // First reverse diagnostic
+                (
+                    _,
+                    Some(PrevWord(None, Some(Primitive::Reverse), _, b_span)),
+                    Some(Primitive::First),
+                ) => {
+                    self.emit_diagnostic(
+                        format!(
+                            "Prefer {} over {}{}",
+                            Primitive::Last.format(),
+                            Primitive::First,
+                            Primitive::Reverse
+                        ),
+                        DiagnosticKind::Advice,
+                        b_span.clone().merge(span.clone()),
+                    );
+                }
+                // Select by rise and select rise dup diagnostics
+                (
+                    Some(PrevWord(None, Some(Primitive::Dup), _, a_span)),
+                    Some(PrevWord(None, Some(Primitive::Rise), _, _)),
+                    Some(Primitive::Select),
+                ) => {
+                    self.emit_diagnostic(
+                        format!(
+                            "Prefer {} over {}{}{}",
+                            Primitive::Sort.format(),
+                            Primitive::Select,
+                            Primitive::Rise,
+                            Primitive::Dup
+                        ),
+                        DiagnosticKind::Advice,
+                        a_span.merge(span.clone()),
+                    );
+                }
+                (
+                    _,
+                    Some(PrevWord(Some(Primitive::By), Some(Primitive::Rise), _, b_span)),
+                    Some(Primitive::Select),
+                ) => {
+                    self.emit_diagnostic(
+                        format!(
+                            "Prefer {} over {}{}{}",
+                            Primitive::Sort.format(),
+                            Primitive::Select,
+                            Primitive::By,
+                            Primitive::Rise
+                        ),
+                        DiagnosticKind::Advice,
+                        b_span.clone().merge(span.clone()),
+                    );
+                }
                 _ => {}
             }
 
@@ -1011,7 +1086,7 @@ code:
             let sig = node.sig().ok();
             nodes.push(node);
             a = b;
-            b = Some(PrevWord(prim, sig, span));
+            b = Some(PrevWord(modif, prim, sig, span));
         }
         if let Some(sem) = sem {
             nodes = self.semantic_comment(sem.value, sem.span, nodes);

@@ -1037,7 +1037,7 @@ primitive!(
     /// Multidimensional arrays have their rows sorted lexicographically.
     /// ex: ⍆ . [1_5_3 4_3_2 1_5_2]
     /// [sort] is equivalent to [select][by][rise]
-    /// ex:   ⍆ "uiua"
+    /// ex!   ⍆ "uiua"
     ///   : ⊏⊸⍏ "uiua"
     /// If you want to sort by some key rather than the data itself, use [rise] or [fall].
     /// [un][sort] shuffles an array.
@@ -1051,8 +1051,8 @@ primitive!(
     /// The [rise] of an array is the list of indices that would sort the array ascending if used with [select].
     /// ex: ⍏ 6_2_7_0_¯1_5
     /// Using the [rise] as a selector in [select] yields the sorted array.
-    /// ex: ⊏⍏. 6_2_7_0_¯1_5
-    /// ex: ⊏⊸⍏ 6_2_7_0_¯1_5
+    /// ex! ⊏⍏. 6_2_7_0_¯1_5
+    /// ex! ⊏⊸⍏ 6_2_7_0_¯1_5
     /// This can also be done with [sort].
     /// If we transform the array before [rise]ing, we can sort by a key.
     /// Here, we sort the array ascending by the [absolute value] of its elements.
@@ -1107,7 +1107,7 @@ primitive!(
     ///
     /// When combined with [group], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters in this string
-    ///   : ⊕($"_ _"⊃⊢⧻) ⊛.⊏⍏.
+    ///   : ⊕($"_ _"⊃⊢⧻) ⊛.⍆
     (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Remove duplicate rows from an array
     ///

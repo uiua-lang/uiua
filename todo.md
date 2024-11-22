@@ -4,7 +4,6 @@
 The next version of Uiua
 
 - Negative subscripts
-- `first rev`, `sel by rise`, `sel rise dup` style warnings
 - Stabilize `backward`, `case`
 - Optimize `group`/`partition` reduction replacement
 - Compile-time code string evaluation

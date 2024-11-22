@@ -377,7 +377,7 @@
     "description": "Encode audio into a byte array"
   },
   "backward": {
-    "glyph": "˜",
+    "glyph": "𝄈",
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",

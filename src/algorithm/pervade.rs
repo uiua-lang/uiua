@@ -406,7 +406,11 @@ where
                             reuse_fill(a, b, ash, bsh, fill, f);
                         }
                     }
-                } else if a_row_len != 0 {
+                } else if a_row_len == 0 {
+                    for b in b.chunks_exact_mut(b_row_len) {
+                        reuse_fill(&[], b, ash, bsh, fill, f);
+                    }
+                } else {
                     let fill_row = vec![fill; a_row_len];
                     for (a, b) in a
                         .chunks_exact(a_row_len)

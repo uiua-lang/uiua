@@ -384,6 +384,9 @@ impl MapKeys {
                     let orig = key_index;
                     loop {
                         key_index = (key_index + 1) % capacity;
+                        if key_index == orig {
+                            break false;
+                        }
                         let cell_key =
                             &key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
                         if cell_key[0].is_any_tombstone() {

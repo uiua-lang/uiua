@@ -1002,6 +1002,9 @@ fn update(main: bool, check: bool, mut features: Vec<String>) {
     } else {
         args.push("uiua");
     }
+    if cfg!(feature = "full") {
+        features.push("full".into());
+    }
     if cfg!(feature = "audio") {
         features.push("audio".into());
     }

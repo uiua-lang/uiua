@@ -21,7 +21,7 @@ use crate::{
     lex::{CodeSpan, Loc, Sp},
     parse::{flip_unsplit_lines, parse, split_words, trim_spaces},
     Compiler, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys, Signature, Uiua,
-    UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_NUMS,
+    UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_DIGITS,
 };
 
 trait ConfigValue: Sized {
@@ -1140,7 +1140,7 @@ impl<'a> Formatter<'a> {
                 }
                 _ => {
                     self.format_word(&sub.word, depth);
-                    if self.output.ends_with(SUBSCRIPT_NUMS) {
+                    if self.output.ends_with(SUBSCRIPT_DIGITS) {
                         self.output.push(' ');
                     }
                     self.push(&sub.n.span, &sub.n_string());

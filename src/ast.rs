@@ -9,7 +9,7 @@ use crate::{
     function::Signature,
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
-    Ident, Primitive, SemanticComment, SUBSCRIPT_NUMS,
+    Ident, Primitive, SemanticComment, SUBSCRIPT_DIGITS,
 };
 
 /// A top-level item
@@ -623,25 +623,58 @@ impl Modifier {
     }
 }
 
-/// A subscript
+/// A subscripted word
 #[derive(Clone)]
 pub struct Subscripted {
     /// The subscript number
-    pub n: Sp<Option<usize>>,
+    pub n: Sp<Subscript>,
     /// The modified word
     pub word: Sp<Word>,
 }
 
-impl Subscripted {
-    /// Get the subscript number as a string
-    pub fn n_string(&self) -> String {
-        if let Some(n) = &self.n.value {
-            (n.to_string().chars())
-                .map(|c| SUBSCRIPT_NUMS[(c as u32 as u8 - b'0') as usize])
-                .collect()
-        } else {
-            String::new()
+/// A subscript
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Subscript {
+    /// Just __
+    Empty,
+    /// Just a negative sign
+    NegOnly,
+    /// A number
+    N(i32),
+}
+
+impl Subscript {
+    /// Get the number
+    pub fn n(&self) -> Option<i32> {
+        match self {
+            Subscript::N(n) => Some(*n),
+            _ => None,
         }
+    }
+}
+
+impl fmt::Display for Subscript {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Subscript::Empty => Ok(()),
+            Subscript::NegOnly => write!(f, "₋"),
+            Subscript::N(n) => {
+                if *n < 0 {
+                    write!(f, "₋")?;
+                }
+                for c in n.abs().to_string().chars() {
+                    write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl Subscripted {
+    /// Get the subscript as a string
+    pub fn n_string(&self) -> String {
+        self.n.value.to_string()
     }
 }
 

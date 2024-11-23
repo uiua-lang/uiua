@@ -37,7 +37,7 @@ use crate::{
     DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc,
     IntoInputSrc, IntoSysBackend, Node, Primitive, Purity, RunMode, SemanticComment, SigNode,
     Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
-    EXAMPLE_UA, SUBSCRIPT_NUMS, VERSION,
+    EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
 pub use pre_eval::PreEvalMode;
 
@@ -1813,6 +1813,25 @@ code:
         let span = self.add_span(span);
         Node::Prim(prim, span)
     }
+    fn subscript_n(&mut self, sub: Subscript, span: &CodeSpan) -> Option<i32> {
+        match sub {
+            Subscript::N(n) => Some(n),
+            Subscript::Empty => None,
+            Subscript::NegOnly => {
+                self.add_error(span.clone(), "Subscript is incomplete");
+                None
+            }
+        }
+    }
+    fn positive_subscript(&mut self, n: i32, prim: Primitive, span: CodeSpan) -> UiuaResult<usize> {
+        if n < 0 {
+            self.add_error(
+                span,
+                format!("Subscript for {} must be positive", prim.format()),
+            );
+        }
+        Ok(n.unsigned_abs() as usize)
+    }
     #[allow(clippy::match_single_binding)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
         if !matches!(sub.word.value, Word::Primitive(Primitive::Utf8)) {
@@ -1821,14 +1840,14 @@ code:
                 `# Experimental!` to the top of the file."
             });
         }
-        let Some(n) = sub.n.value else {
+        let Some(n) = self.subscript_n(sub.n.value, &sub.n.span) else {
             return self.word(sub.word);
         };
         Ok(match sub.word.value {
             Word::Modified(m) => match m.modifier.value {
                 Modifier::Ref(_) | Modifier::Macro(..) => {
                     self.add_error(span, "Subscripts are not implemented for macros");
-                    self.modified(*m, Some(n))?
+                    self.modified(*m, Some(Subscript::N(n)))?
                 }
                 Modifier::Primitive(prim) => match prim {
                     _ => {
@@ -1841,7 +1860,7 @@ code:
                                 format!("Subscripts are not implemented for {}", prim.format()),
                             );
                         }
-                        self.modified(*m, Some(n))?
+                        self.modified(*m, Some(Subscript::N(n)))?
                     }
                 },
             },
@@ -1872,7 +1891,7 @@ code:
                     ])
                 }
                 Primitive::Round | Primitive::Floor | Primitive::Ceil => {
-                    let mul = 10f64.powi(n as i32);
+                    let mul = 10f64.powi(n);
                     Node::from_iter([
                         Node::new_push(mul),
                         self.primitive(Primitive::Mul, span.clone()),
@@ -1897,25 +1916,33 @@ code:
                     1 => self.primitive(Primitive::Fix, span),
                     2 => self.primitive(Primitive::Couple, span),
                     n => Node::Array {
-                        len: ArrayLen::Static(n),
+                        len: ArrayLen::Static(self.positive_subscript(
+                            n,
+                            Primitive::Couple,
+                            span.clone(),
+                        )?),
                         inner: Node::empty().into(),
                         boxed: false,
-                        span: self.add_span(span.clone()),
+                        span: self.add_span(span),
                     },
                 },
                 Primitive::Box => Node::Array {
-                    len: ArrayLen::Static(n),
+                    len: ArrayLen::Static(self.positive_subscript(
+                        n,
+                        Primitive::Box,
+                        span.clone(),
+                    )?),
                     inner: Node::empty().into(),
                     boxed: true,
-                    span: self.add_span(span.clone()),
+                    span: self.add_span(span),
                 },
                 Primitive::Stack => Node::ImplPrim(
                     ImplPrimitive::TraceN {
-                        n,
+                        n: self.positive_subscript(n, Primitive::Stack, span.clone())?,
                         inverse: false,
                         stack_sub: true,
                     },
-                    self.add_span(span.clone()),
+                    self.add_span(span),
                 ),
                 _ => {
                     self.add_error(

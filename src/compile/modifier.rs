@@ -13,7 +13,7 @@ impl Compiler {
         &mut self,
         modifier: &Sp<Modifier>,
         operand: &Sp<Word>,
-        subscript: Option<usize>,
+        subscript: Option<Subscript>,
     ) -> UiuaResult<Option<Node>> {
         let Sp {
             value: Word::Pack(pack),
@@ -292,7 +292,7 @@ impl Compiler {
     pub(crate) fn modified(
         &mut self,
         mut modified: Modified,
-        subscript: Option<usize>,
+        subscript: Option<Subscript>,
     ) -> UiuaResult<Node> {
         let mut op_count = modified.code_operands().count();
 
@@ -401,7 +401,7 @@ impl Compiler {
     pub(super) fn inline_modifier(
         &mut self,
         modified: &Modified,
-        subscript: Option<usize>,
+        subscript: Option<Subscript>,
     ) -> UiuaResult<Option<Node>> {
         use Primitive::*;
         let Modifier::Primitive(prim) = modified.modifier.value else {
@@ -453,9 +453,13 @@ impl Compiler {
                 }
             }
             Both => {
-                let Some(n) = subscript else {
+                let Some(sub) = subscript else {
                     return Ok(None);
                 };
+                let Some(n) = self.subscript_n(sub, &modified.modifier.span) else {
+                    return Ok(None);
+                };
+                let n = self.positive_subscript(n, Both, modified.modifier.span.clone())?;
                 let span = self.add_span(modified.modifier.span.clone());
                 self.monadic_modifier_op(modified)?.0.on_all(n, span)
             }
@@ -552,7 +556,9 @@ impl Compiler {
                 } else {
                     Node::Mod(Primitive::Repeat, eco_vec![sn], spandex)
                 };
-                if let Some(n) = subscript {
+                if let Some(n) =
+                    subscript.and_then(|n| self.subscript_n(n, &modified.modifier.span))
+                {
                     node.prepend(Node::new_push(n));
                 }
                 node
@@ -561,7 +567,9 @@ impl Compiler {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let mut node = Node::Mod(Primitive::Tuples, eco_vec![sn], span);
-                if let Some(n) = subscript {
+                if let Some(n) =
+                    subscript.and_then(|n| self.subscript_n(n, &modified.modifier.span))
+                {
                     node.prepend(Node::new_push(n));
                 }
                 node

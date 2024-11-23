@@ -22,7 +22,7 @@ use crate::{
 #[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpanKind {
-    Primitive(Primitive, Option<usize>),
+    Primitive(Primitive, Option<i32>),
     String,
     Number,
     Comment,
@@ -42,7 +42,7 @@ pub enum SpanKind {
     FuncDelim(Signature, SetInverses),
     MacroDelim(usize),
     ImportSrc(ImportSrc),
-    Subscript(Option<Primitive>, Option<usize>),
+    Subscript(Option<Primitive>, Option<i32>),
     Obverse(SetInverses),
 }
 
@@ -681,46 +681,47 @@ impl Spanner {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
                 }
                 #[allow(clippy::match_single_binding)]
-                Word::Subscripted(sub) => match &sub.word.value {
-                    Word::Modified(m) => {
-                        match &m.modifier.value {
-                            Modifier::Primitive(p) => {
-                                spans.push(
-                                    m.modifier
-                                        .span
-                                        .clone()
-                                        .sp(SpanKind::Primitive(*p, sub.n.value)),
-                                );
-                                spans.push(sub.n.clone().map(|n| SpanKind::Subscript(Some(*p), n)));
-                            }
-                            Modifier::Ref(r) => {
-                                spans.extend(self.ref_spans(r));
-                                spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
-                            }
-                            Modifier::Macro(mac) => {
-                                spans.extend(self.func_spans(&mac.func.value, &mac.func.span));
-                                let mac_delim_kind =
-                                    SpanKind::MacroDelim(ident_modifier_args(&mac.ident.value));
-                                if let Some(span) = &mac.caret_span {
-                                    spans.push(span.clone().sp(mac_delim_kind.clone()));
+                Word::Subscripted(sub) => {
+                    let n = sub.n.value.n();
+                    match &sub.word.value {
+                        Word::Modified(m) => {
+                            match &m.modifier.value {
+                                Modifier::Primitive(p) => {
+                                    spans.push(
+                                        m.modifier.span.clone().sp(SpanKind::Primitive(*p, n)),
+                                    );
+                                    spans.push(
+                                        sub.n.span.clone().sp(SpanKind::Subscript(Some(*p), n)),
+                                    );
                                 }
-                                let ident_span = (mac.ident.span.clone()).sp(mac_delim_kind);
-                                spans.push(ident_span);
-                                spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
+                                Modifier::Ref(r) => {
+                                    spans.extend(self.ref_spans(r));
+                                    spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None, n)));
+                                }
+                                Modifier::Macro(mac) => {
+                                    spans.extend(self.func_spans(&mac.func.value, &mac.func.span));
+                                    let mac_delim_kind =
+                                        SpanKind::MacroDelim(ident_modifier_args(&mac.ident.value));
+                                    if let Some(span) = &mac.caret_span {
+                                        spans.push(span.clone().sp(mac_delim_kind.clone()));
+                                    }
+                                    let ident_span = (mac.ident.span.clone()).sp(mac_delim_kind);
+                                    spans.push(ident_span);
+                                    spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None, n)));
+                                }
                             }
+                            spans.extend(self.words_spans(&m.operands));
                         }
-                        spans.extend(self.words_spans(&m.operands));
+                        Word::Primitive(p) => {
+                            spans.push((sub.word.span.clone()).sp(SpanKind::Primitive(*p, n)));
+                            spans.push(sub.n.span.clone().sp(SpanKind::Subscript(Some(*p), n)));
+                        }
+                        _ => {
+                            spans.extend(self.words_spans(slice::from_ref(&sub.word)));
+                            spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None, n)));
+                        }
                     }
-                    Word::Primitive(p) => {
-                        spans
-                            .push((sub.word.span.clone()).sp(SpanKind::Primitive(*p, sub.n.value)));
-                        spans.push(sub.n.clone().map(|n| SpanKind::Subscript(Some(*p), n)));
-                    }
-                    _ => {
-                        spans.extend(self.words_spans(slice::from_ref(&sub.word)));
-                        spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
-                    }
-                },
+                }
                 Word::InlineMacro(InlineMacro {
                     ident,
                     caret_span,
@@ -1566,7 +1567,7 @@ mod server {
             let mut tokens = Vec::new();
             let mut prev_line = 0;
             let mut prev_char = 0;
-            let for_prim = |p: Primitive, sub: Option<usize>| {
+            let for_prim = |p: Primitive, sub: Option<i32>| {
                 let args = p.subscript_sig(sub).map(|sig| sig.args).or(p.args());
                 Some(match p.class() {
                     PrimClass::Stack | PrimClass::Debug | PrimClass::Planet

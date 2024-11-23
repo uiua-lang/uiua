@@ -1821,7 +1821,7 @@ fn modifier_class(margs: usize) -> &'static str {
     }
 }
 
-fn prim_sig_class(prim: Primitive, subscript: Option<usize>) -> &'static str {
+fn prim_sig_class(prim: Primitive, subscript: Option<i32>) -> &'static str {
     match prim {
         Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose => code_font!("monadic-function trans text-gradient"),

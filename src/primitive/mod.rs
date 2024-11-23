@@ -30,7 +30,7 @@ use crate::{
     array::Array,
     boxed::Boxed,
     encode,
-    lex::{AsciiToken, SUBSCRIPT_NUMS},
+    lex::{AsciiToken, SUBSCRIPT_DIGITS},
     sys::*,
     value::*,
     FunctionId, Ops, Signature, Uiua, UiuaErrorKind, UiuaResult,
@@ -284,7 +284,7 @@ impl fmt::Display for ImplPrimitive {
                 if stack_sub {
                     fn n_string(n: usize) -> String {
                         (n.to_string().chars())
-                            .map(|c| SUBSCRIPT_NUMS[(c as u32 as u8 - b'0') as usize])
+                            .map(|c| SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])
                             .collect()
                     }
                     let n_str = n_string(n);
@@ -468,7 +468,7 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     /// The modified signature of the primitive given a subscript
-    pub fn subscript_sig(&self, n: Option<usize>) -> Option<Signature> {
+    pub fn subscript_sig(&self, n: Option<i32>) -> Option<Signature> {
         use Primitive::*;
         Some(match (self, n) {
             (prim, Some(_)) if prim.class() == PrimClass::DyadicPervasive => Signature::new(1, 1),
@@ -476,7 +476,7 @@ impl Primitive {
                 Select | Pick | Take | Drop | Join | Rerank | Rotate | Orient | Windows | Base,
                 Some(_),
             ) => Signature::new(1, 1),
-            (Couple | Box, Some(n)) => Signature::new(n, 1),
+            (Couple | Box, Some(n)) if n >= 0 => Signature::new(n as usize, 1),
             (Couple, None) => Signature::new(2, 1),
             (Box, None) => Signature::new(1, 1),
             (Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8, _) => return self.sig(),

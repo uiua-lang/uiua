@@ -15,10 +15,10 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{Ident, Inputs, Primitive, WILDCARD_CHAR};
+use crate::{ast::Subscript, Ident, Inputs, Primitive, WILDCARD_CHAR};
 
 /// Subscript digit characters
-pub const SUBSCRIPT_NUMS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
+pub const SUBSCRIPT_DIGITS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
 
 /// Lex a Uiua source file
 pub fn lex(
@@ -564,7 +564,7 @@ pub enum Token {
     Simple(AsciiToken),
     Glyph(Primitive),
     Placeholder(usize),
-    Subscript(Option<usize>),
+    Subscr(Subscript),
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
@@ -637,9 +637,9 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_subscript(&self) -> Option<Option<usize>> {
+    pub(crate) fn as_subscript(&self) -> Option<Subscript> {
         match self {
-            Token::Subscript(n) => Some(*n),
+            Token::Subscr(n) => Some(*n),
             _ => None,
         }
     }
@@ -686,17 +686,10 @@ impl fmt::Display for Token {
             Token::CloseAngle => write!(f, "⟩"),
             Token::Newline => write!(f, "newline"),
             Token::Spaces => write!(f, "space(s)"),
-            Token::Subscript(n) => {
-                if let Some(n) = n {
-                    for c in n.to_string().chars() {
-                        let i = (c as u32 as u8 - b'0') as usize;
-                        write!(f, "{}", SUBSCRIPT_NUMS[i])?;
-                    }
-                    Ok(())
-                } else {
-                    write!(f, "__")
-                }
-            }
+            Token::Subscr(sub) => match sub {
+                Subscript::Empty => write!(f, "__"),
+                sub => sub.fmt(f),
+            },
             Token::OpenModule => write!(f, "┌─╴"),
             Token::CloseModule => write!(f, "└─╴"),
             Token::Placeholder(i) => write!(f, "^{i}"),
@@ -932,22 +925,32 @@ impl<'a> Lexer<'a> {
                 "⟩" => self.end(CloseAngle, start),
                 "_" => {
                     if self.next_char_exact("_") {
-                        let mut n: Option<usize> = None;
+                        let mut n: Option<i32> = None;
+                        let neg = self.next_char_exact("₋")
+                            || self.next_char_exact("`")
+                            || self.next_char_exact("¯");
                         loop {
                             if let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                                 let n = n.get_or_insert(0);
-                                *n = *n * 10 + c.parse::<usize>().unwrap();
+                                *n = *n * 10 + c.parse::<i32>().unwrap();
                             } else if let Some(c) =
-                                self.next_char_if_all(|c| SUBSCRIPT_NUMS.contains(&c))
+                                self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c))
                             {
                                 let c = c.chars().next().unwrap();
                                 let n = n.get_or_insert(0);
-                                *n = *n * 10 + SUBSCRIPT_NUMS.iter().position(|&d| d == c).unwrap();
+                                *n = *n * 10
+                                    + SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
                             } else {
                                 break;
                             }
                         }
-                        self.end(Subscript(n), start)
+                        let sub = match (neg, n) {
+                            (false, None) => Subscript::Empty,
+                            (true, None) => Subscript::NegOnly,
+                            (false, Some(n)) => Subscript::N(n),
+                            (true, Some(n)) => Subscript::N(-n),
+                        };
+                        self.end(Subscr(sub), start)
                     } else {
                         self.end(Underscore, start)
                     }
@@ -1138,29 +1141,39 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 // Formatted subscripts
-                c if c.chars().all(|c| SUBSCRIPT_NUMS.contains(&c)) => {
-                    let mut s = c.to_string();
+                c if c == "₋" || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
+                    let (mut s, neg) = if c == "₋" {
+                        (String::new(), true)
+                    } else {
+                        (c.to_string(), false)
+                    };
                     loop {
                         if let Some(c) =
-                            self.next_char_if(|c| c.chars().all(|c| SUBSCRIPT_NUMS.contains(&c)))
+                            self.next_char_if(|c| c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)))
                         {
                             s.push_str(c);
                         } else if self.next_chars_exact(["_"; 2]) {
                             while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                                 let i: usize = c.parse().unwrap();
-                                s.push(SUBSCRIPT_NUMS[i]);
+                                s.push(SUBSCRIPT_DIGITS[i]);
                             }
                         } else {
                             break;
                         }
                     }
-                    let mut n: Option<usize> = None;
+                    let mut n: Option<i32> = None;
                     for c in s.chars() {
-                        let i = SUBSCRIPT_NUMS.iter().position(|&d| d == c).unwrap();
+                        let i = SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
                         let n = n.get_or_insert(0);
                         *n = *n * 10 + i;
                     }
-                    self.end(Subscript(n), start)
+                    let sub = match (neg, n) {
+                        (false, None) => Subscript::Empty,
+                        (true, None) => Subscript::NegOnly,
+                        (false, Some(n)) => Subscript::N(n),
+                        (true, Some(n)) => Subscript::N(-n),
+                    };
+                    self.end(Subscr(sub), start)
                 }
                 // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c) || c.chars().all(is_ident_start) || "&!‼".contains(c) => {
@@ -1226,8 +1239,8 @@ impl<'a> Lexer<'a> {
                         let rest = &ident[lowercase_end..];
                         if !rest.is_empty() {
                             let ident = canonicalize_ident(rest);
-                            if let Some(n) = subscript_num(&ident) {
-                                self.end(Subscript(Some(n)), start);
+                            if let Some(sub) = subscript(&ident) {
+                                self.end(Subscr(sub), start);
                             } else {
                                 self.end(Ident(ident), start);
                             }
@@ -1235,8 +1248,8 @@ impl<'a> Lexer<'a> {
                     } else {
                         // Lone ident
                         let ident = canonicalize_ident(&ident);
-                        if let Some(n) = subscript_num(&ident) {
-                            self.end(Subscript(Some(n)), start);
+                        if let Some(sub) = subscript(&ident) {
+                            self.end(Subscr(sub), start);
                         } else {
                             self.end(Ident(ident), start);
                         }
@@ -1337,10 +1350,17 @@ impl<'a> Lexer<'a> {
             return s;
         }
         let mut started_subscript = false;
+        let mut got_neg = false;
         // Handle identifiers beginning with __
         loop {
             if self.next_chars_exact(["_"; 2]) {
                 s.push_str("__");
+                if !got_neg {
+                    if let Some(neg) = self.next_char_if_all(|c| "₋`¯".contains(c)) {
+                        s.push_str(neg);
+                        got_neg = true;
+                    }
+                }
                 while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                     s.push_str(c);
                 }
@@ -1349,7 +1369,10 @@ impl<'a> Lexer<'a> {
                 self.next_char_if_all(|c| !started_subscript && is_ident_start(c))
             {
                 s.push_str(c);
-            } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_NUMS.contains(&c)) {
+            } else if !got_neg && self.next_char_exact("₋") {
+                s.push('₋');
+                got_neg = true;
+            } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c)) {
                 s.push_str(c);
                 started_subscript = true;
             } else {
@@ -1548,7 +1571,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 
 /// Whether a character can be part of a Uiua identifier
 pub fn is_ident_char(c: char) -> bool {
-    is_ident_start(c) || SUBSCRIPT_NUMS.contains(&c)
+    is_ident_start(c) || SUBSCRIPT_DIGITS.contains(&c)
 }
 
 /// Whether a character can be among the first characters of a Uiua identifier
@@ -1556,17 +1579,29 @@ pub fn is_ident_start(c: char) -> bool {
     c.is_alphabetic() && !"ⁿₙπτηℂ".contains(c)
 }
 
-fn subscript_num(s: &str) -> Option<usize> {
+fn subscript(s: &str) -> Option<Subscript> {
     if s.is_empty() {
         return None;
     }
-    let mut n = 0;
-    for c in s.chars() {
-        let i = SUBSCRIPT_NUMS.iter().position(|&d| c == d)?;
-        n *= 10;
-        n += i;
+    let mut chars = s.chars().peekable();
+    let first = *chars.peek().unwrap();
+    let neg = "₋`¯".contains(first);
+    if neg {
+        chars.next();
     }
-    Some(n)
+    let mut n: Option<i32> = None;
+    for c in chars {
+        let i = SUBSCRIPT_DIGITS.iter().position(|&d| c == d)? as i32;
+        let n = n.get_or_insert(0);
+        *n *= 10;
+        *n += i;
+    }
+    Some(match (neg, n) {
+        (false, None) => Subscript::Empty,
+        (true, None) => Subscript::NegOnly,
+        (false, Some(n)) => Subscript::N(n),
+        (true, Some(n)) => Subscript::N(-n),
+    })
 }
 
 /// Whether a string is a custom glyph
@@ -1618,7 +1653,7 @@ fn canonicalize_subscripts(ident: &str) -> Ident {
     (ident.chars().filter(|c| *c != '_'))
         .map(|c| {
             if let Some(d) = c.to_digit(10) {
-                crate::lex::SUBSCRIPT_NUMS[d as usize]
+                crate::lex::SUBSCRIPT_DIGITS[d as usize]
             } else {
                 c
             }

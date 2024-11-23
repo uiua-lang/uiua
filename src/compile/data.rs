@@ -370,7 +370,7 @@ impl Compiler {
                         comment.push_str(&field.name);
                         let mut i = i + 1;
                         while i > 0 {
-                            comment.push(SUBSCRIPT_NUMS[i % 10]);
+                            comment.push(SUBSCRIPT_DIGITS[i % 10]);
                             i /= 10;
                         }
                     }

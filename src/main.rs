@@ -1163,7 +1163,7 @@ const DYADIC: Color = Color::Blue;
 const MONADIC_MOD: Color = Color::Yellow;
 const DYADIC_MOD: Color = Color::Magenta;
 
-fn color_prim(prim: Primitive, sub: Option<usize>) -> Option<Color> {
+fn color_prim(prim: Primitive, sub: Option<i32>) -> Option<Color> {
     match prim.class() {
         PrimClass::Stack | PrimClass::Debug if prim.modifier_args().is_none() => None,
         PrimClass::Constant => None,

@@ -722,7 +722,7 @@ impl Primitive {
                 }
                 // Aliases
                 if let Some(ps) = alias(sub_name) {
-                    prims.extend(ps);
+                    prims.extend(ps.into_iter().rev());
                     end -= len;
                     continue 'outer;
                 }

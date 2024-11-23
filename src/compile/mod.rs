@@ -1873,6 +1873,9 @@ code:
                         self.primitive(prim, span),
                     ])
                 }
+                Primitive::Deshape => {
+                    Node::ImplPrim(ImplPrimitive::DeshapeSub(n), self.add_span(span))
+                }
                 Primitive::Transpose => {
                     if n > 100 {
                         self.add_error(span.clone(), "Too many subscript repetitions");

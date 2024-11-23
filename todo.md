@@ -3,7 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Negative subscripts
 - Stabilize `backward`, `case`
 - Optimize `group`/`partition` reduction replacement
 - Compile-time code string evaluation

@@ -150,8 +150,9 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &(
         Deshape,
         (Dup, Shape, PushUnd(1), Deshape),
-        (PopUnd(1), UndoDeshape),
+        (PopUnd(1), UndoDeshape(None)),
     ),
+    &DeshapeSubPat,
     &MaybeVal((
         Rerank,
         (Over, Shape, Over, PushUnd(2), Rerank),
@@ -246,9 +247,11 @@ macro_rules! under {
     ($(#[$attr:meta])* $($doc:literal,)? ($($tt:tt)*), $body:expr) => {
         under!($(#[$attr])* $($doc,)? $($tt)*, $body);
     };
-    // Optional parens
     ($(#[$attr:meta])* $($doc:literal,)? ($($tt:tt)*), ref, $pat:pat, $body:expr) => {
         under!($(#[$attr])* $($doc,)? $($tt)*, ref, $pat, $body);
+    };
+    ($(#[$attr:meta])* $($doc:literal,)? ($($tt:tt)*), $pat:pat, $body:expr) => {
+        under!($(#[$attr])* $($doc,)? $($tt)*, $pat, $body);
     };
     // Main impl
     ($(#[$attr:meta])* $($doc:literal,)? $name:ident, $input:ident, $g_sig:tt, $inverse:tt, $asm:tt, $body:expr) => {
@@ -639,6 +642,21 @@ under!(DupPat, input, g_sig, inverse, asm, Prim(Dup, dup_span), {
     after.push(monadic_after);
     Ok((input, before, after))
 });
+
+under!(
+    (DeshapeSubPat, input, _, _, _),
+    ImplPrim(DeshapeSub(i), span),
+    {
+        let before = Node::from_iter([
+            Prim(Dup, span),
+            Prim(Shape, span),
+            PushUnder(1, span),
+            ImplPrim(DeshapeSub(i), span),
+        ]);
+        let after = Node::from_iter([PopUnder(1, span), ImplPrim(UndoDeshape(Some(i)), span)]);
+        Ok((input, before, after))
+    }
+);
 
 #[derive(Debug)]
 struct Trivial;

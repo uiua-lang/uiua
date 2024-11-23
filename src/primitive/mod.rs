@@ -160,6 +160,18 @@ impl fmt::Display for ImplPrimitive {
         use ImplPrimitive::*;
         use Primitive::*;
         match self {
+            &DeshapeSub(mut i) => {
+                write!(f, "{Deshape}")?;
+                if i < 0 {
+                    write!(f, "₋")?;
+                    i = -i;
+                }
+                while i > 0 {
+                    write!(f, "{}", SUBSCRIPT_DIGITS[i as usize % 10])?;
+                    i /= 10;
+                }
+                Ok(())
+            }
             Root => write!(f, "{Pow}{Div}{Flip}1"),
             Cos => write!(f, "cos"),
             Asin => write!(f, "{Un}{Sin}"),
@@ -218,7 +230,7 @@ impl fmt::Display for ImplPrimitive {
             UndoGroup1 | UndoGroup2 => write!(f, "{Under}{Group}"),
             TryClose => write!(f, "{}", Sys(SysOp::Close)),
             UndoFix => write!(f, "{Under}{Fix}"),
-            UndoDeshape => write!(f, "{Under}{Deshape}"),
+            UndoDeshape(_) => write!(f, "{Under}{Deshape}"),
             UndoFirst => write!(f, "{Under}{First}"),
             UndoLast => write!(f, "{Under}{Last}"),
             UndoKeep => write!(f, "{Under}{Keep}"),
@@ -1137,6 +1149,9 @@ impl Primitive {
 impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
+            ImplPrimitive::DeshapeSub(i) => {
+                env.monadic_mut_env(|val, env| val.deshape_sub(*i, env))?
+            }
             ImplPrimitive::Root => env.dyadic_oo_00_env(Value::root)?,
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
@@ -1401,10 +1416,10 @@ impl ImplPrimitive {
                 env.push(from.undo_drop(index, into, env)?);
             }
             ImplPrimitive::UndoFix => env.monadic_mut(Value::undo_fix)?,
-            ImplPrimitive::UndoDeshape => {
+            ImplPrimitive::UndoDeshape(sub) => {
                 let shape = env.pop(1)?;
                 let mut val = env.pop(2)?;
-                val.undo_deshape(&shape, env)?;
+                val.undo_deshape(*sub, &shape, env)?;
                 env.push(val)
             }
             ImplPrimitive::UndoPartition2 => loops::undo_partition_part2(env)?,

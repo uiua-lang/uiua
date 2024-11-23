@@ -8,7 +8,7 @@ use std::{
     f64::consts::{PI, TAU},
     fmt,
     io::Write,
-    iter,
+    iter::{self, once},
     mem::size_of,
     ops::Neg,
     ptr, slice,
@@ -37,40 +37,119 @@ impl Value {
     pub fn deshape(&mut self) {
         self.deshape_depth(0);
     }
-    pub(crate) fn deshape_depth(&mut self, depth: usize) {
-        match self {
-            Value::Num(n) => n.deshape_depth(depth),
-            Value::Byte(b) => b.deshape_depth(depth),
-            Value::Complex(c) => c.deshape_depth(depth),
-            Value::Char(c) => c.deshape_depth(depth),
-            Value::Box(b) => {
-                if let Some(bx) = b.as_scalar_mut() {
-                    bx.as_value_mut().deshape_depth(depth);
-                } else if depth > 0 && b.rank() <= 1 {
-                    for b in b.data.as_mut_slice() {
-                        b.as_value_mut().deshape_depth(depth - 1);
-                    }
-                } else {
-                    b.deshape_depth(depth);
-                }
+    pub(crate) fn deshape_depth(&mut self, mut depth: usize) {
+        if let Value::Box(arr) = self {
+            if let Some(Boxed(val)) = arr.as_scalar_mut() {
+                val.deshape_depth(depth);
+                return;
             }
         }
+        if self.is_map() {
+            self.take_map_keys();
+        }
+        depth = depth.min(self.rank());
+        let deshaped = self.shape_mut().split_off(depth).into_iter().product();
+        self.shape_mut().push(deshaped);
     }
-    pub(crate) fn undo_deshape(&mut self, orig_shape: &Self, env: &Uiua) -> UiuaResult {
-        let shape = orig_shape.as_nats(env, "Shape must be an array of natural numbers")?;
-        let mut new_shape = self.shape().clone();
-        if new_shape.len() > 0 {
-            new_shape.remove(0);
+    pub(crate) fn deshape_sub(&mut self, irank: i32, env: &Uiua) -> UiuaResult {
+        if irank == 0 || irank > 0 && irank as usize == self.rank() {
+            return Ok(());
         }
-        for &d in shape.iter().rev() {
-            new_shape.insert(0, d);
+        self.take_map_keys();
+        let shape = self.shape_mut();
+        let rank = irank.unsigned_abs() as usize;
+        if irank > 0 {
+            // Positive rank
+            match rank.cmp(&shape.len()) {
+                Ordering::Equal => {}
+                Ordering::Less => {
+                    let mid = shape.len() + 1 - rank;
+                    let new_first_dim: usize = shape[..mid].iter().product();
+                    *shape = once(new_first_dim)
+                        .chain(shape[mid..].iter().copied())
+                        .collect();
+                }
+                Ordering::Greater => {
+                    for _ in 0..rank - shape.len() {
+                        shape.insert(0, 1);
+                    }
+                }
+            }
+        } else {
+            // Negative rank
+            if rank + 1 > shape.len() {
+                return Err(env.error(format!(
+                    "Negative deshape has magnitude {}, but the \
+                    rank-{} array cannot be reduced that much",
+                    rank,
+                    shape.len()
+                )));
+            }
+            let new_first_dim: usize = shape[..=rank].iter().product();
+            *shape = once(new_first_dim)
+                .chain(shape[rank + 1..].iter().copied())
+                .collect();
         }
-        if new_shape.elements() == self.element_count() {
+        self.validate_shape();
+        Ok(())
+    }
+    pub(crate) fn undo_deshape(
+        &mut self,
+        sub: Option<i32>,
+        orig_shape: &Self,
+        env: &Uiua,
+    ) -> UiuaResult {
+        if let Some(irank) = sub {
+            if self.rank() == 0 {
+                if let Value::Box(arr) = self {
+                    arr.data.as_mut_slice()[0]
+                        .0
+                        .undo_deshape(sub, orig_shape, env)?;
+                }
+                return Ok(());
+            }
+            if irank == 0 {
+                return self.undo_deshape(None, orig_shape, env);
+            }
+            let orig_shape = orig_shape.as_nats(env, "Shape must be a list of natural numbers")?;
+            let rank = irank.unsigned_abs() as usize;
+            let new_shape: Shape = if irank >= 0 {
+                // Positive rank
+                (orig_shape.iter())
+                    .take((orig_shape.len() + 1).saturating_sub(rank))
+                    .chain((self.shape().iter()).skip(rank.saturating_sub(orig_shape.len()).max(1)))
+                    .copied()
+                    .collect()
+            } else {
+                // Negative rank
+                (orig_shape.iter().take(rank + 1))
+                    .chain(self.shape().iter().skip(1))
+                    .copied()
+                    .collect()
+            };
+            if validate_size::<u8>(new_shape.iter().copied(), env)? != self.element_count() {
+                return Ok(());
+            }
             *self.shape_mut() = new_shape;
+            self.validate_shape();
             Ok(())
         } else {
-            let spec: Vec<Result<isize, bool>> = shape.iter().map(|&d| Ok(d as isize)).collect();
-            self.reshape_impl(&spec, env)
+            let shape = orig_shape.as_nats(env, "Shape must be an array of natural numbers")?;
+            let mut new_shape = self.shape().clone();
+            if new_shape.len() > 0 {
+                new_shape.remove(0);
+            }
+            for &d in shape.iter().rev() {
+                new_shape.insert(0, d);
+            }
+            if new_shape.elements() == self.element_count() {
+                *self.shape_mut() = new_shape;
+                Ok(())
+            } else {
+                let spec: Vec<Result<isize, bool>> =
+                    shape.iter().map(|&d| Ok(d as isize)).collect();
+                self.reshape_impl(&spec, env)
+            }
         }
     }
     pub(crate) fn box_depth(mut self, depth: usize) -> Array<Boxed> {
@@ -281,14 +360,6 @@ impl<T: ArrayValue> Array<T> {
             self.take_map_keys();
         }
         self.shape = self.element_count().into();
-    }
-    pub(crate) fn deshape_depth(&mut self, mut depth: usize) {
-        if self.is_map() {
-            self.take_map_keys();
-        }
-        depth = depth.min(self.rank());
-        let deshaped = self.shape.split_off(depth).into_iter().product();
-        self.shape.push(deshaped);
     }
     /// Add a 1-length dimension to the front of the array's shape
     pub fn fix(&mut self) {

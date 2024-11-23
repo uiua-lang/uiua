@@ -3475,6 +3475,8 @@ macro_rules! impl_primitive {
                 $(#[$attr])*
                 $variant,
             )*
+            DeshapeSub(i32),
+            UndoDeshape(Option<i32>),
             TransposeN(i32),
             UndoTransposeN(usize, i32),
             UndoReverse { n: usize, all: bool },
@@ -3487,6 +3489,8 @@ macro_rules! impl_primitive {
             pub fn args(&self) -> usize {
                 match self {
                     $(ImplPrimitive::$variant => $args,)*
+                    ImplPrimitive::DeshapeSub(_) => 1,
+                    ImplPrimitive::UndoDeshape(_) => 2,
                     ImplPrimitive::TransposeN(_) => 1,
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
                     ImplPrimitive::UndoReverse { n, .. } => *n,
@@ -3575,7 +3579,6 @@ impl_primitive!(
     (1, UndoFix),
     (2, UndoUnbits),
     (2, AntiBase),
-    (2, UndoDeshape),
     (3, UndoSelect),
     (3, UndoPick),
     (3, UndoTake),

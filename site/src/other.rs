@@ -519,6 +519,7 @@ pub fn Experimental() -> impl IntoView {
             { vec![
                 subscript(Couple, "Group N arrays as rows", "# Experimental!\n{⊟₃ 1 2 3 4 5}"),
                 subscript(Box, "Group N arrays as boxed rows", "# Experimental!\n□₃ 1_2_3 5 \"wow\""),
+                subscript(Deshape, "Change rank", "# Experimental!\n♭₂ ⇡ 2_2"),
                 subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
                 subscript(Sqrt, "Nth root", "# Experimental!\n√₃ [8 27 125]"),
                 subscript(Round, "To N decimal places", "# Experimental!\n⁅₃ π"),

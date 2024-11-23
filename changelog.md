@@ -19,6 +19,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Getting the last row is a very common operation
 - Change [`backward 𝄈`](https://uiua.org/docs/backward)'s glyph to `𝄈`. Code using `˜` will continue to work and will be formatted as `𝄈`.
 - Allow negative subscripts
+- [`deshape ♭`](https://uiua.org/docs/deshape) now supports subscripts
+  - The functionality is similar to [`rerank ☇`](https://uiua.org/docs/rerank), but offst by 1
 - Add experimental [inline macros](https://www.uiua.org/docs/experimental#inline-macros)
   - Deprecate the experimental `stringify` and `signature` modifiers in favor of inline code macros
 - Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation

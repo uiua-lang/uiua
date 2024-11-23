@@ -420,7 +420,7 @@ impl Value {
         }
         let irank = rank.as_int(env, "Rank must be an integer")?;
         if irank == 0 {
-            return self.undo_deshape(orig_shape, env);
+            return self.undo_deshape(None, orig_shape, env);
         }
         let orig_shape = orig_shape.as_nats(env, "Shape must be a list of natural numbers")?;
         let rank = irank.unsigned_abs();

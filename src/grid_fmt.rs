@@ -296,7 +296,7 @@ impl GridFmt for Boxed {
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
-        let mut first_align: Option<ElemAlignment> = None;
+        let mut first_align: Option<ElemAlign> = None;
         let mut grid = if let Some(pointer) = self.meta().pointer.filter(|p| p.raw) {
             vec![boxed_scalar(params.boxed)
                 .chain(format!("0x{:x}", pointer.ptr).chars())
@@ -374,18 +374,29 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     .unwrap_or(1);
                 row_heights[row] = max_row_height;
             }
+            let requires_summary = requires_summary::<T>(&self.shape);
             for col in 0..metagrid_width {
-                let max_col_width = T::max_col_width(
+                let max_col_width = if requires_summary {
                     metagrid
                         .iter()
                         .filter_map(|row| row.get(col))
                         .flatten()
-                        .map(Vec::as_slice),
-                );
+                        .map(|row| row.len())
+                        .max()
+                        .unwrap_or(0)
+                } else {
+                    T::max_col_width(
+                        metagrid
+                            .iter()
+                            .filter_map(|row| row.get(col))
+                            .flatten()
+                            .map(Vec::as_slice),
+                    )
+                };
                 column_widths[col] = max_col_width;
                 let align = first_align.filter(|_| col == 0).unwrap_or(T::alignment());
                 match align {
-                    ElemAlignment::DelimOrRight(s) | ElemAlignment::DelimOrLeft(s) => {
+                    ElemAlign::DelimOrRight(s) | ElemAlign::DelimOrLeft(s) => {
                         for row in metagrid.iter().filter_map(|row| row.get(col)).flatten() {
                             if let Some(pos) = (0..row.len().saturating_sub(s.chars().count()))
                                 .find(|&i| row[i..].iter().zip(s.chars()).all(|(&a, b)| a == b))
@@ -393,7 +404,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                                 let right_len = row.len() - pos - s.chars().count();
                                 max_lr_lens[col].0 = max_lr_lens[col].0.max(pos);
                                 max_lr_lens[col].1 = max_lr_lens[col].1.max(right_len);
-                            } else if let ElemAlignment::DelimOrRight(_) = align {
+                            } else if let ElemAlign::DelimOrRight(_) = align {
                                 max_lr_lens[col].0 = max_lr_lens[col].0.max(row.len());
                             } else {
                                 max_lr_lens[col].1 = max_lr_lens[col].1.max(row.len());
@@ -412,7 +423,10 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     .zip(&mut metagrid[row])
                     .enumerate()
                 {
-                    let align = first_align.filter(|_| i == 0).unwrap_or(T::alignment());
+                    let align = first_align
+                        .filter(|_| i == 0)
+                        .or_else(|| requires_summary.then_some(ElemAlign::None))
+                        .unwrap_or(T::alignment());
                     pad_grid_center(*col_width, row_height, align, Some(*max_lr_lens), cell);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
                         subrow.extend(cell_row);
@@ -424,7 +438,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let grid_row_count = grid.len();
             if grid_row_count == 1 && self.rank() == 1 {
                 // Add brackets to lists
-                let (left, right) = if requires_summary::<T>(&self.shape) {
+                let (left, right) = if requires_summary {
                     if params.boxed {
                         Boxed::grid_fmt_delims(params.boxed)
                     } else {
@@ -436,18 +450,14 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 grid[0].insert(0, left);
                 grid[0].push(right);
             } else {
-                let apparent_rank = if requires_summary::<T>(&self.shape) {
-                    1
-                } else {
-                    self.rank()
-                };
+                let apparent_rank = if requires_summary { 1 } else { self.rank() };
                 // Add corners to non-vectors
                 let width = grid[0].len();
                 let height = grid.len();
                 pad_grid_center(
                     width + 4,
                     (height + 2).max(apparent_rank + 1),
-                    ElemAlignment::None,
+                    ElemAlign::None,
                     None,
                     &mut grid,
                 );
@@ -697,7 +707,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ElemAlignment {
+pub enum ElemAlign {
     None,
     Left,
     Right,
@@ -708,7 +718,7 @@ pub enum ElemAlignment {
 fn pad_grid_center(
     width: usize,
     height: usize,
-    align: ElemAlignment,
+    align: ElemAlign,
     lr_lens: Option<(usize, usize)>,
     grid: &mut Grid,
 ) {
@@ -728,14 +738,14 @@ fn pad_grid_center(
         if row.len() < width {
             let diff = width - row.len();
             let (pre, post) = match align {
-                ElemAlignment::Left => (0, diff),
-                ElemAlignment::Right => (diff, 0),
-                ElemAlignment::None => {
+                ElemAlign::Left => (0, diff),
+                ElemAlign::Right => (diff, 0),
+                ElemAlign::None => {
                     let post = (diff + 1) / 2;
                     let pre = diff - post;
                     (pre, post)
                 }
-                ElemAlignment::DelimOrRight(s) => {
+                ElemAlign::DelimOrRight(s) => {
                     let (left, right) = lr_lens.unwrap();
                     if let Some(pos) = (0..row.len())
                         .find(|i| row[*i..].iter().zip(s.chars()).all(|(&a, b)| a == b))
@@ -751,7 +761,7 @@ fn pad_grid_center(
                         (diff, 0)
                     }
                 }
-                ElemAlignment::DelimOrLeft(s) => {
+                ElemAlign::DelimOrLeft(s) => {
                     let (left, right) = lr_lens.unwrap();
                     if let Some(pos) = (0..row.len().saturating_sub(s.chars().count()))
                         .find(|i| row[*i..].iter().zip(s.chars()).all(|(&a, b)| a == b))

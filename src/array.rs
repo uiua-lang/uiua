@@ -14,7 +14,7 @@ use crate::{
     algorithm::map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
     cowslice::{cowslice, CowSlice},
     fill::Fill,
-    grid_fmt::{ElemAlignment, GridFmt},
+    grid_fmt::{ElemAlign, GridFmt},
     Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Value,
 };
 
@@ -808,8 +808,8 @@ pub trait ArrayValue:
         3600
     }
     /// How to align elements when formatting
-    fn alignment() -> ElemAlignment {
-        ElemAlignment::Left
+    fn alignment() -> ElemAlign {
+        ElemAlign::Left
     }
     /// How to determine the maximum width of a formatted column
     fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]> + Clone) -> usize {
@@ -897,8 +897,8 @@ impl ArrayValue for f64 {
             s
         }
     }
-    fn alignment() -> ElemAlignment {
-        ElemAlignment::DelimOrRight(".")
+    fn alignment() -> ElemAlign {
+        ElemAlign::DelimOrRight(".")
     }
     fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
         let mut max_whole_len = 0;
@@ -966,8 +966,8 @@ impl ArrayValue for u8 {
             )
         }
     }
-    fn alignment() -> ElemAlignment {
-        ElemAlignment::Right
+    fn alignment() -> ElemAlign {
+        ElemAlign::Right
     }
 }
 
@@ -1127,8 +1127,8 @@ impl ArrayValue for Boxed {
     fn summary_min_elems() -> usize {
         1000
     }
-    fn alignment() -> ElemAlignment {
-        ElemAlignment::DelimOrLeft(": ")
+    fn alignment() -> ElemAlign {
+        ElemAlign::DelimOrLeft(": ")
     }
     fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
         let mut max_val_len = 0;

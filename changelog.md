@@ -21,6 +21,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Allow negative subscripts
 - [`deshape ♭`](https://uiua.org/docs/deshape) now supports subscripts
   - The functionality is similar to [`rerank ☇`](https://uiua.org/docs/rerank), but offst by 1
+- Add [`&ep`](https://uiua.org/docs/&ep) and [`&epf`](https://uiua.org/docs/&epf) system functions for easier printing to stderr
 - Add experimental [inline macros](https://www.uiua.org/docs/experimental#inline-macros)
   - Deprecate the experimental `stringify` and `signature` modifiers in favor of inline code macros
 - Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation

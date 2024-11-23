@@ -179,6 +179,8 @@ sys_op! {
     /// Print a value to stdout
     ///
     /// Exactly like [&p], except that there is no trailing newline.
+    ///
+    /// See also: [&p], [&epf]
     (1(0), Prin, StdIO, "&pf", "print and flush", Mutating),
     /// Print a value to stdout followed by a newline
     ///
@@ -190,7 +192,19 @@ sys_op! {
     ///   : &p @U
     /// [&p] will ignore any level of [box]ing.
     /// ex: &p □□□"In a box"
+    ///
+    /// See also: [&pf], [&ep]
     (1(0), Print, StdIO, "&p", "print with newline", Mutating),
+    /// Print a value to stderr
+    ///
+    /// Exactly like [&ep], except that there is no trailing newline.
+    ///
+    /// See also: [&pf], [&ep]
+    (1(0), PrinErr, StdIO, "&epf", "print error and flush", Mutating),
+    /// Print a value to stderr followed by a newline
+    ///
+    /// See also: [&p], [&epf]
+    (1(0), PrintErr, StdIO, "&ep", "print error with newline", Mutating),
     /// Read a line from stdin
     ///
     /// The normal output is a string.
@@ -1133,6 +1147,18 @@ impl SysOp {
                 let s = env.pop(1)?.format();
                 (env.rt.backend)
                     .print_str_stdout(&format!("{s}\n"))
+                    .map_err(|e| env.error(e))?;
+            }
+            SysOp::PrinErr => {
+                let s = env.pop(1)?.format();
+                (env.rt.backend)
+                    .print_str_stderr(&s)
+                    .map_err(|e| env.error(e))?;
+            }
+            SysOp::PrintErr => {
+                let s = env.pop(1)?.format();
+                (env.rt.backend)
+                    .print_str_stderr(&format!("{s}\n"))
                     .map_err(|e| env.error(e))?;
             }
             SysOp::ScanLine => {

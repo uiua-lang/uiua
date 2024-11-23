@@ -982,7 +982,7 @@ code:
                 _ => {}
             }
 
-            match (a, &b, prim) {
+            match (a, &b, prim.filter(|_| modif.is_none())) {
                 // Flip monadic dup diagnostic
                 (
                     Some(PrevWord(None, Some(Primitive::Dup), _, a_span)),

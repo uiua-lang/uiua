@@ -141,6 +141,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     // Shaping
     &(Fix, (Fix), (UndoFix)),
     &(UndoFix, (UndoFix), (Fix)),
+    &Stash(1, (Shape, Len), (Flip, 1, Sub, Rerank)),
     &Stash(1, Shape, (Flip, Reshape)),
     &(
         Len,

@@ -48,6 +48,18 @@
     "class": "Misc",
     "description": "Get the contents of the clipboard"
   },
+  "&ep": {
+    "args": 1,
+    "outputs": 0,
+    "class": "StdIO",
+    "description": "Print a value to stderr followed by a newline"
+  },
+  "&epf": {
+    "args": 1,
+    "outputs": 0,
+    "class": "StdIO",
+    "description": "Print a value to stderr"
+  },
   "&exit": {
     "args": 1,
     "outputs": 0,

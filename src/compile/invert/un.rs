@@ -202,6 +202,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &(Min, MatchLe),
     &(Max, MatchGe),
     &(Orient, AntiOrient),
+    &(AntiOrient, Orient),
     &(Drop, AntiDrop),
     &(Select, AntiSelect),
     &(Pick, AntiPick),

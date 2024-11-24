@@ -1,3 +1,6 @@
+use base64::engine::{general_purpose::URL_SAFE, Engine};
+use leptos::*;
+use std::path::PathBuf;
 use std::{
     borrow::Cow,
     cell::Cell,
@@ -6,9 +9,6 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-use std::path::PathBuf;
-use base64::engine::{general_purpose::URL_SAFE, Engine};
-use leptos::*;
 
 use uiua::{
     ast::Item,

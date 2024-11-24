@@ -25,9 +25,9 @@ use web_sys::{
 };
 
 use utils::*;
-use utils::{element, get_ast_time, format_insert_file_code};
+use utils::{element, format_insert_file_code, get_ast_time};
 
-use backend::{drop_file, delete_file, OutputItem};
+use backend::{delete_file, drop_file, OutputItem};
 use js_sys::Date;
 use std::sync::OnceLock;
 
@@ -1286,16 +1286,16 @@ pub fn Editor<'a>(
         if files.length() == 0 {
             return;
         }
-        
+
         let total_files = files.length();
         let processed_files = Rc::new(Cell::new(0));
-        
+
         for i in 0..total_files {
             let file = files.get(i).unwrap();
             let file_name = file.name();
             let reader = FileReader::new().unwrap();
             reader.read_as_array_buffer(&file).unwrap();
-        
+
             let processed_files = Rc::clone(&processed_files);
             let on_load = Closure::wrap(Box::new(move |event: Event| {
                 let event = event.dyn_into::<web_sys::ProgressEvent>().unwrap();
@@ -1309,13 +1309,13 @@ pub fn Editor<'a>(
                 let path = PathBuf::from(&file_name);
                 drop_file(path.clone(), bytes.to_vec());
                 set_drag_message.set("");
-                
+
                 processed_files.set(processed_files.get() + 1);
                 if processed_files.get() == total_files {
                     run(true, false);
                 }
             }) as Box<dyn FnMut(_)>);
-        
+
             reader
                 .add_event_listener_with_callback("load", on_load.as_ref().unchecked_ref())
                 .unwrap();
@@ -1478,7 +1478,8 @@ pub fn Editor<'a>(
 
         let excluded_files = ["example.txt", "example.ua"];
         backend::FILES.with(|files| {
-            files.borrow()
+            files
+                .borrow()
                 .iter()
                 .filter(|(path, _)| !excluded_files.contains(&path.to_str().unwrap()))
                 .map(|(path, _)| path.clone())
@@ -1507,7 +1508,8 @@ pub fn Editor<'a>(
                 let path_clone = path.clone();
                 let on_insert = move |_: MouseEvent| {
                     let content = backend::FILES.with(|files| {
-                        files.borrow()
+                        files
+                            .borrow()
                             .iter()
                             .find(|(p, _)| *p == &path_clone)
                             .map(|(_, code)| code.clone())

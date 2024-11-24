@@ -1154,6 +1154,7 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, stack: bool, config:
                 print_stack(env.stack(), color);
             }
         }
+        compiler.assembly_mut().root.clear();
     }
 }
 

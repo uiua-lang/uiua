@@ -397,6 +397,10 @@ impl Node {
             node => Some(take(node)),
         }
     }
+    /// Clear the node
+    pub fn clear(&mut self) {
+        *self = Node::empty();
+    }
     pub(crate) fn as_flipped_primitive(&self) -> Option<(Primitive, bool)> {
         match self {
             Node::Prim(prim, _) => Some((*prim, false)),

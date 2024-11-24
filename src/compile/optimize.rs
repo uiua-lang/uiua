@@ -69,6 +69,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &((Where, Len), LenWhere),
     &((Range, MemberOf), MemberOfRange),
     &((Range, 1, Rerank, MemberOf), MultidimMemberOfRange),
+    &((Range, DeshapeSub(2), MemberOf), MultidimMemberOfRange),
     &((UnSort, Or(First, Last)), RandomRow),
     &((Deduplicate, Len), CountUnique),
     &((Or((Dup, Rise), M(By, Rise)), Select), Sort),

@@ -2115,7 +2115,7 @@ primitive!(
     /// For example, we can use [triangle][couple] to get all unique combinations of rows from two arrays.
     /// Notice the difference from [table].
     /// ex: # Experimental!
-    ///   : ☇1⊞⊟ ⇡3⇡3
+    ///   : ♭₂⊞⊟ ⇡3⇡3
     ///   : ◹⊟ ⇡3⇡3
     /// We can also see the pattern by rearranging the combinations with [group].
     /// ex: # Experimental!

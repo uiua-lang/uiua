@@ -6,7 +6,7 @@ Step ← (
   ⊞≠.⇡⧻.        # Make comparison matrix
   ⊃(≡▽⊙¤)⋅∘     # Make others
   ⊃≡(-¤)∘:      # Get diffs
-  ÷⍜(☇1|≡/+×.). # Inverse square
+  ÷⍜♭₂(≡/+×.).  # Inverse square
   ≡/+×G         # Get accs
   ⊃(+⊙⋅∘|⋅∘)×Dt # apply accs
   ⊃(+×Dt)∘      # Apply vels
@@ -16,9 +16,9 @@ Step ← (
 ⟜(↯:0⊂:2⧻) # Init vels
 
 ⁅×0.5⇌[⊙◌⍥(Step ⟜:)Steps] # Run
-⍜⊙(☇1)-¤/↧☇1.             # Normalize
+⍜⊙♭₂-¤/↧♭₂.               # Normalize
 ⬚0≡(°⊚)                   # Plot
-≡(⍜(☇2)≡(/↥/↥) ◫3_3)      # Upscale
+≡(≡₂(/↥/↥) ◫3_3)          # Upscale
 
 &fwa "n-body.gif" gif 16
 &p "Wrote gif to n-body.gif"

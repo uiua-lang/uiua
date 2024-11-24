@@ -11,6 +11,6 @@ CFlag  ← ⍜∩°⍉(↧¤I0.95)Coords ⟜Flag
 ⊃(≡◇CFlag:PrideFlags|⊣°⍉.Logo)
 ≡⍜°⍉⊂⊙¤            # Apply logo alpha to flags
 +∩×≡(⊙:¬.)⊸⊙⊙¤ 0.3 # Tint flags with logo
-+☇3[..0.05 0]      # Lighten
++♭₄[..0.05 0]      # Lighten
 ⊂:                 # Add logo
 &gifs 1

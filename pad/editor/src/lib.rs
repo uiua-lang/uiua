@@ -20,8 +20,8 @@ use uiua::{
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
-    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement, 
-    HtmlSelectElement, HtmlTextAreaElement, MouseEvent
+    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement,
+    HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
 };
 
 use utils::*;
@@ -1509,7 +1509,7 @@ pub fn Editor<'a>(
 
     let file_tab_display = move || {
         let files = get_files_to_display().clone();
-        if files.len() == 0 {
+        if files.is_empty() {
             return view! {
                 <div></div>
             };

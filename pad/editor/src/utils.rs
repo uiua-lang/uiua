@@ -1,6 +1,6 @@
 use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
-use std::path::PathBuf;
+use std::path::Path;
 use std::{
     borrow::Cow,
     cell::Cell,
@@ -1409,7 +1409,7 @@ pub fn element<T: JsCast>(id: &str) -> T {
     }
 }
 
-pub fn format_insert_file_code(path: &PathBuf, content: Vec<u8>) -> String {
+pub fn format_insert_file_code(path: &Path, content: Vec<u8>) -> String {
     let function = match path.extension().and_then(|ext| ext.to_str()) {
         Some("ua") => "~",
         Some("txt") | Some("md") | Some("json") | None => "&fras",

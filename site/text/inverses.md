@@ -26,28 +26,47 @@ As discussed [previously](/tutorial/arrays#array-model), [un](/docs/un)[box](/do
 °□ ⊢{"unbox" "me!"}
 ```
 
-One interesting use of [un](/docs/un) is to put an array's rows onto the stack by [un](/docs/un)ing stack array notation with [dip](/docs/dip) and [identity](/docs/identity). The number of rows in the array must match though!
+One interesting use of [un](/docs/un) is to put an array's rows onto the stack by [un](/docs/un)ing subscripted [couple](/docs/couple) or [box](/docs/box). The number of rows in the array must match though!
 
 ```uiua
-[⊙⊙∘] 1 2 3
+⊟₃ 1 2 3
 ```
 
 ```uiua
-°[⊙⊙∘] [1 2 3]
+°⊟₃ [1 2 3]
 ```
 
 ```uiua should fail
-°[⊙⊙⊙∘] [1 2 3]
+°⊟₄ [1 2 3]
 ```
 
-[un](/docs/un)ing box array notation will unbox the items.
+[un](/docs/un)ing subscripted [box](/docs/box) will unbox the items.
 
 ```uiua
-°[⊙⊙∘] {1 2_3 "hmmm"}
+°⊟₃ {1 2_3 "hmmm"}
 ```
 
 ```uiua
-°{⊙⊙∘} {1 2_3 "hmmm"}
+°□₃ {1 2_3 "hmmm"}
+```
+
+Some built-in functions that do not necessarily have a sensible or obvious inverse nevertheless have one defined anyway. The behavior is generally something that technically is *an* inverse, and which is also useful.
+
+For example [un](/docs/un) [shape](/docs/shape) generates an array of incrementing integers with the given shape.
+
+```uiua
+°△ 5_5
+```
+
+```uiua
+°△ 2_3_4
+```
+
+This is often used in examples to quickly generate a high-rank array.
+
+[un](/docs/un) [select](/docs/select) produces an array of indices for the array's rows without removing the array itself from the stack.
+```uiua
+°⊏ "enumerate"
 ```
 
 You can find more uses of [un](/docs/un) in its documentation, including a list of all [un](/docs/un)-compatible functions and modifiers.
@@ -171,6 +190,26 @@ FmtPerson PassYear Dan
 ```
 
 You can find more uses of [under](/docs/under) in its documentation, including a list of all [under](/docs/under)-compatible functions and modifiers.
+
+## [un](/docs/un) [by](/docs/by)
+
+The [un](/docs/un) [by](/docs/by) pattern allows you to access the "undo" part of a function's [under](/docs/under) inverse without the "do" part. This only works for monadic functions.
+
+For example, [under](/docs/under) [first](/docs/first) allows you to modify the first row of an array. Therefore, [un](/docs/un) [by](/docs/by) [first](/docs/first) allows you to *set* the first row of an array.
+
+```uiua
+⍜⊢(×10) [2 3 4]
+```
+
+```uiua
+°⊸⊢ 0 [2 3 4]
+```
+
+This is useful to set rows that are at static indices.
+
+```uiua
+°⊸(⊡2) 5 [1 2 3 4]
+```
 
 ## Setting Inverses with [obverse](/docs/obverse)
 

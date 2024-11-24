@@ -1852,14 +1852,17 @@ code:
         }
         Ok(n.unsigned_abs() as usize)
     }
+    fn subscript_experimental(&mut self, prim: Primitive, span: &CodeSpan) {
+        self.experimental_error(span, || {
+            format!(
+                "Subcripted {} is experimental. To use it, \
+                add `# Experimental!` to the top of the file.",
+                prim.format()
+            )
+        });
+    }
     #[allow(clippy::match_single_binding)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
-        if !matches!(sub.word.value, Word::Primitive(Primitive::Utf8)) {
-            self.experimental_error(&span, || {
-                "Subscripts are experimental. To use them, add \
-                `# Experimental!` to the top of the file."
-            });
-        }
         let Some(n) = self.subscript_n(sub.n.value, &sub.n.span) else {
             return self.word(sub.word);
         };
@@ -1902,6 +1905,7 @@ code:
                     Node::ImplPrim(ImplPrimitive::DeshapeSub(n), self.add_span(span))
                 }
                 Primitive::Transpose => {
+                    self.subscript_experimental(prim, &span);
                     if n > 100 {
                         self.add_error(span.clone(), "Too many subscript repetitions");
                     }
@@ -1928,12 +1932,15 @@ code:
                         self.primitive(Primitive::Div, span),
                     ])
                 }
-                Primitive::Rand => Node::from_iter([
-                    self.primitive(Primitive::Rand, span.clone()),
-                    Node::new_push(n),
-                    self.primitive(Primitive::Mul, span.clone()),
-                    self.primitive(Primitive::Floor, span),
-                ]),
+                Primitive::Rand => {
+                    self.subscript_experimental(prim, &span);
+                    Node::from_iter([
+                        self.primitive(Primitive::Rand, span.clone()),
+                        Node::new_push(n),
+                        self.primitive(Primitive::Mul, span.clone()),
+                        self.primitive(Primitive::Floor, span),
+                    ])
+                }
                 Primitive::Utf8 => {
                     if n != 8 {
                         self.add_error(span.clone(), "Only UTF-8 is supported");

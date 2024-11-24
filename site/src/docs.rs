@@ -30,6 +30,7 @@ pub enum DocsPage {
     RightToLeft,
     Constants,
     Combinators,
+    Subscripts,
     Optimizations,
     FormatConfig,
     Experimental,
@@ -50,6 +51,7 @@ impl IntoParam for DocsPage {
             "rtl" => Ok(Self::RightToLeft),
             "constants" => Ok(Self::Constants),
             "combinators" => Ok(Self::Combinators),
+            "subscripts" => Ok(Self::Subscripts),
             "optimizations" => Ok(Self::Optimizations),
             "format-config" => Ok(Self::FormatConfig),
             "experimental" => Ok(Self::Experimental),
@@ -81,6 +83,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Changelog => Changelog().into_view(),
             DocsPage::RightToLeft => RightToLeft().into_view(),
             DocsPage::Constants => Constants().into_view(),
+            DocsPage::Subscripts => Subscripts().into_view(),
             DocsPage::Combinators => Combinators().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
             DocsPage::FormatConfig => {
@@ -236,6 +239,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
             <li><A href="/docs/constants">"Constants"</A>" - a list of the shadowable constants"</li>
+            <li><A href="/docs/subscripts">"Subscripts"</A>" - a list of subscript-compatible functions"</li>
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
             <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
             <li><A href="/docs/experimental">"Experimental Features"</A>" - an overview of experimental features"</li>

@@ -74,6 +74,8 @@ impl Value {
                         for _ in 0..rank - shape.len() {
                             shape.insert(0, 1);
                         }
+                    } else {
+                        shape.insert(0, 1);
                     }
                 }
             }

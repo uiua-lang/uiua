@@ -977,7 +977,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="[⊃(+|-|×|÷) 5 8]"/>
         <Editor example="[⊓(+1|×|÷2) 5 10 12 22]"/>
 
-        <Hd id="dip-gap"><Prim prim=Dip/>" and "<Prim prim=Gap/></Hd>
+        <Hd id="dip"><Prim prim=Dip/></Hd>
         <p>"The "<Prim prim=Dip/>" modifier temporarily pops the top value on the stack, calls its function, then pushes the value back."</p>
         <Editor example="[⊙+ 1 2 3]"/>
         <p><Prim prim=Dip/>" can be chained to dig deeper into the stack, though try not to dig "<em>"too"</em>" deep, as it makes code harder to read."</p>
@@ -985,11 +985,23 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"One use of "<Prim prim=Dip/>" is to collect values from the stack into an array. Here, a chain of "<Prim prim=Dip/>"s are terminated with "<Prim prim=Identity/>"."</p>
         <Editor example="[⊙⊙⊙∘] 1 2 3 4 5"/>
         <Editor example="{⊙⊙∘} 1 2_3 \"wow\""/>
+        <p>"However, you do not typically need to do this because of..."</p>
+
+        <Hd id="Subscripts">"Subscripts"</Hd>
+        <p>"Subscripts are a special syntax that allows you to augment some functions and modifiers with a number."</p>
+        <p>"Subscripts are typed with "<code>"__"</code>" followed by some digits. The formatter will turn them into subscript digit characters. A leading negative sign is allowed."</p>
+        <p>"Several functions and modifiers are supported, but we'll only cover some stack-related ones here. You can find a full list of subscript-compatible functions "<A href="/docs/subscripts">"here"</A>"."</p>
+        <p>"Subscripted "<Prim prim=Both/>" calls its function on N sets of arguments."</p>
+        <Editor example="[∩+ 1 2 3 4]\n[∩__3+ 1 2 3 4 5 6]\n[∩__4+ 1 2 3 4 5 6 7 8] # Try formatting!"/>
+        <p>"Subscripted "<Prim prim=Couple/>" collects N values from the stack into an array."</p>
+        <Editor example="⊟₄ 1 2 3 4 5"/>
+        <p><Prim prim=Box/>" has similar behavior, but it boxes each value."</p>
+        <Editor example="□₃ 5 \"Hi!\" [1 2 3]"/>
+
+        <Hd id="planet-notation">"🌍 Planet Notation 🪐"</Hd>
         <p><Prim prim=Gap/>" "<em>"discards"</em>" the top value on the stack and calls its function."</p>
         <Editor example="⋅+ 1 2 3"/>
         <p>"But wait, "<Prim prim=Pop/>" exists! Why would you need this?"</p>
-
-        <Hd id="planet-notation">"🌍 Planet Notation 🪐"</Hd>
         <p>"The main reason for "<Prim prim=Dip/>" and "<Prim prim=Gap/>" to exist is to be chained with "<Prim prim=Identity/>", often inside of "<Prim prim=Fork/>". They act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch."</p>
         <p>"This is called "<em>"planet notation"</em>" because it looks like the planets in a solar system chart."</p>
         <p>"For example, let's say you want to "<Prim prim=Mul/>" the 2nd and 4th arguments on the stack and discard the rest:"</p>
@@ -1066,6 +1078,14 @@ fn TutorialAdvancedStack() -> impl IntoView {
 
         <Challenge
             number=4
+            prompt="collects 9 values from the stack evenly into 3 arrays"
+            example="1 2 3 4 5 6 7 8 9"
+            answer="∩₃⊟₃"
+            tests={&["@G @o @o @d @  @j @o @b @!", "...×2..+1...5"]}
+            hidden="1 2 3 4 5 6 7 8 9"/>
+
+        <Challenge
+            number=5
             prompt="for numbers A, B, C, and D calculates (A+C)×(B+D)"
             example="1 2 3 4"
             answer="×⊃(+⊙⋅∘|+⋅⊙⋅∘)"
@@ -1325,38 +1345,23 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="-  1_3 [3_4 5_6 7_8]"/> // Should fail
         <Editor example="- ¤1_3 [3_4 5_6 7_8]"/>
 
-        <Hd id="rerank"><Prim prim=Rerank/></Hd>
-        <p>"The above examples dig into an array from the top down. But what if you want to think about the array from the "<em>"bottom up"</em>"?"</p>
-        <p>"The "<Prim prim=Rerank/>" function changes the rows of an array to have the specified rank."</p>
-        <Editor example="☇3 ↯2_2_2_5⇡40 # The rows are already rank 3"/>
-        <Editor example="☇2 ↯2_2_2_5⇡40"/>
-        <Editor example="☇1 ↯2_2_2_5⇡40"/>
-        <Editor example="☇0 ↯2_2_2_5⇡40 # Equivalent to ♭ deshape"/>
-        <p>"You can then use "<Prim prim=Rows/>" to iterate over arrays of that rank."</p>
-        <Editor example="≡□ ☇1 ↯2_2_2_3⇡24"/>
-        <p>"You can think of "<Prim prim=Rerank/>" as combining the dimensions of the array that are above the specified rank into a single dimension."</p>
-        <p>"In the example above, the shape information of the original array is lost."</p>
-        <p>"If you want to keep the part of the shape that is above the specified rank, you can use "<Prim prim=Under/>". This will "<em>"uncombine"</em>" the combined dimensions after the operation is complete."</p>
-        <Editor example="⍜(☇1)≡□ ↯2_2_2_3⇡24"/>
-        <p>"Notice in the above example that we specified the rank "<code>"1"</code>", and it was rank "<code>"1"</code>" arrays that were "<Prim prim=Box/>"ed."</p>
-        <p>"We can think of this pattern as allowing us to operate on arrays of the specified rank within the greater array. For example, by changing the rank to "<code>"2"</code>", we end up "<Prim prim=Box/>"ing matrices instead of lists."</p>
-        <Editor example="⍜(☇2)≡□ ↯2_2_2_3⇡24"/>
-        <p>"The specified rank can still be dynamic in this case by simply putting it on the stack."</p>
-        <Editor example="⍜☇≡□ 1 ↯2_2_2_3⇡24"/>
-        <Editor example="⍜☇≡□ 2 ↯2_2_2_3⇡24"/>
-        <p>"You can use "<Prim prim=Under/><Prim prim=Both/><Prim prim=Rerank/>" to "<Prim prim=Rerank/>" 2 arrays. Here, we insert one of the ranks for "<Prim prim=Rerank/>" using "<Prim prim=Dip/>"."</p>
-        <Editor example="⍜∩☇≡⊂ 1⊙1 ↯6_2⇡12 ↯2_3_4⇡24"/>
-
-        <Hd id="table">"Multi-dimensional "<Prim prim=Table/></Hd>
-        <p><Prim prim=Table/>" called on arrays of multiple dimensions calls its function on all "<em>"combinations"</em>" of rows of its arguments."</p>
-        <Editor example="⊞⊂ η_π_τ ↯3_3⇡9"/>
-        <p><Prim prim=Table/>" can be useful when working with "<Prim prim=Rerank/>"ed or "<Prim prim=Fix/>"ed arrays."</p>
-        <p>"In this example, we apply a table of rotations to each matrix cell of a 3D array."</p>
-        <Editor example="°⊚ ≡[..]⇡3           # Target array
-[0_0 0_1]_[¯1_1 1_0] # Rotations table
-,,                   # Copy to see inputs
-⍜(☇1)⊞↻              # All rotation combinations
-≡≡□                  # Box for display"/>
+        <Hd id="operating-at-different-ranks">"Operating at Different Ranks"</Hd>
+        <p><Prim prim=Rows/>" is the bread and butter of traversing an array's structure. It calls its function on each row of an array, but what if you want to go deeper?"</p>
+        <p>"One option is to simply chain "<Prim prim=Rows/>" multiple times."</p>
+        <Editor example="≡□ °△ 2_3_4\n≡≡□ °△ 2_3_4\n≡≡≡□ °△ 2_3_4"/>
+        <p>"This can get a bit unwieldy if an array has a lot of dimensions. You can instead use "<A href="/tutorial/advancedstack#Subscripts">"subscripted"</A>" "<Prim prim=Rows/>" to specify the depth of the operation."</p>
+        <Editor example="≡□ °△ 2_3_4\n≡₂□ °△ 2_3_4\n≡₃□ °△ 2_3_4"/>
+        <p>"This is useful when you are approaching the array's structure from the top down, but what if you want to start at the bottom?"</p>
+        <p>"Subscripted "<Prim prim=Each/>" allows you to specify the rank of the arrays you want to apply the function to, regardless of the outer array's rank. Notice how the rank of the "<Prim prim=Box/>"ed arrays is this example corresponds to the subscript."</p>
+        <Editor example="∵□ °△2_3_4\n∵₁□ °△2_3_4\n∵₂□ °△2_3_4"/>
+        <p>"Sometimes you simply want to collapse the dimensions of an array to make it a certain rank. This can be done with subscripted "<Prim prim=Deshape/>"."</p>
+        <Editor example="△ ♭ °△2_3_4_5\n△ ♭₂ °△2_3_4_5\n△ ♭₃ °△2_3_4_5\n△ ♭₄ °△2_3_4_5"/>
+        <p>"Combined with "<Prim prim=Range/>", this is a nice way to generate all combinations of indices given a list of maxumims."</p>
+        <Editor example="⍉ ♭₂ ⇡2_2_3"/>
+        <p>"Subscripting these works in the vast majority of cases. However, subscripts are static. The rank to use cannot be taken from the stack."</p>
+        <p>"In the rare event that you need a dynamic rank, you can use the "<Prims prims=[Un, By]/><code>"("</code><Prims prims=[Len, Shape]/><code>")"</code>" idiom introduced in the "<A href="/tutorial/inverses#un-by">"Inverses"</A>" tutorial."</p>
+        <Editor example="⍉ °⊸(⧻△) 2 ⇡2_2_2"/>
+        <Editor example="°⊸(⧻△) 1 °△2_3_3"/>
 
         <Hd id="challenges">"Challenges"</Hd>
 
@@ -1370,12 +1375,11 @@ fn TutorialAdvancedArray() -> impl IntoView {
 
         <Challenge
             number=2
-            prompt="rotates all rank 2 arrays in the second argument by all rank 1 arrays in the first"
-            example="[¯1_¯2 0_1] [.] ↯3_4⇡12"
-            answer="⊞↻ ☇1⊙(☇2)"
-            best_answer="⊞↻ ∩☇1⊙2"
-            tests={&["[0_2 2_1 1_1] ⊞×⊞×.↘1.+1⇡3"]}
-            hidden="1 [1 2 3]"/>
+            prompt="joins the first argument to each list in the second argument"
+            example="0 +1°△3_4"
+            answer="∵₁⊂"
+            tests={&["0 [1 2 3]", r#"@| ⬚@ [["Hey""there""buddy"] [@a "bc" "def"]]"#, "η_π_τ ⇡2_2_2"]}
+            hidden="3 5"/>
     }
 }
 

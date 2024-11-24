@@ -4,6 +4,7 @@
 The next version of Uiua
 
 - Stabilize `backward`, `case`
+- Fix `stack` function bounds
 - Optimize `group`/`partition` reduction replacement
 - Compile-time code string evaluation
 - `do` function pack

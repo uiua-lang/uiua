@@ -472,7 +472,7 @@ pub fn Combinators() -> impl IntoView {
 }
 
 #[component]
-pub fn Experimental() -> impl IntoView {
+pub fn Subscripts() -> impl IntoView {
     use Primitive::*;
 
     fn subscript<'a>(prim: Primitive, meaning: &'a str, example: &'a str) -> impl IntoView + 'a {
@@ -483,6 +483,52 @@ pub fn Experimental() -> impl IntoView {
         </tr>)
     }
 
+    view! {
+        <Title text="Subscripts - Uiua Docs"/>
+        <h1>"Subscripts"</h1>
+        <p>"By suffixing some functions or modifiers with a subscript number, their behavior can be modified."</p>
+        <p>"Subscript numbers are typed with a "<code>"__"</code>" followed by some digits. The formatter will turn them into subscript digit characters."</p>
+        <p>"The following functions and modifiers are supported. Not all are stable."</p>
+        <table class="header-centered-table cell-centered-table" style="width: 100%">
+            <tr>
+                <th>"Primitive"</th>
+                <th>"Meaning"</th>
+                <th style="width: 100%">"Example"</th>
+            </tr>
+            <tr>
+                <td>"Any "<span class="dyadic-function">"dyadic"</span>" pervasive function"</td>
+                <td>"Constant first argument"</td>
+                <td><Editor example="⊃+₁×₂ [1 2 3]" nonprogressive=true/></td>
+            </tr>
+            <tr>
+                <td><Prims prims=[Select, Pick, Take, Drop, Join, Rotate, Orient, Windows]/></td>
+                <td>"Constant first argument"</td>
+                <td><Editor example="⊃↙₂↻₃ [1 2 3 4 5]" nonprogressive=true/></td>
+            </tr>
+            { vec![
+                subscript(Couple, "Group N arrays as rows", "{⊟₃ 1 2 3 4 5}"),
+                subscript(Box, "Group N arrays as boxed rows", "□₃ 1_2_3 5 \"wow\""),
+                subscript(Deshape, "Change rank", "♭₂ ⇡ 2_2"),
+                subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
+                subscript(Sqrt, "Nth root", "√₃ [8 27 125]"),
+                subscript(Round, "To N decimal places", "⁅₃ π"),
+                subscript(Floor, "To N decimal places", "⌊₄ π\n⌊₄ τ"),
+                subscript(Ceil, "To N decimal places", "⌈₄ π\n⌈₄ τ"),
+                subscript(Rand, "Random integer", "# Experimental!\n⚂₁₀₀"),
+                subscript(Both, "Apply to N argument sets", "[∩₃+ 1 2 3 4 5 6]"),
+                subscript(Each, "Apply to rank N subarrays", "∵₁□ °△2_3_4"),
+                subscript(Rows, "Apply to subarrays N deep", "≡₂□ °△2_3_4"),
+                subscript(Inventory, "Apply to subarrays N deep", "⍚₂⇡ °△2_3"),
+                subscript(Repeat, "Repetition count", "⍥₅(⊂⟜/+) [1 2]"),
+                subscript(Tuples, "Tuple size", "# Experimental!\n⧅₂< ⇡4"),
+                subscript(Stack, "Print top N values", "?₂ 1 2 3 4")
+            ] }
+        </table>
+    }
+}
+
+#[component]
+pub fn Experimental() -> impl IntoView {
     view! {
         <Title text="Experimental Features - Uiua Docs"/>
         <h1>"Experimental Features"</h1>
@@ -495,45 +541,6 @@ pub fn Experimental() -> impl IntoView {
                 view! { <li><Prim prim=prim/></li> }
             }).collect::<Vec<_>>()
         }</ul>
-
-        <Hd id="subscript-modifiers">"Subscript Modifiers"</Hd>
-        <p>"By suffixing some functions or modifiers with a subscript number, their behavior can be modified."</p>
-        <p>"Subscript numbers are typed with a "<code>"__"</code>" followed by some digits. The formatter will turn them into subscript digit characters."</p>
-        <p>"The following functions and modifiers are supported:"</p>
-        <table class="header-centered-table cell-centered-table" style="width: 100%">
-            <tr>
-                <th>"Primitive"</th>
-                <th>"Meaning"</th>
-                <th style="width: 100%">"Example"</th>
-            </tr>
-            <tr>
-                <td>"Any "<span class="dyadic-function">"dyadic"</span>" pervasive function"</td>
-                <td>"Constant first argument"</td>
-                <td><Editor example="# Experimental!\n⊃+₁×₂ [1 2 3]" nonprogressive=true/></td>
-            </tr>
-            <tr>
-                <td><Prims prims=[Select, Pick, Take, Drop, Join, Rerank, Rotate, Orient, Windows]/></td>
-                <td>"Constant first argument"</td>
-                <td><Editor example="# Experimental!\n⊃↙₂↻₃ [1 2 3 4 5]" nonprogressive=true/></td>
-            </tr>
-            { vec![
-                subscript(Couple, "Group N arrays as rows", "# Experimental!\n{⊟₃ 1 2 3 4 5}"),
-                subscript(Box, "Group N arrays as boxed rows", "# Experimental!\n□₃ 1_2_3 5 \"wow\""),
-                subscript(Deshape, "Change rank", "# Experimental!\n♭₂ ⇡ 2_2"),
-                subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
-                subscript(Sqrt, "Nth root", "# Experimental!\n√₃ [8 27 125]"),
-                subscript(Round, "To N decimal places", "# Experimental!\n⁅₃ π"),
-                subscript(Floor, "To N decimal places", "# Experimental!\n⌊₃ π"),
-                subscript(Ceil, "To N decimal places", "# Experimental!\n⌈₃ π"),
-                subscript(Both, "Apply to N argument sets", "# Experimental!\n[∩₃+ 1 2 3 4 5 6]"),
-                subscript(Each, "Apply to rank N subarrays", "# Experimental!\n∵₁□ °△2_3_4"),
-                subscript(Rows, "Apply to subarrays N deep", "# Experimental!\n≡₂□ °△2_3_4"),
-                subscript(Inventory, "Apply to subarrays N deep", "# Experimental!\n⍚₂⇡ °△2_3"),
-                subscript(Repeat, "Repetition count", "# Experimental!\n⍥₅(⊂⟜/+) [1 2]"),
-                subscript(Tuples, "Tuple size", "# Experimental!\n⧅₂< ⇡4"),
-                subscript(Stack, "Print top N values", "# Experimental!\n?₂ 1 2 3 4")
-            ] }
-        </table>
 
         <Markdown src="/text/experimental.md"/>
     }

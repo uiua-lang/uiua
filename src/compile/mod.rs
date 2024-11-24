@@ -521,7 +521,7 @@ code:
                         }),
                         _ => false,
                     });
-            if let Err(e) = self.item(item, must_run, &mut prelude) {
+            if let Err(e) = self.item(item, from_macro, must_run, &mut prelude) {
                 if !item_errored {
                     self.errors.push(e);
                 }
@@ -530,10 +530,16 @@ code:
         }
         Ok(())
     }
-    fn item(&mut self, item: Item, from_macro: bool, prelude: &mut BindingPrelude) -> UiuaResult {
+    fn item(
+        &mut self,
+        item: Item,
+        from_macro: bool,
+        must_run: bool,
+        prelude: &mut BindingPrelude,
+    ) -> UiuaResult {
         match item {
             Item::Module(m) => self.module(m, take(prelude).comment),
-            Item::Words(lines) => self.top_level_words(lines, from_macro, true, prelude),
+            Item::Words(lines) => self.top_level_words(lines, from_macro, must_run, true, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
             Item::Data(data) => self.data_def(data, true, take(prelude)),
@@ -544,6 +550,7 @@ code:
         &mut self,
         mut lines: Vec<Vec<Sp<Word>>>,
         from_macro: bool,
+        must_run: bool,
         precomp: bool,
         prelude: &mut BindingPrelude,
     ) -> UiuaResult {
@@ -601,7 +608,7 @@ code:
                 })
             };
             if line.is_empty()
-                || !(can_run || from_macro || assert_later() || words_should_run_anyway(&line))
+                || !(can_run || must_run || assert_later() || words_should_run_anyway(&line))
             {
                 continue;
             }
@@ -641,9 +648,12 @@ code:
                                 .last_mut_recursive(&mut self.asm, |node| {
                                     if let &mut Node::Prim(Primitive::Assert, span) = node {
                                         *node = Node::ImplPrim(ImplPrimitive::TestAssert, span);
+                                        true
+                                    } else {
+                                        false
                                     }
                                 })
-                                .is_some();
+                                .unwrap_or(false);
                             if test_assert {
                                 self.asm.test_assert_count += 1;
                             }

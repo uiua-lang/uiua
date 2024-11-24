@@ -1463,3 +1463,37 @@ a.clean {
         -webkit-text-stroke: 0.01em #fff8;
     }
 }
+
+.pad-files {
+    border-top: 0.1em solid #60646838;
+    padding: 0.3em;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.3em;
+
+    @media (prefers-color-scheme: light) {
+        border-color: #0000001a;
+    }
+}
+
+.pad-file-tab {
+    display: flex;
+    gap: 0.3em;
+    padding: 0.2em 0.5em;
+    background-color: #294259;
+    border-radius: 999px;
+    cursor: pointer;
+
+    @media (prefers-color-scheme: light) {
+        background-color: #b3cece;
+    }
+}
+
+.pad-file-tab-close {
+    opacity: 0.5;
+
+    &:hover {
+        opacity: 1;
+    }
+}

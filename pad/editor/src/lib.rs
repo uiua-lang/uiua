@@ -1,7 +1,7 @@
 pub mod backend;
 pub mod utils;
 
-use std::{cell::Cell, iter::repeat, mem::take, path::PathBuf, time::Duration};
+use std::{cell::Cell, iter::repeat, mem::take, path::PathBuf, rc::Rc, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
@@ -25,9 +25,9 @@ use web_sys::{
 };
 
 use utils::*;
-use utils::{element, get_ast_time};
+use utils::{element, get_ast_time, format_insert_file_code};
 
-use backend::{drop_file, OutputItem};
+use backend::{drop_file, delete_file, OutputItem};
 use js_sys::Date;
 use std::sync::OnceLock;
 
@@ -1286,53 +1286,41 @@ pub fn Editor<'a>(
         if files.length() == 0 {
             return;
         }
-        let file = files.get(0).unwrap();
-        let file_name = file.name();
-        let reader = FileReader::new().unwrap();
-        reader.read_as_array_buffer(&file).unwrap();
-        let on_load = Closure::wrap(Box::new(move |event: Event| {
-            // Log file contents
-            let event = event.dyn_into::<web_sys::ProgressEvent>().unwrap();
-            let reader = event.target().unwrap().dyn_into::<FileReader>().unwrap();
-            let bytes = reader
-                .result()
-                .unwrap()
-                .dyn_into::<js_sys::ArrayBuffer>()
-                .unwrap();
-            let bytes = js_sys::Uint8Array::new(&bytes);
-            let byte_count = bytes.length();
-            let path = PathBuf::from(&file_name);
-            drop_file(path.clone(), bytes.to_vec());
-            set_drag_message.set("");
-            state.update(|state| {
-                let code = get_code();
-                if code.trim().is_empty() {
-                    let function = if path.extension().is_some_and(|ext| ext == "ua") {
-                        "~"
-                    } else if path
-                        .extension()
-                        .map_or(true, |ext| ["txt", "md"].iter().any(|e| e == &ext))
-                    {
-                        "&fras"
-                    } else {
-                        "&frab"
-                    };
-                    state.set_code(
-                        &if byte_count < 10000 {
-                            format!("{function} {file_name:?}\n")
-                        } else {
-                            format!("# {byte_count} bytes\n# {function} {file_name:?}\n")
-                        },
-                        Cursor::Ignore,
-                    )
+        
+        let total_files = files.length();
+        let processed_files = Rc::new(Cell::new(0));
+        
+        for i in 0..total_files {
+            let file = files.get(i).unwrap();
+            let file_name = file.name();
+            let reader = FileReader::new().unwrap();
+            reader.read_as_array_buffer(&file).unwrap();
+        
+            let processed_files = Rc::clone(&processed_files);
+            let on_load = Closure::wrap(Box::new(move |event: Event| {
+                let event = event.dyn_into::<web_sys::ProgressEvent>().unwrap();
+                let reader = event.target().unwrap().dyn_into::<FileReader>().unwrap();
+                let bytes = reader
+                    .result()
+                    .unwrap()
+                    .dyn_into::<js_sys::ArrayBuffer>()
+                    .unwrap();
+                let bytes = js_sys::Uint8Array::new(&bytes);
+                let path = PathBuf::from(&file_name);
+                drop_file(path.clone(), bytes.to_vec());
+                set_drag_message.set("");
+                
+                processed_files.set(processed_files.get() + 1);
+                if processed_files.get() == total_files {
+                    run(true, false);
                 }
-            });
-            run(true, false);
-        }) as Box<dyn FnMut(_)>);
-        reader
-            .add_event_listener_with_callback("load", on_load.as_ref().unchecked_ref())
-            .unwrap();
-        on_load.forget();
+            }) as Box<dyn FnMut(_)>);
+        
+            reader
+                .add_event_listener_with_callback("load", on_load.as_ref().unchecked_ref())
+                .unwrap();
+            on_load.forget();
+        }
     });
 
     on_cleanup(move || listener.remove());
@@ -1481,6 +1469,81 @@ pub fn Editor<'a>(
     set_font_size(&get_font_size());
     let on_insert_experimental = move |_| insert_experimental();
 
+    let get_files_to_display = move || {
+        // This is a hack to make this closure reactive.
+        // The file list updates every time output changes.
+        // The code runs immediately after dropping a file, so the output changes too.
+        // Plus it handles cases where files are created/deleted after the code runs.
+        let _ = output.get();
+
+        let excluded_files = ["example.txt", "example.ua"];
+        backend::FILES.with(|files| {
+            files.borrow()
+                .iter()
+                .filter(|(path, _)| !excluded_files.contains(&path.to_str().unwrap()))
+                .map(|(path, _)| path.clone())
+                .collect::<Vec<_>>()
+        })
+    };
+
+    let file_tab_display = move || {
+        let files = get_files_to_display().clone();
+        if files.len() == 0 {
+            return view! {
+                <div></div>
+            };
+        }
+
+        let file_list = get_files_to_display()
+            .into_iter()
+            .map(|path| {
+                let path_clone = path.clone();
+                let on_delete = move |event: MouseEvent| {
+                    event.stop_propagation();
+                    delete_file(&path_clone);
+                    run(true, false);
+                };
+
+                let path_clone = path.clone();
+                let on_insert = move |_: MouseEvent| {
+                    let content = backend::FILES.with(|files| {
+                        files.borrow()
+                            .iter()
+                            .find(|(p, _)| *p == &path_clone)
+                            .map(|(_, code)| code.clone())
+                            .unwrap_or_default()
+                    });
+                    state.update(|state| {
+                        let to_insert = format_insert_file_code(&path_clone, content);
+                        replace_code(state, &to_insert);
+                    });
+                    run(true, false);
+                };
+
+                let path_clone = path.clone();
+                view! {
+                    <div
+                        class="pad-file-tab"
+                        on:click=on_insert
+                    >
+                        {&path_clone.to_string_lossy().into_owned()}
+                        <span
+                            class="pad-file-tab-close"
+                            on:click=on_delete
+                            inner_html="&times;"
+                        />
+                    </div>
+                }
+            })
+            .collect_view();
+
+        view! {
+            <div class="pad-files">
+                {file_list}
+            </div>
+        }
+    };
+
     // Render
     view! {
         <div id="editor-wrapper">
@@ -1488,6 +1551,7 @@ pub fn Editor<'a>(
                 <div style=glyph_buttons_style>
                     <div class="glyph-buttons">{glyph_buttons}</div>
                 </div>
+                {file_tab_display}
                 <div id="settings" style=settings_style>
                     <div id="settings-left">
                         <div title="The maximum number of seconds a program can run for">

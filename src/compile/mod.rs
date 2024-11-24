@@ -1821,6 +1821,10 @@ code:
                 self.add_error(span.clone(), "Subscript is incomplete");
                 None
             }
+            Subscript::TooLarge => {
+                self.add_error(span.clone(), "Subscript is too large");
+                None
+            }
         }
     }
     fn positive_subscript(&mut self, n: i32, prim: Primitive, span: CodeSpan) -> UiuaResult<usize> {

@@ -1131,19 +1131,19 @@ impl<'a> Formatter<'a> {
             Word::Subscripted(sub) => match &sub.word.value {
                 Word::Modified(m) => {
                     self.format_modifier(&m.modifier, depth);
-                    self.push(&sub.n.span, &sub.n_string());
+                    self.subscript(&sub.n);
                     self.format_words(&m.operands, true, depth);
                 }
                 Word::Primitive(Primitive::Utf8) => {
                     self.push(&sub.word.span, "utf");
-                    self.push(&sub.n.span, &sub.n_string());
+                    self.subscript(&sub.n);
                 }
                 _ => {
                     self.format_word(&sub.word, depth);
                     if self.output.ends_with(SUBSCRIPT_DIGITS) {
                         self.output.push(' ');
                     }
-                    self.push(&sub.n.span, &sub.n_string());
+                    self.subscript(&sub.n);
                 }
             },
             Word::Spaces => self.push(&word.span, " "),
@@ -1436,6 +1436,12 @@ impl<'a> Formatter<'a> {
 
         self.format_multiline_words(&func.lines, allow_compact, true, true, true, depth + 1);
         self.output.push(')');
+    }
+    fn subscript(&mut self, sub: &Sp<Subscript>) {
+        match &sub.value {
+            Subscript::TooLarge => sub.span.as_str(self.inputs, |s| self.push(&sub.span, s)),
+            _ => self.push(&sub.span, &sub.value.to_string()),
+        }
     }
 }
 

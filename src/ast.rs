@@ -641,6 +641,8 @@ pub enum Subscript {
     NegOnly,
     /// A number
     N(i32),
+    /// The subscript is too large
+    TooLarge,
 }
 
 impl Subscript {
@@ -667,20 +669,14 @@ impl fmt::Display for Subscript {
                 }
                 Ok(())
             }
+            Subscript::TooLarge => write!(f, "…"),
         }
-    }
-}
-
-impl Subscripted {
-    /// Get the subscript as a string
-    pub fn n_string(&self) -> String {
-        self.n.value.to_string()
     }
 }
 
 impl fmt::Debug for Subscripted {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.word.value.fmt(f)?;
-        write!(f, "{}", self.n_string())
+        write!(f, "{}", self.n.value)
     }
 }

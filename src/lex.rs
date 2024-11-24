@@ -929,6 +929,7 @@ impl<'a> Lexer<'a> {
                         let neg = self.next_char_exact("₋")
                             || self.next_char_exact("`")
                             || self.next_char_exact("¯");
+                        let mut overflow = false;
                         loop {
                             if let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                                 let n = n.get_or_insert(0);
@@ -938,18 +939,17 @@ impl<'a> Lexer<'a> {
                             {
                                 let c = c.chars().next().unwrap();
                                 let n = n.get_or_insert(0);
-                                *n = *n * 10
-                                    + SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
+                                let (m, over_m) = n.overflowing_mul(10);
+                                let (a, over_a) = m.overflowing_add(
+                                    SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32,
+                                );
+                                overflow |= over_m | over_a;
+                                *n = a;
                             } else {
                                 break;
                             }
                         }
-                        let sub = match (neg, n) {
-                            (false, None) => Subscript::Empty,
-                            (true, None) => Subscript::NegOnly,
-                            (false, Some(n)) => Subscript::N(n),
-                            (true, Some(n)) => Subscript::N(-n),
-                        };
+                        let sub = pick_subscript(neg, n, overflow);
                         self.end(Subscr(sub), start)
                     } else {
                         self.end(Underscore, start)
@@ -1162,17 +1162,16 @@ impl<'a> Lexer<'a> {
                         }
                     }
                     let mut n: Option<i32> = None;
+                    let mut overflow = false;
                     for c in s.chars() {
                         let i = SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
                         let n = n.get_or_insert(0);
-                        *n = *n * 10 + i;
+                        let (m, over_m) = n.overflowing_mul(10);
+                        let (a, over_a) = m.overflowing_add(i);
+                        overflow |= over_m | over_a;
+                        *n = a;
                     }
-                    let sub = match (neg, n) {
-                        (false, None) => Subscript::Empty,
-                        (true, None) => Subscript::NegOnly,
-                        (false, Some(n)) => Subscript::N(n),
-                        (true, Some(n)) => Subscript::N(-n),
-                    };
+                    let sub = pick_subscript(neg, n, overflow);
                     self.end(Subscr(sub), start)
                 }
                 // Identifiers and unformatted glyphs
@@ -1590,18 +1589,16 @@ fn subscript(s: &str) -> Option<Subscript> {
         chars.next();
     }
     let mut n: Option<i32> = None;
+    let mut overflow = false;
     for c in chars {
         let i = SUBSCRIPT_DIGITS.iter().position(|&d| c == d)? as i32;
         let n = n.get_or_insert(0);
-        *n *= 10;
-        *n += i;
+        let (m, over_m) = n.overflowing_mul(10);
+        let (a, over_a) = m.overflowing_add(i);
+        overflow |= over_m | over_a;
+        *n = a;
     }
-    Some(match (neg, n) {
-        (false, None) => Subscript::Empty,
-        (true, None) => Subscript::NegOnly,
-        (false, Some(n)) => Subscript::N(n),
-        (true, Some(n)) => Subscript::N(-n),
-    })
+    Some(pick_subscript(neg, n, overflow))
 }
 
 /// Whether a string is a custom glyph
@@ -1659,4 +1656,16 @@ fn canonicalize_subscripts(ident: &str) -> Ident {
             }
         })
         .collect()
+}
+
+fn pick_subscript(neg: bool, n: Option<i32>, overflow: bool) -> Subscript {
+    if overflow {
+        return Subscript::TooLarge;
+    }
+    match (neg, n) {
+        (false, None) => Subscript::Empty,
+        (true, None) => Subscript::NegOnly,
+        (false, Some(n)) => Subscript::N(n),
+        (true, Some(n)) => Subscript::N(-n),
+    }
 }

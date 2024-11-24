@@ -12,6 +12,7 @@ use leptos::{
 };
 
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
+use leptos::html::Input;
 use uiua::{
     format::{format_str, FormatConfig},
     is_ident_char, lex,
@@ -19,10 +20,7 @@ use uiua::{
     now, seed_random, PrimClass, Primitive, Signature, SysOp, Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
-use web_sys::{
-    DragEvent, Event, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement,
-    HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
-};
+use web_sys::{DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, InputEvent, MouseEvent};
 
 use utils::*;
 use utils::{element, format_insert_file_code, get_ast_time};
@@ -93,6 +91,7 @@ pub fn Editor<'a>(
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
     let hover_id = move || format!("hover{id}");
+    let input_id = move || format!("input{id}");
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
     #[allow(unused)]
@@ -1278,15 +1277,8 @@ pub fn Editor<'a>(
         event.stop_propagation();
         set_drag_message.set("");
     });
-    let listener = window_event_listener(leptos_dom::ev::drop, move |event: DragEvent| {
-        let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
-        event.prevent_default();
-        event.stop_propagation();
-        let files = event.data_transfer().unwrap().files().unwrap();
-        if files.length() == 0 {
-            return;
-        }
 
+    let handle_load_files = move |files: FileList| {
         let total_files = files.length();
         let processed_files = Rc::new(Cell::new(0));
 
@@ -1321,6 +1313,17 @@ pub fn Editor<'a>(
                 .unwrap();
             on_load.forget();
         }
+    };
+
+    let listener = window_event_listener(leptos_dom::ev::drop, move |event: DragEvent| {
+        let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
+        event.prevent_default();
+        event.stop_propagation();
+        let files = event.data_transfer().unwrap().files().unwrap();
+        if files.length() == 0 {
+            return;
+        }
+        handle_load_files(files);
     });
 
     on_cleanup(move || listener.remove());
@@ -1468,6 +1471,21 @@ pub fn Editor<'a>(
     set_font_name(&get_font_name());
     set_font_size(&get_font_size());
     let on_insert_experimental = move |_| insert_experimental();
+
+    // File upload dialog opening
+    let upload_file_dialog = move |_| {
+        let input_element: HtmlInputElement = element(&input_id());
+        // This produces an error in the console for some reason, but it works
+        input_element.dyn_ref::<HtmlInputElement>().unwrap().click();
+    };
+
+    let files_selected = move |event: Event| {
+        let target = event.target().unwrap();
+        let input_element = target.dyn_ref::<HtmlInputElement>().unwrap();
+        let files = input_element.files().unwrap();
+        handle_load_files(files);
+        input_element.set_value("");
+    };
 
     let get_files_to_display = move || {
         // This is a hack to make this closure reactive.
@@ -1729,6 +1747,12 @@ pub fn Editor<'a>(
                                 on:click=toggle_settings_open>
                                 "⚙️"
                             </button>
+                            <button
+                                class="editor-right-button"
+                                data-title="Upload file"
+                                on:click=upload_file_dialog>
+                                "📄"
+                            </button>
                             <div id="example-tracker">{example_text}</div>
                         </div>
                     </div>
@@ -1801,6 +1825,13 @@ pub fn Editor<'a>(
             <div id="editor-help">
                 { help.iter().map(|s| view!(<p>{s}</p>)).collect::<Vec<_>>() }
             </div>
+            <input
+                id=input_id
+                type="file"
+                multiple="multiple"
+                style="display: none"
+                on:change=files_selected
+            />
         </div>
     }
 }

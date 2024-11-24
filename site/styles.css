@@ -1484,6 +1484,8 @@ a.clean {
     background-color: #294259;
     border-radius: 999px;
     cursor: pointer;
+    font-size: .75em;
+    line-height: 1em;
 
     @media (prefers-color-scheme: light) {
         background-color: #b3cece;

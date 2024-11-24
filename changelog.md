@@ -13,15 +13,21 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change**: [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) now sets the initial value as well as filling row shapes
   - This behavior is hard to get otherwise
   - Fixes to existing code should be simple
+- Stabilize [subscripts](https://uiua.org/docs/subscripts)!
+  - They make available a lot of nice functionality
+  - Allow negative subscripts
+- [`rows ≡`](https://uiua.org/docs/rows), [`inventory ⍚`](https://uiua.org/docs/inventory), and [`each ∵`](https://uiua.org/docs/each) now support subscripts
+- [`deshape ♭`](https://uiua.org/docs/deshape) now supports subscripts
+  - Axes are collapsed to get the given rank
+- Deprecate [`rerank ☇`](https://uiua.org/docs/rerank)
+  - It was basically always used with a static rank, and that functionality has been subsumed by subscripted [`deshape ♭`](https://uiua.org/docs/deshape) and/or the iterating modifiers listed above
+  - The dynamic behavior can still be accessed with `°⊸(⧻△)` (though when you would need this is unclear)
 - Stabilize [`sort ⍆`](https://uiua.org/docs/sort)
   - Sorting is a very common operation, and it's useful to have such simple access to it
 - Stabilize [`last ⊣`](https://uiua.org/docs/last)
   - Getting the last row is a very common operation
-- Change [`backward 𝄈`](https://uiua.org/docs/backward)'s glyph to `𝄈`. Code using `˜` will continue to work and will be formatted as `𝄈`.
-- Allow negative subscripts
-- [`deshape ♭`](https://uiua.org/docs/deshape) now supports subscripts
-  - The functionality is similar to [`rerank ☇`](https://uiua.org/docs/rerank), but offst by 1
 - Add [`&ep`](https://uiua.org/docs/&ep) and [`&epf`](https://uiua.org/docs/&epf) system functions for easier printing to stderr
+- Change [`backward 𝄈`](https://uiua.org/docs/backward)'s glyph to `𝄈`. Code using `˜` will continue to work and will be formatted as `𝄈`.
 - Add experimental [inline macros](https://www.uiua.org/docs/experimental#inline-macros)
   - Deprecate the experimental `stringify` and `signature` modifiers in favor of inline code macros
 - Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation
@@ -37,6 +43,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add an `-e`/`--experimental` flag to the `uiua eval` command to enable experimental features
 ### Website
 - Add a new pad setting to show line values to the right of the code
+- Add [Subscripts](https://uiua.org/docs/subscripts) page
+- Update [Advanced Stack Manipulation](https://uiua.org/tutorial/advancedstack) and [Advanced Array Manipulation](https://uiua.org/tutorial/advancedarray) tutorials to include subscripts
 
 ## 0.13.0 - 2024-10-21
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
@@ -122,7 +130,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
   - Getting the last row of an array is very common
 - Add experimental subscript modifiers
   - They modify the behavior of some functions and modifiers
-  - You can read more about them [here](https://uiua.org/docs/experimental#subscript-modifiers)
+  - You can read more about them [here](https://uiua.org/docs/subscripts)
 - Add experimental [data definitions](https://uiua.org/docs/experimental#data-definitions)
   - These allow for structured data similar to `struct`s and `enum`s in other languages
   - They also allow a limited form of namable function arguments

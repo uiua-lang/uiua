@@ -27,7 +27,7 @@ This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be ins
   ```
   On Linux, you may need to install some dependencies first:
   ```
-  apt install libx11-dev
+  apt install libx11-dev libffi-dev
   ```
 
   The following optional features are available but not enabled by default (enabled by passing `--features <feature>`):

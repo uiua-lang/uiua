@@ -47,7 +47,7 @@ pub fn Install() -> impl IntoView {
         <code class="code-block">"cargo install uiua -F full"</code>
         <code class="code-block">"cargo install uiua"</code>
         <p>"On Linux, this may require installing some dependencies:"</p>
-        <code class="code-block">"apt install libx11-dev"</code>
+        <code class="code-block">"apt install libx11-dev libffi-dev"</code>
         <p>"The "<code>"-F full"</code>" flag enables all optional features. If you need more control over which features are installed, enable only the only the ones you want by passing "<code>"--features <feature>"</code>"):"</p>
         <ul>
             <li><code>"full"</code>" - Enables all optional features below."</li>

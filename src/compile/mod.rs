@@ -466,7 +466,7 @@ code:
             .into()),
         }
     }
-    pub(crate) fn items(&mut self, items: Vec<Item>, must_run: bool) -> UiuaResult {
+    pub(crate) fn items(&mut self, items: Vec<Item>, from_macro: bool) -> UiuaResult {
         // Set scope comment
         if let Some(Item::Words(lines)) = items.first() {
             let mut started = false;
@@ -503,7 +503,7 @@ code:
         let mut item_errored = false;
         let mut items = VecDeque::from(items);
         while let Some(item) = items.pop_front() {
-            let must_run = must_run
+            let must_run = from_macro
                 || matches!(&item, Item::Words(_))
                     && items.iter().any(|item| match item {
                         Item::Binding(binding)
@@ -530,10 +530,10 @@ code:
         }
         Ok(())
     }
-    fn item(&mut self, item: Item, must_run: bool, prelude: &mut BindingPrelude) -> UiuaResult {
+    fn item(&mut self, item: Item, from_macro: bool, prelude: &mut BindingPrelude) -> UiuaResult {
         match item {
             Item::Module(m) => self.module(m, take(prelude).comment),
-            Item::Words(lines) => self.top_level_words(lines, must_run, true, prelude),
+            Item::Words(lines) => self.top_level_words(lines, from_macro, true, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
             Item::Data(data) => self.data_def(data, true, take(prelude)),
@@ -543,7 +543,7 @@ code:
     fn top_level_words(
         &mut self,
         mut lines: Vec<Vec<Sp<Word>>>,
-        must_run: bool,
+        from_macro: bool,
         precomp: bool,
         prelude: &mut BindingPrelude,
     ) -> UiuaResult {
@@ -601,7 +601,7 @@ code:
                 })
             };
             if line.is_empty()
-                || !(can_run || must_run || assert_later() || words_should_run_anyway(&line))
+                || !(can_run || from_macro || assert_later() || words_should_run_anyway(&line))
             {
                 continue;
             }
@@ -631,15 +631,21 @@ code:
                         *height = (*height + sig.outputs).saturating_sub(sig.args);
                         // Compile test assert
                         if self.mode != RunMode::Normal
+                            && !from_macro
                             && sig.outputs == 0
                             && !self
                                 .scopes()
                                 .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
                         {
-                            if let Some(Node::Prim(Primitive::Assert, span)) = line_node.last() {
-                                let span = *span;
-                                line_node.pop();
-                                line_node.push(Node::ImplPrim(ImplPrimitive::TestAssert, span));
+                            let test_assert = line_node
+                                .last_mut_recursive(&mut self.asm, |node| {
+                                    if let &mut Node::Prim(Primitive::Assert, span) = node {
+                                        *node = Node::ImplPrim(ImplPrimitive::TestAssert, span);
+                                    }
+                                })
+                                .is_some();
+                            if test_assert {
+                                self.asm.test_assert_count += 1;
                             }
                         }
                     }

@@ -21,7 +21,7 @@ use crate::{
 node!(
     Array { len: ArrayLen, inner: Box<Node>, boxed: bool, span: usize },
     CallGlobal(index(usize), sig(Signature)),
-    CallMacro{ index: usize, sig: Signature, span: usize },
+    CallMacro { index: usize, sig: Signature, span: usize },
     BindGlobal { index: usize, span: usize },
     Label(label(EcoString), span(usize)),
     RemoveLabel(label(Option<EcoString>), span(usize)),
@@ -430,6 +430,50 @@ impl Node {
         self.as_flipped_impl_primitive()
             .filter(|(_, flipped)| !flipped)
             .map(|(prim, _)| prim)
+    }
+    /// Call a function on the last node in the tree, recursing into function calls
+    pub fn last_mut_recursive<T>(
+        &mut self,
+        asm: &mut Assembly,
+        f: impl Fn(&mut Node) -> T + Copy,
+    ) -> Option<T> {
+        fn recurse<T>(
+            target: Option<usize>,
+            sub: Option<usize>,
+            node: &mut Node,
+            asm: &mut Assembly,
+            f: impl FnOnce(&mut Node) -> T + Copy,
+        ) -> Option<T> {
+            let mut this_node = match target {
+                Some(i) => &asm.functions[i],
+                None => &*node,
+            };
+            if let Some(i) = sub {
+                this_node = this_node.get(i)?;
+            }
+            match this_node {
+                Node::Run(nodes) if sub.is_none() => {
+                    for i in (0..nodes.len()).rev() {
+                        if let Some(res) = recurse(target, Some(i), node, asm, f) {
+                            return Some(res);
+                        }
+                    }
+                    None
+                }
+                Node::Call(func, _) => recurse(Some(func.index), None, node, asm, f),
+                _ => {
+                    let mut node = match target {
+                        Some(i) => &mut asm.functions.make_mut()[i],
+                        None => node,
+                    };
+                    if let Some(i) = sub {
+                        node = node.as_mut_slice().get_mut(i)?;
+                    }
+                    Some(f(node))
+                }
+            }
+        }
+        recurse(None, None, self, asm, f)
     }
 }
 

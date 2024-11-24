@@ -30,6 +30,7 @@ pub struct Assembly {
     /// Inputs used to build the assembly
     pub inputs: Inputs,
     pub(crate) dynamic_functions: EcoVec<DynFn>,
+    pub(crate) test_assert_count: usize,
 }
 
 /// A Uiua function
@@ -44,7 +45,7 @@ pub struct Function {
     pub id: FunctionId,
     /// The function's signature
     pub sig: Signature,
-    index: usize,
+    pub(crate) index: usize,
     hash: u64,
 }
 
@@ -251,6 +252,7 @@ impl Assembly {
                 ..Inputs::default()
             },
             dynamic_functions: EcoVec::new(),
+            test_assert_count: 0,
         })
     }
     /// Serialize the assembly into a `.uasm` file
@@ -347,6 +349,7 @@ impl Default for Assembly {
             bindings: EcoVec::new(),
             dynamic_functions: EcoVec::new(),
             inputs: Inputs::default(),
+            test_assert_count: 0,
         }
     }
 }

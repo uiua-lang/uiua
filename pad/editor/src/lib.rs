@@ -1749,12 +1749,18 @@ pub fn Editor<'a>(
                                 on:click=toggle_settings_open>
                                 "⚙️"
                             </button>
-                            <button
-                                class="editor-right-button"
-                                data-title="Upload file"
-                                on:click=upload_file_dialog>
-                                "📄"
-                            </button>
+                            {
+                                if mode == EditorMode::Pad {
+                                    Some(view!(<button
+                                        class="editor-right-button"
+                                        data-title="Upload file"
+                                        on:click=upload_file_dialog>
+                                        "📄"
+                                    </button>))
+                                } else {
+                                    None
+                                }
+                            }
                             <div id="example-tracker">{example_text}</div>
                         </div>
                     </div>

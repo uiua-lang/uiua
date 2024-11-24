@@ -19,7 +19,10 @@ use uiua::{
     now, seed_random, PrimClass, Primitive, Signature, SysOp, Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
-use web_sys::{DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent};
+use web_sys::{
+    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement, 
+    HtmlSelectElement, HtmlTextAreaElement, MouseEvent
+};
 
 use utils::*;
 use utils::{element, format_insert_file_code, get_ast_time};

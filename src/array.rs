@@ -1321,8 +1321,8 @@ impl<'a, T: fmt::Display> fmt::Display for FormatShape<'a, T> {
     deserialize = "T: ArrayValueSer + Deserialize<'de>"
 ))]
 enum ArrayRep<T: ArrayValueSer> {
-    Scalar(T::Scalar),
     List(T::Collection),
+    Scalar(T::Scalar),
     Map(Shape, Value, T::Collection),
     Metaless(Shape, T::Collection),
     Full(Shape, T::Collection, ArrayMeta),
@@ -1377,7 +1377,7 @@ impl<T: ArrayValueSer> From<Array<T>> for ArrayRep<T> {
             }
         }
         match arr.rank() {
-            0 => ArrayRep::Scalar(arr.data[0].clone().into()),
+            0 if !T::no_scalar() => ArrayRep::Scalar(arr.data[0].clone().into()),
             1 => ArrayRep::List(T::make_collection(arr.data)),
             _ => ArrayRep::Metaless(arr.shape, T::make_collection(arr.data)),
         }
@@ -1389,6 +1389,10 @@ trait ArrayValueSer: ArrayValue + fmt::Debug {
     type Collection: Serialize + DeserializeOwned + fmt::Debug;
     fn make_collection(data: CowSlice<Self>) -> Self::Collection;
     fn make_data(collection: Self::Collection) -> CowSlice<Self>;
+    /// Do not use the [`ArrayRep::Scalar`] variant
+    fn no_scalar() -> bool {
+        false
+    }
 }
 
 macro_rules! array_value_ser {
@@ -1429,6 +1433,9 @@ impl ArrayValueSer for char {
     }
     fn make_data(collection: Self::Collection) -> CowSlice<Self> {
         collection.chars().collect()
+    }
+    fn no_scalar() -> bool {
+        true
     }
 }
 

@@ -39,8 +39,6 @@ node!(
     NoInline(inner(Box<Node>)),
     TrackCaller(inner(Box<Node>)),
     (#[serde(untagged)] rep),
-    Run(nodes(EcoVec<Node>)),
-    (#[serde(untagged)] rep),
     Push(val(Value)),
     (#[serde(untagged)] rep),
     Prim(prim(Primitive), span(usize)),
@@ -52,6 +50,8 @@ node!(
     ImplMod(prim(ImplPrimitive), args(Ops), span(usize)),
     (#[serde(untagged)] rep),
     Call(func(Function), span(usize)),
+    (#[serde(untagged)] rep),
+    Run(nodes(EcoVec<Node>)),
 );
 
 /// A node with a signature

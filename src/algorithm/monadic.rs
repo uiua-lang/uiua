@@ -51,7 +51,7 @@ impl Value {
         let deshaped = self.shape_mut().split_off(depth).into_iter().product();
         self.shape_mut().push(deshaped);
     }
-    pub(crate) fn deshape_sub(&mut self, irank: i32, env: &Uiua) -> UiuaResult {
+    pub(crate) fn deshape_sub(&mut self, irank: i32, extend: bool, env: &Uiua) -> UiuaResult {
         if irank == 0 || irank > 0 && irank as usize == self.rank() {
             return Ok(());
         }
@@ -70,20 +70,27 @@ impl Value {
                         .collect();
                 }
                 Ordering::Greater => {
-                    for _ in 0..rank - shape.len() {
-                        shape.insert(0, 1);
+                    if extend {
+                        for _ in 0..rank - shape.len() {
+                            shape.insert(0, 1);
+                        }
                     }
                 }
             }
         } else {
             // Negative rank
             if rank + 1 > shape.len() {
-                return Err(env.error(format!(
-                    "Negative deshape has magnitude {}, but the \
-                    rank-{} array cannot be reduced that much",
-                    rank,
-                    shape.len()
-                )));
+                return if extend {
+                    Err(env.error(format!(
+                        "Negative {} has magnitude {}, but the \
+                        rank-{} array cannot be reduced that much",
+                        Primitive::Deshape.format(),
+                        rank,
+                        shape.len()
+                    )))
+                } else {
+                    Ok(())
+                };
             }
             let new_first_dim: usize = shape[..=rank].iter().product();
             *shape = once(new_first_dim)
@@ -96,7 +103,7 @@ impl Value {
     pub(crate) fn undo_deshape(
         &mut self,
         sub: Option<i32>,
-        orig_shape: &Self,
+        orig_shape: &Shape,
         env: &Uiua,
     ) -> UiuaResult {
         if let Some(irank) = sub {
@@ -109,9 +116,8 @@ impl Value {
                 return Ok(());
             }
             if irank == 0 {
-                return self.undo_deshape(None, orig_shape, env);
+                return Ok(());
             }
-            let orig_shape = orig_shape.as_nats(env, "Shape must be a list of natural numbers")?;
             let rank = irank.unsigned_abs() as usize;
             let new_shape: Shape = if irank >= 0 {
                 // Positive rank
@@ -134,12 +140,11 @@ impl Value {
             self.validate_shape();
             Ok(())
         } else {
-            let shape = orig_shape.as_nats(env, "Shape must be an array of natural numbers")?;
             let mut new_shape = self.shape().clone();
             if new_shape.len() > 0 {
                 new_shape.remove(0);
             }
-            for &d in shape.iter().rev() {
+            for &d in orig_shape.iter().rev() {
                 new_shape.insert(0, d);
             }
             if new_shape.elements() == self.element_count() {
@@ -147,7 +152,7 @@ impl Value {
                 Ok(())
             } else {
                 let spec: Vec<Result<isize, bool>> =
-                    shape.iter().map(|&d| Ok(d as isize)).collect();
+                    orig_shape.iter().map(|&d| Ok(d as isize)).collect();
                 self.reshape_impl(&spec, env)
             }
         }

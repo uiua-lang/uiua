@@ -409,7 +409,12 @@ impl Value {
         self.validate_shape();
         Ok(())
     }
-    pub(crate) fn undo_rerank(&mut self, rank: &Self, orig_shape: &Self, env: &Uiua) -> UiuaResult {
+    pub(crate) fn undo_rerank(
+        &mut self,
+        rank: &Self,
+        orig_shape: &Shape,
+        env: &Uiua,
+    ) -> UiuaResult {
         if self.rank() == 0 {
             if let Value::Box(arr) = self {
                 arr.data.as_mut_slice()[0]
@@ -422,7 +427,6 @@ impl Value {
         if irank == 0 {
             return self.undo_deshape(None, orig_shape, env);
         }
-        let orig_shape = orig_shape.as_nats(env, "Shape must be a list of natural numbers")?;
         let rank = irank.unsigned_abs();
         let new_shape: Shape = if irank >= 0 {
             // Positive rank

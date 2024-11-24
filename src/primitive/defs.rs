@@ -3477,6 +3477,9 @@ macro_rules! impl_primitive {
             )*
             DeshapeSub(i32),
             UndoDeshape(Option<i32>),
+            EachSub(i32),
+            RowsSub(i32),
+            InventorySub(i32),
             TransposeN(i32),
             UndoTransposeN(usize, i32),
             UndoReverse { n: usize, all: bool },
@@ -3491,6 +3494,9 @@ macro_rules! impl_primitive {
                     $(ImplPrimitive::$variant => $args,)*
                     ImplPrimitive::DeshapeSub(_) => 1,
                     ImplPrimitive::UndoDeshape(_) => 2,
+                    ImplPrimitive::EachSub(_) => 1,
+                    ImplPrimitive::RowsSub(_) => 1,
+                    ImplPrimitive::InventorySub(_) => 1,
                     ImplPrimitive::TransposeN(_) => 1,
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
                     ImplPrimitive::UndoReverse { n, .. } => *n,
@@ -3513,6 +3519,9 @@ macro_rules! impl_primitive {
                 match self {
                     $($(ImplPrimitive::$variant => Some($margs),)?)*
                     ImplPrimitive::ReduceDepth(_) => Some(1),
+                    ImplPrimitive::EachSub(_) => Some(1),
+                    ImplPrimitive::RowsSub(_) => Some(1),
+                    ImplPrimitive::InventorySub(_) => Some(1),
                     _ => None
                 }
             }

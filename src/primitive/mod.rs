@@ -33,7 +33,7 @@ use crate::{
     lex::{AsciiToken, SUBSCRIPT_DIGITS},
     sys::*,
     value::*,
-    FunctionId, Ops, Signature, Uiua, UiuaErrorKind, UiuaResult,
+    FunctionId, Ops, Shape, Signature, Uiua, UiuaErrorKind, UiuaResult,
 };
 
 /// Categories of primitives
@@ -155,22 +155,38 @@ impl fmt::Display for Primitive {
     }
 }
 
+fn fmt_subscript(f: &mut fmt::Formatter<'_>, mut i: i32) -> fmt::Result {
+    if i < 0 {
+        write!(f, "₋")?;
+        i = -i;
+    }
+    while i > 0 {
+        write!(f, "{}", SUBSCRIPT_DIGITS[i as usize % 10])?;
+        i /= 10;
+    }
+    Ok(())
+}
+
 impl fmt::Display for ImplPrimitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use ImplPrimitive::*;
         use Primitive::*;
         match self {
-            &DeshapeSub(mut i) => {
+            &DeshapeSub(i) => {
                 write!(f, "{Deshape}")?;
-                if i < 0 {
-                    write!(f, "₋")?;
-                    i = -i;
-                }
-                while i > 0 {
-                    write!(f, "{}", SUBSCRIPT_DIGITS[i as usize % 10])?;
-                    i /= 10;
-                }
-                Ok(())
+                fmt_subscript(f, i)
+            }
+            &EachSub(i) => {
+                write!(f, "{Each}")?;
+                fmt_subscript(f, i)
+            }
+            &RowsSub(i) => {
+                write!(f, "{Rows}")?;
+                fmt_subscript(f, i)
+            }
+            &InventorySub(i) => {
+                write!(f, "{Inventory}")?;
+                fmt_subscript(f, i)
             }
             Root => write!(f, "{Pow}{Div}{Flip}1"),
             Cos => write!(f, "cos"),
@@ -996,9 +1012,15 @@ impl Primitive {
             Primitive::Scan => reduce::scan(ops, env)?,
             Primitive::Fold => reduce::fold(ops, env)?,
             Primitive::Each => zip::each(ops, env)?,
-            Primitive::Rows => zip::rows(ops, false, env)?,
+            Primitive::Rows => {
+                let [f] = get_ops(ops, env)?;
+                zip::rows(f, false, env)?
+            }
+            Primitive::Inventory => {
+                let [f] = get_ops(ops, env)?;
+                zip::rows(f, true, env)?
+            }
             Primitive::Table => table::table(ops, env)?,
-            Primitive::Inventory => zip::rows(ops, true, env)?,
             Primitive::Repeat => loops::repeat(ops, false, env)?,
             Primitive::Do => loops::do_(ops, env)?,
             Primitive::Group => loops::group(ops, env)?,
@@ -1150,7 +1172,7 @@ impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             ImplPrimitive::DeshapeSub(i) => {
-                env.monadic_mut_env(|val, env| val.deshape_sub(*i, env))?
+                env.monadic_mut_env(|val, env| val.deshape_sub(*i, true, env))?
             }
             ImplPrimitive::Root => env.dyadic_oo_00_env(Value::root)?,
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
@@ -1374,7 +1396,10 @@ impl ImplPrimitive {
             ImplPrimitive::AntiOrient => env.dyadic_ro_env(Value::anti_orient)?,
             ImplPrimitive::UndoRerank => {
                 let rank = env.pop(1)?;
-                let shape = env.pop(2)?;
+                let shape = Shape::from(
+                    env.pop(2)?
+                        .as_nats(env, "Shape must be a list of natural numbers")?,
+                );
                 let mut array = env.pop(3)?;
                 array.undo_rerank(&rank, &shape, env)?;
                 env.push(array);
@@ -1417,7 +1442,10 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UndoFix => env.monadic_mut(Value::undo_fix)?,
             ImplPrimitive::UndoDeshape(sub) => {
-                let shape = env.pop(1)?;
+                let shape = Shape::from(
+                    env.pop(1)?
+                        .as_nats(env, "Shape must be a list of natural numbers")?,
+                );
                 let mut val = env.pop(2)?;
                 val.undo_deshape(*sub, &shape, env)?;
                 env.push(val)
@@ -1677,6 +1705,36 @@ impl ImplPrimitive {
                 let vals = env.take_n(f.sig.outputs)?;
                 env.exec(f.node)?;
                 env.push_all(vals);
+            }
+            ImplPrimitive::EachSub(n)
+            | ImplPrimitive::RowsSub(n)
+            | ImplPrimitive::InventorySub(n) => {
+                let [f] = get_ops(ops, env)?;
+                let sig = f.sig;
+                let vals = env.pop_n(sig.args)?;
+                let irank = if let ImplPrimitive::EachSub(_) = self {
+                    *n + 1
+                } else {
+                    vals.iter().map(Value::rank).max().unwrap_or(0) as i32 - *n + 1
+                };
+                let max_shape = vals
+                    .iter()
+                    .map(Value::shape)
+                    .max_by_key(|sh| sh.len())
+                    .cloned();
+                let max_rank = max_shape.as_ref().map(|sh| sh.len()).unwrap_or(0);
+                let inv = matches!(self, ImplPrimitive::InventorySub(_));
+                for mut val in vals {
+                    val.deshape_sub(irank, val.rank() == max_rank, env)?;
+                    env.push(val);
+                }
+                zip::rows(f, inv, env)?;
+                for mut value in env.pop_n(sig.outputs)? {
+                    if let Some(max_shape) = &max_shape {
+                        value.undo_deshape(Some(irank), max_shape, env)?;
+                    }
+                    env.push(value);
+                }
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

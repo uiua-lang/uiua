@@ -763,34 +763,63 @@ impl Compiler {
             Each => {
                 // Each pervasive
                 let operand = modified.code_operands().next().unwrap().clone();
-                if !words_look_pervasive(slice::from_ref(&operand)) {
-                    return Ok(None);
-                }
                 let op_span = operand.span.clone();
+                let full_span = modified.modifier.span.clone().merge(op_span);
+                let words_look_pervasive = words_look_pervasive(slice::from_ref(&operand));
                 let sn = self.word_sig(operand)?;
-                self.emit_diagnostic(
-                    if let Some((prim, _)) = sn
-                        .node
-                        .as_flipped_primitive()
-                        .filter(|(prim, _)| prim.class().is_pervasive())
-                    {
-                        format!(
-                            "{} is pervasive, so {} is redundant here.",
-                            prim.format(),
-                            Each.format(),
-                        )
-                    } else {
-                        format!(
-                            "{m}'s function is pervasive, \
-                            so {m} is redundant here.",
-                            m = Each.format(),
-                        )
-                    },
-                    DiagnosticKind::Advice,
-                    modified.modifier.span.clone().merge(op_span),
-                );
+                if words_look_pervasive {
+                    self.emit_diagnostic(
+                        if let Some((prim, _)) = sn
+                            .node
+                            .as_flipped_primitive()
+                            .filter(|(prim, _)| prim.class().is_pervasive())
+                        {
+                            format!(
+                                "{} is pervasive, so {} is redundant here.",
+                                prim.format(),
+                                Each.format(),
+                            )
+                        } else {
+                            format!(
+                                "{m}'s function is pervasive, \
+                                so {m} is redundant here.",
+                                m = Each.format(),
+                            )
+                        },
+                        DiagnosticKind::Advice,
+                        full_span.clone(),
+                    );
+                }
                 let span = self.add_span(modified.modifier.span.clone());
-                Node::Mod(Primitive::Each, eco_vec![sn], span)
+                if let Some(i) = subscript
+                    .and_then(|n| self.subscript_n(n, &modified.modifier.span))
+                    .filter(|i| *i != 0)
+                {
+                    if i == -1 {
+                        Node::Mod(Rows, eco_vec![sn], span)
+                    } else {
+                        Node::ImplMod(ImplPrimitive::EachSub(i), eco_vec![sn], span)
+                    }
+                } else {
+                    Node::Mod(Each, eco_vec![sn], span)
+                }
+            }
+            prim @ (Rows | Inventory) => {
+                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let span = self.add_span(modified.modifier.span.clone());
+                if let Some(i) = subscript
+                    .and_then(|n| self.subscript_n(n, &modified.modifier.span))
+                    .filter(|i| *i != -1)
+                {
+                    let impl_prim = if prim == Rows {
+                        ImplPrimitive::RowsSub
+                    } else {
+                        ImplPrimitive::InventorySub
+                    };
+                    Node::ImplMod(impl_prim(i), eco_vec![sn], span)
+                } else {
+                    Node::Mod(prim, eco_vec![sn], span)
+                }
             }
             Table => {
                 // Normal table compilation, but get some diagnostics

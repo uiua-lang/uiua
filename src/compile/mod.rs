@@ -1853,7 +1853,12 @@ code:
                     _ => {
                         if !matches!(
                             prim,
-                            Primitive::Both | Primitive::Repeat | Primitive::Tuples
+                            Primitive::Both
+                                | Primitive::Repeat
+                                | Primitive::Tuples
+                                | Primitive::Rows
+                                | Primitive::Each
+                                | Primitive::Inventory
                         ) {
                             self.add_error(
                                 span,

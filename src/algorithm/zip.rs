@@ -533,9 +533,8 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn rows(ops: Ops, inv: bool, env: &mut Uiua) -> UiuaResult {
+pub fn rows(f: SigNode, inv: bool, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let [f] = get_ops(ops, env)?;
     match f.sig.args {
         0 => env.without_fill(|env| env.exec(f)),
         1 => rows1(f, env.pop(1)?, inv, env),

@@ -223,7 +223,7 @@ mod enabled {
     use std::{
         any::{type_name, Any},
         mem::{forget, take, transmute},
-        slice,
+        ptr, slice,
     };
 
     use dashmap::DashMap;
@@ -723,7 +723,11 @@ mod enabled {
             self.push_list::<c_char>(list)
         }
         fn push_list<T: Any + 'static>(&mut self, mut arg: Box<[T]>) -> *mut T {
-            let ptr = &mut arg[0] as *mut T;
+            let ptr = if arg.is_empty() {
+                ptr::null_mut()
+            } else {
+                &mut arg[0] as *mut T
+            };
             dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
             let storage = (ptr, arg);
             self.arg_data.push(Box::new(storage));

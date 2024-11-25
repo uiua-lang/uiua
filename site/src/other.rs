@@ -512,8 +512,6 @@ pub fn Subscripts() -> impl IntoView {
                 subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
                 subscript(Sqrt, "Nth root", "√₃ [8 27 125]"),
                 subscript(Round, "To N decimal places", "⁅₃ π"),
-                subscript(Floor, "To N decimal places", "⌊₄ π\n⌊₄ τ"),
-                subscript(Ceil, "To N decimal places", "⌈₄ π\n⌈₄ τ"),
                 subscript(Rand, "Random integer", "# Experimental!\n⚂₁₀₀"),
                 subscript(Both, "Apply to N argument sets", "[∩₃+ 1 2 3 4 5 6]"),
                 subscript(Each, "Apply to rank N subarrays", "∵₁□ °△2_3_4"),

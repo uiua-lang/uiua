@@ -187,6 +187,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
         (PopUnd(1), UndoDeshape(None)),
     ),
     &DeshapeSubPat,
+    &ReduceJoinPat,
     &MaybeVal((
         Rerank,
         (Over, Shape, Over, PushUnd(2), Rerank),
@@ -691,6 +692,20 @@ under!(
         Ok((input, before, after))
     }
 );
+
+under!(ReduceJoinPat, input, _, _, _, Reduce, span, [f], {
+    let Node::Prim(Join, _) = f.node else {
+        return generic();
+    };
+    let before = Node::from_iter([
+        Prim(Dup, span),
+        Prim(Shape, span),
+        PushUnder(1, span),
+        Mod(Reduce, eco_vec![f.clone()], span),
+    ]);
+    let after = Node::from_iter([PopUnder(1, span), ImplPrim(UndoDeshape(Some(-1)), span)]);
+    Ok((input, before, after))
+});
 
 #[derive(Debug)]
 struct Trivial;

@@ -1927,7 +1927,18 @@ code:
                         self.primitive(Primitive::Pow, span),
                     ])
                 }
-                Primitive::Round | Primitive::Floor | Primitive::Ceil => {
+                Primitive::Floor | Primitive::Ceil => {
+                    self.subscript_experimental(prim, &span);
+                    let mul = 10f64.powi(n);
+                    Node::from_iter([
+                        Node::new_push(mul),
+                        self.primitive(Primitive::Mul, span.clone()),
+                        self.primitive(prim, span.clone()),
+                        Node::new_push(mul),
+                        self.primitive(Primitive::Div, span),
+                    ])
+                }
+                Primitive::Round => {
                     let mul = 10f64.powi(n);
                     Node::from_iter([
                         Node::new_push(mul),

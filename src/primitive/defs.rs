@@ -2038,7 +2038,8 @@ primitive!(
     ///   : ⬚0⧅∘ +1⇡50
     ///
     /// The tuple size may be given as a subscript.
-    /// ex: ⧅₂< ⇡4
+    /// ex: # Experimental!
+    ///   : ⧅₂< ⇡4
     ([1], Tuples, IteratingModifier, ("tuples", '⧅')),
     /// Repeat a function a number of times
     ///

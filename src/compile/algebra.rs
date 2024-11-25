@@ -38,9 +38,7 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
     let b = expr.0.remove(&Term::X(1.0)).unwrap_or(ZERO);
     let a = (expr.0).remove(&Term::X(2.0)).filter(|&a| a != ZERO);
 
-    if !expr.0.is_empty() {
-        return Err(Some(AlgebraError::TooComplex));
-    }
+    let span = asm.spans.len() - 1;
 
     let push = |x: Complex| {
         if data.any_complex {
@@ -50,7 +48,27 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
         }
     };
 
-    let span = asm.spans.len() - 1;
+    if !expr.0.is_empty() {
+        if expr.0.len() == 1 && b == ZERO && a.is_none() {
+            if let (Term::X(p), k) = expr.0.into_iter().next().unwrap() {
+                // y = kx^p + c
+                let mut node = Node::empty();
+                if c != ZERO {
+                    node.push(push(c));
+                    node.push(Prim(Sub, span));
+                }
+                if k != ONE {
+                    node.push(push(k));
+                    node.push(Prim(Div, span));
+                }
+                node.push(push(p.into()));
+                node.push(ImplPrim(Root, span));
+                return Ok(node);
+            }
+        }
+        return Err(Some(AlgebraError::TooComplex));
+    }
+
     let node = if let Some(a) = a {
         // Quadratic
         if b == ZERO {

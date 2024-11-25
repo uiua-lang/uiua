@@ -1,7 +1,7 @@
 pub mod backend;
 pub mod utils;
 
-use std::{cell::Cell, iter::repeat, mem::take, path::PathBuf, time::Duration};
+use std::{cell::Cell, iter::repeat, mem::take, path::PathBuf, rc::Rc, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
@@ -20,14 +20,14 @@ use uiua::{
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
-    DragEvent, Event, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement,
+    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement,
     HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
 };
 
 use utils::*;
-use utils::{element, get_ast_time};
+use utils::{element, format_insert_file_code, get_ast_time};
 
-use backend::{drop_file, OutputItem};
+use backend::{delete_file, drop_file, OutputItem};
 use js_sys::Date;
 use std::sync::OnceLock;
 
@@ -93,6 +93,7 @@ pub fn Editor<'a>(
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
     let hover_id = move || format!("hover{id}");
+    let input_id = move || format!("input{id}");
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
     #[allow(unused)]
@@ -1278,6 +1279,44 @@ pub fn Editor<'a>(
         event.stop_propagation();
         set_drag_message.set("");
     });
+
+    let handle_load_files = move |files: FileList| {
+        let total_files = files.length();
+        let processed_files = Rc::new(Cell::new(0));
+
+        for i in 0..total_files {
+            let file = files.get(i).unwrap();
+            let file_name = file.name();
+            let reader = FileReader::new().unwrap();
+            reader.read_as_array_buffer(&file).unwrap();
+
+            let processed_files = Rc::clone(&processed_files);
+            let on_load = Closure::wrap(Box::new(move |event: Event| {
+                let event = event.dyn_into::<web_sys::ProgressEvent>().unwrap();
+                let reader = event.target().unwrap().dyn_into::<FileReader>().unwrap();
+                let bytes = reader
+                    .result()
+                    .unwrap()
+                    .dyn_into::<js_sys::ArrayBuffer>()
+                    .unwrap();
+                let bytes = js_sys::Uint8Array::new(&bytes);
+                let path = PathBuf::from(&file_name);
+                drop_file(path.clone(), bytes.to_vec());
+                set_drag_message.set("");
+
+                processed_files.set(processed_files.get() + 1);
+                if processed_files.get() == total_files {
+                    run(true, false);
+                }
+            }) as Box<dyn FnMut(_)>);
+
+            reader
+                .add_event_listener_with_callback("load", on_load.as_ref().unchecked_ref())
+                .unwrap();
+            on_load.forget();
+        }
+    };
+
     let listener = window_event_listener(leptos_dom::ev::drop, move |event: DragEvent| {
         let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
         event.prevent_default();
@@ -1286,53 +1325,7 @@ pub fn Editor<'a>(
         if files.length() == 0 {
             return;
         }
-        let file = files.get(0).unwrap();
-        let file_name = file.name();
-        let reader = FileReader::new().unwrap();
-        reader.read_as_array_buffer(&file).unwrap();
-        let on_load = Closure::wrap(Box::new(move |event: Event| {
-            // Log file contents
-            let event = event.dyn_into::<web_sys::ProgressEvent>().unwrap();
-            let reader = event.target().unwrap().dyn_into::<FileReader>().unwrap();
-            let bytes = reader
-                .result()
-                .unwrap()
-                .dyn_into::<js_sys::ArrayBuffer>()
-                .unwrap();
-            let bytes = js_sys::Uint8Array::new(&bytes);
-            let byte_count = bytes.length();
-            let path = PathBuf::from(&file_name);
-            drop_file(path.clone(), bytes.to_vec());
-            set_drag_message.set("");
-            state.update(|state| {
-                let code = get_code();
-                if code.trim().is_empty() {
-                    let function = if path.extension().is_some_and(|ext| ext == "ua") {
-                        "~"
-                    } else if path
-                        .extension()
-                        .map_or(true, |ext| ["txt", "md"].iter().any(|e| e == &ext))
-                    {
-                        "&fras"
-                    } else {
-                        "&frab"
-                    };
-                    state.set_code(
-                        &if byte_count < 10000 {
-                            format!("{function} {file_name:?}\n")
-                        } else {
-                            format!("# {byte_count} bytes\n# {function} {file_name:?}\n")
-                        },
-                        Cursor::Ignore,
-                    )
-                }
-            });
-            run(true, false);
-        }) as Box<dyn FnMut(_)>);
-        reader
-            .add_event_listener_with_callback("load", on_load.as_ref().unchecked_ref())
-            .unwrap();
-        on_load.forget();
+        handle_load_files(files);
     });
 
     on_cleanup(move || listener.remove());
@@ -1481,6 +1474,98 @@ pub fn Editor<'a>(
     set_font_size(&get_font_size());
     let on_insert_experimental = move |_| insert_experimental();
 
+    // File upload dialog opening
+    let upload_file_dialog = move |_| {
+        let input_element: HtmlInputElement = element(&input_id());
+        // This produces an error in the console for some reason, but it works
+        input_element.dyn_ref::<HtmlInputElement>().unwrap().click();
+    };
+
+    let files_selected = move |event: Event| {
+        let target = event.target().unwrap();
+        let input_element = target.dyn_ref::<HtmlInputElement>().unwrap();
+        let files = input_element.files().unwrap();
+        handle_load_files(files);
+        input_element.set_value("");
+    };
+
+    let get_files_to_display = move || {
+        // This is a hack to make this closure reactive.
+        // The file list updates every time output changes.
+        // The code runs immediately after dropping a file, so the output changes too.
+        // Plus it handles cases where files are created/deleted after the code runs.
+        let _ = output.get();
+
+        let excluded_files = ["example.txt", "example.ua"];
+        backend::FILES.with(|files| {
+            files
+                .borrow()
+                .iter()
+                .filter(|(path, _)| !excluded_files.contains(&path.to_str().unwrap()))
+                .map(|(path, _)| path.clone())
+                .collect::<Vec<_>>()
+        })
+    };
+
+    let file_tab_display = move || {
+        let files = get_files_to_display().clone();
+        if files.is_empty() {
+            return view! {
+                <div></div>
+            };
+        }
+
+        let file_list = get_files_to_display()
+            .into_iter()
+            .map(|path| {
+                let path_clone = path.clone();
+                let on_delete = move |event: MouseEvent| {
+                    event.stop_propagation();
+                    delete_file(&path_clone);
+                    run(true, false);
+                };
+
+                let path_clone = path.clone();
+                let on_insert = move |_: MouseEvent| {
+                    let content = backend::FILES.with(|files| {
+                        files
+                            .borrow()
+                            .iter()
+                            .find(|(p, _)| *p == &path_clone)
+                            .map(|(_, code)| code.clone())
+                            .unwrap_or_default()
+                    });
+                    state.update(|state| {
+                        let to_insert = format_insert_file_code(&path_clone, content);
+                        replace_code(state, &to_insert);
+                    });
+                    run(true, false);
+                };
+
+                let path_clone = path.clone();
+                view! {
+                    <div
+                        class="pad-file-tab"
+                        on:click=on_insert
+                    >
+                        {&path_clone.to_string_lossy().into_owned()}
+                        <span
+                            class="pad-file-tab-close"
+                            on:click=on_delete
+                            inner_html="&times;"
+                        />
+                    </div>
+                }
+            })
+            .collect_view();
+
+        view! {
+            <div class="pad-files">
+                {file_list}
+            </div>
+        }
+    };
+
     // Render
     view! {
         <div id="editor-wrapper">
@@ -1488,6 +1573,7 @@ pub fn Editor<'a>(
                 <div style=glyph_buttons_style>
                     <div class="glyph-buttons">{glyph_buttons}</div>
                 </div>
+                {file_tab_display}
                 <div id="settings" style=settings_style>
                     <div id="settings-left">
                         <div title="The maximum number of seconds a program can run for">
@@ -1663,6 +1749,18 @@ pub fn Editor<'a>(
                                 on:click=toggle_settings_open>
                                 "⚙️"
                             </button>
+                            {
+                                if mode == EditorMode::Pad {
+                                    Some(view!(<button
+                                        class="editor-right-button"
+                                        data-title="Upload file"
+                                        on:click=upload_file_dialog>
+                                        "📄"
+                                    </button>))
+                                } else {
+                                    None
+                                }
+                            }
                             <div id="example-tracker">{example_text}</div>
                         </div>
                     </div>
@@ -1735,6 +1833,13 @@ pub fn Editor<'a>(
             <div id="editor-help">
                 { help.iter().map(|s| view!(<p>{s}</p>)).collect::<Vec<_>>() }
             </div>
+            <input
+                id=input_id
+                type="file"
+                multiple="multiple"
+                style="display: none"
+                on:change=files_selected
+            />
         </div>
     }
 }

@@ -1,3 +1,6 @@
+use base64::engine::{general_purpose::URL_SAFE, Engine};
+use leptos::*;
+use std::path::Path;
 use std::{
     borrow::Cow,
     cell::Cell,
@@ -6,9 +9,6 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-
-use base64::engine::{general_purpose::URL_SAFE, Engine};
-use leptos::*;
 
 use uiua::{
     ast::Item,
@@ -1406,5 +1406,21 @@ pub fn element<T: JsCast>(id: &str) -> T {
         elem
     } else {
         panic!("#{id} not found")
+    }
+}
+
+pub fn format_insert_file_code(path: &Path, content: Vec<u8>) -> String {
+    let function = match path.extension().and_then(|ext| ext.to_str()) {
+        Some("ua") => "~",
+        Some("txt") | Some("md") | Some("json") | None => "&fras",
+        _ => "&frab",
+    };
+
+    let file_name = path.to_string_lossy().into_owned();
+    let byte_count = content.len();
+    if byte_count < 10000 {
+        format!("{function} {file_name:?}\n")
+    } else {
+        format!("# {byte_count} bytes\n# {function} {file_name:?}\n")
     }
 }

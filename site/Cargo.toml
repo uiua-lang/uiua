@@ -32,6 +32,7 @@ features = [
   "Storage",
   "HtmlAudioElement",
   "HtmlBrElement",
+  "HtmlElement",
   "Selection",
   "Node",
   "Clipboard",

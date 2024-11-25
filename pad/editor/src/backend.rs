@@ -30,7 +30,7 @@ struct VirtualStream {
 }
 
 thread_local! {
-    static FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new(
+    pub static FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new(
         [
             ("example.ua", EXAMPLE_UA),
             ("example.txt", EXAMPLE_TXT)
@@ -54,6 +54,10 @@ fn weewuh() {
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
     FILES.with(|files| files.borrow_mut().insert(path, contents));
+}
+
+pub fn delete_file(path: &PathBuf) {
+    FILES.with(|files| files.borrow_mut().remove(path));
 }
 
 impl Default for WebBackend {

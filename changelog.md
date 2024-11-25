@@ -41,6 +41,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Improve pattern matching error messages
 - Optimize the "root" pattern `ⁿ%:1`
 - Optimize format strings applied to strings or boxed strings
+- Optimize common [`partition ⊜`](https://uiua.org/docs/partition) patterns
 - Add an `-e`/`--experimental` flag to the `uiua eval` command to enable experimental features
 ### Website
 - Add a new pad setting to show line values to the right of the code

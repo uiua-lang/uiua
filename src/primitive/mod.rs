@@ -256,6 +256,7 @@ impl fmt::Display for ImplPrimitive {
             UndoChunks => write!(f, "{Un}{Chunks}"),
             UndoWindows => write!(f, "{Un}{Windows}"),
             UndoJoin => write!(f, "{Under}{Join}"),
+            // Optimizations
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
@@ -280,6 +281,8 @@ impl fmt::Display for ImplPrimitive {
             MatchGe => write!(f, "match ≥"),
             AstarFirst => write!(f, "{First}{Astar}"),
             AstarPop => write!(f, "{Pop}{Astar}"),
+            SplitByScalar => write!(f, "{Partition}{Box}{By}{Ne}"),
+            SplitBy => write!(f, "{Partition}{Box}{Not}{By}{Mask}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -1028,8 +1031,14 @@ impl Primitive {
             Primitive::Table => table::table(ops, env)?,
             Primitive::Repeat => loops::repeat(ops, false, env)?,
             Primitive::Do => loops::do_(ops, env)?,
-            Primitive::Group => loops::group(ops, env)?,
-            Primitive::Partition => loops::partition(ops, env)?,
+            Primitive::Group => {
+                let [f] = get_ops(ops, env)?;
+                loops::group(f, env)?
+            }
+            Primitive::Partition => {
+                let [f] = get_ops(ops, env)?;
+                loops::partition(f, env)?
+            }
             Primitive::Tuples => permute::tuples(ops, env)?,
 
             // Stack
@@ -1505,6 +1514,8 @@ impl ImplPrimitive {
                 env.push(random());
             }
             ImplPrimitive::CountUnique => env.monadic_ref(Value::count_unique)?,
+            ImplPrimitive::SplitByScalar => loops::split_by(true, env)?,
+            ImplPrimitive::SplitBy => loops::split_by(false, env)?,
             ImplPrimitive::MatchPattern => {
                 let expected = env.pop(1)?;
                 let got = env.pop(2)?;

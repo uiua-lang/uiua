@@ -86,6 +86,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &ReduceDepthOpt,
     &AdjacentOpt,
     &AstarOpt,
+    &SplitByOpt,
     &PopConst,
     &TraceOpt,
     &ValidateTypeOpt,
@@ -215,6 +216,57 @@ opt!(
         ImplMod(AstarPop, args.clone(), *span)
     ),
 );
+
+#[derive(Debug)]
+struct SplitByOpt;
+impl Optimization for SplitByOpt {
+    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
+        fn is_par_box(node: &Node) -> bool {
+            let Mod(Partition, args, _) = node else {
+                return false;
+            };
+            let [f] = args.as_slice() else {
+                return false;
+            };
+            matches!(f.node, Prim(Box, _))
+        }
+        for i in 0..nodes.len() {
+            match &nodes[i..] {
+                [Mod(By, args, span), last, ..]
+                    if is_par_box(last)
+                        && matches!(args.as_slice(), [f]
+                            if matches!(f.node, Prim(Ne, _))) =>
+                {
+                    replace_nodes(nodes, i, 2, ImplPrim(SplitByScalar, *span));
+                    break;
+                }
+                [Mod(By, args, span), Prim(Not, _), last, ..]
+                    if is_par_box(last)
+                        && matches!(args.as_slice(), [f]
+                            if matches!(f.node, Prim(Mask, _))) =>
+                {
+                    replace_nodes(nodes, i, 3, ImplPrim(SplitBy, *span));
+                    break;
+                }
+                [Prim(Dup, span), Push(delim), Prim(Ne, _), last, ..] if is_par_box(last) => {
+                    let new =
+                        Node::from_iter([Push(delim.clone()), ImplPrim(SplitByScalar, *span)]);
+                    replace_nodes(nodes, i, 4, new);
+                    break;
+                }
+                [Prim(Dup, span), Push(delim), Prim(Mask, _), Prim(Not, _), last, ..]
+                    if is_par_box(last) =>
+                {
+                    let new = Node::from_iter([Push(delim.clone()), ImplPrim(SplitBy, *span)]);
+                    replace_nodes(nodes, i, 5, new);
+                    break;
+                }
+                _ => {}
+            }
+        }
+        false
+    }
+}
 
 opt!(
     TraceOpt,

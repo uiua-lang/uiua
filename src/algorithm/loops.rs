@@ -252,11 +252,96 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn partition(ops: Ops, env: &mut Uiua) -> UiuaResult {
+pub fn split_by(scalar: bool, env: &mut Uiua) -> UiuaResult {
+    let delim = env.pop(1)?;
+    let haystack = env.pop(2)?;
+    if haystack.rank() > 1
+        || delim.rank() > 1
+        || scalar && !(delim.rank() == 0 || delim.rank() == 1 && delim.row_count() == 1)
+    {
+        let mask = if scalar {
+            delim.is_ne(haystack.clone(), 0, 0, env)?
+        } else {
+            delim.mask(&haystack, env)?.not(env)?
+        };
+        env.push(haystack);
+        env.push(mask);
+        return partition(
+            SigNode {
+                node: Node::Prim(Primitive::Box, 0),
+                sig: Signature::new(1, 1),
+            },
+            env,
+        );
+    }
+    let val = haystack.generic_bin_ref(
+        &delim,
+        |a, b| a.split_by(b, env),
+        |a, b| a.split_by(b, env),
+        |a, b| a.split_by(b, env),
+        |a, b| a.split_by(b, env),
+        |a, b| a.split_by(b, env),
+        |a, b| {
+            env.error(format!(
+                "Cannot split {} by {}",
+                a.type_name_plural(),
+                b.type_name_plural()
+            ))
+        },
+    )?;
+    env.push(val);
+    Ok(())
+}
+
+impl<T: ArrayValue> Array<T>
+where
+    Value: From<CowSlice<T>>,
+{
+    fn split_by(&self, delim: &Self, _env: &Uiua) -> UiuaResult<Array<Boxed>> {
+        let haystack = self.data.as_slice();
+        let delim_slice = delim.data.as_slice();
+        Ok(if delim.rank() == 0 || delim.row_count() == 1 {
+            let mut curr = 0;
+            let mut data = EcoVec::new();
+            let delim = &delim_slice[0];
+            for slice in haystack.split(|elem| elem.array_eq(delim)) {
+                if slice.is_empty() {
+                    curr += 1;
+                    continue;
+                }
+                let start = curr;
+                let end = start + slice.len();
+                data.push(Boxed(self.data.slice(start..end).into()));
+                curr = end + 1;
+            }
+            data.into()
+        } else {
+            let mut curr = 0;
+            let mut data = EcoVec::new();
+            while curr < haystack.len() {
+                let prev_end = haystack[curr..]
+                    .windows(delim_slice.len())
+                    .position(|win| win.iter().zip(delim_slice).all(|(a, b)| a.array_eq(b)))
+                    .map(|i| curr + i)
+                    .unwrap_or(haystack.len());
+                let next_start = prev_end + delim_slice.len();
+                if curr == prev_end {
+                    curr = next_start;
+                    continue;
+                }
+                data.push(Boxed(self.data.slice(curr..prev_end).into()));
+                curr = next_start;
+            }
+            data.into()
+        })
+    }
+}
+
+pub fn partition(f: SigNode, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     collapse_groups(
         Primitive::Partition,
-        ops,
+        f,
         Value::partition_groups,
         |val, markers, _| Ok(val.partition_firsts(markers)),
         |val, markers, _| Ok(val.partition_lasts(markers)),
@@ -642,11 +727,11 @@ fn update_array_at<T: Clone>(arr: &mut Array<T>, start: usize, new: &[T]) {
     arr.data.as_mut_slice()[start..end].clone_from_slice(new);
 }
 
-pub fn group(ops: Ops, env: &mut Uiua) -> UiuaResult {
+pub fn group(f: SigNode, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     collapse_groups(
         Primitive::Group,
-        ops,
+        f,
         Value::group_groups,
         Value::group_firsts,
         Value::group_lasts,
@@ -840,7 +925,7 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
 #[allow(clippy::too_many_arguments)]
 fn collapse_groups<I>(
     prim: Primitive,
-    ops: Ops,
+    f: SigNode,
     get_groups: impl Fn(Value, &Array<isize>) -> I,
     firsts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
     lasts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
@@ -852,7 +937,6 @@ where
     I: IntoIterator<Item = Value>,
     I::IntoIter: ExactSizeIterator,
 {
-    let [f] = get_ops(ops, env)?;
     let sig = f.sig;
     let indices = env.pop(1)?.as_integer_array(env, indices_error)?;
     let values: Vec<Value> = (0..sig.args.max(1))

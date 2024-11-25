@@ -785,6 +785,9 @@ code:
             };
             // Git import
             let mut url = url.trim().trim_end_matches(".git").to_string();
+            if url.ends_with("/uiua") {
+                return Err(self.error(span.clone(), "Cannot import what looks like a Uiua fork"));
+            }
             if ![".com", ".net", ".org", ".io", ".dev"]
                 .iter()
                 .any(|s| url.contains(s))

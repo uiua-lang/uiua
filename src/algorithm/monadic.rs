@@ -1647,13 +1647,24 @@ impl Value {
 impl Value {
     /// Convert a string value to a list of UTF-8 bytes
     pub fn utf8(&self, env: &Uiua) -> UiuaResult<Self> {
-        let s = self.as_string(env, "Argument to utf must be a string")?;
+        let s = self.as_string(env, "Argument to utf₈ must be a string")?;
         Ok(Array::<u8>::from_iter(s.into_bytes()).into())
+    }
+    /// Convert a string value to a list of UTF-16 code units
+    pub fn utf16(&self, env: &Uiua) -> UiuaResult<Self> {
+        let s = self.as_string(env, "Argument to utf₁₆ must be a string")?;
+        Ok(Array::<f64>::from_iter(s.encode_utf16().map(|u| u as f64)).into())
     }
     /// Convert a list of UTF-8 bytes to a string value
     pub fn unutf8(&self, env: &Uiua) -> UiuaResult<Self> {
-        let bytes = self.as_bytes(env, "Argument to inverse utf must be a list of bytes")?;
+        let bytes = self.as_bytes(env, "Argument to °utf₈ must be a list of bytes")?;
         let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
+        Ok(s.into())
+    }
+    /// Convert a list of UTF-16 code units to a string value
+    pub fn unutf16(&self, env: &Uiua) -> UiuaResult<Self> {
+        let code_units = self.as_u16s(env, "Argument to °utf₁₆ must be a list of code units")?;
+        let s = String::from_utf16(&code_units).map_err(|e| env.error(e))?;
         Ok(s.into())
     }
     /// Convert a string value to a list of boxed UTF-8 grapheme clusters

@@ -2885,6 +2885,12 @@ primitive!(
     /// Character math can only convert to and from UTF-32.
     /// ex: -@\0 "👩🏽‍👩🏻‍👦🏻‍👧🏽"
     /// ex: utf₈ "👩🏽‍👩🏻‍👦🏻‍👧🏽"
+    ///
+    /// You can subscript with `16` instead of `8` to get UTF-16.
+    /// ex: utf₁₆ "Hi! 😀"
+    /// If you are reading from a file, you'll have to convert the bytes to base 16 before decoding.
+    /// ex: [0 87 0 104 0 121 0 63 0 32 216 61 222 53]
+    ///   : °utf₁₆ ≡/(+×256) ↯∞_2
     (1, Utf8, Encoding, "utf₈"),
     /// Convert a string to a list of UTF-8 grapheme clusters
     ///
@@ -3623,7 +3629,8 @@ impl_primitive!(
     (1, UnBits),
     (1, UnWhere),
     (1(2), UnCouple),
-    (1, UnUtf),
+    (1, UnUtf8),
+    (1, UnUtf16),
     (1, UnGraphemes),
     (1(2), UnAtan),
     (1(2), UnComplex),
@@ -3712,6 +3719,7 @@ impl_primitive!(
     (2[1], SplitByScalar),
     (2[1], SplitBy),
     // Implementation details
+    (1, Utf16),
     (1[2], RepeatWithInverse),
     (2(1), ValidateType),
     (2(0), ValidateTypeConsume),

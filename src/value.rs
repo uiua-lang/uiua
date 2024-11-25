@@ -787,8 +787,19 @@ impl Value {
         self.as_number_list(
             env,
             requirement,
-            |f| f.fract() == 0.0 && (0.0..256.0).contains(&f),
+            |f| f.fract() == 0.0 && (0.0..=u8::MAX as f64).contains(&f),
             |f| f as u8,
+        )
+    }
+    /// Attempt to convert the array to a list of u16s
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_u16s(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<u16>> {
+        self.as_number_list(
+            env,
+            requirement,
+            |f| f.fract() == 0.0 && (0.0..=u16::MAX as f64).contains(&f),
+            |f| f as u16,
         )
     }
     /// Attempt to convert the array to a list of booleans

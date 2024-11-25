@@ -199,7 +199,9 @@ impl fmt::Display for ImplPrimitive {
             UnMap => write!(f, "{Un}{Map}"),
             UnAtan => write!(f, "{Un}{Atan}"),
             UnComplex => write!(f, "{Un}{Complex}"),
-            UnUtf => write!(f, "{Un}{Utf8}"),
+            UnUtf8 => write!(f, "{Un}{Utf8}"),
+            UnUtf16 => write!(f, "{Un}{Utf16}"),
+            Utf16 => write!(f, "utf₁₆"),
             UnGraphemes => write!(f, "{Un}{Graphemes}"),
             UnParse => write!(f, "{Un}{Parse}"),
             UnFix => write!(f, "{Un}{Fix}"),
@@ -1211,7 +1213,9 @@ impl ImplPrimitive {
                 env.push(keys);
             }
             ImplPrimitive::UnWhere => env.monadic_ref_env(Value::unwhere)?,
-            ImplPrimitive::UnUtf => env.monadic_ref_env(Value::unutf8)?,
+            ImplPrimitive::Utf16 => env.monadic_ref_env(Value::utf16)?,
+            ImplPrimitive::UnUtf8 => env.monadic_ref_env(Value::unutf8)?,
+            ImplPrimitive::UnUtf16 => env.monadic_ref_env(Value::unutf16)?,
             ImplPrimitive::UnGraphemes => env.monadic_env(Value::ungraphemes)?,
             ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
             ImplPrimitive::AntiDrop => env.dyadic_ro_env(Value::anti_drop)?,

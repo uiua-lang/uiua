@@ -1957,12 +1957,14 @@ code:
                         self.primitive(Primitive::Floor, span),
                     ])
                 }
-                Primitive::Utf8 => {
-                    if n != 8 {
-                        self.add_error(span.clone(), "Only UTF-8 is supported");
+                Primitive::Utf8 => match n {
+                    8 => self.primitive(Primitive::Utf8, span),
+                    16 => Node::ImplPrim(ImplPrimitive::Utf16, self.add_span(span)),
+                    _ => {
+                        self.add_error(span.clone(), "Only UTF-8 and UTF-16 are supported");
+                        self.primitive(Primitive::Utf8, span)
                     }
-                    self.primitive(prim, span)
-                }
+                },
                 Primitive::Couple => match n {
                     1 => self.primitive(Primitive::Fix, span),
                     2 => self.primitive(Primitive::Couple, span),

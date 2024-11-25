@@ -565,20 +565,7 @@ at {}",
             } => self.with_span(span, |env| {
                 algorithm::switch(branches, sig, under_cond, env)
             }),
-            Node::Format(parts, span) => {
-                let parts = parts.clone();
-                self.with_span(span, |env| {
-                    let mut s = String::new();
-                    for (i, part) in parts.into_iter().enumerate() {
-                        if i > 0 {
-                            s.push_str(&env.pop(("format argument", i))?.format());
-                        }
-                        s.push_str(&part);
-                    }
-                    env.push(s);
-                    Ok(())
-                })
-            }
+            Node::Format(parts, span) => self.with_span(span, |env| algorithm::format(&parts, env)),
             Node::MatchFormatPattern(parts, span) => {
                 self.with_span(span, |env| match_format_pattern(parts, env))
             }

@@ -269,6 +269,10 @@ pub(crate) fn extend_repeat_slice<T: Clone>(vec: &mut EcoVec<T>, slice: &[T], co
     }
 }
 
+pub(crate) fn ecovec_extend_cowslice<T: Clone>(vec: &mut EcoVec<T>, cowslice: CowSlice<T>) {
+    unsafe { vec.extend_from_trusted(cowslice) }
+}
+
 /// Exact sized repeating iterator
 pub(crate) struct Repeat<'a, T> {
     elem: &'a T,

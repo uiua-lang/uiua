@@ -12,13 +12,13 @@ use std::{
     option,
 };
 
-use ecow::EcoVec;
+use ecow::{EcoString, EcoVec};
 use tinyvec::TinyVec;
 
 use crate::{
-    Array, ArrayCmp, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops,
-    PersistentMeta, Shape, SigNode, Signature, Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
-    Value,
+    cowslice::ecovec_extend_cowslice, Array, ArrayCmp, ArrayValue, Boxed, CodeSpan, Complex,
+    ExactDoubleIterator, Inputs, Ops, PersistentMeta, Shape, SigNode, Signature, Span, Uiua,
+    UiuaError, UiuaErrorKind, UiuaResult, Value,
 };
 
 mod dyadic;
@@ -603,6 +603,33 @@ pub fn try_(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
         env.exec(handler)?;
     }
+    Ok(())
+}
+
+pub fn format(parts: &[EcoString], env: &mut Uiua) -> UiuaResult {
+    fn format_val(chars: &mut EcoVec<char>, val: Value) {
+        match val {
+            Value::Char(arr) if arr.rank() <= 1 => {
+                if chars.is_empty() {
+                    *chars = arr.data.into();
+                } else {
+                    ecovec_extend_cowslice(chars, arr.data);
+                }
+            }
+            Value::Box(arr) if arr.rank() == 0 => format_val(chars, arr.into_scalar().unwrap().0),
+            val => chars.extend(val.format().chars()),
+        }
+    }
+
+    let mut chars = EcoVec::new();
+    for (i, part) in parts.iter().enumerate() {
+        if i > 0 {
+            let value = env.pop(("format argument", i))?;
+            format_val(&mut chars, value);
+        }
+        chars.extend(part.chars());
+    }
+    env.push(chars);
     Ok(())
 }
 

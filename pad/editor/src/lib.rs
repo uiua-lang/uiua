@@ -1501,7 +1501,9 @@ pub fn Editor<'a>(
             files
                 .borrow()
                 .iter()
-                .filter(|(path, _)| !excluded_files.contains(&path.to_str().unwrap()))
+                .filter(|(path, _)| {
+                    !excluded_files.contains(&path.to_str().unwrap()) && !path.ends_with("lib.ua")
+                })
                 .map(|(path, _)| path.clone())
                 .collect::<Vec<_>>()
         })

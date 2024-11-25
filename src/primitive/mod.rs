@@ -1215,8 +1215,8 @@ impl ImplPrimitive {
             ImplPrimitive::UnGraphemes => env.monadic_env(Value::ungraphemes)?,
             ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
             ImplPrimitive::AntiDrop => env.dyadic_ro_env(Value::anti_drop)?,
-            ImplPrimitive::AntiSelect => env.dyadic_oo_env(Value::un_on_select)?,
-            ImplPrimitive::AntiPick => env.dyadic_oo_env(Value::un_on_pick)?,
+            ImplPrimitive::AntiSelect => env.dyadic_oo_env(Value::anti_select)?,
+            ImplPrimitive::AntiPick => env.dyadic_oo_env(Value::anti_pick)?,
             ImplPrimitive::UnJoin => {
                 let val = env.pop(1)?;
                 let (first, rest) = val.unjoin(env)?;

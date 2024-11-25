@@ -1051,24 +1051,24 @@ impl Value {
             },
         )
     }
-    pub(crate) fn un_on_select(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn anti_select(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         from.match_fill(env);
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         Ok(match from {
-            Value::Num(a) => Value::Num(a.un_on_select(indices_shape, &indices_data, env)?),
-            Value::Byte(a) => Value::Byte(a.un_on_select(indices_shape, &indices_data, env)?),
+            Value::Num(a) => Value::Num(a.anti_select(indices_shape, &indices_data, env)?),
+            Value::Byte(a) => Value::Byte(a.anti_select(indices_shape, &indices_data, env)?),
             Value::Complex(a) => {
-                Value::Complex(a.un_on_select(indices_shape, &indices_data, env)?)
+                Value::Complex(a.anti_select(indices_shape, &indices_data, env)?)
             }
-            Value::Char(a) => Value::Char(a.un_on_select(indices_shape, &indices_data, env)?),
-            Value::Box(a) => Value::Box(a.un_on_select(indices_shape, &indices_data, env)?),
+            Value::Char(a) => Value::Char(a.anti_select(indices_shape, &indices_data, env)?),
+            Value::Box(a) => Value::Box(a.anti_select(indices_shape, &indices_data, env)?),
         })
     }
-    pub(crate) fn un_on_pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn anti_pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         from.match_fill(env);
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         val_as_arr!(from, |a| a
-            .un_on_pick(indices_shape, &indices_data, env)
+            .anti_pick(indices_shape, &indices_data, env)
             .map(Into::into))
     }
 }
@@ -1306,7 +1306,7 @@ impl<T: ArrayValue> Array<T> {
 
         Ok(into)
     }
-    fn un_on_select(
+    fn anti_select(
         self,
         indices_shape: &[usize],
         indices: &[isize],
@@ -1322,6 +1322,16 @@ impl<T: ArrayValue> Array<T> {
         }
         let row_shape: Shape = self.shape[indices_shape.len()..].into();
         // Normalize indices
+        if let Some(i) = indices
+            .iter()
+            .find(|&&i| i < 0 && i.unsigned_abs() > indices.len())
+        {
+            return Err(env.error(format!(
+                "Cannot invert selection with negative index {i}, \
+                which is greater than the number of indices {}",
+                indices.len()
+            )));
+        }
         let normalized_indices: Vec<usize> = indices
             .iter()
             .map(|&i| normalize_index(i, indices.len()))
@@ -1342,6 +1352,7 @@ impl<T: ArrayValue> Array<T> {
                 env.error(format!(
                     "Cannot invert selection of non-total indices without a fill{e}"
                 ))
+                .fill()
             })?;
             if !row_shape.ends_with(&fill_arr.shape) {
                 return Err(env.error(format!(
@@ -1391,12 +1402,7 @@ impl<T: ArrayValue> Array<T> {
         shape.insert(0, row_count);
         Ok(Array::new(shape, data))
     }
-    fn un_on_pick(
-        self,
-        indices_shape: &[usize],
-        indices: &[isize],
-        env: &Uiua,
-    ) -> UiuaResult<Self> {
+    fn anti_pick(self, indices_shape: &[usize], indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
         // Validate shape
         let cell_shape = if let [init @ .., _] = indices_shape {
             // if self.shape.len() < init.len() {
@@ -1413,6 +1419,9 @@ impl<T: ArrayValue> Array<T> {
         };
         let cell_size: usize = cell_shape.iter().product();
         let index_size = indices_shape.last().copied().unwrap_or(1);
+        if indices.iter().any(|&i| i < 0) {
+            return Err(env.error("Cannot invert pick with negative indidices"));
+        }
         // Normalize indices
         let normalized_indices: Vec<usize> = indices
             .iter()
@@ -1454,6 +1463,7 @@ impl<T: ArrayValue> Array<T> {
                 env.error(format!(
                     "Cannot invert pick of non-total indices without a fill{e}"
                 ))
+                .fill()
             })?;
             if !cell_shape.ends_with(&fill_arr.shape) {
                 return Err(env.error(format!(

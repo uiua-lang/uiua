@@ -1927,7 +1927,7 @@ code:
                         self.primitive(Primitive::Pow, span),
                     ])
                 }
-                Primitive::Round => {
+                Primitive::Round | Primitive::Floor | Primitive::Ceil => {
                     let mul = 10f64.powi(n);
                     Node::from_iter([
                         Node::new_push(mul),

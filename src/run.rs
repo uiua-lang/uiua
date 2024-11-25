@@ -550,6 +550,7 @@ at {}",
                 inner,
                 boxed,
                 span,
+                ..
             } => self.with_span(span, |env| env.make_array(len, *inner, boxed)),
             Node::Call(f, span) => self.call_with_span(&f, span),
             Node::CustomInverse(cust, span) => match cust.normal {
@@ -633,13 +634,26 @@ at {}",
                     })?
                     .clone()(self)
             })(),
-            Node::Unpack { count, span, unbox } => self.with_span(span, |env| {
+            Node::Unpack {
+                count,
+                span,
+                prim,
+                unbox,
+            } => self.with_span(span, |env| {
                 let arr = env.pop(1)?;
                 if arr.row_count() != count {
+                    let prim_text;
                     return Err(env.error(format!(
                         "This °{} expects an array with {} rows, \
-                            but the array has {}",
-                        if unbox { "{}" } else { "[]" },
+                        but the array has {}",
+                        if let Some(prim) = prim {
+                            prim_text = prim.to_string();
+                            prim_text.as_str()
+                        } else if unbox {
+                            "{}"
+                        } else {
+                            "[]"
+                        },
                         count,
                         arr.row_count()
                     )));

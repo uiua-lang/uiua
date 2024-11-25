@@ -325,6 +325,7 @@ impl Compiler {
                 len: ArrayLen::Static(fields.len()),
                 inner: inner.into(),
                 boxed,
+                prim: None,
                 span,
             }
         } else {

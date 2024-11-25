@@ -1237,6 +1237,7 @@ code:
                     len: ArrayLen::Static(sig.outputs),
                     inner: inner.into(),
                     boxed: false,
+                    prim: None,
                     span,
                 }
             }
@@ -1351,6 +1352,7 @@ code:
                     len,
                     inner: inner.into(),
                     boxed: arr.boxes,
+                    prim: None,
                     span,
                 }
             }
@@ -1958,6 +1960,7 @@ code:
                         )?),
                         inner: Node::empty().into(),
                         boxed: false,
+                        prim: Some(Primitive::Couple),
                         span: self.add_span(span),
                     },
                 },
@@ -1969,6 +1972,7 @@ code:
                     )?),
                     inner: Node::empty().into(),
                     boxed: true,
+                    prim: Some(Primitive::Box),
                     span: self.add_span(span),
                 },
                 Primitive::Stack => Node::ImplPrim(

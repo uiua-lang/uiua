@@ -306,6 +306,7 @@ inverse!(
         len,
         inner,
         boxed,
+        prim,
         span
     },
     {
@@ -316,6 +317,7 @@ inverse!(
                     count: *len,
                     unbox: *boxed,
                     span: *span,
+                    prim: *prim,
                 });
                 Ok((input, inv))
             }
@@ -415,6 +417,7 @@ inverse!(
     Unpack {
         count,
         unbox,
+        prim,
         span,
         ..
     },
@@ -424,6 +427,7 @@ inverse!(
             len: ArrayLen::Static(count),
             inner: Node::empty().into(),
             boxed: unbox,
+            prim,
             span,
         });
         Ok((&[], inv))

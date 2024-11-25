@@ -19,7 +19,7 @@ use crate::{
 };
 
 node!(
-    Array { len: ArrayLen, inner: Box<Node>, boxed: bool, span: usize },
+    Array { len: ArrayLen, inner: Box<Node>, boxed: bool, prim: Option<Primitive>, span: usize },
     CallGlobal(index(usize), sig(Signature)),
     CallMacro { index: usize, sig: Signature, span: usize },
     BindGlobal { index: usize, span: usize },
@@ -29,7 +29,7 @@ node!(
     MatchFormatPattern(parts(EcoVec<EcoString>), span(usize)),
     CustomInverse(cust(Box<CustomInverse>), span(usize)),
     Switch { branches: Ops, sig: Signature, under_cond: bool, span: usize },
-    Unpack { count: usize, unbox: bool, span: usize },
+    Unpack { count: usize, unbox: bool, prim: Option<Primitive>, span: usize },
     SetOutputComment { i: usize, n: usize },
     ValidateType { index: usize, type_num: u8, name: EcoString, span: usize },
     Dynamic(func(DynamicFunction)),

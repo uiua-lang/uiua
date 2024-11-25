@@ -50,7 +50,7 @@ fn use_window() -> bool {
 fn set_use_window(use_window: bool) {
     #[cfg(feature = "window")]
     {
-        uiua::window::set_use_window(use_window);
+        uiua::window::set_use_window(use_window || env::var("UIUA_WINDOW").is_ok());
     }
     #[cfg(not(feature = "window"))]
     if use_window {
@@ -97,6 +97,10 @@ fn main() {
     if cfg!(feature = "profile") {
         uiua::profile::run_profile();
         return;
+    }
+    #[cfg(feature = "window")]
+    if env::args().count() == 2 && env::args().nth(1).unwrap() == "window" {
+        uiua::window::run_window();
     }
     #[cfg(feature = "stand")]
     if let Some(asm) = &*uiua::stand::STAND_ASM {
@@ -392,8 +396,6 @@ fn main() {
         }
         Some(Comm::Doc { name }) => doc(&name),
         Some(Comm::Find { path, text, raw }) => find(path, text, raw).unwrap_or_else(fail),
-        #[cfg(feature = "window")]
-        Some(Comm::Window) => uiua::window::run_window(),
         None => {
             #[cfg(feature = "window")]
             uiua::window::set_use_window(app.window);
@@ -718,7 +720,12 @@ struct App {
     #[clap(subcommand)]
     command: Option<Comm>,
     file: Option<PathBuf>,
-    #[clap(short, long, help = "Use a window for output instead of stdout")]
+    #[clap(
+        short,
+        long,
+        help = "Use a window for output instead of stdout. \
+                Set UIUA_WINDOW=1 to always use a window."
+    )]
     window: bool,
     #[clap(trailing_var_arg = true, help = "Arguments to pass to the program")]
     args: Vec<String>,
@@ -746,7 +753,12 @@ enum Comm {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
-        #[clap(short, long, help = "Use a window for output instead of stdout")]
+        #[clap(
+            short,
+            long,
+            help = "Use a window for output instead of stdout. \
+                    Set UIUA_WINDOW=1 to always use a window."
+        )]
         window: bool,
         #[clap(trailing_var_arg = true, help = "Arguments to pass to the program")]
         args: Vec<String>,
@@ -788,7 +800,12 @@ enum Comm {
         formatter_options: FormatterOptions,
         #[clap(long, help = "Clear the terminal on file change")]
         clear: bool,
-        #[clap(short, long, help = "Use a window for output instead of stdout")]
+        #[clap(
+            short,
+            long,
+            help = "Use a window for output instead of stdout. \
+                    Set UIUA_WINDOW=1 to always use a window."
+        )]
         window: bool,
         #[clap(long, help = "Read stdin from file")]
         stdin_file: Option<PathBuf>,
@@ -855,8 +872,6 @@ enum Comm {
     #[cfg(feature = "lsp")]
     #[clap(about = "Run the Language Server")]
     Lsp,
-    #[cfg(feature = "window")]
-    Window,
 }
 
 #[derive(Subcommand)]

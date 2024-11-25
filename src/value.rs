@@ -1692,6 +1692,7 @@ value_bin_math_impl!(
 );
 value_bin_math_impl!(div, (Num, Char, num_char), (Byte, Char, byte_char),);
 value_bin_math_impl!(modulus, (Complex, Complex, com_com));
+value_bin_math_impl!(or, [|meta| meta.flags.is_boolean(), Byte, bool_bool]);
 value_bin_math_impl!(pow);
 value_bin_math_impl!(root);
 value_bin_math_impl!(log);

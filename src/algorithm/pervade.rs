@@ -1,6 +1,8 @@
 //! Algorithms for pervasive array operations
 
-use std::{cmp::Ordering, convert::Infallible, fmt::Display, iter::repeat, marker::PhantomData};
+use std::{
+    cmp::Ordering, convert::Infallible, fmt::Display, iter::repeat, marker::PhantomData, mem::swap,
+};
 
 use ecow::eco_vec;
 
@@ -1332,6 +1334,88 @@ pub mod modulus {
         env.error(format!("Cannot modulo {a} and {b}"))
     }
 }
+
+pub mod or {
+
+    use super::*;
+
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        if (1.0..=u128::MAX as f64).contains(&a)
+            && (1.0..=u128::MAX as f64).contains(&b)
+            && a.fract() == 0.0
+            && b.fract() == 0.0
+        {
+            let mut a = a as u128;
+            let mut b = b as u128;
+            let shift = (a | b).trailing_zeros();
+            a >>= shift;
+            b >>= shift;
+            a >>= a.trailing_zeros();
+            loop {
+                b >>= b.trailing_zeros();
+                if a > b {
+                    swap(&mut a, &mut b);
+                }
+                b -= a;
+                if b == 0 {
+                    break;
+                }
+            }
+            return (a << shift) as f64;
+        }
+        fn recurse(a: f64, b: f64) -> f64 {
+            if b.abs() <= 8.0 * f64::EPSILON {
+                return a;
+            }
+            recurse(b, a.rem_euclid(b))
+        }
+        recurse(a, b)
+    }
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        num_num(b.into(), a)
+    }
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        num_num(a.into(), b)
+    }
+    pub fn byte_byte(mut a: u8, mut b: u8) -> u8 {
+        if a == 0 {
+            return b;
+        }
+        if b == 0 {
+            return a;
+        }
+        let shift = (a | b).trailing_zeros();
+        a >>= shift;
+        b >>= shift;
+        a >>= a.trailing_zeros();
+        loop {
+            b >>= b.trailing_zeros();
+            if a > b {
+                swap(&mut a, &mut b);
+            }
+            b -= a;
+            if b == 0 {
+                break;
+            }
+        }
+        a << shift
+    }
+    pub fn bool_bool(a: u8, b: u8) -> u8 {
+        a | b
+    }
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        let b = b.into();
+        Complex::new(num_num(a.re, b.re), num_num(a.im, b.im))
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        let a = a.into();
+        Complex::new(num_num(a.re, b.re), num_num(a.im, b.im))
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot or {a} and {b}"))
+    }
+}
+
 bin_op_mod!(
     atan2,
     a,

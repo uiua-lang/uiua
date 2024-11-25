@@ -125,6 +125,17 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     modulus::num_byte,
                 )
                 .into(),
+                Primitive::Or => {
+                    let byte_fill = env.scalar_fill::<u8>().ok();
+                    if fill.is_some() && byte_fill.is_none() {
+                        fast_reduce_different(bytes, 0.0, fill, depth, or::num_num, or::num_byte)
+                            .into()
+                    } else if bytes.meta().flags.is_boolean() {
+                        fast_reduce(bytes, 0, byte_fill, depth, or::bool_bool).into()
+                    } else {
+                        fast_reduce(bytes, 0, byte_fill, depth, or::byte_byte).into()
+                    }
+                }
                 Primitive::Atan if flipped => fast_reduce_different(
                     bytes,
                     0.0,
@@ -332,6 +343,7 @@ macro_rules! reduce_math {
                 Primitive::Modulus => {
                     fast_reduce(xs, f64::INFINITY.into(), fill, depth, modulus::$f)
                 }
+                Primitive::Or => fast_reduce(xs, 0.0.into(), fill, depth, or::$f),
                 #[cfg(feature = "opt")]
                 Primitive::Atan if _flipped => {
                     fast_reduce(xs, 0.0.into(), fill, depth, flip(atan2::$f))
@@ -1046,6 +1058,7 @@ pub fn adjacent(ops: Ops, env: &mut Uiua) -> UiuaResult {
             Primitive::Div => fast_adjacent(nums, n, env, div::num_num),
             Primitive::Modulus if flipped => fast_adjacent(nums, n, env, flip(modulus::num_num)),
             Primitive::Modulus => fast_adjacent(nums, n, env, modulus::num_num),
+            Primitive::Or => fast_adjacent(nums, n, env, or::num_num),
             Primitive::Atan if flipped => fast_adjacent(nums, n, env, flip(atan2::num_num)),
             Primitive::Atan => fast_adjacent(nums, n, env, atan2::num_num),
             Primitive::Max => fast_adjacent(nums, n, env, max::num_num),

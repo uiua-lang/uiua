@@ -390,6 +390,7 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::Pi, &["pi"]),
         (Primitive::Fix, &["fx"]),
         (Primitive::Box, &["bx"]),
+        (Primitive::Mul, &["and"]),
         (Primitive::IndexOf, &["idx"]),
         (Primitive::Switch, &["sw"]),
         (Primitive::Floor, &["flr", "flor"]),
@@ -545,7 +546,7 @@ impl Primitive {
             self,
             (Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
-                | (Chunks | Base | Fft | Case | Layout | Binary)
+                | (Or | Chunks | Base | Fft | Case | Layout | Binary)
                 | (Astar | Triangle)
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
@@ -783,6 +784,7 @@ impl Primitive {
             Primitive::Mul => env.dyadic_oo_00_env(Value::mul)?,
             Primitive::Div => env.dyadic_oo_00_env(Value::div)?,
             Primitive::Modulus => env.dyadic_oo_00_env(Value::modulus)?,
+            Primitive::Or => env.dyadic_oo_00_env(Value::or)?,
             Primitive::Pow => env.dyadic_oo_00_env(Value::pow)?,
             Primitive::Log => env.dyadic_oo_00_env(Value::log)?,
             Primitive::Min => env.dyadic_oo_00_env(Value::min)?,

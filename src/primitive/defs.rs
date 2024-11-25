@@ -973,6 +973,17 @@ primitive!(
     /// ex: ♭5
     /// ex: ♭[1 2 3]
     /// ex: ♭.[1_2 3_4 5_6]
+    /// Subscripted [deshape] collapses the upper dimensions of the array until it is the given rank.
+    /// ex: △ ♭  °△2_3_4_5
+    ///   : △ ♭₂ °△2_3_4_5
+    ///   : △ ♭₃ °△2_3_4_5
+    /// Negative subscripts are relative to the rank of the array.
+    /// ex: △ ♭₋₁ °△2_3_4_5
+    ///   : △ ♭₋₂ °△2_3_4_5
+    ///   : △ ♭₋₃ °△2_3_4_5
+    /// If the subscript rank is greater than the rank of the array, length-1 axes are added to the front for the shape
+    /// ex: ♭₂ [1 2 3]
+    ///   : ♭₃ [1 2 3]
     ///
     /// It looks like `♭` because it *flat*tens the array.
     ///
@@ -1186,6 +1197,11 @@ primitive!(
     /// This is the main way to [join] a list of [box]ed strings.
     /// ex: /◇⊂       {"Join" "these" "strings"}
     /// ex: /◇(⊂⊂:@ ) {"Join" "these" "strings"}
+    ///
+    /// Subscripted [box] combines that many values into a list of boxes
+    /// ex: □₂ 5 "abc"
+    /// ex: □₃ 1 2_3 4_5_6
+    /// ex: □₀
     (1, Box, MonadicArray, ("box", '□')),
     /// Parse a string as a number
     ///
@@ -1242,6 +1258,12 @@ primitive!(
     /// ex: ⊟ [1 2 3] 4
     /// ex: ⊟ [1_2 3_4] 5
     /// ex: ⊟ [1_2 3_4] 5_6
+    ///
+    /// Subscripted [couple] combines that many arrays
+    /// ex: ⊟₃ 1_2 3_4 5_6
+    /// ex: ⊟₄ @a @b @c @d
+    /// ex: ⊟₁ 5
+    /// ex: ⊟₀
     ///
     /// By default, arrays with different shape suffixes cannot be [couple]d.
     /// ex! ⊟ [1 2 3] [4 5]
@@ -1876,6 +1898,12 @@ primitive!(
     /// If the function is already pervasive, then [each] is redundant.
     /// ex! ∵+ 1_2_3 4_5_6
     /// ex:  + 1_2_3 4_5_6
+    ///
+    /// Subscripted [each] operates on rank-N subarrays.
+    /// ex: ∵₀□ °△2_3_4
+    ///   : ∵₁□ °△2_3_4
+    ///   : ∵₂□ °△2_3_4
+    ///   : ∵₃□ °△2_3_4
     ([1], Each, IteratingModifier, ("each", '∵')),
     /// Apply a function to each row of an array or arrays
     ///
@@ -1899,7 +1927,37 @@ primitive!(
     /// ex: ≡⊂ ¤  1_2_3 4_5_6
     /// ex: ≡⊂ ⊙¤ 1_2_3 4_5_6
     /// [fold] also has this behavior.
+    ///
+    /// Subscripted [rows] operates N subarrays deep.
+    /// ex: ≡₀□ °△2_3_4
+    ///   : ≡₁□ °△2_3_4
+    ///   : ≡₂□ °△2_3_4
+    ///   : ≡₃□ °△2_3_4
     ([1], Rows, IteratingModifier, ("rows", '≡')),
+    /// Apply a function to each unboxed row of an array and re-box the results
+    ///
+    /// For box arrays, this is equivalent to `rows``under``un``box`.
+    /// ex: ≡⍜°□(⊂:@!) {"a" "bc" "def"}
+    ///   :    ⍚(⊂:@!) {"a" "bc" "def"}
+    /// For non-box arrays, [inventory] works identically to [rows], except it [box]es each result row.
+    /// ex: ≡⇌ [1_2_3 4_5_6]
+    ///   : ⍚⇌ [1_2_3 4_5_6]
+    /// This can be useful when you expect the function to yield arrays of different [shape]s.
+    /// ex: ⍚⇡ [3 8 5 4]
+    /// ex: ⍚↙⊙¤ [2 0 3 4 1] [4 8 9 2]
+    /// For a box and non-box array, [inventory] will unbox the box array's rows and then re-box the results.
+    /// ex: ⍚⊂ {"a" "bc" "def"} "123"
+    ///
+    /// A common use case is in conjunction with [under] and boxing array notation as a sort of n-wise [both].
+    /// ex: {⍜ {⊙⊙∘}⍚⊂    1_2 3_4_5 6_7_8_9 10}
+    ///   : {⍜⊙{⊙⊙∘}⍚⊂ 10 1_2 3_4_5 6_7_8_9   }
+    ///
+    /// Subscripted [rows] operates N subarrays deep.
+    /// ex: ⍚₀∘ °△2_3_4
+    ///   : ⍚₁∘ °△2_3_4
+    ///   : ⍚₂∘ °△2_3_4
+    ///   : ⍚₃∘ °△2_3_4
+    ([1], Inventory, IteratingModifier, ("inventory", '⍚')),
     /// Apply a function to each combination of rows of some arrays
     ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
@@ -1978,25 +2036,10 @@ primitive!(
     /// We can get something similar with the monadic form.
     /// ex: # Experimental!
     ///   : ⬚0⧅∘ +1⇡50
+    ///
+    /// The tuple size may be given as a subscript.
+    /// ex: ⧅₂< ⇡4
     ([1], Tuples, IteratingModifier, ("tuples", '⧅')),
-    /// Apply a function to each unboxed row of an array and re-box the results
-    ///
-    /// For box arrays, this is equivalent to `rows``under``un``box`.
-    /// ex: ≡⍜°□(⊂:@!) {"a" "bc" "def"}
-    ///   :    ⍚(⊂:@!) {"a" "bc" "def"}
-    /// For non-box arrays, [inventory] works identically to [rows], except it [box]es each result row.
-    /// ex: ≡⇌ [1_2_3 4_5_6]
-    ///   : ⍚⇌ [1_2_3 4_5_6]
-    /// This can be useful when you expect the function to yield arrays of different [shape]s.
-    /// ex: ⍚⇡ [3 8 5 4]
-    /// ex: ⍚↙⊙¤ [2 0 3 4 1] [4 8 9 2]
-    /// For a box and non-box array, [inventory] will unbox the box array's rows and then re-box the results.
-    /// ex: ⍚⊂ {"a" "bc" "def"} "123"
-    ///
-    /// A common use case is in conjunction with [under] and boxing array notation as a sort of n-wise [both].
-    /// ex: {⍜ {⊙⊙∘}⍚⊂    1_2 3_4_5 6_7_8_9 10}
-    ///   : {⍜⊙{⊙⊙∘}⍚⊂ 10 1_2 3_4_5 6_7_8_9   }
-    ([1], Inventory, IteratingModifier, ("inventory", '⍚')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2)5 0
@@ -2013,6 +2056,10 @@ primitive!(
     ///   : F 12
     /// [repeat]ing a negative number of times will repeat the function's [un]-inverse.
     /// ex: ⍥(×2)¯5 1024
+    ///
+    /// The repetition count may be given as a subscript
+    /// ex: ⍥₅(×2) 32
+    ///   : ⍥₋₅(×2) 1024
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
     ([1], Repeat, IteratingModifier, ("repeat", '⍥')),

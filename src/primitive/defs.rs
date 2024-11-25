@@ -1470,30 +1470,30 @@ primitive!(
     /// ex: ↘ 5 ↯3_3⇡9
     /// ex: ↘ ¯5 ↯3_3⇡9
     ///
-    /// [un] can be used with [drop] to pad an array. Because this takes the same number of arguments as [drop], [on] (and likely [pop]) are required to make the inverse correct.
+    /// [anti][drop] pads an array.
     /// By default, the pad value is a "zero element" of the array's type.
     /// - For number arrays, it is `0`.
     /// - For character arrays, it is `@ ` (space).
     /// - For complex arrays, it is `0ℂ`.
     /// - For box arrays, it is `⟦⟧`.
     /// A scalar first argument will pad the first axis of the array on both sides.
-    /// ex: ◌°⟜↘ 2 [1 2 3]
-    /// ex: ◌°⟜↘ ¯2 [1 2 3]
-    /// ex: ◌°⟜↘ 3 "Hello!"
-    /// ex: ◌°⟜↘ 1 [1_2 3_4]
+    /// ex: ⌝↘ 2 [1 2 3]
+    /// ex: ⌝↘ ¯2 [1 2 3]
+    /// ex: ⌝↘ 3 "Hello!"
+    /// ex: ⌝↘ 1 [1_2 3_4]
     /// [fill] can be used to set the fill value. Non-scalar fills are allowed if they are compatible with the array's shape.
-    /// ex: ◌⬚10°⟜↘ 2 [1 2 3]
-    /// ex: ◌⬚@-°⟜↘ 2 "abc"
-    /// ex: ◌⬚10°⟜↘ 1 [1_2 3_4]
-    /// ex: ◌⬚10_20°⟜↘ 1 [1_2 3_4]
+    /// ex: ⬚10⌝↘ 2 [1 2 3]
+    /// ex: ⬚@-⌝↘ 2 "abc"
+    /// ex: ⬚10⌝↘ 1 [1_2 3_4]
+    /// ex: ⬚10_20⌝↘ 1 [1_2 3_4]
     /// If the first argument is a list, each axis will be padded on both sides with the corresponding amount.
-    /// ex: ◌°⟜↘ 1_2 [1_2 3_4]
-    /// ex: ◌°⟜↘ 1_¯2 [1_2 3_4]
-    /// ex: ◌°⟜↘ ¯1_2 +1°△2_2_4
-    /// ex: ◌°⟜↘ ¯1_1_2 +1°△2_2_4
-    /// ex: ◌°⟜↘ ¯1_0_2 +1°△2_2_4
+    /// ex: ⌝↘ 1_2 [1_2 3_4]
+    /// ex: ⌝↘ 1_¯2 [1_2 3_4]
+    /// ex: ⌝↘ ¯1_2 +1°△2_2_4
+    /// ex: ⌝↘ ¯1_1_2 +1°△2_2_4
+    /// ex: ⌝↘ ¯1_0_2 +1°△2_2_4
     /// This can be good for padding images.
-    /// ex: ⬚(⊂:1Purple)(◌°⟜↘¯°⟜↘) 20_20 Logo
+    /// ex: ⬚(⊂:1Purple|⌝↘¯⟜⌝↘) 20_20 Logo
     (2, Drop, DyadicArray, ("drop", '↘')),
     /// Rotate the elements of an array by n
     ///

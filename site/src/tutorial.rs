@@ -1356,7 +1356,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="∵□ °△2_3_4\n∵₁□ °△2_3_4\n∵₂□ °△2_3_4"/>
         <p>"Sometimes you simply want to collapse the dimensions of an array to make it a certain rank. This can be done with subscripted "<Prim prim=Deshape/>"."</p>
         <Editor example="△ ♭ °△2_3_4_5\n△ ♭₂ °△2_3_4_5\n△ ♭₃ °△2_3_4_5\n△ ♭₄ °△2_3_4_5"/>
-        <p>"Combined with "<Prim prim=Range/>", this is a nice way to generate all combinations of indices given a list of maxumims."</p>
+        <p>"Combined with "<Prim prim=Range/>", this is a nice way to generate all combinations of indices given a list of maximums."</p>
         <Editor example="⍉ ♭₂ ⇡2_2_3"/>
         <p>"Subscripting these works in the vast majority of cases. However, subscripts are static. The rank to use cannot be taken from the stack."</p>
         <p>"In the rare event that you need a dynamic rank, you can use the "<Prims prims=[Un, By]/><code>"("</code><Prims prims=[Len, Shape]/><code>")"</code>" idiom introduced in the "<A href="/tutorial/inverses#un-by">"Inverses"</A>" tutorial."</p>

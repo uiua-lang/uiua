@@ -564,6 +564,10 @@ impl VirtualEnv {
                     }
                     self.node(&f.node)?;
                 }
+                ImplPrimitive::UnBracket => {
+                    let [f, g] = get_args(args)?;
+                    self.handle_args_outputs(f.args + g.args, f.outputs + g.outputs);
+                }
                 prim => {
                     let args = prim.args();
                     for _ in 0..args {

@@ -223,6 +223,7 @@ impl fmt::Display for ImplPrimitive {
             UnFft => write!(f, "{Un}{Fft}"),
             UnDatetime => write!(f, "{Un}{DateTime}"),
             UnBoth => write!(f, "{Un}{Both}"),
+            UnBracket => write!(f, "{Un}{Bracket}"),
             ImageDecode => write!(f, "{Un}{ImageEncode}"),
             GifDecode => write!(f, "{Un}{GifEncode}"),
             AudioDecode => write!(f, "{Un}{AudioEncode}"),
@@ -1709,6 +1710,13 @@ impl ImplPrimitive {
                 let vals = env.take_n(f.sig.outputs)?;
                 env.exec(f.node)?;
                 env.push_all(vals);
+            }
+            ImplPrimitive::UnBracket => {
+                let [f, g] = get_ops(ops, env)?;
+                env.exec(f.node)?;
+                let f_outputs = env.pop_n(f.sig.outputs)?;
+                env.exec(g.node)?;
+                env.push_all(f_outputs);
             }
             ImplPrimitive::EachSub(n)
             | ImplPrimitive::RowsSub(n)

@@ -151,6 +151,8 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &ArrayPat,
     &UnpackPat,
     &DipPat,
+    &BothPat,
+    &BracketPat,
     &OnPat,
     &ByPat,
     &RowsPat,
@@ -329,6 +331,17 @@ inverse!(
 inverse!(DipPat, input, asm, Dip, span, [f], {
     let inv = f.un_inverse(asm)?;
     Ok((input, Mod(Dip, eco_vec![inv], span)))
+});
+
+inverse!(BothPat, input, asm, Both, span, [f], {
+    let inv = f.un_inverse(asm)?;
+    Ok((input, ImplMod(UnBoth, eco_vec![inv], span)))
+});
+
+inverse!(BracketPat, input, asm, Bracket, span, [f, g], {
+    let f_inv = f.un_inverse(asm)?;
+    let g_inv = g.un_inverse(asm)?;
+    Ok((input, ImplMod(UnBracket, eco_vec![f_inv, g_inv], span)))
 });
 
 inverse!(OnPat, input, asm, On, span, [f], {

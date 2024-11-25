@@ -1427,6 +1427,14 @@ a.clean {
             #FFF000 70%);
 }
 
+@media (prefers-color-scheme: dark) {
+
+    .image-visibility {
+        -webkit-filter: invert(1);
+        filter: invert(1);
+    }
+}
+
 @media (prefers-color-scheme: light) {
 
     .trans,

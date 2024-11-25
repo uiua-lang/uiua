@@ -124,7 +124,10 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         }
         NodeValue::Link(link) => {
             let text = leaf_text(node).unwrap_or_default();
-            let name = text.rsplit_once(' ').map(|(name, _)| name).unwrap_or(&text);
+            let name = text
+                .rsplit_once(' ')
+                .map(|(a, b)| if a.len() > b.len() { a } else { b })
+                .unwrap_or(&text);
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 view!(<Prim prim=prim/>).into_view()
             } else {
@@ -154,6 +157,15 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
             }
         }
         NodeValue::ThematicBreak => view!(<hr/>).into_view(),
+        NodeValue::Image(image) => {
+            let mut class = "";
+            let mut alt = leaf_text(node).unwrap_or_default();
+            if let Some(a) = alt.strip_suffix("(invert)") {
+                alt = a.trim_end().into();
+                class = "image-visibility";
+            }
+            view!(<img src={&image.url} alt={alt.clone()} title=alt class=class/>).into_view()
+        }
         _ => children.into_view(),
     }
 }
@@ -215,7 +227,10 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         }
         NodeValue::Link(link) => {
             let text = leaf_text(node).unwrap_or_default();
-            let name = text.rsplit_once(' ').map(|(name, _)| name).unwrap_or(&text);
+            let name = text
+                .rsplit_once(' ')
+                .map(|(a, b)| if a.len() > b.len() { a } else { b })
+                .unwrap_or(&text);
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 let symbol_class = format!("prim-glyph {}", prim_class(prim));
                 let symbol = prim.to_string();
@@ -307,6 +322,18 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
             format!("<code class=\"code-block\">{text}</code>")
         }
         NodeValue::ThematicBreak => "<hr/>".into(),
+        NodeValue::Image(image) => {
+            let mut class = "";
+            let mut alt = leaf_text(node).unwrap_or_default();
+            if let Some(a) = alt.strip_suffix("(invert)") {
+                alt = a.trim_end().into();
+                class = "image-visibility";
+            }
+            format!(
+                r#"<img src="{}" alt="{alt}" title="{alt}" class="{class}"/>"#,
+                image.url
+            )
+        }
         _ => children,
     }
 }

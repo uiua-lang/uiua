@@ -467,6 +467,7 @@ pub fn PadPage() -> impl IntoView {
             { EDITOR_SHORTCUTS }
         </code>
         <p>"Want a pad-like experience in the native interpreter? Try the "<code>"uiua -w"</code>" command to show output in a window."</p>
+        <p>"You can download the newest version of the native interpreter "<a href="https://github.com/uiua-lang/uiua/releases">"here"</a>"."</p>
     }
 }
 

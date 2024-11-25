@@ -765,7 +765,8 @@ impl Compiler {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let op_span = operand.span.clone();
                 let full_span = modified.modifier.span.clone().merge(op_span);
-                let words_look_pervasive = words_look_pervasive(slice::from_ref(&operand));
+                let words_look_pervasive = subscript.map_or(true, |sub| sub == Subscript::N(0))
+                    && words_look_pervasive(slice::from_ref(&operand));
                 let sn = self.word_sig(operand)?;
                 if words_look_pervasive {
                     self.emit_diagnostic(

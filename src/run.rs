@@ -551,10 +551,10 @@ at {}",
                 boxed,
                 span,
                 ..
-            } => self.with_span(span, |env| env.make_array(len, *inner, boxed)),
+            } => self.with_span(span, |env| env.make_array(len, inner.into(), boxed)),
             Node::Call(f, span) => self.call_with_span(&f, span),
-            Node::CustomInverse(cust, span) => match cust.normal {
-                Ok(normal) => self.exec_with_span(normal, span),
+            Node::CustomInverse(cust, span) => match &cust.normal {
+                Ok(normal) => self.exec_with_span(normal.clone(), span),
                 Err(e) => self.with_span(span, |env| Err(env.error(e))),
             },
             Node::Switch {
@@ -702,10 +702,10 @@ at {}",
                 env.rt.stack.extend(env.rt.under_stack.drain(start..).rev());
                 Ok(())
             }),
-            Node::NoInline(inner) => self.exec(*inner),
+            Node::NoInline(inner) => self.exec(inner),
             Node::TrackCaller(inner) => {
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
-                self.exec(*inner)
+                self.exec(inner)
             }
         };
         if self.rt.time_instrs {

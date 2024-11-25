@@ -28,7 +28,7 @@ pathdiff = "0.2.1"
 rand = {version = "0.8.5", features = ["small_rng"]}
 rayon = "1.9.0"
 regex = "1.10.3"
-serde = {version = "1", features = ["derive"]}
+serde = {version = "1", features = ["derive", "rc"]}
 serde_json = "1"
 serde_tuple = "0.5.0"
 thread_local = "1"

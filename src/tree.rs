@@ -6,6 +6,7 @@ use std::{
     mem::{discriminant, swap, take},
     ops::Deref,
     slice::{self, SliceIndex},
+    sync::Arc,
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
@@ -19,7 +20,7 @@ use crate::{
 };
 
 node!(
-    Array { len: ArrayLen, inner: Box<Node>, boxed: bool, prim: Option<Primitive>, span: usize },
+    Array { len: ArrayLen, inner: Arc<Node>, boxed: bool, prim: Option<Primitive>, span: usize },
     CallGlobal(index(usize), sig(Signature)),
     CallMacro { index: usize, sig: Signature, span: usize },
     BindGlobal { index: usize, span: usize },
@@ -27,7 +28,7 @@ node!(
     RemoveLabel(label(Option<EcoString>), span(usize)),
     Format(parts(EcoVec<EcoString>), span(usize)),
     MatchFormatPattern(parts(EcoVec<EcoString>), span(usize)),
-    CustomInverse(cust(Box<CustomInverse>), span(usize)),
+    CustomInverse(cust(Arc<CustomInverse>), span(usize)),
     Switch { branches: Ops, sig: Signature, under_cond: bool, span: usize },
     Unpack { count: usize, unbox: bool, prim: Option<Primitive>, span: usize },
     SetOutputComment { i: usize, n: usize },
@@ -36,8 +37,8 @@ node!(
     PushUnder(n(usize), span(usize)),
     CopyToUnder(n(usize), span(usize)),
     PopUnder(n(usize), span(usize)),
-    NoInline(inner(Box<Node>)),
-    TrackCaller(inner(Box<Node>)),
+    NoInline(inner(Arc<Node>)),
+    TrackCaller(inner(Arc<Node>)),
     (#[serde(untagged)] rep),
     Push(val(Value)),
     (#[serde(untagged)] rep),
@@ -113,6 +114,12 @@ impl SigNode {
 impl From<SigNode> for Node {
     fn from(sn: SigNode) -> Self {
         sn.node
+    }
+}
+
+impl From<Arc<Node>> for Node {
+    fn from(node: Arc<Node>) -> Self {
+        Arc::unwrap_or_clone(node)
     }
 }
 

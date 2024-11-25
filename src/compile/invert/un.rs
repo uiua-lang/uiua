@@ -1,4 +1,4 @@
-use crate::{check::nodes_sig, compile::algebra::algebraic_inverse};
+use crate::{check::nodes_sig, compile::algebra::algebraic_inverse, CustomInverse};
 
 use super::*;
 
@@ -664,23 +664,23 @@ inverse!(AntiJoinPat, input, _, {
 });
 
 inverse!(CustomPat, input, _, ref, CustomInverse(cust, span), {
-    let mut cust = cust.clone();
+    let mut cust = CustomInverse::clone(cust);
     let un = cust.un.take().ok_or(Generic)?;
     cust.un = cust.normal.ok();
     cust.normal = Ok(un);
     cust.anti = None;
     cust.under = None;
-    Ok((input, CustomInverse(cust, *span)))
+    Ok((input, CustomInverse(cust.into(), *span)))
 });
 
 inverse!(AntiCustomPat, input, _, ref, CustomInverse(cust, span), {
-    let mut cust = cust.clone();
+    let mut cust = CustomInverse::clone(cust);
     let anti = cust.anti.take().ok_or(Generic)?;
     cust.anti = cust.normal.ok();
     cust.normal = Ok(anti);
     cust.un = None;
     cust.under = None;
-    Ok((input, CustomInverse(cust, *span)))
+    Ok((input, CustomInverse(cust.into(), *span)))
 });
 
 inverse!(FormatPat, input, _, ref, Format(parts, span), {

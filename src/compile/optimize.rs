@@ -38,6 +38,7 @@ impl Node {
                 }
             }
             CustomInverse(cust, _) => {
+                let cust = Arc::make_mut(cust);
                 if let Ok(normal) = cust.normal.as_mut() {
                     normal.node.optimize();
                 }

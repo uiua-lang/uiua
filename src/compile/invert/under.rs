@@ -38,6 +38,39 @@ fn under_inverse(
     if input.is_empty() {
         return Ok((Node::empty(), Node::empty()));
     }
+
+    type Key = (u64, Signature, bool);
+    thread_local! {
+        static CACHE: RefCell<HashMap<Key, InversionResult<(Node, Node)>>> = Default::default();
+    }
+    let mut hasher = DefaultHasher::new();
+    for node in input {
+        node.hash_with_span(&mut hasher);
+    }
+    let hash = hasher.finish();
+    if let Some(cached) =
+        CACHE.with(|cache| cache.borrow_mut().get(&(hash, g_sig, inverse)).cloned())
+    {
+        return cached;
+    }
+    let res = under_inverse_impl(input, g_sig, inverse, asm);
+    CACHE.with(|cache| {
+        cache
+            .borrow_mut()
+            .insert((hash, g_sig, inverse), res.clone())
+    });
+    res
+}
+
+fn under_inverse_impl(
+    input: &[Node],
+    g_sig: Signature,
+    inverse: bool,
+    asm: &Assembly,
+) -> InversionResult<(Node, Node)> {
+    if input.is_empty() {
+        return Ok((Node::empty(), Node::empty()));
+    }
     let mut before = Node::empty();
     let mut after = Node::empty();
     let mut curr = input;

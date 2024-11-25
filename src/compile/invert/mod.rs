@@ -1,15 +1,23 @@
 mod un;
 mod under;
 
-use std::{boxed, cell::RefCell, collections::HashMap, error::Error, fmt};
+use std::{
+    boxed,
+    cell::RefCell,
+    collections::HashMap,
+    error::Error,
+    fmt,
+    hash::{DefaultHasher, Hasher},
+};
 
 use ecow::eco_vec;
 use serde::*;
 
 use crate::{
     assembly::{Assembly, Function},
-    check::{nodes_clean_sig, SigCheckError},
-    ArrayLen, FunctionId,
+    check::{nodes_clean_sig, nodes_sig, SigCheckError},
+    compile::algebra::algebraic_inverse,
+    ArrayLen, CustomInverse, FunctionId,
     ImplPrimitive::{self, *},
     Node::{self, *},
     Primitive::{self, *},

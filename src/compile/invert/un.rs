@@ -1,5 +1,3 @@
-use crate::{check::nodes_sig, compile::algebra::algebraic_inverse, CustomInverse};
-
 use super::*;
 
 impl Node {
@@ -33,6 +31,24 @@ pub fn un_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
     if input.is_empty() {
         return Ok(Node::empty());
     }
+
+    thread_local! {
+        static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = Default::default();
+    }
+    let mut hasher = DefaultHasher::new();
+    for node in input {
+        node.hash_with_span(&mut hasher);
+    }
+    let hash = hasher.finish();
+    if let Some(cached) = CACHE.with(|cache| cache.borrow_mut().get(&hash).cloned()) {
+        return cached;
+    }
+    let res = un_inverse_impl(input, asm);
+    CACHE.with(|cache| cache.borrow_mut().insert(hash, res.clone()));
+    res
+}
+
+fn un_inverse_impl(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
     let mut node = Node::empty();
     let mut curr = input;
     let mut error = Generic;
@@ -57,9 +73,28 @@ pub fn un_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
     Err(error)
 }
 
-pub fn anti_inverse(mut input: &[Node], asm: &Assembly) -> InversionResult<Node> {
-    // An anti inverse can be optionaly sandwiched by an un inverse on either side
+pub fn anti_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
+    if input.is_empty() {
+        return generic();
+    }
+    thread_local! {
+        static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = Default::default();
+    }
+    let mut hasher = DefaultHasher::new();
+    for node in input {
+        node.hash_with_span(&mut hasher);
+    }
+    let hash = hasher.finish();
+    if let Some(cached) = CACHE.with(|cache| cache.borrow_mut().get(&hash).cloned()) {
+        return cached;
+    }
+    let res = anti_inverse_impl(input, asm);
+    CACHE.with(|cache| cache.borrow_mut().insert(hash, res.clone()));
+    res
+}
 
+fn anti_inverse_impl(mut input: &[Node], asm: &Assembly) -> InversionResult<Node> {
+    // An anti inverse can be optionaly sandwiched by an un inverse on either side
     let orig_input = input;
     let mut error = Generic;
 

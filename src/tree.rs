@@ -482,6 +482,12 @@ impl Node {
         }
         recurse(None, None, self, asm, f)
     }
+    pub(crate) fn hash_with_span(&self, hasher: &mut impl Hasher) {
+        self.hash(hasher);
+        if let Some(span) = self.span() {
+            span.hash(hasher);
+        }
+    }
 }
 
 impl From<&[Node]> for Node {

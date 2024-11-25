@@ -3690,8 +3690,8 @@ impl_primitive!(
     (1, CountUnique),
     (1(2)[3], AstarFirst),
     (1[3], AstarPop),
-    (2, SplitByScalar),
-    (2, SplitBy),
+    (2[1], SplitByScalar),
+    (2[1], SplitBy),
     // Implementation details
     (1[2], RepeatWithInverse),
     (2(1), ValidateType),

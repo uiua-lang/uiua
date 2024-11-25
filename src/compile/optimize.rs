@@ -221,43 +221,56 @@ opt!(
 struct SplitByOpt;
 impl Optimization for SplitByOpt {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
-        fn is_par_box(node: &Node) -> bool {
+        fn par_f(node: &Node) -> Option<SigNode> {
             let Mod(Partition, args, _) = node else {
-                return false;
+                return None;
             };
             let [f] = args.as_slice() else {
-                return false;
+                return None;
             };
-            matches!(f.node, Prim(Box, _))
+            Some(f.clone())
         }
         for i in 0..nodes.len() {
             match &nodes[i..] {
                 [Mod(By, args, span), last, ..]
-                    if is_par_box(last)
-                        && matches!(args.as_slice(), [f]
+                    if matches!(args.as_slice(), [f]
                             if matches!(f.node, Prim(Ne, _))) =>
                 {
-                    replace_nodes(nodes, i, 2, ImplPrim(SplitByScalar, *span));
+                    let Some(f) = par_f(last) else {
+                        continue;
+                    };
+                    replace_nodes(nodes, i, 2, ImplMod(SplitByScalar, eco_vec![f], *span));
                     break;
                 }
                 [Mod(By, args, span), Prim(Not, _), last, ..]
-                    if is_par_box(last)
-                        && matches!(args.as_slice(), [f]
+                    if matches!(args.as_slice(), [f]
                             if matches!(f.node, Prim(Mask, _))) =>
                 {
-                    replace_nodes(nodes, i, 3, ImplPrim(SplitBy, *span));
+                    let Some(f) = par_f(last) else {
+                        continue;
+                    };
+                    replace_nodes(nodes, i, 3, ImplMod(SplitBy, eco_vec![f], *span));
                     break;
                 }
-                [Prim(Dup, span), Push(delim), Prim(Ne, _), last, ..] if is_par_box(last) => {
-                    let new =
-                        Node::from_iter([Push(delim.clone()), ImplPrim(SplitByScalar, *span)]);
+                [Prim(Dup, span), Push(delim), Prim(Ne, _), last, ..] => {
+                    let Some(f) = par_f(last) else {
+                        continue;
+                    };
+                    let new = Node::from_iter([
+                        Push(delim.clone()),
+                        ImplMod(SplitByScalar, eco_vec![f], *span),
+                    ]);
                     replace_nodes(nodes, i, 4, new);
                     break;
                 }
-                [Prim(Dup, span), Push(delim), Prim(Mask, _), Prim(Not, _), last, ..]
-                    if is_par_box(last) =>
-                {
-                    let new = Node::from_iter([Push(delim.clone()), ImplPrim(SplitBy, *span)]);
+                [Prim(Dup, span), Push(delim), Prim(Mask, _), Prim(Not, _), last, ..] => {
+                    let Some(f) = par_f(last) else {
+                        continue;
+                    };
+                    let new = Node::from_iter([
+                        Push(delim.clone()),
+                        ImplMod(SplitBy, eco_vec![f], *span),
+                    ]);
                     replace_nodes(nodes, i, 5, new);
                     break;
                 }

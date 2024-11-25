@@ -1514,8 +1514,6 @@ impl ImplPrimitive {
                 env.push(random());
             }
             ImplPrimitive::CountUnique => env.monadic_ref(Value::count_unique)?,
-            ImplPrimitive::SplitByScalar => loops::split_by(true, env)?,
-            ImplPrimitive::SplitBy => loops::split_by(false, env)?,
             ImplPrimitive::MatchPattern => {
                 let expected = env.pop(1)?;
                 let got = env.pop(2)?;
@@ -1728,6 +1726,14 @@ impl ImplPrimitive {
                 let f_outputs = env.pop_n(f.sig.outputs)?;
                 env.exec(g.node)?;
                 env.push_all(f_outputs);
+            }
+            ImplPrimitive::SplitByScalar => {
+                let [f] = get_ops(ops, env)?;
+                loops::split_by(f, true, env)?;
+            }
+            ImplPrimitive::SplitBy => {
+                let [f] = get_ops(ops, env)?;
+                loops::split_by(f, false, env)?;
             }
             ImplPrimitive::EachSub(n)
             | ImplPrimitive::RowsSub(n)

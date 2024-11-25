@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use leptos::*;
 use leptos_meta::*;
-use uiua::{ConstClass, Primitive, CONSTANTS};
+use uiua::{ConstClass, Primitive, SysOp, CONSTANTS};
 use uiua_editor::Editor;
 
 use crate::{
@@ -37,6 +37,7 @@ pub fn Technical() -> impl IntoView {
 
 #[component]
 pub fn Install() -> impl IntoView {
+    use Primitive::*;
     view! {
         <Title text="Installation - Uiua Docs"/>
         <Hd id="installing-uiua">"Installing Uiua"</Hd>
@@ -94,6 +95,18 @@ pub fn Install() -> impl IntoView {
         <p>"Use "<code>"uiua fmt [PATH]"</code>" to format a file without running it."</p>
         <p>"Use "<code>"uiua test [PATH]"</code>" to run tests."</p>
         <p>"Use "<code>"uiua module update"</code>" to update Git modules."</p>
+
+        <Hd id="the-output-window">"The Output Window"</Hd>
+        <p>"If you download the native interpreter from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases page"</a>", or if you build it from source with either the "<code>"window"</code>" or "<code>"full"</code>" features, you will have the option to show the output of a program (and certain system functions) in a window."</p>
+        <p>"The window shows not only basic arrays, but images, gifs, and audio as well."</p>
+        <p>"The window will be shown if you run any of the following commands:"</p>
+        <code class="code-block">"\
+uiua -w
+uiua run -w <PATH>
+uiua watch -w"
+        </code>
+        <p>"It can also be enabled by default if you set the "<code>"UIUA_WINDOW"</code>" environment variable to "<code>"1"</code>"."</p>
+        <p>"The values left on the stack after a program finishes will be shown in the window. In addition, the "<Prim prim=Sys(SysOp::Show)/>", "<Prim prim=Sys(SysOp::ImShow)/>", "<Prim prim=Sys(SysOp::GifShow)/>", and "<Prim prim=Sys(SysOp::AudioPlay)/>" functions will all show their output in the window."</p>
 
         <Hd id="local-site">"Running the Site Locally"</Hd>
         <p>"This website is a static, single-page application. As such, it can be build and run locally, without connecting to a server."</p>

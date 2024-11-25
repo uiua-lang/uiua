@@ -682,6 +682,12 @@ primitive!(
     /// ex: ⁅1.5
     /// ex: ⁅[0.1 π 2 9.9 7.5]
     /// ex: ⁅[4/3_¯2.5 9.81_¯3.6]
+    /// Subscripted [round] rounds to that many decimal places.
+    /// ex: ⁅₃ π
+    ///   : ⁅₃ τ
+    /// If you need a dynamic number of decimal places, you can use [under][multiply].
+    /// ex: ⍜×⁅ 3 π
+    /// ex: ⍜×⁅ ⁿ:10⇡6 π
     (1, Round, MonadicPervasive, ("round", '⁅')),
     /// Compare for equality
     ///
@@ -2356,6 +2362,10 @@ primitive!(
     /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
     /// ex: [∩∩(□+2) 1 @a 2_3 5]
     /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
+    ///
+    /// Subscripted [both] calls its function on N sets of arguments.
+    /// ex: [∩₃+ 1 2 3 4 5 6]
+    /// ex: [∩₃⊟ 1 2 3 4 5 6]
     ///
     /// There are two common patterns that involve a dyadic function and three values.
     /// If we call the function `f` and the values `a`, `b`, and `c`, then the patterns are:

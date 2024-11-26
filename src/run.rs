@@ -657,22 +657,28 @@ impl Uiua {
                 unbox,
             } => self.with_span(span, |env| {
                 let arr = env.pop(1)?;
-                if arr.row_count() != count {
+                if arr.row_count() != count || arr.shape() == [] {
                     let prim_text;
-                    return Err(env.error(format!(
-                        "This °{} expects an array with {} rows, \
-                        but the array has {}",
-                        if let Some(prim) = prim {
-                            prim_text = prim.to_string();
-                            prim_text.as_str()
-                        } else if unbox {
-                            "{}"
-                        } else {
-                            "[]"
-                        },
-                        count,
-                        arr.row_count()
-                    )));
+                    let prim_text = if let Some(prim) = prim {
+                        prim_text = prim.to_string();
+                        prim_text.as_str()
+                    } else if unbox {
+                        "{}"
+                    } else {
+                        "[]"
+                    };
+                    return Err(env.error(if arr.shape() == [] {
+                        format!(
+                            "This °{prim_text} expects an array with {count} rows, \
+                            but the array is a scalar"
+                        )
+                    } else {
+                        format!(
+                            "This °{prim_text} expects an array with {count} rows, \
+                            but the array has {}",
+                            arr.row_count()
+                        )
+                    }));
                 }
                 if unbox {
                     for val in arr.into_rows().rev() {

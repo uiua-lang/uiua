@@ -122,14 +122,7 @@ fn derive_new_shape(
     Ok(new_shape)
 }
 
-pub fn bin_pervade<A, B, C, F>(
-    a: Array<A>,
-    b: Array<B>,
-    a_depth: usize,
-    b_depth: usize,
-    env: &Uiua,
-    f: F,
-) -> UiuaResult<Array<C>>
+pub fn bin_pervade<A, B, C, F>(a: Array<A>, b: Array<B>, env: &Uiua, f: F) -> UiuaResult<Array<C>>
 where
     A: ArrayValue,
     B: ArrayValue,
@@ -137,9 +130,6 @@ where
     F: PervasiveFn<A, B, Output = C> + Clone,
     F::Error: Into<UiuaError>,
 {
-    let _a_depth = a_depth.min(a.rank());
-    let _b_depth = b_depth.min(b.rank());
-
     let a_fill = env.scalar_fill::<A>();
     let b_fill = env.scalar_fill::<B>();
     let new_shape = derive_new_shape(
@@ -282,17 +272,12 @@ where
 pub fn bin_pervade_mut<T>(
     mut a: Array<T>,
     b: &mut Array<T>,
-    a_depth: usize,
-    b_depth: usize,
     env: &Uiua,
     f: impl Fn(T, T) -> T + Copy,
 ) -> UiuaResult
 where
     T: ArrayValue + Copy,
 {
-    let _a_depth = a_depth.min(a.rank());
-    let _b_depth = b_depth.min(b.rank());
-
     fn derive_new_shape(
         ash: &Shape,
         bsh: &Shape,
@@ -1425,7 +1410,7 @@ bin_op_mod!(
     a.atan2(b),
     "Cannot get the atan2 of {a} and {b}"
 );
-pub mod pow {
+pub mod scalar_pow {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
         b.powf(a)

@@ -80,6 +80,8 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &((Pop, Rand), ReplaceRand),
     &((Pop, Pop, Rand), ReplaceRand2),
     &((1, Flip, Div, Pow), Root),
+    &((-1, Pow), (1, Flip, Div)),
+    &((2, Pow), (Dup, Mul)),
     &InlineCustomInverse,
     &TransposeOpt,
     &ReduceTableOpt,
@@ -438,6 +440,11 @@ impl OptReplace for Primitive {
 impl OptReplace for ImplPrimitive {
     fn replacement_node(&self, span: usize) -> Node {
         Node::ImplPrim(*self, span)
+    }
+}
+impl OptReplace for i32 {
+    fn replacement_node(&self, _: usize) -> Node {
+        Node::new_push(*self)
     }
 }
 

@@ -1583,6 +1583,18 @@ impl Value {
             value => value.scalar_neg(env),
         }
     }
+    /// Raise a value to a power
+    pub fn pow(self, base: Self, env: &Uiua) -> UiuaResult<Self> {
+        if let Ok(pow) = self.as_int(env, "") {
+            match pow {
+                1 => return Ok(base),
+                2 => return base.clone().mul(base, env),
+                -1 => return base.div(Value::from(1), env),
+                _ => {}
+            }
+        }
+        self.scalar_pow(base, env)
+    }
 }
 
 fn optimize_types(a: Value, b: Value) -> (Value, Value) {
@@ -1604,7 +1616,7 @@ macro_rules! value_bin_impl {
     ),* ) => {
         impl Value {
             #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
-            pub(crate) fn $name(self, other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
+            pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 let (mut a, mut b) = optimize_types(self, other);
                 a.match_fill(env);
                 b.match_fill(env);
@@ -1613,7 +1625,7 @@ macro_rules! value_bin_impl {
                         let f = |$meta: &ArrayMeta| $pred;
                         f(a.meta()) && f(b.meta())
                     })* => {
-                        bin_pervade_mut(a, &mut b, a_depth, b_depth, env, $name::$f2)?;
+                        bin_pervade_mut(a, &mut b, env, $name::$f2)?;
                         let mut val: Value = b.into();
                         $(if $reset_meta {
                             val.reset_meta_flags();
@@ -1621,35 +1633,35 @@ macro_rules! value_bin_impl {
                         val
                     },)*)*
                     $($((Value::$na(a), Value::$nb(b)) => {
-                        let mut val: Value = bin_pervade(a, b, a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f1))?.into();
+                        let mut val: Value = bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f1))?.into();
                         val.reset_meta_flags();
                         val
                     },)*)*
                     (Value::Box(a), Value::Box(b)) => {
                         let (a, b) = match (a.into_unboxed(), b.into_unboxed()) {
-                            (Ok(a), Ok(b)) => return Ok(Boxed(Value::$name(a, b, a_depth, b_depth, env)?).into()),
+                            (Ok(a), Ok(b)) => return Ok(Boxed(Value::$name(a, b, env)?).into()),
                             (Ok(a), Err(b)) => (a.coerce_as_boxes().into_owned(), b),
                             (Err(a), Ok(b)) => (a, b.coerce_as_boxes().into_owned()),
                             (Err(a), Err(b)) => (a, b),
                         };
-                        let mut val: Value = bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
-                            Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
+                        let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                            Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();
                         val.reset_meta_flags();
                         val
                     }
                     (Value::Box(a), b) => {
                         let b = b.coerce_as_boxes().into_owned();
-                        let mut val: Value = bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
-                            Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
+                        let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                            Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();
                         val.reset_meta_flags();
                         val
                     },
                     (a, Value::Box(b)) => {
                         let a = a.coerce_as_boxes().into_owned();
-                        let mut val: Value = bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
-                            Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
+                        let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                            Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();
                         val.reset_meta_flags();
                         val
@@ -1704,7 +1716,7 @@ value_bin_math_impl!(
 value_bin_math_impl!(div, (Num, Char, num_char), (Byte, Char, byte_char),);
 value_bin_math_impl!(modulus, (Complex, Complex, com_com));
 value_bin_math_impl!(or, [|meta| meta.flags.is_boolean(), Byte, bool_bool]);
-value_bin_math_impl!(pow);
+value_bin_math_impl!(scalar_pow);
 value_bin_math_impl!(root);
 value_bin_math_impl!(log);
 value_bin_math_impl!(atan2);

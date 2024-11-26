@@ -838,7 +838,7 @@ primitive!(
     ///   : ∨ [0 1 0 1] [0 0 1 1]
     /// ex: # Experimental!
     ///   : ⊞∨.[0 1]
-    /// Non boolean values give the GCD
+    /// Non-boolean values give the GCD.
     /// ex: # Experimental!
     ///   : ∨ 16 24
     /// ex: # Experimental!

@@ -263,7 +263,7 @@ pub fn split_by(f: SigNode, scalar: bool, env: &mut Uiua) -> UiuaResult {
         || matches!(haystack, Value::Complex(_))
     {
         let mask = if scalar {
-            delim.is_ne(haystack.clone(), 0, 0, env)?
+            delim.is_ne(haystack.clone(), env)?
         } else {
             delim.mask(&haystack, env)?.not(env)?
         };

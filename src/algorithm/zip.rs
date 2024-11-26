@@ -275,9 +275,9 @@ impl<T: Clone> Array<T> {
 
 fn spanned_dy_fn(
     span: usize,
-    f: impl Fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value> + 'static,
+    f: impl Fn(Value, Value, &Uiua) -> UiuaResult<Value> + 'static,
 ) -> ValueDyFn {
-    Box::new(move |a, b, ad, bd, env| env.with_span(span, |env| f(a, b, ad, bd, env)))
+    Box::new(move |a, b, _, _, env| env.with_span(span, |env| f(a, b, env)))
 }
 
 fn prim_dy_fast_fn(prim: Primitive, span: usize) -> Option<ValueDyFn> {

@@ -774,24 +774,24 @@ impl Primitive {
             Primitive::Floor => env.monadic_env(Value::floor)?,
             Primitive::Ceil => env.monadic_env(Value::ceil)?,
             Primitive::Round => env.monadic_env(Value::round)?,
-            Primitive::Eq => env.dyadic_oo_00_env(Value::is_eq)?,
-            Primitive::Ne => env.dyadic_oo_00_env(Value::is_ne)?,
-            Primitive::Lt => env.dyadic_oo_00_env(Value::other_is_lt)?,
-            Primitive::Le => env.dyadic_oo_00_env(Value::other_is_le)?,
-            Primitive::Gt => env.dyadic_oo_00_env(Value::other_is_gt)?,
-            Primitive::Ge => env.dyadic_oo_00_env(Value::other_is_ge)?,
-            Primitive::Add => env.dyadic_oo_00_env(Value::add)?,
-            Primitive::Sub => env.dyadic_oo_00_env(Value::sub)?,
-            Primitive::Mul => env.dyadic_oo_00_env(Value::mul)?,
-            Primitive::Div => env.dyadic_oo_00_env(Value::div)?,
-            Primitive::Modulus => env.dyadic_oo_00_env(Value::modulus)?,
-            Primitive::Or => env.dyadic_oo_00_env(Value::or)?,
-            Primitive::Pow => env.dyadic_oo_00_env(Value::pow)?,
-            Primitive::Log => env.dyadic_oo_00_env(Value::log)?,
-            Primitive::Min => env.dyadic_oo_00_env(Value::min)?,
-            Primitive::Max => env.dyadic_oo_00_env(Value::max)?,
-            Primitive::Atan => env.dyadic_oo_00_env(Value::atan2)?,
-            Primitive::Complex => env.dyadic_oo_00_env(Value::complex)?,
+            Primitive::Eq => env.dyadic_oo_env(Value::is_eq)?,
+            Primitive::Ne => env.dyadic_oo_env(Value::is_ne)?,
+            Primitive::Lt => env.dyadic_oo_env(Value::other_is_lt)?,
+            Primitive::Le => env.dyadic_oo_env(Value::other_is_le)?,
+            Primitive::Gt => env.dyadic_oo_env(Value::other_is_gt)?,
+            Primitive::Ge => env.dyadic_oo_env(Value::other_is_ge)?,
+            Primitive::Add => env.dyadic_oo_env(Value::add)?,
+            Primitive::Sub => env.dyadic_oo_env(Value::sub)?,
+            Primitive::Mul => env.dyadic_oo_env(Value::mul)?,
+            Primitive::Div => env.dyadic_oo_env(Value::div)?,
+            Primitive::Modulus => env.dyadic_oo_env(Value::modulus)?,
+            Primitive::Or => env.dyadic_oo_env(Value::or)?,
+            Primitive::Pow => env.dyadic_oo_env(Value::pow)?,
+            Primitive::Log => env.dyadic_oo_env(Value::log)?,
+            Primitive::Min => env.dyadic_oo_env(Value::min)?,
+            Primitive::Max => env.dyadic_oo_env(Value::max)?,
+            Primitive::Atan => env.dyadic_oo_env(Value::atan2)?,
+            Primitive::Complex => env.dyadic_oo_env(Value::complex)?,
             Primitive::Match => env.dyadic_rr(|a, b| a == b)?,
             Primitive::Join => env.dyadic_oo_env(|a, b, env| a.join(b, true, env))?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
@@ -1191,7 +1191,7 @@ impl ImplPrimitive {
             ImplPrimitive::DeshapeSub(i) => {
                 env.monadic_mut_env(|val, env| val.deshape_sub(*i, true, env))?
             }
-            ImplPrimitive::Root => env.dyadic_oo_00_env(Value::root)?,
+            ImplPrimitive::Root => env.dyadic_oo_env(Value::root)?,
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
@@ -1579,7 +1579,7 @@ impl ImplPrimitive {
             ImplPrimitive::MatchLe => {
                 let max = env.pop(1)?;
                 let val = env.pop(2)?;
-                let le = max.clone().other_is_le(val.clone(), 0, 0, env)?;
+                let le = max.clone().other_is_le(val.clone(), env)?;
                 if le.all_true() {
                     env.push(val);
                     return Ok(());
@@ -1594,7 +1594,7 @@ impl ImplPrimitive {
             ImplPrimitive::MatchGe => {
                 let min = env.pop(1)?;
                 let val = env.pop(2)?;
-                let ge = min.clone().other_is_ge(val.clone(), 0, 0, env)?;
+                let ge = min.clone().other_is_ge(val.clone(), env)?;
                 if ge.all_true() {
                     env.push(val);
                     return Ok(());

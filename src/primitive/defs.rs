@@ -843,7 +843,7 @@ primitive!(
     ///   : ∨ 16 24
     /// ex: # Experimental!
     ///   : ∨ 51 85
-    /// The [reduce] identity of [or] is `0`. This makes it betta than [max] as a logical OR.
+    /// The [reduce] identity of [or] is `0`. This makes it better than [max] as a logical OR.
     /// ex: # Experimental!
     ///   : /∨ []
     /// ex: # Experimental!

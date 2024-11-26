@@ -4,6 +4,7 @@ use std::{
     fs,
     io::{ErrorKind, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
+    path::Path,
     process::{exit, Command, Stdio},
     sync::{
         atomic::{self, AtomicBool},
@@ -410,6 +411,24 @@ impl eframe::App for App {
     }
 }
 
+fn save_name(ovrride: Option<&str>, name: &str, ext: &str) -> String {
+    if let Some(ovr) = ovrride {
+        return format!("{ovr}.{ext}");
+    }
+    let mut num: Option<u64> = None;
+    loop {
+        let path = if let Some(n) = num {
+            format!("{name}({n}).{ext}")
+        } else {
+            format!("{name}.{ext}")
+        };
+        if !Path::new(path.as_str()).exists() {
+            return path;
+        }
+        *num.get_or_insert(0) += 1;
+    }
+}
+
 impl App {
     fn inner(&mut self, ui: &mut Ui) {
         for (i, item) in self.items.iter_mut().enumerate().rev() {
@@ -465,10 +484,7 @@ impl App {
                         if ui.button("Save").clicked() {
                             match native_dialog::FileDialog::new()
                                 .set_title("Save Image")
-                                .set_filename(&format!(
-                                    "{}.png",
-                                    state.label.as_deref().unwrap_or("image")
-                                ))
+                                .set_filename(&save_name(state.label.as_deref(), "image", "png"))
                                 .add_filter("PNG Image", &["png"])
                                 .add_filter("JPEG Image", &["jpg", "jpeg"])
                                 .add_filter("BMP Image", &["bmp"])
@@ -595,10 +611,7 @@ impl App {
                         if ui.button("Save").clicked() {
                             match native_dialog::FileDialog::new()
                                 .set_title("Save Gif")
-                                .set_filename(&format!(
-                                    "{}.gif",
-                                    state.label.as_deref().unwrap_or("gif")
-                                ))
+                                .set_filename(&save_name(state.label.as_deref(), "gif", "gif"))
                                 .add_filter("GIF Image", &["gif"])
                                 .add_filter("All Files", &["*"])
                                 .show_save_single_file()
@@ -682,7 +695,7 @@ impl App {
                     if ui.button("Save").clicked() {
                         match native_dialog::FileDialog::new()
                             .set_title("Save Audio")
-                            .set_filename(&format!("{}.wav", label.as_deref().unwrap_or("audio")))
+                            .set_filename(&save_name(label.as_deref(), "audio", "wav"))
                             .add_filter("WAV Audio", &["wav"])
                             .add_filter("All Files", &["*"])
                             .show_save_single_file()

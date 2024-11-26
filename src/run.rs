@@ -110,6 +110,8 @@ pub(crate) struct StackFrame {
     pub(crate) call_span: usize,
     /// Additional spans for error reporting
     spans: Vec<(usize, Option<Primitive>)>,
+    /// The stack height at the start of the function
+    pub(crate) start_height: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -411,9 +413,36 @@ at {}",
             ))),
         }
     }
-    /// Execute a [`Node`]
-    pub fn exec(&mut self, node: impl Into<Node>) -> UiuaResult {
-        self.exec_impl(node.into())
+}
+
+/// Things that can be executed
+pub trait Exec {
+    /// Execute
+    fn exec(self, uiua: &mut Uiua) -> UiuaResult;
+}
+
+impl Exec for Node {
+    fn exec(self, uiua: &mut Uiua) -> UiuaResult {
+        uiua.exec_impl(self)
+    }
+}
+
+impl Exec for SigNode {
+    fn exec(self, uiua: &mut Uiua) -> UiuaResult {
+        uiua.exec_with_span(self, 0)
+    }
+}
+
+impl<T: Exec + Clone> Exec for Arc<T> {
+    fn exec(self, uiua: &mut Uiua) -> UiuaResult {
+        Arc::unwrap_or_clone(self).exec(uiua)
+    }
+}
+
+impl Uiua {
+    /// Execute an [`Exec`]
+    pub fn exec(&mut self, node: impl Exec) -> UiuaResult {
+        node.exec(self)
     }
     fn exec_impl(&mut self, node: Node) -> UiuaResult {
         let mut formatted_node = String::new();
@@ -810,6 +839,7 @@ at {}",
                     sig: f.sig,
                     id: Some(f.id.clone()),
                     call_span,
+                    start_height: env.stack_height(),
                     ..Default::default()
                 },
                 call_span,
@@ -822,6 +852,7 @@ at {}",
             StackFrame {
                 sig: sn.sig,
                 call_span,
+                start_height: self.stack_height(),
                 ..Default::default()
             },
             call_span,
@@ -1215,15 +1246,19 @@ at {}",
         self.push(f(&a, b, self)?);
         Ok(())
     }
+    #[inline]
     pub(crate) fn stack_height(&self) -> usize {
         self.rt.stack.len()
     }
+    #[inline]
     pub(crate) fn under_stack_height(&self) -> usize {
         self.rt.under_stack.len()
     }
+    #[inline]
     pub(crate) fn truncate_stack(&mut self, size: usize) -> Vec<Value> {
         self.rt.stack.split_off(size)
     }
+    #[inline]
     pub(crate) fn truncate_under_stack(&mut self, size: usize) {
         self.rt.under_stack.truncate(size);
     }

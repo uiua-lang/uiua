@@ -2000,13 +2000,9 @@ fn dump(ops: Ops, env: &mut Uiua, inverse: bool) -> UiuaResult {
 fn stack_boundaries(env: &Uiua) -> Vec<(usize, &Option<FunctionId>)> {
     let mut boundaries: Vec<(usize, &Option<FunctionId>)> = Vec::new();
     let mut height = 0;
-    let mut reduced = 0;
-    for (i, frame) in env.call_frames().rev().enumerate() {
-        if i == 0 {
-            let before_sig = frame.sig;
-            reduced = before_sig.args as isize - before_sig.outputs as isize;
-        }
-        height = height.max(((frame.sig.args as isize) - reduced).max(0) as usize);
+    for frame in env.call_frames().rev() {
+        let delta = env.stack_height() as isize - frame.start_height as isize;
+        height = height.max((frame.sig.args as isize + delta).max(0) as usize);
         if matches!(frame.id, Some(FunctionId::Main)) {
             break;
         }

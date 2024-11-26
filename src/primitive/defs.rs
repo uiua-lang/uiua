@@ -3454,6 +3454,29 @@ primitive!(
     ///   : ⍜⊜□⍚(⊂@,)∈" \n". repr # add commas
     ///   : &p ⍜▽∵⋅@-=@¯.        # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
+    /// Evalute a string as code at compile time
+    ///
+    /// The first argument is a list of arguments to pass to the code.
+    /// The second argument is the string to evaluate.
+    /// If the code returns a single value, it will simply be pushed to the stack.
+    /// If the code returns multiple values, they will collected into a list of boxes.
+    ///
+    /// [eval] can only be called in a compile-time context.
+    /// ex! # Experimental!
+    ///   : eval {1 2} "+"
+    /// The simplest way to do this is to use [comptime].
+    /// ex: # Experimental!
+    ///   : comptime(eval {1 2} "+")
+    /// [eval] is probably more useful in code macros.
+    /// ex: # Experimental!
+    ///   : F! ←^ eval{1 2}⊢
+    ///   : F!+
+    /// ex: # Experimental!
+    ///   : F! ←^ eval{}⊢
+    ///   : F!"+1" 5
+    ///
+    /// [eval] is still very experimental and may be buggy.
+    (2, Eval, Misc, "eval"),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.

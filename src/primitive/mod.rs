@@ -33,7 +33,7 @@ use crate::{
     lex::{AsciiToken, SUBSCRIPT_DIGITS},
     sys::*,
     value::*,
-    FunctionId, Ops, Shape, Signature, Uiua, UiuaErrorKind, UiuaResult,
+    Compiler, FunctionId, Ops, Shape, Signature, Uiua, UiuaErrorKind, UiuaResult,
 };
 
 /// Categories of primitives
@@ -547,7 +547,7 @@ impl Primitive {
             self,
             (Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
-                | (Or | Chunks | Base | Fft | Case | Layout | Binary)
+                | (Or | Chunks | Base | Fft | Case | Layout | Binary | Eval)
                 | (Astar | Triangle)
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
@@ -837,6 +837,39 @@ impl Primitive {
                 env.push(val.box_depth(0));
             }
             Primitive::Repr => env.monadic_ref(Value::representation)?,
+            Primitive::Eval => {
+                if !env.rt.is_comptime {
+                    return Err(env.error("eval cannot be called outside a compile-time context"));
+                }
+                let args = env.pop(1)?;
+                let code = env.pop(2)?.as_string(env, "eval expects a string")?;
+                let stack = env.take_stack();
+                for arg in args.into_rows().rev() {
+                    env.push(arg.unboxed());
+                }
+
+                let mut comp = Compiler::with_backend(env.rt.backend.clone());
+                comp.asm.spans = env.asm.spans.clone();
+                comp.asm.inputs = env.asm.inputs.clone();
+                let res = (|| -> UiuaResult {
+                    comp.load_str(&code)?;
+                    env.run_compiler(&mut comp)?;
+                    env.asm.spans = comp.asm.spans;
+                    env.asm.inputs = comp.asm.inputs;
+                    Ok(())
+                })();
+
+                let results = env.take_stack();
+                for val in stack.into_iter().rev() {
+                    env.push(val);
+                }
+                env.push(if results.len() == 1 {
+                    results.into_iter().next().unwrap()
+                } else {
+                    Array::from_iter(results.into_iter().map(Boxed)).into()
+                });
+                res?;
+            }
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
             Primitive::Utf8 => env.monadic_ref_env(Value::utf8)?,
             Primitive::Graphemes => env.monadic_ref_env(Value::graphemes)?,

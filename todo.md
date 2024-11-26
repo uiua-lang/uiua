@@ -5,7 +5,6 @@ The next version of Uiua
 
 - Stabilize `backward`, `case`
 - Optimize `group`/`partition` reduction replacement
-- Compile-time code string evaluation
 - `do` function pack
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)

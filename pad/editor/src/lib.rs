@@ -824,7 +824,7 @@ pub fn Editor<'a>(
                 });
             }
             // Intercept forward/back keyboard navigation
-            "ArrowLeft" | "ArrowRight" if event.alt_key() => {}
+            "ArrowLeft" | "ArrowRight" if !on_mac() && event.alt_key() => {}
             // Chrome 😠
             "Unidentified" => {
                 set_timeout(

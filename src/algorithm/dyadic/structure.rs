@@ -215,23 +215,29 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut picked = self.data.clone();
+        let fill = env.scalar_fill::<T>();
         for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
             let row_len: usize = self.shape[d + 1..].iter().product();
             let s = s as isize;
             if i >= s || i < -s {
-                match env.scalar_fill::<T>() {
+                match &fill {
                     Ok(fill) => {
-                        picked = cowslice![fill; row_len];
+                        picked = cowslice![fill.clone(); row_len];
                         continue;
                     }
                     Err(e) => {
-                        return Err(env
-                            .error(format!(
-                                "Index {i} is out of bounds of length {s} (dimension {d}) in shape {}{e}",
-                                self.shape()
-                            ))
-                            .fill());
+                        let message = format!(
+                            "Index {i} is out of bounds of length {s} \
+                            (dimension {d}) in shape {}{e}",
+                            self.shape()
+                        );
+                        return Err(env.error(message).fill());
                     }
+                }
+            } else if i < 0 {
+                if let Ok(fill) = &fill {
+                    picked = cowslice![fill.clone(); row_len];
+                    continue;
                 }
             }
             let i = if i >= 0 { i as usize } else { (s + i) as usize };
@@ -1116,68 +1122,65 @@ impl<T: ArrayValue> Array<T> {
             }
             Ok(arr)
         } else {
-            let mut res = self.select_impl(indices, env)?;
-            if indices_shape.is_empty() {
-                res.shape.remove(0);
+            let mut selected = CowSlice::with_capacity(self.row_len() * indices.len());
+            let row_len = self.row_len();
+            let row_count = self.row_count();
+            let fill = env.scalar_fill::<T>();
+            for &i in indices {
+                let i = if i >= 0 {
+                    let ui = i as usize;
+                    if ui >= row_count {
+                        match &fill {
+                            Ok(fill) => {
+                                selected.extend_repeat(fill, row_len);
+                                continue;
+                            }
+                            Err(e) => {
+                                return Err(env
+                                    .error(format!(
+                                        "Index {} is out of bounds of length {}{e}",
+                                        i, row_count
+                                    ))
+                                    .fill());
+                            }
+                        }
+                    }
+                    ui
+                } else {
+                    match &fill {
+                        Ok(fill) => {
+                            selected.extend_repeat(fill, row_len);
+                            continue;
+                        }
+                        Err(e) => {
+                            let pos_i = (row_count as isize + i) as usize;
+                            if pos_i >= row_count {
+                                return Err(env
+                                    .error(format!(
+                                        "Index {} is out of bounds of length {}{e}",
+                                        i, row_count
+                                    ))
+                                    .fill());
+                            }
+                            pos_i
+                        }
+                    }
+                };
+                let start = i * row_len;
+                let end = start + row_len;
+                selected.extend_from_slice(&self.data[start..end]);
             }
-            Ok(res)
-        }
-    }
-    fn select_impl(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        let mut selected = CowSlice::with_capacity(self.row_len() * indices.len());
-        let row_len = self.row_len();
-        let row_count = self.row_count();
-        for &i in indices {
-            let i = if i >= 0 {
-                let ui = i as usize;
-                if ui >= row_count {
-                    match env.scalar_fill::<T>() {
-                        Ok(fill) => {
-                            selected.extend_repeat(&fill, row_len);
-                            continue;
-                        }
-                        Err(e) => {
-                            return Err(env
-                                .error(format!(
-                                    "Index {} is out of bounds of length {}{e}",
-                                    i, row_count
-                                ))
-                                .fill());
-                        }
-                    }
-                }
-                ui
+            let mut shape = self.shape.clone();
+            if let Some(s) = shape.get_mut(0) {
+                *s = indices.len();
             } else {
-                let pos_i = (row_count as isize + i) as usize;
-                if pos_i >= row_count {
-                    match env.scalar_fill::<T>() {
-                        Ok(fill) => {
-                            selected.extend_repeat(&fill, row_len);
-                            continue;
-                        }
-                        Err(e) => {
-                            return Err(env
-                                .error(format!(
-                                    "Index {} is out of bounds of length {}{e}",
-                                    i, row_count
-                                ))
-                                .fill());
-                        }
-                    }
-                }
-                pos_i
-            };
-            let start = i * row_len;
-            let end = start + row_len;
-            selected.extend_from_slice(&self.data[start..end]);
+                shape.push(indices.len());
+            }
+            if indices_shape.is_empty() {
+                shape.remove(0);
+            }
+            Ok(Array::new(shape, selected))
         }
-        let mut shape = self.shape.clone();
-        if let Some(s) = shape.get_mut(0) {
-            *s = indices.len();
-        } else {
-            shape.push(indices.len());
-        }
-        Ok(Array::new(shape, selected))
     }
     fn undo_select(
         self,

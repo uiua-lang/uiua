@@ -1341,6 +1341,15 @@ primitive!(
     /// ex: ⊏ [0_1 1_2 2_3] [2 3 5 7]
     /// ex: ⊏ [0_1 1_2 2_0] [1_2_3 4_5_6 7_8_9]
     ///
+    /// Negative indices select from the end.
+    /// ex: ⊏¯1 "hello"
+    /// ex: ⊏¯[1 3 5] "hello"
+    ///
+    /// [fill] allows you to set a default value for when an index is out of bounds.
+    /// ex: ⬚@-⊏[4 7 2 6 1] "hello!"
+    /// Negative indices will always use the fill value if there is one.
+    /// ex: ⬚@-⊏[¯2 ¯1 0 1 2 3 4 5 6] "hello!"
+    ///
     /// [un][select] is equivalent to [range][length][duplicate]. This is a common way to enumerate the indices of the rows an array.
     /// ex: °⊏ "hello!"
     /// ex: °⊏ {1 2_3 4_5_6}

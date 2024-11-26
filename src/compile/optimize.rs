@@ -228,6 +228,9 @@ impl Optimization for SplitByOpt {
             let [f] = args.as_slice() else {
                 return None;
             };
+            if f.sig.args != 1 {
+                return None;
+            }
             Some(f.clone())
         }
         for i in 0..nodes.len() {

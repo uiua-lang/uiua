@@ -242,6 +242,7 @@ impl VirtualEnv {
         nodes.iter().try_for_each(|node| self.node(node))
     }
     fn node(&mut self, node: &Node) -> Result<(), SigCheckError> {
+        use ImplPrimitive::*;
         use Primitive::*;
         match node {
             Node::Run(nodes) => nodes.iter().try_for_each(|node| self.node(node))?,
@@ -289,7 +290,7 @@ impl VirtualEnv {
                 self.handle_args_outputs(1, parts.len().saturating_sub(1))
             }
             Node::Unpack { count, .. } => self.handle_args_outputs(1, *count),
-            Node::Mod(Astar, args, _) | Node::ImplMod(ImplPrimitive::AstarFirst, args, _) => {
+            Node::Mod(Astar, args, _) | Node::ImplMod(AstarFirst, args, _) => {
                 let _start = self.pop();
                 let [neighbors, heuristic, is_goal] = get_args(args)?;
                 let args = neighbors
@@ -299,7 +300,7 @@ impl VirtualEnv {
                     .saturating_sub(1);
                 self.handle_args_outputs(args, 2);
             }
-            Node::ImplMod(ImplPrimitive::AstarPop, args, _) => {
+            Node::ImplMod(AstarPop, args, _) => {
                 let _start = self.pop();
                 let [neighbors, heuristic, is_goal] = get_args(args)?;
                 let args = neighbors
@@ -370,8 +371,12 @@ impl VirtualEnv {
                 }
             },
             Node::ImplPrim(prim, _) => {
-                let args = prim.args();
-                let outputs = prim.outputs();
+                let args = prim
+                    .args()
+                    .ok_or_else(|| format!("{prim} has indeterminate args"))?;
+                let outputs = prim
+                    .outputs()
+                    .ok_or_else(|| format!("{prim} has indeterminate outputs"))?;
                 self.handle_args_outputs(args, outputs);
             }
             Node::Mod(prim, args, _) => match prim {
@@ -529,12 +534,12 @@ impl VirtualEnv {
                 }
             },
             Node::ImplMod(prim, args, _) => match prim {
-                ImplPrimitive::ReduceContent | ImplPrimitive::ReduceDepth(_) => {
+                ReduceContent | ReduceDepth(_) => {
                     let [sig] = get_args(args)?;
                     let args = sig.args.saturating_sub(sig.outputs);
                     self.handle_args_outputs(args, sig.outputs);
                 }
-                ImplPrimitive::RepeatWithInverse => {
+                RepeatWithInverse => {
                     let [f, inv] = get_args(args)?;
                     if f.inverse() != inv {
                         return Err(SigCheckError::from(
@@ -544,7 +549,7 @@ impl VirtualEnv {
                     let n = self.pop();
                     self.repeat(f, n)?;
                 }
-                ImplPrimitive::UnFill => {
+                UnFill => {
                     let [fill, f] = get_args(args)?;
                     if fill.outputs > 0 {
                         self.handle_sig(fill);
@@ -552,7 +557,7 @@ impl VirtualEnv {
                     self.handle_args_outputs(fill.outputs, 0);
                     self.handle_sig(f);
                 }
-                ImplPrimitive::UnBoth => {
+                UnBoth => {
                     let [f] = get_args_nodes(args)?;
                     let mut args = Vec::with_capacity(f.sig.args);
                     for _ in 0..f.sig.args {
@@ -564,16 +569,29 @@ impl VirtualEnv {
                     }
                     self.node(&f.node)?;
                 }
-                ImplPrimitive::UnBracket => {
+                UnBracket => {
                     let [f, g] = get_args(args)?;
                     self.handle_args_outputs(f.args + g.args, f.outputs + g.outputs);
                 }
+                RowsSub(_) | InventorySub(_) | EachSub(_) => {
+                    let [f] = get_args(args)?;
+                    self.handle_sig(f);
+                }
+                UnScan => self.handle_args_outputs(1, 1),
+                SplitBy | SplitByScalar => {
+                    let [f] = get_args(args)?;
+                    self.handle_args_outputs(2, f.outputs);
+                }
                 prim => {
-                    let args = prim.args();
+                    let args = prim
+                        .args()
+                        .ok_or_else(|| format!("{prim} has indeterminate args"))?;
+                    let outputs = prim
+                        .outputs()
+                        .ok_or_else(|| format!("{prim} has indeterminate outputs"))?;
                     for _ in 0..args {
                         self.pop();
                     }
-                    let outputs = prim.outputs();
                     for _ in 0..outputs {
                         self.push(BasicValue::Other);
                     }

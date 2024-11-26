@@ -698,7 +698,10 @@ code:
                         }
                     }
                 }
-                Err(e) => self.scope.stack_height = Err(span.sp(e)),
+                Err(e) if matches!(e.kind, SigCheckErrorKind::LoopVariable { .. }) => {
+                    self.scope.stack_height = Err(span.sp(e))
+                }
+                Err(e) => self.add_error(span, e),
             }
             self.asm.root.push(line_node)
         }

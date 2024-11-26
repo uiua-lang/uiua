@@ -3542,7 +3542,7 @@ macro_rules! impl_primitive {
     ($(
         $(#[$attr:meta])*
         (
-            $args:literal
+            $($args:literal)?
             $(($outputs:expr))?
             $([$margs:expr])?,
             $variant:ident
@@ -3572,31 +3572,30 @@ macro_rules! impl_primitive {
         }
 
         impl ImplPrimitive {
-            pub fn args(&self) -> usize {
-                match self {
-                    $(ImplPrimitive::$variant => $args,)*
+            pub fn args(&self) -> Option<usize> {
+                Some(match self {
+                    $($(ImplPrimitive::$variant => $args,)?)*
                     ImplPrimitive::DeshapeSub(_) => 1,
                     ImplPrimitive::UndoDeshape(_) => 2,
-                    ImplPrimitive::EachSub(_) => 1,
-                    ImplPrimitive::RowsSub(_) => 1,
-                    ImplPrimitive::InventorySub(_) => 1,
                     ImplPrimitive::TransposeN(_) => 1,
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n + 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
                     ImplPrimitive::TraceN { n, .. } => *n,
-                }
+                    _ => return None
+                })
             }
-            pub fn outputs(&self) -> usize {
-                match self {
+            pub fn outputs(&self) -> Option<usize> {
+                Some(match self {
                     $($(ImplPrimitive::$variant => $outputs,)?)*
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n,
                     ImplPrimitive::TraceN { n, .. } => *n,
+                    _ if self.modifier_args().is_some() => return None,
                     _ => 1
-                }
+                })
             }
             pub fn modifier_args(&self) -> Option<usize> {
                 match self {
@@ -3686,15 +3685,15 @@ impl_primitive!(
     (2, UndoWhere),
     (2, AntiOrient),
     (3(2), UndoJoin),
-    (1[1], UndoPartition1),
+    (1(1)[1], UndoPartition1),
     (3, UndoPartition2),
-    (1[1], UndoGroup1),
+    (1(1)[1], UndoGroup1),
     (3, UndoGroup2),
     (4, UndoInsert),
     (3, UndoRemove),
     (1(0), TryClose),
-    (2[1], UnBoth),
-    (2[2], UnBracket),
+    ([1], UnBoth),
+    ([2], UnBracket),
     // Optimizations
     (1, FirstMinIndex),
     (1, FirstMaxIndex),
@@ -3711,16 +3710,16 @@ impl_primitive!(
     (2[2], ReduceTable),
     (1, ReplaceRand, Impure),
     (2, ReplaceRand2, Impure),
-    (2[1], Adjacent),
-    (2[1], RowsWindows),
+    (2(1)[1], Adjacent),
+    (2(1)[1], RowsWindows),
     (1, CountUnique),
-    (1(2)[3], AstarFirst),
-    (1[3], AstarPop),
+    ((2)[3], AstarFirst),
+    ([3], AstarPop),
     (2[1], SplitByScalar),
     (2[1], SplitBy),
     // Implementation details
     (1, Utf16),
-    (1[2], RepeatWithInverse),
+    ([2], RepeatWithInverse),
     (2(1), ValidateType),
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),

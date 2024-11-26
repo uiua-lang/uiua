@@ -402,7 +402,7 @@ impl VirtualEnv {
                     self.handle_args_outputs(sig.args, 1);
                 }
                 Repeat => {
-                    let [f] = get_args(args)?;
+                    let [f] = get_args_nodes(args)?;
                     let n = self.pop();
                     self.repeat(f, n)?;
                 }
@@ -540,8 +540,8 @@ impl VirtualEnv {
                     self.handle_args_outputs(args, sig.outputs);
                 }
                 RepeatWithInverse => {
-                    let [f, inv] = get_args(args)?;
-                    if f.inverse() != inv {
+                    let [f, inv] = get_args_nodes(args)?;
+                    if f.sig.inverse() != inv.sig {
                         return Err(SigCheckError::from(
                             "repeat inverse does not have inverse signature",
                         ));
@@ -574,8 +574,8 @@ impl VirtualEnv {
                     self.handle_args_outputs(f.args + g.args, f.outputs + g.outputs);
                 }
                 RowsSub(_) | InventorySub(_) | EachSub(_) => {
-                    let [f] = get_args(args)?;
-                    self.handle_sig(f);
+                    let [f] = get_args_nodes(args)?;
+                    self.node(&f.node)?;
                 }
                 UnScan => self.handle_args_outputs(1, 1),
                 SplitBy | SplitByScalar => {
@@ -645,24 +645,34 @@ impl VirtualEnv {
     fn handle_sig(&mut self, sig: Signature) {
         self.handle_args_outputs(sig.args, sig.outputs)
     }
-    fn repeat(&mut self, sig: Signature, n: BasicValue) -> Result<(), SigCheckError> {
+    fn repeat(
+        &mut self,
+        &SigNode { sig, ref node }: &SigNode,
+        n: BasicValue,
+    ) -> Result<(), SigCheckError> {
         if let BasicValue::Num(n) = n {
             // If n is a known natural number, then the function can have any signature.
             let sig = if n >= 0.0 { sig } else { sig.inverse() };
             if n.fract() == 0.0 {
                 let n = n.abs() as usize;
                 if n > 0 {
-                    let (args, outputs) = match sig.args.cmp(&sig.outputs) {
-                        Ordering::Equal => (sig.args, sig.outputs),
-                        Ordering::Less => (sig.args, n * (sig.outputs - sig.args) + sig.args),
-                        Ordering::Greater => {
-                            ((n - 1) * (sig.args - sig.outputs) + sig.args, sig.outputs)
+                    if n <= 100 {
+                        for _ in 0..n {
+                            self.node(node)?;
                         }
-                    };
-                    if validate_size_of::<BasicValue>([outputs]).is_err() {
-                        return Err("repeat with excessive outputs".into());
+                    } else {
+                        let (args, outputs) = match sig.args.cmp(&sig.outputs) {
+                            Ordering::Equal => (sig.args, sig.outputs),
+                            Ordering::Less => (sig.args, n * (sig.outputs - sig.args) + sig.args),
+                            Ordering::Greater => {
+                                ((n - 1) * (sig.args - sig.outputs) + sig.args, sig.outputs)
+                            }
+                        };
+                        if validate_size_of::<BasicValue>([outputs]).is_err() {
+                            return Err("repeat with excessive outputs".into());
+                        }
+                        self.handle_args_outputs(args, outputs);
                     }
-                    self.handle_args_outputs(args, outputs);
                 }
             } else if n.is_infinite() {
                 match sig.args.cmp(&sig.outputs) {

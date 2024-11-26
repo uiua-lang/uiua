@@ -525,6 +525,11 @@ under!(RowsPat, input, g_sig, inverse, asm, {
 });
 
 under!(RepeatPat, input, g_sig, inverse, asm, {
+    let (input, val) = if let Ok((input, val)) = Val.invert_extract(input, asm) {
+        (input, Some(val))
+    } else {
+        (input, None)
+    };
     let (f, span, input) = match input {
         [Mod(Repeat, args, span), input @ ..] => {
             let [f] = args.as_slice() else {
@@ -541,8 +546,10 @@ under!(RepeatPat, input, g_sig, inverse, asm, {
         _ => return generic(),
     };
     let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
-    let befores = Node::from_iter([CopyToUnder(1, span), Mod(Repeat, eco_vec![f_before], span)]);
-    let afters = Node::from_iter([PopUnder(1, span), Mod(Repeat, eco_vec![f_after], span)]);
+    let mut befores = val.clone().unwrap_or(CopyToUnder(1, span));
+    befores.push(Mod(Repeat, eco_vec![f_before], span));
+    let mut afters = val.unwrap_or(PopUnder(1, span));
+    afters.push(Mod(Repeat, eco_vec![f_after], span));
     Ok((input, befores, afters))
 });
 

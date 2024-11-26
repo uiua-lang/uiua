@@ -3,7 +3,8 @@
 ## 0.14
 The next version of Uiua
 
-- Optimize splitting and interspersing
+- Fill negative indices
+- Optimize interspersing
 - Stabilize `backward`, `case`
 - Fix `stack` function bounds
 - Optimize `group`/`partition` reduction replacement

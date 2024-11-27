@@ -535,6 +535,7 @@ impl Primitive {
                 "use subscripted {} or {Un}{By}({Len}{Shape}) instead",
                 Deshape.format()
             ),
+            Trace => format!("use subscripted {} instead", Stack.format()),
             _ => return None,
         })
     }

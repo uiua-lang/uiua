@@ -617,6 +617,13 @@
     "class": "Constant",
     "description": "The number of radians in a quarter circle"
   },
+  "eval": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Evalute a string as code at compile time",
+    "experimental": true
+  },
   "fall": {
     "glyph": "⍖",
     "args": 1,
@@ -1308,7 +1315,8 @@
     "args": 1,
     "outputs": 1,
     "class": "Debug",
-    "description": "Debug print the top value on the stack without popping it"
+    "description": "Debug print the top value on the stack without popping it",
+    "deprecated": true
   },
   "transpose": {
     "glyph": "⍉",

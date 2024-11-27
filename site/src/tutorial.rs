@@ -299,13 +299,14 @@ fn TutorialBasic() -> impl IntoView {
         <p><Prim prim=Pop/>" removes the top item from the stack."</p>
         <p>"This is useful when you want to discard a value that you do not need."</p>
         <Editor example="1 pop 2 3 4 ◌ 5 6"/>
-        <Hd id="stack-and-trace"><Prim prim=Stack/>" and "<Prim prim=Trace/></Hd>
+        <Hd id="stack"><Prim prim=Stack/></Hd>
         <p><Prim prim=Stack/>" prints the entire stack."</p>
         <p>"It also attaches line and column numbers."</p>
         <p>"This is useful for debugging by inspecting the stack."</p>
         <Editor example="√+ ? .+ ? 1 ×3 4"/>
-        <p><Prim prim=Trace/>" prints only the top item on the stack."</p>
-        <Editor example="+1 ⸮ ×4 trace ×. -3 5"/>
+        <p><Prim prim=Stack/>" is compatible with a language feature called "<em>"subscripts"</em>". If you add a little subscript number to the right of it, it will only print that many values from the stack."</p>
+        <p>"We'll talk more about subscripts later. For now, know that you can add subscripts to "<Prim prim=Stack/>" by adding consecutive "<code>"?"</code>"s. The formatter will convert it for you!"</p>
+        <Editor example="+1 ?? × ??? 4 ?? ×. -3 5 # Try formatting!"/>
 
         <Hd id="challenges">"Challenges"</Hd>
         <p>"At the end of most sections of this tutorial, there will be a few challenges to test your understanding."</p>

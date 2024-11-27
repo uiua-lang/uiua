@@ -6,31 +6,25 @@ This exercise can be likened to "feeling" the code, turning it around in your ha
 
 This section covers a few tools that Uiua provides for making code easier to work with and debug.
 
-## [stack]() and [trace]()
+## [stack]()
 
 Uiua already prints out any values left on the stack when the program ends. This is usually enough for smaller programs, but sometimes, you need to be able to see what values are on the stack somewhere in the middle of the code.
 
-[stack]() and [trace]() were mentioned near the [beginning](/tutorial/basic#stack-and-trace) of this tutorial. They both print out values from the stack without removing them. [stack]() prints all values while [trace]() only prints one.
+[stack]() was mentioned near the [beginning](/tutorial/basic#stack) of this tutorial. It prints out values from the stack without removing them. Subscripting [stack]() prints out only that many values.
 
 ```uiua
 5 ? 1 [2 3] "uiua"
 ```
 
 ```uiua
-5 1 ⸮ ⇡3 "uiua"
+5 1 ?₁ ⇡3 "uiua"
 ```
 As you can see, the line and column number is also printed.
 
-The formatter will convert two `?`s into [trace](). Try it below.
+The formatter will convert multiple `?`s that come immediately after [stack]() a subscript. Try it below.
 
 ```uiua
-?? √5
-```
-
-Multiple [trace]()'s next to each other will combine to show multiple stack values.
-
-```uiua
-⸮⸮⸮ 1 2 3 4 5
+??? √5 7 10
 ```
 
 [stack]() will show you the boundaries of the functions that values are used in.
@@ -41,7 +35,7 @@ F ← ×G
 F 10 4
 ```
 
-[stack]() and [trace]() allow you to inspect the stack at a given place in the code. They make it easy to get a quick sense of what values a function is working with.
+[stack]() llows you to inspect the stack at a given place in the code. It makes it easy to get a quick sense of what values a function is working with.
 
 ## Labels
 
@@ -51,7 +45,7 @@ Labels allow you to tag an array with a debug-only name. They are written with a
 $Numbers [1 2 3]
 ```
 
-Labels are *only* visible in debugging outputs. This includes normal interpreter output as well as [stack]() and [trace]().
+Labels are *only* visible in debugging outputs. This includes normal interpreter output as well as [stack]().
 
 Labels will *not* be shown when arrays are formatted using [`&p`]() or format strings.
 

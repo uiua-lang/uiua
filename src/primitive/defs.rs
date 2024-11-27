@@ -3143,6 +3143,10 @@ primitive!(
     ///   : +×-×+
     /// ex: 2_3_10 ? 17 ↯3_4⇡12
     ///   : ++
+    /// Subscripted [stack] prints that many values from the stack.
+    /// ex: ?₂ 1 2 3 4
+    /// If you type `N+1`` `?`s, it will format to [stack] subscripted with `N`.
+    /// ex: ??? 1 2 3 4 # Try formatting!
     (0(0), Stack, Debug, ("stack", '?'), Impure),
     /// Debug print the top value on the stack without popping it
     ///

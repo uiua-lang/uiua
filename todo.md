@@ -3,8 +3,8 @@
 ## 0.14
 The next version of Uiua
 
+- Validate number literals at compile time
 - Stabilize `backward`, `case`
-- Optimize `group`/`partition` reduction replacement
 - `do` function pack
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)

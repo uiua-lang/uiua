@@ -999,17 +999,16 @@ impl<'a> Lexer<'a> {
                 "└" if self.next_char_exact("─") && self.next_char_exact("╴") => {
                     self.end(CloseModule, start)
                 }
-                // Stack and trace
+                // Stack
                 "?" => {
+                    self.end(Primitive::Stack, start);
                     let mut n = 0;
-                    let mut start = start;
+                    let start = self.loc;
                     while self.next_char_exact("?") {
-                        self.end(Primitive::Trace, start);
-                        start = self.loc;
                         n += 1;
                     }
-                    if n == 0 {
-                        self.end(Primitive::Stack, start);
+                    if n > 0 {
+                        self.end(Subscr(Subscript::N(n)), start);
                     }
                 }
                 // Comments

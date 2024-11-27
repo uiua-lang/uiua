@@ -22,6 +22,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Deprecate [`rerank ☇`](https://uiua.org/docs/rerank)
   - It was basically always used with a static rank, and that functionality has been subsumed by subscripted [`deshape ♭`](https://uiua.org/docs/deshape) and/or the iterating modifiers listed above
   - The dynamic behavior can still be accessed with `°⊸(⧻△)` (though when you would need this is unclear)
+- Deprecate [`trace ⸮`](https://uiua.org/docs/trace)
+  - It is equivalent to subscripted [`stack ?`](https://uiua.org/docs/stack)
+  - Sequential `?`s, which formatted to [`trace ⸮`](https://uiua.org/docs/trace)s, now format to subscripted [`stack ?`](https://uiua.org/docs/stack)
 - Stabilize [`sort ⍆`](https://uiua.org/docs/sort)
   - Sorting is a very common operation, and it's useful to have such simple access to it
 - Stabilize [`last ⊣`](https://uiua.org/docs/last)

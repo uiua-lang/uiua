@@ -13,15 +13,15 @@ use super::*;
 pub enum PreEvalMode {
     /// Does not evalute pure constants and expressions at comptime, but still evaluates `comptime`
     Lazy,
-    /// Evaluate as much as possible at compile time, even impure expressions
-    ///
-    /// Recursive functions and certain system functions are not evaluated
-    Lsp,
     /// Pre-evaluate each line, but not multiple lines together
     Line,
     /// The normal mode. Tries to evaluate pure, time-bounded constants and expressions at comptime
     #[default]
     Normal,
+    /// Evaluate as much as possible at compile time, even impure expressions
+    ///
+    /// Recursive functions and certain system functions are not evaluated
+    Lsp,
 }
 
 const MAX_PRE_EVAL_ELEMS: usize = 1000;

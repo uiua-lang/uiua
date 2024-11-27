@@ -1177,7 +1177,7 @@ impl Compiler {
             })
             .collect();
 
-        let mut code = String::new();
+        let mut code: Option<String> = None;
         (|| -> UiuaResult {
             if let Some(index) = self.node_unbound_index(&mac.root.node) {
                 let name = self.scope.names.iter().find_map(|(name, local)| {
@@ -1225,8 +1225,9 @@ impl Compiler {
                     Ok(strings) => strings,
                     Err(_) => val.representation().lines().map(Into::into).collect(),
                 };
+                let code = code.get_or_insert_with(String::new);
                 for s in strings {
-                    if s.chars().last().is_some_and(|c| !c.is_whitespace()) {
+                    if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
                         code.push(' ');
                     }
                     code.push_str(&s);
@@ -1247,14 +1248,18 @@ impl Compiler {
         .map_err(|e| e.trace_macro(mac_name.clone(), modifier_span.clone()))?;
 
         // Quote
-        self.code_meta
-            .macro_expansions
-            .insert(full_span, (mac_name.clone(), code.clone()));
-        self.suppress_diagnostics(|comp| {
-            comp.temp_scope(mac.names, None, |comp| {
-                comp.quote(&code, mac_name, &modifier_span)
+        if let Some(code) = code {
+            self.code_meta
+                .macro_expansions
+                .insert(full_span, (mac_name.clone(), code.clone()));
+            self.suppress_diagnostics(|comp| {
+                comp.temp_scope(mac.names, None, |comp| {
+                    comp.quote(&code, mac_name, &modifier_span)
+                })
             })
-        })
+        } else {
+            Ok(Node::empty())
+        }
     }
     fn node_unbound_index(&self, node: &Node) -> Option<usize> {
         match node {

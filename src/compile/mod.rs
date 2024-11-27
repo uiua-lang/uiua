@@ -330,7 +330,7 @@ impl Compiler {
         let input: EcoString = fs::read_to_string(path)
             .map_err(|e| UiuaErrorKind::Load(path.into(), e.into()))?
             .into();
-        // _ = crate::lsp::Spans::from_input(&input);
+        _ = crate::lsp::Spans::from_input(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.into()))
     }
@@ -661,12 +661,12 @@ code:
                     }
                     // Try to evaluate at comptime
                     // This can be done when:
-                    // - the pre-eval mode is not `Line`
+                    // - the pre-eval mode is greater that `Line`
                     // - there are at least as many push nodes preceding the current line as there are arguments to the line
                     // - the words create no bindings
                     if precomp
                         && error_count_after == error_count_before
-                        && self.pre_eval_mode != PreEvalMode::Line
+                        && self.pre_eval_mode > PreEvalMode::Line
                         && !line_node.is_empty()
                         && binding_count_before == binding_count_after
                         && root_len_before == self.asm.root.len()

@@ -81,6 +81,12 @@ M! ←^ ⋅"∘"
 @a @b
 ⍤⤙≍ "b" [⋅M!∘]
 
+Join! ←^ ↯:@⊂↥0-1⋕
+{Join!0 "a" "bc" "def"}
+{Join!1 "a" "bc" "def"}
+{Join!2 "a" "bc" "def"}
+◌◌◌
+
 # Experimental!
 
 # Inline macros

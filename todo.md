@@ -3,6 +3,7 @@
 ## 0.14
 The next version of Uiua
 
+- Optimize `conjoin inventory`
 - Stabilize `backward`, `case`
 - Compile-time code string evaluation
 - `do` function pack

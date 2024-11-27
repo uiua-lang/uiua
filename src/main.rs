@@ -395,6 +395,7 @@ fn main() {
             }
         }
         Some(Comm::Doc { name }) => doc(&name),
+        Some(Comm::Check { path }) => check(path).unwrap_or_else(fail),
         Some(Comm::Find { path, text, raw }) => find(path, text, raw).unwrap_or_else(fail),
         None => {
             #[cfg(feature = "window")]
@@ -825,6 +826,11 @@ enum Comm {
         #[clap(help = "The name of the function, modifier, or constant")]
         name: String,
     },
+    #[clap(about = "Check that Uiua files compile")]
+    Check {
+        #[clap(help = "The path to a file or directory to check")]
+        path: Option<PathBuf>,
+    },
     #[clap(about = "Find some Uiua code that matches the given unformatted text")]
     Find {
         text: String,
@@ -917,12 +923,41 @@ fn setup_audio(options: AudioOptions) {
     }
 }
 
-fn uiua_files(root: &Path) -> UiuaResult<Vec<PathBuf>> {
+fn uiua_files(path: Option<&Path>) -> UiuaResult<Vec<PathBuf>> {
+    if let Some(path) = path {
+        if path.is_file() {
+            Ok(vec![path.into()])
+        } else if path.is_dir() {
+            uiua_files_in(path)
+        } else {
+            Err(UiuaError::load(
+                path.into(),
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Path is not a file or directory",
+                ),
+            ))
+        }
+    } else {
+        uiua_files_in(".".as_ref())
+    }
+}
+
+fn uiua_files_in(root: &Path) -> UiuaResult<Vec<PathBuf>> {
     fn rec(root: &Path, acc: &mut Vec<PathBuf>) -> UiuaResult<()> {
         for entry in fs::read_dir(root).map_err(|e| UiuaError::format(root.into(), e))? {
             let entry = entry.map_err(|e| UiuaError::format(root.into(), e))?;
             let path = entry.path();
             if path.is_dir() {
+                if path
+                    .file_name()
+                    .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+                    || path
+                        .to_str()
+                        .is_some_and(|s| s == "./target" || s == ".\\target")
+                {
+                    continue;
+                }
                 rec(&path, acc)?;
             } else if path.extension().map_or(false, |ext| ext == "ua") {
                 acc.push(path);
@@ -1050,7 +1085,7 @@ fn format_single_file(path: PathBuf, config: &FormatConfig) -> Result<(), UiuaEr
 }
 
 fn format_multi_files(config: &FormatConfig) -> Result<(), UiuaError> {
-    for path in uiua_files(".".as_ref())? {
+    for path in uiua_files_in(".".as_ref())? {
         format_file(path, config)?;
     }
     Ok(())
@@ -1313,27 +1348,29 @@ fn update_modules(modules: &[PathBuf]) -> io::Result<()> {
     Ok(())
 }
 
+fn check(path: Option<PathBuf>) -> UiuaResult {
+    let paths = uiua_files(path.as_deref())?;
+    let path_count = paths.len();
+    for (i, path) in paths.into_iter().enumerate() {
+        print!(
+            "\r{} {} ({}/{})             ",
+            "Checking".bold().bright_green(),
+            path.display(),
+            i + 1,
+            path_count
+        );
+        let mut comp = Compiler::with_backend(NativeSys);
+        if let Err(e) = comp.load_file(path) {
+            println!("\n{}", e.report());
+        }
+    }
+    Ok(())
+}
+
 fn find(path: Option<PathBuf>, mut text: String, raw: bool) -> UiuaResult {
     if raw {
         colored::control::set_override(false);
     }
-    let paths = if let Some(path) = path {
-        if path.is_file() {
-            vec![path]
-        } else if path.is_dir() {
-            uiua_files(&path)?
-        } else {
-            return Err(UiuaError::load(
-                path,
-                io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Path is not a file or directory",
-                ),
-            ));
-        }
-    } else {
-        uiua_files(".".as_ref())?
-    };
     text = format_str(
         &text,
         &FormatConfig {
@@ -1342,7 +1379,7 @@ fn find(path: Option<PathBuf>, mut text: String, raw: bool) -> UiuaResult {
         },
     )?
     .output;
-    for path in paths {
+    for path in uiua_files(path.as_deref())? {
         let path = path
             .strip_prefix("./")
             .or_else(|_| path.strip_prefix(".\\"))

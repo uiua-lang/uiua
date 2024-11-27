@@ -68,6 +68,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     fast_reduce_different(bytes, 0.0, fill, depth, add::num_num, add::num_byte)
                         .into()
                 }
+                #[cfg(feature = "opt")]
                 Primitive::Sub if flipped => fast_reduce_different(
                     bytes,
                     0.0,
@@ -77,6 +78,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     flip(sub::byte_num),
                 )
                 .into(),
+                #[cfg(feature = "opt")]
                 Primitive::Sub => {
                     fast_reduce_different(bytes, 0.0, fill, depth, sub::num_num, sub::num_byte)
                         .into()
@@ -94,37 +96,6 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     fast_reduce_different(bytes, 1.0, fill, depth, mul::num_num, mul::num_byte)
                         .into()
                 }
-                Primitive::Div if flipped => fast_reduce_different(
-                    bytes,
-                    1.0,
-                    fill,
-                    depth,
-                    flip(div::num_num),
-                    flip(div::byte_num),
-                )
-                .into(),
-                Primitive::Div => {
-                    fast_reduce_different(bytes, 1.0, fill, depth, div::num_num, div::num_byte)
-                        .into()
-                }
-                Primitive::Modulus if flipped => fast_reduce_different(
-                    bytes,
-                    f64::INFINITY,
-                    fill,
-                    depth,
-                    flip(modulus::num_num),
-                    flip(modulus::byte_num),
-                )
-                .into(),
-                Primitive::Modulus => fast_reduce_different(
-                    bytes,
-                    f64::INFINITY,
-                    fill,
-                    depth,
-                    modulus::num_num,
-                    modulus::num_byte,
-                )
-                .into(),
                 Primitive::Or => {
                     let byte_fill = env.scalar_fill::<u8>().ok();
                     if fill.is_some() && byte_fill.is_none() {
@@ -135,19 +106,6 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     } else {
                         fast_reduce(bytes, 0, byte_fill, depth, or::byte_byte).into()
                     }
-                }
-                Primitive::Atan if flipped => fast_reduce_different(
-                    bytes,
-                    0.0,
-                    fill,
-                    depth,
-                    flip(atan2::num_num),
-                    flip(atan2::byte_num),
-                )
-                .into(),
-                Primitive::Atan => {
-                    fast_reduce_different(bytes, 0.0, fill, depth, atan2::num_num, atan2::num_byte)
-                        .into()
                 }
                 Primitive::Max => {
                     let byte_fill = env.scalar_fill::<u8>().ok();
@@ -329,27 +287,7 @@ macro_rules! reduce_math {
                 #[cfg(feature = "opt")]
                 Primitive::Sub => fast_reduce(xs, 0.0.into(), fill, depth, sub::$f),
                 Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, depth, mul::$f),
-                #[cfg(feature = "opt")]
-                Primitive::Div if _flipped => {
-                    fast_reduce(xs, 1.0.into(), fill, depth, flip(div::$f))
-                }
-                #[cfg(feature = "opt")]
-                Primitive::Div => fast_reduce(xs, 1.0.into(), fill, depth, div::$f),
-                #[cfg(feature = "opt")]
-                Primitive::Modulus if _flipped => {
-                    fast_reduce(xs, f64::INFINITY.into(), fill, depth, flip(modulus::$f))
-                }
-                #[cfg(feature = "opt")]
-                Primitive::Modulus => {
-                    fast_reduce(xs, f64::INFINITY.into(), fill, depth, modulus::$f)
-                }
                 Primitive::Or => fast_reduce(xs, 0.0.into(), fill, depth, or::$f),
-                #[cfg(feature = "opt")]
-                Primitive::Atan if _flipped => {
-                    fast_reduce(xs, 0.0.into(), fill, depth, flip(atan2::$f))
-                }
-                #[cfg(feature = "opt")]
-                Primitive::Atan => fast_reduce(xs, 0.0.into(), fill, depth, atan2::$f),
                 Primitive::Max => fast_reduce(xs, f64::NEG_INFINITY.into(), fill, depth, max::$f),
                 Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), fill, depth, min::$f),
                 _ => return Err(xs),

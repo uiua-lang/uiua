@@ -967,10 +967,9 @@ inverse!(PrimPat, input, _, Prim(prim, span), {
         Fft => ImplPrim(UnFft, span),
         DateTime => ImplPrim(UnDatetime, span),
         Trace => ImplPrim(
-            TraceN {
+            StackN {
                 n: 1,
                 inverse: true,
-                stack_sub: false,
             },
             span,
         ),
@@ -1013,15 +1012,10 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnDatetime => Prim(DateTime, span),
         UnRawMode => Prim(Sys(SysOp::RawMode), span),
         UnClip => Prim(Sys(SysOp::Clip), span),
-        TraceN {
-            n,
-            inverse,
-            stack_sub,
-        } => ImplPrim(
-            TraceN {
+        StackN { n, inverse } => ImplPrim(
+            StackN {
                 n,
                 inverse: !inverse,
-                stack_sub,
             },
             span,
         ),

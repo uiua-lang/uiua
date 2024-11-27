@@ -307,34 +307,14 @@ impl fmt::Display for ImplPrimitive {
                 }
                 Ok(())
             }
-            &TraceN {
-                n,
-                inverse,
-                stack_sub,
-            } => {
+            &StackN { n, inverse } => {
                 if inverse {
                     write!(f, "{Un}")?;
                 }
-                if stack_sub {
-                    fn n_string(n: usize) -> String {
-                        (n.to_string().chars())
-                            .map(|c| SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])
-                            .collect()
-                    }
-                    let n_str = n_string(n);
-                    write!(f, "{Stack}{n_str}").unwrap();
-                } else {
-                    if inverse && n > 1 {
-                        write!(f, "(")?;
-                    }
-                    for _ in 0..n {
-                        write!(f, "{Trace}")?;
-                    }
-                    if inverse && n > 1 {
-                        write!(f, ")")?;
-                    }
-                }
-                Ok(())
+                let n_str: String = (n.to_string().chars())
+                    .map(|c| SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])
+                    .collect();
+                write!(f, "{Stack}{n_str}")
             }
             RepeatWithInverse => write!(f, "{Repeat}"),
             ValidateType => write!(f, "{Un}…{Type}{Dup}"),
@@ -1303,11 +1283,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnParse => env.monadic_ref_env(Value::unparse)?,
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
-            ImplPrimitive::TraceN {
-                n,
-                inverse,
-                stack_sub,
-            } => trace_n(env, *n, *inverse, *stack_sub)?,
+            ImplPrimitive::StackN { n, inverse } => stack_n(env, *n, *inverse)?,
             ImplPrimitive::UnStack => stack(env, true)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
             ImplPrimitive::UnBox => {
@@ -1896,21 +1872,13 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     Ok(())
 }
 
-fn trace_n(env: &mut Uiua, n: usize, inverse: bool, stack_sub: bool) -> UiuaResult {
+fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
     let mut items = Vec::new();
     for i in 0..n {
         items.push(env.pop(i + 1)?);
     }
     items.reverse();
-    let span = format!(
-        "{} {}",
-        ImplPrimitive::TraceN {
-            n,
-            inverse,
-            stack_sub
-        },
-        env.span()
-    );
+    let span = format!("{} {}", ImplPrimitive::StackN { n, inverse }, env.span());
     let max_line_len = span.chars().count() + 2;
     let boundaries = stack_boundaries(env);
     let item_lines: Vec<Vec<String>> = items

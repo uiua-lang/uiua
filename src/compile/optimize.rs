@@ -337,63 +337,23 @@ opt!(
     (
         [Prim(Trace, span), Prim(Trace, _)],
         ImplPrim(
-            TraceN {
+            StackN {
                 n: 2,
                 inverse: false,
-                stack_sub: false
             },
             *span
         )
     ),
     (
-        [
-            ImplPrim(
-                TraceN {
-                    n,
-                    inverse: false,
-                    ..
-                },
-                span
-            ),
-            Prim(Trace, _)
-        ],
+        [ImplPrim(StackN { n, inverse: false }, span), Prim(Trace, _)],
         ImplPrim(
-            TraceN {
+            StackN {
                 n: n + 1,
                 inverse: false,
-                stack_sub: false
             },
             *span
         )
     ),
-    (
-        [
-            ImplPrim(
-                TraceN {
-                    n: a,
-                    inverse: inv_a,
-                    stack_sub,
-                },
-                span
-            ),
-            ImplPrim(
-                TraceN {
-                    n: b,
-                    inverse: inv_b,
-                    ..
-                },
-                _
-            )
-        ](inv_a == inv_b),
-        ImplPrim(
-            TraceN {
-                n: a + b,
-                inverse: *inv_a,
-                stack_sub: *stack_sub
-            },
-            *span
-        )
-    )
 );
 
 trait Optimization: Debug + Sync {

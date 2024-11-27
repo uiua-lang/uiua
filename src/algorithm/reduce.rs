@@ -216,7 +216,7 @@ fn trim_node(node: &Node) -> &[Node] {
     let trim = |node: &Node| {
         matches!(
             node,
-            Node::Prim(Stack | Trace, _) | Node::ImplPrim(UnStack | TraceN { .. }, _)
+            Node::Prim(Stack | Trace, _) | Node::ImplPrim(UnStack | StackN { .. }, _)
         )
     };
     while nodes.first().is_some_and(trim) {

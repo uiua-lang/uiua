@@ -1999,10 +1999,9 @@ code:
                     span: self.add_span(span),
                 },
                 Primitive::Stack => Node::ImplPrim(
-                    ImplPrimitive::TraceN {
+                    ImplPrimitive::StackN {
                         n: self.positive_subscript(n, Primitive::Stack, span.clone())?,
                         inverse: false,
-                        stack_sub: true,
                     },
                     self.add_span(span),
                 ),

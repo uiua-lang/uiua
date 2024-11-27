@@ -3147,7 +3147,7 @@ primitive!(
     /// ex: ?₂ 1 2 3 4
     /// If you type `N+1` `?`s, it will format to [stack] subscripted with `N`.
     /// ex: ??? 1 2 3 4 # Try formatting!
-    (0(0), Stack, Debug, ("stack", '?'), Impure),
+    (0(0), Stack, Debug, ("stack", '?'), Mutating),
     /// Debug print the top value on the stack without popping it
     ///
     /// ex: ⸮[1 2 3]
@@ -3159,7 +3159,7 @@ primitive!(
     /// To see them, use [trace].
     /// ex: [1 5 2 9 11 0 7 12 8 3]
     ///   : ▽×⸮≥5:⸮≤10..
-    (1, Trace, Debug, ("trace", '⸮'), Impure),
+    (1, Trace, Debug, ("trace", '⸮'), Mutating),
     /// Preprocess and print all stack values without popping them
     ///
     /// [dump][identity] is equivalent to [stack].
@@ -3181,7 +3181,7 @@ primitive!(
     /// Errors encountered within [dump]'s function are caught and dumped as strings.
     /// ex: 1_2_3 [] 5_6_7
     ///   : dump⊢
-    (0(0)[1], Dump, Debug, "dump", Impure),
+    (0(0)[1], Dump, Debug, "dump", Mutating),
     /// Convert code into a string instead of compiling it
     ///
     /// ex: # Experimental!
@@ -3604,7 +3604,7 @@ macro_rules! impl_primitive {
             UndoReverse { n: usize, all: bool },
             UndoRotate(usize),
             ReduceDepth(usize),
-            TraceN { n: usize, inverse: bool, stack_sub: bool},
+            StackN { n: usize, inverse: bool },
         }
 
         impl ImplPrimitive {
@@ -3618,7 +3618,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n + 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
-                    ImplPrimitive::TraceN { n, .. } => *n,
+                    ImplPrimitive::StackN { n, .. } => *n,
                     _ => return None
                 })
             }
@@ -3628,7 +3628,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n,
-                    ImplPrimitive::TraceN { n, .. } => *n,
+                    ImplPrimitive::StackN { n, .. } => *n,
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })
@@ -3646,7 +3646,7 @@ macro_rules! impl_primitive {
             pub fn purity(&self) -> Purity {
                 match self {
                     $($(ImplPrimitive::$variant => {Purity::$purity},)*)*
-                    ImplPrimitive::TraceN { .. } => Purity::Impure,
+                    ImplPrimitive::StackN { .. } => Purity::Mutating,
                     _ => Purity::Pure
                 }
             }

@@ -494,6 +494,7 @@ impl Primitive {
             (Couple, None) => Signature::new(2, 1),
             (Box, None) => Signature::new(1, 1),
             (Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8, _) => return self.sig(),
+            (Stack, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),
             _ => return None,
         })
     }
@@ -2567,9 +2568,6 @@ mod tests {
         {{
             "include": "#module_delim"
         }},
-		{{
-			"include": "#numbers"
-		}},
         {{
             "include": "#strand"
         }},
@@ -2593,7 +2591,10 @@ mod tests {
 		}},
         {{
             "include": "#idents"
-        }}
+        }},
+		{{
+			"include": "#numbers"
+		}}
 	],
 	"repository": {{
         "idents": {{

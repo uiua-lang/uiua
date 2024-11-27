@@ -22,6 +22,7 @@ use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
+use terminal_size::terminal_size;
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
@@ -1355,19 +1356,48 @@ fn update_modules(modules: &[PathBuf]) -> io::Result<()> {
 fn check(path: Option<PathBuf>) -> UiuaResult {
     let paths = uiua_files(path.as_deref())?;
     let path_count = paths.len();
+    let mut successes = 0;
+    let width = terminal_size().map(|(w, _)| w.0 as usize).unwrap_or(60);
     for (i, path) in paths.into_iter().enumerate() {
+        let message_length = format!("Checking {} ({}/{})", path.display(), i + 1, path_count)
+            .chars()
+            .count();
         print!(
-            "\r{} {} ({}/{})             ",
+            "\r{} {} ({}/{}){}",
             "Checking".bold().bright_green(),
             path.display(),
             i + 1,
-            path_count
+            path_count,
+            " ".repeat(width.saturating_sub(message_length))
         );
+        stdout().flush().unwrap();
         let mut comp = Compiler::with_backend(NativeSys);
         if let Err(e) = comp.load_file(path) {
             println!("\n{}", e.report());
+        } else {
+            successes += 1;
         }
     }
+    let message = format!(
+        "{successes}/{path_count} file{} compiled successfully",
+        if path_count == 1 { "" } else { "s" }
+    );
+    let color = if successes == 0 {
+        if path_count == 0 {
+            Color::BrightGreen
+        } else {
+            Color::BrightRed
+        }
+    } else if successes == path_count {
+        Color::BrightGreen
+    } else {
+        Color::BrightYellow
+    };
+    println!(
+        "\r{}{}",
+        message.color(color),
+        " ".repeat(width.saturating_sub(message.chars().count()))
+    );
     Ok(())
 }
 

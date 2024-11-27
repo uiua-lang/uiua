@@ -55,6 +55,40 @@ pub struct ArrayMeta {
     pub handle_kind: Option<HandleKind>,
 }
 
+impl ArrayMeta {
+    /// Take the persistent metadata
+    pub fn take_per_meta(&mut self) -> PersistentMeta {
+        let label = self.label.take();
+        let map_keys = self.map_keys.take();
+        PersistentMeta { label, map_keys }
+    }
+    /// Set the persistent metadata
+    pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
+        self.label = per_meta.label;
+        self.map_keys = per_meta.map_keys;
+    }
+    /// Reset the flags
+    pub fn reset_flags(&mut self) {
+        self.flags.reset();
+    }
+    /// Combine the metadata with another
+    pub fn combine(&mut self, other: &Self) {
+        self.flags &= other.flags;
+        self.map_keys = None;
+        if self.handle_kind != other.handle_kind {
+            self.handle_kind = None;
+        }
+    }
+    /// Check if the metadata is the default
+    pub fn is_default(&self) -> bool {
+        self.label.is_none()
+            && self.map_keys.is_none()
+            && self.handle_kind.is_none()
+            && self.pointer.is_none()
+            && self.flags.is_empty()
+    }
+}
+
 /// Array pointer metadata
 #[derive(Debug, Clone, Copy)]
 pub struct MetaPtr {
@@ -130,8 +164,8 @@ pub static DEFAULT_META: ArrayMeta = ArrayMeta {
 /// Array metadata that can be persisted across operations
 #[derive(Clone, Default)]
 pub struct PersistentMeta {
-    label: Option<EcoString>,
-    map_keys: Option<MapKeys>,
+    pub(crate) label: Option<EcoString>,
+    pub(crate) map_keys: Option<MapKeys>,
 }
 
 impl PersistentMeta {
@@ -305,25 +339,17 @@ impl<T> Array<T> {
     }
     /// The the persistent metadata of the array
     pub fn take_per_meta(&mut self) -> PersistentMeta {
-        if let Some(meta) = self.get_meta_mut() {
-            let label = meta.label.take();
-            let map_keys = meta.map_keys.take();
-            PersistentMeta { label, map_keys }
-        } else {
-            PersistentMeta::default()
-        }
+        self.get_meta_mut()
+            .map(ArrayMeta::take_per_meta)
+            .unwrap_or_default()
     }
     /// Set the map keys in the metadata
     pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
-        if let Some(keys) = per_meta.map_keys {
-            self.meta_mut().map_keys = Some(keys);
-        } else if let Some(meta) = self.get_meta_mut() {
-            meta.map_keys = None;
+        if self.meta().map_keys.is_some() != per_meta.map_keys.is_some() {
+            self.meta_mut().map_keys = per_meta.map_keys;
         }
-        if let Some(label) = per_meta.label {
-            self.meta_mut().label = Some(label);
-        } else if let Some(meta) = self.get_meta_mut() {
-            meta.label = None;
+        if self.meta().label.is_some() != per_meta.label.is_some() {
+            self.meta_mut().label = per_meta.label;
         }
     }
     /// Get a reference to the map keys
@@ -334,15 +360,9 @@ impl<T> Array<T> {
     pub fn map_keys_mut(&mut self) -> Option<&mut MapKeys> {
         self.get_meta_mut().and_then(|meta| meta.map_keys.as_mut())
     }
-    /// Reset all metadata
-    pub fn reset_meta(&mut self) {
-        self.meta = None;
-    }
     /// Reset all metadata flags
     pub fn reset_meta_flags(&mut self) {
-        if self.meta.is_some() {
-            self.meta_mut().flags.reset();
-        }
+        self.get_meta_mut().map(ArrayMeta::reset_flags);
     }
     /// Get an iterator over the row slices of the array
     pub fn row_slices(
@@ -369,12 +389,8 @@ impl<T> Array<T> {
     /// Notably, this does not combine the label, as label
     /// combination should be more nuanced.
     pub fn combine_meta(&mut self, other: &ArrayMeta) {
-        if let Some(meta) = self.get_meta_mut() {
-            meta.flags &= other.flags;
-            meta.map_keys = None;
-            if meta.handle_kind != other.handle_kind {
-                meta.handle_kind = None;
-            }
+        if !(self.meta.is_none() && other.is_default()) {
+            self.meta_mut().combine(other);
         }
     }
 }

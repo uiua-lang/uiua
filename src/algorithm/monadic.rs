@@ -366,15 +366,14 @@ impl<T: ArrayValue> Array<T> {
         if self.is_map() {
             self.take_map_keys();
         }
-        self.shape = self.element_count().into();
+        self.shape.deshape();
     }
     /// Add a 1-length dimension to the front of the array's shape
     pub fn fix(&mut self) {
         self.fix_depth(0);
     }
     pub(crate) fn fix_depth(&mut self, depth: usize) {
-        let depth = depth.min(self.rank());
-        self.shape.insert(depth, 1);
+        let depth = self.shape.fix_depth(depth);
         if depth == 0 {
             if let Some(keys) = self.map_keys_mut() {
                 keys.fix();
@@ -386,20 +385,14 @@ impl<T: ArrayValue> Array<T> {
         if let Some(keys) = self.map_keys_mut() {
             keys.unfix();
         }
-        match self.shape.unfix() {
-            Some(1) => Ok(()),
-            Some(d) => Err(env.error(format!("Cannot unfix array with length {d}"))),
-            None if self.shape.contains(&0) => Err(env.error("Cannot unfix empty array")),
-            None if self.shape.is_empty() => Err(env.error("Cannot unfix scalar")),
-            None => Err(env.error(format!("Cannot unfix array with shape {:?}", self.shape))),
-        }
+        self.shape.unfix().map_err(|e| env.error(e))
     }
     /// Collapse the top two dimensions of the array's shape
     pub fn undo_fix(&mut self) {
         if let Some(keys) = self.map_keys_mut() {
             keys.unfix();
         }
-        self.shape.unfix();
+        _ = self.shape.unfix();
     }
 }
 

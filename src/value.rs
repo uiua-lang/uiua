@@ -289,7 +289,7 @@ impl Value {
 #[repr(C)]
 struct Repr {
     discriminant: u8,
-    arr: Array<f64>,
+    _arr: Array<f64>,
 }
 
 impl Value {
@@ -305,92 +305,100 @@ impl Value {
     }
     /// Get the shape of the value
     pub fn shape(&self) -> &Shape {
-        &unsafe { self.repr() }.arr.shape
+        &unsafe { self.repr() }._arr.shape
     }
     /// Get a mutable reference to the shape
     pub fn shape_mut(&mut self) -> &mut Shape {
-        &mut unsafe { self.repr_mut() }.arr.shape
+        &mut unsafe { self.repr_mut() }._arr.shape
     }
     /// Get the number of elements
     pub fn element_count(&self) -> usize {
-        unsafe { self.repr() }.arr.element_count()
+        self.shape().elements()
     }
     /// Get the value's metadata
     pub fn meta(&self) -> &ArrayMeta {
-        unsafe { self.repr() }.arr.meta()
+        unsafe { self.repr() }._arr.meta()
     }
     /// Get a mutable reference to the value's metadata
     pub fn meta_mut(&mut self) -> &mut ArrayMeta {
-        unsafe { self.repr_mut() }.arr.meta_mut()
+        unsafe { self.repr_mut() }._arr.meta_mut()
     }
     /// Get a mutable reference to the value's metadata
     pub fn get_meta_mut(&mut self) -> Option<&mut ArrayMeta> {
-        unsafe { self.repr_mut() }.arr.get_meta_mut()
+        unsafe { self.repr_mut() }._arr.get_meta_mut()
     }
     /// Take the label from the value
     pub fn take_label(&mut self) -> Option<EcoString> {
-        unsafe { self.repr_mut() }.arr.take_label()
+        self.get_meta_mut().and_then(|meta| meta.label.take())
     }
     /// Take the map keys from the value
     pub fn take_map_keys(&mut self) -> Option<MapKeys> {
-        unsafe { self.repr_mut() }.arr.take_map_keys()
+        self.get_meta_mut().and_then(|meta| meta.map_keys.take())
     }
     /// Take the persistent metadata from the value
     pub fn take_per_meta(&mut self) -> PersistentMeta {
-        unsafe { self.repr_mut() }.arr.take_per_meta()
+        self.get_meta_mut()
+            .map(ArrayMeta::take_per_meta)
+            .unwrap_or_default()
     }
     /// Set the label for the value
     pub fn set_label(&mut self, label: Option<EcoString>) {
-        let repr = unsafe { self.repr_mut() };
-        if label.is_some() {
-            repr.arr.meta_mut().label = label;
-        } else if repr.arr.meta().label.is_some() {
-            repr.arr.meta_mut().label = None;
+        if label.is_none() && self.meta().label.is_none() {
+            return;
         }
+        self.meta_mut().label = label;
     }
     /// Set the persistent metadata for the value
     pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
-        unsafe { self.repr_mut() }.arr.set_per_meta(per_meta)
+        if self.meta().map_keys.is_some() != per_meta.map_keys.is_some() {
+            self.meta_mut().map_keys = per_meta.map_keys;
+        }
+        if self.meta().label.is_some() != per_meta.label.is_some() {
+            self.meta_mut().label = per_meta.label;
+        }
     }
     /// Get the value's map keys
     pub fn map_keys(&self) -> Option<&MapKeys> {
-        unsafe { self.repr() }.arr.map_keys()
+        self.meta().map_keys.as_ref()
     }
     /// Get a mutable reference to the value's map keys
     pub fn map_keys_mut(&mut self) -> Option<&mut MapKeys> {
-        unsafe { self.repr_mut() }.arr.map_keys_mut()
-    }
-    /// Combine this value's metadata with another
-    pub fn combine_meta(&mut self, other: &ArrayMeta) {
-        unsafe { self.repr_mut() }.arr.combine_meta(other)
-    }
-    /// Reset this value's metadata
-    pub fn reset_meta(&mut self) {
-        unsafe { self.repr_mut() }.arr.reset_meta()
+        self.get_meta_mut().and_then(|meta| meta.map_keys.as_mut())
     }
     /// Reset this value's metadata flags
     pub fn reset_meta_flags(&mut self) {
-        unsafe { self.repr_mut() }.arr.reset_meta_flags()
+        self.get_meta_mut().map(ArrayMeta::reset_flags);
     }
-    /// Add a 1-length dimension to the front of the value's shape
+    /// Add a 1-length dimension to the front of the array's shape
     pub fn fix(&mut self) {
-        unsafe { self.repr_mut() }.arr.fix()
+        self.shape_mut().fix_depth(0);
     }
     pub(crate) fn fix_depth(&mut self, depth: usize) {
-        unsafe { self.repr_mut() }.arr.fix_depth(depth)
+        let depth = depth.min(self.rank());
+        self.shape_mut().fix_depth(depth);
+        if depth == 0 {
+            if let Some(keys) = self.map_keys_mut() {
+                keys.fix();
+            }
+        }
     }
-    /// Remove a 1-length dimension from the front of the value's shape
+    /// Remove a 1-length dimension from the front of the array's shape
     pub fn unfix(&mut self, env: &Uiua) -> UiuaResult {
-        unsafe { self.repr_mut() }.arr.unfix(env)
+        if let Some(keys) = self.map_keys_mut() {
+            keys.unfix();
+        }
+        self.shape_mut().unfix().map_err(|e| env.error(e))
     }
-    /// Remove a 1-length dimension from the front of the value's shape
+    /// Collapse the top two dimensions of the array's shape
     pub fn undo_fix(&mut self) {
-        unsafe { self.repr_mut() }.arr.undo_fix();
+        if let Some(keys) = self.map_keys_mut() {
+            keys.unfix();
+        }
+        _ = self.shape_mut().unfix();
     }
     #[track_caller]
     pub(crate) fn validate_shape(&self) {
-        let repr = unsafe { self.repr() };
-        validate_shape(&repr.arr.shape, repr.arr.data.len());
+        val_as_arr!(self, |arr| arr.validate_shape());
     }
     /// Get the row at the given index
     #[track_caller]

@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     fmt,
     hash::Hash,
     ops::{Deref, DerefMut, RangeBounds},
@@ -80,10 +81,41 @@ impl Shape {
             self.dims.remove(0);
         }
     }
+    /// Make the shape 1-dimensional
+    pub fn deshape(&mut self) {
+        if self.len() != 1 {
+            *self = self.elements().into();
+        }
+    }
+    /// Add a 1-length dimension to the front of the array's shape
+    pub fn fix(&mut self) {
+        self.fix_depth(0);
+    }
+    pub(crate) fn fix_depth(&mut self, depth: usize) -> usize {
+        let depth = depth.min(self.len());
+        self.insert(depth, 1);
+        depth
+    }
+    /// Remove a 1-length dimension from the front of the array's shape
+    pub fn unfix(&mut self) -> Result<(), Cow<'static, str>> {
+        match self.unfix_inner() {
+            Some(1) => Ok(()),
+            Some(d) => Err(Cow::Owned(format!("Cannot unfix array with length {d}"))),
+            None if self.contains(&0) => Err("Cannot unfix empty array".into()),
+            None if self.is_empty() => Err("Cannot unfix scalar".into()),
+            None => Err(Cow::Owned(format!(
+                "Cannot unfix array with shape {self:?}"
+            ))),
+        }
+    }
+    /// Collapse the top two dimensions of the array's shape
+    pub fn undo_fix(&mut self) {
+        self.unfix_inner();
+    }
     /// Unfix the shape
     ///
     /// Returns the first dimension
-    pub fn unfix(&mut self) -> Option<usize> {
+    fn unfix_inner(&mut self) -> Option<usize> {
         match &mut **self {
             [1, ..] => Some(self.remove(0)),
             [a, b, ..] => {

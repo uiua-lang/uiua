@@ -38,7 +38,6 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [inline macros](https://www.uiua.org/docs/experimental#inline-macros)
   - Deprecate the experimental `stringify` and `signature` modifiers in favor of inline code macros
 - Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation
-- Add experimental [`eval`](https://uiua.org/docs/eval) function, which evaluates a string as code at compile time
 - Remove the previously deprecated experimental `coordinate ⟔` function
 - Remove the previously deprecated experimental `struct` modifier
 - Remove the previously deprecated `setinv` and `setund` modifiers

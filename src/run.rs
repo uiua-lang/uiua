@@ -59,8 +59,6 @@ pub(crate) struct Runtime {
     pub(crate) execution_start: f64,
     /// The recursion limit
     recursion_limit: usize,
-    /// Whether this is a compile-time runtime
-    pub(crate) is_comptime: bool,
     /// Whether the program was interrupted
     pub(crate) interrupted: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
     /// Whether to print the time taken to execute each instruction
@@ -201,7 +199,6 @@ impl Default for Runtime {
             cli_file_path: PathBuf::new(),
             execution_limit: None,
             execution_start: 0.0,
-            is_comptime: false,
             #[cfg(debug_assertions)]
             recursion_limit: 20,
             #[cfg(not(debug_assertions))]
@@ -243,11 +240,6 @@ impl Uiua {
     /// Build an assembly
     pub fn build(self) -> Assembly {
         self.asm
-    }
-    /// Make this a compile-time runtime
-    pub(crate) fn comptime(mut self) -> Self {
-        self.rt.is_comptime = true;
-        self
     }
     /// Get a reference to the system backend
     pub fn backend(&self) -> &dyn SysBackend {
@@ -1441,7 +1433,6 @@ impl Uiua {
                 interrupted: self.rt.interrupted.clone(),
                 output_comments: HashMap::new(),
                 memo: self.rt.memo.clone(),
-                is_comptime: self.rt.is_comptime,
                 unevaluated_constants: HashMap::new(),
                 test_results: Vec::new(),
                 reports: Vec::new(),

@@ -106,7 +106,7 @@ impl Default for Compiler {
             print_diagnostics: false,
             comptime: true,
             pre_eval_mode: PreEvalMode::default(),
-            macro_env: Uiua::default().comptime(),
+            macro_env: Uiua::default(),
         }
     }
 }
@@ -247,7 +247,7 @@ impl Compiler {
     /// Create a new compiler with a custom backend for `comptime` code
     pub fn with_backend(backend: impl IntoSysBackend) -> Self {
         Self {
-            macro_env: Uiua::with_backend(backend.into_sys_backend()).comptime(),
+            macro_env: Uiua::with_backend(backend.into_sys_backend()),
             ..Self::default()
         }
     }

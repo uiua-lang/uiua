@@ -58,7 +58,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                 return generic_reduce(f, Value::Complex(nums), depth, env);
             }
         }
-        (Some((prim, flipped)), Value::Byte(bytes)) => {
+        (Some((prim, _flipped)), Value::Byte(bytes)) => {
             let fill = env.scalar_fill::<f64>().ok();
             if fill.is_none() && env.value_fill().is_some() {
                 return generic_reduce(f, Value::Byte(bytes), depth, env);
@@ -69,7 +69,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                         .into()
                 }
                 #[cfg(feature = "opt")]
-                Primitive::Sub if flipped => fast_reduce_different(
+                Primitive::Sub if _flipped => fast_reduce_different(
                     bytes,
                     0.0,
                     fill,

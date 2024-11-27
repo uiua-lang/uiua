@@ -521,16 +521,20 @@ impl VirtualEnv {
                     self.handle_args_outputs(f.args, f.outputs + 1);
                 }
                 prim if prim.modifier_args().is_some() => {
-                    return Err(SigCheckError::from(format!(
-                        "{} was not checked. This is a bug in the interpreter",
-                        prim.format()
-                    )))
+                    if let Some(sig) = prim.sig() {
+                        self.handle_sig(sig);
+                    } else {
+                        return Err(SigCheckError::from(format!(
+                            "{} was not checked. This is a bug in the interpreter",
+                            prim.format()
+                        )));
+                    }
                 }
                 prim => {
                     return Err(SigCheckError::from(format!(
                         "{} was checked as a modifier. This is a bug in the interpreter",
                         prim.format()
-                    )))
+                    )));
                 }
             },
             Node::ImplMod(prim, args, _) => match prim {

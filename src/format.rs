@@ -904,40 +904,42 @@ impl<'a> Formatter<'a> {
     }
     fn format_word(&mut self, word: &Sp<Word>, depth: usize) {
         match &word.value {
-            Word::Number(s, n) => {
+            Word::Number(Ok(n)) => {
                 let grid_str = n.grid_string(false);
-                let formatted = if !grid_str.contains('…')
-                    && grid_str.chars().count() < s.trim_end_matches('i').chars().count()
-                    && !["tau", "pi", "eta"].iter().any(|name| s.contains(name))
-                    && !grid_str.contains("τ/")
-                {
-                    grid_str
-                } else {
-                    fn format_frag(s: &str) -> Cow<str> {
-                        let mut s = Cow::Borrowed(s);
-                        if s.contains('`') {
-                            s = Cow::Owned(s.replace('`', "¯"));
-                        }
-                        for (name, glyph) in [("eta", "η"), ("pi", "π"), ("tau", "τ")] {
-                            if s.contains(name) {
-                                s = Cow::Owned(s.replace(name, glyph));
-                            }
-                        }
-                        for i in (3..="infinity".len()).rev() {
-                            if s.contains(&"infinity"[..i]) {
-                                s = Cow::Owned(s.replace(&"infinity"[..i], "∞"));
-                            }
-                        }
-                        s
-                    }
-                    if let Some((num, denom)) = s.split_once('/') {
-                        let num = format_frag(num);
-                        let denom = format_frag(denom);
-                        format!("{num}/{denom}")
+                let formatted = word.span.as_str(self.inputs, |s| {
+                    if !grid_str.contains('…')
+                        && grid_str.chars().count() < s.trim_end_matches('i').chars().count()
+                        && !["tau", "pi", "eta"].iter().any(|name| s.contains(name))
+                        && !grid_str.contains("τ/")
+                    {
+                        grid_str
                     } else {
-                        format_frag(s).into_owned()
+                        fn format_frag(s: &str) -> Cow<str> {
+                            let mut s = Cow::Borrowed(s);
+                            if s.contains('`') {
+                                s = Cow::Owned(s.replace('`', "¯"));
+                            }
+                            for (name, glyph) in [("eta", "η"), ("pi", "π"), ("tau", "τ")] {
+                                if s.contains(name) {
+                                    s = Cow::Owned(s.replace(name, glyph));
+                                }
+                            }
+                            for i in (3..="infinity".len()).rev() {
+                                if s.contains(&"infinity"[..i]) {
+                                    s = Cow::Owned(s.replace(&"infinity"[..i], "∞"));
+                                }
+                            }
+                            s
+                        }
+                        if let Some((num, denom)) = s.split_once('/') {
+                            let num = format_frag(num);
+                            let denom = format_frag(denom);
+                            format!("{num}/{denom}")
+                        } else {
+                            format_frag(s).into_owned()
+                        }
                     }
-                };
+                });
                 if formatted.starts_with(|c: char| c.is_ascii_digit())
                     && (self
                         .output
@@ -950,6 +952,7 @@ impl<'a> Formatter<'a> {
                 }
                 self.push(&word.span, &formatted);
             }
+            Word::Number(Err(s)) => self.push(&word.span, s),
             Word::Label(label) => self.push(&word.span, &format!("${label}")),
             Word::Char(_) | Word::String(_) | Word::FormatString(_) => self
                 .output

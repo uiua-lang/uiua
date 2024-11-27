@@ -1123,7 +1123,11 @@ code:
     }
     fn word(&mut self, word: Sp<Word>) -> UiuaResult<Node> {
         Ok(match word.value {
-            Word::Number(_, n) => Node::new_push(n),
+            Word::Number(Ok(n)) => Node::new_push(n),
+            Word::Number(Err(s)) => {
+                self.add_error(word.span.clone(), format!("Invalid number `{s}`"));
+                Node::new_push(0.0)
+            }
             Word::Char(c) => {
                 let val: Value = if c.chars().count() == 1 {
                     c.chars().next().unwrap().into()
@@ -1905,7 +1909,7 @@ code:
                     && prim.subscript_sig(Some(2)).is_some_and(|sig| sig == (1, 1)) =>
                 {
                     Node::from_iter([
-                        self.word(sub.n.span.sp(Word::Number(n.to_string(), n as f64)))?,
+                        self.word(sub.n.span.sp(Word::Number(Ok(n as f64))))?,
                         self.primitive(prim, span),
                     ])
                 }

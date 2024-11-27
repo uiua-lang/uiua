@@ -17,7 +17,6 @@ use crate::{
 pub enum ParseError {
     Lex(LexError),
     Expected(Vec<Expectation>, Option<EcoString>),
-    InvalidNumber(String),
     Unexpected(Token),
     InvalidArgCount(String),
     InvalidOutCount(String),
@@ -82,7 +81,6 @@ impl fmt::Display for ParseError {
                 }
                 Ok(())
             }
-            ParseError::InvalidNumber(s) => write!(f, "Invalid number `{s}`"),
             ParseError::Unexpected(token) => write!(f, "Unexpected token {token}"),
             ParseError::InvalidArgCount(n) => write!(f, "Invalid argument count `{n}`"),
             ParseError::InvalidOutCount(n) => write!(f, "Invalid output count `{n}`"),
@@ -758,8 +756,9 @@ impl<'i> Parser<'i> {
         Some(span.sp(Signature::new(args, outs)))
     }
     fn sig_inner(&mut self) -> Option<(usize, usize)> {
-        let sn = self.num()?;
-        Some(if let Some((a, o)) = sn.value.0.split_once('.') {
+        let range = self.num()?.span.byte_range();
+        let s = &self.input[range];
+        Some(if let Some((a, o)) = s.split_once('.') {
             let a = match a.parse() {
                 Ok(a) => a,
                 Err(_) => {
@@ -778,11 +777,11 @@ impl<'i> Parser<'i> {
             };
             (a, o)
         } else {
-            let a = match sn.value.0.parse() {
+            let a = match s.parse() {
                 Ok(a) => a,
                 Err(_) => {
                     self.errors
-                        .push(self.prev_span().sp(ParseError::InvalidArgCount(sn.value.0)));
+                        .push(self.prev_span().sp(ParseError::InvalidArgCount(s.into())));
                     1
                 }
             };
@@ -1072,8 +1071,8 @@ impl<'i> Parser<'i> {
             prim.map(Word::Primitive)
         } else if let Some(refer) = self.ref_() {
             refer
-        } else if let Some(sn) = self.num() {
-            sn.map(|(s, n)| Word::Number(s, n))
+        } else if let Some(n) = self.num() {
+            n.map(Word::Number)
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
@@ -1174,9 +1173,9 @@ impl<'i> Parser<'i> {
         }
         Some(word)
     }
-    fn num(&mut self) -> Option<Sp<(String, f64)>> {
+    fn num(&mut self) -> Option<Sp<Result<f64, String>>> {
         let span = self.exact(Token::Number)?;
-        let s = self.input[span.byte_range()].to_string();
+        let s = &self.input[span.byte_range()];
         fn parse(s: &str) -> Option<f64> {
             let mut s = s.replace(['`', '¯'], "-");
             // Replace pi multiples
@@ -1200,19 +1199,17 @@ impl<'i> Parser<'i> {
             }
             s.parse().ok()
         }
-        let n: f64 = match parse(&s) {
-            Some(n) => n,
+        let n: Result<f64, String> = match parse(s) {
+            Some(n) => Ok(n),
             None => {
                 if let Some((n, d)) = s.split_once('/').and_then(|(n, d)| parse(n).zip(parse(d))) {
-                    n / d
+                    Ok(n / d)
                 } else {
-                    self.errors
-                        .push(self.prev_span().sp(ParseError::InvalidNumber(s.clone())));
-                    0.0
+                    Err(s.into())
                 }
             }
         };
-        Some(span.sp((s, n)))
+        Some(span.sp(n))
     }
     fn prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::all() {

@@ -3,7 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Validate number literals at compile time
 - Stabilize `backward`, `case`
 - `do` function pack
 - Allow for multi-value constant bindings

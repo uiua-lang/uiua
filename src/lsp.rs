@@ -542,9 +542,11 @@ impl Spanner {
         let mut spans = Vec::new();
         'words: for word in words {
             match &word.value {
-                Word::Number(s, _) => {
+                Word::Number(_) => {
                     for prim in Primitive::all().filter(|p| p.is_constant()) {
-                        if prim.name().starts_with(s) || prim.to_string() == *s {
+                        if word.span.as_str(self.inputs(), |s| {
+                            prim.name().starts_with(s) || prim.to_string() == *s
+                        }) {
                             spans.push(word.span.clone().sp(SpanKind::Primitive(prim, None)));
                             continue 'words;
                         }

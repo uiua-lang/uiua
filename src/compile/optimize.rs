@@ -15,7 +15,6 @@ use dbgln;
 
 impl Node {
     pub(super) fn optimize(&mut self) {
-        dbgln!("optimizing {self:?}");
         match self {
             Run(nodes) => {
                 for node in nodes.make_mut() {
@@ -89,6 +88,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &AdjacentOpt,
     &AstarOpt,
     &SplitByOpt,
+    &RepeatRandOpt,
     &PopConst,
     &TraceOpt,
     &ValidateTypeOpt,
@@ -153,28 +153,21 @@ opt!(
 struct AdjacentOpt;
 impl Optimization for AdjacentOpt {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
-        for i in 0..nodes.len() {
-            let [Prim(Windows, _), Mod(Rows, args, span), ..] = &nodes[i..] else {
-                continue;
+        match_and_replace(nodes, |nodes| {
+            let [Prim(Windows, _), Mod(Rows, args, span), ..] = nodes else {
+                return None;
             };
             let [f] = args.as_slice() else {
-                continue;
+                return None;
             };
             match f.node.as_slice() {
                 [Mod(Reduce, reduce_args, span)] if reduce_args[0].sig == (2, 1) => {
-                    let impl_mod = ImplMod(ImplPrimitive::Adjacent, reduce_args.clone(), *span);
-                    replace_nodes(nodes, i, 2, impl_mod);
-                    return true;
+                    Some((2, ImplMod(Adjacent, reduce_args.clone(), *span)))
                 }
-                _ if args[0].sig == (1, 1) => {
-                    let impl_mod = ImplMod(ImplPrimitive::RowsWindows, args.clone(), *span);
-                    replace_nodes(nodes, i, 2, impl_mod);
-                    return true;
-                }
-                _ => {}
+                _ if args[0].sig == (1, 1) => Some((2, ImplMod(RowsWindows, args.clone(), *span))),
+                _ => None,
             }
-        }
-        false
+        })
     }
 }
 
@@ -182,28 +175,23 @@ impl Optimization for AdjacentOpt {
 struct ReduceDepthOpt;
 impl Optimization for ReduceDepthOpt {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
-        for i in 0..nodes.len() {
-            let [Mod(Rows, args, _), ..] = &nodes[i..] else {
-                continue;
+        match_and_replace(nodes, |nodes| {
+            let [Mod(Rows, args, _), ..] = nodes else {
+                return None;
             };
             let [f] = args.as_slice() else {
-                continue;
+                return None;
             };
             match f.node.as_slice() {
-                [Mod(Reduce, reduce_args, span)] => {
-                    let impl_mod = ImplMod(ReduceDepth(1), reduce_args.clone(), *span);
-                    replace_nodes(nodes, i, 1, impl_mod);
-                    return true;
+                [Mod(Reduce, redu_args, span)] => {
+                    Some((1, ImplMod(ReduceDepth(1), redu_args.clone(), *span)))
                 }
-                [ImplMod(ReduceDepth(depth), reduce_args, span)] => {
-                    let impl_mod = ImplMod(ReduceDepth(depth + 1), reduce_args.clone(), *span);
-                    replace_nodes(nodes, i, 1, impl_mod);
-                    return true;
+                [ImplMod(ReduceDepth(depth), redu_args, span)] => {
+                    Some((1, ImplMod(ReduceDepth(depth + 1), redu_args.clone(), *span)))
                 }
-                _ => {}
+                _ => None,
             }
-        }
-        false
+        })
     }
 }
 
@@ -235,54 +223,112 @@ impl Optimization for SplitByOpt {
             }
             Some(f.clone())
         }
-        for i in 0..nodes.len() {
-            match &nodes[i..] {
-                [Mod(By, args, span), last, ..]
-                    if matches!(args.as_slice(), [f]
+        match_and_replace(nodes, |nodes| match nodes {
+            [Mod(By, args, span), last, ..]
+                if matches!(args.as_slice(), [f]
                             if matches!(f.node, Prim(Ne, _))) =>
-                {
-                    let Some(f) = par_f(last) else {
-                        continue;
-                    };
-                    replace_nodes(nodes, i, 2, ImplMod(SplitByScalar, eco_vec![f], *span));
-                    break;
-                }
-                [Mod(By, args, span), Prim(Not, _), last, ..]
-                    if matches!(args.as_slice(), [f]
-                            if matches!(f.node, Prim(Mask, _))) =>
-                {
-                    let Some(f) = par_f(last) else {
-                        continue;
-                    };
-                    replace_nodes(nodes, i, 3, ImplMod(SplitBy, eco_vec![f], *span));
-                    break;
-                }
-                [Prim(Dup, span), Push(delim), Prim(Ne, _), last, ..] => {
-                    let Some(f) = par_f(last) else {
-                        continue;
-                    };
-                    let new = Node::from_iter([
-                        Push(delim.clone()),
-                        ImplMod(SplitByScalar, eco_vec![f], *span),
-                    ]);
-                    replace_nodes(nodes, i, 4, new);
-                    break;
-                }
-                [Prim(Dup, span), Push(delim), Prim(Mask, _), Prim(Not, _), last, ..] => {
-                    let Some(f) = par_f(last) else {
-                        continue;
-                    };
-                    let new = Node::from_iter([
-                        Push(delim.clone()),
-                        ImplMod(SplitBy, eco_vec![f], *span),
-                    ]);
-                    replace_nodes(nodes, i, 5, new);
-                    break;
-                }
-                _ => {}
+            {
+                let f = par_f(last)?;
+                Some((2, ImplMod(SplitByScalar, eco_vec![f], *span)))
             }
-        }
-        false
+            [Mod(By, args, span), Prim(Not, _), last, ..]
+                if matches!(args.as_slice(), [f]
+                            if matches!(f.node, Prim(Mask, _))) =>
+            {
+                let f = par_f(last)?;
+                Some((3, ImplMod(SplitBy, eco_vec![f], *span)))
+            }
+            [Prim(Dup, span), Push(delim), Prim(Ne, _), last, ..] => {
+                let f = par_f(last)?;
+                let new = Node::from_iter([
+                    Push(delim.clone()),
+                    ImplMod(SplitByScalar, eco_vec![f], *span),
+                ]);
+                Some((4, new))
+            }
+            [Prim(Dup, span), Push(delim), Prim(Mask, _), Prim(Not, _), last, ..] => {
+                let f = par_f(last)?;
+                let new =
+                    Node::from_iter([Push(delim.clone()), ImplMod(SplitBy, eco_vec![f], *span)]);
+                Some((5, new))
+            }
+            _ => None,
+        })
+    }
+}
+
+#[derive(Debug)]
+struct RepeatRandOpt;
+impl Optimization for RepeatRandOpt {
+    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
+        match_and_replace(nodes, |mut nodes| {
+            // Extract potential repetition count before array
+            let n = if let [Node::Push(n), rest @ ..] = nodes {
+                nodes = rest;
+                Some(n)
+            } else {
+                None
+            };
+            let had_leading_n = n.is_some();
+            // Extract array
+            let [Node::Array { inner, .. }, ..] = nodes else {
+                return None;
+            };
+            let mut inner = inner.as_slice();
+            // Extract repetition count inside array if it wasn't extracted before
+            let n = if let Some(n) = n {
+                n
+            } else if let [Push(n), rest @ ..] = inner {
+                inner = rest;
+                n
+            } else {
+                return None;
+            };
+            if n.rank() != 0 {
+                return None;
+            }
+            // Extract repeat
+            let [Mod(Repeat, args, repeat_span) | ImplMod(RepeatWithInverse, args, repeat_span)] =
+                inner
+            else {
+                return None;
+            };
+            let f = args.first()?;
+
+            match f.node.as_slice() {
+                [Prim(Rand, rand_span), Push(max), mul @ Prim(Mul, _), floor @ Prim(Floor, _)] => {
+                    if max.rank() != 0 {
+                        return None;
+                    }
+                    let new = Node::from_iter([
+                        Push(n.clone()),
+                        Prim(Range, *repeat_span),
+                        Mod(
+                            Rows,
+                            eco_vec![SigNode::new((1, 1), ImplPrim(ReplaceRand, *rand_span))],
+                            *repeat_span,
+                        ),
+                        Push(max.clone()),
+                        mul.clone(),
+                        floor.clone(),
+                    ]);
+                    Some((1 + had_leading_n as usize, new))
+                }
+                [Prim(Rand, rand_span)] => {
+                    let new = Node::from_iter([
+                        Push(n.clone()),
+                        Prim(Range, *repeat_span),
+                        Mod(
+                            Rows,
+                            eco_vec![SigNode::new((1, 1), ImplPrim(ReplaceRand, *rand_span))],
+                            *repeat_span,
+                        ),
+                    ]);
+                    Some((1 + had_leading_n as usize, new))
+                }
+                _ => None,
+            }
+        })
     }
 }
 
@@ -360,13 +406,12 @@ where
     B: OptReplace,
 {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
-        for i in 0..nodes.len() {
-            if let Some((n, Some(span))) = self.0.match_nodes(&nodes[i..]) {
-                replace_nodes(nodes, i, n, self.1.replacement_node(span));
-                return true;
-            }
-        }
-        false
+        match_and_replace(nodes, |nodes| {
+            let (n, Some(span)) = self.0.match_nodes(nodes)? else {
+                return None;
+            };
+            Some((n, self.1.replacement_node(span)))
+        })
     }
 }
 
@@ -457,6 +502,19 @@ fn replace_nodes(nodes: &mut EcoVec<Node>, i: usize, n: usize, new: Node) {
     nodes.extend(new);
     let added = nodes.len() - (orig_len - n);
     nodes.make_mut()[i..].rotate_right(added);
+}
+
+fn match_and_replace(
+    nodes: &mut EcoVec<Node>,
+    f: impl Fn(&[Node]) -> Option<(usize, Node)>,
+) -> bool {
+    for i in 0..nodes.len() {
+        if let Some((n, node)) = f(&nodes[i..]) {
+            replace_nodes(nodes, i, n, node);
+            return true;
+        }
+    }
+    false
 }
 
 macro_rules! opt {

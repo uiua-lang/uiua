@@ -578,8 +578,7 @@ pub fn rows1(f: SigNode, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult
                 env.push(val);
                 return Ok(());
             }
-        }
-        if let Some((f, d)) = f_mon2_fast_fn(&f.node, env) {
+        } else if let Some((f, d)) = f_mon2_fast_fn(&f.node, env) {
             let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
             if !maybe_through_boxes {
                 let (xs, ys) = f(xs, d + 1, env)?;

@@ -1024,6 +1024,7 @@ mod server {
             let path = uri_path(&params.text_document_position_params.text_document.uri);
             let (line, col) =
                 lsp_pos_to_uiua(params.text_document_position_params.position, &doc.input);
+            self.debug(&format!("Hovering at {line}:{col}")).await;
             // Hovering a primitive
             for sp in &doc.spans {
                 if sp.span.contains_line_col(line, col) && sp.span.src == path {
@@ -1034,7 +1035,15 @@ mod server {
                                     kind: MarkupKind::Markdown,
                                     value: full_prim_doc_markdown(prim),
                                 }),
-                                range: Some(uiua_span_to_lsp(&sp.span, &doc.asm.inputs)),
+                                range: Some({
+                                    let span = uiua_span_to_lsp(&sp.span, &doc.asm.inputs);
+                                    self.debug(&format!(
+                                        "Hovering {prim} at {:?}-{:?}",
+                                        span.start, span.end
+                                    ))
+                                    .await;
+                                    span
+                                }),
                             }));
                         }
                         SpanKind::Obverse(set_inverses) => {

@@ -420,11 +420,11 @@ impl CodeSpan {
         let line = line as u16;
         let col = col as u16;
         if self.start.line == self.end.line {
-            self.start.line == line && (self.start.col..=self.end.col).contains(&col)
+            self.start.line == line && (self.start.col..self.end.col).contains(&col)
         } else {
             (self.start.line..=self.end.line).contains(&line)
-                && (self.start.line < line || col >= self.start.col)
-                && (self.end.line > line || col <= self.end.col)
+                && (self.start.line < line || col > self.start.col)
+                && (self.end.line > line || col < self.end.col)
         }
     }
     /// Get the text of the span from the inputs

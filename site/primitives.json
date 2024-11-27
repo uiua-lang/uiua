@@ -617,13 +617,6 @@
     "class": "Constant",
     "description": "The number of radians in a quarter circle"
   },
-  "eval": {
-    "args": 2,
-    "outputs": 1,
-    "class": "Misc",
-    "description": "Evalute a string as code at compile time",
-    "experimental": true
-  },
   "fall": {
     "glyph": "⍖",
     "args": 1,

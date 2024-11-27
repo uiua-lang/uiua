@@ -5,7 +5,7 @@ use std::{
 };
 
 use enum_iterator::all;
-use leptos::{leptos_dom::helpers::location, *};
+use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{PrimClass, Primitive, SysOpClass};
@@ -253,7 +253,12 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in Uiua"</li>
             <li><a href="https://tankorsmash.unison-services.cloud/s/uiuisms-service/">"Uiuisms"</a>"- a community catalog of many common Uiua snippets"</li>
             <li>
-                <A href="/primitives.json" on:click = |_| _ = location().set_href("/primitives.json")>"Primitives JSON"</A>
+                <A href="/primitives.json" on:click = |_| BrowserIntegration {}.navigate(&LocationChange {
+                    value: "/primitives.json".into(),
+                    scroll: false,
+                    replace: false,
+                    ..Default::default()
+                })>"Primitives JSON"</A>
                 " - a JSON file of all the primitives, for tooling and other projects"</li>
         </ul>
 

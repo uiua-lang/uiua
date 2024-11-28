@@ -3720,7 +3720,7 @@ impl_primitive!(
     (1, RandomRow, Impure),
     (1, SortDown),
     (1[1], ReduceContent),
-    (2[2], ReduceTable),
+    (2(1)[2], ReduceTable),
     (1, ReplaceRand, Impure),
     (2, ReplaceRand2, Impure),
     (2(1)[1], Adjacent),

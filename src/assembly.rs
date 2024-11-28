@@ -187,11 +187,7 @@ impl Assembly {
                 (true, line)
             };
             let kind: BindingKind = serde_json::from_str(line).or_else(|e| {
-                if let Some((key, val)) = line.split_once("\" ") {
-                    let key = format!("{key}\"");
-                    let json = format!("{{{key:?}: {val:?}}}");
-                    serde_json::from_str(&json).map_err(|_| e.to_string())
-                } else if let Some((key, val)) = line.split_once(' ') {
+                if let Some((key, val)) = line.split_once(' ') {
                     let json = format!("{{{key:?}: {val}}}");
                     serde_json::from_str(&json).map_err(|_| e.to_string())
                 } else {

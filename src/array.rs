@@ -1411,24 +1411,68 @@ trait ArrayValueSer: ArrayValue + fmt::Debug {
     }
 }
 
-macro_rules! array_value_ser {
-    ($ty:ty) => {
-        impl ArrayValueSer for $ty {
-            type Scalar = $ty;
-            type Collection = CowSlice<$ty>;
-            fn make_collection(data: CowSlice<Self>) -> Self::Collection {
-                data
-            }
-            fn make_data(collection: Self::Collection) -> CowSlice<Self> {
-                collection
-            }
-        }
-    };
+impl ArrayValueSer for u8 {
+    type Scalar = u8;
+    type Collection = CowSlice<u8>;
+    fn make_collection(data: CowSlice<Self>) -> Self::Collection {
+        data
+    }
+    fn make_data(collection: Self::Collection) -> CowSlice<Self> {
+        collection
+    }
 }
 
-array_value_ser!(u8);
-array_value_ser!(Boxed);
-array_value_ser!(Complex);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum BoxCollection {
+    #[serde(rename = "empty_boxes")]
+    Empty([Boxed; 0]),
+    #[serde(untagged)]
+    List(CowSlice<Boxed>),
+}
+
+impl ArrayValueSer for Boxed {
+    type Scalar = Boxed;
+    type Collection = BoxCollection;
+    fn make_collection(data: CowSlice<Self>) -> Self::Collection {
+        if data.is_empty() {
+            BoxCollection::Empty([])
+        } else {
+            BoxCollection::List(data)
+        }
+    }
+    fn make_data(collection: Self::Collection) -> CowSlice<Self> {
+        match collection {
+            BoxCollection::Empty(_) => CowSlice::new(),
+            BoxCollection::List(data) => data,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum ComplexCollection {
+    #[serde(rename = "empty_complex")]
+    Empty([Complex; 0]),
+    #[serde(untagged)]
+    List(CowSlice<Complex>),
+}
+
+impl ArrayValueSer for Complex {
+    type Scalar = Complex;
+    type Collection = ComplexCollection;
+    fn make_collection(data: CowSlice<Self>) -> Self::Collection {
+        if data.is_empty() {
+            ComplexCollection::Empty([])
+        } else {
+            ComplexCollection::List(data)
+        }
+    }
+    fn make_data(collection: Self::Collection) -> CowSlice<Self> {
+        match collection {
+            ComplexCollection::Empty(_) => CowSlice::new(),
+            ComplexCollection::List(data) => data,
+        }
+    }
+}
 
 impl ArrayValueSer for f64 {
     type Scalar = F64Rep;

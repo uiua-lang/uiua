@@ -452,8 +452,8 @@ impl Node {
             f: impl FnOnce(&mut Node) -> T + Copy,
         ) -> Option<T> {
             let mut this_node = match target {
-                Some(i) => &asm.functions[i],
-                None => &*node,
+                Some(i) => asm.functions[i].inner(),
+                None => node.inner(),
             };
             if let Some(i) = sub {
                 this_node = this_node.get(i)?;
@@ -470,17 +470,29 @@ impl Node {
                 Node::Call(func, _) => recurse(Some(func.index), None, node, asm, f),
                 _ => {
                     let mut node = match target {
-                        Some(i) => &mut asm.functions.make_mut()[i],
-                        None => node,
+                        Some(i) => asm.functions.make_mut()[i].inner_mut(),
+                        None => node.inner_mut(),
                     };
                     if let Some(i) = sub {
-                        node = node.as_mut_slice().get_mut(i)?;
+                        node = node.as_mut_slice().get_mut(i)?.inner_mut();
                     }
                     Some(f(node))
                 }
             }
         }
         recurse(None, None, self, asm, f)
+    }
+    fn inner(&self) -> &Node {
+        match self {
+            Node::TrackCaller(inner) | Node::NoInline(inner) => inner,
+            node => node,
+        }
+    }
+    fn inner_mut(&mut self) -> &mut Node {
+        match self {
+            Node::TrackCaller(inner) | Node::NoInline(inner) => Arc::make_mut(inner),
+            node => node,
+        }
     }
     pub(crate) fn hash_with_span(&self, hasher: &mut impl Hasher) {
         self.hash(hasher);

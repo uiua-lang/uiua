@@ -264,39 +264,50 @@ mod tests {
 
     #[test]
     #[cfg(feature = "native_sys")]
-    fn errors() {
+    fn error_dont_crash() {
         use super::*;
-        for path in test_files(|path| {
-            (path.file_stem().unwrap())
-                .to_string_lossy()
-                .contains("error")
-        }) {
-            let mut code = std::fs::read_to_string(&path).unwrap();
-            if code.contains('\r') {
-                code = code.replace('\r', "");
-            }
-            for section in code.split("\n\n") {
-                let mut env = Uiua::with_native_sys();
-                let mut comp = Compiler::new();
-                let res = comp
-                    .load_str_src(section, &path)
-                    .and_then(|comp| env.run_asm(comp.finish()));
-                if res.is_ok()
-                    && comp
-                        .take_diagnostics()
-                        .into_iter()
-                        .filter(|diag| diag.kind > DiagnosticKind::Advice)
-                        .count()
-                        == 0
-                {
-                    panic!(
-                        "Test succeeded when it should have failed in {}:\n{}",
-                        path.display(),
-                        section
-                    );
-                }
+        let path = Path::new("tests_special/error.ua");
+        let mut code = std::fs::read_to_string(path).unwrap();
+        if code.contains('\r') {
+            code = code.replace('\r', "");
+        }
+        for section in code.split("\n\n") {
+            let mut env = Uiua::with_native_sys();
+            let mut comp = Compiler::new();
+            let res = comp
+                .load_str_src(section, path)
+                .and_then(|comp| env.run_asm(comp.finish()));
+            if res.is_ok()
+                && comp
+                    .take_diagnostics()
+                    .into_iter()
+                    .filter(|diag| diag.kind > DiagnosticKind::Advice)
+                    .count()
+                    == 0
+            {
+                panic!(
+                    "Test succeeded when it should have failed in {}:\n{}",
+                    path.display(),
+                    section
+                );
             }
         }
+    }
+
+    #[test]
+    #[cfg(feature = "native_sys")]
+    fn assembly_round_trip() {
+        use super::*;
+        let path = Path::new("tests_special/uasm.ua");
+        let mut comp = Compiler::new();
+        comp.load_file(path).unwrap();
+        let asm = comp.finish();
+        let root = asm.root.clone();
+        let uasm = asm.to_uasm();
+        let asm = Assembly::from_uasm(&uasm).unwrap();
+        assert_eq!(asm.root, root);
+        let mut env = Uiua::with_native_sys();
+        env.run_asm(asm).unwrap();
     }
 
     #[test]

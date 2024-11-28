@@ -3,6 +3,9 @@
 ## 0.14
 The next version of Uiua
 
+- Formattable identifiers
+  - Some Greek letters
+- Placeholder semantic tokens in LSP
 - Optimize `conjoin inventory`
 - Stabilize `backward`, `case`
 - Compile-time code string evaluation

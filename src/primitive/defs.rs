@@ -154,6 +154,10 @@ constant!(
     ("W", Math, WILDCARD_NAN),
     /// The maximum integer that can be represented exactly
     ("MaxInt", Math, 2f64.powi(53)),
+    /// The machine epsilon for Uiua numbers
+    ///
+    /// It is the difference between 1 and the next larger representable number.
+    ("ε", Math, f64::EPSILON),
     /// A string identifying the operating system
     ("Os", System, std::env::consts::OS),
     /// A string identifying family of the operating system

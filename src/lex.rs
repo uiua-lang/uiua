@@ -1,7 +1,7 @@
 //! The Uiua lexer
 
 use std::{
-    collections::VecDeque,
+    collections::{BTreeMap, VecDeque},
     error::Error,
     fmt,
     hash::Hash,
@@ -1615,7 +1615,7 @@ pub fn is_custom_glyph(c: &str) -> bool {
 }
 
 pub(crate) fn canonicalize_ident(ident: &str) -> Ident {
-    canonicalize_subscripts(&canonicalize_exclams(ident))
+    canonicalize_special(canonicalize_subscripts(canonicalize_exclams(ident)))
 }
 
 /// Rewrite the identifier with the same number of exclamation points
@@ -1640,9 +1640,9 @@ fn place_exclams(ident: &str, count: usize) -> Ident {
 }
 
 /// Rewrite the identifier with numerals preceded by `__` replaced with subscript characters
-fn canonicalize_subscripts(ident: &str) -> Ident {
+fn canonicalize_subscripts(ident: Ident) -> Ident {
     if !ident.contains('_') {
-        return ident.into();
+        return ident;
     }
     // This hasty canonicalization is okay because the stricter
     // rules about the syntax are handled in the lexer
@@ -1655,6 +1655,44 @@ fn canonicalize_subscripts(ident: &str) -> Ident {
             }
         })
         .collect()
+}
+
+thread_local! {
+    static SPECIAL: BTreeMap<&'static str, &'static str> = [
+        ("Alpha", "α"),
+        ("Beta", "β"),
+        ("Gamma", "γ"),
+        ("Delta", "δ"),
+        ("Epsilon", "ε"),
+        ("Zeta", "ζ"),
+        ("Iota", "ι"),
+        ("Kappa", "κ"),
+        ("Lambda", "λ"),
+        ("Mu", "μ"),
+        ("Nu", "ν"),
+        ("Xi", "ξ"),
+        ("Omicron", "ο"),
+        ("Rho", "ρ"),
+        ("Sigma", "σ"),
+        ("Upsilon", "υ"),
+        ("Phi", "φ"),
+        ("Chi", "χ"),
+        ("Psi", "ψ"),
+        ("Omega", "ω"),
+    ].into()
+}
+
+fn canonicalize_special(ident: Ident) -> Ident {
+    let end = ident
+        .find(|c: char| "!‼₋".contains(c) || SUBSCRIPT_DIGITS.contains(&c))
+        .unwrap_or(ident.len());
+    if let Some(replacement) = SPECIAL.with(|map| map.get(&ident[..end]).copied()) {
+        let mut new = Ident::from(replacement);
+        new.push_str(&ident[end..]);
+        new
+    } else {
+        ident
+    }
 }
 
 fn pick_subscript(neg: bool, n: Option<i32>, overflow: bool) -> Subscript {

@@ -1576,12 +1576,12 @@ G ← (
 ⊃(1
 | 2
 )
-Alpha(
-  Beta(
-    Gamma
-    Delta
-  )Epsilon
-)Zeta
+Foo(
+  Bar(
+    Baz
+    Qux
+  )Mix
+)Dir
 
 x ← 2
 

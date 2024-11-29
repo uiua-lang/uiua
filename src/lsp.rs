@@ -892,8 +892,9 @@ mod server {
     const TRIADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("triadic_modifier");
     const MODULE_STT: SemanticTokenType = SemanticTokenType::new("uiua_module");
 
-    const UIUA_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 13] = [
+    const UIUA_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 14] = [
         SemanticTokenType::COMMENT,
+        SemanticTokenType::PARAMETER,
         UIUA_NUMBER_STT,
         UIUA_STRING_STT,
         STACK_FUNCTION_STT,
@@ -909,8 +910,9 @@ mod server {
     ];
 
     const NO_STT: SemanticTokenType = SemanticTokenType::new("none");
-    const GENERIC_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 13] = [
+    const GENERIC_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 14] = [
         SemanticTokenType::COMMENT,
+        SemanticTokenType::PARAMETER,
         SemanticTokenType::NUMBER,
         SemanticTokenType::new("lifetime"),
         NO_STT,
@@ -1636,6 +1638,7 @@ mod server {
                         };
                         stt
                     }
+                    SpanKind::Placeholder(_) => SemanticTokenType::PARAMETER,
                     _ => continue,
                 };
                 let mut token_type = UIUA_SEMANTIC_TOKEN_TYPES

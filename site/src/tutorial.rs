@@ -195,18 +195,20 @@ fn TutorialIntroduction() -> impl IntoView {
 fn TutorialBasic() -> impl IntoView {
     use Primitive::*;
 
-    let primitive_table: Vec<_> = Primitive::all()
+    let primitive_table: Vec<_> = Primitive::non_deprecated()
         .filter_map(|p| {
-            if let (Some(ascii), Some(unicode)) = (p.ascii(), p.glyph()) {
-                if ascii.to_string() != unicode.to_string() {
-                    return Some(view! {
-                        <tr>
-                            <td><code>{ p.name() }</code></td>
-                            <td><code>{ ascii.to_string() }</code></td>
-                            <td><Prim prim=p glyph_only=true/></td>
-                        </tr>
-                    });
-                }
+            if p.is_experimental() {
+                return None;
+            }
+            let (ascii, unicode) = (p.ascii()?, p.glyph()?);
+            if ascii.to_string() != unicode.to_string() {
+                return Some(view! {
+                    <tr>
+                        <td><code>{ p.name() }</code></td>
+                        <td><code>{ ascii.to_string() }</code></td>
+                        <td><Prim prim=p glyph_only=true/></td>
+                    </tr>
+                });
             }
             None
         })

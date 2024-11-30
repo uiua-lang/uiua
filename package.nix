@@ -23,6 +23,7 @@ let
         ++ lib.optionals doCheck [
           ./site/favicon.ico
           ./tests
+          ./tests_special
         ]
       );
     };

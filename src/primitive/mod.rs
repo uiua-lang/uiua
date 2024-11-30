@@ -1841,22 +1841,22 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
 }
 
 fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
-    let mut items = Vec::new();
-    for i in 0..n {
-        items.push(env.pop(i + 1)?);
-    }
-    items.reverse();
+    env.require_height(n)?;
+    let boundaries = stack_boundaries(env);
     let span = format!("{} {}", ImplPrimitive::StackN { n, inverse }, env.span());
     let max_line_len = span.chars().count() + 2;
-    let boundaries = stack_boundaries(env);
-    let item_lines: Vec<Vec<String>> = items
+    let stack_height = env.stack_height() - n;
+    let item_lines: Vec<Vec<String>> = env.stack()[stack_height..]
         .iter()
         .map(Value::show)
         .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
         .map(|lines| format_trace_item_lines(lines, max_line_len))
         .enumerate()
         .flat_map(|(i, lines)| {
-            if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
+            if let Some((_, id)) = boundaries
+                .iter()
+                .find(|(height, _)| i + stack_height == *height)
+            {
                 let id = id.as_ref().map_or_else(String::new, ToString::to_string);
                 vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
             } else {
@@ -1864,9 +1864,6 @@ fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
             }
         })
         .collect();
-    for item in items {
-        env.push(item);
-    }
     env.rt.backend.print_str_trace(&format!("┌╴{span}\n"));
     for line in item_lines.iter().flatten() {
         env.rt.backend.print_str_trace(line);

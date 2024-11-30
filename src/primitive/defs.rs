@@ -1010,9 +1010,11 @@ primitive!(
     /// ex: △ ♭₋₁ °△2_3_4_5
     ///   : △ ♭₋₂ °△2_3_4_5
     ///   : △ ♭₋₃ °△2_3_4_5
-    /// If the subscript rank is greater than the rank of the array, length-1 axes are added to the front for the shape
+    /// If the subscript rank is greater than the rank of the array, length-1 axes are added to the front for the shape.
     /// ex: ♭₂ [1 2 3]
     ///   : ♭₃ [1 2 3]
+    /// A subscript of `0` gives the first scalar in the array.
+    /// ex: ♭₀ [4_2_6 0_3_7]
     ///
     /// It looks like `♭` because it *flat*tens the array.
     ///

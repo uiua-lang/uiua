@@ -52,52 +52,70 @@ impl Value {
         self.shape_mut().push(deshaped);
     }
     pub(crate) fn deshape_sub(&mut self, irank: i32, extend: bool, env: &Uiua) -> UiuaResult {
-        if irank == 0 || irank > 0 && irank as usize == self.rank() {
+        if irank > 0 && irank as usize == self.rank() {
             return Ok(());
         }
         self.take_map_keys();
         let shape = self.shape_mut();
         let rank = irank.unsigned_abs() as usize;
-        if irank > 0 {
-            // Positive rank
-            match rank.cmp(&shape.len()) {
-                Ordering::Equal => {}
-                Ordering::Less => {
-                    let mid = shape.len() + 1 - rank;
-                    let new_first_dim: usize = shape[..mid].iter().product();
-                    *shape = once(new_first_dim)
-                        .chain(shape[mid..].iter().copied())
-                        .collect();
+        match irank.cmp(&0) {
+            Ordering::Equal => {
+                // First scalar
+                if shape.contains(&0) {
+                    if let Some(fill) = env.value_fill() {
+                        *self = fill.clone();
+                    } else {
+                        return Err(env.error(format!(
+                            "Cannot get first scalar of an empty array (shape {shape})"
+                        )));
+                    }
+                } else {
+                    *shape = [].into();
+                    val_as_arr!(self, |arr| arr.data.truncate(1));
                 }
-                Ordering::Greater => {
-                    if extend {
-                        for _ in 0..rank - shape.len() {
+            }
+            Ordering::Greater => {
+                // Positive rank
+                match rank.cmp(&shape.len()) {
+                    Ordering::Equal => {}
+                    Ordering::Less => {
+                        let mid = shape.len() + 1 - rank;
+                        let new_first_dim: usize = shape[..mid].iter().product();
+                        *shape = once(new_first_dim)
+                            .chain(shape[mid..].iter().copied())
+                            .collect();
+                    }
+                    Ordering::Greater => {
+                        if extend {
+                            for _ in 0..rank - shape.len() {
+                                shape.insert(0, 1);
+                            }
+                        } else {
                             shape.insert(0, 1);
                         }
-                    } else {
-                        shape.insert(0, 1);
                     }
                 }
             }
-        } else {
-            // Negative rank
-            if rank + 1 > shape.len() {
-                return if extend {
-                    Err(env.error(format!(
-                        "Negative {} has magnitude {}, but the \
+            Ordering::Less => {
+                // Negative rank
+                if rank + 1 > shape.len() {
+                    return if extend {
+                        Err(env.error(format!(
+                            "Negative {} has magnitude {}, but the \
                         rank-{} array cannot be reduced that much",
-                        Primitive::Deshape.format(),
-                        rank,
-                        shape.len()
-                    )))
-                } else {
-                    Ok(())
-                };
+                            Primitive::Deshape.format(),
+                            rank,
+                            shape.len()
+                        )))
+                    } else {
+                        Ok(())
+                    };
+                }
+                let new_first_dim: usize = shape[..=rank].iter().product();
+                *shape = once(new_first_dim)
+                    .chain(shape[rank + 1..].iter().copied())
+                    .collect();
             }
-            let new_first_dim: usize = shape[..=rank].iter().product();
-            *shape = once(new_first_dim)
-                .chain(shape[rank + 1..].iter().copied())
-                .collect();
         }
         self.validate_shape();
         Ok(())

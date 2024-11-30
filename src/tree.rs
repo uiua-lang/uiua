@@ -95,12 +95,14 @@ impl SigNode {
                     let mut both = node.clone();
                     for _ in 0..remain {
                         for _ in 0..args {
-                            both =
-                                Node::Mod(Primitive::Dip, eco_vec![SigNode::new(sig, both)], span);
+                            let inner = SigNode::new(sig, both);
+                            both = Node::Mod(Primitive::Dip, eco_vec![inner], span);
                         }
                         both.push(inner.node.clone());
-                        sig.args += 1;
-                        sig.outputs += 1;
+                        sig.args += args;
+                        sig.outputs += args;
+                        sig.outputs += inner.sig.outputs;
+                        sig.outputs -= inner.sig.args;
                     }
                     both
                 } else {

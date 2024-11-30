@@ -686,9 +686,17 @@ under!(DupPat, input, g_sig, inverse, asm, Prim(Dup, dup_span), {
 });
 
 under!(
-    (DeshapeSubPat, input, _, _, _),
+    (DeshapeSubPat, input, g_sig, inverse, asm),
     ImplPrim(DeshapeSub(i), span),
-    {
+    Ok(if i == 0 {
+        let (before, after) = under_inverse(
+            &[Prim(Deshape, span), Prim(First, span)],
+            g_sig,
+            inverse,
+            asm,
+        )?;
+        (input, before, after)
+    } else {
         let before = Node::from_iter([
             Prim(Dup, span),
             Prim(Shape, span),
@@ -696,8 +704,8 @@ under!(
             ImplPrim(DeshapeSub(i), span),
         ]);
         let after = Node::from_iter([PopUnder(1, span), ImplPrim(UndoDeshape(Some(i)), span)]);
-        Ok((input, before, after))
-    }
+        (input, before, after)
+    })
 );
 
 under!(ReduceJoinPat, input, _, _, _, Reduce, span, [f], {

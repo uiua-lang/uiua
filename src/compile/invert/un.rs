@@ -387,7 +387,10 @@ inverse!(OnPat, input, asm, On, span, [f], {
 inverse!(ByPat, input, asm, By, span, [f], {
     // Under's undo step
     if f.sig.args == 1 {
-        if let Ok((before, after)) = f.node.under_inverse(Signature::new(1, 1), false, asm) {
+        if let [Prim(Shape, span), Prim(Len, _)] = f.node.as_slice() {
+            let inv = Node::from_iter([Node::new_push(1), Prim(Sub, *span), Prim(Rerank, *span)]);
+            return Ok((input, inv));
+        } else if let Ok((before, after)) = f.node.under_inverse(Signature::new(1, 1), false, asm) {
             let mut inv = before;
             (0..f.sig.outputs).for_each(|_| inv.push(Prim(Pop, span)));
             for _ in 0..f.sig.outputs {

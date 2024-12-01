@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, mem::take};
+use std::{array, cmp::Ordering, mem::take};
 
 use crate::{
     cowslice::CowSlice, Array, Assembly, Boxed, Complex, ImplPrimitive, Node, PersistentMeta,
@@ -10,7 +10,7 @@ enum ScalarType {
     Real,
     Complex,
     Char,
-    Box(Option<Box<Type>>),
+    Box(Option<Box<Ty>>),
 }
 
 impl Value {
@@ -29,14 +29,14 @@ impl Value {
             }),
         }
     }
-    fn ty(&self) -> Type {
-        Type {
+    fn ty(&self) -> Ty {
+        Ty {
             scalar: self.scalar_ty(),
             shape: self.shape().clone(),
         }
     }
-    fn row_ty(&self) -> Type {
-        Type {
+    fn row_ty(&self) -> Ty {
+        Ty {
             scalar: self.scalar_ty(),
             shape: self.shape().row(),
         }
@@ -44,12 +44,12 @@ impl Value {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct Type {
+struct Ty {
     scalar: ScalarType,
     shape: Shape,
 }
 
-impl Type {
+impl Ty {
     fn new(scalar: ScalarType, shape: impl Into<Shape>) -> Self {
         Self {
             scalar,
@@ -61,9 +61,10 @@ impl Type {
 enum TypeError {
     StackUnderflow,
     NotSupported,
+    Other,
 }
 
-fn make_val(mut ty: Type) -> Value {
+fn make_val(mut ty: Ty) -> Value {
     ty.shape.insert(0, 0);
     match ty.scalar {
         ScalarType::Real => Array::<u8>::new(ty.shape, CowSlice::default()).into(),
@@ -130,8 +131,8 @@ where
 }
 
 struct TypeRt<'a> {
-    stack: Vec<Type>,
-    _under_stack: Vec<Type>,
+    stack: Vec<Ty>,
+    _under_stack: Vec<Ty>,
     array_stack: Vec<usize>,
     asm: &'a Assembly,
 }
@@ -139,41 +140,41 @@ struct TypeRt<'a> {
 impl<'a> TypeRt<'a> {
     #[allow(clippy::collapsible_match)]
     fn node(&mut self, node: &Node) -> Result<(), TypeError> {
-        use Primitive as P;
+        use Primitive::*;
         match node {
             Node::Push(val) => self.stack.push(val.row_ty()),
             Node::Call(f, _) => self.node(&self.asm[f])?,
             Node::Prim(prim, _) => match prim {
-                P::Dup => {
+                Dup => {
                     let val = self.pop()?;
                     self.stack.push(val.clone());
                     self.stack.push(val);
                 }
-                P::Flip => {
+                Flip => {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     self.stack.push(a);
                     self.stack.push(b);
                 }
-                P::Over => {
+                Over => {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     self.stack.push(b.clone());
                     self.stack.push(a);
                     self.stack.push(b);
                 }
-                P::Around => {
+                Around => {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     self.stack.push(a.clone());
                     self.stack.push(b);
                     self.stack.push(a);
                 }
-                P::Not | P::Sign | P::Neg | P::Abs | P::Sqrt | P::Floor | P::Ceil | P::Round => {
+                Not | Sign | Neg | Abs | Sqrt | Floor | Ceil | Round => {
                     let x = self.pop()?;
                     self.stack.push(x);
                 }
-                P::Add | P::Sub | P::Mul | P::Div | P::Pow | P::Modulus | P::Log => {
+                Add | Sub | Mul | Div | Pow | Modulus | Log => {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     let shape = if a.shape.len() > b.shape.len() {
@@ -182,9 +183,9 @@ impl<'a> TypeRt<'a> {
                         b.shape
                     };
                     let scalar = a.scalar.max(b.scalar);
-                    self.stack.push(Type::new(scalar, shape));
+                    self.stack.push(Ty::new(scalar, shape));
                 }
-                P::Couple => {
+                Couple => {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     let scalar = a.scalar.max(b.scalar);
@@ -194,9 +195,9 @@ impl<'a> TypeRt<'a> {
                         b.shape
                     };
                     shape.insert(0, 2);
-                    self.stack.push(Type::new(scalar, shape));
+                    self.stack.push(Ty::new(scalar, shape));
                 }
-                P::Join => {
+                Join => {
                     let mut a = self.pop()?;
                     let mut b = self.pop()?;
                     let scalar = a.scalar.max(b.scalar);
@@ -214,32 +215,32 @@ impl<'a> TypeRt<'a> {
                             a.shape
                         }
                     };
-                    self.stack.push(Type::new(scalar, shape));
+                    self.stack.push(Ty::new(scalar, shape));
                 }
-                P::Match | P::Has => {
+                Match | Has => {
                     self.pop()?;
                     self.pop()?;
-                    self.stack.push(Type::new(ScalarType::Real, []));
+                    self.stack.push(Ty::new(ScalarType::Real, []));
                 }
-                P::Get => {
+                Get => {
                     let _key = self.pop()?;
                     let val = self.pop()?;
                     self.stack.push(val);
                 }
-                P::Parse => {
+                Parse => {
                     let x = self.pop()?;
                     let mut shape = x.shape;
                     if !matches!(x.scalar, ScalarType::Box(_)) {
                         shape.pop();
                     }
-                    self.stack.push(Type::new(ScalarType::Real, shape));
+                    self.stack.push(Ty::new(ScalarType::Real, shape));
                 }
-                P::Box => {
+                Box => {
                     let x = self.pop()?;
-                    let boxed = Type::new(ScalarType::Box(Some(x.into())), []);
+                    let boxed = Ty::new(ScalarType::Box(Some(x.into())), []);
                     self.stack.push(boxed);
                 }
-                P::Identity => {}
+                Identity => {}
                 prim if prim.outputs() == Some(0) => {
                     if let Some(args) = prim.args() {
                         for _ in 0..args {
@@ -257,11 +258,20 @@ impl<'a> TypeRt<'a> {
                             self.stack.push(if let Some(ty) = ty {
                                 *ty
                             } else {
-                                Type::new(ScalarType::Real, [0])
+                                Ty::new(ScalarType::Real, [0])
                             });
                             return Ok(());
                         }
                     }
+                    self.stack.push(x);
+                }
+                _ => return Err(TypeError::NotSupported),
+            },
+            Node::Mod(prim, args, _) => match prim {
+                Dip => {
+                    let [f] = get_args(args)?;
+                    let x = self.pop()?;
+                    self.node(&f.node)?;
                     self.stack.push(x);
                 }
                 _ => return Err(TypeError::NotSupported),
@@ -271,11 +281,18 @@ impl<'a> TypeRt<'a> {
         }
         Ok(())
     }
-    fn pop(&mut self) -> Result<Type, TypeError> {
+    fn pop(&mut self) -> Result<Ty, TypeError> {
         let ty = self.stack.pop().ok_or(TypeError::StackUnderflow)?;
         for height in &mut self.array_stack {
             *height = (*height).min(self.stack.len());
         }
         Ok(ty)
     }
+}
+
+fn get_args<const N: usize>(args: &[SigNode]) -> Result<[&SigNode; N], TypeError> {
+    if args.len() != N {
+        return Err(TypeError::Other);
+    }
+    Ok(array::from_fn(|i| &args[i]))
 }

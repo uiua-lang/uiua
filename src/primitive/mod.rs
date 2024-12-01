@@ -527,7 +527,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (Off | Backward | Above | Around)
+            (Reach | Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
                 | (Or | Chunks | Base | Fft | Case | Layout | Binary)
                 | (Astar | Triangle)

@@ -435,6 +435,17 @@ impl Compiler {
                     Node::Mod(By, eco_vec![sn], span)
                 }
             }
+            Reach => {
+                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let span = self.add_span(modified.modifier.span.clone());
+                let mut node = sn.node;
+                node.prepend(Node::Mod(
+                    Dip,
+                    eco_vec![SigNode::new((1, 0), Node::Prim(Pop, span))],
+                    span,
+                ));
+                node
+            }
             Fork => {
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
                 if !modified.pack_expansion && f.node.as_primitive() == Some(Primitive::Identity) {

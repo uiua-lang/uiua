@@ -483,6 +483,13 @@ impl VirtualEnv {
                     _ = self.pop();
                     self.node(&f.node)?;
                 }
+                Reach => {
+                    let [f] = get_args_nodes(args)?;
+                    let x = self.pop();
+                    _ = self.pop();
+                    self.push(x);
+                    self.node(&f.node)?;
+                }
                 On => {
                     let [f] = get_args_nodes(args)?;
                     let x = self.pop();

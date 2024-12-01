@@ -295,9 +295,17 @@ pub fn Optimizations() -> impl IntoView {
 
         <Hd id="other-optimizations">"Other Optimizations"</Hd>
         <ul>
-            <li><Prim prim=Rows/>", "<Prim prim=Each/>", "<Prim prim=Table/>", "<Prim prim=Group/>", "<Prim prim=Partition/>", and "<Prim prim=Inventory/>" are all optimized when a "<Prim prim=Fork/>" or "<Prim prim=Bracket/>" is at the top level of their function. For example, "<Prims prims=[Table, Fork]/><code>"F"</code><code>"G"</code>" is optimized to "<Prims prims=[Fork, Table]/><code>"F"</code><Prims prims=[Table]/><code>"G"</code>"."</li>
-            <li><Prim prim=Group/>" and "<Prim prim=Partition/>" are optimized to be fast with "<Prim prim=Len/>", "<Prim prim=First/>", "<Prims prims=[First, Reverse]/>", "<Prims prims=[Dip, Pop]/>", and "<Prims prims=[Gap, Identity]/>"."</li>
+            <li><Prims prims=[Table, Fork]/><code>"F"</code><code>"G"</code>" is optimized to "<Prims prims=[Fork, Table]/><code>"F"</code><Prims prims=[Table]/><code>"G"</code>" for pure functions."</li>
+            <li><Prim prim=Group/>" and "<Prim prim=Partition/>" are optimized to be fast with "<Prim prim=Len/>", "<Prim prim=First/>", "<Prim prim=Last/>"."</li>
             <li><Prim prim=Repeat/>" with a simple-enough function and a small constant count will compile to an unrolled loop."</li>
+            <li>"The following splitting patterns are optimized for monadic function "<code>"F"</code>":"
+                <table class="bordered-table">
+                    <tr><td><Prims prims=[Partition]/><code>"F"</code><Prims prims=[By, Ne]/></td></tr>
+                    <tr><td><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Ne]/><code>"constant"</code><Prims prims=[Dup]/></td></tr>
+                    <tr><td><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Not, By, Mask]/></td></tr>
+                    <tr><td><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Not, Mask]/><code>"constant"</code><Prims prims=[Dup]/></td></tr>
+                </table>
+            </li>
         </ul>
     }
 }

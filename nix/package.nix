@@ -13,17 +13,17 @@
 let
   commonArgs = {
     src = lib.fileset.toSource {
-      root = ./.;
+      root = ../.;
       fileset = lib.fileset.unions (
         [
-          (lib.fileset.fromSource (craneLib.cleanCargoSource ./.))
-          ./src/primitive/assets
-          ./src/algorithm/Uiua386.ttf
+          (lib.fileset.fromSource (craneLib.cleanCargoSource ../.))
+          ../src/primitive/assets
+          ../src/algorithm/Uiua386.ttf
         ]
         ++ lib.optionals doCheck [
-          ./site/favicon.ico
-          ./tests
-          ./tests_special
+          ../site/favicon.ico
+          ../tests
+          ../tests_special
         ]
       );
     };

@@ -444,14 +444,7 @@ impl VirtualEnv {
                     let [f] = get_args(args)?;
                     self.handle_sig(f);
                 }
-                Fill => {
-                    let [fill, f] = get_args(args)?;
-                    if fill.outputs > 0 {
-                        self.handle_sig(fill);
-                    }
-                    self.handle_args_outputs(fill.outputs, 0);
-                    self.handle_sig(f);
-                }
+                Fill => self.fill(args)?,
                 Content | Memo | Comptime => {
                     let [f] = get_args(args)?;
                     self.handle_sig(f);
@@ -553,14 +546,7 @@ impl VirtualEnv {
                     let n = self.pop();
                     self.repeat(f, n)?;
                 }
-                UnFill => {
-                    let [fill, f] = get_args(args)?;
-                    if fill.outputs > 0 {
-                        self.handle_sig(fill);
-                    }
-                    self.handle_args_outputs(fill.outputs, 0);
-                    self.handle_sig(f);
-                }
+                UnFill => self.fill(args)?,
                 UnBoth => {
                     let [f] = get_args_nodes(args)?;
                     let mut args = Vec::with_capacity(f.sig.args);
@@ -648,6 +634,14 @@ impl VirtualEnv {
     }
     fn handle_sig(&mut self, sig: Signature) {
         self.handle_args_outputs(sig.args, sig.outputs)
+    }
+    fn fill(&mut self, args: &[SigNode]) -> Result<(), SigCheckError> {
+        let [fill, f] = get_args_nodes(args)?;
+        if fill.sig.outputs > 0 || fill.sig.args > 0 && fill.sig.outputs != 0 {
+            self.node(&fill.node)?;
+        }
+        self.handle_args_outputs(fill.sig.outputs, 0);
+        self.node(&f.node)
     }
     fn repeat(
         &mut self,

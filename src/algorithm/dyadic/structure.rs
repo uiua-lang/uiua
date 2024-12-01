@@ -17,7 +17,13 @@ use crate::{
 };
 
 impl<T: Clone> Array<T> {
+    #[track_caller]
     pub(crate) fn remove_row(&mut self, index: usize) {
+        debug_assert!(
+            index < self.row_count(),
+            "Index {index} is out of bounds of {} rows",
+            self.row_count()
+        );
         let row_len = self.row_len();
         let data = self.data.as_mut_slice();
         let start = index * row_len;
@@ -49,6 +55,7 @@ impl<T: Clone> Array<T> {
 }
 
 impl Value {
+    #[track_caller]
     pub(crate) fn remove_row(&mut self, index: usize) {
         val_as_arr!(self, |a| a.remove_row(index))
     }
@@ -996,10 +1003,11 @@ impl Value {
             if from.rank() == 0 {
                 return Ok(into);
             }
+            let from_row_count = from.row_count();
             let mut n = 0;
             sorted_indices.reverse();
             sorted_indices.retain(|&(i, j)| {
-                let keep = index_in_bounds(j, into_row_count);
+                let keep = index_in_bounds(j, into_row_count) || i >= from_row_count;
                 if !keep {
                     from.remove_row(i);
                     n += 1;

@@ -1081,6 +1081,14 @@
     "class": "MonadicArray",
     "description": "Make an array of all natural numbers less than a number"
   },
+  "reach": {
+    "glyph": "𝄐",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Planet",
+    "description": "Call a function on the first and third values on the stack",
+    "experimental": true
+  },
   "recv": {
     "args": 1,
     "outputs": 1,

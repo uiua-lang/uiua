@@ -978,12 +978,9 @@ impl Value {
         from.match_fill(env);
         let (indices_shape, indices_data) =
             self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
-        Ok(match from {
-            Value::Num(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            Value::Byte(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            Value::Complex(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            Value::Char(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            Value::Box(a) => a.select(indices_shape, &indices_data, env)?.into(),
+        val_as_arr!(from, |a| {
+            let mut a = a;
+            a.select(indices_shape, &indices_data, env).map(Into::into)
         })
     }
     pub(crate) fn undo_select(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -1106,9 +1103,26 @@ fn normalize_index(index: isize, len: usize) -> usize {
     }
 }
 
+fn indices_are_total(indices: &[isize], row_count: usize) -> bool {
+    let mut max_normal = 0;
+    let mut set = HashSet::new();
+    for &i in indices {
+        let normalized = normalize_index(i, row_count);
+        if set.insert(normalized) {
+            max_normal = max_normal.max(normalized);
+        }
+    }
+    set.len() == row_count && max_normal == row_count.saturating_sub(1)
+}
+
 impl<T: ArrayValue> Array<T> {
     /// `select` from this array
-    fn select(&self, indices_shape: &[usize], indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
+    fn select(
+        &mut self,
+        indices_shape: &[usize],
+        indices: &[isize],
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
         if indices_shape.len() > 1 {
             let row_count = indices_shape[0];
             let row_len = indices_shape[1..].iter().product();
@@ -1134,6 +1148,20 @@ impl<T: ArrayValue> Array<T> {
             let row_len = self.row_len();
             let row_count = self.row_count();
             let fill = env.scalar_fill::<T>();
+            let map_keys = self
+                .is_map()
+                .then(|| {
+                    let indices_are_total = indices_are_total(indices, row_count);
+                    if !indices_are_total {
+                        return None;
+                    }
+                    let keys = self.take_map_keys().unwrap().normalized();
+                    Some(val_as_arr!(keys, |keys| {
+                        let mut keys = keys;
+                        keys.select(indices_shape, indices, env).unwrap().into()
+                    }))
+                })
+                .flatten();
             for &i in indices {
                 let i = if i >= 0 {
                     let ui = i as usize;
@@ -1187,7 +1215,11 @@ impl<T: ArrayValue> Array<T> {
             if indices_shape.is_empty() {
                 shape.remove(0);
             }
-            Ok(Array::new(shape, selected))
+            let mut array = Array::new(shape, selected);
+            if let Some(map_keys) = map_keys {
+                array.map(map_keys, &()).unwrap();
+            }
+            Ok(array)
         }
     }
     fn undo_select(
@@ -1353,8 +1385,7 @@ impl<T: ArrayValue> Array<T> {
             .map(|&max| max + 1)
             .unwrap_or(0);
         // Check indices totality
-        let mut set = HashSet::new();
-        let indices_are_total = indices.iter().filter(|&&i| set.insert(i)).count() == row_count;
+        let indices_are_total = indices_are_total(indices, row_count);
         // Get fill if not total
         let mut fill = None;
         let mut fill_rep = 0;

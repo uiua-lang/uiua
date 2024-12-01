@@ -74,3 +74,7 @@ insert "e" 42
 map "abc" [2 3 1]
 map "cba" [1 3 2]
 ⍤⤙≍ [1 1] [∩≍] ⊃∩⍆∩(⇌⍆)
+
+# Selection
+⍤⤙≍ ⤙⊏⇡3 map "abc" [1 2 3]
+⍤⤙≍ ⊃⇌(⊏⇌°⊏) map "abc" [1 2 3]

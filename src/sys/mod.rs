@@ -768,14 +768,16 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Reading from stdin is not supported in this environment".into())
     }
     /// Read a number of bytes from stdin
-    fn scan_stdin(&self, count: usize) -> Result<Vec<u8>, String> {
+    ///
+    /// If `count` is `None`, read until EOF.
+    fn scan_stdin(&self, count: Option<usize>) -> Result<Vec<u8>, String> {
         Err("Reading from stdin is not supported in this environment".into())
     }
     /// Read from stdin until a delimiter is reached
     fn scan_until_stdin(&self, delim: &[u8]) -> Result<Vec<u8>, String> {
         let mut buffer = Vec::new();
         loop {
-            let bytes = self.scan_stdin(1)?;
+            let bytes = self.scan_stdin(Some(1))?;
             if bytes.is_empty() {
                 break;
             }
@@ -1240,31 +1242,27 @@ impl SysOp {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
                     Handle::STDIN => {
-                        if let Some(count) = count {
-                            let buf = env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?;
-                            match String::from_utf8(buf) {
-                                Ok(s) => s,
-                                Err(e) => {
-                                    let valid_to = e.utf8_error().valid_up_to();
-                                    let mut buf = e.into_bytes();
-                                    let mut rest = buf.split_off(valid_to);
-                                    for _ in 0..3 {
-                                        rest.extend(
-                                            env.rt
-                                                .backend
-                                                .scan_stdin(1)
-                                                .map_err(|e| env.error(e))?,
-                                        );
-                                        if let Ok(s) = std::str::from_utf8(&rest) {
-                                            buf.extend_from_slice(s.as_bytes());
-                                            break;
-                                        }
+                        let buf = env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?;
+                        match String::from_utf8(buf) {
+                            Ok(s) => s,
+                            Err(e) => {
+                                let valid_to = e.utf8_error().valid_up_to();
+                                let mut buf = e.into_bytes();
+                                let mut rest = buf.split_off(valid_to);
+                                for _ in 0..3 {
+                                    rest.extend(
+                                        env.rt
+                                            .backend
+                                            .scan_stdin(Some(1))
+                                            .map_err(|e| env.error(e))?,
+                                    );
+                                    if let Ok(s) = std::str::from_utf8(&rest) {
+                                        buf.extend_from_slice(s.as_bytes());
+                                        break;
                                     }
-                                    String::from_utf8(buf).map_err(|e| env.error(e))?
                                 }
+                                String::from_utf8(buf).map_err(|e| env.error(e))?
                             }
-                        } else {
-                            return Err(env.error("Cannot read an infinite amount from stdin"));
                         }
                     }
                     _ => {
@@ -1315,13 +1313,7 @@ impl SysOp {
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
-                    Handle::STDIN => {
-                        if let Some(count) = count {
-                            env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?
-                        } else {
-                            return Err(env.error("Cannot read an infinite amount from stdin"));
-                        }
-                    }
+                    Handle::STDIN => env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?,
                     _ => {
                         if let Some(count) = count {
                             env.rt

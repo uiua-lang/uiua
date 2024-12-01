@@ -364,13 +364,21 @@ impl SysBackend for NativeSys {
         }
         Ok(Some(String::from_utf8(buffer).map_err(|e| e.to_string())?))
     }
-    fn scan_stdin(&self, count: usize) -> Result<Vec<u8>, String> {
+    fn scan_stdin(&self, count: Option<usize>) -> Result<Vec<u8>, String> {
         if !output_enabled() {
             return Ok(Vec::new());
         }
-        let mut buffer = vec![0; count];
-        stdin().read_exact(&mut buffer).map_err(|e| e.to_string())?;
-        Ok(buffer)
+        Ok(if let Some(count) = count {
+            let mut buffer = vec![0; count];
+            stdin().read_exact(&mut buffer).map_err(|e| e.to_string())?;
+            buffer
+        } else {
+            let mut buffer = Vec::new();
+            stdin()
+                .read_to_end(&mut buffer)
+                .map_err(|e| e.to_string())?;
+            buffer
+        })
     }
     fn save_error_color(&self, message: String, colored: String) {
         NATIVE_SYS.colored_errors.insert(message, colored);

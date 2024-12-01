@@ -28,7 +28,8 @@
           craneLib = crane.mkLib pkgs;
         in
         {
-          packages.default = pkgs.callPackage ./package.nix { inherit craneLib; };
+          packages.default = pkgs.callPackage ./nix/package.nix { inherit craneLib; };
+          packages.fonts = pkgs.callPackage ./nix/fonts.nix {};
           devShells.default = pkgs.mkShell {
             inputsFrom = builtins.attrValues self'.packages;
             packages = with pkgs; [

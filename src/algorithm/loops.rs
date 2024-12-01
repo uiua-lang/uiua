@@ -13,6 +13,7 @@ use crate::{
     algorithm::{fixed_rows, get_ops, FixedRowsData},
     array::{Array, ArrayValue},
     cowslice::CowSlice,
+    types::push_empty_rows_value,
     val_as_arr,
     value::Value,
     Boxed, Node, Ops, Primitive, Shape, SigNode, Signature, Uiua, UiuaResult,
@@ -978,6 +979,12 @@ where
     let values: Vec<Value> = (0..sig.args.max(1))
         .map(|i| env.pop(i + 2))
         .collect::<UiuaResult<_>>()?;
+
+    if indices.shape == [0]
+        && push_empty_rows_value(&f, &values, false, &mut Default::default(), env)
+    {
+        return Ok(());
+    }
 
     for xs in &values {
         if !xs.shape().starts_with(indices.shape()) {

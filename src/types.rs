@@ -234,6 +234,12 @@ impl<'a> TypeRt<'a> {
                     }
                     self.stack.push(Type::new(ScalarType::Real, shape));
                 }
+                P::Box => {
+                    let x = self.pop()?;
+                    let boxed = Type::new(ScalarType::Box(Some(x.into())), []);
+                    self.stack.push(boxed);
+                }
+                P::Identity => {}
                 prim if prim.outputs() == Some(0) => {
                     if let Some(args) = prim.args() {
                         for _ in 0..args {

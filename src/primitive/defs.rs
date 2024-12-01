@@ -2267,6 +2267,14 @@ primitive!(
     /// ex: ⊙(⊂×10|{⊙∘}|⊟) 1 2 3 4 5
     ([1], Dip, Planet, ("dip", '⊙')),
     /// Call a function on the first and third values on the stack
+    ///
+    /// ex: # Experimental!
+    ///   : 𝄐+ 1 2 3
+    /// This can simplify some common stack access patterns.
+    /// ex: # Experimental!
+    ///   : [⊃⊟𝄐⊟ @a@b@c]
+    /// ex: # Experimental!
+    ///   : [⊃⋅⊟𝄐⊟ @a@b@c]
     ([1], Reach, Planet, ("reach", '𝄐')),
     /// Call a function but keep its first argument on the top of the stack
     ///

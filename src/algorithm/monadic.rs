@@ -1034,7 +1034,7 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return Array::scalar(0.0);
         }
-        if self.element_count() == 0 {
+        if self.row_count() == 0 {
             return Array::default();
         }
         let mut indices = (0..self.row_count())
@@ -1050,12 +1050,30 @@ impl<T: ArrayValue> Array<T> {
         });
         indices.into()
     }
+    pub(crate) fn rise_indices(&self) -> Vec<usize> {
+        if self.rank() == 0 {
+            return vec![0];
+        }
+        if self.row_count() == 0 {
+            return Vec::new();
+        }
+        let mut indices: Vec<usize> = (0..self.row_count()).collect();
+        indices.par_sort_by(|&a, &b| {
+            self.row_slice(a)
+                .iter()
+                .zip(self.row_slice(b))
+                .map(|(a, b)| a.array_cmp(b))
+                .find(|x| x != &Ordering::Equal)
+                .unwrap_or(Ordering::Equal)
+        });
+        indices
+    }
     /// Get the `fall` of the array
     pub fn fall(&self) -> Array<f64> {
         if self.rank() == 0 {
             return Array::scalar(0.0);
         }
-        if self.element_count() == 0 {
+        if self.row_count() == 0 {
             return Array::default();
         }
         let mut indices = (0..self.row_count())
@@ -1071,6 +1089,24 @@ impl<T: ArrayValue> Array<T> {
         });
         indices.into()
     }
+    pub(crate) fn fall_indices(&self) -> Vec<usize> {
+        if self.rank() == 0 {
+            return vec![0];
+        }
+        if self.row_count() == 0 {
+            return Vec::new();
+        }
+        let mut indices: Vec<usize> = (0..self.row_count()).collect();
+        indices.par_sort_by(|&a, &b| {
+            self.row_slice(a)
+                .iter()
+                .zip(self.row_slice(b))
+                .map(|(a, b)| b.array_cmp(a))
+                .find(|x| x != &Ordering::Equal)
+                .unwrap_or(Ordering::Equal)
+        });
+        indices
+    }
     /// Sort an array ascending
     pub fn sort_up(&mut self) {
         self.sort_up_depth(0);
@@ -1082,6 +1118,16 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn sort_up_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
         if self.rank() == depth || self.element_count() == 0 {
+            return;
+        }
+        if let Some(Some(keys)) = (depth == 0).then(|| self.take_map_keys()) {
+            let keys = keys.normalized();
+            let rise = self.rise_indices();
+            self.sort_up();
+            let new_keys = Value::from_row_values_infallible(
+                rise.into_iter().map(|i| keys.row(i)).collect::<Vec<_>>(),
+            );
+            self.map(new_keys, &()).unwrap();
             return;
         }
         let chunk_len: usize = self.shape[depth..].iter().product();
@@ -1116,6 +1162,16 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn sort_down_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
         if self.rank() == depth || self.element_count() == 0 {
+            return;
+        }
+        if let Some(Some(keys)) = (depth == 0).then(|| self.take_map_keys()) {
+            let keys = keys.normalized();
+            let fall = self.fall_indices();
+            self.sort_down();
+            let new_keys = Value::from_row_values_infallible(
+                fall.into_iter().map(|i| keys.row(i)).collect::<Vec<_>>(),
+            );
+            self.map(new_keys, &()).unwrap();
             return;
         }
         let chunk_len: usize = self.shape[depth..].iter().product();

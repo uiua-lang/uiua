@@ -69,3 +69,8 @@ insert "e" 42
 
 # Duplicate init keys
 ⍤⤙≍ map [0 1] [3 4] map [0 0 0 1] [1 2 3 4]
+
+# Sort correctness
+map "abc" [2 3 1]
+map "cba" [1 3 2]
+⍤⤙≍ [1 1] [∩≍] ⊃∩⍆∩(⇌⍆)

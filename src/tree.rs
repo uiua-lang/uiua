@@ -959,7 +959,10 @@ macro_rules! node {
         }
 
         #[derive(Serialize, Deserialize)]
+        #[serde(rename_all = "snake_case")]
         pub(crate) enum NodeRep {
+            #[serde(rename = "e")]
+            Empty(),
             $(
                 $(#[$rep_attr])?
                 $name(
@@ -972,6 +975,7 @@ macro_rules! node {
         impl From<NodeRep> for Node {
             fn from(rep: NodeRep) -> Self {
                 match rep {
+                    NodeRep::Empty() => Self::empty(),
                     $(
                         NodeRep::$name (
                             $($($tup_name,)*)?
@@ -985,6 +989,7 @@ macro_rules! node {
         impl From<Node> for NodeRep {
             fn from(instr: Node) -> Self {
                 match instr {
+                    Node::Run(nodes) if nodes.is_empty() => NodeRep::Empty(),
                     $(
                         Node::$name $(($($tup_name),*))? $({$($field_name),*})? => NodeRep::$name (
                             $($($tup_name),*)?

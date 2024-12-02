@@ -3,6 +3,8 @@
 ## 0.14
 The next version of Uiua
 
+- `first`/`last` subscripts
+- Breakpoints?
 - Split up sys backend
 - Allow reading files in output comments
 - Optimize `conjoin inventory`

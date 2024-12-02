@@ -2067,9 +2067,6 @@ primitive!(
     ///   : ⧈∘ 3 ⇡6
     /// ex: # Experimental!
     ///   : ⧈□ 3 ⇡6
-    /// You can call a function on adjacent rows with [stencil][reduce].
-    /// ex: # Experimental!
-    ///   : ⧈/- 2 [3 1 5 6 8]
     /// Multi-dimensional window sizes are supported.
     /// ex: # Experimental!
     ///   : ⧈□ 3_3 °△5_5
@@ -2081,6 +2078,10 @@ primitive!(
     /// A subscript sets the window size.
     /// ex: # Experimental!
     ///   : ⧈₃∘ ⇡6
+    /// [stencil] only takes a window size if its function is monadic. For functions with 2 or more arguments, the window size is the number of arguments.
+    /// This is useful things like getting adjacent differences.
+    /// ex: # Experimental!
+    ///   : ⧈- [3 1 5 6 8]
     (2[1], Stencil, IteratingModifier, ("stencil", '⧈')),
     /// Repeat a function a number of times
     ///

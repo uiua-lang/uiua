@@ -395,8 +395,10 @@ impl VirtualEnv {
                 }
                 Stencil => {
                     let [sig] = get_args(args)?;
-                    let _size = self.pop();
-                    self.handle_sig(sig);
+                    if sig.args <= 1 {
+                        let _size = self.pop();
+                    }
+                    self.handle_args_outputs(1, sig.outputs);
                 }
                 Group | Partition => {
                     let [sig] = get_args(args)?;

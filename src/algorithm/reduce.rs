@@ -985,6 +985,22 @@ pub fn adjacent(f: SigNode, env: &mut Uiua) -> UiuaResult {
             return adjacent_fallback(f, n_arr, xs, env);
         }
     };
+    adjacent_impl(f, xs, n, env)
+}
+
+fn adjacent_fallback(f: SigNode, n: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+    let windows = n.windows(xs, env)?;
+    let mut new_rows = Vec::with_capacity(windows.row_count());
+    for window in windows.into_rows() {
+        env.push(window);
+        reduce_impl(f.clone(), 0, env)?;
+        new_rows.push(env.pop("adjacent function result")?);
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
+    Ok(())
+}
+
+fn adjacent_impl(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult {
     match (f.node.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
             Primitive::Add => fast_adjacent(nums, n, env, add::num_num),
@@ -1027,18 +1043,6 @@ pub fn adjacent(f: SigNode, env: &mut Uiua) -> UiuaResult {
         }),
         (_, xs) => generic_adjacent(f, xs, n, env)?,
     }
-    Ok(())
-}
-
-fn adjacent_fallback(f: SigNode, n: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let windows = n.windows(xs, env)?;
-    let mut new_rows = Vec::with_capacity(windows.row_count());
-    for window in windows.into_rows() {
-        env.push(window);
-        reduce_impl(f.clone(), 0, env)?;
-        new_rows.push(env.pop("adjacent function result")?);
-    }
-    env.push(Value::from_row_values(new_rows, env)?);
     Ok(())
 }
 
@@ -1130,15 +1134,26 @@ fn generic_adjacent(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResu
 
 pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
-    if f.sig.args != 1 {
+    if f.sig.args == 0 {
         return Err(env.error(format!(
-            "{}'s function must have 1 argument, but its signature is {}",
+            "{}'s function must have at least 1 argument, but its signature is {}",
             Primitive::Stencil.format(),
             f.sig
         )));
     }
+    if f.sig.args > 1 {
+        if env.value_fill().is_some() {
+            return Err(env.error(format!(
+                "Filled adjacent {} is not currently supported",
+                Primitive::Stencil.format()
+            )));
+        }
+        let xs = env.pop(1)?;
+        let n = f.sig.args;
+        return adjacent_impl(f, xs, n, env);
+    }
     let size = env.pop(1)?;
-    if size.rank() == 0 && size.type_id() == f64::TYPE_ID {
+    if size.rank() == 0 && size.type_id() == f64::TYPE_ID && env.value_fill().is_none() {
         if let Node::Mod(Primitive::Reduce, args, _) = f.node {
             let [f] = get_ops(args.clone(), env)?;
             env.push(size);

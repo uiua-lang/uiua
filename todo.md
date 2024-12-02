@@ -3,6 +3,7 @@
 ## 0.14
 The next version of Uiua
 
+- Optimize "all same"
 - Negative length to dyadic `tuples`
 - Split up sys backend
 - Allow reading files in output comments

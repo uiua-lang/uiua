@@ -1796,32 +1796,6 @@ primitive!(
     ///   : ⌝base 1 [1 ¯2 1]
     ///   : ⌝base 2 [1 ¯2 1]
     (2, Base, DyadicArray, "base"),
-    /// Get all combinations of `k` rows from an array
-    ///
-    /// The first argument must be a natural number.
-    /// ex: # Experimental!
-    ///   : choose 3 ⇡5
-    /// ex: # Experimental!
-    ///   : choose 4 "hello!"
-    /// If the second argument is a scalar number, the number of combinations is returned.
-    /// ex: # Experimental!
-    ///   : choose 3 5
-    ///
-    /// See also: [permute]
-    (2, Choose, DyadicArray, "choose"),
-    /// Get all permutations of `k` rows from an array
-    ///
-    /// The first argument must be a natural number.
-    /// ex: # Experimental!
-    ///   : permute 3 ⇡4
-    /// ex: # Experimental!
-    ///   : permute 2 "hello!"
-    /// If the second argument is a scalar number, the number of permutations is returned.
-    /// ex: # Experimental!
-    ///   : permute 3 5
-    ///
-    /// See also: [choose]
-    (2, Permute, DyadicArray, "permute"),
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].
@@ -2051,6 +2025,9 @@ primitive!(
     /// ex: # Experimental!
     ///   :   ⧅≠ 2  4
     ///   : ⍉ ⧅≠ 2 ⇡4
+    /// A negative size will subtract from the length of the array. This is useful if you want to, for example, get a versions of the array with each row removed.
+    /// ex: # Experimental!
+    ///   : ⧅<¯1 ⇡4
     ///
     /// If [tuples] is given a monadic function, it takes only one argument.
     /// The function will be called on all prefixes of the array.
@@ -2079,7 +2056,7 @@ primitive!(
     ///
     /// The tuple size may be given as a subscript.
     /// ex: # Experimental!
-    ///   : ⍉ ⧅≠ 2 ⇡4
+    ///   : ⍉ ⧅₂< ⇡5
     ([1], Tuples, IteratingModifier, ("tuples", '⧅')),
     /// Repeat a function a number of times
     ///

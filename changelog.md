@@ -44,6 +44,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Remove the previously deprecated experimental `coordinate ⟔` function
 - Remove the previously deprecated experimental `struct` modifier
 - Remove the previously deprecated `setinv` and `setund` modifiers
+- Remove the previously deprecated `choose` and `permute` functions
 ### Interpreter
 - The compiler and interpreter have been almost entirely rewritten to use a tree-based execution model rather than a bytecode model
   - This massively simplifies compilation as well as optimizations and the derivation of inverses

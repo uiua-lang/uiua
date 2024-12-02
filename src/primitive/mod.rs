@@ -507,8 +507,6 @@ impl Primitive {
             ),
             Chunks => format!("use {Windows} with a rank-2 window size instead"),
             Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
-            Choose => format!("use {Tuples}{Lt} instead"),
-            Permute => format!("use {Tuples}{Ne} instead"),
             Triangle => format!("use {Tuples} instead"),
             Sig => "use (⋅⊢)^! instead".into(),
             Stringify => "use (◇repr⊢)^! instead".into(),
@@ -528,7 +526,7 @@ impl Primitive {
         matches!(
             self,
             (Reach | Off | Backward | Above | Around)
-                | (Tuples | Choose | Permute)
+                | Tuples
                 | (Or | Chunks | Base | Fft | Case | Layout | Binary)
                 | (Astar | Triangle)
                 | (Derivative | Integral)
@@ -807,10 +805,6 @@ impl Primitive {
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
-            Primitive::Choose => {
-                env.dyadic_rr_env(|k, val, env| k.choose(val, false, false, env))?
-            }
-            Primitive::Permute => env.dyadic_ro_env(Value::permute)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
                 if val.box_nesting() > 1000 {

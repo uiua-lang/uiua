@@ -72,14 +72,20 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
 fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
     let k = env.pop(1)?;
     let mut xs = env.pop(2)?;
+    let k = k.as_int(env, "Tuple size must be an integer")?;
+    let k = if k >= 0 {
+        k.unsigned_abs()
+    } else {
+        xs.row_count().saturating_sub(k.unsigned_abs())
+    };
     'blk: {
         if let Some(prim) = f.node.as_primitive() {
             let res = match prim {
-                Primitive::Lt => k.choose(&xs, false, false, env)?,
-                Primitive::Le => k.choose(&xs, false, true, env)?,
-                Primitive::Gt => k.choose(&xs, true, false, env)?,
-                Primitive::Ge => k.choose(&xs, true, true, env)?,
-                Primitive::Ne => k.permute(xs, env)?,
+                Primitive::Lt => xs.choose(k, false, false, env)?,
+                Primitive::Le => xs.choose(k, false, true, env)?,
+                Primitive::Gt => xs.choose(k, true, false, env)?,
+                Primitive::Ge => xs.choose(k, true, true, env)?,
+                Primitive::Ne => xs.permute(k, env)?,
                 _ => break 'blk,
             };
             env.push(res);
@@ -87,7 +93,6 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
         }
     }
     let is_scalar = xs.rank() == 0;
-    let k = k.as_nat(env, "Tuple size must be a natural number")?;
     match k {
         0 => {
             xs = xs.first_dim_zero();
@@ -225,46 +230,36 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
 
 impl Value {
     /// `choose` all combinations of `k` rows from a value
-    pub fn choose(&self, from: &Self, reverse: bool, same: bool, env: &Uiua) -> UiuaResult<Self> {
-        let k = self.as_nat(env, "Choose k must be an integer")?;
-        if let Ok(n) = from.as_nat(env, "") {
-            return combinations(n, k, same, env).map(Into::into);
+    fn choose(self, k: usize, reverse: bool, same: bool, env: &Uiua) -> UiuaResult<Self> {
+        if let Ok(n) = self.as_nat(env, "") {
+            return Ok(combinations(n, k, same).into());
         }
-        val_as_arr!(from, |a| a.choose(k, reverse, same, env).map(Into::into))
+        val_as_arr!(self, |a| a.choose(k, reverse, same, env).map(Into::into))
     }
     /// `permute` all combinations of `k` rows from a value
-    pub fn permute(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
-        let k = self.as_nat(env, "Permute k must be an integer")?;
-        if let Ok(n) = from.as_nat(env, "") {
-            return permutations(n, k, env).map(Into::into);
+    fn permute(self, k: usize, env: &Uiua) -> UiuaResult<Self> {
+        if let Ok(n) = self.as_nat(env, "") {
+            return Ok(permutations(n, k).into());
         }
-        val_as_arr!(from, |a| a.permute(k, env).map(Into::into))
+        val_as_arr!(self, |a| a.permute(k, env).map(Into::into))
     }
 }
 
-fn combinations(n: usize, k: usize, same: bool, env: &Uiua) -> UiuaResult<f64> {
+fn combinations(n: usize, k: usize, same: bool) -> f64 {
     if k > n {
-        return Err(env.error(format!(
-            "Cannot choose combinations of {k} rows \
-            from array of shape {}",
-            n
-        )));
+        return 0.0;
     }
     let calc_n = if same { n + k - 1 } else { n };
-    Ok((1..=k.min(calc_n - k))
+    (1..=k.min(calc_n - k))
         .map(|i| (calc_n + 1 - i) as f64 / i as f64)
-        .product())
+        .product()
 }
 
-fn permutations(n: usize, k: usize, env: &Uiua) -> UiuaResult<f64> {
+fn permutations(n: usize, k: usize) -> f64 {
     if k > n {
-        return Err(env.error(format!(
-            "Cannot get permutations of {k} rows \
-            from array of shape {}",
-            n
-        )));
+        return 0.0;
     }
-    Ok((1..=n).rev().take(k).map(|i| i as f64).product())
+    (1..=n).rev().take(k).map(|i| i as f64).product()
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -275,7 +270,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let n = self.row_count();
         let mut shape = self.shape.clone();
-        let combinations = combinations(n, k, same, env)?;
+        let combinations = combinations(n, k, same);
         if combinations.is_nan() {
             return Err(env.error("Combinatorial explosion"));
         }
@@ -284,6 +279,9 @@ impl<T: ArrayValue> Array<T> {
         }
         shape[0] = combinations.round() as usize;
         shape.insert(1, k);
+        if n < k {
+            return Ok(Array::new(shape, []));
+        }
         let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
         let row_len = self.row_len();
         let at = |i| &self.data[i * row_len..][..row_len];
@@ -388,7 +386,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let n = self.row_count();
         let mut shape = self.shape.clone();
-        let permutations = permutations(n, k, env)?;
+        let permutations = permutations(n, k);
         if permutations.is_nan() {
             return Err(env.error("Combinatorial explosion"));
         }
@@ -397,6 +395,9 @@ impl<T: ArrayValue> Array<T> {
         }
         shape[0] = permutations.round() as usize;
         shape.insert(1, k);
+        if n < k {
+            return Ok(Array::new(shape, []));
+        }
         let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
         let mut data = EcoVec::with_capacity(elem_count);
         let row_len = self.row_len();

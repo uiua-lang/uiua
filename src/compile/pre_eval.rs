@@ -31,19 +31,9 @@ impl PreEvalMode {
     #[allow(unused)]
     fn matches_nodes(&self, nodes: &[Node], asm: &Assembly) -> bool {
         if nodes.iter().all(|node| matches!(node, Node::Push(_))) {
-            return true;
-        }
-        if let PreEvalMode::Lazy = self {
             return false;
         }
-        if nodes.iter().any(|node| {
-            matches!(
-                node,
-                Node::Push(val)
-                    if val.element_count() > MAX_PRE_EVAL_ELEMS
-                    || val.rank() > MAX_PRE_EVAL_RANK
-            )
-        }) {
+        if let PreEvalMode::Lazy = self {
             return false;
         }
         fn recurse<'a>(
@@ -52,6 +42,16 @@ impl PreEvalMode {
             asm: &'a Assembly,
             visited: &mut IndexSet<&'a Function>,
         ) -> bool {
+            if nodes.iter().any(|node| {
+                matches!(
+                    node,
+                    Node::Push(val)
+                        if val.element_count() > MAX_PRE_EVAL_ELEMS
+                        || val.rank() > MAX_PRE_EVAL_RANK
+                )
+            }) {
+                return false;
+            }
             let len = visited.len();
             let matches = nodes.iter().all(|node| match node {
                 Node::Run(nodes) => nodes.iter().all(|node| recurse(mode, node, asm, visited)),
@@ -99,8 +99,8 @@ impl Compiler {
         'start: while start < node.len() {
             for end in (start + 1..=node.len()).rev() {
                 let section = &node[start..end];
-                if nodes_clean_sig(section).is_some_and(|sig| sig.args == 0 && sig.outputs > 0)
-                    && self.can_pre_eval(section)
+                if self.can_pre_eval(section)
+                    && nodes_clean_sig(section).is_some_and(|sig| sig.args == 0 && sig.outputs > 0)
                 {
                     // println!("section: {section:?}");
                     let mut success = false;

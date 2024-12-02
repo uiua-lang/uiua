@@ -3,13 +3,15 @@
 ## 0.14
 The next version of Uiua
 
+- Negative length to dyadic `tuples`
+- Split up sys backend
+- Allow reading files in output comments
 - Optimize `conjoin inventory`
 - Stabilize `backward`, `case`
 - Compile-time code string evaluation
 - `do` function pack
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)
-- Split up sys backend?
 
 ## Planned Features
 Features that are planned to be implemented in the future.

@@ -1709,6 +1709,22 @@ impl Value {
     pub(crate) fn undo_where(&self, shape: &[usize], env: &Uiua) -> UiuaResult<Self> {
         self.unwhere_impl(shape, env)
     }
+    pub(crate) fn all_same(&self) -> bool {
+        if self.row_count() <= 1 {
+            return true;
+        }
+        val_as_arr!(self, |arr| {
+            if arr.rank() == 1 {
+                return arr.data.windows(2).all(|win| win[1].array_eq(&win[0]));
+            }
+            let row_len = arr.row_len();
+            arr.data.windows(2 * row_len).all(|win| {
+                win.iter()
+                    .zip(win[row_len..].iter())
+                    .all(|(a, b)| a.array_eq(b))
+            })
+        })
+    }
 }
 
 impl Value {

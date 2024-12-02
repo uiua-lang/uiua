@@ -270,6 +270,7 @@ impl fmt::Display for ImplPrimitive {
             MultidimMemberOfRange => write!(f, "{MemberOf}{Rerank}1{Range}"),
             RandomRow => write!(f, "{First}{Un}{Sort}"),
             SortDown => write!(f, "{Select}{Fall}{Dup}"),
+            AllSame => write!(f, "all same"),
             Primes => write!(f, "{Un}{Reduce}{Mul}"),
             ReplaceRand => write!(f, "{Gap}{Rand}"),
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
@@ -1481,6 +1482,7 @@ impl ImplPrimitive {
             ImplPrimitive::RandomRow => env.monadic_ref_env(Value::random_row)?,
             ImplPrimitive::LastWhere => env.monadic_ref_env(Value::last_where)?,
             ImplPrimitive::SortDown => env.monadic_mut(Value::sort_down)?,
+            ImplPrimitive::AllSame => env.monadic_ref(Value::all_same)?,
             ImplPrimitive::ReplaceRand => {
                 env.pop(1)?;
                 env.push(random());

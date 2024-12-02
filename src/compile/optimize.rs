@@ -36,6 +36,7 @@ impl Node {
                     arg.node.optimize();
                 }
             }
+            Node::Array { inner, .. } => Arc::make_mut(inner).optimize(),
             CustomInverse(cust, _) => {
                 let cust = Arc::make_mut(cust);
                 if let Ok(normal) = cust.normal.as_mut() {
@@ -88,6 +89,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &AdjacentOpt,
     &AstarOpt,
     &SplitByOpt,
+    &AllSameOpt,
     &RepeatRandOpt,
     &PopConst,
     &TraceOpt,
@@ -206,6 +208,52 @@ opt!(
         ImplMod(AstarPop, args.clone(), *span)
     ),
 );
+
+#[derive(Debug)]
+struct AllSameOpt;
+impl Optimization for AllSameOpt {
+    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
+        match_and_replace(nodes, |nodes| match nodes {
+            [Prim(Dup, span), Push(val), Prim(Rotate, _), Prim(Match, _), ..]
+                if val.rank() == 0
+                    || val.rank() == 1 && val.row_count() <= 1 && val.type_id() == f64::TYPE_ID =>
+            {
+                Some((4, ImplPrim(AllSame, *span)))
+            }
+            [Push(val), Mod(By, args, span), Prim(Match, _), ..]
+                if val.rank() == 0
+                    || val.rank() == 1 && val.row_count() <= 1 && val.type_id() == f64::TYPE_ID =>
+            {
+                let [SigNode {
+                    node: Prim(Rotate, _),
+                    ..
+                }] = args.as_slice()
+                else {
+                    return None;
+                };
+                Some((3, ImplPrim(AllSame, *span)))
+            }
+            [Mod(By | On, args, span), Prim(Match, _), ..] => {
+                let [f] = args.as_slice() else {
+                    return None;
+                };
+                match f.node.as_slice() {
+                    [Push(val), Prim(Rotate, _)]
+                        if val.rank() == 0
+                            || val.rank() == 1
+                                && val.row_count() <= 1
+                                && val.type_id() == f64::TYPE_ID => {}
+                    _ => return None,
+                }
+                Some((2, ImplPrim(AllSame, *span)))
+            }
+            [ImplPrim(CountUnique, span), Push(val), Prim(Le, _), ..] if *val == 1 => {
+                Some((3, ImplPrim(AllSame, *span)))
+            }
+            _ => None,
+        })
+    }
+}
 
 #[derive(Debug)]
 struct SplitByOpt;

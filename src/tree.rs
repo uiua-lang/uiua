@@ -766,6 +766,7 @@ impl Node {
                 Node::CustomInverse(cust, _) => (cust.normal.as_ref().ok())
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, asm, visited)),
+                Node::Array { inner, .. } => recurse(inner, asm, visited),
                 _ => false,
             };
             visited.truncate(len);
@@ -805,6 +806,7 @@ impl Node {
                 Node::Switch { branches, .. } => branches
                     .iter()
                     .find_map(|br| recurse(&br.node, asm, spans, visited)),
+                Node::Array { inner, .. } => recurse(inner, asm, spans, visited),
                 _ => None,
             };
             visited.truncate(len);

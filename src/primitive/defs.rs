@@ -3731,6 +3731,7 @@ impl_primitive!(
     (2, MultidimMemberOfRange),
     (1, RandomRow, Impure),
     (1, SortDown),
+    (1, AllSame),
     (1[1], ReduceContent),
     (2(1)[2], ReduceTable),
     (1, ReplaceRand, Impure),

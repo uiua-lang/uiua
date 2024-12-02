@@ -163,21 +163,21 @@ impl Value {
     /// Insert a key-value pair into a map array
     #[allow(clippy::unit_arg)]
     pub fn insert(&mut self, key: Value, value: Value, env: &Uiua) -> UiuaResult {
-        if value.rank() == self.rank() && value.type_id() == self.type_id() {
-            if key.row_count() != value.row_count() {
-                return Err(env.error(format!(
-                    "You appear to be inserting multiple keys. \
-                    Inserted keys and values must have the same length, \
-                    but their shapes are {} and {}",
-                    key.shape(),
-                    value.shape()
-                )));
-            }
-            for (key, value) in key.into_rows().zip(value.into_rows()) {
-                self.insert(key, value, env)?;
-            }
-            return Ok(());
-        }
+        // if value.rank() == self.rank() && value.type_id() == self.type_id() {
+        //     if key.row_count() != value.row_count() {
+        //         return Err(env.error(format!(
+        //             "You appear to be inserting multiple keys. \
+        //             Inserted keys and values must have the same length, \
+        //             but their shapes are {} and {}",
+        //             key.shape(),
+        //             value.shape()
+        //         )));
+        //     }
+        //     for (key, value) in key.into_rows().zip(value.into_rows()) {
+        //         self.insert(key, value, env)?;
+        //     }
+        //     return Ok(());
+        // }
 
         if !self.is_map() && self.row_count() == 0 {
             self.map(Value::default(), env)?;

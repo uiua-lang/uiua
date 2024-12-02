@@ -83,9 +83,9 @@ map "cba" [1 3 2]
 ⍤⤙≍ "bdd" get 2_4_4 map [1 2 3 4] "abcd"
 ⍤⤙≍ "dcba" get 4_3_2_1 map [1 2 3 4] "abcd"
 
-# Multi-key insert
-⍤⤙≍ map 1_2 "ab" insert 1_2 "ab" map [] ""
-⍤⤙≍ map [1_2] ["ab"] insert 1_2 "ab" map ⤙+@a °△0_2
+# # Multi-key insert
+# ⍤⤙≍ map 1_2 "ab" insert 1_2 "ab" map [] ""
+# ⍤⤙≍ map [1_2] ["ab"] insert 1_2 "ab" map ⤙+@a °△0_2
 
 # Multi-key remove
 ⍤⤙≍ map 1_3 "ac" remove 2_4 map [1 2 3 4] "abcd"

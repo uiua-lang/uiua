@@ -3026,7 +3026,7 @@ primitive!(
     /// Use [insert] to insert additional key-value pairs.
     /// ex: map 1_2 3_4
     ///   : insert 5 6
-    /// An empty array can be used as an empty map, event if it was not created with [map]. This only works if the keys are expected to *not* be non-scalar numbers
+    /// An empty array can be used as an empty map, event if it was not created with [map].
     /// ex: has 5 []
     ///   : insert 1 2 []
     /// You can use [un][map] to get the keys list and values list back.
@@ -3085,12 +3085,12 @@ primitive!(
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 3 5
-    /// Multiple key-value pairs can be inserted at once. This will happen when the inserted key has the same rank and type as the map's keys.
-    /// ex: map 1_2 "ab"
-    ///   : insert 3_4 "cd"
-    /// Notice that only a single key-value pair will be inserted if the inserted value has a lower rank than the map's value.
-    /// ex: map [1_2] ["ab"]
-    ///   : insert 3_4 "cd"
+    // /// Multiple key-value pairs can be inserted at once. This will happen when the inserted key has the same rank and type as the map's keys.
+    // /// ex: map 1_2 "ab"
+    // ///   : insert 3_4 "cd"
+    // /// Notice that only a single key-value pair will be inserted if the inserted value has a lower rank than the map's value.
+    // /// ex: map [1_2] ["ab"]
+    // ///   : insert 3_4 "cd"
     /// Keys that are already present keep their order.
     /// ex: map 1_2_3 4_5_6
     ///   : insert 1 10

@@ -3026,11 +3026,11 @@ primitive!(
     /// Use [insert] to insert additional key-value pairs.
     /// ex: map 1_2 3_4
     ///   : insert 5 6
-    /// An empty array can be used as an empty map, event if it was not created with [map].
+    /// An empty array can be used as an empty map, event if it was not created with [map]. This only works if the keys are expected to *not* be non-scalar numbers
     /// ex: has 5 []
     ///   : insert 1 2 []
     /// You can use [un][map] to get the keys list and values list back.
-    /// ex: []
+    /// ex: °△0_2
     ///   : insert 1 2_3
     ///   : insert 4 5_6
     ///   : insert 7 8_9
@@ -3083,6 +3083,12 @@ primitive!(
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 3 5
+    /// Multiple key-value pairs can be inserted at once. This will happen when the inserted key has the same rank and type as the map's keys.
+    /// ex: map 1_2 "ab"
+    ///   : insert 3_4 "cd"
+    /// Notice that only a single key-value pair will be inserted if the inserted value has a lower rank than the map's value.
+    /// ex: map [1_2] ["ab"]
+    ///   : insert 3_4 "cd"
     /// Keys that are already present keep their order.
     /// ex: map 1_2_3 4_5_6
     ///   : insert 1 10
@@ -3105,7 +3111,10 @@ primitive!(
     /// See [map] for an overview of map arrays.
     ///
     /// ex: map 1_2 3_4
-    ///   : [fork(has 2|has 5)].
+    ///   : has 2 .
+    /// The presence of multiple keys can be checked at once.
+    /// ex: map 1_2 3_4
+    ///   : has 2_5 .
     ///
     /// See also: [insert], [get], [remove]
     (2, Has, Map, "has"),
@@ -3113,8 +3122,11 @@ primitive!(
     ///
     /// See [map] for an overview of map arrays.
     ///
-    /// ex: map 1_2 3_4
+    /// ex: map 1_2_3 4_5_6
     ///   : get 2 .
+    /// Multiple values can be retrieved at once.
+    /// ex: map 1_2_3 4_5_6
+    ///   : get 1_3 .
     /// If the key is not found, an error is thrown.
     /// ex! map 1_2 3_4
     ///   : get 5 .
@@ -3144,6 +3156,9 @@ primitive!(
     /// ex: map 1_2 3_4
     ///   : remove 2 .
     ///   : remove 5 .
+    /// Multiple values can be removed at once
+    /// ex: map 1_2_3 4_5_6
+    ///   : remove 1_3_4
     ///
     /// Unlike the other map functions, [remove] has O(n) time complexity.
     ///

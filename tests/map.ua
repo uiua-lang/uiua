@@ -46,7 +46,7 @@ MapsII ← ∩(remove 1) MapsI
 ⍤⤙≍ ⤙insert 1□"a" map 1 □"a"
 
 # Empty keys
-⍤⟜≍ insert[][]map°△0_0[] insert[][] °△0_0
+⍤⟜≍ insert[][] map[]°△0_0 insert[][] °△0_0
 ⍤⤙≍ 5 get [] insert [] 5 map°△0_0 []
 ⍤⤙≍ 5 get [] insert [] 5 insert[]3 map°△0_0[]
 

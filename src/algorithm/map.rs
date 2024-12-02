@@ -142,33 +142,41 @@ impl Value {
         }
     }
     /// Check if a map array contains a key
-    pub fn has_key(&self, key: &Value, env: &Uiua) -> UiuaResult<bool> {
+    pub fn has_key(&self, key: &Value, env: &Uiua) -> UiuaResult<Array<u8>> {
+        if let Some(keys) = self.meta().map_keys.as_ref() {
+            if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
+                let mut values = EcoVec::with_capacity(key.row_count());
+                for key in key.rows() {
+                    values.push(keys.get(&key).is_some().into());
+                }
+                return Ok(values.into());
+            }
+        }
+
         if self.row_count() == 0 {
-            return Ok(false);
+            return Ok(0.into());
         }
         let keys =
             (self.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
-        Ok(keys.get(key).is_some())
+        Ok(keys.get(key).is_some().into())
     }
     /// Insert a key-value pair into a map array
     #[allow(clippy::unit_arg)]
     pub fn insert(&mut self, key: Value, value: Value, env: &Uiua) -> UiuaResult {
-        if let Some(keys) = self.meta().map_keys.as_ref() {
-            if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
-                if key.row_count() != value.row_count() {
-                    return Err(env.error(format!(
-                        "You appear to be inserting multiple keys. \
-                        Inserted keys and values must have the same length, \
-                        but their shapes are {} and {}",
-                        key.shape(),
-                        value.shape()
-                    )));
-                }
-                for (key, value) in key.into_rows().zip(value.into_rows()) {
-                    self.insert(key, value, env)?;
-                }
-                return Ok(());
+        if value.rank() == self.rank() && value.type_id() == self.type_id() {
+            if key.row_count() != value.row_count() {
+                return Err(env.error(format!(
+                    "You appear to be inserting multiple keys. \
+                    Inserted keys and values must have the same length, \
+                    but their shapes are {} and {}",
+                    key.shape(),
+                    value.shape()
+                )));
             }
+            for (key, value) in key.into_rows().zip(value.into_rows()) {
+                self.insert(key, value, env)?;
+            }
+            return Ok(());
         }
 
         if !self.is_map() && self.row_count() == 0 {

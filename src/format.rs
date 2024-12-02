@@ -17,7 +17,7 @@ use InlineMacro;
 use crate::{
     ast::*,
     grid_fmt::GridFmt,
-    is_ident_start,
+    is_ident_char, is_ident_start,
     lex::{CodeSpan, Loc, Sp},
     parse::{flip_unsplit_lines, parse, split_words, trim_spaces},
     Compiler, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys, Signature, Uiua,
@@ -1295,9 +1295,21 @@ impl<'a> Formatter<'a> {
         }
     }
     fn format_primitive(&mut self, prim: Primitive, span: &CodeSpan) {
+        let as_str = prim.to_string();
+        if span.end.char_pos - span.start.char_pos > 1
+            && !as_str.starts_with(is_ident_char)
+            && self.output.ends_with(' ')
+            && self.output[..self.output.len() - 1].ends_with(is_ident_char)
+            && (self.glyph_map.last()).is_some_and(|(last_span, _)| {
+                last_span.end.char_pos - last_span.start.char_pos == 1
+            })
+        {
+            self.output.pop();
+            self.glyph_map.pop();
+        }
         match prim {
             Primitive::Utf8 => self.push(span, "utf₈"),
-            _ => self.push(span, &prim.to_string()),
+            _ => self.push(span, &as_str),
         }
     }
     fn format_multiline_words(

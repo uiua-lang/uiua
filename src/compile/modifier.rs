@@ -577,10 +577,21 @@ impl Compiler {
             Tuples => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
+                let inner_sig = sn.sig;
                 let mut node = Node::Mod(Primitive::Tuples, eco_vec![sn], span);
                 if let Some(n) =
                     subscript.and_then(|n| self.subscript_n(n, &modified.modifier.span))
                 {
+                    if inner_sig.args != 2 {
+                        self.add_error(
+                            modified.modifier.span.clone(),
+                            format!(
+                                "Only dyadic {} can be subscripted, \
+                                but its function's signature is {inner_sig}",
+                                Primitive::Tuples.format()
+                            ),
+                        );
+                    }
                     node.prepend(Node::new_push(n));
                 }
                 node

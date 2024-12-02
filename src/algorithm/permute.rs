@@ -50,7 +50,7 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
         }
     } else {
         env.without_fill(|env| -> UiuaResult {
-            for n in 0..=xs.row_count() {
+            for n in 1..=xs.row_count() {
                 env.push(xs.slice_rows(0, n));
                 env.exec(f.clone())?;
                 results.push(env.pop("tuples's function result")?);

@@ -2049,12 +2049,12 @@ primitive!(
     ///   : ⍉ ⧅(+1<) 2 ⇡4
     /// If the second argument is a scalar, the number of tuples that would be returned for the [range] of that number is returned.
     /// ex: # Experimental!
-    ///   : ⧅≠ 2 4
-    ///   : ⧅≠ 2 ⇡4
+    ///   :   ⧅≠ 2  4
+    ///   : ⍉ ⧅≠ 2 ⇡4
     ///
     /// If [tuples] is given a monadic function, it takes only one argument.
     /// The function will be called on all prefixes of the array.
-    /// Both the empty prefix and full-length prefix will be included, so the output will have one more row than the input.
+    /// The full-length prefix will be included, but not the empty prefix, so the output will have the same number of rows as the original array.
     /// ex: # Experimental!
     ///   : ⧅□ ⇡5
     /// ex: # Experimental!
@@ -2079,7 +2079,7 @@ primitive!(
     ///
     /// The tuple size may be given as a subscript.
     /// ex: # Experimental!
-    ///   : ⧅₂< ⇡4
+    ///   : ⍉ ⧅≠ 2 ⇡4
     ([1], Tuples, IteratingModifier, ("tuples", '⧅')),
     /// Repeat a function a number of times
     ///

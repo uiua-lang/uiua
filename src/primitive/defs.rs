@@ -3056,6 +3056,8 @@ primitive!(
     /// ex: ¤ map 3_10_5 "abc"
     /// This is usually only useful with [rows].
     /// ex: ≡get [1 3 3 2] ¤ map 1_2_3 4_5_6
+    /// But you can normally do this without [rows] at all.
+    /// ex: get [1 3 3 2] map 1_2_3 4_5_6
     ///
     /// Map keys are stored as metadata on the values array. For this reason, they cannot be put in arrays together without being [box]ed, as the metadata for each map would be lost.
     ///

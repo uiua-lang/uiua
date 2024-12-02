@@ -258,8 +258,8 @@ pub fn Optimizations() -> impl IntoView {
                 <tr><td><Prim prim=Gap/><code>"constant"</code></td></tr>
                 <tr><td><Prim prim=On/><code>"constant"</code></td></tr>
                 <tr><td><Prim prim=By/><code>"constant"</code></td></tr>
-                <tr><td><Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></td></tr>
-                <tr><td><Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></td></tr>
+                <tr><td><Prims prims=[Sort]/>" / "<Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></td></tr>
+                <tr><td><Prims prims=[Reverse, Sort]/>" / "<Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></td></tr>
                 <tr><td><Prims prims=[Un, Couple] show_names=true/></td></tr>
                 <tr><td><Prims prims=[Un, Join] show_names=true/></td></tr>
                 <tr><td><Prim prim=Rotate/></td></tr>

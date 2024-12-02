@@ -92,7 +92,15 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
             xs.shape_mut().insert(1, 0);
             xs.validate_shape();
         }
-        1 => xs.shape_mut().insert(1, 1),
+        1 => {
+            if is_scalar {
+                xs = xs
+                    .as_nat(env, "Tuples of scalar must be a natural number")?
+                    .into();
+            } else {
+                xs.shape_mut().insert(1, 1);
+            }
+        }
         2 => {
             let n = if is_scalar {
                 xs.as_nat(env, "Tuples of scalar must be a natural number")?

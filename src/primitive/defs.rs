@@ -975,6 +975,9 @@ primitive!(
     /// [under][first] allows you to modify the first row of an array.
     /// ex: ⍜⊢(×10) [2 3 4]
     ///
+    /// Subscripted [first] puts the first N rows of an array onto the stack.
+    /// ex: ⊢₂ [1 2 3 4]
+    ///
     /// See also: [last]
     (1, First, MonadicArray, ("first", '⊢')),
     /// Get the last row of an array
@@ -986,6 +989,9 @@ primitive!(
     ///
     /// [under][last] allows you to modify the last row of an array.
     /// ex: ⍜⊣(×10) [2 3 4]
+    ///
+    /// Subscripted [last] puts the last N rows of an array onto the stack.
+    /// ex: ⊣₂ [1 2 3 4]
     ///
     /// See also: [first]
     (1, Last, MonadicArray, ("last", '⊣')),

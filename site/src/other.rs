@@ -535,6 +535,8 @@ pub fn Subscripts() -> impl IntoView {
                 subscript(Round, "To N decimal places", "⁅₃ π"),
                 subscript(Floor, "To N decimal places", "# Experimental!\n⌊₄ π\n⌊₄ τ"),
                 subscript(Ceil, "To N decimal places", "# Experimental!\n⌈₄ π\n⌈₄ τ"),
+                subscript(First, "First N values", "⊢₂ \"hello\""),
+                subscript(Last, "Last N values", "⊣₂ \"hello\""),
                 subscript(Rand, "Random integer", "# Experimental!\n⚂₁₀₀"),
                 subscript(Both, "Apply to N argument sets", "[∩₃+ 1 2 3 4 5 6]"),
                 subscript(Each, "Apply to rank N subarrays", "∵₁□ °△2_3_4"),
@@ -543,7 +545,7 @@ pub fn Subscripts() -> impl IntoView {
                 subscript(Repeat, "Repetition count", "⍥₅(⊂⟜/+) [1 2]"),
                 subscript(Tuples, "Tuple size", "# Experimental!\n⧅₂< ⇡4"),
                 subscript(Stencil, "Window size", "# Experimental!\n⧈₃∘ ⇡6"),
-                subscript(Stack, "Print top N values", "?₂ 1 2 3 4")
+                subscript(Stack, "Print top N values", "?₂ 1 2 3 4"),
             ] }
         </table>
     }

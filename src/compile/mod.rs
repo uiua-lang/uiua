@@ -1841,38 +1841,6 @@ code:
         let span = self.add_span(span);
         Node::Prim(prim, span)
     }
-    fn subscript_n(&mut self, sub: Subscript, span: &CodeSpan) -> Option<i32> {
-        match sub {
-            Subscript::N(n) => Some(n),
-            Subscript::Empty => None,
-            Subscript::NegOnly => {
-                self.add_error(span.clone(), "Subscript is incomplete");
-                None
-            }
-            Subscript::TooLarge => {
-                self.add_error(span.clone(), "Subscript is too large");
-                None
-            }
-        }
-    }
-    fn positive_subscript(&mut self, n: i32, prim: Primitive, span: CodeSpan) -> UiuaResult<usize> {
-        if n < 0 {
-            self.add_error(
-                span,
-                format!("Subscript for {} must be positive", prim.format()),
-            );
-        }
-        Ok(n.unsigned_abs() as usize)
-    }
-    fn subscript_experimental(&mut self, prim: Primitive, span: &CodeSpan) {
-        self.experimental_error(span, || {
-            format!(
-                "Subcripted {} is experimental. To use it, \
-                add `# Experimental!` to the top of the file.",
-                prim.format()
-            )
-        });
-    }
     #[allow(clippy::match_single_binding)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
         let Some(n) = self.subscript_n(sub.n.value, &sub.n.span) else {
@@ -2006,6 +1974,35 @@ code:
                     },
                     self.add_span(span),
                 ),
+                Primitive::First | Primitive::Last => {
+                    let n = self.positive_subscript(n, prim, span.clone())?;
+                    let span = self.add_span(span);
+                    match n {
+                        0 => Node::Prim(Primitive::Pop, span),
+                        1 => Node::Prim(prim, span),
+                        n if prim == Primitive::First => Node::from_iter([
+                            Node::new_push(n),
+                            Node::Prim(Primitive::Take, span),
+                            Node::Unpack {
+                                count: n,
+                                unbox: false,
+                                prim: Some(Primitive::First),
+                                span,
+                            },
+                        ]),
+                        n => Node::from_iter([
+                            Node::new_push(-(n as i32)),
+                            Node::Prim(Primitive::Take, span),
+                            Node::Prim(Primitive::Reverse, span),
+                            Node::Unpack {
+                                count: n,
+                                unbox: false,
+                                prim: Some(Primitive::Last),
+                                span,
+                            },
+                        ]),
+                    }
+                }
                 _ => {
                     self.add_error(
                         span.clone(),
@@ -2019,6 +2016,38 @@ code:
                 self.word(sub.word)?
             }
         })
+    }
+    fn subscript_n(&mut self, sub: Subscript, span: &CodeSpan) -> Option<i32> {
+        match sub {
+            Subscript::N(n) => Some(n),
+            Subscript::Empty => None,
+            Subscript::NegOnly => {
+                self.add_error(span.clone(), "Subscript is incomplete");
+                None
+            }
+            Subscript::TooLarge => {
+                self.add_error(span.clone(), "Subscript is too large");
+                None
+            }
+        }
+    }
+    fn positive_subscript(&mut self, n: i32, prim: Primitive, span: CodeSpan) -> UiuaResult<usize> {
+        if n < 0 {
+            self.add_error(
+                span,
+                format!("Subscript for {} must be positive", prim.format()),
+            );
+        }
+        Ok(n.unsigned_abs() as usize)
+    }
+    fn subscript_experimental(&mut self, prim: Primitive, span: &CodeSpan) {
+        self.experimental_error(span, || {
+            format!(
+                "Subcripted {} is experimental. To use it, \
+                add `# Experimental!` to the top of the file.",
+                prim.format()
+            )
+        });
     }
     /// Get all diagnostics
     pub fn diagnostics(&self) -> &BTreeSet<Diagnostic> {

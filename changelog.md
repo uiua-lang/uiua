@@ -35,6 +35,8 @@ This version is not yet released. If you are reading this on the website, then t
   - You can type it as `Epsilon`
 - Add [`&ep`](https://uiua.org/docs/&ep) and [`&epf`](https://uiua.org/docs/&epf) system functions for easier printing to stderr
 - Change [`backward 𝄈`](https://uiua.org/docs/backward)'s glyph to `𝄈`. Code using `˜` will continue to work and will be formatted as `𝄈`.
+- Add the experimental [`stencil ⧈`](https://uiua.org/docs/stencil) modifier, which is a generalization of [`windows ◫`](https://uiua.org/docs/windows)
+  - If stabilized, [`windows ◫`](https://uiua.org/docs/windows) would be deprecated
 - Add the experimental [`or ∨`](https://uiua.org/docs/or) function
   - It has a useful reduction identity
   - It is also GCD

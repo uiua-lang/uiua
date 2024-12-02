@@ -508,7 +508,6 @@ impl Primitive {
             ),
             Chunks => format!("use {Windows} with a rank-2 window size instead"),
             Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
-            Triangle => format!("use {Tuples} instead"),
             Sig => "use (⋅⊢)^! instead".into(),
             Stringify => "use (◇repr⊢)^! instead".into(),
             Rerank => format!(
@@ -529,7 +528,7 @@ impl Primitive {
             (Reach | Off | Backward | Above | Around)
                 | (Tuples | Stencil)
                 | (Or | Chunks | Base | Fft | Case | Layout | Binary)
-                | (Astar | Triangle)
+                | Astar
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)

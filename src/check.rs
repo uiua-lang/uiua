@@ -389,7 +389,7 @@ impl VirtualEnv {
                     let [sig] = get_args(args)?;
                     self.handle_sig(sig)
                 }
-                Table | Tuples | Triangle => {
+                Table | Tuples => {
                     let [sig] = get_args(args)?;
                     self.handle_sig(sig);
                 }

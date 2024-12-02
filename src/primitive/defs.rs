@@ -2183,43 +2183,6 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// Apply a function to each shrinking row of an array
-    ///
-    /// Similar to [rows], [triangle] calls its function on each row of an array.
-    /// However, [triangle] will call its function on a descreasing-size suffix of each row.
-    /// We can see an example of what this means with [triangle][box].
-    /// ex: # Experimental!
-    ///   : ◹□ . ↯4_4⇡16
-    /// Notice that the elements included correspond to the upper-right [triangle] of the input array.
-    ///
-    /// Non-square arrays will have extra rows either be truncated or longer.
-    /// ex: # Experimental!
-    ///   : ◹□ . ↯3_4⇡12
-    /// ex: # Experimental!
-    ///   : ◹□ . ↯5_3⇡15
-    /// You can use [triangle][first] to get the diagonal of an array.
-    /// ex: # Experimental!
-    ///   : ◹⊢ . ↯3_4⇡12
-    /// If [triangle]'s function takes more than one argument, then it functions similarly to [table], except some of the combinations are skipped.
-    /// For example, we can use [triangle][couple] to get all unique combinations of rows from two arrays.
-    /// Notice the difference from [table].
-    /// ex: # Experimental!
-    ///   : ♭₂⊞⊟ ⇡3⇡3
-    ///   : ◹⊟ ⇡3⇡3
-    /// We can also see the pattern by rearranging the combinations with [group].
-    /// ex: # Experimental!
-    ///   : ◹⊂.⇡4
-    ///   : ⊕□≡°⊟ .
-    ///   : ⬚0⊕∘≡°⊟ :
-    /// [triangle] also works with 3-argument functions (but currently no more).
-    /// ex: # Experimental!
-    ///   : ◹(⊂⊂)..⇡3
-    /// It follows the same pattern that we can see with [group].
-    /// ex: # Experimental!
-    ///   : ◹(⊂⊂)..⇡3
-    ///   : ⊕(□⊕□≡°⊟)≡°⊂ .
-    ///   : ⬚0⊕(⬚0⊕∘≡°⊟)≡°⊂ :
-    ([1], Triangle, AggregatingModifier, ("triangle", '◹')),
     /// Unbox the arguments to a function before calling it
     ///
     /// ex:  ⊂ □[1 2 3] □[4 5 6]

@@ -542,6 +542,7 @@ pub fn Subscripts() -> impl IntoView {
                 subscript(Inventory, "Apply to subarrays N deep", "⍚₂⇡ °△2_3"),
                 subscript(Repeat, "Repetition count", "⍥₅(⊂⟜/+) [1 2]"),
                 subscript(Tuples, "Tuple size", "# Experimental!\n⧅₂< ⇡4"),
+                subscript(Stencil, "Window size", "# Experimental!\n⧈₃∘ ⇡6"),
                 subscript(Stack, "Print top N values", "?₂ 1 2 3 4")
             ] }
         </table>

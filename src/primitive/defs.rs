@@ -2058,6 +2058,30 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⍉ ⧅₂< ⇡5
     ([1], Tuples, IteratingModifier, ("tuples", '⧅')),
+    /// Call a function on windows of an array
+    ///
+    /// The first argument is the window size.
+    /// The second argument is the array to be windowed.
+    /// Sliding windows of the given size are passed to the function.
+    /// ex: # Experimental!
+    ///   : ⧈∘ 3 ⇡6
+    /// ex: # Experimental!
+    ///   : ⧈□ 3 ⇡6
+    /// You can call a function on adjacent rows with [stencil][reduce].
+    /// ex: # Experimental!
+    ///   : ⧈/- 2 [3 1 5 6 8]
+    /// Multi-dimensional window sizes are supported.
+    /// ex: # Experimental!
+    ///   : ⧈□ 3_3 °△5_5
+    /// [fill] will pad the sides of the windows
+    /// ex: # Experimental!
+    ///   : ⬚0⧈□ 3 [1 2 3]
+    /// ex: # Experimental!
+    ///   : ⬚0⧈□ 2_2 +1°△3_3
+    /// A subscript sets the window size.
+    /// ex: # Experimental!
+    ///   : ⧈₃∘ ⇡6
+    (2[1], Stencil, IteratingModifier, ("stencil", '⧈')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2)5 0

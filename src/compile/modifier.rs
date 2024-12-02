@@ -596,6 +596,17 @@ impl Compiler {
                 }
                 node
             }
+            Stencil => {
+                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let span = self.add_span(modified.modifier.span.clone());
+                let mut node = Node::Mod(Primitive::Stencil, eco_vec![sn], span);
+                if let Some(n) =
+                    subscript.and_then(|n| self.subscript_n(n, &modified.modifier.span))
+                {
+                    node.prepend(Node::new_push(n));
+                }
+                node
+            }
             Un => {
                 let (sn, span) = self.monadic_modifier_op(modified)?;
                 self.add_span(span.clone());

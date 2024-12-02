@@ -527,7 +527,7 @@ impl Primitive {
         matches!(
             self,
             (Reach | Off | Backward | Above | Around)
-                | Tuples
+                | (Tuples | Stencil)
                 | (Or | Chunks | Base | Fft | Case | Layout | Binary)
                 | (Astar | Triangle)
                 | (Derivative | Integral)
@@ -1020,6 +1020,7 @@ impl Primitive {
                 loops::partition(f, env)?
             }
             Primitive::Tuples => permute::tuples(ops, env)?,
+            Primitive::Stencil => reduce::stencil(ops, env)?,
 
             // Stack
             Primitive::Fork => {
@@ -1682,7 +1683,10 @@ impl ImplPrimitive {
             ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(ops, env)?,
             ImplPrimitive::UndoGroup1 => loops::undo_group_part1(ops, env)?,
             ImplPrimitive::ReduceContent => reduce::reduce_content(ops, env)?,
-            ImplPrimitive::Adjacent => reduce::adjacent(ops, env)?,
+            ImplPrimitive::Adjacent => {
+                let [f] = get_ops(ops, env)?;
+                reduce::adjacent(f, env)?
+            }
             ImplPrimitive::AstarFirst => algorithm::astar_first(ops, env)?,
             ImplPrimitive::AstarPop => algorithm::astar_pop(ops, env)?,
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(ops, depth, env)?,

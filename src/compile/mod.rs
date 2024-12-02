@@ -1894,6 +1894,7 @@ code:
                                 | Primitive::Rows
                                 | Primitive::Each
                                 | Primitive::Inventory
+                                | Primitive::Stencil
                         ) {
                             self.add_error(
                                 span,

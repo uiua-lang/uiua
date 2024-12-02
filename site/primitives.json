@@ -1239,6 +1239,15 @@
     "class": "Debug",
     "description": "Debug print all stack values without popping them"
   },
+  "stencil": {
+    "glyph": "⧈",
+    "args": 2,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "IteratingModifier",
+    "description": "Call a function on windows of an array",
+    "experimental": true
+  },
   "stringify": {
     "args": 0,
     "outputs": 1,

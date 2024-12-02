@@ -262,7 +262,7 @@ impl Compiler {
                     // Binding is a constant
                     let val = if let [Node::Push(v)] = node.as_slice() {
                         Some(v.clone())
-                    } else {
+                    } else if node.is_pure(Purity::Pure, &self.asm) {
                         match self.comptime_node(&node) {
                             Ok(Some(vals)) => vals.into_iter().next(),
                             Ok(None) => None,
@@ -271,6 +271,8 @@ impl Compiler {
                                 None
                             }
                         }
+                    } else {
+                        None
                     };
 
                     let is_const = val.is_some();

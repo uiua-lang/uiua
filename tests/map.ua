@@ -46,9 +46,9 @@ MapsII ← ∩(remove 1) MapsI
 ⍤⤙≍ ⤙insert 1□"a" map 1 □"a"
 
 # Empty keys
-⍤⟜≍ insert[][]map[][] insert[][][]
-⍤⤙≍ 5 get [] insert [] 5 map[][]
-⍤⤙≍ 5 get [] insert [] 5 insert[]3map[][]
+⍤⟜≍ insert[][]map°△0_0[] insert[][] °△0_0
+⍤⤙≍ 5 get [] insert [] 5 map°△0_0 []
+⍤⤙≍ 5 get [] insert [] 5 insert[]3 map°△0_0[]
 
 # Weird probe patterns
 map {"x" "y" "z"} [1 2 3]
@@ -78,3 +78,15 @@ map "cba" [1 3 2]
 # Selection
 ⍤⤙≍ ⤙⊏⇡3 map "abc" [1 2 3]
 ⍤⤙≍ ⊃⇌(⊏⇌°⊏) map "abc" [1 2 3]
+
+# Multi-key get
+⍤⤙≍ "bdd" get 2_4_4 map [1 2 3 4] "abcd"
+⍤⤙≍ "dcba" get 4_3_2_1 map [1 2 3 4] "abcd"
+
+# Multi-key insert
+⍤⤙≍ map 1_2 "ab" insert 1_2 "ab" map [] ""
+⍤⤙≍ map [1_2] ["ab"] insert 1_2 "ab" map ⤙+@a °△0_2
+
+# Multi-key remove
+⍤⤙≍ map 1_3 "ac" remove 2_4 map [1 2 3 4] "abcd"
+⍤⤙≍ map [3_4] "b" remove 1_2 map [1_2 3_4] "ab"

@@ -106,9 +106,21 @@ impl Value {
     }
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
+        // Check for higher-ranked keys
+        if let Some(keys) = self.meta().map_keys.as_ref() {
+            if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
+                let mut values = Vec::with_capacity(key.row_count());
+                for key in key.rows() {
+                    values.push(self.get(&key, env)?);
+                }
+                return Value::from_row_values(values, env);
+            }
+        }
+        // An empty array cannot have the key
         if self.row_count() == 0 {
             return (env.value_fill().cloned()).ok_or_else(|| env.error("Key not found in map"));
         }
+
         let keys =
             (self.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
         if keys.len != self.row_count() {
@@ -141,6 +153,24 @@ impl Value {
     /// Insert a key-value pair into a map array
     #[allow(clippy::unit_arg)]
     pub fn insert(&mut self, key: Value, value: Value, env: &Uiua) -> UiuaResult {
+        if let Some(keys) = self.meta().map_keys.as_ref() {
+            if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
+                if key.row_count() != value.row_count() {
+                    return Err(env.error(format!(
+                        "You appear to be inserting multiple keys. \
+                        Inserted keys and values must have the same length, \
+                        but their shapes are {} and {}",
+                        key.shape(),
+                        value.shape()
+                    )));
+                }
+                for (key, value) in key.into_rows().zip(value.into_rows()) {
+                    self.insert(key, value, env)?;
+                }
+                return Ok(());
+            }
+        }
+
         if !self.is_map() && self.row_count() == 0 {
             self.map(Value::default(), env)?;
         }
@@ -252,6 +282,15 @@ impl Value {
     }
     /// Remove a key-value pair from a map array
     pub fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult {
+        if let Some(keys) = self.meta().map_keys.as_ref() {
+            if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
+                for key in key.into_rows() {
+                    self.remove(key, env)?;
+                }
+                return Ok(());
+            }
+        }
+
         if self.row_count() == 0 {
             return Ok(());
         }
@@ -451,7 +490,7 @@ impl MapKeys {
         Ok(replaced)
     }
     fn get(&self, key: &Value) -> Option<usize> {
-        if self.keys.shape() == [0] {
+        if self.keys.row_count() == 0 {
             return None;
         }
         let start = val_as_arr!(key, |a| hash_start(a, self.capacity()));
@@ -711,10 +750,11 @@ pub const EMPTY_CHAR: char = '\u{100001}';
 // A character value used as a tombstone
 pub const TOMBSTONE_CHAR: char = '\u{100002}';
 
+#[track_caller]
 fn hash_start<T: ArrayValue>(arr: &Array<T>, capacity: usize) -> usize {
     let mut hasher = DefaultHasher::new();
     arr.hash(&mut hasher);
-    hasher.finish() as usize % capacity
+    hasher.finish() as usize % capacity.max(1)
 }
 
 fn coerce_values(

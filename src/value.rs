@@ -371,7 +371,7 @@ impl Value {
     }
     /// Add a 1-length dimension to the front of the array's shape
     pub fn fix(&mut self) {
-        self.shape_mut().fix_depth(0);
+        self.fix_depth(0);
     }
     pub(crate) fn fix_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());

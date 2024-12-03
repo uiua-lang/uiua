@@ -215,15 +215,11 @@ impl Optimization for AllSameOpt {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
         match_and_replace(nodes, |nodes| match nodes {
             [Prim(Dup, span), Push(val), Prim(Rotate, _), Prim(Match, _), ..]
-                if val.rank() == 0
-                    || val.rank() == 1 && val.row_count() <= 1 && val.type_id() == f64::TYPE_ID =>
+                if *val == 1 || *val == -1 =>
             {
                 Some((4, ImplPrim(AllSame, *span)))
             }
-            [Push(val), Mod(By, args, span), Prim(Match, _), ..]
-                if val.rank() == 0
-                    || val.rank() == 1 && val.row_count() <= 1 && val.type_id() == f64::TYPE_ID =>
-            {
+            [Push(val), Mod(By, args, span), Prim(Match, _), ..] if *val == 1 || *val == -1 => {
                 let [SigNode {
                     node: Prim(Rotate, _),
                     ..
@@ -238,11 +234,7 @@ impl Optimization for AllSameOpt {
                     return None;
                 };
                 match f.node.as_slice() {
-                    [Push(val), Prim(Rotate, _)]
-                        if val.rank() == 0
-                            || val.rank() == 1
-                                && val.row_count() <= 1
-                                && val.type_id() == f64::TYPE_ID => {}
+                    [Push(val), Prim(Rotate, _)] if *val == 1 || *val == -1 => {}
                     _ => return None,
                 }
                 Some((2, ImplPrim(AllSame, *span)))

@@ -1843,14 +1843,17 @@ code:
     }
     #[allow(clippy::match_single_binding)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
-        let Some(n) = self.subscript_n(sub.n.value, &sub.n.span) else {
+        let Some(n) = self.subscript_n(sub.n) else {
             return self.word(sub.word);
         };
         Ok(match sub.word.value {
             Word::Modified(m) => match m.modifier.value {
                 Modifier::Ref(_) | Modifier::Macro(..) => {
-                    self.add_error(span, "Subscripts are not implemented for macros");
-                    self.modified(*m, Some(Subscript::N(n)))?
+                    self.add_error(
+                        m.modifier.span.clone().merge(n.span.clone()),
+                        "Subscripts are not implemented for macros",
+                    );
+                    self.modified(*m, Some(n.map(Subscript::N)))?
                 }
                 Modifier::Primitive(prim) => match prim {
                     _ => {
@@ -1865,168 +1868,172 @@ code:
                                 | Primitive::Stencil
                         ) {
                             self.add_error(
-                                span,
+                                m.modifier.span.clone().merge(n.span.clone()),
                                 format!("Subscripts are not implemented for {}", prim.format()),
                             );
                         }
-                        self.modified(*m, Some(Subscript::N(n)))?
+                        self.modified(*m, Some(n.map(Subscript::N)))?
                     }
                 },
             },
-            Word::Primitive(prim) => match prim {
-                prim if prim.sig().is_some_and(|sig| sig == (2, 1))
-                    && prim.subscript_sig(Some(2)).is_some_and(|sig| sig == (1, 1)) =>
-                {
-                    Node::from_iter([
-                        self.word(sub.n.span.sp(Word::Number(Ok(n as f64))))?,
-                        self.primitive(prim, span),
-                    ])
-                }
-                Primitive::Deshape => {
-                    Node::ImplPrim(ImplPrimitive::DeshapeSub(n), self.add_span(span))
-                }
-                Primitive::Transpose => {
-                    self.subscript_experimental(prim, &span);
-                    if n > 100 {
-                        self.add_error(span.clone(), "Too many subscript repetitions");
+            Word::Primitive(prim) => {
+                let n_span = n.span;
+                let n = n.value;
+                match prim {
+                    prim if prim.sig().is_some_and(|sig| sig == (2, 1))
+                        && prim.subscript_sig(Some(2)).is_some_and(|sig| sig == (1, 1)) =>
+                    {
+                        Node::from_iter([
+                            self.word(n_span.sp(Word::Number(Ok(n as f64))))?,
+                            self.primitive(prim, span),
+                        ])
                     }
-                    (0..n.min(100))
-                        .map(|_| self.primitive(prim, span.clone()))
-                        .collect()
-                }
-                Primitive::Sqrt => {
-                    if n == 0 {
-                        self.add_error(span.clone(), "Cannot take 0th root");
+                    Primitive::Deshape => {
+                        Node::ImplPrim(ImplPrimitive::DeshapeSub(n), self.add_span(span))
                     }
-                    Node::from_iter([
-                        Node::new_push(1.0 / n.max(1) as f64),
-                        self.primitive(Primitive::Pow, span),
-                    ])
-                }
-                Primitive::Floor | Primitive::Ceil => {
-                    self.subscript_experimental(prim, &span);
-                    let mul = 10f64.powi(n);
-                    Node::from_iter([
-                        Node::new_push(mul),
-                        self.primitive(Primitive::Mul, span.clone()),
-                        self.primitive(prim, span.clone()),
-                        Node::new_push(mul),
-                        self.primitive(Primitive::Div, span),
-                    ])
-                }
-                Primitive::Round => {
-                    let mul = 10f64.powi(n);
-                    Node::from_iter([
-                        Node::new_push(mul),
-                        self.primitive(Primitive::Mul, span.clone()),
-                        self.primitive(prim, span.clone()),
-                        Node::new_push(mul),
-                        self.primitive(Primitive::Div, span),
-                    ])
-                }
-                Primitive::Rand => {
-                    self.subscript_experimental(prim, &span);
-                    Node::from_iter([
-                        self.primitive(Primitive::Rand, span.clone()),
-                        Node::new_push(n),
-                        self.primitive(Primitive::Mul, span.clone()),
-                        self.primitive(Primitive::Floor, span),
-                    ])
-                }
-                Primitive::Utf8 => match n {
-                    8 => self.primitive(Primitive::Utf8, span),
-                    16 => Node::ImplPrim(ImplPrimitive::Utf16, self.add_span(span)),
-                    _ => {
-                        self.add_error(span.clone(), "Only UTF-8 and UTF-16 are supported");
-                        self.primitive(Primitive::Utf8, span)
+                    Primitive::Transpose => {
+                        self.subscript_experimental(prim, &span);
+                        if n > 100 {
+                            self.add_error(span.clone(), "Too many subscript repetitions");
+                        }
+                        (0..n.min(100))
+                            .map(|_| self.primitive(prim, span.clone()))
+                            .collect()
                     }
-                },
-                Primitive::Couple => match n {
-                    1 => self.primitive(Primitive::Fix, span),
-                    2 => self.primitive(Primitive::Couple, span),
-                    n => Node::Array {
+                    Primitive::Sqrt => {
+                        if n == 0 {
+                            self.add_error(span.clone(), "Cannot take 0th root");
+                        }
+                        Node::from_iter([
+                            Node::new_push(1.0 / n.max(1) as f64),
+                            self.primitive(Primitive::Pow, span),
+                        ])
+                    }
+                    Primitive::Floor | Primitive::Ceil => {
+                        self.subscript_experimental(prim, &span);
+                        let mul = 10f64.powi(n);
+                        Node::from_iter([
+                            Node::new_push(mul),
+                            self.primitive(Primitive::Mul, span.clone()),
+                            self.primitive(prim, span.clone()),
+                            Node::new_push(mul),
+                            self.primitive(Primitive::Div, span),
+                        ])
+                    }
+                    Primitive::Round => {
+                        let mul = 10f64.powi(n);
+                        Node::from_iter([
+                            Node::new_push(mul),
+                            self.primitive(Primitive::Mul, span.clone()),
+                            self.primitive(prim, span.clone()),
+                            Node::new_push(mul),
+                            self.primitive(Primitive::Div, span),
+                        ])
+                    }
+                    Primitive::Rand => {
+                        self.subscript_experimental(prim, &span);
+                        Node::from_iter([
+                            self.primitive(Primitive::Rand, span.clone()),
+                            Node::new_push(n),
+                            self.primitive(Primitive::Mul, span.clone()),
+                            self.primitive(Primitive::Floor, span),
+                        ])
+                    }
+                    Primitive::Utf8 => match n {
+                        8 => self.primitive(Primitive::Utf8, span),
+                        16 => Node::ImplPrim(ImplPrimitive::Utf16, self.add_span(span)),
+                        _ => {
+                            self.add_error(span.clone(), "Only UTF-8 and UTF-16 are supported");
+                            self.primitive(Primitive::Utf8, span)
+                        }
+                    },
+                    Primitive::Couple => match n {
+                        1 => self.primitive(Primitive::Fix, span),
+                        2 => self.primitive(Primitive::Couple, span),
+                        n => Node::Array {
+                            len: ArrayLen::Static(self.positive_subscript(
+                                n,
+                                Primitive::Couple,
+                                span.clone(),
+                            )?),
+                            inner: Node::empty().into(),
+                            boxed: false,
+                            prim: Some(Primitive::Couple),
+                            span: self.add_span(span),
+                        },
+                    },
+                    Primitive::Box => Node::Array {
                         len: ArrayLen::Static(self.positive_subscript(
                             n,
-                            Primitive::Couple,
+                            Primitive::Box,
                             span.clone(),
                         )?),
                         inner: Node::empty().into(),
-                        boxed: false,
-                        prim: Some(Primitive::Couple),
+                        boxed: true,
+                        prim: Some(Primitive::Box),
                         span: self.add_span(span),
                     },
-                },
-                Primitive::Box => Node::Array {
-                    len: ArrayLen::Static(self.positive_subscript(
-                        n,
-                        Primitive::Box,
-                        span.clone(),
-                    )?),
-                    inner: Node::empty().into(),
-                    boxed: true,
-                    prim: Some(Primitive::Box),
-                    span: self.add_span(span),
-                },
-                Primitive::Stack => Node::ImplPrim(
-                    ImplPrimitive::StackN {
-                        n: self.positive_subscript(n, Primitive::Stack, span.clone())?,
-                        inverse: false,
-                    },
-                    self.add_span(span),
-                ),
-                Primitive::First | Primitive::Last => {
-                    let n = self.positive_subscript(n, prim, span.clone())?;
-                    let span = self.add_span(span);
-                    match n {
-                        0 => Node::Prim(Primitive::Pop, span),
-                        1 => Node::Prim(prim, span),
-                        n if prim == Primitive::First => Node::from_iter([
-                            Node::new_push(n),
-                            Node::Prim(Primitive::Take, span),
-                            Node::Unpack {
-                                count: n,
-                                unbox: false,
-                                prim: Some(Primitive::First),
-                                span,
-                            },
-                        ]),
-                        n => Node::from_iter([
-                            Node::new_push(-(n as i32)),
-                            Node::Prim(Primitive::Take, span),
-                            Node::Prim(Primitive::Reverse, span),
-                            Node::Unpack {
-                                count: n,
-                                unbox: false,
-                                prim: Some(Primitive::Last),
-                                span,
-                            },
-                        ]),
+                    Primitive::Stack => Node::ImplPrim(
+                        ImplPrimitive::StackN {
+                            n: self.positive_subscript(n, Primitive::Stack, span.clone())?,
+                            inverse: false,
+                        },
+                        self.add_span(span),
+                    ),
+                    Primitive::First | Primitive::Last => {
+                        let n = self.positive_subscript(n, prim, span.clone())?;
+                        let span = self.add_span(span);
+                        match n {
+                            0 => Node::Prim(Primitive::Pop, span),
+                            1 => Node::Prim(prim, span),
+                            n if prim == Primitive::First => Node::from_iter([
+                                Node::new_push(n),
+                                Node::Prim(Primitive::Take, span),
+                                Node::Unpack {
+                                    count: n,
+                                    unbox: false,
+                                    prim: Some(Primitive::First),
+                                    span,
+                                },
+                            ]),
+                            n => Node::from_iter([
+                                Node::new_push(-(n as i32)),
+                                Node::Prim(Primitive::Take, span),
+                                Node::Prim(Primitive::Reverse, span),
+                                Node::Unpack {
+                                    count: n,
+                                    unbox: false,
+                                    prim: Some(Primitive::Last),
+                                    span,
+                                },
+                            ]),
+                        }
+                    }
+                    _ => {
+                        self.add_error(
+                            span.clone(),
+                            format!("Subscripts are not implemented for {}", prim.format()),
+                        );
+                        self.primitive(prim, span)
                     }
                 }
-                _ => {
-                    self.add_error(
-                        span.clone(),
-                        format!("Subscripts are not implemented for {}", prim.format()),
-                    );
-                    self.primitive(prim, span)
-                }
-            },
+            }
             _ => {
                 self.add_error(span.clone(), "Subscripts are not allowed in this context");
                 self.word(sub.word)?
             }
         })
     }
-    fn subscript_n(&mut self, sub: Subscript, span: &CodeSpan) -> Option<i32> {
-        match sub {
-            Subscript::N(n) => Some(n),
+    fn subscript_n(&mut self, sub: Sp<Subscript>) -> Option<Sp<i32>> {
+        match sub.value {
+            Subscript::N(n) => Some(sub.span.sp(n)),
             Subscript::Empty => None,
             Subscript::NegOnly => {
-                self.add_error(span.clone(), "Subscript is incomplete");
+                self.add_error(sub.span.clone(), "Subscript is incomplete");
                 None
             }
             Subscript::TooLarge => {
-                self.add_error(span.clone(), "Subscript is too large");
+                self.add_error(sub.span.clone(), "Subscript is too large");
                 None
             }
         }

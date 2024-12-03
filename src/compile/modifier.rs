@@ -13,7 +13,7 @@ impl Compiler {
         &mut self,
         modifier: &Sp<Modifier>,
         operand: &Sp<Word>,
-        subscript: Option<Subscript>,
+        subscript: Option<Sp<Subscript>>,
     ) -> UiuaResult<Option<Node>> {
         let Sp {
             value: Word::Pack(pack),
@@ -292,7 +292,7 @@ impl Compiler {
     pub(crate) fn modified(
         &mut self,
         mut modified: Modified,
-        subscript: Option<Subscript>,
+        subscript: Option<Sp<Subscript>>,
     ) -> UiuaResult<Node> {
         let mut op_count = modified.code_operands().count();
 
@@ -300,7 +300,7 @@ impl Compiler {
         if op_count == 1 {
             let operand = modified.code_operands().next().unwrap();
             if let Some(node) =
-                self.desugar_function_pack(&modified.modifier, operand, subscript)?
+                self.desugar_function_pack(&modified.modifier, operand, subscript.clone())?
             {
                 return Ok(node);
             }
@@ -401,7 +401,7 @@ impl Compiler {
     pub(super) fn inline_modifier(
         &mut self,
         modified: &Modified,
-        subscript: Option<Subscript>,
+        subscript: Option<Sp<Subscript>>,
     ) -> UiuaResult<Option<Node>> {
         use Primitive::*;
         let Modifier::Primitive(prim) = modified.modifier.value else {
@@ -467,10 +467,10 @@ impl Compiler {
                 let Some(sub) = subscript else {
                     return Ok(None);
                 };
-                let Some(n) = self.subscript_n(sub, &modified.modifier.span) else {
+                let Some(n) = self.subscript_n(sub) else {
                     return Ok(None);
                 };
-                let n = self.positive_subscript(n, Both, modified.modifier.span.clone())?;
+                let n = self.positive_subscript(n.value, Both, modified.modifier.span.clone())?;
                 let span = self.add_span(modified.modifier.span.clone());
                 self.monadic_modifier_op(modified)?.0.on_all(n, span)
             }
@@ -567,10 +567,8 @@ impl Compiler {
                 } else {
                     Node::Mod(Primitive::Repeat, eco_vec![sn], spandex)
                 };
-                if let Some(n) =
-                    subscript.and_then(|n| self.subscript_n(n, &modified.modifier.span))
-                {
-                    node.prepend(Node::new_push(n));
+                if let Some(n) = subscript.and_then(|n| self.subscript_n(n)) {
+                    node.prepend(Node::new_push(n.value));
                 }
                 node
             }
@@ -579,31 +577,38 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 let inner_sig = sn.sig;
                 let mut node = Node::Mod(Primitive::Tuples, eco_vec![sn], span);
-                if let Some(n) =
-                    subscript.and_then(|n| self.subscript_n(n, &modified.modifier.span))
-                {
+                if let Some(n) = subscript.and_then(|n| self.subscript_n(n)) {
                     if inner_sig.args != 2 {
                         self.add_error(
-                            modified.modifier.span.clone(),
+                            modified.modifier.span.clone().merge(n.span),
                             format!(
-                                "Only dyadic {} can be subscripted, \
-                                but its function's signature is {inner_sig}",
-                                Primitive::Tuples.format()
+                                "{} can only be subscripted if its function \
+                                is dyadic, but the signature is {inner_sig}",
+                                Primitive::Stencil.format()
                             ),
                         );
                     }
-                    node.prepend(Node::new_push(n));
+                    node.prepend(Node::new_push(n.value));
                 }
                 node
             }
             Stencil => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
+                let inner_sig = sn.sig;
                 let mut node = Node::Mod(Primitive::Stencil, eco_vec![sn], span);
-                if let Some(n) =
-                    subscript.and_then(|n| self.subscript_n(n, &modified.modifier.span))
-                {
-                    node.prepend(Node::new_push(n));
+                if let Some(n) = subscript.and_then(|n| self.subscript_n(n)) {
+                    if inner_sig.args != 1 {
+                        self.add_error(
+                            modified.modifier.span.clone().merge(n.span),
+                            format!(
+                                "{} can only be subscripted if its function \
+                                is monadic, but the signature is {inner_sig}",
+                                Primitive::Stencil.format()
+                            ),
+                        );
+                    }
+                    node.prepend(Node::new_push(n.value));
                 }
                 node
             }
@@ -798,7 +803,9 @@ impl Compiler {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let op_span = operand.span.clone();
                 let full_span = modified.modifier.span.clone().merge(op_span);
-                let words_look_pervasive = subscript.map_or(true, |sub| sub == Subscript::N(0))
+                let words_look_pervasive = subscript
+                    .as_ref()
+                    .map_or(true, |sub| sub.value == Subscript::N(0))
                     && words_look_pervasive(slice::from_ref(&operand));
                 let sn = self.word_sig(operand)?;
                 if words_look_pervasive {
@@ -826,7 +833,8 @@ impl Compiler {
                 }
                 let span = self.add_span(modified.modifier.span.clone());
                 if let Some(i) = subscript
-                    .and_then(|n| self.subscript_n(n, &modified.modifier.span))
+                    .and_then(|n| self.subscript_n(n))
+                    .map(|i| i.value)
                     .filter(|i| *i != 0)
                 {
                     if i == -1 {
@@ -842,7 +850,8 @@ impl Compiler {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 if let Some(i) = subscript
-                    .and_then(|n| self.subscript_n(n, &modified.modifier.span))
+                    .and_then(|n| self.subscript_n(n))
+                    .map(|i| i.value)
                     .filter(|i| *i != -1)
                 {
                     let impl_prim = if prim == Rows {

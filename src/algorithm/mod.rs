@@ -483,7 +483,7 @@ pub fn switch(
         // Array
         // Collect arguments
         let mut args = Vec::with_capacity(sig.args + 1);
-        let new_shape = selector.shape().clone();
+        let mut new_shape = selector.shape().clone();
         args.push(selector);
         for i in 0..sig.args {
             let arg = env.pop(i + 1)?;
@@ -494,6 +494,7 @@ pub fn switch(
             mut rows,
             row_count,
             is_empty,
+            all_scalar,
             ..
         } = fixed_rows("switch", sig.outputs, args, env)?;
         // Collect functions
@@ -561,12 +562,17 @@ pub fn switch(
             }
         }
         // Collect output
+        if is_empty {
+            new_shape[0] = 0;
+        }
         for output in outputs.into_iter().rev() {
+            let mut new_shape = new_shape.clone();
             let mut new_value = Value::from_row_values(output, env)?;
-            if is_empty {
+            if all_scalar {
+                new_value.undo_fix();
+            } else if is_empty {
                 new_value.pop_row();
             }
-            let mut new_shape = new_shape.clone();
             new_shape.extend_from_slice(&new_value.shape()[1..]);
             *new_value.shape_mut() = new_shape;
             new_value.validate_shape();

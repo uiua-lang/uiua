@@ -2097,11 +2097,11 @@ primitive!(
     /// A rank-2 array with two rows allows the "stride" of the windows to be specified.
     /// The first row specifies the window size, and the second row specifies the stride.
     /// ex: # Experimental!
-    ///   : ◫[¤3¤4] ⇡12
+    ///   : ⧈□ [¤3¤4] ⇡12
     /// ex: # Experimental!
-    ///   : ◫[¤4¤2] ⇡12
+    ///   : ⧈□ [¤4¤2] ⇡12
     /// ex: # Experimental!
-    ///   : ≡≡□ ◫[2_2 1_3] . °△4_6
+    ///   : ⧈□ [2_2 1_3] . °△4_6
     (2[1], Stencil, IteratingModifier, ("stencil", '⧈')),
     /// Repeat a function a number of times
     ///

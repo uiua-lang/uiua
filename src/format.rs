@@ -21,8 +21,8 @@ use crate::{
     is_ident_char, is_ident_start,
     lex::{CodeSpan, Loc, Sp},
     parse::{flip_unsplit_lines, parse, split_words, trim_spaces},
-    Compiler, Handle, Ident, InputSrc, Inputs, NativeSys, PreEvalMode, Primitive, RunMode, SafeSys,
-    Signature, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_DIGITS,
+    Compiler, Handle, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys, Signature,
+    SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_DIGITS,
 };
 
 trait ConfigValue: Sized {
@@ -1639,7 +1639,7 @@ impl SysBackend for NoSys {
 fn native() -> &'static dyn SysBackend {
     #[cfg(feature = "native_sys")]
     {
-        &NativeSys
+        &crate::NativeSys
     }
     #[cfg(not(feature = "native_sys"))]
     {

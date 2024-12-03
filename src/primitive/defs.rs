@@ -2070,24 +2070,63 @@ primitive!(
     /// The second argument is the array to be windowed.
     /// Sliding windows of the given size are passed to the function.
     /// ex: # Experimental!
+    ///   : ⧈∘ 2 ⇡4
     ///   : ⧈∘ 3 ⇡6
     /// ex: # Experimental!
+    ///   : ⧈□ 2 ⇡4
     ///   : ⧈□ 3 ⇡6
     /// Multi-dimensional window sizes are supported.
     /// ex: # Experimental!
     ///   : ⧈□ 3_3 °△5_5
+    ///
     /// [fill] will pad the sides of the windows
     /// ex: # Experimental!
-    ///   : ⬚0⧈□ 3 [1 2 3]
+    ///   : ⬚0⧈∘ 3 [1 2 3]
     /// ex: # Experimental!
-    ///   : ⬚0⧈□ 2_2 +1°△3_3
+    ///   : ⬚0⧈□ 2_3 +1°△3_3
+    ///
     /// A subscript sets the window size.
     /// ex: # Experimental!
     ///   : ⧈₃∘ ⇡6
+    ///
     /// [stencil] only takes a window size if its function is monadic. For functions with 2 or more arguments, the window size is the number of arguments.
-    /// This is useful things like getting adjacent differences.
+    /// This is useful for things like getting adjacent differences.
     /// ex: # Experimental!
     ///   : ⧈- [3 1 5 6 8]
+    /// ex: # Experimental!
+    ///   : ⧈⊟ [3 1 5 6 8]
+    ///
+    /// Negative window sizes gives the absolute value number of windows.
+    /// ex: # Experimental!
+    ///   : ⧈□¯2 ↯4_4⇡16
+    /// ex: # Experimental!
+    ///   : ⧈□¯3 ↯4_4⇡16
+    /// This can be useful when you want to get horizontal windows.
+    /// ex: # Experimental!
+    ///   : ⧈□¯1_2 ↯4_4⇡16
+    ///
+    /// [stencil] with a scalar or list window size will always produce overlapping windows that shift by one row at a time.
+    /// 2-dimensional window sizes allow more control over the windows.
+    /// A rank-2 array with only one row will "chunk" the array with non-overlapping windows.
+    /// ex: # Experimental!
+    ///   : ⧈∘[[4]] ⇡12
+    /// ex: # Experimental!
+    ///   : ⧈∘ ¤¤4  ⇡12
+    /// ex: # Experimental!
+    ///   : ⧈□ ¤[2 2] . °△4_6
+    /// Negative sizes still specify the number of windows desired.
+    /// ex: # Experimental!
+    ///   : ⧈∘ ¤¤¯4 ⇡12
+    /// ex: # Experimental!
+    ///   : ⧈□ ¤[¯2 ¯2] . °△4_6
+    /// A rank-2 array with two rows allows the "stride" of the windows to be specified.
+    /// The first row specifies the window size, and the second row specifies the stride.
+    /// ex: # Experimental!
+    ///   : ◫[¤3¤4] ⇡12
+    /// ex: # Experimental!
+    ///   : ◫[¤4¤2] ⇡12
+    /// ex: # Experimental!
+    ///   : ≡≡□ ◫[2_2 1_3] . °△4_6
     (2[1], Stencil, IteratingModifier, ("stencil", '⧈')),
     /// Repeat a function a number of times
     ///

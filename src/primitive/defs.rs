@@ -2070,6 +2070,8 @@ primitive!(
     ///   : ⧈- [3 1 5 6 8]
     /// ex: # Experimental!
     ///   : ⧈⊟ [3 1 5 6 8]
+    /// ex: # Experimental!
+    ///   : ⧈{⊙⊟} ⇡5
     ///
     /// Negative window sizes gives the absolute value number of windows.
     /// ex: # Experimental!

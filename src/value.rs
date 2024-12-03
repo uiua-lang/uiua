@@ -410,6 +410,13 @@ impl Value {
         val_as_arr!(self, |arr| arr.depth_row(depth, i).into())
     }
     #[track_caller]
+    /// Create an value that is a slice of this values's rows
+    ///
+    /// Generally doesn't allocate
+    ///
+    /// - `start` must be <= `end`
+    /// - `start` must be < `self.row_count()`
+    /// - `end` must be <= `self.row_count()`
     pub(crate) fn slice_rows(&self, start: usize, end: usize) -> Self {
         val_as_arr!(self, |arr| arr.slice_rows(start, end).into())
     }

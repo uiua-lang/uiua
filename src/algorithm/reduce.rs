@@ -9,8 +9,8 @@ use crate::{
     algorithm::{get_ops, loops::flip, multi_output, pervade::*},
     check::nodes_sig,
     cowslice::cowslice,
-    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Signature,
-    Uiua, UiuaResult, Value,
+    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
+    UiuaResult, Value,
 };
 
 use super::{fixed_rows, FillContext, FixedRowsData};
@@ -965,6 +965,116 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f] = get_ops(ops, env)?;
+    if f.sig.args == 0 {
+        return Err(env.error(format!(
+            "{}'s function must have at least 1 argument, but its signature is {}",
+            Primitive::Stencil.format(),
+            f.sig
+        )));
+    }
+    // Adjacent stencil
+    if f.sig.args > 1 {
+        if env.value_fill().is_some() {
+            return Err(env.error(format!(
+                "Filled adjacent {} is not currently supported",
+                Primitive::Stencil.format()
+            )));
+        }
+        let xs = env.pop(1)?;
+        let n = f.sig.args;
+        return if f.sig == (2, 1) {
+            adjacent_impl(f, xs, n, env)
+        } else {
+            if xs.row_count() < n {
+                env.push(xs.first_dim_zero());
+                return Ok(());
+            }
+            let win_count = xs.row_count() - (n - 1);
+            let mut new_rows = multi_output(f.sig.outputs, Vec::with_capacity(win_count));
+            for w in 0..win_count {
+                for i in (0..n).rev() {
+                    env.push(xs.row(w + i));
+                }
+                env.exec(f.clone())?;
+                for i in 0..f.sig.outputs {
+                    new_rows[i].push(env.pop("stencil's function result")?);
+                }
+            }
+            for new_rows in new_rows.into_iter().rev() {
+                env.push(Value::from_row_values(new_rows, env)?);
+            }
+            Ok(())
+        };
+    }
+    let size = env.pop(1)?;
+    // Stencil reduce calls adjacent
+    if size.rank() == 0 && size.type_id() == f64::TYPE_ID && env.value_fill().is_none() {
+        if let Node::Mod(Primitive::Reduce, args, _) = f.node {
+            let [f] = get_ops(args.clone(), env)?;
+            env.push(size);
+            return adjacent(f, env);
+        }
+    }
+    let xs = env.pop(2)?;
+    let size_axes = size.shape().last().copied().unwrap_or(1);
+    if size_axes > xs.rank() {
+        return Err(env.error(format!(
+            "{} size specifies {size_axes} axes, but the array is rank {}",
+            Primitive::Stencil.format(),
+            xs.rank()
+        )));
+    }
+    let windows = size.windows(xs, env)?;
+    let shape_prefix = Shape::from(&windows.shape()[..size_axes]);
+    let shape_suffix = Shape::from(&windows.shape()[windows.rank() - size_axes..]);
+    // Optimizations
+    match &f.node {
+        Node::Prim(Primitive::Identity, _) => {
+            env.push(windows);
+            return Ok(());
+        }
+        Node::Prim(Primitive::Dup, _) => {
+            env.push(windows.clone());
+            env.push(windows);
+            return Ok(());
+        }
+        Node::Prim(Primitive::Box, _) => {
+            env.push(windows.box_depth(size_axes));
+            return Ok(());
+        }
+        Node::Mod(Primitive::Reduce, args, _) => {
+            let [f] = get_ops(args.clone(), env)?;
+            env.push(windows);
+            return reduce_impl(f, size_axes, env);
+        }
+        _ => {}
+    }
+    // Generic stencil
+    let outputs = f.sig.outputs;
+    let mut new_rows = multi_output(outputs, Vec::with_capacity(outputs));
+    env.without_fill(|env| -> UiuaResult {
+        for window in windows.into_row_shaped_slices(shape_suffix) {
+            env.push(window);
+            env.exec(f.node.clone())?;
+            for i in 0..outputs {
+                new_rows[i].push(env.pop("stencil's function result")?);
+            }
+        }
+        Ok(())
+    })?;
+    for new_rows in new_rows.into_iter().rev() {
+        let mut val = Value::from_row_values(new_rows, env)?;
+        let mut new_shape = shape_prefix.clone();
+        new_shape.extend_from_slice(&val.shape()[1..]);
+        *val.shape_mut() = new_shape;
+        val.validate_shape();
+        env.push(val);
+    }
+    Ok(())
+}
+
 pub fn adjacent(f: SigNode, env: &mut Uiua) -> UiuaResult {
     let n_arr = env.pop(1)?;
     let xs = env.pop(2)?;
@@ -1103,9 +1213,9 @@ fn generic_adjacent(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResu
     let sig = f.sig;
     if sig != (2, 1) {
         return Err(env.error(format!(
-            "Adjacent's function's signature must be {}, but it is {}",
-            Signature::new(2, 1),
-            sig
+            "Dyadic {}'s function must have 1 output, \
+            but its signature is {sig}",
+            Primitive::Stencil.format()
         )));
     }
     if xs.row_count() < n {
@@ -1129,89 +1239,5 @@ fn generic_adjacent(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResu
         window.extend(rows.next());
     }
     env.push(Value::from_row_values(new_rows, env)?);
-    Ok(())
-}
-
-pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
-    let [f] = get_ops(ops, env)?;
-    if f.sig.args == 0 {
-        return Err(env.error(format!(
-            "{}'s function must have at least 1 argument, but its signature is {}",
-            Primitive::Stencil.format(),
-            f.sig
-        )));
-    }
-    if f.sig.args > 1 {
-        if env.value_fill().is_some() {
-            return Err(env.error(format!(
-                "Filled adjacent {} is not currently supported",
-                Primitive::Stencil.format()
-            )));
-        }
-        let xs = env.pop(1)?;
-        let n = f.sig.args;
-        return adjacent_impl(f, xs, n, env);
-    }
-    let size = env.pop(1)?;
-    if size.rank() == 0 && size.type_id() == f64::TYPE_ID && env.value_fill().is_none() {
-        if let Node::Mod(Primitive::Reduce, args, _) = f.node {
-            let [f] = get_ops(args.clone(), env)?;
-            env.push(size);
-            return adjacent(f, env);
-        }
-    }
-    let xs = env.pop(2)?;
-    let size_axes = size.shape().last().copied().unwrap_or(1);
-    if size_axes > xs.rank() {
-        return Err(env.error(format!(
-            "{} size specifies {size_axes} axes, but the array is rank {}",
-            Primitive::Stencil.format(),
-            xs.rank()
-        )));
-    }
-    let windows = size.windows(xs, env)?;
-    let shape_prefix = Shape::from(&windows.shape()[..size_axes]);
-    let shape_suffix = Shape::from(&windows.shape()[windows.rank() - size_axes..]);
-    match &f.node {
-        Node::Prim(Primitive::Identity, _) => {
-            env.push(windows);
-            return Ok(());
-        }
-        Node::Prim(Primitive::Dup, _) => {
-            env.push(windows.clone());
-            env.push(windows);
-            return Ok(());
-        }
-        Node::Prim(Primitive::Box, _) => {
-            env.push(windows.box_depth(size_axes));
-            return Ok(());
-        }
-        Node::Mod(Primitive::Reduce, args, _) => {
-            let [f] = get_ops(args.clone(), env)?;
-            env.push(windows);
-            return reduce_impl(f, size_axes, env);
-        }
-        _ => {}
-    }
-    let outputs = f.sig.outputs;
-    let mut new_rows = multi_output(outputs, Vec::with_capacity(outputs));
-    env.without_fill(|env| -> UiuaResult {
-        for window in windows.into_row_shaped_slices(shape_suffix) {
-            env.push(window);
-            env.exec(f.node.clone())?;
-            for i in 0..outputs {
-                new_rows[i].push(env.pop("stencil's function result")?);
-            }
-        }
-        Ok(())
-    })?;
-    for new_rows in new_rows.into_iter().rev() {
-        let mut val = Value::from_row_values(new_rows, env)?;
-        let mut new_shape = shape_prefix.clone();
-        new_shape.extend_from_slice(&val.shape()[1..]);
-        *val.shape_mut() = new_shape;
-        val.validate_shape();
-        env.push(val);
-    }
     Ok(())
 }

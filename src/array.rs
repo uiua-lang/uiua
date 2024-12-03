@@ -499,7 +499,14 @@ impl<T: ArrayValue> Array<T> {
         Self::new(&self.shape[depth + 1..], self.data.slice(start..end))
     }
     #[track_caller]
-    pub(crate) fn slice_rows(&self, start: usize, end: usize) -> Self {
+    /// Create an array that is a slice of this array's rows
+    ///
+    /// Generally doesn't allocate
+    ///
+    /// - `start` must be <= `end`
+    /// - `start` must be < `self.row_count()`
+    /// - `end` must be <= `self.row_count()`
+    pub fn slice_rows(&self, start: usize, end: usize) -> Self {
         assert!(start <= end);
         assert!(start < self.row_count());
         assert!(end <= self.row_count());

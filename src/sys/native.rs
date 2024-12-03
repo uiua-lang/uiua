@@ -1199,8 +1199,8 @@ impl SysBackend for NativeSys {
 #[doc(hidden)]
 pub fn print_stack(stack: &[Value], color: bool) {
     #[cfg(feature = "window")]
-    if uiua::window::use_window() {
-        use uiua::{encode::SmartOutput, window::Request};
+    if crate::window::use_window() {
+        use crate::{encode::SmartOutput, window::Request};
         _ = Request::Separator.send();
         _ = Request::ShowAll(
             (stack.iter())

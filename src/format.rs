@@ -1378,7 +1378,7 @@ impl<'a> Formatter<'a> {
     }
     fn format_modifier(&mut self, modifier: &Sp<Modifier>, depth: usize) {
         match &modifier.value {
-            Modifier::Primitive(prim) => self.push(&modifier.span, &prim.to_string()),
+            Modifier::Primitive(prim) => self.format_primitive(*prim, &modifier.span),
             Modifier::Ref(r) => self.format_ref(r),
             Modifier::Macro(mac) => {
                 self.func(&mac.func.value, depth);

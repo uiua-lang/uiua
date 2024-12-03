@@ -24,6 +24,13 @@
     "class": "Media",
     "description": "Synthesize and stream audio"
   },
+  "&b": {
+    "args": 0,
+    "outputs": 0,
+    "class": "Misc",
+    "description": "Pause the execution and print the stack",
+    "experimental": true
+  },
   "&camcap": {
     "args": 1,
     "outputs": 1,
@@ -466,15 +473,6 @@
     "outputs": 1,
     "class": "MonadicPervasive",
     "description": "Round to the nearest integer towards ∞"
-  },
-  "chunks": {
-    "glyph": "⑄",
-    "args": 2,
-    "outputs": 1,
-    "class": "DyadicArray",
-    "description": "Get the n-wise chunks of an array",
-    "experimental": true,
-    "deprecated": true
   },
   "classify": {
     "glyph": "⊛",

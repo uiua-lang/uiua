@@ -1062,17 +1062,16 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
                 new_rows[i].push(env.pop("stencil's function result")?);
             }
         }
+        for new_rows in new_rows.into_iter().rev() {
+            let mut val = Value::from_row_values(new_rows, env)?;
+            let mut new_shape = shape_prefix.clone();
+            new_shape.extend_from_slice(&val.shape()[1..]);
+            *val.shape_mut() = new_shape;
+            val.validate_shape();
+            env.push(val);
+        }
         Ok(())
-    })?;
-    for new_rows in new_rows.into_iter().rev() {
-        let mut val = Value::from_row_values(new_rows, env)?;
-        let mut new_shape = shape_prefix.clone();
-        new_shape.extend_from_slice(&val.shape()[1..]);
-        *val.shape_mut() = new_shape;
-        val.validate_shape();
-        env.push(val);
-    }
-    Ok(())
+    })
 }
 
 pub fn adjacent(f: SigNode, env: &mut Uiua) -> UiuaResult {

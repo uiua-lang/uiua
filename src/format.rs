@@ -1,6 +1,7 @@
 //! The Uiua formatter
 
 use std::{
+    any::Any,
     borrow::Cow,
     collections::HashMap,
     env,
@@ -20,8 +21,8 @@ use crate::{
     is_ident_char, is_ident_start,
     lex::{CodeSpan, Loc, Sp},
     parse::{flip_unsplit_lines, parse, split_words, trim_spaces},
-    Compiler, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys, Signature, Uiua,
-    UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_DIGITS,
+    Compiler, Handle, Ident, InputSrc, Inputs, NativeSys, PreEvalMode, Primitive, RunMode, SafeSys,
+    Signature, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_DIGITS,
 };
 
 trait ConfigValue: Sized {
@@ -1410,7 +1411,8 @@ impl<'a> Formatter<'a> {
             if !self.eval_output_comments {
                 return HashMap::new();
             }
-            let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_secs(2));
+            let mut env = Uiua::with_backend(FormatterBackend::default())
+                .with_execution_limit(Duration::from_secs(2));
 
             #[cfg(feature = "native_sys")]
             let enabled = crate::sys::native::set_output_enabled(false);
@@ -1546,6 +1548,102 @@ fn end_loc(s: &str) -> Loc {
         col,
         char_pos,
         byte_pos,
+    }
+}
+
+#[derive(Default)]
+struct FormatterBackend {}
+
+impl SysBackend for FormatterBackend {
+    fn any(&self) -> &dyn Any {
+        self
+    }
+    fn any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+    fn print_str_stdout(&self, _: &str) -> Result<(), String> {
+        Ok(())
+    }
+    fn print_str_stderr(&self, _: &str) -> Result<(), String> {
+        Ok(())
+    }
+    fn print_str_trace(&self, _: &str) {}
+    fn show(&self, _: Value) -> Result<(), String> {
+        Ok(())
+    }
+    fn allow_thread_spawning(&self) -> bool {
+        true
+    }
+    fn file_exists(&self, path: &str) -> bool {
+        native().file_exists(path)
+    }
+    fn is_file(&self, path: &str) -> Result<bool, String> {
+        native().is_file(path)
+    }
+    fn list_dir(&self, path: &str) -> Result<Vec<String>, String> {
+        native().list_dir(path)
+    }
+    fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
+        native().file_read_all(path)
+    }
+    fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
+        native().file_write_all(path, contents)
+    }
+    fn open_file(&self, path: &Path, write: bool) -> Result<Handle, String> {
+        native().open_file(path, write)
+    }
+    fn close(&self, handle: Handle) -> Result<(), String> {
+        native().close(handle)
+    }
+    fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
+        native().read(handle, len)
+    }
+    fn read_all(&self, handle: Handle) -> Result<Vec<u8>, String> {
+        native().read_all(handle)
+    }
+    fn read_until(&self, handle: Handle, delim: &[u8]) -> Result<Vec<u8>, String> {
+        native().read_until(handle, delim)
+    }
+    fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
+        native().write(handle, contents)
+    }
+    fn var(&self, name: &str) -> Option<String> {
+        native().var(name)
+    }
+    fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
+        native().tcp_connect(addr)
+    }
+    fn tls_connect(&self, addr: &str) -> Result<Handle, String> {
+        native().tls_connect(addr)
+    }
+    fn timezone(&self) -> Result<f64, String> {
+        native().timezone()
+    }
+    fn breakpoint(&self, _: &Uiua) -> Result<bool, String> {
+        Ok(true)
+    }
+}
+
+#[cfg(not(feature = "native_sys"))]
+struct NoSys;
+#[cfg(not(feature = "native_sys"))]
+impl SysBackend for NoSys {
+    fn any(&self) -> &dyn Any {
+        self
+    }
+    fn any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+fn native() -> &'static dyn SysBackend {
+    #[cfg(feature = "native_sys")]
+    {
+        &NativeSys
+    }
+    #[cfg(not(feature = "native_sys"))]
+    {
+        &NoSys
     }
 }
 

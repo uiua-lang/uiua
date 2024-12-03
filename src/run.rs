@@ -735,12 +735,12 @@ impl Uiua {
             let end_time = self.rt.backend.now();
             let padding = self.rt.call_stack.len().saturating_sub(1) * 2;
             #[rustfmt::skip]
-                println!( // Allow println
-                    "  ⏲{:padding$}{:.2}ms - {}",
-                    "",
-                    end_time - self.rt.last_time,
-                    formatted_node
-                );
+            println!( // Allow println
+                "  ⏲{:padding$}{:.2}ms - {}",
+                "",
+                end_time - self.rt.last_time,
+                formatted_node
+            );
             self.rt.last_time = self.rt.backend.now();
         }
         self.respect_execution_limit()?;

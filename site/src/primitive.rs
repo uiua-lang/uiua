@@ -439,9 +439,11 @@ fn prim_docs() {
     for prim in Primitive::non_deprecated() {
         for line in &prim.doc().lines {
             if let PrimDocLine::Example(ex) = line {
-                if ["&sl", "&tcpc", "&tlsc", "&ast", "&clip", "&frab", "&fmd"]
-                    .iter()
-                    .any(|prim| ex.input().contains(prim))
+                if [
+                    "&sl", "&tcpc", "&tlsc", "&ast", "&clip", "&frab", "&fmd", "&b",
+                ]
+                .iter()
+                .any(|prim| ex.input().contains(prim))
                 {
                     continue;
                 }

@@ -1176,17 +1176,21 @@ impl SysBackend for NativeSys {
         res
     }
     fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
+        if !output_enabled() {
+            return Ok(true);
+        }
         match env.span() {
-            Span::Code(span) => println!(
+            #[rustfmt::skip]
+            Span::Code(span) => println!( // Allow println
                 "{} at {span} {}",
                 "&b".truecolor(237, 94, 106),
                 "(press enter to continue)".bright_black()
             ),
             Span::Builtin => {}
         }
-        println!();
+        println!(); // Allow println
         print_stack(env.stack(), true);
-        println!();
+        println!(); // Allow println
         _ = stdin().read_line(&mut String::new());
         Ok(true)
     }
@@ -1209,7 +1213,7 @@ pub fn print_stack(stack: &[Value], color: bool) {
     }
     if stack.len() == 1 || !color {
         for value in stack {
-            println!("{}", value.show());
+            println!("{}", value.show()); // Allow println
         }
         return;
     }
@@ -1228,7 +1232,7 @@ pub fn print_stack(stack: &[Value], color: bool) {
             5 => (w, b, w),
             _ => unreachable!(),
         };
-        println!("{}", value.show().truecolor(r, g, b));
+        println!("{}", value.show().truecolor(r, g, b)); // Allow println
     }
 }
 

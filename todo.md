@@ -3,7 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Breakpoints?
 - Change how audio is shaped
 - Allow reading files in output comments
 - Optimize `conjoin inventory`

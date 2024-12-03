@@ -171,7 +171,8 @@ sys_op! {
     /// On the website, each [&b], in the same editor, with the same input code, will end execution and print the stack.
     /// Running the code multiple times will allow the code to advance to the next [&b].
     /// Try it out!
-    /// ex: ≡(&b⇌&b) &b °△ &b 3_3 &b
+    /// ex: # Experimental!
+    ///   : ≡(&b⇌&b) &b °△ &b 3_3 &b
     /// Once the execution has completed, the final stack state will be shown as normal. Running again will start from the beginning.
     ///
     /// In the native interpreter, [&b] pauses execution, prints the stack, and waits for the user to press enter.

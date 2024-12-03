@@ -452,11 +452,9 @@ impl SysBackend for WebBackend {
     }
     fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
         let breakpoint = self.breakpoint.fetch_add(1, Ordering::Relaxed);
-        logging::log!("Breakpoint reached: {breakpoint}");
         let reached = BREAKPOINTS.with(|map| {
             let mut map = map.borrow_mut();
             if let Some((_, bp)) = map.get_mut(&self.id) {
-                logging::log!("stored breakpoint: {bp}");
                 let reached = breakpoint >= *bp;
                 if reached {
                     *bp += 1;

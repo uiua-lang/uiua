@@ -1217,12 +1217,12 @@ pub fn print_stack(stack: &[Value], color: bool) {
         }
         return;
     }
+    #[cfg(feature = "terminal-light")]
+    let is_light = terminal_light::luma().is_ok_and(|luma| luma > 0.6);
+    #[cfg(not(feature = "terminal-light"))]
+    let is_light = false;
     for (i, value) in stack.iter().enumerate() {
-        let (w, b) = if terminal_light::luma().is_ok_and(|luma| luma > 0.6) {
-            (0, 35)
-        } else {
-            (255, 200)
-        };
+        let (w, b) = if is_light { (0, 35) } else { (255, 200) };
         let (r, g, b) = match (i + 3) % 6 {
             0 => (w, b, b),
             1 => (w, w, b),

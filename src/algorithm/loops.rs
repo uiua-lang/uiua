@@ -340,6 +340,9 @@ where
     ) -> UiuaResult<EcoVec<R>> {
         let haystack = self.data.as_slice();
         let delim_slice = delim.data.as_slice();
+        if delim_slice.is_empty() {
+            return Ok(eco_vec![f(self.data.clone())]);
+        }
         let mut curr = 0;
         let mut data = EcoVec::new();
         if delim.rank() == 0 || delim.row_count() == 1 {

@@ -43,11 +43,12 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [inline macros](https://www.uiua.org/docs/experimental#inline-macros)
   - Deprecate the experimental `stringify` and `signature` modifiers in favor of inline code macros
 - Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation
-- Remove the previously deprecated experimental `coordinate ⟔` function
+- Remove the previously deprecated experimental `⟔ coordinate` function
 - Remove the previously deprecated experimental `struct` modifier
 - Remove the previously deprecated `setinv` and `setund` modifiers
 - Remove the previously deprecated `choose` and `permute` functions
-- Remove the previously deprecated `triangle` modifier
+- Remove the previously deprecated experimental `◹ triangle` modifier
+- Remove the previously deprecated experimental `⑄ chunks` function
 ### Interpreter
 - The compiler and interpreter have been almost entirely rewritten to use a tree-based execution model rather than a bytecode model
   - This massively simplifies compilation as well as optimizations and the derivation of inverses

@@ -1621,31 +1621,6 @@ primitive!(
     /// ex: ◫[[4] [2]] ⇡12
     /// ex: ≡≡□ ◫[2_2 1_3] . °△4_6
     (2, Windows, DyadicArray, ("windows", '◫')),
-    /// Get the n-wise chunks of an array
-    ///
-    /// [chunks] produces non-overlapping subarrays of equal size.
-    /// ex: # Experimental!
-    ///   : ⑄ 3 [1 2 3 4 5 6]
-    /// ex: # Experimental!
-    ///   : ≡≡□ ⑄ 2_3 . °△ 4_6
-    /// If the chunk size does not evenly divide the shape of the array, the edge chunks will be omitted.
-    /// ex: # Experimental!
-    ///   : ⑄ 3 [1 2 3 4 5 6 7 8]
-    /// ex: # Experimental!
-    ///   : ≡≡□ ⑄ 2_2 . °△ 5_5
-    /// If [fill] is used, the edge chunks will be filled with the fill value.
-    /// ex: # Experimental!
-    ///   : ⬚0⑄ 3 [1 2 3 4 5 6 7 8]
-    /// ex: # Experimental!
-    ///   : ≡≡□ ⬚0⑄ 2_2 . °△ 5_5
-    /// Negative chunk sizes specify the number of chunks desired.
-    /// ex: # Experimental!
-    ///   : ⑄ ¯2 [1 2 3 4 5 6]
-    ///   : ⑄ ¯3 [1 2 3 4 5 6]
-    /// Negative and positive chunk sizes can be mixed.
-    /// ex: # Experimental!
-    ///   : ≡≡□ ⑄ ¯2_2 . °△ 6_6
-    (2, Chunks, DyadicArray, ("chunks", '⑄')),
     /// Discard or copy some rows of an array
     ///
     /// Takes two arrays. The first array is the number of copies to keep of each row of the second array.
@@ -3739,7 +3714,6 @@ impl_primitive!(
     (3, UndoRerank),
     (2, UndoReshape),
     (2, UndoWindows),
-    (2, UndoChunks),
     (2, UndoWhere),
     (2, AntiOrient),
     (3(2), UndoJoin),

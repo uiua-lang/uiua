@@ -255,7 +255,6 @@ impl fmt::Display for ImplPrimitive {
             UndoKeep => write!(f, "{Under}{Keep}"),
             UndoRerank => write!(f, "{Under}{Rerank}"),
             UndoReshape => write!(f, "{Un}{Reshape}"),
-            UndoChunks => write!(f, "{Un}{Chunks}"),
             UndoWindows => write!(f, "{Un}{Windows}"),
             UndoJoin => write!(f, "{Under}{Join}"),
             // Optimizations
@@ -507,7 +506,6 @@ impl Primitive {
                 "use new {} instead, which has its arguments flipped",
                 MemberOf.format()
             ),
-            Chunks => format!("use {Windows} with a rank-2 window size instead"),
             Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
             Sig => "use (⋅⊢)^! instead".into(),
             Stringify => "use (◇repr⊢)^! instead".into(),
@@ -528,7 +526,7 @@ impl Primitive {
             self,
             (Reach | Off | Backward | Above | Around)
                 | (Tuples | Stencil)
-                | (Or | Chunks | Base | Fft | Case | Layout | Binary)
+                | (Or | Base | Fft | Case | Layout | Binary)
                 | Astar
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
@@ -796,7 +794,6 @@ impl Primitive {
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Select => env.dyadic_oo_env(Value::select)?,
             Primitive::Windows => env.dyadic_ro_env(Value::windows)?,
-            Primitive::Chunks => env.dyadic_ro_env(Value::chunks)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
             Primitive::Classify => env.monadic_ref(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut_env(Value::deduplicate)?,
@@ -1401,9 +1398,6 @@ impl ImplPrimitive {
                 val.undo_reshape(orig_shape, env)?;
                 Ok(val)
             })?,
-            ImplPrimitive::UndoChunks => {
-                env.dyadic_ro_env(|size, val, env| val.undo_chunks(size, env))?
-            }
             ImplPrimitive::UndoWindows => env.dyadic_ro_env(Value::undo_windows)?,
             ImplPrimitive::UndoFirst => {
                 let into = env.pop(1)?;

@@ -1227,21 +1227,6 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-impl Value {
-    /// Use this value to `chunks` another
-    pub fn chunks(&self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        let isize_spec = self.as_ints(env, "Chunk size must be an integer or list of integers")?;
-        from.match_fill(env);
-        Ok(val_as_arr!(from, |a| a.chunks(&isize_spec, env)?.into()))
-    }
-    pub(crate) fn undo_chunks(self, size: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let isize_spec = size.as_ints(env, "Chunk size must be an integer or list of integers")?;
-        Ok(val_as_arr!(self, |a| a
-            .undo_chunks(&isize_spec, env)?
-            .into()))
-    }
-}
-
 impl<T: ArrayValue> Array<T> {
     /// Get `chunks` of this array
     pub fn chunks(mut self, isize_spec: &[isize], env: &Uiua) -> UiuaResult<Self> {

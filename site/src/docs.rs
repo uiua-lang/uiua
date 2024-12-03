@@ -13,8 +13,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
 use crate::{
-    element, markdown::Markdown, other::*, other_tutorial::OtherTutorialPage, primitive::*,
-    tutorial::TutorialPage, uiuisms::Uiuisms, Hd, Prim, Tour,
+    element, idioms::Idioms, markdown::Markdown, other::*, other_tutorial::OtherTutorialPage,
+    primitive::*, tutorial::TutorialPage, uiuisms::Uiuisms, Hd, Prim, Tour,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,6 +34,7 @@ pub enum DocsPage {
     Optimizations,
     FormatConfig,
     Experimental,
+    Idioms,
 }
 
 impl IntoParam for DocsPage {
@@ -55,6 +56,7 @@ impl IntoParam for DocsPage {
             "optimizations" => Ok(Self::Optimizations),
             "format-config" => Ok(Self::FormatConfig),
             "experimental" => Ok(Self::Experimental),
+            "idioms" => Ok(Self::Idioms),
             value => Ok(Self::Search(value.into())),
         }
     }
@@ -90,6 +92,7 @@ pub fn Docs() -> impl IntoView {
                 title_markdown("Formatter Configuration", "/text/format_config.md", ()).into_view()
             }
             DocsPage::Experimental => Experimental().into_view(),
+            DocsPage::Idioms => Idioms().into_view(),
         };
 
         view! {
@@ -243,6 +246,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
             <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
             <li><A href="/docs/experimental">"Experimental Features"</A>" - an overview of experimental features"</li>
+            <li><A href="/docs/idioms">"Idioms"</A>" - commonly useful, non-obvious idioms"</li>
         </ul>
 
         <Hd id="other-pages">"Other Pages"</Hd>

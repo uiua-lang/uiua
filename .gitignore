@@ -22,6 +22,7 @@ uiua.tmLanguage.json
 !/tests_*/*
 !/examples/*
 !/site/*.ua
+!/site/text/*.ua
 
 # symlink created by `nix build`
 result

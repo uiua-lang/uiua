@@ -3,8 +3,9 @@
 ## 0.14
 The next version of Uiua
 
-- New idioms page
+- Empty array as nil?
 - Breakpoints?
+- Change how audio is shaped
 - Split up sys backend
 - Allow reading files in output comments
 - Optimize `conjoin inventory`

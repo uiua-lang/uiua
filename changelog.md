@@ -63,6 +63,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add a new pad setting to show line values to the right of the code
 - Add [Subscripts](https://uiua.org/docs/subscripts) page
 - Update [Advanced Stack Manipulation](https://uiua.org/tutorial/advancedstack) and [Advanced Array Manipulation](https://uiua.org/tutorial/advancedarray) tutorials to include subscripts
+- Add new [Idioms](https://uiua.org/docs/idioms) page
 
 ## 0.13.0 - 2024-10-21
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).

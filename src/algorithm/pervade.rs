@@ -1349,12 +1349,12 @@ pub mod or {
             return (a << shift) as f64;
         }
         fn recurse(a: f64, b: f64) -> f64 {
-            if b.abs() <= 8.0 * f64::EPSILON {
+            if b <= 8.0 * f64::EPSILON {
                 return a;
             }
             recurse(b, a.rem_euclid(b))
         }
-        recurse(a, b)
+        a.signum() * b.signum() * recurse(a.abs(), b.abs())
     }
     pub fn num_byte(a: f64, b: u8) -> f64 {
         num_num(b.into(), a)

@@ -26,9 +26,9 @@ use terminal_size::terminal_size;
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
-    Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDocFragment, PrimDocLine,
-    Primitive, RunMode, SafeSys, SpanKind, Spans, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
-    Value, CONSTANTS,
+    print_stack, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDocFragment,
+    PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Uiua, UiuaError, UiuaErrorKind,
+    UiuaResult, CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -1090,45 +1090,6 @@ fn format_multi_files(config: &FormatConfig) -> Result<(), UiuaError> {
         format_file(path, config)?;
     }
     Ok(())
-}
-
-fn print_stack(stack: &[Value], color: bool) {
-    #[cfg(feature = "window")]
-    if uiua::window::use_window() {
-        use uiua::{encode::SmartOutput, window::Request};
-        _ = Request::Separator.send();
-        _ = Request::ShowAll(
-            (stack.iter())
-                .map(|v| SmartOutput::from_value(v.clone(), &NativeSys))
-                .collect(),
-        )
-        .send();
-        _ = Request::ClearBeforeNext.send();
-        return;
-    }
-    if stack.len() == 1 || !color {
-        for value in stack {
-            println!("{}", value.show());
-        }
-        return;
-    }
-    for (i, value) in stack.iter().enumerate() {
-        let (w, b) = if terminal_light::luma().is_ok_and(|luma| luma > 0.6) {
-            (0, 35)
-        } else {
-            (255, 200)
-        };
-        let (r, g, b) = match (i + 3) % 6 {
-            0 => (w, b, b),
-            1 => (w, w, b),
-            2 => (b, w, b),
-            3 => (b, w, w),
-            4 => (b, b, w),
-            5 => (w, b, w),
-            _ => unreachable!(),
-        };
-        println!("{}", value.show().truecolor(r, g, b));
-    }
 }
 
 fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, stack: bool, config: FormatConfig) {

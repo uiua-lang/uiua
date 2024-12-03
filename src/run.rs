@@ -389,6 +389,7 @@ impl Uiua {
                     time_instrs: env.rt.time_instrs,
                     output_comments: take(&mut env.rt.output_comments),
                     reports: take(&mut env.rt.reports),
+                    stack: take(&mut env.rt.stack),
                     ..Runtime::default()
                 };
             }

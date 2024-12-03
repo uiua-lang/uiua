@@ -322,9 +322,9 @@ pub fn Editor<'a>(
                     if take(&mut st.loading_module) {
                         set_timeout(
                             move || {
-                                state.update(|state| {
+                                state.update(|st| {
                                     seed_random(seed);
-                                    let output = state.run_code(&input);
+                                    let output = st.run_code(&input);
                                     let (diags, items): (Vec<_>, Vec<_>) =
                                         output.into_iter().partition(OutputItem::is_report);
                                     let items: Vec<_> =
@@ -1728,7 +1728,7 @@ pub fn Editor<'a>(
                                 <div
                                     id=overlay_id
                                     class="code-overlay">
-                                    { move || gen_code_view(&overlay.get()) }
+                                    { move || gen_code_view(&code_id(), &overlay.get()) }
                                 </div>
                             </div>
                         </div>

@@ -23,7 +23,7 @@ use time::UtcOffset;
 pub use self::native::*;
 use crate::{
     algorithm::validate_size, cowslice::cowslice, get_ops, primitive::PrimDoc, Array, Boxed,
-    FfiType, Ops, Primitive, Purity, Signature, Uiua, UiuaResult, Value,
+    FfiType, Ops, Primitive, Purity, Signature, Uiua, UiuaErrorKind, UiuaResult, Value,
 };
 
 /// The text of Uiua's example module
@@ -165,6 +165,17 @@ impl SysOpClass {
 }
 
 sys_op! {
+    /// Pause the execution and print the stack
+    ///
+    /// This is useful for debugging.
+    /// On the website, each [&b], in the same editor, with the same input code, will end execution and print the stack.
+    /// Running the code multiple times will allow the code to advance to the next [&b].
+    /// Try it out!
+    /// ex: ≡(&b⇌&b) &b °△ &b 3_3 &b
+    /// Once the execution has completed, the final stack state will be shown as normal. Running again will start from the beginning.
+    ///
+    /// In the native interpreter, [&b] pauses execution, prints the stack, and waits for the user to press enter.
+    (0(0), Breakpoint, Misc, "&b", "breakpoint", Mutating),
     /// Print a nicely formatted representation of a value to stdout
     ///
     /// [&s] will print the value the same way it would appear at the end of a program, or from [?].
@@ -1041,6 +1052,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         o += s as f64 / 3600.0;
         Ok(o)
     }
+    /// Hit a breakpoint
+    ///
+    /// Returns whether to continue the program
+    fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
+        Err("Breakpoints are not supported in this environment".into())
+    }
 }
 
 /// A target for a git repository
@@ -1780,6 +1797,11 @@ impl SysOp {
                     .map(|p| p.get())
                     .ok_or_else(|| env.error("Freed pointer must be a pointer value"))?;
                 (env.rt.backend).mem_free(ptr).map_err(|e| env.error(e))?;
+            }
+            SysOp::Breakpoint => {
+                if !env.rt.backend.breakpoint(env).map_err(|e| env.error(e))? {
+                    return Err(UiuaErrorKind::Interrupted.into());
+                }
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

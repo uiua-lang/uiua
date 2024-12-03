@@ -3,10 +3,8 @@
 ## 0.14
 The next version of Uiua
 
-- Empty array as nil?
 - Breakpoints?
 - Change how audio is shaped
-- Split up sys backend
 - Allow reading files in output comments
 - Optimize `conjoin inventory`
 - Stabilize `backward`, `case`

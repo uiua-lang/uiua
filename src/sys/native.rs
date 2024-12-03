@@ -15,7 +15,8 @@ use std::{
     time::Duration,
 };
 
-use crate::{terminal_size, GitTarget, Handle, SysBackend, Value};
+use crate::{terminal_size, GitTarget, Handle, Span, SysBackend, Uiua, Value};
+use colored::Colorize;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
@@ -1173,6 +1174,61 @@ impl SysBackend for NativeSys {
         }
         NATIVE_SYS.git_paths.insert(url.to_string(), res.clone());
         res
+    }
+    fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
+        match env.span() {
+            Span::Code(span) => println!(
+                "{} at {span} {}",
+                "&b".truecolor(237, 94, 106),
+                "(press enter to continue)".bright_black()
+            ),
+            Span::Builtin => {}
+        }
+        println!();
+        print_stack(env.stack(), true);
+        println!();
+        _ = stdin().read_line(&mut String::new());
+        Ok(true)
+    }
+}
+
+#[doc(hidden)]
+pub fn print_stack(stack: &[Value], color: bool) {
+    #[cfg(feature = "window")]
+    if uiua::window::use_window() {
+        use uiua::{encode::SmartOutput, window::Request};
+        _ = Request::Separator.send();
+        _ = Request::ShowAll(
+            (stack.iter())
+                .map(|v| SmartOutput::from_value(v.clone(), &NativeSys))
+                .collect(),
+        )
+        .send();
+        _ = Request::ClearBeforeNext.send();
+        return;
+    }
+    if stack.len() == 1 || !color {
+        for value in stack {
+            println!("{}", value.show());
+        }
+        return;
+    }
+    for (i, value) in stack.iter().enumerate() {
+        let (w, b) = if terminal_light::luma().is_ok_and(|luma| luma > 0.6) {
+            (0, 35)
+        } else {
+            (255, 200)
+        };
+        let (r, g, b) = match (i + 3) % 6 {
+            0 => (w, b, b),
+            1 => (w, w, b),
+            2 => (b, w, b),
+            3 => (b, w, w),
+            4 => (b, b, w),
+            5 => (w, b, w),
+            _ => unreachable!(),
+        };
+        println!("{}", value.show().truecolor(r, g, b));
     }
 }
 

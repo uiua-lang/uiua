@@ -9,6 +9,7 @@ use std::{
     str::FromStr,
     time::Duration,
 };
+use uiua::UiuaErrorKind;
 
 use uiua::{
     ast::Item,
@@ -361,7 +362,7 @@ pub fn update_ctrl(event: &Event) {
         .set_class_name(if os_ctrl(event) { "ctrl-pressed" } else { "" });
 }
 
-fn build_code_lines(code: &str) -> CodeLines {
+fn build_code_lines(id: &str, code: &str) -> CodeLines {
     let mut lines = CodeLines {
         frags: vec![Vec::new()],
     };
@@ -403,7 +404,7 @@ fn build_code_lines(code: &str) -> CodeLines {
     };
 
     let mut end = 0;
-    let spans = Spans::with_backend(code, WebBackend::default());
+    let spans = Spans::with_backend(code, WebBackend::new(id, code));
     for span in spans.spans {
         let kind = span.value;
         let span = span.span;
@@ -491,7 +492,7 @@ fn build_code_lines(code: &str) -> CodeLines {
     lines
 }
 
-pub fn gen_code_view(code: &str) -> View {
+pub fn gen_code_view(id: &str, code: &str) -> View {
     fn pair_aliases() -> HashMap<(Primitive, Primitive), &'static str> {
         use Primitive::*;
         [
@@ -576,7 +577,7 @@ pub fn gen_code_view(code: &str) -> View {
     }
 
     // logging::log!("gen_code_view({code:?})");
-    let CodeLines { frags } = build_code_lines(code);
+    let CodeLines { frags } = build_code_lines(id, code);
     let mut line_views = Vec::new();
     for line in frags {
         if line.is_empty() {
@@ -877,14 +878,14 @@ pub fn gen_code_view(code: &str) -> View {
     line_views.into_view()
 }
 
-fn init_rt() -> Uiua {
-    Uiua::with_backend(WebBackend::default())
+fn init_rt(id: &str, code: &str) -> Uiua {
+    Uiua::with_backend(WebBackend::new(id, code))
         .with_execution_limit(Duration::from_secs_f64(get_execution_limit()))
         .with_recursion_limit(50)
 }
 
-fn just_values(code: &str) -> UiuaResult<Vec<Value>> {
-    let mut rt = init_rt();
+fn just_values(id: &str, code: &str) -> UiuaResult<Vec<Value>> {
+    let mut rt = init_rt(id, code);
     rt.run_str(code)?;
     Ok(rt.take_stack())
 }
@@ -901,38 +902,45 @@ impl State {
     /// Run code and return the output
     pub fn run_code(&mut self, code: &str) -> Vec<OutputItem> {
         if let Some(chal) = &self.challenge {
-            let mut example = run_code_single(&challenge_code(
-                &chal.intended_answer,
-                &chal.example,
-                chal.flip,
-            ))
+            let mut example = run_code_single(
+                &self.code_id,
+                &challenge_code(&chal.intended_answer, &chal.example, chal.flip),
+            )
             .0;
             example.insert(0, OutputItem::Faint(format!("Example: {}", chal.example)));
             let mut output_sections = vec![example];
             let mut correct = true;
             for test in &chal.tests {
-                let answer =
-                    || just_values(&challenge_code(&chal.intended_answer, test, chal.flip));
+                let answer = || {
+                    just_values(
+                        &self.code_id,
+                        &challenge_code(&chal.intended_answer, test, chal.flip),
+                    )
+                };
                 let user_input = challenge_code(code, test, chal.flip);
-                let user_output = || just_values(&user_input);
+                let user_output = || just_values(&self.code_id, &user_input);
                 correct = correct
                     && match (answer(), user_output()) {
                         (Ok(answer), Ok(users)) => answer == users,
                         (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
                         _ => false,
                     };
-                let mut output = run_code_single(&user_input).0;
+                let mut output = run_code_single(&self.code_id, &user_input).0;
                 output.insert(0, OutputItem::Faint(format!("Input: {test}")));
                 output_sections.push(output);
             }
             let hidden_answer = || {
-                just_values(&challenge_code(
-                    &chal.intended_answer,
-                    &chal.hidden,
-                    chal.flip,
-                ))
+                just_values(
+                    &self.code_id,
+                    &challenge_code(&chal.intended_answer, &chal.hidden, chal.flip),
+                )
             };
-            let hidden_user_output = || just_values(&challenge_code(code, &chal.hidden, chal.flip));
+            let hidden_user_output = || {
+                just_values(
+                    &self.code_id,
+                    &challenge_code(code, &chal.hidden, chal.flip),
+                )
+            };
             let hidden_correct = match (hidden_answer(), hidden_user_output()) {
                 (Ok(answer), Ok(users)) => answer == users,
                 (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
@@ -958,7 +966,7 @@ impl State {
             }
             output
         } else {
-            let (output, error) = run_code_single(code);
+            let (output, error) = run_code_single(&self.code_id, code);
             self.loading_module = false;
             if let Some(error) = error {
                 if error.to_string().contains("Waiting for module") {
@@ -971,14 +979,22 @@ impl State {
 }
 
 #[allow(clippy::mutable_key_type)]
-fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
+fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
     // Run
-    let mut rt = init_rt();
+    let mut rt = init_rt(id, code);
     let mut error = None;
-    let mut comp = Compiler::with_backend(WebBackend::default());
+    let mut comp = Compiler::with_backend(WebBackend::new(id, code));
     let comp_backend;
-    let (mut values, io) = match comp.load_str(code).map(|comp| rt.run_compiler(comp)) {
-        Ok(Ok(_)) => (
+    let res = comp.load_str(code).map(|comp| rt.run_compiler(comp));
+    logging::log!("res: {:?}", res);
+    let (mut values, io) = match res {
+        Ok(Ok(())) => {
+            let stack = rt.take_stack();
+            let backend = rt.downcast_backend::<WebBackend>().unwrap();
+            backend.finish();
+            (stack, backend)
+        }
+        Ok(Err(e)) if matches!(e.kind, UiuaErrorKind::Interrupted) => (
             rt.take_stack(),
             rt.downcast_backend::<WebBackend>().unwrap(),
         ),

@@ -529,7 +529,7 @@ impl Primitive {
                 | (Or | Base | Fft | Case | Layout | Binary)
                 | Astar
                 | (Derivative | Integral)
-                | Sys(Ffi | MemCopy | MemFree | TlsListen)
+                | Sys(Ffi | MemCopy | MemFree | TlsListen | Breakpoint)
                 | (Stringify | Quote | Sig)
         )
     }

@@ -9,7 +9,7 @@
 # Build the Markov chain
 # Chain ? TokenLen Input
 Build ← (
-  ⬚@\0⊃(↘-1⟜◫|↻) ⊙(⊂:@\n⊂@\n)
+  ⬚@\0⊃(↘-1⟜⧈∘|↻) ⊙(⊂:@\n⊂@\n)
   ∧(⍜(°□⬚""get)⊂ ⊙:)⊙⊙[])
 Initial ↚ ⊏⌊×⚂⧻. ▽⊸(≡⊢=@\n)⊙◌°map
 Next ↚ (

@@ -304,6 +304,7 @@ fn aliases() -> HashMap<&'static str, &'static [Primitive]> {
         ("flatten", &[Deshape]),
         ("choose", &[Tuples]),
         ("permute", &[Tuples]),
+        ("windows", &[Stencil]),
     ]
     .into_iter()
     .flat_map(|(alias, prims)| (3..=alias.len()).map(move |len| (&alias[..len], prims)))

@@ -156,8 +156,14 @@ struct AdjacentOpt;
 impl Optimization for AdjacentOpt {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
         match_and_replace(nodes, |nodes| {
-            let [Prim(Windows, _), Mod(Rows, args, span), ..] = nodes else {
-                return None;
+            let (args, span) = match nodes {
+                [Prim(Windows, _), Mod(Rows, args, span), ..] => (args, span),
+                [Mod(Stencil, st_args, _), Mod(Rows, args, span), ..]
+                    if st_args.len() == 1 && matches!(st_args[0].node, Prim(Identity, _)) =>
+                {
+                    (args, span)
+                }
+                _ => return None,
             };
             let [f] = args.as_slice() else {
                 return None;

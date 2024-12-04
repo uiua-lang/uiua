@@ -1028,7 +1028,7 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
     let windows = size.windows(xs, env)?;
     let shape_prefix = Shape::from(&windows.shape()[..size_axes]);
-    let shape_suffix = Shape::from(&windows.shape()[windows.rank() - size_axes..]);
+    let shape_interfix = Shape::from(&windows.shape()[size_axes..]);
     // Optimizations
     match &f.node {
         Node::Prim(Primitive::Identity, _) => {
@@ -1053,9 +1053,9 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
     // Generic stencil
     let outputs = f.sig.outputs;
-    let mut new_rows = multi_output(outputs, Vec::with_capacity(outputs));
+    let mut new_rows = multi_output(outputs, Vec::new());
     env.without_fill(|env| -> UiuaResult {
-        for window in windows.into_row_shaped_slices(shape_suffix) {
+        for window in windows.into_row_shaped_slices(shape_interfix) {
             env.push(window);
             env.exec(f.node.clone())?;
             for i in 0..outputs {

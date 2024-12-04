@@ -199,6 +199,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
         (PopUnd(1), UndoReshape),
     )),
     &MaybeVal((Windows, (CopyUnd(1), Windows), (PopUnd(1), UndoWindows))),
+    &MaybeVal(StencilPat),
     // Classify and deduplicate
     &(
         Classify,
@@ -718,6 +719,18 @@ under!(ReduceJoinPat, input, _, _, _, Reduce, span, [f], {
         Mod(Reduce, eco_vec![f.clone()], span),
     ]);
     let after = Node::from_iter([PopUnder(1, span), ImplPrim(UndoDeshape(Some(-1)), span)]);
+    Ok((input, before, after))
+});
+
+under!(StencilPat, input, _, _, _, Stencil, span, [f], {
+    if !matches!(f.node, Prim(Identity, _)) {
+        return generic();
+    }
+    let before = Node::from_iter([
+        CopyToUnder(1, span),
+        Mod(Stencil, eco_vec![f.clone()], span),
+    ]);
+    let after = Node::from_iter([PopUnder(1, span), ImplPrim(UndoWindows, span)]);
     Ok((input, before, after))
 });
 

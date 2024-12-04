@@ -18,7 +18,7 @@ Step ← (
 ⁅×0.5⇌[⊙◌⍥(Step ⟜:)Steps] # Run
 ⍜⊙♭₂-¤/↧♭₂.               # Normalize
 ⬚0≡(°⊚)                   # Plot
-≡(≡₂(/↥/↥) ◫3_3)          # Upscale
+≡(⧈(/↥/↥)3_3)             # Upscale
 
 &fwa "n-body.gif" gif 16
 &p "Wrote gif to n-body.gif"

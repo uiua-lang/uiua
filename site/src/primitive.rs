@@ -363,7 +363,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Select], Optional, "Duplicate indices must have the same value", "⍜(⊏1_4|×10) [1 2 3 4 5]") }
             { inverse_row([Pick], Optional, "Duplicate indices must have the same value", "⍜(⊡1_1|×10) [1_2_3 4_5_6]") }
             { inverse_row([Join], No, view!(<Prim prim=Len/>" may not change"), "⍜⊂\\+ 1_2_3 4_5_6") }
-            { inverse_row([Windows], Optional, "Chunking only", "⍜◫≡⇌ ¤¤3 ⇡9") }
+            { inverse_row([Stencil, Identity], Optional, "Chunking only", "⍜⧈∘≡⇌ ¤¤3 ⇡9") }
             { inverse_row([Dip], No, "Inner function must be invertible", "⍜⊙⊂× 10 2 3") }
             { inverse_row([Both], No, "Inner function must be invertible", "⍜∩⊡: 1 [1 2 3] 2 [4 5 6]") }
             { inverse_row([Pop], No, "", "⍜◌(×2) 1 2") }

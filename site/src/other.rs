@@ -522,7 +522,7 @@ pub fn Subscripts() -> impl IntoView {
                 <td><Editor example="⊃+₁×₂ [1 2 3]" nonprogressive=true/></td>
             </tr>
             <tr>
-                <td><Prims prims=[Select, Pick, Take, Drop, Join, Rotate, Orient, Windows]/></td>
+                <td><Prims prims=[Select, Pick, Take, Drop, Join, Rotate, Orient]/></td>
                 <td>"Constant first argument"</td>
                 <td><Editor example="⊃↙₂↻₃ [1 2 3 4 5]" nonprogressive=true/></td>
             </tr>

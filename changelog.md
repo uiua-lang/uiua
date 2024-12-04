@@ -22,6 +22,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Deprecate [`rerank ☇`](https://uiua.org/docs/rerank)
   - It was basically always used with a static rank, and that functionality has been subsumed by subscripted [`deshape ♭`](https://uiua.org/docs/deshape) and/or the iterating modifiers listed above
   - The dynamic behavior can still be accessed with `°⊸(⧻△)` (though when you would need this is unclear)
+- Add the [`stencil ⧈`](https://uiua.org/docs/stencil) modifier, which is a generalization of [`windows ◫`](https://uiua.org/docs/windows)
+  - `⧈∘` is equivalent to [`windows ◫`](https://uiua.org/docs/windows)
+  - [`windows ◫`](https://uiua.org/docs/windows) has been deprecated. All existing uses will continue to work and will be formatted as `⧈∘`.
 - [`get`](https://uiua.org/docs/get), [`has`](https://uiua.org/docs/has), and [`remove`](https://uiua.org/docs/remove) now support working on multiple key-value pairs at once
 - Deprecate [`trace ⸮`](https://uiua.org/docs/trace)
   - It is equivalent to subscripted [`stack ?`](https://uiua.org/docs/stack)
@@ -35,8 +38,6 @@ This version is not yet released. If you are reading this on the website, then t
   - You can type it as `Epsilon`
 - Add [`&ep`](https://uiua.org/docs/&ep) and [`&epf`](https://uiua.org/docs/&epf) system functions for easier printing to stderr
 - Change [`backward 𝄈`](https://uiua.org/docs/backward)'s glyph to `𝄈`. Code using `˜` will continue to work and will be formatted as `𝄈`.
-- Add the experimental [`stencil ⧈`](https://uiua.org/docs/stencil) modifier, which is a generalization of [`windows ◫`](https://uiua.org/docs/windows)
-  - If stabilized, [`windows ◫`](https://uiua.org/docs/windows) would be deprecated
 - Add the experimental [`or ∨`](https://uiua.org/docs/or) function
   - It has a useful reduction identity
   - It is also GCD

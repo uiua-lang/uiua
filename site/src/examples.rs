@@ -42,12 +42,12 @@ const STRIPES: &str = "\
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⬚@ ⊜(⊂⊏:"❌✅" ≍⊸⇌.)⊸≠@ "#;
 const AUTOMATA: &str = "\
-Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌◫3⇌ ⊂⊂0:0)
+Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌⧈∘3⇌ ⊂⊂0:0)
 =⌊÷2⟜⇡ 500          # Init
 ⇌[◌⍥⟜⊸Rule⌊÷2⧻,] 30 # Run";
 const ROMAN: &str = r#"k ← "IVXLCDM"
 n ← [1 5 10 50 100 500 1000]
-F ← /+-⊃(↻1×|×¬)⊸(≡/>◫2⊂:0)⊏:n⊗:k
+F ← /+-⊃(↻1×|×¬)⊸(⧈>⊂:0)⊏:n⊗:k
 F "LVII"
 F "MCMXCIV""#;
 const MANDELBROT: &str = "\

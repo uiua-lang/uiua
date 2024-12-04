@@ -63,6 +63,5 @@ Feel free to make PRs to the list itself as well.
 - Better complex `⌈`/`⌊`/`⁅`/`◿`, `<`/`>`/`≤`/`≥`, `↥`/`↧`
 - Pad link from Gist
 - Additional optimizations
-  - `/F◫`
   - `/F⇌`
   - `⍜⇌/F`

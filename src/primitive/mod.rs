@@ -255,7 +255,7 @@ impl fmt::Display for ImplPrimitive {
             UndoKeep => write!(f, "{Under}{Keep}"),
             UndoRerank => write!(f, "{Under}{Rerank}"),
             UndoReshape => write!(f, "{Un}{Reshape}"),
-            UndoWindows => write!(f, "{Un}{Windows}"),
+            UndoWindows => write!(f, "{Un}{Stencil}{Identity}"),
             UndoJoin => write!(f, "{Under}{Join}"),
             // Optimizations
             FirstMinIndex => write!(f, "{First}{Rise}"),
@@ -275,8 +275,8 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             ReduceTable => write!(f, "{Reduce}(…){Table}"),
-            Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}"),
-            RowsWindows => write!(f, "{Rows}(…){Windows}"),
+            Adjacent => write!(f, "{Rows}{Reduce}(…){Stencil}{Identity}"),
+            RowsWindows => write!(f, "{Rows}(…){Stencil}{Identity}"),
             CountUnique => write!(f, "{Len}{Deduplicate}"),
             MatchPattern => write!(f, "pattern match"),
             MatchLe => write!(f, "match ≤"),
@@ -514,6 +514,7 @@ impl Primitive {
                 Deshape.format()
             ),
             Trace => format!("use subscripted {} instead", Stack.format()),
+            Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
             _ => return None,
         })
     }
@@ -525,7 +526,7 @@ impl Primitive {
         matches!(
             self,
             (Reach | Off | Backward | Above | Around)
-                | (Tuples | Stencil)
+                | Tuples
                 | (Or | Base | Fft | Case | Layout | Binary)
                 | Astar
                 | (Derivative | Integral)
@@ -585,6 +586,11 @@ impl Primitive {
                 "rkok" => vec![(Rows, "r"), (Keep, "k"), (On, "o"), (Keep, "k")],
                 "dor" => vec![(Div, "d"), (On, "o"), (Range, "r")],
                 "awm" => vec![(Assert, "a"), (With, "w"), (Match, "m")],
+                "win" => vec![(Stencil, "w"), (Identity, "in")],
+                "wind" => vec![(Stencil, "wi"), (Identity, "nd")],
+                "windo" => vec![(Stencil, "win"), (Identity, "do")],
+                "window" => vec![(Stencil, "win"), (Identity, "dow")],
+                "windows" => vec![(Stencil, "wind"), (Identity, "ows")],
                 _ => return None,
             })
         }

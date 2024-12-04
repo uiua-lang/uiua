@@ -584,7 +584,7 @@ impl Compiler {
                             format!(
                                 "{} can only be subscripted if its function \
                                 is dyadic, but the signature is {inner_sig}",
-                                Primitive::Stencil.format()
+                                Primitive::Tuples.format()
                             ),
                         );
                     }

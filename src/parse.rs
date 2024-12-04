@@ -483,7 +483,6 @@ impl<'i> Parser<'i> {
         fn iter_chars(tokens: &[Sp<Token>], inputs: &Inputs, mut f: impl FnMut(char)) {
             use Primitive::*;
             use Token::*;
-            println!("{tokens:?}");
             for (i, token) in tokens.iter().enumerate() {
                 match &token.value {
                     Token::Newline => {}

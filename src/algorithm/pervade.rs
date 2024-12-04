@@ -294,8 +294,13 @@ where
                 (None, Some(b)) => b,
                 (Some(ad), Some(bd)) => {
                     if ad == bd || ad == 1 || bd == 1 {
-                        requires_fill |= ad != bd && fill_err.is_none();
-                        pervade_dim(ad, bd)
+                        match fill_err {
+                            None => {
+                                requires_fill |= ad != bd;
+                                ad.max(bd)
+                            }
+                            Some(_) => pervade_dim(ad, bd),
+                        }
                     } else {
                         match &fill_err {
                             None => {
@@ -320,6 +325,8 @@ where
     let (new_shape, requires_fill) =
         derive_new_shape(a.shape(), b.shape(), fill.as_ref().err().copied(), env)?;
     let fill = if requires_fill { fill.ok() } else { None };
+
+    // dbg!(a.shape(), b.shape(), &new_shape, &fill);
 
     fn reuse_no_fill<T: ArrayValue + Copy>(
         a: &[T],

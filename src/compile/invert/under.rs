@@ -133,11 +133,6 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
         (CopyUnd(2), Keep),
         (PopUnd(1), Flip, PopUnd(1), UndoKeep),
     )),
-    &MaybeVal((
-        Join,
-        (Over, Shape, Over, Shape, PushUnd(2), Join),
-        (PopUnd(2), UndoJoin),
-    )),
     // Rise and fall
     &(
         Rise,
@@ -188,6 +183,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     ),
     &DeshapeSubPat,
     &ReduceJoinPat,
+    &JoinPat,
     &MaybeVal((
         Rerank,
         (Over, Shape, Over, PushUnd(2), Rerank),
@@ -719,6 +715,59 @@ under!(ReduceJoinPat, input, _, _, _, Reduce, span, [f], {
         Mod(Reduce, eco_vec![f.clone()], span),
     ]);
     let after = Node::from_iter([PopUnder(1, span), ImplPrim(UndoDeshape(Some(-1)), span)]);
+    Ok((input, before, after))
+});
+
+under!(JoinPat, input, g_sig, inverse, asm, {
+    let (input, val) = if let Ok((input, val)) = Val.invert_extract(input, asm) {
+        (input, Some(val))
+    } else {
+        (input, None)
+    };
+    let (input, mut before, mut after, span) = match *input {
+        [Prim(Flip, flip_span), ref input @ ..] => 'blk: {
+            for (i, node) in input.iter().enumerate() {
+                let &Prim(Join, span) = node else {
+                    continue;
+                };
+                let between = &input[..i];
+                if !nodes_clean_sig(between).is_some_and(|sig| sig == (0, 0) || sig == (1, 1)) {
+                    continue;
+                }
+                let (betw_before, betw_after) = under_inverse(between, g_sig, inverse, asm)?;
+                let before = Node::from_iter([
+                    Prim(Dup, span),
+                    Prim(Shape, span),
+                    PushUnder(1, span),
+                    Prim(Flip, flip_span),
+                    betw_before,
+                    Prim(Join, span),
+                ]);
+                let after = Node::from_iter([
+                    PopUnder(1, span),
+                    ImplPrim(UnJoinShapeEnd, span),
+                    betw_after,
+                ]);
+                break 'blk (&input[i + 1..], before, after, span);
+            }
+            return generic();
+        }
+        [Prim(Join, span), ref input @ ..] => {
+            let before = Node::from_iter([
+                Prim(Dup, span),
+                Prim(Shape, span),
+                PushUnder(1, span),
+                Prim(Join, span),
+            ]);
+            let after = Node::from_iter([PopUnder(1, span), ImplPrim(UnJoinShape, span)]);
+            (input, before, after, span)
+        }
+        _ => return generic(),
+    };
+    if let Some(val) = val {
+        before.prepend(val);
+        after.push(Prim(Pop, span));
+    }
     Ok((input, before, after))
 });
 

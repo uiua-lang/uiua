@@ -585,7 +585,12 @@ impl<T: ArrayValue> Array<T> {
 
         let row_len = self.row_len();
 
-        let unjoin_count = shape.first().copied().unwrap_or(1);
+        let was_row_join = self.rank() > shape.len();
+        let unjoin_count = if was_row_join {
+            1
+        } else {
+            shape.first().copied().unwrap_or(1)
+        };
         let unjoined_slice;
         if is_end {
             let split_pos = self.element_count() - unjoin_count * row_len;
@@ -597,7 +602,7 @@ impl<T: ArrayValue> Array<T> {
             self.data = self.data.slice(split_pos..);
         }
         let mut unjoined_shape = self.shape.clone();
-        if shape.is_empty() {
+        if was_row_join {
             unjoined_shape.make_row();
         } else {
             unjoined_shape[0] = unjoin_count;

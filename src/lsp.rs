@@ -14,8 +14,9 @@ use crate::{
     ident_modifier_args, is_custom_glyph,
     lex::{CodeSpan, Sp},
     parse::parse,
-    Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc, Inputs, PreEvalMode,
-    Primitive, Purity, SafeSys, Shape, Signature, SysBackend, UiuaError, Value, CONSTANTS,
+    Assembly, BindingCounts, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc,
+    Inputs, PreEvalMode, Primitive, Purity, SafeSys, Shape, Signature, SysBackend, UiuaError,
+    Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -59,8 +60,8 @@ pub struct BindingDocs {
     pub kind: BindingDocsKind,
     /// An escape code used to type a glyph
     pub escape: Option<String>,
-    /// The number of characters in the binding, for golfing
-    pub char_count: Option<usize>,
+    /// Character counts for golfing
+    pub counts: Option<BindingCounts>,
 }
 
 /// The kind of a binding
@@ -466,7 +467,7 @@ impl Spanner {
                 is_public: true,
                 kind: BindingDocsKind::Constant(Some(val)),
                 escape: None,
-                char_count: None,
+                counts: None,
             });
         }
         None
@@ -538,7 +539,7 @@ impl Spanner {
             is_public: binfo.public,
             kind,
             escape,
-            char_count: binfo.char_count,
+            counts: binfo.counts,
         }
     }
 
@@ -1151,12 +1152,9 @@ mod server {
                         }
                         value.push_str(&comment.text);
                     }
-                    if let Some(char_count) = docs.char_count {
+                    if let Some(counts) = &docs.counts {
                         value.push_str("\n\n");
-                        value.push_str(&format!(
-                            "{char_count} character{}",
-                            if char_count == 1 { "" } else { "s" }
-                        ));
+                        value.push_str(&counts.to_string());
                     }
                     return Ok(Some(Hover {
                         contents: HoverContents::Markup(MarkupContent {

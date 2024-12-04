@@ -8,7 +8,7 @@ use crate::{
     ast::*,
     function::Signature,
     lex::{AsciiToken::*, Token::*, *},
-    Diagnostic, DiagnosticKind, Ident, Inputs, Primitive,
+    BindingCounts, Diagnostic, DiagnosticKind, Ident, Inputs, Primitive,
 };
 
 /// An error that occurred while parsing
@@ -475,11 +475,6 @@ impl<'i> Parser<'i> {
         let words = self.words().unwrap_or_default();
         let words_end = self.index;
 
-        fn count_chars(tokens: &[Sp<Token>], inputs: &Inputs) -> usize {
-            let mut count = 0;
-            iter_chars(tokens, inputs, |_| count += 1);
-            count
-        }
         fn iter_chars(tokens: &[Sp<Token>], inputs: &Inputs, mut f: impl FnMut(char)) {
             use Primitive::*;
             use Token::*;
@@ -517,7 +512,39 @@ impl<'i> Parser<'i> {
                 }
             }
         }
-        let char_count = count_chars(&self.tokens[words_start..words_end], self.inputs);
+        let char_count = {
+            let mut count = 0;
+            iter_chars(&self.tokens[words_start..words_end], self.inputs, |_| {
+                count += 1
+            });
+            count
+        };
+        let sbcs_count = {
+            thread_local! {
+                static SBCS_CHARS: Vec<char> = {
+                    let mut chars = Vec::new();
+                    chars.extend(Primitive::non_deprecated().filter_map(|p| p.glyph()));
+                    chars.extend(' '..='~');
+                    chars.extend(SUBSCRIPT_DIGITS);
+                    chars.push('₋');
+                    chars.extend("←↚".chars());
+                    chars.sort_unstable();
+                    chars
+                };
+            }
+            SBCS_CHARS.with(|chars| {
+                debug_assert!(chars.len() < 256);
+                let mut count = 0;
+                iter_chars(&self.tokens[words_start..words_end], self.inputs, |c| {
+                    count += if chars.binary_search(&c).is_ok() {
+                        1
+                    } else {
+                        c.len_utf16() * 2
+                    };
+                });
+                count
+            })
+        };
 
         self.validate_binding_name(&name);
         Some(Binding {
@@ -527,7 +554,10 @@ impl<'i> Parser<'i> {
             code_macro: array_macro,
             words,
             signature,
-            char_count,
+            counts: BindingCounts {
+                char: char_count,
+                sbcs: sbcs_count,
+            },
         })
     }
     fn ignore_whitespace(&mut self) -> bool {

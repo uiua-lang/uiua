@@ -333,7 +333,7 @@ impl Compiler {
                             func,
                             spandex,
                             comment.as_deref(),
-                            Some(binding.char_count),
+                            Some(binding.counts),
                         )?;
                     } else {
                         self.compile_bind_const(name, local, None, spandex, comment.as_deref());
@@ -351,7 +351,7 @@ impl Compiler {
                         func,
                         spandex,
                         comment.as_deref(),
-                        Some(binding.char_count),
+                        Some(binding.counts),
                     )?;
                 }
 

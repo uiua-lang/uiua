@@ -119,14 +119,14 @@ impl Assembly {
         global: BindingKind,
         span: Option<CodeSpan>,
         comment: Option<DocComment>,
-        char_count: Option<usize>,
+        counts: Option<BindingCounts>,
     ) {
         let binding = BindingInfo {
             public: local.public,
             kind: global,
             span: span.unwrap_or_else(CodeSpan::dummy),
             comment,
-            char_count,
+            counts,
         };
         if local.index < self.bindings.len() {
             self.bindings.make_mut()[local.index] = binding;
@@ -137,7 +137,7 @@ impl Assembly {
                     public: false,
                     span: CodeSpan::dummy(),
                     comment: None,
-                    char_count: None,
+                    counts: None,
                 });
             }
             self.bindings.push(binding);
@@ -149,7 +149,7 @@ impl Assembly {
         function: Function,
         span: usize,
         comment: Option<DocComment>,
-        char_count: Option<usize>,
+        counts: Option<BindingCounts>,
     ) {
         let span = self.spans[span].clone();
         self.add_binding_at(
@@ -157,7 +157,7 @@ impl Assembly {
             BindingKind::Func(function),
             span.code(),
             comment,
-            char_count,
+            counts,
         );
     }
     pub(crate) fn bind_const(
@@ -209,7 +209,7 @@ impl Assembly {
                 public,
                 span: CodeSpan::dummy(),
                 comment: None,
-                char_count: None,
+                counts: None,
             });
         }
 
@@ -378,8 +378,8 @@ pub struct BindingInfo {
     pub span: CodeSpan,
     /// The comment preceding the binding
     pub comment: Option<DocComment>,
-    /// The number of characters in the binding, for golfing
-    pub char_count: Option<usize>,
+    /// The character counts for golfing
+    pub counts: Option<BindingCounts>,
 }
 
 /// A kind of global binding
@@ -417,6 +417,30 @@ impl BindingKind {
     /// Check if the global is a once-bound constant
     pub fn is_constant(&self) -> bool {
         matches!(self, Self::Const(_))
+    }
+}
+
+/// Character counts for a binding
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BindingCounts {
+    /// The number of characters
+    pub char: usize,
+    /// The number of SBCS bytes
+    pub sbcs: usize,
+}
+
+impl fmt::Display for BindingCounts {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} character{}",
+            self.char,
+            if self.char == 1 { "" } else { "s" }
+        )?;
+        if self.sbcs != self.char {
+            write!(f, " ({} SBCS)", self.sbcs)?;
+        }
+        Ok(())
     }
 }
 

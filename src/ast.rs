@@ -9,7 +9,7 @@ use crate::{
     function::Signature,
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
-    Ident, Primitive, SemanticComment, SUBSCRIPT_DIGITS,
+    BindingCounts, Ident, Primitive, SemanticComment, SUBSCRIPT_DIGITS,
 };
 
 /// A top-level item
@@ -42,8 +42,8 @@ pub struct Binding {
     pub signature: Option<Sp<Signature>>,
     /// The code
     pub words: Vec<Sp<Word>>,
-    /// The number of characters in the binding
-    pub char_count: usize,
+    /// Character counts for golfing
+    pub counts: BindingCounts,
 }
 
 impl Binding {

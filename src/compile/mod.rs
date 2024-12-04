@@ -33,11 +33,11 @@ use crate::{
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, ImportSrc, SetInverses, SigDecl},
     parse::{flip_unsplit_lines, max_placeholder, parse, split_words},
-    Array, ArrayLen, Assembly, BindingKind, Boxed, CustomInverse, Diagnostic, DiagnosticKind,
-    DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc,
-    IntoInputSrc, IntoSysBackend, Node, Primitive, Purity, RunMode, SemanticComment, SigNode,
-    Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
-    EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
+    Array, ArrayLen, Assembly, BindingCounts, BindingKind, Boxed, CustomInverse, Diagnostic,
+    DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
+    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, Primitive, Purity, RunMode,
+    SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
+    Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
 pub use pre_eval::PreEvalMode;
 
@@ -714,7 +714,7 @@ code:
         function: Function,
         span: usize,
         comment: Option<&str>,
-        char_count: Option<usize>,
+        counts: Option<BindingCounts>,
     ) -> UiuaResult {
         let comment = comment.map(|text| {
             let comment = DocComment::from(text);
@@ -737,7 +737,7 @@ code:
         });
         self.scope.names.insert(name, local);
         self.asm
-            .bind_function(local, function, span, comment, char_count);
+            .bind_function(local, function, span, comment, counts);
         Ok(())
     }
     fn compile_bind_const(

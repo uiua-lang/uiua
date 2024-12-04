@@ -42,6 +42,8 @@ pub struct Binding {
     pub signature: Option<Sp<Signature>>,
     /// The code
     pub words: Vec<Sp<Word>>,
+    /// The number of characters in the binding
+    pub char_count: usize,
 }
 
 impl Binding {

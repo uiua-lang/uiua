@@ -469,9 +469,57 @@ impl<'i> Parser<'i> {
             ));
         }
         // Signature
+        let words_start = self.index;
         let signature = self.signature(true);
         // Words
         let words = self.words().unwrap_or_default();
+        let words_end = self.index;
+
+        fn count_chars(tokens: &[Sp<Token>], inputs: &Inputs) -> usize {
+            let mut count = 0;
+            iter_chars(tokens, inputs, |_| count += 1);
+            count
+        }
+        fn iter_chars(tokens: &[Sp<Token>], inputs: &Inputs, mut f: impl FnMut(char)) {
+            use Primitive::*;
+            use Token::*;
+            println!("{tokens:?}");
+            for (i, token) in tokens.iter().enumerate() {
+                match &token.value {
+                    Token::Newline => {}
+                    Token::Spaces => {
+                        let prev_prev = (i > 1).then(|| &tokens[i - 2]);
+                        let prev = (i > 0).then(|| &tokens[i - 1]);
+                        let next = tokens.get(i + 1);
+                        let next_next = tokens.get(i + 2);
+                        let Some((prev, next)) = prev.zip(next) else {
+                            continue;
+                        };
+                        let count_it = match (&prev.value, &next.value) {
+                            (Glyph(Neg), Number) => true,
+                            (Number, Glyph(Dup)) => {
+                                next_next.is_some_and(|t| matches!(t.value, Number))
+                            }
+                            (Glyph(Dup), Number) => {
+                                prev_prev.is_some_and(|t| matches!(t.value, Number))
+                            }
+                            (Glyph(Lt), Simple(Equal)) => true,
+                            (Glyph(Gt), Simple(Equal)) => true,
+                            (Number, Number) => true,
+                            (Ident(_), Ident(_)) => true,
+                            (Ident(_), Glyph(p)) => p.to_string().starts_with(is_ident_char),
+                            _ => false,
+                        };
+                        if count_it {
+                            f(' ');
+                        }
+                    }
+                    _ => token.span.as_str(inputs, |s| s.chars().for_each(&mut f)),
+                }
+            }
+        }
+        let char_count = count_chars(&self.tokens[words_start..words_end], self.inputs);
+
         self.validate_binding_name(&name);
         Some(Binding {
             name,
@@ -480,6 +528,7 @@ impl<'i> Parser<'i> {
             code_macro: array_macro,
             words,
             signature,
+            char_count,
         })
     }
     fn ignore_whitespace(&mut self) -> bool {

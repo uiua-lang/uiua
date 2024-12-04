@@ -1,7 +1,5 @@
 //! Compiler code for bindings
 
-use crate::Inputs;
-
 use super::*;
 
 impl Compiler {
@@ -206,8 +204,6 @@ impl Compiler {
 
         // A non-macro binding
 
-        let char_count = count_chars(&binding.words, &self.asm.inputs);
-
         let is_func = binding
             .words
             .iter()
@@ -337,7 +333,7 @@ impl Compiler {
                             func,
                             spandex,
                             comment.as_deref(),
-                            Some(char_count),
+                            Some(binding.char_count),
                         )?;
                     } else {
                         self.compile_bind_const(name, local, None, spandex, comment.as_deref());
@@ -355,7 +351,7 @@ impl Compiler {
                         func,
                         spandex,
                         comment.as_deref(),
-                        Some(char_count),
+                        Some(binding.char_count),
                     )?;
                 }
 
@@ -588,21 +584,6 @@ impl Compiler {
                         .insert(comp.module.span.clone(), local.index);
                 }
             }
-        }
-    }
-}
-
-fn count_chars(words: &[Sp<Word>], inputs: &Inputs) -> usize {
-    let mut count = 0;
-    iter_chars(words, inputs, |_| count += 1);
-    count
-}
-
-fn iter_chars(words: &[Sp<Word>], inputs: &Inputs, mut f: impl FnMut(char)) {
-    for word in words {
-        match &word.value {
-            Word::Spaces => {}
-            _ => word.span.as_str(inputs, |s| s.chars().for_each(&mut f)),
         }
     }
 }

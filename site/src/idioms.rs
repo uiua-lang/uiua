@@ -39,7 +39,7 @@ pub fn Idioms() -> impl IntoView {
         <Title text="Idioms - Uiua Docs"/>
         <h1>"Idioms"</h1>
         <p>"This page contains short Uiua idioms that may be non-obvious from simply knowing the primitives themselves."</p>
-        <p>"You can contribute to this list by submitted a PR to the repo. The list is defined "<a href="https://github.com/uiua-lang/uiua/blob/main/site/text/idioms.ua">"here"</a>". Keep in mind these are meant to be both short and useful. Idioms above 10 character in length (without inputs), or which are not useful for everyday tasks, will not be accepted."</p>
+        <p>"You can contribute to this list by submitting a PR to the repo. The list is defined "<a href="https://github.com/uiua-lang/uiua/blob/main/site/text/idioms.ua">"here"</a>". Keep in mind these are meant to be both short and useful. Idioms above 10 characters in length (without inputs), or which are not useful for everyday tasks, will not be accepted."</p>
         <table class="bordered-table" style="width: 100%">
             { idioms() }
         </table>

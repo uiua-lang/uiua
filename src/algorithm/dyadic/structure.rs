@@ -1462,7 +1462,7 @@ impl<T: ArrayValue> Array<T> {
         let cell_size: usize = cell_shape.iter().product();
         let index_size = indices_shape.last().copied().unwrap_or(1);
         if indices.iter().any(|&i| i < 0) {
-            return Err(env.error("Cannot invert pick with negative indidices"));
+            return Err(env.error("Cannot invert pick with negative indices"));
         }
         // Normalize indices
         let normalized_indices: Vec<usize> = indices

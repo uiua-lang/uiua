@@ -78,13 +78,19 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
     } else {
         xs.row_count().saturating_sub(k.unsigned_abs())
     };
+    let is_scalar = xs.rank() == 0;
     'blk: {
         if let Some(prim) = f.node.as_primitive() {
+            let n = if is_scalar {
+                xs.as_nat(env, "Tuples of scalar must be a natural number")?
+            } else {
+                xs.row_count()
+            };
             let res = match prim {
                 Primitive::Lt => xs.choose(k, false, false, env)?,
-                Primitive::Le => xs.choose(k, false, true, env)?,
+                Primitive::Le if n >= k => xs.choose(k, false, true, env)?,
                 Primitive::Gt => xs.choose(k, true, false, env)?,
-                Primitive::Ge => xs.choose(k, true, true, env)?,
+                Primitive::Ge if n >= k => xs.choose(k, true, true, env)?,
                 Primitive::Ne => xs.permute(k, env)?,
                 _ => break 'blk,
             };
@@ -92,7 +98,6 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
             return Ok(());
         }
     }
-    let is_scalar = xs.rank() == 0;
     match k {
         0 => {
             xs = xs.first_dim_zero();

@@ -94,7 +94,11 @@ impl Request {
                 return Err(format!("Failed to connect to window: {e}"));
             }
         };
-        let bin = rmp_serde::to_vec(&self).unwrap();
+        let mut serializer = rmp_serde::Serializer::new(Vec::new())
+            .with_struct_map()
+            .with_human_readable();
+        self.serialize(&mut serializer).unwrap();
+        let bin = serializer.into_inner();
         stream.write_all(&bin).map_err(|e| e.to_string())?;
         stream.flush().map_err(|e| e.to_string())?;
         Ok(())
@@ -120,7 +124,9 @@ pub fn run_window() {
                 Ok((mut stream, _)) => {
                     let mut buffer = Vec::new();
                     stream.read_to_end(&mut buffer).unwrap();
-                    match rmp_serde::from_slice(&buffer) {
+                    let mut deserializer =
+                        rmp_serde::Deserializer::new(buffer.as_slice()).with_human_readable();
+                    match Request::deserialize(&mut deserializer) {
                         Ok(req) => send.send(req).unwrap(),
                         Err(e) => {
                             eprintln!("Failed to decode request: {e}")

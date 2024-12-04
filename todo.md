@@ -3,6 +3,8 @@
 ## 0.14
 The next version of Uiua
 
+- Left/right subscripts
+- Unified `stencil` implementation
 - Change how audio is shaped
 - Allow reading files in output comments
 - Optimize `conjoin inventory`
@@ -11,6 +13,7 @@ The next version of Uiua
 - `do` function pack
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)
+- Stackless execution trees?
 
 ## Planned Features
 Features that are planned to be implemented in the future.

@@ -796,7 +796,7 @@ pub use server::run_language_server;
 
 #[cfg(feature = "lsp")]
 mod server {
-    use std::{env::current_dir, path::Path, sync::Arc};
+    use std::{char::decode_utf16, env::current_dir, path::Path, sync::Arc};
 
     use dashmap::DashMap;
     use tower_lsp::{
@@ -1514,7 +1514,12 @@ mod server {
             let col = if is_newline {
                 line16.len() as u32
             } else {
-                pos.character.saturating_sub(1)
+                let col = pos.character.saturating_sub(1);
+                if decode_utf16(line16.iter().take(col as usize).copied()).any(|c| c.is_err()) {
+                    col.saturating_sub(1)
+                } else {
+                    col
+                }
             };
             let before = String::from_utf16(&line16[..col as usize]).unwrap();
             let mut ident = (before.chars().rev())

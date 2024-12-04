@@ -226,38 +226,57 @@ mod tests {
     #[cfg(feature = "native_sys")]
     fn suite() {
         use super::*;
-        for path in test_files(|path| {
+        use std::thread;
+
+        let threads: Vec<_> = test_files(|path| {
             !(path.file_stem().unwrap())
                 .to_string_lossy()
                 .contains("error")
-        }) {
-            let code = std::fs::read_to_string(&path).unwrap();
-            // Test running
-            let mut env = Uiua::with_native_sys();
-            let mut comp = Compiler::new();
-            if let Err(e) = comp
-                .load_str_src(&code, &path)
-                .and_then(|comp| env.run_asm(comp.asm.clone()))
-            {
-                panic!("Test failed in {}:\n{}", path.display(), e.report());
-            }
-            if let Some(diag) = comp
-                .take_diagnostics()
-                .into_iter()
-                .find(|d| d.kind > DiagnosticKind::Advice)
-            {
-                panic!("Test failed in {}:\n{}", path.display(), diag.report());
-            }
-            let (stack, under_stack) = env.take_stacks();
-            if !stack.is_empty() {
-                panic!("{} had a non-empty stack", path.display());
-            }
-            if !under_stack.is_empty() {
-                panic!("{} had a non-empty under stack", path.display());
-            }
+        })
+        .map(|path| {
+            thread::spawn(move || {
+                let code = std::fs::read_to_string(&path).unwrap();
+                // Test running
+                let mut env = Uiua::with_native_sys();
+                let mut comp = Compiler::new();
+                if let Err(e) = comp
+                    .load_str_src(&code, &path)
+                    .and_then(|comp| env.run_asm(comp.asm.clone()))
+                {
+                    panic!("Test failed in {}:\n{}", path.display(), e.report());
+                }
+                if let Some(diag) = comp
+                    .take_diagnostics()
+                    .into_iter()
+                    .find(|d| d.kind > DiagnosticKind::Advice)
+                {
+                    panic!("Test failed in {}:\n{}", path.display(), diag.report());
+                }
+                let (stack, under_stack) = env.take_stacks();
+                if !stack.is_empty() {
+                    panic!("{} had a non-empty stack", path.display());
+                }
+                if !under_stack.is_empty() {
+                    panic!("{} had a non-empty under stack", path.display());
+                }
 
-            // Make sure lsp spans doesn't panic
-            _ = Spans::from_input(&code);
+                // Make sure lsp spans doesn't panic
+                _ = Spans::from_input(&code);
+            })
+        })
+        .collect();
+        for thread in threads {
+            if let Err(e) = thread.join() {
+                if let Some(s) = e.downcast_ref::<String>() {
+                    dbg!();
+                    panic!("{}", s);
+                } else if let Some(s) = e.downcast_ref::<&str>() {
+                    dbg!();
+                    panic!("{}", s);
+                } else {
+                    panic!("{:?}", e);
+                }
+            }
         }
         _ = std::fs::remove_file("example.ua");
     }

@@ -3,12 +3,16 @@
 ## 0.14
 The next version of Uiua
 
-- Left/right subscripts
+- Character/SBCS count on identifier hover
 - Unified `stencil` implementation
-- Change how audio is shaped
-- Allow reading files in output comments
-- Optimize `conjoin inventory`
+- Left/right subscripts
+- Change how audio is shaped?
 - Stabilize `backward`, `case`
+  - Need to figure out `backward`'s glyph and non-dyadic semantics
+  - Add `case` to pattern matching tutorial
+
+# 0.15
+- Optimize `conjoin inventory`
 - Compile-time code string evaluation
 - `do` function pack
 - Allow for multi-value constant bindings

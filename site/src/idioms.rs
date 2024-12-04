@@ -5,7 +5,7 @@ use uiua_editor::Editor;
 fn idioms() -> impl IntoView {
     let src = include_str!("../text/idioms.ua");
     let mut idioms = Vec::new();
-    for text in src.split("\n\n") {
+    for text in src.split("\n\n").flat_map(|s| s.split("\r\n\r\n")) {
         logging::log!("{text:?}");
         let mut comment = String::new();
         let mut code = String::new();

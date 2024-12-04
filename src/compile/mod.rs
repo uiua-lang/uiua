@@ -714,6 +714,7 @@ code:
         function: Function,
         span: usize,
         comment: Option<&str>,
+        char_count: Option<usize>,
     ) -> UiuaResult {
         let comment = comment.map(|text| {
             let comment = DocComment::from(text);
@@ -735,7 +736,8 @@ code:
             comment
         });
         self.scope.names.insert(name, local);
-        self.asm.bind_function(local, function, span, comment);
+        self.asm
+            .bind_function(local, function, span, comment, char_count);
         Ok(())
     }
     fn compile_bind_const(
@@ -764,7 +766,7 @@ code:
             comment
         });
         self.asm
-            .add_binding_at(local, BindingKind::Const(value), span, comment);
+            .add_binding_at(local, BindingKind::Const(value), span, comment, None);
         self.scope.names.insert(name, local);
     }
     /// Import a module
@@ -2199,7 +2201,7 @@ code:
             public: true,
         };
         self.next_global += 1;
-        self.compile_bind_function(name.clone(), local, function, 0, None)?;
+        self.compile_bind_function(name.clone(), local, function, 0, None, None)?;
         Ok(())
     }
     /// Create and bind a function in the current scope

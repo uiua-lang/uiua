@@ -53,6 +53,7 @@ impl Compiler {
                     BindingKind::Module(module),
                     Some(name.span.clone()),
                     comment,
+                    None,
                 );
                 // Add local
                 self.scope.names.insert(name.value.clone(), local);
@@ -259,7 +260,7 @@ impl Compiler {
                     format!("Get `{module_name}`'s `{name}`\n{comment}")
                 }
             };
-            self.compile_bind_function(name.clone(), local, func, span, Some(&comment))?;
+            self.compile_bind_function(name.clone(), local, func, span, Some(&comment), None)?;
             self.code_meta
                 .global_references
                 .insert(field.name_span.clone(), local.index);
@@ -408,6 +409,7 @@ impl Compiler {
                         func,
                         field.span,
                         Some(&comment),
+                        None,
                     )?;
                 }
                 let word_span =
@@ -445,11 +447,11 @@ impl Compiler {
 
         // Bind the call function
         if let Some((local, func, span)) = function_stuff {
-            self.compile_bind_function("Call".into(), local, func, span, None)?;
+            self.compile_bind_function("Call".into(), local, func, span, None, None)?;
         }
 
         // Bind the constructor
-        self.compile_bind_function(name, local, constructor_func, span, Some(&comment))?;
+        self.compile_bind_function(name, local, constructor_func, span, Some(&comment), None)?;
 
         Ok(())
     }

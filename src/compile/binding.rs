@@ -1,5 +1,7 @@
 //! Compiler code for bindings
 
+use crate::Inputs;
+
 use super::*;
 
 impl Compiler {
@@ -121,6 +123,7 @@ impl Compiler {
                 BindingKind::CodeMacro(node.clone()),
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
+                None,
             );
             let mac = CodeMacro {
                 root: SigNode::new(sig, node),
@@ -172,6 +175,7 @@ impl Compiler {
                 BindingKind::IndexMacro(ident_margs),
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
+                None,
             );
             let words = binding.words.clone();
             let mut recursive = false;
@@ -201,6 +205,8 @@ impl Compiler {
         }
 
         // A non-macro binding
+
+        let char_count = count_chars(&binding.words, &self.asm.inputs);
 
         let is_func = binding
             .words
@@ -325,7 +331,14 @@ impl Compiler {
                         );
                     } else if sig == (0, 0) {
                         let func = make_fn(Node::empty(), sig, self);
-                        self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
+                        self.compile_bind_function(
+                            name,
+                            local,
+                            func,
+                            spandex,
+                            comment.as_deref(),
+                            Some(char_count),
+                        )?;
                     } else {
                         self.compile_bind_const(name, local, None, spandex, comment.as_deref());
                         self.asm.root.push(Node::BindGlobal {
@@ -336,7 +349,14 @@ impl Compiler {
                 } else {
                     // Binding is a normal function
                     let func = make_fn(node, sig, self);
-                    self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
+                    self.compile_bind_function(
+                        name,
+                        local,
+                        func,
+                        spandex,
+                        comment.as_deref(),
+                        Some(char_count),
+                    )?;
                 }
 
                 // Validate signature
@@ -417,6 +437,7 @@ impl Compiler {
                     BindingKind::Module(module),
                     Some(name.span.clone()),
                     comment,
+                    None,
                 );
                 // Add local
                 self.scope.names.insert(name.value.clone(), local);
@@ -456,6 +477,7 @@ impl Compiler {
                 prev_com
                     .or_else(|| imported.comment.clone())
                     .map(|text| DocComment::from(text.as_str())),
+                None,
             );
             self.scope.names.insert(name.value.clone(), local);
         }
@@ -566,6 +588,21 @@ impl Compiler {
                         .insert(comp.module.span.clone(), local.index);
                 }
             }
+        }
+    }
+}
+
+fn count_chars(words: &[Sp<Word>], inputs: &Inputs) -> usize {
+    let mut count = 0;
+    iter_chars(words, inputs, |_| count += 1);
+    count
+}
+
+fn iter_chars(words: &[Sp<Word>], inputs: &Inputs, mut f: impl FnMut(char)) {
+    for word in words {
+        match &word.value {
+            Word::Spaces => {}
+            _ => word.span.as_str(inputs, |s| s.chars().for_each(&mut f)),
         }
     }
 }

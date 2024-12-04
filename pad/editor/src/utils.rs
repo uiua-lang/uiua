@@ -859,6 +859,13 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     _ => {}
                                 }
                             }
+                            if let Some(char_count) = docs.char_count {
+                                title.push('\n');
+                                title.push_str(&format!(
+                                    "{char_count} character{}",
+                                    if char_count == 1 { "" } else { "s" }
+                                ));
+                            }
                             let class =
                                 format!("code-span {} {}", binding_class(&text, &docs), private);
                             frag_views.push(

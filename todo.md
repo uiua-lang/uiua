@@ -3,7 +3,7 @@
 ## 0.14
 The next version of Uiua
 
-- Character/SBCS count on identifier hover
+- SBCS count on identifier hover
 - Unified `stencil` implementation
 - Left/right subscripts
 - Change how audio is shaped?

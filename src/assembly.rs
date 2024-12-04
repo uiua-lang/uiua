@@ -119,12 +119,14 @@ impl Assembly {
         global: BindingKind,
         span: Option<CodeSpan>,
         comment: Option<DocComment>,
+        char_count: Option<usize>,
     ) {
         let binding = BindingInfo {
             public: local.public,
             kind: global,
             span: span.unwrap_or_else(CodeSpan::dummy),
             comment,
+            char_count,
         };
         if local.index < self.bindings.len() {
             self.bindings.make_mut()[local.index] = binding;
@@ -135,6 +137,7 @@ impl Assembly {
                     public: false,
                     span: CodeSpan::dummy(),
                     comment: None,
+                    char_count: None,
                 });
             }
             self.bindings.push(binding);
@@ -146,9 +149,16 @@ impl Assembly {
         function: Function,
         span: usize,
         comment: Option<DocComment>,
+        char_count: Option<usize>,
     ) {
         let span = self.spans[span].clone();
-        self.add_binding_at(local, BindingKind::Func(function), span.code(), comment);
+        self.add_binding_at(
+            local,
+            BindingKind::Func(function),
+            span.code(),
+            comment,
+            char_count,
+        );
     }
     pub(crate) fn bind_const(
         &mut self,
@@ -158,7 +168,7 @@ impl Assembly {
         comment: Option<DocComment>,
     ) {
         let span = self.spans[span].clone();
-        self.add_binding_at(local, BindingKind::Const(value), span.code(), comment);
+        self.add_binding_at(local, BindingKind::Const(value), span.code(), comment, None);
     }
     /// Parse a `.uasm` file into an assembly
     pub fn from_uasm(src: &str) -> Result<Self, String> {
@@ -199,6 +209,7 @@ impl Assembly {
                 public,
                 span: CodeSpan::dummy(),
                 comment: None,
+                char_count: None,
             });
         }
 
@@ -367,6 +378,8 @@ pub struct BindingInfo {
     pub span: CodeSpan,
     /// The comment preceding the binding
     pub comment: Option<DocComment>,
+    /// The number of characters in the binding, for golfing
+    pub char_count: Option<usize>,
 }
 
 /// A kind of global binding

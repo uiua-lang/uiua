@@ -59,6 +59,8 @@ pub struct BindingDocs {
     pub kind: BindingDocsKind,
     /// An escape code used to type a glyph
     pub escape: Option<String>,
+    /// The number of characters in the binding, for golfing
+    pub char_count: Option<usize>,
 }
 
 /// The kind of a binding
@@ -464,6 +466,7 @@ impl Spanner {
                 is_public: true,
                 kind: BindingDocsKind::Constant(Some(val)),
                 escape: None,
+                char_count: None,
             });
         }
         None
@@ -535,6 +538,7 @@ impl Spanner {
             is_public: binfo.public,
             kind,
             escape,
+            char_count: binfo.char_count,
         }
     }
 
@@ -1146,6 +1150,13 @@ mod server {
                             value.push_str("`\n\n");
                         }
                         value.push_str(&comment.text);
+                    }
+                    if let Some(char_count) = docs.char_count {
+                        value.push_str("\n\n");
+                        value.push_str(&format!(
+                            "{char_count} character{}",
+                            if char_count == 1 { "" } else { "s" }
+                        ));
                     }
                     return Ok(Some(Hover {
                         contents: HoverContents::Markup(MarkupContent {

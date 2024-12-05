@@ -571,6 +571,7 @@ impl Value {
             }
             match val {
                 Value::Num(arr) if arr.rank() == 0 => arr.data[0].to_string(),
+                Value::Byte(arr) if arr.rank() == 0 => arr.data[0].to_string(),
                 Value::Complex(arr) if arr.rank() == 0 => arr.data[0].to_string(),
                 Value::Char(arr) if arr.rank() < 2 => {
                     let mut s: String = arr.data.iter().collect();
@@ -580,7 +581,7 @@ impl Value {
                     s
                 }
                 Value::Box(arr) if arr.rank() == 0 => recur(&arr.data[0].0, qoute),
-                value => {
+                value if value.rank() > 0 => {
                     let mut s = "[".to_string();
                     for (i, row) in value.rows().enumerate() {
                         if i > 0 {
@@ -591,6 +592,7 @@ impl Value {
                     s.push(']');
                     s
                 }
+                value => value.to_string(),
             }
         }
         recur(self, false)

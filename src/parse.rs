@@ -174,7 +174,6 @@ pub fn parse(
                         heuristic = start;
                     }
                 }
-                dbg!(heuristic);
                 if heuristic <= STYLE_MAX_WIDTH {
                     continue;
                 }

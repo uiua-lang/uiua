@@ -36,6 +36,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Getting the last row is a very common operation
 - Negative indices to [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now always use a fill value if available
 - [`orient ⤸`](https://uiua.org/docs/orient) can now use [`fill ⬚`](https://uiua.org/docs/fill) to fill in new dimensions
+- [`un °`](https://uiua.org/docs/un) [`reduce /`](https://uiua.org/docs/reduce) (format string) now splits a string by a delimiter
 - Add an `ε` shadowable constant for the machine epsilon
   - You can type it as `Epsilon`
 - Add [`&ep`](https://uiua.org/docs/&ep) and [`&epf`](https://uiua.org/docs/&epf) system functions for easier printing to stderr

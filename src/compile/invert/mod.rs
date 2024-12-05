@@ -188,6 +188,7 @@ pub enum InversionError {
     AlgebraError(AlgebraError),
     UnUnderExperimental,
     UnUnderSignature(Signature),
+    ReduceFormat,
 }
 
 pub type InversionResult<T = ()> = Result<T, InversionError>;
@@ -246,6 +247,11 @@ impl fmt::Display for InversionError {
                     sig
                 )
             }
+            InversionError::ReduceFormat => write!(
+                f,
+                "Only format functions with 2 arguments \
+                and text only between them can be inverted"
+            ),
         }
     }
 }

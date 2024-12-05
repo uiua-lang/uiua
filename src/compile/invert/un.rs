@@ -194,6 +194,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &Trivial,
     &ScanPat,
     &ReduceMulPat,
+    &ReduceFormatPat,
     &PrimesPat,
     &CustomPat,
     &FormatPat,
@@ -547,6 +548,23 @@ inverse!(
         ))
     }
 );
+
+inverse!(ReduceFormatPat, input, _, Reduce, span, [f], {
+    let Format(parts, fmt_span) = &f.node else {
+        return generic();
+    };
+    if parts.len() != 3 || !parts[0].is_empty() || !parts[2].is_empty() {
+        return Err(InversionError::ReduceFormat);
+    }
+    let inv = Node::from_iter([
+        Prim(Dup, *fmt_span),
+        Node::new_push(parts[1].as_str()),
+        Prim(Mask, *fmt_span),
+        Prim(Not, *fmt_span),
+        Mod(Partition, eco_vec![Prim(Box, span).sig_node()?], span),
+    ]);
+    Ok((input, inv))
+});
 
 inverse!(JoinPat, input, asm, {
     let orig_input = input;

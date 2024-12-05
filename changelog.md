@@ -66,6 +66,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add an `-e`/`--experimental` flag to the `uiua eval` command to enable experimental features
 - Add the `uiua check` command, which checks that Uiua files compile
 - More system functions are now run for output comments
+- Improve formatting of more complex arrays with format strings and [`&p`](https://uiua.org/docs/&p)
 ### Website
 - Add a new pad setting to show line values to the right of the code
 - Add [Subscripts](https://uiua.org/docs/subscripts) page

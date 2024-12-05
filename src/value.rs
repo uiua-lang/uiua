@@ -555,13 +555,45 @@ impl Value {
     }
     /// Get the pretty-printed string representation of the value that appears when formatted
     pub fn format(&self) -> String {
-        match self {
-            Value::Num(arr) if arr.rank() == 0 => arr.data[0].to_string(),
-            Value::Complex(arr) if arr.rank() == 0 => arr.data[0].to_string(),
-            Value::Char(arr) if arr.rank() < 2 => arr.to_string(),
-            Value::Box(arr) if arr.rank() == 0 => arr.as_scalar().unwrap().0.format(),
-            value => value.grid_string(false),
+        fn recur(val: &Value, qoute: bool) -> String {
+            if val.is_map() {
+                let mut s = "{".to_string();
+                for (i, (k, v)) in val.map_kv().into_iter().enumerate() {
+                    if i > 0 {
+                        s.push(' ');
+                    }
+                    s.push_str(&recur(&k, true));
+                    s.push('→');
+                    s.push_str(&recur(&v, true));
+                }
+                s.push('}');
+                return s;
+            }
+            match val {
+                Value::Num(arr) if arr.rank() == 0 => arr.data[0].to_string(),
+                Value::Complex(arr) if arr.rank() == 0 => arr.data[0].to_string(),
+                Value::Char(arr) if arr.rank() < 2 => {
+                    let mut s: String = arr.data.iter().collect();
+                    if qoute {
+                        s = format!("{s:?}");
+                    }
+                    s
+                }
+                Value::Box(arr) if arr.rank() == 0 => recur(&arr.data[0].0, qoute),
+                value => {
+                    let mut s = "[".to_string();
+                    for (i, row) in value.rows().enumerate() {
+                        if i > 0 {
+                            s.push(' ');
+                        }
+                        s.push_str(&recur(&row, true));
+                    }
+                    s.push(']');
+                    s
+                }
+            }
         }
+        recur(self, false)
     }
     /// Attempt to convert the array to a list of integers
     ///

@@ -16,6 +16,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [subscripts](https://uiua.org/docs/subscripts)!
   - They make available a lot of nice functionality
   - Allow negative subscripts
+  - Add experimental [sided subscripts](https://uiua.org/docs/subscripts#sided)
 - [`rows ≡`](https://uiua.org/docs/rows), [`inventory ⍚`](https://uiua.org/docs/inventory), and [`each ∵`](https://uiua.org/docs/each) now support subscripts
 - [`deshape ♭`](https://uiua.org/docs/deshape) now supports subscripts
   - Axes are collapsed to get the given rank

@@ -15,7 +15,10 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ast::Subscript, Ident, Inputs, Primitive, WILDCARD_CHAR};
+use crate::{
+    ast::{SubSide, Subscript},
+    Ident, Inputs, Primitive, WILDCARD_CHAR,
+};
 
 /// Subscript digit characters
 pub const SUBSCRIPT_DIGITS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
@@ -929,6 +932,13 @@ impl<'a> Lexer<'a> {
                 "⟩" => self.end(CloseAngle, start),
                 "_" => {
                     if self.next_char_exact("_") {
+                        if self.next_char_exact("<") {
+                            self.end(Subscr(Subscript::Side(SubSide::Left)), start);
+                            continue;
+                        } else if self.next_char_exact(">") {
+                            self.end(Subscr(Subscript::Side(SubSide::Right)), start);
+                            continue;
+                        }
                         let mut n: Option<i32> = None;
                         let neg = self.next_char_exact("₋")
                             || self.next_char_exact("`")
@@ -1144,7 +1154,18 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 // Formatted subscripts
-                c if c == "₋" || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
+                c if "₋⌞⌟".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
+                    match c {
+                        "⌞" => {
+                            self.end(Subscr(Subscript::Side(SubSide::Left)), start);
+                            continue;
+                        }
+                        "⌟" => {
+                            self.end(Subscr(Subscript::Side(SubSide::Right)), start);
+                            continue;
+                        }
+                        _ => {}
+                    }
                     let (mut s, neg) = if c == "₋" {
                         (String::new(), true)
                     } else {
@@ -1357,6 +1378,14 @@ impl<'a> Lexer<'a> {
         loop {
             if self.next_chars_exact(["_"; 2]) {
                 s.push_str("__");
+                if let Some(left) = self.next_char_if_all(|c| "⌞<".contains(c)) {
+                    s.push_str(left);
+                    break s;
+                }
+                if let Some(right) = self.next_char_if_all(|c| "⌟>".contains(c)) {
+                    s.push_str(right);
+                    break s;
+                }
                 if !got_neg {
                     if let Some(neg) = self.next_char_if_all(|c| "₋`¯".contains(c)) {
                         s.push_str(neg);
@@ -1584,6 +1613,11 @@ pub fn is_ident_start(c: char) -> bool {
 fn subscript(s: &str) -> Option<Subscript> {
     if s.is_empty() {
         return None;
+    }
+    match s {
+        "⌞" | "<" => return Some(Subscript::Side(SubSide::Left)),
+        "⌟" | ">" => return Some(Subscript::Side(SubSide::Right)),
+        _ => {}
     }
     let mut chars = s.chars().peekable();
     let first = *chars.peek().unwrap();

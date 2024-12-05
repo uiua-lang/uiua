@@ -643,8 +643,18 @@ pub enum Subscript {
     NegOnly,
     /// A number
     N(i32),
+    /// A side
+    Side(SubSide),
     /// The subscript is too large
     TooLarge,
+}
+
+/// A sided subscript
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(missing_docs)]
+pub enum SubSide {
+    Left,
+    Right,
 }
 
 impl Subscript {
@@ -653,6 +663,15 @@ impl Subscript {
         match self {
             Subscript::N(n) => Some(*n),
             _ => None,
+        }
+    }
+}
+
+impl fmt::Display for SubSide {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SubSide::Left => write!(f, "⌞"),
+            SubSide::Right => write!(f, "⌟"),
         }
     }
 }
@@ -671,6 +690,7 @@ impl fmt::Display for Subscript {
                 }
                 Ok(())
             }
+            Subscript::Side(side) => side.fmt(f),
             Subscript::TooLarge => write!(f, "…"),
         }
     }

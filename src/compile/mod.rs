@@ -35,9 +35,9 @@ use crate::{
     parse::{flip_unsplit_lines, max_placeholder, parse, split_words},
     Array, ArrayLen, Assembly, BindingCounts, BindingKind, Boxed, CustomInverse, Diagnostic,
     DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
-    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, Primitive, Purity, RunMode,
-    SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
-    Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
+    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
+    RunMode, SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind,
+    UiuaResult, Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
 pub use pre_eval::PreEvalMode;
 
@@ -1131,7 +1131,7 @@ code:
     }
     fn check_depth(&mut self, span: &CodeSpan) -> UiuaResult {
         #[cfg(not(target_arch = "wasm32"))]
-        const MAX_RECURSION_DEPTH: usize = (512 + 256) * 1024;
+        const MAX_RECURSION_DEPTH: usize = (512 + 256 + 64) * 1024;
         #[cfg(target_arch = "wasm32")]
         const MAX_RECURSION_DEPTH: usize = 128 * 1024;
         #[cfg(debug_assertions)]
@@ -1870,7 +1870,7 @@ code:
     }
     #[allow(clippy::match_single_binding)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
-        let Some(n) = self.subscript_n(sub.n) else {
+        let Some(n) = self.subscript_n_or_side(sub.n) else {
             return self.word(sub.word);
         };
         Ok(match sub.word.value {
@@ -1880,7 +1880,7 @@ code:
                         m.modifier.span.clone().merge(n.span.clone()),
                         "Subscripts are not implemented for macros",
                     );
-                    self.modified(*m, Some(n.map(Subscript::N)))?
+                    self.modified(*m, Some(n.map(Into::into)))?
                 }
                 Modifier::Primitive(prim) => match prim {
                     _ => {
@@ -1899,11 +1899,36 @@ code:
                                 format!("Subscripts are not implemented for {}", prim.format()),
                             );
                         }
-                        self.modified(*m, Some(n.map(Subscript::N)))?
+                        self.modified(*m, Some(n.map(Into::into)))?
                     }
                 },
             },
+            Word::Primitive(prim) if prim.class() == PrimClass::DyadicPervasive => {
+                let n_span = n.span;
+                match n.value {
+                    SubNOrSide::N(n) => Node::from_iter([
+                        self.word(n_span.sp(Word::Number(Ok(n as f64))))?,
+                        self.primitive(prim, span),
+                    ]),
+                    SubNOrSide::Side(side) => {
+                        let sub_span = self.add_span(n_span);
+                        let mut node = Node::Prim(Primitive::Fix, sub_span);
+                        if side == SubSide::Right {
+                            node = Node::Mod(
+                                Primitive::Dip,
+                                eco_vec![node.sig_node().unwrap()],
+                                sub_span,
+                            );
+                        }
+                        node.push(self.primitive(prim, span));
+                        node
+                    }
+                }
+            }
             Word::Primitive(prim) => {
+                let Some(n) = self.subscript_n_only(n, prim.format()) else {
+                    return self.word(sub.word);
+                };
                 let n_span = n.span;
                 let n = n.value;
                 match prim {
@@ -2051,9 +2076,40 @@ code:
             }
         })
     }
-    fn subscript_n(&mut self, sub: Sp<Subscript>) -> Option<Sp<i32>> {
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SubNOrSide {
+    N(i32),
+    Side(SubSide),
+}
+
+impl From<SubNOrSide> for Subscript {
+    fn from(n_or_side: SubNOrSide) -> Self {
+        match n_or_side {
+            SubNOrSide::N(n) => Subscript::N(n),
+            SubNOrSide::Side(side) => Subscript::Side(side),
+        }
+    }
+}
+
+impl PartialEq<i32> for SubNOrSide {
+    fn eq(&self, other: &i32) -> bool {
+        match self {
+            SubNOrSide::N(n) => *n == *other,
+            SubNOrSide::Side(_) => false,
+        }
+    }
+}
+
+impl Compiler {
+    fn subscript_n(&mut self, sub: Sp<Subscript>, for_what: impl fmt::Display) -> Option<Sp<i32>> {
+        let n_or_s = self.subscript_n_or_side(sub)?;
+        self.subscript_n_only(n_or_s, for_what)
+    }
+    fn subscript_n_or_side(&mut self, sub: Sp<Subscript>) -> Option<Sp<SubNOrSide>> {
         match sub.value {
-            Subscript::N(n) => Some(sub.span.sp(n)),
+            Subscript::N(n) => Some(sub.span.sp(SubNOrSide::N(n))),
             Subscript::Empty => None,
             Subscript::NegOnly => {
                 self.add_error(sub.span.clone(), "Subscript is incomplete");
@@ -2063,6 +2119,45 @@ code:
                 self.add_error(sub.span.clone(), "Subscript is too large");
                 None
             }
+            Subscript::Side(side) => {
+                self.experimental_error(&sub.span, || {
+                    "Sided subscripts are experimental. \
+                    To use them, add `# Experimental!` to the top of the file."
+                });
+                Some(sub.span.sp(SubNOrSide::Side(side)))
+            }
+        }
+    }
+    fn subscript_n_only(
+        &mut self,
+        n_or_side: Sp<SubNOrSide>,
+        for_what: impl fmt::Display,
+    ) -> Option<Sp<i32>> {
+        match n_or_side.value {
+            SubNOrSide::N(n) => Some(n_or_side.span.sp(n)),
+            SubNOrSide::Side(_) => {
+                self.add_error(
+                    n_or_side.span,
+                    format!("Sided subscripts are not allowed for {for_what}"),
+                );
+                None
+            }
+        }
+    }
+    fn subscript_side_only(
+        &mut self,
+        n_or_side: Sp<SubNOrSide>,
+        for_what: impl fmt::Display,
+    ) -> Option<Sp<SubSide>> {
+        match n_or_side.value {
+            SubNOrSide::N(_) => {
+                self.add_error(
+                    n_or_side.span,
+                    format!("Numeric subscripts are not allowed for {for_what}"),
+                );
+                None
+            }
+            SubNOrSide::Side(side) => Some(n_or_side.span.sp(side)),
         }
     }
     fn positive_subscript(&mut self, n: i32, prim: Primitive, span: CodeSpan) -> UiuaResult<usize> {

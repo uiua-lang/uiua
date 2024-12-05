@@ -467,12 +467,89 @@ impl Compiler {
                 let Some(sub) = subscript else {
                     return Ok(None);
                 };
-                let Some(n) = self.subscript_n(sub) else {
+                let Some(n) = self.subscript_n_or_side(sub) else {
                     return Ok(None);
                 };
-                let n = self.positive_subscript(n.value, Both, modified.modifier.span.clone())?;
                 let span = self.add_span(modified.modifier.span.clone());
-                self.monadic_modifier_op(modified)?.0.on_all(n, span)
+                match n.value {
+                    SubNOrSide::N(n) => {
+                        let n = self.positive_subscript(n, Both, modified.modifier.span.clone())?;
+                        self.monadic_modifier_op(modified)?.0.on_all(n, span)
+                    }
+                    SubNOrSide::Side(side) => {
+                        let op = self.monadic_modifier_op(modified)?.0;
+                        if op.sig.args != 2 {
+                            self.add_error(
+                                modified.modifier.span.clone().merge(n.span),
+                                format!(
+                                    "Sided {}'s function must have 2 arguments, \
+                                    but its signature is {}",
+                                    Primitive::Both.format(),
+                                    op.sig
+                                ),
+                            );
+                            op.on_all(2, span)
+                        } else {
+                            let sub_span = self.add_span(n.span);
+                            let mut node = match side {
+                                SubSide::Left => Node::Mod(
+                                    On,
+                                    eco_vec![Node::Prim(Flip, sub_span).sig_node().unwrap()],
+                                    sub_span,
+                                ),
+                                SubSide::Right => Node::Mod(
+                                    Dip,
+                                    eco_vec![Node::Prim(Over, sub_span).sig_node().unwrap()],
+                                    sub_span,
+                                ),
+                            };
+                            node.push(op.on_all(2, span));
+                            node
+                        }
+                    }
+                }
+            }
+            Bracket => {
+                let Some(sub) = subscript else {
+                    return Ok(None);
+                };
+                let Some(side) = self
+                    .subscript_n_or_side(sub)
+                    .and_then(|n| self.subscript_side_only(n, Bracket.format()))
+                else {
+                    return Ok(None);
+                };
+                let span = self.add_span(modified.modifier.span.clone());
+                let (a, b, _, _) = self.dyadic_modifier_ops(modified)?;
+                if a.sig.args != 2 || b.sig.args != 2 {
+                    self.add_error(
+                        modified.modifier.span.clone().merge(side.span),
+                        format!(
+                            "Sided {}'s functions must both have 2 arguments, \
+                            but their signatures are {} and {}.",
+                            Primitive::Bracket.format(),
+                            a.sig,
+                            b.sig
+                        ),
+                    );
+                    Node::Mod(Bracket, eco_vec![a, b], span)
+                } else {
+                    let sub_span = self.add_span(side.span);
+                    let mut node = match side.value {
+                        SubSide::Left => Node::Mod(
+                            On,
+                            eco_vec![Node::Prim(Flip, sub_span).sig_node().unwrap()],
+                            sub_span,
+                        ),
+                        SubSide::Right => Node::Mod(
+                            Dip,
+                            eco_vec![Node::Prim(Over, sub_span).sig_node().unwrap()],
+                            sub_span,
+                        ),
+                    };
+                    node.push(Node::Mod(Bracket, eco_vec![a, b], span));
+                    node
+                }
             }
             prim @ (With | Off) => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
@@ -567,7 +644,7 @@ impl Compiler {
                 } else {
                     Node::Mod(Primitive::Repeat, eco_vec![sn], spandex)
                 };
-                if let Some(n) = subscript.and_then(|n| self.subscript_n(n)) {
+                if let Some(n) = subscript.and_then(|n| self.subscript_n(n, Repeat.format())) {
                     node.prepend(Node::new_push(n.value));
                 }
                 node
@@ -577,7 +654,7 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 let inner_sig = sn.sig;
                 let mut node = Node::Mod(Primitive::Tuples, eco_vec![sn], span);
-                if let Some(n) = subscript.and_then(|n| self.subscript_n(n)) {
+                if let Some(n) = subscript.and_then(|n| self.subscript_n(n, Tuples.format())) {
                     if inner_sig.args != 2 {
                         self.add_error(
                             modified.modifier.span.clone().merge(n.span),
@@ -597,7 +674,7 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 let inner_sig = sn.sig;
                 let mut node = Node::Mod(Primitive::Stencil, eco_vec![sn], span);
-                if let Some(n) = subscript.and_then(|n| self.subscript_n(n)) {
+                if let Some(n) = subscript.and_then(|n| self.subscript_n(n, Stencil.format())) {
                     if inner_sig.args != 1 {
                         self.add_error(
                             modified.modifier.span.clone().merge(n.span),
@@ -832,15 +909,41 @@ impl Compiler {
                     );
                 }
                 let span = self.add_span(modified.modifier.span.clone());
-                if let Some(i) = subscript
-                    .and_then(|n| self.subscript_n(n))
-                    .map(|i| i.value)
-                    .filter(|i| *i != 0)
+                if let Some(n) = subscript
+                    .and_then(|n| self.subscript_n_or_side(n))
+                    .filter(|i| i.value != 0)
                 {
-                    if i == -1 {
+                    if n.value == -1 {
                         Node::Mod(Rows, eco_vec![sn], span)
                     } else {
-                        Node::ImplMod(ImplPrimitive::EachSub(i), eco_vec![sn], span)
+                        match n.value {
+                            SubNOrSide::N(n) => {
+                                Node::ImplMod(ImplPrimitive::EachSub(n), eco_vec![sn], span)
+                            }
+                            SubNOrSide::Side(side) => {
+                                let sub_span = self.add_span(n.span);
+                                let mut node = match side {
+                                    SubSide::Left => Node::Prim(Fix, sub_span),
+                                    SubSide::Right => match sn.sig.args {
+                                        0 => Node::empty(),
+                                        1 => Node::Prim(Fix, sub_span),
+                                        n => {
+                                            let mut node = Node::Prim(Fix, sub_span);
+                                            for _ in 1..n {
+                                                node = Node::Mod(
+                                                    Dip,
+                                                    eco_vec![node.sig_node().unwrap()],
+                                                    sub_span,
+                                                );
+                                            }
+                                            node
+                                        }
+                                    },
+                                };
+                                node.push(Node::Mod(Each, eco_vec![sn], span));
+                                node
+                            }
+                        }
                     }
                 } else {
                     Node::Mod(Each, eco_vec![sn], span)
@@ -849,17 +952,43 @@ impl Compiler {
             prim @ (Rows | Inventory) => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
-                if let Some(i) = subscript
-                    .and_then(|n| self.subscript_n(n))
-                    .map(|i| i.value)
-                    .filter(|i| *i != -1)
+                if let Some(n) = subscript
+                    .and_then(|n| self.subscript_n_or_side(n))
+                    .filter(|i| i.value != -1)
                 {
-                    let impl_prim = if prim == Rows {
-                        ImplPrimitive::RowsSub
-                    } else {
-                        ImplPrimitive::InventorySub
-                    };
-                    Node::ImplMod(impl_prim(i), eco_vec![sn], span)
+                    match n.value {
+                        SubNOrSide::N(n) => {
+                            let impl_prim = if prim == Rows {
+                                ImplPrimitive::RowsSub
+                            } else {
+                                ImplPrimitive::InventorySub
+                            };
+                            Node::ImplMod(impl_prim(n), eco_vec![sn], span)
+                        }
+                        SubNOrSide::Side(side) => {
+                            let sub_span = self.add_span(n.span);
+                            let mut node = match side {
+                                SubSide::Left => Node::Prim(Fix, sub_span),
+                                SubSide::Right => match sn.sig.args {
+                                    0 => Node::empty(),
+                                    1 => Node::Prim(Fix, sub_span),
+                                    n => {
+                                        let mut node = Node::Prim(Fix, sub_span);
+                                        for _ in 1..n {
+                                            node = Node::Mod(
+                                                Dip,
+                                                eco_vec![node.sig_node().unwrap()],
+                                                sub_span,
+                                            );
+                                        }
+                                        node
+                                    }
+                                },
+                            };
+                            node.push(Node::Mod(prim, eco_vec![sn], span));
+                            node
+                        }
+                    }
                 } else {
                     Node::Mod(prim, eco_vec![sn], span)
                 }

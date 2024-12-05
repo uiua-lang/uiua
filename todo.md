@@ -5,7 +5,6 @@ The next version of Uiua
 
 - "sort by" optimizations?
 - Unified `stencil` implementation
-- Left/right subscripts
 - Change how audio is shaped?
 - Stabilize `backward`, `case`
   - Need to figure out `backward`'s glyph and non-dyadic semantics

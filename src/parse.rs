@@ -138,23 +138,43 @@ pub fn parse(
                 let mut heuristic = 0;
                 let mut first = None;
                 let mut toks = line.iter().peekable();
+                let mut array_depth = 0i32;
+                let mut underscore = false;
                 while let Some(tok) = toks.next() {
+                    let start = heuristic;
                     heuristic += match &tok.value {
                         Spaces | Comment => 0,
-                        Simple(CloseBracket | CloseCurly | CloseParen) => 0,
-                        Simple(Underscore) => 0,
+                        Simple(OpenBracket | OpenCurly) => {
+                            array_depth += 1;
+                            1
+                        }
+                        Simple(CloseBracket | CloseCurly) => {
+                            array_depth -= 1;
+                            0
+                        }
+                        Simple(CloseParen) => 0,
+                        Simple(Underscore) => {
+                            underscore = true;
+                            0
+                        }
                         MultilineString(_) => {
                             while let Some(MultilineString(_)) = toks.peek().map(|t| &t.value) {
                                 toks.next();
                             }
                             1
                         }
+                        Number | Str(_) | Char(_) if array_depth > 0 => 0,
                         _ => {
                             first = first.or(Some(&tok.span));
                             1
                         }
                     };
+                    if heuristic > start && underscore {
+                        underscore = false;
+                        heuristic = start;
+                    }
                 }
+                dbg!(heuristic);
                 if heuristic <= STYLE_MAX_WIDTH {
                     continue;
                 }

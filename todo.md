@@ -3,7 +3,8 @@
 ## 0.14
 The next version of Uiua
 
-- Relax the line length heuristic
+- `by` -> `dup` optimizations
+- "sort by" optimizations?
 - Unified `stencil` implementation
 - Left/right subscripts
 - Change how audio is shaped?

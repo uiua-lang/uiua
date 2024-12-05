@@ -474,7 +474,7 @@ sys_op! {
     ///   : Noise ← [⍥⚂10000]
     ///   : Hit ← ×↯:Noise △. ×⊓><0.5,0.6 ÷⟜◿2
     ///   : Hat ← ×0.3×↯:Noise △.<0.1 ÷⟜◿0.25
-    ///   : &ast(÷3/+⍉[⊃(Hat|Kick|Hit|Bass)]×Sp)
+    ///   : &ast(÷3/+[⊃(Hat|Kick|Hit|Bass)]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
     /// How long the audio is can be configured in the editor settings.
     (0(0)[1], AudioStream, Media, "&ast", "audio - stream", Mutating),
@@ -1844,6 +1844,13 @@ impl SysOp {
                     })?;
                     match samples.shape().dims() {
                         [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
+                        &[n, 2] => {
+                            let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
+                            for samp in samples.data.chunks_exact(2) {
+                                samps.push([samp[0], samp[1]]);
+                            }
+                            Ok(samps)
+                        }
                         &[2, n] => {
                             let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
                             for i in 0..n {

@@ -654,7 +654,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             prompt="boxes two strings and puts them in an array"
             example="\"Hello\" \"World\""
             answer="⊟□:□:"
-            best_answer="{⊙∘}"
+            best_answer="□₂"
             tests={&["\"ui\" \"ua\"", "\"dog\" \"cat\""]}
             hidden="\"a\" \"b\""/>
     }

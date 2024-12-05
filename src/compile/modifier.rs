@@ -980,6 +980,7 @@ impl Compiler {
             }
             Derivative => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
+                self.add_span(modified.modifier.span.clone());
                 match derivative(&sn.node, &self.asm) {
                     Ok(node) => node,
                     Err(e) => {
@@ -993,6 +994,7 @@ impl Compiler {
             }
             Integral => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
+                self.add_span(modified.modifier.span.clone());
                 match integral(&sn.node, &self.asm) {
                     Ok(node) => node,
                     Err(e) => {

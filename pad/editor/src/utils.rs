@@ -990,7 +990,6 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
     let mut comp = Compiler::with_backend(WebBackend::new(id, code));
     let comp_backend;
     let res = comp.load_str(code).map(|comp| rt.run_compiler(comp));
-    logging::log!("res: {:?}", res);
     let (mut values, io) = match res {
         Ok(Ok(())) => {
             let stack = rt.take_stack();

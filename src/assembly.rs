@@ -683,24 +683,42 @@ impl Inputs {
                 if let Some(src) = self.files.get(&**path) {
                     f(&src)
                 } else {
-                    panic!("File {:?} not found", path)
+                    panic!(
+                        "File {} not found. Available sources are {}",
+                        path.display(),
+                        self.available_srcs()
+                    )
                 }
             }
             InputSrc::Str(index) => {
                 if let Some(src) = self.strings.get(*index) {
                     f(src)
                 } else {
-                    panic!("String {} not found", index)
+                    panic!(
+                        "String {} not found. Available sources are {}",
+                        index,
+                        self.available_srcs()
+                    )
                 }
             }
             InputSrc::Macro(span) => {
                 if let Some(src) = self.macros.get(span) {
                     f(src.value())
                 } else {
-                    panic!("Macro at {} not found", span)
+                    panic!(
+                        "Macro at {} not found. Available sources are {}",
+                        span,
+                        self.available_srcs()
+                    )
                 }
             }
         }
+    }
+    fn available_srcs(&self) -> String {
+        (self.files.iter().map(|e| e.key().display().to_string()))
+            .chain(self.strings.iter().map(|i| format!("string {i}")))
+            .collect::<Vec<_>>()
+            .join(", ")
     }
     /// Get an input string and perform an operation on it
     pub fn try_get_with<T>(&self, src: &InputSrc, f: impl FnOnce(&str) -> T) -> Option<T> {

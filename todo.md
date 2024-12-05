@@ -3,6 +3,7 @@
 ## 0.14
 The next version of Uiua
 
+- Relax the line length heuristic
 - Unified `stencil` implementation
 - Left/right subscripts
 - Change how audio is shaped?

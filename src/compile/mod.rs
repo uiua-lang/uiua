@@ -1887,6 +1887,7 @@ code:
                         if !matches!(
                             prim,
                             Primitive::Both
+                                | Primitive::Bracket
                                 | Primitive::Repeat
                                 | Primitive::Tuples
                                 | Primitive::Rows

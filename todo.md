@@ -3,7 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- `by` -> `dup` optimizations
 - "sort by" optimizations?
 - Unified `stencil` implementation
 - Left/right subscripts

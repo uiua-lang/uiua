@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::{ImplPrimitive::*, Node::*, Primitive::*};
+use crate::{check::nodes_clean_sig, ImplPrimitive::*, Node::*, Primitive::*};
 
 pub(crate) const DEBUG: bool = false;
 
@@ -14,11 +14,12 @@ macro_rules! dbgln {
 use dbgln;
 
 impl Node {
-    pub(super) fn optimize(&mut self) {
+    pub(super) fn optimize(&mut self) -> bool {
+        let mut optimized = false;
         match self {
             Run(nodes) => {
                 for node in nodes.make_mut() {
-                    node.optimize();
+                    optimized |= node.optimize();
                 }
                 while OPTIMIZATIONS.iter().any(|op| {
                     if !op.match_and_replace(nodes) {
@@ -26,35 +27,38 @@ impl Node {
                     }
                     dbgln!("applied optimization {op:?}");
                     true
-                }) {}
+                }) {
+                    optimized = true;
+                }
                 if nodes.len() == 1 {
                     *self = take(nodes).remove(0);
                 }
             }
             Mod(_, args, _) | ImplMod(_, args, _) => {
                 for arg in args.make_mut() {
-                    arg.node.optimize();
+                    optimized |= arg.node.optimize();
                 }
             }
-            Node::Array { inner, .. } => Arc::make_mut(inner).optimize(),
+            Node::Array { inner, .. } => optimized |= Arc::make_mut(inner).optimize(),
             CustomInverse(cust, _) => {
                 let cust = Arc::make_mut(cust);
                 if let Ok(normal) = cust.normal.as_mut() {
-                    normal.node.optimize();
+                    optimized |= normal.node.optimize();
                 }
                 if let Some(un) = cust.un.as_mut() {
-                    un.node.optimize();
+                    optimized |= un.node.optimize();
                 }
                 if let Some(anti) = cust.anti.as_mut() {
-                    anti.node.optimize();
+                    optimized |= anti.node.optimize();
                 }
                 if let Some((before, after)) = cust.under.as_mut() {
-                    before.node.optimize();
-                    after.node.optimize();
+                    optimized |= before.node.optimize();
+                    optimized |= after.node.optimize();
                 }
             }
             _ => {}
         }
+        optimized
     }
 }
 
@@ -73,8 +77,8 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &((Range, DeshapeSub(2), MemberOf), MultidimMemberOfRange),
     &((UnSort, Or(First, Last)), RandomRow),
     &((Deduplicate, Len), CountUnique),
-    &((Or((Dup, Rise), M(By, Rise)), Select), Sort),
-    &((Or((Dup, Fall), M(By, Fall)), Select), SortDown),
+    &((Dup, Rise, Select), Sort),
+    &((Dup, Fall, Select), SortDown),
     &((Sort, Reverse), SortDown),
     &((SortDown, Reverse), Sort),
     &((Pop, Rand), ReplaceRand),
@@ -82,6 +86,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &((1, Flip, Div, Pow), Root),
     &((-1, Pow), (1, Flip, Div)),
     &((2, Pow), (Dup, Mul)),
+    &ByToDup,
     &InlineCustomInverse,
     &TransposeOpt,
     &ReduceTableOpt,
@@ -224,16 +229,6 @@ impl Optimization for AllSameOpt {
                 if *val == 1 || *val == -1 =>
             {
                 Some((4, ImplPrim(AllSame, *span)))
-            }
-            [Push(val), Mod(By, args, span), Prim(Match, _), ..] if *val == 1 || *val == -1 => {
-                let [SigNode {
-                    node: Prim(Rotate, _),
-                    ..
-                }] = args.as_slice()
-                else {
-                    return None;
-                };
-                Some((3, ImplPrim(AllSame, *span)))
             }
             [Mod(By | On, args, span), Prim(Match, _), ..] => {
                 let [f] = args.as_slice() else {
@@ -402,6 +397,56 @@ opt!(
     ),
 );
 
+#[derive(Debug)]
+struct ByToDup;
+impl Optimization for ByToDup {
+    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
+        'outer: for i in 0..nodes.len() {
+            let Mod(By, args, span) = &nodes[i] else {
+                continue;
+            };
+            let [f] = args.as_slice() else {
+                continue;
+            };
+            let mut back = 0;
+            let mut dip = false;
+            'back: {
+                if f.sig != (1, 1) {
+                    if f.sig == (2, 1) {
+                        for j in (0..i).rev() {
+                            let frag = &nodes[j..i];
+                            if nodes_clean_sig(frag)
+                                .is_some_and(|sig| sig == (0, 1) || sig == (1, 2))
+                            {
+                                // println!("frag: {frag:?}");
+                                back = i - j;
+                                break 'back;
+                            }
+                        }
+                        dip = true;
+                    } else {
+                        continue 'outer;
+                    }
+                }
+            }
+            let mut composed = Prim(Dup, *span);
+            if dip {
+                composed = Mod(Dip, eco_vec![composed.sig_node().unwrap()], *span);
+            }
+            composed.extend(nodes[i - back..i].iter().cloned());
+            composed.push(f.node.clone());
+            composed.extend(nodes[i + 1..].iter().cloned());
+            // println!("composed: {composed:?}");
+            if composed.optimize() {
+                let n = nodes.len() - i;
+                replace_nodes(nodes, i - back, n + back, composed);
+                return true;
+            }
+        }
+        false
+    }
+}
+
 trait Optimization: Debug + Sync {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool;
 }
@@ -459,24 +504,6 @@ where
         self.0
             .match_nodes(nodes)
             .or_else(|| self.1.match_nodes(nodes))
-    }
-}
-
-#[derive(Debug)]
-struct M<A, B>(A, B);
-impl OptPattern for M<Primitive, Primitive> {
-    fn match_nodes(&self, nodes: &[Node]) -> Option<(usize, Option<usize>)> {
-        let [Mod(a, args, span), ..] = nodes else {
-            return None;
-        };
-        let [f] = args.as_slice() else {
-            return None;
-        };
-        if *a == self.0 && f.node.as_primitive() == Some(self.1) {
-            Some((1, Some(*span)))
-        } else {
-            None
-        }
     }
 }
 

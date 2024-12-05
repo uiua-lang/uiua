@@ -164,7 +164,7 @@ Arrays have a [shape](/docs/shape) that describes how many elements they have al
 
 The *rank* of an array refers to the number of axes it has.
 
-The [len](/docs/len) is the number of rows it has along its first axis.
+The [length](/docs/length) is the number of rows it has along its first axis.
 
 ```uiua
 a ← [1_2_3_4 5_6_7_8 9_10_11_12]

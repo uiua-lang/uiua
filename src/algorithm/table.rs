@@ -616,6 +616,19 @@ fn reduce_table_bytes(
                 )
             }
         }
+        Primitive::Ne if xs.row_count() > 0 => {
+            all_gs!(
+                xs.convert(),
+                ys.convert(),
+                to(is_ne::num_num),
+                to(is_ne::com_x),
+                0.0,
+                0.0,
+                fill,
+                num_num,
+                num_num
+            )
+        }
         _ => return Err((xs, ys)),
     }
     Ok(())
@@ -749,6 +762,9 @@ macro_rules! reduce_table_math {
                 Primitive::Min => all_gs!(min::$f, min::com_x, f64::INFINITY, f64::INFINITY),
                 Primitive::Max => {
                     all_gs!(max::$f, max::com_x, f64::NEG_INFINITY, f64::NEG_INFINITY)
+                }
+                Primitive::Ne if xs.row_count() > 0 => {
+                    all_gs!(to(is_ne::$f), to(is_ne::com_x), 0.0, 0.0)
                 }
                 _ => return Ok(Err((xs, ys))),
             }

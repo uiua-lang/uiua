@@ -955,12 +955,10 @@ impl Uiua {
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
-        self.rt.stack.pop().ok_or_else(|| {
-            self.error(format!(
-                "Stack was empty when evaluating {}",
-                arg.arg_name()
-            ))
-        })
+        self.rt
+            .stack
+            .pop()
+            .ok_or_else(|| self.error(format!("Stack was empty when getting {}", arg.arg_name())))
     }
     /// Pop a value and try to convert it
     pub fn pop_convert<T>(
@@ -1167,7 +1165,7 @@ impl Uiua {
     pub fn clone_stack_top(&self, n: usize) -> UiuaResult<Vec<Value>> {
         if self.rt.stack.len() < n {
             return Err(self.error(format!(
-                "Stack was empty evaluating argument {}",
+                "Stack was empty getting argument {}",
                 n - self.rt.stack.len()
             )));
         }
@@ -1261,14 +1259,14 @@ impl Uiua {
     pub(crate) fn remove_nth_back(&mut self, n: usize) -> UiuaResult<Value> {
         let len = self.rt.stack.len();
         if n >= len {
-            return Err(self.error(format!("Stack was empty evaluating argument {}", n + 1)));
+            return Err(self.error(format!("Stack was empty getting argument {}", n + 1)));
         }
         Ok(self.rt.stack.remove(len - n - 1))
     }
     pub(crate) fn pop_n(&mut self, n: usize) -> UiuaResult<Vec<Value>> {
         let len = self.rt.stack.len();
         if n > len {
-            return Err(self.error(format!("Stack was empty evaluating argument {}", n + 1)));
+            return Err(self.error(format!("Stack was empty getting argument {}", n + 1)));
         }
         Ok(self.rt.stack.split_off(len - n))
     }
@@ -1606,7 +1604,7 @@ impl Uiua {
 
 /// A trait for types that can be used as argument specifiers for [`Uiua::pop`]
 ///
-/// If the stack is empty, the error message will be "Stack was empty when evaluating {arg_name}"
+/// If the stack is empty, the error message will be "Stack was empty when getting {arg_name}"
 pub trait StackArg {
     /// Get the name of the argument
     fn arg_name(self) -> String;

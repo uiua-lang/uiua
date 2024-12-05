@@ -10,7 +10,7 @@ use std::{
     cmp::Ordering,
     hash::{DefaultHasher, Hash, Hasher},
     iter::{once, repeat},
-    mem::{replace, take},
+    mem::{replace, swap, take, transmute},
 };
 
 use ecow::{eco_vec, EcoVec};
@@ -1455,30 +1455,56 @@ impl Array<f64> {
     }
 }
 
+fn derive_undices(mut indices: Vec<isize>, rank: usize, env: &Uiua) -> UiuaResult<Vec<usize>> {
+    for i in &mut indices {
+        let u = (*i).unsigned_abs();
+        if *i >= 0 && u >= rank || *i < 0 && u > rank {
+            return Err(env.error(format!("Cannot orient axis {i} in array of rank {rank}")));
+        }
+        *i = if *i >= 0 {
+            u as isize
+        } else {
+            (rank - u) as isize
+        };
+    }
+    Ok(unsafe { transmute::<Vec<isize>, Vec<usize>>(indices) })
+}
+
 impl Value {
     /// `orient` a value by this value
     pub fn orient(&self, target: &mut Self, env: &Uiua) -> UiuaResult {
         let indices = self.as_ints(env, "Orient indices must be integers")?;
-        let mut undices = Vec::with_capacity(indices.len());
-        for i in indices {
-            let u = i.unsigned_abs();
-            if i >= 0 && u >= target.rank() || i < 0 && u > target.rank() {
-                return Err(env.error(format!(
-                    "Cannot orient axis {i} in array of rank {}",
-                    target.rank()
-                )));
-            }
-            if i >= 0 {
-                undices.push(u);
-            } else {
-                undices.push(target.rank() - u);
-            }
-        }
-        val_as_arr!(target, |a| a.orient(&undices, env))
+        let undices = derive_undices(indices, target.rank(), env)?;
+        val_as_arr!(target, |a| a.orient(undices, env))
     }
     pub(crate) fn anti_orient(&self, target: Self, env: &Uiua) -> UiuaResult<Self> {
         let indices = self.as_ints(env, "Unorient indices must be integers")?;
-        val_as_arr!(target, |a| a.anti_orient(&indices, env).map(Into::into))
+        let undices = derive_undices(indices, target.rank(), env)?;
+        val_as_arr!(target, |a| a.anti_orient(undices, env).map(Into::into))
+    }
+    pub(crate) fn undo_anti_orient(
+        self,
+        indices: Self,
+        into: Self,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        let indices = indices.as_ints(env, "Orient indices must be integers")?;
+        let undices = derive_undices(indices, self.rank(), env)?;
+        self.generic_bin_into(
+            into,
+            |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
+            |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
+            |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
+            |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
+            |a, b| a.undo_anti_orient(undices.clone(), b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
+                    "Cannot undo orient of {} array into {} array",
+                    a.type_name(),
+                    b.type_name()
+                ))
+            },
+        )
     }
 }
 
@@ -1500,8 +1526,36 @@ fn derive_orient_rotations(rank: usize, undices: &[usize]) -> Vec<(usize, i32)> 
     depth_rotations
 }
 
+fn derive_orient_data(undices: &mut Vec<usize>, shape: &[usize], env: &Uiua) -> UiuaResult<Shape> {
+    let rank = shape.len();
+    // Validate indices
+    for &i in &*undices {
+        if i >= rank {
+            return Err(env.error(format!("Cannot orient axis {i} in array of rank {rank}")));
+        }
+    }
+    // Derive new shape
+    let duplicate_count = undices
+        .iter()
+        .enumerate()
+        .filter(|&(i, a)| undices[..i].contains(a))
+        .count();
+    let new_rank = rank + duplicate_count;
+    let mut new_shape = Shape::with_capacity(new_rank);
+    for &i in &*undices {
+        new_shape.push(shape[i]);
+    }
+    for i in 0..rank {
+        if !undices.contains(&i) {
+            new_shape.push(shape[i]);
+            undices.push(i);
+        }
+    }
+    Ok(new_shape)
+}
+
 impl<T: ArrayValue> Array<T> {
-    fn orient(&mut self, undices: &[usize], env: &Uiua) -> UiuaResult {
+    fn orient(&mut self, undices: Vec<usize>, env: &Uiua) -> UiuaResult {
         if undices.len() > self.rank() {
             return match env.scalar_fill() {
                 Ok(fill) => self.filled_orient(undices, fill, env),
@@ -1526,87 +1580,40 @@ impl<T: ArrayValue> Array<T> {
                     .fill()),
             };
         }
-        for (depth, amnt) in derive_orient_rotations(self.rank(), undices) {
+        for (depth, amnt) in derive_orient_rotations(self.rank(), &undices) {
             self.transpose_depth(depth, amnt);
         }
         Ok(())
     }
-    fn filled_orient(&mut self, undices: &[usize], fill: T, env: &Uiua) -> UiuaResult {
-        fn derive_orient_data(
-            undices: &[usize],
-            shape: &[usize],
-            env: &Uiua,
-        ) -> UiuaResult<(Vec<usize>, Shape)> {
-            let rank = shape.len();
-            // Validate indices
-            for &i in undices {
-                if i >= rank {
-                    return Err(
-                        env.error(format!("Cannot orient axis {i} in array of rank {rank}"))
-                    );
-                }
-            }
-            // Derive new shape
-            let duplicate_count = undices
-                .iter()
-                .enumerate()
-                .filter(|&(i, a)| undices[..i].contains(a))
-                .count();
-            let new_rank = rank + duplicate_count;
-            let mut new_shape = Shape::with_capacity(new_rank);
-            for &i in undices {
-                new_shape.push(shape[i]);
-            }
-            let mut undices = undices.to_vec();
-            for i in 0..rank {
-                if !undices.contains(&i) {
-                    new_shape.push(shape[i]);
-                    undices.push(i);
-                }
-            }
-            Ok((undices, new_shape))
-        }
-        let (undices, new_shape) = derive_orient_data(undices, &self.shape, env)?;
-        let mut new_data = eco_vec![fill; new_shape.elements()];
-        let slice = new_data.make_mut();
-        let mut new_index = vec![0usize; new_shape.len()];
-        let mut orig_index = vec![0usize; self.shape.len()];
-        for (i, elem) in take(&mut self.data).into_iter().enumerate() {
+    fn filled_orient(&mut self, mut undices: Vec<usize>, fill: T, env: &Uiua) -> UiuaResult {
+        let new_shape = derive_orient_data(&mut undices, &self.shape, env)?;
+        let new_data = eco_vec![fill; new_shape.elements()];
+        let mut new_arr = Array::new(new_shape, new_data);
+        swap(self, &mut new_arr);
+        new_arr.orient_into(self, &undices);
+        Ok(())
+    }
+    fn orient_into(self, into: &mut Self, undices: &[usize]) {
+        let mut into_index = vec![0usize; into.rank()];
+        let mut orig_index = vec![0usize; self.rank()];
+        let slice = into.data.as_mut_slice();
+        for (i, elem) in self.data.into_iter().enumerate() {
             self.shape.flat_to_dims(i, &mut orig_index);
-            for (j, ni) in new_index.iter_mut().enumerate() {
-                *ni = orig_index[undices[j]];
+            for (j, ii) in into_index.iter_mut().enumerate() {
+                *ii = orig_index[undices[j]];
             }
-            if let Some(j) = new_shape.dims_to_flat(&new_index) {
+            if let Some(j) = into.shape.dims_to_flat(&into_index) {
                 slice[j] = elem;
             }
         }
-        self.data = new_data.into();
-        self.shape = new_shape;
-        self.validate_shape();
-        Ok(())
     }
-    fn anti_orient(mut self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        fn derive_orient_data(
-            indices: &[isize],
+    fn anti_orient(mut self, mut undices: Vec<usize>, env: &Uiua) -> UiuaResult<Self> {
+        fn derive_anti_orient_data(
+            undices: &mut Vec<usize>,
             shape: &[usize],
             env: &Uiua,
-        ) -> UiuaResult<(Vec<usize>, Shape, usize, usize)> {
+        ) -> UiuaResult<(Shape, usize, usize)> {
             let rank = shape.len();
-            // Normalize indices
-            let mut undices = Vec::with_capacity(indices.len());
-            for &i in indices {
-                let u = i.unsigned_abs();
-                if i >= 0 && u >= rank || i < 0 && u > rank {
-                    return Err(
-                        env.error(format!("Cannot orient axis {i} in array of rank {rank}"))
-                    );
-                }
-                if i >= 0 {
-                    undices.push(u);
-                } else {
-                    undices.push(rank - u);
-                }
-            }
 
             // Add missing axes
             let duplicate_count = undices
@@ -1651,11 +1658,11 @@ impl<T: ArrayValue> Array<T> {
                 .take_while(|&((_, &a), b)| a == b)
                 .count();
 
-            Ok((undices, new_shape, duplicate_count, trailing_dims))
+            Ok((new_shape, duplicate_count, trailing_dims))
         }
 
-        let (undices, new_shape, duplicates, trailing_dims) =
-            derive_orient_data(indices, &self.shape, env)?;
+        let (new_shape, duplicates, trailing_dims) =
+            derive_anti_orient_data(&mut undices, &self.shape, env)?;
 
         if new_shape.elements() == 0 {
             return Ok(Array::new(new_shape, CowSlice::new()));
@@ -1691,6 +1698,23 @@ impl<T: ArrayValue> Array<T> {
         }
 
         Ok(Array::new(new_shape, data))
+    }
+    fn undo_anti_orient(
+        self,
+        mut undices: Vec<usize>,
+        mut into: Self,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        let new_shape = derive_orient_data(&mut undices, &self.shape, env)?;
+        if new_shape.len() > into.rank() {
+            return Err(env.error(format!(
+                "Cannot reorient because the rank of the array changed from {} to {}",
+                new_shape.len() - into.rank(),
+                self.rank(),
+            )));
+        }
+        self.orient_into(&mut into, &undices);
+        Ok(into)
     }
 }
 

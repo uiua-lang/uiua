@@ -1566,10 +1566,14 @@ primitive!(
     /// ex: °△ 2_3_4
     ///   : ∩△ ⊃°⍉(⤸¯1)
     ///
+    /// [fill][orient] uses the fill value to fill in new axes. The elements of the array will be arranged along the diagonals specified by repeated axis indices. The rest of the array will be filled with the fill value.
+    /// ex: ⬚0⤸ 0_0 [1 2 3 4]
+    /// ex: ⬚@-⤸ 0_1_1 ["Hello" "World"]
+    ///
     /// [anti][orient] moves the axes *to* the given indices.
     /// ex: △  ⤸ 3_1 °△ 2_3_4_5
     ///   : △ ⌝⤸ 3_1 °△ 2_3_4_5
-    /// This does not have the requirement that the indices be unique. Repeated indices will retrive the *diagonal* along those axes.
+    /// Repeated axis indices will retrieve the diagonal along those axes.
     /// ex: ⌝⤸ 0_0 . °△ 3_3
     /// ex: ⌝⤸ 0_0_0 . °△ 3_3_3
     /// ex: ⌝⤸ 0_0 °△ 3_3_3
@@ -1581,6 +1585,9 @@ primitive!(
     /// ex: °⤸ "hello!"
     /// ex: °⤸ ["ab" "cd"]
     /// ex: °⤸ [[1_2 3_4] [5_6 7_8]]
+    ///
+    /// [under][anti][orient] will put diagonals back into the original array.
+    /// ex: ⍜⌝⤸¯ 0_0 +1°△4_4
     (2, Orient, DyadicArray, ("orient", '⤸')),
     /// The n-wise windows of an array
     ///
@@ -3698,6 +3705,7 @@ impl_primitive!(
     (2, UndoWindows),
     (2, UndoWhere),
     (2, AntiOrient),
+    (3, UndoAntiOrient),
     (3(2), UndoJoin),
     (1(1)[1], UndoPartition1),
     (3, UndoPartition2),

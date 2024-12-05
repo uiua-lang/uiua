@@ -3,7 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Filled same-axis `orient`
 - Unified `stencil` implementation
 - Left/right subscripts
 - Change how audio is shaped?

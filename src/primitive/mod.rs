@@ -242,7 +242,8 @@ impl fmt::Display for ImplPrimitive {
             UndoSelect => write!(f, "{Under}{Select}"),
             UndoPick => write!(f, "{Under}{Pick}"),
             UndoWhere => write!(f, "{Under}{Where}"),
-            AntiOrient => write!(f, "{Under}{Orient}"),
+            AntiOrient => write!(f, "{Anti}{Orient}"),
+            UndoAntiOrient => write!(f, "{Under}{Orient}"),
             UndoInsert => write!(f, "{Under}{Insert}"),
             UndoRemove => write!(f, "{Under}{Remove}"),
             UndoPartition1 | UndoPartition2 => write!(f, "{Under}{Partition}"),
@@ -1390,6 +1391,12 @@ impl ImplPrimitive {
                 env.push(mask);
             }
             ImplPrimitive::AntiOrient => env.dyadic_ro_env(Value::anti_orient)?,
+            ImplPrimitive::UndoAntiOrient => {
+                let indices = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
+                env.push(from.undo_anti_orient(indices, into, env)?);
+            }
             ImplPrimitive::UndoRerank => {
                 let rank = env.pop(1)?;
                 let shape = Shape::from(

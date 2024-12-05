@@ -12,7 +12,7 @@ One common use of subscripts is to indicate indices. In many (perhaps the majori
 
 ## Subscripts in Uiua
 
-Uiua's [formatter](https://www.uiua.org/tutorial/basic#formatting) and its embrace of Unicode glyphs free it from the contraints many other languages have. This makes it possible to explore powerful and/or aesthetic syntactic constructs that would either be impossible or cumbersome to express in other languages. Look no further than the [fancy module delimiters](https://www.uiua.org/tutorial/modules#scoped-modules).
+Uiua's [formatter](https://www.uiua.org/tutorial/basic#formatting) and its embrace of Unicode glyphs free it from the constraints many other languages have. This makes it possible to explore powerful and/or aesthetic syntactic constructs that would either be impossible or cumbersome to express in other languages. Look no further than the [fancy module delimiters](https://www.uiua.org/tutorial/modules#scoped-modules).
 
 Uiua has actually allowed subscript numbers in identifiers for a while. Since identifiers cannot contain regular digits, this allows you to put numbers in them anyway.
 

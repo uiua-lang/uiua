@@ -612,12 +612,7 @@ impl WatchArgs {
                         .map_err(|e| UiuaErrorKind::Load(path.clone(), e.into()).into())
                 };
                 match formatted {
-                    Ok(input) => {
-                        if input.is_empty() {
-                            clear_watching();
-                            print_watching();
-                            return Ok(());
-                        }
+                    Ok(_) => {
                         clear_watching();
                         #[cfg(feature = "audio")]
                         let audio_time =

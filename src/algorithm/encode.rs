@@ -11,7 +11,7 @@ use crate::SysBackend;
 use crate::{Array, Uiua, UiuaResult, Value};
 
 /// Conversion of a value to some media format based on the value's shape
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum SmartOutput {
     Normal(Value),

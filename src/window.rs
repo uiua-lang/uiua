@@ -38,7 +38,7 @@ pub fn set_use_window(use_window: bool) {
 const PORT: u16 = 8482;
 
 /// A request to the window process
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Request {
     Ping,
     ShowText(String),
@@ -447,10 +447,12 @@ impl App {
     fn item(cache: &mut Cache, item: &mut OutputItem, ui: &mut Ui) {
         match item {
             OutputItem::Text(text) => {
-                ui.label(&*text);
+                ui.horizontal(|ui| ui.label(&*text));
             }
             OutputItem::Code(code) => {
-                ui.label(RichText::new(code.as_str()).font(FontId::monospace(14.0)));
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(code.as_str()).font(FontId::monospace(14.0)))
+                });
             }
             OutputItem::Error(error) => {
                 ui.label(RichText::new(error.as_str()).color(Color32::RED));

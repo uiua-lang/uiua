@@ -40,6 +40,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add an `ε` shadowable constant for the machine epsilon
   - You can type it as `Epsilon`
 - Add [`&ep`](https://uiua.org/docs/&ep) and [`&epf`](https://uiua.org/docs/&epf) system functions for easier printing to stderr
+- Functions that work with audio such as [`audio`](https://uiua.org/docs/audio) now treat the first axis as samples and the second axis as channels
 - Change [`backward 𝄈`](https://uiua.org/docs/backward)'s glyph to `𝄈`. Code using `˜` will continue to work and will be formatted as `𝄈`.
 - Add the experimental [`or ∨`](https://uiua.org/docs/or) function
   - It has a useful reduction identity

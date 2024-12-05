@@ -443,7 +443,7 @@ sys_op! {
     /// The audio must be a rank 1 or 2 numeric array.
     ///
     /// A rank 1 array is a list of mono audio samples.
-    /// For a rank 2 array, each row is a channel.
+    /// For a rank 2 array, each row is a sample with multiple channels.
     ///
     /// The samples must be between -1 and 1.
     /// The sample rate is [&asr].
@@ -461,7 +461,7 @@ sys_op! {
     /// Synthesize and stream audio
     ///
     /// Expects a function that takes a list of sample times and returns a list of samples.
-    /// The samples returned from the function must either be a rank 1 array or a rank 2 array with 2 rows.
+    /// The samples returned from the function must either be a rank 1 array or a rank 2 array with 2nd axis length 2.
     /// The function will be called repeatedly to generate the audio.
     /// ex: Sp ← 1.5
     ///   : Bass ← (
@@ -474,7 +474,7 @@ sys_op! {
     ///   : Noise ← [⍥⚂10000]
     ///   : Hit ← ×↯:Noise △. ×⊓><0.5,0.6 ÷⟜◿2
     ///   : Hat ← ×0.3×↯:Noise △.<0.1 ÷⟜◿0.25
-    ///   : &ast(÷3/+[⊃(Hat|Kick|Hit|Bass)]×Sp)
+    ///   : &ast(÷3/+⍉[⊃(Hat|Kick|Hit|Bass)]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
     /// How long the audio is can be configured in the editor settings.
     (0(0)[1], AudioStream, Media, "&ast", "audio - stream", Mutating),

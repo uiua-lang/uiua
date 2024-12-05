@@ -327,71 +327,39 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 }
 
 #[doc(hidden)]
-pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
-    let unrolled: Vec<f32> = match audio {
-        Value::Num(nums) => nums.data.iter().map(|&f| f as f32).collect(),
-        Value::Byte(byte) => byte.data.iter().map(|&b| b as f32).collect(),
-        _ => return Err("Audio must be a numeric array".into()),
-    };
-    let (length, mut channels) = match audio.rank() {
-        1 => (unrolled.len(), vec![unrolled]),
-        2 => (
-            audio.row_len(),
-            unrolled
-                .chunks_exact(audio.row_len().max(1))
-                .map(|c| c.to_vec())
-                .collect(),
-        ),
-        n => {
-            return Err(format!(
-                "Audio must be a rank 1 or 2 numeric array, but it is rank {n}"
-            ))
-        }
-    };
-    if channels.is_empty() {
-        channels.push(vec![0.0; length]);
-    }
-    let mut sterio = Vec::new();
-    if channels.len() == 1 {
-        for sample in channels.into_iter().next().unwrap() {
-            sterio.push([sample, sample]);
-        }
-    } else {
-        for i in 0..length {
-            let left = channels[0][i];
-            let right = channels[1][i];
-            sterio.push([left, right]);
-        }
-    }
-    Ok(sterio)
-}
-
-#[doc(hidden)]
 pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
+    let orig = audio;
+    let mut audio = audio;
+    let mut transposed;
+    if audio.rank() == 2 && audio.shape()[1] > 5 {
+        transposed = audio.clone();
+        transposed.transpose();
+        audio = &transposed;
+    }
     let interleaved: Vec<f64> = match audio {
         Value::Num(nums) => nums.data.iter().copied().collect(),
         Value::Byte(byte) => byte.data.iter().map(|&b| b as f64).collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
-    let (length, mut channels) = match audio.rank() {
-        1 => (interleaved.len(), vec![interleaved]),
-        2 => (
-            audio.row_len(),
-            interleaved
-                .chunks_exact(audio.row_len().max(1))
-                .map(|c| c.to_vec())
+    let (length, mut channels) = match &**audio.shape() {
+        [_] => (interleaved.len(), vec![interleaved]),
+        &[len, ch] => (
+            len,
+            (0..ch)
+                .map(|c| (0..len).map(|i| interleaved[i * ch + c]).collect())
                 .collect(),
         ),
-        n => {
+        _ => {
             return Err(format!(
-                "Audio must be a rank 1 or 2 numeric array, but it is rank {n}"
+                "Audio must be a rank 1 or 2 numeric array, but it is rank {}",
+                orig.rank()
             ))
         }
     };
     if channels.len() > 5 {
         return Err(format!(
             "Audio can have at most 5 channels, but its shape is {}",
-            audio.shape()
+            orig.shape()
         ));
     }
 
@@ -514,23 +482,24 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
     reader: &mut WavReader<std::io::Cursor<&[u8]>>,
     sample_to_f64: impl Fn(T) -> f64,
 ) -> Result<(Array<f64>, u32), String> {
+    use ecow::EcoVec;
+
     let channel_count = reader.spec().channels as usize;
-    let mut channels = vec![ecow::EcoVec::new(); channel_count];
+    let mut samples = EcoVec::new();
     let mut curr_channel = 0;
     for sample in reader.samples::<T>() {
         let sample = sample.map_err(|e| e.to_string())?;
-        channels[curr_channel].push(sample_to_f64(sample));
+        samples.push(sample_to_f64(sample));
         curr_channel = (curr_channel + 1) % channel_count;
     }
 
     let sample_rate = reader.spec().sample_rate;
-    Ok(if channel_count == 1 {
-        let channel = channels.pop().unwrap();
-        (channel.into(), sample_rate)
+    let arr = if channel_count == 1 {
+        samples.into()
     } else {
-        let arr = Array::from_row_arrays_infallible(channels.into_iter().map(|ch| ch.into()));
-        (arr, sample_rate)
-    })
+        Array::new([samples.len() / channel_count, channel_count], samples)
+    };
+    Ok((arr, sample_rate))
 }
 
 #[doc(hidden)]

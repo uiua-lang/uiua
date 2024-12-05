@@ -3506,7 +3506,7 @@ primitive!(
     /// The audio samples must be a rank 1 or 2 numeric array.
     ///
     /// A rank 1 array is a list of mono audio samples.
-    /// For a rank 2 array, each row is a channel.
+    /// For a rank 2 array, each row is a sample with multiple channels.
     ///
     /// The samples must be between -1 and 1.
     /// The sample rate is [&asr].

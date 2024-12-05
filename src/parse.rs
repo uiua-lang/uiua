@@ -110,11 +110,6 @@ const ADVICE_MAX_WIDTH: usize = 53;
 const WARNING_MAX_WIDTH: usize = 67;
 const ERROR_MAX_WIDTH: usize = 80;
 
-#[cfg(debug_assertions)]
-const MAX_RECURSION_DEPTH: usize = 25;
-#[cfg(not(debug_assertions))]
-const MAX_RECURSION_DEPTH: usize = 100;
-
 impl Error for ParseError {}
 
 /// Parse Uiua code into an AST
@@ -195,6 +190,7 @@ pub fn parse(
         }
 
         // Parse
+        let base = 0u8;
         let mut parser = Parser {
             inputs,
             input: input.into(),
@@ -203,7 +199,7 @@ pub fn parse(
             errors,
             diagnostics,
             next_output_comment: 0,
-            depth: 0,
+            start_addr: &base as *const u8 as usize,
         };
         let items = parser.items(false);
         if parser.errors.is_empty() && parser.index < parser.tokens.len() {
@@ -235,7 +231,7 @@ struct Parser<'i> {
     next_output_comment: usize,
     errors: Vec<Sp<ParseError>>,
     diagnostics: Vec<Diagnostic>,
-    depth: usize,
+    start_addr: usize,
 }
 
 type FunctionContents = (Option<Sp<Signature>>, Vec<Vec<Sp<Word>>>, Option<CodeSpan>);
@@ -312,7 +308,6 @@ impl<'i> Parser<'i> {
         if self.too_deep() {
             return None;
         }
-        self.depth += 1;
         self.spaces();
         let item = if let Some(binding) = self.binding() {
             Item::Binding(binding)
@@ -325,13 +320,11 @@ impl<'i> Parser<'i> {
         } else {
             let lines = self.multiline_words(true, false);
             if lines.is_empty() {
-                self.depth -= 1;
                 return None;
             } else {
                 Item::Words(lines)
             }
         };
-        self.depth -= 1;
         Some(item)
     }
     fn module(&mut self, in_scope: bool) -> Option<Sp<ScopedModule>> {
@@ -1004,6 +997,9 @@ impl<'i> Parser<'i> {
         Some(span.sp(Word::Strand(items)))
     }
     fn modified(&mut self) -> Option<Sp<Word>> {
+        if self.too_deep() {
+            return None;
+        }
         let (modifier, mod_span) = if let Some(prim) = Primitive::all()
             .filter(|prim| prim.is_modifier())
             .find_map(|prim| {
@@ -1131,19 +1127,24 @@ impl<'i> Parser<'i> {
         Some(word)
     }
     fn too_deep(&mut self) -> bool {
-        if self.depth > MAX_RECURSION_DEPTH {
+        #[cfg(not(target_arch = "wasm32"))]
+        const MAX_RECURSION_DEPTH: usize = (512 + 256) * 1024;
+        #[cfg(target_arch = "wasm32")]
+        const MAX_RECURSION_DEPTH: usize = 512 * 1024;
+        let curr = 0u8;
+        let curr_addr = &curr as *const u8 as usize;
+        let diff = curr_addr.abs_diff(self.start_addr);
+        let too_deep = diff > MAX_RECURSION_DEPTH;
+        if too_deep {
             self.errors
                 .push(self.prev_span().sp(ParseError::RecursionLimit));
-            true
-        } else {
-            false
         }
+        too_deep
     }
     fn term(&mut self) -> Option<Sp<Word>> {
         if self.too_deep() {
             return None;
         }
-        self.depth += 1;
         let mut word = if let Some(prim) = self.prim() {
             prim.map(Word::Primitive)
         } else if let Some(refer) = self.ref_() {
@@ -1230,10 +1231,8 @@ impl<'i> Parser<'i> {
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
         } else {
-            self.depth -= 1;
             return None;
         };
-        self.depth -= 1;
         loop {
             let reset = self.index;
             self.spaces();

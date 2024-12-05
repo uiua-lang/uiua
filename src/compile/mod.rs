@@ -82,6 +82,8 @@ pub struct Compiler {
     pre_eval_mode: PreEvalMode,
     /// The interpreter used for comptime code
     macro_env: Uiua,
+    /// Start addresses
+    start_addrs: Vec<usize>,
 }
 
 impl Default for Compiler {
@@ -107,6 +109,7 @@ impl Default for Compiler {
             comptime: true,
             pre_eval_mode: PreEvalMode::default(),
             macro_env: Uiua::default(),
+            start_addrs: Vec::new(),
         }
     }
 }
@@ -407,7 +410,10 @@ impl Compiler {
             });
         }
 
+        let base = 0u8;
+        self.start_addrs.push(&base as *const u8 as usize);
         let res = self.catching_crash(input, |env| env.items(items, false));
+        self.start_addrs.pop();
 
         // Optimize root
         self.asm.root.optimize();
@@ -1123,7 +1129,26 @@ code:
         let sig = self.sig_of(&node, &span)?;
         Ok(SigNode::new(sig, node))
     }
+    fn check_depth(&mut self, span: &CodeSpan) -> UiuaResult {
+        #[cfg(not(target_arch = "wasm32"))]
+        const MAX_RECURSION_DEPTH: usize = (512 + 256) * 1024;
+        #[cfg(target_arch = "wasm32")]
+        const MAX_RECURSION_DEPTH: usize = 128 * 1024;
+        #[cfg(debug_assertions)]
+        const MUL: usize = 1;
+        #[cfg(not(debug_assertions))]
+        const MUL: usize = 2;
+        let start_addr = *self.start_addrs.first().unwrap();
+        let curr = 0u8;
+        let curr_addr = &curr as *const u8 as usize;
+        let diff = curr_addr.abs_diff(start_addr);
+        if diff > MAX_RECURSION_DEPTH * MUL {
+            return Err(self.error(span.clone(), "Compilation recursion limit reached"));
+        }
+        Ok(())
+    }
     fn word(&mut self, word: Sp<Word>) -> UiuaResult<Node> {
+        self.check_depth(&word.span)?;
         Ok(match word.value {
             Word::Number(Ok(n)) => Node::new_push(n),
             Word::Number(Err(s)) => {

@@ -281,7 +281,7 @@ It works on multi-dimensional arrays too! In this case, it adds each row to the 
 /+ .[1_2_3 4_5_6 7_8_9]
 ```
 
-This works with any function. For example, you can use [max](/docs/max) instead of [add](/docs/add) to get the maximum of each column rather than the sum.
+This works with any function. For example, you can use [maximum](/docs/maximum) instead of [add](/docs/add) to get the maximum of each column rather than the sum.
 
 ```uiua
 /↥ [1_2_3 4_5_2 3_1_8]

@@ -25,7 +25,7 @@ impl SmartOutput {
     pub fn from_value(value: Value, backend: &dyn SysBackend) -> Self {
         // Try to convert the value to audio
         #[cfg(feature = "audio_encode")]
-        if value.shape().last().is_some_and(|&n| n >= 44100 / 4)
+        if value.row_count() >= 44100 / 4
             && matches!(&value, Value::Num(arr) if arr.elements().all(|x| x.abs() <= 5.0))
         {
             if let Ok(bytes) = value_to_wav_bytes(&value, backend.audio_sample_rate()) {

@@ -30,6 +30,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Deprecate [`trace ⸮`](https://uiua.org/docs/trace)
   - It is equivalent to subscripted [`stack ?`](https://uiua.org/docs/stack)
   - Sequential `?`s, which formatted to [`trace ⸮`](https://uiua.org/docs/trace)s, now format to subscripted [`stack ?`](https://uiua.org/docs/stack)
+- Stabilize [`tuples ⧅`](https://uiua.org/docs/tuples)
 - Stabilize [`sort ⍆`](https://uiua.org/docs/sort)
   - Sorting is a very common operation, and it's useful to have such simple access to it
 - Stabilize [`last ⊣`](https://uiua.org/docs/last)

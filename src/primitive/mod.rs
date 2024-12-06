@@ -527,7 +527,6 @@ impl Primitive {
         matches!(
             self,
             (Reach | Off | Backward | Above | Around)
-                | Tuples
                 | (Or | Base | Fft | Case | Layout | Binary)
                 | Astar
                 | (Derivative | Integral)

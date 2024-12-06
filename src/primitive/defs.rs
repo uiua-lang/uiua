@@ -1987,64 +1987,45 @@ primitive!(
     /// The examples here are [transpose]d to take up less vertical space.
     ///
     /// `less than` and `greater than` will give all unique *combinations* of rows from the array.
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅< 2 ⇡5
+    /// ex: ⍉ ⧅< 2 ⇡5
     ///   : ⍉ ⧅> 2 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅< 3 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅< 4 ⇡5
+    /// ex: ⍉ ⧅< 3 ⇡5
+    /// ex: ⍉ ⧅< 4 ⇡5
     /// `less or equal` and `greater or equal` will include values that are the same.
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≤ 2 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≥ 2 ⇡5
+    /// ex: ⍉ ⧅≤ 2 ⇡5
+    /// ex: ⍉ ⧅≥ 2 ⇡5
     /// `not equals` will give all *permutations* of rows from the array.
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≠ 2 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≠ 3 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≠ 4 ⇡5
+    /// ex: ⍉ ⧅≠ 2 ⇡5
+    /// ex: ⍉ ⧅≠ 3 ⇡5
+    /// ex: ⍉ ⧅≠ 4 ⇡5
     /// If the size is `2`, the function is allowed to return non-booleans. Tuples will be copied as many times as the value.
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅(+1<) 2 ⇡4
+    /// ex: ⍉ ⧅(+1<) 2 ⇡4
     /// If the second argument is a scalar, the number of tuples that would be returned for the [range] of that number is returned.
-    /// ex: # Experimental!
-    ///   :   ⧅≠ 2  4
+    /// ex:   ⧅≠ 2  4
     ///   : ⍉ ⧅≠ 2 ⇡4
     /// A negative size will subtract from the length of the array. This is useful if you want to, for example, get a versions of the array with each row removed.
-    /// ex: # Experimental!
-    ///   : ⧅<¯1 ⇡4
+    /// ex: ⧅<¯1 ⇡4
     ///
     /// If [tuples] is given a monadic function, it takes only one argument.
     /// The function will be called on all prefixes of the array.
     /// The full-length prefix will be included, but not the empty prefix, so the output will have the same number of rows as the original array.
-    /// ex: # Experimental!
-    ///   : ⧅□ ⇡5
-    /// ex: # Experimental!
-    ///   : ⧅□ "Hello!"
-    /// ex: # Experimental!
-    ///   : ⧅□ °△5_2
+    /// ex: ⧅□ ⇡5
+    /// ex: ⧅□ "Hello!"
+    /// ex: ⧅□ °△5_2
     /// You can get suffixes with a few [reverse]s.
-    /// ex: # Experimental!
-    ///   : ⍜⇌⧅(□⇌) "Hello!"
+    /// ex: ⍜⇌⧅(□⇌) "Hello!"
     /// Monadic [tuples] is compatible with [fill].
-    /// ex: # Experimental!
-    ///   : ⬚@-⧅∘ "Uiua"
+    /// ex: ⬚@-⧅∘ "Uiua"
     ///
     /// With [un][where], we can see where the inspiration for [tuples]'s glyph comes from.
-    /// ex: # Experimental!
-    ///   : °⊚ ⧅< 2 ⇡50
+    /// ex: °⊚ ⧅< 2 ⇡50
     ///   : °⊚ ⧅> 2 ⇡50
     ///   : °⊚ ⧅≠ 2 ⇡50
     /// We can get something similar with the monadic form.
-    /// ex: # Experimental!
-    ///   : ⬚0⧅∘ +1⇡50
+    /// ex: ⬚0⧅∘ +1⇡50
     ///
     /// The tuple size may be given as a subscript.
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅₂< ⇡5
+    /// ex: ⍉ ⧅₂< ⇡5
     ([1], Tuples, IteratingModifier, ("tuples", '⧅')),
     /// Call a function on windows of an array
     ///

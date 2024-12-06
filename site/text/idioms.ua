@@ -18,7 +18,7 @@
 # Split on a list
 ⊜□¬⊸⦷ " - " "a - bc - d"
 
-# Check that all elements of an array are equal
+# Check that all rows of an array are equal
 ≍⊸↻1 [5 5 5]
 ≍⊸↻1 [1 2 3]
 

@@ -99,6 +99,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
         }
     }
     match k {
+        0 if is_scalar => xs = 0.into(),
         0 => {
             xs = xs.first_dim_zero();
             xs.shape_mut()[0] = 1;

@@ -3,6 +3,7 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
+    iter::once,
     mem::{size_of, take},
 };
 
@@ -130,7 +131,13 @@ impl Value {
     }
     /// Get an iterator over the rows of the value
     pub fn rows(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
-        val_as_arr!(self, |array| Box::new(array.rows().map(Value::from)))
+        if self.shape().first() == Some(&1) {
+            let mut row = self.clone();
+            row.undo_fix();
+            Box::new(once(row))
+        } else {
+            val_as_arr!(self, |array| Box::new(array.rows().map(Value::from)))
+        }
     }
     /// Get an iterator over the rows of the value that have the given shape
     pub fn row_shaped_slices(
@@ -151,8 +158,13 @@ impl Value {
         ))
     }
     /// Consume the value and get an iterator over its rows
-    pub fn into_rows(self) -> Box<dyn ExactDoubleIterator<Item = Self>> {
-        val_as_arr!(self, |array| Box::new(array.into_rows().map(Value::from)))
+    pub fn into_rows(mut self) -> Box<dyn ExactDoubleIterator<Item = Self>> {
+        if self.shape().first() == Some(&1) {
+            self.undo_fix();
+            Box::new(once(self))
+        } else {
+            val_as_arr!(self, |array| Box::new(array.into_rows().map(Value::from)))
+        }
     }
     /// Get an iterator over the elements of the value
     pub fn elements(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
@@ -392,7 +404,9 @@ impl Value {
     /// Collapse the top two dimensions of the array's shape
     pub fn undo_fix(&mut self) {
         if let Some(keys) = self.map_keys_mut() {
-            keys.unfix();
+            if !keys.unfix() {
+                self.take_map_keys();
+            }
         }
         _ = self.shape_mut().unfix();
     }

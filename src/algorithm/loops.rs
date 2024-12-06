@@ -249,6 +249,9 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
         let cond = (env.pop("do condition")?).as_bool(env, "Do condition must be a boolean")?;
         if !cond {
+            if let Some(err) = sig_err {
+                return Err(err);
+            }
             break;
         }
         // Call body

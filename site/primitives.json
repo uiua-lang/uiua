@@ -1334,8 +1334,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "IteratingModifier",
-    "description": "Get permutations or combinations of an array",
-    "experimental": true
+    "description": "Get permutations or combinations of an array"
   },
   "type": {
     "args": 1,

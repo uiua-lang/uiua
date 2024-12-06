@@ -419,6 +419,7 @@ impl Optimization for ByToDup {
                                 .is_some_and(|sig| sig == (0, 1) || sig == (1, 2))
                             {
                                 // println!("frag: {frag:?}");
+                                dip = !matches!(frag, [Prim(Dup, _)]);
                                 back = i - j;
                                 break 'back;
                             }
@@ -429,17 +430,19 @@ impl Optimization for ByToDup {
                     }
                 }
             }
-            let mut composed = Prim(Dup, *span);
+            let mut composed = Node::from_iter(nodes[i - back..i].iter().cloned());
+            let mut dup = Prim(Dup, *span);
             if dip {
-                composed = Mod(Dip, eco_vec![composed.sig_node().unwrap()], *span);
+                dup = Mod(Dip, eco_vec![dup.sig_node().unwrap()], *span);
             }
-            composed.extend(nodes[i - back..i].iter().cloned());
+            composed.push(dup);
             composed.push(f.node.clone());
             composed.extend(nodes[i + 1..].iter().cloned());
             // println!("composed: {composed:?}");
             if composed.optimize() {
                 let n = nodes.len() - i;
                 replace_nodes(nodes, i - back, n + back, composed);
+                // println!("optimized: {nodes:?}");
                 return true;
             }
         }

@@ -286,6 +286,7 @@ impl fmt::Display for ImplPrimitive {
             AstarPop => write!(f, "{Pop}{Astar}"),
             SplitByScalar => write!(f, "{Partition}{Box}{By}{Ne}"),
             SplitBy => write!(f, "{Partition}{Box}{Not}{By}{Mask}"),
+            SplitByKeepEmpty => write!(f, "{Un}{Reduce}$\"_…_\""),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -1718,11 +1719,15 @@ impl ImplPrimitive {
             }
             ImplPrimitive::SplitByScalar => {
                 let [f] = get_ops(ops, env)?;
-                loops::split_by(f, true, env)?;
+                loops::split_by(f, true, false, env)?;
             }
             ImplPrimitive::SplitBy => {
                 let [f] = get_ops(ops, env)?;
-                loops::split_by(f, false, env)?;
+                loops::split_by(f, false, false, env)?;
+            }
+            ImplPrimitive::SplitByKeepEmpty => {
+                let [f] = get_ops(ops, env)?;
+                loops::split_by(f, false, true, env)?;
             }
             ImplPrimitive::EachSub(n)
             | ImplPrimitive::RowsSub(n)

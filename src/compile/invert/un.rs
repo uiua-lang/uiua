@@ -557,11 +557,12 @@ inverse!(ReduceFormatPat, input, _, Reduce, span, [f], {
         return Err(InversionError::ReduceFormat);
     }
     let inv = Node::from_iter([
-        Prim(Dup, *fmt_span),
         Node::new_push(parts[1].as_str()),
-        Prim(Mask, *fmt_span),
-        Prim(Not, *fmt_span),
-        Mod(Partition, eco_vec![Prim(Box, span).sig_node()?], span),
+        ImplMod(
+            SplitByKeepEmpty,
+            eco_vec![Prim(Box, span).sig_node()?],
+            *fmt_span,
+        ),
     ]);
     Ok((input, inv))
 });

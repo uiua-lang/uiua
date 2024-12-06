@@ -349,6 +349,10 @@ $$ _ line
 ⍤⤙≍ ⟜≡(⋕°⋕).
 ⍤⤙≍ ⟜≡(⋕$"_")
 
+# Un reduce format strings
+⍤⤙≍ {"a" "bcd" "ef"} °/$"_ - _" "a - bcd - ef"
+⍤⤙≍ ⟜(/$"_b_" °/$"_b_") "abbc"
+
 # Try
 {"cat" "sand"} "dog" {"cat" "cats" "and" "sand" "dog"}
 ⍤⤙≍ {{"cat" "sand"} {"dog"} {""}} {⊙(∩▽⟜:≡°□⍚⍣(1°.⊙⊃↙↘⟜⧻|0⊙∘):¤)}

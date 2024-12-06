@@ -582,7 +582,7 @@ impl VirtualEnv {
                     self.node(&f.node)?;
                 }
                 UnScan => self.handle_args_outputs(1, 1),
-                SplitBy | SplitByScalar => {
+                SplitBy | SplitByScalar | SplitByKeepEmpty => {
                     let [f] = get_args(args)?;
                     self.handle_args_outputs(2, f.outputs);
                 }

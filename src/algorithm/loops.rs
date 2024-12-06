@@ -253,17 +253,17 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn split_by(f: SigNode, scalar: bool, env: &mut Uiua) -> UiuaResult {
+pub fn split_by(f: SigNode, by_scalar: bool, keep_empty: bool, env: &mut Uiua) -> UiuaResult {
     let delim = env.pop(1)?;
     let haystack = env.pop(2)?;
     if f.sig.args != 1
         || haystack.rank() > 1
         || delim.rank() > 1
-        || scalar && !(delim.rank() == 0 || delim.rank() == 1 && delim.row_count() == 1)
+        || by_scalar && !(delim.rank() == 0 || delim.rank() == 1 && delim.row_count() == 1)
         || matches!(delim, Value::Complex(_))
         || matches!(haystack, Value::Complex(_))
     {
-        let mask = if scalar {
+        let mask = if by_scalar {
             delim.is_ne(haystack.clone(), env)?
         } else {
             delim.mask(&haystack, env)?.not(env)?
@@ -275,11 +275,11 @@ pub fn split_by(f: SigNode, scalar: bool, env: &mut Uiua) -> UiuaResult {
     if let Some(Primitive::Box) = f.node.as_primitive() {
         let val = haystack.generic_bin_ref(
             &delim,
-            |a, b| a.split_by(b, |data| Boxed(data.into())),
-            |a, b| a.split_by(b, |data| Boxed(data.into())),
+            |a, b| a.split_by(b, keep_empty, |data| Boxed(data.into())),
+            |a, b| a.split_by(b, keep_empty, |data| Boxed(data.into())),
             |_, _| unreachable!("split by complex"),
-            |a, b| a.split_by(b, |data| Boxed(data.into())),
-            |a, b| a.split_by(b, |data| Boxed(data.into())),
+            |a, b| a.split_by(b, keep_empty, |data| Boxed(data.into())),
+            |a, b| a.split_by(b, keep_empty, |data| Boxed(data.into())),
             |a, b| {
                 env.error(format!(
                     "Cannot split {} by {}",
@@ -292,11 +292,11 @@ pub fn split_by(f: SigNode, scalar: bool, env: &mut Uiua) -> UiuaResult {
     } else {
         let parts = haystack.generic_bin_ref(
             &delim,
-            |a, b| a.split_by(b, Value::from),
-            |a, b| a.split_by(b, Value::from),
+            |a, b| a.split_by(b, keep_empty, Value::from),
+            |a, b| a.split_by(b, keep_empty, Value::from),
             |_, _| unreachable!("split by complex"),
-            |a, b| a.split_by(b, Value::from),
-            |a, b| a.split_by(b, Value::from),
+            |a, b| a.split_by(b, keep_empty, Value::from),
+            |a, b| a.split_by(b, keep_empty, Value::from),
             |a, b| {
                 env.error(format!(
                     "Cannot split {} by {}",
@@ -336,6 +336,7 @@ where
     fn split_by<R: Clone>(
         &self,
         delim: &Self,
+        keep_empty: bool,
         f: impl Fn(CowSlice<T>) -> R,
     ) -> UiuaResult<EcoVec<R>> {
         let haystack = self.data.as_slice();
@@ -348,7 +349,7 @@ where
         if delim.rank() == 0 || delim.row_count() == 1 {
             let delim = &delim_slice[0];
             for slice in haystack.split(|elem| elem.array_eq(delim)) {
-                if slice.is_empty() {
+                if slice.is_empty() && !keep_empty {
                     curr += 1;
                     continue;
                 }
@@ -365,7 +366,7 @@ where
                     .map(|i| curr + i)
                     .unwrap_or(haystack.len());
                 let next_start = prev_end + delim_slice.len();
-                if curr == prev_end {
+                if curr == prev_end && !keep_empty {
                     curr = next_start;
                     continue;
                 }

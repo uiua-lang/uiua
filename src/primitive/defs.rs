@@ -3721,6 +3721,7 @@ impl_primitive!(
     ([3], AstarPop),
     (2[1], SplitByScalar),
     (2[1], SplitBy),
+    (2[1], SplitByKeepEmpty),
     // Implementation details
     (1, Utf16),
     ([2], RepeatWithInverse),

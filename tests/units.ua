@@ -352,6 +352,7 @@ $$ _ line
 # Un reduce format strings
 ⍤⤙≍ {"a" "bcd" "ef"} °/$"_ - _" "a - bcd - ef"
 ⍤⤙≍ ⟜(/$"_b_" °/$"_b_") "abbc"
+⍤⤙≍ ⟜(/$"_ab_" °/$"_ab_") "abab"
 
 # Try
 {"cat" "sand"} "dog" {"cat" "cats" "and" "sand" "dog"}

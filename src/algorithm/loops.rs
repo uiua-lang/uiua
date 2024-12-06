@@ -373,6 +373,9 @@ where
                 data.push(f(self.data.slice(curr..prev_end)));
                 curr = next_start;
             }
+            if keep_empty && curr == haystack.len() {
+                data.push(f(CowSlice::new()));
+            }
         }
         Ok(data)
     }

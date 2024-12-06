@@ -1497,7 +1497,7 @@ impl Uiua {
             let mut rows = Vec::new();
             for handle in ids.data {
                 #[cfg(not(target_arch = "wasm32"))]
-                let thread_stack = self
+                let mut thread_stack = self
                     .rt
                     .thread
                     .children
@@ -1507,7 +1507,7 @@ impl Uiua {
                     .recv()
                     .unwrap()?;
                 #[cfg(target_arch = "wasm32")]
-                let thread_stack = self
+                let mut thread_stack = self
                     .rt
                     .thread
                     .children
@@ -1517,6 +1517,7 @@ impl Uiua {
                 let row = if thread_stack.len() == 1 {
                     thread_stack.into_iter().next().unwrap()
                 } else {
+                    thread_stack.reverse();
                     Value::from_row_values(thread_stack, self)?
                 };
                 rows.push(row);

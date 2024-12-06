@@ -3,6 +3,7 @@
 ## 0.14
 The next version of Uiua
 
+- Fix on-type formatting in comments
 - Unified `stencil` implementation
 - Stabilize `backward`, `case`
   - Need to figure out `backward`'s glyph and non-dyadic semantics

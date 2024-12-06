@@ -466,6 +466,9 @@ F ← ⌅⍜⊢¯ ⊏⊙"nubtqphsoe" -@0 °⋕
 ⍤⤙≍ 10 ∩₁₀◌ °⊟₁₁⇡11
 ⍤⤙≍ 20 ∩₁₀(◌◌) °⊟₂₁⇡21
 
+# Spawn/pool/wait
+⍤⤙≍ wait≡pool(1 ∘) 2_3 ≡(⊟1 ∘) 2_3
+
 # Experimental!
 
 # Off

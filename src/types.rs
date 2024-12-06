@@ -105,8 +105,7 @@ where
     }
     let mut rt = TypeRt {
         stack,
-        _under_stack: Vec::new(),
-        array_stack: Vec::new(),
+        under_stack: Vec::new(),
         asm: &env.asm,
     };
     match rt.node(&f.node) {
@@ -132,8 +131,7 @@ where
 
 struct TypeRt<'a> {
     stack: Vec<Ty>,
-    _under_stack: Vec<Ty>,
-    array_stack: Vec<usize>,
+    under_stack: Vec<Ty>,
     asm: &'a Assembly,
 }
 
@@ -277,16 +275,36 @@ impl<'a> TypeRt<'a> {
                 _ => return Err(TypeError::NotSupported),
             },
             Node::NoInline(inner) | Node::TrackCaller(inner) => self.node(inner)?,
+            &Node::PushUnder(n, _) => {
+                for _ in 0..n {
+                    let value = self.pop()?;
+                    self.under_stack.push(value);
+                }
+            }
+            &Node::CopyToUnder(n, _) => {
+                for _ in 0..n {
+                    let value = self.pop()?;
+                    self.under_stack.push(value);
+                }
+                for ty in self.under_stack.iter().rev().take(n) {
+                    self.stack.push(ty.clone());
+                }
+            }
+            &Node::PopUnder(n, _) => {
+                for _ in 0..n {
+                    let value = self.pop_under()?;
+                    self.stack.push(value);
+                }
+            }
             _ => return Err(TypeError::NotSupported),
         }
         Ok(())
     }
     fn pop(&mut self) -> Result<Ty, TypeError> {
-        let ty = self.stack.pop().ok_or(TypeError::StackUnderflow)?;
-        for height in &mut self.array_stack {
-            *height = (*height).min(self.stack.len());
-        }
-        Ok(ty)
+        self.stack.pop().ok_or(TypeError::StackUnderflow)
+    }
+    fn pop_under(&mut self) -> Result<Ty, TypeError> {
+        self.under_stack.pop().ok_or(TypeError::StackUnderflow)
     }
 }
 

@@ -86,7 +86,7 @@ struct VirtualEnv {
     array_depth: usize,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Stack {
     stack: Vec<BasicValue>,
     height: i32,
@@ -119,7 +119,10 @@ impl Stack {
         self.min_height = self.min_height.max((-self.height).max(0) as usize);
     }
     fn sig(&self) -> Signature {
-        derive_sig(self.min_height, self.height)
+        Signature {
+            args: self.min_height,
+            outputs: (self.height + self.min_height as i32).max(0) as usize,
+        }
     }
 }
 
@@ -218,15 +221,9 @@ impl FromIterator<f64> for BasicValue {
     }
 }
 
-fn derive_sig(min_height: usize, final_height: i32) -> Signature {
-    Signature {
-        args: min_height,
-        outputs: (final_height + min_height as i32).max(0) as usize,
-    }
-}
-
 impl VirtualEnv {
     fn from_nodes(nodes: &[Node]) -> Result<Self, SigCheckError> {
+        // println!("\ncheck sig: {nodes:?}");
         let mut env = VirtualEnv {
             stack: Stack::default(),
             under: Stack::default(),
@@ -609,8 +606,11 @@ impl VirtualEnv {
                 }
             }
             Node::CopyToUnder(n, _) => {
-                for val in self.stack.stack.iter().rev().take(*n).cloned() {
-                    self.under.push(val);
+                for _ in 0..*n {
+                    self.under.push(self.stack.pop());
+                }
+                for val in self.under.stack.iter().rev().take(*n).cloned() {
+                    self.stack.push(val);
                 }
             }
             Node::PopUnder(n, _) => {
@@ -620,11 +620,7 @@ impl VirtualEnv {
             }
             Node::TrackCaller(inner) | Node::NoInline(inner) => self.node(inner)?,
         }
-        // println!(
-        //     "{node:?} -> {}/{}",
-        //     -(self.stack.min_height as i32),
-        //     self.stack.height
-        // );
+        // println!("{node:?} -> {} ({})", self.stack.sig(), self.under.sig());
         Ok(())
     }
     fn push(&mut self, val: BasicValue) {

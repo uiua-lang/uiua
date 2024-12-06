@@ -719,7 +719,10 @@ impl Uiua {
             }),
             Node::PopUnder(n, span) => self.with_span(span, |env| {
                 if env.under_stack_height() < n {
-                    return Err(env.error("Stack was empty when getting context value"));
+                    return Err(env.error(
+                        "Stack was empty when getting context value. \
+                        This is a bug in the interpreter.",
+                    ));
                 }
                 let start = env.under_stack_height() - n;
                 env.rt.stack.extend(env.rt.under_stack.drain(start..).rev());

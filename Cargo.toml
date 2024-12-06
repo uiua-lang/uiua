@@ -124,7 +124,7 @@ bytes = [] # No longer used
 clipboard = ["arboard"]
 debug = []
 default = [
-  "window", # Comment in for dev
+  # "window", # Comment in for dev
   "binary",
   "terminal_image",
   "lsp",

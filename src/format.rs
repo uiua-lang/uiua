@@ -518,7 +518,7 @@ impl<'a> Formatter<'a> {
                     if max_name_len == 0 {
                         max_name_len = items[i..]
                             .iter()
-                            .take_while(|item| matches!(item, Item::Binding(_)))
+                            .take_while(|item| matches!(item, Item::Binding(binding) if !words_are_multiline(&binding.words)))
                             .map(|item| match item {
                                 Item::Binding(binding) => binding.name.value.chars().count(),
                                 _ => 0,

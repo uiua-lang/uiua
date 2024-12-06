@@ -20,6 +20,7 @@ The next version of Uiua
 ## Planned Features
 Features that are planned to be implemented in the future.
 
+- Step debugging
 - Dead code elimination
   - Eliminate unused anonymous functions
 - Dynamic modules

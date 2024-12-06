@@ -1475,6 +1475,7 @@ impl Value {
     pub fn orient(&self, target: &mut Self, env: &Uiua) -> UiuaResult {
         let indices = self.as_ints(env, "Orient indices must be integers")?;
         let undices = derive_undices(indices, target.rank(), env)?;
+        target.match_fill(env);
         val_as_arr!(target, |a| a.orient(undices, env))
     }
     pub(crate) fn anti_orient(&self, target: Self, env: &Uiua) -> UiuaResult<Self> {

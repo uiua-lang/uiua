@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     env::current_exe,
     fs,
     io::{ErrorKind, Read, Write},
@@ -170,6 +169,10 @@ pub fn run_window() {
                 .send_viewport_cmd(ViewportCommand::RequestUserAttention(
                     UserAttentionType::Informational,
                 ));
+            cc.egui_ctx.style_mut(|style| {
+                style.interaction.show_tooltips_only_when_still = false;
+                style.interaction.tooltip_delay = 0.2;
+            });
             Ok(Box::new(App::new(recv, &cc.egui_ctx)))
         }),
     )
@@ -180,27 +183,28 @@ struct App {
     items: Vec<OutputItem>,
     recv: Receiver<Request>,
     cache: Cache,
+    scroll_to_top: bool,
     clear: bool,
     clear_before_next: bool,
     #[cfg(feature = "audio")]
     audio_output: Option<hodaun::OutputDeviceMixer<hodaun::Stereo>>,
+    #[cfg(feature = "audio")]
+    autoplay: bool,
 }
 
 struct Cache {
     ppp: f32,
-    next_id: u64,
-    size_map: HashMap<[u32; 2], Vec2>,
+    image_scale: f32,
     #[cfg(feature = "audio")]
-    samples_map: HashMap<usize, bool>,
+    samples_map: std::collections::HashMap<usize, bool>,
     last_frame: Instant,
     errors: Vec<String>,
 }
 
 impl Cache {
-    fn next_id(&mut self) -> u64 {
-        let id = self.next_id;
-        self.next_id += 1;
-        id
+    fn image_size(&self, size: [u32; 2]) -> Vec2 {
+        let mul = self.image_scale / self.ppp;
+        vec2(size[0] as f32 * mul, size[1] as f32 * mul)
     }
 }
 
@@ -234,43 +238,13 @@ enum OutputItem {
 }
 
 struct ImageState {
-    id: u64,
-    true_size: [u32; 2],
-    resize: Vec2,
+    size: [u32; 2],
     label: Option<String>,
-    changing: bool,
 }
 
 impl ImageState {
-    fn new(cache: &mut Cache, true_size: [u32; 2], label: Option<String>) -> Self {
-        Self {
-            id: cache.next_id(),
-            true_size,
-            resize: cache
-                .size_map
-                .get(&true_size)
-                .copied()
-                .unwrap_or(vec2(true_size[0] as f32, true_size[1] as f32)),
-            label,
-            changing: false,
-        }
-    }
-    fn show_reset(&mut self, cache: &mut Cache, ui: &mut Ui) {
-        if (self.true_size[0] as f32 != self.resize.x || self.true_size[1] as f32 != self.resize.y)
-            && ui.button("↻").on_hover_text("Reset size").clicked()
-        {
-            self.id = cache.next_id();
-            self.resize = vec2(self.true_size[0] as f32, self.true_size[1] as f32);
-            cache.size_map.remove(&self.true_size);
-        }
-    }
-    fn handle_resize(&mut self, cache: &mut Cache, ui: &mut Ui, rect: Rect) {
-        if self.changing && !ui.input(|i| i.pointer.primary_down()) {
-            self.resize = rect.size() * cache.ppp;
-            cache.size_map.insert(self.true_size, self.resize);
-            self.id = cache.next_id();
-            self.changing = false;
-        }
+    fn new(size: [u32; 2], label: Option<String>) -> Self {
+        Self { size, label }
     }
 }
 
@@ -288,23 +262,26 @@ impl App {
             recv,
             cache: Cache {
                 ppp,
-                next_id: 0,
-                size_map: HashMap::new(),
+                image_scale: 1.0,
                 #[cfg(feature = "audio")]
-                samples_map: HashMap::new(),
+                samples_map: Default::default(),
                 last_frame: Instant::now(),
                 errors: Vec::new(),
             },
+            scroll_to_top: false,
             clear,
             clear_before_next: true,
             #[cfg(feature = "audio")]
             audio_output: hodaun::default_output().ok(),
+            #[cfg(feature = "audio")]
+            autoplay: false,
         }
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
+        let mut scroll = false;
         while let Ok(req) = self.recv.try_recv() {
             if self.clear_before_next {
                 self.clear_before_next = false;
@@ -331,6 +308,7 @@ impl eframe::App for App {
                     let item = self.convert_smart_output(so, ctx);
                     self.items.push(item);
                     self.clear_before_next = false;
+                    scroll = true;
                 }
                 Request::ShowAll(sos) => {
                     for so in sos.into_iter().rev() {
@@ -338,6 +316,7 @@ impl eframe::App for App {
                         self.items.push(item);
                     }
                     self.clear_before_next = false;
+                    scroll = true;
                 }
                 Request::Separator => {
                     if !self.clear {
@@ -371,20 +350,53 @@ impl eframe::App for App {
                 ui.add_space(10.0);
                 global_theme_preference_switch(ui);
                 ui.add_space(10.0);
+                if ui
+                    .button(if self.scroll_to_top { "⬆" } else { "⬇" })
+                    .on_hover_text(if self.scroll_to_top {
+                        "Scroll to top"
+                    } else {
+                        "Scroll to bottom"
+                    })
+                    .clicked()
+                {
+                    self.scroll_to_top = !self.scroll_to_top;
+                }
+                ui.add_space(10.0);
                 Checkbox::new(&mut self.clear, "Clear")
                     .ui(ui)
                     .on_hover_text("Clear on each run");
-                if !self.clear && ui.button("Clear All").clicked() {
+                if !self.clear && ui.button("🗑").on_hover_text("Clear All").clicked() {
                     self.items.clear();
+                }
+                ui.add_space(10.0);
+                ui.scope(|ui| {
+                    ui.spacing_mut().slider_width = 120.0;
+                    Slider::new(&mut self.cache.image_scale, 0.1..=10.0)
+                        .logarithmic(true)
+                        .suffix("x")
+                        .max_decimals(2)
+                        .ui(ui)
+                        .on_hover_text("Image Scale");
+                    if self.cache.image_scale != 1.0
+                        && ui.button("↺").on_hover_text("Reset").clicked()
+                    {
+                        self.cache.image_scale = 1.0;
+                    }
+                });
+                #[cfg(feature = "audio")]
+                {
+                    ui.add_space(10.0);
+                    ui.toggle_value(&mut self.autoplay, "▶")
+                        .on_hover_text("Autoplay audio");
                 }
             })
         });
 
         // Main content
         CentralPanel::default().show(ctx, |ui| {
-            ScrollArea::vertical()
+            ScrollArea::both()
                 .auto_shrink([false; 2])
-                .show(ui, |ui| self.inner(ui))
+                .show(ui, |ui| self.inner(ui, scroll))
         });
 
         // Error window
@@ -436,12 +448,18 @@ fn save_name(ovrride: Option<&str>, name: &str, ext: &str) -> String {
 }
 
 impl App {
-    fn inner(&mut self, ui: &mut Ui) {
+    fn inner(&mut self, ui: &mut Ui, scroll: bool) {
+        if scroll && self.scroll_to_top {
+            ui.scroll_to_cursor(Some(Align::TOP));
+        }
         for (i, item) in self.items.iter_mut().enumerate().rev() {
-            ScrollArea::horizontal().id_salt(i).show(ui, |ui| {
-                Self::item(&mut self.cache, item, ui);
-                ui.add_space(3.0);
-            });
+            if scroll && !self.scroll_to_top && i == 0 {
+                ui.scroll_to_cursor(Some(Align::Center));
+            }
+            // ScrollArea::horizontal().id_salt(i).show(ui, |ui| {
+            Self::item(&mut self.cache, item, ui);
+            ui.add_space(3.0);
+            // });
         }
     }
     fn item(cache: &mut Cache, item: &mut OutputItem, ui: &mut Ui) {
@@ -468,28 +486,19 @@ impl App {
                 if let Some(label) = &state.label {
                     ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                 }
-                ui.horizontal_wrapped(|ui| {
+                ui.horizontal(|ui| {
                     // Image
-                    let render_size = state.resize / cache.ppp;
-                    let resp = (Resize::default()
-                        .id_salt(state.id)
-                        .with_stroke(false)
-                        .default_size(render_size))
-                    .show(ui, |ui| {
-                        let available_width = ui.available_width();
-                        let available_height = ui.available_height();
-                        let aspect_ratio = state.true_size[0] as f32 / state.true_size[1] as f32;
-                        let use_height = (available_width / aspect_ratio).max(available_height);
-                        let use_width = (use_height * aspect_ratio).max(available_width);
-                        ui.image(SizedTexture {
-                            id: *tex_id,
-                            size: vec2(use_width, use_height),
-                        })
-                    });
-                    ui.vertical(|ui| {
-                        ui.label(format!("{}×{}", state.true_size[0], state.true_size[1]));
-                        // Save
-                        if ui.button("Save").clicked() {
+                    let size = cache.image_size(state.size);
+                    ui.image(SizedTexture { id: *tex_id, size });
+                    ui.allocate_ui_with_layout(
+                        vec2(100.0, 0.0),
+                        Layout::top_down(Align::Min),
+                        |ui| {
+                            ui.label(format!("{}×{}", state.size[0], state.size[1]));
+                            // Save
+                            if !ui.button("Save").clicked() {
+                                return;
+                            }
                             match native_dialog::FileDialog::new()
                                 .set_title("Save Image")
                                 .set_filename(&save_name(state.label.as_deref(), "image", "png"))
@@ -533,15 +542,8 @@ impl App {
                                 Ok(None) => {}
                                 Err(e) => cache.errors.push(e.to_string()),
                             }
-                        }
-                        // Reset
-                        state.show_reset(cache, ui);
-                        // Resize
-                        let chng = resp.rect.width() != render_size.x
-                            && resp.rect.height() != render_size.y;
-                        state.changing |= chng;
-                        state.handle_resize(cache, ui, resp.rect);
-                    });
+                        },
+                    );
                 });
             }
             OutputItem::Gif {
@@ -555,52 +557,36 @@ impl App {
                     ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                 }
                 let total_time: f32 = frames.iter().map(|(_, d)| d).sum();
-                ui.horizontal_wrapped(|ui| {
+                ui.horizontal(|ui| {
                     // Frames
-                    let render_size = state.resize / cache.ppp;
-                    let resp = (Resize::default()
-                        .id_salt(state.id)
-                        .with_stroke(false)
-                        .default_size(render_size))
-                    .show(ui, |ui| {
-                        let available_width = ui.available_width();
-                        let available_height = ui.available_height();
-                        let aspect_ratio = state.true_size[0] as f32 / state.true_size[1] as f32;
-                        let use_height = (available_width / aspect_ratio).max(available_height);
-                        let use_width = (use_height * aspect_ratio).max(available_width);
-                        let mut t = 0.0;
-                        for (tex_id, delay) in &*frames {
-                            if t < *curr {
-                                t += delay;
-                                continue;
-                            }
-                            ui.ctx()
-                                .request_repaint_after(Duration::from_secs_f32(*delay));
-                            return ui.image(SizedTexture {
-                                id: *tex_id,
-                                size: vec2(use_width, use_height),
-                            });
+                    let size = cache.image_size(state.size);
+                    let mut t = 0.0;
+                    let mut rendered = false;
+                    for (tex_id, delay) in &*frames {
+                        if t < *curr {
+                            t += delay;
+                            continue;
                         }
-                        let (text_id, delay) = frames.last().unwrap();
                         ui.ctx()
                             .request_repaint_after(Duration::from_secs_f32(*delay));
-                        ui.image(SizedTexture {
-                            id: *text_id,
-                            size: vec2(use_width, use_height),
-                        })
-                    });
-                    let chng =
-                        resp.rect.width() != render_size.x && resp.rect.height() != render_size.y;
-                    state.changing |= chng;
-                    state.handle_resize(cache, ui, resp.rect);
+                        ui.image(SizedTexture { id: *tex_id, size });
+                        rendered = true;
+                        break;
+                    }
+                    let (tex_id, delay) = frames.last().unwrap();
+                    if !rendered {
+                        ui.image(SizedTexture { id: *tex_id, size });
+                    }
+                    ui.ctx()
+                        .request_repaint_after(Duration::from_secs_f32(*delay));
                     ui.vertical(|ui| {
                         ui.label(format!(
                             "{}×{}, {} frames",
-                            state.true_size[0],
-                            state.true_size[1],
+                            state.size[0],
+                            state.size[1],
                             frames.len()
                         ));
-                        ui.horizontal_wrapped(|ui| {
+                        ui.horizontal(|ui| {
                             // Play/pause
                             let play_text = if *play { "⏸" } else { "▶" };
                             ui.toggle_value(play, play_text).on_hover_text(if *play {
@@ -633,8 +619,6 @@ impl App {
                                 Err(e) => cache.errors.push(e.to_string()),
                             }
                         }
-                        // Reset
-                        state.show_reset(cache, ui);
                     });
                 });
                 if *play {
@@ -651,7 +635,7 @@ impl App {
                 sample_count,
                 bytes,
             } => {
-                ui.horizontal_wrapped(|ui| {
+                ui.horizontal(|ui| {
                     if let Some(label) = label {
                         ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                     }
@@ -749,7 +733,7 @@ impl App {
                 );
                 OutputItem::Image {
                     tex_id: text_id,
-                    state: ImageState::new(&mut self.cache, [width, height], label),
+                    state: ImageState::new([width, height], label),
                     bytes,
                 }
             }
@@ -806,7 +790,7 @@ impl App {
                     frames: tex_ids,
                     curr: 0.0,
                     play: true,
-                    state: ImageState::new(&mut self.cache, [gif_width, gif_height], label),
+                    state: ImageState::new([gif_width, gif_height], label),
                     bytes,
                 }
             }
@@ -816,7 +800,8 @@ impl App {
             }
             #[cfg(feature = "audio")]
             SmartOutput::Wav(bytes, label) => {
-                let (src, sample_count) = audio::SeekBufferSource::from_wav_bytes(&bytes);
+                let (src, sample_count) =
+                    audio::SeekBufferSource::from_wav_bytes(&bytes, self.autoplay);
                 let mut controls = src.controls.clone();
                 let total_time = src.total_time;
                 if let Some(output) = &self.audio_output {
@@ -866,7 +851,7 @@ mod audio {
     }
 
     impl SeekBufferSource {
-        pub fn from_wav_bytes(bytes: &[u8]) -> (Self, usize) {
+        pub fn from_wav_bytes(bytes: &[u8], play: bool) -> (Self, usize) {
             let mut wav_source = wav::WavSource::new(bytes).unwrap().resample::<Stereo>();
             let sr = crate::SysBackend::audio_sample_rate(&crate::NativeSys) as f64;
             let mut buffer = Vec::new();
@@ -879,7 +864,7 @@ mod audio {
                 buffer,
                 controls: AudioControls {
                     curr: Shared::new(0.0),
-                    play: Shared::new(true),
+                    play: Shared::new(play),
                     repeat: Shared::new(false),
                 },
             };

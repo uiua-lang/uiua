@@ -2557,6 +2557,12 @@ primitive!(
     /// ex: [⍢(×2.|<1000)] 1
     /// Alternatively, you can [join] the items to an initial list.
     /// ex: ◌⍢(⊃(×2)⊂|<100) 1 []
+    ///
+    /// Even if signatures are invalid, [do] will alway run its condition function at least once.
+    /// If the condition returns true, it will always run its body function at least once.
+    /// This is helpful when initially setting up a loop so that you can debug if necessary.
+    /// ex! ⍢(+|?) 5 3
+    /// ex! ⍢(?+|>2) 5 3
     ([2], Do, IteratingModifier, ("do", '⍢')),
     /// Set the fill value for a function
     ///

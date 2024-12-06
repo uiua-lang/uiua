@@ -201,35 +201,36 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
 pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let [body, cond] = get_ops(ops, env)?;
-    if cond.sig.outputs < 1 {
-        return Err(env.error(format!(
+    let cond_sig_err = if cond.sig.outputs == 0 {
+        Some(env.error(format!(
             "Do's condition function must return at least 1 value, \
             but its signature is {}",
             cond.sig
-        )));
-    }
-    let copy_count = cond.sig.args.saturating_sub(cond.sig.outputs - 1);
-    let cond_sub_sig = Signature::new(cond.sig.args, cond.sig.outputs + copy_count - 1);
+        )))
+    } else {
+        None
+    };
+    let copy_count = (cond.sig.args).saturating_sub(cond.sig.outputs.saturating_sub(1));
+    let cond_sub_sig = Signature::new(
+        cond.sig.args,
+        (cond.sig.outputs + copy_count).saturating_sub(1),
+    );
     let comp_sig = body.sig.compose(cond_sub_sig);
-    match comp_sig.args.cmp(&comp_sig.outputs) {
-        Ordering::Less if env.rt.array_depth == 0 => {
-            return Err(env.error(format!(
-                "Do's functions cannot have a positive net stack \
-                change outside an array, but the composed signature of \
-                {} and {}, minus the condition, is {comp_sig}",
-                body.sig, cond.sig
-            )))
-        }
-        Ordering::Greater => {
-            return Err(env.error(format!(
-                "Do's functions cannot have a negative net stack \
-                change, but the composed signature of {} and \
-                {}, minus the condition, is {comp_sig}",
-                body.sig, cond.sig
-            )))
-        }
-        _ => {}
-    }
+    let sig_err = match comp_sig.args.cmp(&comp_sig.outputs) {
+        Ordering::Less if env.rt.array_depth == 0 => Some(env.error(format!(
+            "Do's functions cannot have a positive net stack \
+            change outside an array, but the composed signature of \
+            {} and {}, minus the condition, is {comp_sig}",
+            body.sig, cond.sig
+        ))),
+        Ordering::Greater => Some(env.error(format!(
+            "Do's functions cannot have a negative net stack \
+            change, but the composed signature of {} and \
+            {}, minus the condition, is {comp_sig}",
+            body.sig, cond.sig
+        ))),
+        _ => None,
+    };
     loop {
         // Make sure there are enough values
         if env.stack().len() < copy_count {
@@ -243,12 +244,18 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
         // Call condition
         env.exec(cond.clone())?;
         // Break if condition is false
+        if let Some(err) = cond_sig_err {
+            return Err(err);
+        }
         let cond = (env.pop("do condition")?).as_bool(env, "Do condition must be a boolean")?;
         if !cond {
             break;
         }
         // Call body
         env.exec(body.clone())?;
+        if let Some(err) = sig_err {
+            return Err(err);
+        }
     }
     Ok(())
 }

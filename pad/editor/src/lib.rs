@@ -1932,7 +1932,12 @@ fn prim_sig_class(prim: Primitive, subscript: Option<i32>) -> &'static str {
     match prim {
         Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
-        Primitive::Both => code_font!("monadic-modifier bi text-gradient"),
+        Primitive::Both => match subscript.unwrap_or(2) {
+            0 => code_font!("monadic-function aroace text-gradient"),
+            1 => code_font!("monadic-function aro text-gradient"),
+            2 => code_font!("monadic-modifier bi text-gradient"),
+            _ => code_font!("dyadic-function pan text-gradient"),
+        },
         Primitive::Member => code_font!("dyadic-function caution text-gradient"),
         Primitive::Couple => match subscript.unwrap_or(2) {
             0 => code_font!("monadic-function aroace text-gradient"),

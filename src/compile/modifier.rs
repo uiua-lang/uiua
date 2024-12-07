@@ -31,7 +31,7 @@ impl Compiler {
                         .collect(),
                     pack_expansion: true,
                 };
-                 self.modified(new, subscript)
+                self.modified(new, subscript)
             }
             Modifier::Primitive(Primitive::Dip) => {
                 let mut branches = pack.branches.iter().cloned().rev();
@@ -51,7 +51,7 @@ impl Compiler {
                             lines,
                             closed: true,
                         }))],
-                    pack_expansion: true,
+                        pack_expansion: true,
                     };
                 }
                 self.modified(new, subscript)
@@ -77,7 +77,7 @@ impl Compiler {
                             lines,
                             closed: true,
                         }))],
-                    pack_expansion: true,
+                        pack_expansion: true,
                     };
                 }
                 self.modified(new, subscript)
@@ -106,7 +106,7 @@ impl Compiler {
                             branch.map(Word::Func),
                             span.clone().sp(Word::Modified(Box::new(new))),
                         ],
-                    pack_expansion: true,
+                        pack_expansion: true,
                     };
                 }
                 self.modified(new, subscript)
@@ -117,7 +117,7 @@ impl Compiler {
                     words.push(branch.span.clone().sp(Word::Modified(Box::new(Modified {
                         modifier: modifier.clone(),
                         operands: vec![branch.map(Word::Func)],
-                    pack_expansion: true,
+                        pack_expansion: true,
                     }))));
                 }
                 self.words(words)
@@ -164,15 +164,15 @@ impl Compiler {
                         if !b.node.is_empty() {
                             if !a.sig.is_compatible_with(b.sig.inverse()) {
                                 self.emit_diagnostic(
-                                        format!(
-                                            "First and second functions must have opposite signatures, \
-                                            but their signatures are {} and {}",
-                                            a.sig,
-                                            b.sig
-                                        ),
-                                        DiagnosticKind::Warning,
-                                        modifier.span.clone(),
-                                    );
+                                    format!(
+                                        "First and second functions must have \
+                                        opposite signatures, \
+                                        but their signatures are {} and {}",
+                                        a.sig, b.sig
+                                    ),
+                                    DiagnosticKind::Warning,
+                                    modifier.span.clone(),
+                                );
                             }
                             cust.un = Some(b.clone());
                         }
@@ -190,15 +190,15 @@ impl Compiler {
                         if !b.node.is_empty() {
                             if !a.sig.is_compatible_with(b.sig.inverse()) {
                                 self.emit_diagnostic(
-                                        format!(
-                                            "First and second functions must have opposite signatures, \
-                                            but their signatures are {} and {}",
-                                            a.sig,
-                                            b.sig
-                                        ),
-                                        DiagnosticKind::Warning,
-                                        modifier.span.clone(),
-                                    );
+                                    format!(
+                                        "First and second functions must have \
+                                        opposite signatures, \
+                                        but their signatures are {} and {}",
+                                        a.sig, b.sig
+                                    ),
+                                    DiagnosticKind::Warning,
+                                    modifier.span.clone(),
+                                );
                             }
                             cust.un = Some(b.clone());
                         }
@@ -210,7 +210,8 @@ impl Compiler {
                                 None => self.emit_diagnostic(
                                     format!(
                                         "An anti inverse is specified, but the first \
-                                            function's signature {} cannot have an anti inverse",
+                                        function's signature {} cannot have an \
+                                        anti inverse",
                                         a.sig
                                     ),
                                     DiagnosticKind::Warning,
@@ -220,8 +221,8 @@ impl Compiler {
                                     self.emit_diagnostic(
                                         format!(
                                             "The first function's signature implies an \
-                                                anti inverse with signature {sig}, but the \
-                                                fifth function's signature is {}",
+                                            anti inverse with signature {sig}, but the \
+                                            fifth function's signature is {}",
                                             e.sig
                                         ),
                                         DiagnosticKind::Warning,
@@ -238,7 +239,7 @@ impl Compiler {
                             modifier.span.clone(),
                             format!(
                                 "Obverse requires between 1 and 5 branches, \
-                                    but {} were provided",
+                                but {} were provided",
                                 funcs.len()
                             ),
                         ))
@@ -260,6 +261,27 @@ impl Compiler {
                 let span = self.add_span(modifier.span.clone());
                 Ok(Node::CustomInverse(cust.into(), span))
             }
+            Modifier::Primitive(Primitive::Astar) if pack.branches.len() == 2 => {
+                let mut args = EcoVec::with_capacity(3);
+                for branch in pack.branches.iter().cloned() {
+                    args.push(self.word_sig(branch.map(Word::Func))?);
+                }
+                if args[0].sig.outputs != 1 {
+                    self.add_error(
+                        modifier.span.clone(),
+                        format!(
+                            "{}'s with a 2-function pack's first \
+                            function must have 1 output, \
+                            but its signature is {}",
+                            Primitive::Astar.format(),
+                            args[0].sig
+                        ),
+                    )
+                }
+                args.insert(1, Node::new_push(1).sig_node().unwrap());
+                let span = self.add_span(modifier.span.clone());
+                Ok(Node::Mod(Primitive::Astar, args, span))
+            }
             m if m.args() >= 2 => {
                 let new = Modified {
                     modifier: modifier.clone(),
@@ -271,7 +293,7 @@ impl Compiler {
                         .collect(),
                     pack_expansion: true,
                 };
-                self.modified(new, subscript, )
+                self.modified(new, subscript)
             }
             m => {
                 if let Modifier::Ref(name) = m {
@@ -286,7 +308,8 @@ impl Compiler {
                     format!("{m} cannot use a function pack"),
                 ));
             }
-        }.map(Some)
+        }
+        .map(Some)
     }
     #[allow(clippy::collapsible_match)]
     pub(crate) fn modified(

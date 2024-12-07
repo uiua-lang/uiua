@@ -3,9 +3,7 @@
 ## 0.14
 The next version of Uiua
 
-- Fix on-type formatting in comments
 - Add subscripts to on-type formatting
-- `astar` function pack
 - Unified `stencil` implementation
 - Stabilize `backward`, `case`
   - Need to figure out `backward`'s glyph and non-dyadic semantics

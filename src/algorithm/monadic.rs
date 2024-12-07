@@ -2,6 +2,7 @@
 
 use core::str;
 use std::{
+    borrow::Cow,
     cmp::Ordering,
     collections::{HashMap, HashSet},
     convert::identity,
@@ -10,7 +11,6 @@ use std::{
     io::Write,
     iter::{self, once},
     mem::size_of,
-    ops::Neg,
     ptr, slice,
     time::Duration,
 };
@@ -194,83 +194,27 @@ impl Value {
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, self.shape().dims()) {
             (Value::Char(arr), [] | [_]) => {
-                let mut s: String = arr.data.iter().copied().collect();
+                let s: String = arr.data.iter().copied().collect();
                 match (
                     s.strip_suffix("i").and_then(|s| s.split_once("r")),
                     s.strip_suffix("i").and_then(|s| s.split_once("+")),
                     s.strip_suffix("i").and_then(|s| s.split_once("-")),
                 ) {
                     (Some((re, im)), None, _) | (None, Some((re, im)), _) => {
-                        let re_parsed = Self::from(re).parse_num(env)?;
-                        let im_parsed = Self::from(im).parse_num(env)?;
-                        Complex {
-                            re: re_parsed.as_num(env, "")?,
-                            im: im_parsed.as_num(env, "")?,
-                        }
-                        .into()
+                        let re = parse_uiua_num(re.into(), env);
+                        let im = parse_uiua_num(im.into(), env);
+                        re.and_then(|re| im.map(|im| Complex { re, im }.into()))
+                            .or_else(|e| env.value_fill().cloned().ok_or(e))?
                     }
                     (_, _, Some((re, im))) => {
-                        let re_parsed = Self::from(re).parse_num(env)?;
-                        let im_parsed = Self::from(im).parse_num(env)?;
-                        Complex {
-                            re: re_parsed.as_num(env, "")?,
-                            im: im_parsed.as_num(env, "")?.neg(),
-                        }
-                        .into()
+                        let re = parse_uiua_num(re.into(), env);
+                        let im = parse_uiua_num(im.into(), env);
+                        re.and_then(|re| im.map(|im| Complex { re, im: -im }.into()))
+                            .or_else(|e| env.value_fill().cloned().ok_or(e))?
                     }
-                    _ => {
-                        let mut mul = 1.0;
-                        if s.contains('¯') {
-                            s = s.replace('¯', "-");
-                        }
-                        if s.contains('`') {
-                            s = s.replace('`', "-");
-                        }
-                        'glyphs: for (names, constant) in [
-                            (["η", "eta"], PI * 0.5),
-                            (["π", "pi"], PI),
-                            (["τ", "tau"], TAU),
-                            (["∞", "inf"], f64::INFINITY),
-                        ] {
-                            if let Some((before, after)) = s.split_once('/') {
-                                for name in names {
-                                    if before.trim_start_matches('-') == name {
-                                        s = format!(
-                                            "{}/{}",
-                                            before.replace(name, &constant.to_string()),
-                                            after
-                                        );
-                                        break 'glyphs;
-                                    } else if let Some(start) = before.strip_suffix(name) {
-                                        mul = constant;
-                                        s = format!("{}/{}", start, after);
-                                        break 'glyphs;
-                                    }
-                                }
-                            } else {
-                                for name in names {
-                                    if s.trim_start_matches('-') == name {
-                                        s = s.replace(name, &constant.to_string());
-                                        break 'glyphs;
-                                    } else if let Some(start) = s.strip_suffix(name) {
-                                        mul = constant;
-                                        s = start.to_string();
-                                        break 'glyphs;
-                                    }
-                                }
-                            }
-                        }
-                        match s.split_once('/') {
-                            Some((numer, denom)) => numer
-                                .parse::<f64>()
-                                .and_then(|n| denom.parse::<f64>().map(|d| n / d)),
-                            None => s.parse::<f64>(),
-                        }
-                        .map(|n| n * mul)
-                        .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))
-                        .or_else(|e| env.scalar_fill::<f64>().map_err(|_| e))?
-                        .into()
-                    }
+                    _ => parse_uiua_num(s.into(), env)
+                        .map(Into::into)
+                        .or_else(|e| env.value_fill().cloned().ok_or(e))?,
                 }
             }
             (Value::Box(arr), []) => {
@@ -373,6 +317,54 @@ impl Value {
             val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
         })
     }
+}
+
+fn parse_uiua_num(mut s: Cow<str>, env: &Uiua) -> UiuaResult<f64> {
+    let mut mul = 1.0;
+    if s.contains('¯') {
+        s = s.replace('¯', "-").into();
+    }
+    if s.contains('`') {
+        s = s.replace('`', "-").into();
+    }
+    'glyphs: for (names, constant) in [
+        (["η", "eta"], PI * 0.5),
+        (["π", "pi"], PI),
+        (["τ", "tau"], TAU),
+        (["∞", "inf"], f64::INFINITY),
+    ] {
+        if let Some((before, after)) = s.split_once('/') {
+            for name in names {
+                if before.trim_start_matches('-') == name {
+                    s = format!("{}/{}", before.replace(name, &constant.to_string()), after).into();
+                    break 'glyphs;
+                } else if let Some(start) = before.strip_suffix(name) {
+                    mul = constant;
+                    s = format!("{}/{}", start, after).into();
+                    break 'glyphs;
+                }
+            }
+        } else {
+            for name in names {
+                if s.trim_start_matches('-') == name {
+                    s = s.replace(name, &constant.to_string()).into();
+                    break 'glyphs;
+                } else if let Some(start) = s.strip_suffix(name) {
+                    mul = constant;
+                    s = start.to_string().into();
+                    break 'glyphs;
+                }
+            }
+        }
+    }
+    match s.split_once('/') {
+        Some((numer, denom)) => numer
+            .parse::<f64>()
+            .and_then(|n| denom.parse::<f64>().map(|d| n / d)),
+        None => s.parse::<f64>(),
+    }
+    .map(|n| n * mul)
+    .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))
 }
 
 impl<T: ArrayValue> Array<T> {

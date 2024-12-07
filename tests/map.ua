@@ -48,6 +48,7 @@ MapsII ← ∩(remove 1) MapsI
 # Fix
 ⍤⤙≍ ≡¤[4 5 6] ⊞get 1_2_3 ¤ map 1_2_3 4_5_6
 ⍤⤙≍ [4 5 6] ≡get 1_2_3 ¤ map 1_2_3 4_5_6
+⍤⤙≍ ↯3≡¤ [4 5 6] ⊞⋅get . 1_2_3 ¤ map1_2_3 4_5_6
 
 # Empty keys
 ⍤⟜≍ insert[][] map[]°△0_0 insert[][] °△0_0

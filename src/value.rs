@@ -131,7 +131,13 @@ impl Value {
     }
     /// Get an iterator over the rows of the value
     pub fn rows(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
-        val_as_arr!(self, |array| Box::new(array.rows().map(Value::from)))
+        if self.shape().first() == Some(&1) {
+            let mut row = self.clone();
+            row.undo_fix();
+            Box::new(once(row))
+        } else {
+            val_as_arr!(self, |array| Box::new(array.rows().map(Value::from)))
+        }
     }
     /// Get an iterator over the rows of the value that have the given shape
     pub fn row_shaped_slices(
@@ -398,7 +404,9 @@ impl Value {
     /// Collapse the top two dimensions of the array's shape
     pub fn undo_fix(&mut self) {
         if let Some(keys) = self.map_keys_mut() {
-            keys.unfix();
+            if !keys.unfix() {
+                self.take_map_keys();
+            }
         }
         _ = self.shape_mut().unfix();
     }

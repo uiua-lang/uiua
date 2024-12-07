@@ -84,6 +84,7 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data = new_data;
         self.shape = shape.into();
+        self.validate_shape();
     }
 }
 

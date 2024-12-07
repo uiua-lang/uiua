@@ -4,6 +4,7 @@
 The next version of Uiua
 
 - Add subscripts to on-type formatting
+- `un repeat`: convergence count
 - Unified `stencil` implementation
 - Stabilize `backward`, `case`
   - Need to figure out `backward`'s glyph and non-dyadic semantics

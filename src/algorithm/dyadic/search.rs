@@ -8,7 +8,13 @@ use std::{
 
 use ecow::{eco_vec, EcoVec};
 
-use crate::{array::*, cowslice::cowslice, value::Value, Shape, Uiua, UiuaResult};
+use crate::{
+    algorithm::{max_shape, validate_size},
+    array::*,
+    cowslice::cowslice,
+    value::Value,
+    Shape, Uiua, UiuaResult,
+};
 
 use super::{ArrayCmpSlice, FillContext};
 
@@ -337,16 +343,16 @@ impl<T: ArrayValue> Array<T> {
     pub fn find(&self, haystack: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let needle = self;
         let mut haystack = haystack;
+
         let mut local_searched: Self;
         let any_dim_greater = (needle.shape().iter().rev())
             .zip(haystack.shape().iter().rev())
             .any(|(a, b)| a > b);
-        if self.rank() > haystack.rank() || any_dim_greater {
+        if needle.rank() > haystack.rank() || any_dim_greater {
             // Fill
             match env.scalar_fill() {
                 Ok(fill) => {
-                    let mut target_shape = haystack.shape.clone();
-                    target_shape[0] = needle.row_count();
+                    let target_shape = max_shape(&haystack.shape, &needle.shape);
                     local_searched = haystack.clone();
                     local_searched.fill_to_shape(&target_shape, fill);
                     haystack = &local_searched;
@@ -374,7 +380,8 @@ impl<T: ArrayValue> Array<T> {
             .map(|(s, f)| s + 1 - f)
             .collect();
 
-        let mut data = EcoVec::from_elem(0, temp_output_shape.iter().product());
+        let elem_count = validate_size::<T>(temp_output_shape.iter().copied(), env)?;
+        let mut data = EcoVec::from_elem(0, elem_count);
         let data_slice = data.make_mut();
 
         if haystack.rank() == 1 {

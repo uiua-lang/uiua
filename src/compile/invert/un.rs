@@ -9,7 +9,7 @@ impl Node {
     /// Get the anti inverse of this node
     pub fn anti_inverse(&self, asm: &Assembly) -> InversionResult<Node> {
         dbgln!("anti-inverting {self:?}");
-        anti_inverse(self.as_slice(), asm)
+        anti_inverse(self.as_slice(), asm, false)
     }
 }
 
@@ -73,7 +73,7 @@ fn un_inverse_impl(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
     Err(error)
 }
 
-pub fn anti_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
+fn anti_inverse(input: &[Node], asm: &Assembly, for_un: bool) -> InversionResult<Node> {
     if input.is_empty() {
         return generic();
     }
@@ -88,12 +88,12 @@ pub fn anti_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
     if let Some(cached) = CACHE.with(|cache| cache.borrow_mut().get(&hash).cloned()) {
         return cached;
     }
-    let res = anti_inverse_impl(input, asm);
+    let res = anti_inverse_impl(input, asm, for_un);
     CACHE.with(|cache| cache.borrow_mut().insert(hash, res.clone()));
     res
 }
 
-fn anti_inverse_impl(mut input: &[Node], asm: &Assembly) -> InversionResult<Node> {
+fn anti_inverse_impl(mut input: &[Node], asm: &Assembly, for_un: bool) -> InversionResult<Node> {
     // An anti inverse can be optionaly sandwiched by an un inverse on either side
     let orig_input = input;
     let mut error = Generic;
@@ -105,7 +105,7 @@ fn anti_inverse_impl(mut input: &[Node], asm: &Assembly) -> InversionResult<Node
     'find_anti: for s in 0..input.len() {
         error = Generic;
         let curr = &input[s..];
-        for pattern in ANTI_PATTERNS {
+        for pattern in (ANTI_PATTERNS.iter()).filter(|pat| !for_un || pat.allowed_in_un()) {
             match pattern.invert_extract(curr, asm) {
                 Ok((new, anti_inv)) => {
                     if !nodes_clean_sig(new).is_some_and(|sig| sig.args == sig.outputs) {
@@ -218,7 +218,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
 ];
 
 pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
-    &NoUnder((Complex, (crate::Complex::I, Mul, Sub))),
+    &NoUn(NoUnder((Complex, (crate::Complex::I, Mul, Sub)))),
     &(Atan, (Flip, UnAtan, Div, Mul)),
     &((IgnoreMany(Flip), Add), Sub),
     &(Sub, Add),
@@ -236,7 +236,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &((Flip, Log), (Flip, Root)),
     &((Flip, Root), (Flip, Log)),
     &((Flip, 1, Flip, Div, Pow), (Flip, Log)),
-    &NoUnder((Complex, (crate::Complex::I, Mul, Sub))),
+    &NoUn(NoUnder((Complex, (crate::Complex::I, Mul, Sub)))),
     &(Min, MatchLe),
     &(Max, MatchGe),
     &(Orient, AntiOrient),
@@ -279,6 +279,9 @@ pub trait InvertPattern: fmt::Debug + Sync {
         input: &'a [Node],
         asm: &Assembly,
     ) -> InversionResult<(&'a [Node], Node)>;
+    fn allowed_in_un(&self) -> bool {
+        true
+    }
     fn allowed_in_under(&self) -> bool {
         true
     }
@@ -423,7 +426,7 @@ inverse!(
         if let Ok((inp, val)) = Val.invert_extract(input, asm) {
             // Starts with a value
             for end in 1..=inp.len() {
-                if let Ok(mut inv) = anti_inverse(&inp[..end], asm) {
+                if let Ok(mut inv) = anti_inverse(&inp[..end], asm, true) {
                     inv.prepend(val);
                     dbgln!("matched inner anti pattern for un\n  on {input:?}\n  to {inv:?}");
                     return Ok((&inp[end..], inv));
@@ -1147,7 +1150,28 @@ impl<P: InvertPattern> InvertPattern for NoUnder<P> {
     ) -> InversionResult<(&'a [Node], Node)> {
         self.0.invert_extract(input, asm)
     }
+    fn allowed_in_un(&self) -> bool {
+        self.0.allowed_in_un()
+    }
     fn allowed_in_under(&self) -> bool {
         false
+    }
+}
+
+#[derive(Debug)]
+struct NoUn<P>(P);
+impl<P: InvertPattern> InvertPattern for NoUn<P> {
+    fn invert_extract<'a>(
+        &self,
+        input: &'a [Node],
+        asm: &Assembly,
+    ) -> InversionResult<(&'a [Node], Node)> {
+        self.0.invert_extract(input, asm)
+    }
+    fn allowed_in_un(&self) -> bool {
+        false
+    }
+    fn allowed_in_under(&self) -> bool {
+        self.0.allowed_in_under()
     }
 }

@@ -151,6 +151,10 @@ li {
         background-color: #2d3c4a;
     }
 
+    .editor-right-button:hover {
+        background-color: #2d3c4a80;
+    }
+
     a:link {
         color: #6fadea;
     }
@@ -229,6 +233,10 @@ li {
 
     button:hover {
         background-color: #fdffff;
+    }
+
+    .editor-right-button:hover {
+        background-color: #fdffff80;
     }
 
     a:link {
@@ -522,6 +530,7 @@ option,
     width: 100%;
     pointer-events: none;
     white-space: pre;
+    z-index: 1;
 }
 
 .code-line {
@@ -738,6 +747,7 @@ option,
 
 .editor-right-button:hover {
     opacity: 1;
+    z-index: 2;
 }
 
 .info-button:hover::after,

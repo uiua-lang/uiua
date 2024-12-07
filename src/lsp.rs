@@ -1487,12 +1487,16 @@ mod server {
 
             // Check if in a string or comment
             let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
+            self.debug(format!("line: {}, col: {}", line, col)).await;
             for span in &doc.spans {
                 if matches!(
                     span.value,
                     SpanKind::String | SpanKind::Comment | SpanKind::Label
-                ) && span.span.contains_line_col(line, col)
-                {
+                ) && (span.span.contains_line_col_end(line, col) || {
+                    self.debug(format!("Check span end {:?}", span.span.end))
+                        .await;
+                    span.span.end.line + 1 == line as u16 && col == 1
+                }) {
                     return Ok(None);
                 }
             }
@@ -1500,6 +1504,7 @@ mod server {
             // Get ident
             let pos = params.text_document_position.position;
             let is_newline = params.ch == "\n";
+            self.debug(&format!("is_newline: {is_newline}")).await;
             let line = if is_newline {
                 pos.line.saturating_sub(1)
             } else {
@@ -1508,6 +1513,7 @@ mod server {
             let Some(line_str) = doc.input.lines().nth(line as usize) else {
                 return Ok(None);
             };
+            self.debug(&format!("line_str: {line_str:?}")).await;
             let line16: Vec<u16> = line_str.encode_utf16().collect();
             let col = if is_newline {
                 line16.len() as u32

@@ -419,15 +419,30 @@ impl CodeSpan {
         self.start.byte_pos as usize..self.end.byte_pos as usize
     }
     /// Check if the span contains a line and column
+    ///
+    /// Excludes the end column
     pub fn contains_line_col(&self, line: usize, col: usize) -> bool {
+        self.contains_line_col_impl(line, col, false)
+    }
+    /// Check if the span contains a line and column
+    ///
+    /// Includes the end column
+    pub fn contains_line_col_end(&self, line: usize, col: usize) -> bool {
+        self.contains_line_col_impl(line, col, true)
+    }
+    fn contains_line_col_impl(&self, line: usize, col: usize, include_end: bool) -> bool {
         let line = line as u16;
         let col = col as u16;
         if self.start.line == self.end.line {
-            self.start.line == line && (self.start.col..self.end.col).contains(&col)
+            self.start.line == line
+                && (!include_end && (self.start.col..self.end.col).contains(&col)
+                    || include_end && (self.start.col..=self.end.col).contains(&col))
         } else {
             (self.start.line..=self.end.line).contains(&line)
                 && (self.start.line < line || col > self.start.col)
-                && (self.end.line > line || col < self.end.col)
+                && (self.end.line > line
+                    || !include_end && col < self.end.col
+                    || include_end && col <= self.end.col)
         }
     }
     /// Get the text of the span from the inputs

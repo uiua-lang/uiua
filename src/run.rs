@@ -565,7 +565,8 @@ impl Uiua {
                     public: false,
                 };
                 let Some(mut value) = self.rt.stack.pop() else {
-                    return Err(self.error(
+                    return Err(self.error_with_span(
+                        self.get_span(span),
                         "No values on the stack for binding. \
                         This is a bug in the interpreter",
                     ));
@@ -1478,7 +1479,7 @@ impl Uiua {
         if ids.shape.is_empty() {
             let handle = ids.data[0];
             #[cfg(not(target_arch = "wasm32"))]
-            let thread_stack = self
+            let mut thread_stack = self
                 .rt
                 .thread
                 .children
@@ -1488,14 +1489,21 @@ impl Uiua {
                 .recv()
                 .unwrap()?;
             #[cfg(target_arch = "wasm32")]
-            let thread_stack = self
+            let mut thread_stack = self
                 .rt
                 .thread
                 .children
                 .remove(&handle)
                 .ok_or_else(|| self.error("Invalid thread id"))?
                 .result?;
-            self.rt.stack.extend(thread_stack);
+            match thread_stack.len() {
+                0 => self.push(Value::default()),
+                1 => self.push(thread_stack.into_iter().next().unwrap()),
+                _ => {
+                    thread_stack.reverse();
+                    self.push(Value::from_row_values(thread_stack, self)?)
+                }
+            }
         } else {
             let mut rows = Vec::new();
             for handle in ids.data {

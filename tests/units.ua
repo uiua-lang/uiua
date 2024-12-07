@@ -470,6 +470,7 @@ F ← ⌅⍜⊢¯ ⊏⊙"nubtqphsoe" -@0 °⋕
 
 # Spawn/pool/wait
 ⍤⤙≍ wait≡pool(1 ∘) 2_3 ≡(⊟1 ∘) 2_3
+⍤⤙≍ [1 2 3] waitpool(1 2 3)
 
 # Experimental!
 

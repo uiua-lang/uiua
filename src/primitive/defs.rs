@@ -2798,6 +2798,12 @@ primitive!(
     /// [wait] is pervasive and will call [each] implicitly.
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
+    ///
+    /// [wait] will always return a single value. If the spawned function returns multiple values, they will be put in an array.
+    /// ex: wait spawn(1 2 3)
+    /// This means you need to box incompatible values if you want to return multiple from the thread.
+    /// ex! wait spawn(1 "yes")
+    /// ex: wait spawn{1 "yes"}
     (1, Wait, Thread, "wait", Mutating),
     /// Send a value to a thread
     ///

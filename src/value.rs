@@ -80,6 +80,7 @@ macro_rules! val_as_arr {
 }
 
 impl Value {
+    /// A NULL pointer value for use in `&ffi`
     pub(crate) fn null() -> Self {
         let mut arr = Array::<u8>::default();
         arr.meta_mut().pointer = Some(MetaPtr::null());

@@ -1130,19 +1130,18 @@ code:
         Ok(SigNode::new(sig, node))
     }
     fn check_depth(&mut self, span: &CodeSpan) -> UiuaResult {
-        #[cfg(not(target_arch = "wasm32"))]
-        const MAX_RECURSION_DEPTH: usize = (512 + 256 + 64) * 1024;
-        #[cfg(target_arch = "wasm32")]
-        const MAX_RECURSION_DEPTH: usize = 128 * 1024;
-        #[cfg(debug_assertions)]
-        const MUL: usize = 1;
-        #[cfg(not(debug_assertions))]
-        const MUL: usize = 2;
+        const MAX_RECURSION_DEPTH: usize =
+            match (cfg!(target_arch = "wasm32"), cfg!(debug_assertions)) {
+                (false, false) => (512 + 256 + 64) * 1024 * 2,
+                (false, true) => (512 + 256 + 64) * 1024,
+                (true, false) => 512 * 1024,
+                (true, true) => 512 * 1024,
+            };
         let start_addr = *self.start_addrs.first().unwrap();
         let curr = 0u8;
         let curr_addr = &curr as *const u8 as usize;
         let diff = curr_addr.abs_diff(start_addr);
-        if diff > MAX_RECURSION_DEPTH * MUL {
+        if diff > MAX_RECURSION_DEPTH {
             return Err(self.error(span.clone(), "Compilation recursion limit reached"));
         }
         Ok(())

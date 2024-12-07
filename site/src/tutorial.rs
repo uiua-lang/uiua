@@ -1514,7 +1514,7 @@ fn TutorialMacros() -> impl IntoView {
 
         <Challenge
             number=2
-            prompt="creates a macro called F‼ which calls its first function, then its second, then its first again."
+            prompt="creates a macro called F‼ which calls its first function, then its second, then its first again"
             example="F‼⇌(⊂10) [1 2 3]"
             answer="F‼ ← ^0^1^0"
             default="F‼ ← ^0"

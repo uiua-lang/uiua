@@ -816,7 +816,8 @@ mod server {
         is_ident_char,
         lex::{lex, Loc},
         primitive::{PrimClass, PrimDocFragment},
-        AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token, UiuaErrorKind,
+        subscript, AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token,
+        UiuaErrorKind,
     };
 
     pub struct LspDoc {
@@ -1031,7 +1032,6 @@ mod server {
             let path = uri_path(&params.text_document_position_params.text_document.uri);
             let (line, col) =
                 lsp_pos_to_uiua(params.text_document_position_params.position, &doc.input);
-            self.debug(&format!("Hovering at {line}:{col}")).await;
             // Hovering a primitive
             for sp in &doc.spans {
                 if sp.span.contains_line_col(line, col) && sp.span.src == path {
@@ -1042,15 +1042,7 @@ mod server {
                                     kind: MarkupKind::Markdown,
                                     value: full_prim_doc_markdown(prim),
                                 }),
-                                range: Some({
-                                    let span = uiua_span_to_lsp(&sp.span, &doc.asm.inputs);
-                                    self.debug(&format!(
-                                        "Hovering {prim} at {:?}-{:?}",
-                                        span.start, span.end
-                                    ))
-                                    .await;
-                                    span
-                                }),
+                                range: Some(uiua_span_to_lsp(&sp.span, &doc.asm.inputs)),
                             }));
                         }
                         SpanKind::Obverse(set_inverses) => {
@@ -1487,24 +1479,20 @@ mod server {
 
             // Check if in a string or comment
             let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
-            self.debug(format!("line: {}, col: {}", line, col)).await;
             for span in &doc.spans {
                 if matches!(
                     span.value,
                     SpanKind::String | SpanKind::Comment | SpanKind::Label
-                ) && (span.span.contains_line_col_end(line, col) || {
-                    self.debug(format!("Check span end {:?}", span.span.end))
-                        .await;
-                    span.span.end.line + 1 == line as u16 && col == 1
-                }) {
+                ) && (span.span.contains_line_col_end(line, col)
+                    || span.span.end.line + 1 == line as u16 && col == 1)
+                {
                     return Ok(None);
                 }
             }
 
-            // Get ident
+            // Determine text before cursor
             let pos = params.text_document_position.position;
             let is_newline = params.ch == "\n";
-            self.debug(&format!("is_newline: {is_newline}")).await;
             let line = if is_newline {
                 pos.line.saturating_sub(1)
             } else {
@@ -1513,7 +1501,6 @@ mod server {
             let Some(line_str) = doc.input.lines().nth(line as usize) else {
                 return Ok(None);
             };
-            self.debug(&format!("line_str: {line_str:?}")).await;
             let line16: Vec<u16> = line_str.encode_utf16().collect();
             let col = if is_newline {
                 line16.len() as u32
@@ -1526,35 +1513,53 @@ mod server {
                 }
             };
             let before = String::from_utf16(&line16[..col as usize]).unwrap();
-            let mut ident = (before.chars().rev())
-                .take_while(|&c| is_ident_char(c))
-                .collect::<String>();
-            ident = ident.chars().rev().collect();
-
-            // Get formatted
-            let mut start = col.saturating_sub(ident.encode_utf16().count() as u32);
             let mut formatted = String::new();
-            if ident.is_empty() {
-                let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
-                    .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
-                    .collect();
-                ascii_prims.sort_by_key(|(_, a)| a.len());
-                ascii_prims.reverse();
-                for (prim, ascii) in ascii_prims {
-                    if before.ends_with(&ascii) {
-                        formatted.push_str(&prim.to_string());
-                        start = start.saturating_sub(ascii.encode_utf16().count() as u32);
-                        break;
+            let mut start = 0;
+            if let Some(pos) = before.rfind("__") {
+                // Subscript
+                let digit_ends = params.ch.parse::<u8>().is_ok();
+                if !digit_ends {
+                    start = col.saturating_sub(before[pos..].encode_utf16().count() as u32);
+                    let s = &before[pos + 2..];
+                    if let Some(sub) = subscript(s) {
+                        if sub.is_useable() {
+                            formatted = sub.to_string();
+                        }
                     }
-                }
-            } else if let Some(prims) = Primitive::from_format_name_multi(&ident) {
-                for (p, _) in prims {
-                    formatted.push_str(&p.to_string());
                 }
             }
             if formatted.is_empty() {
+                // Primitive ident
+                let mut ident = (before.chars().rev())
+                    .take_while(|&c| is_ident_char(c))
+                    .collect::<String>();
+                ident = ident.chars().rev().collect();
+
+                // Get formatted
+                start = col.saturating_sub(ident.encode_utf16().count() as u32);
+                if ident.is_empty() {
+                    let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
+                        .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
+                        .collect();
+                    ascii_prims.sort_by_key(|(_, a)| a.len());
+                    ascii_prims.reverse();
+                    for (prim, ascii) in ascii_prims {
+                        if before.ends_with(&ascii) {
+                            formatted = prim.to_string();
+                            start = start.saturating_sub(ascii.encode_utf16().count() as u32);
+                            break;
+                        }
+                    }
+                } else if let Some(prims) = Primitive::from_format_name_multi(&ident) {
+                    for (p, _) in prims {
+                        formatted = p.to_string();
+                    }
+                }
+            };
+            if formatted.is_empty() {
                 return Ok(None);
             }
+            self.debug(&format!("formatted: {formatted:?}")).await;
 
             // Adjust range
             let mut end = pos;

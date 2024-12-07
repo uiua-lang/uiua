@@ -1625,7 +1625,7 @@ pub fn is_ident_start(c: char) -> bool {
     c.is_alphabetic() && !"ⁿₙπτηℂ".contains(c)
 }
 
-fn subscript(s: &str) -> Option<Subscript> {
+pub(crate) fn subscript(s: &str) -> Option<Subscript> {
     if s.is_empty() {
         return None;
     }
@@ -1643,7 +1643,8 @@ fn subscript(s: &str) -> Option<Subscript> {
     let mut n: Option<i32> = None;
     let mut overflow = false;
     for c in chars {
-        let i = SUBSCRIPT_DIGITS.iter().position(|&d| c == d)? as i32;
+        let i = (SUBSCRIPT_DIGITS.iter().position(|&d| c == d))
+            .or_else(|| "0123456789".chars().position(|d| c == d))? as i32;
         let n = n.get_or_insert(0);
         let (m, over_m) = n.overflowing_mul(10);
         let (a, over_a) = m.overflowing_add(i);

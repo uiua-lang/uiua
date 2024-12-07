@@ -665,6 +665,10 @@ impl Subscript {
             _ => None,
         }
     }
+    /// Check if the subscript is useable
+    pub fn is_useable(&self) -> bool {
+        matches!(self, Subscript::N(_) | Subscript::Side(_))
+    }
 }
 
 impl fmt::Display for SubSide {

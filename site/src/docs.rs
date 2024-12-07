@@ -246,7 +246,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
             <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
             <li><A href="/docs/experimental">"Experimental Features"</A>" - an overview of experimental features"</li>
-            <li><A href="/docs/idioms">"Idioms"</A>" - commonly useful, non-obvious idioms"</li>
+            <li><A href="/docs/idioms">"Idioms"</A>" - commonly useful, non-obvious idioms. Also "<A href="/docs/idioms#aliases">"aliases"</A>"."</li>
         </ul>
 
         <Hd id="other-pages">"Other Pages"</Hd>

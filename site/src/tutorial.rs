@@ -251,7 +251,7 @@ fn TutorialBasic() -> impl IntoView {
         <Editor example="roundsqrtpi"/>
         <p>"On this site, you can also click the ↧ symbol on any editor to show a palette of all the Uiua glyphs. You can then click on any glyph to insert it into the editor."</p>
         <p>"Here is a table of all the glyphs that are typed with ASCII characters that get converted to glyphs."</p>
-        <table>
+        <table class="left-header-table">
             <tr>
                 <th>"Name"</th>
                 <th>"ASCII"</th>

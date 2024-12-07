@@ -84,9 +84,6 @@ td {
     border-radius: 0.5em;
 }
 
-th {
-    text-align: left;
-}
 
 tr:nth-child(even) {
     background-color: #0001;
@@ -95,13 +92,19 @@ tr:nth-child(even) {
 .bordered-table {
     border: 0.2em solid #0005;
     border-radius: 0.5em;
+    text-align: left;
 }
 
+.all-centered-table,
 .header-centered-table>tr>th {
     text-align: center;
-
 }
 
+.left-header-table {
+    text-align: left;
+}
+
+.all-centered-table,
 .cell-centered-table>tr>td {
     text-align: center;
 }
@@ -355,15 +358,25 @@ li {
     opacity: 0.8;
 }
 
+.wider,
 .features {
     display: flex;
-    flex-wrap: wrap;
     justify-content: space-between;
-    gap: min(3em, 3vw);
     width: min(120%, 90vw);
     margin-left: calc(-0.5 * (min(120%, 90vw) - 100%));
+    flex-wrap: wrap;
+    gap: min(3em, 3vw);
 }
 
+.features {
+    gap: min(3em, 3vw);
+}
+
+.wider {
+    gap: min(2em, 2vw);
+}
+
+.wider>*,
 .features>* {
     flex: 1 1 22em;
     width: 0;

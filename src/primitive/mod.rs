@@ -376,9 +376,9 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::Box, &["bx"]),
         (Primitive::IndexOf, &["idx"]),
         (Primitive::Switch, &["sw"]),
+        (Primitive::Stencil, &["st", "win"]),
         (Primitive::Floor, &["flr", "flor"]),
         (Primitive::Range, &["ran"]),
-        (Primitive::Transpose, &["tra"]),
         (Primitive::Partition, &["par"]),
         (Primitive::Dup, &["dup"]),
         (Primitive::Deshape, &["flat"]),
@@ -578,24 +578,33 @@ impl Primitive {
         let exact_match = res.name() == name;
         (exact_match || matching.next().is_none()).then_some(res)
     }
+    /// The list of strings where each character maps to an entire primitive
+    pub fn multi_aliases() -> &'static [(&'static str, &'static [(Primitive, &'static str)])] {
+        use Primitive::*;
+        &[
+            ("kork", &[(Keep, "k"), (On, "o"), (Rows, "r"), (Keep, "k")]),
+            ("rkok", &[(Rows, "r"), (Keep, "k"), (On, "o"), (Keep, "k")]),
+            ("awm", &[(Assert, "a"), (With, "w"), (Match, "m")]),
+            ("dor", &[(Div, "d"), (On, "o"), (Range, "r")]),
+            (
+                "pbbn",
+                &[(Partition, "p"), (Box, "b"), (By, "b"), (Ne, "n")],
+            ),
+            (
+                "ppbn",
+                &[(Partition, "p"), (Parse, "p"), (By, "b"), (Ne, "n")],
+            ),
+        ]
+    }
+    /// Look up a multi-alias from [`Self::multi_aliases`]
+    pub fn get_multi_alias(name: &str) -> Option<&'static [(Primitive, &'static str)]> {
+        Self::multi_aliases()
+            .iter()
+            .find(|(alias, _)| *alias == name)
+            .map(|(_, aliases)| *aliases)
+    }
     /// Try to parse multiple primitives from the concatenation of their name prefixes
     pub fn from_format_name_multi(name: &str) -> Option<Vec<(Self, &str)>> {
-        fn alias(name: &str) -> Option<Vec<(Primitive, &str)>> {
-            use Primitive::*;
-            Some(match name {
-                "kork" => vec![(Keep, "k"), (On, "o"), (Rows, "r"), (Keep, "k")],
-                "rkok" => vec![(Rows, "r"), (Keep, "k"), (On, "o"), (Keep, "k")],
-                "dor" => vec![(Div, "d"), (On, "o"), (Range, "r")],
-                "awm" => vec![(Assert, "a"), (With, "w"), (Match, "m")],
-                "win" => vec![(Stencil, "w"), (Identity, "in")],
-                "wind" => vec![(Stencil, "wi"), (Identity, "nd")],
-                "windo" => vec![(Stencil, "win"), (Identity, "do")],
-                "window" => vec![(Stencil, "win"), (Identity, "dow")],
-                "windows" => vec![(Stencil, "wind"), (Identity, "ows")],
-                _ => return None,
-            })
-        }
-
         let mut indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
         if indices.len() < 2 {
             return None;
@@ -664,7 +673,7 @@ impl Primitive {
                     continue 'outer;
                 }
                 // Aliases
-                if let Some(ps) = alias(sub_name) {
+                if let Some(ps) = Self::get_multi_alias(sub_name) {
                     prims.extend(ps);
                     start += len;
                     continue 'outer;
@@ -733,8 +742,8 @@ impl Primitive {
                     continue 'outer;
                 }
                 // Aliases
-                if let Some(ps) = alias(sub_name) {
-                    prims.extend(ps.into_iter().rev());
+                if let Some(ps) = Self::get_multi_alias(sub_name) {
+                    prims.extend(ps.iter().rev());
                     end -= len;
                     continue 'outer;
                 }

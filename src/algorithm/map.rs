@@ -42,7 +42,7 @@ impl<T: ArrayValue> Array<T> {
         kv
     }
     /// Create a map array
-    pub fn map<C: ErrorContext>(&mut self, mut keys: Value, ctx: &C) -> Result<(), C::Error> {
+    pub fn map<C: ErrorContext>(&mut self, keys: Value, ctx: &C) -> Result<(), C::Error> {
         let values = self;
         if keys.row_count() != values.row_count() {
             return Err(ctx.error(format!(
@@ -50,12 +50,6 @@ impl<T: ArrayValue> Array<T> {
                 keys.row_count(),
                 values.row_count()
             )));
-        }
-        if keys.rank() == 0 {
-            keys.shape_mut().insert(0, 1);
-        }
-        if values.rank() == 0 {
-            values.shape_mut().insert(0, 1);
         }
         let mut map_keys = MapKeys {
             keys: keys.clone(),
@@ -181,6 +175,9 @@ impl Value {
 
         if !self.is_map() && self.row_count() == 0 {
             self.map(Value::default(), env)?;
+        }
+        if self.rank() == 0 {
+            self.shape_mut().insert(0, 1);
         }
         let row_count = self.row_count();
         let mut keys = self
@@ -375,7 +372,11 @@ impl MapKeys {
     {
         let key_row_len = keys.row_len();
         let mut keys_shape = keys.shape.clone();
-        keys_shape[0] = new_capacity;
+        if let Some(len) = keys_shape.first_mut() {
+            *len = new_capacity;
+        } else if new_capacity > 1 {
+            keys_shape = new_capacity.into();
+        }
         let old_keys = take(keys).into_rows();
         let old_indices = take(indices);
         *keys = Array::new(
@@ -676,6 +677,12 @@ impl MapKeys {
         for index in &mut other.indices {
             *index += self.len;
         }
+        if self.keys.rank() == 0 {
+            self.keys.shape_mut().insert(0, 1);
+        }
+        if other.keys.rank() == 0 {
+            other.keys.shape_mut().insert(0, 1);
+        }
         let mut to_remove = Vec::new();
         let mut to_insert: Vec<_> = (other.keys.into_rows())
             .zip(other.indices)
@@ -798,28 +805,34 @@ fn coerce_values(
         }
     }
     match (&mut *a, b) {
-        (Value::Num(arr), Value::Num(item)) if arr.shape[1..] != item.shape => Err(format!(
-            "Cannot {action1} shape {} {action2} shape {} {action3}",
-            item.shape(),
-            FormatShape(&arr.shape()[1..])
-        )),
-        (Value::Complex(arr), Value::Complex(item)) if arr.shape[1..] != item.shape => {
+        (Value::Num(arr), Value::Num(item)) if arr.rank() > 0 && arr.shape[1..] != item.shape => {
             Err(format!(
                 "Cannot {action1} shape {} {action2} shape {} {action3}",
                 item.shape(),
                 FormatShape(&arr.shape()[1..])
             ))
         }
-        (Value::Box(arr), Value::Box(item)) if arr.shape[1..] != item.shape => Err(format!(
-            "Cannot {action1} shape {} {action2} shape {} {action3}",
-            item.shape(),
-            FormatShape(&arr.shape()[1..])
-        )),
+        (Value::Complex(arr), Value::Complex(item))
+            if arr.rank() > 0 && arr.shape[1..] != item.shape =>
+        {
+            Err(format!(
+                "Cannot {action1} shape {} {action2} shape {} {action3}",
+                item.shape(),
+                FormatShape(&arr.shape()[1..])
+            ))
+        }
+        (Value::Box(arr), Value::Box(item)) if arr.rank() > 0 && arr.shape[1..] != item.shape => {
+            Err(format!(
+                "Cannot {action1} shape {} {action2} shape {} {action3}",
+                item.shape(),
+                FormatShape(&arr.shape()[1..])
+            ))
+        }
         (val @ Value::Num(_), owned @ Value::Num(_))
         | (val @ Value::Complex(_), owned @ Value::Complex(_))
         | (val @ Value::Char(_), owned @ Value::Char(_))
         | (val @ Value::Box(_), owned @ Value::Box(_)) => {
-            if &val.shape()[1..] != owned.shape() {
+            if val.rank() > 0 && &val.shape()[1..] != owned.shape() {
                 Err(format!(
                     "Cannot {action1} shape {} {action2} shape {} {action3}",
                     owned.shape(),

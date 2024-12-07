@@ -232,6 +232,9 @@ impl<T: ArrayValue> Array<T> {
                 if self.shape() == [0] {
                     return Ok(other);
                 }
+                let map_keys = (self.rank() == 0)
+                    .then(|| self.take_map_keys().zip(other.take_map_keys()))
+                    .flatten();
                 if other.shape.row_count() == 0 {
                     validate_size_of::<T>(once(1).chain(other.shape[1..].iter().copied()))
                         .map_err(|e| ctx.error(e))?;
@@ -275,6 +278,15 @@ impl<T: ArrayValue> Array<T> {
                 other.data.as_mut_slice().rotate_right(rot_len);
                 other.shape = target_shape;
                 other.shape[0] += 1;
+                // Combine map keys
+                if let Some((mut a, b)) = map_keys {
+                    let mut to_remove = a.join(b, ctx)?;
+                    to_remove.sort_unstable();
+                    for i in to_remove.into_iter().rev() {
+                        other.remove_row(i);
+                    }
+                    other.meta_mut().map_keys = Some(a);
+                }
                 other
             }
             Ordering::Greater => {
@@ -285,7 +297,8 @@ impl<T: ArrayValue> Array<T> {
                 self
             }
             Ordering::Equal => {
-                if self.rank() == 0 {
+                let map_keys = self.take_map_keys().zip(other.take_map_keys());
+                let mut res = if self.rank() == 0 {
                     debug_assert_eq!(other.rank(), 0);
                     if let Some(label) = self.take_label().xor(other.take_label()) {
                         self.meta_mut().label = Some(label);
@@ -294,7 +307,6 @@ impl<T: ArrayValue> Array<T> {
                     self.shape = 2.into();
                     self
                 } else {
-                    let map_keys = self.take_map_keys().zip(other.take_map_keys());
                     if self.shape[1..] != other.shape[1..] {
                         match ctx.scalar_fill::<T>() {
                             Ok(fill) => {
@@ -343,17 +355,18 @@ impl<T: ArrayValue> Array<T> {
                         other.shape[0] += self.shape[0];
                         self = other;
                     }
-
-                    if let Some((mut a, b)) = map_keys {
-                        let mut to_remove = a.join(b, ctx)?;
-                        to_remove.sort_unstable();
-                        for i in to_remove.into_iter().rev() {
-                            self.remove_row(i);
-                        }
-                        self.meta_mut().map_keys = Some(a);
-                    }
                     self
+                };
+                // Combine map keys
+                if let Some((mut a, b)) = map_keys {
+                    let mut to_remove = a.join(b, ctx)?;
+                    to_remove.sort_unstable();
+                    for i in to_remove.into_iter().rev() {
+                        res.remove_row(i);
+                    }
+                    res.meta_mut().map_keys = Some(a);
                 }
+                res
             }
         };
         res.validate_shape();
@@ -369,6 +382,9 @@ impl<T: ArrayValue> Array<T> {
             validate_size_of::<T>(once(1).chain(self.shape[1..].iter().copied()))
                 .map_err(|e| ctx.error(e))?;
         }
+        let map_keys = (other.rank() == 0)
+            .then(|| self.take_map_keys().zip(other.take_map_keys()))
+            .flatten();
         self.combine_meta(other.meta());
         if self.shape[1..] == other.shape {
             self.data.extend_from_cowslice(other.data);
@@ -409,6 +425,15 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         self.shape[0] += 1;
+        // Combine map keys
+        if let Some((mut a, b)) = map_keys {
+            let mut to_remove = a.join(b, ctx)?;
+            to_remove.sort_unstable();
+            for i in to_remove.into_iter().rev() {
+                self.remove_row(i);
+            }
+            self.meta_mut().map_keys = Some(a);
+        }
         self.validate_shape();
         Ok(())
     }

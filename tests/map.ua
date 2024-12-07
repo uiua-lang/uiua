@@ -43,7 +43,7 @@ MapsII ← ∩(remove 1) MapsI
 ⍤⤙≍ 0 ≍ ⟜map [1 2 3] [4 5 6]
 ⍤⤙≍ 1 ≍ .map [1 2 3] [4 5 6]
 
-⍤⤙≍ ⤙insert 1□"a" map 1 □"a"
+⍤⤙≍ map [1] {"a"} insert 1 □"a" map 1 □"a"
 
 # Fix
 ⍤⤙≍ ≡¤[4 5 6] ⊞get 1_2_3 ¤ map 1_2_3 4_5_6

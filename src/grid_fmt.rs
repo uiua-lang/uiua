@@ -436,7 +436,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             }
             // Outline the grid
             let grid_row_count = grid.len();
-            if grid_row_count == 1 && self.rank() == 1 {
+            if self.rank() == 0 && self.is_map() {
+            } else if grid_row_count == 1 && self.rank() == 1 {
                 // Add brackets to lists
                 let (left, right) = if requires_summary || self.is_map() {
                     if params.boxed {

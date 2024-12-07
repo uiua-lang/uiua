@@ -3,9 +3,11 @@
 ## 0.14
 The next version of Uiua
 
-- `un repeat`: convergence count
+- Pad right buttons below text
+- `&rl`
+- Random selection for "Rich Primitives" on home page
+- `un repeat`: convergence count?
 - Unified `stencil` implementation
-- `&frl`
 - Stabilize `backward`, `case`
   - Need to figure out `backward`'s glyph and non-dyadic semantics
   - Add `case` to pattern matching tutorial
@@ -22,6 +24,8 @@ The next version of Uiua
 Features that are planned to be implemented in the future.
 
 - Step debugging
+- Better compiler IR sytem
+  - Make the stack only exist at compile time?
 - Dead code elimination
   - Eliminate unused anonymous functions
 - Dynamic modules

@@ -1545,14 +1545,14 @@ mod server {
                     ascii_prims.reverse();
                     for (prim, ascii) in ascii_prims {
                         if before.ends_with(&ascii) {
-                            formatted = prim.to_string();
+                            formatted.push_str(&prim.to_string());
                             start = start.saturating_sub(ascii.encode_utf16().count() as u32);
                             break;
                         }
                     }
                 } else if let Some(prims) = Primitive::from_format_name_multi(&ident) {
                     for (p, _) in prims {
-                        formatted = p.to_string();
+                        formatted.push_str(&p.to_string());
                     }
                 }
             };

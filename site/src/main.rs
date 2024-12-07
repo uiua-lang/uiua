@@ -18,6 +18,7 @@ use js_sys::Date;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use rand::prelude::*;
 use uiua::{now, ConstantDef, Primitive, SysOp};
 use uiua_editor::{
     binding_name_class, prim_class, utils::ChallengeDef, Editor, EditorMode, EDITOR_SHORTCUTS,
@@ -72,10 +73,7 @@ pub fn Site() -> impl IntoView {
         view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_view(),
         "It's got um...I um...arrays".into_view(),
     ];
-    let local_storage = window().local_storage().unwrap().unwrap();
-    let mut visits: usize = (local_storage.get_item("visits").ok().flatten())
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+    let mut visits = visits();
     let subtitle = if visits % 3 < 2 {
         subtitles_common[(visits as f64 * 2.0 / 3.0).round() as usize % subtitles_common.len()]
             .into_view()
@@ -91,7 +89,7 @@ pub fn Site() -> impl IntoView {
         link.set_attribute("href", "/favicon-crayon.ico").unwrap();
         document().head().unwrap().append_child(&link).unwrap();
     }
-    local_storage
+    (window().local_storage().unwrap().unwrap())
         .set_item("visits", &visits.to_string())
         .unwrap();
 
@@ -142,6 +140,15 @@ pub fn Site() -> impl IntoView {
     }
 }
 
+fn visits() -> usize {
+    (window().local_storage().unwrap().unwrap())
+        .get_item("visits")
+        .ok()
+        .flatten()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0)
+}
+
 fn weewuh() {
     let i = (now() % 1.0 * 100.0) as u32;
     let src = match i {
@@ -157,6 +164,75 @@ fn weewuh() {
 #[component]
 pub fn MainPage() -> impl IntoView {
     use Primitive::*;
+
+    let visits = visits();
+
+    fn rich_prim(prim: Primitive, text: &'static str, example: &'static str) -> impl Fn() -> View {
+        move || {
+            view! {
+                <p><Prim prim=prim/>" "{text}":"</p>
+                <Editor example=example/>
+            }
+            .into_view()
+        }
+    }
+
+    let mut rich_prims = vec![
+        rich_prim(
+            Select,
+            "for re-sequencing array items",
+            r#"⊏ 2_1_3_0_4 "loco!""#,
+        ),
+        rich_prim(
+            Deduplicate,
+            "for removing duplicate items",
+            r#"◴ "hello, world!""#,
+        ),
+        rich_prim(Sort, "for... sorting", "⍆ [2 8 3 2 1 5]"),
+        rich_prim(
+            Keep,
+            "for filtering",
+            r#"▽ [1 1 1 0 0 0 0 1 0] "filter me""#,
+        ),
+        rich_prim(
+            Where,
+            "for finding the indices of things",
+            "⊚≤5 [4 8 3 9 2 7 1]",
+        ),
+        rich_prim(Mask, "for finding subsequences", r#"⦷ "ra" "abracadabra""#),
+        rich_prim(
+            Partition,
+            "for splitting arrays by sequential keys",
+            r#"⬚@ ⊜∘≠@ ."Oh boy, neat!""#,
+        ),
+        rich_prim(
+            Un,
+            "for inverting the behavior of a function",
+            "°(÷2+1) [1 2 3 4]",
+        ),
+        rich_prim(
+            Under,
+            "for modifying only part of an array (among other things)",
+            r#"⍜(↙2|×10) 1_2_3_4_5"#,
+        ),
+    ];
+
+    let indices = if visits < 4 {
+        vec![0, rich_prims.len() - 3, rich_prims.len() - 1]
+    } else {
+        let mut rng = SmallRng::seed_from_u64(visits as u64);
+        let mut indices: Vec<usize> = (0..rich_prims.len()).collect();
+        indices.shuffle(&mut rng);
+        indices.truncate(3);
+        indices.sort_unstable();
+        indices
+    };
+    let mut rich_prims: Vec<_> = indices
+        .into_iter()
+        .rev()
+        .map(|i| rich_prims.remove(i)())
+        .collect();
+    rich_prims.reverse();
 
     view! {
         <Title text="Uiua"/>
@@ -201,12 +277,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <Hd id="rich-primitives">"Rich Primitives"</Hd>
                     <p>"Uiua has lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
-                    <p><Prim prim=Select/>" for re-sequencing array items:"</p>
-                    <Editor example=r#"⊏ 2_1_3_0_4 "loco!""#/>
-                    <p><Prim prim=Partition/>" for splitting arrays by sequential keys:"</p>
-                    <Editor example=r#"⬚@ ⊜∘≠@ ."Oh boy, neat!""#/>
-                    <p><Prim prim=Under/>" for modifying only part of an array (among other things):"</p>
-                    <Editor example="⍜(↙2|×10) 1_2_3_4_5"/>
+                    { rich_prims }
                 </div>
                 <div>
                     <Hd id="syntactic-simplicity">"Syntactic Simplicity"</Hd>

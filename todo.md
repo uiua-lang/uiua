@@ -3,8 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Pad right buttons below text
-- `both` subscript pan
 - `&rl`
 - Random selection for "Rich Primitives" on home page
 - `un repeat`: convergence count?

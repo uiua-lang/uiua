@@ -22,8 +22,12 @@ use time::UtcOffset;
 #[cfg(feature = "native_sys")]
 pub use self::native::*;
 use crate::{
-    algorithm::validate_size, cowslice::cowslice, get_ops, primitive::PrimDoc, Array, Boxed,
-    FfiType, Ops, Primitive, Purity, Signature, Uiua, UiuaErrorKind, UiuaResult, Value,
+    algorithm::{multi_output, validate_size},
+    cowslice::cowslice,
+    get_ops,
+    primitive::PrimDoc,
+    Array, Boxed, FfiType, Ops, Primitive, Purity, Signature, Uiua, UiuaErrorKind, UiuaResult,
+    Value,
 };
 
 /// The text of Uiua's example module
@@ -317,6 +321,14 @@ sys_op! {
     /// The stream handle `0` is stdin.
     /// ex: &ru "Uiua" &fo "example.txt"
     (2, ReadUntil, Stream, "&ru", "read until", Mutating),
+    /// Read lines from a stream
+    ///
+    /// [&rl] calls its function on each line in the stream without reading the entire stream into memory.
+    /// Lines are delimited by either `\n` or `\r\n`.
+    /// For each line, it will be pushed onto the stack and the function will be called.
+    /// Additional arguments to the function will be bellow the line.
+    /// Outputs in excess of the number of accumulators will be collected into arrays.
+    (1[1], ReadLines, Stream, "&rl", "read lines", Mutating),
     /// Write an array to a stream
     ///
     /// If the stream is a file, the file may not be written to until it is closed with [&cl].
@@ -698,7 +710,7 @@ impl Value {
     /// Attempt to convert the array to systme handle
     pub fn as_handle(&self, env: &Uiua, mut expected: &'static str) -> UiuaResult<Handle> {
         if expected.is_empty() {
-            expected = "Expected value to be a handle";
+            expected = "Expected value to be a stream handle";
         }
         match self {
             Value::Box(b) => {
@@ -715,6 +727,10 @@ impl Value {
 
 /// The function type passed to `&ast`
 pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
+/// The function type passed to `&rl`'s returned function
+pub type ReadLinesFn<'a> = Box<dyn FnMut(String, &mut Uiua) -> UiuaResult + Send + 'a>;
+/// The function type returned by `&rl`
+pub type ReadLinesReturnFn<'a> = Box<dyn FnMut(&mut Uiua, ReadLinesFn) -> UiuaResult + Send + 'a>;
 
 /// The kind of a handle
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -862,6 +878,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
             }
         }
         Ok(buffer)
+    }
+    /// Read lines from a stream
+    fn read_lines<'a>(&self, handle: Handle) -> Result<ReadLinesReturnFn<'a>, String> {
+        Err("Reading from streams is not supported in this environment".into())
     }
     /// Write bytes to a stream
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
@@ -1824,6 +1844,40 @@ impl SysOp {
     }
     pub(crate) fn run_mod(&self, ops: Ops, env: &mut Uiua) -> UiuaResult {
         match self {
+            SysOp::ReadLines => {
+                let [f] = get_ops(ops, env)?;
+                let handle = env.pop(1)?.as_handle(env, "")?;
+                let mut read_lines = env
+                    .rt
+                    .backend
+                    .read_lines(handle)
+                    .map_err(|e| env.error(e))?;
+                let sig = f.sig;
+                if sig.args == 0 {
+                    return env.exec(f);
+                }
+                let acc_count = sig.args.saturating_sub(1);
+                let out_count = sig.outputs.saturating_sub(acc_count);
+                let mut outputs = multi_output(out_count, Vec::new());
+                env.without_fill(|env| {
+                    read_lines(
+                        env,
+                        Box::new(|s, env| {
+                            let val = Value::from(s);
+                            env.push(val);
+                            env.exec(f.clone())?;
+                            for i in 0..out_count {
+                                outputs[i].push(env.pop("read lines output")?);
+                            }
+                            Ok(())
+                        }),
+                    )
+                })?;
+                for rows in outputs.into_iter().rev() {
+                    let val = Value::from_row_values(rows, env)?;
+                    env.push(val);
+                }
+            }
             SysOp::AudioStream => {
                 let [f] = get_ops(ops, env)?;
                 if f.sig != (1, 1) {

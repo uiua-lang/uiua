@@ -53,7 +53,7 @@ pub trait Indexable: IntoIterator + Deref<Target = [Self::Item]> {}
 impl<T> Indexable for T where T: IntoIterator + Deref<Target = [T::Item]> {}
 
 type MultiOutput<T> = TinyVec<[T; 1]>;
-fn multi_output<T: Clone + Default>(n: usize, val: T) -> MultiOutput<T> {
+pub(crate) fn multi_output<T: Clone + Default>(n: usize, val: T) -> MultiOutput<T> {
     let mut vec = TinyVec::with_capacity(n);
     if n == 0 {
         return vec;

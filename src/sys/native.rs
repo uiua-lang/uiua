@@ -2,7 +2,7 @@ use std::{
     any::Any,
     env::{self, set_current_dir},
     fs::{self, File, OpenOptions},
-    io::{stderr, stdin, stdout, BufReader, Read, Write},
+    io::{stderr, stdin, stdout, BufRead, BufReader, Read, Write},
     net::*,
     path::{Path, PathBuf},
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
@@ -15,10 +15,13 @@ use std::{
     time::Duration,
 };
 
-use crate::{terminal_size, GitTarget, Handle, Span, SysBackend, Uiua, Value};
 use colored::Colorize;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
+
+use crate::{
+    terminal_size, GitTarget, Handle, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend, Uiua, Value,
+};
 
 /// The default native system backend
 #[derive(Default)]
@@ -29,8 +32,8 @@ struct GlobalNativeSys {
     next_handle: AtomicU64,
     files: DashMap<Handle, BufReader<File>>,
     child_stdins: DashMap<Handle, ChildStream<ChildStdin>>,
-    child_stdouts: DashMap<Handle, ChildStream<ChildStdout>>,
-    child_stderrs: DashMap<Handle, ChildStream<ChildStderr>>,
+    child_stdouts: DashMap<Handle, ChildStream<BufReader<ChildStdout>>>,
+    child_stderrs: DashMap<Handle, ChildStream<BufReader<ChildStderr>>>,
     tcp_listeners: DashMap<Handle, TcpListener>,
     tls_listeners: DashMap<Handle, TlsListener>,
     tcp_sockets: DashMap<Handle, TcpStream>,
@@ -53,8 +56,8 @@ struct GlobalNativeSys {
 enum SysStream<'a> {
     File(dashmap::mapref::one::RefMut<'a, Handle, BufReader<File>>),
     ChildStdin(dashmap::mapref::one::RefMut<'a, Handle, ChildStream<ChildStdin>>),
-    ChildStdout(dashmap::mapref::one::RefMut<'a, Handle, ChildStream<ChildStdout>>),
-    ChildStderr(dashmap::mapref::one::RefMut<'a, Handle, ChildStream<ChildStderr>>),
+    ChildStdout(dashmap::mapref::one::RefMut<'a, Handle, ChildStream<BufReader<ChildStdout>>>),
+    ChildStderr(dashmap::mapref::one::RefMut<'a, Handle, ChildStream<BufReader<ChildStderr>>>),
     TcpSocket(dashmap::mapref::one::Ref<'a, Handle, TcpStream>),
     TlsSocket(dashmap::mapref::one::Ref<'a, Handle, TlsSocket>),
 }
@@ -242,7 +245,7 @@ impl GlobalNativeSys {
                 return handle;
             }
         }
-        panic!("Ran out of file handles");
+        panic!("Ran out of stream handles");
     }
     fn get_stream(&self, handle: Handle) -> Result<SysStream, String> {
         Ok(if let Some(file) = self.files.get_mut(&handle) {
@@ -258,7 +261,7 @@ impl GlobalNativeSys {
         } else if let Some(tls_socket) = self.tls_sockets.get(&handle) {
             SysStream::TlsSocket(tls_socket)
         } else {
-            return Err("Invalid file handle".to_string());
+            return Err("Invalid stream handle".to_string());
         })
     }
     fn get_tcp_listener<T>(&self, handle: Handle, f: impl FnOnce(&TcpListener) -> T) -> Option<T> {
@@ -536,6 +539,49 @@ impl SysBackend for NativeSys {
                 buf
             }
         })
+    }
+    fn read_lines<'a>(&self, handle: Handle) -> Result<ReadLinesReturnFn<'a>, String> {
+        Ok(Box::new(move |env: &mut Uiua, mut f: ReadLinesFn| {
+            match NATIVE_SYS.get_stream(handle).map_err(|e| env.error(e))? {
+                SysStream::File(mut file) => {
+                    for line in (&mut *file).lines() {
+                        let line =
+                            line.map_err(|e| env.error(format!("Error reading line: {e}")))?;
+                        f(line, env)?;
+                    }
+                }
+                SysStream::ChildStdin(_) => return Err(env.error("Cannot read from child stdin")),
+                SysStream::ChildStdout(mut child) => {
+                    for line in (&mut child.stream).lines() {
+                        let line =
+                            line.map_err(|e| env.error(format!("Error reading line: {e}")))?;
+                        f(line, env)?;
+                    }
+                }
+                SysStream::ChildStderr(mut child) => {
+                    for line in (&mut child.stream).lines() {
+                        let line =
+                            line.map_err(|e| env.error(format!("Error reading line: {e}")))?;
+                        f(line, env)?;
+                    }
+                }
+                SysStream::TcpSocket(socket) => {
+                    for line in BufReader::new(&*socket).lines() {
+                        let line =
+                            line.map_err(|e| env.error(format!("Error reading line: {e}")))?;
+                        f(line, env)?;
+                    }
+                }
+                SysStream::TlsSocket(socket) => {
+                    for line in &mut BufReader::new(&socket.stream).lines() {
+                        let line =
+                            line.map_err(|e| env.error(format!("Error reading line: {e}")))?;
+                        f(line, env)?;
+                    }
+                }
+            }
+            Ok(())
+        }))
     }
     fn write(&self, handle: Handle, conts: &[u8]) -> Result<(), String> {
         let mut conts = conts;
@@ -960,7 +1006,7 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.child_stdouts.insert(
             stdout_handle,
             ChildStream {
-                stream: stdout,
+                stream: BufReader::new(stdout),
                 child: child.clone(),
             },
         );
@@ -968,7 +1014,7 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.child_stderrs.insert(
             stderr_handle,
             ChildStream {
-                stream: stderr,
+                stream: BufReader::new(stderr),
                 child,
             },
         );

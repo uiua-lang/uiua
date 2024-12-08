@@ -209,6 +209,13 @@
     "class": "Stream",
     "description": "Read at most n bytes from a stream"
   },
+  "&rl": {
+    "args": 1,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Stream",
+    "description": "Read lines from a stream"
+  },
   "&rs": {
     "args": 2,
     "outputs": 1,

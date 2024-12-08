@@ -15,7 +15,7 @@ use serde::*;
 
 use crate::{
     algorithm::validate_size_of, Array, ArrayLen, ImplPrimitive, Node, Primitive, SigNode,
-    Signature, Value,
+    Signature, SysOp, Value,
 };
 
 impl Node {
@@ -523,6 +523,10 @@ impl VirtualEnv {
                 With | Off => {
                     let [f] = get_args(args)?;
                     self.handle_args_outputs(f.args, f.outputs + 1);
+                }
+                Sys(SysOp::ReadLines) => {
+                    let [f] = get_args(args)?;
+                    self.handle_args_outputs(f.args + 1, f.outputs);
                 }
                 prim if prim.modifier_args().is_some() => {
                     if let Some(sig) = prim.sig() {

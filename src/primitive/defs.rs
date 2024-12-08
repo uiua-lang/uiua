@@ -1763,6 +1763,9 @@ primitive!(
     ///   : base [10 2 ∞] 35
     /// ex: # Experimental!
     ///   : base [60 60 24 365.25 ∞] now
+    /// [fill] can be used to set a repeating base after the array.
+    /// ex: # Experimental!
+    ///   :  ⬚10base[12 20] 999999
     /// Non-integer bases are supported.
     /// ex: # Experimental!
     ///   : base π [η π τ]
@@ -1783,6 +1786,11 @@ primitive!(
     ///   : ⌝base 0 [1 ¯2 1]
     ///   : ⌝base 1 [1 ¯2 1]
     ///   : ⌝base 2 [1 ¯2 1]
+    /// [anti][base] also works with array bases:
+    /// ex: # Experimental!
+    ///   : ⌝base[12 20] [1 12]
+    ///   : ⌝base[12 20 ∞] [11 1 3]
+    ///   : ⬚10⌝base[12 20] [3 13 6 6 1 4]
     (2, Base, DyadicArray, "base"),
     /// Apply a reducing function to an array
     ///

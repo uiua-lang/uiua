@@ -6,6 +6,7 @@ The next version of Uiua
 - Window improvements
 - `un repeat`: convergence count?
 - Unified `stencil` implementation
+- Let `&ast` take args
 - Stabilize `backward`, `case`
   - Need to figure out `backward`'s glyph and non-dyadic semantics
   - Add `case` to pattern matching tutorial

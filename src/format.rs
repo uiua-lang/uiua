@@ -642,7 +642,7 @@ impl<'a> Formatter<'a> {
                 self.prev_import_function = None;
                 let lines =
                     flip_unsplit_lines(lines.iter().cloned().flat_map(split_words).collect());
-                self.format_multiline_words(&lines, false, false, true, false, depth);
+                self.format_multiline_words(&lines, Compact::Never, false, true, false, depth);
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
@@ -1047,12 +1047,7 @@ impl<'a> Formatter<'a> {
                     }
                 }
 
-                let start_indent =
-                    (self.output.split('\n').last()).map_or(0, |line| line.chars().count());
-                let indent = self.config.multiline_indent * depth;
-                let allow_compact = start_indent <= indent + 2;
-
-                self.format_multiline_words(&arr.lines, allow_compact, true, true, true, depth + 1);
+                self.format_multiline_words(&arr.lines, Compact::Auto, true, true, true, depth + 1);
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -1111,7 +1106,7 @@ impl<'a> Formatter<'a> {
                     }
                     self.format_multiline_words(
                         lines,
-                        false,
+                        Compact::Never,
                         false,
                         true,
                         i < pack.branches.len() - 1,
@@ -1314,12 +1309,22 @@ impl<'a> Formatter<'a> {
             _ => self.push(span, &as_str),
         }
     }
+}
+
+#[derive(PartialEq)]
+enum Compact {
+    Always,
+    Never,
+    Auto,
+}
+
+impl<'a> Formatter<'a> {
     fn format_multiline_words(
         &mut self,
         mut lines: &[Vec<Sp<Word>>],
-        allow_compact: bool,
+        compact: Compact,
         allow_leading_space: bool,
-        allow_trailing_newline: bool,
+        mut allow_trailing_newline: bool,
         full_trim_end: bool,
         depth: usize,
     ) {
@@ -1348,8 +1353,10 @@ impl<'a> Formatter<'a> {
             }
         }
         // Remove leading empty lines
+        let mut has_leading_newline = false;
         while lines.first().is_some_and(|line| line.is_empty()) {
             lines = &lines[1..];
+            has_leading_newline = true;
         }
         let curr_line = self.output.split('\n').last().unwrap_or_default();
         let start_line_pos = if self.output.ends_with('\n') {
@@ -1357,13 +1364,16 @@ impl<'a> Formatter<'a> {
         } else {
             curr_line.chars().count()
         };
-        let indent = if allow_compact {
+        let indent = if compact != Compact::Never && !has_leading_newline {
+            if compact == Compact::Auto {
+                allow_trailing_newline = start_line_pos <= self.config.multiline_indent * depth;
+            }
             start_line_pos
         } else {
             self.config.multiline_indent * depth
         };
         for (i, line) in lines.iter().enumerate() {
-            if i > 0 || (!allow_compact && allow_leading_space) {
+            if i > 0 || (compact == Compact::Never && allow_leading_space) || has_leading_newline {
                 if line.is_empty() {
                     if allow_trailing_newline || prevent_compact || i < lines.len() - 1 {
                         self.newline(depth.saturating_sub(1));
@@ -1438,7 +1448,11 @@ impl<'a> Formatter<'a> {
     fn func(&mut self, func: &Func, depth: usize) {
         let start_indent = (self.output.split('\n').last()).map_or(0, |line| line.chars().count());
         let indent = self.config.multiline_indent * depth;
-        let allow_compact = start_indent <= indent + 1;
+        let compact = if start_indent <= indent + 1 {
+            Compact::Always
+        } else {
+            Compact::Never
+        };
 
         self.output.push('(');
 
@@ -1452,7 +1466,7 @@ impl<'a> Formatter<'a> {
             }
         }
 
-        self.format_multiline_words(&func.lines, allow_compact, true, true, true, depth + 1);
+        self.format_multiline_words(&func.lines, compact, true, true, true, depth + 1);
         self.output.push(')');
     }
     fn subscript(&mut self, sub: &Sp<Subscript>) {
@@ -1681,9 +1695,16 @@ G ← (
  2
  3
 )
+[1
+ 2
+ 3
+]
 (1
  2
  3)
+[1
+ 2
+ 3]
 ⊃(1
 | 2
 )
@@ -1722,9 +1743,33 @@ x ← 2
   )
 )
 1/10
+x ← [1_2
+     3_4]
+x ← [
+  1_2
+  3_4]
+x ← [
+  1_2
+  3_4
+]
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
-    assert_eq!(formatted, input, "{formatted}");
+    if formatted != input {
+        const N: usize = 50;
+        let offset = formatted
+            .chars()
+            .zip(input.chars())
+            .position(|(a, b)| a != b)
+            .unwrap_or_else(|| formatted.chars().count().min(input.chars().count()))
+            .saturating_sub(N / 2);
+        panic!(
+            "Formatting non-idempotent:\n\
+            input:     {:?}\n\
+            formatted: {:?}\n",
+            input.chars().skip(offset).take(N).collect::<String>(),
+            formatted.chars().skip(offset).take(N).collect::<String>(),
+        );
+    }
 }
 
 #[test]

@@ -3,6 +3,7 @@
 ## 0.14
 The next version of Uiua
 
+- Overhaul indices
 - Window improvements
 - `un repeat`: convergence count?
 - Unified `stencil` implementation

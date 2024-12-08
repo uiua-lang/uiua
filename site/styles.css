@@ -895,7 +895,7 @@ option,
     max-width: 80%;
     white-space: pre-wrap;
     font-family: "Code Font", monospace;
-    z-index: 1;
+    z-index: 2;
 }
 
 .additional-functions {

@@ -2507,6 +2507,10 @@ mod tests {
             r##"{{
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "Uiua",
+	"firstLineMatch": "^#!/.*\buiua\b",
+	"fileTypes": [
+		"ua"
+	],
 	"patterns": [
 		{{
 			"include": "#comments"

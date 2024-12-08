@@ -191,6 +191,7 @@ fn all_fills() -> impl IntoView {
             { fill_row(Each, "Fills row shapes", "⬚0∵⇡ [3_2 2_4]") }
             { fill_row(Partition, "Fills row shapes", "⬚@ ⊜∘ ≠@ . \"Hey there\"") }
             { fill_row(Group, "Fills row shapes", "⬚0⊕∘ ◿3. [1 8 4 9 3 8 2]") }
+            { fill_row(Base, "Repeating base", "# Experimental!\n⬚10⌝base[12 20] [3 13 6 6 1 4]") }
             { fill_row_impl(view!(<Prims prims=[Un, Pop]/>), "Get fill value", "⬚5°◌") }
         </table>
     }

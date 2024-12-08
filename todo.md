@@ -3,8 +3,7 @@
 ## 0.14
 The next version of Uiua
 
-- `&rl`
-- Random selection for "Rich Primitives" on home page
+- Improve greek format constants
 - `un repeat`: convergence count?
 - Unified `stencil` implementation
 - Stabilize `backward`, `case`

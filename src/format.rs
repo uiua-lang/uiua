@@ -908,7 +908,8 @@ impl<'a> Formatter<'a> {
             Word::Number(Ok(n)) => {
                 let grid_str = n.grid_string(false);
                 let formatted = word.span.as_str(self.inputs, |s| {
-                    if !grid_str.contains('…')
+                    if !s.contains('/')
+                        && !grid_str.contains('…')
                         && grid_str.chars().count() < s.trim_end_matches('i').chars().count()
                         && !["tau", "pi", "eta"].iter().any(|name| s.contains(name))
                         && !grid_str.contains("τ/")
@@ -1720,6 +1721,7 @@ x ← 2
   (∘
   )
 )
+1/10
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, input, "{formatted}");

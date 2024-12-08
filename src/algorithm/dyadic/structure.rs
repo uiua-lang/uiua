@@ -318,19 +318,22 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut start = 0;
-        for (i, (&ind, &f)) in index.iter().zip(into.shape()).enumerate() {
+        for (i, (&ind, &s)) in index.iter().zip(into.shape()).enumerate() {
             let ind = if ind >= 0 {
                 ind as usize
             } else {
-                (f as isize + ind) as usize
+                (s as isize + ind) as usize
             };
+            if ind >= s {
+                return Ok(into);
+            }
             start += ind * into.shape[i + 1..].iter().product::<usize>();
         }
-        for (f, i) in (into.data.as_mut_slice().iter_mut())
+        for (x, i) in (into.data.as_mut_slice().iter_mut())
             .skip(start)
             .zip(self.data)
         {
-            *f = i;
+            *x = i;
         }
         Ok(into)
     }

@@ -3,7 +3,7 @@
 ## 0.14
 The next version of Uiua
 
-- Improve greek format constants
+- Window improvements
 - `un repeat`: convergence count?
 - Unified `stencil` implementation
 - Stabilize `backward`, `case`

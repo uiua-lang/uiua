@@ -1,7 +1,7 @@
 //! The Uiua lexer
 
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::VecDeque,
     error::Error,
     fmt,
     hash::Hash,
@@ -1712,27 +1712,30 @@ fn canonicalize_subscripts(ident: Ident) -> Ident {
 }
 
 thread_local! {
-    static SPECIAL: BTreeMap<&'static str, &'static str> = [
-        ("Alpha", "α"),
-        ("Beta", "β"),
-        ("Gamma", "γ"),
-        ("Delta", "δ"),
-        ("Epsilon", "ε"),
-        ("Zeta", "ζ"),
-        ("Iota", "ι"),
-        ("Kappa", "κ"),
-        ("Lambda", "λ"),
-        ("Mu", "μ"),
-        ("Nu", "ν"),
-        ("Xi", "ξ"),
-        ("Omicron", "ο"),
-        ("Rho", "ρ"),
-        ("Sigma", "σ"),
-        ("Upsilon", "υ"),
-        ("Phi", "φ"),
-        ("Chi", "χ"),
-        ("Psi", "ψ"),
-        ("Omega", "ω"),
+    static SPECIAL: Vec<(&'static str, &'static str, &'static str)> = [
+        ("Alpha", "α", "Α"),
+        ("Beta", "β", "Β"),
+        ("Gamma", "γ", "Γ"),
+        ("Delta", "δ", "Δ"),
+        ("Epsilon", "ε", "Ε"),
+        ("Zeta", "ζ", "Ζ"),
+        ("Eta", "", "Η"),
+        ("Iota", "ι", "Ι"),
+        ("Kappa", "κ", "Κ"),
+        ("Lambda", "λ", "Λ"),
+        ("Mu", "μ", "Μ"),
+        ("Nu", "ν", "Ν"),
+        ("Xi", "ξ", "Ξ"),
+        ("Omicron", "ο", "Ο"),
+        ("Pi", "", "Π"),
+        ("Rho", "ρ", "Ρ"),
+        ("Sigma", "σ", "Σ"),
+        ("Tau", "", "Τ"),
+        ("Upsilon", "υ", "Υ"),
+        ("Phi", "φ", "Φ"),
+        ("Chi", "χ", "Χ"),
+        ("Psi", "ψ", "Ψ"),
+        ("Omega", "ω", "Ω"),
     ].into()
 }
 
@@ -1740,13 +1743,21 @@ fn canonicalize_special(ident: Ident) -> Ident {
     let end = ident
         .find(|c: char| "!‼₋".contains(c) || SUBSCRIPT_DIGITS.contains(&c))
         .unwrap_or(ident.len());
-    if let Some(replacement) = SPECIAL.with(|map| map.get(&ident[..end]).copied()) {
-        let mut new = Ident::from(replacement);
-        new.push_str(&ident[end..]);
-        new
-    } else {
+    SPECIAL.with(|map| {
+        for &(name, lower, upper) in map {
+            if &ident[..end] == name {
+                let mut new = Ident::from(upper);
+                new.push_str(&ident[end..]);
+                return new;
+            }
+            if !lower.is_empty() && &ident[..end] == lower {
+                let mut new = Ident::from(lower);
+                new.push_str(&ident[end..]);
+                return new;
+            }
+        }
         ident
-    }
+    })
 }
 
 fn pick_subscript(neg: bool, n: Option<i32>, overflow: bool) -> Subscript {

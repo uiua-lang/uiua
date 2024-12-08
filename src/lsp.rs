@@ -15,8 +15,8 @@ use crate::{
     lex::{CodeSpan, Sp},
     parse::parse,
     Assembly, BindingCounts, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc,
-    Inputs, PreEvalMode, Primitive, Purity, SafeSys, Shape, Signature, SysBackend, UiuaError,
-    Value, CONSTANTS,
+    Inputs, LocalName, PreEvalMode, Primitive, Purity, SafeSys, Shape, Signature, SysBackend,
+    UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -167,6 +167,8 @@ pub struct CodeMeta {
     pub inline_macros: HashMap<CodeSpan, usize>,
     /// A map of incomplete ref paths to their module's index
     pub incomplete_refs: HashMap<CodeSpan, usize>,
+    /// A map of top-level binding names to their indices
+    pub top_level_names: HashMap<Ident, LocalName>,
     /// A map of the spans of top-level lines to values
     pub top_level_values: HashMap<CodeSpan, Vec<Value>>,
     /// A map of strand spans
@@ -1238,6 +1240,7 @@ mod server {
                             .map(|sig| format!("{:<4}", sig.to_string())),
                         ..Default::default()
                     }),
+                    sort_text: name.split('~').last().map(Into::into),
                     documentation: binding.comment.as_ref().map(|c| {
                         Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
@@ -1299,7 +1302,7 @@ mod server {
             }
 
             // Find the span at the cursor position
-            let Some(sp) = (doc.spans.iter()).find(|sp| sp.span.contains_line_col(line, col))
+            let Some(sp) = (doc.spans.iter()).find(|sp| sp.span.contains_line_col_end(line, col))
             else {
                 return Ok(None);
             };
@@ -1311,6 +1314,7 @@ mod server {
             let Ok(token) = std::str::from_utf8(&doc.input.as_bytes()[sp.span.byte_range()]) else {
                 return Ok(None);
             };
+            let lower_token = token.to_lowercase();
 
             // Collect primitive completions
             let mut completions: Vec<_> = Primitive::non_deprecated()
@@ -1368,33 +1372,47 @@ mod server {
                 .collect();
 
             // Collect binding completions
-            for binding in self.bindings_in_file(doc_uri, &uri_path(doc_uri)) {
-                let Some(name) = binding.span.try_as_str(&doc.asm.inputs, |s| s.to_string()) else {
-                    continue;
-                };
+            for (name, local) in &doc.code_meta.top_level_names {
+                let binding = &doc.asm.bindings[local.index];
 
-                if let BindingKind::Import(module) = &binding.kind {
-                    for binding in self.bindings_in_file(doc_uri, module) {
-                        if !binding.public {
-                            continue;
+                match &binding.kind {
+                    BindingKind::Import(module) => {
+                        for binding in self.bindings_in_file(doc_uri, module) {
+                            if !binding.public {
+                                continue;
+                            }
+                            let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+                            if !item_name.to_lowercase().starts_with(&lower_token) {
+                                continue;
+                            }
+                            completions.push(make_completion(
+                                &doc,
+                                format!("{name}~{item_name}"),
+                                &sp.span,
+                                &binding,
+                            ));
                         }
-                        let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-                        if !item_name.to_lowercase().starts_with(&token.to_lowercase()) {
-                            continue;
-                        }
-                        completions.push(make_completion(
-                            &doc,
-                            format!("{name}~{item_name}"),
-                            &sp.span,
-                            &binding,
-                        ));
                     }
+                    BindingKind::Module(module) => {
+                        for (item_name, local) in &module.names {
+                            if !local.public && !name.to_lowercase().starts_with(&lower_token) {
+                                continue;
+                            }
+                            completions.push(make_completion(
+                                &doc,
+                                format!("{name}~{item_name}"),
+                                &sp.span,
+                                &doc.asm.bindings[local.index],
+                            ));
+                        }
+                    }
+                    _ => (),
                 }
 
-                if !name.to_lowercase().starts_with(&token.to_lowercase()) {
+                if !name.to_lowercase().starts_with(&lower_token) {
                     continue;
                 }
-                completions.push(make_completion(&doc, name, &sp.span, &binding));
+                completions.push(make_completion(&doc, name.to_string(), &sp.span, binding));
             }
 
             // Collect constant completions

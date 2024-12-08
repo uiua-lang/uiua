@@ -428,15 +428,22 @@ impl Compiler {
         }
         // dbg!(&self.asm.root);
 
+        // Print diagnostics
         if self.print_diagnostics {
             for diagnostic in self.take_diagnostics() {
                 eprintln!("{}", diagnostic.report());
             }
         }
 
+        // Update top-level bindings
+        self.code_meta.top_level_names = (self.scope.names.iter())
+            .map(|(name, local)| (name.clone(), *local))
+            .collect();
+
         if let InputSrc::File(_) = &src {
             self.current_imports.pop();
         }
+        // Collect errors
         match res {
             Err(e) | Ok(Err(e)) => {
                 self.asm.root.truncate(node_start);

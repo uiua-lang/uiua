@@ -652,7 +652,6 @@ code:
                         // Compile test assert
                         if self.mode != RunMode::Normal
                             && !from_macro
-                            && sig.outputs == 0
                             && !self
                                 .scopes()
                                 .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))

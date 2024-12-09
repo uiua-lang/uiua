@@ -846,6 +846,12 @@ pub const WILDCARD_NAN: f64 =
 /// A character value used as a wildcard that will equal any character
 pub const WILDCARD_CHAR: char = '\u{100000}';
 
+/// Round to a number of significant decimal places
+fn round_sig_dec(f: f64, n: i32) -> f64 {
+    let mul = 10f64.powf(n as f64 - f.fract().log10().ceil());
+    (f * mul).round() / mul
+}
+
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
@@ -906,10 +912,10 @@ impl ArrayValue for f64 {
             format!("all {}", min.grid_string(false))
         } else {
             let mut s = format!(
-                "{}-{} x̄{}",
-                min.grid_string(false),
-                max.grid_string(false),
-                mean.grid_string(false)
+                "{}-{} μ{}",
+                round_sig_dec(min, 4).grid_string(false),
+                round_sig_dec(max, 4).grid_string(false),
+                round_sig_dec(mean, 4).grid_string(false)
             );
             if nan_count > 0 {
                 s.push_str(&format!(
@@ -985,7 +991,7 @@ impl ArrayValue for u8 {
                 "{}-{} x̄{}",
                 min.grid_string(false),
                 max.grid_string(false),
-                mean.grid_string(false)
+                round_sig_dec(mean, 4).grid_string(false)
             )
         }
     }
@@ -1210,6 +1216,9 @@ impl ArrayValue for Complex {
         if min == max {
             format!("all {}", min.grid_string(false))
         } else {
+            min = Complex::new(round_sig_dec(min.re, 3), round_sig_dec(min.im, 3));
+            max = Complex::new(round_sig_dec(max.re, 3), round_sig_dec(max.im, 3));
+            mean = Complex::new(round_sig_dec(mean.re, 3), round_sig_dec(mean.im, 3));
             format!(
                 "{} - {} x̄{}",
                 min.grid_string(false),

@@ -4,6 +4,7 @@
 The next version of Uiua
 
 - Overhaul indices
+- Fix indented formatter bug
 - Forced signatures
 - Proper data def locals
 - Diagnostic for 0-output function wrapped in `[]`

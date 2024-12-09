@@ -848,6 +848,9 @@ pub const WILDCARD_CHAR: char = '\u{100000}';
 
 /// Round to a number of significant decimal places
 fn round_sig_dec(f: f64, n: i32) -> f64 {
+    if f.fract() == 0.0 {
+        return f;
+    }
     let mul = 10f64.powf(n as f64 - f.fract().log10().ceil());
     (f * mul).round() / mul
 }

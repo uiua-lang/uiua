@@ -353,33 +353,35 @@ impl<T: ArrayValue> Array<T> {
             }
             _ => {
                 let mut data = EcoVec::with_capacity(elem_count);
-                let mut indices = vec![0; k];
-                let op = match (rev, same) {
-                    (false, false) => PartialOrd::lt,
-                    (true, false) => PartialOrd::gt,
-                    (false, true) => PartialOrd::le,
-                    (true, true) => PartialOrd::ge,
-                };
-                'outer: loop {
-                    env.respect_execution_limit()?;
-                    if (indices.iter().skip(1))
-                        .zip(&indices)
-                        .all(|(a, b)| op(a, b))
-                    {
-                        for &i in indices.iter().rev() {
-                            data.extend_from_slice(at(i));
+                let mut stack = vec![(Vec::new(), 0)];
+                if rev {
+                    while let Some((curr, start)) = stack.pop() {
+                        if curr.len() == k {
+                            for &i in &curr {
+                                data.extend_from_slice(at(n - 1 - i));
+                            }
+                            continue;
+                        }
+                        for i in start..n {
+                            let mut curr = curr.clone();
+                            curr.push(i);
+                            stack.push((curr, i + !same as usize));
                         }
                     }
-                    // Increment indices
-                    for i in 0..k {
-                        indices[i] += 1;
-                        if indices[i] == n {
-                            indices[i] = 0;
-                        } else {
-                            continue 'outer;
+                } else {
+                    while let Some((curr, start)) = stack.pop() {
+                        if curr.len() == k {
+                            for &i in &curr {
+                                data.extend_from_slice(at(i));
+                            }
+                            continue;
+                        }
+                        for i in (start..n).rev() {
+                            let mut curr = curr.clone();
+                            curr.push(i);
+                            stack.push((curr, i + !same as usize));
                         }
                     }
-                    break;
                 }
                 Array::new(shape, data)
             }

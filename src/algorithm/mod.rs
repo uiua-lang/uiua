@@ -643,21 +643,21 @@ pub fn format(parts: &[EcoString], env: &mut Uiua) -> UiuaResult {
 #[derive(Debug)]
 struct ArrayCmpSlice<'a, T>(&'a [T]);
 
-impl<'a, T: ArrayValue> PartialEq for ArrayCmpSlice<'a, T> {
+impl<T: ArrayValue> PartialEq for ArrayCmpSlice<'_, T> {
     fn eq(&self, other: &Self) -> bool {
         self.0.len() == other.0.len() && self.0.iter().zip(other.0).all(|(a, b)| a.array_eq(b))
     }
 }
 
-impl<'a, T: ArrayValue> Eq for ArrayCmpSlice<'a, T> {}
+impl<T: ArrayValue> Eq for ArrayCmpSlice<'_, T> {}
 
-impl<'a, T: ArrayValue> PartialOrd for ArrayCmpSlice<'a, T> {
+impl<T: ArrayValue> PartialOrd for ArrayCmpSlice<'_, T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a, T: ArrayValue> Ord for ArrayCmpSlice<'a, T> {
+impl<T: ArrayValue> Ord for ArrayCmpSlice<'_, T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.0
             .iter()
@@ -668,7 +668,7 @@ impl<'a, T: ArrayValue> Ord for ArrayCmpSlice<'a, T> {
     }
 }
 
-impl<'a, T: ArrayValue> Hash for ArrayCmpSlice<'a, T> {
+impl<T: ArrayValue> Hash for ArrayCmpSlice<'_, T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         for elem in self.0 {
             elem.array_hash(state);
@@ -882,7 +882,7 @@ fn astar_impl(ops: Ops, mode: AstarMode, env: &mut Uiua) -> UiuaResult {
         args: Vec<Value>,
     }
 
-    impl<'a> AstarEnv<'a> {
+    impl AstarEnv<'_> {
         fn heuristic(&mut self, node: &Value) -> UiuaResult<f64> {
             let heu_args = self.heuristic.sig.args;
             for arg in (self.args.iter()).take(heu_args.saturating_sub(1)).rev() {

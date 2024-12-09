@@ -1318,13 +1318,13 @@ impl ArrayCmp<u8> for f64 {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FormatShape<'a, T = usize>(pub &'a [T]);
 
-impl<'a, T: fmt::Display> fmt::Debug for FormatShape<'a, T> {
+impl<T: fmt::Display> fmt::Debug for FormatShape<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self}")
     }
 }
 
-impl<'a, T: fmt::Display> fmt::Display for FormatShape<'a, T> {
+impl<T: fmt::Display> fmt::Display for FormatShape<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[")?;
         for (i, dim) in self.0.iter().enumerate() {

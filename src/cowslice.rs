@@ -283,7 +283,7 @@ impl<'a, T> Repeat<'a, T> {
         Self { elem, count }
     }
 }
-impl<'a, T: Clone> Iterator for Repeat<'a, T> {
+impl<T: Clone> Iterator for Repeat<'_, T> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.count == 0 {
@@ -296,7 +296,7 @@ impl<'a, T: Clone> Iterator for Repeat<'a, T> {
         (self.count, Some(self.count))
     }
 }
-impl<'a, T: Clone> ExactSizeIterator for Repeat<'a, T> {}
+impl<T: Clone> ExactSizeIterator for Repeat<'_, T> {}
 
 #[test]
 fn cow_slice_modify() {

@@ -255,7 +255,7 @@ struct Parser<'i> {
 
 type FunctionContents = (Option<Sp<Signature>>, Vec<Vec<Sp<Word>>>, Option<CodeSpan>);
 
-impl<'i> Parser<'i> {
+impl Parser<'_> {
     fn next_token_map<'a, T: 'a>(
         &'a mut self,
         f: impl FnOnce(&'a Token) -> Option<T>,

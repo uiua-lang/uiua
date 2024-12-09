@@ -733,7 +733,7 @@ impl Inputs {
 impl fmt::Debug for Assembly {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct FmtFunctions<'a>(&'a Assembly);
-        impl<'a> fmt::Debug for FmtFunctions<'a> {
+        impl fmt::Debug for FmtFunctions<'_> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list()
                     .entries(self.0.bindings.iter().filter_map(|b| {

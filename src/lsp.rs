@@ -213,7 +213,7 @@ impl SetInverses {
 }
 
 struct FormatSetInverses<'a>(SetInverses, [&'a str; 3]);
-impl<'a> fmt::Display for FormatSetInverses<'a> {
+impl fmt::Display for FormatSetInverses<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let FormatSetInverses(set_inverses, names) = self;
         let count =

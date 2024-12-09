@@ -135,7 +135,7 @@ struct TypeRt<'a> {
     asm: &'a Assembly,
 }
 
-impl<'a> TypeRt<'a> {
+impl TypeRt<'_> {
     #[allow(clippy::collapsible_match)]
     fn node(&mut self, node: &Node) -> Result<(), TypeError> {
         use Primitive::*;

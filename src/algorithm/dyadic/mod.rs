@@ -1249,7 +1249,7 @@ impl<T: ArrayValue> Array<T> {
             let s = if i >= 0 {
                 u
             } else if fill.is_some() {
-                ((*v + u - 1) / u).max(1)
+                (*v).div_ceil(u).max(1)
             } else {
                 (*v / u).max(1)
             };

@@ -211,7 +211,7 @@ fn struct_fields_size_align(fields: &[FfiType]) -> (usize, usize) {
         }
         size += field_size;
     }
-    size = (size + align - 1) / align * align;
+    size = size.div_ceil(align) * align;
     // println!("size_align of struct {fields:?}: {size}, {align}");
     (size, align)
 }

@@ -494,7 +494,7 @@ struct Formatter<'a> {
 
 type GlyphMap = Vec<(CodeSpan, (Loc, Loc))>;
 
-impl<'a> Formatter<'a> {
+impl Formatter<'_> {
     fn format_top_items(mut self, items: &[Item]) -> (String, GlyphMap) {
         self.format_items(items, 0);
         let mut output = self.output;
@@ -1318,7 +1318,7 @@ enum Compact {
     Auto,
 }
 
-impl<'a> Formatter<'a> {
+impl Formatter<'_> {
     fn format_multiline_words(
         &mut self,
         mut lines: &[Vec<Sp<Word>>],

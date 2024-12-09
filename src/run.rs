@@ -1643,7 +1643,7 @@ impl StackArg for i32 {
         format!("argument {self}")
     }
 }
-impl<'a> StackArg for &'a str {
+impl StackArg for &str {
     fn arg_name(self) -> String {
         self.to_string()
     }

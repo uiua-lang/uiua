@@ -1327,7 +1327,7 @@ impl<'a> Lexer<'a> {
             input: &'a str,
         }
 
-        impl<'a> PostLexer<'a> {
+        impl PostLexer<'_> {
             fn nth_is(&self, n: usize, f: impl Fn(&str) -> bool) -> bool {
                 self.tokens
                     .get(n)

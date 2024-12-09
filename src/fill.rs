@@ -2,8 +2,8 @@ use crate::{Array, Boxed, Complex, Uiua, Value};
 
 pub struct Fill<'a> {
     env: &'a Uiua,
-    value_fill: fn(env: &'a Uiua) -> Option<&Value>,
-    other_value_fill: fn(env: &'a Uiua) -> Option<&Value>,
+    value_fill: fn(env: &'a Uiua) -> Option<&'a Value>,
+    other_value_fill: fn(env: &'a Uiua) -> Option<&'a Value>,
     other_error: &'static str,
 }
 

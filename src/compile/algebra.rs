@@ -61,8 +61,16 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
                     node.push(push(k));
                     node.push(Prim(Div, span));
                 }
-                node.push(push(p.into()));
-                node.push(ImplPrim(Root, span));
+                if p == 2.0 {
+                    node.push(Prim(Sqrt, span));
+                } else if p == 0.5 {
+                    node.push(Prim(Dup, span));
+                    node.push(Prim(Mul, span));
+                } else {
+                    node.push(push(p.into()));
+                    node.push(ImplPrim(Root, span));
+                }
+                dbgln!("algebraic inverted to {node:?}");
                 return Ok(node);
             }
         }
@@ -228,8 +236,15 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                                 *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
                             }
                             if x != 1.0 {
-                                node.push(Node::new_push(x));
-                                node.push(Prim(Pow, span));
+                                if x == 0.5 {
+                                    node.push(Prim(Sqrt, span));
+                                } else if x == 2.0 {
+                                    node.push(Prim(Dup, span));
+                                    node.push(Prim(Mul, span));
+                                } else {
+                                    node.push(Node::new_push(x));
+                                    node.push(Prim(Pow, span));
+                                }
                             }
                         }
                     }

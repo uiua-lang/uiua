@@ -3,13 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Fix complex performance bug
-  - ```
-    A ← ℂ⊸⤸0_2 °△102_512_512
-    ⊙◌⍜now⌵ A
-    ⊙◌⍜now(⍜∩°√+°ℂ) A
-    ⊙◌⍜now(√+∩°√°ℂ) A
-    ```
 - Overhaul indices
 - Forced signatures
 - Proper data def locals

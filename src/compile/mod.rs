@@ -1489,16 +1489,19 @@ code:
             }
             Ordering::Less => {
                 let diff = (new_delta - delta).unsigned_abs();
-                for i in 0..diff {
-                    node.push(Node::new_push(Boxed(Value::from(format!(
-                        "extra-{}",
-                        i + 1
-                    )))));
+                let spandex = self.add_span(span.clone());
+                let mut extra = Node::from_iter(
+                    (0..diff).map(|i| Node::new_push(Boxed(Value::from(format!("dbg-{}", i + 1))))),
+                );
+                for _ in 0..sig.outputs {
+                    extra = Node::Mod(Primitive::Dip, eco_vec![extra.sig_node().unwrap()], spandex);
                 }
+                node.push(extra);
                 self.emit_diagnostic(
                     format!(
-                        "Signature mismatch: declared {new_sig} but inferred {sig}. \
-                        Additional debug outputs will be generated."
+                        "Signature mismatch: declared {new_sig} but inferred {sig}.  \
+                        {diff} debug output{} will be generated.",
+                        if diff == 1 { "" } else { "s" }
                     ),
                     DiagnosticKind::Warning,
                     span.clone(),

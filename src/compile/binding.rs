@@ -255,7 +255,7 @@ impl Compiler {
         let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
         let node = self.words(binding.words);
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
-        let node = match node {
+        let mut node = match node {
             Ok(node) => node,
             Err(e) => {
                 self.asm.add_binding_at(
@@ -272,6 +272,15 @@ impl Compiler {
         // Resolve signature
         match node.sig() {
             Ok(mut sig) => {
+                let binds_above = node.is_empty() && no_code_words;
+                if !binds_above {
+                    // Validate signature
+                    if let Some(declared_sig) = &binding.signature {
+                        node = self.force_sig(node, declared_sig.value, &declared_sig.span);
+                        sig = declared_sig.value;
+                    }
+                }
+
                 if sig == (0, 1) && !self_referenced && !is_func {
                     // Binding is a constant
                     let val = if let [Node::Push(v)] = node.as_slice() {
@@ -306,7 +315,7 @@ impl Compiler {
                             span: spandex,
                         });
                     }
-                } else if node.is_empty() && no_code_words {
+                } else if binds_above {
                     // Binding binds the value above
                     match &mut self.scope.stack_height {
                         Ok(height) => {
@@ -365,19 +374,6 @@ impl Compiler {
                         comment.as_deref(),
                         Some(binding.counts),
                     )?;
-                }
-
-                // Validate signature
-                if let Some(declared_sig) = &binding.signature {
-                    if declared_sig.value != sig {
-                        self.add_error(
-                            declared_sig.span.clone(),
-                            format!(
-                                "Function signature mismatch: declared {} but inferred {}",
-                                declared_sig.value, sig
-                            ),
-                        );
-                    }
                 }
 
                 self.code_meta.function_sigs.insert(

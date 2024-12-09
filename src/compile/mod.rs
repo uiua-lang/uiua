@@ -1306,18 +1306,11 @@ code:
                 }
                 // Validate inner loop correctness
                 let len = match inner.sig() {
-                    Ok(sig) => {
+                    Ok(mut sig) => {
                         // Validate signature
                         if let Some(declared_sig) = arr.signature {
-                            if sig != declared_sig.value {
-                                self.add_error(
-                                    declared_sig.span.clone(),
-                                    format!(
-                                        "Array signature mismatch: declared {} but inferred {}",
-                                        declared_sig.value, sig
-                                    ),
-                                );
-                            }
+                            inner = self.force_sig(inner, declared_sig.value, &declared_sig.span);
+                            sig = declared_sig.value;
                         }
                         if sig.outputs == 0 && any_contents {
                             self.emit_diagnostic(
@@ -1440,6 +1433,97 @@ code:
                 Node::empty()
             }
         })
+    }
+    fn force_sig(&mut self, mut node: Node, new_sig: Signature, span: &CodeSpan) -> Node {
+        let Ok(sig) = node.sig() else {
+            return node;
+        };
+        if new_sig == sig {
+            return node;
+        }
+        // let message =
+        //     |end: &str| format!("Signature mismatch: declared {new_sig} but inferred {sig}{end}");
+        // match new_sig.args.cmp(&sig.args) {
+        //     Ordering::Equal => {}
+        //     Ordering::Greater => {
+        //         let spandex = self.add_span(span.clone());
+        //         let mut pops = Node::from_iter(
+        //             (0..sig.args - new_sig.args).map(|_| Node::Prim(Primitive::Pop, spandex)),
+        //         );
+        //         for _ in 0..sig.outputs {
+        //             pops = Node::Mod(Primitive::Dip, eco_vec![pops.sig_node().unwrap()], spandex);
+        //         }
+        //         node.push(pops);
+        //         if new_sig.outputs <= sig.outputs {
+        //             self.emit_diagnostic(message(""), DiagnosticKind::Warning, span.clone())
+        //         }
+        //     }
+        //     Ordering::Less => {
+        //         self.add_error(span.clone(), message(""));
+        //         return node;
+        //     }
+        // }
+        // match new_sig.outputs.cmp(&sig.outputs) {
+        //     Ordering::Equal => {}
+        //     Ordering::Greater => {
+        //         for i in 0..new_sig.outputs - sig.outputs {
+        //             node.push(Node::new_push(format!("Extra output {}", i + 1)));
+        //         }
+        //         self.emit_diagnostic(
+        //             message(". Additional debug outputs will be generated."),
+        //             DiagnosticKind::Warning,
+        //             span.clone(),
+        //         );
+        //     }
+        //     Ordering::Less => self.add_error(span.clone(), message("")),
+        // }
+        let delta = sig.outputs as isize - sig.args as isize;
+        let new_delta = new_sig.outputs as isize - new_sig.args as isize;
+        match delta.cmp(&new_delta) {
+            Ordering::Equal => {
+                self.emit_diagnostic(
+                    format!("Signature mismatch: declared {new_sig} but inferred {sig}"),
+                    DiagnosticKind::Warning,
+                    span.clone(),
+                );
+            }
+            Ordering::Less => {
+                let diff = (new_delta - delta).unsigned_abs();
+                for i in 0..diff {
+                    node.push(Node::new_push(Boxed(Value::from(format!(
+                        "extra-{}",
+                        i + 1
+                    )))));
+                }
+                self.emit_diagnostic(
+                    format!(
+                        "Signature mismatch: declared {new_sig} but inferred {sig}. \
+                        Additional debug outputs will be generated."
+                    ),
+                    DiagnosticKind::Warning,
+                    span.clone(),
+                );
+            }
+            Ordering::Greater => {
+                let diff = (delta - new_delta).unsigned_abs();
+                let spandex = self.add_span(span.clone());
+                let mut pops =
+                    Node::from_iter((0..diff).map(|_| Node::Prim(Primitive::Pop, spandex)));
+                for _ in 0..new_sig.outputs {
+                    pops = Node::Mod(Primitive::Dip, eco_vec![pops.sig_node().unwrap()], spandex);
+                }
+                node.push(pops);
+                self.emit_diagnostic(
+                    format!(
+                        "Signature mismatch: declared {new_sig} but inferred {sig}. \
+                        Additional arguments will be popped."
+                    ),
+                    DiagnosticKind::Warning,
+                    span.clone(),
+                );
+            }
+        }
+        node
     }
     #[must_use]
     fn semantic_comment(&mut self, comment: SemanticComment, span: CodeSpan, inner: Node) -> Node {
@@ -1739,23 +1823,12 @@ code:
         let sig = match root.sig() {
             Ok(mut sig) => {
                 if let Some(declared_sig) = &func.signature {
-                    if declared_sig.value == sig {
-                        sig = declared_sig.value;
-                    } else {
-                        self.add_error(
-                            declared_sig.span.clone(),
-                            format!(
-                                "Function signature mismatch: declared {} but inferred {}",
-                                declared_sig.value, sig
-                            ),
-                        );
-                    }
+                    root = self.force_sig(root, declared_sig.value, &declared_sig.span);
+                    sig = declared_sig.value;
                 }
                 Some(sig)
             }
-            Err(e) => {
-                return Err(self.error(span, format!("Cannot infer function signature: {e}")));
-            }
+            Err(e) => return Err(self.error(span, format!("Cannot infer function signature: {e}"))),
         };
         if let Some(sig) = sig {
             self.code_meta.function_sigs.insert(

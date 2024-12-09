@@ -3,7 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Forced signatures
 - Proper data def locals
 - `un repeat`: convergence count?
 - Unified `stencil` implementation

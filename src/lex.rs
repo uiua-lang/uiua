@@ -308,13 +308,13 @@ impl IntoInputSrc for InputSrc {
     }
 }
 
-impl<'a> IntoInputSrc for &'a Path {
+impl IntoInputSrc for &Path {
     fn into_input_src(self, _: usize) -> InputSrc {
         self.into()
     }
 }
 
-impl<'a> IntoInputSrc for &'a PathBuf {
+impl IntoInputSrc for &PathBuf {
     fn into_input_src(self, _: usize) -> InputSrc {
         self.as_path().into()
     }
@@ -1750,7 +1750,7 @@ fn canonicalize_special(ident: Ident) -> Ident {
                 new.push_str(&ident[end..]);
                 return new;
             }
-            if !lower.is_empty() && &ident[..end] == lower {
+            if !lower.is_empty() && ident[..end].eq_ignore_ascii_case(name) {
                 let mut new = Ident::from(lower);
                 new.push_str(&ident[end..]);
                 return new;

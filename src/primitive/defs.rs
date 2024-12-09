@@ -1591,6 +1591,8 @@ primitive!(
     (2, Orient, DyadicArray, ("orient", '⤸')),
     /// The n-wise windows of an array
     ///
+    /// [windows] has been deprecated. Use [stencil] instead.
+    ///
     /// ex: ◫2 .⇡4
     /// ex: ◫4 .⇡6
     ///

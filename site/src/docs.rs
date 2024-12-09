@@ -304,7 +304,7 @@ fn aliases() -> HashMap<&'static str, &'static [Primitive]> {
         ("flatten", &[Deshape]),
         ("choose", &[Tuples]),
         ("permute", &[Tuples]),
-        ("windows", &[Stencil]),
+        ("window", &[Stencil]),
     ]
     .into_iter()
     .flat_map(|(alias, prims)| (3..=alias.len()).map(move |len| (&alias[..len], prims)))
@@ -334,7 +334,7 @@ impl Allowed {
         let mut prims = HashSet::new();
         let all = Primitive::all;
         let prim_matching_part_exactly = |part: &str| -> Option<Primitive> {
-            all().find(|p| {
+            Primitive::non_deprecated().find(|p| {
                 p.name().to_lowercase() == part
                     || p.ascii().is_some_and(|a| a.to_string() == part)
                     || p.glyph().is_some_and(|u| part.chars().all(|c| c == u))

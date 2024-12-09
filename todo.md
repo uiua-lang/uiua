@@ -3,7 +3,17 @@
 ## 0.14
 The next version of Uiua
 
+- Fix complex performance bug
+  - ```
+    A ← ℂ⊸⤸0_2 °△102_512_512
+    ⊙◌⍜now⌵ A
+    ⊙◌⍜now(⍜∩°√+°ℂ) A
+    ⊙◌⍜now(√+∩°√°ℂ) A
+    ```
 - Overhaul indices
+- Forced signatures
+- Proper data def locals
+- Diagnostic for 0-output function wrapped in `[]`
 - Window improvements
 - `un repeat`: convergence count?
 - Unified `stencil` implementation

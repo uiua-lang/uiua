@@ -1299,6 +1299,7 @@ code:
                         .insert(word.span.clone(), just_spans);
                 }
                 let line_count = arr.lines.len();
+                let any_contents = arr.lines.iter().flatten().any(|w| w.value.is_code());
                 let mut inner = Node::empty();
                 for line in arr.lines.into_iter().rev() {
                     inner.push(self.line(line, false)?);
@@ -1317,6 +1318,13 @@ code:
                                     ),
                                 );
                             }
+                        }
+                        if sig.outputs == 0 && any_contents {
+                            self.emit_diagnostic(
+                                "Array wraps function with no outputs. This is probably not what you want.",
+                                DiagnosticKind::Advice,
+                                word.span.clone(),
+                            )
                         }
                         ArrayLen::Static(sig.outputs)
                     }

@@ -285,8 +285,6 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[Reverse, Sort]/></th><td>"Sort then reverse"</td><td>"Sort backwards"</td></tr>
             <tr><th><Prims prims=[Dip, Dip, Dip]/>"…"</th><td><Prim prim=Dip/>" n times"</td><td>"Single "<Prim prim=Dip/>" of n values"</td></tr>
             <tr><th><Prims prims=[Transpose, Transpose, Transpose]/>"…"</th><td><Prim prim=Transpose/>" n times"</td><td>"Single "<Prim prim=Transpose/></td></tr>
-            <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code><Prims prims=[Windows]/></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Reduce/>" each row"</td><td>"Apply "<code>"F"</code>" to adjacent rows"</td></tr>
-            <tr><th><Prims prims=[Rows, Box, Windows]/></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Box/>" each row"</td><td><Prim prim=Box/>" each window"</td></tr>
             <tr><th><Prims prims=[Len, Where]/></th><td>"Make "<Prim prim=Where/>" then get "<Prim prim=Len/></td><td>"Just count"</td></tr>
             <tr><th><Prims prims=[MemberOf, Range]/></th><td>"Make "<Prim prim=Range/>" then check "<Prim prim=MemberOf/></td><td>"Just check bounds"</td></tr>
             <tr><th><Prims prims=[MemberOf, Deshape]/><code>"₂"</code><Prims prims=[Range]/></th><td>"Make "<Prim prim=Range/>" then "<Prim prim=Deshape/>" then check "<Prim prim=MemberOf/></td><td>"Just check bounds"</td></tr>

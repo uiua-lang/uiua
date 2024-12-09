@@ -66,7 +66,7 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
                 } else if p == 0.5 {
                     node.push(Prim(Dup, span));
                     node.push(Prim(Mul, span));
-                } else {
+                } else if p != 1.0 {
                     node.push(push(p.into()));
                     node.push(ImplPrim(Root, span));
                 }
@@ -226,25 +226,19 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                 node.push(Prim(Mul, span));
             } else {
                 match term {
-                    Term::X(x) => {
-                        if x == 0.0 {
-                            node.push(Node::new_push(f64::INFINITY));
-                            node.push(Prim(Add, span));
-                            node.push(Prim(Sign, span));
-                        } else {
-                            if i > 0 {
-                                *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
-                            }
-                            if x != 1.0 {
-                                if x == 0.5 {
-                                    node.push(Prim(Sqrt, span));
-                                } else if x == 2.0 {
-                                    node.push(Prim(Dup, span));
-                                    node.push(Prim(Mul, span));
-                                } else {
-                                    node.push(Node::new_push(x));
-                                    node.push(Prim(Pow, span));
-                                }
+                    Term::X(pow) => {
+                        if i > 0 {
+                            *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
+                        }
+                        if pow != 1.0 {
+                            if pow == 0.5 {
+                                node.push(Prim(Sqrt, span));
+                            } else if pow == 2.0 {
+                                node.push(Prim(Dup, span));
+                                node.push(Prim(Mul, span));
+                            } else if pow != 1.0 {
+                                node.push(Node::new_push(pow));
+                                node.push(Prim(Pow, span));
                             }
                         }
                     }

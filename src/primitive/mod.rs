@@ -188,7 +188,7 @@ impl fmt::Display for ImplPrimitive {
                 write!(f, "{Inventory}")?;
                 fmt_subscript(f, i)
             }
-            Root => write!(f, "{Pow}{Div}{Flip}1"),
+            Root => write!(f, "{Anti}{Pow}"),
             Cos => write!(f, "cos"),
             Asin => write!(f, "{Un}{Sin}"),
             Acos => write!(f, "{Un}{Cos}"),
@@ -1513,8 +1513,23 @@ impl ImplPrimitive {
             ImplPrimitive::MatchPattern => {
                 let expected = env.pop(1)?;
                 let got = env.pop(2)?;
-                if expected == got {
-                    return Ok(());
+                match (&expected, &got) {
+                    (Value::Num(a), Value::Num(b))
+                        if a.shape() == b.shape()
+                            && (a.data.iter().zip(&b.data)).all(|(a, b)| (a - b).abs() < 1e-12) =>
+                    {
+                        return Ok(())
+                    }
+                    (Value::Complex(a), Value::Complex(b))
+                        if a.shape() == b.shape()
+                            && a.data.iter().zip(&b.data).all(|(a, b)| {
+                                (a.re - b.re).abs() < 1e-12 && (a.im - b.im).abs() < 1e-12
+                            }) =>
+                    {
+                        return Ok(())
+                    }
+                    (a, b) if a == b => return Ok(()),
+                    _ => {}
                 }
                 let message = match (
                     expected.rank() <= 1 && expected.row_count() <= 10,

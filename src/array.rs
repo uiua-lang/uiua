@@ -951,7 +951,7 @@ impl ArrayValue for f64 {
 #[cfg(test)]
 #[test]
 fn f64_summarize() {
-    assert_eq!(f64::summarize(&[2.0, 6.0, 1.0]), "1-6 x̄3");
+    assert_eq!(f64::summarize(&[2.0, 6.0, 1.0]), "1-6 μ3");
 }
 
 impl ArrayValue for u8 {

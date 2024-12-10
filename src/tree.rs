@@ -20,37 +20,65 @@ use crate::{
 };
 
 node!(
+    /// Create an array
     Array { len: ArrayLen, inner: Arc<Node>, boxed: bool, prim: Option<Primitive>, span: usize },
+    /// Get a global value
     CallGlobal(index(usize), sig(Signature)),
+    /// Call a recursive macro
     CallMacro { index: usize, sig: Signature, span: usize },
+    /// Bind a global value
     BindGlobal { index: usize, span: usize },
+    /// Set a value's label
     Label(label(EcoString), span(usize)),
+    /// Remove a value's label
     RemoveLabel(label(Option<EcoString>), span(usize)),
+    /// Format with a string
     Format(parts(EcoVec<EcoString>), span(usize)),
+    /// Match a format pattern
     MatchFormatPattern(parts(EcoVec<EcoString>), span(usize)),
+    /// A custom inverse
     CustomInverse(cust(Arc<CustomInverse>), span(usize)),
+    /// A switch with branches
     Switch { branches: Ops, sig: Signature, under_cond: bool, span: usize },
+    /// Unpack an array onto the stack
     Unpack { count: usize, unbox: bool, prim: Option<Primitive>, span: usize },
+    /// Set some values for an output comment
     SetOutputComment { i: usize, n: usize },
+    /// Validate that a value has a certain type
     ValidateType { index: usize, type_num: u8, name: EcoString, span: usize },
+    /// Call a Rust function
     Dynamic(func(DynamicFunction)),
+    /// Push some values to the under stack
     PushUnder(n(usize), span(usize)),
+    /// Copy some values to the under stack
     CopyToUnder(n(usize), span(usize)),
+    /// Pop some values from the under stack
     PopUnder(n(usize), span(usize)),
+    /// Do not inline this node
     NoInline(inner(Arc<Node>)),
+    /// Track the caller of this node
     TrackCaller(inner(Arc<Node>)),
+    /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),
+    /// Run a primitive function
     (#[serde(untagged)] rep),
     Prim(prim(Primitive), span(usize)),
+    /// Run an implementation primitive function
     (#[serde(untagged)] rep),
     ImplPrim(prim(ImplPrimitive), span(usize)),
+    /// Run a modifier
     (#[serde(untagged)] rep),
     Mod(prim(Primitive), args(Ops), span(usize)),
+    /// Run an implementation modifier
     (#[serde(untagged)] rep),
     ImplMod(prim(ImplPrimitive), args(Ops), span(usize)),
+    /// Call a function
     (#[serde(untagged)] rep),
     Call(func(Function), span(usize)),
+    /// Run some nodes in sequence.
+    ///
+    /// Do not edit the list directly. Use functions like [`Node::push`] and [`Node::prepend`] instead.
     (#[serde(untagged)] rep),
     Run(nodes(EcoVec<Node>)),
 );

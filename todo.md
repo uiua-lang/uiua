@@ -5,7 +5,6 @@ The next version of Uiua
 
 - Forced signatures
 - Proper data def locals
-- Window improvements
 - `un repeat`: convergence count?
 - Unified `stencil` implementation
 - Let `&ast` take args

@@ -855,24 +855,29 @@ impl Formatter<'_> {
             self.output.push(' ');
         }
     }
-    fn format_ref(&mut self, r: &Ref) {
-        self.format_ref_path(&r.path);
-        if r.path.is_empty()
-            && r.name.value.starts_with(|c: char| c.is_lowercase())
+    fn pre_space(&mut self, next: &str) {
+        if next.starts_with(|c: char| c.is_lowercase())
             && (self.output.chars().last()).is_some_and(|c| c.is_lowercase() && is_ident_start(c))
         {
             self.output.push(' ');
         }
+    }
+    fn format_ref(&mut self, r: &Ref) {
+        self.pre_space(
+            (r.path.first())
+                .map(|comp| comp.module.value.as_str())
+                .unwrap_or(r.name.value.as_str()),
+        );
+        self.format_ref_path(&r.path, false);
         self.push(&r.name.span, &r.name.value);
     }
-    fn format_ref_path(&mut self, comps: &[RefComponent]) {
-        if let Some(first) = comps.first() {
-            if first.module.value.starts_with(|c: char| c.is_lowercase())
-                && (self.output.chars().last())
-                    .is_some_and(|c| c.is_lowercase() && is_ident_start(c))
-            {
-                self.output.push(' ');
-            }
+    fn format_ref_path(&mut self, comps: &[RefComponent], incomplete: bool) {
+        if incomplete {
+            self.pre_space(
+                (comps.first())
+                    .map(|comp| comp.module.value.as_str())
+                    .unwrap_or(""),
+            );
         }
         for comp in comps {
             self.push(&comp.module.span, &comp.module.value);
@@ -1003,24 +1008,8 @@ impl Formatter<'_> {
                         .push_str(&self.inputs.get(&line.span.src)[line.span.byte_range()]);
                 }
             }
-            Word::Ref(r) => {
-                if (self.output.chars().rev())
-                    .take_while(|&c| is_ident_start(c))
-                    .any(|c| c.is_uppercase())
-                {
-                    self.output.push(' ');
-                }
-                self.format_ref(r);
-            }
-            Word::IncompleteRef { path, .. } => {
-                if (self.output.chars().rev())
-                    .take_while(|&c| is_ident_start(c))
-                    .any(|c| c.is_uppercase())
-                {
-                    self.output.push(' ');
-                }
-                self.format_ref_path(path);
-            }
+            Word::Ref(r) => self.format_ref(r),
+            Word::IncompleteRef { path, .. } => self.format_ref_path(path, true),
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
                     if i > 0 {

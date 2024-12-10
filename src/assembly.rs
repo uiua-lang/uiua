@@ -400,6 +400,8 @@ pub enum BindingKind {
     IndexMacro(usize),
     /// A code macro
     CodeMacro(Node),
+    /// An error
+    Error,
 }
 
 impl BindingKind {
@@ -412,6 +414,7 @@ impl BindingKind {
             Self::Module(_) => None,
             Self::IndexMacro(_) => None,
             Self::CodeMacro(_) => None,
+            Self::Error => None,
         }
     }
     /// Check if the global is a once-bound constant

@@ -87,9 +87,12 @@ pub enum BindingDocsKind {
         /// The signature of the module's `New` function
         sig: Option<Signature>,
     },
+    /// An error
+    Error,
 }
 
 /// Span data extracted from Uiua code
+#[derive(Debug)]
 pub struct Spans {
     /// The spans
     pub spans: Vec<Sp<SpanKind>>,
@@ -503,6 +506,7 @@ impl Spanner {
                 }
                 BindingKind::Func(_) => {}
                 BindingKind::Const(_) => {}
+                BindingKind::Error => {}
             }
         }
         let kind = match &binfo.kind {
@@ -528,6 +532,7 @@ impl Spanner {
                 };
                 BindingDocsKind::Module { sig }
             }
+            BindingKind::Error => BindingDocsKind::Error,
         };
         let escape = binfo.span.as_str(&self.asm.inputs, |s| {
             is_custom_glyph(s).then(|| {
@@ -1231,6 +1236,7 @@ mod server {
                         CompletionItemKind::FUNCTION
                     }
                     BindingKind::Import(_) | BindingKind::Module(_) => CompletionItemKind::MODULE,
+                    BindingKind::Error => CompletionItemKind::FUNCTION,
                 };
                 CompletionItem {
                     label: name.clone(),
@@ -1674,6 +1680,7 @@ mod server {
                             _ => continue,
                         },
                         BindingDocsKind::Module { .. } => MODULE_STT,
+                        BindingDocsKind::Error => continue,
                     },
                     SpanKind::Subscript(Some(prim), n) => {
                         let Some(stt) = for_prim(*prim, *n) else {

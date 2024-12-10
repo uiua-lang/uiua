@@ -255,7 +255,19 @@ impl Compiler {
         let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
         let node = self.words(binding.words);
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
-        let node = node?;
+        let node = match node {
+            Ok(node) => node,
+            Err(e) => {
+                self.asm.add_binding_at(
+                    local,
+                    BindingKind::Error,
+                    Some(span.clone()),
+                    comment.map(|text| DocComment::from(text.as_str())),
+                    None,
+                );
+                return Err(e);
+            }
+        };
 
         // Resolve signature
         match node.sig() {

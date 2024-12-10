@@ -539,6 +539,7 @@ impl Uiua {
                         "Called code macro global. \
                         This is a bug in the interpreter.",
                     )),
+                    BindingKind::Error => Ok(()),
                 }
             }
             Node::CallMacro { index, span, .. } => self.with_span(span, |env| {
@@ -1375,16 +1376,18 @@ impl Uiua {
     }
     pub(crate) fn respect_recursion_limit(&mut self) -> UiuaResult {
         if self.rt.call_stack.len() > self.rt.recursion_limit {
-            Err(self.error(if cfg!(target_arch = "wasm32") {
-                "Recursion limit reached".into()
-            } else {
-                format!(
-                    "Recursion limit reached. \
-                    You can try setting UIUA_RECURSION_LIMIT to a higher value. \
-                    The current limit is {}.",
-                    self.rt.recursion_limit
-                )
-            }))
+            Err(
+                self.error(if cfg!(target_arch = "wasm32") || cfg!(debug_assertions) {
+                    "Recursion limit reached".into()
+                } else {
+                    format!(
+                        "Recursion limit reached. \
+                        You can try setting UIUA_RECURSION_LIMIT to a higher value. \
+                        The current limit is {}.",
+                        self.rt.recursion_limit
+                    )
+                }),
+            )
         } else {
             Ok(())
         }

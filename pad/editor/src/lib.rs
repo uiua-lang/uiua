@@ -1993,6 +1993,7 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
             _ => code_font!("triadic-modifier"),
         },
         BindingDocsKind::Module { .. } => code_font!("module"),
+        BindingDocsKind::Error => code_font!("output-error"),
     })
 }
 

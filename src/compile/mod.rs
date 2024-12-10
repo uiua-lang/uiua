@@ -333,7 +333,7 @@ impl Compiler {
         let input: EcoString = fs::read_to_string(path)
             .map_err(|e| UiuaErrorKind::Load(path.into(), e.into()))?
             .into();
-        // _ = crate::lsp::Spans::from_input(&input);
+        _ = crate::lsp::Spans::from_input(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.into()))
     }
@@ -760,7 +760,7 @@ code:
         span: usize,
         comment: Option<&str>,
     ) {
-        let span = self.get_span(span).clone().code();
+        let span = self.get_span(span).clone().code().unwrap();
         let comment = comment.map(|text| {
             let comment = DocComment::from(text);
             if let Some(sig) = &comment.sig {
@@ -772,13 +772,13 @@ code:
                         sig.sig_string(),
                     ),
                     DiagnosticKind::Warning,
-                    span.clone().unwrap(),
+                    span.clone(),
                 );
             }
             comment
         });
         self.asm
-            .add_binding_at(local, BindingKind::Const(value), span, comment, None);
+            .add_binding_at(local, BindingKind::Const(value), Some(span), comment, None);
         self.scope.names.insert(name, local);
     }
     /// Import a module
@@ -1561,6 +1561,7 @@ code:
                     format!("`{}` is a code macro, not a module", first.module.value),
                 ))
             }
+            BindingKind::Error => return Ok(None),
         };
         for comp in path.iter().skip(1) {
             let submod_local = module
@@ -1602,6 +1603,7 @@ code:
                         format!("`{}` is a code macro, not a module", comp.module.value),
                     ))
                 }
+                BindingKind::Error => return Ok(None),
             };
         }
 
@@ -1634,7 +1636,7 @@ code:
                         span,
                         format!(
                             "Recursive function `{ident}` must have a \
-                        signature declared after the ←."
+                            signature declared after the ←."
                         ),
                     ));
                 };
@@ -1711,6 +1713,7 @@ code:
                 // We could error here, but it's easier to handle it higher up
                 Node::empty()
             }
+            BindingKind::Error => Node::empty(),
         }
     }
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Node> {

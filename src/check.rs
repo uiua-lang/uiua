@@ -578,7 +578,7 @@ impl VirtualEnv {
                     let [f, g] = get_args(args)?;
                     self.handle_args_outputs(f.args + g.args, f.outputs + g.outputs);
                 }
-                RowsSub(_) | InventorySub(_) | EachSub(_) => {
+                EachSub(_) => {
                     let [f] = get_args_nodes(args)?;
                     self.node(&f.node)?;
                 }

@@ -180,14 +180,6 @@ impl fmt::Display for ImplPrimitive {
                 write!(f, "{Each}")?;
                 fmt_subscript(f, i)
             }
-            &RowsSub(i) => {
-                write!(f, "{Rows}")?;
-                fmt_subscript(f, i)
-            }
-            &InventorySub(i) => {
-                write!(f, "{Inventory}")?;
-                fmt_subscript(f, i)
-            }
             Root => write!(f, "{Anti}{Pow}"),
             Cos => write!(f, "cos"),
             Asin => write!(f, "{Un}{Sin}"),
@@ -1752,32 +1744,24 @@ impl ImplPrimitive {
                 let [f] = get_ops(ops, env)?;
                 loops::split_by(f, false, true, env)?;
             }
-            ImplPrimitive::EachSub(n)
-            | ImplPrimitive::RowsSub(n)
-            | ImplPrimitive::InventorySub(n) => {
+            &ImplPrimitive::EachSub(n) => {
                 let [f] = get_ops(ops, env)?;
                 let sig = f.sig;
                 let vals = env.pop_n(sig.args)?;
-                let irank = if let ImplPrimitive::EachSub(_) = self {
-                    *n + 1
-                } else {
-                    vals.iter().map(Value::rank).max().unwrap_or(0) as i32 - *n + 1
-                };
                 let max_shape = vals
                     .iter()
                     .map(Value::shape)
                     .max_by_key(|sh| sh.len())
                     .cloned();
                 let max_rank = max_shape.as_ref().map(|sh| sh.len()).unwrap_or(0);
-                let inv = matches!(self, ImplPrimitive::InventorySub(_));
                 for mut val in vals {
-                    val.deshape_sub(irank, val.rank() == max_rank, env)?;
+                    val.deshape_sub(n + 1, val.rank() == max_rank, env)?;
                     env.push(val);
                 }
-                zip::rows(f, inv, env)?;
+                zip::rows(f, false, env)?;
                 for mut value in env.pop_n(sig.outputs)? {
                     if let Some(max_shape) = &max_shape {
-                        value.undo_deshape(Some(irank), max_shape, env)?;
+                        value.undo_deshape(Some(n + 1), max_shape, env)?;
                     }
                     env.push(value);
                 }

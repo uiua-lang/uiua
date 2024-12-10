@@ -965,16 +965,22 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 if let Some(n) = subscript
                     .and_then(|n| self.subscript_n_or_side(n))
-                    .filter(|i| i.value != -1)
+                    .filter(|i| i.value != 1)
                 {
                     match n.value {
                         SubNOrSide::N(n) => {
-                            let impl_prim = if prim == Rows {
-                                ImplPrimitive::RowsSub
+                            let n =
+                                self.positive_subscript(n, prim, modified.modifier.span.clone())?;
+                            if n == 0 {
+                                sn.node
                             } else {
-                                ImplPrimitive::InventorySub
-                            };
-                            Node::ImplMod(impl_prim(n), eco_vec![sn], span)
+                                let mut node = Node::Mod(prim, eco_vec![sn], span);
+                                for _ in 1..n {
+                                    node =
+                                        Node::Mod(prim, eco_vec![node.sig_node().unwrap()], span);
+                                }
+                                node
+                            }
                         }
                         SubNOrSide::Side(side) => {
                             let sub_span = self.add_span(n.span);

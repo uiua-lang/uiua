@@ -1,6 +1,6 @@
 //! The Uiua parser
 
-use std::{collections::HashMap, error::Error, f64::consts::PI, fmt, mem::replace};
+use std::{collections::HashMap, error::Error, f64::consts::PI, fmt, mem::replace, slice};
 
 use ecow::EcoString;
 
@@ -1700,6 +1700,7 @@ pub(crate) fn max_placeholder(words: &[Sp<Word>]) -> Option<usize> {
                     }
                 }
             }
+            Word::Subscripted(s) => set(max_placeholder(slice::from_ref(&s.word))),
             _ => {}
         }
     }

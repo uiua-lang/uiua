@@ -39,6 +39,7 @@ fn fail<T>(e: UiuaError) -> T {
     exit(1)
 }
 
+#[cfg(feature = "window")]
 fn use_window() -> bool {
     #[cfg(feature = "window")]
     {
@@ -970,23 +971,14 @@ const WATCHING: &str = "\x1b[0mwatching for changes...";
 fn print_watching() {
     #[cfg(feature = "raw_mode")]
     rawrrr::disable_raw();
-    if use_window() {
-        return;
-    }
     eprint!("{}", WATCHING);
     stderr().flush().unwrap();
 }
 fn clear_watching() {
-    if use_window() {
-        return;
-    }
     clear_watching_with("―", "\n")
 }
 
 fn clear_watching_with(s: &str, end: &str) {
-    if use_window() {
-        return;
-    }
     print!(
         "\r{}{}",
         s.repeat(terminal_size::terminal_size().map_or(10, |(w, _)| w.0 as usize)),

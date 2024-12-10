@@ -1255,6 +1255,11 @@ pub fn print_stack(stack: &[Value], color: bool) {
         )
         .send();
         _ = Request::ClearBeforeNext.send();
+        println!(
+            "{} value{} displayed in window",
+            stack.len(),
+            if stack.len() == 1 { "" } else { "s" }
+        );
         return;
     }
     if stack.len() == 1 || !color {

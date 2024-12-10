@@ -371,7 +371,6 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::Identity, &["id"] as &[_]),
         (Primitive::Gap, &["ga"]),
         (Primitive::Pop, &["po"]),
-        (Primitive::Pi, &["pi"]),
         (Primitive::Fix, &["fx"]),
         (Primitive::Box, &["bx"]),
         (Primitive::IndexOf, &["idx"]),

@@ -1087,7 +1087,7 @@ fn astar_impl(ops: Ops, mode: AstarMode, env: &mut Uiua) -> UiuaResult {
                 curr = from[0];
             }
             path.reverse();
-            env.push(make_path(path)?);
+            env.push(Boxed(make_path(path)?));
         }
         AstarMode::CostOnly => {}
     }

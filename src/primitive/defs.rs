@@ -3297,6 +3297,11 @@ primitive!(
     ///   : °⊚
     ///   : ▽⟜≡▽8 # Upscale
     ///
+    /// Pathfinding isn't just good for solving problems with grids or graphs.
+    /// Anything that involves find a series of steps to get from one point to another is a good candidate for [astar].
+    /// For example, you can use it to find edits to a string to turn it into another string.
+    /// ex: # Experimental!
+    ///   : ⊢astar(+⊙¤ ⊂¯.⊞=. °⊏|≍) "thud" "uiua"
     /// [astar] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[3], Astar, Misc, "astar"),
     /// Calculate the derivative of a mathematical expression

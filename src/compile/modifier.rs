@@ -266,19 +266,7 @@ impl Compiler {
                 for branch in pack.branches.iter().cloned() {
                     args.push(self.word_sig(branch.map(Word::Func))?);
                 }
-                if args[0].sig.outputs != 1 {
-                    self.add_error(
-                        modifier.span.clone(),
-                        format!(
-                            "{}'s with a 2-function pack's first \
-                            function must have 1 output, \
-                            but its signature is {}",
-                            Primitive::Astar.format(),
-                            args[0].sig
-                        ),
-                    )
-                }
-                args.insert(1, Node::new_push(1).sig_node().unwrap());
+                args.insert(1, Node::new_push(0).sig_node().unwrap());
                 let span = self.add_span(modifier.span.clone());
                 Ok(Node::Mod(Primitive::Astar, args, span))
             }

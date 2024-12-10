@@ -3281,6 +3281,10 @@ primitive!(
     /// ex: # Experimental!
     ///   : Neis ← [∩¯,,⇌.⇡2]
     ///   : °□⊢ astar(+Neis¤)0≍ 0_0 3_5
+    /// Since this is common, it is the behavior of [astar] with a 2-function pack.
+    /// ex: # Experimental!
+    ///   : Neis ← [∩¯,,⇌.⇡2]
+    ///   : °□⊢ astar(+Neis¤|≍) 0_0 3_5
     /// In the examples above, we use `un``box``first` to get only the first path. [first][astar] and [pop][astar] are optimized to not do extra work.
     /// If we want *all* shortest paths, we can omit [first].
     /// ex: # Experimental!

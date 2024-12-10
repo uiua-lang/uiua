@@ -1441,46 +1441,18 @@ code:
         if new_sig == sig {
             return node;
         }
-        // let message =
-        //     |end: &str| format!("Signature mismatch: declared {new_sig} but inferred {sig}{end}");
-        // match new_sig.args.cmp(&sig.args) {
-        //     Ordering::Equal => {}
-        //     Ordering::Greater => {
-        //         let spandex = self.add_span(span.clone());
-        //         let mut pops = Node::from_iter(
-        //             (0..sig.args - new_sig.args).map(|_| Node::Prim(Primitive::Pop, spandex)),
-        //         );
-        //         for _ in 0..sig.outputs {
-        //             pops = Node::Mod(Primitive::Dip, eco_vec![pops.sig_node().unwrap()], spandex);
-        //         }
-        //         node.push(pops);
-        //         if new_sig.outputs <= sig.outputs {
-        //             self.emit_diagnostic(message(""), DiagnosticKind::Warning, span.clone())
-        //         }
-        //     }
-        //     Ordering::Less => {
-        //         self.add_error(span.clone(), message(""));
-        //         return node;
-        //     }
-        // }
-        // match new_sig.outputs.cmp(&sig.outputs) {
-        //     Ordering::Equal => {}
-        //     Ordering::Greater => {
-        //         for i in 0..new_sig.outputs - sig.outputs {
-        //             node.push(Node::new_push(format!("Extra output {}", i + 1)));
-        //         }
-        //         self.emit_diagnostic(
-        //             message(". Additional debug outputs will be generated."),
-        //             DiagnosticKind::Warning,
-        //             span.clone(),
-        //         );
-        //     }
-        //     Ordering::Less => self.add_error(span.clone(), message("")),
-        // }
         let delta = sig.outputs as isize - sig.args as isize;
         let new_delta = new_sig.outputs as isize - new_sig.args as isize;
         match delta.cmp(&new_delta) {
             Ordering::Equal => {
+                if sig.args < new_sig.args {
+                    let spandex = self.add_span(span.clone());
+                    let mut dip = Node::empty();
+                    for _ in 0..new_sig.args - sig.args {
+                        dip = Node::Mod(Primitive::Dip, eco_vec![dip.sig_node().unwrap()], spandex);
+                    }
+                    node.prepend(dip);
+                }
                 self.emit_diagnostic(
                     format!("Signature mismatch: declared {new_sig} but inferred {sig}"),
                     DiagnosticKind::Warning,
@@ -1804,19 +1776,6 @@ code:
         }
     }
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Node> {
-        if (func.lines.iter().flatten().filter(|w| w.value.is_code())).count() == 1 {
-            // Inline single ident
-            if let Some(
-                word @ Sp {
-                    value: Word::Ref(_),
-                    ..
-                },
-            ) = func.lines.iter().flatten().find(|w| w.value.is_code())
-            {
-                return self.word(word.clone());
-            }
-        }
-
         let mut root = Node::empty();
         for line in func.lines {
             root.push(self.line(line, false)?);

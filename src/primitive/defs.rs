@@ -3268,8 +3268,7 @@ primitive!(
     /// The neighbors function returns the 4 cardinal directions with all costs of 1.
     /// The heuristic function `absolute value``reduce``complex``subtract` calculates the euclidean distance between two points.
     /// The goal function simply checks if the current node [match]es the given goal node.
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
+    /// ex: Neis ← [∩¯,,⇌.⇡2]
     ///   : Neis # Side-adjacent neighbors offsets
     ///   :
     ///   : °□⊢ astar(
@@ -3278,30 +3277,26 @@ primitive!(
     ///   : | ≍           # Check if goal
     ///   : )0_0 3_5      # Start and goal
     /// If we omit the cost array from the neighbors function and simply use `0` as the heuristic, the algorithm becomes Dijkstra's algorithm.
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
+    /// ex: Neis ← [∩¯,,⇌.⇡2]
     ///   : °□⊢ astar(+Neis¤)0≍ 0_0 3_5
     /// Since this is common, it is the behavior of [astar] with a 2-function pack.
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
+    /// ex: Neis ← [∩¯,,⇌.⇡2]
     ///   : °□⊢ astar(+Neis¤|≍) 0_0 3_5
     /// In the examples above, we use `un``box``first` to get only the first path. [first][astar] and [pop][astar] are optimized to not do extra work.
     /// If we want *all* shortest paths, we can omit [first].
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
+    /// ex: Neis ← [∩¯,,⇌.⇡2]
     ///   : astar(+Neis¤)0≍ 0_0 1_2
     /// If pathing on a grid like the examples above, we can use [un][where] to visualize the path that was taken!
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
+    /// ex: Neis ← [∩¯,,⇌.⇡2]
     ///   : °□⊢ astar(+Neis¤|⌵/ℂ-|≍) 3_4 10_14
     ///   : °⊚
     ///   : ▽⟜≡▽8 # Upscale
+    /// There are no guarantees about the order of the paths, only that they all have the same cost.
     ///
     /// Pathfinding isn't just good for solving problems with grids or graphs.
     /// Anything that involves find a series of steps to get from one point to another is a good candidate for [astar].
     /// For example, you can use it to find edits to a string to turn it into another string.
-    /// ex: # Experimental!
-    ///   : ⊢astar(+⊙¤ ⊂¯.⊞=. °⊏|≍) "thud" "uiua"
+    /// ex: ⊢astar(+⊙¤ ⊂¯.⊞=. °⊏|≍) "thud" "uiua"
     /// [astar] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[3], Astar, Misc, "astar"),
     /// Calculate the derivative of a mathematical expression

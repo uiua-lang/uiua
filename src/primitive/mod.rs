@@ -529,7 +529,6 @@ impl Primitive {
             self,
             (Reach | Off | Backward | Above | Around)
                 | (Or | Base | Fft | Case | Layout | Binary)
-                | Astar
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen | Breakpoint)
                 | (Stringify | Quote | Sig)

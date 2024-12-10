@@ -35,6 +35,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Sorting is a very common operation, and it's useful to have such simple access to it
 - Stabilize [`last ⊣`](https://uiua.org/docs/last)
   - Getting the last row is a very common operation
+- Stabilize [`astar`](https://uiua.org/docs/astar)
+  - It is useful for a wide variety of problems
 - Negative indices to [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now always use a fill value if available
 - [`orient ⤸`](https://uiua.org/docs/orient) can now use [`fill ⬚`](https://uiua.org/docs/fill) to fill in new dimensions
 - [`un °`](https://uiua.org/docs/un) [`reduce /`](https://uiua.org/docs/reduce) (format string) now splits a string by a delimiter

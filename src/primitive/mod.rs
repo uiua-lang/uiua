@@ -1752,16 +1752,16 @@ impl ImplPrimitive {
                 let [f] = get_ops(ops, env)?;
                 loops::split_by(f, false, true, env)?;
             }
-            ImplPrimitive::EachSub(n)
-            | ImplPrimitive::RowsSub(n)
-            | ImplPrimitive::InventorySub(n) => {
+            &ImplPrimitive::EachSub(n)
+            | &ImplPrimitive::RowsSub(n)
+            | &ImplPrimitive::InventorySub(n) => {
                 let [f] = get_ops(ops, env)?;
                 let sig = f.sig;
                 let vals = env.pop_n(sig.args)?;
-                let irank = if let ImplPrimitive::EachSub(_) = self {
-                    *n + 1
+                let iranks = if let ImplPrimitive::EachSub(_) = self {
+                    vec![n + 1; sig.args]
                 } else {
-                    vals.iter().map(Value::rank).max().unwrap_or(0) as i32 - *n + 1
+                    vals.iter().map(|v| v.rank() as i32 - n + 1).collect()
                 };
                 let max_shape = vals
                     .iter()
@@ -1770,12 +1770,12 @@ impl ImplPrimitive {
                     .cloned();
                 let max_rank = max_shape.as_ref().map(|sh| sh.len()).unwrap_or(0);
                 let inv = matches!(self, ImplPrimitive::InventorySub(_));
-                for mut val in vals {
+                for (mut val, &irank) in vals.into_iter().zip(&iranks) {
                     val.deshape_sub(irank, val.rank() == max_rank, env)?;
                     env.push(val);
                 }
                 zip::rows(f, inv, env)?;
-                for mut value in env.pop_n(sig.outputs)? {
+                for (mut value, irank) in env.pop_n(sig.outputs)?.into_iter().zip(iranks) {
                     if let Some(max_shape) = &max_shape {
                         value.undo_deshape(Some(irank), max_shape, env)?;
                     }

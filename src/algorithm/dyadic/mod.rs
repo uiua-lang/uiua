@@ -1775,6 +1775,14 @@ impl Value {
     }
 }
 
+fn digits_needed_for_base(n: f64, base: f64) -> usize {
+    if n == 0.0 {
+        0
+    } else {
+        n.abs().log(base).floor() as usize + 1
+    }
+}
+
 impl<T: RealArrayValue> Array<T> {
     fn base_scalar(&self, base: f64, env: &Uiua) -> UiuaResult<Array<f64>> {
         if base == 0.0 {
@@ -1790,14 +1798,7 @@ impl<T: RealArrayValue> Array<T> {
             let max_row_len = self
                 .data
                 .iter()
-                .map(|&n| {
-                    let n = n.to_f64();
-                    if n == 0.0 {
-                        0
-                    } else {
-                        n.abs().log(base).floor() as usize + 1
-                    }
-                })
+                .map(|&n| digits_needed_for_base(n.to_f64(), base))
                 .max()
                 .unwrap_or(0);
             let mut new_shape = self.shape.clone();
@@ -1841,7 +1842,8 @@ impl<T: RealArrayValue> Array<T> {
         })
     }
     fn base_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
-        for &base in bases {
+        let fill = env.scalar_fill::<f64>().ok();
+        for base in bases.iter().copied().chain(fill) {
             if base == 0.0 {
                 return Err(env.error("Base cannot contain 0s"));
             }
@@ -1852,20 +1854,40 @@ impl<T: RealArrayValue> Array<T> {
                 return Err(env.error("Base cannot contain NaNs"));
             }
         }
+        let fill_digits = if let Some(fill) = fill {
+            let product: f64 = bases.iter().product();
+            self.data
+                .iter()
+                .map(|&n| digits_needed_for_base(n.to_f64() / product, fill))
+                .max()
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        let num_digits = bases.len() + fill_digits;
         let mut new_shape = self.shape.clone();
-        new_shape.push(bases.len());
+        new_shape.push(num_digits);
         let elem_count = validate_size::<f64>(new_shape.iter().copied(), env)?;
         let mut new_data = eco_vec![0.0; elem_count];
         let slice = new_data.make_mut();
         for (i, n) in self.data.iter().enumerate() {
             let mut n = n.to_f64();
-            for (j, base) in bases.iter().enumerate() {
+            for (j, base) in bases
+                .iter()
+                .copied()
+                .chain(
+                    fill.map(|fill| repeat(fill).take(fill_digits))
+                        .into_iter()
+                        .flatten(),
+                )
+                .enumerate()
+            {
                 if n == f64::INFINITY {
-                    slice[i * bases.len() + j] = n;
+                    slice[i * num_digits + j] = n;
                     break;
                 } else {
-                    slice[i * bases.len() + j] = n.rem_euclid(*base);
-                    n = n.div_euclid(*base);
+                    slice[i * num_digits + j] = n.rem_euclid(base);
+                    n = n.div_euclid(base);
                 }
             }
         }
@@ -1887,6 +1909,7 @@ impl<T: RealArrayValue> Array<T> {
         Ok(Array::new(shape, data))
     }
     fn antibase_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
+        let fill = env.scalar_fill::<f64>().ok();
         let mut shape = self.shape.clone();
         let row_len = shape.pop().unwrap_or(1);
         let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
@@ -1894,7 +1917,7 @@ impl<T: RealArrayValue> Array<T> {
         if row_len > 0 {
             let slice = data.make_mut();
             let mut bases = bases.to_vec();
-            bases.extend(repeat(1.0).take(row_len.saturating_sub(bases.len())));
+            bases.extend(repeat(fill.unwrap_or(1.0)).take(row_len.saturating_sub(bases.len())));
             let scan: Vec<f64> = bases
                 .iter()
                 .scan(1.0, |acc, b| {

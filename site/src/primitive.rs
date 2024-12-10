@@ -191,6 +191,7 @@ fn all_fills() -> impl IntoView {
             { fill_row(Each, "Fills row shapes", "⬚0∵⇡ [3_2 2_4]") }
             { fill_row(Partition, "Fills row shapes", "⬚@ ⊜∘ ≠@ . \"Hey there\"") }
             { fill_row(Group, "Fills row shapes", "⬚0⊕∘ ◿3. [1 8 4 9 3 8 2]") }
+            { fill_row(Base, "Repeating base", "# Experimental!\n⬚10base[12 20] 999999") }
             { fill_row_impl(view!(<Prims prims=[Un, Pop]/>), "Get fill value", "⬚5°◌") }
         </table>
     }
@@ -486,7 +487,7 @@ fn listed_examples() {
             continue;
         }
         let line = line.replace("\\\"", "<double quote>");
-        let Some(end) = line.rfind("\"#").or_else(|| line.rfind('"')) else {
+        let Some(end) = line.rfind("\"") else {
             continue;
         };
         eprintln!("{line}");

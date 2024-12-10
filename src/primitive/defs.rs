@@ -3501,14 +3501,10 @@ primitive!(
     /// The first argument is the format, the second is the audio sample rate, and the third is the audio samples.
     ///
     /// The sample rate must be a positive integer.
-    ///
     /// The audio samples must be a rank 1 or 2 numeric array.
-    ///
     /// A rank 1 array is a list of mono audio samples.
     /// For a rank 2 array, each row is a sample with multiple channels.
-    ///
     /// The samples must be between -1 and 1.
-    /// The sample rate is [&asr].
     ///
     /// You can decode a byte array into audio with [un][audio].
     /// This returns the audio format as a string, the audio sample rate, and an array representing the audio samples.

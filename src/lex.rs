@@ -898,28 +898,32 @@ impl<'a> Lexer<'a> {
                 break;
             };
 
-            // Handle unicode escapes
+            // Handle escapes
             if c == "\\" && self.next_char_exact("\\") {
-                let mut hex = String::new();
-                while let Some(c) = self.next_char_if_all(|c| c.is_ascii_hexdigit()) {
-                    hex.push_str(c);
+                let mut text = String::new();
+                while let Some(c) = self.next_char_if_all(|c| c.is_ascii_alphanumeric()) {
+                    text.push_str(c);
                 }
-                if hex.len() >= 2 {
-                    let mut code = 0;
-                    for c in hex.chars() {
-                        code = code << 4 | c.to_digit(16).unwrap();
-                    }
-                    replacement = if let Some(c) = std::char::from_u32(code).filter(|_| code > 127)
-                    {
-                        c.to_string()
+                if text.len() >= 2 {
+                    if let Some(special) = find_special(&text) {
+                        c = special;
                     } else {
-                        self.errors.push(
-                            self.end_span(start)
-                                .sp(LexError::InvalidUnicodeEscape(code)),
-                        );
-                        continue;
-                    };
-                    c = &replacement;
+                        let mut code = 0;
+                        for c in text.chars() {
+                            code = code << 4 | c.to_digit(16).unwrap();
+                        }
+                        replacement =
+                            if let Some(c) = std::char::from_u32(code).filter(|_| code > 127) {
+                                c.to_string()
+                            } else {
+                                self.errors.push(
+                                    self.end_span(start)
+                                        .sp(LexError::InvalidUnicodeEscape(code)),
+                                );
+                                continue;
+                            };
+                        c = &replacement;
+                    }
                 } else {
                     self.loc = start;
                     self.next_char();
@@ -1669,7 +1673,7 @@ pub fn is_custom_glyph(c: &str) -> bool {
 }
 
 pub(crate) fn canonicalize_ident(ident: &str) -> Ident {
-    canonicalize_special(canonicalize_subscripts(canonicalize_exclams(ident)))
+    canonicalize_subscripts(canonicalize_exclams(ident))
 }
 
 /// Rewrite the identifier with the same number of exclamation points
@@ -1739,24 +1743,17 @@ thread_local! {
     ].into()
 }
 
-fn canonicalize_special(ident: Ident) -> Ident {
-    let end = ident
-        .find(|c: char| "!‼₋".contains(c) || SUBSCRIPT_DIGITS.contains(&c))
-        .unwrap_or(ident.len());
+fn find_special(s: &str) -> Option<&'static str> {
     SPECIAL.with(|map| {
         for &(name, lower, upper) in map {
-            if &ident[..end] == name {
-                let mut new = Ident::from(upper);
-                new.push_str(&ident[end..]);
-                return new;
+            if s == name {
+                return Some(upper);
             }
-            if !lower.is_empty() && ident[..end].eq_ignore_ascii_case(name) {
-                let mut new = Ident::from(lower);
-                new.push_str(&ident[end..]);
-                return new;
+            if !lower.is_empty() && s.eq_ignore_ascii_case(name) {
+                return Some(lower);
             }
         }
-        ident
+        None
     })
 }
 

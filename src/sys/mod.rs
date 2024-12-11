@@ -1202,7 +1202,10 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
             }
             SysOp::ScanLine => {
-                if let Some(line) = env.rt.backend.scan_line_stdin().map_err(|e| env.error(e))? {
+                let start = env.rt.backend.now();
+                let res = env.rt.backend.scan_line_stdin().map_err(|e| env.error(e));
+                env.rt.execution_start += env.rt.backend.now() - start;
+                if let Some(line) = res? {
                     env.push(line);
                 } else {
                     env.push(0u8);

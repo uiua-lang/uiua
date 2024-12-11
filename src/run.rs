@@ -23,7 +23,7 @@ use crate::{
     lex::Span,
     Array, ArrayLen, Assembly, BindingKind, Boxed, CodeSpan, Compiler, Function, FunctionId, Ident,
     Inputs, IntoSysBackend, LocalName, Node, Primitive, Report, SafeSys, SigNode, Signature,
-    SysBackend, SysOp, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, Value, VERSION,
+    SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, Value, VERSION,
 };
 
 /// The Uiua interpreter
@@ -470,21 +470,7 @@ impl Uiua {
             self.rt.last_time = self.rt.backend.now();
         }
         let res = match node {
-            // Pause execution timer during &sc
-            Node::Prim(prim @ Primitive::Sys(SysOp::ScanLine), span) => {
-                self.with_prim_span(span, Some(prim), |env| {
-                    let start = env.rt.backend.now();
-                    let res = prim.run(env);
-                    env.rt.execution_start += env.rt.backend.now() - start;
-                    res
-                })
-            }
-            Node::Run(nodes) => (|| {
-                for node in nodes {
-                    self.exec(node)?;
-                }
-                Ok(())
-            })(),
+            Node::Run(nodes) => nodes.into_iter().try_for_each(|node| self.exec(node)),
             Node::Prim(prim, span) => self.with_prim_span(span, Some(prim), |env| prim.run(env)),
             Node::ImplPrim(prim, span) => self.with_span(span, |env| prim.run(env)),
             Node::Mod(prim, args, span) => {

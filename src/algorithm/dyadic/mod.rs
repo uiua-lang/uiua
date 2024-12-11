@@ -2004,7 +2004,9 @@ impl Value {
             return fallback(self, &from, env);
         }
 
-        let Ok(range_bound) = self.as_number_list(env, "", |v| v.fract() == 0.0, |v| v) else {
+        let Some(range_bound) =
+            (self.as_nums(env, "").ok()).filter(|nums| nums.iter().all(|f| f.fract() == 0.0))
+        else {
             return fallback(self, &from, env);
         };
 

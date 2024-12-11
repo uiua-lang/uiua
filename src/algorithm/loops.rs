@@ -16,7 +16,7 @@ use crate::{
     types::push_empty_rows_value,
     val_as_arr,
     value::Value,
-    Boxed, Node, Ops, Primitive, Shape, SigNode, Signature, Uiua, UiuaResult,
+    Boxed, Node, Ops, Primitive, ScalarNum, Shape, SigNode, Signature, Uiua, UiuaResult,
 };
 
 use super::{multi_output, validate_size_impl};
@@ -393,7 +393,7 @@ where
 
 pub fn partition(f: SigNode, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    collapse_groups(
+    collapse_groups::<_, i64>(
         Primitive::Partition,
         f,
         Value::partition_groups,
@@ -406,13 +406,13 @@ pub fn partition(f: SigNode, env: &mut Uiua) -> UiuaResult {
 }
 
 impl Value {
-    fn partition_groups(self, markers: &Array<isize>) -> Box<dyn ExactSizeIterator<Item = Self>> {
+    fn partition_groups(self, markers: &Array<i64>) -> Box<dyn ExactSizeIterator<Item = Self>> {
         val_as_arr!(self, |arr| arr.partition_groups(markers))
     }
-    fn partition_firsts(self, markers: &[isize]) -> Self {
+    fn partition_firsts(self, markers: &[i64]) -> Self {
         val_as_arr!(self, |arr| arr.partition_firsts(markers).into())
     }
-    fn partition_lasts(self, markers: &[isize]) -> Self {
+    fn partition_lasts(self, markers: &[i64]) -> Self {
         val_as_arr!(self, |arr| arr.partition_lasts(markers).into())
     }
 }
@@ -420,7 +420,7 @@ impl Value {
 struct PartitionIter<T> {
     len: usize,
     curr: usize,
-    markers: CowSlice<isize>,
+    markers: CowSlice<i64>,
     source: Array<T>,
 }
 
@@ -467,11 +467,11 @@ impl<T: ArrayValue> Array<T>
 where
     Array<T>: Into<Value>,
 {
-    fn partition_groups(self, markers: &Array<isize>) -> Box<dyn ExactSizeIterator<Item = Value>> {
+    fn partition_groups(self, markers: &Array<i64>) -> Box<dyn ExactSizeIterator<Item = Value>> {
         let mut groups = Vec::new();
         if markers.rank() == 1 {
             let mut count = 0;
-            let mut last_marker = isize::MAX;
+            let mut last_marker = i64::MAX;
             for &marker in &markers.data {
                 if marker > 0 && marker != last_marker {
                     count += 1;
@@ -502,7 +502,7 @@ where
             )
         }
     }
-    fn partition_firsts(mut self, markers: &[isize]) -> Self {
+    fn partition_firsts(mut self, markers: &[i64]) -> Self {
         if self.shape.len() == 0 {
             self.shape.insert(0, 0);
         } else {
@@ -510,7 +510,7 @@ where
         }
         let row_len = self.row_len();
         let data = self.data.as_mut_slice();
-        let mut last_marker = isize::MAX;
+        let mut last_marker = i64::MAX;
         for (i, &marker) in markers.iter().enumerate() {
             if marker > 0 && marker != last_marker {
                 let dest_start = self.shape[0] * row_len;
@@ -532,7 +532,7 @@ where
         self.validate_shape();
         self
     }
-    fn partition_lasts(mut self, markers: &[isize]) -> Self {
+    fn partition_lasts(mut self, markers: &[i64]) -> Self {
         let row_count = self.row_count();
         if self.shape.len() == 0 {
             self.shape.insert(0, 0);
@@ -541,7 +541,7 @@ where
         }
         let row_len = self.row_len();
         let data = self.data.as_mut_slice();
-        let mut last_marker = isize::MAX;
+        let mut last_marker = i64::MAX;
         for (i, &marker) in markers.iter().enumerate().rev() {
             if marker > 0 && marker != last_marker {
                 self.shape[0] += 1;
@@ -566,9 +566,9 @@ where
     }
 }
 
-fn partition_lens(markers: &[isize]) -> Array<f64> {
+fn partition_lens(markers: &[i64]) -> Array<f64> {
     let mut lens = EcoVec::new();
-    let mut prev = isize::MAX;
+    let mut prev = i64::MAX;
     let mut len = 0;
     for &marker in markers {
         if marker > 0 {
@@ -594,11 +594,11 @@ fn partition_lens(markers: &[isize]) -> Array<f64> {
     lens.into()
 }
 
-fn multi_partition_indices(markers: &Array<isize>) -> Vec<(isize, Vec<usize>)> {
+fn multi_partition_indices(markers: &Array<i64>) -> Vec<(i64, Vec<usize>)> {
     if markers.element_count() == 0 {
         return Vec::new();
     }
-    let mut groups: Vec<(isize, Vec<Vec<usize>>)> = Vec::new();
+    let mut groups: Vec<(i64, Vec<Vec<usize>>)> = Vec::new();
     let mut curr = vec![0; markers.rank()];
     for &marker in &markers.data {
         if marker >= 1 {
@@ -695,11 +695,11 @@ pub fn undo_partition_part2(env: &mut Uiua) -> UiuaResult {
     let untransformed = env.pop(1)?;
     let markers = env
         .pop(2)?
-        .as_integer_array(env, "⊜ partition markers must be an array of integers")?;
+        .as_number_array(env, "⊜ partition markers must be an array of integers")?;
     let mut original = env.pop(3)?;
     if markers.rank() == 1 {
         // Count partition markers
-        let mut marker_partitions: Vec<(isize, usize)> = Vec::new();
+        let mut marker_partitions: Vec<(i64, usize)> = Vec::new();
         let mut markers = markers.data.into_iter();
         if let Some(mut prev) = markers.next() {
             marker_partitions.push((prev, 1));
@@ -977,13 +977,13 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn collapse_groups<I>(
+fn collapse_groups<I, T: ScalarNum>(
     prim: Primitive,
     f: SigNode,
-    get_groups: impl Fn(Value, &Array<isize>) -> I,
-    firsts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
-    lasts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
-    lens: impl Fn(&[isize]) -> Array<f64>,
+    get_groups: impl Fn(Value, &Array<T>) -> I,
+    firsts: impl Fn(Value, &[T], &Uiua) -> UiuaResult<Value>,
+    lasts: impl Fn(Value, &[T], &Uiua) -> UiuaResult<Value>,
+    lens: impl Fn(&[T]) -> Array<f64>,
     indices_error: &'static str,
     env: &mut Uiua,
 ) -> UiuaResult
@@ -992,7 +992,7 @@ where
     I::IntoIter: ExactSizeIterator,
 {
     let sig = f.sig;
-    let indices = env.pop(1)?.as_integer_array(env, indices_error)?;
+    let indices = env.pop(1)?.as_number_array(env, indices_error)?;
     let values: Vec<Value> = (0..sig.args.max(1))
         .map(|i| env.pop(i + 2))
         .collect::<UiuaResult<_>>()?;

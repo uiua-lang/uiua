@@ -612,6 +612,197 @@ impl Value {
         }
         recur(self, false)
     }
+}
+
+pub(crate) trait ScalarNum: Copy {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error>;
+    fn from_f64(f: f64) -> Result<Self, FromF64Error>;
+}
+
+pub(crate) enum FromU8Error {
+    NonBoolean,
+}
+
+pub(crate) enum FromF64Error {
+    NaN,
+    TooHigh,
+    TooLow,
+    NonInteger,
+    NonBoolean,
+}
+
+impl fmt::Display for FromU8Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FromU8Error::NonBoolean => write!(f, "not a boolean"),
+        }
+    }
+}
+
+impl fmt::Display for FromF64Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FromF64Error::NaN => write!(f, "present"),
+            FromF64Error::TooHigh => write!(f, "too high"),
+            FromF64Error::TooLow => write!(f, "too low"),
+            FromF64Error::NonInteger => write!(f, "not an integer"),
+            FromF64Error::NonBoolean => write!(f, "not a boolean"),
+        }
+    }
+}
+
+impl ScalarNum for usize {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(u as usize)
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        if f.is_nan() {
+            Err(FromF64Error::NaN)
+        } else if f > usize::MAX as f64 {
+            Err(FromF64Error::TooHigh)
+        } else if f < 0.0 {
+            Err(FromF64Error::TooLow)
+        } else if f.fract() != 0.0 {
+            Err(FromF64Error::NonInteger)
+        } else {
+            Ok(f as usize)
+        }
+    }
+}
+
+impl ScalarNum for isize {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(u as isize)
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        if f.is_nan() {
+            Err(FromF64Error::NaN)
+        } else if f > isize::MAX as f64 {
+            Err(FromF64Error::TooHigh)
+        } else if f < isize::MIN as f64 {
+            Err(FromF64Error::TooLow)
+        } else if f.fract() != 0.0 {
+            Err(FromF64Error::NonInteger)
+        } else {
+            Ok(f as isize)
+        }
+    }
+}
+
+impl ScalarNum for i64 {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(u as i64)
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        if f.is_nan() {
+            Err(FromF64Error::NaN)
+        } else if f > i64::MAX as f64 {
+            Err(FromF64Error::TooHigh)
+        } else if f < i64::MIN as f64 {
+            Err(FromF64Error::TooLow)
+        } else if f.fract() != 0.0 {
+            Err(FromF64Error::NonInteger)
+        } else {
+            Ok(f as i64)
+        }
+    }
+}
+
+impl ScalarNum for Result<isize, bool> {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(Ok(u as isize))
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        if f.is_nan() {
+            Err(FromF64Error::NaN)
+        } else if f.is_infinite() {
+            Ok(Err(f.is_sign_negative()))
+        } else if f > isize::MAX as f64 {
+            Err(FromF64Error::TooHigh)
+        } else if f < isize::MIN as f64 {
+            Err(FromF64Error::TooLow)
+        } else if f.fract() != 0.0 {
+            Err(FromF64Error::NonInteger)
+        } else {
+            Ok(Ok(f as isize))
+        }
+    }
+}
+
+impl ScalarNum for Option<isize> {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(Some(u as isize))
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        Result::<isize, bool>::from_f64(f).map(Result::ok)
+    }
+}
+
+impl ScalarNum for u8 {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(u)
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        if f.is_nan() {
+            Err(FromF64Error::NaN)
+        } else if f > u8::MAX as f64 {
+            Err(FromF64Error::TooHigh)
+        } else if f < 0.0 {
+            Err(FromF64Error::TooLow)
+        } else if f.fract() != 0.0 {
+            Err(FromF64Error::NonInteger)
+        } else {
+            Ok(f as u8)
+        }
+    }
+}
+
+impl ScalarNum for u16 {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(u as u16)
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        if f.is_nan() {
+            Err(FromF64Error::NaN)
+        } else if f > u16::MAX as f64 {
+            Err(FromF64Error::TooHigh)
+        } else if f < 0.0 {
+            Err(FromF64Error::TooLow)
+        } else if f.fract() != 0.0 {
+            Err(FromF64Error::NonInteger)
+        } else {
+            Ok(f as u16)
+        }
+    }
+}
+
+impl ScalarNum for bool {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        match u {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => Err(FromU8Error::NonBoolean),
+        }
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        match f {
+            0.0 => Ok(false),
+            1.0 => Ok(true),
+            _ => Err(FromF64Error::NonBoolean),
+        }
+    }
+}
+
+impl ScalarNum for f64 {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(u as f64)
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        Ok(f)
+    }
+}
+
+impl Value {
     /// Attempt to convert the array to a list of integers
     ///
     /// The `requirement` parameter is used in error messages.
@@ -620,25 +811,14 @@ impl Value {
         ctx: &C,
         requirement: &'static str,
     ) -> Result<Vec<isize>, C::Error> {
-        self.as_number_list(ctx, requirement, |f| f.fract() == 0.0, |f| f as isize)
+        self.as_number_list(ctx, requirement)
     }
     pub(crate) fn as_ints_or_infs(
         &self,
         env: &Uiua,
         requirement: &'static str,
     ) -> UiuaResult<Vec<Result<isize, bool>>> {
-        self.as_number_list(
-            env,
-            requirement,
-            |n| n.fract() == 0.0 || n.is_infinite(),
-            |n| {
-                if n.is_infinite() {
-                    Err(n.is_sign_negative())
-                } else {
-                    Ok(n as isize)
-                }
-            },
-        )
+        self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a single boolean
     ///
@@ -818,7 +998,7 @@ impl Value {
     ///
     /// The `requirement` parameter is used in error messages.
     pub fn as_nums(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<f64>> {
-        self.as_number_list(env, requirement, |_| true, |f| f)
+        self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a list of natural numbers
     ///
@@ -837,40 +1017,25 @@ impl Value {
                 return Err(ctx.error(format!("{requirement}, but {n}e{power} is too large")));
             }
         }
-        self.as_number_list(
-            ctx,
-            requirement,
-            |f| f.fract() == 0.0 && f >= 0.0,
-            |f| f as usize,
-        )
+        self.as_number_list(ctx, requirement)
     }
     /// Attempt to convert the array to a list of bytes
     ///
     /// The `requirement` parameter is used in error messages.
     pub fn as_bytes(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<u8>> {
-        self.as_number_list(
-            env,
-            requirement,
-            |f| f.fract() == 0.0 && (0.0..=u8::MAX as f64).contains(&f),
-            |f| f as u8,
-        )
+        self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a list of u16s
     ///
     /// The `requirement` parameter is used in error messages.
     pub fn as_u16s(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<u16>> {
-        self.as_number_list(
-            env,
-            requirement,
-            |f| f.fract() == 0.0 && (0.0..=u16::MAX as f64).contains(&f),
-            |f| f as u16,
-        )
+        self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a list of booleans
     ///
     /// The `requirement` parameter is used in error messages.
     pub fn as_bools(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<bool>> {
-        self.as_number_list(env, requirement, |f| f == 0.0 || f == 1.0, |f| f == 1.0)
+        self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a list of integers or infinity
     ///
@@ -885,27 +1050,15 @@ impl Value {
         if requirement.is_empty() {
             requirement = "Elements of rank list must be integers or infinity";
         }
-        self.as_number_list(
-            env,
-            requirement,
-            |n| n.fract() == 0.0 || n == f64::INFINITY,
-            |n| {
-                if n == f64::INFINITY {
-                    None
-                } else {
-                    Some(n as isize)
-                }
-            },
-        )
+        self.as_number_list(env, requirement)
     }
     pub(crate) fn as_number_list<T, C>(
         &self,
         ctx: &C,
         requirement: &'static str,
-        test: fn(f64) -> bool,
-        convert: fn(f64) -> T,
     ) -> Result<Vec<T>, C::Error>
     where
+        T: ScalarNum,
         C: ErrorContext,
     {
         Ok(match self {
@@ -917,10 +1070,10 @@ impl Value {
                 }
                 let mut result = Vec::with_capacity(nums.row_count());
                 for &num in &nums.data {
-                    if !test(num) {
-                        return Err(ctx.error(requirement));
-                    }
-                    result.push(convert(num));
+                    result.push(
+                        T::from_f64(num)
+                            .map_err(|e| ctx.error(format!("{requirement}, but {num} is {e}")))?,
+                    );
                 }
                 result
             }
@@ -932,11 +1085,10 @@ impl Value {
                 }
                 let mut result = Vec::with_capacity(bytes.row_count());
                 for &byte in &bytes.data {
-                    let num = byte as f64;
-                    if !test(num) {
-                        return Err(ctx.error(requirement));
-                    }
-                    result.push(convert(num));
+                    result.push(
+                        T::from_u8(byte)
+                            .map_err(|e| ctx.error(format!("{requirement}, but {byte} is {e}")))?,
+                    );
                 }
                 result
             }
@@ -953,13 +1105,7 @@ impl Value {
         env: &Uiua,
         requirement: &'static str,
     ) -> UiuaResult<Array<isize>> {
-        self.as_number_array(
-            env,
-            requirement,
-            |_| true,
-            |n| n.fract() == 0.0,
-            |n| n as isize,
-        )
+        self.as_number_array(env, requirement)
     }
     pub(crate) fn as_natural_array(
         &self,
@@ -975,51 +1121,31 @@ impl Value {
                 return Err(env.error(format!("{requirement}, but {n}e{power} is too large")));
             }
         }
-        self.as_number_array(
-            env,
-            requirement,
-            |_| true,
-            |n| n.fract() == 0.0 && n >= 0.0,
-            |n| n as usize,
-        )
+        self.as_number_array(env, requirement)
     }
-    pub(crate) fn as_number_array<T: Clone>(
+    pub(crate) fn as_number_array<T: ScalarNum>(
         &self,
         env: &Uiua,
         requirement: &'static str,
-        test_shape: fn(&[usize]) -> bool,
-        test_num: fn(f64) -> bool,
-        convert_num: fn(f64) -> T,
     ) -> UiuaResult<Array<T>> {
         Ok(match self {
             Value::Num(nums) => {
-                if !test_shape(self.shape()) {
-                    return Err(
-                        env.error(format!("{requirement}, but its shape is {}", nums.shape()))
-                    );
-                }
                 let mut result = EcoVec::with_capacity(nums.element_count());
                 for &num in &nums.data {
-                    if !test_num(num) {
-                        return Err(env.error(requirement));
-                    }
-                    result.push(convert_num(num));
+                    result.push(
+                        T::from_f64(num)
+                            .map_err(|e| env.error(format!("{requirement}, but {num} is {e}")))?,
+                    );
                 }
                 Array::new(self.shape().clone(), result)
             }
             Value::Byte(bytes) => {
-                if !test_shape(self.shape()) {
-                    return Err(
-                        env.error(format!("{requirement}, but its shape is {}", bytes.shape()))
-                    );
-                }
                 let mut result = EcoVec::with_capacity(bytes.element_count());
                 for &byte in &bytes.data {
-                    let num = byte as f64;
-                    if !test_num(num) {
-                        return Err(env.error(requirement));
-                    }
-                    result.push(convert_num(num));
+                    result.push(
+                        T::from_u8(byte)
+                            .map_err(|e| env.error(format!("{requirement}, but {byte} is {e}")))?,
+                    );
                 }
                 Array::new(self.shape().clone(), result)
             }

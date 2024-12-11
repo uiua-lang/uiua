@@ -109,6 +109,7 @@ pub enum LexError {
     ExpectedCharacter(Vec<char>),
     InvalidEscape(String),
     InvalidUnicodeEscape(u32),
+    InvalidEscapeSequence(String),
     ExpectedNumber,
     LineTooLong(usize),
     FileTooLong,
@@ -130,6 +131,7 @@ impl fmt::Display for LexError {
             LexError::ExpectedCharacter(chars) => write!(f, "Expected one of {:?}", chars),
             LexError::InvalidEscape(c) => write!(f, "Invalid escape character {c:?}"),
             LexError::InvalidUnicodeEscape(c) => write!(f, "Invalid unicode escape \\\\{c:x}"),
+            LexError::InvalidEscapeSequence(c) => write!(f, "Invalid escape \\\\{c}"),
             LexError::ExpectedNumber => write!(f, "Expected number"),
             LexError::LineTooLong(n) => write!(f, "Line {n} is too long"),
             LexError::FileTooLong => write!(f, "File is too long"),
@@ -910,7 +912,14 @@ impl<'a> Lexer<'a> {
                     } else {
                         let mut code = 0;
                         for c in text.chars() {
-                            code = code << 4 | c.to_digit(16).unwrap();
+                            let Some(digit) = c.to_digit(16) else {
+                                self.errors.push(
+                                    self.end_span(start)
+                                        .sp(LexError::InvalidEscapeSequence(text.clone())),
+                                );
+                                continue;
+                            };
+                            code = code << 4 | digit;
                         }
                         replacement =
                             if let Some(c) = std::char::from_u32(code).filter(|_| code > 127) {

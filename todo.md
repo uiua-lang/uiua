@@ -3,7 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Proper data def locals
 - `un repeat`: convergence count?
 - Unified `stencil` implementation
 - Let `&ast` take args

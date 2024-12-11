@@ -1233,10 +1233,16 @@ impl Parser<'_> {
             }
             span.sp(Word::Array(arr))
         } else if let Some(start) = self.exact(OpenCurly.into()) {
-            while self.exact(Newline).is_some() || self.exact(Spaces).is_some() {}
+            let mut has_newline = self.ignore_whitespace();
             let signature = self.signature(true);
-            while self.exact(Newline).is_some() {}
-            let items = self.multiline_words(false, true);
+            if signature.is_some() {
+                has_newline = false;
+            }
+            has_newline |= self.ignore_whitespace();
+            let mut items = self.multiline_words(false, true);
+            if has_newline {
+                items.insert(0, Vec::new());
+            }
             let end = self.expect_close(CloseCurly.into());
             let span = start.merge(end.span);
             span.sp(Word::Array(Arr {

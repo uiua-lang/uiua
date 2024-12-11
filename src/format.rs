@@ -1741,6 +1741,15 @@ x ← [
   1_2
   3_4
 ]
+x ← {1_2
+     3_4}
+x ← {
+  1_2
+  3_4}
+x ← {
+  1_2
+  3_4
+}
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

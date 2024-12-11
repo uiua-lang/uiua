@@ -30,3 +30,7 @@
 # Useful for scaling images
 # Can scale both up and down
 ▽⟜≡▽ 2 [1_2 3_4]
+
+# Repeat until an error is thrown
+F ← &p°⊂
+◌⍢⍣⊙F⋅0∘1 ⇡5

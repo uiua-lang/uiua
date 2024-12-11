@@ -57,6 +57,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Deprecate the experimental `stringify` and `signature` modifiers in favor of inline code macros
 - Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation
 - Add experimental [`&b`](https://uiua.org/docs/breakpoint) function, which pauses execution and prints the stack
+- Remove the previously deprecated `member ∊` function
+  - As planned, [`memberof ∊`](https://uiua.org/docs/memberof)'s glyph has been changed and, and the old one will format to `∊`.
 - Remove the previously deprecated experimental `⟔ coordinate` function
 - Remove the previously deprecated experimental `struct` modifier
 - Remove the previously deprecated `setinv` and `setund` modifiers
@@ -188,8 +190,8 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
       - ~5x in the average case
       - ~450x in the worst case
   - [`rows ≡`](https://uiua.org/docs/rows) [`on ⟜`](https://uiua.org/docs/on)/[`by ⊸`](https://uiua.org/docs/by) [`random ⚂`](https://uiua.org/docs/random)/`constant`
-  - [`memberof ∈`](https://uiua.org/docs/memberof)[`range ⇡`](https://uiua.org/docs/range) for scalar inputs to [`range ⇡`](https://uiua.org/docs/range)
-  - [`memberof ∈`](https://uiua.org/docs/memberof)[`rerank ☇`](https://uiua.org/docs/rerank)`1`[`range ⇡`](https://uiua.org/docs/range) for rank 1 inputs to [`range ⇡`](https://uiua.org/docs/range)
+  - [`memberof ∊`](https://uiua.org/docs/memberof)[`range ⇡`](https://uiua.org/docs/range) for scalar inputs to [`range ⇡`](https://uiua.org/docs/range)
+  - [`memberof ∊`](https://uiua.org/docs/memberof)[`rerank ☇`](https://uiua.org/docs/rerank)`1`[`range ⇡`](https://uiua.org/docs/range) for rank 1 inputs to [`range ⇡`](https://uiua.org/docs/range)
   - [`first ⊢`](https://uiua.org/docs/first)[`un °`](https://uiua.org/docs/un)[`sort ⍆`](https://uiua.org/docs/sort) to just pick an element
 - Tweak the formatter to reduce excess vertical space
 - The formatter now aligns consecutive single-line bindings
@@ -236,10 +238,10 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
 - **Breaking Change** - disable pattern matching inverses resulting from [`under ⍜`](https://uiua.org/docs/under)
   - This is basically never what you want
   - Pattern matching via [`un °`](https://uiua.org/docs/un) still works as normal
-- Deprecate [`member ∊`](https://uiua.org/docs/member) and add [`memberof ∈`](https://uiua.org/docs/memberof)
-  - [`member ∊`](https://uiua.org/docs/member) almost always required flipping the arguments
-  - [`memberof ∈`](https://uiua.org/docs/memberof) is the same, but with the arguments flipped
-  - In the future, [`member ∊`](https://uiua.org/docs/member) will be removed, and [`memberof ∈`](https://uiua.org/docs/memberof)'s glyph will be changed and format to `∊`
+- Deprecate `member ∊` and add [`memberof ∊`](https://uiua.org/docs/memberof)
+  - `member ∊` almost always required flipping the arguments
+  - [`memberof ∊`](https://uiua.org/docs/memberof) is the same, but with the arguments flipped
+  - In the future, `member ∊` will be removed, and [`memberof ∊`](https://uiua.org/docs/memberof)'s glyph will be changed and format to `∊`
 - Rename media en/decoding system functions `&ime`, `&gife`, and `&ae` to non-system functions [`imen`](https://uiua.org/docs/img), [`gifen`](https://uiua.org/docs/gif), and [`auden`](https://uiua.org/docs/audio)
   - Their implementation is not actually system-dependent
   - Existing `&*e` will format to the new names

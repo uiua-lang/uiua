@@ -1,6 +1,6 @@
 ✅ ← ⍤⟜≍:0 &runi
 
-¬∈ &args □"resume"
+¬∊ &args □"resume"
 ⍥(✅ {"git" "checkout" "site" "--"}
   ✅ {"git" "reset" "--hard" "origin/site"}
   ✅ {"git" "rebase" "main"}

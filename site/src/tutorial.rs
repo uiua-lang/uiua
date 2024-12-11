@@ -586,7 +586,7 @@ fn TutorialArrays() -> impl IntoView {
         <p>"For example, to check if a string is in a list of "<Prim prim=Box/>"ed strings with "<Prim prim=MemberOf/>", you would need to "<Prim prim=Box/>" the string first."</p>
         <Editor example=
 r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
-∈ Langs □"APL""#/>
+∊ Langs □"APL""#/>
         <p>"Pervasive functions work through boxes and preserve the maximum "<Prim prim=Box/>" depth of their arguments."</p>
         <Editor example="¯ 1\n¯ □1\n¯ □□1"/>
         <Editor example="+1 4\n+1 □4\n+1 □□4\n+□□1 □4"/>

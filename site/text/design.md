@@ -24,7 +24,7 @@ For example, in BQN, you can trim matches from the beginning of a string with [`
 In contrast, here is their equivalent in Uiua, implemented the same way:
 
 ```uiua
-Trim ← ▽¬\×⊸∈
+Trim ← ▽¬\×⊸∊
 ```
 
 You'll notice that stack basing simplifies the expression in a few ways:

@@ -186,7 +186,7 @@ fn strings_challenges() -> impl IntoView {
             example="\"1foo2bar3\""
             answer="+⊃⊢⊣ ⋕♭regex\"\\\\d+\""
             tests={&["\"What is 1 + 2?\"", "\"99 bottles of beer on the wall, 99 bottles of beer\"", "\"(555) 555-5555\""]}
-            best_answer="+⊃⊢⊣ ⊜⋕⊸∈+@0⇡10"
+            best_answer="+⊃⊢⊣ ⊜⋕⊸∊+@0⇡10"
             hidden="\"123\""/>
     }
 }

@@ -949,6 +949,7 @@ impl<'a> Lexer<'a> {
                     self.end(Primitive::Stencil, start);
                     self.end(Primitive::Identity, self.loc);
                 }
+                "∈" => self.end(Primitive::MemberOf, start),
 
                 "(" => self.end(OpenParen, start),
                 ")" => self.end(CloseParen, start),

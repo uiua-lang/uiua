@@ -1943,7 +1943,7 @@ impl Value {
     pub fn memberof_range(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         fn fallback(a: &Value, b: &Value, env: &Uiua) -> UiuaResult<Value> {
             let range = a.range(env)?;
-            b.member(&range, env)
+            range.memberof(b, env)
         }
 
         let Ok(range_bound) = self.as_num(env, "") else {
@@ -1997,7 +1997,7 @@ impl Value {
         fn fallback(a: &Value, b: &Value, env: &Uiua) -> UiuaResult<Value> {
             let mut range = a.range(env)?;
             range.rerank(&Value::Num(1.0.into()), env)?;
-            b.member(&range, env)
+            range.memberof(b, env)
         }
 
         if self.rank() != 1 {

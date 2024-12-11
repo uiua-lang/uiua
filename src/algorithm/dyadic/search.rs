@@ -19,15 +19,15 @@ use crate::{
 use super::{ArrayCmpSlice, FillContext};
 
 impl Value {
-    /// Check which rows of this value are `member`s of another
-    pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
+    /// Check which rows of another value are `member`s of this one
+    pub fn memberof(&self, elems: &Self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_bin_ref(
-            of,
-            |a, b| a.member(b, env).map(Into::into),
-            |a, b| a.member(b, env).map(Into::into),
-            |a, b| a.member(b, env).map(Into::into),
-            |a, b| a.member(b, env).map(Into::into),
-            |a, b| a.member(b, env).map(Into::into),
+            elems,
+            |a, b| a.memberof(b, env).map(Into::into),
+            |a, b| a.memberof(b, env).map(Into::into),
+            |a, b| a.memberof(b, env).map(Into::into),
+            |a, b| a.memberof(b, env).map(Into::into),
+            |a, b| a.memberof(b, env).map(Into::into),
             |a, b| {
                 env.error(format!(
                     "Cannot look for members of {} array in {} array",
@@ -40,9 +40,9 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    /// Check which rows of this array are `member`s of another
-    pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
-        let elems = self;
+    /// Check which rows of another array are `member`s of this one
+    pub fn memberof(&self, elems: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        let of = self;
         let mut arr = match elems.rank().cmp(&of.rank()) {
             Ordering::Equal => {
                 let has_wildcard =
@@ -65,13 +65,13 @@ impl<T: ArrayValue> Array<T> {
                         result_data.push(is_member as u8);
                     }
                 }
-                let shape: Shape = self.shape.iter().cloned().take(1).collect();
+                let shape: Shape = elems.shape.iter().cloned().take(1).collect();
                 Array::new(shape, result_data)
             }
             Ordering::Greater => {
                 let mut rows = Vec::with_capacity(elems.row_count());
                 for elem in elems.rows() {
-                    rows.push(elem.member(of, env)?);
+                    rows.push(of.memberof(&elem, env)?);
                 }
                 Array::from_row_arrays(rows, env)?
             }
@@ -79,7 +79,7 @@ impl<T: ArrayValue> Array<T> {
                 if !of.shape.ends_with(&elems.shape) {
                     return Err(env.error(format!(
                         "Cannot look for array of shape {} in array of shape {}",
-                        self.shape, of.shape
+                        elems.shape, of.shape
                     )));
                 }
                 if of.rank() - elems.rank() == 1 {
@@ -87,7 +87,7 @@ impl<T: ArrayValue> Array<T> {
                 } else {
                     let mut rows = Vec::with_capacity(of.row_count());
                     for of in of.rows() {
-                        rows.push(elems.member(&of, env)?);
+                        rows.push(of.memberof(elems, env)?);
                     }
                     Array::from_row_arrays(rows, env)?
                 }

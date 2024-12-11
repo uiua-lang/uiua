@@ -64,7 +64,7 @@ This assumes that the two delimiters delimit different dimensions of the array. 
 $ 1  8   4 99
 $ 5  20  0 0
 $ 78 101 1 8
-⊜⋕¬⊸∈" \n"
+⊜⋕¬⊸∊" \n"
 ```
 
 ## Finding substrings with [`mask`]()

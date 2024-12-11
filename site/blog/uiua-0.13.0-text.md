@@ -218,7 +218,7 @@ No previous Uiua release has had so many direct code contributions!
 In particular, I'd like to thank:
 - [Omnikar](https://github.com/omnikar/) for implementing [`un °`](https://uiua.org/docs/un)[`by ⊸`](https://uiua.org/docs/by)
 - [amatgil](https://github.com/amatgil) for implementing the new behavior for [`gen`](https://uiua.org/docs/gen) and the experimental [`around ’`](https://uiua.org/docs/around) function
-- [Marcos-cat](https://github.com/Marcos-cat/) for implementing [`fill ⬚`](https://uiua.org/docs/fill)ed [`csv`](https://uiua.org/docs/csv), [`memberof ∈`](https://uiua.org/docs/memberof)[`range ⇡`](https://uiua.org/docs/range) optimization, and a more persistent pad virtual filesystem
+- [Marcos-cat](https://github.com/Marcos-cat/) for implementing [`fill ⬚`](https://uiua.org/docs/fill)ed [`csv`](https://uiua.org/docs/csv), [`memberof ∊`](https://uiua.org/docs/memberof)[`range ⇡`](https://uiua.org/docs/range) optimization, and a more persistent pad virtual filesystem
 
 Also, check out [Omnikar](https://github.com/omnikar/)'s awesome [`uiua-plot`](https://github.com/omnikar/uiua-plot) library for making plots and graphs in Uiua!
 

@@ -585,6 +585,11 @@ impl Primitive {
                 "ppbn",
                 &[(Partition, "p"), (Parse, "p"), (By, "b"), (Ne, "n")],
             ),
+            (
+                "pibn",
+                &[(Partition, "p"), (Identity, "i"), (By, "b"), (Ne, "n")],
+            ),
+            ("kbn", &[(Keep, "k"), (By, "b"), (Ne, "n")]),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

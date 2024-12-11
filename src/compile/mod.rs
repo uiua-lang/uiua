@@ -2411,7 +2411,7 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
     })
 }
 
-fn set_in_macro_arg(words: &mut Vec<Sp<Word>>) {
+fn set_in_macro_arg(words: &mut [Sp<Word>]) {
     recurse_words_mut(words, &mut |word| match &mut word.value {
         Word::Ref(r) => r.in_macro_arg = true,
         Word::IncompleteRef { in_macro_arg, .. } => *in_macro_arg = true,
@@ -2439,7 +2439,7 @@ fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
     }
 }
 
-fn recurse_words_mut(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)) {
+fn recurse_words_mut(words: &mut [Sp<Word>], f: &mut dyn FnMut(&mut Sp<Word>)) {
     for word in words {
         match &mut word.value {
             Word::Strand(items) => recurse_words_mut(items, f),
@@ -2453,6 +2453,7 @@ fn recurse_words_mut(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)
             Word::Pack(pack) => pack.branches.iter_mut().for_each(|branch| {
                 (branch.value.lines.iter_mut()).for_each(|line| recurse_words_mut(line, f))
             }),
+            Word::Subscripted(sub) => recurse_words_mut(slice::from_mut(&mut sub.word), f),
             _ => {}
         }
         f(word);

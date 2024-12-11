@@ -412,7 +412,7 @@ impl fmt::Debug for Word {
             Word::Modified(modified) => modified.fmt(f),
             Word::Spaces => write!(f, "' '"),
             Word::Comment(comment) => write!(f, "# {comment}"),
-            Word::Placeholder(op) => write!(f, "{op}"),
+            Word::Placeholder(op) => write!(f, "^{op}"),
             Word::BreakLine => write!(f, "break_line"),
             Word::FlipLine => write!(f, "unbreak_line"),
             Word::SemanticComment(comment) => write!(f, "{comment}"),

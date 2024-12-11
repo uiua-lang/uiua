@@ -856,6 +856,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     BindingDocsKind::Constant(None) => title.push_str("constant"),
                                     BindingDocsKind::Module { .. } => title.push_str("module"),
                                     BindingDocsKind::Modifier(_) => title.push_str("macro"),
+                                    BindingDocsKind::Error => title.push_str("error"),
                                     _ => {}
                                 }
                             }

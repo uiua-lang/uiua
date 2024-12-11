@@ -14,7 +14,6 @@ The next version of Uiua
 # 0.15
 - Optimize `conjoin inventory`
 - Compile-time code string evaluation
-- `do` function pack
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)
 - Stackless execution trees?

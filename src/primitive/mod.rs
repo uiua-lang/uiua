@@ -276,6 +276,8 @@ impl fmt::Display for ImplPrimitive {
             MatchGe => write!(f, "match ≥"),
             AstarFirst => write!(f, "{First}{Astar}"),
             AstarPop => write!(f, "{Pop}{Astar}"),
+            PathFirst => write!(f, "{First}{Path}"),
+            PathPop => write!(f, "{Pop}{Path}"),
             SplitByScalar => write!(f, "{Partition}{Box}{By}{Ne}"),
             SplitBy => write!(f, "{Partition}{Box}{Not}{By}{Mask}"),
             SplitByKeepEmpty => write!(f, "{Un}{Reduce}$\"_…_\""),
@@ -508,6 +510,7 @@ impl Primitive {
             ),
             Trace => format!("use subscripted {} instead", Stack.format()),
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
+            Astar => format!("use {} instead", Path.format()),
             _ => return None,
         })
     }
@@ -1113,7 +1116,14 @@ impl Primitive {
                 })?;
             }
             Primitive::Dump => dump(ops, env, false)?,
-            Primitive::Astar => algorithm::astar(ops, env)?,
+            Primitive::Astar => {
+                let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
+                algorithm::astar(neighbors, is_goal, Some(heuristic), env)?;
+            }
+            Primitive::Path => {
+                let [neighbors, is_goal] = get_ops(ops, env)?;
+                algorithm::astar(neighbors, is_goal, None, env)?;
+            }
             Primitive::Memo => {
                 let [f] = get_ops(ops, env)?;
                 let mut args = Vec::with_capacity(f.sig.args);
@@ -1714,8 +1724,22 @@ impl ImplPrimitive {
                 let [f] = get_ops(ops, env)?;
                 reduce::adjacent(f, env)?
             }
-            ImplPrimitive::AstarFirst => algorithm::astar_first(ops, env)?,
-            ImplPrimitive::AstarPop => algorithm::astar_pop(ops, env)?,
+            ImplPrimitive::AstarFirst => {
+                let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
+                algorithm::astar_first(neighbors, is_goal, Some(heuristic), env)?;
+            }
+            ImplPrimitive::AstarPop => {
+                let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
+                algorithm::astar_pop(neighbors, is_goal, Some(heuristic), env)?;
+            }
+            ImplPrimitive::PathFirst => {
+                let [neighbors, is_goal] = get_ops(ops, env)?;
+                algorithm::astar_first(neighbors, is_goal, None, env)?;
+            }
+            ImplPrimitive::PathPop => {
+                let [neighbors, is_goal] = get_ops(ops, env)?;
+                algorithm::astar_pop(neighbors, is_goal, None, env)?;
+            }
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(ops, depth, env)?,
             ImplPrimitive::RepeatWithInverse => loops::repeat(ops, true, env)?,
             ImplPrimitive::UnScan => reduce::unscan(ops, env)?,

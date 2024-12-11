@@ -307,6 +307,18 @@ impl VirtualEnv {
                     .saturating_sub(1);
                 self.handle_args_outputs(args, 1);
             }
+            Node::Mod(Path, args, _) | Node::ImplMod(PathFirst, args, _) => {
+                let _start = self.pop();
+                let [neighbors, is_goal] = get_args(args)?;
+                let args = neighbors.args.max(is_goal.args).saturating_sub(1);
+                self.handle_args_outputs(args, 2);
+            }
+            Node::ImplMod(PathPop, args, _) => {
+                let _start = self.pop();
+                let [neighbors, is_goal] = get_args(args)?;
+                let args = neighbors.args.max(is_goal.args).saturating_sub(1);
+                self.handle_args_outputs(args, 1);
+            }
             Node::Prim(prim, _) => match prim {
                 Dup => {
                     let val = self.pop();

@@ -387,7 +387,8 @@
     "modifier_args": 3,
     "class": "Misc",
     "description": "Find shortest paths in a graph",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "atangent": {
     "glyph": "∠",
@@ -1013,6 +1014,12 @@
     "modifier_args": 1,
     "class": "AggregatingModifier",
     "description": "Group sequential sections of an array"
+  },
+  "path": {
+    "outputs": 2,
+    "modifier_args": 2,
+    "class": "Misc",
+    "description": "Find the shortest path between two things"
   },
   "pi": {
     "glyph": "π",

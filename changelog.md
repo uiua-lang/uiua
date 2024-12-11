@@ -35,8 +35,9 @@ This version is not yet released. If you are reading this on the website, then t
   - Sorting is a very common operation, and it's useful to have such simple access to it
 - Stabilize [`last ⊣`](https://uiua.org/docs/last)
   - Getting the last row is a very common operation
-<!-- - Stabilize [`astar`](https://uiua.org/docs/astar)
-  - It is useful for a wide variety of problems -->
+- Add the [`path`](https://uiua.org/docs/path) modifier, which finds shortest paths
+  - Replaces and deprecates [`astar`](https://uiua.org/docs/astar)
+  - `astar`'s functionality is still available via [`path`](https://uiua.org/docs/path) with a function pack
 - Declared signatures that do not match the inferred signature will now cause a warning rather than an error
   - The function is edited to make the signature correct
 - Negative indices to [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now always use a fill value if available

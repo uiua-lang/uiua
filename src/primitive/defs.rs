@@ -3248,6 +3248,8 @@ primitive!(
     (1, Fft, Misc, "fft"),
     /// Find shortest paths in a graph
     ///
+    /// [astar] is deprecated in favor of [path].
+    ///
     /// Expects 3 functions and at least 1 value.
     /// The value is the starting node.
     /// The first function should return 1 or 2 arrays of equal [length].
@@ -3299,12 +3301,68 @@ primitive!(
     /// There are no guarantees about the order of the paths, only that they all have the same cost.
     ///
     /// Pathfinding isn't just good for solving problems with grids or graphs.
-    /// Anything that involves find a series of steps to get from one point to another is a good candidate for [astar].
+    /// Anything that involves finding a series of steps to get from one point to another is a good candidate for [astar].
     /// For example, you can use it to find edits to a string to turn it into another string.
     /// ex: # Experimental!
     ///   : ⊢astar(+⊙¤ ⊂¯.⊞=. °⊏|≍) "thud" "uiua"
     /// [astar] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[3], Astar, Misc, "astar"),
+    /// Find the shortest path between two things
+    ///
+    /// Expects 2 functions and at least 1 value.
+    /// The value is the starting node.
+    /// The first function should return 1 or 2 arrays of equal [length].
+    /// - An array of the neighboring nodes must always be returned.
+    /// - An array of costs may be returned above the nodes array on the stack. If ommitted, all costs are assumed to be 1.
+    /// The second function should return whether or not the goal node has been reached.
+    ///
+    /// When called, [path] will pop any additional arguments its functions need from the stack.
+    /// On each iteration, the current node will be passed to each function, along with any of the additional arguments that each function needs.
+    ///
+    /// If a path is found, a list of [box]ed arrays of all shortest paths is returned, as well as the cost.
+    /// If no path is found, an empty list and a cost of `infinity` are returned.
+    ///
+    /// In this example, we find the shortest path from the 2D point `0_0` to `3_5` in a grid.
+    /// The neighbors function returns the 4 cardinal directions with all costs of 1.
+    /// The goal function simply checks if the current node [match]es the given goal node.
+    /// ex: Neis ← ⊂⟜¯⋯1_2
+    ///   : $Neighbors Neis # Side-adjacent neighbors offsets
+    ///   :
+    ///   : 0_0 3_5 # Start and goal
+    ///   : °□⊢path(
+    ///   :   ≡⋅1. +Neis¤ # Costs and neighbors
+    ///   : | ≍           # Check if goal
+    ///   : )
+    ///   : ⊓$Path$Cost
+    /// As stated before, the costs can be omitted.
+    /// ex: Neis ← ⊂⟜¯⋯1_2
+    ///   : °□⊢ path(+Neis¤)≍ 0_0 3_5
+    /// In the examples above, we use `un``box``first` to get only the first path. [first][path] and [pop][path] are optimized to not do extra work.
+    /// If we want *all* shortest paths, we can omit [first].
+    /// ex: Neis ← ⊂⟜¯⋯1_2
+    ///   : path(+Neis¤)≍ 0_0 1_2
+    /// If pathing on a grid like the examples above, we can use [un][where] to visualize the path that was taken!
+    /// ex: Neis ← ⊂⟜¯⋯1_2
+    ///   : °□⊢ path(+Neis¤)≍ 3_4 10_14
+    ///   : °⊚
+    ///   : ▽⟜≡▽8 # Upscale
+    /// There are no guarantees about the order of the paths, only that they all have the same cost.
+    ///
+    /// If given a function pack with 3 functions, [path] uses the [A*](https://en.wikipedia.org/wiki/A*_search_algorithm) algorithm.
+    /// The third function should return a heuristic cost to reach the goal node from the current node.
+    /// - The heuristic should return a value [less or equal] the actual cost
+    /// - It must *never* overestimate the cost, or the algorithm may not find the shortest path
+    /// The heuristic function `absolute value``reduce``complex``subtract` calculates the euclidean distance between two points.
+    /// ex: Neis ← ⊂⟜¯⋯1_2
+    ///   : °□⊢ path(+Neis¤|≍|⌵/ℂ-) 0_0 3_5
+    /// With a good heuristic, A* is generally faster than [path], which uses a [Dijkstra](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm)-like algorithm.
+    ///
+    /// Pathfinding isn't just good for solving problems with grids or graphs.
+    /// Anything that involves finding a series of steps to get from one point to another is a good candidate for [path].
+    /// For example, you can use it to find edits to a string to turn it into another string.
+    /// ex: ⊢path(+⊙¤ ⊂¯.⊞=. °⊏)≍ "thud" "uiua"
+    /// [path] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
+    ((2)[2], Path, Misc, "path"),
     /// Calculate the derivative of a mathematical expression
     ///
     /// Basic polynomials are supported, along with [sine] and [logarithm].
@@ -3734,7 +3792,9 @@ impl_primitive!(
     (2(1)[1], RowsWindows),
     (1, CountUnique),
     ((2)[3], AstarFirst),
-    ([3], AstarPop),
+    ((1)[3], AstarPop),
+    ((2)[2], PathFirst),
+    ((1)[2], PathPop),
     (2[1], SplitByScalar),
     (2[1], SplitBy),
     (2[1], SplitByKeepEmpty),

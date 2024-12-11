@@ -266,7 +266,15 @@ impl Compiler {
                 for branch in pack.branches.iter().cloned() {
                     args.push(self.word_sig(branch.map(Word::Func))?);
                 }
-                args.insert(1, Node::new_push(0).sig_node().unwrap());
+                let span = self.add_span(modifier.span.clone());
+                Ok(Node::Mod(Primitive::Path, args, span))
+            }
+            Modifier::Primitive(Primitive::Path) if pack.branches.len() == 3 => {
+                let mut args = EcoVec::with_capacity(3);
+                for branch in pack.branches.iter().cloned() {
+                    args.push(self.word_sig(branch.map(Word::Func))?);
+                }
+                args.make_mut().swap(1, 2);
                 let span = self.add_span(modifier.span.clone());
                 Ok(Node::Mod(Primitive::Astar, args, span))
             }

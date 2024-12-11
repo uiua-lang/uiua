@@ -17,8 +17,8 @@ use tinyvec::TinyVec;
 
 use crate::{
     cowslice::ecovec_extend_cowslice, Array, ArrayCmp, ArrayValue, Boxed, CodeSpan, Complex,
-    ExactDoubleIterator, Inputs, Ops, PersistentMeta, Shape, SigNode, Signature, Span, Uiua,
-    UiuaError, UiuaErrorKind, UiuaResult, Value,
+    ExactDoubleIterator, Inputs, Ops, PersistentMeta, Primitive, Shape, SigNode, Signature, Span,
+    Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
 };
 
 mod dyadic;
@@ -805,16 +805,31 @@ fn fft_impl(
     Ok(())
 }
 
-pub fn astar(ops: Ops, env: &mut Uiua) -> UiuaResult {
-    astar_impl(ops, AstarMode::All, env)
+pub fn astar(
+    neighbors: SigNode,
+    is_goal: SigNode,
+    heuristic: Option<SigNode>,
+    env: &mut Uiua,
+) -> UiuaResult {
+    astar_impl(neighbors, is_goal, heuristic, AstarMode::All, env)
 }
 
-pub fn astar_first(ops: Ops, env: &mut Uiua) -> UiuaResult {
-    astar_impl(ops, AstarMode::First, env)
+pub fn astar_first(
+    neighbors: SigNode,
+    is_goal: SigNode,
+    heuristic: Option<SigNode>,
+    env: &mut Uiua,
+) -> UiuaResult {
+    astar_impl(neighbors, is_goal, heuristic, AstarMode::First, env)
 }
 
-pub fn astar_pop(ops: Ops, env: &mut Uiua) -> UiuaResult {
-    astar_impl(ops, AstarMode::CostOnly, env)
+pub fn astar_pop(
+    neighbors: SigNode,
+    is_goal: SigNode,
+    heuristic: Option<SigNode>,
+    env: &mut Uiua,
+) -> UiuaResult {
+    astar_impl(neighbors, is_goal, heuristic, AstarMode::CostOnly, env)
 }
 
 enum AstarMode {
@@ -823,18 +838,25 @@ enum AstarMode {
     CostOnly,
 }
 
-fn astar_impl(ops: Ops, mode: AstarMode, env: &mut Uiua) -> UiuaResult {
+fn astar_impl(
+    neighbors: SigNode,
+    is_goal: SigNode,
+    heuristic: Option<SigNode>,
+    mode: AstarMode,
+    env: &mut Uiua,
+) -> UiuaResult {
     let start = env.pop("start")?;
-    let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
     let nei_sig = neighbors.sig;
-    let heu_sig = heuristic.sig;
+    let heu_sig = heuristic
+        .as_ref()
+        .map(|h| h.sig)
+        .unwrap_or_else(|| Signature::new(0, 1));
     let isg_sig = is_goal.sig;
-    for (name, f, req_out) in &[
-        ("neighbors", &neighbors, [1, 2].as_slice()),
-        ("heuristic", &heuristic, &[1]),
-        ("goal", &is_goal, &[1]),
+    for (name, sig, req_out) in &[
+        ("neighbors", nei_sig, [1, 2].as_slice()),
+        ("goal", isg_sig, &[1]),
+        ("heuristic", heu_sig, &[1]),
     ] {
-        let sig = f.sig;
         if !req_out.contains(&sig.outputs) {
             let count = if req_out.len() == 1 {
                 "1"
@@ -842,8 +864,9 @@ fn astar_impl(ops: Ops, mode: AstarMode, env: &mut Uiua) -> UiuaResult {
                 "either 1 or 2"
             };
             return Err(env.error(format!(
-                "A* {name} function must return {count} outputs \
+                "{} {name} function must return {count} outputs \
                 but its signature is {sig}",
+                Primitive::Path.format()
             )));
         }
     }
@@ -877,28 +900,33 @@ fn astar_impl(ops: Ops, mode: AstarMode, env: &mut Uiua) -> UiuaResult {
     struct AstarEnv<'a> {
         env: &'a mut Uiua,
         neighbors: SigNode,
-        heuristic: SigNode,
         is_goal: SigNode,
+        heuristic: Option<SigNode>,
         args: Vec<Value>,
     }
 
     impl AstarEnv<'_> {
         fn heuristic(&mut self, node: &Value) -> UiuaResult<f64> {
-            let heu_args = self.heuristic.sig.args;
-            for arg in (self.args.iter()).take(heu_args.saturating_sub(1)).rev() {
-                self.env.push(arg.clone());
-            }
-            if heu_args > 0 {
-                self.env.push(node.clone());
-            }
-            self.env.exec(self.heuristic.clone())?;
-            let h = (self.env.pop("heuristic")?).as_num(self.env, "Heuristic must be a number")?;
-            if h < 0.0 {
-                return Err(self
-                    .env
-                    .error("Negative heuristic values are not allowed in A*"));
-            }
-            Ok(h)
+            Ok(if let Some(heuristic) = &self.heuristic {
+                let heu_args = heuristic.sig.args;
+                for arg in (self.args.iter()).take(heu_args.saturating_sub(1)).rev() {
+                    self.env.push(arg.clone());
+                }
+                if heu_args > 0 {
+                    self.env.push(node.clone());
+                }
+                self.env.exec(heuristic.clone())?;
+                let h =
+                    (self.env.pop("heuristic")?).as_num(self.env, "Heuristic must be a number")?;
+                if h < 0.0 {
+                    return Err(self
+                        .env
+                        .error("Negative heuristic values are not allowed in A*"));
+                }
+                h
+            } else {
+                0.0
+            })
         }
         fn neighbors(&mut self, node: &Value) -> UiuaResult<Vec<(Value, f64)>> {
             let nei_args = self.neighbors.sig.args;
@@ -941,7 +969,7 @@ fn astar_impl(ops: Ops, mode: AstarMode, env: &mut Uiua) -> UiuaResult {
             }
             self.env.exec(self.is_goal.clone())?;
             let is_goal = (self.env.pop("is_goal")?)
-                .as_bool(self.env, "A* goal function must return a boolean")?;
+                .as_bool(self.env, "path goal function must return a boolean")?;
             Ok(is_goal)
         }
     }

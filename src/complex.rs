@@ -85,7 +85,8 @@ impl Complex {
     }
     /// Get the absolute value of a complex number
     pub fn abs(self) -> f64 {
-        self.re.hypot(self.im)
+        // Do not use `self.re.hypot(self.im)` because it is slower, especially on WASM
+        (self.re * self.re + self.im * self.im).sqrt()
     }
     /// Get the arctangent of a complex number
     pub fn atan2(self, x: impl Into<Self>) -> Complex {

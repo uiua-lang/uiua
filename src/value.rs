@@ -1593,7 +1593,8 @@ impl Value {
                 chars.shape = chars.data.len().into();
                 Ok(chars.into())
             }
-            Value::Char(chars) if chars.rank() > 1 && env.scalar_fill::<char>().is_ok() => {
+            Value::Char(mut chars) if chars.rank() > 1 && env.scalar_fill::<char>().is_ok() => {
+                let meta = chars.get_meta_mut().map(take);
                 let mut rows = Vec::new();
                 for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
                     rows.push(Array::<char>::from_iter(
@@ -1604,6 +1605,7 @@ impl Value {
                 let last = arr.shape.pop().unwrap();
                 arr.shape = chars.shape;
                 *arr.shape.last_mut().unwrap() = last;
+                arr.meta = meta.map(Into::into);
                 Ok(arr.into())
             }
             value => value.scalar_abs(env),

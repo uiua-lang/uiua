@@ -906,11 +906,18 @@ F 10 11"/>
         <p>"In bindings, the "<code>"|"</code>" comes after the "<code>"←"</code>". In inline functions, it comes after the "<code>"("</code>"."</p>
         <Editor example="TimesThree ← |1.1 ×3\nTimesThree 7"/>
         <Editor example="TimesThree ← |1   ×3\nTimesThree 7"/>
-        <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
+        <Editor example="≡(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions to make sure that they are used correctly."</p>
         <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be inferred. The compiler can usually infer a function's signature unless you are doing something weird that it cannot reason about."</p>
-        <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
-        <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
+        <p>"A declared signature always overrides the inferred signature. However, if they do not match, a warning will be emitted."</p>
+        <Editor example="F ← |3.2 ⊟+1\nF 1 4"/> // Should fail
+        <p>"In that example, the net stack change of the declared signature of "<code>"|3.2"</code>" is actually the same of that of the inferred signature of "<code>"|2.1"</code>". Either way, the function will cause the stack to have one less value."</p>
+        <p>"If this is "<em>"not"</em>" the case, the declared signature will be "<em>"made"</em>" to be correct by, after the function has run, either popping extra arguments or pushing extra outputs below on the stack."</p>
+        <p>"For example, even though this function has signature "<code>"|2.1"</code>", the declared signature of "<code>"|2.2"</code>" causes an extra debug output to be pushed. This debug output is a boxed string. This is done to ensure that the function does in fact have 2 outputs."</p>
+        <Editor example="F ← |2.2 ⊟+1\nF 1 4 5"/> // Should fail
+        <p>"Conversely, if the function needs to have more "<em>"arguments"</em>", such as here where we declare it to have signature "<code>"|4.2"</code>", some extra arguments will be popped from the stack. In this case, it is the "<code>"6"</code>" that is popped. We can see that this does in fact make the function turn 4 values on the stack into 2."</p>
+        <Editor example="F ← |4.2 ⊟+1\nF 1 4 5 6"/> // Should fail
+        <p><strong>"The point of allowing this is that functions which are only partially written can still be run and debugged. But finished code should never have warnings!"</strong></p>
         <p>"If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", the function will throw an error at runtime."</p>
 
         <Hd id="challenges">"Challenges"</Hd>

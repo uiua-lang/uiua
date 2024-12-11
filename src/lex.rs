@@ -1434,6 +1434,8 @@ impl<'a> Lexer<'a> {
             } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c)) {
                 s.push_str(c);
                 started_subscript = true;
+            } else if let Some(c) = self.next_char_if(|c| "⌞⌟".contains(c)) {
+                s.push_str(c);
             } else {
                 break s;
             }
@@ -1718,7 +1720,12 @@ fn canonicalize_subscripts(ident: Ident) -> Ident {
             if let Some(d) = c.to_digit(10) {
                 crate::lex::SUBSCRIPT_DIGITS[d as usize]
             } else {
-                c
+                match c {
+                    '<' => '⌞',
+                    '>' => '⌟',
+                    '`' | '¯' => '₋',
+                    c => c,
+                }
             }
         })
         .collect()

@@ -318,6 +318,9 @@ F ←
 a ← ()
 ⍤⤙≍ 4
 
+Foo⌟ ← 5
+⍤⤙≍ 5 Foo⌟
+
 # Constant vs Noadic function
 F ← ⚂
 G ← (⚂)

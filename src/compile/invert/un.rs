@@ -574,7 +574,7 @@ inverse!(JoinPat, input, asm, {
     let orig_input = input;
     let mut input = input;
     let Some((join_index, join_span)) = (input.iter().enumerate().rev())
-        .filter_map(|(i, node)| match node {
+        .filter_map(|(i, node)| match node.inner() {
             Prim(Join, span) => Some((i, *span)),
             _ => None,
         })
@@ -647,7 +647,7 @@ inverse!(JoinPat, input, asm, {
                     continue;
                 }
                 if let Some((i, _)) = input.iter().enumerate().skip(1).find(|(i, node)| {
-                    nodes_clean_sig(&input[..*i]).is_some() && matches!(node, Mod(Dip, ..))
+                    nodes_clean_sig(&input[..*i]).is_some() && matches!(node.inner(), Mod(Dip, ..))
                 }) {
                     node.extend(un_inverse(&input[..i], asm)?);
                     input = &input[i..];
@@ -658,8 +658,8 @@ inverse!(JoinPat, input, asm, {
             }
             Ok(node)
         }
-        let flip_after = join_index > 0 && matches!(input[join_index - 1], Prim(Flip, _));
-        let flip_before = join_index > 1 && matches!(input[0], Prim(Flip, _));
+        let flip_after = join_index > 0 && matches!(input[join_index - 1].inner(), Prim(Flip, _));
+        let flip_before = join_index > 1 && matches!(input[0].inner(), Prim(Flip, _));
         let flip = flip_before ^ flip_after;
         let before = &input[flip_before as usize..join_index - flip_after as usize];
         input = &input[join_index + 1..];

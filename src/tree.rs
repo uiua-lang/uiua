@@ -512,9 +512,16 @@ impl Node {
         }
         recurse(None, None, self, asm, f)
     }
-    fn inner(&self) -> &Node {
+    pub(crate) fn inner(&self) -> &Node {
         match self {
-            Node::TrackCaller(inner) | Node::NoInline(inner) => inner,
+            Node::TrackCaller(inner) | Node::NoInline(inner) => inner.inner(),
+            Node::CustomInverse(cust, ..) => {
+                if let Ok(sn) = cust.normal.as_ref() {
+                    sn.node.inner()
+                } else {
+                    self
+                }
+            }
             node => node,
         }
     }

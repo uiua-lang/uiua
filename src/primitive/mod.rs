@@ -2242,10 +2242,10 @@ fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
     }
     let mut curr = String::new();
     let mut kind = FragKind::Text;
-    let mut chars = line.chars().peekable();
-    while let Some(c) = chars.next() {
+    let mut chars = line.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
         match c {
-            '\\' if chars.peek() == Some(&'`') => {
+            '\\' if chars.peek().map(|i| i.1) == Some('`') => {
                 curr.push('`');
                 chars.next();
             }
@@ -2271,13 +2271,16 @@ fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
                 curr = String::new();
                 kind = FragKind::Text;
             }
-            '*' if kind == FragKind::Strong && chars.peek() == Some(&'*') => {
+            '*' if kind == FragKind::Strong
+                && chars.peek().map(|i| i.1) == Some('*')
+                && line[i + 2..].contains("**") =>
+            {
                 chars.next();
                 frags.push(PrimDocFragment::Strong(curr));
                 curr = String::new();
                 kind = FragKind::Text;
             }
-            '*' if kind == FragKind::Text => {
+            '*' if kind == FragKind::Text && line[i + 1..].contains('*') => {
                 frags.push(PrimDocFragment::Text(curr));
                 curr = String::new();
                 kind = FragKind::Emphasis;
@@ -2287,10 +2290,10 @@ fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
                 curr = String::new();
                 kind = FragKind::Primitive;
             }
-            ']' if kind == FragKind::Primitive && chars.peek() == Some(&'(') => {
+            ']' if kind == FragKind::Primitive && chars.peek().map(|i| i.1) == Some('(') => {
                 chars.next();
                 let mut url = String::new();
-                for c in chars.by_ref() {
+                for (_, c) in chars.by_ref() {
                     if c == ')' {
                         break;
                     }

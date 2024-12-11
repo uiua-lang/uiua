@@ -262,6 +262,8 @@ impl Compiler {
                 Ok(Node::CustomInverse(cust.into(), span))
             }
             Modifier::Primitive(Primitive::Astar) if pack.branches.len() == 2 => {
+                self.handle_primitive_deprecation(Primitive::Astar, &modifier.span);
+                self.handle_primitive_experimental(Primitive::Astar, &modifier.span);
                 let mut args = EcoVec::with_capacity(3);
                 for branch in pack.branches.iter().cloned() {
                     args.push(self.word_sig(branch.map(Word::Func))?);

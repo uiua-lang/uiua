@@ -897,7 +897,7 @@ fn astar_impl(
         }
     }
 
-    struct AstarEnv<'a> {
+    struct PathEnv<'a> {
         env: &'a mut Uiua,
         neighbors: SigNode,
         is_goal: SigNode,
@@ -905,7 +905,7 @@ fn astar_impl(
         args: Vec<Value>,
     }
 
-    impl AstarEnv<'_> {
+    impl PathEnv<'_> {
         fn heuristic(&mut self, node: &Value) -> UiuaResult<f64> {
             Ok(if let Some(heuristic) = &self.heuristic {
                 let heu_args = heuristic.sig.args;
@@ -916,8 +916,9 @@ fn astar_impl(
                     self.env.push(node.clone());
                 }
                 self.env.exec(heuristic.clone())?;
-                let h =
-                    (self.env.pop("heuristic")?).as_num(self.env, "Heuristic must be a number")?;
+                let h = (self.env)
+                    .pop("heuristic")?
+                    .as_num(self.env, "Heuristic must be a number")?;
                 if h < 0.0 {
                     return Err(self
                         .env
@@ -974,7 +975,7 @@ fn astar_impl(
         }
     }
 
-    let mut env = AstarEnv {
+    let mut env = PathEnv {
         env,
         neighbors,
         heuristic,

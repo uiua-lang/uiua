@@ -92,7 +92,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &ReduceTableOpt,
     &ReduceDepthOpt,
     &AdjacentOpt,
-    &AstarOpt,
+    &PathOpt,
     &SplitByOpt,
     &AllSameOpt,
     &RepeatRandOpt,
@@ -209,7 +209,15 @@ impl Optimization for ReduceDepthOpt {
 }
 
 opt!(
-    AstarOpt,
+    PathOpt,
+    (
+        [Mod(Path, args, span), Prim(First, _)],
+        ImplMod(PathFirst, args.clone(), *span)
+    ),
+    (
+        [Mod(Path, args, span), Prim(Pop, _)],
+        ImplMod(PathPop, args.clone(), *span)
+    ),
     (
         [Mod(Astar, args, span), Prim(First, _)],
         ImplMod(AstarFirst, args.clone(), *span)

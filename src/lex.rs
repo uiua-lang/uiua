@@ -911,27 +911,31 @@ impl<'a> Lexer<'a> {
                         c = special;
                     } else {
                         let mut code = 0;
+                        let mut allow_hex = true;
                         for c in text.chars() {
                             let Some(digit) = c.to_digit(16) else {
                                 self.errors.push(
                                     self.end_span(start)
                                         .sp(LexError::InvalidEscapeSequence(text.clone())),
                                 );
-                                continue;
+                                allow_hex = false;
+                                break;
                             };
                             code = code << 4 | digit;
                         }
-                        replacement =
-                            if let Some(c) = std::char::from_u32(code).filter(|_| code > 127) {
-                                c.to_string()
-                            } else {
-                                self.errors.push(
-                                    self.end_span(start)
-                                        .sp(LexError::InvalidUnicodeEscape(code)),
-                                );
-                                continue;
-                            };
-                        c = &replacement;
+                        if allow_hex {
+                            replacement =
+                                if let Some(c) = std::char::from_u32(code).filter(|_| code > 127) {
+                                    c.to_string()
+                                } else {
+                                    self.errors.push(
+                                        self.end_span(start)
+                                            .sp(LexError::InvalidUnicodeEscape(code)),
+                                    );
+                                    continue;
+                                };
+                            c = &replacement;
+                        }
                     }
                 } else {
                     self.loc = start;
@@ -1740,7 +1744,8 @@ thread_local! {
         ("Delta", "δ", "Δ"),
         ("Epsilon", "ε", "Ε"),
         ("Zeta", "ζ", "Ζ"),
-        ("Eta", "", "Η"),
+        ("Eta", "η", "Η"),
+        ("Theta", "θ", "Θ"),
         ("Iota", "ι", "Ι"),
         ("Kappa", "κ", "Κ"),
         ("Lambda", "λ", "Λ"),
@@ -1748,10 +1753,10 @@ thread_local! {
         ("Nu", "ν", "Ν"),
         ("Xi", "ξ", "Ξ"),
         ("Omicron", "ο", "Ο"),
-        ("Pi", "", "Π"),
+        ("Pi", "π", "Π"),
         ("Rho", "ρ", "Ρ"),
         ("Sigma", "σ", "Σ"),
-        ("Tau", "", "Τ"),
+        ("Tau", "τ", "Τ"),
         ("Upsilon", "υ", "Υ"),
         ("Phi", "φ", "Φ"),
         ("Chi", "χ", "Χ"),

@@ -87,7 +87,7 @@ You can put many `;`s on the same line.
 1;2;3;4
 ```
 
-Another problems is that if you want to split a line of code into two lines, it is not enough to simply place your cursor at the split point and press Enter, as this puts the lines in the wrong order!
+Another problem is that if you want to split a line of code into two lines, it is not enough to simply place your cursor at the split point and press Enter, as this puts the lines in the wrong order!
 
 Instead, you can type `;;` at the point you want to split the code. Upon formatting, the line will be split in a way that preserves the same meaning!
 

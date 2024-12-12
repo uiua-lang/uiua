@@ -10,7 +10,7 @@ use std::{
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
-    algorithm::{fixed_rows, get_ops, FixedRowsData},
+    algorithm::{fixed_rows, get_ops, pervade::pervade_dim, FixedRowsData},
     array::{Array, ArrayValue},
     cowslice::CowSlice,
     types::push_empty_rows_value,
@@ -68,10 +68,12 @@ pub fn repeat(ops: Ops, with_inverse: bool, env: &mut Uiua) -> UiuaResult {
         // Collect arguments
         let mut args = Vec::with_capacity(sig.args + 1);
         let mut new_shape = n.shape().clone();
+        let mut true_shape = Shape::SCALAR;
         args.push(n);
         for i in 0..sig.args {
             let arg = env.pop(i + 1)?;
             for (a, &b) in new_shape.iter_mut().zip(arg.shape()) {
+                true_shape.push(pervade_dim(*a, b));
                 *a = (*a).max(b);
             }
             args.push(arg);
@@ -95,16 +97,21 @@ pub fn repeat(ops: Ops, with_inverse: bool, env: &mut Uiua) -> UiuaResult {
                 },
                 env,
             )?;
-            // println!("ns: {} {:?}", n.shape, n.data);
+            if row_count == 1 && n.row_count() == 0 {
+                new_shape = true_shape;
+                break;
+            }
             rows_to_sel.clear();
-            for row in rows[1..].iter_mut() {
+            for row in &mut rows[1..] {
                 let row = match row {
                     Ok(row) => row.next().unwrap(),
                     Err(row) => row.clone(),
                 };
-                // println!("row: {:?}", row);
                 if n.rank() > row.rank() || is_empty {
                     rows_to_sel.push(Err(row));
+                } else if row.row_count() == 1 && n.row_count() >= 1 {
+                    let row_shape = row.shape()[n.rank()..].into();
+                    rows_to_sel.push(Err(row.into_row_shaped_slices(row_shape).next().unwrap()));
                 } else {
                     let row_shape = row.shape()[n.rank()..].into();
                     rows_to_sel.push(Ok(row.into_row_shaped_slices(row_shape)));

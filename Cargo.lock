@@ -5807,6 +5807,7 @@ dependencies = [
  "serde_tuple",
  "serde_yaml",
  "simple_excel_writer",
+ "skrifa",
  "sys-locale",
  "terminal-light",
  "terminal_size",

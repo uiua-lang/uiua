@@ -83,6 +83,7 @@ libloading = {version = "0.8.3", optional = true}
 rustfft = {version = "6.2.0", optional = true}
 rustls-pemfile = {version = "2.1.2", optional = true}
 simple_excel_writer = {version = "0.2.0", optional = true}
+skrifa = {version = "0.20.0", optional = true}
 sys-locale = {version = "0.3.1", optional = true}
 uiua-nokhwa = {version = "0.10.5", optional = true, features = ["input-native"]}
 
@@ -140,7 +141,7 @@ default = [
 ]
 ffi = ["libffi", "libloading"]
 fft = ["rustfft"]
-font_shaping = ["cosmic-text", "sys-locale"]
+font_shaping = ["cosmic-text", "sys-locale", "skrifa"]
 full = ["audio", "webcam", "window"] # Enables all optional features
 gif = ["dep:gif", "image", "color_quant"]
 invoke = ["open"]

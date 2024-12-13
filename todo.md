@@ -3,10 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Stabilize `backward`, `case`
-  - Need to figure out `backward`'s glyph and non-dyadic semantics
-  - Add `case` to pattern matching tutorial
-
 # 0.15
 - Optimize `conjoin inventory`
 - Compile-time code string evaluation

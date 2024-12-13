@@ -91,7 +91,6 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &TransposeOpt,
     &ReduceTableOpt,
     &ReduceDepthOpt,
-    &AdjacentOpt,
     &PathOpt,
     &SplitByOpt,
     &AllSameOpt,
@@ -155,34 +154,6 @@ opt!(
         [Push(val.clone()), ImplPrim(ValidateTypeConsume, *span)]
     )
 );
-
-#[derive(Debug)]
-struct AdjacentOpt;
-impl Optimization for AdjacentOpt {
-    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
-        match_and_replace(nodes, |nodes| {
-            let (args, span) = match nodes {
-                [Prim(Windows, _), Mod(Rows, args, span), ..] => (args, span),
-                [Mod(Stencil, st_args, _), Mod(Rows, args, span), ..]
-                    if st_args.len() == 1 && matches!(st_args[0].node, Prim(Identity, _)) =>
-                {
-                    (args, span)
-                }
-                _ => return None,
-            };
-            let [f] = args.as_slice() else {
-                return None;
-            };
-            match f.node.as_slice() {
-                [Mod(Reduce, reduce_args, span)] if reduce_args[0].sig == (2, 1) => {
-                    Some((2, ImplMod(Adjacent, reduce_args.clone(), *span)))
-                }
-                _ if args[0].sig == (1, 1) => Some((2, ImplMod(RowsWindows, args.clone(), *span))),
-                _ => None,
-            }
-        })
-    }
-}
 
 #[derive(Debug)]
 struct ReduceDepthOpt;

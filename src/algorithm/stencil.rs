@@ -8,7 +8,7 @@ use crate::{
     val_as_arr, Array, ArrayValue, Boxed, Node, Primitive, Shape, SigNode, Uiua, UiuaResult, Value,
 };
 
-use super::{get_ops, loops::flip, multi_output, reduce::reduce_impl, Ops};
+use super::{get_ops, loops::flip, multi_output, Ops};
 
 pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
@@ -53,16 +53,8 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
             Ok(())
         };
     }
-    let size = env.pop(1)?;
-    // Stencil reduce calls adjacent
-    if size.rank() == 0 && size.type_id() == f64::TYPE_ID && env.value_fill().is_none() {
-        if let Node::Mod(Primitive::Reduce, args, _) = f.node {
-            let [f] = get_ops(args.clone(), env)?;
-            env.push(size);
-            return adjacent(f, env);
-        }
-    }
     // Default stencil
+    let size = env.pop(1)?;
     let xs = env.pop(2)?;
     let has_fill = env.fill().value_for(&xs).is_some();
     let dims = derive_dims(&size, xs.shape(), has_fill, env)?;
@@ -320,41 +312,6 @@ fn derive_dims(
         )));
     }
     Ok(dims)
-}
-
-pub fn adjacent(f: SigNode, env: &mut Uiua) -> UiuaResult {
-    let n_arr = env.pop(1)?;
-    let xs = env.pop(2)?;
-    if n_arr.rank() != 0 {
-        return adjacent_fallback(f, n_arr, xs, env);
-    }
-    let n = n_arr.as_int(env, "Window size must be an integer or list of integers")?;
-    if n == 0 {
-        return Err(env.error("Window size cannot be zero"));
-    }
-    let n = if n > 0 {
-        n.unsigned_abs()
-    } else {
-        let count = n.unsigned_abs();
-        if count <= xs.row_count() {
-            xs.row_count() + 1 - count
-        } else {
-            return adjacent_fallback(f, n_arr, xs, env);
-        }
-    };
-    adjacent_impl(f, xs, n, env)
-}
-
-fn adjacent_fallback(f: SigNode, n: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let windows = n.windows(xs, env)?;
-    let mut new_rows = Vec::with_capacity(windows.row_count());
-    for window in windows.into_rows() {
-        env.push(window);
-        reduce_impl(f.clone(), 0, env)?;
-        new_rows.push(env.pop("adjacent function result")?);
-    }
-    env.push(Value::from_row_values(new_rows, env)?);
-    Ok(())
 }
 
 fn adjacent_impl(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult {

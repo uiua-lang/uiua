@@ -268,8 +268,6 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             ReduceTable => write!(f, "{Reduce}(…){Table}"),
-            Adjacent => write!(f, "{Rows}{Reduce}(…){Stencil}{Identity}"),
-            RowsWindows => write!(f, "{Rows}(…){Stencil}{Identity}"),
             CountUnique => write!(f, "{Len}{Deduplicate}"),
             MatchPattern => write!(f, "pattern match"),
             MatchLe => write!(f, "match ≤"),
@@ -805,7 +803,6 @@ impl Primitive {
             Primitive::Fall => env.monadic_ref(Value::fall)?,
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Select => env.dyadic_oo_env(Value::select)?,
-            Primitive::Windows => env.dyadic_ro_env(Value::windows)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
             Primitive::Classify => env.monadic_ref(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut_env(Value::deduplicate)?,
@@ -1716,10 +1713,6 @@ impl ImplPrimitive {
             ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(ops, env)?,
             ImplPrimitive::UndoGroup1 => loops::undo_group_part1(ops, env)?,
             ImplPrimitive::ReduceContent => reduce::reduce_content(ops, env)?,
-            ImplPrimitive::Adjacent => {
-                let [f] = get_ops(ops, env)?;
-                stencil::adjacent(f, env)?
-            }
             ImplPrimitive::AstarFirst => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
                 algorithm::astar_first(neighbors, is_goal, Some(heuristic), env)?;
@@ -1743,7 +1736,6 @@ impl ImplPrimitive {
             ImplPrimitive::UnDump => dump(ops, env, true)?,
             ImplPrimitive::UnFill => fill!(ops, env, with_unfill, without_unfill_but),
             ImplPrimitive::ReduceTable => table::reduce_table(ops, env)?,
-            ImplPrimitive::RowsWindows => zip::rows_windows(ops, env)?,
             ImplPrimitive::UnBoth => {
                 let [f] = get_ops(ops, env)?;
                 env.exec(f.node.clone())?;

@@ -278,11 +278,6 @@ pub(crate) struct Repeat<'a, T> {
     elem: &'a T,
     count: usize,
 }
-impl<'a, T> Repeat<'a, T> {
-    pub fn new(elem: &'a T, count: usize) -> Self {
-        Self { elem, count }
-    }
-}
 impl<T: Clone> Iterator for Repeat<'_, T> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {

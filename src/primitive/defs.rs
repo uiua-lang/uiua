@@ -3784,8 +3784,6 @@ impl_primitive!(
     (2(1)[2], ReduceTable),
     (1, ReplaceRand, Impure),
     (2, ReplaceRand2, Impure),
-    (2(1)[1], Adjacent),
-    (2(1)[1], RowsWindows),
     (1, CountUnique),
     ((2)[3], AstarFirst),
     ((1)[3], AstarPop),

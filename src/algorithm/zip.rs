@@ -6,7 +6,7 @@ use ecow::eco_vec;
 
 use crate::{
     algorithm::pervade::bin_pervade_values, cowslice::CowSlice, get_ops, random,
-    types::push_empty_rows_value, val_as_arr, value::Value, Array, Boxed, ImplPrimitive, Node, Ops,
+    types::push_empty_rows_value, val_as_arr, value::Value, Array, ImplPrimitive, Node, Ops,
     PersistentMeta, Primitive, Shape, SigNode, Uiua, UiuaResult,
 };
 
@@ -813,40 +813,4 @@ fn rowsn(f: SigNode, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult 
         env.push(rowsed);
     }
     Ok(())
-}
-
-pub fn rows_windows(ops: Ops, env: &mut Uiua) -> UiuaResult {
-    let [f] = get_ops(ops, env)?;
-    if f.sig != (1, 1) {
-        return Err(
-            env.error("rows windows's function is not |1. This is a bug in the interpreter")
-        );
-    }
-    let n_arr = env.pop(1)?;
-    let xs = env.pop(2)?;
-    if n_arr.rank() != 0 || xs.rank() == 0 {
-        let windows = n_arr.windows(xs, env)?;
-        return rows1(f, windows, false, env);
-    }
-    let n = n_arr.as_int(env, "Window size must be an integer or list of integers")?;
-    let n_abs = n.unsigned_abs();
-    if n_abs == 0 {
-        return Err(env.error("Window size cannot be zero"));
-    }
-    let n = n_abs;
-    if xs.row_count() < n {
-        env.push(xs.first_dim_zero());
-        return Ok(());
-    }
-    if let Some(Primitive::Box) = f.node.as_primitive() {
-        let win_count = xs.row_count() - (n - 1);
-        let arr = Array::from_iter(
-            (0..win_count).map(|win_start| Boxed(xs.slice_rows(win_start, win_start + n))),
-        );
-        env.push(arr);
-        return Ok(());
-    }
-
-    let windows = n_arr.windows(xs, env)?;
-    rows1(f, windows, false, env)
 }

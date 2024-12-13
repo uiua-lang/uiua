@@ -472,8 +472,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Misc",
-    "description": "Call a pattern matching case",
-    "experimental": true
+    "description": "Call a pattern matching case"
   },
   "ceiling": {
     "glyph": "⌈",

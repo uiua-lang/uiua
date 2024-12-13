@@ -1277,8 +1277,8 @@ fn TutorialPatternMatching() -> impl IntoView {
         <Editor example="°(⊂1) [1 2 3]"/>
         <Editor example="°(⊂1) [4 5 6]"/> // Should fail
         <Editor example="°(⊂1_2) [1 2 3]"/>
-        <p>"To match a suffix, you can use "<Prim prim=Under/><Prim prim=Reverse/>"."</p>
-        <Editor example="⍜⇌°(⊂3) [1 2 3]"/>
+        <p>"To match a suffix, you can use "<Prim prim=Flip/>"."</p>
+        <Editor example="°(⊂:3) [1 2 3]"/>
 
         <Hd id="with-try">"Matching multiple patterns with "<Prim prim=Try/></Hd>
         <p>"Single patterns are of limited usefulness on their own. Because they throw errors when matching fails, you can attempt to match additional errors using "<Prim prim=Try/>"."</p>
@@ -1293,7 +1293,22 @@ fn TutorialPatternMatching() -> impl IntoView {
         <Editor example="°$\"_, _, _\" \"1, 2, 3\""/>
         <Editor example="°$\"_, _, _\" \"1, 2, 3, 4, 5\""/>
         <Editor example="°$\"Hello, _!\" \"Hello, World!\""/>
+        <p>"Multiline format strings can be inverted as well."</p>
+        <Editor example="\"Hello\\nWorld!\"\n°$$ Hello\n $$ _!"/>
+        <p>"Inverting the "<Prim prim=Reduce/>" of a dyadic format string will split by a delimiter."</p>
+        <Editor example="°/$\"_ - _\" \"a - bcd - ef\""/>
         <p>"More precisely, format string patterns form a regex that replaces all "<code>"_"</code>"s from the format string with "<code>"(.+?|.*)"</code>", where "<code>"."</code>" also matches newlines."</p>
+
+        <Hd id="case">"Propogating errors with "<Prim prim=Case/></Hd>
+        <p>"Consider a function which attempts to match multiple patterns. After a pattern matches, each branch has some code to run."</p>
+        <p>"For example, this function attempts to parse a couple different expected string formats, then "<Prim prim=Parse/>"s and "<Prim prim=Select/>"s the result in some way."</p>
+        <Editor example="F ← ⍣(  ⊏⋕ °$\"_: _\"| ⊏⋕: °$\"_ - _\"| ∘)\nF \"1: abc\"\nF \"def - 2\""/>
+        <p>"But what happens if we give an input that matches the pattern but fails elswhere is the branch?"</p>
+        <Editor example="F ← ⍣(⊏⋕ °$\"_: _\"|⊏⋕: °$\"_ - _\"|∘)\nF \"r: xyz\"  # Can't parse\nF \"ghi - 3\" # Out of bounds"/>
+        <p>"In both those cases, a pattern match succeedes, but either the "<Prim prim=Parse/>" or "<Prim prim=Select/>" fails. This causes the "<Prim prim=Try/>" to move on to the next branch silently, causing what may be unexpected behavior!"</p>
+        <p>"The "<Prim prim=Case/>" modifier can be used to make the branch fail properly. "<Prim prim=Case/>" simply calls its function. However, in the even that the function errors, the error can escape a single "<Prim prim=Try/>"."</p>
+        <p>"Wrapping the code after a pattern match in "<Prim prim=Case/>" will make the error propagate properly."</p>
+        <Editor example="F ← ⍣(\n  ⍩(⊏⋕) °$\"_: _\"\n| ⍩(⊏⋕): °$\"_ - _\"\n| ∘)\nF \"ghi - 3\""/> // Should fail
 
         <Hd id="challenges">"Challenges"</Hd>
 

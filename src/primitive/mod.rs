@@ -518,7 +518,7 @@ impl Primitive {
         matches!(
             self,
             (Reach | Off | Backward | Above | Around)
-                | (Or | Base | Fft | Case | Layout | Binary)
+                | (Or | Base | Fft | Layout | Binary)
                 | Astar
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen | Breakpoint)

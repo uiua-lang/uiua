@@ -2705,8 +2705,7 @@ primitive!(
     ///
     /// This is where [case] comes in. [case] has one special thing it does that makes it useful: errors returned from [case]'s first function can escape a single [try].
     /// We can then arrange our [try] pattern matching with a [case] for each branch. The code in each branch that comes after the pattern match is wrapped in a [case].
-    /// ex! # Experimental!
-    ///   : F ← ⍣(
+    /// ex! F ← ⍣(
     ///   :   ⍩(⊏3) °(⊂1)
     ///   : | ⍩(⊏1) °(⊂2)
     ///   : | 0

@@ -35,6 +35,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Sorting is a very common operation, and it's useful to have such simple access to it
 - Stabilize [`last ⊣`](https://uiua.org/docs/last)
   - Getting the last row is a very common operation
+- Stabilize [`case ⍩`](https://uiua.org/docs/case)
 - Add the [`path`](https://uiua.org/docs/path) modifier, which finds shortest paths
   - Replaces and deprecates [`astar`](https://uiua.org/docs/astar)
   - `astar`'s functionality is still available via [`path`](https://uiua.org/docs/path) with a function pack

@@ -26,8 +26,7 @@ use crate::{
     cowslice::cowslice,
     get_ops,
     primitive::PrimDoc,
-    Array, Boxed, FfiType, Ops, Primitive, Purity, Signature, Uiua, UiuaErrorKind, UiuaResult,
-    Value,
+    Array, Boxed, FfiType, Ops, Primitive, Purity, Uiua, UiuaErrorKind, UiuaResult, Value,
 };
 
 /// The text of Uiua's example module
@@ -725,12 +724,12 @@ impl Value {
     }
 }
 
-/// The function type passed to `&ast`
-pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
 /// The function type passed to `&rl`'s returned function
 pub type ReadLinesFn<'a> = Box<dyn FnMut(String, &mut Uiua) -> UiuaResult + Send + 'a>;
 /// The function type returned by `&rl`
 pub type ReadLinesReturnFn<'a> = Box<dyn FnMut(&mut Uiua, ReadLinesFn) -> UiuaResult + Send + 'a>;
+/// The function type passed to `&ast`
+pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
 
 /// The kind of a handle
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -1883,17 +1882,23 @@ impl SysOp {
             }
             SysOp::AudioStream => {
                 let [f] = get_ops(ops, env)?;
-                if f.sig != (1, 1) {
+                let push_time = f.sig.args > 0;
+                if f.sig != (0, 1) && f.sig.args != f.sig.outputs {
                     return Err(env.error(format!(
-                        "&ast's function's signature must be {}, but it is {}",
-                        Signature::new(1, 1),
+                        "&ast's function must have the same number \
+                        of inputs and outputs, but its signature is {}",
                         f.sig
                     )));
                 }
+                if f.sig == (0, 0) {
+                    return Ok(());
+                }
                 let mut stream_env = env.clone();
-                if let Err(e) = env.rt.backend.stream_audio(Box::new(move |time_array| {
-                    let time_array = Array::<f64>::from(time_array);
-                    stream_env.push(time_array);
+                let res = env.rt.backend.stream_audio(Box::new(move |time_array| {
+                    if push_time {
+                        let time_array = Array::<f64>::from(time_array);
+                        stream_env.push(time_array);
+                    }
                     stream_env.exec(f.clone())?;
                     let samples = &stream_env.pop(1)?;
                     let samples = samples.as_num_array().ok_or_else(|| {
@@ -1922,9 +1927,8 @@ impl SysOp {
                             samples.shape()
                         ))),
                     }
-                })) {
-                    return Err(env.error(e));
-                }
+                }));
+                res.map_err(|e| env.error(e))?;
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

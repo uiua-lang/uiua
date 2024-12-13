@@ -540,6 +540,10 @@ impl VirtualEnv {
                     let [f] = get_args(args)?;
                     self.handle_args_outputs(f.args + 1, f.outputs);
                 }
+                Sys(SysOp::AudioStream) => {
+                    let [f] = get_args(args)?;
+                    self.handle_args_outputs(f.args.saturating_sub(1), f.outputs.saturating_sub(1));
+                }
                 prim if prim.modifier_args().is_some() => {
                     if let Some(sig) = prim.sig() {
                         self.handle_sig(sig);

@@ -1950,7 +1950,7 @@ primitive!(
     /// ex: {⍜ {⊙⊙∘}⍚⊂    1_2 3_4_5 6_7_8_9 10}
     ///   : {⍜⊙{⊙⊙∘}⍚⊂ 10 1_2 3_4_5 6_7_8_9   }
     ///
-    /// Subscripted [rows] operates N subarrays deep.
+    /// Subscripted [inventory] operates N subarrays deep.
     /// ex: ⍚₀∘ °△2_3_4
     ///   : ⍚₁∘ °△2_3_4
     ///   : ⍚₂∘ °△2_3_4

@@ -816,6 +816,25 @@ impl Compiler {
                 self.in_try = in_try;
                 let (mut tried, mut handler, _, handler_span) = nodes?;
 
+                // Adjust handler signature if it is a noreturn function
+                if let [init @ .., Node::Prim(Assert, _)] = handler.node.as_slice() {
+                    let noreturn = match init {
+                        [.., Node::Push(val), Node::Prim(Dup | Flip, _)] if *val != 1 => true,
+                        [.., Node::Format(..), Node::Prim(Dup, _)] => true,
+                        [.., Node::Push(val), Node::Push(_)] if *val != 1 => true,
+                        [.., Node::Mod(Dip, args, _)]
+                            if args.len() == 1
+                                && matches!(&args[0].node, Node::Push(val) if *val != 1) =>
+                        {
+                            true
+                        }
+                        _ => false,
+                    };
+                    if noreturn {
+                        handler.sig.outputs = tried.sig.outputs;
+                    }
+                }
+
                 match tried.sig.outputs.cmp(&handler.sig.outputs) {
                     Ordering::Equal => {}
                     Ordering::Less => {

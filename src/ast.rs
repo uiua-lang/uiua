@@ -361,14 +361,15 @@ impl Word {
     }
     /// Whether this word must come at the end of a line
     pub fn is_end_of_line(&self) -> bool {
-        matches!(
-            self,
+        match self {
             Word::Comment(_)
-                | Word::SemanticComment(_)
-                | Word::OutputComment { .. }
-                | Word::MultilineString(_)
-                | Word::MultilineFormatString(_)
-        )
+            | Word::SemanticComment(_)
+            | Word::OutputComment { .. }
+            | Word::MultilineString(_)
+            | Word::MultilineFormatString(_) => true,
+            Word::Modified(m) => m.operands.last().is_some_and(|w| w.value.is_end_of_line()),
+            _ => false,
+        }
     }
 }
 

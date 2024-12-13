@@ -1750,6 +1750,9 @@ x ← {
   1_2
   3_4
 }
+∘∘[°$ a
+    $ b
+]
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

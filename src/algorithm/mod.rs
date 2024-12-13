@@ -806,44 +806,44 @@ fn fft_impl(
     Ok(())
 }
 
-pub fn astar(
+pub fn path(
     neighbors: SigNode,
     is_goal: SigNode,
     heuristic: Option<SigNode>,
     env: &mut Uiua,
 ) -> UiuaResult {
-    astar_impl(neighbors, is_goal, heuristic, AstarMode::All, env)
+    path_impl(neighbors, is_goal, heuristic, PathMode::All, env)
 }
 
-pub fn astar_first(
+pub fn path_first(
     neighbors: SigNode,
     is_goal: SigNode,
     heuristic: Option<SigNode>,
     env: &mut Uiua,
 ) -> UiuaResult {
-    astar_impl(neighbors, is_goal, heuristic, AstarMode::First, env)
+    path_impl(neighbors, is_goal, heuristic, PathMode::First, env)
 }
 
-pub fn astar_pop(
+pub fn path_pop(
     neighbors: SigNode,
     is_goal: SigNode,
     heuristic: Option<SigNode>,
     env: &mut Uiua,
 ) -> UiuaResult {
-    astar_impl(neighbors, is_goal, heuristic, AstarMode::CostOnly, env)
+    path_impl(neighbors, is_goal, heuristic, PathMode::CostOnly, env)
 }
 
-enum AstarMode {
+enum PathMode {
     All,
     First,
     CostOnly,
 }
 
-fn astar_impl(
+fn path_impl(
     neighbors: SigNode,
     is_goal: SigNode,
     heuristic: Option<SigNode>,
-    mode: AstarMode,
+    mode: PathMode,
     env: &mut Uiua,
 ) -> UiuaResult {
     let start = env.pop("start")?;
@@ -1008,7 +1008,7 @@ fn astar_impl(
         if env.is_goal(&backing[curr])? {
             ends.insert(curr);
             shortest_cost = curr_cost;
-            if let AstarMode::All = mode {
+            if let PathMode::All = mode {
                 continue;
             } else {
                 break;
@@ -1066,11 +1066,12 @@ fn astar_impl(
     };
 
     match mode {
-        AstarMode::All => {
+        PathMode::All => {
             for end in ends {
                 let mut currs = vec![vec![end]];
                 let mut these_paths = Vec::new();
                 while !currs.is_empty() {
+                    env.respect_execution_limit()?;
                     let mut new_paths = Vec::new();
                     currs.retain_mut(|path| {
                         let parents = came_from
@@ -1106,7 +1107,7 @@ fn astar_impl(
             }
             env.push(paths);
         }
-        AstarMode::First => {
+        PathMode::First => {
             let mut curr = ends
                 .into_iter()
                 .next()
@@ -1119,7 +1120,7 @@ fn astar_impl(
             path.reverse();
             env.push(Boxed(make_path(path)?));
         }
-        AstarMode::CostOnly => {}
+        PathMode::CostOnly => {}
     }
     Ok(())
 }

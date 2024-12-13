@@ -1111,11 +1111,11 @@ impl Primitive {
             Primitive::Dump => dump(ops, env, false)?,
             Primitive::Astar => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
-                algorithm::astar(neighbors, is_goal, Some(heuristic), env)?;
+                algorithm::path(neighbors, is_goal, Some(heuristic), env)?;
             }
             Primitive::Path => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;
-                algorithm::astar(neighbors, is_goal, None, env)?;
+                algorithm::path(neighbors, is_goal, None, env)?;
             }
             Primitive::Memo => {
                 let [f] = get_ops(ops, env)?;
@@ -1715,19 +1715,19 @@ impl ImplPrimitive {
             ImplPrimitive::ReduceContent => reduce::reduce_content(ops, env)?,
             ImplPrimitive::AstarFirst => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
-                algorithm::astar_first(neighbors, is_goal, Some(heuristic), env)?;
+                algorithm::path_first(neighbors, is_goal, Some(heuristic), env)?;
             }
             ImplPrimitive::AstarPop => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
-                algorithm::astar_pop(neighbors, is_goal, Some(heuristic), env)?;
+                algorithm::path_pop(neighbors, is_goal, Some(heuristic), env)?;
             }
             ImplPrimitive::PathFirst => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;
-                algorithm::astar_first(neighbors, is_goal, None, env)?;
+                algorithm::path_first(neighbors, is_goal, None, env)?;
             }
             ImplPrimitive::PathPop => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;
-                algorithm::astar_pop(neighbors, is_goal, None, env)?;
+                algorithm::path_pop(neighbors, is_goal, None, env)?;
             }
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(ops, depth, env)?,
             ImplPrimitive::RepeatWithInverse => loops::repeat(ops, true, false, env)?,

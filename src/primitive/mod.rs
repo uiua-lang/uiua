@@ -1028,7 +1028,7 @@ impl Primitive {
                 loops::partition(f, env)?
             }
             Primitive::Tuples => permute::tuples(ops, env)?,
-            Primitive::Stencil => reduce::stencil(ops, env)?,
+            Primitive::Stencil => stencil::stencil(ops, env)?,
 
             // Stack
             Primitive::Fork => {
@@ -1718,7 +1718,7 @@ impl ImplPrimitive {
             ImplPrimitive::ReduceContent => reduce::reduce_content(ops, env)?,
             ImplPrimitive::Adjacent => {
                 let [f] = get_ops(ops, env)?;
-                reduce::adjacent(f, env)?
+                stencil::adjacent(f, env)?
             }
             ImplPrimitive::AstarFirst => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;

@@ -168,6 +168,16 @@ impl Shape {
         }
         Some(flat)
     }
+    pub(crate) fn i_dims_to_flat(&self, index: &[isize]) -> Option<usize> {
+        let mut flat = 0;
+        for (&dim, &i) in self.dims.iter().zip(index) {
+            if i < 0 || i >= dim as isize {
+                return None;
+            }
+            flat = flat * dim + i as usize;
+        }
+        Some(flat)
+    }
 }
 
 impl fmt::Debug for Shape {

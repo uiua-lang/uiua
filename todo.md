@@ -3,7 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Unified `stencil` implementation
 - Let `&ast` take args
 - Stabilize `backward`, `case`
   - Need to figure out `backward`'s glyph and non-dyadic semantics

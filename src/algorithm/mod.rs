@@ -29,6 +29,7 @@ mod monadic;
 pub mod permute;
 pub mod pervade;
 pub mod reduce;
+pub mod stencil;
 pub mod table;
 pub mod zip;
 

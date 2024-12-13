@@ -231,8 +231,8 @@ impl Optimization for AllSameOpt {
 struct SplitByOpt;
 impl Optimization for SplitByOpt {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
-        fn par_f(node: &Node) -> Option<SigNode> {
-            let Mod(Partition, args, _) = node else {
+        fn par_f(node: &Node) -> Option<(SigNode, usize)> {
+            let Mod(Partition, args, span) = node else {
                 return None;
             };
             let [f] = args.as_slice() else {
@@ -241,35 +241,35 @@ impl Optimization for SplitByOpt {
             if f.sig.args != 1 {
                 return None;
             }
-            Some(f.clone())
+            Some((f.clone(), *span))
         }
         match_and_replace(nodes, |nodes| match nodes {
-            [Mod(By, args, span), last, ..]
+            [Mod(By, args, _), last, ..]
                 if matches!(args.as_slice(), [f]
                             if matches!(f.node, Prim(Ne, _))) =>
             {
-                let f = par_f(last)?;
-                Some((2, ImplMod(SplitByScalar, eco_vec![f], *span)))
+                let (f, span) = par_f(last)?;
+                Some((2, ImplMod(SplitByScalar, eco_vec![f], span)))
             }
-            [Mod(By, args, span), Prim(Not, _), last, ..]
+            [Mod(By, args, _), Prim(Not, _), last, ..]
                 if matches!(args.as_slice(), [f]
                             if matches!(f.node, Prim(Mask, _))) =>
             {
-                let f = par_f(last)?;
-                Some((3, ImplMod(SplitBy, eco_vec![f], *span)))
+                let (f, span) = par_f(last)?;
+                Some((3, ImplMod(SplitBy, eco_vec![f], span)))
             }
-            [Prim(Dup, span), Push(delim), Prim(Ne, _), last, ..] => {
-                let f = par_f(last)?;
+            [Prim(Dup, _), Push(delim), Prim(Ne, _), last, ..] => {
+                let (f, span) = par_f(last)?;
                 let new = Node::from_iter([
                     Push(delim.clone()),
-                    ImplMod(SplitByScalar, eco_vec![f], *span),
+                    ImplMod(SplitByScalar, eco_vec![f], span),
                 ]);
                 Some((4, new))
             }
-            [Prim(Dup, span), Push(delim), Prim(Mask, _), Prim(Not, _), last, ..] => {
-                let f = par_f(last)?;
+            [Prim(Dup, _), Push(delim), Prim(Mask, _), Prim(Not, _), last, ..] => {
+                let (f, span) = par_f(last)?;
                 let new =
-                    Node::from_iter([Push(delim.clone()), ImplMod(SplitBy, eco_vec![f], *span)]);
+                    Node::from_iter([Push(delim.clone()), ImplMod(SplitBy, eco_vec![f], span)]);
                 Some((5, new))
             }
             _ => None,

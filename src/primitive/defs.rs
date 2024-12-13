@@ -2068,6 +2068,13 @@ primitive!(
     /// ex: ⧈□ [¤3¤4] ⇡12
     /// ex: ⧈□ [¤4¤2] ⇡12
     /// ex: ⧈□ [2_2 1_3] . °△4_6
+    /// By default, [fill]ed [stencil] pads each side of an axis with a number equal to the axis's window size [subtract]`1`.
+    /// This number is then [multiply]d by the specified stride.
+    /// ex: ⬚0⧈□ 2_2 +1°△2_2
+    /// ex: ⬚0⧈□ ¤2_2 +1°△4_6
+    /// Adding a third row to the array allows the fill amount to be specified for each axis.
+    /// ex: ⬚0⧈□ [2_2 1_1 0_1] +1°△2_2
+    /// ex: ⬚0⧈□ [2_2 2_2 0_1] +1°△4_6
     (2[1], Stencil, IteratingModifier, ("stencil", '⧈')),
     /// Repeat a function a number of times
     ///

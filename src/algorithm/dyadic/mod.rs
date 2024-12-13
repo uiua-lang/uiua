@@ -1048,6 +1048,22 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
+impl Value {
+    pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        match (self, other) {
+            (Value::Num(a), Value::Num(b)) => a.matrix_div(b, env),
+            (Value::Num(a), Value::Byte(b)) => a.matrix_div(&b.convert_ref(), env),
+            (Value::Byte(a), Value::Num(b)) => a.convert_ref().matrix_div(b, env),
+            (Value::Byte(a), Value::Byte(b)) => a.convert_ref().matrix_div(&b.convert_ref(), env),
+            _ => Err(env.error(format!(
+                "Cannot matrix divide {} by {}",
+                other.type_name(),
+                self.type_name(),
+            ))),
+        }
+    }
+}
+
 impl Array<f64> {
     pub(crate) fn matrix_mul(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
         let (a, b) = (self, other);
@@ -1104,6 +1120,27 @@ impl Array<f64> {
             }
         }
         Ok(Array::new(result_shape, result_data))
+    }
+    pub(crate) fn matrix_div(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let (a, b) = (other, self);
+        if a.rank() != 2 || b.rank() != 2 {
+            return Err(env.error(format!(
+                "Matrix division requires arrays of rank 2, \
+                but their shapes are {} and {}",
+                a.shape(),
+                b.shape()
+            )));
+        }
+        if [a.shape[0], a.shape[1]] != [b.shape[1], b.shape[0]] {
+            return Err(env.error(format!(
+                "Matrix division requires arrays of compatible shapes, \
+                but their shapes are {} and {}",
+                a.shape(),
+                b.shape()
+            )));
+        }
+        // let mut result_data = eco_vec![0.0; a.element_count().max(b.element_count())];
+        Err(env.error("Matrix division is not yet implemented"))
     }
 }
 

@@ -279,6 +279,7 @@ impl fmt::Display for ImplPrimitive {
             SplitByScalar => write!(f, "{Partition}{Box}{By}{Ne}"),
             SplitBy => write!(f, "{Partition}{Box}{Not}{By}{Mask}"),
             SplitByKeepEmpty => write!(f, "{Un}{Reduce}$\"_…_\""),
+            MatrixDiv => write!(f, "{Anti}{Under}{Transpose}({Reduce}{Add}{Mul})"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -1312,6 +1313,7 @@ impl ImplPrimitive {
                     .set_clipboard(&contents)
                     .map_err(|e| env.error(e))?;
             }
+            ImplPrimitive::MatrixDiv => env.dyadic_rr_env(Value::matrix_div)?,
             // Unders
             ImplPrimitive::UndoUnbits => {
                 let orig_shape = env.pop(1)?;

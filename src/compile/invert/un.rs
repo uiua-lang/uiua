@@ -246,6 +246,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &(Select, AntiSelect),
     &(Pick, AntiPick),
     &(Base, AntiBase),
+    &MatrixDivPat,
     &NoUnder(AntiCouplePat),
     &AntiFillPat,
     &AntiTrivial,
@@ -749,14 +750,19 @@ inverse!(CustomPat, input, _, ref, CustomInverse(cust, span), {
     Ok((input, CustomInverse(cust.into(), *span)))
 });
 
-inverse!(AntiCustomPat, input, _, ref, CustomInverse(cust, span), {
+inverse!(AntiCustomPat, input, asm, ref, CustomInverse(cust, span), {
     let mut cust = CustomInverse::clone(cust);
-    let anti = cust.anti.take().ok_or(Generic)?;
-    cust.anti = cust.normal.ok();
-    cust.normal = Ok(anti);
-    cust.un = None;
-    cust.under = None;
-    Ok((input, CustomInverse(cust.into(), *span)))
+    if let Some(anti) = cust.anti.take() {
+        cust.anti = cust.normal.ok();
+        cust.normal = Ok(anti);
+        cust.un = None;
+        cust.under = None;
+        Ok((input, CustomInverse(cust.into(), *span)))
+    } else if input.is_empty() {
+        Ok((&[], cust.normal?.anti_inverse(asm)?.node))
+    } else {
+        generic()
+    }
 });
 
 inverse!(FormatPat, input, _, ref, Format(parts, span), {
@@ -919,6 +925,25 @@ inverse!(AntiContraFlip, input, asm, Prim(Flip, span), {
         }
     }
     generic()
+});
+
+inverse!(MatrixDivPat, input, _, Prim(Transpose, _), {
+    let [Mod(Table, args, span), ImplPrim(TransposeN(-1), _), input @ ..] = input else {
+        return generic();
+    };
+    let [table_node] = args.as_slice() else {
+        return generic();
+    };
+    let [Prim(Mul, _), Mod(Reduce, args, _)] = table_node.node.as_slice() else {
+        return generic();
+    };
+    let [reduce_node] = args.as_slice() else {
+        return generic();
+    };
+    let Prim(Add, _) = reduce_node.node else {
+        return generic();
+    };
+    Ok((input, ImplPrim(MatrixDiv, *span)))
 });
 
 #[derive(Debug)]

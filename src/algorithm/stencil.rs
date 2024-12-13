@@ -96,13 +96,19 @@ where
     let mut shape_prefix = Shape::SCALAR;
     for (d, s) in dims.iter().zip(&arr.shape) {
         let total_len = *s + 2 * d.fill * d.stride;
-        shape_prefix.push((total_len - d.size + d.stride) / d.stride);
+        shape_prefix.push((total_len + d.stride).saturating_sub(d.size) / d.stride);
     }
     let window_shape = Shape::from_iter(
         dims.iter()
             .map(|d| d.size)
             .chain(arr.shape.iter().skip(dims.len()).copied()),
     );
+    if shape_prefix.contains(&0) {
+        let mut shape = shape_prefix;
+        shape.extend(window_shape);
+        env.push(Array::new(shape, EcoVec::new()));
+        return Ok(());
+    }
     let cell_shape = Shape::from(&arr.shape[dims.len()..]);
     let cell_len = cell_shape.elements();
     let fill = env.scalar_fill::<T>();

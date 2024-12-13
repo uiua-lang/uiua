@@ -200,6 +200,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &FormatPat,
     &FillPat,
     &InsertPat,
+    &RepeatPat,
     &DupPat,
     &DumpPat,
     &(Sqrt, (Dup, Mul)),
@@ -535,6 +536,21 @@ inverse!(
         input,
         Mod(Reduce, eco_vec![Prim(Mul, span).sig_node()?], span)
     ))
+);
+
+inverse!(
+    (RepeatPat, input, _),
+    ref,
+    ImplMod(RepeatWithInverse, args, span),
+    {
+        let [_f, inv] = args.as_slice() else {
+            return generic();
+        };
+        Ok((
+            input,
+            ImplMod(RepeatCountConvergence, eco_vec![inv.clone()], *span),
+        ))
+    }
 );
 
 inverse!(

@@ -3,7 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- `un repeat`: convergence count?
 - Unified `stencil` implementation
 - Let `&ast` take args
 - Stabilize `backward`, `case`

@@ -25,7 +25,7 @@ pub fn flip<A, B, C>(f: impl Fn(A, B) -> C + Copy) -> impl Fn(B, A) -> C + Copy 
     move |b, a| f(a, b)
 }
 
-pub fn repeat(ops: Ops, with_inverse: bool, env: &mut Uiua) -> UiuaResult {
+pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let (f, inv) = if with_inverse {
         let [f, inv] = get_ops(ops, env)?;
@@ -34,6 +34,11 @@ pub fn repeat(ops: Ops, with_inverse: bool, env: &mut Uiua) -> UiuaResult {
         let [f] = get_ops(ops, env)?;
         (f, None)
     };
+    if count_convergence {
+        let count = repeat_impl(f, inv, f64::INFINITY, env)?;
+        env.push(count as f64);
+        return Ok(());
+    }
     let n = env.pop("repetition count")?;
     fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
         Ok(match value {
@@ -52,7 +57,8 @@ pub fn repeat(ops: Ops, with_inverse: bool, env: &mut Uiua) -> UiuaResult {
     if n.rank() == 0 {
         // Scalar repeat
         let n = rep_count(n, env)?;
-        repeat_impl(f, inv, n.data[0], env)
+        repeat_impl(f, inv, n.data[0], env)?;
+        Ok(())
     } else {
         // Array
         let sig = f.sig;
@@ -153,7 +159,7 @@ pub fn repeat(ops: Ops, with_inverse: bool, env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> UiuaResult {
+fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> UiuaResult<u64> {
     let sig = f.sig;
     let (f, n) = if n >= 0.0 {
         (f, n)
@@ -161,6 +167,7 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
         let f = inv.ok_or_else(|| env.error("No inverse found"))?;
         (f, -n)
     };
+    let mut convergence_count = 0;
     if n.is_infinite() {
         // Converging repeat
         if sig.args == 0 {
@@ -182,6 +189,7 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
                 env.push(next.clone());
                 prev = next;
             }
+            convergence_count += 1;
         }
     } else {
         // Normal repeat
@@ -202,7 +210,7 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
             env.exec(f.clone())?;
         }
     }
-    Ok(())
+    Ok(convergence_count)
 }
 
 pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {

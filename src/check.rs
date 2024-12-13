@@ -573,6 +573,11 @@ impl VirtualEnv {
                     let n = self.pop();
                     self.repeat(f, n)?;
                 }
+                RepeatCountConvergence => {
+                    let [f] = get_args_nodes(args)?;
+                    self.repeat(f, BasicValue::Num(f64::INFINITY))?;
+                    self.push(BasicValue::Other);
+                }
                 UnFill => self.fill(args)?,
                 UnBoth => {
                     let [f] = get_args_nodes(args)?;

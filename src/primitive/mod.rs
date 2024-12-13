@@ -313,6 +313,7 @@ impl fmt::Display for ImplPrimitive {
                 write!(f, "{Stack}{n_str}")
             }
             RepeatWithInverse => write!(f, "{Repeat}"),
+            RepeatCountConvergence => write!(f, "{Un}{Repeat}"),
             ValidateType => write!(f, "{Un}…{Type}{Dup}"),
             ValidateTypeConsume => write!(f, "{Un}…{Type}"),
             TestAssert => write!(f, "{Assert}"),
@@ -1016,7 +1017,7 @@ impl Primitive {
                 zip::rows(f, true, env)?
             }
             Primitive::Table => table::table(ops, env)?,
-            Primitive::Repeat => loops::repeat(ops, false, env)?,
+            Primitive::Repeat => loops::repeat(ops, false, false, env)?,
             Primitive::Do => loops::do_(ops, env)?,
             Primitive::Group => {
                 let [f] = get_ops(ops, env)?;
@@ -1736,7 +1737,8 @@ impl ImplPrimitive {
                 algorithm::astar_pop(neighbors, is_goal, None, env)?;
             }
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(ops, depth, env)?,
-            ImplPrimitive::RepeatWithInverse => loops::repeat(ops, true, env)?,
+            ImplPrimitive::RepeatWithInverse => loops::repeat(ops, true, false, env)?,
+            ImplPrimitive::RepeatCountConvergence => loops::repeat(ops, false, true, env)?,
             ImplPrimitive::UnScan => reduce::unscan(ops, env)?,
             ImplPrimitive::UnDump => dump(ops, env, true)?,
             ImplPrimitive::UnFill => fill!(ops, env, with_unfill, without_unfill_but),

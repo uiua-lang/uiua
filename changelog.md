@@ -45,6 +45,8 @@ This version is not yet released. If you are reading this on the website, then t
 - [`un °`](https://uiua.org/docs/un) [`reduce /`](https://uiua.org/docs/reduce) (format string) now splits a string by a delimiter
 - [`do ⍢`](https://uiua.org/docs/do) now runs its functions at least once, even if their signatures are invalid
   - This is helpful when initially setting up a loop
+- [`un °`](https://uiua.org/docs/un) now works with [`repeat ⍥`](https://uiua.org/docs/repeat) without a repetition count
+  - This counts the number of repetitions required to converge
 - Add an `ε` shadowable constant for the machine epsilon
   - You can type it as `\\epsilon`
 - Add [`&ep`](https://uiua.org/docs/&ep) and [`&epf`](https://uiua.org/docs/&epf) system functions for easier printing to stderr

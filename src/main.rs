@@ -103,6 +103,7 @@ fn main() {
     #[cfg(feature = "window")]
     if env::args().count() == 2 && env::args().nth(1).unwrap() == "window" {
         uiua::window::run_window();
+        return;
     }
     #[cfg(feature = "stand")]
     if let Some(asm) = &*uiua::stand::STAND_ASM {

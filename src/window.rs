@@ -71,6 +71,7 @@ impl Request {
                     if cfg!(debug_assertions) {
                         eprintln!("Uiua window not found, creating...");
                     }
+                    #[allow(clippy::zombie_processes)]
                     Command::new(current_exe().unwrap())
                         .arg("window")
                         .stdout(if cfg!(debug_assertions) {
@@ -563,7 +564,7 @@ impl App {
                     let mut t = 0.0;
                     let mut rendered = false;
                     for (tex_id, delay) in &*frames {
-                        if t < *curr {
+                        if t < *curr - delay {
                             t += delay;
                             continue;
                         }

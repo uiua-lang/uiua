@@ -21,7 +21,7 @@ use leptos_router::*;
 use rand::prelude::*;
 use uiua::{now, ConstantDef, Primitive, SysOp};
 use uiua_editor::{
-    binding_name_class, prim_class, utils::ChallengeDef, Editor, EditorMode, EDITOR_SHORTCUTS,
+    binding_name_class, utils::ChallengeDef, Editor, EditorMode, Prim, EDITOR_SHORTCUTS,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlAudioElement};
@@ -355,60 +355,9 @@ fn NotFound() -> impl IntoView {
     }
 }
 
-#[component]
-pub fn Prim(
-    prim: Primitive,
-    #[prop(optional)] glyph_only: bool,
-    #[prop(optional)] hide_docs: bool,
-) -> impl IntoView {
-    let symbol_class = format!("prim-glyph {}", prim_class(prim));
-    let symbol = prim.to_string();
-    let name = if !glyph_only && symbol != prim.name() {
-        format!(" {}", prim.name())
-    } else {
-        "".to_string()
-    };
-    let href = format!("/docs/{}", prim.name());
-    let mut title = String::new();
-    if let Some(ascii) = prim.ascii() {
-        title.push_str(&format!("({})", ascii));
-    }
-    if prim.glyph().is_some() && glyph_only {
-        if !title.is_empty() {
-            title.push(' ');
-        }
-        title.push_str(prim.name());
-    }
-    if let Primitive::Sys(op) = prim {
-        title.push_str(op.long_name());
-        title.push(':');
-        title.push('\n');
-    }
-    if !hide_docs {
-        let doc = prim.doc();
-        if glyph_only && !title.is_empty() && !matches!(prim, Primitive::Sys(_)) {
-            title.push_str(": ");
-        }
-        title.push_str(&doc.short_text());
-    }
-    if title.is_empty() {
-        view! {
-            <a href=href class="prim-code-a">
-                <code><span class=symbol_class>{ symbol }</span>{name}</code>
-            </a>
-        }
-    } else {
-        view! {
-            <a href=href class="prim-code-a">
-                <code class="prim-code" data-title=title><span class=symbol_class>{ symbol }</span>{name}</code>
-            </a>
-        }
-    }
-}
-
 #[cfg(test)]
 fn prim_html(prim: Primitive, glyph_only: bool, hide_docs: bool) -> String {
-    let symbol_class = format!("prim-glyph {}", prim_class(prim));
+    let symbol_class = format!("prim-glyph {}", uiua_editor::prim_class(prim));
     let symbol = prim.to_string();
     let name = if !glyph_only && symbol != prim.name() {
         format!(" {}", prim.name())

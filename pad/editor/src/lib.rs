@@ -1968,7 +1968,7 @@ pub fn binding_name_class(name: &str) -> Option<&'static str> {
         "Trans" | "Transgender" => code_font!("trans text-gradient"),
         "Bi" | "Bisexual" => code_font!("bi text-gradient"),
         "Pan" | "Pansexual" => code_font!("pan text-gradient"),
-        "Rainbow" => code_font!("rainbow text-gradient"),
+        "Rainbow" | "LGBT" | "Lgbt" => code_font!("rainbow text-gradient"),
         "Gay" => code_font!("gay text-gradient"),
         "Lesbian" => code_font!("lesbian text-gradient"),
         "Ace" | "Asexual" => code_font!("ace text-gradient"),

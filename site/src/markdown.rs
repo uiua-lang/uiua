@@ -173,8 +173,9 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
 #[cfg(test)]
 fn node_html<'a>(node: &'a AstNode<'a>) -> String {
     use uiua::{Compiler, SafeSys, Uiua, UiuaErrorKind, Value};
+    use uiua_editor::prim_class;
 
-    use crate::{prim_class, prim_html};
+    use crate::prim_html;
 
     let children: String = node.children().map(node_html).collect();
     match &node.data.borrow().value {

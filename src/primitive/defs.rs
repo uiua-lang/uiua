@@ -323,10 +323,10 @@ constant!(
     ("Lorem", Media, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
     /// Rainbow flag colors
     ("Rainbow", Flags, [[0.894, 0.012, 0.012], [1.0, 0.647, 0.173], [1.0, 1.0, 0.255], [0.0, 0.502, 0.094], [0.0, 0.0, 0.976], [0.525, 0.0, 0.49]]),
-    /// Gay flag colors
-    ("Gay", Flags, [[0.031, 0.55, 0.44], [0.149, 0.808, 0.667], [0.596, 0.91, 0.757], [1.0, 1.0, 1.0], [0.482, 0.678, 0.886], [0.314, 0.286, 0.8], [0.239, 0.102, 0.471]]),
     /// Lesbian flag colors
     ("Lesbian", Flags, [[0.831, 0.173, 0.0], [0.992, 0.596, 0.333], [1.0, 1.0, 1.0], [0.82, 0.38, 0.635], [0.635, 0.004, 0.38]]),
+    /// Gay flag colors
+    ("Gay", Flags, [[0.031, 0.55, 0.44], [0.149, 0.808, 0.667], [0.596, 0.91, 0.757], [1.0, 1.0, 1.0], [0.482, 0.678, 0.886], [0.314, 0.286, 0.8], [0.239, 0.102, 0.471]]),
     /// Bi flag colors
     ("Bi", Flags, [[0.839, 0.008, 0.439], [0.839, 0.008, 0.439], [0.608, 0.31, 0.588], [0.0, 0.22, 0.659], [0.0, 0.22, 0.659]]),
     /// Trans flag colors

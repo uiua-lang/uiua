@@ -585,7 +585,7 @@ primitive!(
     ///
     /// ex: ∘ 5
     ///
-    /// [identity] is mostly useless on its own. See the [Advanced Stack Manipulation Tutorial](/tutorial/advancedstack) to understand what it is for.
+    /// [identity] is mostly useless on its own. See the [More Stack Manipulation Tutorial](/tutorial/morestack) to understand what it is for.
     (1, Identity, Planet, ("identity", '∘')),
     // Pervasive monadic ops
     /// Logical not
@@ -1041,7 +1041,7 @@ primitive!(
     /// ex! -  1_3 [3_4 5_6 7_8]
     /// ex: - ¤1_3 [3_4 5_6 7_8]
     /// [fix]'s name come from the way it "fixes" an array in this way.
-    /// See the [Advanced Array Manipulation Tutorial](/tutorial/advancedarray) for more information on this use case.
+    /// See the [More Array Manipulation Tutorial](/tutorial/morearray) for more information on this use case.
     (1, Fix, MonadicArray, ("fix", '¤')),
     /// Encode an array as bits (LSB-first)
     ///
@@ -2190,7 +2190,7 @@ primitive!(
     ([1], Content, OtherModifier, ("content", '◇')),
     /// Discard the top stack value then call a function
     ///
-    /// See the [Advanced Stack Manipulation Tutorial](/tutorial/advancedstack) for a more complete understanding of why [gap] is useful.
+    /// See the [More Stack Manipulation Tutorial](/tutorial/morestack) for a more complete understanding of why [gap] is useful.
     ///
     /// ex: ⋅+ 1 2 3
     /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
@@ -2207,7 +2207,7 @@ primitive!(
     ([1], Gap, Planet, ("gap", '⋅')),
     /// Temporarily pop the top value off the stack and call a function
     ///
-    /// See the [Advanced Stack Manipulation Tutorial](/tutorial/advancedstack) for a more complete understanding of why [dip] is useful.
+    /// See the [More Stack Manipulation Tutorial](/tutorial/morestack) for a more complete understanding of why [dip] is useful.
     ///
     /// ex: [⊙+ 1 2 3]
     /// ex: [⊙⊙+ 1 2 3 4]
@@ -2517,7 +2517,7 @@ primitive!(
     /// Call two functions on the same values
     ///
     /// [fork] is one of the most important functions for working with the stack.
-    /// See the [Advanced Stack Manipulation Tutorial](/tutorial/advancedstack) for a more complete understanding as to why.
+    /// See the [More Stack Manipulation Tutorial](/tutorial/morestack) for a more complete understanding as to why.
     ///
     /// ex: ⊃⇌◴ 1_2_2_3
     /// ex: ⊃(+1)(×2) 5

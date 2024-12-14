@@ -539,7 +539,7 @@ impl Allowed {
                     "Work with the inverses of functions",
                 ),
                 PrimClass::Planet => (
-                    view!(<a class="clean" href="/tutorial/advancedstack#planet-notation">"🌎 Planet 🪐"</a>).into_view(),
+                    view!(<a class="clean" href="/tutorial/morestack#planet-notation">"🌎 Planet 🪐"</a>).into_view(),
                     "Advanced stack manipulation",
                 ),
                 PrimClass::Comptime => (

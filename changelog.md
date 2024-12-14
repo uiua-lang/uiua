@@ -83,7 +83,8 @@ This version is not yet released. If you are reading this on the website, then t
 ### Website
 - Add a new pad setting to show line values to the right of the code
 - Add [Subscripts](https://uiua.org/docs/subscripts) page
-- Update [Advanced Stack Manipulation](https://uiua.org/tutorial/advancedstack) and [Advanced Array Manipulation](https://uiua.org/tutorial/advancedarray) tutorials to include subscripts
+- Update [More Stack Manipulation](https://uiua.org/tutorial/morestack) and [More Array Manipulation](https://uiua.org/tutorial/advancedarray) tutorials to include subscripts
+  - Change their titles from "Advanced" to "More"
 - Add new [Idioms](https://uiua.org/docs/idioms) page
 
 ## 0.13.0 - 2024-10-21
@@ -924,7 +925,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ### Website
 - Add challenges to the end of tutorial sections
 - Make the introductory examples on the main page less esoteric
-- Update the [Advanced Stack Manipulation Tutorial](https://uiua.org/tutorial/advancedstack) to include `reach ⟜`
+- Update the [Advanced Stack Manipulation Tutorial](https://uiua.org/tutorial/morestack) to include `reach ⟜`
 ### Crate
 - The [Uiua Rust crate](https://crates.io/crates/uiua) is now [fully documented](https://docs.rs/uiua) and has a decent API
 
@@ -1077,7 +1078,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ## 0.0.15 - 2023-10-05
 This version changes a lot of glyphs. If you are coming from the previous version, most of the old glyphs will be automatically formatted to the new ones. The only change you may need to make is replacing all `^`s with `|`s.
 
-You may want to read the new version of the [Advanced Stack Manipulation Tutorial](https://uiua.org/tutorial/advancedstack) to understand the reason for so many of these changes.
+You may want to read the new version of the [Advanced Stack Manipulation Tutorial](https://uiua.org/tutorial/morestack) to understand the reason for so many of these changes.
 
 ### Language
 - Add the [`bracket ⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments

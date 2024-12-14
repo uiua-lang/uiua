@@ -28,7 +28,7 @@ Being stack-based is Uiua's key to being usable as a pure-tacit language. Howeve
 
 Uiua encourages a more structured approach to stack manipulation. There are no single functions for rotating the stack or for swapping more than 2 values.
 
-When complex stack manipulation *is* required, it is usually done with [planet notation](/tutorial/advancedstack#planet-notation). Planet notation allows you to *visualize* the way values move around.
+When complex stack manipulation *is* required, it is usually done with [planet notation](/tutorial/morestack#planet-notation). Planet notation allows you to *visualize* the way values move around.
 
 ## A Motivating Example
 

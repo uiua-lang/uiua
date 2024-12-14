@@ -21,11 +21,11 @@ pub enum TutorialPage {
     Types,
     Bindings,
     Functions,
-    AdvancedStack,
+    MoreStack,
     Inverses,
     ControlFlow,
     PatternMatching,
-    AdvancedArray,
+    MoreArray,
     ThinkingWithArrays,
     Macros,
     TacitCode,
@@ -46,11 +46,11 @@ impl TutorialPage {
             Self::Types => "Types",
             Self::Bindings => "Bindings",
             Self::Functions => "Modifiers and Functions",
-            Self::AdvancedStack => "Advanced Stack Manipulation",
+            Self::MoreStack => "More Stack Manipulation",
             Self::Inverses => "Inverses",
             Self::ControlFlow => "Control Flow",
             Self::PatternMatching => "Pattern Matching",
-            Self::AdvancedArray => "Advanced Array Manipulation",
+            Self::MoreArray => "More Array Manipulation",
             Self::ThinkingWithArrays => "Thinking With Arrays",
             Self::Macros => "Macros",
             Self::TacitCode => "Tacit Code",
@@ -77,10 +77,10 @@ pub fn Tutorial() -> impl IntoView {
             TutorialPage::Bindings => TutorialBindings().into_view(),
             TutorialPage::Functions => TutorialFunctions().into_view(),
             TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
-            TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
+            TutorialPage::MoreStack => TutorialMoreStack().into_view(),
             TutorialPage::Inverses => TutorialInverses().into_view(),
             TutorialPage::PatternMatching => TutorialPatternMatching().into_view(),
-            TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
+            TutorialPage::MoreArray => TutorialMoreArray().into_view(),
             TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
             TutorialPage::Macros => TutorialMacros().into_view(),
             TutorialPage::TacitCode => TutorialTacitCode().into_view(),
@@ -121,12 +121,15 @@ pub fn Tutorial() -> impl IntoView {
 
 impl IntoParam for TutorialPage {
     fn into_param(value: Option<&str>, name: &str) -> Result<Self, ParamsError> {
-        if value == Some("custommodifiers") {
-            return Ok(TutorialPage::Macros);
+        match value {
+            Some("custommodifiers") => Ok(TutorialPage::Macros),
+            Some("advancedstack") => Ok(TutorialPage::MoreStack),
+            Some("advancedarray") => Ok(TutorialPage::MoreArray),
+            Some(val) => all::<TutorialPage>()
+                .find(|p| p.path() == val)
+                .ok_or_else(|| ParamsError::MissingParam(name.to_string())),
+            None => Ok(TutorialPage::Introduction),
         }
-        all::<TutorialPage>()
-            .find(|p| p.path() == value.unwrap_or(""))
-            .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
     }
 }
 
@@ -883,7 +886,7 @@ F 10 11"/>
 
         <Hd id="local-bindings">"A Note on Local Bindings"</Hd>
         <p>"Bindings in Uiua can "<em>"only"</em>" be global. There is no way to give a name to a value within an inline function. A "<code>"←"</code>" inside "<code>"()"</code>"s is a syntax error."</p>
-        <p>"This is a deliberate design decision. It forces you to write tacit code, a.k.a. code with functions that do not mention their arguments. Uiua is designed to make writing tacit code as workable as possible. "<em>"How"</em>" it does this will be discussed in "<A href="/tutorial/advancedstack">"later"</A>" "<A href="/tutorial/advancedarray">"sections"</A>"."</p>
+        <p>"This is a deliberate design decision. It forces you to write tacit code, a.k.a. code with functions that do not mention their arguments. Uiua is designed to make writing tacit code as workable as possible. "<em>"How"</em>" it does this will be discussed in "<A href="/tutorial/morestack">"later"</A>" "<A href="/tutorial/advancedarray">"sections"</A>"."</p>
 
         <Hd id="format-strings">"Format Strings"</Hd>
         <p>"Prefixing a string with a "<code>"$"</code>" creates a format string. A format string is a special kind of function. It takes an argument for each "<code>"_"</code>" in the string and replaces it with the stringified version."</p>
@@ -949,11 +952,11 @@ F 10 11"/>
 }
 
 #[component]
-fn TutorialAdvancedStack() -> impl IntoView {
+fn TutorialMoreStack() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text="Advanced Stack Manipulation - Uiua Docs"/>
-        <h1>"Advanced Stack Manipulation"</h1>
+        <Title text="More Stack Manipulation - Uiua Docs"/>
+        <h1>"More Stack Manipulation"</h1>
         <p>"Uiua does not have local variables. With only "<Prim prim=Dup/>", "<Prim prim=Flip/>", and "<Prim prim=Over/>", how do you work with more than 2 values at a time?"</p>
 
         <Hd id="fork"><Prim prim=Fork/></Hd>
@@ -1202,7 +1205,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="⨬+- 0 3 5\n⨬+- 1 3 5"/>
         <p>"Non-scalar selectors are allowed. They allow a different function to be evaluated for each row of the input array(s)."</p>
         <Editor example="⨬+- [1 0 1] [1 2 3] [4 5 6]"/>
-        <p><Prim prim=Switch/>" can use a "<A href="/tutorial/advancedstack#function-packs">"function pack"</A>" to select from more functions."</p>
+        <p><Prim prim=Switch/>" can use a "<A href="/tutorial/morestack#function-packs">"function pack"</A>" to select from more functions."</p>
         <Editor example="⨬(+|-|×|÷) [1 2 0 3] [...2] [...5]"/>
         <Editor example="⨬(×10|+1|⨬¯∘ =2.) ◿3. [2 9 4 0 8 3]"/>
         <p>"With "<Prim prim=IndexOf/>", "<Prim prim=Switch/>" can be used to implement behavior similar to "<code>"switch"</code>" statements in other languages."</p>
@@ -1339,7 +1342,7 @@ fn TutorialPatternMatching() -> impl IntoView {
 }
 
 #[component]
-fn TutorialAdvancedArray() -> impl IntoView {
+fn TutorialMoreArray() -> impl IntoView {
     use Primitive::*;
     view! {
         <Title text="Advanced Array Manipulation - Uiua Docs"/>
@@ -1374,7 +1377,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <p><Prim prim=Rows/>" is the bread and butter of traversing an array's structure. It calls its function on each row of an array, but what if you want to go deeper?"</p>
         <p>"One option is to simply chain "<Prim prim=Rows/>" multiple times."</p>
         <Editor example="≡□ °△ 2_3_4\n≡≡□ °△ 2_3_4\n≡≡≡□ °△ 2_3_4"/>
-        <p>"This can get a bit unwieldy if an array has a lot of dimensions. You can instead use "<A href="/tutorial/advancedstack#Subscripts">"subscripted"</A>" "<Prim prim=Rows/>" to specify the depth of the operation."</p>
+        <p>"This can get a bit unwieldy if an array has a lot of dimensions. You can instead use "<A href="/tutorial/morestack#Subscripts">"subscripted"</A>" "<Prim prim=Rows/>" to specify the depth of the operation."</p>
         <Editor example="≡□ °△ 2_3_4\n≡₂□ °△ 2_3_4\n≡₃□ °△ 2_3_4"/>
         <p>"This is useful when you are approaching the array's structure from the top down, but what if you want to start at the bottom?"</p>
         <p>"Subscripted "<Prim prim=Each/>" allows you to specify the rank of the arrays you want to apply the function to, regardless of the outer array's rank. Notice how the rank of the "<Prim prim=Box/>"ed arrays is this example corresponds to the subscript."</p>

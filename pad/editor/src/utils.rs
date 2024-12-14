@@ -639,7 +639,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                 if os_ctrl(&event) {
                                     window()
                                         .open_with_url_and_target(
-                                            "/tutorial/advancedstack#on-and-by",
+                                            "/tutorial/morestack#on-and-by",
                                             "_blank",
                                         )
                                         .unwrap();

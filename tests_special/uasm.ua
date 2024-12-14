@@ -9,3 +9,6 @@
 
 F ← ∵⍣⋕()
 ⍤⤙≍ {1 "bn"} F {"1" "bn"} # No inline!
+
+C ← ℂ3 4
+⍤⤙≍ ℂ3 4 C # No inline!

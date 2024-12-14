@@ -1491,6 +1491,9 @@ impl ArrayValueSer for Complex {
             ComplexCollection::List(data) => data,
         }
     }
+    fn no_scalar() -> bool {
+        true
+    }
 }
 
 impl ArrayValueSer for f64 {

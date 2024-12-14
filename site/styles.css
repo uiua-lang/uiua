@@ -1306,7 +1306,7 @@ a.clean {
             #21B1FF 64%);
 }
 
-.gay {
+.rainbow {
     background-image: linear-gradient(180deg,
             #E40303 30%,
             #FFA52C 30%,
@@ -1318,6 +1318,22 @@ a.clean {
             #0000F9 60%,
             #0000F9 70%,
             #86007D 70%);
+}
+
+.gay {
+    background-image: linear-gradient(180deg,
+            #078d70 20%,
+            #26ceaa 20%,
+            #26ceaa 32%,
+            #98e8c1 32%,
+            #98e8c1 44%,
+            #ffffff 44%,
+            #ffffff 56%,
+            #7bade2 56%,
+            #7bade2 68%,
+            #5049cc 68%,
+            #5049cc 80%,
+            #3d1a78 80%);
 }
 
 .ace {
@@ -1466,7 +1482,7 @@ a.clean {
     .ace,
     .aro,
     .aroace,
-    .gay,
+    .rainbow,
     .nb,
     .nb2,
     .agender,

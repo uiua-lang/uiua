@@ -61,7 +61,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`binary`](https://uiua.org/docs/binary) function, which encodes and decodes arrays into a compact binary representation
 - Add experimental [`&b`](https://uiua.org/docs/breakpoint) function, which pauses execution and prints the stack
 - Remove the previously deprecated `member ∊` function
-  - As planned, [`memberof ∊`](https://uiua.org/docs/memberof)'s glyph has been changed and, and the old one will format to `∊`.
+  - As planned, [`memberof ∊`](https://uiua.org/docs/memberof)'s glyph has been changed, and the old one will format to `∊`.
 - Remove the previously deprecated experimental `⟔ coordinate` function
 - Remove the previously deprecated experimental `struct` modifier
 - Remove the previously deprecated `setinv` and `setund` modifiers

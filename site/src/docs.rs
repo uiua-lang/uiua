@@ -215,7 +215,10 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
 
     view! {
         <Title text=update_title/>
-        <h1>"Documentation"</h1>
+        <div id="header">
+            <h1>"Documentation"</h1>
+            <a href="#functions" style="text-decoration: none">"↓ Jump to Functions ↓"</a>
+        </div>
 
         <Hd id="language-tour">"Language Tour"</Hd>
         <p>"If you want to jump right in, check out the "<A href="/docs/tour">"Language Tour"</A>" for a high-level overview!"</p>

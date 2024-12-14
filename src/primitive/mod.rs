@@ -1547,7 +1547,7 @@ impl ImplPrimitive {
                     (true, false) => format!(
                         "expected {expected} but found {} array with shape {}",
                         got.type_name(),
-                        got.rank()
+                        got.shape()
                     ),
                     (false, true) if expected.type_id() != got.type_id() => {
                         format!("expected {} but got {got}", expected.type_name_plural())
@@ -1559,7 +1559,7 @@ impl ImplPrimitive {
                     (false, true) => format!(
                         "expected {} array with shape {} but got {got}",
                         expected.type_name(),
-                        expected.rank()
+                        expected.shape()
                     ),
                     (false, false) if expected.type_id() != got.type_id() => {
                         format!(
@@ -1573,13 +1573,23 @@ impl ImplPrimitive {
                         expected.shape(),
                         got.shape()
                     ),
-                    (false, false) => format!(
-                        "expected {} array with shape {} but got {} array with shape {}",
-                        expected.type_name(),
-                        expected.rank(),
-                        got.type_name(),
-                        got.rank()
-                    ),
+                    (false, false) => {
+                        let different = if expected.type_id() == got.type_id()
+                            && expected.shape() == got.shape()
+                        {
+                            " different"
+                        } else {
+                            ""
+                        };
+                        format!(
+                            "expected {} array with shape {} but \
+                            got{different} {} array with shape {}",
+                            expected.type_name(),
+                            expected.shape(),
+                            got.type_name(),
+                            got.shape()
+                        )
+                    }
                 };
                 return Err(env.error(env.error(format!("Pattern match failed: {message}"))));
             }

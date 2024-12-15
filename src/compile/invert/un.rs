@@ -40,7 +40,17 @@ pub fn un_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
         node.hash_with_span(&mut hasher);
     }
     let hash = hasher.finish();
-    if let Some(cached) = CACHE.with(|cache| cache.borrow_mut().get(&hash).cloned()) {
+    if let Some(cached) = CACHE.with(|cache| {
+        (cache.borrow_mut().get(&hash))
+            .filter(|node| {
+                // Bit of a hack
+                !node.as_ref().is_ok_and(|node| {
+                    node.iter()
+                        .any(|node| matches!(node, ImplPrim(MatchPattern, _)))
+                })
+            })
+            .cloned()
+    }) {
         return cached;
     }
     let res = un_inverse_impl(input, asm);

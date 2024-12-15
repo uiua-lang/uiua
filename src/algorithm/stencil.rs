@@ -221,7 +221,7 @@ struct WindowDim {
     fill: usize,
 }
 
-fn derive_size(size: isize, dim: usize, env: &Uiua) -> UiuaResult<usize> {
+fn derive_size(size: isize, dim: usize, chunk: bool, env: &Uiua) -> UiuaResult<usize> {
     if size == 0 {
         return Err(env.error("Window size cannot be zero"));
     }
@@ -231,6 +231,8 @@ fn derive_size(size: isize, dim: usize, env: &Uiua) -> UiuaResult<usize> {
         return Err(env.error(format!(
             "Window size {size} is too large for array of shape {dim}"
         )));
+    } else if chunk {
+        dim as isize / size.abs()
     } else {
         dim as isize + 1 + size
     } as usize)
@@ -245,7 +247,7 @@ fn derive_dims(
     let ints = size.as_integer_array(env, "Window size must be an array of integers")?;
     let dims = match &*ints.shape {
         [] => {
-            let size = derive_size(ints.data[0], shape.row_count(), env)?;
+            let size = derive_size(ints.data[0], shape.row_count(), false, env)?;
             vec![WindowDim {
                 size,
                 stride: 1,
@@ -255,7 +257,7 @@ fn derive_dims(
         &[n] => {
             let mut dims = Vec::with_capacity(n);
             for (size, dim) in ints.data.iter().zip(shape) {
-                let size = derive_size(*size, *dim, env)?;
+                let size = derive_size(*size, *dim, false, env)?;
                 dims.push(WindowDim {
                     size,
                     stride: 1,
@@ -279,7 +281,7 @@ fn derive_dims(
             }
             let mut dims = Vec::with_capacity(n);
             for i in 0..n {
-                let size = derive_size(ints.data[i], shape[i], env)?;
+                let size = derive_size(ints.data[i], shape[i], true, env)?;
                 let stride = ints.data.get(n + i).copied().unwrap_or(size as isize);
                 if stride <= 0 {
                     return Err(env.error(format!(

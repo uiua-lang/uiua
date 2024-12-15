@@ -538,7 +538,7 @@ impl VirtualEnv {
                 }
                 Sys(SysOp::ReadLines) => {
                     let [f] = get_args(args)?;
-                    self.handle_args_outputs(f.args + 1, f.outputs);
+                    self.handle_sig(f);
                 }
                 Sys(SysOp::AudioStream) => {
                     let [f] = get_args(args)?;

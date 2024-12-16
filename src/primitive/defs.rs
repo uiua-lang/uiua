@@ -655,6 +655,10 @@ primitive!(
     /// You can only take the square root of a negative number if it is complex.
     /// ex: √  ¯4
     ///   : √ℂ0¯4
+    ///
+    /// Subscripted [sqrt] gives the nth root
+    /// ex: √₄81
+    ///
     (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
     /// Get the sine of a number
     ///

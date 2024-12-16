@@ -2,7 +2,7 @@
 
 use std::{
     cmp::Ordering,
-    collections::{BTreeSet, BinaryHeap, HashMap},
+    collections::*,
     convert::Infallible,
     fmt,
     hash::{Hash, Hasher},
@@ -1016,6 +1016,7 @@ fn path_impl(
         }
         // Check neighbors
         for (nei, nei_cost) in env.neighbors(&backing[curr])? {
+            // Add to backing if needed
             let nei = if let Some(index) = indices.get(&nei) {
                 *index
             } else {
@@ -1024,23 +1025,23 @@ fn path_impl(
                 backing.push(nei);
                 index
             };
-            let tentative_full_cost = curr_cost + nei_cost;
-            let neighbor_g_score = full_cost.get(&nei).copied().unwrap_or(f64::INFINITY);
-            // Mark parents
-            if tentative_full_cost <= neighbor_g_score {
-                if let Some(parents) = came_from.get_mut(&nei) {
-                    parents.push(curr);
-                } else {
-                    came_from.insert(nei, vec![curr]);
-                }
-                // Add to to see
-                if tentative_full_cost < neighbor_g_score {
-                    full_cost.insert(nei, tentative_full_cost);
+            let from_curr_nei_cost = curr_cost + nei_cost;
+            let curr_nei_cost = full_cost.get(&nei).copied().unwrap_or(f64::INFINITY);
+            if from_curr_nei_cost <= curr_nei_cost {
+                let parents = came_from.entry(nei).or_default();
+                // If a better path was found we...
+                if from_curr_nei_cost < curr_nei_cost {
+                    // 1. Clear the parents
+                    parents.clear();
+                    // 2. Update the known cost
+                    full_cost.insert(nei, from_curr_nei_cost);
+                    // 3. Add to to see
                     to_see.push(NodeCost {
-                        cost: tentative_full_cost + env.heuristic(&backing[nei])?,
+                        cost: from_curr_nei_cost + env.heuristic(&backing[nei])?,
                         node: nei,
                     });
                 }
+                parents.push(curr);
             }
         }
     }
@@ -1064,6 +1065,11 @@ fn path_impl(
         let path: Vec<_> = path.into_iter().map(|i| backing[i].clone()).collect();
         Value::from_row_values(path, env)
     };
+
+    for parents in came_from.values_mut() {
+        parents.sort_unstable();
+        parents.dedup();
+    }
 
     match mode {
         PathMode::All => {

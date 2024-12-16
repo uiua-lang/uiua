@@ -6,7 +6,7 @@ use std::{
     error::Error,
     fmt, fs,
     io::{self, stderr, stdin, stdout, BufRead, Write},
-    path::{Path, PathBuf},
+    path::{is_separator, Path, PathBuf},
     process::{exit, Child, Command, Stdio},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -100,11 +100,13 @@ fn main() {
         uiua::profile::run_profile();
         return;
     }
+    // Open window
     #[cfg(feature = "window")]
     if env::args().count() == 2 && env::args().nth(1).unwrap() == "window" {
         uiua::window::run_window();
         return;
     }
+    // Run stand-alone
     #[cfg(feature = "stand")]
     if let Some(asm) = &*uiua::stand::STAND_ASM {
         let mut rt = Uiua::with_native_sys().with_args(env::args().skip(1).collect());
@@ -112,6 +114,23 @@ fn main() {
         print_stack(&rt.take_stack(), true);
         return;
     }
+
+    // If passing a file, just run it
+    let mut args = env::args().skip(1).peekable();
+    if (args.peek()).is_some_and(|arg| ["-w", "--window"].contains(&arg.as_str())) {
+        set_use_window(true);
+        args.next();
+    }
+    if let Some(path) = args
+        .next()
+        .filter(|arg| arg.ends_with(".ua") || arg.contains(is_separator))
+    {
+        let args = args.collect();
+        run(path.as_ref(), args, false, None, None, None, false);
+        return;
+    }
+
+    // Main command parsing
     let app = App::parse();
     match app.command {
         Some(Comm::Init) => {
@@ -401,38 +420,25 @@ fn main() {
         Some(Comm::Check { path }) => check(path).unwrap_or_else(fail),
         Some(Comm::Find { path, text, raw }) => find(path, text, raw).unwrap_or_else(fail),
         None => {
-            #[cfg(feature = "window")]
-            uiua::window::set_use_window(app.window);
-            if let Some(path) = app.file {
-                run(
-                    path.as_ref(),
-                    app.args,
-                    false,
-                    None,
-                    Some(RunMode::Normal),
-                    None,
-                    false,
-                )
-            } else {
-                let res = match working_file_path() {
-                    Ok(path) => WatchArgs {
-                        initial_path: Some(path),
-                        ..Default::default()
-                    }
-                    .watch(),
-                    Err(NoWorkingFile::MultipleFiles) => WatchArgs::default().watch(),
-                    Err(nwf) => {
-                        _ = App::try_parse_from(["uiua", "help"])
-                            .map(drop)
-                            .unwrap_err()
-                            .print();
-                        eprintln!("\n{nwf}");
-                        return;
-                    }
-                };
-                if let Err(e) = res {
-                    eprintln!("Error watching file: {e}");
+            set_use_window(app.window);
+            let res = match working_file_path() {
+                Ok(path) => WatchArgs {
+                    initial_path: Some(path),
+                    ..Default::default()
                 }
+                .watch(),
+                Err(NoWorkingFile::MultipleFiles) => WatchArgs::default().watch(),
+                Err(nwf) => {
+                    _ = App::try_parse_from(["uiua", "help"])
+                        .map(drop)
+                        .unwrap_err()
+                        .print();
+                    eprintln!("\n{nwf}");
+                    return;
+                }
+            };
+            if let Err(e) = res {
+                eprintln!("Error watching file: {e}");
             }
         }
     }
@@ -718,7 +724,6 @@ impl WatchArgs {
 struct App {
     #[clap(subcommand)]
     command: Option<Comm>,
-    file: Option<PathBuf>,
     #[clap(
         short,
         long,

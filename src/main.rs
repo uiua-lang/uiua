@@ -112,6 +112,29 @@ fn main() {
         print_stack(&rt.take_stack(), true);
         return;
     }
+
+    // Check for a path-like argument prior to any other args. If found (must contain a path
+    // separator; run as ./foo or with an absolute path by being found in PATH), run without
+    // argument parsing or formatting.
+    let mut args = std::env::args().skip(1);
+    if let Some(path) = args
+        .next()
+        .filter(|path| path.contains(std::path::is_separator))
+        .map(PathBuf::from)
+    {
+        run(
+            path.as_ref(),
+            args.collect(),
+            false,
+            None,
+            Some(RunMode::Normal),
+            None,
+            false,
+        );
+        return;
+    }
+    drop(args);
+
     let app = App::parse();
     match app.command {
         Some(Comm::Init) => {
@@ -403,36 +426,24 @@ fn main() {
         None => {
             #[cfg(feature = "window")]
             uiua::window::set_use_window(app.window);
-            if let Some(path) = app.file {
-                run(
-                    path.as_ref(),
-                    app.args,
-                    false,
-                    None,
-                    Some(RunMode::Normal),
-                    None,
-                    false,
-                )
-            } else {
-                let res = match working_file_path() {
-                    Ok(path) => WatchArgs {
-                        initial_path: Some(path),
-                        ..Default::default()
-                    }
-                    .watch(),
-                    Err(NoWorkingFile::MultipleFiles) => WatchArgs::default().watch(),
-                    Err(nwf) => {
-                        _ = App::try_parse_from(["uiua", "help"])
-                            .map(drop)
-                            .unwrap_err()
-                            .print();
-                        eprintln!("\n{nwf}");
-                        return;
-                    }
-                };
-                if let Err(e) = res {
-                    eprintln!("Error watching file: {e}");
+            let res = match working_file_path() {
+                Ok(path) => WatchArgs {
+                    initial_path: Some(path),
+                    ..Default::default()
                 }
+                .watch(),
+                Err(NoWorkingFile::MultipleFiles) => WatchArgs::default().watch(),
+                Err(nwf) => {
+                    _ = App::try_parse_from(["uiua", "help"])
+                        .map(drop)
+                        .unwrap_err()
+                        .print();
+                    eprintln!("\n{nwf}");
+                    return;
+                }
+            };
+            if let Err(e) = res {
+                eprintln!("Error watching file: {e}");
             }
         }
     }
@@ -718,7 +729,6 @@ impl WatchArgs {
 struct App {
     #[clap(subcommand)]
     command: Option<Comm>,
-    file: Option<PathBuf>,
     #[clap(
         short,
         long,

@@ -3810,6 +3810,7 @@ impl_primitive!(
     (1, SortDown),
     (1, AllSame),
     (1[1], ReduceContent),
+    ([1], ReduceConjoinInventory),
     (2(1)[2], ReduceTable),
     (1, ReplaceRand, Impure),
     (2, ReplaceRand2, Impure),

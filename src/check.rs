@@ -571,6 +571,10 @@ impl VirtualEnv {
                     let args = sig.args.saturating_sub(sig.outputs);
                     self.handle_args_outputs(args, sig.outputs);
                 }
+                ReduceConjoinInventory => {
+                    let [sig] = get_args(args)?;
+                    self.handle_sig(sig);
+                }
                 RepeatWithInverse => {
                     let [f, inv] = get_args_nodes(args)?;
                     if f.sig.inverse() != inv.sig {

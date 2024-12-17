@@ -267,6 +267,7 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand => write!(f, "{Gap}{Rand}"),
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
+            ReduceConjoinInventory => write!(f, "{Reduce}{Content}{Join}{Inventory}"),
             ReduceTable => write!(f, "{Reduce}(…){Table}"),
             CountUnique => write!(f, "{Len}{Deduplicate}"),
             MatchPattern => write!(f, "pattern match"),
@@ -1725,6 +1726,7 @@ impl ImplPrimitive {
             ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(ops, env)?,
             ImplPrimitive::UndoGroup1 => loops::undo_group_part1(ops, env)?,
             ImplPrimitive::ReduceContent => reduce::reduce_content(ops, env)?,
+            ImplPrimitive::ReduceConjoinInventory => zip::reduce_conjoin_inventory(ops, env)?,
             ImplPrimitive::AstarFirst => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
                 algorithm::path_first(neighbors, is_goal, Some(heuristic), env)?;

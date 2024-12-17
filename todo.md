@@ -5,7 +5,6 @@ The next version of Uiua
 
 # 0.15
 - `# Deprecated!` semantic comment
-- Optimize `conjoin inventory`
 - Compile-time code string evaluation
 - Allow for multi-value constant bindings
 - Animated WEBP support? (`&webp`)

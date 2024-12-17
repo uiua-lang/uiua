@@ -103,6 +103,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &ReduceTableOpt,
     &ReduceDepthOpt,
     &ReduceContentOpt,
+    &ReduceConjoinInventoryOpt,
     &PathOpt,
     &SplitByOpt,
     &AllSameOpt,
@@ -216,6 +217,30 @@ impl Optimization for ReduceContentOpt {
             };
             let inner = Node::from(rest).sig_node().unwrap();
             Some((1, ImplMod(ReduceContent, eco_vec![inner], *span)))
+        })
+    }
+}
+
+#[derive(Debug)]
+struct ReduceConjoinInventoryOpt;
+impl Optimization for ReduceConjoinInventoryOpt {
+    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
+        match_and_replace(nodes, |nodes| {
+            let [Mod(Inventory, inv_args, span), ImplMod(ReduceContent, rc_args, _), ..] = nodes
+            else {
+                return None;
+            };
+            let ([inv_f], [rc_f]) = (inv_args.as_slice(), rc_args.as_slice()) else {
+                return None;
+            };
+            if inv_f.sig.outputs != 1 {
+                return None;
+            }
+            let Some(Join) = rc_f.node.as_primitive() else {
+                return None;
+            };
+            let node = ImplMod(ReduceConjoinInventory, eco_vec![inv_f.clone()], *span);
+            Some((2, node))
         })
     }
 }

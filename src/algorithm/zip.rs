@@ -6,7 +6,7 @@ use ecow::eco_vec;
 
 use crate::{
     algorithm::pervade::bin_pervade_values, cowslice::CowSlice, get_ops, random,
-    types::push_empty_rows_value, val_as_arr, value::Value, Array, ImplPrimitive, Node, Ops,
+    types::push_empty_rows_value, val_as_arr, value::Value, Array, Boxed, ImplPrimitive, Node, Ops,
     PersistentMeta, Primitive, Shape, SigNode, Uiua, UiuaResult,
 };
 
@@ -813,4 +813,56 @@ fn rowsn(f: SigNode, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult 
         env.push(rowsed);
     }
     Ok(())
+}
+
+pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
+    let [f] = get_ops(ops, env)?;
+    if f.sig.outputs != 1 {
+        return Err(env.error(format!(
+            "{}'s function does not return a single value. \
+            This is a bug in the interpreter.",
+            ImplPrimitive::ReduceConjoinInventory
+        )));
+    }
+    let mut args = Vec::with_capacity(f.sig.args);
+    for i in 0..f.sig.args {
+        args.push(env.pop(i + 1)?);
+    }
+    let FixedRowsData {
+        mut rows,
+        row_count,
+        ..
+    } = fixed_rows(Primitive::Inventory.format(), 1, args, env)?;
+    let mut acc = if let Some(val) = env.value_fill() {
+        val.clone()
+    } else if row_count == 0 {
+        env.push(Array::<Boxed>::default());
+        return Ok(());
+    } else {
+        for arg in rows.iter_mut().rev() {
+            match arg {
+                Ok(rows) => env.push(rows.next().unwrap().unboxed()),
+                Err(row) => env.push(row.clone().unboxed()),
+            }
+        }
+        env.without_fill(|env| -> UiuaResult<Value> {
+            env.exec(f.clone())?;
+            env.pop("accumulator")
+        })?
+    };
+    env.without_fill(|env| -> UiuaResult {
+        for _ in 1..row_count {
+            for arg in rows.iter_mut().rev() {
+                match arg {
+                    Ok(rows) => env.push(rows.next().unwrap().unboxed()),
+                    Err(row) => env.push(row.clone().unboxed()),
+                }
+            }
+            env.exec(f.clone())?;
+            let item = env.pop("accumulator")?;
+            acc = acc.join(item, true, env)?;
+        }
+        env.push(acc);
+        Ok(())
+    })
 }

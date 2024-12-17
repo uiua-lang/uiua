@@ -898,23 +898,6 @@ impl Compiler {
                 let word = modified.code_operands().next().unwrap().clone();
                 self.do_comptime(prim, word, &modified.modifier.span)?
             }
-            Reduce => {
-                // Reduce content
-                let operand = modified.code_operands().next().unwrap().clone();
-                let Word::Modified(m) = &operand.value else {
-                    return Ok(None);
-                };
-                let Modifier::Primitive(Content) = &m.modifier.value else {
-                    return Ok(None);
-                };
-                if m.code_operands().count() != 1 {
-                    return Ok(None);
-                }
-                let content_op = m.code_operands().next().unwrap().clone();
-                let inner = self.word_sig(content_op)?;
-                let span = self.add_span(modified.modifier.span.clone());
-                Node::ImplMod(ImplPrimitive::ReduceContent, eco_vec![inner], span)
-            }
             Each => {
                 // Each pervasive
                 let operand = modified.code_operands().next().unwrap().clone();

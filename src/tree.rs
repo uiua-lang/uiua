@@ -463,7 +463,7 @@ impl Node {
             _ => None,
         }
     }
-    pub(crate) fn _as_impl_primitive(&self) -> Option<ImplPrimitive> {
+    pub(crate) fn as_impl_primitive(&self) -> Option<ImplPrimitive> {
         self.as_flipped_impl_primitive()
             .filter(|(_, flipped)| !flipped)
             .map(|(prim, _)| prim)

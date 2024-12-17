@@ -91,6 +91,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &TransposeOpt,
     &ReduceTableOpt,
     &ReduceDepthOpt,
+    &ReduceContentOpt,
     &PathOpt,
     &SplitByOpt,
     &AllSameOpt,
@@ -175,6 +176,35 @@ impl Optimization for ReduceDepthOpt {
                 }
                 _ => None,
             }
+        })
+    }
+}
+
+#[derive(Debug)]
+struct ReduceContentOpt;
+impl Optimization for ReduceContentOpt {
+    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
+        match_and_replace(nodes, |nodes| {
+            let [Mod(Reduce, args, span), ..] = nodes else {
+                return None;
+            };
+            let [f] = args.as_slice() else {
+                return None;
+            };
+            if f.sig != (2, 1) {
+                return None;
+            }
+            let [Mod(Both, args, _), rest @ ..] = f.node.as_slice() else {
+                return None;
+            };
+            let [f] = args.as_slice() else {
+                return None;
+            };
+            let Some(UnBox) = f.node.as_impl_primitive() else {
+                return None;
+            };
+            let inner = Node::from(rest).sig_node().unwrap();
+            Some((1, ImplMod(ReduceContent, eco_vec![inner], *span)))
         })
     }
 }

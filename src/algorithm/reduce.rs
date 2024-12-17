@@ -442,7 +442,7 @@ fn generic_reduce(f: SigNode, xs: Value, depth: usize, env: &mut Uiua) -> UiuaRe
 pub fn reduce_content(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
     let xs = env.pop(1)?;
-    if let (1, Some((Primitive::Join, false))) = (xs.rank(), f.node.as_flipped_primitive()) {
+    if let (1, Some(Primitive::Join)) = (xs.rank(), f.node.as_primitive()) {
         if xs.row_count() == 0 {
             env.push(match xs {
                 Value::Box(_) => Value::default(),

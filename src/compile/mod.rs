@@ -2313,7 +2313,7 @@ impl Compiler {
             if !suggestion.is_empty() {
                 message.push_str(". ");
                 message.push_str(suggestion);
-                if !message.ends_with('.') {
+                if message.ends_with(char::is_alphanumeric) {
                     message.push('.');
                 }
             }

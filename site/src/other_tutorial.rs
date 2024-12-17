@@ -225,5 +225,15 @@ pub fn Documentation() -> impl IntoView {
         <p>"The "<code>"# Tracker caller!"</code>" semantic comment tells a function to emit errors at its call site rather than from within. It can be placed either inside the function's body, or on the line just above it."</p>
         <Editor example="F ← +@a # Track caller!\nF 5\nF @b"/> // Should fail
         <p>"Notice the difference in the error messages."</p>
+
+        <Hd id="deprecated"><code>"# Deprecated!"</code></Hd>
+
+        <p>"The "<code>"# Deprecated!"</code>" semantic comment causes a warning to be emitted when the function is referenced. It can be placed either inside the function's body, or on the line just above it."</p>
+        <p>"This is useful for making it clear to users that a function is no longer supported, but without breaking their code."</p>
+        <Editor example="# Deprecated!\nF ← +2\nF 5"/> // Should fail
+        <p>"You can note a suggested replacement after the "<code>"!"</code>". This will appear in the warning message."</p>
+        <Editor example="F ← +2 # Deprecated! Use G instead\nG ← ×2\nF 5"/> // Should fail
+        <p><code>"# Deprecated!"</code>" works for constants, macros, and modules as well."</p>
+        <Editor example="# Deprecated! Don't use it!\n┌─╴Foo\n  # Deprecated! It's no good!\n  Bar ← 5\n└─╴\nFoo~Bar"/> // Should fail
     }
 }

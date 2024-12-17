@@ -834,11 +834,11 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             if let Some(escape) = &docs.escape {
                                 title.push('\n');
                                 title.push_str(escape);
-                                if docs.comment.is_some() {
+                                if docs.meta.comment.is_some() {
                                     title.push('\n');
                                 }
                             }
-                            if let Some(comment) = &docs.comment {
+                            if let Some(comment) = &docs.meta.comment {
                                 if !title.is_empty() && !title.ends_with('\n') {
                                     if comment.text.contains('\n') && comment.sig.is_none() {
                                         title.push('\n');
@@ -860,7 +860,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     _ => {}
                                 }
                             }
-                            if let Some(counts) = &docs.counts {
+                            if let Some(counts) = &docs.meta.counts {
                                 title.push('\n');
                                 title.push_str(&counts.to_string());
                             }

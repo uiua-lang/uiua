@@ -1,5 +1,7 @@
 //! Compiler code for bindings
 
+use crate::BindingMeta;
+
 use super::*;
 
 impl Compiler {
@@ -45,12 +47,27 @@ impl Compiler {
         };
         self.next_global += 1;
 
-        let comment = prelude.comment.or_else(|| {
+        // Create meta
+        let comment = prelude
+            .comment
+            .map(|text| DocComment::from(text.as_str()))
+            .or_else(|| {
+                binding.words.iter().last().and_then(|w| match &w.value {
+                    Word::Comment(c) => Some(DocComment::from(c.as_str())),
+                    _ => None,
+                })
+            });
+        let deprecation = prelude.deprecation.or_else(|| {
             binding.words.iter().last().and_then(|w| match &w.value {
-                Word::Comment(c) => Some(c.as_str().into()),
+                Word::SemanticComment(SemanticComment::Deprecated(s)) => Some(s.clone()),
                 _ => None,
             })
         });
+        let meta = BindingMeta {
+            comment,
+            deprecation,
+            counts: Some(binding.counts),
+        };
 
         // Handle macro
         let ident_margs = ident_modifier_args(&name);
@@ -120,8 +137,7 @@ impl Compiler {
                 local,
                 BindingKind::CodeMacro(node.clone()),
                 Some(span.clone()),
-                comment.map(|text| DocComment::from(text.as_str())),
-                None,
+                meta,
             );
             let mac = CodeMacro {
                 root: SigNode::new(sig, node),
@@ -172,8 +188,7 @@ impl Compiler {
                 local,
                 BindingKind::IndexMacro(ident_margs),
                 Some(span.clone()),
-                comment.map(|text| DocComment::from(text.as_str())),
-                None,
+                meta,
             );
             let words = binding.words.clone();
             let mut recursive = false;
@@ -258,13 +273,8 @@ impl Compiler {
         let mut node = match node {
             Ok(node) => node,
             Err(e) => {
-                self.asm.add_binding_at(
-                    local,
-                    BindingKind::Error,
-                    Some(span.clone()),
-                    comment.map(|text| DocComment::from(text.as_str())),
-                    None,
-                );
+                self.asm
+                    .add_binding_at(local, BindingKind::Error, Some(span.clone()), meta);
                 return Err(e);
             }
         };
@@ -299,7 +309,7 @@ impl Compiler {
                     };
 
                     let is_const = val.is_some();
-                    self.compile_bind_const(name, local, val, spandex, comment.as_deref());
+                    self.compile_bind_const(name, local, val, spandex, meta);
                     if !is_const {
                         // Add binding instrs to unevaluated constants
                         if node.is_pure(Purity::Pure, &self.asm) {
@@ -339,25 +349,12 @@ impl Compiler {
                     if let Some(Node::Push(val)) = self.asm.root.last() {
                         let val = val.clone();
                         self.asm.root.pop();
-                        self.compile_bind_const(
-                            name,
-                            local,
-                            Some(val),
-                            spandex,
-                            comment.as_deref(),
-                        );
+                        self.compile_bind_const(name, local, Some(val), spandex, meta);
                     } else if sig == (0, 0) {
                         let func = make_fn(Node::empty(), sig, self);
-                        self.compile_bind_function(
-                            name,
-                            local,
-                            func,
-                            spandex,
-                            comment.as_deref(),
-                            Some(binding.counts),
-                        )?;
+                        self.compile_bind_function(name, local, func, spandex, meta)?;
                     } else {
-                        self.compile_bind_const(name, local, None, spandex, comment.as_deref());
+                        self.compile_bind_const(name, local, None, spandex, meta);
                         self.asm.root.push(Node::BindGlobal {
                             index: local.index,
                             span: spandex,
@@ -366,14 +363,7 @@ impl Compiler {
                 } else {
                     // Binding is a normal function
                     let func = make_fn(node, sig, self);
-                    self.compile_bind_function(
-                        name,
-                        local,
-                        func,
-                        spandex,
-                        comment.as_deref(),
-                        Some(binding.counts),
-                    )?;
+                    self.compile_bind_function(name, local, func, spandex, meta)?;
                 }
 
                 self.code_meta.function_sigs.insert(
@@ -393,11 +383,7 @@ impl Compiler {
         }
         Ok(())
     }
-    pub(super) fn module(
-        &mut self,
-        m: Sp<ScopedModule>,
-        prev_com: Option<EcoString>,
-    ) -> UiuaResult {
+    pub(super) fn module(&mut self, m: Sp<ScopedModule>, prelude: BindingPrelude) -> UiuaResult {
         let m = m.value;
         let scope_kind = match &m.kind {
             ModuleKind::Named(name) => ScopeKind::Module(name.value.clone()),
@@ -433,15 +419,16 @@ impl Compiler {
                     index: global_index,
                     public: true,
                 };
-                let comment = prev_com
-                    .or_else(|| module.comment.clone())
-                    .map(|text| DocComment::from(text.as_str()));
+                let meta = BindingMeta {
+                    comment: prelude.comment.as_deref().map(DocComment::from),
+                    deprecation: prelude.deprecation.clone(),
+                    ..Default::default()
+                };
                 self.asm.add_binding_at(
                     local,
                     BindingKind::Module(module),
                     Some(name.span.clone()),
-                    comment,
-                    None,
+                    meta,
                 );
                 // Add local
                 self.scope.names.insert(name.value.clone(), local);
@@ -478,10 +465,12 @@ impl Compiler {
                 local,
                 BindingKind::Import(module_path.clone()),
                 Some(name.span.clone()),
-                prev_com
-                    .or_else(|| imported.comment.clone())
-                    .map(|text| DocComment::from(text.as_str())),
-                None,
+                BindingMeta {
+                    comment: prev_com
+                        .or_else(|| imported.comment.clone())
+                        .map(|text| DocComment::from(text.as_str())),
+                    ..Default::default()
+                },
             );
             self.scope.names.insert(name.value.clone(), local);
         }

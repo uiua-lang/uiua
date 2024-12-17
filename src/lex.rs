@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use enum_iterator::{all, Sequence};
+use ecow::EcoString;
 use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
@@ -653,7 +653,7 @@ impl Token {
     }
     pub(crate) fn as_semantic_comment(&self) -> Option<SemanticComment> {
         match self {
-            Token::SemanticComment(sc) => Some(*sc),
+            Token::SemanticComment(sc) => Some(sc.clone()),
             _ => None,
         }
     }
@@ -786,8 +786,14 @@ impl From<Primitive> for Token {
     }
 }
 
+impl From<SemanticComment> for Token {
+    fn from(sc: SemanticComment) -> Self {
+        Self::SemanticComment(sc)
+    }
+}
+
 /// The kinds of semantic comments
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(clippy::manual_non_exhaustive)]
 pub enum SemanticComment {
     /// Allow experimental features
@@ -796,9 +802,13 @@ pub enum SemanticComment {
     NoInline,
     /// Prevent stack traces from going deeper
     TrackCaller,
+    /// Mark a function as deprecated
+    Deprecated(EcoString),
     #[doc(hidden)]
     Boo,
 }
+
+use SemanticComment::*;
 
 impl fmt::Display for SemanticComment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -806,6 +816,8 @@ impl fmt::Display for SemanticComment {
             SemanticComment::Experimental => write!(f, "# Experimental!"),
             SemanticComment::NoInline => write!(f, "# No inline!"),
             SemanticComment::TrackCaller => write!(f, "# Track caller!"),
+            SemanticComment::Deprecated(s) if s.is_empty() => write!(f, "# Deprecated!"),
+            SemanticComment::Deprecated(s) => write!(f, "# Deprecated! {s}"),
             SemanticComment::Boo => write!(f, "# Boo!"),
         }
     }
@@ -1072,12 +1084,18 @@ impl<'a> Lexer<'a> {
                         if comment.starts_with(' ') {
                             comment.remove(0);
                         }
-                        if let Some(sc) = all::<self::SemanticComment>()
-                            .find(|sc| &sc.to_string()[2..] == comment.trim())
-                        {
-                            self.end(Token::SemanticComment(sc), start);
-                        } else {
-                            self.end(Comment, start);
+                        match comment.trim() {
+                            "Experimental!" => self.end(Experimental, start),
+                            "No inline!" => self.end(NoInline, start),
+                            "Track caller!" => self.end(TrackCaller, start),
+                            "Boo!" => self.end(Boo, start),
+                            s => {
+                                if let Some(suf) = s.strip_prefix("Deprecated!") {
+                                    self.end(Deprecated(suf.trim().into()), start);
+                                } else {
+                                    self.end(Comment, start);
+                                }
+                            }
                         }
                     } else {
                         loop {

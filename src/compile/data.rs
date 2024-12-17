@@ -52,8 +52,10 @@ impl Compiler {
                     local,
                     BindingKind::Module(module),
                     Some(name.span.clone()),
-                    comment,
-                    None,
+                    BindingMeta {
+                        comment,
+                        ..Default::default()
+                    },
                 );
                 // Add local
                 self.scope.names.insert(name.value.clone(), local);
@@ -260,7 +262,11 @@ impl Compiler {
                     format!("Get `{module_name}`'s `{name}`\n{comment}")
                 }
             };
-            self.compile_bind_function(name.clone(), local, func, span, Some(&comment), None)?;
+            let meta = BindingMeta {
+                comment: Some(DocComment::from(comment.as_str())),
+                ..Default::default()
+            };
+            self.compile_bind_function(name.clone(), local, func, span, meta)?;
             self.code_meta
                 .global_references
                 .insert(field.name_span.clone(), local.index);
@@ -280,7 +286,10 @@ impl Compiler {
             local,
             Some(Array::from_iter(fields.iter().map(|f| f.name.as_str())).into()),
             span,
-            comment.as_deref(),
+            BindingMeta {
+                comment: comment.as_deref().map(DocComment::from),
+                ..Default::default()
+            },
         );
 
         // Make constructor
@@ -403,14 +412,11 @@ impl Compiler {
                     } else {
                         format!("`{name}` argument")
                     };
-                    comp.compile_bind_function(
-                        field.name.clone(),
-                        local,
-                        func,
-                        field.span,
-                        Some(&comment),
-                        None,
-                    )?;
+                    let meta = BindingMeta {
+                        comment: Some(DocComment::from(comment.as_str())),
+                        ..Default::default()
+                    };
+                    comp.compile_bind_function(field.name.clone(), local, func, field.span, meta)?;
                 }
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
@@ -447,11 +453,15 @@ impl Compiler {
 
         // Bind the call function
         if let Some((local, func, span)) = function_stuff {
-            self.compile_bind_function("Call".into(), local, func, span, None, None)?;
+            self.compile_bind_function("Call".into(), local, func, span, BindingMeta::default())?;
         }
 
         // Bind the constructor
-        self.compile_bind_function(name, local, constructor_func, span, Some(&comment), None)?;
+        let meta = BindingMeta {
+            comment: Some(DocComment::from(comment.as_str())),
+            ..Default::default()
+        };
+        self.compile_bind_function(name, local, constructor_func, span, meta)?;
 
         Ok(())
     }

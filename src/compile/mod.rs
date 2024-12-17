@@ -33,7 +33,7 @@ use crate::{
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, ImportSrc, SetInverses, SigDecl},
     parse::{flip_unsplit_lines, max_placeholder, parse, split_words},
-    Array, ArrayLen, Assembly, BindingCounts, BindingKind, Boxed, CustomInverse, Diagnostic,
+    Array, ArrayLen, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
     DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
     RunMode, SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind,
@@ -119,6 +119,7 @@ struct BindingPrelude {
     comment: Option<EcoString>,
     track_caller: bool,
     no_inline: bool,
+    deprecation: Option<EcoString>,
 }
 
 /// A Uiua module
@@ -551,7 +552,7 @@ code:
         prelude: &mut BindingPrelude,
     ) -> UiuaResult {
         match item {
-            Item::Module(m) => self.module(m, take(prelude).comment),
+            Item::Module(m) => self.module(m, take(prelude)),
             Item::Words(lines) => self.top_level_words(lines, from_macro, must_run, true, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
@@ -596,6 +597,9 @@ code:
                     Word::SemanticComment(SemanticComment::NoInline) => prelude.no_inline = true,
                     Word::SemanticComment(SemanticComment::TrackCaller) => {
                         prelude.track_caller = true
+                    }
+                    Word::SemanticComment(SemanticComment::Deprecated(s)) => {
+                        prelude.deprecation = Some(s.clone())
                     }
                     _ => *prelude = BindingPrelude::default(),
                 }
@@ -725,31 +729,25 @@ code:
         local: LocalName,
         function: Function,
         span: usize,
-        comment: Option<&str>,
-        counts: Option<BindingCounts>,
+        meta: BindingMeta,
     ) -> UiuaResult {
-        let comment = comment.map(|text| {
-            let comment = DocComment::from(text);
-            if let Some(sig) = &comment.sig {
-                if !sig.matches_sig(function.sig) {
-                    self.emit_diagnostic(
-                        format!(
-                            "{}'s comment describes {}, \
+        if let Some(sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
+            if !sig.matches_sig(function.sig) {
+                self.emit_diagnostic(
+                    format!(
+                        "{}'s comment describes {}, \
                             but its code has signature {}",
-                            name,
-                            sig.sig_string(),
-                            function.sig,
-                        ),
-                        DiagnosticKind::Warning,
-                        self.get_span(span).clone().code().unwrap(),
-                    );
-                }
+                        name,
+                        sig.sig_string(),
+                        function.sig,
+                    ),
+                    DiagnosticKind::Warning,
+                    self.get_span(span).clone().code().unwrap(),
+                );
             }
-            comment
-        });
+        }
         self.scope.names.insert(name, local);
-        self.asm
-            .bind_function(local, function, span, comment, counts);
+        self.asm.bind_function(local, function, span, meta);
         Ok(())
     }
     fn compile_bind_const(
@@ -758,27 +756,22 @@ code:
         local: LocalName,
         value: Option<Value>,
         span: usize,
-        comment: Option<&str>,
+        meta: BindingMeta,
     ) {
         let span = self.get_span(span).clone().code().unwrap();
-        let comment = comment.map(|text| {
-            let comment = DocComment::from(text);
-            if let Some(sig) = &comment.sig {
-                self.emit_diagnostic(
-                    format!(
-                        "{}'s comment describes {}, \
-                        but it is a constant",
-                        name,
-                        sig.sig_string(),
-                    ),
-                    DiagnosticKind::Warning,
-                    span.clone(),
-                );
-            }
-            comment
-        });
+        if let Some(sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
+            self.emit_diagnostic(
+                format!(
+                    "{}'s comment describes {}, but it is a constant",
+                    name,
+                    sig.sig_string(),
+                ),
+                DiagnosticKind::Warning,
+                span.clone(),
+            );
+        }
         self.asm
-            .add_binding_at(local, BindingKind::Const(value), Some(span), comment, None);
+            .add_binding_at(local, BindingKind::Const(value), Some(span), meta);
         self.scope.names.insert(name, local);
     }
     /// Import a module
@@ -981,7 +974,8 @@ code:
         // Extract semantic comment
         let mut sem = None;
         if let Some(word) = words.last() {
-            if let Word::SemanticComment(com) = word.value {
+            if let Word::SemanticComment(com) = &word.value {
+                let com = com.clone();
                 sem = Some(words.pop().unwrap().span.sp(com));
             }
         }
@@ -1509,6 +1503,7 @@ code:
             }
             SemanticComment::NoInline => Node::NoInline(inner.into()),
             SemanticComment::TrackCaller => Node::TrackCaller(inner.into()),
+            SemanticComment::Deprecated(_) => inner,
             SemanticComment::Boo => {
                 self.add_error(span, "The compiler is scared!");
                 inner
@@ -2312,6 +2307,19 @@ impl Compiler {
         .into()
     }
     fn validate_local(&mut self, name: &str, local: LocalName, span: &CodeSpan) {
+        // Emit deprecation warning
+        if let Some(suggestion) = &self.asm.bindings[local.index].meta.deprecation {
+            let mut message = format!("{name} is deprecated");
+            if !suggestion.is_empty() {
+                message.push_str(". ");
+                message.push_str(suggestion);
+                if !message.ends_with('.') {
+                    message.push('.');
+                }
+            }
+            self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone());
+        }
+        // Validate public
         if local.public {
             return;
         }
@@ -2373,7 +2381,7 @@ impl Compiler {
             public: true,
         };
         self.next_global += 1;
-        self.compile_bind_function(name.clone(), local, function, 0, None, None)?;
+        self.compile_bind_function(name.clone(), local, function, 0, BindingMeta::default())?;
         Ok(())
     }
     /// Create and bind a function in the current scope

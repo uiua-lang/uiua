@@ -14,9 +14,9 @@ use crate::{
     ident_modifier_args, is_custom_glyph,
     lex::{CodeSpan, Sp},
     parse::parse,
-    Assembly, BindingCounts, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc,
-    Inputs, LocalName, PreEvalMode, Primitive, Purity, SafeSys, Shape, Signature, SysBackend,
-    UiuaError, Value, CONSTANTS,
+    Assembly, BindingInfo, BindingKind, BindingMeta, Compiler, Ident, InputSrc, Inputs, LocalName,
+    PreEvalMode, Primitive, Purity, SafeSys, Shape, Signature, SysBackend, UiuaError, Value,
+    CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -52,16 +52,14 @@ pub enum SpanKind {
 pub struct BindingDocs {
     /// The span of the binding name where it was defined
     pub src_span: CodeSpan,
-    /// The comment of the binding
-    pub comment: Option<DocComment>,
     /// Whether the binding is public
     pub is_public: bool,
     /// The specific binding kind
     pub kind: BindingDocsKind,
     /// An escape code used to type a glyph
     pub escape: Option<String>,
-    /// Character counts for golfing
-    pub counts: Option<BindingCounts>,
+    /// Metadata about the binding
+    pub meta: BindingMeta,
 }
 
 /// The kind of a binding
@@ -466,23 +464,26 @@ impl Spanner {
             #[cfg(not(feature = "native_sys"))]
             let sys = &crate::SafeSys::new();
             let val = constant.value.resolve(path, sys);
+            let meta = BindingMeta {
+                comment: Some(constant.doc().into()),
+                ..Default::default()
+            };
             return Some(BindingDocs {
                 src_span: span.clone(),
-                comment: Some(constant.doc().into()),
                 is_public: true,
                 kind: BindingDocsKind::Constant(Some(val)),
                 escape: None,
-                counts: None,
+                meta,
             });
         }
         None
     }
 
     fn make_binding_docs(&self, binfo: &BindingInfo) -> BindingDocs {
-        let mut comment = binfo.comment.clone();
-        if comment.is_none() {
+        let mut meta = binfo.meta.clone();
+        if meta.comment.is_none() {
             let name = binfo.span.as_str(&self.asm.inputs, |s| s.to_string());
-            comment = match name.as_str() {
+            meta.comment = match name.as_str() {
                 "🦈" | "🏳️‍⚧️" => Some("Trans rights".into()),
                 "🤠" => Some("This town ain't big enough for the ∩ of us".into()),
                 "👽" => Some("Ayy, lmao".into()),
@@ -497,12 +498,14 @@ impl Spanner {
                 _ => None,
             };
         }
-        if comment.is_none() {
+        if meta.comment.is_none() {
             match &binfo.kind {
-                BindingKind::Const(None) => comment = Some("constant".into()),
-                BindingKind::Import(_) | BindingKind::Module(_) => comment = Some("module".into()),
+                BindingKind::Const(None) => meta.comment = Some("constant".into()),
+                BindingKind::Import(_) | BindingKind::Module(_) => {
+                    meta.comment = Some("module".into())
+                }
                 BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
-                    comment = Some("macro".into())
+                    meta.comment = Some("macro".into())
                 }
                 BindingKind::Func(_) => {}
                 BindingKind::Const(_) => {}
@@ -542,11 +545,10 @@ impl Spanner {
         });
         BindingDocs {
             src_span: binfo.span.clone(),
-            comment,
             is_public: binfo.public,
             kind,
             escape,
-            counts: binfo.counts,
+            meta,
         }
     }
 
@@ -1142,7 +1144,7 @@ mod server {
                         }
                         _ => {}
                     }
-                    if let Some(comment) = &docs.comment {
+                    if let Some(comment) = &docs.meta.comment {
                         value.push_str("\n\n");
                         if let Some(sig) = &comment.sig {
                             value.push('`');
@@ -1151,7 +1153,7 @@ mod server {
                         }
                         value.push_str(&comment.text);
                     }
-                    if let Some(counts) = &docs.counts {
+                    if let Some(counts) = &docs.meta.counts {
                         value.push_str("\n\n");
                         value.push_str(&counts.to_string());
                     }
@@ -1247,7 +1249,7 @@ mod server {
                         ..Default::default()
                     }),
                     sort_text: name.split('~').last().map(Into::into),
-                    documentation: binding.comment.as_ref().map(|c| {
+                    documentation: binding.meta.comment.as_ref().map(|c| {
                         Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
                             value: c.text.to_string(),

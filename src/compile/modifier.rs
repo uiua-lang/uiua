@@ -1274,8 +1274,7 @@ impl Compiler {
                             },
                             BindingKind::IndexMacro(count),
                             Some(modifier_span.clone()),
-                            None,
-                            None,
+                            BindingMeta::default(),
                         );
                         self.next_global += 1;
                         MacroLocal {

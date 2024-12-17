@@ -21,9 +21,10 @@ use crate::{
     fill::Fill,
     invert::match_format_pattern,
     lex::Span,
-    Array, ArrayLen, Assembly, BindingKind, Boxed, CodeSpan, Compiler, Function, FunctionId, Ident,
-    Inputs, IntoSysBackend, LocalName, Node, Primitive, Report, SafeSys, SigNode, Signature,
-    SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, Value, VERSION,
+    Array, ArrayLen, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function,
+    FunctionId, Ident, Inputs, IntoSysBackend, LocalName, Node, Primitive, Report, SafeSys,
+    SigNode, Signature, SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, Value,
+    VERSION,
 };
 
 /// The Uiua interpreter
@@ -560,7 +561,8 @@ impl Uiua {
                 };
                 value.compress();
                 // Binding is a constant
-                self.asm.bind_const(local, Some(value), span, None);
+                self.asm
+                    .bind_const(local, Some(value), span, BindingMeta::default());
                 Ok(())
             }
             Node::Array {

@@ -118,15 +118,13 @@ impl Assembly {
         local: LocalName,
         global: BindingKind,
         span: Option<CodeSpan>,
-        comment: Option<DocComment>,
-        counts: Option<BindingCounts>,
+        meta: BindingMeta,
     ) {
         let binding = BindingInfo {
             public: local.public,
             kind: global,
             span: span.unwrap_or_else(CodeSpan::dummy),
-            comment,
-            counts,
+            meta,
         };
         if local.index < self.bindings.len() {
             self.bindings.make_mut()[local.index] = binding;
@@ -136,8 +134,7 @@ impl Assembly {
                     kind: BindingKind::Const(None),
                     public: false,
                     span: CodeSpan::dummy(),
-                    comment: None,
-                    counts: None,
+                    meta: BindingMeta::default(),
                 });
             }
             self.bindings.push(binding);
@@ -148,27 +145,20 @@ impl Assembly {
         local: LocalName,
         function: Function,
         span: usize,
-        comment: Option<DocComment>,
-        counts: Option<BindingCounts>,
+        meta: BindingMeta,
     ) {
         let span = self.spans[span].clone();
-        self.add_binding_at(
-            local,
-            BindingKind::Func(function),
-            span.code(),
-            comment,
-            counts,
-        );
+        self.add_binding_at(local, BindingKind::Func(function), span.code(), meta);
     }
     pub(crate) fn bind_const(
         &mut self,
         local: LocalName,
         value: Option<Value>,
         span: usize,
-        comment: Option<DocComment>,
+        meta: BindingMeta,
     ) {
         let span = self.spans[span].clone();
-        self.add_binding_at(local, BindingKind::Const(value), span.code(), comment, None);
+        self.add_binding_at(local, BindingKind::Const(value), span.code(), meta);
     }
     /// Parse a `.uasm` file into an assembly
     pub fn from_uasm(src: &str) -> Result<Self, String> {
@@ -208,8 +198,7 @@ impl Assembly {
                 kind,
                 public,
                 span: CodeSpan::dummy(),
-                comment: None,
-                counts: None,
+                meta: BindingMeta::default(),
             });
         }
 
@@ -376,10 +365,19 @@ pub struct BindingInfo {
     pub public: bool,
     /// The span of the original binding name
     pub span: CodeSpan,
+    /// Metadata about the binding
+    pub meta: BindingMeta,
+}
+
+/// Metadata about a binding
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct BindingMeta {
     /// The comment preceding the binding
     pub comment: Option<DocComment>,
     /// The character counts for golfing
     pub counts: Option<BindingCounts>,
+    /// The deprecation message
+    pub deprecation: Option<EcoString>,
 }
 
 /// A kind of global binding

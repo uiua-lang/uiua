@@ -871,6 +871,7 @@ fn path_impl(
             )));
         }
     }
+    let has_costs = nei_sig.outputs == 2;
     let arg_count = nei_sig.args.max(heu_sig.args).max(isg_sig.args) - 1;
     let mut args = Vec::with_capacity(arg_count);
     for i in 0..arg_count {
@@ -1047,9 +1048,9 @@ fn path_impl(
     }
 
     let env = env.env;
-    env.push(shortest_cost);
-
-    let mut paths = EcoVec::new();
+    if has_costs {
+        env.push(shortest_cost);
+    }
 
     let make_path = |path: Vec<usize>| {
         if let Some(&[a, b]) = path
@@ -1073,6 +1074,7 @@ fn path_impl(
 
     match mode {
         PathMode::All => {
+            let mut paths = Vec::new();
             for end in ends {
                 let mut currs = vec![vec![end]];
                 let mut these_paths = Vec::new();
@@ -1108,10 +1110,16 @@ fn path_impl(
                 }
                 for mut path in these_paths {
                     path.reverse();
-                    paths.push(Boxed(make_path(path)?));
+                    let path_val = make_path(path)?;
+                    paths.push(if has_costs {
+                        Boxed(path_val).into()
+                    } else {
+                        path_val
+                    });
                 }
             }
-            env.push(paths);
+            let paths_val = Value::from_row_values(paths, env)?;
+            env.push(paths_val);
         }
         PathMode::First => {
             let mut curr = ends
@@ -1124,7 +1132,12 @@ fn path_impl(
                 curr = from[0];
             }
             path.reverse();
-            env.push(Boxed(make_path(path)?));
+            let path_val = make_path(path)?;
+            env.push(if has_costs {
+                Boxed(path_val).into()
+            } else {
+                path_val
+            });
         }
         PathMode::CostOnly => {}
     }

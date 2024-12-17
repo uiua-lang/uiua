@@ -3347,31 +3347,29 @@ primitive!(
     /// When called, [path] will pop any additional arguments its functions need from the stack.
     /// On each iteration, the current node will be passed to each function, along with any of the additional arguments that each function needs.
     ///
-    /// If a path is found, a list of [box]ed arrays of all shortest paths is returned, as well as the cost.
+    /// If a path is found, a list of arrays of all shortest paths is returned.
+    /// If costs were returned from the neighbors functions, then each path array will be [box]ed, and the cost will be returned as well.
+    /// If costs were not returned, then all paths must necessarily be the same length, so boxing is not necessary, and the cost is just the length of any path.
     /// If no path is found, an empty list and a cost of `infinity` are returned.
     ///
     /// In this example, we find the shortest path from the 2D point `0_0` to `3_5` in a grid.
-    /// The neighbors function returns the 4 cardinal directions with all costs of 1.
+    /// We use the `A₂` constant to get an array of offsets for adjacent neighbors in two dimensions.
     /// The goal function simply checks if the current node [match]es the given goal node.
-    /// ex: Neis ← ⊂⟜¯⋯1_2
-    ///   : $Neighbors Neis # Side-adjacent neighbors offsets
+    /// ex: $Neighbors A₂ # Side-adjacent neighbors offsets
     ///   :
     ///   : 0_0 3_5 # Start and goal
     ///   : °□⊢path(
-    ///   :   ≡⋅1. +Neis¤ # Costs and neighbors
-    ///   : | ≍           # Check if goal
+    ///   :   ≡⊸1 +A₂¤ # Costs and neighbors
+    ///   : | ≍          # Check if goal
     ///   : )
     ///   : ⊓$Path$Cost
-    /// As stated before, the costs can be omitted.
-    /// ex: Neis ← ⊂⟜¯⋯1_2
-    ///   : °□⊢ path(+Neis¤)≍ 0_0 3_5
-    /// In the examples above, we use `un``box``first` to get only the first path. [first][path] and [pop][path] are optimized to not do extra work.
+    /// As stated before, the costs can be omitted. Notice [un][box]ing is not necessary in this case, and a cost is not returned.
+    /// ex: ⊢ path(+A₂¤)≍ 0_0 3_5
+    /// In the examples above, we use [first] to get only the first path. [first][path] and [pop][path] are optimized to not do extra work.
     /// If we want *all* shortest paths, we can omit [first].
-    /// ex: Neis ← ⊂⟜¯⋯1_2
-    ///   : path(+Neis¤)≍ 0_0 1_2
+    /// ex: path(+A₂¤)≍ 0_0 1_2
     /// If pathing on a grid like the examples above, we can use [un][where] to visualize the path that was taken!
-    /// ex: Neis ← ⊂⟜¯⋯1_2
-    ///   : °□⊢ path(+Neis¤)≍ 3_4 10_14
+    /// ex: ⊢ path(+A₂¤)≍ 3_4 10_14
     ///   : °⊚
     ///   : ▽⟜≡▽8 # Upscale
     /// There are no guarantees about the order of the paths, only that they all have the same cost.
@@ -3381,8 +3379,7 @@ primitive!(
     /// - The heuristic should return a value [less or equal] the actual cost
     /// - It must *never* overestimate the cost, or the algorithm may not find the shortest path
     /// The heuristic function `absolute value``reduce``complex``subtract` calculates the euclidean distance between two points.
-    /// ex: Neis ← ⊂⟜¯⋯1_2
-    ///   : °□⊢ path(+Neis¤|≍|⌵/ℂ-) 0_0 3_5
+    /// ex: ⊢ path(+A₂¤|≍|⌵/ℂ-) 0_0 3_5
     /// With a good heuristic, A* is generally faster than [path], which uses a [Dijkstra](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm)-like algorithm.
     ///
     /// Pathfinding isn't just good for solving problems with grids or graphs.

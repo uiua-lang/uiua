@@ -290,34 +290,38 @@ impl VirtualEnv {
             Node::Mod(Astar, args, _) | Node::ImplMod(AstarFirst, args, _) => {
                 let _start = self.pop();
                 let [neighbors, heuristic, is_goal] = get_args(args)?;
+                let has_costs = neighbors.outputs == 2;
                 let args = neighbors
                     .args
                     .max(heuristic.args)
                     .max(is_goal.args)
                     .saturating_sub(1);
-                self.handle_args_outputs(args, 2);
+                self.handle_args_outputs(args, 1 + has_costs as usize);
             }
             Node::ImplMod(AstarPop, args, _) => {
                 let _start = self.pop();
                 let [neighbors, heuristic, is_goal] = get_args(args)?;
+                let has_costs = neighbors.outputs == 2;
                 let args = neighbors
                     .args
                     .max(heuristic.args)
                     .max(is_goal.args)
                     .saturating_sub(1);
-                self.handle_args_outputs(args, 1);
+                self.handle_args_outputs(args, has_costs as usize);
             }
             Node::Mod(Path, args, _) | Node::ImplMod(PathFirst, args, _) => {
                 let _start = self.pop();
                 let [neighbors, is_goal] = get_args(args)?;
+                let has_costs = neighbors.outputs == 2;
                 let args = neighbors.args.max(is_goal.args).saturating_sub(1);
-                self.handle_args_outputs(args, 2);
+                self.handle_args_outputs(args, 1 + has_costs as usize);
             }
             Node::ImplMod(PathPop, args, _) => {
                 let _start = self.pop();
                 let [neighbors, is_goal] = get_args(args)?;
+                let has_costs = neighbors.outputs == 2;
                 let args = neighbors.args.max(is_goal.args).saturating_sub(1);
-                self.handle_args_outputs(args, 1);
+                self.handle_args_outputs(args, has_costs as usize);
             }
             Node::Prim(prim, _) => match prim {
                 Dup => {

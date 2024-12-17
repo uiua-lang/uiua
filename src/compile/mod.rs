@@ -736,7 +736,7 @@ code:
                 self.emit_diagnostic(
                     format!(
                         "{}'s comment describes {}, \
-                            but its code has signature {}",
+                        but its code has signature {}",
                         name,
                         sig.sig_string(),
                         function.sig,
@@ -921,7 +921,11 @@ code:
             if let Ok(sig) = node.sig() {
                 if !is_empty && !comment_sig.value.matches_sig(sig) {
                     self.emit_diagnostic(
-                        format!("Line signature {sig} does not match comment"),
+                        format!(
+                            "Line comment describes {}, \
+                            but its code has signature {sig}",
+                            comment_sig.value.sig_string()
+                        ),
                         DiagnosticKind::Warning,
                         comment_sig.span.clone(),
                     );

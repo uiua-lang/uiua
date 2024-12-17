@@ -458,7 +458,7 @@ pub struct DocComment {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct DocCommentSig {
     /// The arguments of the signature
-    pub args: Vec<DocCommentArg>,
+    pub args: Option<Vec<DocCommentArg>>,
     /// The outputs of the signature
     pub outputs: Option<Vec<DocCommentArg>>,
 }
@@ -466,17 +466,25 @@ pub struct DocCommentSig {
 impl DocCommentSig {
     /// Whether the doc comment signature matches a given function signature
     pub fn matches_sig(&self, sig: Signature) -> bool {
-        self.args.len() == sig.args
+        (self.args.as_ref()).map_or(true, |args| args.len() == sig.args)
             && (self.outputs.as_ref()).map_or(true, |o| o.len() == sig.outputs)
     }
     pub(crate) fn sig_string(&self) -> String {
-        if let Some(outputs) = &self.outputs {
-            format!(
-                "signature {}",
-                Signature::new(self.args.len(), outputs.len())
-            )
-        } else {
-            format!("{} args", self.args.len())
+        match (&self.args, &self.outputs) {
+            (Some(args), Some(outputs)) => {
+                format!("signature {}", Signature::new(args.len(), outputs.len()))
+            }
+            (Some(args), None) => format!(
+                "{} arg{}",
+                args.len(),
+                if args.len() == 1 { "" } else { "s" }
+            ),
+            (None, Some(outputs)) => format!(
+                "{} output{}",
+                outputs.len(),
+                if outputs.len() == 1 { "" } else { "s" }
+            ),
+            (None, None) => "signature".into(),
         }
     }
 }
@@ -492,14 +500,17 @@ impl fmt::Display for DocCommentSig {
             }
             write!(f, " ")?;
         }
-        write!(f, "? ")?;
-        for (i, arg) in self.args.iter().enumerate() {
-            if i > 0 {
-                write!(f, " ")?;
-            }
-            write!(f, "{}", arg.name)?;
-            if let Some(ty) = &arg.ty {
-                write!(f, ":{}", ty)?;
+        write!(f, "?")?;
+        if let Some(args) = &self.args {
+            write!(f, " ")?;
+            for (i, arg) in args.iter().enumerate() {
+                if i > 0 {
+                    write!(f, " ")?;
+                }
+                write!(f, "{}", arg.name)?;
+                if let Some(ty) = &arg.ty {
+                    write!(f, ":{}", ty)?;
+                }
             }
         }
         Ok(())
@@ -569,7 +580,7 @@ impl FromStr for DocCommentSig {
             }
         }
         Ok(DocCommentSig {
-            args,
+            args: (!args.is_empty()).then_some(args),
             outputs: (!outputs.is_empty()).then_some(outputs),
         })
     }

@@ -339,6 +339,14 @@ impl Node {
             eco_vec![self]
         }
     }
+    /// Turn a run of 1 node into a single node
+    pub fn normalize(&mut self) {
+        if let Node::Run(nodes) = self {
+            if nodes.len() == 1 {
+                *self = take(nodes).remove(0);
+            }
+        }
+    }
     /// Truncate the node to a certain length
     pub fn truncate(&mut self, len: usize) {
         if let Node::Run(nodes) = self {

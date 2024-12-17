@@ -15,45 +15,56 @@ use dbgln;
 
 impl Node {
     pub(super) fn optimize(&mut self) -> bool {
+        self.optimize_impl(true)
+    }
+    fn optimize_impl(&mut self, opt_single: bool) -> bool {
         let mut optimized = false;
-        match self {
+        fn optimize_run(nodes: &mut EcoVec<Node>, opt_single: bool) -> bool {
+            let mut optimized = false;
+            for node in nodes.make_mut() {
+                optimized |= node.optimize_impl(opt_single);
+            }
+            while OPTIMIZATIONS.iter().any(|op| {
+                if !op.match_and_replace(nodes) {
+                    return false;
+                }
+                dbgln!("applied optimization {op:?}");
+                true
+            }) {
+                optimized = true;
+            }
+            optimized
+        }
+
+        match &mut *self {
             Run(nodes) => {
-                for node in nodes.make_mut() {
-                    optimized |= node.optimize();
-                }
-                while OPTIMIZATIONS.iter().any(|op| {
-                    if !op.match_and_replace(nodes) {
-                        return false;
-                    }
-                    dbgln!("applied optimization {op:?}");
-                    true
-                }) {
-                    optimized = true;
-                }
-                if nodes.len() == 1 {
-                    *self = take(nodes).remove(0);
-                }
+                optimized |= optimize_run(nodes, opt_single);
+                self.normalize();
             }
             Mod(_, args, _) | ImplMod(_, args, _) => {
                 for arg in args.make_mut() {
-                    optimized |= arg.node.optimize();
+                    optimized |= arg.node.optimize_impl(true);
+                }
+                if opt_single {
+                    optimized |= optimize_run(self.as_vec(), false);
+                    self.normalize();
                 }
             }
-            Node::Array { inner, .. } => optimized |= Arc::make_mut(inner).optimize(),
+            Node::Array { inner, .. } => optimized |= Arc::make_mut(inner).optimize_impl(true),
             CustomInverse(cust, _) => {
                 let cust = Arc::make_mut(cust);
                 if let Ok(normal) = cust.normal.as_mut() {
-                    optimized |= normal.node.optimize();
+                    optimized |= normal.node.optimize_impl(true);
                 }
                 if let Some(un) = cust.un.as_mut() {
-                    optimized |= un.node.optimize();
+                    optimized |= un.node.optimize_impl(true);
                 }
                 if let Some(anti) = cust.anti.as_mut() {
-                    optimized |= anti.node.optimize();
+                    optimized |= anti.node.optimize_impl(true);
                 }
                 if let Some((before, after)) = cust.under.as_mut() {
-                    optimized |= before.node.optimize();
-                    optimized |= after.node.optimize();
+                    optimized |= before.node.optimize_impl(true);
+                    optimized |= after.node.optimize_impl(true);
                 }
             }
             _ => {}

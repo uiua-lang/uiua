@@ -216,6 +216,7 @@ pub trait FillContext: ErrorContext {
     }
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
+    /// There is a number fill but not a byte fill
     fn number_only_fill(&self) -> bool {
         self.array_fill::<f64>().is_ok() && self.array_fill::<u8>().is_err()
     }

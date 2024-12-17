@@ -93,7 +93,7 @@ fn derive_new_shape(
                                 "Fill shape {sh} cannot be used to fill array with shape {ash}"
                             )));
                         }
-                        Ok(_) => pervade_dim(ad, bd),
+                        Ok(_) => ad.max(bd),
                         Err(e) => {
                             return Err(
                                 env.error(format!("Shapes {ash} and {bsh} are not compatible{e}"))
@@ -107,7 +107,7 @@ fn derive_new_shape(
                                 "Fill shape {sh} cannot be used to fill array with shape {bsh}"
                             )));
                         }
-                        Ok(_) => pervade_dim(ad, bd),
+                        Ok(_) => ad.max(bd),
                         Err(e) => {
                             return Err(
                                 env.error(format!("Shapes {ash} and {bsh} are not compatible{e}"))

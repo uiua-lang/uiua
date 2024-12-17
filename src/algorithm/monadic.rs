@@ -1358,8 +1358,8 @@ impl<T: RealArrayValue> Array<T> {
                 )));
             }
             nats.push(n.abs().round() as u128);
-            negatives.push(n.is_sign_negative());
-            any_neg |= n.is_sign_negative();
+            negatives.push(n < 0.0);
+            any_neg |= n < 0.0;
         }
         let mut max = if let Some(max) = nats.iter().max() {
             *max

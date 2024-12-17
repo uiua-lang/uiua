@@ -1479,6 +1479,9 @@ impl Value {
     }
     pub(crate) fn match_fill<C: FillContext>(&mut self, ctx: &C) {
         if let Value::Byte(arr) = self {
+            if arr.meta().flags.is_boolean() && ctx.scalar_fill::<f64>().is_ok() {
+                arr.meta_mut().flags.remove(ArrayFlags::BOOLEAN);
+            }
             if ctx.number_only_fill() {
                 let shape = take(&mut arr.shape);
                 let meta = take(&mut arr.meta);
@@ -1961,7 +1964,7 @@ macro_rules! eq_impls {
                 [Num, same_type],
                 (Complex, Complex, com_x),
                 (Box, Box, generic),
-                (Byte, Byte, same_type),
+                [Byte, same_type],
                 (Char, Char, generic),
                 (Num, Byte, num_byte),
                 (Byte, Num, byte_num),

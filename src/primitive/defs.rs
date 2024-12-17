@@ -139,6 +139,7 @@ pub enum ConstClass {
     Media,
     System,
     Color,
+    Spatial,
     Flags,
     Fun,
 }
@@ -158,6 +159,25 @@ constant!(
     ///
     /// It is the difference between 1 and the next larger representable number.
     ("ε", Math, f64::EPSILON),
+    /// 1-dimensional adjacent neighbors offsets
+    ("A₁", Spatial, [1, -1]),
+    /// 2-dimensional adjacent neighbors offsets
+    ("A₂", Spatial, [[0, 1], [1, 0], [0, -1], [-1, 0]]),
+    /// 3-dimensional adjacent neighbors offsets
+    ("A₃", Spatial, [[0, 1, 0], [-1, 0, 0], [0, -1, 0], [1, 0, 0], [0, 0, 1], [0, 0, -1]]),
+    /// 2-dimensional corner neighbors offsets
+    ("C₂", Spatial, [[1, 1], [1, -1], [-1, -1], [-1, 1]]),
+    /// 3-dimensional corner neighbors offsets
+    ("C₃", Spatial, [
+        [1, 1, 1], [1, -1, 1], [-1, -1, 1], [-1, 1, 1],
+        [1, 1, -1], [1, -1, -1], [-1, -1, -1], [-1, 1, -1]
+    ]),
+    /// 3-dimensional edge neighbors offsets
+    ("E₃", Spatial, [
+        [1, 1, 0], [1, -1, 0], [-1, -1, 0], [-1, 1, 0],
+        [0, 1, 1], [1, 0, 1], [0, -1, 1], [-1, 0, 1],
+        [0, 1, -1], [1, 0, -1], [0, -1, -1], [-1, 0, -1]
+    ]),
     /// A string identifying the operating system
     ("Os", System, std::env::consts::OS),
     /// A string identifying family of the operating system

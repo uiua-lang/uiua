@@ -1625,6 +1625,20 @@ impl From<Vec<u8>> for Value {
     }
 }
 
+impl<const M: usize, const N: usize> From<[[i32; N]; M]> for Value {
+    fn from(array: [[i32; N]; M]) -> Self {
+        let data: EcoVec<f64> = array.into_iter().flatten().map(|n| n as f64).collect();
+        Self::Num(Array::new([M, N], data))
+    }
+}
+
+impl<const N: usize> From<[i32; N]> for Value {
+    fn from(array: [i32; N]) -> Self {
+        let data: EcoVec<f64> = array.into_iter().map(|n| n as f64).collect();
+        Self::Num(Array::new(N, data))
+    }
+}
+
 macro_rules! value_un_impl {
     ($name:ident, $(
         $([$(|$meta:ident| $pred:expr,)* $in_place:ident, $f:ident])?

@@ -50,6 +50,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This counts the number of repetitions required to converge
 - Add an `ε` shadowable constant for the machine epsilon
   - You can type it as `\\epsilon`
+- Add `A₁`, `A₂`, `A₃`, `D₂`, `D₃`, `E₃` constants for 1D, 2D, and 3D adjacency offsets
 - Add [`&ep`](https://uiua.org/docs/&ep) and [`&epf`](https://uiua.org/docs/&epf) system functions for easier printing to stderr
 - Functions that work with audio such as [`audio`](https://uiua.org/docs/audio) now treat the first axis as samples and the second axis as channels
 - Change [`backward 𝄈`](https://uiua.org/docs/backward)'s glyph to `𝄈`. Code using `˜` will continue to work and will be formatted as `𝄈`.

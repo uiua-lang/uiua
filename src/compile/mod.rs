@@ -1469,7 +1469,7 @@ code:
                 node.push(extra);
                 self.emit_diagnostic(
                     format!(
-                        "Signature mismatch: declared {new_sig} but inferred {sig}.  \
+                        "Signature mismatch: declared {new_sig} but inferred {sig}. \
                         {diff} debug output{} will be generated.",
                         if diff == 1 { "" } else { "s" }
                     ),

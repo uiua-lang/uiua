@@ -1753,6 +1753,10 @@ x ← {
 ∘∘[°$ a
     $ b
 ]
+F ← |2 +
+F ← (|2
+  +
+)
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

@@ -2075,10 +2075,10 @@ primitive!(
     /// ex: ⧈{⊙⊟} ⇡5
     ///
     /// Negative window sizes gives the absolute value number of windows.
-    /// ex: ⧈□¯2 ↯4_4⇡16
-    /// ex: ⧈□¯3 ↯4_4⇡16
+    /// ex: ⧈□¯2 °△4_4
+    /// ex: ⧈□¯3 °△4_4
     /// This can be useful when you want to get horizontal windows.
-    /// ex: ⧈□¯1_2 ↯4_4⇡16
+    /// ex: ⧈□¯1_2 °△4_4
     ///
     /// [stencil] with a scalar or list window size will always produce overlapping windows that shift by one row at a time.
     /// 2-dimensional window sizes allow more control over the windows.

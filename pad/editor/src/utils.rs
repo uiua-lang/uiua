@@ -529,7 +529,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
             ((Un, Couple), "uncouple: Split an array into its two rows"),
             ((Un, Bits), "unbits: Decode an array from bits (LSB-first)"),
             ((Un, Utf8), "unutf₈: Convert UTF-8 bytes to a string"),
-            ((Un, Csv), "unutf₈: Decode a CSV string to an array"),
+            ((Un, Csv), "uncsv: Decode a CSV string to an array"),
             (
                 (Un, Transpose),
                 "untranspose: Bring the last axis of an array to the front",

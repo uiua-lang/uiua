@@ -3,11 +3,14 @@
 ## 0.14
 The next version of Uiua
 
+- Make sure functions get inlined properly
+
 # 0.15
-- `# Deprecated!` semantic comment
+- Optimizations through calls
+- Path exists optimization
+- `bind` and `ref` modifiers
 - Compile-time code string evaluation
 - Allow for multi-value constant bindings
-- Animated WEBP support? (`&webp`)
 - Stackless execution trees?
 
 ## Planned Features

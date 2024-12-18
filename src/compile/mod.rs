@@ -2161,7 +2161,10 @@ impl Compiler {
     fn subscript_n_or_side(&mut self, sub: Sp<Subscript>) -> Option<Sp<SubNOrSide>> {
         match sub.value {
             Subscript::N(n) => Some(sub.span.sp(SubNOrSide::N(n))),
-            Subscript::Empty => None,
+            Subscript::Empty => {
+                self.add_error(sub.span.clone(), "Subscript is incomplete");
+                None
+            }
             Subscript::NegOnly => {
                 self.add_error(sub.span.clone(), "Subscript is incomplete");
                 None

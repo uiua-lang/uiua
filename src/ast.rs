@@ -684,7 +684,7 @@ impl fmt::Display for SubSide {
 impl fmt::Display for Subscript {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Subscript::Empty => Ok(()),
+            Subscript::Empty => write!(f, "__"),
             Subscript::NegOnly => write!(f, "₋"),
             Subscript::N(n) => {
                 if *n < 0 {

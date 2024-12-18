@@ -1757,6 +1757,7 @@ F ← |2 +
 F ← (|2
   +
 )
++__
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

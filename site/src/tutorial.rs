@@ -1303,14 +1303,14 @@ fn TutorialPatternMatching() -> impl IntoView {
         <Editor example="°/$\"_ - _\" \"a - bcd - ef\""/>
         <p>"More precisely, format string patterns form a regex that replaces all "<code>"_"</code>"s from the format string with "<code>"(.+?|.*)"</code>", where "<code>"."</code>" also matches newlines."</p>
 
-        <Hd id="case">"Propogating errors with "<Prim prim=Case/></Hd>
+        <Hd id="case">"Propagating errors with "<Prim prim=Case/></Hd>
         <p>"Consider a function which attempts to match multiple patterns. After a pattern matches, each branch has some code to run."</p>
         <p>"For example, this function attempts to parse a couple different expected string formats, then "<Prim prim=Parse/>"s and "<Prim prim=Select/>"s the result in some way."</p>
         <Editor example="F ← ⍣(  ⊏⋕ °$\"_: _\"| ⊏⋕: °$\"_ - _\"| ∘)\nF \"1: abc\"\nF \"def - 2\""/>
-        <p>"But what happens if we give an input that matches the pattern but fails elswhere is the branch?"</p>
+        <p>"But what happens if we give an input that matches the pattern but fails elsewhere in the branch?"</p>
         <Editor example="F ← ⍣(⊏⋕ °$\"_: _\"|⊏⋕: °$\"_ - _\"|∘)\nF \"r: xyz\"  # Can't parse\nF \"ghi - 3\" # Out of bounds"/>
-        <p>"In both those cases, a pattern match succeedes, but either the "<Prim prim=Parse/>" or "<Prim prim=Select/>" fails. This causes the "<Prim prim=Try/>" to move on to the next branch silently, causing what may be unexpected behavior!"</p>
-        <p>"The "<Prim prim=Case/>" modifier can be used to make the branch fail properly. "<Prim prim=Case/>" simply calls its function. However, in the even that the function errors, the error can escape a single "<Prim prim=Try/>"."</p>
+        <p>"In both those cases, a pattern match succeeds, but either the "<Prim prim=Parse/>" or "<Prim prim=Select/>" fails. This causes the "<Prim prim=Try/>" to move on to the next branch silently, causing what may be unexpected behavior!"</p>
+        <p>"The "<Prim prim=Case/>" modifier can be used to make the branch fail properly. "<Prim prim=Case/>" simply calls its function. However, in the event that the function errors, the error can escape a single "<Prim prim=Try/>"."</p>
         <p>"Wrapping the code after a pattern match in "<Prim prim=Case/>" will make the error propagate properly."</p>
         <Editor example="F ← ⍣(\n  ⍩(⊏⋕) °$\"_: _\"\n| ⍩(⊏⋕): °$\"_ - _\"\n| ∘)\nF \"ghi - 3\""/> // Should fail
 

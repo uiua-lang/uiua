@@ -203,14 +203,6 @@ fn path_impl(
         }
     }
 
-    let mut env = PathEnv {
-        env,
-        neighbors,
-        heuristic,
-        is_goal,
-        args,
-    };
-
     let mut if_empty = start.clone();
     if_empty.fix();
     if_empty = if_empty.first_dim_zero();
@@ -248,62 +240,72 @@ fn path_impl(
     }
 
     // Main pathing loop
-    'outer: while let Some(NodeCost { node: curr, .. }) = to_see.pop() {
-        env.env.respect_execution_limit()?;
-        let curr_cost = full_cost[&curr];
-        // Early exit if found a shorter path
-        if curr_cost > shortest_cost || ends.contains(&curr) {
-            continue;
-        }
-        // Check if reached a goal
-        if env.is_goal(&backing[curr])? {
-            ends.insert(curr);
-            shortest_cost = curr_cost;
-            match mode {
-                PathMode::All => continue,
-                PathMode::Take(n) if n <= 1 => break,
-                PathMode::Take(n) if count_paths(&ends, &came_from) >= n => break,
-                _ => break,
-            }
-        }
-        // Check neighbors
-        for (nei, nei_cost) in env.neighbors(&backing[curr])? {
-            // Add to backing if needed
-            let nei = if let Some(index) = indices.get(&nei) {
-                *index
-            } else {
-                let index = backing.len();
-                indices.insert(nei.clone(), index);
-                backing.push(nei);
-                index
-            };
-            let from_curr_nei_cost = curr_cost + nei_cost;
-            let curr_nei_cost = full_cost.get(&nei).copied().unwrap_or(f64::INFINITY);
-            if from_curr_nei_cost <= curr_nei_cost {
-                if let PathMode::Take(n) = mode {
-                    if ends.contains(&nei) && count_paths(&ends, &came_from) >= n {
-                        break 'outer;
-                    }
-                }
-                let parents = came_from.entry(nei).or_default();
-                // If a better path was found we...
-                if from_curr_nei_cost < curr_nei_cost {
-                    // 1. Clear the parents
-                    parents.clear();
-                    // 2. Update the known cost
-                    full_cost.insert(nei, from_curr_nei_cost);
-                    // 3. Add to to see
-                    to_see.push(NodeCost {
-                        cost: from_curr_nei_cost + env.heuristic(&backing[nei])?,
-                        node: nei,
-                    });
-                }
-                parents.insert(curr);
-            }
-        }
-    }
+    env.without_fill(|env| -> UiuaResult {
+        let mut env = PathEnv {
+            env,
+            neighbors,
+            heuristic,
+            is_goal,
+            args,
+        };
 
-    let env = env.env;
+        'outer: while let Some(NodeCost { node: curr, .. }) = to_see.pop() {
+            env.env.respect_execution_limit()?;
+            let curr_cost = full_cost[&curr];
+            // Early exit if found a shorter path
+            if curr_cost > shortest_cost || ends.contains(&curr) {
+                continue;
+            }
+            // Check if reached a goal
+            if env.is_goal(&backing[curr])? {
+                ends.insert(curr);
+                shortest_cost = curr_cost;
+                match mode {
+                    PathMode::All => continue,
+                    PathMode::Take(n) if n <= 1 => break,
+                    PathMode::Take(n) if count_paths(&ends, &came_from) >= n => break,
+                    _ => break,
+                }
+            }
+            // Check neighbors
+            for (nei, nei_cost) in env.neighbors(&backing[curr])? {
+                // Add to backing if needed
+                let nei = if let Some(index) = indices.get(&nei) {
+                    *index
+                } else {
+                    let index = backing.len();
+                    indices.insert(nei.clone(), index);
+                    backing.push(nei);
+                    index
+                };
+                let from_curr_nei_cost = curr_cost + nei_cost;
+                let curr_nei_cost = full_cost.get(&nei).copied().unwrap_or(f64::INFINITY);
+                if from_curr_nei_cost <= curr_nei_cost {
+                    if let PathMode::Take(n) = mode {
+                        if ends.contains(&nei) && count_paths(&ends, &came_from) >= n {
+                            break 'outer;
+                        }
+                    }
+                    let parents = came_from.entry(nei).or_default();
+                    // If a better path was found we...
+                    if from_curr_nei_cost < curr_nei_cost {
+                        // 1. Clear the parents
+                        parents.clear();
+                        // 2. Update the known cost
+                        full_cost.insert(nei, from_curr_nei_cost);
+                        // 3. Add to to see
+                        to_see.push(NodeCost {
+                            cost: from_curr_nei_cost + env.heuristic(&backing[nei])?,
+                            node: nei,
+                        });
+                    }
+                    parents.insert(curr);
+                }
+            }
+        }
+        Ok(())
+    })?;
+
     if has_costs {
         env.push(shortest_cost);
     }

@@ -252,7 +252,7 @@ impl<T: ArrayValue> Array<T> {
                     Err(e) => {
                         if allow_ext && other.shape.ends_with(&self.shape) {
                             for &b_dim in other.shape[1..other.rank() - self.rank()].iter().rev() {
-                                self.reshape_scalar_integer(b_dim)
+                                self.reshape_scalar_integer(b_dim, None)
                                     .map_err(|e| ctx.error(e))?;
                             }
                         } else {
@@ -763,12 +763,12 @@ impl<T: ArrayValue> Array<T> {
                         if self.shape.ends_with(&other.shape) {
                             for &a_dim in self.shape[0..self.rank() - other.rank()].iter().rev() {
                                 other
-                                    .reshape_scalar_integer(a_dim)
+                                    .reshape_scalar_integer(a_dim, None)
                                     .map_err(|e| ctx.error(e))?;
                             }
                         } else if other.shape.ends_with(&self.shape) {
                             for &b_dim in other.shape[0..other.rank() - self.rank()].iter().rev() {
-                                self.reshape_scalar_integer(b_dim)
+                                self.reshape_scalar_integer(b_dim, None)
                                     .map_err(|e| ctx.error(e))?;
                             }
                         } else {

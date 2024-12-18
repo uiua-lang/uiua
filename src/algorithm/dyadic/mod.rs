@@ -209,6 +209,32 @@ impl Value {
 }
 
 impl<T: Clone> Array<T> {
+    pub(crate) fn reshape_scalar_integer(
+        &mut self,
+        count: usize,
+        fill: Option<T>,
+    ) -> Result<(), SizeError> {
+        if count == 0 {
+            self.data.clear();
+            self.shape.insert(0, 0);
+            return Ok(());
+        }
+        let elem_count = validate_size_of::<T>([count - 1, self.data.len()])?;
+        if let Some(fill) = fill {
+            self.data.extend_repeat(&fill, elem_count);
+        } else {
+            self.data.reserve(elem_count);
+            let row = self.data.to_vec();
+            for _ in 1..count {
+                self.data.extend_from_slice(&row);
+            }
+        }
+        self.shape.insert(0, count);
+        Ok(())
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
     /// `reshape` this array by replicating it as the rows of a new array
     pub fn reshape_scalar(&mut self, count: Result<isize, bool>, env: &Uiua) -> UiuaResult {
         self.take_map_keys();
@@ -217,7 +243,7 @@ impl<T: Clone> Array<T> {
                 if count < 0 {
                     self.reverse();
                 }
-                self.reshape_scalar_integer(count.unsigned_abs())
+                self.reshape_scalar_integer(count.unsigned_abs(), env.scalar_fill::<T>().ok())
                     .map_err(|e| env.error(e))
             }
             Err(rev) => {
@@ -228,24 +254,6 @@ impl<T: Clone> Array<T> {
             }
         }
     }
-    pub(crate) fn reshape_scalar_integer(&mut self, count: usize) -> Result<(), SizeError> {
-        if count == 0 {
-            self.data.clear();
-            self.shape.insert(0, 0);
-            return Ok(());
-        }
-        let elem_count = validate_size_of::<T>([count - 1, self.data.len()])?;
-        self.data.reserve(elem_count);
-        let row = self.data.to_vec();
-        for _ in 1..count {
-            self.data.extend_from_slice(&row);
-        }
-        self.shape.insert(0, count);
-        Ok(())
-    }
-}
-
-impl<T: ArrayValue> Array<T> {
     /// `reshape` the array
     pub fn reshape(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
         let fill = env.scalar_fill::<T>();

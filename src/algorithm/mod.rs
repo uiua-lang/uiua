@@ -343,11 +343,11 @@ where
             arr.shape.drain(..fixes);
             if target.len() >= fixes {
                 for &dim in target.iter().take(fixes).rev() {
-                    arr.reshape_scalar_integer(dim)?;
+                    arr.reshape_scalar_integer(dim, None)?;
                 }
             } else if arr.shape() == target {
                 for &dim in target.iter().cycle().take(fixes) {
-                    arr.reshape_scalar_integer(dim)?;
+                    arr.reshape_scalar_integer(dim, None)?;
                 }
             }
         }

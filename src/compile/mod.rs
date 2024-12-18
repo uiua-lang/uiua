@@ -33,8 +33,8 @@ use crate::{
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, ImportSrc, SetInverses, SigDecl},
     parse::{flip_unsplit_lines, max_placeholder, parse, split_words},
-    Array, ArrayLen, Assembly, BindingKind, BindingMeta, Boxed, ConstClass, CustomInverse,
-    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
+    Array, ArrayLen, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
+    DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
     RunMode, SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind,
     UiuaResult, Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
@@ -1707,22 +1707,15 @@ code:
                 (self.code_meta.global_references).insert(span.clone(), local.index);
                 self.global_index(local.index, span)
             } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
-                if constant.class == ConstClass::Experimental {
-                    self.experimental_error(&span, || {
-                        format!(
-                            "`{ident}` is experimental. To use it, \
-                            add `# Experimental!` to the top of the file."
-                        )
-                    });
-                }
                 // Name is a built-in constant
                 self.code_meta
                     .constant_references
                     .insert(span.clone().sp(ident));
-                let value = constant
-                    .value
-                    .resolve(self.scope_file_path(), &*self.backend());
-                Node::Push(value)
+                Node::Push(
+                    constant
+                        .value
+                        .resolve(self.scope_file_path(), &*self.backend()),
+                )
             } else {
                 return Err(self.error(span, format!("Unknown identifier `{ident}`")));
             },

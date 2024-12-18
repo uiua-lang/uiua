@@ -139,7 +139,7 @@ pub enum ConstClass {
     Media,
     System,
     Color,
-    Experimental,
+    Spatial,
     Flags,
     Fun,
 }
@@ -160,20 +160,20 @@ constant!(
     /// It is the difference between 1 and the next larger representable number.
     ("ε", Math, f64::EPSILON),
     /// 1-dimensional adjacent neighbors offsets
-    ("A₁", Experimental, [1, -1]),
+    ("A₁", Spatial, [1, -1]),
     /// 2-dimensional adjacent neighbors offsets
-    ("A₂", Experimental, [[0, 1], [1, 0], [0, -1], [-1, 0]]),
+    ("A₂", Spatial, [[0, 1], [1, 0], [0, -1], [-1, 0]]),
     /// 3-dimensional adjacent neighbors offsets
-    ("A₃", Experimental, [[0, 1, 0], [-1, 0, 0], [0, -1, 0], [1, 0, 0], [0, 0, 1], [0, 0, -1]]),
+    ("A₃", Spatial, [[0, 1, 0], [-1, 0, 0], [0, -1, 0], [1, 0, 0], [0, 0, 1], [0, 0, -1]]),
     /// 2-dimensional corner neighbors offsets
-    ("C₂", Experimental, [[1, 1], [1, -1], [-1, -1], [-1, 1]]),
+    ("C₂", Spatial, [[1, 1], [1, -1], [-1, -1], [-1, 1]]),
     /// 3-dimensional corner neighbors offsets
-    ("C₃", Experimental, [
+    ("C₃", Spatial, [
         [1, 1, 1], [1, -1, 1], [-1, -1, 1], [-1, 1, 1],
         [1, 1, -1], [1, -1, -1], [-1, -1, -1], [-1, 1, -1]
     ]),
     /// 3-dimensional edge neighbors offsets
-    ("E₃", Experimental, [
+    ("E₃", Spatial, [
         [1, 1, 0], [1, -1, 0], [-1, -1, 0], [-1, 1, 0],
         [0, 1, 1], [1, 0, 1], [0, -1, 1], [-1, 0, 1],
         [0, 1, -1], [1, 0, -1], [0, -1, -1], [-1, 0, -1]

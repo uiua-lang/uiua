@@ -246,7 +246,7 @@ impl Optimization for ReduceConjoinInventoryOpt {
 }
 
 opt!(
-    PathOpt,
+    SimplePathOpt,
     (
         [Mod(Path, args, span), Prim(First, _)],
         ImplMod(PathFirst, args.clone(), *span)
@@ -264,6 +264,47 @@ opt!(
         ImplMod(AstarPop, args.clone(), *span)
     ),
 );
+
+#[derive(Debug)]
+struct PathOpt;
+impl Optimization for PathOpt {
+    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
+        if SimplePathOpt.match_and_replace(nodes) {
+            return true;
+        }
+        match_and_replace(nodes, |nodes| match nodes {
+            [Mod(Path, args, span), Mod(Fill, fill_args, fill_span), ..] => {
+                let [get_fill, filled] = fill_args.as_slice() else {
+                    return None;
+                };
+                if get_fill.sig != (0, 1) {
+                    return None;
+                }
+                let Some(First) = filled.node.as_primitive() else {
+                    return None;
+                };
+                let inner = ImplMod(PathFirst, args.clone(), *span).sig_node().ok()?;
+                let node = Mod(Fill, eco_vec![get_fill.clone(), inner], *fill_span);
+                Some((2, node))
+            }
+            [Mod(Astar, args, span), Mod(Fill, fill_args, fill_span), ..] => {
+                let [get_fill, filled] = fill_args.as_slice() else {
+                    return None;
+                };
+                if get_fill.sig != (0, 1) {
+                    return None;
+                }
+                let Some(First) = filled.node.as_primitive() else {
+                    return None;
+                };
+                let inner = ImplMod(AstarFirst, args.clone(), *span).sig_node().ok()?;
+                let node = Mod(Fill, eco_vec![get_fill.clone(), inner], *fill_span);
+                Some((2, node))
+            }
+            _ => None,
+        })
+    }
+}
 
 #[derive(Debug)]
 struct AllSameOpt;

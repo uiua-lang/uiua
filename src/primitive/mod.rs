@@ -1113,11 +1113,11 @@ impl Primitive {
             Primitive::Dump => dump(ops, env, false)?,
             Primitive::Astar => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
-                algorithm::path(neighbors, is_goal, Some(heuristic), env)?;
+                path::path(neighbors, is_goal, Some(heuristic), env)?;
             }
             Primitive::Path => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;
-                algorithm::path(neighbors, is_goal, None, env)?;
+                path::path(neighbors, is_goal, None, env)?;
             }
             Primitive::Memo => {
                 let [f] = get_ops(ops, env)?;
@@ -1729,19 +1729,19 @@ impl ImplPrimitive {
             ImplPrimitive::ReduceConjoinInventory => zip::reduce_conjoin_inventory(ops, env)?,
             ImplPrimitive::AstarFirst => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
-                algorithm::path_first(neighbors, is_goal, Some(heuristic), env)?;
+                path::path_first(neighbors, is_goal, Some(heuristic), env)?;
             }
             ImplPrimitive::AstarPop => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
-                algorithm::path_pop(neighbors, is_goal, Some(heuristic), env)?;
+                path::path_pop(neighbors, is_goal, Some(heuristic), env)?;
             }
             ImplPrimitive::PathFirst => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;
-                algorithm::path_first(neighbors, is_goal, None, env)?;
+                path::path_first(neighbors, is_goal, None, env)?;
             }
             ImplPrimitive::PathPop => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;
-                algorithm::path_pop(neighbors, is_goal, None, env)?;
+                path::path_pop(neighbors, is_goal, None, env)?;
             }
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(ops, depth, env)?,
             ImplPrimitive::RepeatWithInverse => loops::repeat(ops, true, false, env)?,

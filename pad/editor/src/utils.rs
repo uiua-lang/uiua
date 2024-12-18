@@ -547,6 +547,18 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
             ((Anti, Pow), "antipower: Get the nth root of a number"),
             ((Anti, Log), "antilogarithm: Get the nth power of a number"),
             (
+                (Anti, Select),
+                "antiselect: Puts rows into the corresponding indices",
+            ),
+            (
+                (Anti, Pick),
+                "antipick: Puts elements into the corresponding indices",
+            ),
+            (
+                (Anti, Repeat),
+                "antirepeat: Repeat a function's inverse a number of times",
+            ),
+            (
                 (Anti, Orient),
                 "antiorient: Reorder axes by specifying where to send them",
             ),

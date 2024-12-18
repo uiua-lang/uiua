@@ -514,11 +514,22 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                 "unshape: Create an array of incrementing indices with the given shape",
             ),
             ((Un, Sin), "unsine: Get the arcsine of a number"),
+            (
+                (Un, Atan),
+                "unatangent: Get the sine and cosine of a number",
+            ),
+            (
+                (Un, Complex),
+                "uncomplex: Get the real part and imaginary part of a number",
+            ),
             ((Un, Parse), "unparse: Format a number as a string"),
             ((Un, Sqrt), "unsqrt: Square a number"),
             ((Un, Fix), "unfix: Remove a length-1 axis from an array"),
+            ((Un, Sort), "unsort: Shuffle an array"),
             ((Un, Couple), "uncouple: Split an array into its two rows"),
             ((Un, Bits), "unbits: Decode an array from bits (LSB-first)"),
+            ((Un, Utf8), "unutf₈: Convert UTF-8 bytes to a string"),
+            ((Un, Csv), "unutf₈: Decode a CSV string to an array"),
             (
                 (Un, Transpose),
                 "untranspose: Bring the last axis of an array to the front",

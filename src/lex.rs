@@ -1459,6 +1459,7 @@ impl<'a> Lexer<'a> {
                 started_subscript = true;
             } else if let Some(c) = self.next_char_if(|c| "⌞⌟".contains(c)) {
                 s.push_str(c);
+                break s;
             } else {
                 break s;
             }

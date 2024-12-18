@@ -111,7 +111,7 @@ where
     }
     let cell_shape = Shape::from(&arr.shape[dims.len()..]);
     let cell_len = cell_shape.elements();
-    let fill = env.scalar_fill::<T>();
+    let fill = env.scalar_fill::<T>().ok().unwrap_or_else(T::proxy);
     // dbg!(&arr.shape, &dims, &shape_prefix);
     // dbg!(&window_shape, &cell_shape, &maxs);
     env.without_fill(|env| -> UiuaResult {
@@ -136,18 +136,10 @@ where
                         }
                     }
                 } else {
-                    match &fill {
-                        Ok(fill) => match &mut action {
-                            WindowAction::Id(data)
-                            | WindowAction::Box(_, data)
-                            | WindowAction::Default(_, data) => extend_repeat(data, fill, cell_len),
-                        },
-                        Err(_) => {
-                            return Err(env.error(
-                                "Fill not present for filled stencil. \
-                                This is a bug in the interpreter.",
-                            ));
-                        }
+                    match &mut action {
+                        WindowAction::Id(data)
+                        | WindowAction::Box(_, data)
+                        | WindowAction::Default(_, data) => extend_repeat(data, &fill, cell_len),
                     }
                 }
                 // Increment offset

@@ -164,7 +164,7 @@ constant!(
     /// 2-dimensional adjacent neighbors offsets
     ("A₂", Spatial, [[0, 1], [1, 0], [0, -1], [-1, 0]]),
     /// 3-dimensional adjacent neighbors offsets
-    ("A₃", Spatial, [[0, 1, 0], [-1, 0, 0], [0, -1, 0], [1, 0, 0], [0, 0, 1], [0, 0, -1]]),
+    ("A₃", Spatial, [[0, 1, 0], [1, 0, 0], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]]),
     /// 2-dimensional corner neighbors offsets
     ("C₂", Spatial, [[1, 1], [1, -1], [-1, -1], [-1, 1]]),
     /// 3-dimensional corner neighbors offsets

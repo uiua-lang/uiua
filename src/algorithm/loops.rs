@@ -40,6 +40,7 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
         return Ok(());
     }
     let n = env.pop("repetition count")?;
+    env.require_height(f.sig.args)?;
     fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
         Ok(match value {
             Value::Num(n) => n,

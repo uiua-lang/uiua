@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::*, mem::take};
 
-use crate::{ArrayCmp, Boxed, Primitive, SigNode, Signature, Uiua, UiuaResult, Value};
+use crate::{Array, ArrayCmp, Boxed, Primitive, SigNode, Signature, Uiua, UiuaResult, Value};
 
 pub fn path(
     neighbors: SigNode,
@@ -20,6 +20,34 @@ pub fn path_first(
     path_impl(neighbors, is_goal, heuristic, PathMode::First, env)
 }
 
+pub fn path_take(
+    neighbors: SigNode,
+    is_goal: SigNode,
+    heuristic: Option<SigNode>,
+    env: &mut Uiua,
+) -> UiuaResult {
+    let n = env
+        .pop("number of paths to take")?
+        .as_ints_or_infs(env, "Taken amount must be a list of integers or infinity")?;
+    if n.is_empty() {
+        path_impl(neighbors, is_goal, heuristic, PathMode::All, env)?;
+    } else {
+        match n.first() {
+            Some(Ok(n)) if *n >= 0 => path_impl(
+                neighbors,
+                is_goal,
+                heuristic,
+                PathMode::Take(*n as usize),
+                env,
+            )?,
+            _ => path_impl(neighbors, is_goal, heuristic, PathMode::All, env)?,
+        }
+    }
+    let path = env.pop("path")?.take_impl(&n, env)?;
+    env.push(path);
+    Ok(())
+}
+
 pub fn path_pop(
     neighbors: SigNode,
     is_goal: SigNode,
@@ -29,10 +57,12 @@ pub fn path_pop(
     path_impl(neighbors, is_goal, heuristic, PathMode::CostOnly, env)
 }
 
+#[derive(Debug, Clone, Copy)]
 enum PathMode {
     All,
     First,
     CostOnly,
+    Take(usize),
 }
 
 fn path_impl(
@@ -181,20 +211,44 @@ fn path_impl(
         args,
     };
 
+    let mut if_empty = start.clone();
+    if_empty.fix();
+    if_empty = if_empty.first_dim_zero();
+    if_empty.shape_mut().insert(0, 0);
+
     // Initialize state
     let mut to_see = BinaryHeap::new();
     let mut backing = vec![start.clone()];
     let mut indices: HashMap<Value, usize> = [(start, 0)].into();
     to_see.push(NodeCost { node: 0, cost: 0.0 });
 
-    let mut came_from: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut came_from: HashMap<usize, BTreeSet<usize>> = HashMap::new();
     let mut full_cost: HashMap<usize, f64> = [(0, 0.0)].into();
 
     let mut shortest_cost = f64::INFINITY;
     let mut ends = BTreeSet::new();
 
+    fn count_paths(ends: &BTreeSet<usize>, came_from: &HashMap<usize, BTreeSet<usize>>) -> usize {
+        let mut queue = VecDeque::new();
+        let mut count = 0;
+        for &end in ends {
+            queue.clear();
+            queue.push_back(end);
+            while let Some(curr) = queue.pop_front() {
+                if let Some(parents) = came_from.get(&curr) {
+                    for &parent in parents {
+                        queue.push_back(parent);
+                    }
+                } else {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
+
     // Main pathing loop
-    while let Some(NodeCost { node: curr, .. }) = to_see.pop() {
+    'outer: while let Some(NodeCost { node: curr, .. }) = to_see.pop() {
         env.env.respect_execution_limit()?;
         let curr_cost = full_cost[&curr];
         // Early exit if found a shorter path
@@ -205,10 +259,11 @@ fn path_impl(
         if env.is_goal(&backing[curr])? {
             ends.insert(curr);
             shortest_cost = curr_cost;
-            if let PathMode::All = mode {
-                continue;
-            } else {
-                break;
+            match mode {
+                PathMode::All => continue,
+                PathMode::Take(n) if n <= 1 => break,
+                PathMode::Take(n) if count_paths(&ends, &came_from) >= n => break,
+                _ => break,
             }
         }
         // Check neighbors
@@ -225,6 +280,11 @@ fn path_impl(
             let from_curr_nei_cost = curr_cost + nei_cost;
             let curr_nei_cost = full_cost.get(&nei).copied().unwrap_or(f64::INFINITY);
             if from_curr_nei_cost <= curr_nei_cost {
+                if let PathMode::Take(n) = mode {
+                    if ends.contains(&nei) && count_paths(&ends, &came_from) >= n {
+                        break 'outer;
+                    }
+                }
                 let parents = came_from.entry(nei).or_default();
                 // If a better path was found we...
                 if from_curr_nei_cost < curr_nei_cost {
@@ -238,7 +298,7 @@ fn path_impl(
                         node: nei,
                     });
                 }
-                parents.push(curr);
+                parents.insert(curr);
             }
         }
     }
@@ -263,41 +323,33 @@ fn path_impl(
         Value::from_row_values(path, env)
     };
 
-    for parents in came_from.values_mut() {
-        parents.sort_unstable();
-        parents.dedup();
-    }
-
     match mode {
-        PathMode::All => {
+        PathMode::All | PathMode::Take(_) => {
             let mut paths = Vec::new();
-            for end in ends {
+            'outer: for end in ends {
                 let mut currs = vec![vec![end]];
                 let mut these_paths = Vec::new();
                 while !currs.is_empty() {
                     env.respect_execution_limit()?;
                     let mut new_paths = Vec::new();
                     currs.retain_mut(|path| {
-                        let parents = came_from
-                            .get(path.last().unwrap())
-                            .map(|p| p.as_slice())
-                            .unwrap_or(&[]);
-                        match parents {
-                            [] => {
+                        let parents = came_from.get(path.last().unwrap());
+                        match parents.map(|p| p.len()).unwrap_or(0) {
+                            0 => {
                                 these_paths.push(take(path));
                                 false
                             }
-                            &[parent] => {
-                                path.push(parent);
+                            1 => {
+                                path.push(*parents.unwrap().iter().next().unwrap());
                                 true
                             }
-                            &[parent, ref rest @ ..] => {
-                                for &parent in rest {
+                            _ => {
+                                for &parent in parents.unwrap().iter().skip(1) {
                                     let mut path = path.clone();
                                     path.push(parent);
                                     new_paths.push(path);
                                 }
-                                path.push(parent);
+                                path.push(*parents.unwrap().iter().next().unwrap());
                                 true
                             }
                         }
@@ -312,17 +364,35 @@ fn path_impl(
                     } else {
                         path_val
                     });
+                    if let PathMode::Take(n) = mode {
+                        if paths.len() >= n {
+                            break 'outer;
+                        }
+                    }
                 }
             }
-            let paths_val = Value::from_row_values(paths, env)?;
+            let path_count = paths.len();
+            let mut paths_val = Value::from_row_values(paths, env)?;
+            if path_count == 0 {
+                paths_val = if has_costs {
+                    Array::<Boxed>::default().into()
+                } else {
+                    if_empty
+                }
+            } else if let PathMode::Take(0) = mode {
+                if paths_val.row_count() > 0 {
+                    paths_val.drop_n(1);
+                }
+            }
             env.push(paths_val);
         }
         PathMode::First => {
             if let Some(mut curr) = ends.into_iter().next() {
                 let mut path = vec![curr];
                 while let Some(from) = came_from.get(&curr) {
-                    path.push(from[0]);
-                    curr = from[0];
+                    let from = *from.iter().next().unwrap();
+                    path.push(from);
+                    curr = from;
                 }
                 path.reverse();
                 let path_val = make_path(path)?;

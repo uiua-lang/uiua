@@ -298,6 +298,18 @@ impl VirtualEnv {
                     .saturating_sub(1);
                 self.handle_args_outputs(args, 1 + has_costs as usize);
             }
+            Node::ImplMod(AstarTake, args, _) => {
+                let _n = self.pop();
+                let _start = self.pop();
+                let [neighbors, heuristic, is_goal] = get_args(args)?;
+                let has_costs = neighbors.outputs == 2;
+                let args = neighbors
+                    .args
+                    .max(heuristic.args)
+                    .max(is_goal.args)
+                    .saturating_sub(1);
+                self.handle_args_outputs(args, 1 + has_costs as usize);
+            }
             Node::ImplMod(AstarPop, args, _) => {
                 let _start = self.pop();
                 let [neighbors, heuristic, is_goal] = get_args(args)?;
@@ -310,6 +322,14 @@ impl VirtualEnv {
                 self.handle_args_outputs(args, has_costs as usize);
             }
             Node::Mod(Path, args, _) | Node::ImplMod(PathFirst, args, _) => {
+                let _start = self.pop();
+                let [neighbors, is_goal] = get_args(args)?;
+                let has_costs = neighbors.outputs == 2;
+                let args = neighbors.args.max(is_goal.args).saturating_sub(1);
+                self.handle_args_outputs(args, 1 + has_costs as usize);
+            }
+            Node::ImplMod(PathTake, args, _) => {
+                let _n = self.pop();
                 let _start = self.pop();
                 let [neighbors, is_goal] = get_args(args)?;
                 let has_costs = neighbors.outputs == 2;

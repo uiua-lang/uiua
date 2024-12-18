@@ -274,8 +274,10 @@ impl fmt::Display for ImplPrimitive {
             MatchLe => write!(f, "match ≤"),
             MatchGe => write!(f, "match ≥"),
             AstarFirst => write!(f, "{First}{Astar}"),
+            AstarTake => write!(f, "{Take}…{Astar}"),
             AstarPop => write!(f, "{Pop}{Astar}"),
             PathFirst => write!(f, "{First}{Path}"),
+            PathTake => write!(f, "{Take}…{Path}"),
             PathPop => write!(f, "{Pop}{Path}"),
             SplitByScalar => write!(f, "{Partition}{Box}{By}{Ne}"),
             SplitBy => write!(f, "{Partition}{Box}{Not}{By}{Mask}"),
@@ -1731,6 +1733,10 @@ impl ImplPrimitive {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
                 path::path_first(neighbors, is_goal, Some(heuristic), env)?;
             }
+            ImplPrimitive::AstarTake => {
+                let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
+                path::path_take(neighbors, is_goal, Some(heuristic), env)?;
+            }
             ImplPrimitive::AstarPop => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
                 path::path_pop(neighbors, is_goal, Some(heuristic), env)?;
@@ -1738,6 +1744,10 @@ impl ImplPrimitive {
             ImplPrimitive::PathFirst => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;
                 path::path_first(neighbors, is_goal, None, env)?;
+            }
+            ImplPrimitive::PathTake => {
+                let [neighbors, is_goal] = get_ops(ops, env)?;
+                path::path_take(neighbors, is_goal, None, env)?;
             }
             ImplPrimitive::PathPop => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;

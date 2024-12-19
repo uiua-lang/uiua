@@ -2226,7 +2226,7 @@ pub enum PrimDocFragment {
     Link { text: String, url: String },
 }
 
-fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
+pub(crate) fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
     let mut end_link = None;
     if let Some(link_start) = line.find("https://") {
         let end = &line[link_start..];

@@ -141,8 +141,7 @@ pub fn run_window() {
             };
         }
     });
-    let icon =
-        image::load_from_memory(include_bytes!("primitive/assets/uiua-logo-512.png")).unwrap();
+    let icon = image::load_from_memory(include_bytes!("assets/uiua-logo-512.png")).unwrap();
     let icon = IconData {
         width: icon.width(),
         height: icon.height(),

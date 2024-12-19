@@ -636,6 +636,7 @@ impl Primitive {
                     .unwrap_or(sub_name)
                     .chars()
                     .all(|c| "gd".contains(c))
+                    && sub_name != "fi"
                 {
                     for (i, c) in sub_name.char_indices() {
                         let prim = match c {
@@ -705,6 +706,7 @@ impl Primitive {
                     .unwrap_or(sub_name)
                     .chars()
                     .all(|c| "gd".contains(c))
+                    && sub_name != "fi"
                 {
                     for (i, c) in sub_name.char_indices().rev() {
                         let prim = match c {

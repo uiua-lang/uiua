@@ -644,6 +644,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
     match (xs.row_count(), ys.row_count()) {
         (_, 1) => {
             ys.undo_fix();
+            ys = ys.unboxed_if(inv);
             let is_empty = outputs > 0 && xs.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
             let mut per_meta = xs.take_per_meta();
@@ -661,7 +662,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
                     }
                 } else {
                     for x in xs.into_rows() {
-                        env.push(ys.clone().unboxed_if(inv));
+                        env.push(ys.clone());
                         env.push(x.unboxed_if(inv));
                         env.exec(f.clone())?;
                         for i in 0..outputs {
@@ -675,6 +676,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
         }
         (1, _) => {
             xs.undo_fix();
+            xs = xs.unboxed_if(inv);
             let is_empty = outputs > 0 && ys.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
             let mut per_meta = ys.take_per_meta();

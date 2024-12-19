@@ -238,6 +238,14 @@ pub extern "C" fn make_void_struct(_: c_int) -> VoidStruct {
     }
 }
 
+#[no_mangle]
+pub extern "C" fn make_void_struct_a(a: c_int) -> VoidStruct {
+    VoidStruct {
+        a: Box::into_raw(Box::new(a)) as *const c_void,
+        b: std::ptr::null(),
+    }
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

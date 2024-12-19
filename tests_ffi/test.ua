@@ -42,3 +42,6 @@ MDF ← Lib {"const unsigned char*" "dummy_md5" "const unsigned char:1" "unsigne
 
 VoidStruct ← "{void*; void*}"
 ⍤⤙≍ {NULL NULL} Lib {VoidStruct "make_void_struct" "int"} {5}
+°□₂ Lib {VoidStruct "make_void_struct_a" "int"} {5}
+⍤⤙≍ [5] ⊃&memfree(&memcpy "int"⊙1)
+⍤⤙≍ NULL

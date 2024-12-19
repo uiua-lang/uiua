@@ -201,7 +201,11 @@ pub unsafe extern "C" fn array_ptr(arr: *const c_int, len: c_int) -> *const c_in
 }
 
 #[no_mangle]
-pub unsafe fn dummy_md5(m: *const c_uchar, len: c_int, out: *mut c_uchar) -> *const c_uchar {
+pub unsafe extern "C" fn dummy_md5(
+    m: *const c_uchar,
+    len: c_int,
+    out: *mut c_uchar,
+) -> *const c_uchar {
     if len == 0 {
         return std::ptr::null();
     }
@@ -217,6 +221,20 @@ pub unsafe fn dummy_md5(m: *const c_uchar, len: c_int, out: *mut c_uchar) -> *co
             *out.offset(i) = *m.offset(i);
         }
         out
+    }
+}
+
+#[repr(C)]
+pub struct VoidStruct {
+    pub a: *const c_void,
+    pub b: *const c_void,
+}
+
+#[no_mangle]
+pub extern "C" fn make_void_struct(_: c_int) -> VoidStruct {
+    VoidStruct {
+        a: std::ptr::null(),
+        b: std::ptr::null(),
     }
 }
 

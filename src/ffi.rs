@@ -1156,6 +1156,16 @@ mod enabled {
                             let inner_repr = unsafe { slice::from_raw_parts(ptr, size) };
                             rows.push(self.struct_repr_to_value(inner_repr, fields)?);
                         }
+                        FfiType::Void => {
+                            let mut bytes: [u8; size_of::<*const u8>()] = Default::default();
+                            bytes.copy_from_slice(&repr[offset..offset + size_of::<*const u8>()]);
+                            let ptr = unsafe {
+                                transmute::<[u8; size_of::<*const u8>()], *const u8>(bytes)
+                            };
+                            let mut row = Value::default();
+                            row.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
+                            rows.push(row);
+                        }
                         inner => {
                             let mut bytes: [u8; size_of::<*const u8>()] = Default::default();
                             bytes.copy_from_slice(&repr[offset..offset + size_of::<*const u8>()]);

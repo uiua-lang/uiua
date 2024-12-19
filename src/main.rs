@@ -428,6 +428,7 @@ fn main() {
                 }
                 .watch(),
                 Err(NoWorkingFile::MultipleFiles) => WatchArgs::default().watch(),
+                Err(_) if app.window => WatchArgs::default().watch(),
                 Err(nwf) => {
                     _ = App::try_parse_from(["uiua", "help"])
                         .map(drop)

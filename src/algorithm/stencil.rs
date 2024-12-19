@@ -27,7 +27,8 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
                 Primitive::Stencil.format()
             )));
         }
-        let xs = env.pop(1)?;
+        let mut xs = env.pop(1)?;
+        xs.match_fill(env);
         let n = f.sig.args;
         return if f.sig == (2, 1) {
             adjacent_impl(f, xs, n, env)
@@ -55,7 +56,8 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
     // Default stencil
     let size = env.pop(1)?;
-    let xs = env.pop(2)?;
+    let mut xs = env.pop(2)?;
+    xs.match_fill(env);
     let has_fill = env.fill().value_for(&xs).is_some();
     let dims = derive_dims(&size, xs.shape(), has_fill, env)?;
     val_as_arr!(xs, |arr| stencil_array(arr, &dims, f, env))

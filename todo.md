@@ -7,7 +7,6 @@ The next version of Uiua
 
 # 0.15
 - Optimizations through calls
-- Path exists optimization
 - `bind` and `ref` modifiers
 - Compile-time code string evaluation
 - Allow for multi-value constant bindings

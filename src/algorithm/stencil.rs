@@ -237,7 +237,7 @@ fn derive_dims(
     env: &Uiua,
 ) -> UiuaResult<Vec<WindowDim>> {
     let ints = size.as_integer_array(env, "Window size must be an array of integers")?;
-    let dims = match &*ints.shape {
+    Ok(match &*ints.shape {
         [] => {
             let size = derive_size(ints.data[0], shape.row_count(), false, env)?;
             vec![WindowDim {
@@ -247,6 +247,12 @@ fn derive_dims(
             }]
         }
         &[n] => {
+            if n > shape.len() {
+                return Err(env.error(format!(
+                    "Window size specifies {n} axes, \
+                    which is too many for array of shape {shape}"
+                )));
+            }
             let mut dims = Vec::with_capacity(n);
             for (size, dim) in ints.data.iter().zip(shape) {
                 let size = derive_size(*size, *dim, false, env)?;
@@ -259,6 +265,12 @@ fn derive_dims(
             dims
         }
         &[m, n] => {
+            if n > shape.len() {
+                return Err(env.error(format!(
+                    "Window size specifies {n} axes, \
+                    which is too many for array of shape {shape}"
+                )));
+            }
             if m == 0 {
                 return Err(env.error(format!(
                     "2D window size must have at least 1 row, \
@@ -303,15 +315,7 @@ fn derive_dims(
                 "Window size may be at most rank 2, but its shape is {shape}"
             )))
         }
-    };
-    if dims.len() > shape.len() {
-        return Err(env.error(format!(
-            "Window size specifies {} axes, \
-            which is too many for array of shape {shape}",
-            dims.len()
-        )));
-    }
-    Ok(dims)
+    })
 }
 
 fn adjacent_impl(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult {

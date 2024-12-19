@@ -13,24 +13,37 @@ macro_rules! dbgln {
 }
 use dbgln;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum OptLevel {
+    Early,
+    Full,
+}
+
 impl Node {
-    pub(super) fn optimize(&mut self) -> bool {
-        self.optimize_impl(true)
+    pub(crate) fn optimize_early(&mut self) -> bool {
+        self.optimize_impl(OptLevel::Early, true)
     }
-    fn optimize_impl(&mut self, opt_single: bool) -> bool {
+    pub(crate) fn optimize_full(&mut self) -> bool {
+        self.optimize_impl(OptLevel::Full, true)
+    }
+    fn optimize_impl(&mut self, level: OptLevel, opt_single: bool) -> bool {
         let mut optimized = false;
-        fn optimize_run(nodes: &mut EcoVec<Node>, opt_single: bool) -> bool {
+        fn optimize_run(nodes: &mut EcoVec<Node>, level: OptLevel, opt_single: bool) -> bool {
             let mut optimized = false;
             for node in nodes.make_mut() {
-                optimized |= node.optimize_impl(opt_single);
+                optimized |= node.optimize_impl(level, opt_single);
             }
-            while OPTIMIZATIONS.iter().any(|op| {
-                if !op.match_and_replace(nodes) {
-                    return false;
-                }
-                dbgln!("applied optimization {op:?}");
-                true
-            }) {
+            while OPTIMIZATIONS
+                .iter()
+                .filter(|opt| opt.level() <= level)
+                .any(|op| {
+                    if !op.match_and_replace(nodes) {
+                        return false;
+                    }
+                    dbgln!("applied optimization {op:?}");
+                    true
+                })
+            {
                 optimized = true;
             }
             optimized
@@ -38,33 +51,35 @@ impl Node {
 
         match &mut *self {
             Run(nodes) => {
-                optimized |= optimize_run(nodes, opt_single);
+                optimized |= optimize_run(nodes, level, opt_single);
                 self.normalize();
             }
             Mod(_, args, _) | ImplMod(_, args, _) => {
                 for arg in args.make_mut() {
-                    optimized |= arg.node.optimize_impl(true);
+                    optimized |= arg.node.optimize_impl(level, true);
                 }
                 if opt_single {
-                    optimized |= optimize_run(self.as_vec(), false);
+                    optimized |= optimize_run(self.as_vec(), level, false);
                     self.normalize();
                 }
             }
-            Node::Array { inner, .. } => optimized |= Arc::make_mut(inner).optimize_impl(true),
+            Node::Array { inner, .. } => {
+                optimized |= Arc::make_mut(inner).optimize_impl(level, true)
+            }
             CustomInverse(cust, _) => {
                 let cust = Arc::make_mut(cust);
                 if let Ok(normal) = cust.normal.as_mut() {
-                    optimized |= normal.node.optimize_impl(true);
+                    optimized |= normal.node.optimize_impl(level, true);
                 }
                 if let Some(un) = cust.un.as_mut() {
-                    optimized |= un.node.optimize_impl(true);
+                    optimized |= un.node.optimize_impl(level, true);
                 }
                 if let Some(anti) = cust.anti.as_mut() {
-                    optimized |= anti.node.optimize_impl(true);
+                    optimized |= anti.node.optimize_impl(level, true);
                 }
                 if let Some((before, after)) = cust.under.as_mut() {
-                    optimized |= before.node.optimize_impl(true);
-                    optimized |= after.node.optimize_impl(true);
+                    optimized |= before.node.optimize_impl(level, true);
+                    optimized |= after.node.optimize_impl(level, true);
                 }
             }
             _ => {}
@@ -218,6 +233,9 @@ impl Optimization for ReduceContentOpt {
             let inner = Node::from(rest).sig_node().unwrap();
             Some((1, ImplMod(ReduceContent, eco_vec![inner], *span)))
         })
+    }
+    fn level(&self) -> OptLevel {
+        OptLevel::Early
     }
 }
 
@@ -533,12 +551,12 @@ impl Optimization for ByToDup {
             composed.push(f.node.clone());
             composed.extend(nodes[i + 1..].iter().cloned());
             // println!("composed: {composed:?}");
-            if composed.optimize() {
-                let n = nodes.len() - i;
-                replace_nodes(nodes, i - back, n + back, composed);
-                // println!("optimized: {nodes:?}");
-                return true;
-            }
+            // if composed.optimize() {
+            let n = nodes.len() - i;
+            replace_nodes(nodes, i - back, n + back, composed);
+            // println!("optimized: {nodes:?}");
+            return true;
+            // }
         }
         false
     }
@@ -546,6 +564,9 @@ impl Optimization for ByToDup {
 
 trait Optimization: Debug + Sync {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool;
+    fn level(&self) -> OptLevel {
+        OptLevel::Full
+    }
 }
 
 impl<A, B> Optimization for (A, B)

@@ -417,14 +417,14 @@ impl Compiler {
         self.start_addrs.pop();
 
         // Optimize root
-        self.asm.root.optimize();
+        self.asm.root.optimize_full();
         // Optimize and pre-eval functions
         for i in 0..self.asm.functions.len() {
-            self.asm.functions.make_mut()[i].optimize();
+            self.asm.functions.make_mut()[i].optimize_full();
             if let Some((root, errs)) = self.pre_eval(&self.asm.functions[i]) {
                 self.asm.functions.make_mut()[i] = root;
                 self.errors.extend(errs);
-                self.asm.functions.make_mut()[i].optimize();
+                self.asm.functions.make_mut()[i].optimize_full();
             }
         }
         // dbg!(&self.asm.root);
@@ -647,7 +647,7 @@ code:
             let binding_count_after = self.asm.bindings.len();
             let error_count_after = self.errors.len();
 
-            line_node.optimize();
+            line_node.optimize_full();
             match line_node.sig() {
                 Ok(sig) => {
                     // Update scope stack height

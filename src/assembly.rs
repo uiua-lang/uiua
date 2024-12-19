@@ -100,7 +100,8 @@ impl Assembly {
         SigNode::new(f.sig, self[f].clone())
     }
     /// Add a function to the assembly
-    pub fn add_function(&mut self, id: FunctionId, sig: Signature, root: Node) -> Function {
+    pub fn add_function(&mut self, id: FunctionId, sig: Signature, mut root: Node) -> Function {
+        root.optimize_early();
         let mut hasher = DefaultHasher::new();
         root.hash(&mut hasher);
         let hash = hasher.finish();

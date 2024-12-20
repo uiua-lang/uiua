@@ -261,7 +261,13 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &FlipPat,
     &DipPat,
     &StashContraPat,
-    &FromUnPat,
+    &FromUnPat {
+        require_under: true,
+    },
+    &ConstPat,
+    &FromUnPat {
+        require_under: false,
+    },
 ];
 
 trait UnderPattern: fmt::Debug + Sync {
@@ -433,11 +439,22 @@ under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {
     Ok((&[], before, after))
 });
 
-under!(
-    "Derives under inverses from un inverses",
-    (FromUnPat, input, _, _, asm),
-    {
-        for pat in UN_PATTERNS {
+#[derive(Debug)]
+/// Derives under inverses from un inverses
+struct FromUnPat {
+    require_under: bool,
+}
+
+impl UnderPattern for FromUnPat {
+    fn under_extract<'a>(
+        &self,
+        input: &'a [Node],
+        _: Signature,
+        _: bool,
+        asm: &Assembly,
+    ) -> InversionResult<(&'a [Node], Node, Node)> {
+        for pat in (UN_PATTERNS.iter()).filter(|pat| !self.require_under || pat.allowed_in_under())
+        {
             if let Ok((inp, inv)) = pat.invert_extract(input, asm) {
                 let node = Node::from(&input[..input.len() - inp.len()]);
                 dbgln!("matched un pattern for under {pat:?}\n  on {input:?}\n  to {node:?}\n  and {inv:?}");
@@ -446,7 +463,7 @@ under!(
         }
         generic()
     }
-);
+}
 
 under!(
     "Derives under inverses from anti inverses",
@@ -965,6 +982,30 @@ under!(FlipPat, input, g_sig, inverse, asm, Prim(Flip, span), {
         before.clone()
     };
     Ok((input, before, after))
+});
+
+under!(ConstPat, input, _, _, asm, {
+    let (input, val) = Val.invert_extract(input, asm)?;
+    for end in 1..=input.len() {
+        let frag = &input[..end];
+        if let Some(sig) = nodes_clean_sig(frag) {
+            match sig.args {
+                0 => {}
+                1 => return generic(),
+                _ => {
+                    // println!("frag: {:?}", frag);
+                    if let Some(sig) = un_inverse(frag, asm).ok().and_then(|inv| inv.clean_sig()) {
+                        // println!("inv sig: {:?}", sig);
+                        if sig.args < sig.outputs {
+                            return generic();
+                        }
+                    }
+                    return Ok((input, val, Node::empty()));
+                }
+            }
+        }
+    }
+    generic()
 });
 
 /// Copy some values to the under stack at the beginning of the "do" step

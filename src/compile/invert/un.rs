@@ -225,7 +225,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &(Dup, (Over, Flip, MatchPattern)),
     &PrimPat,
     &ImplPrimPat,
-    &MatchConst,
+    &NoUnder(MatchConst),
 ];
 
 pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[

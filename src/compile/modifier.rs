@@ -238,8 +238,9 @@ impl Compiler {
                         return Err(self.error(
                             modifier.span.clone(),
                             format!(
-                                "Obverse requires between 1 and 5 branches, \
+                                "{} requires between 1 and 5 branches, \
                                 but {} were provided",
+                                Primitive::Obverse.format(),
                                 funcs.len()
                             ),
                         ))
@@ -781,14 +782,14 @@ impl Compiler {
                 Node::CustomInverse(cust.into(), span)
             }
             Obverse => {
-                // Rectify case, where only one function is supplied
+                // Empty inverse case, where only one function is supplied
                 let (sn, span) = self.monadic_modifier_op(modified)?;
                 let spandex = self.add_span(span.clone());
                 let mut cust = CustomInverse {
                     normal: Ok(sn.clone()),
-                    un: (sn.sig.args == sn.sig.outputs).then(|| sn.clone()),
-                    anti: (sn.sig == (2, 2)).then(|| sn.clone()),
-                    under: Some((sn.clone(), sn.clone())),
+                    un: Some(SigNode::default()),
+                    anti: None,
+                    under: Some((sn.clone(), SigNode::default())),
                     is_obverse: true,
                 };
                 if sn.sig == sn.sig.inverse() {

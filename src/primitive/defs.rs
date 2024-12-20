@@ -1966,14 +1966,16 @@ primitive!(
     /// [obverse] defines how a function should interact with [un], [anti], and [under].
     /// It can either take a single function, or a function pack with up to 5 functions.
     ///
-    /// If only a single function is provided, the function will be called in both directions of an [under].
-    /// This is useful when you want to call one bit of code both before and after some other code.
-    /// For example, calculating the standard deviation of some data involves taking the mean twice.
-    /// ex: StdDev ← √ ÷⧻⟜/+ ×.- ÷⧻⟜/+ .
-    ///   : StdDev [1 2 3 4]
-    /// The averaging section can be factored out using [under][obverse].
-    /// ex: StdDev ← √⍜⌅(÷⧻⟜/+)(×.-).
-    ///   : StdDev [1 2 3 4]
+    /// If only a single function is provided, its inverse will be nothing.
+    /// This is useful when a function has to do some setup before the main [under]able part.
+    /// Condider this function which [keep]s only odd numbers. While [keep] is compatible with [under], `by``modulus``2` is not.
+    /// ex! F ← ▽⊸◿2
+    ///   : F [1 2 3 4 5]
+    ///   : ⍜F(×10) [1 2 3 4 5]
+    /// Adding [obverse] makes it work.
+    /// ex: F ← ▽⌅⊸◿2
+    ///   : F [1 2 3 4 5]
+    ///   : ⍜F(×10) [1 2 3 4 5]
     /// If given 2 functions, which inverse is set depends on the functions' signatures.
     /// If the functions have opposite signatures, then an [un]-compatible inverse is set.
     /// ex: F ← ⌅(+|⊃⌊⌈÷2)
@@ -1990,13 +1992,6 @@ primitive!(
     /// Otherwise, an [under]-compatible inverse is set.
     /// ex: F ← ⌅(+|¯)
     ///   : ⍜F? 1 2
-    /// Leaving the second function empty is useful when a function has to do some setup before the main [under]able part.
-    /// ex! F ← ▽⊸◿2
-    ///   : F [1 2 3 4 5]
-    ///   : ⍜F(×10) [1 2 3 4 5]
-    /// ex: F ← ▽⌅(⊸◿2|)
-    ///   : F [1 2 3 4 5]
-    ///   : ⍜F(×10) [1 2 3 4 5]
     /// If given 3 functions, an [under]-compatible inverse always set.
     /// The first function is the normal case.
     /// The second function is the "do" part of the [under].

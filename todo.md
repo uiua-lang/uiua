@@ -3,8 +3,6 @@
 ## 0.14
 The next version of Uiua
 
-- Deprecate `around`
-
 # 0.15
 - Optimizations through calls
 - `bind` and `ref` modifiers

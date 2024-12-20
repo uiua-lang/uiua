@@ -991,7 +991,7 @@ impl ArrayValue for u8 {
             format!("all {}", min.grid_string(false))
         } else {
             format!(
-                "{}-{} x̄{}",
+                "{}-{} μ{}",
                 min.grid_string(false),
                 max.grid_string(false),
                 round_sig_dec(mean, 4).grid_string(false)
@@ -1223,7 +1223,7 @@ impl ArrayValue for Complex {
             max = Complex::new(round_sig_dec(max.re, 3), round_sig_dec(max.im, 3));
             mean = Complex::new(round_sig_dec(mean.re, 3), round_sig_dec(mean.im, 3));
             format!(
-                "{} - {} x̄{}",
+                "{} - {} μ{}",
                 min.grid_string(false),
                 max.grid_string(false),
                 mean.grid_string(false)

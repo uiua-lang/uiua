@@ -2633,7 +2633,7 @@ mod tests {
 	"repository": {{
         "idents": {{
             "name": "variable.parameter.uiua",
-            "match": "\\b[a-zA-Z]+[!‼]*\\b"
+            "match": "\\b[a-zA-Z]+([₀₁₂₃₄₅₆₇₈₉]|__\\d+)*[!‼]*\\b"
         }},
 		"comments": {{
 			"name": "comment.line.uiua",
@@ -2691,7 +2691,7 @@ mod tests {
         }},
 		"numbers": {{
 			"name": "constant.numeric.uiua",
-			"match": "([`¯]?(\\d+|η|π|τ|∞|eta|pi|tau|inf(i(n(i(t(y)?)?)?)?)?)([./]\\d+|e[+-]?\\d+)?|([₀₁₂₃₄₅₆₇₈₉]|__\\d+)+)"
+			"match": "[`¯]?(\\d+|η|π|τ|∞|eta|pi|tau|inf(i(n(i(t(y)?)?)?)?)?)([./]\\d+|e[+-]?\\d+)?"
 		}},
 		"strand": {{
 			"name": "comment.line",

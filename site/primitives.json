@@ -373,7 +373,8 @@
     "outputs": 3,
     "class": "Stack",
     "description": "Duplicate the top value on the stack to the third-to-top position",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "assert": {
     "glyph": "⍤",
@@ -959,8 +960,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Call a function but keep its first argument under the outputs on the stack",
-    "experimental": true
+    "description": "Call a function but keep its first argument under the outputs on the stack"
   },
   "on": {
     "glyph": "⟜",

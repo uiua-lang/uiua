@@ -51,8 +51,9 @@ F ← /+-⊃(↻1×|×¬)⊸(⧈>⊂:0)⊏:n⊗:k
 F "LVII"
 F "MCMXCIV""#;
 const MANDELBROT: &str = "\
-×2 ⊞ℂ⤙-1/4 -1/2÷⟜⇡300 # Init
->2 ⌵ ⊙◌⍥⊸(+×.) 50 0   # Run";
+×2 ⊞ℂ⤙-1/4 -1/2÷⟜⇡300   # Init
+⍥(⊸(+>2⌵:)⊙⊸(+×.))50 0. # Run
+÷/↥⊸♭ ⊙⋅◌               # Normalize";
 const LIFE: &str = "\
 Adj  ← ♭₂-1⇡3_3
 Life ← ↥↧⟜(∩=2,3-|/+≡↻Adj¤)

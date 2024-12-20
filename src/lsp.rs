@@ -1655,7 +1655,7 @@ mod server {
                 let token_type = match &sp.value {
                     SpanKind::String => UIUA_STRING_STT,
                     SpanKind::Number => UIUA_NUMBER_STT,
-                    SpanKind::Comment => SemanticTokenType::COMMENT,
+                    SpanKind::Comment | SpanKind::OutputComment => SemanticTokenType::COMMENT,
                     SpanKind::Primitive(p, sub) => {
                         let Some(stt) = for_prim(*p, *sub) else {
                             continue;

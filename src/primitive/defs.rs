@@ -1871,7 +1871,7 @@ primitive!(
     /// [with] can be used to copy a value from deep in the stack, or to move it.
     /// ex: [⤙⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤙⊙⊙⊙◌ 1 2 3 4]
-    /// [with] always takes at least 2 arguments, even if its function takes fewer.
+    /// [with] with fewer than 2 arguments will be coerced to take 1 more.
     /// ex! [⤙¯ 2]
     /// ex: [⤙¯ 2 5]
     /// ex: [⤙1 2 3]
@@ -1892,7 +1892,7 @@ primitive!(
     /// [off] can be used to copy a value from the top of the stack to a position deeper, or to move it.
     /// ex: [⤚⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
-    /// [off] always takes at least 2 arguments, even if its function takes fewer.
+    /// [off] with fewer than 2 arguments will be coerced to take 1 more.
     /// ex! [⤚¯ 2]
     /// ex: [⤚¯ 2 5]
     /// ex: [⤚1 2 3]

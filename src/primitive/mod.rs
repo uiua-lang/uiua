@@ -1086,7 +1086,7 @@ impl Primitive {
             }
             Primitive::With => {
                 let [f] = get_ops(ops, env)?;
-                let val = env.copy_nth(f.sig.args.max(2) - 1)?;
+                let val = env.copy_nth(f.sig.args - 1)?;
                 env.exec(f)?;
                 env.push(val);
             }

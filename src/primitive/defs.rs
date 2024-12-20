@@ -1435,7 +1435,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : ∧(.+) [1 2 3 4 5] 0
     /// ex: # Experimental!
-    ///   : ∧(◡∘⊓+×⟜:) [1 2 3 4 5] 0 1
+    ///   : ∧(◡⊙∘⊓+×⟜:) [1 2 3 4 5] 0 1
     ([1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
@@ -1899,12 +1899,6 @@ primitive!(
     ///   : [◠+ 1 2]
     /// ex: # Experimental!
     ///   : [◠(++) 1 2 3]
-    /// Functions with 0 or 1 arguments will be coerced to have 1 additional argument and output.
-    /// ex: # Experimental!
-    ///   : [◠¯ 1 2]
-    /// ex: # Experimental!
-    ///   : [◠1 2]
-    /// If you do not want this behavior, use [on] instead.
     ///
     /// See also: [below]
     ([1], Above, Stack, ("above", '◠')),
@@ -1914,13 +1908,6 @@ primitive!(
     /// ex: [◡(++) 1 2 3]
     /// This can be used with [gap] and [identity] to copy values from arbitrarily low in the stack.
     /// ex: [◡⋅⋅⋅⋅∘ 1 2 3 4 5]
-    /// Functions with 0 or 1 arguments will be coerced to have 1 additional argument and output.
-    /// ex: [◡¯ 1 2]
-    /// ex: [◡1 2]
-    /// If you do not want this behavior, use [by] instead.
-    /// [below] is often useful in conjunction with [both].
-    /// For example, you can split an array by a mask by [not]ting the mask with [below] and then using [both][keep].
-    /// ex: ∩▽◡¬ ⊸◿2 [2 8 3 9 2 7 1]
     ///
     /// See also: [above]
     ([1], Below, Stack, ("below", '◡')),

@@ -585,6 +585,15 @@ impl Compiler {
             prim @ (Above | Below) => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
                 if sn.sig.args < 2 {
+                    self.emit_diagnostic(
+                        format!(
+                            "The currect behavior of {} with < 2 arguments \
+                            is deprecated and will change in the future",
+                            prim.format(),
+                        ),
+                        DiagnosticKind::Warning,
+                        modified.modifier.span.clone(),
+                    );
                     sn.sig.args += 1;
                     sn.sig.outputs += 1;
                 }

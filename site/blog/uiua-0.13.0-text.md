@@ -67,10 +67,6 @@ The [`with ⤙`](https://uiua.org/docs/with) and [`below ◡`](https://uiua.org/
 [◡+] 1 2
 ```
 
-```uiua
-∩▽◡¬ ⊸◿2 [1 2 3 4 5]
-```
-
 ## [`orient ⤸`](https://uiua.org/docs/orient)
 
 [`orient ⤸`](https://uiua.org/docs/orient) has been stabilized. It reorders the axes of an array, rearranging the elements as necessary.

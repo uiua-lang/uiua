@@ -1166,7 +1166,7 @@ def splitArray(array):
 
 splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"In Uiua, it is much simpler, and there are no "<code>"if"</code>"s or "<code>"for"</code>"s to be found:"</p>
-        <Editor example="F ← ∩▽◡¬⊸◿2\nF [1 2 3 7 2 4 5]"/>
+        <Editor example="F ← ∩▽¬◡⊙∘⊸◿2\nF [1 2 3 7 2 4 5]"/>
         <p>"That being said, not every problem lends itself to array operations. Uiua has a few methods for handling such cases."</p>
 
         <Hd id="repeat-do">"Looping with "<Prim prim=Repeat/>" and "<Prim prim=Do/></Hd>

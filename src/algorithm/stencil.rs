@@ -239,8 +239,11 @@ fn derive_dims(
     env: &Uiua,
 ) -> UiuaResult<Vec<WindowDim>> {
     let ints = size.as_integer_array(env, "Window size must be an array of integers")?;
-    Ok(match &*ints.shape {
+    let dims = match &*ints.shape {
         [] => {
+            if shape.is_empty() {
+                return Err(env.error("Cannot get windows from a scalar"));
+            }
             let size = derive_size(ints.data[0], shape.row_count(), false, env)?;
             vec![WindowDim {
                 size,
@@ -317,7 +320,8 @@ fn derive_dims(
                 "Window size may be at most rank 2, but its shape is {shape}"
             )))
         }
-    })
+    };
+    Ok(dims)
 }
 
 fn adjacent_impl(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult {

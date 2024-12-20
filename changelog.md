@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.14.0 - 202?-??-??
+## 0.14.0 - 202?-12-20
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change**: Multi-argument [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) no longer do reduction. Instead, multiple groups are passed to the function.
@@ -13,6 +13,9 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change**: [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) now sets the initial value as well as filling row shapes
   - This behavior is hard to get otherwise
   - Fixes to existing code should be simple
+- **Breaking Change**: [`obverse ⌅`](https://uiua.org/docs/obverse) with a single function now just nullifies the inverse
+  - This makes a lot of common [`under ⍜`](https://uiua.org/docs/under) patterns much simpler
+- **Breaking Change**: Negative indices to [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now always use a fill value if available
 - Stabilize [subscripts](https://uiua.org/docs/subscripts)!
   - They make available a lot of nice functionality
   - Allow negative subscripts
@@ -39,9 +42,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`path`](https://uiua.org/docs/path) modifier, which finds shortest paths
   - Replaces and deprecates [`astar`](https://uiua.org/docs/astar)
   - `astar`'s functionality is still available via [`path`](https://uiua.org/docs/path) with a function pack
+- Add the `A₁`, `A₂`, `A₃`, `C₂`, `C₃`, and `E₃` constants which are various kinds of adjacency offsets
+  - They are great for working with [`path`](https://uiua.org/docs/path)
 - Declared signatures that do not match the inferred signature will now cause a warning rather than an error
   - The function is edited to make the signature correct
-- Negative indices to [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now always use a fill value if available
 - [`orient ⤸`](https://uiua.org/docs/orient) can now use [`fill ⬚`](https://uiua.org/docs/fill) to fill in new dimensions
 - [`un °`](https://uiua.org/docs/un) [`reduce /`](https://uiua.org/docs/reduce) (format string) now splits a string by a delimiter
 - [`do ⍢`](https://uiua.org/docs/do) now runs its functions at least once, even if their signatures are invalid

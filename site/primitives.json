@@ -437,7 +437,7 @@
     "args": 1,
     "outputs": 1,
     "class": "MonadicArray",
-    "description": "Encode an array as bits (LSB-first)"
+    "description": "Encode an array as bits (LSB-first) **Warning** Due to floating point imprecision, conversion (both [bits] and [un][bits]) performed on large numbers (over 53 bits long) may give incorrect results."
   },
   "both": {
     "glyph": "∩",

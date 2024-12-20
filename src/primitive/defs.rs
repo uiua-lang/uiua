@@ -1871,11 +1871,12 @@ primitive!(
     /// [with] can be used to copy a value from deep in the stack, or to move it.
     /// ex: [⤙⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤙⊙⊙⊙◌ 1 2 3 4]
-    /// [with] with fewer than 2 arguments will be coerced to take 1 more.
+    /// [with] with a monadic function will be coerced to take 2 arguments.
     /// ex! [⤙¯ 2]
     /// ex: [⤙¯ 2 5]
+    /// [with] with a noadic function will be coerced to `with``identity`.
     /// ex: [⤙1 2 3]
-    /// If you do not want this behavior, use [on] instead.
+    /// If you do not want these behaviors, use [on] instead.
     ([1], With, Stack, ("with", '⤙')),
     /// Call a function but keep its first argument under the outputs on the stack
     ///
@@ -1892,11 +1893,12 @@ primitive!(
     /// [off] can be used to copy a value from the top of the stack to a position deeper, or to move it.
     /// ex: [⤚⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
-    /// [off] with fewer than 2 arguments will be coerced to take 1 more.
+    /// [off] with a monadic function will be coerced to take 2 arguments.
     /// ex! [⤚¯ 2]
     /// ex: [⤚¯ 2 5]
+    /// [off] with a noadic function will be coerced to `off``identity`.
     /// ex: [⤚1 2 3]
-    /// If you do not want this behavior, use [by] instead.
+    /// If you do not want these behaviors, use [by] instead.
     ([1], Off, Stack, ("off", '⤚')),
     /// Keep all arguments to a function above the outputs on the stack
     ///

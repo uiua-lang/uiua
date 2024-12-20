@@ -575,19 +575,17 @@ impl Compiler {
             }
             prim @ (With | Off) => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
-                match sn.sig.args {
-                    0 => {
-                        sn.sig.outputs += 1;
-                        sn.sig.args = 1;
-                    }
+                let span = self.add_span(modified.modifier.span.clone());
+                let (inner, before) = match sn.sig.args {
+                    0 => (SigNode::new((2, 2), Node::Prim(Identity, span)), sn.node),
                     1 => {
                         sn.sig.outputs += 1;
                         sn.sig.args = 2;
+                        (sn, Node::empty())
                     }
-                    _ => {}
-                }
-                let span = self.add_span(modified.modifier.span.clone());
-                Node::Mod(prim, eco_vec![sn], span)
+                    _ => (sn, Node::empty()),
+                };
+                Node::from_iter([before, Node::Mod(prim, eco_vec![inner], span)])
             }
             prim @ (Above | Below) => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;

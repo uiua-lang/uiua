@@ -270,10 +270,6 @@ mod tests {
         for thread in threads {
             if let Err(e) = thread.join() {
                 if let Some(s) = e.downcast_ref::<String>() {
-                    dbg!();
-                    panic!("{}", s);
-                } else if let Some(s) = e.downcast_ref::<&str>() {
-                    dbg!();
                     panic!("{}", s);
                 } else {
                     panic!("{:?}", e);

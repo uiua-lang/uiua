@@ -1,4 +1,4 @@
-# uiua-0.14.0(a516e01b-732f-4e30-aba2-9599fedfffab): 2024-12-?? - Announcing Uiua 0.14.0
+uiua-0.14.0(a516e01b-732f-4e30-aba2-9599fedfffab): 2024-12-20 - Announcing Uiua 0.14.0
 subscripts(820eeae1-7c05-4c3c-877c-0675dd7517aa): 2024-11-25 - Subscripts
 uiua-0.13.0(666c3590-e42d-4e75-a7bf-1552a098ccd2): 2024-10-21 - Announcing Uiua 0.13.0
 uiua-0.12.0(95d63645-10e4-4312-bbe3-f0a6254c0144): 2024-08-16 - Announcing Uiua 0.12.0

@@ -1,9 +1,7 @@
 # Uiua Todo
 
-## 0.14
-The next version of Uiua
-
 # 0.15
+- Labelling signature comments
 - Optimizations through calls
 - `bind` and `ref` modifiers
 - Compile-time code string evaluation

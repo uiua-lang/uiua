@@ -3,10 +3,7 @@
 ## 0.14
 The next version of Uiua
 
-- Stabilize `off`
-  - Add to blog post
 - Deprecate `around`
-- Deprecate monadic `above`/`below`
 
 # 0.15
 - Optimizations through calls

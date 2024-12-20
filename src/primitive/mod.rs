@@ -520,7 +520,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (Reach | Off | Backward | Above | Around)
+            (Reach | Backward | Above | Around)
                 | (Or | Base | Fft | Layout | Binary)
                 | Astar
                 | (Derivative | Integral)

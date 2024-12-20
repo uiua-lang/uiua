@@ -1875,23 +1875,28 @@ primitive!(
     /// ex! [⤙¯ 2]
     /// ex: [⤙¯ 2 5]
     /// ex: [⤙1 2 3]
+    /// If you do not want this behavior, use [on] instead.
     ([1], With, Stack, ("with", '⤙')),
     /// Call a function but keep its first argument under the outputs on the stack
     ///
-    /// ex: # Experimental!
-    ///   : [⤚+ 2 5]
+    /// ex: [⤚+ 2 5]
     ///   : [⤚- 2 5]
+    /// [off] makes it easy to call multiple dyadic functions with the same first argument.
+    /// This example keeps only 2D vectors in the first argument with `1`s in that position in the second argument.
+    /// ex: ▽⤚⊡ [0_2 1_0 1_1] [0_1_1 1_0_1]
+    /// Or you could quickly [join] a row to either side of an array.
+    /// ex: ⊂⤚⊂ 0 [1 2 3 4]
+    /// If [off]'s function is commutative, then it can be used in a place where [by] would work if the arguments were reversed.
+    /// ex: ▽⤚≠ [1 2 3 4 5] 2
+    ///   : ▽⊸≠ 2 [1 2 3 4 5]
     /// [off] can be used to copy a value from the top of the stack to a position deeper, or to move it.
-    /// ex: # Experimental!
-    ///   : [⤚⊙⊙⊙∘ 1 2 3 4]
+    /// ex: [⤚⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
     /// [off] always takes at least 2 arguments, even if its function takes fewer.
-    /// ex! # Experimental!
-    ///   : [⤚¯ 2]
-    /// ex: # Experimental!
-    ///   : [⤚¯ 2 5]
-    /// ex: # Experimental!
-    ///   : [⤚1 2 3]
+    /// ex! [⤚¯ 2]
+    /// ex: [⤚¯ 2 5]
+    /// ex: [⤚1 2 3]
+    /// If you do not want this behavior, use [by] instead.
     ([1], Off, Stack, ("off", '⤚')),
     /// Keep all arguments to a function above the outputs on the stack
     ///

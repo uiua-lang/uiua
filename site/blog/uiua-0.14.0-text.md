@@ -157,7 +157,7 @@ You can import `rayua` into a Uiua file with this line:
 
 ## Other Notable Features
 
-- [`sort ⍆`](https://uiua.org/docs/sort), [`last ⊣`](https://uiua.org/docs/last), and [`case ⍩`](https://uiua.org/docs/case) have been stabilized.
+- [`sort ⍆`](https://uiua.org/docs/sort), [`last ⊣`](https://uiua.org/docs/last), [`case ⍩`](https://uiua.org/docs/case), and [`off ⤚`](https://uiua.org/docs/off) have been stabilized.
 - Functions with declared signatures that do not match the inferred signature will now cause a warning rather than an error.
   - You can read more about this feature in the updated [Stack Signatures](https://www.uiua.org/tutorial/functions#stack-signatures) section of the tutorial.
 - New [`# Deprecated!`](https://uiua.org/docs/semanticcomment#deprecated) semantic comments will cause a function to emit a warning when it is used.

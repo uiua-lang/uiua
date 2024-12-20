@@ -282,9 +282,7 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
         let mut scroll = false;
-        let mut got_req = false;
         while let Ok(req) = self.recv.try_recv() {
-            got_req = true;
             if self.clear_before_next {
                 self.clear_before_next = false;
                 for item in self.items.drain(..) {
@@ -328,11 +326,6 @@ impl eframe::App for App {
                 Request::ClearBeforeNext => self.clear_before_next = self.clear,
                 Request::Shutdown => ctx.send_viewport_cmd(ViewportCommand::Close),
             }
-        }
-        if got_req {
-            ctx.send_viewport_cmd(ViewportCommand::RequestUserAttention(
-                UserAttentionType::Informational,
-            ))
         }
 
         // Top bar

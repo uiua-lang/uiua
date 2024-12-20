@@ -620,6 +620,7 @@ primitive!(
     /// See the [More Array Manipulation Tutorial](/tutorial/morearray) for more information on this use case.
     (1, Fix, MonadicArray, ("fix", '¤')),
     /// Encode an array as bits (LSB-first)
+    /// **Warning** Due to floating point imprecision, conversion (both [bits] and [un][bits]) performed on large numbers (over 53 bits long) may give incorrect results.
     ///
     /// The result will always be 1 rank higher than the input.
     /// ex: ⋯27

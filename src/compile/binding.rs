@@ -347,13 +347,22 @@ impl Compiler {
                         }
                     }
                     if let Some(Node::Push(val)) = self.asm.root.last() {
+                        // Actually binds the constant
                         let val = val.clone();
                         self.asm.root.pop();
                         self.compile_bind_const(name, local, Some(val), spandex, meta);
                     } else if sig == (0, 0) {
-                        let func = make_fn(Node::empty(), sig, self);
+                        // Empty function
+                        let mut node = Node::empty();
+                        // Validate signature
+                        if let Some(declared_sig) = &binding.signature {
+                            node = self.force_sig(node, declared_sig.value, &declared_sig.span);
+                            sig = declared_sig.value;
+                        }
+                        let func = make_fn(node, sig, self);
                         self.compile_bind_function(name, local, func, spandex, meta)?;
                     } else {
+                        // Binds some |0.1 code
                         self.compile_bind_const(name, local, None, spandex, meta);
                         self.asm.root.push(Node::BindGlobal {
                             index: local.index,

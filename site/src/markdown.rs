@@ -126,7 +126,13 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
             let text = leaf_text(node).unwrap_or_default();
             let name = text
                 .rsplit_once(' ')
-                .map(|(a, b)| if a.len() > b.len() { a } else { b })
+                .map(|(a, b)| {
+                    if a.chars().count() > b.chars().count() {
+                        a
+                    } else {
+                        b
+                    }
+                })
                 .unwrap_or(&text);
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 view!(<Prim prim=prim/>).into_view()
@@ -136,7 +142,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
                         return view!(<Prim prim=prim glyph_only=true/>).into_view();
                     }
                 }
-                view!(<a href={&link.url} title={&link.title}>{text}</a>).into_view()
+                view!(<a href={&link.url} title={&link.title}>{children}</a>).into_view()
             }
         }
         NodeValue::Emph => view!(<em>{children}</em>).into_view(),
@@ -230,7 +236,13 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
             let text = leaf_text(node).unwrap_or_default();
             let name = text
                 .rsplit_once(' ')
-                .map(|(a, b)| if a.len() > b.len() { a } else { b })
+                .map(|(a, b)| {
+                    if a.chars().count() > b.chars().count() {
+                        a
+                    } else {
+                        b
+                    }
+                })
                 .unwrap_or(&text);
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 let symbol_class = format!("prim-glyph {}", prim_class(prim));

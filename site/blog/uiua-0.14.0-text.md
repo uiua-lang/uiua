@@ -37,7 +37,7 @@ undertake__3*__10 [1 2 3 4 5] # Try formatting!
 There is an entire [blog post](https://www.uiua.org/blog/subscripts) about the addition of subscripts. You can see all currently implemented subscript-compatible functions [here](https://www.uiua.org/docs/subscripts).
 
 - The `rerank ☇` function has been deprecated in favor of subscripted [`deshape ♭`](https://uiua.org/docs/deshape).
-- The `trace ⸮` function has been deprecated in factor of subscripted [`stack ?`](https://uiua.org/docs/stack).
+- The `trace ⸮` function has been deprecated in favor of subscripted [`stack ?`](https://uiua.org/docs/stack).
 
 ## [`stencil ⧈`](https://uiua.org/docs/stencil)
 
@@ -160,7 +160,7 @@ You can import `rayua` into a Uiua file with this line:
 - [`sort ⍆`](https://uiua.org/docs/sort), [`last ⊣`](https://uiua.org/docs/last), [`case ⍩`](https://uiua.org/docs/case), and [`off ⤚`](https://uiua.org/docs/off) have been stabilized.
 - Functions with declared signatures that do not match the inferred signature will now cause a warning rather than an error.
   - You can read more about this feature in the updated [Stack Signatures](https://www.uiua.org/tutorial/functions#stack-signatures) section of the tutorial.
-- New [`# Deprecated!`](https://uiua.org/docs/semanticcomment#deprecated) semantic comments will cause a function to emit a warning when it is used.
+- New [`# Deprecated!`](https://www.uiua.org/tutorial/documentation#deprecated) semantic comments will cause a function to emit a warning when it is used.
 - The `astar` modifier has been deprecated and replaced with a new modifier called [`path`](https://uiua.org/docs/path). It has all the same functionality, but the default behavior is easier to use. It is also not `# Experimental!`.
 - New [adjecency offset constants](https://www.uiua.org/docs/constants#A%E2%82%81) make it easier to use [`path`](https://uiua.org/docs/path) with grids.
   - ```uiua

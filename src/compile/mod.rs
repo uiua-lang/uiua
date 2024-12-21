@@ -2362,7 +2362,7 @@ impl Compiler {
     pub fn create_function(
         &mut self,
         signature: impl Into<Signature>,
-        f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
+        f: impl Fn(&mut Uiua) -> UiuaResult + SendSyncNative + 'static,
     ) -> Function {
         let signature = signature.into();
         let index = self.asm.dynamic_functions.len();
@@ -2399,7 +2399,7 @@ impl Compiler {
         &mut self,
         name: impl Into<EcoString>,
         signature: impl Into<Signature>,
-        f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
+        f: impl Fn(&mut Uiua) -> UiuaResult + SendSyncNative + 'static,
     ) -> UiuaResult {
         let function = self.create_function(signature, f);
         self.bind_function(name, function)
@@ -2491,3 +2491,15 @@ fn line_sig(line: &[Sp<Word>]) -> Option<Sp<DocCommentSig>> {
             _ => None,
         })
 }
+
+/// Supertrait for `Send` and `Sync` on native targets, but not on wasm32
+#[cfg(not(target_arch = "wasm32"))]
+pub trait SendSyncNative: Send + Sync {}
+#[cfg(not(target_arch = "wasm32"))]
+impl<T: Send + Sync> SendSyncNative for T {}
+
+/// Supertrait for `Send` and `Sync` on native targets, but not on wasm32
+#[cfg(target_arch = "wasm32")]
+pub trait SendSyncNative {}
+#[cfg(target_arch = "wasm32")]
+impl<T> SendSyncNative for T {}

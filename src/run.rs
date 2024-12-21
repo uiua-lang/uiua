@@ -61,7 +61,10 @@ pub(crate) struct Runtime {
     /// The recursion limit
     recursion_limit: usize,
     /// Whether the program was interrupted
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) interrupted: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) interrupted: Option<Arc<dyn Fn() -> bool>>,
     /// Whether to print the time taken to execute each instruction
     time_instrs: bool,
     /// The time at which the last instruction was executed
@@ -295,7 +298,14 @@ impl Uiua {
         self
     }
     /// Set the interrupted hook
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn with_interrupt_hook(mut self, hook: impl Fn() -> bool + Send + Sync + 'static) -> Self {
+        self.rt.interrupted = Some(Arc::new(hook));
+        self
+    }
+    #[cfg(target_arch = "wasm32")]
+    /// Set the interrupted hook
+    pub fn with_interrupt_hook(mut self, hook: impl Fn() -> bool + 'static) -> Self {
         self.rt.interrupted = Some(Arc::new(hook));
         self
     }

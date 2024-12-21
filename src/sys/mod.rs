@@ -725,11 +725,25 @@ impl Value {
 }
 
 /// The function type passed to `&rl`'s returned function
+#[cfg(not(target_arch = "wasm32"))]
 pub type ReadLinesFn<'a> = Box<dyn FnMut(String, &mut Uiua) -> UiuaResult + Send + 'a>;
+/// The function type passed to `&rl`'s returned function
+#[cfg(target_arch = "wasm32")]
+pub type ReadLinesFn<'a> = Box<dyn FnMut(String, &mut Uiua) -> UiuaResult + 'a>;
+
 /// The function type returned by `&rl`
+#[cfg(not(target_arch = "wasm32"))]
 pub type ReadLinesReturnFn<'a> = Box<dyn FnMut(&mut Uiua, ReadLinesFn) -> UiuaResult + Send + 'a>;
+/// The function type returned by `&rl`
+#[cfg(target_arch = "wasm32")]
+pub type ReadLinesReturnFn<'a> = Box<dyn FnMut(&mut Uiua, ReadLinesFn) -> UiuaResult + 'a>;
+
 /// The function type passed to `&ast`
+#[cfg(not(target_arch = "wasm32"))]
 pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
+/// The function type passed to `&ast`
+#[cfg(target_arch = "wasm32")]
+pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>>>;
 
 /// The kind of a handle
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

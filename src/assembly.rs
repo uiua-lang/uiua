@@ -335,7 +335,10 @@ impl IndexMut<&Function> for Assembly {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 type DynFn = Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static>;
+#[cfg(target_arch = "wasm32")]
+type DynFn = Arc<dyn Fn(&mut Uiua) -> UiuaResult + 'static>;
 
 impl Default for Assembly {
     fn default() -> Self {

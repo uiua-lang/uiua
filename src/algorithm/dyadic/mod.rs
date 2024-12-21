@@ -15,6 +15,7 @@ use std::{
 
 use ecow::{eco_vec, EcoVec};
 use rand::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
 
 use crate::{
@@ -26,6 +27,21 @@ use crate::{
     value::Value,
     Shape, Uiua, UiuaResult, RNG,
 };
+
+macro_rules! par_if {
+    ($cond:expr, $if_true:expr, $if_false:expr) => {{
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if $cond {
+                $if_true
+            } else {
+                $if_false
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        $if_false
+    }};
+}
 
 use super::{
     shape_prefixes_match, validate_size, validate_size_of, ArrayCmpSlice, FillContext, SizeError,
@@ -1121,11 +1137,11 @@ impl Array<f64> {
         let result_chunk_size = b.row_count() * prod_elems;
         if result_chunk_size > 0 {
             let iter = (a.row_slices()).zip(result_slice.chunks_exact_mut(result_chunk_size));
-            if a.row_count() > 100 || b.row_count() > 100 {
-                (iter.par_bridge()).for_each(|(a_row, res_row)| inner(a_row, res_row));
-            } else {
-                iter.for_each(|(a_row, res_row)| inner(a_row, res_row));
-            }
+            par_if!(
+                a.row_count() > 100 || b.row_count() > 100,
+                (iter.par_bridge()).for_each(|(a_row, res_row)| inner(a_row, res_row)),
+                iter.for_each(|(a_row, res_row)| inner(a_row, res_row))
+            )
         }
         Ok(Array::new(result_shape, result_data))
     }

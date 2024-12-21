@@ -610,6 +610,15 @@ impl MapKeys {
         present_indices.sort_unstable_by_key(|(_, i)| *i);
         present_indices.into_iter().map(|(i, _)| i).collect()
     }
+    /// Get the keys in the same order as map values
+    pub fn normalized_keys(&self) -> Value {
+        let present_indices = self.present_indices();
+        let mut new_keys = Vec::with_capacity(present_indices.len());
+        for i in present_indices {
+            new_keys.push(self.keys.row(i));
+        }
+        Value::from_row_values_infallible(new_keys)
+    }
     pub(crate) fn reverse(&mut self) {
         let present_indices = self.present_indices();
         let mid = present_indices.len() / 2;

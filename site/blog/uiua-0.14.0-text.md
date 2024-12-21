@@ -152,7 +152,7 @@ Thanks a lot to [ekgame](https://github.com/ekgame) and [Omnikar](https://github
 
 You can import `rayua` into a Uiua file with this line:
 ```
-~ "git: github.com/uiua-lang/rayua
+~ "git: github.com/uiua-lang/rayua"
 ```
 
 ## Other Notable Features

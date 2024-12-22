@@ -781,7 +781,13 @@ impl VirtualEnv {
 
 fn get_args_nodes<const N: usize>(args: &[SigNode]) -> Result<[&SigNode; N], SigCheckError> {
     if args.len() != N {
-        return Err(format!("Expected {} arguments, but got {}", N, args.len()).into());
+        return Err(format!(
+            "Expected {} operand{}, but got {}",
+            N,
+            if N == 1 { "" } else { "s" },
+            args.len()
+        )
+        .into());
     }
     Ok(array::from_fn(|i| &args[i]))
 }
@@ -789,7 +795,13 @@ fn get_args_nodes<const N: usize>(args: &[SigNode]) -> Result<[&SigNode; N], Sig
 fn get_args<const N: usize>(args: &[SigNode]) -> Result<[Signature; N], SigCheckError> {
     let mut res = [Signature::default(); N];
     if args.len() != N {
-        return Err(format!("Expected {} arguments, but got {}", N, args.len()).into());
+        return Err(format!(
+            "Expected {} operand{}, but got {}",
+            N,
+            if N == 1 { "" } else { "s" },
+            args.len()
+        )
+        .into());
     }
     for (i, arg) in args.iter().enumerate() {
         res[i] = arg.sig;

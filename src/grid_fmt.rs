@@ -602,7 +602,7 @@ fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
     shape_row
 }
 
-const MAX_RANK: usize = 10;
+const MAX_RANK: usize = 8;
 
 fn requires_summary<T: ArrayValue>(shape: &[usize]) -> bool {
     shape.iter().product::<usize>() > T::summary_min_elems() || shape.len() > MAX_RANK
@@ -673,8 +673,6 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     }
     let row_shape = &shape[1..];
     let cell_size = data.len() / cell_count;
-    let row_height: usize = row_shape.iter().rev().skip(1).product();
-    let max_height = if terminal_size().is_some() { 100 } else { 300 };
     for (i, cell) in data.chunks(cell_size).enumerate() {
         if i > 0 && rank > 2 {
             for _ in 0..rank - 2 {
@@ -690,19 +688,6 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                     row.push(right);
                 }
             }
-        }
-        if i * row_height >= max_height {
-            let mut elipses_row = Vec::new();
-            for prev_grid in metagrid.last().unwrap() {
-                let prev_row = &prev_grid[0];
-                let mut new_row = Vec::with_capacity(prev_row.len());
-                for c in prev_row {
-                    new_row.push(if c.is_whitespace() { ' ' } else { '⋮' });
-                }
-                elipses_row.push(vec![new_row]);
-            }
-            metagrid.push(elipses_row);
-            break;
         }
     }
 }

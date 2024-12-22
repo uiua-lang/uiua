@@ -560,7 +560,7 @@ impl Node {
             _ => {
                 let first = nodes.next().unwrap();
                 let second = Self::bracket(nodes, span).sig_node().unwrap();
-                Node::Mod(Primitive::Both, eco_vec![first, second], span)
+                Node::Mod(Primitive::Bracket, eco_vec![first, second], span)
             }
         }
     }

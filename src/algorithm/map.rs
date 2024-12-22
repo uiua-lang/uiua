@@ -573,7 +573,7 @@ impl MapKeys {
         }
         do_remove!(Num, Complex, Char, Box)
     }
-    pub(crate) fn normalized(mut self) -> Value {
+    pub fn normalized(mut self) -> Value {
         let mut fix_count = 0;
         while self.unfix() {
             fix_count += 1;

@@ -1,7 +1,7 @@
 # Uiua Todo
 
 # 0.15
-- Labelling signature comments
+- Multidimensional `group`
 - `un`/`anti` `stencil`
 - Make `un by` more robust
 - `reach` sided subscripts

@@ -25,10 +25,11 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use terminal_size::terminal_size;
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
+    lex,
     lsp::BindingDocsKind,
     print_stack, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDocFragment,
-    PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Uiua, UiuaError, UiuaErrorKind,
-    UiuaResult, CONSTANTS,
+    PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Token, Uiua, UiuaError,
+    UiuaErrorKind, UiuaResult, CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -1356,18 +1357,32 @@ fn check(path: Option<PathBuf>) -> UiuaResult {
     Ok(())
 }
 
-fn find(path: Option<PathBuf>, mut text: String, raw: bool) -> UiuaResult {
+fn find(path: Option<PathBuf>, text: String, raw: bool) -> UiuaResult {
     if raw {
         colored::control::set_override(false);
     }
-    text = format_str(
-        &text,
-        &FormatConfig {
-            trailing_newline: false,
-            ..Default::default()
-        },
-    )?
-    .output;
+    enum Needle {
+        Text(String),
+        Prim(Primitive),
+    }
+    let needle = if let Some(prim) = Primitive::from_format_name(&text).or_else(|| {
+        (text.chars().count() == 1)
+            .then(|| Primitive::from_glyph(text.chars().next().unwrap()))
+            .flatten()
+    }) {
+        Needle::Prim(prim)
+    } else {
+        Needle::Text(
+            format_str(
+                &text,
+                &FormatConfig {
+                    trailing_newline: false,
+                    ..Default::default()
+                },
+            )?
+            .output,
+        )
+    };
     for path in uiua_files(path.as_deref())? {
         let path = path
             .strip_prefix("./")
@@ -1375,18 +1390,52 @@ fn find(path: Option<PathBuf>, mut text: String, raw: bool) -> UiuaResult {
             .unwrap_or(path.as_path());
         let contents = fs::read_to_string(path).map_err(|e| UiuaError::load(path.into(), e))?;
         let mut matches = Vec::new();
-        for (i, line) in contents.lines().enumerate() {
-            if let Some(pos) = line.find(&text) {
-                matches.push((
-                    format!(
-                        "{}:{}:{}",
-                        path.display(),
-                        i + 1,
-                        line[..pos].chars().count() + 1
-                    ),
-                    pos,
-                    line,
-                ));
+        match &needle {
+            Needle::Text(text) => {
+                for (i, line) in contents.lines().enumerate() {
+                    if let Some(pos) = line.find(text) {
+                        matches.push((
+                            format!(
+                                "{}:{}:{}",
+                                path.display(),
+                                i + 1,
+                                line[..pos].chars().count() + 1
+                            ),
+                            pos,
+                            text.len(),
+                            line,
+                        ));
+                    }
+                }
+            }
+            Needle::Prim(prim) => {
+                let (tokens, ..) = lex(&contents, (), &mut Default::default());
+                for tok in tokens {
+                    let Token::Glyph(prim2) = &tok.value else {
+                        continue;
+                    };
+                    if prim != prim2 {
+                        continue;
+                    }
+                    let line_no = tok.span.start.line as usize - 1;
+                    let line = contents.lines().nth(line_no).unwrap();
+                    let pos = line
+                        .chars()
+                        .take(tok.span.start.col as usize - 1)
+                        .map(|c| c.len_utf8())
+                        .sum();
+                    matches.push((
+                        format!(
+                            "{}:{}:{}",
+                            path.display(),
+                            line_no + 1,
+                            line[..pos].chars().count() + 1
+                        ),
+                        pos,
+                        (tok.span.end.byte_pos - tok.span.start.byte_pos) as usize,
+                        line,
+                    ));
+                }
             }
         }
         let Some(max_len) = matches.iter().map(|(loc, ..)| loc.chars().count()).max() else {
@@ -1396,11 +1445,11 @@ fn find(path: Option<PathBuf>, mut text: String, raw: bool) -> UiuaResult {
         if !raw {
             println!("\n{}", path.display().to_string().bright_green().bold());
         }
-        for (loc, pos, line) in matches {
+        for (loc, pos, len, line) in matches {
             print!("{loc:width$}");
             print!("{}", line[..pos].bright_black());
-            print!("{}", &line[pos..][..text.len()]);
-            println!("{}", line[pos + text.len()..].bright_black());
+            print!("{}", &line[pos..][..len]);
+            println!("{}", line[pos + len..].bright_black());
         }
     }
     Ok(())

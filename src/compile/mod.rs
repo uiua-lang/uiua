@@ -979,26 +979,28 @@ code:
                 );
             }
         }
-        // Add argument labels
-        if let Some(args) = &comment_sig.args {
-            let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
-            let labels = Node::bracket(
-                args.iter()
-                    .map(|a| Node::Label(a.name.clone(), span).sig_node().unwrap()),
-                span,
-            );
-            node.prepend(labels);
-        }
-        // Add output labels
-        if let Some(outputs) = &comment_sig.outputs {
-            let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
-            let labels = Node::bracket(
-                outputs
-                    .iter()
-                    .map(|o| Node::Label(o.name.clone(), span).sig_node().unwrap()),
-                span,
-            );
-            node.push(labels);
+        if comment_sig.label {
+            // Add argument labels
+            if let Some(args) = &comment_sig.args {
+                let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
+                let labels = Node::bracket(
+                    args.iter()
+                        .map(|a| Node::Label(a.name.clone(), span).sig_node().unwrap()),
+                    span,
+                );
+                node.prepend(labels);
+            }
+            // Add output labels
+            if let Some(outputs) = &comment_sig.outputs {
+                let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
+                let labels = Node::bracket(
+                    outputs
+                        .iter()
+                        .map(|o| Node::Label(o.name.clone(), span).sig_node().unwrap()),
+                    span,
+                );
+                node.push(labels);
+            }
         }
     }
     fn args(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<EcoVec<SigNode>> {

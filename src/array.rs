@@ -848,7 +848,7 @@ pub const WILDCARD_CHAR: char = '\u{100000}';
 
 /// Round to a number of significant decimal places
 fn round_sig_dec(f: f64, n: i32) -> f64 {
-    if f.fract() == 0.0 {
+    if f.fract() == 0.0 || f.is_infinite() {
         return f;
     }
     let mul = 10f64.powf(n as f64 - f.fract().abs().log10().ceil());
@@ -896,20 +896,26 @@ impl ArrayValue for f64 {
         }
         let mut min = f64::NAN;
         let mut max = f64::NAN;
-        for &elem in elems {
-            min = min.min(elem);
-            max = max.max(elem);
-        }
         let mut nan_count = elems.iter().take_while(|n| n.is_nan()).count();
-        let mut mean = elems[nan_count];
-        let mut i = 1;
-        for elem in &elems[nan_count + 1..] {
+        let mut mean = 0.0;
+        let mut i = 0;
+        let mut inf_balance = 0i64;
+        for &elem in &elems[nan_count..] {
             if elem.is_nan() {
                 nan_count += 1;
+            } else if elem.is_infinite() {
+                inf_balance += elem.is_sign_positive() as i64;
+                min = min.min(elem);
+                max = max.max(elem);
             } else {
+                min = min.min(elem);
+                max = max.max(elem);
                 mean += (elem - mean) / (i + 1) as f64;
                 i += 1;
             }
+        }
+        if inf_balance != 0 {
+            mean = inf_balance.signum() as f64 * f64::INFINITY;
         }
         if min == max {
             format!("all {}", min.grid_string(false))
@@ -1206,22 +1212,53 @@ impl ArrayValue for Complex {
         if elems.is_empty() {
             return String::new();
         }
-        let mut min = Complex::new(f64::INFINITY, f64::INFINITY);
-        let mut max = Complex::new(f64::NEG_INFINITY, f64::NEG_INFINITY);
+        let (mut re_min, mut im_min) = (f64::INFINITY, f64::INFINITY);
+        let (mut re_max, mut im_max) = (f64::NEG_INFINITY, f64::NEG_INFINITY);
+        let (mut re_mean, mut im_mean) = (0.0, 0.0);
+        let (mut re_nan_count, mut im_nan_count) = (0, 0);
+        let (mut re_inf_balance, mut im_inf_balance) = (0i64, 0i64);
+        let (mut re_i, mut im_i) = (0, 0);
         for &elem in elems {
-            min = min.min(elem);
-            max = max.max(elem);
+            for ((elem, i), (min, max, mean), (nan_count, inf_balance)) in [
+                (
+                    (elem.re, &mut re_i),
+                    (&mut re_min, &mut re_max, &mut re_mean),
+                    (&mut re_nan_count, &mut re_inf_balance),
+                ),
+                (
+                    (elem.im, &mut im_i),
+                    (&mut im_min, &mut im_max, &mut im_mean),
+                    (&mut im_nan_count, &mut im_inf_balance),
+                ),
+            ] {
+                if elem.is_nan() {
+                    *nan_count += 1;
+                } else if elem.is_infinite() {
+                    *inf_balance += elem.is_sign_positive() as i64;
+                    *min = min.min(elem);
+                    *max = max.max(elem);
+                } else {
+                    *min = min.min(elem);
+                    *max = max.max(elem);
+                    *mean += (elem - *mean) / (*i + 1) as f64;
+                    *i += 1;
+                }
+            }
         }
-        let mut mean = elems[0];
-        for (i, &elem) in elems.iter().enumerate().skip(1) {
-            mean = mean + (elem - mean) / (i + 1) as f64;
+        for (inf_balance, mean) in [
+            (re_inf_balance, &mut re_mean),
+            (im_inf_balance, &mut im_mean),
+        ] {
+            if inf_balance != 0 {
+                *mean = inf_balance.signum() as f64 * f64::INFINITY;
+            }
         }
-        if min == max {
-            format!("all {}", min.grid_string(false))
+        if re_min == re_max && im_min == im_max {
+            format!("all {}", Complex::new(re_min, im_min).grid_string(false))
         } else {
-            min = Complex::new(round_sig_dec(min.re, 3), round_sig_dec(min.im, 3));
-            max = Complex::new(round_sig_dec(max.re, 3), round_sig_dec(max.im, 3));
-            mean = Complex::new(round_sig_dec(mean.re, 3), round_sig_dec(mean.im, 3));
+            let min = Complex::new(round_sig_dec(re_min, 3), round_sig_dec(im_min, 3));
+            let max = Complex::new(round_sig_dec(re_max, 3), round_sig_dec(im_max, 3));
+            let mean = Complex::new(round_sig_dec(re_mean, 3), round_sig_dec(im_mean, 3));
             format!(
                 "{} - {} μ{}",
                 min.grid_string(false),

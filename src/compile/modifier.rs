@@ -1562,14 +1562,19 @@ impl Compiler {
         if self.comptime_depth > MAX_COMPTIME_DEPTH {
             return Err(self.error(span.clone(), "Compile-time evaluation recurs too deep"));
         }
+        let errors_before = self.errors.len();
         let res = self
             .items(items, true)
             .map_err(|e| e.trace_macro(name, span.clone()));
+        let errors_after = self.errors.len();
         self.comptime_depth -= 1;
         self.pre_eval_mode = pre_eval_mod;
         // Extract generated root node
-        let node = self.asm.root.split_off(root_node_len);
+        let mut node = self.asm.root.split_off(root_node_len);
         res?;
+        if errors_after > errors_before {
+            node = Node::empty();
+        }
         Ok(node)
     }
     fn do_comptime(

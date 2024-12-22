@@ -1404,6 +1404,7 @@ fn find(path: Option<PathBuf>, text: String, raw: bool) -> UiuaResult {
                             ),
                             pos,
                             text.len(),
+                            None,
                             line,
                         ));
                     }
@@ -1434,6 +1435,7 @@ fn find(path: Option<PathBuf>, text: String, raw: bool) -> UiuaResult {
                         ),
                         pos,
                         (tok.span.end.byte_pos - tok.span.start.byte_pos) as usize,
+                        color_prim(*prim, None),
                         line,
                     ));
                 }
@@ -1446,10 +1448,14 @@ fn find(path: Option<PathBuf>, text: String, raw: bool) -> UiuaResult {
         if !raw {
             println!("\n{}", path.display().to_string().bright_green().bold());
         }
-        for (loc, pos, len, line) in matches {
+        for (loc, pos, len, color, line) in matches {
             print!("{loc:width$}");
             print!("{}", line[..pos].bright_black());
-            print!("{}", &line[pos..][..len]);
+            if let Some(color) = color {
+                print!("{}", line[pos..][..len].color(color));
+            } else {
+                print!("{}", &line[pos..][..len]);
+            }
             println!("{}", line[pos + len..].bright_black());
         }
     }

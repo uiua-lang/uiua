@@ -1379,8 +1379,9 @@ fn find(path: Option<PathBuf>, text: String, raw: bool) -> UiuaResult {
                     trailing_newline: false,
                     ..Default::default()
                 },
-            )?
-            .output,
+            )
+            .map(|f| f.output)
+            .unwrap_or(text),
         )
     };
     for path in uiua_files(path.as_deref())? {

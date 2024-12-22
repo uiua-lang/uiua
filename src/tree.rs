@@ -545,6 +545,25 @@ impl Node {
             span.hash(hasher);
         }
     }
+    /// `⊓ bracket` several nodes
+    pub fn bracket<I>(nodes: I, span: usize) -> Node
+    where
+        I: IntoIterator<Item = SigNode>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        let mut nodes = nodes.into_iter();
+        let size = nodes.len();
+        match size {
+            0 => Node::empty(),
+            1 => nodes.next().unwrap().node,
+            2 => Node::Mod(Primitive::Bracket, nodes.collect(), span),
+            _ => {
+                let first = nodes.next().unwrap();
+                let second = Self::bracket(nodes, span).sig_node().unwrap();
+                Node::Mod(Primitive::Both, eco_vec![first, second], span)
+            }
+        }
+    }
 }
 
 impl From<&[Node]> for Node {

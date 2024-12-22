@@ -278,6 +278,14 @@ impl Compiler {
                 return Err(e);
             }
         };
+        if let Some(comment_sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
+            self.apply_node_comment(
+                &mut node,
+                comment_sig,
+                &format!("{name}'s"),
+                &binding.name.span,
+            );
+        }
 
         // Resolve signature
         match node.sig() {

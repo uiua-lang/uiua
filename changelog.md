@@ -1,7 +1,11 @@
 # Uiua Changelog
 
 Uiua is not yet stable.
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+
+## 0.15.0 - 2025-??-??
+This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- Signature comments can now use a `$` rather than a `?` to automatically label arguments and outputs
 
 ## 0.14.0 - 2024-12-20
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.14.0).

@@ -916,7 +916,9 @@ code:
     fn line(&mut self, line: Vec<Sp<Word>>, must_be_callable: bool) -> UiuaResult<Node> {
         let comment_sig = line_sig(&line);
         let is_empty = line.iter().all(|w| !w.value.is_code());
-        let node = self.words(line)?;
+        // Actually compile the line
+        let mut node = self.words(line)?;
+        // Validate line signature
         if let Some(comment_sig) = comment_sig {
             if let Ok(sig) = node.sig() {
                 if !is_empty && !comment_sig.value.matches_sig(sig) {
@@ -931,7 +933,9 @@ code:
                     );
                 }
             }
+            self.apply_node_comment(&mut node, &comment_sig.value, "Line", &comment_sig.span);
         }
+        // Validate callability
         if must_be_callable {
             if let Err((e, f, mut spans)) = node.check_callability(&self.asm) {
                 let e = e.clone();
@@ -951,6 +955,51 @@ code:
             }
         }
         Ok(node)
+    }
+    fn apply_node_comment(
+        &mut self,
+        node: &mut Node,
+        comment_sig: &DocCommentSig,
+        name: &str,
+        span: &CodeSpan,
+    ) {
+        let mut spandex: Option<usize> = None;
+        // Validate comment signature
+        if let Ok(sig) = node.sig() {
+            if !comment_sig.matches_sig(sig) {
+                let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
+                self.emit_diagnostic(
+                    format!(
+                        "{name} comment describes {}, \
+                        but its code has signature {sig}",
+                        comment_sig.sig_string()
+                    ),
+                    DiagnosticKind::Warning,
+                    self.get_span(span).clone().code().unwrap(),
+                );
+            }
+        }
+        // Add argument labels
+        if let Some(args) = &comment_sig.args {
+            let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
+            let labels = Node::bracket(
+                args.iter()
+                    .map(|a| Node::Label(a.name.clone(), span).sig_node().unwrap()),
+                span,
+            );
+            node.prepend(labels);
+        }
+        // Add output labels
+        if let Some(outputs) = &comment_sig.outputs {
+            let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
+            let labels = Node::bracket(
+                outputs
+                    .iter()
+                    .map(|o| Node::Label(o.name.clone(), span).sig_node().unwrap()),
+                span,
+            );
+            node.push(labels);
+        }
     }
     fn args(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<EcoVec<SigNode>> {
         words

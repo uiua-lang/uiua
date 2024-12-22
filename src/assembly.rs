@@ -461,6 +461,8 @@ pub struct DocComment {
 /// A signature in a doc comment
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct DocCommentSig {
+    /// Whether this is a labelling signature
+    pub label: bool,
     /// The arguments of the signature
     pub args: Option<Vec<DocCommentArg>>,
     /// The outputs of the signature
@@ -504,7 +506,11 @@ impl fmt::Display for DocCommentSig {
             }
             write!(f, " ")?;
         }
-        write!(f, "?")?;
+        if self.label {
+            write!(f, "$")?;
+        } else {
+            write!(f, "?")?;
+        }
         if let Some(args) = &self.args {
             write!(f, " ")?;
             for (i, arg) in args.iter().enumerate() {
@@ -534,12 +540,16 @@ impl FromStr for DocCommentSig {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.trim_end().ends_with('?') && !s.trim_end().ends_with(" ?")
-            || !(s.chars()).all(|c| c.is_whitespace() || "?:".contains(c) || is_ident_char(c))
+            || !(s.chars()).all(|c| c.is_whitespace() || "?$:".contains(c) || is_ident_char(c))
         {
             return Err(());
         }
         // Split into args and outputs
-        let (mut outputs_text, mut args_text) = s.split_once('?').ok_or(())?;
+        let mut label = false;
+        let (mut outputs_text, mut args_text) = s
+            .split_once('?')
+            .or_else(|| s.split_once('$').inspect(|_| label = true))
+            .ok_or(())?;
         outputs_text = outputs_text.trim();
         args_text = args_text.trim();
         // Parse args and outputs
@@ -584,6 +594,7 @@ impl FromStr for DocCommentSig {
             }
         }
         Ok(DocCommentSig {
+            label,
             args: (!args.is_empty()).then_some(args),
             outputs: (!outputs.is_empty()).then_some(outputs),
         })
@@ -600,9 +611,10 @@ impl From<&str> for DocComment {
     fn from(text: &str) -> Self {
         let mut sig = None;
         let sig_line = text.lines().position(|line| {
-            line.chars().filter(|&c| c == '?').count() == 1
+            line.chars().filter(|&c| "$?".contains(c)).count() == 1
                 && !line.trim().ends_with('?')
-                && (line.chars()).all(|c| c.is_whitespace() || "?:".contains(c) || is_ident_char(c))
+                && (line.chars())
+                    .all(|c| c.is_whitespace() || "?$:".contains(c) || is_ident_char(c))
         });
         let raw_text = if let Some(i) = sig_line {
             sig = text.lines().nth(i).unwrap().parse().ok();

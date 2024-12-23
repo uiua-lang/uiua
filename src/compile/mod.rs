@@ -1995,6 +1995,7 @@ code:
                                 | Primitive::Each
                                 | Primitive::Inventory
                                 | Primitive::Stencil
+                                | Primitive::Reach
                         ) {
                             self.add_error(
                                 m.modifier.span.clone().merge(n.span.clone()),

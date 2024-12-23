@@ -550,6 +550,11 @@ pub fn Subscripts() -> impl IntoView {
             "Fix left-most or right-most argument",
             "# Experimental!\n∵⌞⊂ 1_2 3_4\n∵⌟⊂ 1_2 3_4",
         ),
+        subscript(
+            Reach,
+            "Put the second argument above or below the outputs",
+            "# Experimental!\n{𝄐⌞⊟ 1 2 3}\n{𝄐⌟⊟ 1 2 3}",
+        ),
     ];
 
     view! {

@@ -1812,6 +1812,11 @@ primitive!(
     ///   : [⊃⊟𝄐⊟ @a@b@c]
     /// ex: # Experimental!
     ///   : [⊃⋅⊟𝄐⊟ @a@b@c]
+    /// [reach] supports sided subscripts. They put the 2nd stack value above or below the outputs of the function.
+    /// ex: # Experimental!
+    ///   : {𝄐⌞⊟ 1 2 3}
+    /// ex: # Experimental!
+    ///   : {𝄐⌟⊟ 1 2 3}
     ([1], Reach, Planet, ("reach", '𝄐')),
     /// Call a function but keep its first argument on the top of the stack
     ///

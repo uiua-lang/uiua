@@ -1,3 +1,5 @@
+use std::collections::{hash_map::Entry, HashMap};
+
 use ecow::EcoVec;
 
 use crate::{
@@ -170,6 +172,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
             where
                 Value: From<Array<T>>,
             {
+                let mut cache = HashMap::new();
                 let mut curr = vec![0; k];
                 let mut data = EcoVec::new();
                 let mut count = 0;
@@ -181,12 +184,19 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                     'ij: for (ii, &i) in curr.iter().enumerate() {
                         for &j in curr.iter().skip(ii + 1) {
                             // println!("i: {i}, j: {j}");
-                            env.push(i);
-                            env.push(j);
-                            env.exec(f.node.clone())?;
-                            add_it &= env
-                                .pop("tuples's function result")?
-                                .as_bool(env, "tuples of 3 or more must return a boolean")?;
+                            let entry = cache.entry((i, j));
+                            add_it &= match entry {
+                                Entry::Occupied(o) => *o.get(),
+                                Entry::Vacant(v) => {
+                                    env.push(i);
+                                    env.push(j);
+                                    env.exec(f.node.clone())?;
+                                    *v.insert(env.pop("tuples's function result")?.as_bool(
+                                        env,
+                                        "tuples of 3 or more must return a boolean",
+                                    )?)
+                                }
+                            };
                             if !add_it {
                                 break 'ij;
                             }

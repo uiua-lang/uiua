@@ -443,15 +443,19 @@ pub fn reduce_content(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
     let xs = env.pop(1)?;
     if let (1, Some(Primitive::Join)) = (xs.rank(), f.node.as_primitive()) {
-        if xs.row_count() == 0 {
-            env.push(match xs {
-                Value::Box(_) => Value::default(),
-                value => value,
-            });
-            return Ok(());
-        }
-        let mut rows = xs.into_rows().map(Value::unboxed);
-        let mut acc = rows.next().unwrap();
+        let (mut acc, rows) = if let Some(val) = env.value_fill() {
+            (val.clone(), xs.into_rows().map(Value::unboxed))
+        } else {
+            if xs.row_count() == 0 {
+                env.push(match xs {
+                    Value::Box(_) => Value::default(),
+                    value => value,
+                });
+                return Ok(());
+            }
+            let mut rows = xs.into_rows().map(Value::unboxed);
+            (rows.next().unwrap(), rows)
+        };
         if acc.rank() == 0 {
             acc.shape_mut().insert(0, 1);
         }

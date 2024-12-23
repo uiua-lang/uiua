@@ -284,10 +284,22 @@ impl GridFmt for Boxed {
             Value::Char(array) => array.fmt_grid(subparams),
             Value::Box(array) => array.fmt_grid(subparams),
         };
-        if params.boxed && grid.len() == 1 {
-            grid = vec![boxed_scalar(true)
-                .chain(grid.into_iter().flatten())
-                .collect()];
+        if params.boxed {
+            match grid.len() {
+                0 => {}
+                1 => {
+                    grid = vec![boxed_scalar(true)
+                        .chain(grid.into_iter().flatten())
+                        .collect()];
+                }
+                _ => {
+                    let height = grid.len();
+                    for row in &mut grid {
+                        row.insert(0, ' ');
+                    }
+                    grid[height / 2][0] = Primitive::Box.glyph().unwrap();
+                }
+            }
         }
         grid
     }

@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.15
-- Fix hashing of multiple levels of boxing
-- Fix display of multiple levels of boxing on rank >= 2 arrays
 - `bind` and `ref` modifiers
 - Make `un by` more robust
 - Multidimensional `group`

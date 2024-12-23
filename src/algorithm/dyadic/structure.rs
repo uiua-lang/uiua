@@ -446,16 +446,16 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
 
-        let fill = env.array_fill::<T>();
-        if let Ok(fill) = &fill {
-            if !self.shape[index.len()..].ends_with(&fill.shape) {
-                return Err(env.error(format!(
+        let mut fill = env.array_fill::<T>().map_err(Cow::Borrowed);
+        if let Ok(fill_val) = &fill {
+            if !self.shape[index.len()..].ends_with(&fill_val.shape) {
+                fill = Err(Cow::Owned(format!(
                     "Cannot take {} {} of array with \
                     shape {} with fill of shape {}",
                     index.len(),
                     if index.len() == 1 { "axis" } else { "axes" },
                     self.shape,
-                    fill.shape
+                    fill_val.shape
                 )));
             }
         }

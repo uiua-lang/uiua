@@ -3,6 +3,10 @@
 Uiua is not yet stable.
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.14.1 - 2024-12-23
+### Interpreter
+- Various bug fixes related to shapes, types, fills, and optimizations
+
 ## 0.14.0 - 2024-12-20
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.14.0).
 ### Language

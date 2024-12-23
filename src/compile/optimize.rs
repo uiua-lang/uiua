@@ -63,9 +63,22 @@ impl Node {
                     self.normalize();
                 }
             }
+            Node::Switch { branches, .. } => {
+                for branch in branches.make_mut() {
+                    optimized |= branch.node.optimize_impl(level, true);
+                }
+                if opt_single {
+                    optimized |= optimize_run(self.as_vec(), level, false);
+                    self.normalize();
+                }
+            }
             Node::Array { inner, .. } => {
                 optimized |= Arc::make_mut(inner).optimize_impl(level, true)
             }
+            NoInline(inner) => {
+                optimized |= Arc::make_mut(inner).optimize_impl(level.min(OptLevel::Early), true)
+            }
+            TrackCaller(inner) => optimized |= Arc::make_mut(inner).optimize_impl(level, true),
             CustomInverse(cust, _) => {
                 let cust = Arc::make_mut(cust);
                 if let Ok(normal) = cust.normal.as_mut() {

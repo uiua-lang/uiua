@@ -714,6 +714,10 @@ pub fn undo_partition_part2(env: &mut Uiua) -> UiuaResult {
         .as_number_array(env, "⊜ partition markers must be an array of integers")?;
     let mut original = env.pop(3)?;
     if markers.rank() == 1 {
+        if original.row_count() == 0 {
+            env.push(original);
+            return Ok(());
+        }
         // Count partition markers
         let mut marker_partitions: Vec<(i64, usize)> = Vec::new();
         let mut markers = markers.data.into_iter();
@@ -950,6 +954,10 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
         .pop(2)?
         .as_integer_array(env, "⊕ group indices must be an array of integers")?;
     let original = env.pop(3)?;
+    if original.row_count() == 0 {
+        env.push(original);
+        return Ok(());
+    }
 
     let expected_count = (indices.data.iter().max().copied().unwrap_or(-1) + 1).max(0);
     if ungrouped_rows.row_count() as isize != expected_count {

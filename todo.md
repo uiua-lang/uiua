@@ -1,6 +1,8 @@
 # Uiua Todo
 
 # 0.15
+- `bind` and `ref` modifiers
+- Make `un by` more robust
 - Multidimensional `group`
 - `un`/`anti` `stencil`
 - Make `un by` more robust

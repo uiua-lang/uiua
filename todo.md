@@ -1,12 +1,14 @@
 # Uiua Todo
 
 # 0.15
+- Fix hashing of multiple levels of boxing
+- Fix display of multiple levels of boxing on rank >= 2 arrays
+- `bind` and `ref` modifiers
+- Make `un by` more robust
 - Multidimensional `group`
 - `un`/`anti` `stencil`
-- Make `un by` more robust
 - `on`/`by` subscripts
 - Optimizations through calls
-- `bind` and `ref` modifiers
 - Compile-time code string evaluation
 - Allow for multi-value constant bindings
 - Stackless execution trees?

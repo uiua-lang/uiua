@@ -1031,7 +1031,7 @@ impl Primitive {
                 let [f] = get_ops(ops, env)?;
                 loops::partition(f, env)?
             }
-            Primitive::Tuples => permute::tuples(ops, env)?,
+            Primitive::Tuples => tuples::tuples(ops, env)?,
             Primitive::Stencil => stencil::stencil(ops, env)?,
 
             // Stack

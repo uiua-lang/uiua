@@ -650,10 +650,12 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
             let mut per_meta = xs.take_per_meta();
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
+                    ys.fix();
                     if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
                         new_rows.clear();
                     } else {
-                        env.push(ys.unboxed_if(inv));
+                        ys.undo_fix();
+                        env.push(ys);
                         env.push(xs.proxy_row(env));
                         _ = env.exec_maintain_sig(f);
                         for i in 0..outputs {
@@ -682,11 +684,13 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
             let mut per_meta = ys.take_per_meta();
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
+                    ys.fix();
                     if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
                         new_rows.clear();
                     } else {
+                        xs.undo_fix();
                         env.push(ys.proxy_row(env));
-                        env.push(xs.unboxed_if(inv));
+                        env.push(xs);
                         _ = env.exec_maintain_sig(f);
                         for i in 0..outputs {
                             new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));

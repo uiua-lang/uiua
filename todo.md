@@ -4,7 +4,6 @@
 - Multidimensional `group`
 - `un`/`anti` `stencil`
 - Make `un by` more robust
-- `reach` sided subscripts
 - `on`/`by` subscripts
 - Optimizations through calls
 - `bind` and `ref` modifiers

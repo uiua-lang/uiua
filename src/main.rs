@@ -429,7 +429,12 @@ fn main() {
                 }
                 .watch(),
                 Err(NoWorkingFile::MultipleFiles) => WatchArgs::default().watch(),
-                Err(_) if app.window => WatchArgs::default().watch(),
+                Err(_)
+                    if app.window
+                        || uiua_files(None, Some(2)).is_ok_and(|files| !files.is_empty()) =>
+                {
+                    WatchArgs::default().watch()
+                }
                 Err(nwf) => {
                     _ = App::try_parse_from(["uiua", "help"])
                         .map(drop)
@@ -928,12 +933,12 @@ fn setup_audio(options: AudioOptions) {
     }
 }
 
-fn uiua_files(path: Option<&Path>) -> UiuaResult<Vec<PathBuf>> {
+fn uiua_files(path: Option<&Path>, max_depth: Option<usize>) -> UiuaResult<Vec<PathBuf>> {
     if let Some(path) = path {
         if path.is_file() {
             Ok(vec![path.into()])
         } else if path.is_dir() {
-            uiua_files_in(path)
+            uiua_files_in(path, max_depth)
         } else {
             Err(UiuaError::load(
                 path.into(),
@@ -944,12 +949,15 @@ fn uiua_files(path: Option<&Path>) -> UiuaResult<Vec<PathBuf>> {
             ))
         }
     } else {
-        uiua_files_in(".".as_ref())
+        uiua_files_in(".".as_ref(), max_depth)
     }
 }
 
-fn uiua_files_in(root: &Path) -> UiuaResult<Vec<PathBuf>> {
-    fn rec(root: &Path, acc: &mut Vec<PathBuf>) -> UiuaResult<()> {
+fn uiua_files_in(root: &Path, max_depth: Option<usize>) -> UiuaResult<Vec<PathBuf>> {
+    fn rec(root: &Path, acc: &mut Vec<PathBuf>, depth: usize, max_depth: usize) -> UiuaResult<()> {
+        if depth > max_depth {
+            return Ok(());
+        }
         for entry in fs::read_dir(root).map_err(|e| UiuaError::format(root.into(), e))? {
             let entry = entry.map_err(|e| UiuaError::format(root.into(), e))?;
             let path = entry.path();
@@ -963,7 +971,7 @@ fn uiua_files_in(root: &Path) -> UiuaResult<Vec<PathBuf>> {
                 {
                     continue;
                 }
-                rec(&path, acc)?;
+                rec(&path, acc, depth + 1, max_depth)?;
             } else if path.extension().map_or(false, |ext| ext == "ua") {
                 acc.push(path);
             }
@@ -971,7 +979,7 @@ fn uiua_files_in(root: &Path) -> UiuaResult<Vec<PathBuf>> {
         Ok(())
     }
     let mut acc = Vec::new();
-    rec(root, &mut acc)?;
+    rec(root, &mut acc, 0, max_depth.unwrap_or(usize::MAX))?;
     Ok(acc)
 }
 
@@ -1081,7 +1089,7 @@ fn format_single_file(path: PathBuf, config: &FormatConfig) -> Result<(), UiuaEr
 }
 
 fn format_multi_files(config: &FormatConfig) -> Result<(), UiuaError> {
-    for path in uiua_files_in(".".as_ref())? {
+    for path in uiua_files_in(".".as_ref(), None)? {
         format_file(path, config)?;
     }
     Ok(())
@@ -1310,7 +1318,7 @@ fn update_modules(modules: &[PathBuf]) -> io::Result<()> {
 }
 
 fn check(path: Option<PathBuf>) -> UiuaResult {
-    let paths = uiua_files(path.as_deref())?;
+    let paths = uiua_files(path.as_deref(), None)?;
     let path_count = paths.len();
     let mut successes = 0;
     let width = terminal_size().map(|(w, _)| w.0 as usize).unwrap_or(60);
@@ -1384,7 +1392,7 @@ fn find(path: Option<PathBuf>, text: String, raw: bool) -> UiuaResult {
             .unwrap_or(text),
         )
     };
-    for path in uiua_files(path.as_deref())? {
+    for path in uiua_files(path.as_deref(), None)? {
         let path = path
             .strip_prefix("./")
             .or_else(|_| path.strip_prefix(".\\"))

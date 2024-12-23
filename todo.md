@@ -1,7 +1,9 @@
 # Uiua Todo
 
 # 0.15
-- Labelling signature comments
+- Fix `filled take` bug
+- Fix `uiua` ambiguity without `-w`
+- Multidimensional `group`
 - `un`/`anti` `stencil`
 - Make `un by` more robust
 - `reach` sided subscripts

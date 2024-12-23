@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.15
-- Fix `filled take` bug
-- Fix `uiua` ambiguity without `-w`
 - Multidimensional `group`
 - `un`/`anti` `stencil`
 - Make `un by` more robust

@@ -26,11 +26,11 @@ pub mod loops;
 pub mod map;
 mod monadic;
 pub mod path;
-pub mod permute;
 pub mod pervade;
 pub mod reduce;
 pub mod stencil;
 pub mod table;
+pub mod tuples;
 pub mod zip;
 
 pub(crate) fn get_ops<const N: usize>(

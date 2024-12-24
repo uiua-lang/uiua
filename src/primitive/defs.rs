@@ -452,11 +452,6 @@ primitive!(
     /// ex: ↧ [1 4 2] [3 7 1]
     /// Boxes compare lexicographically
     /// ex: ↧ {1_2_3 "dog"} {1_4_5 "cat"}
-    ///
-    /// Uiua does not have dedicated boolean logical operators.
-    /// [minimum] can be used as a logical AND.
-    /// ex: ≥5:≤8. [6 2 5 9 6 5 0 4]
-    ///   : ↧,,
     (2, Min, DyadicPervasive, ("minimum", '↧')),
     /// Take the maximum of two arrays
     ///
@@ -467,7 +462,7 @@ primitive!(
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [maximum] can be used as a logical OR.
-    /// ex: ↥,,≤5:≥8. [6 2 5 9 6 5 0 4]
+    /// ex: ◡↥≤5:≥8. [6 2 5 9 6 5 0 4]
     (2, Max, DyadicPervasive, ("maximum", '↥')),
     /// Take the arctangent of two numbers
     ///

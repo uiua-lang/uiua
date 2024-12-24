@@ -67,7 +67,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.14.0).
   - Other greek letters can also be typed this way
 - Add [`&ep`](https://uiua.org/docs/&ep) and [`&epf`](https://uiua.org/docs/&epf) system functions for easier printing to stderr
 - Functions that work with audio such as [`audio`](https://uiua.org/docs/audio) now treat the first axis as samples and the second axis as channels
-- Add [`# Deprecated!`](https://uiua.org/docs/semanticcomment#deprecated) semantic comments
+- Add [`# Deprecated!`](https://www.uiua.org/tutorial/documentation#deprecated) semantic comments
 - Change [`backward 𝄈`](https://uiua.org/docs/backward)'s glyph to `𝄈`. Code using `˜` will continue to work and will be formatted as `𝄈`.
 - Add the experimental [`or ∨`](https://uiua.org/docs/or) function
   - It has a useful reduction identity

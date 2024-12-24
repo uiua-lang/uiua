@@ -95,3 +95,6 @@ map "cba" [1 3 2]
 # Multi-key remove
 ⍤⤙≍ map 1_3 "ac" remove 2_4 map [1 2 3 4] "abcd"
 ⍤⤙≍ map [3_4] "b" remove 1_2 map [1_2 3_4] "ab"
+
+# Unmap type/shape
+⍤⤙≍ {+@0°△0_2 []} {°map} remove "df"_"as" map "as"_"df" 1_2

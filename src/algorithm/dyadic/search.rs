@@ -69,6 +69,9 @@ impl<T: ArrayValue> Array<T> {
                 Array::new(shape, result_data)
             }
             Ordering::Greater => {
+                if elems.row_count() == 0 {
+                    return Ok(Array::new(elems.shape.clone(), EcoVec::new()));
+                }
                 let mut rows = Vec::with_capacity(elems.row_count());
                 for elem in elems.rows() {
                     rows.push(of.memberof(&elem, env)?);
@@ -173,6 +176,9 @@ impl<T: ArrayValue> Array<T> {
                 Array::new(shape, result_data)
             }
             Ordering::Greater => {
+                if needle.row_count() == 0 {
+                    return Ok(Array::new(needle.shape.clone(), EcoVec::new()));
+                }
                 let mut rows = Vec::with_capacity(needle.row_count());
                 for elem in needle.rows() {
                     rows.push(elem.index_of(haystack, env)?);

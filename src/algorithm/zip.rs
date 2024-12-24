@@ -684,7 +684,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
             let mut per_meta = ys.take_per_meta();
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
-                    ys.fix();
+                    xs.fix();
                     if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
                         new_rows.clear();
                     } else {

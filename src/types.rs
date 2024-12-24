@@ -239,6 +239,28 @@ impl TypeRt<'_> {
                     self.stack.push(boxed);
                 }
                 Identity => {}
+                // Select => {
+                //     let index = self.pop()?;
+                //     let from = self.pop()?;
+                //     let mut shape = index.shape.clone();
+                //     shape.extend(from.shape.iter().copied().skip(1));
+                //     self.stack.push(Ty::new(from.scalar, shape));
+                // }
+                // Pick => {
+                //     let index = self.pop()?;
+                //     let mut from = self.pop()?;
+                //     if let Some((last, outer)) = index.shape.split_last() {
+                //         let shape = Shape::from_iter(
+                //             (outer.iter().copied()).chain(from.shape.iter().copied().skip(*last)),
+                //         );
+                //         self.stack.push(Ty::new(from.scalar, shape));
+                //     } else {
+                //         if !from.shape.is_empty() {
+                //             from.shape.remove(0);
+                //         }
+                //         self.stack.push(from);
+                //     }
+                // }
                 prim if prim.outputs() == Some(0) => {
                     if let Some(args) = prim.args() {
                         for _ in 0..args {

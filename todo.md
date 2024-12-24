@@ -1,11 +1,13 @@
 # Uiua Todo
 
 # 0.15
+- Mixed subscripts
 - `bind` and `ref` modifiers
 - Make `un by` more robust
 - Multidimensional `group`
 - `un`/`anti` `stencil`
 - `on`/`by` subscripts
+- `do` negative signature extension
 - Optimizations through calls
 - Compile-time code string evaluation
 - Allow for multi-value constant bindings

@@ -24,6 +24,7 @@ use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use terminal_size::terminal_size;
 use uiua::{
+    ast::Subscript,
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lex,
     lsp::BindingDocsKind,
@@ -1220,7 +1221,7 @@ const DYADIC: Color = Color::Blue;
 const MONADIC_MOD: Color = Color::Yellow;
 const DYADIC_MOD: Color = Color::Magenta;
 
-fn color_prim(prim: Primitive, sub: Option<i32>) -> Option<Color> {
+fn color_prim(prim: Primitive, sub: Option<Subscript>) -> Option<Color> {
     match prim.class() {
         PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
             if prim.modifier_args().is_none() =>

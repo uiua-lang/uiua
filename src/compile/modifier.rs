@@ -1,6 +1,8 @@
 //! Compiler code for modifiers
 #![allow(clippy::redundant_closure_call)]
 
+use std::iter::repeat;
+
 use super::*;
 use algebra::{derivative, integral};
 use invert::InversionError;
@@ -506,11 +508,11 @@ impl Compiler {
                 let Some(sub) = subscript else {
                     return Ok(None);
                 };
-                let Some(n) = self.subscript_n_or_side(sub) else {
+                let Some(nos) = self.subscript_n_or_side(sub) else {
                     return Ok(None);
                 };
                 let span = self.add_span(modified.modifier.span.clone());
-                match n.value {
+                match nos.value {
                     SubNOrSide::N(n) => {
                         let n = self.positive_subscript(n, Both, modified.modifier.span.clone())?;
                         self.monadic_modifier_op(modified)?.0.on_all(n, span)
@@ -519,7 +521,7 @@ impl Compiler {
                         let op = self.monadic_modifier_op(modified)?.0;
                         if op.sig.args != 2 {
                             self.add_error(
-                                modified.modifier.span.clone().merge(n.span),
+                                modified.modifier.span.clone().merge(nos.span),
                                 format!(
                                     "Sided {}'s function must have 2 arguments, \
                                     but its signature is {}",
@@ -529,7 +531,7 @@ impl Compiler {
                             );
                             op.on_all(2, span)
                         } else {
-                            let sub_span = self.add_span(n.span);
+                            let sub_span = self.add_span(nos.span);
                             let mut node = match side {
                                 SubSide::Left => Node::Mod(
                                     On,
@@ -544,6 +546,73 @@ impl Compiler {
                             };
                             node.push(op.on_all(2, span));
                             node
+                        }
+                    }
+                    SubNOrSide::Both(n, side) => {
+                        let n = self.positive_subscript(n, Both, modified.modifier.span.clone())?;
+                        let op = self.monadic_modifier_op(modified)?.0;
+                        match n {
+                            0 => Node::empty(),
+                            1 => op.node,
+                            _ if op.sig.args != 2 => {
+                                self.add_error(
+                                    modified.modifier.span.clone().merge(nos.span),
+                                    format!(
+                                        "Sided {}'s function must have 2 arguments, \
+                                        but its signature is {}",
+                                        Primitive::Both.format(),
+                                        op.sig
+                                    ),
+                                );
+                                op.on_all(2, span)
+                            }
+                            n => {
+                                let sub_span = self.add_span(nos.span);
+                                let mut node = match side {
+                                    SubSide::Left => {
+                                        let mut inner = Node::Mod(
+                                            Dip,
+                                            eco_vec![Node::Prim(Identity, sub_span)
+                                                .sig_node()
+                                                .unwrap()],
+                                            sub_span,
+                                        )
+                                        .sig_node()
+                                        .unwrap();
+                                        let mut node =
+                                            Node::Mod(Off, eco_vec![inner.clone()], sub_span);
+                                        for _ in 0..n - 2 {
+                                            inner =
+                                                Node::Mod(Dip, eco_vec![inner.clone()], sub_span)
+                                                    .sig_node()
+                                                    .unwrap();
+                                            node.prepend(Node::Mod(
+                                                Off,
+                                                eco_vec![inner.clone()],
+                                                sub_span,
+                                            ));
+                                        }
+                                        node
+                                    }
+                                    SubSide::Right => {
+                                        let mut node = Node::Mod(
+                                            Dip,
+                                            eco_vec![Node::Prim(Over, sub_span)
+                                                .sig_node()
+                                                .unwrap()],
+                                            sub_span,
+                                        );
+                                        for _ in 0..n - 2 {
+                                            let inner =
+                                                node.first().unwrap().clone().sig_node().unwrap();
+                                            node.prepend(Node::Mod(Dip, eco_vec![inner], sub_span));
+                                        }
+                                        node
+                                    }
+                                };
+                                node.push(op.on_all(n, span));
+                                node
+                            }
                         }
                     }
                 }
@@ -937,7 +1006,7 @@ impl Compiler {
                 let full_span = modified.modifier.span.clone().merge(op_span);
                 let words_look_pervasive = subscript
                     .as_ref()
-                    .map_or(true, |sub| sub.value == Subscript::N(0))
+                    .map_or(true, |sub| sub.value == Subscript::from(0))
                     && words_look_pervasive(slice::from_ref(&operand));
                 let sn = self.word_sig(operand)?;
                 if words_look_pervasive {
@@ -998,6 +1067,16 @@ impl Compiler {
                                 node.push(Node::Mod(Each, eco_vec![sn], span));
                                 node
                             }
+                            SubNOrSide::Both(num, ..) => {
+                                self.add_error(
+                                    n.span,
+                                    format!(
+                                        "Mixed subscripts are not allowed for {}",
+                                        prim.format()
+                                    ),
+                                );
+                                Node::ImplMod(ImplPrimitive::EachSub(num), eco_vec![sn], span)
+                            }
                         }
                     }
                 } else {
@@ -1007,11 +1086,11 @@ impl Compiler {
             prim @ (Rows | Inventory) => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
-                if let Some(n) = subscript
+                if let Some(nos) = subscript
                     .and_then(|n| self.subscript_n_or_side(n))
                     .filter(|i| i.value != 1)
                 {
-                    match n.value {
+                    match nos.value {
                         SubNOrSide::N(n) => {
                             let n =
                                 self.positive_subscript(n, prim, modified.modifier.span.clone())?;
@@ -1027,7 +1106,7 @@ impl Compiler {
                             }
                         }
                         SubNOrSide::Side(side) => {
-                            let sub_span = self.add_span(n.span);
+                            let sub_span = self.add_span(nos.span);
                             let mut node = match side {
                                 SubSide::Left => Node::Prim(Fix, sub_span),
                                 SubSide::Right => match sn.sig.args {
@@ -1048,6 +1127,40 @@ impl Compiler {
                             };
                             node.push(Node::Mod(prim, eco_vec![sn], span));
                             node
+                        }
+                        SubNOrSide::Both(n, side) => {
+                            let n =
+                                self.positive_subscript(n, prim, modified.modifier.span.clone())?;
+                            if n == 0 {
+                                sn.node
+                            } else {
+                                let sub_span = self.add_span(nos.span);
+                                let setup = match side {
+                                    SubSide::Left => {
+                                        Node::from_iter(repeat(Node::Prim(Fix, sub_span)).take(n))
+                                    }
+                                    SubSide::Right => {
+                                        let mut node = Node::from_iter(
+                                            repeat(Node::Prim(Fix, sub_span)).take(n),
+                                        );
+                                        for _ in 1..n {
+                                            node = Node::Mod(
+                                                Dip,
+                                                eco_vec![node.sig_node().unwrap()],
+                                                sub_span,
+                                            );
+                                        }
+                                        node
+                                    }
+                                };
+                                let mut node = Node::Mod(prim, eco_vec![sn], span);
+                                for _ in 1..n {
+                                    node =
+                                        Node::Mod(prim, eco_vec![node.sig_node().unwrap()], span);
+                                }
+                                node.prepend(setup);
+                                node
+                            }
                         }
                     }
                 } else {

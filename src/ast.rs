@@ -637,15 +637,29 @@ pub struct Subscripted {
 
 /// A subscript
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Subscript {
-    /// Just __
-    Empty,
+pub struct Subscript {
+    /// The numeric part
+    pub num: Option<SubNum>,
+    /// The sided part
+    pub side: Option<SubSide>,
+}
+
+impl From<i32> for Subscript {
+    fn from(n: i32) -> Self {
+        Self {
+            num: Some(SubNum::N(n)),
+            side: None,
+        }
+    }
+}
+
+/// A subscript number
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SubNum {
     /// Just a negative sign
     NegOnly,
     /// A number
     N(i32),
-    /// A side
-    Side(SubSide),
     /// The subscript is too large
     TooLarge,
 }
@@ -659,16 +673,21 @@ pub enum SubSide {
 }
 
 impl Subscript {
-    /// Get the number
-    pub fn n(&self) -> Option<i32> {
-        match self {
-            Subscript::N(n) => Some(*n),
-            _ => None,
-        }
-    }
     /// Check if the subscript is useable
     pub fn is_useable(&self) -> bool {
-        matches!(self, Subscript::N(_) | Subscript::Side(_))
+        if let Some(num) = &self.num {
+            if !matches!(num, SubNum::N(_)) {
+                return false;
+            }
+        }
+        self.num.is_some() || self.side.is_some()
+    }
+    /// Get the numeric value, if any
+    pub fn num(&self) -> Option<i32> {
+        match self.num {
+            Some(SubNum::N(n)) => Some(n),
+            _ => None,
+        }
     }
 }
 
@@ -683,21 +702,27 @@ impl fmt::Display for SubSide {
 
 impl fmt::Display for Subscript {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Subscript::Empty => write!(f, "__"),
-            Subscript::NegOnly => write!(f, "₋"),
-            Subscript::N(n) => {
-                if *n < 0 {
-                    write!(f, "₋")?;
-                }
-                for c in n.abs().to_string().chars() {
-                    write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
-                }
-                Ok(())
-            }
-            Subscript::Side(side) => side.fmt(f),
-            Subscript::TooLarge => write!(f, "…"),
+        if self.num.is_none() && self.side.is_none() {
+            return write!(f, "__");
         }
+        if let Some(num) = &self.num {
+            match num {
+                SubNum::NegOnly => write!(f, "₋")?,
+                SubNum::N(n) => {
+                    if *n < 0 {
+                        write!(f, "₋")?;
+                    }
+                    for c in n.abs().to_string().chars() {
+                        write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
+                    }
+                }
+                SubNum::TooLarge => write!(f, "…")?,
+            }
+        }
+        if let Some(side) = &self.side {
+            side.fmt(f)?;
+        }
+        Ok(())
     }
 }
 

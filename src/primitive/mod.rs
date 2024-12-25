@@ -28,6 +28,7 @@ use serde::*;
 use crate::{
     algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
+    ast::{SubNum, Subscript},
     boxed::Boxed,
     encode,
     lex::{AsciiToken, SUBSCRIPT_DIGITS},
@@ -480,22 +481,34 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     /// The modified signature of the primitive given a subscript
-    pub fn subscript_sig(&self, n: Option<i32>) -> Option<Signature> {
+    pub fn subscript_sig(&self, n: Option<Subscript>) -> Option<Signature> {
         use Primitive::*;
-        Some(match (self, n) {
-            (prim, Some(_)) if prim.class() == PrimClass::DyadicPervasive => Signature::new(1, 1),
-            (
-                Select | Pick | Take | Drop | Join | Rerank | Rotate | Orient | Windows | Base,
-                Some(_),
-            ) => Signature::new(1, 1),
-            (First | Last, Some(n)) if n >= 0 => Signature::new(1, n as usize),
-            (Couple | Box, Some(n)) if n >= 0 => Signature::new(n as usize, 1),
-            (Couple, None) => Signature::new(2, 1),
-            (Box, None) => Signature::new(1, 1),
-            (Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8, _) => return self.sig(),
-            (Stack, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),
-            _ => return None,
-        })
+        Some(
+            match (self, n.and_then(|n| n.num), n.and_then(|n| n.side)) {
+                (prim, Some(_), None) if prim.class() == PrimClass::DyadicPervasive => {
+                    Signature::new(1, 1)
+                }
+                (prim, None, Some(_)) if prim.class() == PrimClass::DyadicPervasive => {
+                    Signature::new(2, 1)
+                }
+                (
+                    Select | Pick | Take | Drop | Join | Rerank | Rotate | Orient | Windows | Base,
+                    Some(_),
+                    None,
+                ) => Signature::new(1, 1),
+                (First | Last, Some(SubNum::N(n)), None) if n >= 0 => Signature::new(1, n as usize),
+                (Couple | Box, Some(SubNum::N(n)), None) if n >= 0 => Signature::new(n as usize, 1),
+                (Couple, None, None) => Signature::new(2, 1),
+                (Box, None, None) => Signature::new(1, 1),
+                (Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8, _, None) => {
+                    return self.sig()
+                }
+                (Stack, Some(SubNum::N(n)), None) if n >= 0 => {
+                    Signature::new(n as usize, n as usize)
+                }
+                _ => return None,
+            },
+        )
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;

@@ -13,6 +13,7 @@ use leptos::{
 
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
+    ast::Subscript,
     format::{format_str, FormatConfig},
     is_ident_char, lex,
     lsp::{BindingDocs, BindingDocsKind},
@@ -2229,19 +2230,22 @@ fn modifier_class(margs: usize) -> &'static str {
     }
 }
 
-fn prim_sig_class(prim: Primitive, subscript: Option<i32>) -> &'static str {
+fn prim_sig_class(prim: Primitive, subscript: Option<Subscript>) -> &'static str {
     match prim {
         Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose if at_least_a_little_gay() => {
             code_font!("monadic-function trans text-gradient")
         }
-        Primitive::Both if at_least_a_little_gay() => match subscript.unwrap_or(2) {
-            0 => code_font!("monadic-function aroace text-gradient"),
-            1 => code_font!("monadic-function aro text-gradient"),
-            2 => code_font!("monadic-modifier bi text-gradient"),
-            _ => code_font!("dyadic-function pan text-gradient"),
-        },
-        Primitive::Couple => match subscript.unwrap_or(2) {
+        Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
+        Primitive::Both if at_least_a_little_gay() => {
+            match subscript.and_then(|sub| sub.num()).unwrap_or(2) {
+                0 => code_font!("monadic-function aroace text-gradient"),
+                1 => code_font!("monadic-function aro text-gradient"),
+                2 => code_font!("monadic-modifier bi text-gradient"),
+                _ => code_font!("dyadic-function pan text-gradient"),
+            }
+        }
+        Primitive::Couple => match subscript.and_then(|sub| sub.num()).unwrap_or(2) {
             0 if at_least_a_little_gay() => {
                 code_font!("monadic-function aroace text-gradient")
             }

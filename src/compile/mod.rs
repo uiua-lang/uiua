@@ -2089,17 +2089,17 @@ code:
     #[allow(clippy::match_single_binding, unused_parens)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
         use Primitive::*;
-        let Some(n) = self.subscript_n_or_side(sub.n) else {
+        let Some(nos) = self.subscript_n_or_side(sub.n) else {
             return self.word(sub.word);
         };
         Ok(match sub.word.value {
             Word::Modified(m) => match m.modifier.value {
                 Modifier::Ref(_) | Modifier::Macro(..) => {
                     self.add_error(
-                        m.modifier.span.clone().merge(n.span.clone()),
+                        m.modifier.span.clone().merge(nos.span.clone()),
                         "Subscripts are not implemented for macros",
                     );
-                    self.modified(*m, Some(n.map(Into::into)))?
+                    self.modified(*m, Some(nos.map(Into::into)))?
                 }
                 Modifier::Primitive(prim) => match prim {
                     _ => {
@@ -2112,17 +2112,17 @@ code:
                                 | (Fill)
                         ) {
                             self.add_error(
-                                m.modifier.span.clone().merge(n.span.clone()),
+                                m.modifier.span.clone().merge(nos.span.clone()),
                                 format!("Subscripts are not implemented for {}", prim.format()),
                             );
                         }
-                        self.modified(*m, Some(n.map(Into::into)))?
+                        self.modified(*m, Some(nos.map(Into::into)))?
                     }
                 },
             },
             Word::Primitive(prim) if prim.class() == PrimClass::DyadicPervasive => {
-                let n_span = n.span;
-                match n.value {
+                let n_span = nos.span;
+                match nos.value {
                     SubNOrSide::N(n) => Node::from_iter([
                         self.word(n_span.sp(Word::Number(Ok(n as f64))))?,
                         self.primitive(prim, span),
@@ -2141,17 +2141,26 @@ code:
                         node.push(self.primitive(prim, span));
                         node
                     }
+                    SubNOrSide::Both(..) => {
+                        self.add_error(
+                            n_span,
+                            format!("Mixed subscripts are not allowed for {}", prim.format()),
+                        );
+                        self.primitive(prim, span)
+                    }
                 }
             }
             Word::Primitive(prim) => {
-                let Some(n) = self.subscript_n_only(n, prim.format()) else {
+                let Some(n) = self.subscript_n_only(nos, prim.format()) else {
                     return self.word(sub.word);
                 };
                 let n_span = n.span;
                 let n = n.value;
                 match prim {
                     prim if prim.sig().is_some_and(|sig| sig == (2, 1))
-                        && prim.subscript_sig(Some(2)).is_some_and(|sig| sig == (1, 1)) =>
+                        && prim
+                            .subscript_sig(Some(2.into()))
+                            .is_some_and(|sig| sig == (1, 1)) =>
                     {
                         Node::from_iter([
                             self.word(n_span.sp(Word::Number(Ok(n as f64))))?,
@@ -2321,23 +2330,26 @@ code:
 enum SubNOrSide {
     N(i32),
     Side(SubSide),
+    Both(i32, SubSide),
 }
 
 impl From<SubNOrSide> for Subscript {
     fn from(n_or_side: SubNOrSide) -> Self {
-        match n_or_side {
-            SubNOrSide::N(n) => Subscript::N(n),
-            SubNOrSide::Side(side) => Subscript::Side(side),
+        let (n, side) = match n_or_side {
+            SubNOrSide::N(n) => (Some(n), None),
+            SubNOrSide::Side(side) => (None, Some(side)),
+            SubNOrSide::Both(n, side) => (Some(n), Some(side)),
+        };
+        Self {
+            num: n.map(SubNum::N),
+            side,
         }
     }
 }
 
 impl PartialEq<i32> for SubNOrSide {
     fn eq(&self, other: &i32) -> bool {
-        match self {
-            SubNOrSide::N(n) => *n == *other,
-            SubNOrSide::Side(_) => false,
-        }
+        matches!(self, SubNOrSide::N(n) if *n == *other)
     }
 }
 
@@ -2347,22 +2359,23 @@ impl Compiler {
         self.subscript_n_only(n_or_s, for_what)
     }
     fn subscript_n_or_side(&mut self, sub: Sp<Subscript>) -> Option<Sp<SubNOrSide>> {
-        match sub.value {
-            Subscript::N(n) => Some(sub.span.sp(SubNOrSide::N(n))),
-            Subscript::Empty => {
+        let num = sub.value.num.and_then(|n| match n {
+            SubNum::N(n) => Some(n),
+            SubNum::NegOnly => {
                 self.add_error(sub.span.clone(), "Subscript is incomplete");
                 None
             }
-            Subscript::NegOnly => {
-                self.add_error(sub.span.clone(), "Subscript is incomplete");
-                None
-            }
-            Subscript::TooLarge => {
+            SubNum::TooLarge => {
                 self.add_error(sub.span.clone(), "Subscript is too large");
                 None
             }
-            Subscript::Side(side) => Some(sub.span.sp(SubNOrSide::Side(side))),
-        }
+        });
+        Some(sub.span.sp(match (num, sub.value.side) {
+            (Some(num), Some(side)) => SubNOrSide::Both(num, side),
+            (Some(num), None) => SubNOrSide::N(num),
+            (None, Some(side)) => SubNOrSide::Side(side),
+            (None, None) => return None,
+        }))
     }
     fn subscript_n_only(
         &mut self,
@@ -2371,7 +2384,7 @@ impl Compiler {
     ) -> Option<Sp<i32>> {
         match n_or_side.value {
             SubNOrSide::N(n) => Some(n_or_side.span.sp(n)),
-            SubNOrSide::Side(_) => {
+            SubNOrSide::Side(_) | SubNOrSide::Both(..) => {
                 self.add_error(
                     n_or_side.span,
                     format!("Sided subscripts are not allowed for {for_what}"),
@@ -2386,14 +2399,14 @@ impl Compiler {
         for_what: impl fmt::Display,
     ) -> Option<Sp<SubSide>> {
         match n_or_side.value {
-            SubNOrSide::N(_) => {
+            SubNOrSide::Side(side) => Some(n_or_side.span.sp(side)),
+            SubNOrSide::N(_) | SubNOrSide::Both(..) => {
                 self.add_error(
                     n_or_side.span,
                     format!("Numeric subscripts are not allowed for {for_what}"),
                 );
                 None
             }
-            SubNOrSide::Side(side) => Some(n_or_side.span.sp(side)),
         }
     }
     fn positive_subscript(

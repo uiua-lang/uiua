@@ -1436,8 +1436,8 @@ impl Formatter<'_> {
         self.output.push(')');
     }
     fn subscript(&mut self, sub: &Sp<Subscript>) {
-        match &sub.value {
-            Subscript::TooLarge => sub.span.as_str(self.inputs, |s| self.push(&sub.span, s)),
+        match &sub.value.num {
+            Some(SubNum::TooLarge) => sub.span.as_str(self.inputs, |s| self.push(&sub.span, s)),
             _ => self.push(&sub.span, &sub.value.to_string()),
         }
     }

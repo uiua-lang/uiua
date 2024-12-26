@@ -711,7 +711,10 @@ impl App {
             ..TextureOptions::LINEAR
         };
         match output {
-            SmartOutput::Normal(value) => OutputItem::Code(value.show()),
+            SmartOutput::Normal(value)
+            | SmartOutput::Svg {
+                original: value, ..
+            } => OutputItem::Code(value.show()),
             #[cfg(feature = "image")]
             SmartOutput::Png(bytes, label) => {
                 let img = image::load_from_memory_with_format(&bytes, ImageFormat::Png).unwrap();

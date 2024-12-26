@@ -306,9 +306,11 @@ pub fn Editor<'a>(
                     .into_view()
                 }
             }
-            OutputItem::Svg(s) => view!(<div><img
-                    class="output-image"
-                    src={format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))}/>
+            OutputItem::Svg(s, label) => view!(<div class="output-media-wrapper">
+                    <div class="output-image-label">{label}</div>
+                    <img
+                        class="output-image"
+                        src={format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))}/>
                 </div>)
             .into_view(),
             OutputItem::Report(report) => report_view(&report).into_view(),

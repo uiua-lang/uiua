@@ -1060,6 +1060,13 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
                 stack.push(OutputItem::Audio(bytes, label));
                 continue;
             }
+            SmartOutput::Svg { svg, original } => {
+                stack.push(OutputItem::Svg(
+                    svg,
+                    original.meta().label.as_ref().map(Into::into),
+                ));
+                continue;
+            }
             SmartOutput::Normal(value) => value,
         };
         // Otherwise, just show the value

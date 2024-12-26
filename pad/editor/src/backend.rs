@@ -113,7 +113,7 @@ impl WebBackend {
 
 pub enum OutputItem {
     String(String),
-    Svg(String),
+    Svg(String, Option<String>),
     Image(Vec<u8>, Option<String>),
     Gif(Vec<u8>, Option<String>),
     Audio(Vec<u8>, Option<String>),

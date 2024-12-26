@@ -1174,6 +1174,14 @@ impl Value {
             ))),
         }
     }
+    /// Attempt to convert the array to a string
+    pub fn as_string_opt(&self) -> Option<String> {
+        match (self, self.rank()) {
+            (Value::Char(chars), 0 | 1) => Some(chars.data.iter().collect()),
+            (Value::Box(boxes), 0) => boxes.data[0].0.as_string_opt(),
+            _ => None,
+        }
+    }
     /// Attempt to convert the array to a list of strings
     ///
     /// A rank-1 character array is treated as a single string.

@@ -18,6 +18,7 @@ pub enum SmartOutput {
     Png(Vec<u8>, Option<String>),
     Gif(Vec<u8>, Option<String>),
     Wav(Vec<u8>, Option<String>),
+    Svg { svg: String, original: Value },
 }
 
 impl SmartOutput {
@@ -57,6 +58,19 @@ impl SmartOutput {
                     return Self::Gif(bytes, label);
                 }
                 _ => {}
+            }
+        }
+        // Try to convert the value to an svg
+        if let Some(str) = value.as_string_opt() {
+            let mut str = str.trim().to_string();
+            if str.starts_with("<svg") && str.ends_with("</svg>") {
+                if !str.contains("xmlns") {
+                    str = str.replacen("<svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"", 1);
+                }
+                return Self::Svg {
+                    svg: str,
+                    original: value,
+                };
             }
         }
         // Otherwise, just show the value

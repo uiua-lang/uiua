@@ -318,10 +318,14 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut start = 0;
+        let has_fill = env.scalar_fill::<T>().is_ok() || env.scalar_unfill::<T>().is_ok();
         for (i, (&ind, &s)) in index.iter().zip(into.shape()).enumerate() {
             let ind = if ind >= 0 {
                 ind as usize
             } else {
+                if has_fill {
+                    return Ok(into);
+                }
                 (s as isize + ind) as usize
             };
             if ind >= s {

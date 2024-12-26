@@ -789,7 +789,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             {
                                 let j = (i + first.unwrap().to_ascii_lowercase() as usize) % 3;
                                 let mul = 1.0 - (i / 3 % 3) as f32 * 0.333;
-                                let t = mul * (c.saturating_sub(b'a') as f32 / 26.0);
+                                let t = mul * (c.saturating_sub(b'a') as f32 % 26.0 / 26.0);
                                 let target = MIN + (MAX - MIN) * t;
                                 components[j] = components[j].max(target);
                             }

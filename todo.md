@@ -1,9 +1,6 @@
 # Uiua Todo
 
 # 0.15
-- Mixed subscripts
-- `bind` and `ref` modifiers
-- Make `un by` more robust
 - Multidimensional `group`
 - `un`/`anti` `stencil`
 - `on`/`by` subscripts

@@ -168,6 +168,8 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
         let f = inv.ok_or_else(|| env.error("No inverse found"))?;
         (f, -n)
     };
+    let preserve_count = f.sig.args.saturating_sub(f.sig.outputs);
+    let preserved = env.copy_n_down(preserve_count, f.sig.args)?;
     let mut convergence_count = 0;
     if n.is_infinite() {
         // Converging repeat
@@ -180,6 +182,9 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
         let mut prev = env.pop(1)?;
         env.push(prev.clone());
         loop {
+            if preserve_count > 0 {
+                env.insert_stack(sig.outputs, preserved.iter().cloned())?;
+            }
             env.exec(f.clone())?;
             let next = env.pop("converging function result")?;
             let converged = next == prev;
@@ -208,9 +213,13 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
             }
         }
         for _ in 0..n {
+            if preserve_count > 0 {
+                env.insert_stack(sig.outputs, preserved.iter().cloned())?;
+            }
             env.exec(f.clone())?;
         }
     }
+    env.remove_n(preserve_count, sig.args)?;
     Ok(convergence_count)
 }
 
@@ -239,14 +248,10 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
             {} and {}, minus the condition, is {comp_sig}",
             body.sig, cond.sig
         ))),
-        Ordering::Greater => Some(env.error(format!(
-            "Do's functions cannot have a negative net stack \
-            change, but the composed signature of {} and \
-            {}, minus the condition, is {comp_sig}",
-            body.sig, cond.sig
-        ))),
         _ => None,
     };
+    let preserve_count = comp_sig.args.saturating_sub(comp_sig.outputs);
+    let preserved = env.copy_n_down(preserve_count, comp_sig.args)?;
     loop {
         // Make sure there are enough values
         if env.stack().len() < copy_count {
@@ -271,12 +276,15 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
             break;
         }
         // Call body
+        if preserve_count > 0 {
+            env.insert_stack(comp_sig.outputs, preserved.iter().cloned())?;
+        }
         env.exec(body.clone())?;
         if let Some(err) = sig_err {
             return Err(err);
         }
     }
-    Ok(())
+    env.remove_n(preserve_count, comp_sig.args)
 }
 
 pub fn split_by(f: SigNode, by_scalar: bool, keep_empty: bool, env: &mut Uiua) -> UiuaResult {

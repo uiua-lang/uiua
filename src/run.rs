@@ -1068,6 +1068,14 @@ impl Uiua {
         let height = self.require_height(n)?;
         Ok(self.rt.stack[height..].to_vec())
     }
+    /// Copy some values down the stack
+    ///
+    /// `depth` must be greater than or equal to `n`
+    pub fn copy_n_down(&self, n: usize, depth: usize) -> UiuaResult<Vec<Value>> {
+        debug_assert!(depth >= n);
+        let height = self.require_height(depth)?;
+        Ok(self.rt.stack[height..][..n].to_vec())
+    }
     /// Prepare to fork and return the arguments to f
     pub fn prepare_fork(&mut self, f_args: usize, g_args: usize) -> UiuaResult<Vec<Value>> {
         if f_args > g_args {
@@ -1095,6 +1103,7 @@ impl Uiua {
     ///
     /// `depth` must be greater than or equal to `n`
     pub fn dup_values(&mut self, n: usize, depth: usize) -> UiuaResult {
+        debug_assert!(depth >= n);
         let start = self.require_height(depth)?;
         for i in 0..n {
             self.rt.stack.push(self.rt.stack[start + i].clone());
@@ -1102,6 +1111,26 @@ impl Uiua {
         if n != depth {
             self.rt.stack[start..].rotate_right(n);
         }
+        Ok(())
+    }
+    /// Insert some values into the stack
+    pub fn insert_stack(
+        &mut self,
+        depth: usize,
+        values: impl IntoIterator<Item = Value>,
+    ) -> UiuaResult {
+        let start = self.require_height(depth)?;
+        self.rt.stack.extend(values);
+        self.rt.stack[start..].rotate_left(depth);
+        Ok(())
+    }
+    /// Remove some values from the stack
+    ///
+    /// `depth` must be greater than or equal to `n`
+    pub fn remove_n(&mut self, n: usize, depth: usize) -> UiuaResult {
+        debug_assert!(depth >= n);
+        let start = self.require_height(depth)?;
+        self.rt.stack.drain(start..start + n);
         Ok(())
     }
     /// Rotate the stack up at some depth

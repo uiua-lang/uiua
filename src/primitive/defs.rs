@@ -1652,6 +1652,16 @@ primitive!(
     ///
     /// ex: ⍥(+2)5 0
     /// ex: ⍥(⊂2)5 []
+    /// If the net stack change of the function is negative, then lower stack values will be preserved between iterations.
+    /// ex: ⍥+5 3 10
+    /// ex: ⍥⊂5 1 2
+    /// If the net stack change of the function is positive, then either the number of repetitions must be static, or the [repeat] must be wrapped in an array.
+    /// ex: F ← ⍥(⊢.)2
+    ///   : F [1_2 3_4]
+    /// ex! F ← ⍥(⊢.)⊙[1_2 3_4]
+    ///   : F 2
+    /// ex: F ← {⍥(⊢.)⊙[1_2 3_4]}
+    ///   : F 2
     /// Repeating [infinity] times will do a fixed-point iteration.
     /// The loop will end when the top value of the function's output is equal to the top value of the function's input.
     /// For example, this could be used to flatten a deeply nested array.
@@ -2122,18 +2132,20 @@ primitive!(
     /// Consider this equivalence:
     /// ex: ⍢(×3|<100)  1
     ///   : ⍢(×3|<100.) 1
-    /// The net stack change of the two functions, minus the condition, must be 0.
+    /// The net stack change of the two functions, minus the condition, is called the *composed signature*.
+    /// The composed signatures of the above examples all have a net stack change of `0`.
+    /// A positive composed signature net stack change is only allowed inside an array.
     /// ex! ⍢(×2.|<1000) 1
-    /// This requirement is relaxed inside an array.
     /// ex: [⍢(×2.|<1000)] 1
-    /// Alternatively, you can [join] the items to an initial list.
-    /// ex: ◌⍢(⊃(×2)⊂|<100) 1 []
+    /// A negative composed signature net stack change will reuse values lower on the stack.
+    /// ex: ⍢(×|<100) 1 2
+    /// ex: ⍢(⊂⤚(×⊢)|<100⊢) 1 2
     ///
     /// Even if signatures are invalid, [do] will alway run its condition function at least once.
     /// If the condition returns true, it will always run its body function at least once.
     /// This is helpful when initially setting up a loop so that you can debug if necessary.
     /// ex! ⍢(+|?) 5 3
-    /// ex! ⍢(?+|>2) 5 3
+    /// ex! ⍢(?..+|>2) 5 3
     ([2], Do, IteratingModifier, ("do", '⍢')),
     /// Set the fill value for a function
     ///

@@ -3,7 +3,6 @@
 use std::{
     array,
     cell::RefCell,
-    cmp::Ordering,
     collections::HashMap,
     fmt,
     hash::{DefaultHasher, Hash, Hasher},
@@ -711,69 +710,56 @@ impl VirtualEnv {
         &SigNode { sig, ref node }: &SigNode,
         n: BasicValue,
     ) -> Result<(), SigCheckError> {
-        if let BasicValue::Num(n) = n {
-            // If n is a known natural number, then the function can have any signature.
-            let sig = if n >= 0.0 { sig } else { sig.inverse() };
-            if n.fract() == 0.0 {
-                let n = n.abs() as usize;
-                if n > 0 {
-                    if n <= 100 {
-                        for _ in 0..n {
-                            self.node(node)?;
-                        }
-                    } else {
-                        let (args, outputs) = match sig.args.cmp(&sig.outputs) {
-                            Ordering::Equal => (sig.args, sig.outputs),
-                            Ordering::Less => (sig.args, n * (sig.outputs - sig.args) + sig.args),
-                            Ordering::Greater => {
-                                ((n - 1) * (sig.args - sig.outputs) + sig.args, sig.outputs)
+        if sig.args < sig.outputs {
+            // More outputs than arguments
+            if let BasicValue::Num(n) = n {
+                let sig = if n >= 0.0 { sig } else { sig.inverse() };
+                if n.fract() == 0.0 {
+                    // If n is a known natural number, then it's fine
+                    let n = n.abs() as usize;
+                    if n > 0 {
+                        if n <= 100 {
+                            for _ in 0..n {
+                                self.node(node)?;
                             }
-                        };
-                        if validate_size_of::<BasicValue>([outputs]).is_err() {
-                            return Err("repeat with excessive outputs".into());
+                        } else {
+                            let args = sig.args;
+                            let outputs = n * (sig.outputs - sig.args) + sig.args;
+                            if validate_size_of::<BasicValue>([outputs]).is_err() {
+                                return Err("repeat with excessive outputs".into());
+                            }
+                            self.handle_args_outputs(args, outputs);
                         }
-                        self.handle_args_outputs(args, outputs);
                     }
-                }
-            } else if n.is_infinite() {
-                match sig.args.cmp(&sig.outputs) {
-                    Ordering::Greater => {
-                        return Err(SigCheckError::from(format!(
-                            "repeat with infinity and a function with signature {sig}"
-                        ))
-                        .loop_overreach());
-                    }
-                    Ordering::Less if self.array_depth == 0 => {
+                } else if n.is_infinite() {
+                    // If n is infinite, then we must be in an array
+                    if self.array_depth == 0 {
                         self.handle_args_outputs(sig.args, sig.outputs);
                         return Err(SigCheckError::from(format!(
                             "repeat with infinity and a function with signature {sig}"
                         ))
                         .loop_variable(self.stack.sig().args));
+                    } else {
+                        self.handle_sig(sig);
                     }
-                    _ => self.handle_sig(sig),
+                } else {
+                    return Err("repeat without an integer or infinity".into());
                 }
             } else {
-                return Err("repeat without an integer or infinity".into());
-            }
-        } else {
-            // If n is unknown, then what we do depends on the signature
-            match sig.args.cmp(&sig.outputs) {
-                Ordering::Equal => self.handle_sig(sig),
-                Ordering::Greater => {
-                    return Err(SigCheckError::from(format!(
-                        "repeat with no number and a function with signature {sig}"
-                    ))
-                    .loop_overreach());
-                }
-                Ordering::Less if self.array_depth == 0 => {
+                // If there is no number, then we must be in an array
+                if self.array_depth == 0 {
                     self.handle_args_outputs(sig.args, sig.outputs);
                     return Err(SigCheckError::from(format!(
                         "repeat with no number and a function with signature {sig}"
                     ))
                     .loop_variable(self.stack.sig().args));
+                } else {
+                    self.handle_sig(sig);
                 }
-                Ordering::Less => self.handle_sig(sig),
             }
+        } else {
+            // Non-positive case
+            self.handle_sig(sig);
         }
         Ok(())
     }

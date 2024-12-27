@@ -5,6 +5,7 @@ Uiua is not yet stable.
 ## 0.15.0 - 2025-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) and [`do ⍢`](https://uiua.org/docs/do) with net-negative signatures now preserve lower stack values between iterations
 - Signature comments can now use a `$` rather than a `?` to automatically label arguments and outputs
 - Add sided subscripts for [`reach 𝄐`](https://uiua.org/docs/reach)
 

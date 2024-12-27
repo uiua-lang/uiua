@@ -1272,6 +1272,9 @@ impl<'a> Lexer<'a> {
                         && self.input_segments.get(self.loc.char_pos as usize) == Some(&"=");
                     if ambiguous_ne {
                         ident.pop();
+                        self.loc.char_pos -= 1;
+                        self.loc.byte_pos -= 1;
+                        self.loc.col -= 1;
                     }
                     // Try to parse as primitives
                     let lowercase_end = ident
@@ -1280,10 +1283,6 @@ impl<'a> Lexer<'a> {
                         .map_or(ident.len(), |(i, _)| i);
                     let lowercase = &ident[..lowercase_end];
                     if let Some(prims) = Primitive::from_format_name_multi(lowercase) {
-                        if ambiguous_ne {
-                            self.loc.char_pos -= 1;
-                            self.loc.byte_pos -= 1;
-                        }
                         let first_start = start;
                         let mut start = start;
                         let prim_count = prims.len();

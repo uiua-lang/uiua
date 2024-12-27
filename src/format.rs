@@ -1295,6 +1295,12 @@ impl Formatter<'_> {
         }
         match prim {
             Primitive::Utf8 => self.push(span, "utf₈"),
+            Primitive::Eq => {
+                if self.output.ends_with('!') {
+                    self.output.push(' ');
+                }
+                self.push(span, &as_str)
+            }
             _ => self.push(span, &as_str),
         }
     }
@@ -1758,6 +1764,7 @@ F ← (|2
   +
 )
 +__
+∘ M! =
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

@@ -609,7 +609,7 @@ impl Compiler {
                 if sn.sig.args < 2 {
                     self.emit_diagnostic(
                         format!(
-                            "The currect behavior of {} with < 2 arguments \
+                            "The current behavior of {} with < 2 arguments \
                             is deprecated and will change in the future",
                             prim.format(),
                         ),

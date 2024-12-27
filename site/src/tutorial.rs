@@ -1060,6 +1060,7 @@ fn TutorialMoreStack() -> impl IntoView {
         <Editor example="+⟜(⇡-) 3 8"/>
         <p>"Having a single glyph for something that can be written as simply "<Prims prims=[Fork, Identity]/>" may seem unnecessary, but you'll find that because the pattern is so common, it makes code easier to both read and write."</p>
         <p>"The "<Prim prim=By/>" modifier is similar. Instead of keeping the first argument on top of the stack, it keeps the last argument below the function's outputs."</p>
+        <p>"You can read more about these modifiers in the "<A href="/tutorial/evenmorestack">"Even More Stack Manipulation"</A>" tutorial."</p>
         <Editor example="÷⊸⧻ [1 2 3 4]"/>
         <Editor example="▽⊸> 5 [1 8 4 9 2 8 4]"/>
 

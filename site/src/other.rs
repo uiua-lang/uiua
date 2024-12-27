@@ -340,7 +340,7 @@ pub fn Combinators() -> impl IntoView {
             view!(<Prim prim=Flip/>).into_view(),
             ("⊂:", 2, "C", "Cardinal"),
         ),
-        (View::default(), ("⊢⇌", 1, "B", "Bluebird")),
+        (View::default(), ("□⊣", 1, "B", "Bluebird")),
         (View::default(), ("⇌⊂", 2, "B1", "Blackbird")),
         (
             view!(<Prim prim=On/>).into_view(),

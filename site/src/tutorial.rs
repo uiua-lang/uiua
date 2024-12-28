@@ -792,7 +792,7 @@ fn TutorialTypes() -> impl IntoView {
             prompt="increments the first character of a string"
             example="\"`rray\""
             answer="⊂:↘1:+1⊢."
-            best_answer="⍜⊢+:1"
+            best_answer="⍜⊢+₁"
             tests={&["\"Xou're\"", "\"coing\"", "\"freat!\""]}
             hidden="\"abc\""/>
     }

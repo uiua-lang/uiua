@@ -4,7 +4,6 @@
 - Multidimensional `group`
 - `un`/`anti` `stencil`
 - `on`/`by` subscripts
-- `do` negative signature extension
 - Optimizations through calls
 - Compile-time code string evaluation
 - Allow for multi-value constant bindings

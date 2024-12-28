@@ -64,7 +64,7 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
 }
 
 fn stencil_array<T: ArrayValue>(
-    arr: Array<T>,
+    mut arr: Array<T>,
     dims: &[WindowDim],
     f: SigNode,
     env: &mut Uiua,
@@ -83,6 +83,54 @@ where
         Node::Prim(Primitive::Box, _) => WindowAction::Box(EcoVec::new(), EcoVec::new()),
         _ => WindowAction::Default(multi_output(f.sig.outputs, Vec::new()), EcoVec::new()),
     };
+
+    let fill = env.scalar_fill::<T>().ok();
+    if dims.len() == 1 && (fill.is_none() || dims[0].fill == 0) {
+        // Linear optimization
+        let dim = dims[0];
+        if dim.size == dim.stride && matches!(&action, WindowAction::Id(_)) {
+            // Simple chunking
+            let chunk_count = arr.shape[0] / dim.size;
+            arr.shape[0] = dim.size;
+            arr.shape.insert(0, chunk_count);
+            arr.data.truncate(arr.shape.elements());
+            arr.take_map_keys();
+            env.push(arr);
+            return Ok(());
+        } else {
+            // General case
+            let row_len = arr.row_len();
+            let win_count = arr
+                .row_count()
+                .saturating_sub(dim.size.saturating_sub(dim.stride))
+                / dim.stride;
+            match action {
+                WindowAction::Id(mut data) => {
+                    for i in 0..win_count {
+                        data.extend_from_slice(
+                            &arr.data[i * dim.stride * row_len..][..dim.size * row_len],
+                        );
+                    }
+                    let mut new_shape = arr.shape;
+                    new_shape[0] = dim.size;
+                    new_shape.insert(0, win_count);
+                    env.push(Array::new(new_shape, data));
+                    return Ok(());
+                }
+                WindowAction::Box(mut boxes, _) => {
+                    for i in 0..win_count {
+                        boxes.push(Boxed(
+                            arr.slice_rows(i * dim.stride, i * dim.stride + dim.size)
+                                .into(),
+                        ));
+                    }
+                    env.push(Array::from(boxes));
+                    return Ok(());
+                }
+                WindowAction::Default(..) => {}
+            }
+        }
+    }
 
     let mut corner_starts = vec![0isize; dims.len()];
     for (c, d) in corner_starts.iter_mut().zip(dims) {
@@ -113,7 +161,7 @@ where
     }
     let cell_shape = Shape::from(&arr.shape[dims.len()..]);
     let cell_len = cell_shape.elements();
-    let fill = env.scalar_fill::<T>().ok().unwrap_or_else(T::proxy);
+    let fill = fill.unwrap_or_else(T::proxy);
     // dbg!(&arr.shape, &dims, &shape_prefix);
     // dbg!(&window_shape, &cell_shape, &maxs);
     env.without_fill(|env| -> UiuaResult {

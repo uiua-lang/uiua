@@ -289,6 +289,8 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[MemberOf, Range]/></th><td>"Make "<Prim prim=Range/>" then check "<Prim prim=MemberOf/></td><td>"Just check bounds"</td></tr>
             <tr><th><Prims prims=[MemberOf, Deshape]/><code>"₂"</code><Prims prims=[Range]/></th><td>"Make "<Prim prim=Range/>" then "<Prim prim=Deshape/>" then check "<Prim prim=MemberOf/></td><td>"Just check bounds"</td></tr>
             <tr><th><Prim prim=First glyph_only=true/>"/"<Prim prim=Last glyph_only=true/> <Prims prims=[Un, Sort]/></th><td><Prims prims=[Un, Sort] show_names=true/>" then take the "<Prim prim=First/>"/"<Prim prim=Last/></td><td>"Just pick a random row"</td></tr>
+            <tr><th><Prims prims=[Match, By, Rotate]/><code>"1"</code></th><td>"Make a copy, "<Prim prim=Rotate/>", and "<Prim prim=Match/></td><td>"Just check that every row is the same"</td></tr>
+            <tr><th><Prims prims=[Reduce, Mul, Stencil, Match]/></th><td><Prim prim=Stencil/>" then "<Prim prim=Reduce/></td><td>"Just check that every row is the same"</td></tr>
         </table>
 
         <Hd id="other-optimizations">"Other Optimizations"</Hd>

@@ -51,3 +51,16 @@ S~PushB
 
 ~Foo {A: °0type|B: °0type}
 ⍤⤙≍ [7 42] ⊟ °Foo Foo 7 42
+~Foo [A: °0type|B: °0type]
+⍤⤙≍ [7 42] ⊟ °Foo Foo 7 42
+
+┌─╴Foo
+  |Bar [A]
+  |Baz [A]
+  |Qux 
+└─╴
+⍤⤙≍ 1 /↥⌕"Non-boxed variant" ⍣Foo~Bar⋅∘ @a
+⍤⤙≍ 1 /↥⌕"Non-boxed variant" ⍣Foo~Baz⋅∘ [1 2 3]
+⍤⤙≍ [0 5] Foo~Bar 5
+⍤⤙≍ [1 5] Foo~Baz 5
+⍤⤙≍ 2 Foo~Qux

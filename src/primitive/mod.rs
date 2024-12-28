@@ -1673,11 +1673,11 @@ impl ImplPrimitive {
                 let val = env.pop(1)?;
                 if !matches!(val, Value::Num(_) | Value::Byte(_) | Value::Box(_)) {
                     return Err(env.error(format!(
-                        "Variant field must be numbers or boxes, but it is {}",
+                        "Non-boxed variant field must be numbers or boxes, but it is {}",
                         val.type_name_plural()
                     )));
                 }
-                if val.rank() > 1 {
+                if val.rank() > 0 {
                     return Err(env.error(format!(
                         "Non-boxed variant field must be rank 0 or 1, but it is rank {}",
                         val.rank()
@@ -1697,7 +1697,11 @@ impl ImplPrimitive {
                 let (head, tail) = val.unjoin(env).unwrap();
                 let set_tag = head.unboxed();
                 if tag != set_tag {
-                    return Err(env.error(format!("Variant tag is {set_tag} instead of {tag}")));
+                    return Err(env.error(if set_tag.rank() == 0 {
+                        format!("Variant tag is {set_tag} instead of {tag}")
+                    } else {
+                        format!("Variant tag is rank {} instead of {tag}", set_tag.rank())
+                    }));
                 }
                 env.push(tail);
             }

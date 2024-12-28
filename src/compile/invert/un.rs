@@ -977,6 +977,7 @@ impl InvertPattern for Trivial {
             }
             [node @ SetOutputComment { .. }, input @ ..] => Ok((input, node.clone())),
             [Call(f, _), input @ ..] => Ok((input, asm[f].un_inverse(asm).map_err(|e| e.func(f))?)),
+            [ImplPrim(ValidateNonBoxedVariant, _), input @ ..] => Ok((input, Node::empty())),
             _ => generic(),
         }
     }

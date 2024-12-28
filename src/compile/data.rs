@@ -330,14 +330,7 @@ impl Compiler {
             let mut inner = Node::default();
             for field in fields.iter().rev() {
                 let mut arg = if let Some(sn) = &field.init {
-                    let mut arg = sn.clone();
-                    if !boxed {
-                        arg.node.push(Node::ImplPrim(
-                            ImplPrimitive::ValidateNonBoxedVariant,
-                            field.span,
-                        ));
-                    }
-                    arg
+                    sn.clone()
                 } else {
                     self.code_meta
                         .global_references
@@ -346,6 +339,11 @@ impl Compiler {
                 };
                 if boxed {
                     arg.node.push(Node::Label(field.name.clone(), span));
+                } else {
+                    arg.node.push(Node::ImplPrim(
+                        ImplPrimitive::ValidateNonBoxedVariant,
+                        field.span,
+                    ))
                 }
                 if !inner.is_empty() {
                     for _ in 0..arg.sig.args {

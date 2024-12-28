@@ -317,6 +317,7 @@ fn EvenMoreStack() -> impl IntoView {
         <Editor example="∧(⍉▽)÷◡∩△ [1_2 3_4] °△4_6"/>
         <p>"For a simpler example, we can use "<Prim prim=Below/>" with "<Prim prim=Gap/>" to call a function on a value further down the stack."</p>
         <Editor example="◡⋅⧻ 1_2_3 \"hello!\""/>
+        <p>"This leaves the output of the function on "<em>"top"</em>" of the stack, and leaves the input to the function alone, unlike "<Prim prim=Dip/>" would."</p>
 
         <br/>
         <hr/>

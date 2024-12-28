@@ -258,7 +258,7 @@ fn EvenMoreStack() -> impl IntoView {
         <p>"This table shows how these six modifiers are related:"</p>
         <table class="bordered-table header-centered-table">
             <tr>
-                <td colspan="2">"Keep _ argument"</td>
+                <td colspan="2">"Keep __ argument"</td>
                 <th></th>
                 <th></th>
             </tr>
@@ -274,7 +274,7 @@ fn EvenMoreStack() -> impl IntoView {
                 <td><Prim prim=With/></td>
                 <td><Prim prim=Above/><span title="Experimental">"🧪"</span></td>
                 <th>"above"</th>
-                <td rowspan="2">"_ the outputs"</td>
+                <td rowspan="2">"__ the outputs"</td>
             </tr>
             <tr>
                 <td><Prim prim=Off/></td>

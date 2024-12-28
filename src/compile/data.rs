@@ -70,7 +70,7 @@ impl Compiler {
             span: usize,
             global_index: usize,
             comment: Option<String>,
-            validator: Option<(Node, bool, CodeSpan)>,
+            validator_inv: Option<Node>,
             init: Option<SigNode>,
         }
         let mut fields = Vec::new();
@@ -99,34 +99,91 @@ impl Compiler {
                         .collect::<String>()
                 });
                 // Compile validator
-                let validator = if let Some(validator) = data_field.validator {
-                    let mut sn = self.words_sig(validator.words)?;
-                    if sn.sig.args != 1 {
+                let validator_and_inv = if let Some(validator) = data_field.validator {
+                    let mut validator = self.words_sig(validator.words)?;
+                    if validator.sig.args != 1 {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
                                 "Field validator must have 1 \
                                 argument, but its signature is {}",
-                                sn.sig
+                                validator.sig
                             ),
                         );
                     }
-                    if sn.sig.outputs > 1 {
+                    if validator.sig.outputs > 1 {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
                                 "Field validator must have 0 or 1 \
                                 output, but its signature is {}",
-                                sn.sig
+                                validator.sig
                             ),
                         );
                     }
                     let mut validation_only = false;
-                    if sn.sig.outputs == 0 {
+                    if validator.sig.outputs == 0 {
                         validation_only = true;
-                        sn.node.prepend(Node::Prim(Primitive::Dup, span));
+                        validator.node.prepend(Node::Prim(Primitive::Dup, span));
+                        validator.sig.outputs = 1;
                     }
-                    Some((sn.node, validation_only, validator.open_span.clone()))
+
+                    let inverse = validator.node.un_inverse(&self.asm);
+                    Some(match inverse {
+                        Ok(inverse) => {
+                            let inverse = SigNode::new(Signature::new(1, 1), inverse);
+                            (
+                                Node::CustomInverse(
+                                    CustomInverse {
+                                        normal: Ok(validator.clone()),
+                                        un: Some(inverse.clone()),
+                                        under: Some((validator.clone(), inverse.clone())),
+                                        ..Default::default()
+                                    }
+                                    .into(),
+                                    span,
+                                ),
+                                Node::CustomInverse(
+                                    CustomInverse {
+                                        normal: Ok(inverse.clone()),
+                                        un: Some(validator.clone()),
+                                        under: Some((inverse, validator)),
+                                        ..Default::default()
+                                    }
+                                    .into(),
+                                    span,
+                                ),
+                            )
+                        }
+                        Err(_) if validation_only => (
+                            Node::CustomInverse(
+                                CustomInverse {
+                                    normal: Ok(validator.clone()),
+                                    un: Some(SigNode::default()),
+                                    under: Some((validator.clone(), SigNode::default())),
+                                    ..Default::default()
+                                }
+                                .into(),
+                                span,
+                            ),
+                            Node::CustomInverse(
+                                CustomInverse {
+                                    un: Some(validator.clone()),
+                                    under: Some((SigNode::default(), validator)),
+                                    ..Default::default()
+                                }
+                                .into(),
+                                span,
+                            ),
+                        ),
+                        Err(e) => {
+                            self.add_error(
+                                data_field.name.span.clone(),
+                                format!("Transforming validator has no inverse: {e}"),
+                            );
+                            (validator.node, Node::empty())
+                        }
+                    })
                 } else {
                     None
                 };
@@ -152,7 +209,7 @@ impl Compiler {
                     }
                     // Compile words
                     let mut sn = self.words_sig(init.words)?;
-                    if let Some((va_node, ..)) = &validator {
+                    if let Some((va_node, _)) = &validator_and_inv {
                         sn.node.push(va_node.clone());
                     }
                     if sn.sig.outputs != 1 {
@@ -173,9 +230,9 @@ impl Compiler {
                     }
                     Some(sn)
                 } else {
-                    validator
+                    validator_and_inv
                         .as_ref()
-                        .map(|(va_node, ..)| SigNode::new(Signature::new(1, 1), va_node.clone()))
+                        .map(|(va_node, _)| SigNode::new(Signature::new(1, 1), va_node.clone()))
                 };
                 fields.push(Field {
                     name: data_field.name.value,
@@ -183,7 +240,7 @@ impl Compiler {
                     global_index: 0,
                     comment,
                     span,
-                    validator,
+                    validator_inv: validator_and_inv.map(|(_, inv)| inv),
                     init,
                 });
             }
@@ -216,35 +273,7 @@ impl Compiler {
                 node.push(Node::RemoveLabel(Some(field.name.clone()), span));
             }
             // Add validator
-            if let Some((va_instrs, validation_only, _va_span)) = field.validator.take() {
-                let inverse = va_instrs.un_inverse(&self.asm);
-                let make_node = |node: Node| SigNode::new(Signature::new(1, 1), node);
-                match inverse {
-                    Ok(va_inverse) => node.push(Node::CustomInverse(
-                        CustomInverse {
-                            normal: Ok(make_node(va_inverse.clone())),
-                            un: Some(make_node(va_instrs.clone())),
-                            under: Some((make_node(va_inverse), make_node(va_instrs))),
-                            ..Default::default()
-                        }
-                        .into(),
-                        field.span,
-                    )),
-                    Err(_) if validation_only => node.push(Node::CustomInverse(
-                        CustomInverse {
-                            un: Some(make_node(va_instrs.clone())),
-                            under: Some((Default::default(), make_node(va_instrs))),
-                            ..Default::default()
-                        }
-                        .into(),
-                        field.span,
-                    )),
-                    Err(e) => self.add_error(
-                        field.name_span.clone(),
-                        format!("Transforming validator has no inverse: {e}"),
-                    ),
-                }
-            }
+            node.extend(field.validator_inv.take());
             let func = self
                 .asm
                 .add_function(id.clone(), Signature::new(1, 1), node);

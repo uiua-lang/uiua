@@ -39,7 +39,6 @@
 └─╴
 ⍤⤙≍ 5 Foo~Bar~a Foo~Bar 5
 
-# Experimental!
 ┌─╴S
   ~{A B C}
   PopA  ← :⍜A(:°(⊂:))
@@ -49,3 +48,6 @@ S [1 2 3] [4 5 6] [7 8 9]
 S~PopA
 S~PushB
 ⍤⤙≍ S [1 2] [4 5 6 3] [7 8 9]
+
+~Foo {A: °0type|B: °0type}
+⍤⤙≍ [7 42] ⊟ °Foo Foo 7 42

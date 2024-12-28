@@ -111,3 +111,7 @@ F! ← ^2
 ⧈∘.3
 
 ⬚[1_2 3_4]↙5 [1 2 3 4]
+
+# Experimental!
+~MyData {Foo: °0type|Bar: °1type}
+MyData 3 5 # Fails

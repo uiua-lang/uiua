@@ -1039,8 +1039,14 @@ mod server {
                 return Ok(None);
             };
             let path = uri_path(&params.text_document_position_params.text_document.uri);
+            self.debug(format!("hover path: {path:?}")).await;
             let (line, col) =
                 lsp_pos_to_uiua(params.text_document_position_params.position, &doc.input);
+
+            let srcs: std::collections::BTreeSet<_> =
+                doc.spans.iter().map(|sp| sp.span.src.clone()).collect();
+            self.debug(format!("hover srcs: {srcs:?}")).await;
+
             // Hovering a primitive
             for sp in &doc.spans {
                 if sp.span.contains_line_col(line, col) && sp.span.src == path {
@@ -2429,7 +2435,7 @@ mod server {
     }
 
     fn uri_path(uri: &Url) -> PathBuf {
-        let path = uri.path().replace("/c%3A", "C:");
+        let path = uri.path().replace("/c%3A", "C:").replace("%20", " ");
         let path = PathBuf::from(path);
         path.canonicalize().unwrap_or(path)
     }

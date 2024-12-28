@@ -254,6 +254,7 @@ fn EvenMoreStack() -> impl IntoView {
         <Hd id="more-modifiers">"More Modifiers"</Hd>
         <p>"Consider that "<Prim prim=On/>" keeps the "<strong>"first"</strong>" argument "<strong>"above"</strong>" the outputs of a function, and "<Prim prim=By/>" keeps the "<strong>"last"</strong>" argument "<strong>"below"</strong>" the outputs of a function. We can then conceive of similar modifiers that fill in other possible combinations."</p>
         <p><Prim prim=With/>" keeps the "<strong>"last"</strong>" argument "<strong>"above"</strong>" the outputs of a function, and "<Prim prim=Off/>" keeps the "<strong>"first"</strong>" argument "<strong>"below"</strong>" the outputs of a function."</p>
+        <p><Prim prim=Below/>" and the "<code>"# Experimental!"</code>" "<Prim prim=Above/>" do something similar, but with "<em>"every"</em>" argument instead of just the first or last."</p>
         <p>"This table shows how these six modifiers are related:"</p>
         <table class="bordered-table header-centered-table">
             <tr>
@@ -317,6 +318,7 @@ fn EvenMoreStack() -> impl IntoView {
         <p>"For a simpler example, we can use "<Prim prim=Below/>" with "<Prim prim=Gap/>" to call a function on a value further down the stack."</p>
         <Editor example="◡⋅⧻ 1_2_3 \"hello!\""/>
 
+        <br/>
         <hr/>
 
         <p>"Mastering these stack manipulation modifiers takes time and practice. When you end up with a convoluted bit of stack manipulation code, try to see if you can simplify it by using one of these modifiers."</p>

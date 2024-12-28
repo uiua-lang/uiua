@@ -368,6 +368,16 @@ impl Optimization for AllSameOpt {
             [ImplPrim(CountUnique, span), Push(val), Prim(Le, _), ..] if *val == 1 => {
                 Some((3, ImplPrim(AllSame, *span)))
             }
+            [Mod(Stencil, stencil_args, span), Mod(Reduce, reduce_args, _), ..] => {
+                let ([stencil_f], [reduce_f]) = (stencil_args.as_slice(), reduce_args.as_slice())
+                else {
+                    return None;
+                };
+                match (&stencil_f.node, &reduce_f.node) {
+                    (Prim(Match, _), Prim(Mul, _)) => Some((2, ImplPrim(AllSame, *span))),
+                    _ => None,
+                }
+            }
             _ => None,
         })
     }

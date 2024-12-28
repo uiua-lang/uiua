@@ -1039,13 +1039,8 @@ mod server {
                 return Ok(None);
             };
             let path = uri_path(&params.text_document_position_params.text_document.uri);
-            self.debug(format!("hover path: {path:?}")).await;
             let (line, col) =
                 lsp_pos_to_uiua(params.text_document_position_params.position, &doc.input);
-
-            let srcs: std::collections::BTreeSet<_> =
-                doc.spans.iter().map(|sp| sp.span.src.clone()).collect();
-            self.debug(format!("hover srcs: {srcs:?}")).await;
 
             // Hovering a primitive
             for sp in &doc.spans {

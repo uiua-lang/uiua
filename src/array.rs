@@ -675,13 +675,13 @@ impl<T: ArrayValue> Hash for Array<T> {
         if let Some(keys) = self.map_keys() {
             keys.hash(hasher);
         }
+        T::TYPE_ID.hash(hasher);
         if let Some(scalar) = self.as_scalar() {
             if let Some(value) = scalar.nested_value() {
                 value.hash(hasher);
                 return;
             }
         }
-        T::TYPE_ID.hash(hasher);
         self.shape.hash(hasher);
         self.data.iter().for_each(|x| x.array_hash(hasher));
     }

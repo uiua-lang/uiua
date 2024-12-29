@@ -499,8 +499,14 @@ impl MapKeys {
         Ok(replaced)
     }
     fn get(&self, key: &Value) -> Option<usize> {
+        let mut key = key;
         if self.keys.row_count() == 0 {
             return None;
+        }
+        let boxed_key: Value;
+        if matches!(self.keys, Value::Box(_)) && !matches!(key, Value::Box(_)) {
+            boxed_key = Boxed(key.clone()).into();
+            key = &boxed_key;
         }
         let start = val_as_arr!(key, |a| hash_start(a, self.capacity()));
         let mut key_index = start;

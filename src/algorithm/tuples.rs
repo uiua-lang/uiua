@@ -268,7 +268,8 @@ fn combinations(n: usize, k: usize, same: bool) -> f64 {
     let calc_n = if same { n + k - 1 } else { n };
     (1..=k.min(calc_n - k))
         .map(|i| (calc_n + 1 - i) as f64 / i as f64)
-        .product()
+        .product::<f64>()
+        .round()
 }
 
 fn permutations(n: usize, k: usize) -> f64 {

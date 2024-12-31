@@ -520,6 +520,7 @@ impl Parser<'_> {
                             f(' ');
                         }
                     }
+                    Token::Comment | Token::OutputComment(_) => {}
                     _ => token.span.as_str(inputs, |s| s.chars().for_each(&mut f)),
                 }
             }

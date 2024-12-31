@@ -1706,34 +1706,35 @@ impl Value {
         })
     }
     /// Test if rank 1 subarrays are integer coordinates in a range
-    pub fn multidim_memberof_range(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn multidim_memberof_range(&self, elems: Self, env: &Uiua) -> UiuaResult<Self> {
+        let of = self;
+
         fn fallback(a: &Value, b: &Value, env: &Uiua) -> UiuaResult<Value> {
             let mut range = a.range(env)?;
             range.rerank(&Value::Num(1.0.into()), env)?;
             range.memberof(b, env)
         }
 
-        if self.rank() != 1 {
-            return fallback(self, &from, env);
+        if of.rank() != 1 {
+            return fallback(of, &elems, env);
         }
 
         let Some(range_bound) =
-            (self.as_nums(env, "").ok()).filter(|nums| nums.iter().all(|f| f.fract() == 0.0))
+            (of.as_nums(env, "").ok()).filter(|nums| nums.iter().all(|f| f.fract() == 0.0))
         else {
-            return fallback(self, &from, env);
+            return fallback(of, &elems, env);
         };
 
-        if !from.shape().ends_with(&[range_bound.len()]) {
-            let shape = from.shape();
-            let new_shape = &shape[..shape.len() - 1];
+        if !(elems.rank() == 0 || elems.shape().ends_with(&[range_bound.len()])) {
+            let new_shape = &elems.shape()[..elems.rank() - 1];
             return Ok(Value::Byte(Array::new(
                 new_shape,
                 CowSlice::from_elem(0, new_shape.iter().product()),
             )));
         }
 
-        match from.rank().cmp(&2) {
-            Ordering::Equal => Ok(match from {
+        match elems.rank().cmp(&2) {
+            Ordering::Equal => Ok(match elems {
                 Value::Num(nums) => {
                     let data: EcoVec<u8> = nums
                         .row_slices()
@@ -1754,17 +1755,17 @@ impl Value {
                         .collect();
                     Array::new(&bytes.shape[..1], data).into()
                 }
-                from => fallback(self, &from, env)?,
+                from => fallback(of, &from, env)?,
             }),
             Ordering::Greater => {
-                let mut rows = Vec::with_capacity(from.row_count());
-                for row in from.rows() {
-                    let Some(row) = self
+                let mut rows = Vec::with_capacity(elems.row_count());
+                for row in elems.rows() {
+                    let Some(row) = of
                         .multidim_memberof_range(row, env)?
                         .as_byte_array()
                         .cloned()
                     else {
-                        return fallback(self, &from, env);
+                        return fallback(of, &elems, env);
                     };
                     rows.push(row);
                 }
@@ -1772,7 +1773,7 @@ impl Value {
                     Array::from_row_arrays(rows, env).map(Into::into)?,
                 ))
             }
-            Ordering::Less => fallback(self, &from, env),
+            Ordering::Less => fallback(of, &elems, env),
         }
     }
     /// Generate randomly seeded arrays

@@ -1537,13 +1537,29 @@ fn flip_unsplit_lines_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec
         .last()
         .is_some_and(|w| matches!(w.value, Word::FlipLine));
 
+    let trim_spaces = |words: &mut Vec<Sp<Word>>| {
+        while (words.first()).is_some_and(|w| matches!(w.value, Word::Spaces)) {
+            words.remove(0);
+        }
+        while words
+            .last()
+            .is_some_and(|w| matches!(w.value, Word::Spaces))
+        {
+            words.pop();
+        }
+    };
+
     let flip_line = |mut line: Vec<Sp<Word>>| {
         if line.iter().any(|w| matches!(w.value, Word::FlipLine)) {
             let mut parts = Vec::new();
             while let Some(i) = (line.iter()).rposition(|w| matches!(w.value, Word::FlipLine)) {
-                parts.push(line.split_off(i + 1));
-                line.pop();
+                let mut part = line.split_off(i + 1);
+                trim_spaces(&mut part);
+                parts.push(part);
+                let span = line.pop().unwrap().span;
+                parts.push(vec![span.sp(Word::Spaces)]);
             }
+            trim_spaces(&mut line);
             parts.push(line);
             line = parts.into_iter().flatten().collect();
         }
@@ -1553,13 +1569,7 @@ fn flip_unsplit_lines_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec
     let mut new_lines = vec![flip_line(first)];
 
     for mut line in lines {
-        // Trim spaces
-        while (line.first()).is_some_and(|w| matches!(w.value, Word::Spaces)) {
-            line.remove(0);
-        }
-        while line.last().is_some_and(|w| matches!(w.value, Word::Spaces)) {
-            line.pop();
-        }
+        trim_spaces(&mut line);
         // Check for leading and trailing unbreak lines
         let unsplit_front = (line.first()).is_some_and(|w| matches!(w.value, Word::FlipLine));
         if unsplit_front {

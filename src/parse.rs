@@ -1536,7 +1536,8 @@ fn flip_unsplit_lines_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec
     };
     let mut unsplit = trim_spaces(&first, true)
         .last()
-        .is_some_and(|w| matches!(w.value, Word::FlipLine));
+        .filter(|w| matches!(w.value, Word::FlipLine))
+        .cloned();
 
     let trim_spaces = |words: &mut Vec<Sp<Word>>| {
         while (words.first()).is_some_and(|w| matches!(w.value, Word::Spaces)) {
@@ -1572,22 +1573,28 @@ fn flip_unsplit_lines_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec
     for mut line in lines {
         trim_spaces(&mut line);
         // Check for leading and trailing unbreak lines
-        let unsplit_front = (line.first()).is_some_and(|w| matches!(w.value, Word::FlipLine));
-        if unsplit_front {
+        let unsplit_front = (line.first())
+            .filter(|w| matches!(w.value, Word::FlipLine))
+            .cloned();
+        if unsplit_front.is_some() {
             line.remove(0);
         }
-        let unsplit_back = (line.last()).is_some_and(|w| matches!(w.value, Word::FlipLine));
-        if unsplit_back {
+        let unsplit_back = (line.last())
+            .filter(|w| matches!(w.value, Word::FlipLine))
+            .cloned();
+        if unsplit_back.is_some() {
             line.pop();
         }
         line = flip_line(line);
         // Reorder lines
-        if unsplit || unsplit_front {
+        if let Some(word) = unsplit.as_ref().or(unsplit_front.as_ref()) {
             let prev = new_lines.last_mut().unwrap();
             if in_array {
+                prev.push(word.span.clone().sp(Word::Spaces));
                 prev.extend(line);
             } else {
                 let taken_prev = replace(prev, line);
+                prev.push(word.span.clone().sp(Word::Spaces));
                 prev.extend(taken_prev);
             }
         } else {

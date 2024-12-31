@@ -8,6 +8,8 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) and [`do ⍢`](https://uiua.org/docs/do) with net-negative signatures now preserve lower stack values between iterations
 - Signature comments can now use a `$` rather than a `?` to automatically label arguments and outputs
 - Add sided subscripts for [`reach 𝄐`](https://uiua.org/docs/reach)
+- Add experimental subscripts to [`negate ¯`](https://uiua.org/docs/negate)
+  - This will [`multiply ×`](https://uiua.org/docs/multiply) a number by the Nth root of unity
 
 ## 0.14.1 - 2024-12-23
 ### Interpreter

@@ -35,7 +35,7 @@ F ← ×G
 F 10 4
 ```
 
-[stack]() llows you to inspect the stack at a given place in the code. It makes it easy to get a quick sense of what values a function is working with.
+[stack]() allows you to inspect the stack at a given place in the code. It makes it easy to get a quick sense of what values a function is working with.
 
 ## Labels
 

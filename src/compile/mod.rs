@@ -2055,6 +2055,24 @@ code:
                             .map(|_| self.primitive(prim, span.clone()))
                             .collect()
                     }
+                    Primitive::Neg => {
+                        self.subscript_experimental(prim, &span);
+                        if n == 0 {
+                            self.add_error(span.clone(), "Cannot have the 0th root of unity");
+                        }
+                        // Ensure that common cases are exact
+                        let root_of_unity = match n {
+                            1 | -1 => crate::Complex::ONE,
+                            2 | -2 => -crate::Complex::ONE,
+                            4 => crate::Complex::I,
+                            -4 => -crate::Complex::I,
+                            _ => (crate::Complex::I * (std::f64::consts::TAU / n as f64)).exp(),
+                        };
+                        Node::from_iter([
+                            Node::new_push(root_of_unity),
+                            self.primitive(Primitive::Mul, span),
+                        ])
+                    }
                     Primitive::Sqrt => {
                         if n == 0 {
                             self.add_error(span.clone(), "Cannot take 0th root");

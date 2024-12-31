@@ -6,7 +6,7 @@ use std::{
     io::Cursor,
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         Mutex,
     },
 };
@@ -26,6 +26,7 @@ pub struct WebBackend {
     streams: Mutex<HashMap<Handle, VirtualStream>>,
     id: u64,
     breakpoint: AtomicUsize,
+    output_enabled: AtomicBool,
 }
 
 struct VirtualStream {
@@ -99,6 +100,7 @@ impl WebBackend {
             streams: HashMap::new().into(),
             id,
             breakpoint: AtomicUsize::new(0),
+            output_enabled: AtomicBool::new(true),
         }
     }
     pub fn finish(&self) {
@@ -157,7 +159,16 @@ impl SysBackend for WebBackend {
     fn any_mut(&mut self) -> &mut dyn Any {
         self
     }
+    fn output_enabled(&self) -> bool {
+        self.output_enabled.load(Ordering::Relaxed)
+    }
+    fn set_output_enabled(&self, enabled: bool) -> bool {
+        self.output_enabled.swap(enabled, Ordering::Relaxed)
+    }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
+        if !self.output_enabled() {
+            return Ok(());
+        }
         if s.contains('\u{07}') {
             weewuh();
         }
@@ -180,13 +191,22 @@ impl SysBackend for WebBackend {
         Ok(())
     }
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
+        if !self.output_enabled() {
+            return Ok(());
+        }
         self.stderr.lock().unwrap().push_str(s);
         Ok(())
     }
     fn print_str_trace(&self, s: &str) {
+        if !self.output_enabled() {
+            return;
+        }
         self.trace.lock().unwrap().push_str(s);
     }
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
+        if !self.output_enabled() {
+            return Ok(None);
+        }
         Ok(window()
             .prompt_with_message("Enter a line of text for stdin")
             .unwrap_or(None))

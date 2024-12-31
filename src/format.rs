@@ -1420,16 +1420,14 @@ impl Formatter<'_> {
             let mut env = Uiua::with_backend(FormatterBackend::default())
                 .with_execution_limit(Duration::from_secs(2));
 
-            #[cfg(feature = "native_sys")]
-            let enabled = crate::sys::native::set_output_enabled(false);
+            let enabled = env.rt.backend.set_output_enabled(false);
             let res = env.compile_run(|comp| {
                 comp.print_diagnostics(false)
                     .mode(RunMode::All)
                     .pre_eval_mode(PreEvalMode::Lazy)
                     .load_str_src(&self.inputs.get(&self.src), self.src.clone())
             });
-            #[cfg(feature = "native_sys")]
-            crate::sys::native::set_output_enabled(enabled);
+            env.rt.backend.set_output_enabled(enabled);
 
             let mut values = env.rt.output_comments;
             if let Err(e) = res {

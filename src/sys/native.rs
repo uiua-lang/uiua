@@ -297,16 +297,6 @@ pub fn set_audio_stream_time_port(port: u16) -> std::io::Result<()> {
     Ok(())
 }
 
-pub(crate) fn output_enabled() -> bool {
-    NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed)
-}
-
-pub(crate) fn set_output_enabled(enabled: bool) -> bool {
-    NATIVE_SYS
-        .output_enabled
-        .swap(enabled, atomic::Ordering::Relaxed)
-}
-
 impl SysBackend for NativeSys {
     fn any(&self) -> &dyn Any {
         self
@@ -314,8 +304,17 @@ impl SysBackend for NativeSys {
     fn any_mut(&mut self) -> &mut dyn Any {
         self
     }
+    fn output_enabled(&self) -> bool {
+        NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed)
+    }
+
+    fn set_output_enabled(&self, enabled: bool) -> bool {
+        NATIVE_SYS
+            .output_enabled
+            .swap(enabled, atomic::Ordering::Relaxed)
+    }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
-        if !output_enabled() {
+        if !self.output_enabled() {
             return Ok(());
         }
         let mut stdout = stdout().lock();
@@ -323,7 +322,7 @@ impl SysBackend for NativeSys {
         stdout.flush().map_err(|e| e.to_string())
     }
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
-        if !output_enabled() {
+        if !self.output_enabled() {
             return Ok(());
         }
         let mut stderr = stderr().lock();
@@ -331,7 +330,7 @@ impl SysBackend for NativeSys {
         stderr.flush().map_err(|e| e.to_string())
     }
     fn print_str_trace(&self, s: &str) {
-        if !output_enabled() {
+        if !self.output_enabled() {
             return;
         }
         eprint!("{s}");
@@ -345,7 +344,7 @@ impl SysBackend for NativeSys {
         self.print_str_stdout(&format!("{}\n", value.show()))
     }
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
-        if !output_enabled() {
+        if !self.output_enabled() {
             return Ok(None);
         }
         let mut buffer = Vec::new();
@@ -369,7 +368,7 @@ impl SysBackend for NativeSys {
         Ok(Some(String::from_utf8(buffer).map_err(|e| e.to_string())?))
     }
     fn scan_stdin(&self, count: Option<usize>) -> Result<Vec<u8>, String> {
-        if !output_enabled() {
+        if !self.output_enabled() {
             return Ok(Vec::new());
         }
         Ok(if let Some(count) = count {
@@ -396,7 +395,7 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "raw_mode")]
     fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
-        if !output_enabled() {
+        if !self.output_enabled() {
             return Ok(());
         }
         if raw_mode {
@@ -1222,7 +1221,7 @@ impl SysBackend for NativeSys {
         res
     }
     fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
-        if !output_enabled() {
+        if !self.output_enabled() {
             return Ok(true);
         }
         match env.span() {

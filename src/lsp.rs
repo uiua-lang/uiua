@@ -276,6 +276,7 @@ impl Spanner {
     fn new(src: InputSrc, input: &str, backend: impl SysBackend) -> Self {
         let mut compiler = Compiler::with_backend(backend);
         compiler.pre_eval_mode(PreEvalMode::Lsp);
+        compiler.backend().set_output_enabled(false);
         let errors = match compiler.load_str_src(input, src.clone()) {
             Ok(_) => Vec::new(),
             Err(e) => e.into_multi(),
@@ -866,9 +867,6 @@ mod server {
 
     #[doc(hidden)]
     pub fn run_language_server() {
-        #[cfg(feature = "native_sys")]
-        crate::sys::native::set_output_enabled(false);
-
         tokio::runtime::Builder::new_current_thread()
             .build()
             .unwrap()

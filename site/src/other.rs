@@ -510,6 +510,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Deshape, "Change rank", "♭₂ ⇡ 2_2"),
         subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
         subscript(Sqrt, "Nth root", "√₃ [8 27 125]"),
+        subscript(Neg, "Nth root of unity", "# Experimental!\n⁅₃ [⍥₄⊸¯₈] 1"),
         subscript(Round, "To N decimal places", "⁅₃ π"),
         subscript(Floor, "To N decimal places", "# Experimental!\n⌊₄ π\n⌊₄ τ"),
         subscript(Ceil, "To N decimal places", "# Experimental!\n⌈₄ π\n⌈₄ τ"),
@@ -521,8 +522,8 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Rows, "Apply to subarrays N deep", "≡₂□ °△2_3_4"),
         subscript(Inventory, "Apply to subarrays N deep", "⍚₂⇡ °△2_3"),
         subscript(Repeat, "Repetition count", "⍥₅(⊂⟜/+) [1 2]"),
-        subscript(Tuples, "Tuple size", "# Experimental!\n⧅₂< ⇡4"),
-        subscript(Stencil, "Window size", "# Experimental!\n⧈₃∘ ⇡6"),
+        subscript(Tuples, "Tuple size", "⧅₂< ⇡4"),
+        subscript(Stencil, "Window size", "⧈₃∘ ⇡6"),
         subscript(Stack, "Print top N values", "?₂ 1 2 3 4"),
     ];
 

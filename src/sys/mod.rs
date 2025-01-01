@@ -788,6 +788,18 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn any_mut(&mut self) -> &mut dyn Any;
     /// Save a color-formatted version of an error message for later printing
     fn save_error_color(&self, message: String, colored: String) {}
+    /// Check whether output is enabled
+    fn output_enabled(&self) -> bool {
+        true
+    }
+    /// Set whether output should be enabled
+    ///
+    /// Returns the previous value.
+    ///
+    /// It is the trait implementor's responsibility to ensure that this value is respected.
+    fn set_output_enabled(&self, enabled: bool) -> bool {
+        true
+    }
     /// Print a string (without a newline) to stdout
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
         Err("Printing to stdout is not supported in this environment".into())

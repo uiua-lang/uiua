@@ -76,9 +76,24 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
         let mut args = Vec::with_capacity(sig.args + 1);
         let mut new_shape = n.shape().clone();
         let mut true_shape = Shape::SCALAR;
+        let n_shape = n.shape().clone();
         args.push(n);
         for i in 0..sig.args {
             let arg = env.pop(i + 1)?;
+            if arg.rank() > 0
+                && n_shape.len() > 0
+                && !(arg.shape().iter().skip(1))
+                    .zip(n_shape.iter().skip(1))
+                    .all(|(a, b)| *a == 1 || *b == 1 || a == b)
+            {
+                return Err(env.error(format!(
+                    "Cannot {} with counts of shape {n_shape} \
+                    when argument {} has shape {}",
+                    Primitive::Repeat.format(),
+                    i + 1,
+                    arg.shape()
+                )));
+            }
             for (a, &b) in new_shape.iter_mut().zip(arg.shape()) {
                 true_shape.push(pervade_dim(*a, b));
                 *a = (*a).max(b);

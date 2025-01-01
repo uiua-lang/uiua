@@ -1,5 +1,7 @@
 {
   craneLib,
+  libPath,
+  makeWrapper,
   stdenv,
   lib,
   pkg-config,
@@ -33,6 +35,7 @@ let
     nativeBuildInputs = [
       pkg-config
       rustPlatform.bindgenHook
+      makeWrapper
     ];
     buildInputs =
       [ libffi ]
@@ -55,6 +58,9 @@ let
   totalArgs = commonArgs // {
     inherit cargoArtifacts;
     cargoTestExtraArgs = "-- --skip format::generate_format_cfg_docs";
+    postInstall = ''
+      wrapProgram "$out/bin/uiua" --prefix LD_LIBRARY_PATH: "${libPath}"
+    '';
   };
 in
 craneLib.buildPackage totalArgs

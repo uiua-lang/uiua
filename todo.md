@@ -4,6 +4,7 @@
 - Multidimensional `group`
 - `un`/`anti` `stencil`
 - `on`/`by` subscripts
+- `anti keep`
 - Optimizations through calls
 - Compile-time code string evaluation
 - Allow for multi-value constant bindings

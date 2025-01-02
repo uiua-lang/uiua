@@ -1,9 +1,10 @@
 //! Algorithms for performing operations on arrays
 
 use std::{
+    cell::RefCell,
     cmp::Ordering,
     convert::Infallible,
-    fmt,
+    env, fmt,
     hash::{Hash, Hasher},
     iter,
     mem::size_of,
@@ -136,12 +137,38 @@ pub(crate) fn validate_size_impl(
         elements *= size as f64;
     }
     let size = elements * elem_size as f64;
-    let max_mega = if cfg!(target_pointer_width = "32") {
-        256
-    } else {
-        4096
-    };
-    if size > (max_mega * 1024usize.pow(2)) as f64 {
+
+    thread_local! {
+        static MAX_MB: RefCell<Option<f64>> = const { RefCell::new(None) };
+    }
+
+    let max_mb = MAX_MB.with(|max_mega| {
+        *max_mega.borrow_mut().get_or_insert_with(|| {
+            env::var("UIUA_MAX_MB")
+                .ok()
+                .and_then(|s| {
+                    s.parse::<f64>()
+                        .inspect_err(|e| {
+                            eprintln!("Failed to parse UIUA_MAX_MB={s}: {e}");
+                        })
+                        .ok()
+                        .and_then(|f| {
+                            if f <= 0.0 {
+                                eprintln!("UIUA_MAX_MB must be positive, but it is {f}");
+                                None
+                            } else {
+                                Some(f)
+                            }
+                        })
+                })
+                .unwrap_or(if cfg!(target_pointer_width = "32") {
+                    256.0
+                } else {
+                    4096.0
+                })
+        })
+    });
+    if size > max_mb * 1024f64.powi(2) {
         return Err(SizeError(elements));
     }
     Ok(elements as usize)

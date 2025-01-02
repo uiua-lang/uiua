@@ -10,6 +10,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Add sided subscripts for [`reach 𝄐`](https://uiua.org/docs/reach)
 - Add experimental subscripts to [`negate ¯`](https://uiua.org/docs/negate)
   - This will [`multiply ×`](https://uiua.org/docs/multiply) a number by the Nth root of unity
+### Interpreter
+- Add `UIUA_MAX_MB` environment variable to set the maximum size of an array in megabytes
+  - This allows catching memory errors on different systems
 
 ## 0.14.1 - 2024-12-23
 ### Interpreter

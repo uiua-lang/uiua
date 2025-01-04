@@ -503,6 +503,10 @@ primitive!(
     /// [length] is equivalent to the [first] of the [shape].
     /// ex:  ⧻[1_2_3 4_5_6]
     ///   : ⊢△[1_2_3 4_5_6]
+    ///
+    /// Use [un][by][length] to set the [length] of an array. Over-taking will cycle rows.
+    /// ex: °⊸⧻ 5 "hello, world"
+    ///   : °⊸⧻ 10 "abc"
     (1, Len, MonadicArray, ("length", '⧻')),
     /// Get the dimensions of an array
     ///

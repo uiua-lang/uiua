@@ -354,7 +354,9 @@ under!(DipPat, input, g_sig, inverse, asm, Dip, span, [f], {
     let rest_before_sig = rest_before.sig()?;
     let rest_after_sig = rest_after.sig()?;
 
-    let balanced = g_sig.args + rest_before_sig.args <= g_sig.outputs + rest_after_sig.outputs;
+    let bal_symmetric = g_sig.args + rest_before_sig.args <= g_sig.outputs + rest_after_sig.outputs;
+    let bal_assymetic = rest_before_sig.args > 1 && rest_before_sig == rest_after_sig.inverse();
+    let balanced = bal_symmetric || bal_assymetic;
 
     // Make before
     let mut before = if !inverse || balanced {

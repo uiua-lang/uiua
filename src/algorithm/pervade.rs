@@ -161,7 +161,6 @@ where
     Ok(Array::new(new_shape, new_data))
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn bin_pervade_recursive<A, B, C, F>(
     (a, ash): (&[A], &[usize]),
     (b, bsh): (&[B], &[usize]),

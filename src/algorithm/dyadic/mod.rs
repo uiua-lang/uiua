@@ -1112,6 +1112,9 @@ impl Array<f64> {
         let mut result_shape = Shape::from([a.row_count(), b.row_count()]);
         result_shape.extend(prod_row_shape.iter().copied());
         let inner = |a_row: &[f64], res_row: &mut [f64]| {
+            if a_row.is_empty() {
+                return;
+            }
             let mut prod_row = vec![0.0; prod_shape.elements()];
             let mut i = 0;
             for b_row in b.row_slices() {

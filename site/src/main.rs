@@ -93,12 +93,14 @@ pub fn Site() -> impl IntoView {
         .set_item("visits", &visits.to_string())
         .unwrap();
 
-    let mut logo_src = "/assets/uiua-logo.png";
-    if visits % 8 == 0 {
-        logo_src = "/assets/uiua-logo-scrambledine.png";
-    } else if visits % 10 == 0 || Date::new_0().get_month() == 5 {
-        logo_src = "/assets/uiua-logo-pride.png";
-    }
+    let logo_src = match visits % 9 {
+        1 => "/assets/uiua-logo.png",
+        3 => "/assets/uiua-logo-pride.png",
+        5 => "/assets/uiua-logo-scrambledine.png",
+        7 => "/assets/uiua-logo-jacob.svg",
+        _ if Date::new_0().get_month() == 5 => "/assets/uiua-logo-pride.png",
+        _ => "/assets/uiua-logo.png",
+    };
 
     view! {
         <Router>

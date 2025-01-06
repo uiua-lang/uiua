@@ -493,7 +493,6 @@ fn TutorialArrays() -> impl IntoView {
 [[1 2 3]
  [4 5 6]
  [7 8 9]]"/>
-        <p>"More precisely, stack notation "<Prim prim=Couple/>"s the first two stack items created between the "<code>"[]"</code>"s and "<Prim prim=Join/>"s the rest to that coupling. You may see this refered to in error messages."</p>
 
         <Hd id="shape-len"><Prim prim=Shape/>" and "<Prim prim=Len/></Hd>
         <p>"Other than their data, arrays also have a property called their "<strong>"shape"</strong>". Shape is a list of non-negative integers that describes the array's size along each of its axes."</p>

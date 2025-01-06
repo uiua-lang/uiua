@@ -19,7 +19,7 @@ As more and more Uiua code was written, I developed the principle of [Stack-Sour
 
 Long tacit expressions in most array languages can get very unwieldy. Because binary operations are infix, you have to parse the tree structure in your head before you can start determining the order of operations.
 
-For example, in BQN, you can trim matches from the beginning of a string with [`x(∧`∘∊˜¬⊸/⊢)y`](https://mlochbaum.github.io/bqncrate/?q=Remove%20cells%20that%20appear%20in%20x%20from%20beginning%20of%20y#).
+For example, in BQN, you can trim matches from the beginning of a string with [`x(∧<backtick>∘∊˜¬⊸/⊢)y`](https://mlochbaum.github.io/bqncrate/?q=Remove%20cells%20that%20appear%20in%20x%20from%20beginning%20of%20y#).
 
 In contrast, here is their equivalent in Uiua, implemented the same way:
 

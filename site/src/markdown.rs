@@ -98,9 +98,13 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::Item(_) => view!(<li>{children}</li>).into_view(),
         NodeValue::Paragraph => view!(<p>{children}</p>).into_view(),
         NodeValue::Code(code) => {
+            let mut lit = code.literal.clone();
+            if lit.contains("<backtick>") {
+                lit = lit.replace("<backtick>", "`");
+            }
             let mut inputs = Inputs::default();
-            let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut inputs);
-            if errors.is_empty() && code.literal != "---" {
+            let (tokens, errors, _) = uiua::lex(&lit, (), &mut inputs);
+            if errors.is_empty() && lit != "---" {
                 let mut frags = Vec::new();
                 for token in tokens {
                     let text = token.span.as_str(&inputs, |s| s.to_string());
@@ -112,7 +116,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
                             frags.push(view!(<Prim prim=prim glyph_only=true/>).into_view())
                         }
                         _ => {
-                            frags = vec![view!(<code>{code.literal.clone()}</code>).into_view()];
+                            frags = vec![view!(<code>{lit.clone()}</code>).into_view()];
                             break;
                         }
                     }

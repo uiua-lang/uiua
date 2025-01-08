@@ -1,9 +1,12 @@
 # Uiua Todo
 
 # 0.15
+- `on`/`by` subscripts
+- Use different system that `fill` for data functions
+- "Method"-type bindings in a module
+- Nested module context macros
 - Multidimensional `group`
 - `un`/`anti` `stencil`
-- `on`/`by` subscripts
 - `anti keep`
 - Optimizations through calls
 - Compile-time code string evaluation

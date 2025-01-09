@@ -11,6 +11,7 @@
 - Optimizations through calls
 - Compile-time code string evaluation
 - Allow for multi-value constant bindings
+- `# External!`
 - Stackless execution trees?
 
 ## Planned Features

@@ -80,10 +80,9 @@ impl<T: ArrayValue> Array<T> {
             }
             Ordering::Less => {
                 if !of.shape.ends_with(&elems.shape) {
-                    return Err(env.error(format!(
-                        "Cannot look for array of shape {} in array of shape {}",
-                        elems.shape, of.shape
-                    )));
+                    let shape = Shape::from(&of.shape[..of.shape.len() - elems.shape.len() - 1]);
+                    let data = eco_vec![0; shape.elements()];
+                    return Ok(Array::new(shape, data));
                 }
                 if of.rank() - elems.rank() == 1 {
                     of.rows().any(|r| *elems == r).into()
@@ -187,11 +186,12 @@ impl<T: ArrayValue> Array<T> {
             }
             Ordering::Less => {
                 if !haystack.shape.ends_with(&needle.shape) {
-                    return Err(env.error(format!(
-                        "Cannot get index of array of shape {} in array of shape {}",
-                        needle.shape(),
-                        haystack.shape()
-                    )));
+                    let shape = Shape::from(
+                        &haystack.shape[..haystack.shape.len() - needle.shape.len() - 1],
+                    );
+                    let elem = haystack.shape.row_count() as f64;
+                    let data = eco_vec![elem; shape.elements()];
+                    return Ok(Array::new(shape, data));
                 }
                 if haystack.rank() - needle.rank() == 1 {
                     (haystack

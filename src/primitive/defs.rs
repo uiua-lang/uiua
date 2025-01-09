@@ -1848,10 +1848,10 @@ primitive!(
     /// ex: [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
     ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
     ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
-    ///
     /// [on] can be used with a function pack. `on``(F|G)` becomes `on``F``on``G`.
     /// ex: [⟜(+1|×2|¯)] 5
-    ///
+    /// Subscripted [on] keeps the first N arguments on top of the stack.
+    /// ex: {⟜₂[⊙⊙∘] 1 2 3}
     /// [on] is equivalent to [fork][identity], but can often be easier to read.
     ([1], On, Stack, ("on", '⟜')),
     /// Duplicate a function's last argument before calling it
@@ -1870,6 +1870,8 @@ primitive!(
     /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
     ///   : ⊜□⊸≠ @  "Hey there buddy"
     ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
+    /// Subscripted [by] keeps the last N arguments below the outputs on the stack.
+    /// ex: {⊸₂[⊙⊙∘] 1 2 3}
     ([1], By, Stack, ("by", '⊸')),
     /// Call a function but keep its last argument on the top of the stack
     ///
@@ -1891,6 +1893,8 @@ primitive!(
     /// [with] with a noadic function will be coerced to `with``identity`.
     /// ex: [⤙1 2 3]
     /// If you do not want these behaviors, use [on] instead.
+    /// Subscripted [with] keeps the last N arguments above the outputs on the stack.
+    /// ex: {⤙₂[⊙⊙∘] 1 2 3}
     ([1], With, Stack, ("with", '⤙')),
     /// Call a function but keep its first argument under the outputs on the stack
     ///
@@ -1913,6 +1917,8 @@ primitive!(
     /// [off] with a noadic function will be coerced to `off``identity`.
     /// ex: [⤚1 2 3]
     /// If you do not want these behaviors, use [by] instead.
+    /// Subscripted [off] keeps the first N arguments below the outputs on the stack.
+    /// ex: {⤚₂[⊙⊙∘] 1 2 3}
     ([1], Off, Stack, ("off", '⤚')),
     /// Keep all arguments to a function above the outputs on the stack
     ///
@@ -3229,6 +3235,10 @@ macro_rules! impl_primitive {
             UndoRotate(usize),
             ReduceDepth(usize),
             StackN { n: usize, inverse: bool },
+            OnSub(usize),
+            BySub(usize),
+            WithSub(usize),
+            OffSub(usize),
         }
 
         impl ImplPrimitive {
@@ -3260,8 +3270,11 @@ macro_rules! impl_primitive {
             pub fn modifier_args(&self) -> Option<usize> {
                 match self {
                     $($(ImplPrimitive::$variant => Some($margs),)?)*
-                    ImplPrimitive::ReduceDepth(_) => Some(1),
-                    ImplPrimitive::EachSub(_) => Some(1),
+                    ImplPrimitive::ReduceDepth(_) | ImplPrimitive::EachSub(_) => Some(1),
+                    ImplPrimitive::OnSub(_)
+                    | ImplPrimitive::BySub(_)
+                    | ImplPrimitive::WithSub(_)
+                    | ImplPrimitive::OffSub(_) => Some(1),
                     _ => None
                 }
             }

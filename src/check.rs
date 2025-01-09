@@ -585,6 +585,13 @@ impl VirtualEnv {
                 }
             },
             Node::ImplMod(prim, args, _) => match prim {
+                &OnSub(n) | &BySub(n) | &WithSub(n) | &OffSub(n) => {
+                    let [sn] = get_args_nodes(args)?;
+                    let args = sn.sig.args.max(n);
+                    self.handle_args_outputs(args, args);
+                    self.node(&sn.node)?;
+                    self.handle_args_outputs(0, n);
+                }
                 ReduceContent | ReduceDepth(_) => {
                     let [sig] = get_args(args)?;
                     let args = sig.args.saturating_sub(sig.outputs);

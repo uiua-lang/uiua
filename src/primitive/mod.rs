@@ -180,6 +180,22 @@ impl fmt::Display for ImplPrimitive {
                 write!(f, "{Each}")?;
                 fmt_subscript(f, i)
             }
+            OnSub(i) => {
+                write!(f, "{On}")?;
+                fmt_subscript(f, *i as i32)
+            }
+            BySub(i) => {
+                write!(f, "{By}")?;
+                fmt_subscript(f, *i as i32)
+            }
+            WithSub(i) => {
+                write!(f, "{With}")?;
+                fmt_subscript(f, *i as i32)
+            }
+            OffSub(i) => {
+                write!(f, "{Off}")?;
+                fmt_subscript(f, *i as i32)
+            }
             Root => write!(f, "{Anti}{Pow}"),
             Cos => write!(f, "cos"),
             Asin => write!(f, "{Un}{Sin}"),
@@ -1732,6 +1748,30 @@ impl ImplPrimitive {
     }
     pub(crate) fn run_mod(&self, ops: Ops, env: &mut Uiua) -> UiuaResult {
         match self {
+            &ImplPrimitive::OnSub(n) => {
+                let [f] = get_ops(ops, env)?;
+                let kept = env.copy_n(n)?;
+                env.exec(f)?;
+                env.push_all(kept);
+            }
+            &ImplPrimitive::BySub(n) => {
+                let [f] = get_ops(ops, env)?;
+                env.dup_values(n, n.max(f.sig.args))?;
+                env.exec(f)?;
+            }
+            &ImplPrimitive::WithSub(n) => {
+                let [f] = get_ops(ops, env)?;
+                let kept = env.copy_n_down(n, n.max(f.sig.args))?;
+                env.exec(f)?;
+                env.push_all(kept);
+            }
+            &ImplPrimitive::OffSub(n) => {
+                let [f] = get_ops(ops, env)?;
+                let outputs = f.sig.outputs;
+                let kept = env.copy_n(n)?;
+                env.exec(f)?;
+                env.insert_stack(outputs, kept)?;
+            }
             ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(ops, env)?,
             ImplPrimitive::UndoGroup1 => loops::undo_group_part1(ops, env)?,
             ImplPrimitive::ReduceContent => reduce::reduce_content(ops, env)?,

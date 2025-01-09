@@ -444,13 +444,38 @@ impl Compiler {
             On => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
-                let prim = if sn.sig.args == 0 { Dip } else { On };
-                Node::Mod(prim, eco_vec![sn], span)
+                if let Some(sub) = subscript
+                    .and_then(|sub| self.subscript_n(sub, On))
+                    .filter(|n| n.value > 1)
+                {
+                    let n = self.positive_subscript(sub.value, On, sub.span)?;
+                    Node::ImplMod(ImplPrimitive::OnSub(n), eco_vec![sn], span)
+                } else {
+                    let prim = if sn.sig.args == 0 { Dip } else { On };
+                    Node::Mod(prim, eco_vec![sn], span)
+                }
             }
             By => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
-                if sn.sig.args == 0 {
+                if let Some(sub) = subscript
+                    .and_then(|sub| self.subscript_n(sub, By))
+                    .filter(|n| n.value > 1)
+                {
+                    let n = self.positive_subscript(sub.value, By, sub.span)?;
+                    if n == sn.sig.args {
+                        self.emit_diagnostic(
+                            format!(
+                                "Prefer {} over subscripted {} here",
+                                Below.format(),
+                                By.format()
+                            ),
+                            DiagnosticKind::Style,
+                            modified.modifier.span.clone(),
+                        )
+                    }
+                    Node::ImplMod(ImplPrimitive::BySub(n), eco_vec![sn], span)
+                } else if sn.sig.args == 0 {
                     sn.node.prepend(Node::Prim(Identity, span));
                     sn.node
                 } else {
@@ -593,6 +618,7 @@ impl Compiler {
             prim @ (With | Off) => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
+                let sig = sn.sig;
                 let (inner, before) = match sn.sig.args {
                     0 => (SigNode::new((2, 2), Node::Prim(Identity, span)), sn.node),
                     1 => {
@@ -602,7 +628,34 @@ impl Compiler {
                     }
                     _ => (sn, Node::empty()),
                 };
-                Node::from_iter([before, Node::Mod(prim, eco_vec![inner], span)])
+                Node::from_iter([
+                    before,
+                    if let Some(sub) = subscript
+                        .and_then(|sub| self.subscript_n(sub, prim))
+                        .filter(|n| n.value > 1)
+                    {
+                        let n = self.positive_subscript(sub.value, prim, sub.span)?;
+                        let prim = if prim == Off {
+                            if n == sig.args {
+                                self.emit_diagnostic(
+                                    format!(
+                                        "Prefer {} over subscripted {} here",
+                                        Below.format(),
+                                        Off.format()
+                                    ),
+                                    DiagnosticKind::Style,
+                                    modified.modifier.span.clone(),
+                                )
+                            }
+                            ImplPrimitive::OffSub(n)
+                        } else {
+                            ImplPrimitive::WithSub(n)
+                        };
+                        Node::ImplMod(prim, eco_vec![inner], span)
+                    } else {
+                        Node::Mod(prim, eco_vec![inner], span)
+                    },
+                ])
             }
             prim @ (Above | Below) => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;

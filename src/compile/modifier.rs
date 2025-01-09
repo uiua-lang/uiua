@@ -114,11 +114,18 @@ impl Compiler {
             Modifier::Primitive(Primitive::On) => {
                 let mut words = Vec::new();
                 for branch in pack.branches.iter().cloned() {
-                    words.push(branch.span.clone().sp(Word::Modified(Box::new(Modified {
+                    let mut word = Word::Modified(Box::new(Modified {
                         modifier: modifier.clone(),
-                        operands: vec![branch.map(Word::Func)],
+                        operands: vec![branch.clone().map(Word::Func)],
                         pack_expansion: true,
-                    }))));
+                    }));
+                    if let Some(sub) = &subscript {
+                        word = Word::Subscripted(Box::new(Subscripted {
+                            n: sub.clone(),
+                            word: branch.span.clone().sp(word),
+                        }))
+                    }
+                    words.push(branch.span.sp(word));
                 }
                 self.words(words)
             }

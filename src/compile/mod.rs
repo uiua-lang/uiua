@@ -2094,15 +2094,12 @@ code:
                             self.primitive(Div, span),
                         ])
                     }
-                    Rand => {
-                        self.subscript_experimental(prim, &span);
-                        Node::from_iter([
-                            self.primitive(Rand, span.clone()),
-                            Node::new_push(n),
-                            self.primitive(Mul, span.clone()),
-                            self.primitive(Floor, span),
-                        ])
-                    }
+                    Rand => Node::from_iter([
+                        self.primitive(Rand, span.clone()),
+                        Node::new_push(n),
+                        self.primitive(Mul, span.clone()),
+                        self.primitive(Floor, span),
+                    ]),
                     Utf8 => match n {
                         8 => self.primitive(Utf8, span),
                         16 => Node::ImplPrim(ImplPrimitive::Utf16, self.add_span(span)),

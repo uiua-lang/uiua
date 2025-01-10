@@ -248,7 +248,7 @@ pub fn Documentation() -> impl IntoView {
         <Editor example="F ← |2 # External!"/>
         <p>"Calling an "<code>"# External!"</code>" function that hasn't been bound will throw an error."</p>
         <Editor example="F ← |2 # External!\nF 1 2"/> // Should fail
-        <p>"To be compatible with "<code>"# External!"</code>", Rust functions should be bound via "<a href="https://docs.rs/uiua/latest/uiua/struct.Compiler.html#method.create_bind_function">"Compiler::create_bind_function"</a>"."</p>
+        <p>"To be compatible with "<code>"# External!"</code>", Rust functions should be bound via "<a href="https://docs.rs/uiua/latest/uiua/struct.Compiler.html#method.create_bind_function"><code>"Compiler::create_bind_function"</code></a>"."</p>
     }
 }
 

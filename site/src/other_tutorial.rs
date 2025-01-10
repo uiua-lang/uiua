@@ -239,6 +239,16 @@ pub fn Documentation() -> impl IntoView {
         <Editor example="F ← +2 # Deprecated! Use G instead\nG ← ×2\nF 5"/> // Should fail
         <p><code>"# Deprecated!"</code>" works for constants, macros, and modules as well."</p>
         <Editor example="# Deprecated! Don't use it!\n┌─╴Foo\n  # Deprecated! It's no good!\n  Bar ← 5\n└─╴\nFoo~Bar"/> // Should fail
+
+        <Hd id="external"><code>"# External!"</code></Hd>
+
+        <p>"The "<code>"# External!"</code>" semantic comment marks functions that are provided by Rust code. These functions don't require a Uiua implementation and will show up in the LSP."</p>
+        <p>"This is useful when trying to integrate Uiua into different environments while maintaining editor support."</p>
+        <p>"A signature must be declared."</p>
+        <Editor example="F ← |2 # External!"/>
+        <p>"Calling an "<code>"# External!"</code>" function that hasn't been bound will throw an error."</p>
+        <Editor example="F ← |2 # External!\nF 1 2"/> // Should fail
+        <p>"To be compatible with "<code>"# External!"</code>", Rust functions should be bound via "<a href="https://docs.rs/uiua/latest/uiua/struct.Compiler.html#method.create_bind_function">"Compiler::create_bind_function"</a>"."</p>
     }
 }
 

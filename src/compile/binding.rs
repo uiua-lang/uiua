@@ -8,6 +8,23 @@ impl Compiler {
     pub(super) fn binding(&mut self, binding: Binding, prelude: BindingPrelude) -> UiuaResult {
         let public = binding.public;
 
+        let last_word = binding.words.iter().last();
+
+        // If marked external and already bound, don't bind again
+        let external = prelude.external
+            || last_word.is_some_and(|w| {
+                matches!(w.value, Word::SemanticComment(SemanticComment::External))
+            });
+        if external
+            && self.scopes().any(|sc| {
+                sc.names
+                    .get(&binding.name.value)
+                    .is_some_and(|b| self.asm.bindings[b.index].meta.external)
+            })
+        {
+            return Ok(());
+        }
+
         // Alias re-bound imports
         if ident_modifier_args(&binding.name.value) == 0
             && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
@@ -52,13 +69,13 @@ impl Compiler {
             .comment
             .map(|text| DocComment::from(text.as_str()))
             .or_else(|| {
-                binding.words.iter().last().and_then(|w| match &w.value {
+                last_word.and_then(|w| match &w.value {
                     Word::Comment(c) => Some(DocComment::from(c.as_str())),
                     _ => None,
                 })
             });
         let deprecation = prelude.deprecation.or_else(|| {
-            binding.words.iter().last().and_then(|w| match &w.value {
+            last_word.and_then(|w| match &w.value {
                 Word::SemanticComment(SemanticComment::Deprecated(s)) => Some(s.clone()),
                 _ => None,
             })
@@ -67,12 +84,16 @@ impl Compiler {
             comment,
             deprecation,
             counts: Some(binding.counts),
+            external: false,
         };
 
         // Handle macro
         let ident_margs = ident_modifier_args(&name);
         let max_placeholder = max_placeholder(&binding.words);
         if binding.code_macro {
+            if external {
+                self.add_error(span.clone(), "Macros cannot be external");
+            }
             if max_placeholder.is_some() {
                 return Err(self.error(span.clone(), "Code macros may not contain placeholders"));
             }
@@ -183,6 +204,10 @@ impl Compiler {
             }
         }
         if max_placeholder.is_some() || ident_margs > 0 {
+            if external {
+                self.add_error(span.clone(), "Macros cannot be external");
+            }
+
             self.scope.names.insert(name.clone(), local);
             self.asm.add_binding_at(
                 local,
@@ -288,6 +313,34 @@ impl Compiler {
                 &format!("{name}'s"),
                 &binding.name.span,
             );
+        }
+
+        // Normalize external
+        if external {
+            if node.is_empty() {
+                let Some(sig) = &binding.signature else {
+                    return Err(self.error(
+                        span.clone(),
+                        "Empty external functions must have a signature declared",
+                    ));
+                };
+                let sig = sig.value;
+                let span = self.add_span(span.clone());
+                let zero = Value::from(0);
+                for _ in 0..sig.args {
+                    node.push(Node::Prim(Primitive::Pop, span));
+                }
+                for _ in 0..sig.outputs {
+                    node.push(Node::Push(zero.clone()));
+                }
+                node.prepend(Node::Prim(Primitive::Assert, span));
+                node.prepend(Node::new_push("Unbound external function"));
+                node.prepend(Node::Push(zero));
+            } else {
+                node = Node::NoInline(node.into());
+            }
+            self.externals
+                .insert(name.clone(), self.asm.functions.len());
         }
 
         // Resolve signature

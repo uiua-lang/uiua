@@ -64,6 +64,8 @@ pub struct Compiler {
     index_macros: HashMap<usize, IndexMacro>,
     /// Unexpanded code macros
     code_macros: HashMap<usize, CodeMacro>,
+    /// Indices of named external functions
+    externals: HashMap<Ident, usize>,
     /// The depth of compile-time evaluation
     comptime_depth: usize,
     /// Whether the compiler is in a try
@@ -100,6 +102,7 @@ impl Default for Compiler {
             imports: HashMap::new(),
             index_macros: HashMap::new(),
             code_macros: HashMap::new(),
+            externals: HashMap::new(),
             comptime_depth: 0,
             in_try: false,
             errors: Vec::new(),
@@ -114,11 +117,12 @@ impl Default for Compiler {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct BindingPrelude {
     comment: Option<EcoString>,
     track_caller: bool,
     no_inline: bool,
+    external: bool,
     deprecation: Option<EcoString>,
 }
 
@@ -598,6 +602,7 @@ code:
                     Word::SemanticComment(SemanticComment::TrackCaller) => {
                         prelude.track_caller = true
                     }
+                    Word::SemanticComment(SemanticComment::External) => prelude.external = true,
                     Word::SemanticComment(SemanticComment::Deprecated(s)) => {
                         prelude.deprecation = Some(s.clone())
                     }
@@ -1558,6 +1563,7 @@ code:
             }
             SemanticComment::NoInline => Node::NoInline(inner.into()),
             SemanticComment::TrackCaller => Node::TrackCaller(inner.into()),
+            SemanticComment::External => inner,
             SemanticComment::Deprecated(_) => inner,
             SemanticComment::Boo => {
                 self.add_error(span, "The compiler is scared!");
@@ -2418,34 +2424,45 @@ impl Compiler {
         signature: impl Into<Signature>,
         f: impl Fn(&mut Uiua) -> UiuaResult + SendSyncNative + 'static,
     ) -> Function {
-        let signature = signature.into();
+        let sig = signature.into();
+        let df = self.create_dynamic_function(sig, f);
+        self.asm
+            .add_function(FunctionId::Unnamed, sig, Node::Dynamic(df))
+    }
+    fn create_dynamic_function(
+        &mut self,
+        sig: Signature,
+        f: impl Fn(&mut Uiua) -> UiuaResult + SendSyncNative + 'static,
+    ) -> DynamicFunction {
         let index = self.asm.dynamic_functions.len();
         self.asm.dynamic_functions.push(Arc::new(f));
-        self.asm.add_function(
-            FunctionId::Unnamed,
-            signature,
-            Node::Dynamic(DynamicFunction {
-                index,
-                sig: signature,
-            }),
-        )
+        DynamicFunction { index, sig }
     }
     /// Bind a function in the current scope
     ///
     /// # Errors
     /// Returns an error in the binding name is not valid
     pub fn bind_function(&mut self, name: impl Into<EcoString>, function: Function) -> UiuaResult {
-        let index = self.next_global;
+        self.bind_function_with_meta(name, function, BindingMeta::default())
+    }
+    fn bind_function_with_meta(
+        &mut self,
+        name: impl Into<EcoString>,
+        function: Function,
+        meta: BindingMeta,
+    ) -> UiuaResult {
         let name = name.into();
         let local = LocalName {
-            index,
+            index: self.next_global,
             public: true,
         };
         self.next_global += 1;
-        self.compile_bind_function(name.clone(), local, function, 0, BindingMeta::default())?;
+        self.compile_bind_function(name, local, function, 0, meta)?;
         Ok(())
     }
     /// Create and bind a function in the current scope
+    ///
+    /// This function is the only way to bind `# External!` functions.
     ///
     /// # Errors
     /// Returns an error in the binding name is not valid
@@ -2455,8 +2472,19 @@ impl Compiler {
         signature: impl Into<Signature>,
         f: impl Fn(&mut Uiua) -> UiuaResult + SendSyncNative + 'static,
     ) -> UiuaResult {
-        let function = self.create_function(signature, f);
-        self.bind_function(name, function)
+        let name = name.into();
+        if let Some(index) = self.externals.get(&name).copied() {
+            let df = self.create_dynamic_function(signature.into(), f);
+            self.asm.functions.make_mut()[index] = Node::Dynamic(df);
+            Ok(())
+        } else {
+            let function = self.create_function(signature, f);
+            let meta = BindingMeta {
+                external: true,
+                ..Default::default()
+            };
+            self.bind_function_with_meta(name, function, meta)
+        }
     }
     fn sig_of(&self, node: &Node, span: &CodeSpan) -> UiuaResult<Signature> {
         node.sig().map_err(|e| {

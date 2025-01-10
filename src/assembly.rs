@@ -382,6 +382,8 @@ pub struct BindingMeta {
     pub counts: Option<BindingCounts>,
     /// The deprecation message
     pub deprecation: Option<EcoString>,
+    /// Whether this binding's code was externally provided
+    pub external: bool,
 }
 
 /// A kind of global binding

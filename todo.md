@@ -1,7 +1,7 @@
 # Uiua Todo
 
 # 0.15
-- `on`/`by` subscripts
+- `⍜⊂≡¤`
 - Use different system that `fill` for data functions
 - "Method"-type bindings in a module
 - Nested module context macros
@@ -11,7 +11,6 @@
 - Optimizations through calls
 - Compile-time code string evaluation
 - Allow for multi-value constant bindings
-- `# External!`
 - Stackless execution trees?
 
 ## Planned Features

@@ -802,6 +802,8 @@ pub enum SemanticComment {
     NoInline,
     /// Prevent stack traces from going deeper
     TrackCaller,
+    /// Mark that a function should be bound externally
+    External,
     /// Mark a function as deprecated
     Deprecated(EcoString),
     #[doc(hidden)]
@@ -816,6 +818,7 @@ impl fmt::Display for SemanticComment {
             SemanticComment::Experimental => write!(f, "# Experimental!"),
             SemanticComment::NoInline => write!(f, "# No inline!"),
             SemanticComment::TrackCaller => write!(f, "# Track caller!"),
+            SemanticComment::External => write!(f, "# External!"),
             SemanticComment::Deprecated(s) if s.is_empty() => write!(f, "# Deprecated!"),
             SemanticComment::Deprecated(s) => write!(f, "# Deprecated! {s}"),
             SemanticComment::Boo => write!(f, "# Boo!"),
@@ -1088,6 +1091,7 @@ impl<'a> Lexer<'a> {
                             "Experimental!" => self.end(Experimental, start),
                             "No inline!" => self.end(NoInline, start),
                             "Track caller!" => self.end(TrackCaller, start),
+                            "External!" => self.end(External, start),
                             "Boo!" => self.end(Boo, start),
                             s => {
                                 if let Some(suf) = s.strip_prefix("Deprecated!") {

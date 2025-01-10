@@ -215,6 +215,9 @@ pub type Ident = EcoString;
 #[cfg(test)]
 mod tests {
     use std::path::*;
+
+    use crate::{Compiler, Uiua};
+
     fn test_files(filter: impl Fn(&Path) -> bool) -> impl Iterator<Item = PathBuf> {
         std::fs::read_dir("tests")
             .unwrap()
@@ -404,5 +407,51 @@ mod tests {
                 }
             }
         });
+    }
+
+    #[test]
+    fn external_bind_before() {
+        let mut comp = Compiler::new();
+        comp.create_bind_function("F", (2, 1), |env| {
+            let a = env.pop_num().unwrap();
+            let b = env.pop_num().unwrap();
+            env.push(a + b);
+            Ok(())
+        })
+        .unwrap();
+        comp.load_str(
+            "F = |2 # External!\n\
+             F 1 2",
+        )
+        .unwrap();
+
+        let mut env = Uiua::with_native_sys();
+        env.run_compiler(&mut comp)
+            .unwrap_or_else(|e| panic!("{e}"));
+        let res = env.pop_int().unwrap();
+        assert_eq!(res, 3);
+    }
+
+    #[test]
+    fn external_bind_after() {
+        let mut comp = Compiler::new();
+        comp.load_str(
+            "F = |2 # External!\n\
+             F 1 2",
+        )
+        .unwrap();
+        comp.create_bind_function("F", (2, 1), |env| {
+            let a = env.pop_num().unwrap();
+            let b = env.pop_num().unwrap();
+            env.push(a + b);
+            Ok(())
+        })
+        .unwrap();
+
+        let mut env = Uiua::with_native_sys();
+        env.run_compiler(&mut comp)
+            .unwrap_or_else(|e| panic!("{e}"));
+        let res = env.pop_int().unwrap();
+        assert_eq!(res, 3);
     }
 }

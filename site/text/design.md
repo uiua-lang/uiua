@@ -106,4 +106,4 @@ Uiua uses basically the same array model as J: flat arrays with a box type. The 
 
 During the period of Uiua's development, I spent a lot of time listening to [The Array Cast](https://arraycast.com/), a podcast about array languages. The conversations about the design and implementation of APL, J, K, Q, and BQN are both inspirational and informative. The guys have such a depth and breadth of knowledge on the topic. I really recommend giving it a listen.
 
-Thanks to [Con](https://github.com/codereport)[or](https://www.youtube.com/@code_report), Bob, Stephen, Adám, [Marshall](https://github.com/mlochbaum), Richard, and all the guests.
+Thanks to [Co](https://github.com/codereport)[nor](https://www.youtube.com/@code_report), Bob, Stephen, Adám, [Marshall](https://github.com/mlochbaum), Richard, and all the guests.

@@ -241,7 +241,7 @@ impl fmt::Display for ImplPrimitive {
             UnClip => write!(f, "{Un}{}", Primitive::Sys(SysOp::Clip)),
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoUnbits => write!(f, "{Under}{Un}{Bits}"),
-            AntiBase => write!(f, "{Under}{Base}"),
+            AntiBase => write!(f, "{Anti}{Base}"),
             UndoReverse { n, .. } => write!(f, "{Under}{Reverse}({n})"),
             UndoTransposeN(n, _) => write!(f, "{Under}{Transpose}({n})"),
             UndoRotate(n) => write!(f, "{Under}{Rotate}({n})"),

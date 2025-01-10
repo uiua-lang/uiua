@@ -1262,12 +1262,12 @@ primitive!(
     ///
     /// Arbitrary rank arrays are supported.
     /// The first array's rank must be `less or equal` the rank of the second.
-    /// ex: ⦷,, 3_4 ↯2_3⇡6
-    /// ex: ⦷,, [1_2 5_6] [1_2_3_4 5_6_1_2 7_8_5_6 4_3_1_2]
+    /// ex: ◡⦷ 3_4 ↯2_3⇡6
+    /// ex: ◡⦷ [1_2 5_6] [1_2_3_4 5_6_1_2 7_8_5_6 4_3_1_2]
     ///
     /// [mask] works well with [partition] in a way that [find] does not.
     /// Here, we [not] the [mask] of a non-scalar delimiter to split a string.
-    /// ex: ⊜∘ ¬⦷" - ". "foo - bar - baz"
+    /// ex: ⊜∘ ¬⊸⦷ " - " "foo - bar - baz"
     (2, Mask, DyadicArray, ("mask", '⦷')),
     /// Check if each row of one array exists in another
     ///

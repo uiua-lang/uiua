@@ -278,6 +278,9 @@ impl Compiler {
                 return Err(e);
             }
         };
+        let is_obverse = node
+            .iter()
+            .any(|n| matches!(n, Node::CustomInverse(cust, _) if cust.is_obverse));
         if let Some(comment_sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
             self.apply_node_comment(
                 &mut node,
@@ -299,7 +302,7 @@ impl Compiler {
                     }
                 }
 
-                if sig == (0, 1) && !self_referenced && !is_func {
+                if sig == (0, 1) && !self_referenced && !is_func && !is_obverse {
                     // Binding is a constant
                     let val = if let [Node::Push(v)] = node.as_slice() {
                         Some(v.clone())

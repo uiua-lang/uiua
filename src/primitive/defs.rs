@@ -1670,7 +1670,7 @@ primitive!(
     /// The loop will end when the top value of the function's output is equal to the top value of the function's input.
     /// For example, this could be used to flatten a deeply nested array.
     /// ex: ⍥/◇⊂∞ {1 {2 3} {4 {5 6 {7}}}}
-    /// [un][repeat] will do something similar, except the number of repeitions required to converge will be returned as well. It may be necessary to [un] the inner function as well.
+    /// [un][repeat] will do something similar, except the number of repetitions required to converge will be returned as well. It may be necessary to [un] the inner function as well.
     /// ex: °⍥°/◇⊂ {1 {2 3} {4 {5 6 {7}}}}
     /// The number of repetitions may be non-scalar. In this case, the function will be repeated each row of the input a different number of times.
     /// ex: ⍥(×2) [1 2 3 4] [5 5 5 5]

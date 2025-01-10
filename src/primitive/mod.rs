@@ -217,8 +217,8 @@ impl fmt::Display for ImplPrimitive {
             AntiDrop => write!(f, "{Anti}{Drop}"),
             AntiSelect => write!(f, "{Anti}{Select}"),
             AntiPick => write!(f, "{Anti}{Pick}"),
-            UnJoin | UnJoinShape => write!(f, "{Un}{Join}"),
-            UnJoinEnd | UnJoinShapeEnd => write!(f, "{Un}({Join}{Flip})"),
+            UnJoin | UnJoinShape | UnJoinShape2 => write!(f, "{Un}{Join}"),
+            UnJoinEnd | UnJoinShapeEnd | UnJoinShape2End => write!(f, "{Un}({Join}{Flip})"),
             UnKeep => write!(f, "{Un}{Keep}"),
             UnScan => write!(f, "{Un}{Scan}"),
             UnStack => write!(f, "{Un}{Stack}"),
@@ -1248,14 +1248,30 @@ impl ImplPrimitive {
             ImplPrimitive::UnJoinShape => {
                 let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
                 let val = env.pop(2)?;
-                let (first, rest) = val.unjoin_shape(&shape, false, env)?;
+                let (first, rest) = val.unjoin_shape(&shape, None, false, env)?;
                 env.push(rest);
                 env.push(first);
             }
             ImplPrimitive::UnJoinShapeEnd => {
                 let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
                 let val = env.pop(2)?;
-                let (first, rest) = val.unjoin_shape(&shape, true, env)?;
+                let (first, rest) = val.unjoin_shape(&shape, None, true, env)?;
+                env.push(rest);
+                env.push(first);
+            }
+            ImplPrimitive::UnJoinShape2 => {
+                let a_shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let b_shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let val = env.pop(2)?;
+                let (first, rest) = val.unjoin_shape(&a_shape, Some(&b_shape), false, env)?;
+                env.push(rest);
+                env.push(first);
+            }
+            ImplPrimitive::UnJoinShape2End => {
+                let a_shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let b_shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let val = env.pop(2)?;
+                let (first, rest) = val.unjoin_shape(&a_shape, Some(&b_shape), true, env)?;
                 env.push(rest);
                 env.push(first);
             }

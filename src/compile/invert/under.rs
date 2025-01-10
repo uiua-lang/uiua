@@ -759,13 +759,16 @@ under!(JoinPat, input, g_sig, inverse, asm, {
                     Prim(Dup, span),
                     Prim(Shape, span),
                     PushUnder(1, span),
+                    Prim(Over, span),
+                    Prim(Shape, span),
+                    PushUnder(1, span),
                     Prim(Flip, flip_span),
                     betw_before,
                     Prim(Join, span),
                 ]);
                 let after = Node::from_iter([
-                    PopUnder(1, span),
-                    ImplPrim(UnJoinShapeEnd, span),
+                    PopUnder(2, span),
+                    ImplPrim(UnJoinShape2End, span),
                     betw_after,
                 ]);
                 break 'blk (&input[i + 1..], before, after, span);
@@ -777,9 +780,12 @@ under!(JoinPat, input, g_sig, inverse, asm, {
                 Prim(Dup, span),
                 Prim(Shape, span),
                 PushUnder(1, span),
+                Prim(Over, span),
+                Prim(Shape, span),
+                PushUnder(1, span),
                 Prim(Join, span),
             ]);
-            let after = Node::from_iter([PopUnder(1, span), ImplPrim(UnJoinShape, span)]);
+            let after = Node::from_iter([PopUnder(2, span), ImplPrim(UnJoinShape2, span)]);
             (input, before, after, span)
         }
         _ => return generic(),

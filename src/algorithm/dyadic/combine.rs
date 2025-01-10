@@ -199,12 +199,13 @@ impl Value {
     }
     pub(crate) fn unjoin_shape(
         self,
-        shape: &[usize],
+        a_shape: &[usize],
+        b_shape: Option<&[usize]>,
         end: bool,
         env: &Uiua,
     ) -> UiuaResult<(Self, Self)> {
         val_as_arr!(self, |arr| arr
-            .unjoin_shape(shape, end, env)
+            .unjoin_shape(a_shape, b_shape, end, env)
             .map(|(a, b)| (a.into(), b.into())))
     }
 }
@@ -579,14 +580,21 @@ impl<T: ArrayValue> Array<T> {
     }
     pub(crate) fn unjoin_shape(
         mut self,
-        shape: &[usize],
+        a_shape: &[usize],
+        b_shape: Option<&[usize]>,
         is_end: bool,
         env: &Uiua,
     ) -> UiuaResult<(Self, Self)> {
+        // dbg!(
+        //     &self,
+        //     FormatShape(a_shape),
+        //     b_shape.map(FormatShape),
+        //     is_end
+        // );
         if self.rank() == 0 {
             return Err(env.error("Cannot unjoin a scalar"));
         }
-        match shape {
+        match a_shape {
             [] => {
                 if self.row_count() == 0 {
                     return Err(env.error("Cannot unjoin an empty array"));
@@ -602,7 +610,7 @@ impl<T: ArrayValue> Array<T> {
                 if !self.shape[1..].iter().zip(rest).all(|(&a, &b)| a == b) {
                     return Err(env.error(format!(
                         "Cannot unjoin array with shape {} from array with shape {}",
-                        FormatShape(shape),
+                        FormatShape(a_shape),
                         self.shape
                     )));
                 }
@@ -611,11 +619,15 @@ impl<T: ArrayValue> Array<T> {
 
         let row_len = self.row_len();
 
-        let was_row_join = self.rank() > shape.len();
+        let was_row_join = if let Some(b_shape) = b_shape {
+            b_shape.len() > a_shape.len()
+        } else {
+            self.rank() > a_shape.len()
+        };
         let unjoin_count = if was_row_join {
             1
         } else {
-            shape.first().copied().unwrap_or(1)
+            a_shape.first().copied().unwrap_or(1)
         };
         let unjoined_slice;
         if is_end {
@@ -637,7 +649,7 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         let mut unjoined = Array::new(unjoined_shape, unjoined_slice);
         if let Some(keys) = self.map_keys_mut() {
-            if !shape.is_empty() {
+            if !a_shape.is_empty() {
                 let mut unjoined_keys = keys.clone();
                 unjoined_keys.take(unjoin_count);
                 unjoined.meta_mut().map_keys = Some(unjoined_keys);

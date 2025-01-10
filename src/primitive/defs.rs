@@ -3321,6 +3321,8 @@ impl_primitive!(
     (1(2), UnJoinEnd),
     (2(2), UnJoinShape),
     (2(2), UnJoinShapeEnd),
+    (3(2), UnJoinShape2),
+    (3(2), UnJoinShape2End),
     (1(2), UnKeep),
     (1, UnSort, Impure),
     (1, UnJson),

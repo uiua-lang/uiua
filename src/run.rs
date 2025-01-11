@@ -14,6 +14,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
+use ecow::EcoVec;
 use thread_local::ThreadLocal;
 
 use crate::{
@@ -44,6 +45,8 @@ pub(crate) struct Runtime {
     pub(crate) under_stack: Vec<Value>,
     /// The call stack
     pub(crate) call_stack: Vec<StackFrame>,
+    /// The local stack
+    pub(crate) local_stack: EcoVec<(usize, Value)>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -191,6 +194,7 @@ impl Default for Runtime {
                 id: Some(FunctionId::Main),
                 ..Default::default()
             }],
+            local_stack: EcoVec::new(),
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
@@ -733,6 +737,25 @@ impl Uiua {
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
                 self.exec(inner)
             }
+            Node::WithLocal { def, inner, span } => self.with_span(span, |env| {
+                let val = env.pop(1)?;
+                env.rt.local_stack.push((def, val));
+                let res = env.exec(inner);
+                env.rt.local_stack.pop();
+                res
+            }),
+            Node::GetLocal { def, span } => self.with_span(span, |env| {
+                for (i, val) in env.rt.local_stack.iter().rev() {
+                    if *i == def {
+                        env.push(val.clone());
+                        return Ok(());
+                    }
+                }
+                Err(env.error(format!(
+                    "Not currently in a scope for def `{}`",
+                    env.asm.def(def).name
+                )))
+            }),
         };
         if self.rt.time_instrs {
             let end_time = self.rt.backend.now();
@@ -1447,6 +1470,7 @@ impl Uiua {
                     .drain(self.rt.stack.len() - capture_count..)
                     .collect(),
                 under_stack: Vec::new(),
+                local_stack: self.rt.local_stack.clone(),
                 fill_stack: Vec::new(),
                 fill_boundary_stack: Vec::new(),
                 unfill_stack: Vec::new(),

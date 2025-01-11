@@ -58,8 +58,10 @@ node!(
     NoInline(inner(Arc<Node>)),
     /// Track the caller of this node
     TrackCaller(inner(Arc<Node>)),
-    // /// Bind a local value
-    // BindLocal { id:  }
+    /// Bind a local value
+    WithLocal { def: usize, inner: Arc<Node>, span: usize },
+    /// Get a local value
+    GetLocal { def: usize, span: usize },
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),
@@ -696,6 +698,12 @@ impl fmt::Debug for Node {
             Node::TrackCaller(inner) => {
                 f.debug_tuple("track-caller").field(inner.as_ref()).finish()
             }
+            Node::WithLocal { def: id, inner, .. } => {
+                write!(f, "bind-local {id} (")?;
+                inner.fmt(f)?;
+                write!(f, ")")
+            }
+            Node::GetLocal { def: id, .. } => write!(f, "get-local {id}"),
         }
     }
 }

@@ -678,6 +678,11 @@ impl VirtualEnv {
                 }
             }
             Node::TrackCaller(inner) | Node::NoInline(inner) => self.node(inner)?,
+            Node::WithLocal { inner, .. } => {
+                let _val = self.stack.pop();
+                self.node(inner)?;
+            }
+            Node::GetLocal { .. } => self.handle_args_outputs(0, 1),
         }
         // println!("{node:?} -> {} ({})", self.stack.sig(), self.under.sig());
         Ok(())

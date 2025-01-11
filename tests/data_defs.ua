@@ -64,3 +64,6 @@ S~PushB
 ⍤⤙≍ [0 5] Foo~Bar 5
 ⍤⤙≍ [1 5] Foo~Baz 5
 ⍤⤙≍ 2 Foo~Qux
+
+~Foo [Bar]
+⍤⤙≍ ¤[1 2 3] Foo [1 2 3]

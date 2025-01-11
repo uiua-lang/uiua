@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.15
-- `⍜⊂≡¤`
 - Use different system that `fill` for data functions
 - "Method"-type bindings in a module
 - Nested module context macros

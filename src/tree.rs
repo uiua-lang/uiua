@@ -58,6 +58,8 @@ node!(
     NoInline(inner(Arc<Node>)),
     /// Track the caller of this node
     TrackCaller(inner(Arc<Node>)),
+    // /// Bind a local value
+    // BindLocal { id:  }
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),

@@ -339,7 +339,7 @@ impl Compiler {
                 };
                 if boxed {
                     arg.node.push(Node::Label(field.name.clone(), span));
-                } else {
+                } else if data.variant {
                     arg.node.push(Node::ImplPrim(
                         ImplPrimitive::ValidateNonBoxedVariant,
                         field.span,

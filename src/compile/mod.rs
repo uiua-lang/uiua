@@ -126,13 +126,15 @@ struct BindingPrelude {
     deprecation: Option<EcoString>,
 }
 
+type LocalNames = IndexMap<Ident, LocalName>;
+
 /// A Uiua module
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Module {
     /// The top level comment
     pub comment: Option<EcoString>,
     /// Map module-local names to global indices
-    pub names: IndexMap<Ident, LocalName>,
+    pub names: LocalNames,
     /// Whether the module uses experimental features
     experimental: bool,
 }
@@ -141,7 +143,7 @@ pub struct Module {
 #[derive(Clone)]
 struct IndexMacro {
     words: Vec<Sp<Word>>,
-    names: IndexMap<Ident, LocalName>,
+    names: LocalNames,
     sig: Option<Signature>,
     hygenic: bool,
     recursive: bool,
@@ -183,7 +185,7 @@ pub(crate) struct Scope {
     /// The top level comment
     comment: Option<EcoString>,
     /// Map local names to global indices
-    names: IndexMap<Ident, LocalName>,
+    names: LocalNames,
     /// Scope's data def index
     data_def: Option<ScopeDataDef>,
     /// Number of named data variants
@@ -251,7 +253,7 @@ impl Default for Scope {
 }
 
 /// The index of a named local in the bindings, and whether it is public
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LocalName {
     /// The index of the binding in assembly's bindings
     pub index: usize,
@@ -1603,10 +1605,10 @@ code:
     ///
     /// Returns [`None`] if the reference is to a constant
     fn ref_local(&self, r: &Ref) -> UiuaResult<Option<(Vec<LocalName>, LocalName)>> {
-        if let Some((module, path_locals)) = self.ref_path(&r.path, r.in_macro_arg)? {
-            if let Some(local) = module.names.get(&r.name.value).copied().or_else(|| {
+        if let Some((names, path_locals)) = self.ref_path(&r.path, r.in_macro_arg)? {
+            if let Some(local) = names.get(&r.name.value).copied().or_else(|| {
                 (r.name.value.strip_suffix('!')).and_then(|name| {
-                    module.names.get(name).copied().filter(|local| {
+                    names.get(name).copied().filter(|local| {
                         matches!(&self.asm.bindings[local.index].kind, BindingKind::Module(_))
                     })
                 })
@@ -1662,7 +1664,7 @@ code:
         &self,
         path: &[RefComponent],
         skip_local: bool,
-    ) -> UiuaResult<Option<(&Module, Vec<LocalName>)>> {
+    ) -> UiuaResult<Option<(&LocalNames, Vec<LocalName>)>> {
         let Some(first) = path.first() else {
             return Ok(None);
         };
@@ -1677,9 +1679,10 @@ code:
             })?;
         path_locals.push(module_local);
         let global = &self.asm.bindings[module_local.index].kind;
-        let mut module = match global {
-            BindingKind::Import(path) => &self.imports[path],
-            BindingKind::Module(module) => module,
+        let mut names = match global {
+            BindingKind::Import(path) => &self.imports[path].names,
+            BindingKind::Module(module) => &module.names,
+            BindingKind::Scope(i) => &self.higher_scopes.get(*i).unwrap_or(&self.scope).names,
             BindingKind::Func(_) => {
                 return Err(self.error(
                     first.module.span.clone(),
@@ -1707,21 +1710,18 @@ code:
             BindingKind::Error => return Ok(None),
         };
         for comp in path.iter().skip(1) {
-            let submod_local = module
-                .names
-                .get(&comp.module.value)
-                .copied()
-                .ok_or_else(|| {
-                    self.error(
-                        comp.module.span.clone(),
-                        format!("Module `{}` not found", comp.module.value),
-                    )
-                })?;
+            let submod_local = names.get(&comp.module.value).copied().ok_or_else(|| {
+                self.error(
+                    comp.module.span.clone(),
+                    format!("Module `{}` not found", comp.module.value),
+                )
+            })?;
             path_locals.push(submod_local);
             let global = &self.asm.bindings[submod_local.index].kind;
-            module = match global {
-                BindingKind::Import(path) => &self.imports[path],
-                BindingKind::Module(module) => module,
+            names = match global {
+                BindingKind::Import(path) => &self.imports[path].names,
+                BindingKind::Module(module) => &module.names,
+                BindingKind::Scope(i) => &self.higher_scopes.get(*i).unwrap_or(&self.scope).names,
                 BindingKind::Func(_) => {
                     return Err(self.error(
                         comp.module.span.clone(),
@@ -1750,7 +1750,7 @@ code:
             };
         }
 
-        Ok(Some((module, path_locals)))
+        Ok(Some((names, path_locals)))
     }
     fn reference(&mut self, r: Ref) -> UiuaResult<Node> {
         if r.path.is_empty() {
@@ -1855,8 +1855,13 @@ code:
                     Node::empty()
                 }
             }
-            BindingKind::Module(m) => {
-                if let Some(local) = m.names.get("Call").or_else(|| m.names.get("New")) {
+            global @ (BindingKind::Module(_) | BindingKind::Scope(_)) => {
+                let names = if let BindingKind::Module(m) = &global {
+                    &m.names
+                } else {
+                    &self.scope.names
+                };
+                if let Some(local) = names.get("Call").or_else(|| names.get("New")) {
                     self.code_meta.global_references.remove(&span);
                     self.code_meta
                         .global_references

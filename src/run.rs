@@ -528,10 +528,12 @@ impl Uiua {
                     BindingKind::Func(f) => {
                         self.respect_recursion_limit().and_then(|_| self.call(&f))
                     }
-                    BindingKind::Import { .. } | BindingKind::Module(_) => Err(self.error(
-                        "Called module global. \
+                    BindingKind::Import { .. } | BindingKind::Module(_) | BindingKind::Scope(_) => {
+                        Err(self.error(
+                            "Called module global. \
                         This is a bug in the interpreter.",
-                    )),
+                        ))
+                    }
                     BindingKind::IndexMacro(_) => Err(self.error(
                         "Called index macro global. \
                         This is a bug in the interpreter.",

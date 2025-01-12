@@ -505,7 +505,7 @@ impl Spanner {
         if meta.comment.is_none() {
             match &binfo.kind {
                 BindingKind::Const(None) => meta.comment = Some("constant".into()),
-                BindingKind::Import(_) | BindingKind::Module(_) => {
+                BindingKind::Import(_) | BindingKind::Module(_) | BindingKind::Scope(_) => {
                     meta.comment = Some("module".into())
                 }
                 BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
@@ -530,7 +530,7 @@ impl Spanner {
             BindingKind::CodeMacro(_) => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
             }
-            BindingKind::Import(_) => BindingDocsKind::Module { sig: None },
+            BindingKind::Import(_) | BindingKind::Scope(_) => BindingDocsKind::Module { sig: None },
             BindingKind::Module(m) => {
                 let sig = if let Some(local) = m.names.get("Call").or_else(|| m.names.get("New")) {
                     self.asm.bindings[local.index].kind.sig()
@@ -1239,7 +1239,9 @@ mod server {
                     BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
                         CompletionItemKind::FUNCTION
                     }
-                    BindingKind::Import(_) | BindingKind::Module(_) => CompletionItemKind::MODULE,
+                    BindingKind::Import(_) | BindingKind::Module(_) | BindingKind::Scope(_) => {
+                        CompletionItemKind::MODULE
+                    }
                     BindingKind::Error => CompletionItemKind::FUNCTION,
                 };
                 CompletionItem {

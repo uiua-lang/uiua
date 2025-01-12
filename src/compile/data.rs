@@ -37,6 +37,13 @@ impl Compiler {
         // Handle top-level named defs as modules
         if top_level {
             if let Some(name) = data.name.clone() {
+                let global_index = self.next_global;
+                self.next_global += 1;
+                let local = LocalName {
+                    index: global_index,
+                    public: true,
+                };
+
                 let comment = prelude.comment.clone();
                 let (module, ()) = self
                     .in_scope(ScopeKind::Module(name.value.clone()), |comp| {
@@ -44,12 +51,6 @@ impl Compiler {
                     })?;
 
                 // Add global
-                let global_index = self.next_global;
-                self.next_global += 1;
-                let local = LocalName {
-                    index: global_index,
-                    public: true,
-                };
                 let comment = comment.map(|text| DocComment::from(text.as_str()));
                 self.asm.add_binding_at(
                     local,

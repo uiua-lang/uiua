@@ -493,34 +493,8 @@ impl Compiler {
     }
     pub(super) fn module(&mut self, m: Sp<ScopedModule>, prelude: BindingPrelude) -> UiuaResult {
         let m = m.value;
-        let scope_kind = match &m.kind {
-            ModuleKind::Named(name) => ScopeKind::Module(name.value.clone()),
-            ModuleKind::Test => ScopeKind::Test,
-        };
-        let (module, ()) = self.in_scope(scope_kind, |comp| {
-            comp.items(m.items, false)?;
-            comp.end_enum()?;
-            Ok(())
-        })?;
-        match m.kind {
+        let (scope_kind, name_and_local) = match m.kind {
             ModuleKind::Named(name) => {
-                // Add imports
-                if let Some(line) = m.imports {
-                    for item in line.items {
-                        if let Some(mut local) = module.names.get(&item.value).copied() {
-                            local.public = false;
-                            (self.code_meta.global_references)
-                                .insert(item.span.clone(), local.index);
-                            self.scope.names.insert(item.value, local);
-                        } else {
-                            self.add_error(
-                                item.span.clone(),
-                                format!("{} does not exist in {}", item.value, name.value),
-                            );
-                        }
-                    }
-                }
-                // Add global
                 let global_index = self.next_global;
                 self.next_global += 1;
                 let local = LocalName {
@@ -534,21 +508,48 @@ impl Compiler {
                 };
                 self.asm.add_binding_at(
                     local,
-                    BindingKind::Module(module),
+                    BindingKind::Scope(self.higher_scopes.len() + 1),
                     Some(name.span.clone()),
                     meta,
                 );
                 // Add local
                 self.scope.names.insert(name.value.clone(), local);
                 (self.code_meta.global_references).insert(name.span.clone(), local.index);
+                (ScopeKind::Module(name.value.clone()), Some((name, local)))
             }
-            ModuleKind::Test => {
-                if let Some(line) = &m.imports {
-                    self.add_error(
-                        line.tilde_span.clone(),
-                        "Items cannot be imported from test modules",
-                    );
+            ModuleKind::Test => (ScopeKind::Test, None),
+        };
+        let (module, ()) = self.in_scope(scope_kind, |comp| {
+            comp.items(m.items, false)?;
+            comp.end_enum()?;
+            Ok(())
+        })?;
+        if let Some((name, local)) = name_and_local {
+            // Named module
+            // Add imports
+            if let Some(line) = m.imports {
+                for item in line.items {
+                    if let Some(mut local) = module.names.get(&item.value).copied() {
+                        local.public = false;
+                        (self.code_meta.global_references).insert(item.span.clone(), local.index);
+                        self.scope.names.insert(item.value, local);
+                    } else {
+                        self.add_error(
+                            item.span.clone(),
+                            format!("{} does not exist in {}", item.value, name.value),
+                        );
+                    }
                 }
+            }
+            // Update global
+            self.asm.bindings.make_mut()[local.index].kind = BindingKind::Module(module);
+        } else {
+            // Test module
+            if let Some(line) = &m.imports {
+                self.add_error(
+                    line.tilde_span.clone(),
+                    "Items cannot be imported from test modules",
+                );
             }
         }
         Ok(())

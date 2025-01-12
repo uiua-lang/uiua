@@ -431,6 +431,8 @@ pub enum BindingKind {
     Import(PathBuf),
     /// A scoped module
     Module(Module),
+    /// A scope being compiled
+    Scope(usize),
     /// An index macro
     ///
     /// Contains the number of arguments
@@ -449,6 +451,7 @@ impl BindingKind {
             Self::Func(func) => Some(func.sig),
             Self::Import { .. } => None,
             Self::Module(_) => None,
+            Self::Scope(_) => None,
             Self::IndexMacro(_) => None,
             Self::CodeMacro(_) => None,
             Self::Error => None,

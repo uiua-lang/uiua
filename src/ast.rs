@@ -442,7 +442,7 @@ pub struct Ref {
 }
 
 /// A component of a reference
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct RefComponent {
     /// The name of the module
     pub module: Sp<Ident>,

@@ -25,6 +25,21 @@ impl Compiler {
             return Ok(());
         }
 
+        // Get data def if this is a method
+        let mut data_def = None;
+        let is_method = binding.tilde_span.is_some();
+        if let Some(tilde_span) = binding.tilde_span {
+            if let Some(def) = self.scope.data_def.clone() {
+                let span = self.add_span(tilde_span);
+                data_def = Some((def, span));
+            } else {
+                self.add_error(
+                    tilde_span,
+                    "Method has no data definition defined before it",
+                );
+            }
+        }
+
         // Alias re-bound imports
         if ident_modifier_args(&binding.name.value) == 0
             && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
@@ -93,6 +108,9 @@ impl Compiler {
         if binding.code_macro {
             if external {
                 self.add_error(span.clone(), "Macros cannot be external");
+            }
+            if is_method {
+                self.add_error(span.clone(), "Methods cannot be macros");
             }
             if max_placeholder.is_some() {
                 return Err(self.error(span.clone(), "Code macros may not contain placeholders"));
@@ -207,6 +225,9 @@ impl Compiler {
             if external {
                 self.add_error(span.clone(), "Macros cannot be external");
             }
+            if is_method {
+                self.add_error(span.clone(), "Methods cannot be macros");
+            }
 
             self.scope.names.insert(name.clone(), local);
             self.asm.add_binding_at(
@@ -293,7 +314,11 @@ impl Compiler {
             global_index: local.index,
         });
         let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
-        let node = self.words(binding.words);
+        let node = if let Some((def, _)) = &data_def {
+            self.in_method(def, |comp| comp.words(binding.words))
+        } else {
+            self.words(binding.words)
+        };
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
         let mut node = match node {
             Ok(node) => node,
@@ -346,7 +371,7 @@ impl Compiler {
         // Resolve signature
         match node.sig() {
             Ok(mut sig) => {
-                let binds_above = node.is_empty() && no_code_words;
+                let binds_above = node.is_empty() && no_code_words && !is_method;
                 if !binds_above {
                     // Validate signature
                     if let Some(declared_sig) = &binding.signature {
@@ -355,7 +380,17 @@ impl Compiler {
                     }
                 }
 
-                if sig == (0, 1) && !self_referenced && !is_func && !is_obverse {
+                // Add data def local wrapper
+                if let Some((def, span)) = data_def {
+                    node = Node::WithLocal {
+                        def: def.def_index,
+                        inner: SigNode::new(sig, node).into(),
+                        span,
+                    };
+                    sig.args += 1;
+                }
+
+                if sig == (0, 1) && !self_referenced && !is_func && !is_obverse && !is_method {
                     // Binding is a constant
                     let val = if let [Node::Push(v)] = node.as_slice() {
                         Some(v.clone())

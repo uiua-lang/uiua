@@ -59,9 +59,11 @@ node!(
     /// Track the caller of this node
     TrackCaller(inner(Arc<Node>)),
     /// Bind a local value
-    WithLocal { def: usize, inner: Arc<Node>, span: usize },
+    WithLocal { def: usize, inner: Arc<SigNode>, span: usize },
     /// Get a local value
     GetLocal { def: usize, span: usize },
+    /// Set a local value
+    SetLocal { def: usize, span: usize },
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),
@@ -703,7 +705,8 @@ impl fmt::Debug for Node {
                 inner.fmt(f)?;
                 write!(f, ")")
             }
-            Node::GetLocal { def: id, .. } => write!(f, "get-local {id}"),
+            Node::GetLocal { def, .. } => write!(f, "get-local {def}"),
+            Node::SetLocal { def, .. } => write!(f, "set-local {def}"),
         }
     }
 }
@@ -768,6 +771,7 @@ impl Node {
                 Node::CustomInverse(cust, _) => (cust.normal.as_ref().ok())
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, purity, asm, visited)),
+                Node::WithLocal { inner, .. } => recurse(&inner.node, purity, asm, visited),
                 _ => true,
             };
             visited.truncate(len);
@@ -811,6 +815,7 @@ impl Node {
                 Node::CustomInverse(cust, _) => (cust.normal.as_ref().ok())
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, asm, visited)),
+                Node::WithLocal { inner, .. } => recurse(&inner.node, asm, visited),
                 _ => true,
             };
             visited.truncate(len);
@@ -839,6 +844,7 @@ impl Node {
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, asm, visited)),
                 Node::Array { inner, .. } => recurse(inner, asm, visited),
+                Node::WithLocal { inner, .. } => recurse(&inner.node, asm, visited),
                 _ => false,
             };
             visited.truncate(len);
@@ -879,6 +885,7 @@ impl Node {
                     .iter()
                     .find_map(|br| recurse(&br.node, asm, spans, visited)),
                 Node::Array { inner, .. } => recurse(inner, asm, spans, visited),
+                Node::WithLocal { inner, .. } => recurse(&inner.node, asm, spans, visited),
                 _ => None,
             };
             visited.truncate(len);

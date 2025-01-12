@@ -738,7 +738,7 @@ impl Uiua {
                 self.exec(inner)
             }
             Node::WithLocal { def, inner, span } => self.with_span(span, |env| {
-                let val = env.pop(1)?;
+                let val = env.remove_nth_back(inner.sig.args)?;
                 env.rt.local_stack.push((def, val));
                 let res = env.exec(inner);
                 env.rt.local_stack.pop();
@@ -748,6 +748,19 @@ impl Uiua {
                 for (i, val) in env.rt.local_stack.iter().rev() {
                     if *i == def {
                         env.push(val.clone());
+                        return Ok(());
+                    }
+                }
+                Err(env.error(format!(
+                    "Not currently in a scope for def `{}`",
+                    env.asm.def(def).name
+                )))
+            }),
+            Node::SetLocal { def, span } => self.with_span(span, |env| {
+                let new = env.pop(1)?;
+                for (i, val) in env.rt.local_stack.make_mut().iter_mut().rev() {
+                    if *i == def {
+                        *val = new.clone();
                         return Ok(());
                     }
                 }

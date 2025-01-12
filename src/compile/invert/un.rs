@@ -223,6 +223,8 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &RequireVal((TagVariant, ValidateVariant)),
     &RequireVal((ValidateVariant, TagVariant)),
     &(Dup, (Over, Flip, MatchPattern)),
+    &GetLocalPat,
+    &SetLocalPat,
     &PrimPat,
     &ImplPrimPat,
     &NoUnder(MatchConst),
@@ -955,6 +957,14 @@ inverse!(MatrixDivPat, input, _, Prim(Transpose, _), {
         return generic();
     };
     Ok((input, ImplPrim(MatrixDiv, *span)))
+});
+
+inverse!(GetLocalPat, input, _, GetLocal { def, span }, {
+    Ok((input, SetLocal { def, span }))
+});
+
+inverse!(SetLocalPat, input, _, SetLocal { def, span }, {
+    Ok((input, GetLocal { def, span }))
 });
 
 #[derive(Debug)]

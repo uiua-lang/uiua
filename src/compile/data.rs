@@ -64,7 +64,7 @@ impl Compiler {
                 self.scope.names.insert(name.value.clone(), local);
                 (self.code_meta.global_references).insert(name.span.clone(), local.index);
                 return Ok(());
-            } else if self.scope.data_def_index.is_some() {
+            } else if self.scope.data_def.is_some() {
                 return Err(self.error(
                     data.span(),
                     "A module cannot have multiple unnamed data definitions",
@@ -84,7 +84,6 @@ impl Compiler {
         let def_index = self.asm.bind_def(DefInfo {
             name: def_name.clone(),
         });
-        self.scope.data_def_index = Some(def_index);
 
         struct Field {
             name: EcoString,
@@ -427,40 +426,70 @@ impl Compiler {
             }
         }
 
+        // Scope for data function and/or methods
+        let (temp_module, _) = self.in_scope(ScopeKind::Method(def_index), |comp| {
+            // Local getters
+            for field in &fields {
+                let field_name = &field.name;
+                let id = FunctionId::Named(field_name.clone());
+                let node = Node::from_iter([
+                    Node::GetLocal {
+                        def: def_index,
+                        span: field.span,
+                    },
+                    comp.global_index(field.global_index, field.name_span.clone()),
+                ]);
+                let func = comp.asm.add_function(id, Signature::new(0, 1), node);
+                let local = LocalName {
+                    index: comp.next_global,
+                    public: true,
+                };
+                comp.next_global += 1;
+                let comment = format!("`{def_name}`'s `{field_name}` argument");
+                let meta = BindingMeta {
+                    comment: Some(DocComment::from(comment.as_str())),
+                    ..Default::default()
+                };
+                comp.compile_bind_function(field.name.clone(), local, func, field.span, meta)?;
+            }
+            // Self getter
+            {
+                let node = Node::GetLocal {
+                    def: def_index,
+                    span,
+                };
+                let id = FunctionId::Named("Self".into());
+                let func = comp.asm.add_function(id, Signature::new(0, 1), node);
+                let local = LocalName {
+                    index: comp.next_global,
+                    public: true,
+                };
+                comp.next_global += 1;
+                let comment = format!("Get bound `{def_name}`");
+                let meta = BindingMeta {
+                    comment: Some(DocComment::from(comment.as_str())),
+                    ..Default::default()
+                };
+                comp.compile_bind_function("Self".into(), local, func, span, meta)?;
+            }
+            Ok(())
+        })?;
+
+        self.scope.data_def = Some(ScopeDataDef {
+            def_index,
+            module: temp_module,
+        });
+
         let mut function_stuff = None;
         // Call function
         if let Some(words) = data.func {
             self.in_scope(ScopeKind::Temp(None), |comp| {
-                // Filled getters
-                for field in &fields {
-                    let field_name = &field.name;
-                    let id = FunctionId::Named(field_name.clone());
-                    let node = Node::from_iter([
-                        Node::GetLocal {
-                            def: def_index,
-                            span: field.span,
-                        },
-                        comp.global_index(field.global_index, field.name_span.clone()),
-                    ]);
-                    let func = comp.asm.add_function(id, Signature::new(0, 1), node);
-                    let local = LocalName {
-                        index: comp.next_global,
-                        public: true,
-                    };
-                    comp.next_global += 1;
-                    let comment = format!("`{def_name}`'s `{field_name}` argument");
-                    let meta = BindingMeta {
-                        comment: Some(DocComment::from(comment.as_str())),
-                        ..Default::default()
-                    };
-                    comp.compile_bind_function(field.name.clone(), local, func, field.span, meta)?;
-                }
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
                 if data.variant {
                     comp.add_error(word_span.clone(), "Variants may not have functions");
                 }
-                let inner = comp.words(words)?;
+                let inner = comp.words_sig(words)?;
                 let span = comp.add_span(word_span.clone());
                 let node = Node::from_iter([
                     Node::Call(constructor_func.clone(), span),

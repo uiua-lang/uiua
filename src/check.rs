@@ -112,6 +112,14 @@ impl Stack {
         self.height += n as i32;
         self.stack.extend(repeat(BasicValue::Other).take(n));
     }
+    fn remove(&mut self, i: usize) -> BasicValue {
+        self.height -= 1;
+        if i < self.stack.len() {
+            self.stack.remove(self.stack.len() - i - 1)
+        } else {
+            BasicValue::Other
+        }
+    }
     /// Set the current stack height as a potential minimum.
     /// At the end of checking, the minimum stack height is a component in calculating the signature.
     fn set_min_height(&mut self) {
@@ -679,10 +687,11 @@ impl VirtualEnv {
             }
             Node::TrackCaller(inner) | Node::NoInline(inner) => self.node(inner)?,
             Node::WithLocal { inner, .. } => {
-                let _val = self.stack.pop();
-                self.node(inner)?;
+                let _val = self.stack.remove(inner.sig.args);
+                self.node(&inner.node)?;
             }
             Node::GetLocal { .. } => self.handle_args_outputs(0, 1),
+            Node::SetLocal { .. } => self.handle_args_outputs(1, 0),
         }
         // println!("{node:?} -> {} ({})", self.stack.sig(), self.under.sig());
         Ok(())

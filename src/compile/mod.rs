@@ -127,7 +127,7 @@ struct BindingPrelude {
 }
 
 /// A Uiua module
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Module {
     /// The top level comment
     pub comment: Option<EcoString>,
@@ -185,7 +185,7 @@ pub(crate) struct Scope {
     /// Map local names to global indices
     names: IndexMap<Ident, LocalName>,
     /// Scope's data def index
-    data_def_index: Option<usize>,
+    data_def: Option<ScopeDataDef>,
     /// Number of named data variants
     data_variants: usize,
     /// Whether to allow experimental features
@@ -204,6 +204,8 @@ enum ScopeKind {
     File(FileScopeKind),
     /// A scope in a named module
     Module(Ident),
+    /// A scope in a data definition method
+    Method(usize),
     /// A scope that includes all bindings in a module
     AllInModule,
     /// A temporary scope, probably for a macro
@@ -216,6 +218,13 @@ enum ScopeKind {
 enum FileScopeKind {
     Source,
     Git,
+}
+
+#[derive(Debug, Clone)]
+struct ScopeDataDef {
+    def_index: usize,
+    /// Module for local getters
+    module: Module,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -231,7 +240,7 @@ impl Default for Scope {
             file_path: None,
             comment: None,
             names: IndexMap::new(),
-            data_def_index: None,
+            data_def: None,
             data_variants: 0,
             experimental: false,
             experimental_error: false,
@@ -396,6 +405,22 @@ impl Compiler {
             experimental: scope.experimental,
         };
         Ok((module, res))
+    }
+    fn in_method<T>(
+        &mut self,
+        def: &ScopeDataDef,
+        f: impl FnOnce(&mut Self) -> UiuaResult<T>,
+    ) -> UiuaResult<T> {
+        self.higher_scopes.push(take(&mut self.scope));
+        self.scope.kind = ScopeKind::Method(def.def_index);
+        self.scope.names.extend(
+            (def.module.names)
+                .iter()
+                .map(|(name, local)| (name.clone(), *local)),
+        );
+        let res = f(self);
+        self.scope = self.higher_scopes.pop().unwrap();
+        res
     }
     fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
         let node_start = self.asm.root.len();
@@ -1794,7 +1819,26 @@ code:
         match global {
             BindingKind::Const(Some(val)) => Node::new_push(val),
             BindingKind::Const(None) => Node::CallGlobal(index, Signature::new(0, 1)),
-            BindingKind::Func(f) => Node::Call(f, self.add_span(span)),
+            BindingKind::Func(f) => {
+                let span = self.add_span(span);
+                let root = &self.asm[&f];
+                let sig = f.sig;
+                let mut node = Node::Call(f, span);
+                if let &Node::WithLocal { def, .. } = root {
+                    if self.scopes().any(|sc| sc.kind == ScopeKind::Method(def)) {
+                        let mut inner = Node::GetLocal { def, span };
+                        for _ in 0..sig.args.saturating_sub(1) {
+                            inner = Node::Mod(
+                                Primitive::Dip,
+                                eco_vec![inner.sig_node().unwrap()],
+                                span,
+                            );
+                        }
+                        node.prepend(inner);
+                    }
+                }
+                node
+            }
             BindingKind::Import(path) => {
                 if let Some(local) = self.imports.get(&path).and_then(|m| m.names.get("Call")) {
                     self.code_meta.global_references.remove(&span);

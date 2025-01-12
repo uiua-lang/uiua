@@ -330,6 +330,9 @@ impl Spanner {
                     }
                 }
                 Item::Binding(binding) => {
+                    if let Some(tilde_span) = &binding.tilde_span {
+                        spans.push(tilde_span.clone().sp(SpanKind::Delimiter));
+                    }
                     let binding_docs = self
                         .binding_docs(&binding.name.span)
                         .or_else(|| self.reference_docs(&binding.name.span));

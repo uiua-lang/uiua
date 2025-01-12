@@ -412,9 +412,26 @@ impl Parser<'_> {
         self.next_output_comment += 1;
         Some(n.span.sp(Word::OutputComment { i, n: n.value }))
     }
-    fn binding_init(&mut self) -> Option<(Sp<Ident>, CodeSpan, bool, bool)> {
+}
+
+struct BindingInit {
+    tilde_span: Option<CodeSpan>,
+    name: Sp<Ident>,
+    arrow_span: CodeSpan,
+    public: bool,
+    array_macro: bool,
+}
+
+impl Parser<'_> {
+    fn binding_init(&mut self) -> Option<BindingInit> {
         let start = self.index;
-        let name = self.ident()?;
+        let tilde_span = self.exact(Tilde.into());
+        let name = if let Some(name) = self.ident() {
+            name
+        } else {
+            self.index = start;
+            return None;
+        };
         // Left arrow
         let arrow_span = self.spaces().map(|w| w.span);
         let (glyph_span, public) =
@@ -444,7 +461,13 @@ impl Parser<'_> {
         if let Some(span) = self.spaces().map(|w| w.span) {
             arrow_span = arrow_span.merge(span);
         }
-        Some((name, arrow_span, public, array_macro))
+        Some(BindingInit {
+            tilde_span,
+            name,
+            arrow_span,
+            public,
+            array_macro,
+        })
     }
     fn import_init(&mut self) -> Option<(Option<Sp<Ident>>, CodeSpan, Sp<String>)> {
         let start = self.index;
@@ -467,7 +490,13 @@ impl Parser<'_> {
         Some((name, tilde_span, path))
     }
     fn binding(&mut self) -> Option<Binding> {
-        let (name, arrow_span, public, array_macro) = self.binding_init()?;
+        let BindingInit {
+            tilde_span,
+            name,
+            arrow_span,
+            public,
+            array_macro,
+        } = self.binding_init()?;
         // Bad name advice
         if ["\u{200b}", "\u{200c}", "\u{200d}"]
             .iter()
@@ -560,6 +589,7 @@ impl Parser<'_> {
 
         self.validate_binding_name(&name);
         Some(Binding {
+            tilde_span,
             name,
             arrow_span,
             public,

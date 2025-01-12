@@ -645,6 +645,10 @@ impl Formatter<'_> {
                 self.format_multiline_words(&lines, Compact::Never, false, true, false, depth);
             }
             Item::Binding(binding) => {
+                if let Some(tilde_span) = &binding.tilde_span {
+                    self.push(tilde_span, "~");
+                }
+
                 match binding.words.first().map(|w| &w.value) {
                     Some(Word::Ref(r))
                         if binding.words.len() == 1

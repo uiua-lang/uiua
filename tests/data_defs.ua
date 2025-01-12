@@ -74,8 +74,10 @@ S~PushB
   ~Add        ← AddBar Baz
   ~WithBarAdd ← Foo~Add New 10 Baz
   ~WithBar    ← Self °Bar
+  ~IncrBar    ← Self⍜Bar+₁
 └─╴
 ⍤⤙≍ 13 Foo~AddBar 10 Foo 3 5
 ⍤⤙≍ 8 Foo~Add Foo 3 5
 ⍤⤙≍ 15 Foo~WithBarAdd Foo 3 5
 ⍤⤙≍ Foo 10 5 Foo~WithBar 10 Foo 3 5
+⍤⤙≍ Foo 4 5 Foo~IncrBar Foo 3 5

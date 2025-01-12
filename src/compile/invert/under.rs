@@ -115,6 +115,8 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &TransposePat,
     &RotatePat,
     &FillPat,
+    &GetLocalPat,
+    &SetLocalPat,
     &DupPat,
     // Sign ops
     &Stash(1, Abs, (Sign, Mul)),
@@ -958,14 +960,7 @@ under!(RotatePat, input, g_sig, _, _, Prim(Rotate, span), {
 });
 
 under!(
-    FillPat,
-    input,
-    g_sig,
-    inverse,
-    asm,
-    Fill,
-    span,
-    [fill, f],
+    (FillPat, input, g_sig, inverse, asm, Fill, span, [fill, f]),
     {
         if fill.sig != (0, 1) {
             return generic();
@@ -976,6 +971,14 @@ under!(
         Ok((input, before, after))
     }
 );
+
+under!(GetLocalPat, input, _, _, _, GetLocal { def, span }, {
+    Ok((input, GetLocal { def, span }, SetLocal { def, span }))
+});
+
+under!(SetLocalPat, input, _, _, _, SetLocal { def, span }, {
+    Ok((input, SetLocal { def, span }, GetLocal { def, span }))
+});
 
 under!(FlipPat, input, g_sig, inverse, asm, Prim(Flip, span), {
     let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;

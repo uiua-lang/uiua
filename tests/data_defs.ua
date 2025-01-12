@@ -71,13 +71,15 @@ S~PushB
 ┌─╴Foo
   ~{Bar Baz}
   ~AddBar     ← +Bar
-  ~Add        ← AddBar Baz
-  ~WithBarAdd ← Foo~Add New 10 Baz
+  ~Sum        ← AddBar Baz
+  ~WithBarSum ← Foo~Sum New 10 Baz
   ~WithBar    ← Self °Bar
   ~IncrBar    ← Self⍜Bar+₁
+  ~Add        ← Foo ⊃(+Bar Foo~Bar|+Baz Foo~Baz)
 └─╴
 ⍤⤙≍ 13 Foo~AddBar 10 Foo 3 5
-⍤⤙≍ 8 Foo~Add Foo 3 5
-⍤⤙≍ 15 Foo~WithBarAdd Foo 3 5
+⍤⤙≍ 8 Foo~Sum Foo 3 5
+⍤⤙≍ 15 Foo~WithBarSum Foo 3 5
 ⍤⤙≍ Foo 10 5 Foo~WithBar 10 Foo 3 5
 ⍤⤙≍ Foo 4 5 Foo~IncrBar Foo 3 5
+⍤⤙≍ Foo 23 15 Foo~Add Foo 20 10 Foo 3 5

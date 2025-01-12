@@ -8,6 +8,7 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) and [`do ⍢`](https://uiua.org/docs/do) with net-negative signatures now preserve lower stack values between iterations
 - Add subscripted [`on ⟜`](https://uiua.org/docs/on), [`by ⊸`](https://uiua.org/docs/by), [`with ⤙`](https://uiua.org/docs/with), and [`off ⤚`](https://uiua.org/docs/off)
   - These preserve N arguments rather than just the first or last
+- Add data definition methods
 - Stabilize subscripted [`random ⚂`](https://uiua.org/docs/random)
 - Signature comments can now use a `$` rather than a `?` to automatically label arguments and outputs
 - Add sided subscripts for [`reach 𝄐`](https://uiua.org/docs/reach)

@@ -1845,7 +1845,9 @@ code:
             global @ (BindingKind::Module(_) | BindingKind::Scope(_)) => {
                 let names = match &global {
                     BindingKind::Module(m) => &m.names,
-                    BindingKind::Scope(i) => &self.higher_scopes.get(*i).unwrap().names,
+                    BindingKind::Scope(i) => {
+                        &self.higher_scopes.get(*i).unwrap_or(&self.scope).names
+                    }
                     _ => unreachable!(),
                 };
                 if let Some(local) = names.get("Call").or_else(|| names.get("New")) {

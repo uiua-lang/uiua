@@ -1764,7 +1764,7 @@ code:
             self.code_meta
                 .global_references
                 .insert(r.name.span.clone(), local.index);
-            Ok(self.global_index(local.index, r.name.span))
+            Ok(self.global_index(local.index, false, r.name.span))
         } else {
             self.ident(r.name.value, r.name.span, r.in_macro_arg)
         }
@@ -1790,7 +1790,7 @@ code:
                 // Name exists in scope
                 self.validate_local(&ident, local, &span);
                 (self.code_meta.global_references).insert(span.clone(), local.index);
-                self.global_index(local.index, span)
+                self.global_index(local.index, true, span)
             } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
                 // Name is a built-in constant
                 self.code_meta
@@ -1814,7 +1814,7 @@ code:
         }
         None
     }
-    fn global_index(&mut self, index: usize, span: CodeSpan) -> Node {
+    fn global_index(&mut self, index: usize, single_ident: bool, span: CodeSpan) -> Node {
         let global = self.asm.bindings[index].kind.clone();
         match global {
             BindingKind::Const(Some(val)) => Node::new_push(val),
@@ -1824,7 +1824,7 @@ code:
                 let root = &self.asm[&f];
                 let sig = f.sig;
                 let mut node = Node::Call(f, span);
-                if let &Node::WithLocal { def, .. } = root {
+                if let (true, &Node::WithLocal { def, .. }) = (single_ident, root) {
                     if self.scopes().any(|sc| sc.kind == ScopeKind::Method(def)) {
                         let mut inner = Node::GetLocal { def, span };
                         for _ in 0..sig.args.saturating_sub(1) {
@@ -1845,7 +1845,7 @@ code:
                     self.code_meta
                         .global_references
                         .insert(span.clone(), local.index);
-                    self.global_index(local.index, span)
+                    self.global_index(local.index, single_ident, span)
                 } else {
                     self.add_error(
                         span,
@@ -1866,7 +1866,7 @@ code:
                     self.code_meta
                         .global_references
                         .insert(span.clone(), local.index);
-                    self.global_index(local.index, span)
+                    self.global_index(local.index, single_ident, span)
                 } else {
                     self.add_error(
                         span,

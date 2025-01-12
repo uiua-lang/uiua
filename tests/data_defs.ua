@@ -67,3 +67,15 @@ S~PushB
 
 ~Foo [Bar]
 ⍤⤙≍ ¤[1 2 3] Foo [1 2 3]
+
+┌─╴Foo
+  ~{Bar Baz}
+  ~AddBar     ← +Bar
+  ~Add        ← AddBar Baz
+  ~WithBarAdd ← Foo~Add New 10 Baz
+  # ~WithBar    ← Self °Bar
+└─╴
+⍤⤙≍ 13 Foo~AddBar 10 Foo 3 5
+⍤⤙≍ 8 Foo~Add Foo 3 5
+⍤⤙≍ 15 Foo~WithBarAdd Foo 3 5
+# ⍤⤙≍ Foo 10 5 Foo~WithBar 10 Foo 3 5

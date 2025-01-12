@@ -428,7 +428,7 @@ impl Compiler {
         }
 
         // Scope for data function and/or methods
-        let (temp_module, _) = self.in_scope(ScopeKind::Method(def_index), |comp| {
+        let (method_module, _) = self.in_scope(ScopeKind::Method(def_index), |comp| {
             // Local getters
             for field in &fields {
                 let field_name = &field.name;
@@ -438,7 +438,7 @@ impl Compiler {
                         def: def_index,
                         span: field.span,
                     },
-                    comp.global_index(field.global_index, field.name_span.clone()),
+                    comp.global_index(field.global_index, true, field.name_span.clone()),
                 ]);
                 let func = comp.asm.add_function(id, Signature::new(0, 1), node);
                 let local = LocalName {
@@ -476,15 +476,16 @@ impl Compiler {
             Ok(())
         })?;
 
-        self.scope.data_def = Some(ScopeDataDef {
+        let scope_data_def = ScopeDataDef {
             def_index,
-            module: temp_module,
-        });
+            module: method_module,
+        };
+        self.scope.data_def = Some(scope_data_def.clone());
 
         let mut function_stuff = None;
         // Call function
         if let Some(words) = data.func {
-            self.in_scope(ScopeKind::Temp(None), |comp| {
+            self.in_method(&scope_data_def, |comp| {
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
                 if data.variant {
@@ -492,8 +493,16 @@ impl Compiler {
                 }
                 let inner = comp.words_sig(words)?;
                 let span = comp.add_span(word_span.clone());
+                let mut construct = Node::Call(constructor_func.clone(), span);
+                for _ in 0..inner.sig.args {
+                    construct = Node::Mod(
+                        Primitive::Dip,
+                        eco_vec![construct.sig_node().unwrap()],
+                        span,
+                    );
+                }
                 let node = Node::from_iter([
-                    Node::Call(constructor_func.clone(), span),
+                    construct,
                     Node::WithLocal {
                         def: def_index,
                         inner: inner.into(),

@@ -770,9 +770,8 @@ code:
             if !sig.matches_sig(function.sig) {
                 self.emit_diagnostic(
                     format!(
-                        "{}'s comment describes {}, \
+                        "{name}'s comment describes {}, \
                         but its code has signature {}",
-                        name,
                         sig.sig_string(),
                         function.sig,
                     ),
@@ -1856,10 +1855,10 @@ code:
                 }
             }
             global @ (BindingKind::Module(_) | BindingKind::Scope(_)) => {
-                let names = if let BindingKind::Module(m) = &global {
-                    &m.names
-                } else {
-                    &self.scope.names
+                let names = match &global {
+                    BindingKind::Module(m) => &m.names,
+                    BindingKind::Scope(i) => &self.higher_scopes.get(*i).unwrap().names,
+                    _ => unreachable!(),
                 };
                 if let Some(local) = names.get("Call").or_else(|| names.get("New")) {
                     self.code_meta.global_references.remove(&span);

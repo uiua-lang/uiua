@@ -394,11 +394,12 @@ impl Compiler {
                 node.push(Node::ImplPrim(ImplPrimitive::TagVariant, span));
             }
         }
-        let name = Ident::from("New");
-        let id = FunctionId::Named(name.clone());
-        let constructor_func = self
-            .asm
-            .add_function(id, Signature::new(constructor_args, 1), node);
+        let constructor_name = Ident::from("New");
+        let constructor_func = self.asm.add_function(
+            FunctionId::Named(constructor_name.clone()),
+            Signature::new(constructor_args, 1),
+            node,
+        );
         let local = LocalName {
             index: self.next_global,
             public: true,
@@ -515,9 +516,9 @@ impl Compiler {
                     public: true,
                 };
                 comp.next_global += 1;
-                let func = comp
-                    .asm
-                    .add_function(FunctionId::Named(name.clone()), sig, node);
+                let func =
+                    comp.asm
+                        .add_function(FunctionId::Named(constructor_name.clone()), sig, node);
                 function_stuff = Some((local, func, span));
                 Ok(())
             })?;
@@ -533,7 +534,7 @@ impl Compiler {
             comment: Some(DocComment::from(comment.as_str())),
             ..Default::default()
         };
-        self.compile_bind_function(name, local, constructor_func, span, meta)?;
+        self.compile_bind_function(constructor_name, local, constructor_func, span, meta)?;
 
         Ok(())
     }

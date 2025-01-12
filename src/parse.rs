@@ -426,6 +426,7 @@ impl Parser<'_> {
     fn binding_init(&mut self) -> Option<BindingInit> {
         let start = self.index;
         let tilde_span = self.exact(Tilde.into());
+        self.spaces();
         let name = if let Some(name) = self.ident() {
             name
         } else {

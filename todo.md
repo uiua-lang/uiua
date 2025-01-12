@@ -1,8 +1,7 @@
 # Uiua Todo
 
 # 0.15
-- Use different system that `fill` for data functions
-- "Method"-type bindings in a module
+- Implement some `under` inverses in terms of `un by`, rather than the other way around
 - Nested module context macros
 - Multidimensional `group`
 - `un`/`anti` `stencil`

@@ -224,7 +224,6 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &RequireVal((ValidateVariant, TagVariant)),
     &(Dup, (Over, Flip, MatchPattern)),
     &GetLocalPat,
-    &SetLocalPat,
     &PrimPat,
     &ImplPrimPat,
     &NoUnder(MatchConst),
@@ -959,12 +958,16 @@ inverse!(MatrixDivPat, input, _, Prim(Transpose, _), {
     Ok((input, ImplPrim(MatrixDiv, *span)))
 });
 
-inverse!(GetLocalPat, input, _, GetLocal { def, span }, {
-    Ok((input, SetLocal { def, span }))
-});
-
-inverse!(SetLocalPat, input, _, SetLocal { def, span }, {
-    Ok((input, GetLocal { def, span }))
+inverse!(GetLocalPat, input, asm, GetLocal { def, span }, {
+    let by_rest = Mod(By, eco_vec![Node::from(input).sig_node().unwrap()], span);
+    let rest_inv = by_rest.un_inverse(asm)?;
+    let inv = Node::from_iter([
+        GetLocal { def, span },
+        Prim(Flip, span),
+        rest_inv,
+        SetLocal { def, span },
+    ]);
+    Ok((&[], inv))
 });
 
 #[derive(Debug)]

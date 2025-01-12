@@ -502,11 +502,11 @@ impl Compiler {
                             node = Node::Mod(Dip, eco_vec![SigNode::new(sn.sig, node)], span);
                             node.prepend(Node::Prim(Flip, span));
                         }
-                        SubSide::Right => node.prepend(Node::Mod(
-                            Dip,
-                            eco_vec![SigNode::new((2, 2), Node::Prim(Flip, span))],
-                            span,
-                        )),
+                        SubSide::Right => {
+                            node.prepend(Node::Prim(Pop, span));
+                            node = Node::Mod(Off, eco_vec![node.sig_node().unwrap()], span);
+                            node.prepend(Node::Prim(Flip, span));
+                        }
                     }
                 } else {
                     node.prepend(Node::Mod(

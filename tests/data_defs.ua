@@ -7,8 +7,8 @@
   |Foo {Bar Baz}
   |Qux [x y z]
   |Sed {M N}
-  |Wir 
-  
+  |Wir
+
   Format ← ⍣(
     $"_ and _" °Foo
   | $"⟨_ _ _⟩" °Qux
@@ -57,7 +57,7 @@ S~PushB
 ┌─╴Foo
   |Bar [A]
   |Baz [A]
-  |Qux 
+  |Qux
 └─╴
 ⍤⤙≍ 1 /↥⌕"Non-boxed variant" ⍣Foo~Bar⋅∘ @a
 ⍤⤙≍ 1 /↥⌕"Non-boxed variant" ⍣Foo~Baz⋅∘ [1 2 3]
@@ -71,7 +71,7 @@ S~PushB
 ┌─╴Foo
   ~{Bar Baz}
   ~AddBar     ← +Bar
-  ~Sum        ← AddBar Baz
+  ~Sum        ← AddBar Baz # ? Foo
   ~WithBarSum ← Foo~Sum New 10 Baz
   ~WithBar    ← Self °Bar
   ~IncrBar    ← Self⍜Bar+₁

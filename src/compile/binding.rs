@@ -314,31 +314,43 @@ impl Compiler {
             global_index: local.index,
         });
         let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
-        let node = if let Some((def, _)) = &data_def {
-            self.in_method(def, |comp| comp.words(binding.words))
+        let compile = |comp: &mut Compiler| -> UiuaResult<Node> {
+            // Compile the words
+            let node = comp.words(binding.words);
+            // Add an error binding if there was an error
+            let mut node = match node {
+                Ok(node) => node,
+                Err(e) => {
+                    comp.asm.add_binding_at(
+                        local,
+                        BindingKind::Error,
+                        Some(span.clone()),
+                        meta.clone(),
+                    );
+                    return Err(e);
+                }
+            };
+            // Apply the signature comment
+            if let Some(comment_sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
+                comp.apply_node_comment(
+                    &mut node,
+                    comment_sig,
+                    &format!("{name}'s"),
+                    &binding.name.span,
+                );
+            }
+            Ok(node)
+        };
+        // We may need to compile the words in the context of a data definition method
+        let mut node = if let Some((def, _)) = &data_def {
+            self.in_method(def, compile)?
         } else {
-            self.words(binding.words)
+            compile(self)?
         };
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
-        let mut node = match node {
-            Ok(node) => node,
-            Err(e) => {
-                self.asm
-                    .add_binding_at(local, BindingKind::Error, Some(span.clone()), meta);
-                return Err(e);
-            }
-        };
         let is_obverse = node
             .iter()
             .any(|n| matches!(n, Node::CustomInverse(cust, _) if cust.is_obverse));
-        if let Some(comment_sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
-            self.apply_node_comment(
-                &mut node,
-                comment_sig,
-                &format!("{name}'s"),
-                &binding.name.span,
-            );
-        }
 
         // Normalize external
         if external {

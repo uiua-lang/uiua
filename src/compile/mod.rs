@@ -796,8 +796,7 @@ code:
         if let Some(sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
             self.emit_diagnostic(
                 format!(
-                    "{}'s comment describes {}, but it is a constant",
-                    name,
+                    "{name}'s comment describes {}, but it is a constant",
                     sig.sig_string(),
                 ),
                 DiagnosticKind::Warning,
@@ -949,24 +948,10 @@ code:
     // Compile a line, checking an end-of-line signature comment
     fn line(&mut self, line: Vec<Sp<Word>>, must_be_callable: bool) -> UiuaResult<Node> {
         let comment_sig = line_sig(&line);
-        let is_empty = line.iter().all(|w| !w.value.is_code());
         // Actually compile the line
         let mut node = self.words(line)?;
         // Validate line signature
         if let Some(comment_sig) = comment_sig {
-            if let Ok(sig) = node.sig() {
-                if !is_empty && !comment_sig.value.matches_sig(sig) {
-                    self.emit_diagnostic(
-                        format!(
-                            "Line comment describes {}, \
-                            but its code has signature {sig}",
-                            comment_sig.value.sig_string()
-                        ),
-                        DiagnosticKind::Warning,
-                        comment_sig.span.clone(),
-                    );
-                }
-            }
             self.apply_node_comment(&mut node, &comment_sig.value, "Line", &comment_sig.span);
         }
         // Validate callability
@@ -999,7 +984,10 @@ code:
     ) {
         let mut spandex: Option<usize> = None;
         // Validate comment signature
-        if let Ok(sig) = node.sig() {
+        if let Ok(mut sig) = node.sig() {
+            if let ScopeKind::Method(_) = self.scope.kind {
+                sig.args += 1;
+            }
             if !comment_sig.matches_sig(sig) {
                 let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
                 self.emit_diagnostic(

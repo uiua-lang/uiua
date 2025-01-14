@@ -76,7 +76,7 @@ If you like, you can put values on the stack first, then operate on them.
 √.225
 ```
 
-For math functions where the order matters, like [subtract](/docs/sub) and [divide](/docs/div), what would normally be the second argument is instead the first. This is so you can think of fragments like `¯2` as a single unit.
+For math functions where the order matters, like [subtract](/docs/sub) and [divide](/docs/div), what would normally be the second argument is instead the first. This is so you can think of fragments like `-``2` as a single unit.
 
 If you want them to work the other way, you can use [flip](/docs/flip), which swaps the top two values on the stack.
 

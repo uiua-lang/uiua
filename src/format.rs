@@ -951,15 +951,18 @@ impl Formatter<'_> {
                         }
                     }
                 });
-                if formatted.starts_with(|c: char| c.is_ascii_digit())
-                    && (self
-                        .output
-                        .ends_with(|c: char| c.is_ascii_digit() || c == '¯')
-                        || self.output.ends_with('.')
-                            && (self.output.chars().nth_back(1))
-                                .is_some_and(|c| c.is_ascii_digit()))
+                let curr = &mut self.output;
+                let new_starts_ascii = formatted.starts_with(|c: char| c.is_ascii_digit());
+                let new_starts_glyph = formatted.starts_with(['∞', 'η', 'π', 'τ']);
+                let curr_ends_neg = curr.ends_with('¯');
+                let curr_ends_ascii_or_neg =
+                    curr_ends_neg || curr.ends_with(|c: char| c.is_ascii_digit());
+                let curr_ends_num_dup = curr.ends_with('.')
+                    && (curr.chars().nth_back(1)).is_some_and(|c| c.is_ascii_digit());
+                if new_starts_ascii && (curr_ends_ascii_or_neg || curr_ends_num_dup)
+                    || new_starts_glyph && curr_ends_neg
                 {
-                    self.output.push(' ');
+                    curr.push(' ');
                 }
                 self.push(&word.span, &formatted);
             }

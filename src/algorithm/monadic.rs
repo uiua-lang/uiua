@@ -1596,7 +1596,10 @@ impl Value {
                 ok.then_some(len)
                     .ok_or_else(|| env.error("Argument to where must be an array of naturals"))
             }
-            Value::Byte(bytes) => Ok(bytes.data.iter().map(|&n| n as f64).sum()),
+            Value::Byte(bytes) => {
+                // `abs` in needed to fix some weird behavior on WASM
+                Ok(bytes.data.iter().map(|&n| n as f64).sum::<f64>().abs())
+            }
             value => Err(env.error(format!(
                 "Argument to where must be an array of naturals, but it is {}",
                 value.type_name_plural()

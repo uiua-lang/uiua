@@ -3,7 +3,7 @@ use std::{collections::VecDeque, mem::take};
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::{pervade::*, FillContext, MultiOutput},
+    algorithm::{pervade::*, validate_size, FillContext, MultiOutput},
     cowslice::extend_repeat,
     val_as_arr, Array, ArrayValue, Boxed, Node, Primitive, Shape, SigNode, Uiua, UiuaResult, Value,
 };
@@ -78,8 +78,33 @@ where
         Default(MultiOutput<Vec<Value>>, EcoVec<T>),
     }
 
+    // Determine shape stuff
+    let mut shape_prefix = Shape::SCALAR;
+    for (d, s) in dims.iter().zip(&arr.shape) {
+        let total_len = *s + 2 * d.fill * d.stride;
+        shape_prefix.push((total_len + d.stride).saturating_sub(d.size) / d.stride);
+    }
+    let window_shape = Shape::from_iter(
+        dims.iter()
+            .map(|d| d.size)
+            .chain(arr.shape.iter().skip(dims.len()).copied()),
+    );
+    if shape_prefix.contains(&0) {
+        let mut shape = shape_prefix;
+        shape.extend(window_shape);
+        env.push(Array::new(shape, EcoVec::new()));
+        return Ok(());
+    }
+
+    // Initialize action
     let mut action: WindowAction<T> = match &f.node {
-        Node::Prim(Primitive::Identity, _) => WindowAction::Id(EcoVec::new()),
+        Node::Prim(Primitive::Identity, _) => {
+            let size = validate_size::<T>(
+                (shape_prefix.iter().copied()).chain(window_shape.iter().copied()),
+                env,
+            )?;
+            WindowAction::Id(EcoVec::with_capacity(size))
+        }
         Node::Prim(Primitive::Box, _) => WindowAction::Box(EcoVec::new(), EcoVec::new()),
         _ => WindowAction::Default(multi_output(f.sig.outputs, Vec::new()), EcoVec::new()),
     };
@@ -143,22 +168,6 @@ where
     let mut corner = corner_starts.clone();
     let mut curr = corner.clone();
     let mut offset = vec![0usize; corner.len()];
-    let mut shape_prefix = Shape::SCALAR;
-    for (d, s) in dims.iter().zip(&arr.shape) {
-        let total_len = *s + 2 * d.fill * d.stride;
-        shape_prefix.push((total_len + d.stride).saturating_sub(d.size) / d.stride);
-    }
-    let window_shape = Shape::from_iter(
-        dims.iter()
-            .map(|d| d.size)
-            .chain(arr.shape.iter().skip(dims.len()).copied()),
-    );
-    if shape_prefix.contains(&0) {
-        let mut shape = shape_prefix;
-        shape.extend(window_shape);
-        env.push(Array::new(shape, EcoVec::new()));
-        return Ok(());
-    }
     let cell_shape = Shape::from(&arr.shape[dims.len()..]);
     let cell_len = cell_shape.elements();
     let fill = fill.unwrap_or_else(T::proxy);

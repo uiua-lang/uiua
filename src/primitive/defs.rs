@@ -1938,6 +1938,19 @@ primitive!(
     ///
     /// See also: [above]
     ([1], Below, Stack, ("below", '◡')),
+    /// Call a function with the same array as all arguments
+    ///
+    /// ex: # Experimental!
+    ///   : ˙+ 5
+    /// ex: # Experimental!
+    ///   : ˙⊞+ 1_2_3
+    /// ex: # Experimental!
+    ///   : ˙(⊂⊂) π
+    /// [self] on a noadic function duplicates the output. This makes it distinct from [both] on a monadic function.
+    /// ex: # Experimental!
+    ///   : ⌊×10[˙⚂]
+    ///   : ⌊×10[∩⚂]
+    ([1], Slf, Stack, ("self", '˙')),
     /// Call a function with its arguments reversed
     ///
     /// This is a modifier version of [flip].

@@ -17,6 +17,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`# External!`](https://www.uiua.org/tutorial/documentation#external) semantic comment to mark functions that are provided via Rust code
   - These functions don't require a Uiua implementation and will show up in the LSP
   - Calling an `# External!` function that hasn't been bound will throw an error
+- Add experimental [`self ˙`](https://uiua.org/docs/self) modifier
 - Add experimental subscripts to [`negate ¯`](https://uiua.org/docs/negate)
   - This will [`multiply ×`](https://uiua.org/docs/multiply) a number by the Nth root of unity
 ### Interpreter

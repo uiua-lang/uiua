@@ -406,6 +406,7 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::Utf8, &["utf", "utf__8"]),
         (Primitive::First, &["fst"]),
         (Primitive::Last, &["lst"]),
+        (Primitive::Slf, &["slf"]),
         (Primitive::ImageEncode, &["&ime", "imen"]),
         (Primitive::GifEncode, &["&gife", "gifen"]),
         (Primitive::AudioEncode, &["&ae", "auden"]),
@@ -540,7 +541,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (Reach | Backward | Above | Around)
+            (Reach | Slf | Backward | Above | Around)
                 | (Or | Base | Fft | Layout | Binary)
                 | Astar
                 | (Derivative | Integral)

@@ -682,6 +682,34 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 Node::Mod(prim, eco_vec![sn], span)
             }
+            Slf => {
+                let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
+                match sig.args {
+                    0 => {
+                        let span = self.add_span(modified.modifier.span.clone());
+                        node.push(Node::Prim(Dup, span));
+                        node
+                    }
+                    1 => {
+                        self.emit_diagnostic(
+                            format!(
+                                "Remove {} here, as it does nothing for monadic functions",
+                                Slf.format(),
+                            ),
+                            DiagnosticKind::Style,
+                            modified.modifier.span.clone(),
+                        );
+                        node
+                    }
+                    n => {
+                        let span = self.add_span(modified.modifier.span.clone());
+                        for _ in 0..n - 1 {
+                            node.prepend(Node::Prim(Dup, span))
+                        }
+                        node
+                    }
+                }
+            }
             Backward => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
                 match sig.args {

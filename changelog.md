@@ -11,6 +11,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add data definition methods
 - Stabilize subscripted [`random ⚂`](https://uiua.org/docs/random)
 - Signature comments can now use a `$` rather than a `?` to automatically label arguments and outputs
+- Change [`backward ˜`](https://uiua.org/docs/backward)'s glyph back. `¨` will continue to work and will be formatted as `˜`.
+  - This glyph has much better font support
 - Add sided subscripts for [`reach 𝄐`](https://uiua.org/docs/reach)
 - Add the [`# External!`](https://www.uiua.org/tutorial/documentation#external) semantic comment to mark functions that are provided via Rust code
   - These functions don't require a Uiua implementation and will show up in the LSP

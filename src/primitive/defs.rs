@@ -3239,6 +3239,8 @@ macro_rules! impl_primitive {
             BySub(usize),
             WithSub(usize),
             OffSub(usize),
+            /// Push the maximum row count of N values
+            MaxRowCount(usize),
         }
 
         impl ImplPrimitive {
@@ -3253,6 +3255,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoRotate(n) => *n + 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
                     ImplPrimitive::StackN { n, .. } => *n,
+                    ImplPrimitive::MaxRowCount(n) => *n,
                     _ => return None
                 })
             }
@@ -3263,6 +3266,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n,
                     ImplPrimitive::StackN { n, .. } => *n,
+                    ImplPrimitive::MaxRowCount(n) => *n + 1,
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })
@@ -3367,6 +3371,8 @@ impl_primitive!(
     (1(0), TryClose),
     ([1], UnBoth),
     ([2], UnBracket),
+    ([1], UndoRows),
+    ([1], UndoInventory),
     // Optimizations
     (1, FirstMinIndex),
     (1, FirstMaxIndex),

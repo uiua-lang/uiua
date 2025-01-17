@@ -266,6 +266,9 @@ impl fmt::Display for ImplPrimitive {
             UndoReshape => write!(f, "{Un}{Reshape}"),
             UndoWindows => write!(f, "{Un}{Stencil}{Identity}"),
             UndoJoin => write!(f, "{Under}{Join}"),
+            UndoRows => write!(f, "{Under}{Rows}"),
+            UndoInventory => write!(f, "{Under}{Inventory}"),
+            MaxRowCount(n) => write!(f, "MaxRowCount({n})"),
             // Optimizations
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
@@ -1524,6 +1527,16 @@ impl ImplPrimitive {
                 map.undo_remove(key, &original, env)?;
                 env.push(map);
             }
+            &ImplPrimitive::MaxRowCount(n) => {
+                let mut max_len: Option<usize> = None;
+                let start = env.require_height(n)?;
+                for val in &env.stack()[start..] {
+                    if val.row_count() != 1 {
+                        max_len = Some(max_len.unwrap_or(0).max(val.row_count()));
+                    }
+                }
+                env.push(max_len.unwrap_or(1));
+            }
             // Optimizations
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,
             ImplPrimitive::FirstMaxIndex => env.monadic_ref_env(Value::first_max_index)?,
@@ -1869,6 +1882,37 @@ impl ImplPrimitive {
                         value.undo_deshape(Some(n + 1), max_shape, env)?;
                     }
                     env.push(value);
+                }
+            }
+            ImplPrimitive::UndoRows | ImplPrimitive::UndoInventory => {
+                let [f] = get_ops(ops, env)?;
+                let len = env
+                    .pop(1)?
+                    .as_nat(env, "Rows length must be a natural number")?;
+                let start = env.require_height(f.sig.args)?;
+                let inventory = matches!(self, ImplPrimitive::UndoInventory);
+                for i in 0..f.sig.args {
+                    let val = &env.stack()[start + i];
+                    if val.row_count() != len {
+                        return Err(env.error(format!(
+                            "Cannot undo {} of length {len} when \
+                            transformed array has shape {}",
+                            if inventory {
+                                Primitive::Inventory
+                            } else {
+                                Primitive::Rows
+                            }
+                            .format(),
+                            val.shape()
+                        )));
+                    }
+                    env.stack_mut()[start + i].reverse();
+                }
+                let outputs = f.sig.outputs;
+                zip::rows(f, inventory, env)?;
+                let start = env.require_height(outputs)?;
+                for val in &mut env.stack_mut()[start..] {
+                    val.reverse();
                 }
             }
             prim => {

@@ -426,8 +426,8 @@ impl VirtualEnv {
                     self.handle_args_outputs(args, sig.outputs);
                 }
                 Each | Rows | Inventory => {
-                    let [sig] = get_args(args)?;
-                    self.handle_sig(sig)
+                    let [f] = get_args_nodes(args)?;
+                    self.node(&f.node)?;
                 }
                 Table | Tuples => {
                     let [sig] = get_args(args)?;
@@ -643,6 +643,11 @@ impl VirtualEnv {
                 }
                 EachSub(_) => {
                     let [f] = get_args_nodes(args)?;
+                    self.node(&f.node)?;
+                }
+                UndoRows | UndoInventory => {
+                    let [f] = get_args_nodes(args)?;
+                    let _len = self.stack.pop();
                     self.node(&f.node)?;
                 }
                 UnScan => self.handle_args_outputs(1, 1),

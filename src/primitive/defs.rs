@@ -3386,6 +3386,7 @@ impl_primitive!(
     ([2], UnBracket),
     ([1], UndoRows),
     ([1], UndoInventory),
+    (2, SetSign),
     // Optimizations
     (1, FirstMinIndex),
     (1, FirstMaxIndex),

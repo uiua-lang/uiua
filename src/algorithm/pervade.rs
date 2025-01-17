@@ -1263,6 +1263,54 @@ pub mod mul {
     }
 }
 
+pub mod set_sign {
+    use super::*;
+
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        mul::num_num(a, b.abs())
+    }
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
+        num_num(a as f64, b as f64)
+    }
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        num_num(a as f64, b)
+    }
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        num_num(a, b as f64)
+    }
+    pub fn num_char(a: f64, b: char) -> char {
+        if a > 0.0 {
+            scalar_abs::char(b)
+        } else if a < 0.0 {
+            scalar_neg::char(scalar_abs::char(b))
+        } else {
+            b
+        }
+    }
+    pub fn char_num(a: char, b: f64) -> char {
+        num_char(b, a)
+    }
+    pub fn byte_char(a: u8, b: char) -> char {
+        if a > 0 {
+            scalar_abs::char(b)
+        } else {
+            b
+        }
+    }
+    pub fn char_byte(a: char, b: u8) -> char {
+        byte_char(b, a)
+    }
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        a.normalize() * b.into()
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        a.into().normalize() * b
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot set sign of {b} to {a}"))
+    }
+}
+
 pub mod div {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {

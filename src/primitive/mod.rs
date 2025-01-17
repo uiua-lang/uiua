@@ -269,6 +269,7 @@ impl fmt::Display for ImplPrimitive {
             UndoRows => write!(f, "{Under}{Rows}"),
             UndoInventory => write!(f, "{Under}{Inventory}"),
             MaxRowCount(n) => write!(f, "MaxRowCount({n})"),
+            SetSign => write!(f, "{Under}{Sign}"),
             // Optimizations
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
@@ -1538,6 +1539,7 @@ impl ImplPrimitive {
                 }
                 env.push(max_len.unwrap_or(1));
             }
+            ImplPrimitive::SetSign => env.dyadic_oo_env(Value::set_sign)?,
             // Optimizations
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,
             ImplPrimitive::FirstMaxIndex => env.monadic_ref_env(Value::first_max_index)?,

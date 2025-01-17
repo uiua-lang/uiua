@@ -120,7 +120,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &DupPat,
     // Sign ops
     &Stash(1, Abs, (Sign, Mul)),
-    &Stash(1, Sign, (Abs, Mul)),
+    &Stash(1, Sign, (Flip, SetSign)),
     // Mod
     &MaybeVal((
         Modulus,

@@ -1930,6 +1930,13 @@ value_bin_math_impl!(
     (Char, Byte, char_byte),
     [|meta| meta.flags.is_boolean(), Byte, bool_bool],
 );
+value_bin_math_impl!(
+    set_sign,
+    (Num, Char, num_char),
+    (Char, Num, char_num),
+    (Byte, Char, byte_char),
+    (Char, Byte, char_byte),
+);
 value_bin_math_impl!(div, (Num, Char, num_char), (Byte, Char, byte_char),);
 value_bin_math_impl!(modulus, (Complex, Complex, com_com));
 value_bin_math_impl!(or, [|meta| meta.flags.is_boolean(), Byte, bool_bool]);

@@ -408,6 +408,7 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::First, &["fst"]),
         (Primitive::Last, &["lst"]),
         (Primitive::Slf, &["slf"]),
+        (Primitive::Select, &["sel"]),
         (Primitive::ImageEncode, &["&ime", "imen"]),
         (Primitive::GifEncode, &["&gife", "gifen"]),
         (Primitive::AudioEncode, &["&ae", "auden"]),
@@ -2539,7 +2540,10 @@ mod tests {
                 assert_eq!(test(&short), Some(prim));
             }
             for prim in Primitive::non_deprecated() {
-                if matches!(prim, Primitive::Rand | Primitive::Trace | Primitive::Parse) {
+                if matches!(
+                    prim,
+                    Primitive::Rand | Primitive::Trace | Primitive::Parse | Primitive::Slf
+                ) {
                     continue;
                 }
                 let char_test = match prim.glyph() {

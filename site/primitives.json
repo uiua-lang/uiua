@@ -405,7 +405,7 @@
     "description": "Encode audio into a byte array"
   },
   "backward": {
-    "glyph": "𝄈",
+    "glyph": "˜",
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
@@ -1178,6 +1178,14 @@
     "outputs": 1,
     "class": "DyadicArray",
     "description": "Select multiple rows from an array"
+  },
+  "self": {
+    "glyph": "˙",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Stack",
+    "description": "Call a function with the same array as all arguments",
+    "experimental": true
   },
   "send": {
     "args": 2,

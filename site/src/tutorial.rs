@@ -432,7 +432,8 @@ fn TutorialMath() -> impl IntoView {
         <p>"Some programming languages use the terms \"unary\" and \"binary\" to refer to functions that take one or two arguments respectively. While these are the Latin terms, many array languages, including Uiua, prefer to use the Greek terms \"monadic\" and \"dyadic\"."</p>
         <p>"As you read Uiua's documentation, you will see these terms used to describe functions (and modifiers)."</p>
         <p>"For example, "<Prim prim=Sqrt/>" is a monadic function, and "<Prim prim=Add/>" is a dyadic function."</p>
-        <p>"On this site, monadic functions are in "<span class="monadic-function">"green"</span>" and dyadic functions are in "<span class="dyadic-function">"blue"</span>"."</p>
+        <p>"On this site, "<span class="monadic-function">"monadic"</span>" functions are in "<span class="monadic-function">"green"</span>" and "<span class="dyadic-function">"dyadic"</span>" functions are in "<span class="dyadic-function">"blue"</span>"."</p>
+        <p>"Some documentation may also reference functions which are "<span class="noadic-function">"noadic"</span>", "<span class="triadic-function">"triadic"</span>", or "<span class="tetradic-function">"tetradic"</span>". These are the words for functions that take 0, 3, or 4 arguments respectively. The word "<span class="noadic-function">"noadic"</span>" is not common outside of Uiua, but it is chosen because such a function takes "<em>"no"</em>" arguments."</p>
 
         <Hd id="challenges">"Challenges"</Hd>
 

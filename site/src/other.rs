@@ -422,7 +422,7 @@ pub fn Combinators() -> impl IntoView {
             let note = ["N", "ν", "X", "χ", "R", "ρ"].contains(&symbol).then(|| {
                 view! {
                     <sup>" "<span
-                        style="text-decoration: underline dotted; font-size: 0.8em; cursor: help;"
+                        class="help-note"
                         title="N, ν, X, χ, R, and ρ are not standard named combinators. They are included here because Uiua can express them easily.">
                         "*"
                     </span></sup>

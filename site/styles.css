@@ -1546,3 +1546,9 @@ a.clean {
         opacity: 1;
     }
 }
+
+.help-note {
+    text-decoration: underline dotted;
+    font-size: 0.8em;
+    cursor: help;
+}

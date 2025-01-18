@@ -1299,7 +1299,7 @@ primitive!(
     ///   : ⬚∞⊗ [4 8 2 9 1] [1 2 3 4]
     ///
     /// You can use the returned indices with [select] to get the rows that were found.
-    /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
+    /// If you expect any of the searched-for rows to be missing, you can use [fill] to set a default value.
     /// ex: A ← [2 3 5 7 11 13]
     ///   : .⊗,A [1 2 3 4 5]
     ///   : ⬚∞⊏:A
@@ -1946,7 +1946,7 @@ primitive!(
     ///   : ˙⊞+ 1_2_3
     /// ex: # Experimental!
     ///   : ˙(⊂⊂) π
-    /// [self] on a noadic function duplicates the output. This makes it distinct from [both] on a monadic function.
+    /// [self] on a noadic function duplicates the output. This makes it distinct from [both] on a noadic function.
     /// ex: # Experimental!
     ///   : ⌊×10[˙⚂]
     ///   : ⌊×10[∩⚂]

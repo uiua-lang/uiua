@@ -542,27 +542,6 @@ sys_op! {
     (2(0), TcpSetWriteTimeout, Tcp, "&tcpswt", "tcp - set write timeout", Mutating),
     /// Get the connection address of a TCP socket
     (1, TcpAddr, Tcp, "&tcpaddr", "tcp - address", Mutating),
-    /// Make an HTTP(S) request
-    ///
-    /// Takes in an 1.x HTTP request and returns an HTTP response.
-    ///
-    /// Requires the `Host` header to be set.
-    /// Using port 443 makes an HTTPS request. Any other port makes an HTTP request.
-    ///
-    /// ex: &httpsw "GET / " &tcpc "example.com:443"
-    ///
-    /// It is also possible to put in entire HTTP requests.
-    ///
-    /// ex: &tcpc "example.com:443"
-    ///   : &httpsw $ GET /api HTTP/1.0
-    ///   :         $ Host: example.com\r\n
-    ///   :         $ <BODY>
-    ///
-    /// There are a few things the function tries to automatically fill in if it finds they are missing from the request:
-    /// - 2 trailing newlines (if there is no body)
-    /// - The HTTP version
-    /// - The `Host` header (if not defined)
-    (2, HttpsWrite, Tcp, "&httpsw", "https - Make an HTTP(S) request", Mutating),
     /// Capture an image from a webcam
     ///
     /// Takes the index of the webcam to capture from.
@@ -1052,10 +1031,6 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Change the current directory
     fn change_directory(&self, path: &str) -> Result<(), String> {
         Err("Changing directories is not supported in this environment".into())
-    }
-    /// Make an HTTPS request on a TCP socket
-    fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
-        Err("Making HTTPS requests is not supported in this environment".into())
     }
     /// Capture an image from the webcam
     fn webcam_capture(&self, index: usize) -> Result<WebcamImage, String> {
@@ -1710,16 +1685,6 @@ impl SysOp {
                 (env.rt.backend)
                     .tcp_set_write_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
-            }
-            SysOp::HttpsWrite => {
-                let http = env
-                    .pop(1)?
-                    .as_string(env, "HTTP request must be a string")?;
-                let handle = env.pop(2)?.as_handle(env, "")?;
-                let res = (env.rt.backend)
-                    .https_get(&http, handle)
-                    .map_err(|e| env.error(e))?;
-                env.push(res);
             }
             SysOp::Close => {
                 let handle = env.pop(1)?.as_handle(env, "")?;

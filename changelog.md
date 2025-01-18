@@ -20,6 +20,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`self ˙`](https://uiua.org/docs/self) modifier
 - Add experimental subscripts to [`negate ¯`](https://uiua.org/docs/negate)
   - This will [`multiply ×`](https://uiua.org/docs/multiply) a number by the Nth root of unity
+- Remove `&clget` alias for [`&clip`](https://uiua.org/docs/&clip)
+- Remove previously deprecated `&httpsw`
 ### Interpreter
 - Add `UIUA_MAX_MB` environment variable to set the maximum size of an array in megabytes
   - This allows catching memory errors on different systems

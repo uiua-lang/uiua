@@ -412,7 +412,6 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::ImageEncode, &["&ime", "imen"]),
         (Primitive::GifEncode, &["&gife", "gifen"]),
         (Primitive::AudioEncode, &["&ae", "auden"]),
-        (Primitive::Sys(SysOp::Clip), &["&clget"]),
     ]
     .into()
 });
@@ -522,7 +521,6 @@ impl Primitive {
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
         Some(match self {
-            Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
             Sig => "use (⋅⊢)^! instead".into(),
             Stringify => "use (◇repr⊢)^! instead".into(),
             Rerank => format!(

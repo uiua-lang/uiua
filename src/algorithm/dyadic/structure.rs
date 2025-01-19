@@ -932,30 +932,30 @@ impl<T: ArrayValue> Array<T> {
             // println!("curr: {curr:?}");
             // Add leading slices
             for i in 0..n - 1 {
-                if i != n - 2 && index[i] > 0 && curr[i + 1..].iter().all(|&c| c == 0) {
+                if i != n - 2 && index[i + 1] > 0 && curr[i + 1..].iter().all(|&c| c == 0) {
                     // println!("  extend {i} {:?}", slice_sizes[i]);
                     extend_repeat_slice(&mut new_data, &fill.data, slice_sizes[i].unsigned_abs());
                 }
             }
             // Add leading sliver
-            // println!("  sliver: {}", sliver_size);
             if sliver_size > 0 {
+                // println!("  sliver: {}", sliver_size);
                 extend_repeat_slice(&mut new_data, &fill.data, sliver_size.unsigned_abs());
             }
             // Add array row
             new_data.extend_from_slice(&self.data[contig_row_size * i..][..contig_row_size]);
             // Add trailing sliver
-            // println!("  sliver: {}", sliver_size);
             if sliver_size < 0 {
+                // println!("  sliver: {}", sliver_size);
                 extend_repeat_slice(&mut new_data, &fill.data, sliver_size.unsigned_abs());
             }
-            // Add leading slices
+            // Add trailing slices
             for i in 0..n - 1 {
                 if i != n - 2
                     && (curr[i + 1..].iter().enumerate()).all(|(j, &c)| c == maxes[i + 1 + j] - 1)
                 {
                     // println!("  extend {i} {:?}", slice_sizes[i]);
-                    if index[i] < 0 {
+                    if index[i + 1] < 0 {
                         extend_repeat_slice(
                             &mut new_data,
                             &fill.data,

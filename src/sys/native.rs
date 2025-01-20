@@ -16,6 +16,8 @@ use std::{
 };
 
 use colored::Colorize;
+#[cfg(feature = "webcam")]
+use crossbeam_channel as channel;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
@@ -77,14 +79,9 @@ impl<T> Drop for ChildStream<T> {
 
 #[cfg(feature = "webcam")]
 struct WebcamChannel {
-    send: std::sync::mpsc::Sender<()>,
-    recv: std::sync::mpsc::Receiver<Result<image::RgbImage, String>>,
+    send: channel::Sender<()>,
+    recv: channel::Receiver<Result<image::RgbImage, String>>,
 }
-
-#[cfg(feature = "webcam")]
-unsafe impl Send for WebcamChannel {}
-#[cfg(feature = "webcam")]
-unsafe impl Sync for WebcamChannel {}
 
 #[cfg(feature = "webcam")]
 impl WebcamChannel {
@@ -94,8 +91,8 @@ impl WebcamChannel {
             utils::{CameraIndex, RequestedFormat, RequestedFormatType},
             Camera,
         };
-        let (req_send, req_recv) = std::sync::mpsc::channel();
-        let (image_send, image_recv) = std::sync::mpsc::channel();
+        let (req_send, req_recv) = channel::unbounded();
+        let (image_send, image_recv) = channel::unbounded();
         std::thread::spawn(move || {
             let mut camera = match Camera::new(
                 CameraIndex::Index(index as u32),

@@ -2,10 +2,11 @@
 
 use std::{f64::consts::E, fmt, ops::*};
 
+use bytemuck::{Pod, Zeroable};
 use serde::*;
 
 /// Uiua's complex number type
-#[derive(Debug, Clone, Copy, PartialOrd, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialOrd, Default, Serialize, Deserialize, Pod, Zeroable)]
 #[serde(from = "(f64, f64)", into = "(f64, f64)")]
 #[repr(C)]
 pub struct Complex {

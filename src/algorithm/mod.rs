@@ -796,7 +796,7 @@ fn fft_impl(
     env: &mut Uiua,
     plan: fn(&mut rustfft::FftPlanner<f64>, usize) -> std::sync::Arc<dyn rustfft::Fft<f64>>,
 ) -> UiuaResult {
-    use std::mem::transmute;
+    use bytemuck::must_cast_slice_mut;
 
     use rustfft::{num_complex::Complex64, FftPlanner};
 
@@ -823,8 +823,11 @@ fn fft_impl(
     let scaling_factor = 1.0 / (list_row_len as f64).sqrt();
     for row in arr.data.as_mut_slice().chunks_exact_mut(list_row_len) {
         let fft = plan(&mut planner, row.len());
-        // SAFETY: Uiua's `Complex` and `num_complex::Complex64` have the same memory layout
-        let slice: &mut [Complex64] = unsafe { transmute::<&mut [Complex], &mut [Complex64]>(row) };
+        // NOTE: This works as long as Uiua's `complex` and `num_complex::Complex64` have
+        // the same layout. the `Complex64` layout should remain stable since they are
+        // maintaining compatibility with C. So we only need to ensure that we keep
+        // the same (real, imaginary) ordering that they do.
+        let slice: &mut [Complex64] = must_cast_slice_mut(row);
         fft.process(slice);
         for c in row {
             *c *= scaling_factor;

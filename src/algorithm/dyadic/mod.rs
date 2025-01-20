@@ -10,9 +10,10 @@ use std::{
     cmp::Ordering,
     hash::{DefaultHasher, Hash, Hasher},
     iter::{once, repeat},
-    mem::{replace, swap, take, transmute},
+    mem::{replace, swap, take},
 };
 
+use bytemuck::allocation::cast_vec;
 use ecow::{eco_vec, EcoVec};
 use rand::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
@@ -1183,7 +1184,7 @@ fn derive_undices(mut indices: Vec<isize>, rank: usize, env: &Uiua) -> UiuaResul
             (rank - u) as isize
         };
     }
-    Ok(unsafe { transmute::<Vec<isize>, Vec<usize>>(indices) })
+    Ok(cast_vec(indices))
 }
 
 impl Value {

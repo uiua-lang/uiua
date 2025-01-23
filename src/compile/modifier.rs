@@ -685,19 +685,14 @@ impl Compiler {
             Slf => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
                 match sig.args {
-                    0 => {
-                        let span = self.add_span(modified.modifier.span.clone());
-                        node.push(Node::Prim(Dup, span));
-                        node
-                    }
-                    1 => {
-                        self.emit_diagnostic(
-                            format!(
-                                "Remove {} here, as it does nothing for monadic functions",
-                                Slf.format(),
-                            ),
-                            DiagnosticKind::Style,
+                    0 | 1 => {
+                        self.add_error(
                             modified.modifier.span.clone(),
+                            format!(
+                                "{}'s function must take at least 2 arguments, \
+                                but its signature is {sig}",
+                                Slf.format()
+                            ),
                         );
                         node
                     }

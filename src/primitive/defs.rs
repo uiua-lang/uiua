@@ -1946,10 +1946,6 @@ primitive!(
     ///   : ˙⊞+ 1_2_3
     /// ex: # Experimental!
     ///   : ˙(⊂⊂) π
-    /// [self] on a noadic function duplicates the output. This makes it distinct from [both] on a noadic function.
-    /// ex: # Experimental!
-    ///   : ⌊×10[˙⚂]
-    ///   : ⌊×10[∩⚂]
     ([1], Slf, Stack, ("self", '˙')),
     /// Call a function with its arguments reversed
     ///

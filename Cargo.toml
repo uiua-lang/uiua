@@ -14,6 +14,7 @@ version = "0.15.0-dev.1"
 [dependencies]
 # Core dependencies
 bitflags = {version = "2", features = ["serde"]}
+bytemuck = {version = "1.17", features = ["must_cast", "derive", "extern_crate_alloc"]}
 colored = "2"
 crossbeam-channel = "0.5.12"
 dashmap = {version = "5", features = ["serde"]}
@@ -80,6 +81,8 @@ image = {version = "0.24.9", optional = true, default-features = false, features
 json5 = {version = "0.4.1", optional = true}
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.3", optional = true}
+# NOTE: Including as a dependency to activate the bytemuck feature flag
+num-complex = {version = ">=0.4.1", optional = true, default-features = false, features = ["bytemuck"]}
 rustfft = {version = "6.2.0", optional = true}
 rustls-pemfile = {version = "2.1.2", optional = true}
 simple_excel_writer = {version = "0.2.0", optional = true}
@@ -140,7 +143,7 @@ default = [
   "batteries",
 ]
 ffi = ["libffi", "libloading"]
-fft = ["rustfft"]
+fft = ["rustfft", "num-complex"]
 font_shaping = ["cosmic-text", "sys-locale", "skrifa"]
 full = ["audio", "webcam", "window"] # Enables all optional features
 gif = ["dep:gif", "image", "color_quant"]

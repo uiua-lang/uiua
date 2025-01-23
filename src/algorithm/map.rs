@@ -5,6 +5,7 @@ use std::{
     mem::{replace, take},
 };
 
+use bytemuck::must_cast;
 use ecow::EcoVec;
 use serde::*;
 
@@ -764,12 +765,15 @@ pub fn remove_empty_rows(iter: impl ExactSizeIterator<Item = Value>) -> Value {
 
 const LOAD_FACTOR: f64 = 0.75;
 
+// NOTE: must_cast to f64 only works if f64 and u64 have same endianness.
+//       This is true of all currently supported platforms for rust,
+//       but may not be true in general. Swap out for f64::from_bits when
+//       the MSRV passes 1.83 to ensure correctness on all future platforms.
+
 // A NaN value used as empty, not the standard NaN.
-pub const EMPTY_NAN: f64 =
-    unsafe { std::mem::transmute(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0001) };
+pub const EMPTY_NAN: f64 = must_cast(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0001);
 // A NaN value used as a tombstone, not the standard NaN.
-pub const TOMBSTONE_NAN: f64 =
-    unsafe { std::mem::transmute(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0002) };
+pub const TOMBSTONE_NAN: f64 = must_cast(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0002);
 // A character value used as empty
 pub const EMPTY_CHAR: char = '\u{100001}';
 // A character value used as a tombstone

@@ -3308,7 +3308,7 @@ impl_primitive!(
     (1, Cos),
     (1, Asin),
     (1, Acos),
-    (0, UnPop),
+    (0, UnPop, Impure),
     (1, UnBits),
     (1, UnWhere),
     (1(2), UnCouple),

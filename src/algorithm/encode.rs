@@ -3,7 +3,7 @@
 #[cfg(feature = "audio_encode")]
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 #[cfg(feature = "image")]
-use image::{DynamicImage, ImageOutputFormat};
+use image::{DynamicImage, ImageFormat};
 use serde::*;
 
 use crate::SysBackend;
@@ -41,7 +41,7 @@ impl SmartOutput {
             if image.width() >= MIN_AUTO_IMAGE_DIM as u32
                 && image.height() >= MIN_AUTO_IMAGE_DIM as u32
             {
-                if let Ok(bytes) = image_to_bytes(&image, ImageOutputFormat::Png) {
+                if let Ok(bytes) = image_to_bytes(&image, ImageFormat::Png) {
                     let label = value.meta().label.as_ref().map(Into::into);
                     return Self::Png(bytes, label);
                 }
@@ -86,13 +86,13 @@ pub(crate) fn image_encode(env: &mut Uiua) -> UiuaResult {
             .as_string(env, "Image format must be a string")?;
         let value = env.pop(2)?;
         let output_format = match format.as_str() {
-            "jpg" | "jpeg" => ImageOutputFormat::Jpeg(100),
-            "png" => ImageOutputFormat::Png,
-            "bmp" => ImageOutputFormat::Bmp,
-            "gif" => ImageOutputFormat::Gif,
-            "ico" => ImageOutputFormat::Ico,
-            "qoi" => ImageOutputFormat::Qoi,
-            "webp" => ImageOutputFormat::WebP,
+            "jpg" | "jpeg" => ImageFormat::Jpeg,
+            "png" => ImageFormat::Png,
+            "bmp" => ImageFormat::Bmp,
+            "gif" => ImageFormat::Gif,
+            "ico" => ImageFormat::Ico,
+            "qoi" => ImageFormat::Qoi,
+            "webp" => ImageFormat::WebP,
             format => return Err(env.error(format!("Invalid image format: {}", format))),
         };
         let bytes =
@@ -238,7 +238,7 @@ pub(crate) fn audio_decode(env: &mut Uiua) -> UiuaResult {
 
 #[doc(hidden)]
 #[cfg(feature = "image")]
-pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
+pub fn value_to_image_bytes(value: &Value, format: ImageFormat) -> Result<Vec<u8>, String> {
     image_to_bytes(&value_to_image(value)?, format)
 }
 
@@ -290,7 +290,7 @@ pub fn image_bytes_to_array(bytes: &[u8], alpha: bool) -> Result<Array<f64>, Str
 
 #[doc(hidden)]
 #[cfg(feature = "image")]
-pub fn image_to_bytes(image: &DynamicImage, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
+pub fn image_to_bytes(image: &DynamicImage, format: ImageFormat) -> Result<Vec<u8>, String> {
     let mut bytes = std::io::Cursor::new(Vec::new());
     image
         .write_to(&mut bytes, format)

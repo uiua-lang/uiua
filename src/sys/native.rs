@@ -86,7 +86,7 @@ struct WebcamChannel {
 #[cfg(feature = "webcam")]
 impl WebcamChannel {
     fn new(index: usize) -> Result<Self, String> {
-        use uiua_nokhwa::{
+        use nokhwa::{
             pixel_format::RgbFormat,
             utils::{CameraIndex, RequestedFormat, RequestedFormatType},
             Camera,
@@ -668,7 +668,7 @@ impl SysBackend for NativeSys {
             #[cfg(feature = "window")]
             if crate::window::use_window() {
                 return crate::window::Request::Show(crate::encode::SmartOutput::Png(
-                    crate::encode::image_to_bytes(&image, image::ImageOutputFormat::Png)
+                    crate::encode::image_to_bytes(&image, image::ImageFormat::Png)
                         .map_err(|e| e.to_string())?,
                     _label.map(Into::into),
                 ))

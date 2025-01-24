@@ -214,7 +214,7 @@ impl SysBackend for WebBackend {
     fn show_image(&self, image: image::DynamicImage, label: Option<&str>) -> Result<(), String> {
         let mut bytes = Cursor::new(Vec::new());
         image
-            .write_to(&mut bytes, image::ImageOutputFormat::Png)
+            .write_to(&mut bytes, image::ImageFormat::Png)
             .map_err(|e| format!("Failed to show image: {e}"))?;
         self.stdout
             .lock()

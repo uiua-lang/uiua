@@ -48,7 +48,7 @@ rustls = {version = "0.23.2", optional = true, default-features = false, feature
 ]}
 terminal_size = {version = "0.3.0", optional = true}
 trash = {version = "4.0.0", optional = true}
-viuer = {version = "0.7.1", optional = true}
+viuer = {version = "0.9", optional = true}
 webpki-roots = {version = "0.26.0", optional = true}
 
 # Native audio dependencies
@@ -77,7 +77,7 @@ cosmic-text = {version = "0.12.1", optional = true}
 csv = {version = "1", optional = true}
 gif = {version = "0.13.1", optional = true}
 hound = {version = "3", optional = true}
-image = {version = "0.24.9", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi", "webp"]}
+image = {version = "0.25", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi", "webp"]}
 json5 = {version = "0.4.1", optional = true}
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.3", optional = true}
@@ -88,7 +88,7 @@ rustls-pemfile = {version = "2.1.2", optional = true}
 simple_excel_writer = {version = "0.2.0", optional = true}
 skrifa = {version = "0.20.0", optional = true}
 sys-locale = {version = "0.3.1", optional = true}
-uiua-nokhwa = {version = "0.10.5", optional = true, features = ["input-native"]}
+nokhwa = {version = "0.10.7", optional = true, features = ["input-native"]}
 
 # Web-only dependencies
 js-sys = {version = "0.3", optional = true}
@@ -157,7 +157,7 @@ stand = ["native_sys"]
 terminal_image = ["viuer", "image", "icy_sixel"]
 tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
 web = ["wasm-bindgen", "js-sys", "web-sys"]
-webcam = ["image", "uiua-nokhwa"]
+webcam = ["image", "nokhwa"]
 window = ["eframe", "rmp-serde", "image", "native-dialog"]
 xlsx = ["calamine", "simple_excel_writer"]
 # Use system static libraries instead of building them

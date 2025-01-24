@@ -98,3 +98,5 @@ map "cba" [1 3 2]
 
 # Unmap type/shape
 ⍤⤙≍ {+@0°△0_2 []} {°map} remove "df"_"as" map "as"_"df" 1_2
+
+⍤⤙≍ {[] map [¯1] [5]} ⨬⋅∘⍚(insert⊙5) [0 1] [¯1 ¯1] {[] []}

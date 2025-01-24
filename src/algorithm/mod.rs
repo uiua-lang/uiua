@@ -561,18 +561,20 @@ pub fn switch(
                     Err(row) => row.clone(),
                 };
                 // println!("row: {:?}", row);
-                if selector.rank() > row.rank() || is_empty {
+                if selector.rank() > row.rank() || selector.rank() == 0 || is_empty {
+                    // println!(" (repeated)");
                     rows_to_sel.push(Err(row));
                 } else {
+                    // println!(" (iterated)");
                     let row_shape = row.shape()[selector.rank()..].into();
                     rows_to_sel.push(Ok(row.into_row_shaped_slices(row_shape)));
                 }
             }
             for sel_row_slice in selector.row_slices() {
-                for &elem in sel_row_slice {
-                    // println!("  elem: {}", elem);
-                    let node = &branches[elem];
-                    let arg_count = args[elem];
+                for &sel_elem in sel_row_slice {
+                    // println!("  sel_elem: {}", sel_elem);
+                    let node = &branches[sel_elem];
+                    let arg_count = args[sel_elem];
                     for (i, row) in rows_to_sel.iter_mut().rev().enumerate().rev() {
                         let row = match row {
                             Ok(row) => row.next().unwrap(),

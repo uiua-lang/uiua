@@ -402,8 +402,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Call a function with its arguments reversed",
-    "experimental": true
+    "description": "Call a function with its arguments reversed"
   },
   "base": {
     "args": 2,

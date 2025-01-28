@@ -1950,9 +1950,11 @@ primitive!(
     /// Call a function with its arguments reversed
     ///
     /// This is a modifier version of [flip].
-    /// It is experimental because it is unclear whether this is a desirable direction for the language.
-    /// ex: # Experimental!
-    ///   : ˜⊂ 1 2
+    /// ex: ˜⊂ 1 [2 3]
+    /// ex: °˜⊂ [1 2 3]
+    /// ex:  - 2 5
+    ///   : ˜- 2 5
+    /// [backward] is currently only allowed with dyadic functions.
     ([1], Backward, Stack, ("backward", '˜')),
     /// Call a function on two sets of values
     ///

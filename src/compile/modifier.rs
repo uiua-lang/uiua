@@ -708,18 +708,6 @@ impl Compiler {
             Backward => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
                 match sig.args {
-                    0 | 1 => {
-                        self.emit_diagnostic(
-                            format!(
-                                "Remove {} here, as it does nothing for {} functions",
-                                Backward.format(),
-                                if sig.args == 0 { "noadic" } else { "monadic" }
-                            ),
-                            DiagnosticKind::Style,
-                            modified.modifier.span.clone(),
-                        );
-                        node
-                    }
                     2 => {
                         let span = self.add_span(modified.modifier.span.clone());
                         node.prepend(Node::Prim(Flip, span));
@@ -729,8 +717,8 @@ impl Compiler {
                         self.add_error(
                             modified.modifier.span.clone(),
                             format!(
-                                "Currently, {}'s function may take at most, \
-                                2 arguments, but its signature is {sig}",
+                                "Currently, {}'s function must take 2 arguments, \
+                                but its signature is {sig}",
                                 Backward.format(),
                             ),
                         );

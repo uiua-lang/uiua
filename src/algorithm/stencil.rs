@@ -397,6 +397,8 @@ fn adjacent_impl(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult 
             Primitive::Atan => fast_adjacent(nums, n, env, atan2::num_num),
             Primitive::Max => fast_adjacent(nums, n, env, max::num_num),
             Primitive::Min => fast_adjacent(nums, n, env, min::num_num),
+            Primitive::Eq => fast_adjacent(nums, n, env, |a, b| is_eq::num_num(a, b) as f64),
+            Primitive::Ne => fast_adjacent(nums, n, env, |a, b| is_ne::num_num(a, b) as f64),
             _ => return generic_adjacent(f, Value::Num(nums), n, env),
         }?),
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push::<Value>(match prim {
@@ -420,6 +422,8 @@ fn adjacent_impl(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult 
             Primitive::Atan => fast_adjacent(bytes.convert(), n, env, atan2::num_num)?.into(),
             Primitive::Max => fast_adjacent(bytes, n, env, max::byte_byte)?.into(),
             Primitive::Min => fast_adjacent(bytes, n, env, min::byte_byte)?.into(),
+            Primitive::Eq => fast_adjacent(bytes, n, env, is_eq::same_type)?.into(),
+            Primitive::Ne => fast_adjacent(bytes, n, env, is_ne::same_type)?.into(),
             _ => return generic_adjacent(f, Value::Byte(bytes), n, env),
         }),
         (_, xs) => generic_adjacent(f, xs, n, env)?,

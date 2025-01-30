@@ -519,7 +519,7 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             let mut arg_elems: Vec<_> = args
                 .into_iter()
                 .map(|val| {
-                    let repetitions = elem_count / val.element_count();
+                    let repetitions = elem_count / val.element_count().max(1);
                     val.into_elements()
                         .flat_map(move |elem| repeat(elem).take(repetitions))
                 })

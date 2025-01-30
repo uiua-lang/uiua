@@ -426,6 +426,11 @@ fn adjacent_impl(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult 
             Primitive::Ne => fast_adjacent(bytes, n, env, is_ne::same_type)?.into(),
             _ => return generic_adjacent(f, Value::Byte(bytes), n, env),
         }),
+        (Some((prim, _)), Value::Char(chars)) => env.push(match prim {
+            Primitive::Eq => fast_adjacent(chars, n, env, is_eq::same_type)?,
+            Primitive::Ne => fast_adjacent(chars, n, env, is_ne::same_type)?,
+            _ => return generic_adjacent(f, Value::Char(chars), n, env),
+        }),
         (_, xs) => generic_adjacent(f, xs, n, env)?,
     }
     Ok(())

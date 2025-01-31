@@ -496,7 +496,7 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         }
     }
     let outputs = f.sig.outputs;
-    let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
+    let is_empty = args.iter().any(|v| v.row_count() == 0);
     let elem_count = args.iter().map(Value::element_count).max().unwrap() + is_empty as usize;
     let mut new_values = multi_output(outputs, Vec::with_capacity(elem_count));
     let new_shape = args

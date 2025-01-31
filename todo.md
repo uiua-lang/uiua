@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.15
+- Allow unnamed data def outside named module
 - Subscripts `bits`
 - Non-dyadic `backward`
 - Implement some `under` inverses in terms of `un by`, rather than the other way around

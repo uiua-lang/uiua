@@ -1,7 +1,7 @@
 {
   craneLib,
   libPath,
-  makeWrapper,
+  makeBinaryWrapper,
   stdenv,
   lib,
   pkg-config,
@@ -35,7 +35,7 @@ let
     nativeBuildInputs = [
       pkg-config
       rustPlatform.bindgenHook
-      makeWrapper
+      makeBinaryWrapper
     ];
     buildInputs =
       [ libffi ]

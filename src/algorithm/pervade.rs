@@ -1301,10 +1301,10 @@ pub mod set_sign {
         byte_char(b, a)
     }
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
-        a.normalize() * b.into()
+        a * b.into().abs()
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
-        a.into().normalize() * b
+        a.into() * b.abs()
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot set sign of {b} to {a}"))

@@ -2369,19 +2369,20 @@ impl Compiler {
     where
         S: ToString,
     {
+        if !self.allow_experimental() {
+            self.scope.experimental_error = true;
+            self.add_error(span.clone(), message().to_string());
+        }
+    }
+    fn allow_experimental(&self) -> bool {
         let take = self
             .scopes()
             .position(|sc| matches!(sc.kind, ScopeKind::File(_)))
             .map(|i| i + 1)
             .unwrap_or(usize::MAX);
-        if !self
-            .scopes()
+        self.scopes()
             .take(take)
             .any(|sc| sc.experimental || sc.experimental_error)
-        {
-            self.scope.experimental_error = true;
-            self.add_error(span.clone(), message().to_string());
-        }
     }
     fn error(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
         UiuaErrorKind::Run {

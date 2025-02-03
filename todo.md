@@ -2,7 +2,7 @@
 
 # 0.15
 - Allow unnamed data def outside named module
-- Subscripts `bits`
+- Subscripted `bits`
 - Non-dyadic `backward`
 - 0-output `tuples`
 - Implement some `under` inverses in terms of `un by`, rather than the other way around

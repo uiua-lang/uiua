@@ -2697,7 +2697,7 @@ impl Value {
                 write_ty_meta(BinType::Char, arr.meta(), bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 let s: String = arr.data.iter().copied().collect();
-                bytes.extend((s.as_bytes().len() as u32).to_le_bytes());
+                bytes.extend((s.len() as u32).to_le_bytes());
                 bytes.extend(s.as_bytes());
             }
             Value::Box(arr) => {

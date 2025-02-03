@@ -692,7 +692,7 @@ impl WatchArgs {
                 .filter_map(Result::ok)
                 .filter(|event| matches!(event.kind, EventKind::Modify(_)))
                 .flat_map(|event| event.paths)
-                .filter(|path| path.extension().map_or(false, |ext| ext == "ua"))
+                .filter(|path| path.extension().is_some_and(|ext| ext == "ua"))
                 .last()
             {
                 if last_time.elapsed() > Duration::from_millis(100) {
@@ -972,7 +972,7 @@ fn uiua_files_in(root: &Path, max_depth: Option<usize>) -> UiuaResult<Vec<PathBu
                     continue;
                 }
                 rec(&path, acc, depth + 1, max_depth)?;
-            } else if path.extension().map_or(false, |ext| ext == "ua") {
+            } else if path.extension().is_some_and(|ext| ext == "ua") {
                 acc.push(path);
             }
         }

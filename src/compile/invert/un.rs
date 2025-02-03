@@ -118,7 +118,7 @@ fn anti_inverse_impl(mut input: &[Node], asm: &Assembly, for_un: bool) -> Invers
         for pattern in (ANTI_PATTERNS.iter()).filter(|pat| !for_un || pat.allowed_in_un()) {
             match pattern.invert_extract(curr, asm) {
                 Ok((new, anti_inv)) => {
-                    if !nodes_clean_sig(new).is_some_and(|sig| sig.args == sig.outputs) {
+                    if nodes_clean_sig(new).is_none_or(|sig| sig.args != sig.outputs) {
                         continue;
                     }
                     dbgln!("matched anti pattern {pattern:?}\n  on {curr:?}\n  to {anti_inv:?}");
@@ -927,7 +927,7 @@ inverse!(AlgebraPat, input, asm, {
 });
 
 inverse!(AntiContraFlip, input, asm, Prim(Flip, span), {
-    if !nodes_clean_sig(input).is_some_and(|sig| sig == (2, 1)) {
+    if nodes_clean_sig(input).is_none_or(|sig| sig != (2, 1)) {
         return generic();
     }
     for pat in CONTRA_PATTERNS.iter() {

@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn no_dbgs() {
         recurse_dirs(std::path::Path::new("."), &|path| {
-            if !path.extension().is_some_and(|ext| ext == "rs")
+            if path.extension().is_none_or(|ext| ext != "rs")
                 || path.canonicalize().unwrap()
                     == std::path::Path::new(file!()).canonicalize().unwrap()
             {
@@ -387,7 +387,7 @@ mod tests {
     #[test]
     fn no_printlns() {
         recurse_dirs(std::path::Path::new("."), &|path| {
-            if !path.extension().is_some_and(|ext| ext == "rs")
+            if path.extension().is_none_or(|ext| ext != "rs")
                 || path.canonicalize().unwrap()
                     == std::path::Path::new(file!()).canonicalize().unwrap()
                 || path

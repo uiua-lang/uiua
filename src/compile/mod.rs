@@ -1757,41 +1757,38 @@ code:
         }
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, skip_local: bool) -> UiuaResult<Node> {
-        Ok(
-            if let Some(curr) = (self.current_bindings.last_mut()).filter(|curr| curr.name == ident)
-            {
-                // Name is a recursive call
-                let Some(sig) = curr.signature else {
-                    return Err(self.error(
-                        span,
-                        format!(
-                            "Recursive function `{ident}` must have a \
+        if let Some(curr) = (self.current_bindings.last_mut()).filter(|curr| curr.name == ident) {
+            // Name is a recursive call
+            let Some(sig) = curr.signature else {
+                return Err(self.error(
+                    span,
+                    format!(
+                        "Recursive function `{ident}` must have a \
                             signature declared after the ←."
-                        ),
-                    ));
-                };
-                curr.recurses += 1;
-                (self.code_meta.global_references).insert(span.clone(), curr.global_index);
-                Node::CallGlobal(curr.global_index, sig)
-            } else if let Some(local) = self.find_name(&ident, skip_local) {
-                // Name exists in scope
-                self.validate_local(&ident, local, &span);
-                (self.code_meta.global_references).insert(span.clone(), local.index);
-                self.global_index(local.index, true, span)
-            } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
-                // Name is a built-in constant
-                self.code_meta
-                    .constant_references
-                    .insert(span.clone().sp(ident));
-                Node::Push(
-                    constant
-                        .value
-                        .resolve(self.scope_file_path(), &*self.backend()),
-                )
-            } else {
-                return Err(self.error(span, format!("Unknown identifier `{ident}`")));
-            },
-        )
+                    ),
+                ));
+            };
+            curr.recurses += 1;
+            (self.code_meta.global_references).insert(span.clone(), curr.global_index);
+            Ok(Node::CallGlobal(curr.global_index, sig))
+        } else if let Some(local) = self.find_name(&ident, skip_local) {
+            // Name exists in scope
+            self.validate_local(&ident, local, &span);
+            (self.code_meta.global_references).insert(span.clone(), local.index);
+            Ok(self.global_index(local.index, true, span))
+        } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
+            // Name is a built-in constant
+            self.code_meta
+                .constant_references
+                .insert(span.clone().sp(ident));
+            Ok(Node::Push(
+                constant
+                    .value
+                    .resolve(self.scope_file_path(), &*self.backend()),
+            ))
+        } else {
+            Err(self.error(span, format!("Unknown identifier `{ident}`")))
+        }
     }
     fn scope_file_path(&self) -> Option<&Path> {
         for scope in self.scopes() {
@@ -2550,11 +2547,18 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
 }
 
 fn set_in_macro_arg(words: &mut [Sp<Word>]) {
-    recurse_words_mut(words, &mut |word| match &mut word.value {
-        Word::Ref(r) => r.in_macro_arg = true,
-        Word::IncompleteRef { in_macro_arg, .. } => *in_macro_arg = true,
-        _ => {}
-    });
+    recurse_words_mut_impl(
+        words,
+        &|word| match &word.value {
+            Word::Modified(m) => matches!(m.modifier.value, Modifier::Primitive(_)),
+            _ => true,
+        },
+        &mut |word| match &mut word.value {
+            Word::Ref(r) => r.in_macro_arg = true,
+            Word::IncompleteRef { in_macro_arg, .. } => *in_macro_arg = true,
+            _ => {}
+        },
+    );
 }
 
 fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
@@ -2578,7 +2582,18 @@ fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
 }
 
 fn recurse_words_mut(words: &mut [Sp<Word>], f: &mut dyn FnMut(&mut Sp<Word>)) {
+    recurse_words_mut_impl(words, &|_| true, f);
+}
+
+fn recurse_words_mut_impl(
+    words: &mut [Sp<Word>],
+    recurse_word: &dyn Fn(&Sp<Word>) -> bool,
+    f: &mut dyn FnMut(&mut Sp<Word>),
+) {
     for word in words {
+        if !recurse_word(word) {
+            continue;
+        }
         match &mut word.value {
             Word::Strand(items) => recurse_words_mut(items, f),
             Word::Array(arr) => arr.lines.iter_mut().for_each(|line| {

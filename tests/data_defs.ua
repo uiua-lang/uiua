@@ -83,3 +83,7 @@ S~PushB
 ⍤⤙≍ Foo 10 5 Foo~WithBar 10 Foo 3 5
 ⍤⤙≍ Foo 4 5 Foo~IncrBar Foo 3 5
 ⍤⤙≍ Foo 23 15 Foo~Add Foo 20 10 Foo 3 5
+
+~Foo {Bar ← 5}
+F! ← ^0 Foo
+⍤⤙≍ 5 F!Foo!Bar

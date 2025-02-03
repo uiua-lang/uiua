@@ -1412,11 +1412,11 @@ impl Compiler {
         {
             // Module import macro
             let names = m.names.clone();
-            self.in_scope(ScopeKind::AllInModule, move |comp| {
+            let (_, node) = self.in_scope(ScopeKind::AllInModule, move |comp| {
                 comp.scope.names.extend(names);
                 comp.words(operands)
-            })?
-            .1
+            })?;
+            node
         } else {
             Node::empty()
         };

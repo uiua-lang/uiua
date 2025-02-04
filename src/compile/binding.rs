@@ -40,45 +40,6 @@ impl Compiler {
             }
         }
 
-        // Alias re-bound imports
-        if ident_modifier_args(&binding.name.value) == 0
-            && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
-        {
-            if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
-                Word::Ref(r)
-                    if ident_modifier_args(&r.name.value) == 0
-                        && !(r.path.is_empty() && r.name.value == binding.name.value) =>
-                {
-                    Some(r)
-                }
-                _ => None,
-            }) {
-                if let Ok(Some((path_locals, local))) = self.ref_local(r) {
-                    self.validate_local(&r.name.value, local, &r.name.span);
-                    (self.code_meta.global_references)
-                        .insert(binding.name.span.clone(), local.index);
-                    for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                        (self.code_meta.global_references)
-                            .insert(comp.module.span.clone(), local.index);
-                    }
-                    (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
-                    let local = LocalName { public, ..local };
-                    self.scope.names.insert(binding.name.value, local);
-                    return Ok(());
-                }
-            }
-        }
-
-        let name = binding.name.value;
-        let span = &binding.name.span;
-
-        let spandex = self.add_span(span.clone());
-        let local = LocalName {
-            index: self.next_global,
-            public,
-        };
-        self.next_global += 1;
-
         // Create meta
         let comment = prelude
             .comment
@@ -102,8 +63,48 @@ impl Compiler {
             external: false,
         };
 
-        // Handle macro
+        // Alias re-bound imports
+        let name = binding.name.value;
         let ident_margs = ident_modifier_args(&name);
+        if ident_margs == 0
+            && meta.comment.is_none()
+            && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
+        {
+            if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
+                Word::Ref(r)
+                    if ident_modifier_args(&r.name.value) == 0
+                        && !(r.path.is_empty() && r.name.value == name) =>
+                {
+                    Some(r)
+                }
+                _ => None,
+            }) {
+                if let Ok(Some((path_locals, local))) = self.ref_local(r) {
+                    self.validate_local(&r.name.value, local, &r.name.span);
+                    (self.code_meta.global_references)
+                        .insert(binding.name.span.clone(), local.index);
+                    for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                        (self.code_meta.global_references)
+                            .insert(comp.module.span.clone(), local.index);
+                    }
+                    (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
+                    let local = LocalName { public, ..local };
+                    self.scope.names.insert(name, local);
+                    return Ok(());
+                }
+            }
+        }
+
+        let span = &binding.name.span;
+
+        let spandex = self.add_span(span.clone());
+        let local = LocalName {
+            index: self.next_global,
+            public,
+        };
+        self.next_global += 1;
+
+        // Handle macro
         let max_placeholder = max_placeholder(&binding.words);
         if binding.code_macro {
             if external {

@@ -181,7 +181,7 @@ pub fn Constants() -> impl IntoView {
             }
             tables.push(view!(
                 <h3>{format!("{class:?}")}</h3>
-                <table class="bordered-table" style="width: 100%">{ rows }</table>
+                <table id={format!("{class:?}")} class="bordered-table" style="width: 100%">{ rows }</table>
             ));
         }
         view!(<div>{tables}</div>)

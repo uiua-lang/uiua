@@ -2156,11 +2156,7 @@ code:
                         1 => self.primitive(Fix, span),
                         2 => self.primitive(Couple, span),
                         n => Node::Array {
-                            len: ArrayLen::Static(self.positive_subscript(
-                                n,
-                                Couple,
-                                span.clone(),
-                            )?),
+                            len: ArrayLen::Static(self.positive_subscript(n, Couple, &span)?),
                             inner: Node::empty().into(),
                             boxed: false,
                             prim: Some(Couple),
@@ -2168,7 +2164,7 @@ code:
                         },
                     },
                     Box => Node::Array {
-                        len: ArrayLen::Static(self.positive_subscript(n, Box, span.clone())?),
+                        len: ArrayLen::Static(self.positive_subscript(n, Box, &span)?),
                         inner: Node::empty().into(),
                         boxed: true,
                         prim: Some(Box),
@@ -2176,13 +2172,13 @@ code:
                     },
                     Stack => Node::ImplPrim(
                         ImplPrimitive::StackN {
-                            n: self.positive_subscript(n, Stack, span.clone())?,
+                            n: self.positive_subscript(n, Stack, &span)?,
                             inverse: false,
                         },
                         self.add_span(span),
                     ),
                     First | Last => {
-                        let n = self.positive_subscript(n, prim, span.clone())?;
+                        let n = self.positive_subscript(n, prim, &span)?;
                         let span = self.add_span(span);
                         match n {
                             0 => Node::Prim(Pop, span),
@@ -2209,6 +2205,11 @@ code:
                                 },
                             ]),
                         }
+                    }
+                    Bits => {
+                        let n = self.positive_subscript(n, Bits, &span)?;
+                        let span = self.add_span(span);
+                        Node::ImplPrim(ImplPrimitive::NBits(n), span)
                     }
                     _ => {
                         self.add_error(
@@ -2312,10 +2313,15 @@ impl Compiler {
             SubNOrSide::Side(side) => Some(n_or_side.span.sp(side)),
         }
     }
-    fn positive_subscript(&mut self, n: i32, prim: Primitive, span: CodeSpan) -> UiuaResult<usize> {
+    fn positive_subscript(
+        &mut self,
+        n: i32,
+        prim: Primitive,
+        span: &CodeSpan,
+    ) -> UiuaResult<usize> {
         if n < 0 {
             self.add_error(
-                span,
+                span.clone(),
                 format!("Subscript for {} must be positive", prim.format()),
             );
         }

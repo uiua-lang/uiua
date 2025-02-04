@@ -213,6 +213,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &RepeatPat,
     &DupPat,
     &DumpPat,
+    &NBitsPat,
     &(Sqrt, (Dup, Mul)),
     &(Select, (Dup, Len, Range)),
     &(Pick, (Dup, Shape, Range)),
@@ -968,6 +969,10 @@ inverse!(GetLocalPat, input, asm, GetLocal { def, span }, {
         SetLocal { def, span },
     ]);
     Ok((&[], inv))
+});
+
+inverse!(NBitsPat, input, _, ImplPrim(NBits(_), span), {
+    Ok((input, ImplPrim(UnBits, span)))
 });
 
 #[derive(Debug)]

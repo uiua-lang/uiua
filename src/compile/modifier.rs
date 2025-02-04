@@ -455,7 +455,7 @@ impl Compiler {
                     .and_then(|sub| self.subscript_n(sub, On))
                     .filter(|n| n.value > 1)
                 {
-                    let n = self.positive_subscript(sub.value, On, sub.span)?;
+                    let n = self.positive_subscript(sub.value, On, &sub.span)?;
                     Node::ImplMod(ImplPrimitive::OnSub(n), eco_vec![sn], span)
                 } else {
                     let prim = if sn.sig.args == 0 { Dip } else { On };
@@ -469,7 +469,7 @@ impl Compiler {
                     .and_then(|sub| self.subscript_n(sub, By))
                     .filter(|n| n.value > 1)
                 {
-                    let n = self.positive_subscript(sub.value, By, sub.span)?;
+                    let n = self.positive_subscript(sub.value, By, &sub.span)?;
                     if n == sn.sig.args {
                         self.emit_diagnostic(
                             format!(
@@ -544,7 +544,7 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 match n.value {
                     SubNOrSide::N(n) => {
-                        let n = self.positive_subscript(n, Both, modified.modifier.span.clone())?;
+                        let n = self.positive_subscript(n, Both, &modified.modifier.span)?;
                         self.monadic_modifier_op(modified)?.0.on_all(n, span)
                     }
                     SubNOrSide::Side(side) => {
@@ -641,7 +641,7 @@ impl Compiler {
                         .and_then(|sub| self.subscript_n(sub, prim))
                         .filter(|n| n.value > 1)
                     {
-                        let n = self.positive_subscript(sub.value, prim, sub.span)?;
+                        let n = self.positive_subscript(sub.value, prim, &sub.span)?;
                         let prim = if prim == Off {
                             if n == sig.args {
                                 self.emit_diagnostic(
@@ -1084,8 +1084,7 @@ impl Compiler {
                 {
                     match n.value {
                         SubNOrSide::N(n) => {
-                            let n =
-                                self.positive_subscript(n, prim, modified.modifier.span.clone())?;
+                            let n = self.positive_subscript(n, prim, &modified.modifier.span)?;
                             if n == 0 {
                                 sn.node
                             } else {

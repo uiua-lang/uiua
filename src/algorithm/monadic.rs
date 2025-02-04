@@ -1307,10 +1307,10 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Encode the `bits` of the value
-    pub fn bits(&self, env: &Uiua) -> UiuaResult<Value> {
+    pub fn bits(&self, count: Option<usize>, env: &Uiua) -> UiuaResult<Value> {
         match self {
-            Value::Byte(n) => n.bits(env),
-            Value::Num(n) => n.bits(env),
+            Value::Byte(n) => n.bits(count, env),
+            Value::Num(n) => n.bits(count, env),
             _ => Err(env.error("Argument to bits must be an array of natural numbers")),
         }
     }
@@ -1328,8 +1328,8 @@ impl Value {
             .pop()
             .unwrap_or(0);
         match self {
-            Value::Byte(n) => n.bits_impl(min_bits_len, env),
-            Value::Num(n) => n.bits_impl(min_bits_len, env),
+            Value::Byte(n) => n.bits_impl(min_bits_len, None, env),
+            Value::Num(n) => n.bits_impl(min_bits_len, None, env),
             _ => Err(env.error("Argument to undo un bits must be an array of integers")),
         }
     }
@@ -1337,10 +1337,15 @@ impl Value {
 
 impl<T: RealArrayValue> Array<T> {
     /// Encode the `bits` of the array
-    pub fn bits(&self, env: &Uiua) -> UiuaResult<Value> {
-        self.bits_impl(0, env)
+    pub fn bits(&self, count: Option<usize>, env: &Uiua) -> UiuaResult<Value> {
+        self.bits_impl(0, count, env)
     }
-    fn bits_impl(&self, min_bits_len: usize, env: &Uiua) -> UiuaResult<Value> {
+    fn bits_impl(
+        &self,
+        min_bits_len: usize,
+        count: Option<usize>,
+        env: &Uiua,
+    ) -> UiuaResult<Value> {
         let mut nats = Vec::with_capacity(self.data.len());
         let mut negatives = Vec::with_capacity(self.data.len());
         let mut any_neg = false;
@@ -1357,33 +1362,41 @@ impl<T: RealArrayValue> Array<T> {
                     Primitive::Bits.format()
                 )));
             }
-            nats.push(n.abs().round() as u128);
+            let mut nat = n.abs().round() as u128;
+            if let Some(count) = count {
+                nat &= (1 << count) - 1;
+            }
+            nats.push(nat);
             negatives.push(n < 0.0);
             any_neg |= n < 0.0;
         }
-        let mut max = if let Some(max) = nats.iter().max() {
-            *max
+        let bit_count = if let Some(count) = count {
+            count
         } else {
-            let mut shape = self.shape.clone();
-            shape.push(0);
-            return Ok(Array::<u8>::new(shape, CowSlice::new()).into());
+            let mut max = if let Some(max) = nats.iter().max() {
+                *max
+            } else {
+                let mut shape = self.shape.clone();
+                shape.push(0);
+                return Ok(Array::<u8>::new(shape, CowSlice::new()).into());
+            };
+            let mut max_bits = 0;
+            while max != 0 {
+                max_bits += 1;
+                max >>= 1;
+            }
+            max_bits.max(min_bits_len)
         };
-        let mut max_bits = 0;
-        while max != 0 {
-            max_bits += 1;
-            max >>= 1;
-        }
-        max_bits = max_bits.max(min_bits_len);
         let mut shape = self.shape.clone();
-        shape.push(max_bits);
+        shape.push(bit_count);
         let val: Value = if any_neg {
             // If any number is negative, make a f64 array
-            let mut new_data = eco_vec![0.0; self.data.len() * max_bits];
+            let mut new_data = eco_vec![0.0; self.data.len() * bit_count];
             let new_data_slice = new_data.make_mut();
             // LSB first
             for (i, (n, is_neg)) in nats.into_iter().zip(negatives).enumerate() {
-                for j in 0..max_bits {
-                    let index = i * max_bits + j;
+                for j in 0..bit_count {
+                    let index = i * bit_count + j;
                     new_data_slice[index] = u8::from(n & (1 << j) != 0) as f64;
                     if is_neg {
                         new_data_slice[index] = -new_data_slice[index];
@@ -1393,12 +1406,12 @@ impl<T: RealArrayValue> Array<T> {
             Array::new(shape, new_data).into()
         } else {
             // If all numbers are natural, make a u8 array
-            let mut new_data = eco_vec![0; self.data.len() * max_bits];
+            let mut new_data = eco_vec![0; self.data.len() * bit_count];
             let new_data_slice = new_data.make_mut();
             // LSB first
             for (i, n) in nats.into_iter().enumerate() {
-                for j in 0..max_bits {
-                    let index = i * max_bits + j;
+                for j in 0..bit_count {
+                    let index = i * bit_count + j;
                     new_data_slice[index] = u8::from(n & (1 << j) != 0);
                 }
             }

@@ -635,6 +635,11 @@ primitive!(
     ///
     /// [under][bits] can be used to perform bit-wise operations.
     /// ex: ⍜⋯(¬⬚0↙8) 5
+    ///
+    /// Subscripted [bits] forces the number of bits to be used. This extends or truncates the bits.
+    /// ex: ⋯₄ [1 2 3]
+    /// ex: ⋯  1234
+    ///   : ⋯₈ 1234
     (1, Bits, MonadicArray, ("bits", '⋯')),
     /// Rotate the shape of an array
     ///
@@ -3250,6 +3255,7 @@ macro_rules! impl_primitive {
             BySub(usize),
             WithSub(usize),
             OffSub(usize),
+            NBits(usize),
             /// Push the maximum row count of N values
             MaxRowCount(usize),
         }
@@ -3267,6 +3273,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::ReduceDepth(_) => 1,
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n,
+                    ImplPrimitive::NBits(_) => 1,
                     _ => return None
                 })
             }
@@ -3278,6 +3285,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoRotate(n) => *n,
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n + 1,
+                    ImplPrimitive::NBits(_) => 1,
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })
@@ -3357,7 +3365,7 @@ impl_primitive!(
     (1(0), UnClip, Mutating),
     // Unders
     (1, UndoFix),
-    (2, UndoUnbits),
+    (2, UndoUnBits),
     (2, AntiBase),
     (3, UndoSelect),
     (3, UndoPick),

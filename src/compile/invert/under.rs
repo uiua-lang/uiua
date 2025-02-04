@@ -219,7 +219,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &(
         UnBits,
         (Dup, Shape, PushUnd(1), UnBits),
-        (PopUnd(1), UndoUnbits),
+        (PopUnd(1), UndoUnBits),
     ),
     // Rounding
     &(

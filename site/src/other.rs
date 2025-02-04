@@ -516,6 +516,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Ceil, "To N decimal places", "# Experimental!\n⌈₄ π\n⌈₄ τ"),
         subscript(First, "First N values", "⊢₂ \"hello\""),
         subscript(Last, "Last N values", "⊣₂ \"hello\""),
+        subscript(Bits, "Force N bits", "⋯₄ [1 2 3]"),
         subscript(Rand, "Random integer", "⚂₁₀₀"),
         subscript(On, "First N values", "{⟜₂[⊙⊙∘] 1 2 3}"),
         subscript(By, "Last N values", "{⊸₂[⊙⊙∘] 1 2 3}"),

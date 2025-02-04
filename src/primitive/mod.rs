@@ -196,6 +196,10 @@ impl fmt::Display for ImplPrimitive {
                 write!(f, "{Off}")?;
                 fmt_subscript(f, *i as i32)
             }
+            NBits(n) => {
+                write!(f, "{Bits}")?;
+                fmt_subscript(f, *n as i32)
+            }
             Root => write!(f, "{Anti}{Pow}"),
             Cos => write!(f, "cos"),
             Asin => write!(f, "{Un}{Sin}"),
@@ -240,7 +244,7 @@ impl fmt::Display for ImplPrimitive {
             UnRawMode => write!(f, "{Un}{}", Primitive::Sys(SysOp::RawMode)),
             UnClip => write!(f, "{Un}{}", Primitive::Sys(SysOp::Clip)),
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
-            UndoUnbits => write!(f, "{Under}{Un}{Bits}"),
+            UndoUnBits => write!(f, "{Under}{Un}{Bits}"),
             AntiBase => write!(f, "{Anti}{Base}"),
             UndoReverse { n, .. } => write!(f, "{Under}{Reverse}({n})"),
             UndoTransposeN(n, _) => write!(f, "{Under}{Transpose}({n})"),
@@ -859,7 +863,7 @@ impl Primitive {
             Primitive::Shape => {
                 env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
             }
-            Primitive::Bits => env.monadic_ref_env(Value::bits)?,
+            Primitive::Bits => env.monadic_ref_env(|val, env| val.bits(None, env))?,
             Primitive::Base => env.dyadic_rr_env(Value::base)?,
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
@@ -1208,6 +1212,11 @@ impl ImplPrimitive {
             ImplPrimitive::DeshapeSub(i) => {
                 env.monadic_mut_env(|val, env| val.deshape_sub(*i, true, env))?
             }
+            ImplPrimitive::NBits(n) => {
+                let val = env.pop(1)?;
+                let bits = val.bits(Some(*n), env)?;
+                env.push(bits);
+            }
             ImplPrimitive::Root => env.dyadic_oo_env(Value::root)?,
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
@@ -1357,7 +1366,7 @@ impl ImplPrimitive {
             }
             ImplPrimitive::MatrixDiv => env.dyadic_rr_env(Value::matrix_div)?,
             // Unders
-            ImplPrimitive::UndoUnbits => {
+            ImplPrimitive::UndoUnBits => {
                 let orig_shape = env.pop(1)?;
                 let val = env.pop(2)?;
                 env.push(val.undo_un_bits(&orig_shape, env)?);

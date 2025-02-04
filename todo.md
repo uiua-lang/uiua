@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.15
-- Allow unnamed data def outside named module
 - Subscripted `bits`
 - Non-dyadic `backward`
 - 0-output `tuples`

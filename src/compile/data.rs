@@ -75,12 +75,9 @@ impl Compiler {
 
         // Add to defs
         let def_name = if let ScopeKind::Module(name) = &self.scope.kind {
-            name.clone()
+            Some(name.clone())
         } else {
-            return Err(self.error(
-                data.span(),
-                "Unnamed data definitions must be in a named module",
-            ));
+            None
         };
         let def_index = self.asm.bind_def(DefInfo {
             name: def_name.clone(),
@@ -300,10 +297,13 @@ impl Compiler {
             };
             field.global_index = local.index;
             self.next_global += 1;
-            let comment = if let Some(comment) = &field.comment {
-                format!("Get `{def_name}`'s `{field_name}`\n{comment}")
-            } else {
-                format!("Get `{def_name}`'s `{field_name}`")
+            let comment = match (&def_name, &field.comment) {
+                (Some(def_name), Some(comment)) => {
+                    format!("Get `{def_name}`'s `{field_name}`\n{comment}")
+                }
+                (Some(def_name), None) => format!("Get `{def_name}`'s `{field_name}`"),
+                (None, Some(comment)) => format!("Get `{field_name}`\n{comment}"),
+                (None, None) => format!("Get `{field_name}`"),
             };
             let meta = BindingMeta {
                 comment: Some(DocComment::from(comment.as_str())),
@@ -322,7 +322,10 @@ impl Compiler {
             public: true,
         };
         self.next_global += 1;
-        let comment = format!("Names of `{def_name}`'s fields");
+        let comment = match &def_name {
+            Some(def_name) => format!("Names of `{def_name}`'s fields"),
+            None => "Names of fields".into(),
+        };
         let name = Ident::from("Fields");
         self.compile_bind_const(
             name,
@@ -405,8 +408,10 @@ impl Compiler {
             public: true,
         };
         self.next_global += 1;
-        let mut comment = format!("Create a new `{def_name}`\n{def_name} ");
-        comment.push('?');
+        let mut comment = match &def_name {
+            Some(def_name) => format!("Create a new `{def_name}`\n{def_name} ?"),
+            None => "Create a new data instance\nInstance ?".into(),
+        };
         for field in &fields {
             match field.init.as_ref().map(|sn| sn.sig.args) {
                 Some(0) => continue,
@@ -447,7 +452,10 @@ impl Compiler {
                     public: true,
                 };
                 comp.next_global += 1;
-                let comment = format!("`{def_name}`'s `{field_name}` argument");
+                let comment = match &def_name {
+                    Some(def_name) => format!("`{def_name}`'s `{field_name}` argument"),
+                    None => format!("`{field_name}` argument"),
+                };
                 let meta = BindingMeta {
                     comment: Some(DocComment::from(comment.as_str())),
                     ..Default::default()
@@ -467,7 +475,10 @@ impl Compiler {
                     public: true,
                 };
                 comp.next_global += 1;
-                let comment = format!("Get bound `{def_name}`");
+                let comment = match &def_name {
+                    Some(def_name) => format!("Get bound `{def_name}`"),
+                    None => "Get bound data instance".into(),
+                };
                 let meta = BindingMeta {
                     comment: Some(DocComment::from(comment.as_str())),
                     ..Default::default()

@@ -753,10 +753,10 @@ impl Uiua {
                         return Ok(());
                     }
                 }
-                Err(env.error(format!(
-                    "Not currently in a scope for def `{}`",
-                    env.asm.def(def).name
-                )))
+                Err(env.error(match &env.asm.def(def).name {
+                    Some(name) => format!("Not currently in a scope for def `{name}`"),
+                    None => "Not currently in a scope for data def".into(),
+                }))
             }),
             Node::SetLocal { def, span } => self.with_span(span, |env| {
                 let new = env.pop(1)?;
@@ -766,10 +766,10 @@ impl Uiua {
                         return Ok(());
                     }
                 }
-                Err(env.error(format!(
-                    "Not currently in a scope for def `{}`",
-                    env.asm.def(def).name
-                )))
+                Err(env.error(match &env.asm.def(def).name {
+                    Some(name) => format!("Not currently in a scope for def `{name}`"),
+                    None => "Not currently in a scope for data def".into(),
+                }))
             }),
         };
         if self.rt.time_instrs {

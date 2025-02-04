@@ -87,3 +87,7 @@ S~PushB
 ~Foo {Bar ← 5}
 F! ← ^0 Foo
 ⍤⤙≍ 5 F!Foo!Bar
+
+# Unnamed top-level def
+~{Foo Bar}
+⍤⤙≍ [3 5] [⊃Foo Bar] New 3 5

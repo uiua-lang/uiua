@@ -100,7 +100,7 @@ impl<'de> Deserialize<'de> for Function {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefInfo {
     /// The name of the definition
-    pub name: EcoString,
+    pub name: Option<EcoString>,
 }
 
 impl Assembly {

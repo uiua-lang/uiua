@@ -473,46 +473,50 @@ impl SysBackend for WebBackend {
                 Some(res.clone())
             } else if original_url.contains("github.com") && url.ends_with("/lib.ua") {
                 logging::log!("Fetching github repo: {url}");
-                mark_working(&original_url);
+                mark_working(original_url);
                 let original_url = original_url.to_string();
 
                 spawn_local(async move {
-                    let tree_url = format!("https://api.github.com/repos/{repo_owner}/{repo_name}/git/trees/main?recursive=1");
-                    let tree_res = fetch(&tree_url).await;
+                    const TREE_URL: &str = "https://api.github.com\
+                        /repos/{repo_owner}/{repo_name}/git/trees/main?recursive=1";
+                    let tree_res = fetch(TREE_URL).await;
 
-                    if let Err(_) = tree_res {
-                        cache_url(&url, tree_res);
-                        unmark_working(&original_url);
-                        return;
-                    } else {
-                        let tree = tree_res.unwrap();
-                        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
-                        let tree = tree.get("tree").unwrap().as_array().unwrap();
-                        let paths = tree
-                            .iter()
-                            .filter_map(|entry| {
-                                let path = entry.get("path")?.as_str()?;
-                                if path.ends_with(".ua") {
-                                    Some(path.to_string())
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect::<HashSet<_>>();
-
-                        if !paths.contains(&"lib.ua".to_owned()) {
-                            cache_url(&url, Err(format!("lib.ua not found").into()));
+                    match tree_res {
+                        Err(_) => {
+                            cache_url(&url, tree_res);
                             unmark_working(&original_url);
                             return;
                         }
+                        Ok(_) => {
+                            let tree = tree_res.unwrap();
+                            let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
+                            let tree = tree.get("tree").unwrap().as_array().unwrap();
+                            let paths = tree
+                                .iter()
+                                .filter_map(|entry| {
+                                    let path = entry.get("path")?.as_str()?;
+                                    if path.ends_with(".ua") {
+                                        Some(path.to_string())
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<HashSet<_>>();
 
-                        let results = join_all(
-                            paths.iter()
-                            .map(|path| {
+                            if !paths.contains("lib.ua") {
+                                cache_url(&url, Err("lib.ua not found".into()));
+                                unmark_working(&original_url);
+                                return;
+                            }
+
+                            let results = join_all(paths.iter().map(|path| {
                                 let repo_owner = repo_owner.clone();
                                 let repo_name = repo_name.clone();
                                 async move {
-                                    let fetch_url = format!("https://raw.githubusercontent.com/{repo_owner}/{repo_name}/main/{path}");
+                                    let fetch_url = format!(
+                                        "https://raw.githubusercontent.com\
+                                        /{repo_owner}/{repo_name}/main/{path}",
+                                    );
                                     let internal_path = Path::new("uiua-modules")
                                         .join(repo_owner)
                                         .join(repo_name)
@@ -520,17 +524,18 @@ impl SysBackend for WebBackend {
 
                                     (path, internal_path, fetch(fetch_url.as_str()).await)
                                 }
-                            })
-                        ).await;
+                            }))
+                            .await;
 
-                        for (original_path, internal_path, res) in results {
-                            if original_path.eq("lib.ua") {
-                                cache_url(&url, res.clone());
-                            }
+                            for (original_path, internal_path, res) in results {
+                                if original_path.eq("lib.ua") {
+                                    cache_url(&url, res.clone());
+                                }
 
-                            if let Ok(text) = res {
-                                let contents = text.as_bytes().to_vec();
-                                drop_file(internal_path.clone(), contents);
+                                if let Ok(text) = res {
+                                    let contents = text.as_bytes().to_vec();
+                                    drop_file(internal_path.clone(), contents);
+                                }
                             }
                         }
                     }
@@ -540,7 +545,7 @@ impl SysBackend for WebBackend {
                 None
             } else {
                 logging::log!("Fetching url: {url}");
-                mark_working(&original_url);
+                mark_working(original_url);
                 let original_url = original_url.to_string();
                 spawn_local(async move {
                     let res = fetch(&url).await;

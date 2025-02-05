@@ -1,7 +1,7 @@
 use std::{
     any::Any,
     cell::RefCell,
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, HashMap, HashSet},
     hash::{DefaultHasher, Hash, Hasher},
     io::Cursor,
     path::{Path, PathBuf},
@@ -12,6 +12,7 @@ use std::{
 };
 
 use crate::{get_ast_time, START_TIME};
+use futures::future::join_all;
 use js_sys::Date;
 use leptos::*;
 use uiua::{now, GitTarget, Handle, Report, Span, SysBackend, Uiua, EXAMPLE_TXT, EXAMPLE_UA};
@@ -407,7 +408,30 @@ impl SysBackend for WebBackend {
     fn allow_thread_spawning(&self) -> bool {
         true
     }
-    fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
+    fn load_git_module(&self, original_url: &str, target: GitTarget) -> Result<PathBuf, String> {
+        thread_local! {
+            static CACHE: RefCell<HashMap<String, Result<String, String>>> = Default::default();
+            static WORKING: RefCell<HashSet<String>> = Default::default();
+        }
+
+        fn cache_url(url: &str, res: Result<String, String>) {
+            CACHE.with(|cache| {
+                cache.borrow_mut().insert(url.into(), res);
+            });
+        }
+
+        fn mark_working(url: &str) {
+            WORKING.with(|working| working.borrow_mut().insert(url.into()));
+        }
+
+        fn unmark_working(url: &str) {
+            WORKING.with(|working| working.borrow_mut().remove(url));
+        }
+
+        if WORKING.with(|working| working.borrow().contains(original_url)) {
+            return Err("Waiting for module, try running again in a moment...".into());
+        }
+
         match target {
             GitTarget::Default => {}
             GitTarget::Branch(_) => {
@@ -417,38 +441,111 @@ impl SysBackend for WebBackend {
                 return Err("Git commit specification is not supported in the web backend".into())
             }
         }
-        let mut parts = url.rsplitn(3, '/');
-        let repo_name = parts.next().ok_or("Invalid git url")?;
-        let repo_owner = parts.next().ok_or("Invalid git url")?;
-        let path = Path::new("uiua-modules")
-            .join(repo_owner)
-            .join(repo_name)
-            .join("lib.ua");
+        let (repo_owner, repo_name, path) = {
+            let mut parts = original_url.rsplitn(3, '/');
+            let repo_name = parts.next().ok_or("Invalid git url")?;
+            let repo_owner = parts.next().ok_or("Invalid git url")?;
+            let path = Path::new("uiua-modules")
+                .join(repo_owner)
+                .join(repo_name)
+                .join("lib.ua");
+
+            (repo_owner.to_string(), repo_name.to_string(), path)
+        };
+
         if FILES.with(|files| files.borrow().contains_key(&path)) {
             return Ok(path);
         }
-        let mut url = url
+
+        let mut url = original_url
             .trim_end_matches('/')
             .replace("www.", "")
             .replace("github.com", "raw.githubusercontent.com")
             .replace("src/branch/master", "raw/branch/master");
+
         if !url.ends_with(".ua") {
             url = format!("{url}/main/lib.ua");
         }
-        thread_local! {
-            static CACHE: RefCell<HashMap<String, Result<String, String>>> = Default::default();
-        }
+
         let res = CACHE.with(|cache| {
             if let Some(res) = cache.borrow().get(&url) {
                 logging::log!("Using cached module for {url:?}");
                 Some(res.clone())
+            } else if original_url.contains("github.com") && url.ends_with("/lib.ua") {
+                logging::log!("Fetching github repo: {url}");
+                mark_working(&original_url);
+                let original_url = original_url.to_string();
+
+                spawn_local(async move {
+                    let tree_url = format!("https://api.github.com/repos/{repo_owner}/{repo_name}/git/trees/main?recursive=1");
+                    let tree_res = fetch(&tree_url).await;
+
+                    if let Err(_) = tree_res {
+                        cache_url(&url, tree_res);
+                        unmark_working(&original_url);
+                        return;
+                    } else {
+                        let tree = tree_res.unwrap();
+                        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
+                        let tree = tree.get("tree").unwrap().as_array().unwrap();
+                        let paths = tree
+                            .iter()
+                            .filter_map(|entry| {
+                                let path = entry.get("path")?.as_str()?;
+                                if path.ends_with(".ua") {
+                                    Some(path.to_string())
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect::<HashSet<_>>();
+
+                        if !paths.contains(&"lib.ua".to_owned()) {
+                            cache_url(&url, Err(format!("lib.ua not found").into()));
+                            unmark_working(&original_url);
+                            return;
+                        }
+
+                        let results = join_all(
+                            paths.iter()
+                            .map(|path| {
+                                let repo_owner = repo_owner.clone();
+                                let repo_name = repo_name.clone();
+                                async move {
+                                    let fetch_url = format!("https://raw.githubusercontent.com/{repo_owner}/{repo_name}/main/{path}");
+                                    let internal_path = Path::new("uiua-modules")
+                                        .join(repo_owner)
+                                        .join(repo_name)
+                                        .join(path.clone());
+
+                                    (path, internal_path, fetch(fetch_url.as_str()).await)
+                                }
+                            })
+                        ).await;
+
+                        for (original_path, internal_path, res) in results {
+                            if original_path.eq("lib.ua") {
+                                cache_url(&url, res.clone());
+                            }
+
+                            if let Ok(text) = res {
+                                let contents = text.as_bytes().to_vec();
+                                drop_file(internal_path.clone(), contents);
+                            }
+                        }
+                    }
+
+                    unmark_working(&original_url);
+                });
+                None
             } else {
                 logging::log!("Fetching url: {url}");
+                mark_working(&original_url);
+                let original_url = original_url.to_string();
                 spawn_local(async move {
                     let res = fetch(&url).await;
-                    CACHE.with(|cache| {
-                        cache.borrow_mut().insert(url.clone(), res.clone());
-                    });
+                    cache_url(&url, res);
+                    unmark_working(&original_url);
                 });
                 None
             }
@@ -461,7 +558,7 @@ impl SysBackend for WebBackend {
                 Ok(path)
             }
             Some(Err(err)) => Err(err),
-            None => Err("Waiting for module, try running to check...".into()),
+            None => Err("Waiting for module, try running again in a moment...".into()),
         }
     }
     fn timezone(&self) -> Result<f64, String> {

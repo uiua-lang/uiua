@@ -1504,7 +1504,8 @@ pub fn Editor<'a>(
                 .borrow()
                 .iter()
                 .filter(|(path, _)| {
-                    !excluded_files.contains(&path.to_str().unwrap()) && !path.ends_with("lib.ua")
+                    !excluded_files.contains(&path.to_str().unwrap())
+                        && !path.starts_with("uiua-modules/")
                 })
                 .map(|(path, _)| path.clone())
                 .collect::<Vec<_>>()

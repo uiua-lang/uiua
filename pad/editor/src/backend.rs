@@ -477,9 +477,11 @@ impl SysBackend for WebBackend {
                 let original_url = original_url.to_string();
 
                 spawn_local(async move {
-                    const TREE_URL: &str = "https://api.github.com\
-                        /repos/{repo_owner}/{repo_name}/git/trees/main?recursive=1";
-                    let tree_res = fetch(TREE_URL).await;
+                    let tree_res = fetch(&format!(
+                        "https://api.github.com\
+                        /repos/{repo_owner}/{repo_name}/git/trees/main?recursive=1",
+                    ))
+                    .await;
 
                     match tree_res {
                         Err(_) => {

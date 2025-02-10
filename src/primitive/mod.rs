@@ -534,6 +534,7 @@ impl Primitive {
             Trace => format!("use subscripted {} instead", Stack.format()),
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
             Astar => format!("use {} instead", Path.format()),
+            Over => format!("use {With}{Identity} or {Below} instead"),
             Around => format!("use {On}{Flip}, {Off}{Identity}, or sided subscripts instead"),
             _ => return None,
         })

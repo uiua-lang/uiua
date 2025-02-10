@@ -981,7 +981,8 @@
     "args": 2,
     "outputs": 3,
     "class": "Stack",
-    "description": "Duplicate the second-to-top value to the top of the stack"
+    "description": "Duplicate the second-to-top value to the top of the stack",
+    "deprecated": true
   },
   "parse": {
     "glyph": "⋕",

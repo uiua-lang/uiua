@@ -381,7 +381,7 @@ primitive!(
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [multiply] can be used as a logical AND.
-    /// ex: ×,,⊓≥≤5,8 . [6 2 5 9 6 5 0 4]
+    /// ex: ◡×⊓≥≤5⤙8 . [6 2 5 9 6 5 0 4]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
     /// Divide values
     ///
@@ -1307,8 +1307,8 @@ primitive!(
     /// You can use the returned indices with [select] to get the rows that were found.
     /// If you expect any of the searched-for rows to be missing, you can use [fill] to set a default value.
     /// ex: A ← [2 3 5 7 11 13]
-    ///   : .⊗,A [1 2 3 4 5]
-    ///   : ⬚∞⊏:A
+    ///   : .⊗⤙A [1 2 3 4 5]
+    ///   : ⬚∞˜⊏A
     ///
     /// [indexof] is closely related to [memberof].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
@@ -1987,9 +1987,9 @@ primitive!(
     /// For `fac fbc`, the idiom is `dip``over`.
     /// For `fab fac`, the idiom is `on``flip`.
     /// For example, if you wanted to check that a number is divisible by two other numbers:
-    /// ex: F ← ∩(=0◿) ⊙,
+    /// ex: F ← ∩(=0◿) ⊙⤙∘
     ///   : F 3 5 ⇡16
-    /// ex: G ← ∩(=0◿:) ⟜:
+    /// ex: G ← ∩(=0◿:) ⤚∘
     ///   : G ⇡16 3 5
     ([1], Both, Planet, ("both", '∩')),
     /// Define the various inverses of a function
@@ -2111,7 +2111,7 @@ primitive!(
     /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
     /// ex: ⍜∩(×.)+ 3 4
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
-    /// ex: ⍜∩°□(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
+    /// ex: ⍜∩°□(⊂⊢⤙∘) □[1 2 3] □[4 5 6 7 8]
     ///
     /// [obverse] can be used to define a function's [under] behavior.
     ///
@@ -2143,7 +2143,7 @@ primitive!(
     /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
     /// ex: [⊓(+|-|×|÷) 10 20 5 8 3 7 2 5]
     /// [bracket] is a nice way to check if a number is within a range.
-    /// ex: ×,,⊓≥≤5,8 . [6 2 5 9 6 5 0 4]
+    /// ex: ◡×⊓≥≤5⤙8 . [6 2 5 9 6 5 0 4]
     ([2], Bracket, Planet, ("bracket", '⊓')),
     /// Repeat a function while a condition holds
     ///
@@ -2714,7 +2714,7 @@ primitive!(
     /// ex: map 1_2 3_4
     ///   : ⍣get0 5 .
     /// ex: map 1_2 3_4
-    ///   : ⨬⋅⋅0get has,, 5 .
+    ///   : ⨬⋅⋅0get ◡has 5 .
     /// You can provide a default value with [fill].
     /// ex: map 1_2 3_4
     ///   : ⬚0get 1 .
@@ -2749,7 +2749,7 @@ primitive!(
     /// This is useful when you want to inspect the current ordering of the stack.
     /// For example, if you are juggling some values on the stack, you can use [stack] to inspect the stack afterwards:
     /// ex: 1 2 3
-    ///   : ,,⊙.:
+    ///   : ◡⊙∘⊙.:
     ///   : ?
     ///   : +×-×+
     /// ex: 2_3_10 ? 17 ↯3_4⇡12
@@ -2778,7 +2778,7 @@ primitive!(
     /// This is useful when you want to inspect the current ordering of the stack.
     /// For example, if you are juggling some values on the stack, you can use [dump] to inspect the stack afterwards:
     /// ex: 1 2 3
-    ///   : ,,⊙.:
+    ///   : ◡⊙∘⊙.:
     ///   : dump∘
     ///   : +×-×+
     /// [dump][shape] is useful if your raw array data isn't worth looking at, but the shapes are.
@@ -2854,65 +2854,6 @@ primitive!(
     ///   : ◌°ℂ °fft          # Run inverse FFT and get the real part
     (1, Fft, Misc, "fft"),
     /// Find shortest paths in a graph
-    ///
-    /// [astar] is deprecated in favor of [path].
-    ///
-    /// Expects 3 functions and at least 1 value.
-    /// The value is the starting node.
-    /// The first function should return 1 or 2 arrays of equal [length].
-    /// - An array of the neighboring nodes must always be returned.
-    /// - An array of costs may be returned above the nodes array on the stack. If ommitted, all costs are assumed to be 1.
-    /// The second function should return a heuristic cost to reach the goal node.
-    /// - The heuristic may return a value [less or equal] the actual cost
-    /// - It must *never* overestimate the cost, or the algorithm may not find the shortest path
-    /// The third function should return whether or not the goal node has been reached.
-    ///
-    /// When called, [astar] will pop any additional arguments its functions need from the stack.
-    /// On each iteration, the current node will be passed to each function, along with any of the additional arguments that each function needs.
-    ///
-    /// If a path is found, a list of [box]ed arrays of all shortest paths is returned, as well as the cost.
-    /// If no path is found, an empty list and a cost of `infinity` are returned.
-    ///
-    /// In this example, we find the shortest path from the 2D point `0_0` to `3_5` in a grid.
-    /// The neighbors function returns the 4 cardinal directions with all costs of 1.
-    /// The heuristic function `absolute value``reduce``complex``subtract` calculates the euclidean distance between two points.
-    /// The goal function simply checks if the current node [match]es the given goal node.
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
-    ///   : Neis # Side-adjacent neighbors offsets
-    ///   :
-    ///   : °□⊢ astar(
-    ///   :   ≡⋅1. +Neis¤ # Costs and neighbors
-    ///   : | ⌵/ℂ-        # Heuristic
-    ///   : | ≍           # Check if goal
-    ///   : )0_0 3_5      # Start and goal
-    /// If we omit the cost array from the neighbors function and simply use `0` as the heuristic, the algorithm becomes Dijkstra's algorithm.
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
-    ///   : °□⊢ astar(+Neis¤)0≍ 0_0 3_5
-    /// Since this is common, it is the behavior of [astar] with a 2-function pack.
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
-    ///   : °□⊢ astar(+Neis¤|≍) 0_0 3_5
-    /// In the examples above, we use `un``box``first` to get only the first path. [first][astar] and [pop][astar] are optimized to not do extra work.
-    /// If we want *all* shortest paths, we can omit [first].
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
-    ///   : astar(+Neis¤)0≍ 0_0 1_2
-    /// If pathing on a grid like the examples above, we can use [un][where] to visualize the path that was taken!
-    /// ex: # Experimental!
-    ///   : Neis ← [∩¯,,⇌.⇡2]
-    ///   : °□⊢ astar(+Neis¤|⌵/ℂ-|≍) 3_4 10_14
-    ///   : °⊚
-    ///   : ▽⟜≡▽8 # Upscale
-    /// There are no guarantees about the order of the paths, only that they all have the same cost.
-    ///
-    /// Pathfinding isn't just good for solving problems with grids or graphs.
-    /// Anything that involves finding a series of steps to get from one point to another is a good candidate for [astar].
-    /// For example, you can use it to find edits to a string to turn it into another string.
-    /// ex: # Experimental!
-    ///   : ⊢astar(+⊙¤ ⊂¯.⊞=. °⊏|≍) "thud" "uiua"
-    /// [astar] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[3], Astar, Misc, "astar"),
     /// Find the shortest path between two things
     ///

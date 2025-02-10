@@ -316,7 +316,8 @@ impl SysBackend for NativeSys {
         }
         let mut stdout = stdout().lock();
         stdout.write_all(s.as_bytes()).map_err(|e| e.to_string())?;
-        stdout.flush().map_err(|e| e.to_string())
+        // stdout.flush().map_err(|e| e.to_string())
+        Ok(())
     }
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
         if !self.output_enabled() {

@@ -465,9 +465,9 @@ sys_op! {
     ///
     /// ex: &asr
     /// Here is how you can generate a list of sample times for `4` seconds of audio:
-    /// ex: ÷:⇡×, 4 &asr
+    /// ex: ÷⤙(⇡×) 4 &asr
     /// Pass that to a periodic function, and you get a nice tone!
-    /// ex: ÷4∿×τ×220 ÷:⇡×, 4 &asr
+    /// ex: ÷4∿×τ×220 ÷⤙(⇡×) 4 &asr
     (0, AudioSampleRate, Media, "&asr", "audio - sample rate"),
     /// Synthesize and stream audio
     ///

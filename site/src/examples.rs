@@ -44,7 +44,7 @@ const PALINDROME: &str = r#"$ uiua racecar wow cool!
 const AUTOMATA: &str = "\
 Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌⧈∘3⇌ ⊂⊂0:0)
 =⌊÷2⟜⇡ 500          # Init
-⇌[◌⍥⟜⊸Rule⌊÷2⧻,] 30 # Run";
+⇌[◌⍥⟜⊸Rule⌊÷2⧻⤙] 30 # Run";
 const ROMAN: &str = r#"k ← "IVXLCDM"
 n ← [1 5 10 50 100 500 1000]
 F ← /+-⊃(↻1×|×¬)⊸(⧈>⊂:0)⊏:n⊗:k
@@ -56,7 +56,7 @@ const MANDELBROT: &str = "\
 ÷/↥⊸♭ ⊙⋅◌               # Normalize";
 const LIFE: &str = "\
 Adj  ← ♭₂-1⇡3_3
-Life ← ↥↧⟜(∩=2,3-|/+≡↻Adj¤)
+Life ← ↥↧⟜(∩=2⤙3-|/+≡↻Adj¤)
 ⁅×0.6 gen⊙⚂ ⊟.30 # Init
 ⇌◌⍥(⟜⊂Life)100⟜¤ # Run
 ≡(▽⟜≡▽) 4        # Upscale";

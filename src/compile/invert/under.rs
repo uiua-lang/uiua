@@ -378,16 +378,29 @@ under!(DipPat, input, g_sig, inverse, asm, Dip, span, [f], {
     Ok((&[], before, after))
 });
 
-under!(BothPat, input, g_sig, inverse, asm, Both, span, [f], {
+under!(BothPat, input, g_sig, inverse, asm, {
+    let (input, val) = if let Ok((input, val)) = Val.invert_extract(input, asm) {
+        (input, Some(val))
+    } else {
+        (input, None)
+    };
+    let [Mod(Both, args, span), input @ ..] = input else {
+        return generic();
+    };
+    let span = *span;
+    let [f] = args.as_slice() else {
+        return generic();
+    };
     let inner_g_sig = Signature::new(
         g_sig.args.saturating_sub(1),
         g_sig.outputs.saturating_sub(1),
     );
     let (f_before, mut f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
 
-    let balanced = g_sig.args <= g_sig.outputs;
+    let balanced = g_sig.args <= g_sig.outputs && !(val.is_some() && f.sig == (1, 1));
     // Make before
-    let before = if !inverse || balanced {
+    let mut before = val.unwrap_or_default();
+    before.push(if !inverse || balanced {
         Mod(Both, eco_vec![f_before], span)
     } else {
         let node = f_before.node;
@@ -404,7 +417,7 @@ under!(BothPat, input, g_sig, inverse, asm, Both, span, [f], {
             node.prepend(val);
         }
         node
-    };
+    });
     // Make after
     let after = if inverse || balanced {
         ImplMod(UnBoth, eco_vec![f_after], span)

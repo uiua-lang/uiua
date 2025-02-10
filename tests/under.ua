@@ -378,6 +378,8 @@ G ← ⍜(⊙⊙⊢) ⋅⊙∘
 ⍤⤙≍ map "abc" [1 2 3] ⍜insert∘ @d 4 map "abc" [1 2 3]
 ⍤⤙≍ map "abc" [1 2 3] ⍜remove∘ @a map "abc" [1 2 3]
 ⍤⤙≍ map "abc" [1 2 3] ⍜remove∘ @d map "abc" [1 2 3]
+⍤⤙≍ ⟜⍜(get"abc")∘ map {"abc"} [1]
+⍤⤙≍ □⟜⍜(◇get"abc")∘ map {"abc"} [1]
 
 # Pattern matching
 ⍤⤙≍ "2 - 4" ⍜°$"_ - _"∩(×2⋕) "1 - 2"

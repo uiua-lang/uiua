@@ -1897,6 +1897,7 @@ primitive!(
     /// ex! [⤙¯ 2]
     /// ex: [⤙¯ 2 5]
     /// [with] with a noadic function will be coerced to `with``identity`.
+    /// ex: [1⤙2 3]
     /// ex: [⤙1 2 3]
     /// If you do not want these behaviors, use [on] instead.
     /// Subscripted [with] keeps the last N arguments above the outputs on the stack.

@@ -15,6 +15,9 @@ This version is not yet released. If you are reading this on the website, then t
   - This glyph has much better font support
 - Stabilize [`backward ˜`](https://uiua.org/docs/backward)
 - Add subscripts for [`bits ⋯`](https://uiua.org/docs/bits) to force the number of bits
+- Deprecate [`over ,`](https://uiua.org/docs/over)
+  - It is part of a stack manipulation paradigm that Uiua is slowly moving away from
+  - [`with ⤙`](https://uiua.org/docs/with) and [`below ◡`](https://uiua.org/docs/below) replace the vast majority of [`over ,`](https://uiua.org/docs/over)'s use cases
 - Add sided subscripts for [`reach 𝄐`](https://uiua.org/docs/reach)
 - Add the [`# External!`](https://www.uiua.org/tutorial/documentation#external) semantic comment to mark functions that are provided via Rust code
   - These functions don't require a Uiua implementation and will show up in the LSP

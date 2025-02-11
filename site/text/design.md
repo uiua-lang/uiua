@@ -10,7 +10,7 @@ It serves as a [defense of design](https://news.knowledia.com/US/en/articles/mor
 When I first started developing Uiua, it was neither stack-based nor array-oriented. What it *did* focus a lot on was *combinators*. I had this whole hierarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly.  
 I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about.
 
-Eventually, I moved to a stack-based model and discovered that you can write almost any 1 or 2 argument combinator with just [`duplicate`](/docs/duplicate), [`over`](/docs/over), and [`flip`](/docs/flip).  
+Eventually, I moved to a stack-based model and discovered that you can write almost any 1 or 2 argument combinator with just [`duplicate`](/docs/duplicate), `, over`, and [`flip`](/docs/flip).  
 Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer. This is especially true if you try to *rotate* the stack like you could with the now-removed functions `roll` and `unroll`. [`dip`](/docs/dip) replaced the rolling functions as it is more general and easier to reason about, and eventually grew into [Planet Notation](/tutorial/morestack#planet-notation).
 
 As more and more Uiua code was written, I developed the principle of [Stack-Source Locality](/tutorial/tacitcode#stack-source-locality) to guide readability. The [`on`](/docs/on) and [`by`](/docs/by) modifiers were added to express common patterns of stack manipulation.

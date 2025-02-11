@@ -47,7 +47,7 @@ Disc ← # Code goes here
 Disc 1 ¯3 2
 ```
 
-To show how you might build up a solution with only stack reordering, we'll only use [`duplicate`](), [`flip`](), [`over`](), and [`dip`]() to attempt to get all the arguments in the right order.
+To show how you might build up a solution with only stack reordering, we'll only use [`duplicate`](), [`flip`](), [`dip`](), and [`below`]() to attempt to get all the arguments in the right order.
 
 First, we'll might try to get `a` and `c` next to each other above `b` on the stack.
 
@@ -85,37 +85,37 @@ Quad 1 ¯3 2
 ```
 
 And now we have a problem. We still need to use `a` and `b` one more time, but they have already been consumed.
-`a` and `b` start at the top of the stack, so we can copy them with [over]() and put the rest of out code in two [dip]()s.
+`a` and `b` start at the top of the stack, so we can copy them with [below]() [dip]() [identity]() and put the rest of our code in two [dip]()s.
 
 ```uiua
-Quad ← ⊙⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:),,
+Quad ← ⊙⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:) ◡⊙∘
 Quad 1 ¯3 2
 ```
 
 Then we'll [subtract]() `b`... 
 
 ```uiua
-Quad ← ⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)),,
+Quad ← ⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)) ◡⊙∘
 Quad 1 ¯3 2
 ```
 
 ...and [divide]() by `2a`.
 
 ```uiua
-Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)),,
+Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)) ◡⊙∘
 Quad 1 ¯3 2
 ```
 
 And there we have it, the quadratic formula.
 
 ```uiua
-Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)),,
+Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)) ◡⊙∘
 Quad 1 ¯3 2
 Quad 1 2 5
 Quad 2 3 1
 ```
 
-On close inspection, the astute reader may notice that the above code sucks. What's worse, it's not even as bad as it could be. If you hadn't thought to use [over]() and [dip]() in that way, you may have instead used `:⊙:` to rotate 3 values on the stack, making it even more convoluted.
+On close inspection, the astute reader may notice that the above code sucks. What's worse, it's not even as bad as it could be. If you hadn't thought to use [below]() and [dip]() in that way, you may have instead used `:⊙:` to rotate 3 values on the stack, making it even more convoluted.
 
 The problem with reordering stack values this often is that the state of the stack at any point in the code gets harder and harder for the writer to keep in their head. It also makes it much harder for the reader to deduce the state of the stack at a glance.
 
@@ -123,11 +123,11 @@ The problem with reordering stack values this often is that the state of the sta
 
 The code above is also obtuse for another reason.
 
-Imagine a person who is less familiar with this code going to read it. It may be someone else, but it may also be a future version of yourself. If they look at the leftmost term `÷×2`, they'll likely be able to quickly tell that it takes two arguments. But how do they figure out what those arguments are? They would have to make their way all the way to the *other side of the function* to find the [over]() that creates the copy of `a`. They would only end up there after having built up the mental model of the state of the stack throughout the *entire function*.
+Imagine a person who is less familiar with this code going to read it. It may be someone else, but it may also be a future version of yourself. If they look at the leftmost term `÷×2`, they'll likely be able to quickly tell that it takes two arguments. But how do they figure out what those arguments are? They would have to make their way all the way to the *other side of the function* to find the [below]() that creates the copy of `a`. They would only end up there after having built up the mental model of the state of the stack throughout the *entire function*.
 
 This obtuseness is the result of the above code violating a fundamental principle of writing good Uiua code, that of *stack-source locality*. Stated simply, **code that creates values should be as close as possible to the code that uses those values**.
 
-In our example, [divide]() and the [over]() that creates its argument are on opposite sides of the function: a massive violation of stack-source locality.
+In our example, [divide]() and the [below]() that creates its argument are on opposite sides of the function: a massive violation of stack-source locality.
 
 This principle is not a formula you can plug values into. It is not a set of procedures that will make code better. It is a guiding tenet meant to shape the way you think about the flow of your data and how you structure your programs. How well a given code snippet maintains stack-source locality is up to interpretation, and different Uiua programmers may interpret it differently, even for the same program.
 
@@ -196,7 +196,7 @@ Let's compare this solution to the previous one. To improve the comparison, we'l
 
 ```uiua
 Disc ← -⊙(ⁿ2)××4 ⊙:
-Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 Disc)),,
+Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 Disc)) ◡⊙∘
 Quad 1 ¯3 2
 ```
 

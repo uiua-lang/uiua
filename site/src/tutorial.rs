@@ -295,11 +295,6 @@ fn TutorialBasic() -> impl IntoView {
         <Editor example="÷:1 5"/>
         <Editor example=":1 2 3 4 5"/>
         <br/>
-        <Hd id="over"><Prim prim=Over/></Hd>
-        <p><Prim prim=Over/>" is like "<Prim prim=Dup/>", but it duplicates the second item on the stack instead of the first."</p>
-        <Editor example=",1 2 3 4"/>
-        <Editor example="+×, 3 5"/>
-        <br/>
         <Hd id="pop"><Prim prim=Pop/></Hd>
         <p><Prim prim=Pop/>" removes the top item from the stack."</p>
         <p>"This is useful when you want to discard a value that you do not need."</p>
@@ -898,7 +893,7 @@ F 10 11"/>
         <p>"If you need to use a literal "<code>"_"</code>", you can escape them with "<code>"\\"</code>"."</p>
         <Editor example="$\"\\__\\_\" 27"/>
         <p>"Raw strings can be made format strings by adding an additional "<code>"$"</code>"."</p>
-        <Editor example="+,, 1 2\n&p $$ What are two numbers that add up to _?\n   $$ _ and _ do!"/>
+        <Editor example="◡+ 1 2\n&p $$ What are two numbers that add up to _?\n   $$ _ and _ do!"/>
         <p><code>"_"</code>"s still need to be escaped in raw format strings."</p>
         <Editor example="1 2 3\n$$ _\\__\\__"/>
         <p>"Because format strings are just functions, you can use them with modifiers like "<Prim prim=Reduce/>". This is a common way to join a list of "<Prim prim=Box/>"ed strings."</p>
@@ -958,7 +953,7 @@ fn TutorialMoreStack() -> impl IntoView {
     view! {
         <Title text="More Stack Manipulation - Uiua Docs"/>
         <h1>"More Stack Manipulation"</h1>
-        <p>"Uiua does not have local variables. With only "<Prim prim=Dup/>", "<Prim prim=Flip/>", and "<Prim prim=Over/>", how do you work with more than 2 values at a time?"</p>
+        <p>"Uiua does not have local variables. With only "<Prim prim=Dup/>" and "<Prim prim=Flip/>", how do you work with more than 2 values at a time?"</p>
 
         <Hd id="fork"><Prim prim=Fork/></Hd>
         <p><Prim prim=Fork/>" is a dyadic modifier that takes 2 functions and calls them both on the same set of arguments. The number of arguments used is the maximum of the two functions."</p>
@@ -1045,7 +1040,6 @@ fn TutorialMoreStack() -> impl IntoView {
         <p>"Try it out!"</p>
         <Editor example="+gdggi 1 2 3 4 5"/>
         <Editor example="+dggdp 1 2 3 4 5"/>
-        <p>"In general, planet notation as complex as the mathematical function example above should only be used when it is necessary. For examples like that with 4+ values, it is. However, when working with fewer values, you can get very far with just "<Prim prim=Dup/>" and "<Prim prim=Flip/>". Maybe sprinkle some "<Prim prim=Over/>"s and "<Prim prim=Dip/>"s in there too."</p>
 
         <Hd id="on-and-by"><Prim prim=On/>" and "<Prim prim=By/></Hd>
         <p>"As you write more Uiua code, you'll find that there is a kind of pattern you'll encounter over and over again. It involves calling a function, then calling another function that re-uses an argument to the first function."</p>
@@ -1063,6 +1057,9 @@ fn TutorialMoreStack() -> impl IntoView {
         <p>"You can read more about these modifiers in the "<A href="/tutorial/evenmorestack">"Even More Stack Manipulation"</A>" tutorial."</p>
         <Editor example="÷⊸⧻ [1 2 3 4]"/>
         <Editor example="▽⊸> 5 [1 8 4 9 2 8 4]"/>
+
+        <Hd id="even-more">"Even More Stack Manipulation"</Hd>
+        <p>"But wait, there's more! For even more stack manipulation techniques, see the "<A href="/tutorial/evenmorestack">"Even More Stack Manipulation"</A>" tutorial."</p>
 
         <Hd id="challenges">"Challenges"</Hd>
 
@@ -1216,7 +1213,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="F ← ⨬(|2 ×||3.2 ⊃(++)×)\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
         <p>"Signatures in "<Prim prim=Switch/>" functions are a bit messy, so try to avoid them when possible."</p>
         <p>"Because a second "<code>"|"</code>" immediately after another indicates a signature, branches that do nothing must contain "<Prim prim=Identity/>"."</p>
-        <Editor example="F ← ⨬(+5|∘|÷10)+∩>5,10.\n[F2 F6 F200]\nF[2 6 200]"/>
+        <Editor example="F ← ⨬(+5|∘|÷10)+∩>5:10..\n[F2 F6 F200]\nF[2 6 200]"/>
 
         <Hd id="recursion">"Recursion"</Hd>
         <p>"A bound function that refers to its own name is a "<a href="https://en.wikipedia.org/wiki/Recursion_(computer_science)">"recursive function"</a>". A function that calls itself can easily recurse infinitely, so it is important to have a "<em>"base case"</em>" that stops the recursion when a condition is met. Switch functions are great for this."</p>

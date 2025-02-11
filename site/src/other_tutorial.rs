@@ -319,6 +319,8 @@ fn EvenMoreStack() -> impl IntoView {
         <p><Prim prim=With/>" has fewer common patterns that come up often, (other than "<Prims prims=[Assert, With, Match]/>" for "<A href="/tutorial/testing">"testing"</A>"), but it can still be useful in some situations."</p>
         <p>"Its name was chosen because after using it, you end up with an array "<em>"with"</em>" a transformed version of it."</p>
         <Editor example="⊟⤙↻1 [1 2 3 4 5] # Couple *with* rotation"/>
+        <p><Prim prim=With/>" is also useful for interspersing constants between stack values. This is because it (along with "<Prim prim=Off/>") has some special behavior with noadic functions."</p>
+        <Editor example="[1⤙2 3]"/>
 
         <Hd id="below"><Prim prim=Below/></Hd>
         <p>"Use "<Prim prim=Below/>" when you want to call a function without disturbing the stack "<em>"at all"</em>"."</p>

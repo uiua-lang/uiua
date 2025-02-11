@@ -1519,7 +1519,7 @@ bin_op_mod!(
     f64::from,
     f64,
     b.log(a),
-    "Cannot get the log base {b} of {a}"
+    "Cannot get the log base {a} of {b}"
 );
 pub mod complex {
     use super::*;

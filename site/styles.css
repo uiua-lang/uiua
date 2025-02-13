@@ -1539,8 +1539,9 @@ a.clean {
     }
 }
 
-.pad-file-tab-close {
+.pad-file-tab-button {
     opacity: 0.5;
+    scale: 1.2;
 
     &:hover {
         opacity: 1;

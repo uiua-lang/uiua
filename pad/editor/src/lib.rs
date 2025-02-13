@@ -1531,6 +1531,37 @@ pub fn Editor<'a>(
                 };
 
                 let path_clone = path.clone();
+                let on_download = move |event: MouseEvent| {
+                    event.stop_propagation();
+                    let content = backend::FILES.with(|files| {
+                        files
+                            .borrow()
+                            .iter()
+                            .find(|(p, _)| *p == &path_clone)
+                            .map(|(_, code)| code.clone())
+                            .unwrap_or_default()
+                    });
+                    let doc = window().document().unwrap();
+                    let anchor = doc.create_element("a").unwrap();
+                    anchor
+                        .set_attribute(
+                            "href",
+                            &format!(
+                                "data:application/octet-stream;base64,{}",
+                                STANDARD.encode(content)
+                            ),
+                        )
+                        .unwrap();
+                    anchor
+                        .set_attribute("download", &path_clone.to_string_lossy())
+                        .unwrap();
+                    anchor.set_attribute("style", "display: none").unwrap();
+                    doc.body().unwrap().append_child(&anchor).unwrap();
+                    anchor.dyn_ref::<HtmlAnchorElement>().unwrap().click();
+                    set_timeout(move || anchor.remove(), Duration::from_millis(0));
+                };
+
+                let path_clone = path.clone();
                 let on_insert = move |_: MouseEvent| {
                     let content = backend::FILES.with(|files| {
                         files
@@ -1555,7 +1586,12 @@ pub fn Editor<'a>(
                     >
                         {&path_clone.to_string_lossy().into_owned()}
                         <span
-                            class="pad-file-tab-close"
+                            class="pad-file-tab-button"
+                            on:click=on_download
+                            inner_html="🠻"
+                        />
+                        <span
+                            class="pad-file-tab-button"
                             on:click=on_delete
                             inner_html="&times;"
                         />

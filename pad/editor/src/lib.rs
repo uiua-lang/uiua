@@ -1552,7 +1552,9 @@ pub fn Editor<'a>(
                             ),
                         )
                         .unwrap();
-                    anchor.set_attribute("download", &path_clone.to_string_lossy()).unwrap();
+                    anchor
+                        .set_attribute("download", &path_clone.to_string_lossy())
+                        .unwrap();
                     anchor.set_attribute("style", "display: none").unwrap();
                     doc.body().unwrap().append_child(&anchor).unwrap();
                     anchor.dyn_ref::<HtmlAnchorElement>().unwrap().click();

@@ -11,9 +11,16 @@ use super::{monadic::range, table::table_impl, validate_size};
 
 pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
-    if f.sig.outputs != 1 {
+    if f.sig.outputs > 1 {
         return Err(env.error(format!(
-            "{}'s function must have 1 output, \
+            "{}'s function must have at most 1 output, \
+            but its signature is {}",
+            Primitive::Tuples.format(),
+            f.sig
+        )));
+    } else if f.sig.args > 1 && f.sig.outputs == 0 {
+        return Err(env.error(format!(
+            "{}'s function must have 1 argument if it has 0 outputs, \
             but its signature is {}",
             Primitive::Tuples.format(),
             f.sig
@@ -35,6 +42,7 @@ pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
 }
 
 fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
+    let has_output = f.sig.outputs == 1;
     let mut xs = env.pop(1)?;
     if xs.rank() == 0 {
         env.push(xs);
@@ -51,23 +59,29 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
             proxy.fix();
             env.push(proxy);
             _ = env.exec_maintain_sig(f);
-            results.push(env.pop("tuples' function result")?);
+            if has_output {
+                results.push(env.pop("tuples' function result")?);
+            }
         }
     } else {
         env.without_fill(|env| -> UiuaResult {
             for n in 1..=xs.row_count() {
                 env.push(xs.slice_rows(0, n));
                 env.exec(f.clone())?;
-                results.push(env.pop("tuples's function result")?);
+                if has_output {
+                    results.push(env.pop("tuples's function result")?);
+                }
             }
             Ok(())
         })?;
     }
-    let mut val = Value::from_row_values(results, env)?;
-    if xs.row_count() == 0 {
-        val.pop_row();
+    if has_output {
+        let mut val = Value::from_row_values(results, env)?;
+        if xs.row_count() == 0 {
+            val.pop_row();
+        }
+        env.push(val);
     }
-    env.push(val);
     Ok(())
 }
 

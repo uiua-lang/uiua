@@ -30,6 +30,7 @@ use crate::{
     array::Array,
     boxed::Boxed,
     encode,
+    grid_fmt::GridFmt,
     lex::{AsciiToken, SUBSCRIPT_DIGITS},
     sys::*,
     value::*,
@@ -1599,30 +1600,46 @@ impl ImplPrimitive {
                     expected.rank() <= 1 && expected.row_count() <= 10,
                     got.rank() <= 1 && got.row_count() <= 10,
                 ) {
-                    (true, true) => format!("expected {expected} but got {got}"),
+                    (true, true) => format!(
+                        "expected {} but got {}",
+                        expected.grid_string(false),
+                        got.grid_string(false)
+                    ),
                     (true, false) if expected.type_id() != got.type_id() => {
-                        format!("expected {expected} but got {}", got.type_name_plural())
+                        format!(
+                            "expected {} but got {}",
+                            expected.grid_string(false),
+                            got.type_name_plural()
+                        )
                     }
                     (true, false) if expected.shape() != got.shape() => format!(
-                        "expected {expected} but got array with shape {}",
+                        "expected {} but got array with shape {}",
+                        expected.grid_string(false),
                         got.shape()
                     ),
                     (true, false) => format!(
-                        "expected {expected} but found {} array with shape {}",
+                        "expected {} but found {} array with shape {}",
+                        expected.grid_string(false),
                         got.type_name(),
                         got.shape()
                     ),
                     (false, true) if expected.type_id() != got.type_id() => {
-                        format!("expected {} but got {got}", expected.type_name_plural())
+                        format!(
+                            "expected {} but got {}",
+                            expected.type_name_plural(),
+                            got.grid_string(false)
+                        )
                     }
                     (false, true) if expected.shape() != got.shape() => format!(
-                        "expected array with shape {} but got {got}",
-                        expected.shape()
+                        "expected array with shape {} but got {}",
+                        expected.shape(),
+                        got.grid_string(false)
                     ),
                     (false, true) => format!(
-                        "expected {} array with shape {} but got {got}",
+                        "expected {} array with shape {} but got {}",
                         expected.type_name(),
-                        expected.shape()
+                        expected.shape(),
+                        got.grid_string(false)
                     ),
                     (false, false) if expected.type_id() != got.type_id() => {
                         format!(

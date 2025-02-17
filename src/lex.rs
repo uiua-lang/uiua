@@ -1043,6 +1043,8 @@ impl<'a> Lexer<'a> {
                 "^" => {
                     if let Some(x) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_digit())) {
                         self.end(Placeholder(x.parse().unwrap()), start)
+                    } else if self.next_char_exact("!") {
+                        self.end(Placeholder(0), start)
                     } else {
                         self.end(Caret, start)
                     }

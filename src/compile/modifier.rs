@@ -1657,6 +1657,9 @@ impl Compiler {
         self.comptime_depth -= 1;
         self.pre_eval_mode = pre_eval_mod;
         // Extract generated root node
+        if root_node_len >= self.asm.root.len() {
+            return Ok(Node::empty());
+        }
         let mut node = self.asm.root.split_off(root_node_len);
         res?;
         if errors_after > errors_before {

@@ -327,10 +327,9 @@ fn TutorialBasic() -> impl IntoView {
 
         <Challenge
             number=2
-            prompt="divides the second number by the first but keeps the inputs on the stack"
+            prompt="divides the first number by the second"
             example="5 10"
-            answer="÷,,"
-            best_answer="◡÷"
+            answer="÷:"
             tests={&["6 24", "2 100", "17 51"]}
             hidden="8 32"/>
 

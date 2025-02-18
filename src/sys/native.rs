@@ -1212,6 +1212,9 @@ pub fn print_stack(stack: &[Value], color: bool) {
         );
         return;
     }
+    if stack.is_empty() {
+        return;
+    }
     if stack.len() == 1 || !color {
         for value in stack {
             println!("{}", value.show()); // Allow println

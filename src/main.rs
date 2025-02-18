@@ -18,7 +18,7 @@ use std::{
 
 use clap::{Parser, Subcommand};
 use colored::*;
-use notify::{EventKind, RecursiveMode, Watcher};
+use notify::{event::ModifyKind, EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
@@ -690,7 +690,7 @@ impl WatchArgs {
             if let Some(path) = recv
                 .try_iter()
                 .filter_map(Result::ok)
-                .filter(|event| matches!(event.kind, EventKind::Modify(_)))
+                .filter(|event| matches!(&event.kind, EventKind::Modify(ModifyKind::Data(_))))
                 .flat_map(|event| event.paths)
                 .filter(|path| path.extension().is_some_and(|ext| ext == "ua"))
                 .last()

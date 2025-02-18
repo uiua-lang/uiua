@@ -150,16 +150,6 @@ impl Assembly {
             self.bindings.push(binding);
         }
     }
-    pub(crate) fn bind_function(
-        &mut self,
-        local: LocalName,
-        function: Function,
-        span: usize,
-        meta: BindingMeta,
-    ) {
-        let span = self.spans[span].clone();
-        self.add_binding_at(local, BindingKind::Func(function), span.code(), meta);
-    }
     pub(crate) fn bind_const(
         &mut self,
         local: LocalName,
@@ -718,6 +708,7 @@ impl Inputs {
             InputSrc::Macro(span) => {
                 self.macros.insert((**span).clone(), input.into());
             }
+            InputSrc::Literal(_) => {}
         }
         src
     }
@@ -739,6 +730,7 @@ impl Inputs {
                 .get(span)
                 .unwrap_or_else(|| panic!("Macro at {} not found", span))
                 .clone(),
+            InputSrc::Literal(s) => s.clone(),
         }
     }
     /// Get an input string and perform an operation on it
@@ -778,6 +770,7 @@ impl Inputs {
                     )
                 }
             }
+            InputSrc::Literal(s) => f(s),
         }
     }
     fn available_srcs(&self) -> String {
@@ -792,6 +785,7 @@ impl Inputs {
             InputSrc::File(path) => self.files.get(&**path).map(|src| f(&src)),
             InputSrc::Str(index) => self.strings.get(*index).map(|src| f(src)),
             InputSrc::Macro(span) => self.macros.get(span).map(|src| f(&src)),
+            InputSrc::Literal(s) => Some(f(s)),
         }
     }
 }

@@ -1976,6 +1976,7 @@ mod server {
                         params.text_document_position.text_document.uri.clone()
                     }
                     InputSrc::File(file) => path_to_uri(file)?,
+                    InputSrc::Literal(_) => return Ok(None),
                 },
                 vec![TextEdit {
                     range: uiua_span_to_lsp(&binding.span, &doc.asm.inputs),
@@ -1990,6 +1991,7 @@ mod server {
                         let uri = match &name_span.src {
                             InputSrc::Str(_) | InputSrc::Macro(_) => uri.clone(),
                             InputSrc::File(file) => path_to_uri(file)?,
+                            InputSrc::Literal(_) => continue,
                         };
                         changes.entry(uri).or_default().push(TextEdit {
                             range: uiua_span_to_lsp(name_span, &doc.asm.inputs),
@@ -2026,6 +2028,7 @@ mod server {
                             params.text_document_position_params.text_document.uri
                         }
                         InputSrc::File(file) => path_to_uri(file)?,
+                        InputSrc::Literal(_) => continue,
                     };
                     return Ok(Some(GotoDefinitionResponse::Scalar(Location {
                         uri,
@@ -2070,6 +2073,7 @@ mod server {
                             params.text_document_position_params.text_document.uri
                         }
                         InputSrc::File(file) => path_to_uri(file)?,
+                        InputSrc::Literal(_) => continue,
                     };
                     return Ok(Some(GotoDeclarationResponse::Scalar(Location {
                         uri,
@@ -2356,6 +2360,7 @@ mod server {
                                 let uri = match &name_span.src {
                                     InputSrc::Str(_) | InputSrc::Macro(_) => uri.clone(),
                                     InputSrc::File(file) => path_to_uri(file)?,
+                                    InputSrc::Literal(_) => continue,
                                 };
                                 let range = uiua_span_to_lsp(name_span, &doc.asm.inputs);
                                 locations.push(Location { uri, range });
@@ -2410,6 +2415,7 @@ mod server {
                         let path = match &binfo.span.src {
                             InputSrc::File(file) => file.to_path_buf(),
                             InputSrc::Str(_) | InputSrc::Macro(_) => uri_path(&doc_uri),
+                            InputSrc::Literal(_) => return false,
                         };
                         path.canonicalize().ok() == canonical_path
                     })

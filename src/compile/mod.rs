@@ -780,8 +780,14 @@ code:
                 );
             }
         }
-        self.scope.names.insert(name, local);
-        self.asm.bind_function(local, function, span, meta);
+        self.scope.names.insert(name.clone(), local);
+        let span = if span == 0 {
+            Some(CodeSpan::literal(name))
+        } else {
+            self.get_span(span).clone().code()
+        };
+        self.asm
+            .add_binding_at(local, BindingKind::Func(function), span, meta);
         Ok(())
     }
     fn compile_bind_const(

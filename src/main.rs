@@ -690,7 +690,12 @@ impl WatchArgs {
             if let Some(path) = recv
                 .try_iter()
                 .filter_map(Result::ok)
-                .filter(|event| matches!(&event.kind, EventKind::Modify(ModifyKind::Data(_))))
+                .filter(|event| {
+                    matches!(
+                        event.kind,
+                        EventKind::Modify(ModifyKind::Any | ModifyKind::Data(_))
+                    )
+                })
                 .flat_map(|event| event.paths)
                 .filter(|path| path.extension().is_some_and(|ext| ext == "ua"))
                 .last()

@@ -33,12 +33,26 @@ impl Value {
         Ty {
             scalar: self.scalar_ty(),
             shape: self.shape().clone(),
+            int: match self {
+                Value::Num(n) if self.rank() == 0 && n.data[0].fract() == 0.0 => {
+                    Some(n.data[0] as isize)
+                }
+                Value::Byte(n) if self.rank() == 0 => Some(n.data[0] as isize),
+                _ => None,
+            },
         }
     }
     fn row_ty(&self) -> Ty {
         Ty {
             scalar: self.scalar_ty(),
             shape: self.shape().row(),
+            int: match self {
+                Value::Num(n) if self.rank() == 0 && n.data[0].fract() == 0.0 => {
+                    Some(n.data[0] as isize)
+                }
+                Value::Byte(n) if self.rank() == 0 => Some(n.data[0] as isize),
+                _ => None,
+            },
         }
     }
 }
@@ -47,6 +61,7 @@ impl Value {
 struct Ty {
     scalar: ScalarType,
     shape: Shape,
+    int: Option<isize>,
 }
 
 impl Ty {
@@ -54,6 +69,18 @@ impl Ty {
         Self {
             scalar,
             shape: shape.into(),
+            int: None,
+        }
+    }
+    fn unboxed(self) -> Ty {
+        if let ScalarType::Box(ty) = self.scalar {
+            if let Some(ty) = ty {
+                *ty
+            } else {
+                Ty::new(ScalarType::Real, [0])
+            }
+        } else {
+            self
         }
     }
 }
@@ -140,6 +167,7 @@ impl TypeRt<'_> {
     fn node(&mut self, node: &Node) -> Result<(), TypeError> {
         use Primitive::*;
         match node {
+            Node::Run(nodes) => nodes.iter().try_for_each(|node| self.node(node))?,
             Node::Push(val) => self.stack.push(val.row_ty()),
             Node::Call(f, _) => self.node(&self.asm[f])?,
             Node::Prim(prim, _) => match prim {
@@ -238,6 +266,11 @@ impl TypeRt<'_> {
                     let boxed = Ty::new(ScalarType::Box(Some(x.into())), []);
                     self.stack.push(boxed);
                 }
+                First | Last => {
+                    let mut x = self.pop()?;
+                    x.shape.make_row();
+                    self.stack.push(x);
+                }
                 Identity => {}
                 // Select => {
                 //     let index = self.pop()?;
@@ -261,6 +294,26 @@ impl TypeRt<'_> {
                 //         self.stack.push(from);
                 //     }
                 // }
+                Take => {
+                    let n = self.pop()?;
+                    let mut x = self.pop()?;
+                    if let Some(n) = n.int {
+                        *x.shape.row_count_mut() = n.unsigned_abs();
+                        self.stack.push(x);
+                    } else {
+                        return Err(TypeError::NotSupported);
+                    }
+                }
+                Drop => {
+                    let n = self.pop()?;
+                    let mut x = self.pop()?;
+                    if let Some(n) = n.int {
+                        let len = x.shape.row_count_mut();
+                        *len = len.saturating_sub(n.unsigned_abs());
+                    } else {
+                        return Err(TypeError::NotSupported);
+                    }
+                }
                 prim if prim.outputs() == Some(0) => {
                     if let Some(args) = prim.args() {
                         for _ in 0..args {
@@ -273,17 +326,7 @@ impl TypeRt<'_> {
             Node::ImplPrim(prim, _) => match prim {
                 ImplPrimitive::UnBox => {
                     let x = self.pop()?;
-                    if x.shape.len() == 0 {
-                        if let ScalarType::Box(ty) = x.scalar {
-                            self.stack.push(if let Some(ty) = ty {
-                                *ty
-                            } else {
-                                Ty::new(ScalarType::Real, [0])
-                            });
-                            return Ok(());
-                        }
-                    }
-                    self.stack.push(x);
+                    self.stack.push(x.unboxed());
                 }
                 _ => return Err(TypeError::NotSupported),
             },
@@ -316,6 +359,16 @@ impl TypeRt<'_> {
                 for _ in 0..n {
                     let value = self.pop_under()?;
                     self.stack.push(value);
+                }
+            }
+            &Node::Unpack { count, unbox, .. } => {
+                let mut x = self.pop()?;
+                x.shape.make_row();
+                if unbox {
+                    x = x.unboxed();
+                }
+                for _ in 0..count {
+                    self.stack.push(x.clone());
                 }
             }
             _ => return Err(TypeError::NotSupported),

@@ -1,14 +1,20 @@
 # Uiua Todo
 
 # 0.15
-- Non-dyadic `backward`
-- Implement some `under` inverses in terms of `un by`, rather than the other way around
-- Multidimensional `group`
+- Allow single module import list on next line
+- Allow for multi-value constant bindings
+- Non-dyadic `backward`?
 - `un`/`anti` `stencil`
 - `anti keep`
+- Multidimensional `group`
+- Stabilize some of data definitions
+  - Not data functions
+  - Refactor experimental docs into tutorial
+- Stabilize sided subscripts for `both` and `bracket`
+- Implement some `under` inverses in terms of `un by`, rather than the other way around?
+- Reserved modifier glyphs?
 - Optimizations through calls
 - Compile-time code string evaluation
-- Allow for multi-value constant bindings
 - Stackless execution trees?
 
 ## Planned Features

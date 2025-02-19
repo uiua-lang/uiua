@@ -534,6 +534,18 @@ fn generic_reduce_inner(
                 })
             } else {
                 let mut new_rows = Vec::with_capacity(xs.row_count());
+
+                // Handle empty arrays
+                if xs.row_count() == 0 {
+                    if let Some(mut xs) = reduce_identity(&f.node, xs.clone()) {
+                        if xs.element_count() == 0 {
+                            xs.shape_mut().insert(0, 0);
+                            return Ok(xs);
+                        }
+                    }
+                }
+
+                // Normal case
                 env.without_fill(|env| -> UiuaResult {
                     for row in xs.into_rows() {
                         env.push(row);

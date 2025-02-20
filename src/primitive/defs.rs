@@ -1985,7 +1985,7 @@ primitive!(
     /// - `fac fbc`
     /// - `fab fac`
     /// Both involve applying a stack idiom before calling [both].
-    /// For `fac fbc`, the idiom is `dip``over`.
+    /// For `fac fbc`, the idiom is `dip``with``identity`.
     /// For `fab fac`, the idiom is `on``flip`.
     /// For example, if you wanted to check that a number is divisible by two other numbers:
     /// ex: F ← ∩(=0◿) ⊙⤙∘

@@ -736,7 +736,7 @@ macro_rules! opt_pattern {
                     let (n, sp) = $T.match_nodes(nodes)?;
                     i += n;
                     nodes = &nodes[n..];
-                    if sp.is_some() {
+                    if sp.is_some() && span.is_none() {
                         span = sp;
                     }
                 )*

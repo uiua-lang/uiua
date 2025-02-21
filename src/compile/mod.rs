@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ast::*,
-    check::{nodes_sig, SigCheckError, SigCheckErrorKind},
+    check::{nodes_sig, SigCheckErrorKind},
     format::{format_word, format_words},
     function::DynamicFunction,
     ident_modifier_args,
@@ -196,8 +196,6 @@ pub(crate) struct Scope {
     experimental_error: bool,
     /// Whether an error has been emitted for fill function signatures
     fill_sig_error: bool,
-    /// The stack height between top-level statements
-    stack_height: Result<usize, Sp<SigCheckError>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -247,7 +245,6 @@ impl Default for Scope {
             experimental: false,
             experimental_error: false,
             fill_sig_error: false,
-            stack_height: Ok(0),
         }
     }
 }
@@ -685,29 +682,25 @@ code:
             line_node.optimize_full();
             match line_node.sig() {
                 Ok(sig) => {
-                    // Update scope stack height
-                    if let Ok(height) = &mut self.scope.stack_height {
-                        *height = (*height + sig.outputs).saturating_sub(sig.args);
-                        // Compile test assert
-                        if self.mode != RunMode::Normal
-                            && !from_macro
-                            && !self
-                                .scopes()
-                                .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
-                        {
-                            let test_assert = line_node
-                                .last_mut_recursive(&mut self.asm, |node| {
-                                    if let &mut Node::Prim(Primitive::Assert, span) = node {
-                                        *node = Node::ImplPrim(ImplPrimitive::TestAssert, span);
-                                        true
-                                    } else {
-                                        false
-                                    }
-                                })
-                                .unwrap_or(false);
-                            if test_assert {
-                                self.asm.test_assert_count += 1;
-                            }
+                    // Compile test assert
+                    if self.mode != RunMode::Normal
+                        && !from_macro
+                        && !self
+                            .scopes()
+                            .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
+                    {
+                        let test_assert = line_node
+                            .last_mut_recursive(&mut self.asm, |node| {
+                                if let &mut Node::Prim(Primitive::Assert, span) = node {
+                                    *node = Node::ImplPrim(ImplPrimitive::TestAssert, span);
+                                    true
+                                } else {
+                                    false
+                                }
+                            })
+                            .unwrap_or(false);
+                        if test_assert {
+                            self.asm.test_assert_count += 1;
                         }
                     }
                     // Try to evaluate at comptime
@@ -749,9 +742,7 @@ code:
                         }
                     }
                 }
-                Err(e) if matches!(e.kind, SigCheckErrorKind::LoopVariable { .. }) => {
-                    self.scope.stack_height = Err(span.sp(e))
-                }
+                Err(e) if matches!(e.kind, SigCheckErrorKind::LoopVariable { .. }) => {}
                 Err(e) => self.add_error(span, e),
             }
             self.asm.root.push(line_node)

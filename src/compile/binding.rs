@@ -439,24 +439,19 @@ impl Compiler {
                     }
                 } else if binds_above {
                     // Binding binds the value above
-                    match &mut self.scope.stack_height {
-                        Ok(height) => {
-                            if *height > 0 {
-                                sig = Signature::new(0, 1);
-                                *height -= 1;
-                            }
+                    let mut has_stack_value = false;
+                    for i in 0..self.asm.root.len() {
+                        let nodes = &self.asm.root[self.asm.root.len() - 1 - i..];
+                        let Ok(sig) = nodes_sig(nodes) else {
+                            break;
+                        };
+                        if sig.args < sig.outputs {
+                            has_stack_value = true;
+                            break;
                         }
-                        Err(sp) => {
-                            let sp = sp.clone();
-                            self.add_error(
-                                sp.span,
-                                format!(
-                                    "This line's signature is undefined: {}. \
-                                    This prevents the later binding of {}.",
-                                    sp.value, name
-                                ),
-                            );
-                        }
+                    }
+                    if has_stack_value {
+                        sig = Signature::new(0, 1);
                     }
                     if let Some(Node::Push(val)) = self.asm.root.last() {
                         // Actually binds the constant

@@ -498,7 +498,7 @@ option,
 }
 
 .code-entry {
-    margin: 0.1em 0 0 0;
+    margin: 0;
     padding: 0;
     position: absolute;
     outline: none;
@@ -724,30 +724,29 @@ option,
 #code-right-side {
     display: flex;
     position: absolute;
-    top: 0.1em;
+    top: 0.5em;
     right: 0.2em;
     padding-right: 0.3em;
     font-size: min(1em, 3vw);
     align-items: center;
-}
-
-#glyphs-toggle-button {
-    font-weight: bolder;
-    font-size: 0.9em;
-}
-
-#glyphs-toggle-button:hover:after {
-    font-size: 0.6em;
+    gap: 0.25em;
 }
 
 .editor-right-button {
-    font-weight: bolder;
+    font-size: 0.75em;
+    width: 1em;
+    height: 1em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0.25em;
     opacity: 0.5;
+    padding: 0.75em;
+    transition: .25s;
 }
 
 .editor-right-button:hover {
     opacity: 1;
-    z-index: 2;
 }
 
 .info-button:hover::after,
@@ -756,13 +755,15 @@ option,
     content: attr(data-title);
     position: absolute;
     font-family: "Code Font", monospace;
-    font-size: 1em;
-    left: calc(-8em - 50%);
+    font-size: 0.75em;
+    right: 0;
+    top: 100%;
     bottom: 1.5em;
     color: #eee;
     padding: 0.2em;
     border-radius: 0.2em;
     pointer-events: none;
+    height: fit-content;
 }
 
 .editor-right-button:hover::after,

@@ -115,6 +115,7 @@ pub fn Editor<'a>(
     let get_code_cursor = move || get_code_cursor(&code_id());
     let (copied_link, set_copied_link) = create_signal(false);
     let (settings_open, set_settings_open) = create_signal(false);
+    let (fullscreen_enabled, set_fullscreen_enabled) = create_signal(false);
     let update_token_count = move |code: &str| {
         set_token_count.set(
             lex(code, (), &mut Default::default())
@@ -1216,7 +1217,14 @@ pub fn Editor<'a>(
     });
 
     // Glyphs toggle button
-    let show_glyphs_text = move || if show_glyphs.get() { "↥" } else { "↧" };
+    let show_glyphs_icon = move || {
+        if show_glyphs.get() {
+            view!(<span class="material-symbols-rounded">"keyboard_arrow_up"</span>)
+        } else {
+            view!(<span class="material-symbols-rounded">"keyboard_arrow_down"</span>)
+        }
+    };
+
     let show_glyphs_title = move || {
         if show_glyphs.get() {
             "Hide glyphs"
@@ -1237,8 +1245,11 @@ pub fn Editor<'a>(
 
     // Show the example number if there are multiple examples
     let examples_len = examples.len();
-    let example_text =
-        move || (examples_len > 1).then(|| format!("{}/{}", example.get() + 1, examples_len));
+    let example_tracker_element = move || {
+        (examples_len > 1)
+            .then(|| format!("{}/{}", example.get() + 1, examples_len))
+            .map(|text| view!(<span id="example-tracker">{text}</span>))
+    };
 
     // Select a class for the next example button
     let next_button_class = move || {
@@ -1773,36 +1784,39 @@ pub fn Editor<'a>(
                         </div>
                         <div id="code-right-side">
                             <button
-                                class="editor-right-button"
-                                data-title=copy_link_title
-                                on:click=copy_link>
-                                "🔗"
-                            </button>
-                            <button
                                 id="glyphs-toggle-button"
                                 class="editor-right-button"
                                 data-title=show_glyphs_title
-                                on:click=toggle_show_glyphs>{show_glyphs_text}
+                                on:click=toggle_show_glyphs>
+                                {show_glyphs_icon}
                             </button>
+
                             <button
                                 class="editor-right-button"
                                 data-title=toggle_settings_title
                                 on:click=toggle_settings_open>
-                                "⚙️"
+                                <span class="material-symbols-rounded">settings</span>
                             </button>
+
+                            <button
+                                class="editor-right-button"
+                                data-title=copy_link_title
+                                on:click=copy_link>
+                                <span class="material-symbols-rounded">link</span>
+                            </button>
+
                             {
-                                if mode == EditorMode::Pad {
+                                (mode == EditorMode::Pad).then(|| {
                                     Some(view!(<button
                                         class="editor-right-button"
                                         data-title="Upload file"
                                         on:click=upload_file_dialog>
-                                        "📄"
+                                        <span class="material-symbols-rounded">upload</span>
                                     </button>))
-                                } else {
-                                    None
-                                }
+                                })
                             }
-                            <div id="example-tracker">{example_text}</div>
+                            
+                            {example_tracker_element}
                         </div>
                     </div>
                     <div id=hover_id class="code-hover"/>

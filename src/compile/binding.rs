@@ -445,7 +445,7 @@ impl Compiler {
                         let Ok(sig) = nodes_sig(nodes) else {
                             break;
                         };
-                        if sig.args < sig.outputs {
+                        if sig.outputs > 0 {
                             has_stack_value = true;
                             break;
                         }

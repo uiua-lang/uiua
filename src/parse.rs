@@ -767,7 +767,6 @@ impl Parser<'_> {
         // Items
         let mut lines: Vec<Option<ImportLine>> = Vec::new();
         let mut line: Option<ImportLine> = None;
-        self.exact(Newline);
         let mut last_tilde_index = self.index;
         while let Some(token) = self.tokens.get(self.index).cloned() {
             let span = token.span;

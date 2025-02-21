@@ -817,31 +817,23 @@ impl Formatter<'_> {
                     lines[start..i]
                         .sort_by_key(|line| line.as_ref().unwrap().items[0].value.clone());
                 }
-                if lines.iter().flatten().count() == 1 {
-                    let line = lines.iter().flatten().next().unwrap();
-                    self.output.push(' ');
-                    self.push(&line.tilde_span, "~");
-                    for item in &line.items {
-                        self.output.push(' ');
-                        self.push(&item.span, &item.value);
-                    }
-                    if lines.last().unwrap().is_none() {
+                let one_line = lines.iter().filter(|line| line.is_some()).count() == 1;
+                for (i, line) in lines.iter_mut().enumerate() {
+                    if line.is_some() && (i > 0 || !one_line) {
                         self.output.push('\n');
                     }
-                } else {
-                    for line in lines {
-                        self.output.push('\n');
-                        if let Some(line) = line {
-                            if self.config.indent_item_imports {
-                                for _ in 0..self.config.multiline_indent * (depth + 1) {
-                                    self.output.push(' ');
-                                }
-                            }
-                            self.push(&line.tilde_span, "~");
-                            for item in &line.items {
+                    if let Some(line) = line {
+                        if i == 0 && one_line {
+                            self.output.push(' ');
+                        } else if self.config.indent_item_imports {
+                            for _ in 0..self.config.multiline_indent * (depth + 1) {
                                 self.output.push(' ');
-                                self.push(&item.span, &item.value);
                             }
+                        }
+                        self.push(&line.tilde_span, "~");
+                        for item in &line.items {
+                            self.output.push(' ');
+                            self.push(&item.span, &item.value);
                         }
                     }
                 }
@@ -1770,6 +1762,12 @@ F ← (|2
 )
 +__
 ∘ M! =
+~ \"x\" ~ A B
+~ \"x\"
+  ~ A B
+~ \"x\"
+  ~ A B
+  ~ C D
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

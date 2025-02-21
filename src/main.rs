@@ -517,6 +517,7 @@ fn run(
         let mode = mode.unwrap_or(RunMode::Normal);
         let res = rt.compile_run(|comp| comp.mode(mode).print_diagnostics(true).load_file(path));
         if let Err(e) = &res {
+            print_stack(&rt.take_stack(), !no_color);
             println!("{}", e.report());
         }
         rt.print_reports();

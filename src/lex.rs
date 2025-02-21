@@ -520,6 +520,14 @@ impl CodeSpan {
 
 /// A span wrapping a value
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(
+    from = "SpRep<T, S>",
+    into = "SpRep<T, S>",
+    bound(
+        serialize = "T: Clone + Serialize, S: Clone + Serialize",
+        deserialize = "T: Deserialize<'de>, S: Deserialize<'de>"
+    )
+)]
 pub struct Sp<T, S = CodeSpan> {
     /// The value
     pub value: T,
@@ -555,6 +563,21 @@ impl<T> Sp<T> {
             value,
             span: self.span,
         })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct SpRep<T, S>(T, S);
+
+impl<T, S> From<Sp<T, S>> for SpRep<T, S> {
+    fn from(sp: Sp<T, S>) -> Self {
+        SpRep(sp.value, sp.span)
+    }
+}
+
+impl<T, S> From<SpRep<T, S>> for Sp<T, S> {
+    fn from(SpRep(value, span): SpRep<T, S>) -> Self {
+        Sp { value, span }
     }
 }
 
@@ -819,7 +842,7 @@ impl From<SemanticComment> for Token {
 }
 
 /// The kinds of semantic comments
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[allow(clippy::manual_non_exhaustive)]
 pub enum SemanticComment {
     /// Allow experimental features

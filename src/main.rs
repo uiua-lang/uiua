@@ -27,9 +27,9 @@ use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lex,
     lsp::BindingDocsKind,
-    print_stack, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDocFragment,
-    PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Token, Uiua, UiuaError,
-    UiuaErrorKind, UiuaResult, CONSTANTS,
+    parse, print_stack, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass,
+    PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Token, Uiua,
+    UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -210,7 +210,7 @@ fn main() {
                 no_color,
             );
         }
-        Some(Comm::Build { path, output }) => {
+        Some(Comm::Build { path, output, ast }) => {
             let path = if let Some(path) = path {
                 path
             } else {
@@ -222,16 +222,42 @@ fn main() {
                     }
                 }
             };
-            let assembly = Compiler::with_backend(NativeSys)
-                .mode(RunMode::Normal)
-                .print_diagnostics(true)
-                .load_file(&path)
-                .unwrap_or_else(fail)
-                .finish();
-            let output = output.unwrap_or_else(|| path.with_extension("uasm"));
-            let uasm = assembly.to_uasm();
-            if let Err(e) = fs::write(output, uasm) {
-                eprintln!("Failed to write assembly: {e}");
+            if ast {
+                let input = match fs::read_to_string(&path) {
+                    Ok(input) => input,
+                    Err(e) => {
+                        eprintln!("Failed to read file: {e}");
+                        exit(1);
+                    }
+                };
+                let mut inputs = Default::default();
+                let (items, errors, _) = parse(&input, &path, &mut inputs);
+                if !errors.is_empty() {
+                    eprintln!(
+                        "{}",
+                        UiuaErrorKind::Parse(errors, inputs.into()).error().report()
+                    );
+                }
+                println!("{{");
+                for (i, item) in items.into_iter().enumerate() {
+                    if i > 0 {
+                        print!(",");
+                    }
+                    print!("\n  {}", serde_json::to_string(&item).unwrap());
+                }
+                println!("\n}}");
+            } else {
+                let assembly = Compiler::with_backend(NativeSys)
+                    .mode(RunMode::Normal)
+                    .print_diagnostics(true)
+                    .load_file(&path)
+                    .unwrap_or_else(fail)
+                    .finish();
+                let output = output.unwrap_or_else(|| path.with_extension("uasm"));
+                let uasm = assembly.to_uasm();
+                if let Err(e) = fs::write(output, uasm) {
+                    eprintln!("Failed to write assembly: {e}");
+                }
             }
         }
         Some(Comm::Eval {
@@ -784,6 +810,8 @@ enum Comm {
         path: Option<PathBuf>,
         #[clap(short, long, help = "The path to the output file")]
         output: Option<PathBuf>,
+        #[clap(long, help = "Parse only and emit the AST as JSON (unstable)")]
+        ast: bool,
     },
     #[clap(about = "Evaluate an expression and print its output")]
     Eval {

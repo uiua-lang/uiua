@@ -454,7 +454,7 @@ impl BindingKind {
 }
 
 /// Character counts for a binding
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct BindingCounts {
     /// The number of characters
     pub char: usize,

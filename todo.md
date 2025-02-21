@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.15
+- Allow emitting AST json
 - Allow single module import list on next line
 - Allow for multi-value constant bindings
 - Non-dyadic `backward`?

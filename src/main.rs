@@ -238,14 +238,21 @@ fn main() {
                         UiuaErrorKind::Parse(errors, inputs.into()).error().report()
                     );
                 }
-                println!("{{");
+                let mut s: String = "[\n  ".into();
                 for (i, item) in items.into_iter().enumerate() {
                     if i > 0 {
-                        print!(",");
+                        s.push_str(",\n  ");
                     }
-                    print!("\n  {}", serde_json::to_string(&item).unwrap());
+                    s.push_str(&serde_json::to_string(&item).unwrap());
                 }
-                println!("\n}}");
+                s.push_str("\n]");
+                if let Some(output) = output {
+                    if let Err(e) = fs::write(output, s) {
+                        eprintln!("Failed to write json to file: {e}");
+                    }
+                } else {
+                    println!("{s}");
+                }
             } else {
                 let assembly = Compiler::with_backend(NativeSys)
                     .mode(RunMode::Normal)

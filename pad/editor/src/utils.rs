@@ -152,10 +152,12 @@ impl State {
         area.style().set_property("width", &new_width).unwrap();
 
         let outer_new_width = format!("max(calc({width}px + 3.4em),100%)");
-        outer.style().set_property("width", &outer_new_width).unwrap();
+        outer
+            .style()
+            .set_property("width", &outer_new_width)
+            .unwrap();
 
         area.set_value(code);
-
     }
     pub fn refresh_code(&self) {
         let code = get_code(&self.code_id);
@@ -628,7 +630,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             {short}
                         </span>
                     }
-                        .into_view(),
+                    .into_view(),
                 ),
                 CodeFragment::Ghost(short, None) => frag_views
                     .push(view! { <span class="code-span value-hint">{short}</span> }.into_view()),
@@ -754,7 +756,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                         <span class=space_class data-title="space character">
                                             " "
                                         </span>
-                                    }.into_view(),
+                                    }
+                                    .into_view(),
                                 )
                             } else {
                                 let title = if text.starts_with('@') {
@@ -768,7 +771,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                             {text}
                                         </span>
                                     }
-                                        .into_view(),
+                                    .into_view(),
                                 )
                             }
                         }
@@ -802,7 +805,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     <span class=class data-title=title>
                                         {text}
                                     </span>
-                                }.into_view(),
+                                }
+                                .into_view(),
                             )
                         }
                         SpanKind::Placeholder(_) => {
@@ -813,7 +817,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     <span class=class data-title=title>
                                         {text}
                                     </span>
-                                }.into_view(),
+                                }
+                                .into_view(),
                             )
                         }
                         SpanKind::Label => {
@@ -845,7 +850,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                         {text}
                                     </span>
                                 }
-                                    .into_view(),
+                                .into_view(),
                             )
                         }
                         SpanKind::FuncDelim(sig, set_inverses) => {
@@ -860,7 +865,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     <span class=class data-title=title>
                                         {text}
                                     </span>
-                                }.into_view(),
+                                }
+                                .into_view(),
                             )
                         }
                         SpanKind::Subscript(prim, _) => {
@@ -875,7 +881,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     <span class=class data-title=title>
                                         {text}
                                     </span>
-                                }.into_view(),
+                                }
+                                .into_view(),
                             )
                         }
                         SpanKind::Ident {
@@ -943,7 +950,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     <span class=class data-title=title>
                                         {text}
                                     </span>
-                                }.into_view(),
+                                }
+                                .into_view(),
                             )
                         }
                         _ => {
@@ -1234,7 +1242,9 @@ pub fn report_view(report: &Report) -> impl IntoView {
             }
         }
         frags.push(match frag {
-            ReportFragment::Plain(s) => view! { <span class="output-report">{s}</span> }.into_view(),
+            ReportFragment::Plain(s) => {
+                view! { <span class="output-report">{s}</span> }.into_view()
+            }
             ReportFragment::Faint(s) => {
                 view! { <span class="output-report output-faint">{s}</span> }.into_view()
             }

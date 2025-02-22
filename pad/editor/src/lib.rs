@@ -20,7 +20,8 @@ use uiua::{
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
-    console::{self, log_1}, DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlBodyElement, HtmlDivElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent
+    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlBodyElement, HtmlDivElement,
+    HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
 };
 
 use utils::*;
@@ -1703,7 +1704,11 @@ pub fn Editor<'a>(
         }
 
         let ratio = splitter_ratio.get();
-        format!("grid-template-columns: {}fr 0.25em {}fr", ratio, 1.0 - ratio)
+        format!(
+            "grid-template-columns: {}fr 0.25em {}fr",
+            ratio,
+            1.0 - ratio
+        )
     };
 
     window_event_listener(leptos_dom::ev::mousemove, move |event: MouseEvent| {
@@ -1918,7 +1923,6 @@ pub fn Editor<'a>(
                         {example_tracker_element}
                     </div>
 
-
                     <div id="code-area">
                         <div
                             id=code_outer_id
@@ -2039,10 +2043,7 @@ pub fn Editor<'a>(
                     </div>
                 </div>
 
-                <div
-                    class=draggable_splitter_class
-                    on:mousedown=start_dragging_splitter
-                ></div>
+                <div class=draggable_splitter_class on:mousedown=start_dragging_splitter></div>
 
                 {move || {
                     let message = drag_message.get();

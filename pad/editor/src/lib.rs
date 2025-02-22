@@ -256,37 +256,45 @@ pub fn Editor<'a>(
         let (input, seed) = format(do_format, set_cursor);
 
         // Run code
-        set_output.set(view!(<div class="running-text">"Running"</div>).into_view());
+        set_output.set(view! { <div class="running-text">"Running"</div> }.into_view());
         let allow_autoplay = !matches!(mode, EditorMode::Example) && get_autoplay();
         let render_output_item = move |item| match item {
             OutputItem::String(s) => {
                 if s.is_empty() {
-                    view!(<div class="output-item"><br/></div>).into_view()
+                    view! {
+                        <div class="output-item">
+                            <br />
+                        </div>
+                    }.into_view()
                 } else {
-                    view!(<div class="output-item">{s}</div>).into_view()
+                    view! { <div class="output-item">{s}</div> }.into_view()
                 }
             }
             OutputItem::Classed(class, s) => {
                 let class = format!("output-item {class}");
-                view!(<div class=class>{s}</div>).into_view()
+                view! { <div class=class>{s}</div> }.into_view()
             }
             OutputItem::Faint(s) => {
-                view!(<div class="output-item output-fainter">{s}</div>).into_view()
+                view! { <div class="output-item output-fainter">{s}</div> }.into_view()
             }
             OutputItem::Image(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
-                view!(<div class="output-media-wrapper">
-                    <div class="output-image-label">{label}</div>
-                    <img class="output-image" src={format!("data:image/png;base64,{encoded}")} />
-                </div>)
+                view! {
+                    <div class="output-media-wrapper">
+                        <div class="output-image-label">{label}</div>
+                        <img class="output-image" src=format!("data:image/png;base64,{encoded}") />
+                    </div>
+                }
                 .into_view()
             }
             OutputItem::Gif(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
-                view!(<div class="output-media-wrapper">
-                    <div class="output-image-label">{label}</div>
-                    <img class="output-image" src={format!("data:image/gif;base64,{encoded}")} />
-                </div>)
+                view! {
+                    <div class="output-media-wrapper">
+                        <div class="output-image-label">{label}</div>
+                        <img class="output-image" src=format!("data:image/gif;base64,{encoded}") />
+                    </div>
+                }
                 .into_view()
             }
             OutputItem::Audio(bytes, label) => {
@@ -294,28 +302,39 @@ pub fn Editor<'a>(
                 let src = format!("data:audio/wav;base64,{}", encoded);
                 let label = label.map(|s| format!("{s}:"));
                 if allow_autoplay {
-                    view!(<div class="output-media-wrapper">
-                        <div class="output-item output-audio-label">{label}</div>
-                        <audio class="output-audio" controls autoplay src=src/>
-                    </div>)
+                    view! {
+                        <div class="output-media-wrapper">
+                            <div class="output-item output-audio-label">{label}</div>
+                            <audio class="output-audio" controls autoplay src=src />
+                        </div>
+                    }
                     .into_view()
                 } else {
-                    view!(<div class="output-media-wrapper">
-                        <div class="output-item output-audio-label">{label}</div>
-                        <audio class="output-audio" controls src=src/>
-                    </div>)
+                    view! {
+                        <div class="output-media-wrapper">
+                            <div class="output-item output-audio-label">{label}</div>
+                            <audio class="output-audio" controls src=src />
+                        </div>
+                    }
                     .into_view()
                 }
             }
-            OutputItem::Svg(s, label) => view!(<div class="output-media-wrapper">
+            OutputItem::Svg(s, label) => view! {
+                <div class="output-media-wrapper">
                     <div class="output-image-label">{label}</div>
                     <img
                         class="output-image"
-                        src={format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))}/>
-                </div>)
+                        src=format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))
+                    />
+                </div>
+            }
             .into_view(),
             OutputItem::Report(report) => report_view(&report).into_view(),
-            OutputItem::Separator => view!(<div class="output-item"><hr/></div>).into_view(),
+            OutputItem::Separator => view! {
+                <div class="output-item">
+                    <hr />
+                </div>
+            }.into_view(),
         };
         set_timeout(
             move || {
@@ -965,7 +984,7 @@ pub fn Editor<'a>(
 
     // Glyph buttons
     // These are the buttons that appear above the editor and allow the user to insert glyphs
-    let make_glyph_button = |prim: Primitive| {
+    let make_glyph_button = move |prim: Primitive| {
         let text = prim
             .glyph()
             .map(Into::into)
@@ -995,16 +1014,18 @@ pub fn Editor<'a>(
         let onmouseover = move |_| {
             set_glyph_doc.set(
                 view! {
-                    <Prim prim=prim/>
-                    { prim.is_experimental().then(||
-                        view! {
-                            <span class="experimental" style="font-size: 0.8em;">
-                                "⚠️ Experimental"
-                            </span>
-                        }
-                    ) }
-                    <br/>
-                    { prim.doc().short_text().into_owned() }
+                    <Prim prim=prim />
+                    {prim
+                        .is_experimental()
+                        .then(|| {
+                            view! {
+                                <span class="experimental" style="font-size: 0.8em;">
+                                    "⚠️ Experimental"
+                                </span>
+                            }
+                        })}
+                    <br />
+                    {prim.doc().short_text().into_owned()}
                 }
                 .into_view(),
             );
@@ -1021,186 +1042,217 @@ pub fn Editor<'a>(
                     data-title=title
                     on:click=onclick
                     on:mouseover=onmouseover
-                    on:mouseleave=onmouseleave>
-                    <div class={prim_class(prim)}>{ text }</div>
+                    on:mouseleave=onmouseleave
+                >
+                    <div class=prim_class(prim)>{text}</div>
                 </button>
             }
             .into_view(),
         )
     };
-    let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
-        .filter_map(make_glyph_button)
-        .collect();
 
-    // Additional code buttons
-    for (glyph, title, class, surround, doc) in [
-        (
-            "_",
-            "strand",
-            "strand-span",
-            None,
-            "tutorial/arrays#creating-arrays",
-        ),
-        (
-            "[]",
-            "array",
-            "",
-            Some(('[', ']')),
-            "tutorial/arrays#creating-arrays",
-        ),
-        (
-            "{}",
-            "box array",
-            "",
-            Some(('{', '}')),
-            "tutorial/arrays#nested-arrays",
-        ),
-        (
-            "()",
-            "function",
-            "",
-            Some(('(', ')')),
-            "tutorial/functions#inline-functions",
-        ),
-        ("¯", "(`) negative", "number-literal", None, ""),
-        (
-            "@",
-            "character",
-            "string-literal-span",
-            None,
-            "tutorial/types#characters",
-        ),
-        (
-            "$",
-            "format/multiline string",
-            "string-literal-span",
-            None,
-            "tutorial/functions#format-strings",
-        ),
-        (
-            "\"",
-            "string",
-            "string-literal-span",
-            Some(('"', '"')),
-            "tutorial/types#characters",
-        ),
-        ("!", "macro", "", None, "tutorial/macros"),
-        ("^", "placeholder", "", None, "tutorial/custommodifiers"),
-        ("←", "(=) binding", "", None, "tutorial/bindings"),
-        (
-            "↚",
-            "(=~) private binding",
-            "",
-            None,
-            "tutorial/modules#visibility",
-        ),
-        ("~", "module", "", None, "tutorial/modules"),
-        (
-            "|",
-            "signature",
-            "",
-            None,
-            "tutorial/functions#stack-signatures",
-        ),
-        (
-            "#",
-            "comment",
-            "comment-span",
-            None,
-            "tutorial/basic#comments",
-        ),
-    ] {
-        let class = format!("glyph-button {class}");
-        // Navigate to the docs page on ctrl/shift+click
-        let onclick = move |event: MouseEvent| {
-            if !doc.is_empty() && os_ctrl(&event) {
-                // Open the docs page
-                window()
-                    .open_with_url_and_target(&format!("/{doc}"), "_blank")
-                    .unwrap();
-            } else if !doc.is_empty() && event.shift_key() {
-                // Redirect to the docs page
-                use_navigate()(&format!("/{doc}"), NavigateOptions::default());
-            } else if let Some((open, close)) = surround {
-                state.update(|state| surround_code(state, open, close));
-            } else {
-                state.update(|state| replace_code(state, glyph))
-            }
-        };
-        // Show the doc on mouseover
-        let onmouseover = move |_| {
-            if !doc.is_empty() {
-                set_glyph_doc.set(view!(<code>{ glyph }</code>" "{ title }).into_view());
-                _ = glyph_doc_element().style().remove_property("display");
-            }
-        };
-        glyph_buttons.push(
-            view! {
-                <button
-                    class=class
-                    data-title=title
-                    on:click=onclick
-                    on:mouseover=onmouseover
-                    on:mouseleave=onmouseleave>
-                    {glyph}
-                </button>
-            }
-            .into_view(),
-        );
-    }
-
-    // Additional functions combobox
-    let mut options = Vec::new();
-    let mut named_prims: Vec<Primitive> = Primitive::non_deprecated()
-        .filter(|prim| {
-            prim.glyph().is_none() && (get_show_experimental() || !prim.is_experimental())
-        })
-        .collect();
-    named_prims.sort_by(|a, b| {
-        (a.name().starts_with('&').cmp(&b.name().starts_with('&')))
-            .then_with(|| a.name().cmp(b.name()))
+    // Show or hide the glyph buttons
+    let (show_glyphs, set_show_glyphs) = create_signal(match mode {
+        EditorMode::Example => false,
+        EditorMode::Showcase | EditorMode::Pad => true,
     });
-    let max_name_len = named_prims
-        .iter()
-        .map(|prim| prim.name().chars().count())
-        .max()
-        .unwrap();
-    for prim in named_prims {
-        let class = format!("{} named-function-button", prim_class(prim));
-        let mut desc = prim.doc().short_text().to_string();
-        if desc.chars().count() > 30 {
-            desc = desc.chars().take(29).chain(['…']).collect();
-        }
-        let text = format!("{:max_name_len$} - {desc}", prim.name()).replace(' ', " ");
-        options.push(view!(<option
-            class=class
-            value={prim.name()}>
-            {text}
-        </option>));
-    }
-    let additional_on_change = move |event: Event| {
-        let select: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
-        let name = select.value();
-        state.update(|state| replace_code(state, &name));
-        select.set_value("");
+
+    let glyph_buttons_container = move || {
+        show_glyphs.get().then(|| {
+            let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
+                .filter_map(make_glyph_button)
+                .collect();
+
+            // Additional code buttons
+            for (glyph, title, class, surround, doc) in [
+                (
+                    "_",
+                    "strand",
+                    "strand-span",
+                    None,
+                    "tutorial/arrays#creating-arrays",
+                ),
+                (
+                    "[]",
+                    "array",
+                    "",
+                    Some(('[', ']')),
+                    "tutorial/arrays#creating-arrays",
+                ),
+                (
+                    "{}",
+                    "box array",
+                    "",
+                    Some(('{', '}')),
+                    "tutorial/arrays#nested-arrays",
+                ),
+                (
+                    "()",
+                    "function",
+                    "",
+                    Some(('(', ')')),
+                    "tutorial/functions#inline-functions",
+                ),
+                ("¯", "(`) negative", "number-literal", None, ""),
+                (
+                    "@",
+                    "character",
+                    "string-literal-span",
+                    None,
+                    "tutorial/types#characters",
+                ),
+                (
+                    "$",
+                    "format/multiline string",
+                    "string-literal-span",
+                    None,
+                    "tutorial/functions#format-strings",
+                ),
+                (
+                    "\"",
+                    "string",
+                    "string-literal-span",
+                    Some(('"', '"')),
+                    "tutorial/types#characters",
+                ),
+                ("!", "macro", "", None, "tutorial/macros"),
+                ("^", "placeholder", "", None, "tutorial/custommodifiers"),
+                ("←", "(=) binding", "", None, "tutorial/bindings"),
+                (
+                    "↚",
+                    "(=~) private binding",
+                    "",
+                    None,
+                    "tutorial/modules#visibility",
+                ),
+                ("~", "module", "", None, "tutorial/modules"),
+                (
+                    "|",
+                    "signature",
+                    "",
+                    None,
+                    "tutorial/functions#stack-signatures",
+                ),
+                (
+                    "#",
+                    "comment",
+                    "comment-span",
+                    None,
+                    "tutorial/basic#comments",
+                ),
+            ] {
+                let class = format!("glyph-button {class}");
+                // Navigate to the docs page on ctrl/shift+click
+                let onclick = move |event: MouseEvent| {
+                    if !doc.is_empty() && os_ctrl(&event) {
+                        // Open the docs page
+                        window()
+                            .open_with_url_and_target(&format!("/{doc}"), "_blank")
+                            .unwrap();
+                    } else if !doc.is_empty() && event.shift_key() {
+                        // Redirect to the docs page
+                        use_navigate()(&format!("/{doc}"), NavigateOptions::default());
+                    } else if let Some((open, close)) = surround {
+                        state.update(|state| surround_code(state, open, close));
+                    } else {
+                        state.update(|state| replace_code(state, glyph))
+                    }
+                };
+                // Show the doc on mouseover
+                let onmouseover = move |_| {
+                    if !doc.is_empty() {
+                        set_glyph_doc.set(view! {
+                            <code>{glyph}</code>
+                            " "
+                            {title}
+                        }.into_view());
+                        _ = glyph_doc_element().style().remove_property("display");
+                    }
+                };
+                glyph_buttons.push(
+                    view! {
+                        <button
+                            class=class
+                            data-title=title
+                            on:click=onclick
+                            on:mouseover=onmouseover
+                            on:mouseleave=onmouseleave
+                        >
+                            {glyph}
+                        </button>
+                    }
+                    .into_view(),
+                );
+            }
+
+            // Additional functions combobox
+            let mut options = Vec::new();
+            let mut named_prims: Vec<Primitive> = Primitive::non_deprecated()
+                .filter(|prim| {
+                    prim.glyph().is_none() && (get_show_experimental() || !prim.is_experimental())
+                })
+                .collect();
+            named_prims.sort_by(|a, b| {
+                (a.name().starts_with('&').cmp(&b.name().starts_with('&')))
+                    .then_with(|| a.name().cmp(b.name()))
+            });
+            let max_name_len = named_prims
+                .iter()
+                .map(|prim| prim.name().chars().count())
+                .max()
+                .unwrap();
+            for prim in named_prims {
+                let class = format!("{} named-function-button", prim_class(prim));
+                let mut desc = prim.doc().short_text().to_string();
+                if desc.chars().count() > 30 {
+                    desc = desc.chars().take(29).chain(['…']).collect();
+                }
+                let text = format!("{:max_name_len$} - {desc}", prim.name()).replace(' ', " ");
+                options.push(view! {
+                    <option class=class value=prim.name()>
+                        {text}
+                    </option>
+                });
+            }
+            let additional_on_change = move |event: Event| {
+                let select: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
+                let name = select.value();
+                state.update(|state| replace_code(state, &name));
+                select.set_value("");
+            };
+            glyph_buttons.push(
+                view! {
+                    <select
+                        id="additional-functions"
+                        class="additional-functions"
+                        on:change=additional_on_change
+                    >
+                        <option value="" disabled=true selected=true>
+                            "…"
+                        </option>
+                        {options}
+                    </select>
+                }
+                .into_view(),
+            );
+
+            view! { <div class="glyph-buttons">{glyph_buttons}</div> }
+        })
     };
-    glyph_buttons.push(
-        view! {
-            <select
-                id="additional-functions"
-                class="additional-functions"
-                on:change=additional_on_change>
-                <option value="" disabled=true selected=true>"…"</option>
-                { options }
-            </select>
-        }
-        .into_view(),
-    );
 
     // Select a class for the editor and code area
-    let editor_class = match mode {
-        EditorMode::Example => "small-editor",
-        EditorMode::Showcase | EditorMode::Pad => "medium-editor",
+    let editor_class = move || {
+        let editor_size = match mode {
+            EditorMode::Example => "small-editor",
+            EditorMode::Showcase | EditorMode::Pad => "medium-editor",
+        };
+
+        let editor_layout = match fullscreen_enabled.get() {
+            true => "fullscreen-editor",
+            false => "normal-editor",
+        };
+
+        format!("{} {}", editor_size, editor_layout)
     };
 
     // Hide the example arrows if there is only one example
@@ -1210,18 +1262,12 @@ pub fn Editor<'a>(
         ""
     };
 
-    // Show or hide the glyph buttons
-    let (show_glyphs, set_show_glyphs) = create_signal(match mode {
-        EditorMode::Example => false,
-        EditorMode::Showcase | EditorMode::Pad => true,
-    });
-
     // Glyphs toggle button
     let show_glyphs_icon = move || {
         if show_glyphs.get() {
-            view!(<span class="material-symbols-rounded">"keyboard_arrow_up"</span>)
+            view! { <span class="material-symbols-rounded">"keyboard_arrow_up"</span> }
         } else {
-            view!(<span class="material-symbols-rounded">"keyboard_arrow_down"</span>)
+            view! { <span class="material-symbols-rounded">"keyboard_arrow_down"</span> }
         }
     };
 
@@ -1234,21 +1280,30 @@ pub fn Editor<'a>(
     };
     let toggle_show_glyphs = move |_| set_show_glyphs.update(|s| *s = !*s);
 
-    // Hide the glyph buttons if the editor is small
-    let glyph_buttons_style = move || {
-        if show_glyphs.get() {
-            ""
+    let fullscreen_button_icon = move || {
+        if fullscreen_enabled.get() {
+            view! { <span class="material-symbols-rounded">"close_fullscreen"</span> }
         } else {
-            "display:none"
+            view! { <span class="material-symbols-rounded">"open_in_full"</span> }
         }
     };
+
+    let fullscreen_button_title = move || {
+        if fullscreen_enabled.get() {
+            "Collapse editor"
+        } else {
+            "Expand editor"
+        }
+    };
+
+    let toggle_fullscreen = move |_: MouseEvent| set_fullscreen_enabled.update(|s| *s = !*s);
 
     // Show the example number if there are multiple examples
     let examples_len = examples.len();
     let example_tracker_element = move || {
         (examples_len > 1)
             .then(|| format!("{}/{}", example.get() + 1, examples_len))
-            .map(|text| view!(<span id="example-tracker">{text}</span>))
+            .map(|text| view! { <span id="example-tracker">{text}</span> })
     };
 
     // Select a class for the next example button
@@ -1347,9 +1402,11 @@ pub fn Editor<'a>(
     let line_numbers = move || {
         (0..line_count.get().max(1))
             .map(|i| {
-                view!( <div class="code-line">
-                    <span class="code-span">{i + 1}</span>
-                </div>)
+                view! {
+                    <div class="code-line">
+                        <span class="code-span">{i + 1}</span>
+                    </div>
+                }
             })
             .collect::<Vec<_>>()
     };
@@ -1526,9 +1583,7 @@ pub fn Editor<'a>(
     let file_tab_display = move || {
         let files = get_files_to_display().clone();
         if files.is_empty() {
-            return view! {
-                <div></div>
-            };
+            return view! { <div></div> };
         }
 
         let file_list = get_files_to_display()
@@ -1591,40 +1646,23 @@ pub fn Editor<'a>(
 
                 let path_clone = path.clone();
                 view! {
-                    <div
-                        class="pad-file-tab"
-                        on:click=on_insert
-                    >
+                    <div class="pad-file-tab" on:click=on_insert>
                         {&path_clone.to_string_lossy().into_owned()}
-                        <span
-                            class="pad-file-tab-button"
-                            on:click=on_download
-                            inner_html="🠻"
-                        />
-                        <span
-                            class="pad-file-tab-button"
-                            on:click=on_delete
-                            inner_html="&times;"
-                        />
+                        <span class="pad-file-tab-button" on:click=on_download inner_html="🠻" />
+                        <span class="pad-file-tab-button" on:click=on_delete inner_html="&times;" />
                     </div>
                 }
             })
             .collect_view();
 
-        view! {
-            <div class="pad-files">
-                {file_list}
-            </div>
-        }
+        view! { <div class="pad-files">{file_list}</div> }
     };
 
     // Render
     view! {
         <div id="editor-wrapper">
-            <div id="editor">
-                <div style=glyph_buttons_style>
-                    <div class="glyph-buttons">{glyph_buttons}</div>
-                </div>
+            <div id="editor" class=editor_class>
+                {glyph_buttons_container}
                 {file_tab_display}
                 <div id="settings" style=settings_style>
                     <div id="settings-left">
@@ -1636,18 +1674,20 @@ pub fn Editor<'a>(
                                 max="1000000"
                                 width="3em"
                                 value=get_execution_limit
-                                on:input=on_execution_limit_change/>
-                            "s"
+                                on:input=on_execution_limit_change
+                            /> "s"
                         </div>
                         <div title="The maximum number of seconds of audio &ast will generate">
-                            <Prim prim=Primitive::Sys(SysOp::AudioStream) />" time:"
+                            <Prim prim=Primitive::Sys(SysOp::AudioStream) />
+                            " time:"
                             <input
                                 type="number"
                                 min="1"
                                 max="600"
                                 width="3em"
                                 value=get_ast_time
-                                on:input=on_ast_time_change/>
+                                on:input=on_ast_time_change
+                            />
                             "s"
                         </div>
                         <div title="Place the cursor on the left of the current token when formatting">
@@ -1655,69 +1695,84 @@ pub fn Editor<'a>(
                             <input
                                 type="checkbox"
                                 checked=get_right_to_left
-                                on:change=toggle_right_to_left/>
+                                on:change=toggle_right_to_left
+                            />
                         </div>
                         <div title="Automatically run pad links">
                             "Autorun links:"
-                            <input
-                                type="checkbox"
-                                checked=get_autorun
-                                on:change=toggle_autorun/>
+                            <input type="checkbox" checked=get_autorun on:change=toggle_autorun />
                         </div>
                         <div title="Automatically play audio">
                             "Autoplay audio:"
-                            <input
-                                type="checkbox"
-                                checked=get_autoplay
-                                on:change=toggle_autoplay/>
+                            <input type="checkbox" checked=get_autoplay on:change=toggle_autoplay />
                         </div>
                         <div title="Show experimental primitive glyphs">
                             "Show experimental:"
                             <input
                                 type="checkbox"
                                 checked=get_show_experimental
-                                on:change=toggle_show_experimental/>
+                                on:change=toggle_show_experimental
+                            />
                         </div>
                         <div title="Run and format together">
                             "Run on format:"
                             <input
                                 type="checkbox"
                                 checked=get_run_on_format
-                                on:change=toggle_run_on_format/>
+                                on:change=toggle_run_on_format
+                            />
                         </div>
                         <div title="Show line values to the right of the code">
                             "Show values:"
                             <input
                                 type="checkbox"
                                 checked=get_inlay_values
-                                on:change=toggle_inlay_values/>
+                                on:change=toggle_inlay_values
+                            />
                         </div>
                         <div>
-                            "Stack:"
-                            <select
-                                on:change=on_select_top_at_top>
-                                <option value="false" selected=get_top_at_top()>"Top at bottom"</option>
-                                <option value="true" selected=get_top_at_top()>"Top at top"</option>
+                            "Stack:" <select on:change=on_select_top_at_top>
+                                <option value="false" selected=get_top_at_top()>
+                                    "Top at bottom"
+                                </option>
+                                <option value="true" selected=get_top_at_top()>
+                                    "Top at top"
+                                </option>
                             </select>
                         </div>
                         <div>
-                            "Font size:"
-                            <select
-                                on:change=on_select_font_size>
-                                <option value="0.6em" selected={get_font_size() == "0.6em"}>"Scalar"</option>
-                                <option value="0.8em" selected={get_font_size() == "0.8em"}>"Small"</option>
-                                <option value="1em" selected={get_font_size() == "1em"}>"Normal"</option>
-                                <option value="1.2em" selected={get_font_size() == "1.2em"}>"Big"</option>
-                                <option value="1.4em" selected={get_font_size() == "1.4em"}>"Rank 3"</option>
+                            "Font size:" <select on:change=on_select_font_size>
+                                <option value="0.6em" selected=get_font_size() == "0.6em">
+                                    "Scalar"
+                                </option>
+                                <option value="0.8em" selected=get_font_size() == "0.8em">
+                                    "Small"
+                                </option>
+                                <option value="1em" selected=get_font_size() == "1em">
+                                    "Normal"
+                                </option>
+                                <option value="1.2em" selected=get_font_size() == "1.2em">
+                                    "Big"
+                                </option>
+                                <option value="1.4em" selected=get_font_size() == "1.4em">
+                                    "Rank 3"
+                                </option>
                             </select>
                         </div>
                         <div>
-                            "Font:"
-                            <select
-                                on:change=on_select_font>
-                                <option value="Uiua386" selected={get_font_name() == "Uiua386"}>"Uiua386"</option>
-                                <option value="Pixua" selected={get_font_name() == "Pixua"}>"Pixua"</option>
-                                <option value="DejaVuSansMono" selected={get_font_name() == "DejaVuSansMono"}>"DejaVu"</option>
+                            "Font:" <select on:change=on_select_font>
+                                <option value="Uiua386" selected=get_font_name() == "Uiua386">
+                                    "Uiua386"
+                                </option>
+                                <option value="Pixua" selected=get_font_name() == "Pixua">
+                                    "Pixua"
+                                </option>
+                                <option
+                                    value="DejaVuSansMono"
+                                    selected=get_font_name() == "DejaVuSansMono"
+                                >
+                                    "DejaVu"
+                                </option>
                             </select>
                         </div>
                         <button on:click=download_code>"Download Code"</button>
@@ -1728,165 +1783,203 @@ pub fn Editor<'a>(
                             <button
                                 class="info-button"
                                 data-title="Add # Experimental"
-                                on:click=on_insert_experimental>
+                                on:click=on_insert_experimental
+                            >
                                 "🧪"
                             </button>
-                            <button
-                                class="info-button"
-                                data-title=EDITOR_SHORTCUTS
-                                disabled>
+                            <button class="info-button" data-title=EDITOR_SHORTCUTS disabled>
                                 "🛈"
                             </button>
                         </div>
                         <div style="margin-right: 0.1em">
-                            "Tokens: "
-                            { move || token_count.get() }
+                            "Tokens: " {move || token_count.get()}
                         </div>
                     </div>
                 </div>
-                <div class=editor_class>
-                    <div id="code-area">
-                        <div id={glyph_doc_id} class="glyph-doc" style="display: none">
-                            { move || glyph_doc.get() }
-                            <div class="glyph-doc-ctrl-click">"Shift+click for more info (Ctrl/⌘+click for new tab)"</div>
-                        </div>
-                        <div
-                            id=code_outer_id
-                            class="code code-outer sized-code"
-                            style={format!("height: {}em;", code_height_em + 1.25 / 2.0)}>
-                            <div class="line-numbers">
-                                { line_numbers }
-                            </div>
-                            <div class="code-and-overlay">
-                                /////////////////////////
-                                // The text entry area //
-                                /////////////////////////
-                                <textarea
-                                    id=code_id
-                                    class="code-entry"
-                                    autocorrect="false"
-                                    autocapitalize="off"
-                                    spellcheck="false"
-                                    translate="no"
-                                    on:paste=code_paste
-                                    on:input=code_input
-                                    on:mousemove=code_mouse_move
-                                    on:mouseleave=code_mouse_leave
-                                    value=initial_code_str>
-                                </textarea>
-                                /////////////////////////
-                                <div
-                                    id=overlay_id
-                                    class="code-overlay">
-                                    { move || gen_code_view(&code_id(), &overlay.get()) }
-                                </div>
-                            </div>
-                        </div>
-                        <div id="code-right-side">
-                            <button
-                                id="glyphs-toggle-button"
-                                class="editor-right-button"
-                                data-title=show_glyphs_title
-                                on:click=toggle_show_glyphs>
-                                {show_glyphs_icon}
-                            </button>
 
-                            <button
-                                class="editor-right-button"
-                                data-title=toggle_settings_title
-                                on:click=toggle_settings_open>
-                                <span class="material-symbols-rounded">settings</span>
-                            </button>
-
-                            <button
-                                class="editor-right-button"
-                                data-title=copy_link_title
-                                on:click=copy_link>
-                                <span class="material-symbols-rounded">link</span>
-                            </button>
-
-                            {
-                                (mode == EditorMode::Pad).then(|| {
-                                    Some(view!(<button
-                                        class="editor-right-button"
-                                        data-title="Upload file"
-                                        on:click=upload_file_dialog>
-                                        <span class="material-symbols-rounded">upload</span>
-                                    </button>))
-                                })
-                            }
-                            
-                            {example_tracker_element}
+                <div id="code-area">
+                    <div id=glyph_doc_id class="glyph-doc" style="display: none">
+                        {move || glyph_doc.get()}
+                        <div class="glyph-doc-ctrl-click">
+                            "Shift+click for more info (Ctrl/⌘+click for new tab)"
                         </div>
                     </div>
-                    <div id=hover_id class="code-hover"/>
-                    <div class="output-frame">
-                        <div class="output-lines">
-                            <div class="output-diagnostics">
-                                { move || diag_output.get() }
+                    <div
+                        id=code_outer_id
+                        class="code code-outer sized-code"
+                        style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
+                    >
+                        <div class="line-numbers">{line_numbers}</div>
+                        <div class="code-and-overlay">
+                            // ///////////////////////
+                            // The text entry area //
+                            // ///////////////////////
+                            <textarea
+                                id=code_id
+                                class="code-entry"
+                                autocorrect="false"
+                                autocapitalize="off"
+                                spellcheck="false"
+                                translate="no"
+                                on:paste=code_paste
+                                on:input=code_input
+                                on:mousemove=code_mouse_move
+                                on:mouseleave=code_mouse_leave
+                                value=initial_code_str
+                            ></textarea>
+                            // ///////////////////////
+                            <div id=overlay_id class="code-overlay">
+                                {move || gen_code_view(&code_id(), &overlay.get())}
                             </div>
-                            <div class="output-wrapper">
-                                <div id=format!("output-{id}") class="output sized-code">
-                                    { move || output.get() }
-                                    { move || get_state.get().challenge.as_ref().map(|chal| {
-                                        let intended = chal.intended_answer.clone();
-                                        let click_intended = move|_| {
-                                            get_state.get().set_code(&intended, Cursor::Ignore);
-                                        };
-                                        view! {
-                                        <div>
-                                            <hr/>
-                                            <button
-                                                class="glyph-button"
-                                                data-title="Show intended answer"
-                                                on:click=click_intended>
-                                                "📖"
-                                            </button>
-                                            {chal.best_answer.clone().map(|ans| {
-                                                let click_ans = move|_| {
-                                                    get_state.get().set_code(&ans, Cursor::Ignore);
-                                                };
-                                                view! {
+                        </div>
+                    </div>
+                    <div id="code-right-side">
+                        <button
+                            id="glyphs-toggle-button"
+                            class="editor-right-button"
+                            data-title=show_glyphs_title
+                            on:click=toggle_show_glyphs
+                        >
+                            {show_glyphs_icon}
+                        </button>
+
+                        <button
+                            class="editor-right-button"
+                            data-title=toggle_settings_title
+                            on:click=toggle_settings_open
+                        >
+                            <span class="material-symbols-rounded">settings</span>
+                        </button>
+
+                        <button
+                            class="editor-right-button"
+                            data-title=copy_link_title
+                            on:click=copy_link
+                        >
+                            <span class="material-symbols-rounded">link</span>
+                        </button>
+
+                        {(mode == EditorMode::Pad)
+                            .then(|| {
+                                Some(
+                                    view! {
+                                        <button
+                                            class="editor-right-button"
+                                            data-title="Upload file"
+                                            on:click=upload_file_dialog
+                                        >
+                                            <span class="material-symbols-rounded">upload</span>
+                                        </button>
+
+                                        <button
+                                            class="editor-right-button"
+                                            data-title=fullscreen_button_title
+                                            on:click=toggle_fullscreen
+                                        >
+                                            {fullscreen_button_icon}
+                                        </button>
+                                    },
+                                )
+                            })}
+
+                        {example_tracker_element}
+                    </div>
+                </div>
+
+                <div id=hover_id class="code-hover" />
+
+                <div class="output-frame">
+                    <div class="output-lines">
+                        <div class="output-diagnostics">{move || diag_output.get()}</div>
+                        <div class="output-wrapper">
+                            <div id=format!("output-{id}") class="output sized-code">
+                                {move || output.get()}
+                                {move || {
+                                    get_state
+                                        .get()
+                                        .challenge
+                                        .as_ref()
+                                        .map(|chal| {
+                                            let intended = chal.intended_answer.clone();
+                                            let click_intended = move |_| {
+                                                get_state.get().set_code(&intended, Cursor::Ignore);
+                                            };
+                                            view! {
+                                                <div>
+                                                    <hr />
                                                     <button
                                                         class="glyph-button"
-                                                        data-title="Show idiomatic answer"
-                                                        on:click=click_ans>
-                                                        "💡"
+                                                        data-title="Show intended answer"
+                                                        on:click=click_intended
+                                                    >
+                                                        "📖"
                                                     </button>
-                                                }
-                                            })}
-                                        </div>
-                                    }})}
-                                </div>
+                                                    {chal
+                                                        .best_answer
+                                                        .clone()
+                                                        .map(|ans| {
+                                                            let click_ans = move |_| {
+                                                                get_state.get().set_code(&ans, Cursor::Ignore);
+                                                            };
+                                                            view! {
+                                                                <button
+                                                                    class="glyph-button"
+                                                                    data-title="Show idiomatic answer"
+                                                                    on:click=click_ans
+                                                                >
+                                                                    "💡"
+                                                                </button>
+                                                            }
+                                                        })}
+                                                </div>
+                                            }
+                                        })
+                                }}
                             </div>
                         </div>
-                        <div id="code-buttons">
-                            <button
-                                class="code-button format-button run-format-button"
-                                on:click=move |_| {format(true, false);}
-                                data-title=" ctrl Enter - Format        \nshift Enter - Format and Run"
-                            >{ "Format" }</button>
-                            <button class="code-button" on:click=move |_| run(get_run_on_format(), false)>{ "Run" }</button>
-                            <button
-                                id="prev-example"
-                                class="code-button"
-                                style=example_arrow_style
-                                on:click=prev_example>{ "<" } </button>
-                            <button
-                                id="next-example"
-                                class=next_button_class
-                                style=example_arrow_style
-                                on:click=next_example>{ ">" } </button>
-                        </div>
+                    </div>
+                    <div id="code-buttons">
+                        <button
+                            class="code-button format-button run-format-button"
+                            on:click=move |_| {
+                                format(true, false);
+                            }
+                            data-title=" ctrl Enter - Format        \nshift Enter - Format and Run"
+                        >
+                            {"Format"}
+                        </button>
+                        <button
+                            class="code-button"
+                            on:click=move |_| run(get_run_on_format(), false)
+                        >
+                            {"Run"}
+                        </button>
+                        <button
+                            id="prev-example"
+                            class="code-button"
+                            style=example_arrow_style
+                            on:click=prev_example
+                        >
+                            {"<"}
+                        </button>
+                        <button
+                            id="next-example"
+                            class=next_button_class
+                            style=example_arrow_style
+                            on:click=next_example
+                        >
+                            {">"}
+                        </button>
                     </div>
                 </div>
-                { move || {
+
+                {move || {
                     let message = drag_message.get();
-                    (!message.is_empty()).then(|| view!(<div id="drag-message">{ message }</div>))
-                } }
+                    (!message.is_empty()).then(|| view! { <div id="drag-message">{message}</div> })
+                }}
             </div>
             <div id="editor-help">
-                { help.iter().map(|s| view!(<p>{s}</p>)).collect::<Vec<_>>() }
+                {help.iter().map(|s| view! { <p>{s}</p> }).collect::<Vec<_>>()}
             </div>
             <input
                 id=input_id
@@ -1938,13 +2031,19 @@ pub fn Prim(
     if title.is_empty() {
         view! {
             <a href=href class="prim-code-a">
-                <code><span class=symbol_class>{ symbol }</span>{name}</code>
+                <code>
+                    <span class=symbol_class>{symbol}</span>
+                    {name}
+                </code>
             </a>
         }
     } else {
         view! {
             <a href=href class="prim-code-a">
-                <code class="prim-code" data-title=title><span class=symbol_class>{ symbol }</span>{name}</code>
+                <code class="prim-code" data-title=title>
+                    <span class=symbol_class>{symbol}</span>
+                    {name}
+                </code>
             </a>
         }
     }

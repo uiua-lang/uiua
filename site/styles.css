@@ -419,9 +419,10 @@ li {
 }
 
 #settings {
+    grid-area: settings;
     display: flex;
     justify-content: space-between;
-    font-size: 0.82em;
+    font-size: 0.6em;
     padding: 0.2em;
     gap: 0.5em;
 }
@@ -473,7 +474,9 @@ option,
 }
 
 #code-area {
+    grid-area: editor;
     position: relative;
+    overflow: auto;
 }
 
 .code-outer {
@@ -488,8 +491,6 @@ option,
     min-height: 1.8em;
     display: flex;
     gap: 0.1em;
-    overflow-x: auto;
-    overflow-y: hidden;
 }
 
 .code-and-overlay {
@@ -540,7 +541,7 @@ option,
 }
 
 .line-numbers {
-    min-width: 1.5em;
+    min-width: 2em;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -589,6 +590,8 @@ option,
     display: flex;
     justify-content: space-between;
     min-height: 1.9em;
+    overflow-x: hidden;
+    grid-area: output;
 }
 
 .output-lines {
@@ -795,11 +798,11 @@ option,
 
 .glyph-buttons {
     padding: 0.1em;
-    font-size: 1.4em;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-evenly;
     align-items: baseline;
+    grid-area: glyphs;
 }
 
 .glyph-button {
@@ -1519,6 +1522,7 @@ a.clean {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 0.3em;
+    grid-area: files;
 
     @media (prefers-color-scheme: light) {
         border-color: #0000001a;
@@ -1532,7 +1536,7 @@ a.clean {
     background-color: #294259;
     border-radius: 999px;
     cursor: pointer;
-    font-size: .75em;
+    font-size: .6em;
     line-height: 1em;
 
     @media (prefers-color-scheme: light) {
@@ -1553,4 +1557,77 @@ a.clean {
     text-decoration: underline dotted;
     font-size: 0.8em;
     cursor: help;
+}
+
+.normal-editor {
+    display: grid;
+    grid-template-areas:
+        'glyphs'
+        'files'
+        'settings'
+        'editor'
+        'output'
+        ;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto 1fr auto;
+}
+
+.fullscreen-editor {
+    display: grid;
+    grid-template-areas:
+        'glyphs output'
+        'files output'
+        'settings output'
+        'editor output'
+        ;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto 1fr;
+
+    border-radius: 0 !important;
+    outline: none;
+
+    position: fixed !important;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+
+    .code-outer {
+        resize: none;
+        height: 100% !important;
+        border-bottom-right-radius: 0;
+        border-bottom-right-radius: 0;
+        overflow-y: unset;
+        overflow-x: unset;
+    }
+
+    .code-entry {
+        height: 100% !important;
+    }
+
+    .output-lines {
+        width: 100%;
+        overflow-x: unset;
+    }
+
+    .output-wrapper {
+        transform: none;
+        overflow-x: unset;
+    }
+
+    .output-frame {
+        overflow: auto;
+        border-left: 0.1em solid #60646838;
+    }
+
+    .output {
+        transform: none;
+        margin: 0;
+        padding: 0.4em;
+    }
+
+    .output-diagnostics {
+        margin: 0;
+        padding: 0.4em;
+    }
 }

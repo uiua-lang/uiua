@@ -1915,7 +1915,7 @@ pub fn Editor<'a>(
                                         </button>
 
                                         <button
-                                            class="editor-right-button"
+                                            class="editor-right-button expand-editor-button"
                                             data-title=fullscreen_button_title
                                             on:click=toggle_fullscreen
                                         >

@@ -291,6 +291,7 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prim prim=First glyph_only=true/>"/"<Prim prim=Last glyph_only=true/> <Prims prims=[Un, Sort]/></th><td><Prims prims=[Un, Sort] show_names=true/>" then take the "<Prim prim=First/>"/"<Prim prim=Last/></td><td>"Just pick a random row"</td></tr>
             <tr><th><Prims prims=[Match, By, Rotate]/><code>"1"</code></th><td>"Make a copy, "<Prim prim=Rotate/>", and "<Prim prim=Match/></td><td>"Just check that every row is the same"</td></tr>
             <tr><th><Prims prims=[Reduce, Mul, Stencil, Match]/></th><td><Prim prim=Stencil/>" then "<Prim prim=Reduce/></td><td>"Just check that every row is the same"</td></tr>
+            <tr><th><Prims prims=[Abs, Complex]/></th><td>"Make intermediate "<Prim prim=Complex/>" array then get "<Prim prim=Abs/></td><td>"Directly compute the magnitude"</td></tr>
         </table>
 
         <Hd id="other-optimizations">"Other Optimizations"</Hd>

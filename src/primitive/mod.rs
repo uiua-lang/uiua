@@ -307,6 +307,7 @@ impl fmt::Display for ImplPrimitive {
             SplitByScalar => write!(f, "{Partition}{Box}{By}{Ne}"),
             SplitBy => write!(f, "{Partition}{Box}{Not}{By}{Mask}"),
             SplitByKeepEmpty => write!(f, "{Un}{Reduce}$\"_…_\""),
+            AbsComplex => write!(f, "{Abs}{Complex}"),
             MatrixDiv => write!(f, "{Anti}{Under}{Transpose}({Reduce}{Add}{Mul})"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
@@ -1551,6 +1552,7 @@ impl ImplPrimitive {
             }
             ImplPrimitive::SetSign => env.dyadic_oo_env(Value::set_sign)?,
             // Optimizations
+            ImplPrimitive::AbsComplex => env.dyadic_oo_env(Value::abs_complex)?,
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,
             ImplPrimitive::FirstMaxIndex => env.monadic_ref_env(Value::first_max_index)?,
             ImplPrimitive::LastMinIndex => env.monadic_ref_env(Value::last_min_index)?,

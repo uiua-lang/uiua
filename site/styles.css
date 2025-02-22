@@ -473,10 +473,15 @@ option,
     width: 3em;
 }
 
-#code-area {
+.editor-area {
     grid-area: editor;
     position: relative;
+    overflow: hidden;
+}
+
+#code-area {
     overflow: auto;
+    height: 100%;
 }
 
 .code-outer {
@@ -631,7 +636,7 @@ option,
 }
 
 #code-buttons {
-    margin: 0.2em 0.2em 0.2em 0;
+    margin: 0.2em;
     display: flex;
     flex-wrap: nowrap;
     right: 0;
@@ -733,6 +738,7 @@ option,
     font-size: min(1em, 3vw);
     align-items: center;
     gap: 0.25em;
+    z-index: 2;
 }
 
 .editor-right-button {
@@ -1515,18 +1521,21 @@ a.clean {
     }
 }
 
-.pad-files {
+.glyph-buttons + .pad-files {
     border-top: 0.1em solid #60646838;
+
+    @media (prefers-color-scheme: light) {
+        border-color: #0000001a;
+    }
+}
+
+.pad-files {
     padding: 0.3em;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     gap: 0.3em;
     grid-area: files;
-
-    @media (prefers-color-scheme: light) {
-        border-color: #0000001a;
-    }
 }
 
 .pad-file-tab {
@@ -1607,7 +1616,7 @@ a.clean {
 
     .output-lines {
         width: 100%;
-        overflow-x: unset;
+        overflow: auto;
     }
 
     .output-wrapper {
@@ -1616,8 +1625,24 @@ a.clean {
     }
 
     .output-frame {
-        overflow: auto;
         border-left: 0.1em solid #60646838;
+        display: grid;
+        grid-template-areas:
+            'actions'
+            'output';
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+
+        #code-buttons {
+            grid-area: actions;
+            border-bottom: 0.1em solid #60646838;
+            margin: 0;
+            padding: 0.2em;
+        }
+
+        .output-lines {
+            grid-area: output;
+        }
     }
 
     .output {

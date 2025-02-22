@@ -7,8 +7,7 @@ use base64::engine::{general_purpose::STANDARD, Engine};
 
 use ev::mousemove;
 use leptos::{
-    ev::{keydown, keyup},
-    *,
+    ev::{keydown, keyup}, *
 };
 
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
@@ -20,8 +19,7 @@ use uiua::{
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
-    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlDivElement, HtmlInputElement,
-    HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
+    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlBodyElement, HtmlDivElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent
 };
 
 use utils::*;
@@ -1296,7 +1294,13 @@ pub fn Editor<'a>(
         }
     };
 
-    let toggle_fullscreen = move |_: MouseEvent| set_fullscreen_enabled.update(|s| *s = !*s);
+    let toggle_fullscreen = move |_: MouseEvent| set_fullscreen_enabled.update(|s| {
+        *s = !*s;
+        let _ = document().body().unwrap().unchecked_into::<HtmlBodyElement>().style().set_property("overflow", match *s {
+            true => "hidden",
+            false => "auto",
+        });
+    });
 
     // Show the example number if there are multiple examples
     let examples_len = examples.len();
@@ -1797,42 +1801,14 @@ pub fn Editor<'a>(
                     </div>
                 </div>
 
-                <div id="code-area">
+                <div class="editor-area">
                     <div id=glyph_doc_id class="glyph-doc" style="display: none">
                         {move || glyph_doc.get()}
                         <div class="glyph-doc-ctrl-click">
                             "Shift+click for more info (Ctrl/⌘+click for new tab)"
                         </div>
                     </div>
-                    <div
-                        id=code_outer_id
-                        class="code code-outer sized-code"
-                        style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
-                    >
-                        <div class="line-numbers">{line_numbers}</div>
-                        <div class="code-and-overlay">
-                            // ///////////////////////
-                            // The text entry area //
-                            // ///////////////////////
-                            <textarea
-                                id=code_id
-                                class="code-entry"
-                                autocorrect="false"
-                                autocapitalize="off"
-                                spellcheck="false"
-                                translate="no"
-                                on:paste=code_paste
-                                on:input=code_input
-                                on:mousemove=code_mouse_move
-                                on:mouseleave=code_mouse_leave
-                                value=initial_code_str
-                            ></textarea>
-                            // ///////////////////////
-                            <div id=overlay_id class="code-overlay">
-                                {move || gen_code_view(&code_id(), &overlay.get())}
-                            </div>
-                        </div>
-                    </div>
+
                     <div id="code-right-side">
                         <button
                             id="glyphs-toggle-button"
@@ -1883,6 +1859,39 @@ pub fn Editor<'a>(
                             })}
 
                         {example_tracker_element}
+                    </div>
+
+
+                    <div id="code-area">
+                        <div
+                            id=code_outer_id
+                            class="code code-outer sized-code"
+                            style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
+                        >
+                            <div class="line-numbers">{line_numbers}</div>
+                            <div class="code-and-overlay">
+                                // ///////////////////////
+                                // The text entry area //
+                                // ///////////////////////
+                                <textarea
+                                    id=code_id
+                                    class="code-entry"
+                                    autocorrect="false"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    translate="no"
+                                    on:paste=code_paste
+                                    on:input=code_input
+                                    on:mousemove=code_mouse_move
+                                    on:mouseleave=code_mouse_leave
+                                    value=initial_code_str
+                                ></textarea>
+                                // ///////////////////////
+                                <div id=overlay_id class="code-overlay">
+                                    {move || gen_code_view(&code_id(), &overlay.get())}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -126,7 +126,7 @@ li {
         background-color: #171d22;
     }
 
-    #editor {
+    .editor {
         outline: 0.1em solid #606468;
         background-color: #19232d;
     }
@@ -210,7 +210,7 @@ li {
         background-color: #c6e7ec;
     }
 
-    #editor {
+    .editor {
         background-color: #dff2f3;
         outline: 0.1em solid #0004;
     }
@@ -390,7 +390,7 @@ li {
     width: 0;
 }
 
-#editor {
+.editor {
     border-radius: 0.5em;
     position: relative;
 }
@@ -1568,6 +1568,17 @@ a.clean {
     cursor: help;
 }
 
+.draggable-splitter {
+    grid-area: draggable;
+    cursor: ew-resize;
+    display: none;
+    background-color: #60646838;
+
+    &:hover, &.active {
+        background-color: #60646880;
+    }
+}
+
 .normal-editor {
     display: grid;
     grid-template-areas:
@@ -1584,12 +1595,12 @@ a.clean {
 .fullscreen-editor {
     display: grid;
     grid-template-areas:
-        'glyphs output'
-        'files output'
-        'settings output'
-        'editor output'
+        'glyphs draggable output'
+        'files draggable output'
+        'settings draggable output'
+        'editor draggable output'
         ;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 0.25em 1fr;
     grid-template-rows: auto auto auto 1fr;
 
     border-radius: 0 !important;
@@ -1625,7 +1636,6 @@ a.clean {
     }
 
     .output-frame {
-        border-left: 0.1em solid #60646838;
         display: grid;
         grid-template-areas:
             'actions'
@@ -1654,5 +1664,9 @@ a.clean {
     .output-diagnostics {
         margin: 0;
         padding: 0.4em;
+    }
+
+    .draggable-splitter {
+        display: block;
     }
 }

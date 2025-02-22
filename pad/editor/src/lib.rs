@@ -7,7 +7,8 @@ use base64::engine::{general_purpose::STANDARD, Engine};
 
 use ev::mousemove;
 use leptos::{
-    ev::{keydown, keyup}, *
+    ev::{keydown, keyup},
+    *,
 };
 
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
@@ -19,7 +20,7 @@ use uiua::{
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
-    DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlBodyElement, HtmlDivElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent
+    console::{self, log_1}, DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlBodyElement, HtmlDivElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent
 };
 
 use utils::*;
@@ -86,6 +87,7 @@ pub fn Editor<'a>(
     };
     let code_height_em = code_max_lines as f32 * 1.25;
 
+    let editor_wrapper_id = move || format!("editor{id}");
     let code_id = move || format!("code{id}");
     let code_outer_id = move || format!("code-outer{id}");
     let overlay_id = move || format!("overlay{id}");
@@ -93,6 +95,7 @@ pub fn Editor<'a>(
     let hover_id = move || format!("hover{id}");
     let input_id = move || format!("input{id}");
 
+    let editor_wrapper_element = move || -> HtmlDivElement { element(&editor_wrapper_id()) };
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
     #[allow(unused)]
     let code_outer_element = move || -> HtmlDivElement { element(&code_outer_id()) };
@@ -263,7 +266,8 @@ pub fn Editor<'a>(
                         <div class="output-item">
                             <br />
                         </div>
-                    }.into_view()
+                    }
+                    .into_view()
                 } else {
                     view! { <div class="output-item">{s}</div> }.into_view()
                 }
@@ -332,7 +336,8 @@ pub fn Editor<'a>(
                 <div class="output-item">
                     <hr />
                 </div>
-            }.into_view(),
+            }
+            .into_view(),
         };
         set_timeout(
             move || {
@@ -1159,11 +1164,14 @@ pub fn Editor<'a>(
                 // Show the doc on mouseover
                 let onmouseover = move |_| {
                     if !doc.is_empty() {
-                        set_glyph_doc.set(view! {
-                            <code>{glyph}</code>
-                            " "
-                            {title}
-                        }.into_view());
+                        set_glyph_doc.set(
+                            view! {
+                                <code>{glyph}</code>
+                                " "
+                                {title}
+                            }
+                            .into_view(),
+                        );
                         _ = glyph_doc_element().style().remove_property("display");
                     }
                 };
@@ -1250,7 +1258,7 @@ pub fn Editor<'a>(
             false => "normal-editor",
         };
 
-        format!("{} {}", editor_size, editor_layout)
+        format!("editor {} {}", editor_size, editor_layout)
     };
 
     // Hide the example arrows if there is only one example
@@ -1294,13 +1302,23 @@ pub fn Editor<'a>(
         }
     };
 
-    let toggle_fullscreen = move |_: MouseEvent| set_fullscreen_enabled.update(|s| {
-        *s = !*s;
-        let _ = document().body().unwrap().unchecked_into::<HtmlBodyElement>().style().set_property("overflow", match *s {
-            true => "hidden",
-            false => "auto",
-        });
-    });
+    let toggle_fullscreen = move |_: MouseEvent| {
+        set_fullscreen_enabled.update(|s| {
+            *s = !*s;
+            let _ = document()
+                .body()
+                .unwrap()
+                .unchecked_into::<HtmlBodyElement>()
+                .style()
+                .set_property(
+                    "overflow",
+                    match *s {
+                        true => "hidden",
+                        false => "auto",
+                    },
+                );
+        })
+    };
 
     // Show the example number if there are multiple examples
     let examples_len = examples.len();
@@ -1662,10 +1680,49 @@ pub fn Editor<'a>(
         view! { <div class="pad-files">{file_list}</div> }
     };
 
+    let (splitter_dragging, set_splitter_dragging) = create_signal(false);
+    let (splitter_ratio, set_splitter_ratio) = create_signal(0.5);
+
+    let start_dragging_splitter = move |event: MouseEvent| {
+        event.prevent_default();
+        event.stop_propagation();
+        set_splitter_dragging.set(true);
+    };
+
+    let draggable_splitter_class = move || {
+        if splitter_dragging.get() {
+            "draggable-splitter active"
+        } else {
+            "draggable-splitter"
+        }
+    };
+
+    let editor_style = move || {
+        if !fullscreen_enabled.get() {
+            return "".to_string();
+        }
+
+        let ratio = splitter_ratio.get();
+        format!("grid-template-columns: {}fr 0.25em {}fr", ratio, 1.0 - ratio)
+    };
+
+    window_event_listener(leptos_dom::ev::mousemove, move |event: MouseEvent| {
+        if splitter_dragging.get() {
+            let mouse_x = event.client_x();
+            let editor_width = editor_wrapper_element().client_width();
+            let ratio = (mouse_x as f64 / editor_width as f64).clamp(0.1, 0.9);
+            set_splitter_ratio.set(ratio);
+        }
+    });
+
+    window_event_listener(leptos_dom::ev::mouseup, move |_: MouseEvent| {
+        set_splitter_dragging.set(false);
+    });
+
     // Render
     view! {
         <div id="editor-wrapper">
-            <div id="editor" class=editor_class>
+            <div id=editor_wrapper_id class=editor_class style=editor_style>
                 {glyph_buttons_container}
                 {file_tab_display}
                 <div id="settings" style=settings_style>
@@ -1981,6 +2038,11 @@ pub fn Editor<'a>(
                         </button>
                     </div>
                 </div>
+
+                <div
+                    class=draggable_splitter_class
+                    on:mousedown=start_dragging_splitter
+                ></div>
 
                 {move || {
                     let message = drag_message.get();

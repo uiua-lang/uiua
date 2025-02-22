@@ -2422,10 +2422,7 @@ pub(crate) fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
                 curr = String::new();
                 kind = FragKind::Text;
             }
-            '*' if kind == FragKind::Strong
-                && chars.peek().map(|i| i.1) == Some('*')
-                && line[i + 2..].contains("**") =>
-            {
+            '*' if kind == FragKind::Strong && chars.peek().map(|i| i.1) == Some('*') => {
                 chars.next();
                 frags.push(PrimDocFragment::Strong(curr));
                 curr = String::new();

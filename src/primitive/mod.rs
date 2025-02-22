@@ -222,6 +222,7 @@ impl fmt::Display for ImplPrimitive {
             AntiDrop => write!(f, "{Anti}{Drop}"),
             AntiSelect => write!(f, "{Anti}{Select}"),
             AntiPick => write!(f, "{Anti}{Pick}"),
+            AntiKeep => write!(f, "{Anti}{Keep}"),
             UnJoin | UnJoinShape | UnJoinShape2 => write!(f, "{Un}{Join}"),
             UnJoinEnd | UnJoinShapeEnd | UnJoinShape2End => write!(f, "{Un}({Join}{Flip})"),
             UnKeep => write!(f, "{Un}{Keep}"),
@@ -1249,6 +1250,7 @@ impl ImplPrimitive {
             ImplPrimitive::AntiDrop => env.dyadic_ro_env(Value::anti_drop)?,
             ImplPrimitive::AntiSelect => env.dyadic_oo_env(Value::anti_select)?,
             ImplPrimitive::AntiPick => env.dyadic_oo_env(Value::anti_pick)?,
+            ImplPrimitive::AntiKeep => env.dyadic_oo_env(Value::anti_keep)?,
             ImplPrimitive::UnJoin => {
                 let val = env.pop(1)?;
                 let (first, rest) = val.unjoin(env)?;

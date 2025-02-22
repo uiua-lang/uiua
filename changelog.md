@@ -14,6 +14,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Change [`backward ˜`](https://uiua.org/docs/backward)'s glyph back. `𝄈` will continue to work and will be formatted as `˜`.
   - This glyph has much better font support
 - Stabilize [`backward ˜`](https://uiua.org/docs/backward)
+- Add [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) for parity with [`select ⊏`](https://uiua.org/docs/select)
 - Add subscripts for [`bits ⋯`](https://uiua.org/docs/bits) to force the number of bits
 - Deprecate [`over ,`](https://uiua.org/docs/over)
   - It is part of a stack manipulation paradigm that Uiua is slowly moving away from

@@ -23,7 +23,7 @@ use crate::{
     algorithm::pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
     array::*,
     boxed::Boxed,
-    cowslice::{cowslice, CowSlice},
+    cowslice::{cowslice, extend_repeat, CowSlice},
     val_as_arr,
     value::Value,
     Shape, Uiua, UiuaResult, RNG,
@@ -501,6 +501,13 @@ impl Value {
     pub(crate) fn unkeep(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         val_as_arr!(self, |a| a.unkeep(env).map(|(a, b)| (a, b.into())))
     }
+    pub(crate) fn anti_keep(self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
+        let counts = self.as_nums(env, "Keep amount must be a list of natural numbers")?;
+        if self.rank() == 0 {
+            return Err(env.error("Cannot anti keep by scalar"));
+        }
+        Ok(val_as_arr!(kept, |a| a.anti_keep(&counts, env)?.into()))
+    }
     pub(crate) fn undo_keep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_nums(
             env,
@@ -713,6 +720,56 @@ impl<T: ArrayValue> Array<T> {
         self.shape[0] = dest;
         self.validate_shape();
         Ok((counts.into(), self))
+    }
+    fn anti_keep(&self, counts: &[f64], env: &Uiua) -> UiuaResult<Self> {
+        if counts.iter().any(|&n| n != 0.0 && n != 1.0) {
+            return Err(env.error("Anti keep amount must be a list of booleans"));
+        }
+        let trues = counts.iter().filter(|&&n| n == 1.0).count();
+        let falses = counts.iter().filter(|&&n| n == 0.0).count();
+        let counts = pad_keep_counts(
+            counts,
+            self.row_count().max(
+                (self.row_count() as f64 * (trues + falses) as f64 / trues as f64).floor() as usize,
+            ),
+            env,
+        )?;
+        let mut fill: Option<T> = None;
+        let mut new_data = EcoVec::with_capacity(counts.len());
+        let mut rows = self.row_slices();
+        for &count in counts.iter() {
+            if count == 0.0 {
+                let fill = if let Some(fill) = &fill {
+                    fill
+                } else {
+                    let f = env.scalar_fill::<T>().map_err(|e| {
+                        env.error(format!("Anti keep with 0s requires a fill value{e}"))
+                    })?;
+                    fill = Some(f);
+                    fill.as_ref().unwrap()
+                };
+                extend_repeat(&mut new_data, fill, self.row_len());
+            } else if let Some(row) = rows.next() {
+                new_data.extend_from_slice(row);
+            } else {
+                let fill = if let Some(fill) = &fill {
+                    fill
+                } else {
+                    let f = env.scalar_fill::<T>().map_err(|e| {
+                        env.error(format!(
+                            "Anti keep ran out of rows so it \
+                            requires a fill value{e}"
+                        ))
+                    })?;
+                    fill = Some(f);
+                    fill.as_ref().unwrap()
+                };
+                extend_repeat(&mut new_data, fill, self.row_len());
+            }
+        }
+        let mut new_shape = self.shape.clone();
+        new_shape[0] = counts.len();
+        Ok(Array::new(new_shape, new_data))
     }
     fn undo_keep(self, counts: &[f64], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
         if into.rank() == 0 {

@@ -1243,6 +1243,12 @@ primitive!(
     /// [under][keep] allows you to modify part of an array according to a mask.
     /// ex: ⍜▽(+1) =@s. "mississippi"
     ///
+    /// [anti][keep] puts the rows of an array at the corresponding `1`s and [fill]s the rest.
+    /// ex: ⬚@-⌝▽ 0_1_1_0_0_1 "abc"
+    /// ex: ⬚@-⌝▽ 1_0 "abcdefg"
+    /// ex: ⬚@-⌝▽ 1_1_0 "abcdefg"
+    /// ex: ⬚0⌝▽ 1_0_1 [1_2_3 4_5_6]
+    ///
     /// [keep]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Keep, DyadicArray, ("keep", '▽')),
     /// Find the occurences of one array in another
@@ -3283,6 +3289,7 @@ impl_primitive!(
     (2, AntiDrop),
     (2, AntiSelect),
     (2, AntiPick),
+    (2, AntiKeep),
     (1(2), UnJoin),
     (1(2), UnJoinEnd),
     (2(2), UnJoinShape),

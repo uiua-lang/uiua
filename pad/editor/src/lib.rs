@@ -1419,8 +1419,6 @@ pub fn Editor<'a>(
         handle_load_files(files);
     });
 
-    on_cleanup(move || listener.remove());
-
     // Line numbers
     let line_numbers = move || {
         (0..line_count.get().max(1))
@@ -1711,17 +1709,24 @@ pub fn Editor<'a>(
         )
     };
 
-    window_event_listener(leptos_dom::ev::mousemove, move |event: MouseEvent| {
-        if splitter_dragging.get() {
-            let mouse_x = event.client_x();
-            let editor_width = editor_wrapper_element().client_width();
-            let ratio = (mouse_x as f64 / editor_width as f64).clamp(0.1, 0.9);
-            set_splitter_ratio.set(ratio);
-        }
+    let mouse_move_listener =
+        window_event_listener(leptos_dom::ev::mousemove, move |event: MouseEvent| {
+            if splitter_dragging.get() {
+                let mouse_x = event.client_x();
+                let editor_width = editor_wrapper_element().client_width();
+                let ratio = (mouse_x as f64 / editor_width as f64).clamp(0.1, 0.9);
+                set_splitter_ratio.set(ratio);
+            }
+        });
+
+    let mouse_up_listener = window_event_listener(leptos_dom::ev::mouseup, move |_: MouseEvent| {
+        set_splitter_dragging.set(false);
     });
 
-    window_event_listener(leptos_dom::ev::mouseup, move |_: MouseEvent| {
-        set_splitter_dragging.set(false);
+    on_cleanup(move || {
+        mouse_move_listener.remove();
+        mouse_up_listener.remove();
+        listener.remove();
     });
 
     // Render

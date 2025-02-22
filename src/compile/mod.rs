@@ -1500,7 +1500,7 @@ code:
                 if sig.args < new_sig.args {
                     let spandex = self.add_span(span.clone());
                     let mut dip = Node::empty();
-                    for _ in 0..new_sig.args - sig.args {
+                    for _ in 0..new_sig.args {
                         dip = Node::Mod(Primitive::Dip, eco_vec![dip.sig_node().unwrap()], spandex);
                     }
                     node.prepend(dip);

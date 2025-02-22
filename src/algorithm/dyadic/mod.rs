@@ -627,7 +627,7 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Keep amount must be a list of integers"));
         }
         self.take_map_keys();
-        let counts = pad_keep_counts(counts, self.row_count(), env)?;
+        let counts = pad_keep_counts(counts, self.row_count(), false, env)?;
         if self.rank() == 0 {
             if counts.len() != 1 {
                 return Err(env.error("Scalar array can only be kept with a single number"));
@@ -727,13 +727,10 @@ impl<T: ArrayValue> Array<T> {
         }
         let trues = counts.iter().filter(|&&n| n == 1.0).count();
         let falses = counts.iter().filter(|&&n| n == 0.0).count();
-        let counts = pad_keep_counts(
-            counts,
-            self.row_count().max(
-                (self.row_count() as f64 * (trues + falses) as f64 / trues as f64).floor() as usize,
-            ),
-            env,
-        )?;
+        let target_len = self.row_count().max(
+            (self.row_count() as f64 * (trues + falses) as f64 / trues as f64).floor() as usize,
+        );
+        let counts = pad_keep_counts(counts, target_len, true, env)?;
         let mut fill: Option<T> = None;
         let mut new_data = EcoVec::with_capacity(counts.len());
         let mut rows = self.row_slices();
@@ -776,7 +773,7 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Cannot undo keep of scalar array"));
         }
         let from = self;
-        let counts = pad_keep_counts(counts, into.row_count(), env)?;
+        let counts = pad_keep_counts(counts, into.row_count(), false, env)?;
         let mut true_count = 0;
         for &count in counts.iter() {
             if count > 1.0 {
@@ -881,12 +878,17 @@ impl<T: ArrayValue> Array<T> {
 pub(super) fn pad_keep_counts<'a>(
     counts: &'a [f64],
     len: usize,
+    unfill: bool,
     env: &Uiua,
 ) -> UiuaResult<Cow<'a, [f64]>> {
     let mut amount = Cow::Borrowed(counts);
     match amount.len().cmp(&len) {
         Ordering::Equal => {}
-        Ordering::Less => match env.either_array_fill::<f64>() {
+        Ordering::Less => match if unfill {
+            env.unfill().num_array()
+        } else {
+            env.either_array_fill()
+        } {
             Ok(fill) => {
                 if let Some(n) = fill.data.iter().find(|&&n| n.fract() != 0.0) {
                     return Err(env.error(format!(

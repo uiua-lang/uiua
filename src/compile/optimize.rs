@@ -125,6 +125,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &((1, Flip, Div, Pow), Root),
     &((-1, Pow), (1, Flip, Div)),
     &((2, Pow), (Dup, Mul)),
+    &((Complex, Abs), AbsComplex),
     &ByToDup,
     &InlineCustomInverse,
     &TransposeOpt,

@@ -1970,6 +1970,19 @@ value_bin_impl!(
     (Byte, Complex, x_com),
 );
 
+value_bin_impl!(
+    abs_complex,
+    [Num, num],
+    (Byte, Byte, num),
+    (Byte, Num, num),
+    (Num, Byte, num),
+    (Complex, Complex, com),
+    (Complex, Num, com),
+    (Num, Complex, com),
+    (Complex, Byte, com),
+    (Byte, Complex, com),
+);
+
 macro_rules! eq_impls {
     ($($name:ident),*) => {
         $(

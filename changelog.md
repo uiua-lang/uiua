@@ -31,6 +31,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Add `UIUA_MAX_MB` environment variable to set the maximum size of an array in megabytes
   - This allows catching memory errors on different systems
+- Optimize [`absolute value ⌵`](https://uiua.org/docs/absolute)[`complex ℂ`](https://uiua.org/docs/complex) to not create intermediate [`complex ℂ`](https://uiua.org/docs/complex) array
 
 ## 0.14.1 - 2024-12-23
 ### Interpreter

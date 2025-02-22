@@ -1549,6 +1549,20 @@ pub mod complex {
     }
 }
 
+pub mod abs_complex {
+    use super::*;
+
+    pub fn num(a: impl Into<f64>, b: impl Into<f64>) -> f64 {
+        complex::num_num(a.into(), b.into()).abs()
+    }
+    pub fn com(a: impl Into<Complex>, b: impl Into<Complex>) -> f64 {
+        complex::com_x(a.into(), b).abs()
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        complex::error(a, b, env)
+    }
+}
+
 pub mod max {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {

@@ -1673,8 +1673,8 @@ pub fn Editor<'a>(
                 view! {
                     <div class="pad-file-tab" on:click=on_insert>
                         {&path_clone.to_string_lossy().into_owned()}
-                        <span class="pad-file-tab-button" on:click=on_download inner_html="🠻" />
-                        <span class="pad-file-tab-button" on:click=on_delete inner_html="&times;" />
+                        <span class="material-symbols-rounded pad-file-tab-button" on:click=on_download>download</span>
+                        <span class="material-symbols-rounded pad-file-tab-button" on:click=on_delete>delete</span>
                     </div>
                 }
             })

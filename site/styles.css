@@ -1569,7 +1569,7 @@ a.clean {
 
 .pad-file-tab-button {
     opacity: 0.5;
-    scale: 1.2;
+    font-size: 1em;
 
     &:hover {
         opacity: 1;

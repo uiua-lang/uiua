@@ -494,7 +494,6 @@ option,
 .editor-area {
     grid-area: editor;
     position: relative;
-    overflow: hidden;
 }
 
 #code-area {
@@ -1692,5 +1691,9 @@ a.clean {
 
     .draggable-splitter {
         display: block;
+    }
+
+    .editor-area {
+        overflow: hidden;
     }
 }

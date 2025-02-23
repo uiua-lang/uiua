@@ -6,6 +6,7 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) and [`do ⍢`](https://uiua.org/docs/do) with net-negative signatures now preserve lower stack values between iterations
+- **Breaking Change** - [`atan ∠`](https://uiua.org/docs/atan) now interacts with [`under ⍜`](https://uiua.org/docs/under) similarly to [`couple ⊟`](https://uiua.org/docs/couple) and [`complex ℂ`](https://uiua.org/docs/complex)
 - Add subscripted [`on ⟜`](https://uiua.org/docs/on), [`by ⊸`](https://uiua.org/docs/by), [`with ⤙`](https://uiua.org/docs/with), and [`off ⤚`](https://uiua.org/docs/off)
   - These preserve N arguments rather than just the first or last
 - Add data definition methods

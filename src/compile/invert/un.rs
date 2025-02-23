@@ -232,7 +232,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
 
 pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &NoUn(NoUnder((Complex, (crate::Complex::I, Mul, Sub)))),
-    &(Atan, (Flip, UnAtan, Div, Mul)),
+    &NoUn(NoUnder((Atan, (Flip, UnAtan, Div, Mul)))),
     &((IgnoreMany(Flip), Add), Sub),
     &(Sub, Add),
     &((Flip, Sub), (Flip, Sub)),

@@ -114,6 +114,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &ReversePat,
     &TransposePat,
     &RotatePat,
+    &AtanPat,
     &FillPat,
     &GetLocalPat,
     &SetLocalPat,
@@ -977,6 +978,28 @@ under!(RotatePat, input, g_sig, _, _, Prim(Rotate, span), {
     };
     let before = Node::from_iter([CopyToUnder(1, span), Prim(Rotate, span)]);
     let after = Node::from_iter([PopUnder(1, span), ImplPrim(UndoRotate(count), span)]);
+    Ok((input, before, after))
+});
+
+under!(AtanPat, input, _, _, _, Prim(Atan, span), {
+    let before = Node::from_iter([
+        Mod(
+            Fork,
+            eco_vec![
+                ImplPrim(AbsComplex, span).sig_node()?,
+                Prim(Atan, span).sig_node()?
+            ],
+            span,
+        ),
+        PushUnder(1, span),
+    ]);
+    let after = Node::from_iter([
+        ImplPrim(UnAtan, span),
+        PopUnder(1, span),
+        Prim(Flip, span),
+        Prim(Over, span),
+        Mod(Both, eco_vec![Prim(Mul, span).sig_node()?], span),
+    ]);
     Ok((input, before, after))
 });
 

@@ -218,6 +218,11 @@
 ⍤⤙≍ 5 ⍜°√(+9) 4
 ⍤⤙≍ 5 ⍜∩°√+ 3 4
 
+# Atan
+⍤⤙≍ [1 2] [⍜∠∘ 1 2]
+⍤⤙≍ [2] [⍜(∠1)∘ 2]
+⍤⤙≍ [2] [⍜(∠⊙1)∘ 2]
+
 # Absolute value, Sign, and Mod
 ⍤⤙≍ "Hello World!" ⍜⌵∘ "Hello World!"
 ⍤⤙≍ "Hello World!" ⍜±∘ "Hello World!"

@@ -1585,7 +1585,7 @@ a.clean {
     cursor: help;
 }
 
-@media (max-width: 640) {
+@media (max-width: 640px) {
     .expand-editor-button {
         display: none;
     }

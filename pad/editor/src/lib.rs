@@ -90,6 +90,7 @@ pub fn Editor<'a>(
 
     let editor_wrapper_id = move || format!("editor{id}");
     let code_id = move || format!("code{id}");
+    let code_area_id = move || format!("code-area{id}");
     let code_outer_id = move || format!("code-outer{id}");
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
@@ -98,8 +99,6 @@ pub fn Editor<'a>(
 
     let editor_wrapper_element = move || -> HtmlDivElement { element(&editor_wrapper_id()) };
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
-    #[allow(unused)]
-    let code_outer_element = move || -> HtmlDivElement { element(&code_outer_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
     // Track line count
@@ -135,6 +134,7 @@ pub fn Editor<'a>(
     // Initialize the state
     let state = State {
         code_id: code_id(),
+        code_area_id: code_area_id(),
         code_outer_id: code_outer_id(),
         set_overlay,
         set_line_count,
@@ -1928,11 +1928,10 @@ pub fn Editor<'a>(
                         {example_tracker_element}
                     </div>
 
-                    <div id="code-area">
+                    <div id=code_area_id class="code-area" style=format!("height: {}em;", code_height_em + 1.25 / 2.0)>
                         <div
                             id=code_outer_id
                             class="code code-outer sized-code"
-                            style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
                         >
                             <div class="line-numbers">{line_numbers}</div>
                             <div class="code-and-overlay">

@@ -45,6 +45,7 @@ pub struct ChallengeDef {
 #[derive(Clone)]
 pub struct State {
     pub code_id: String,
+    pub code_area_id: String,
     pub code_outer_id: String,
     pub set_overlay: WriteSignal<String>,
     pub set_line_count: WriteSignal<usize>,
@@ -141,10 +142,11 @@ impl State {
         }
         self.set_overlay.set(code.into());
         let area = element::<HtmlTextAreaElement>(&self.code_id);
+        let code_area = element::<HtmlDivElement>(&self.code_area_id);
         let outer = element::<HtmlDivElement>(&self.code_outer_id);
 
         let height = format!("{}em", code.split('\n').count().max(1) as f32 * 1.25 + 0.75);
-        outer.style().set_property("min-height", &height).unwrap();
+        code_area.style().set_property("--normal-min-height", &height).unwrap();
 
         let rect = &virtual_rect(&area, code);
         let width = rect.width();

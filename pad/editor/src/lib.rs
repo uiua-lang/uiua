@@ -90,7 +90,9 @@ pub fn Editor<'a>(
 
     let editor_wrapper_id = move || format!("editor{id}");
     let code_id = move || format!("code{id}");
+    let code_area_id = move || format!("code-area{id}");
     let code_outer_id = move || format!("code-outer{id}");
+    let line_numbers_id = move || format!("line-numbers{id}");
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
     let hover_id = move || format!("hover{id}");
@@ -98,8 +100,6 @@ pub fn Editor<'a>(
 
     let editor_wrapper_element = move || -> HtmlDivElement { element(&editor_wrapper_id()) };
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
-    #[allow(unused)]
-    let code_outer_element = move || -> HtmlDivElement { element(&code_outer_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
     // Track line count
@@ -135,7 +135,10 @@ pub fn Editor<'a>(
     // Initialize the state
     let state = State {
         code_id: code_id(),
+        code_area_id: code_area_id(),
         code_outer_id: code_outer_id(),
+        line_numbers_id: line_numbers_id(),
+        editor_wrapper_id: editor_wrapper_id(),
         set_overlay,
         set_line_count,
         set_copied_link,
@@ -256,6 +259,7 @@ pub fn Editor<'a>(
     let run = move |do_format: bool, set_cursor: bool| {
         // Format code
         let (input, seed) = format(do_format, set_cursor);
+        state.update(|s| s.update_line_number_width());
 
         // Run code
         set_output.set(view! { <div class="running-text">"Running"</div> }.into_view());
@@ -1669,8 +1673,18 @@ pub fn Editor<'a>(
                 view! {
                     <div class="pad-file-tab" on:click=on_insert>
                         {&path_clone.to_string_lossy().into_owned()}
-                        <span class="pad-file-tab-button" on:click=on_download inner_html="🠻" />
-                        <span class="pad-file-tab-button" on:click=on_delete inner_html="&times;" />
+                        <span
+                            class="material-symbols-rounded pad-file-tab-button"
+                            on:click=on_download
+                        >
+                            download
+                        </span>
+                        <span
+                            class="material-symbols-rounded pad-file-tab-button"
+                            on:click=on_delete
+                        >
+                            delete
+                        </span>
                     </div>
                 }
             })
@@ -1928,13 +1942,15 @@ pub fn Editor<'a>(
                         {example_tracker_element}
                     </div>
 
-                    <div id="code-area">
-                        <div
-                            id=code_outer_id
-                            class="code code-outer sized-code"
-                            style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
-                        >
-                            <div class="line-numbers">{line_numbers}</div>
+                    <div
+                        id=code_area_id
+                        class="code-area"
+                        style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
+                    >
+                        <div id=code_outer_id class="code code-outer sized-code">
+                            <div id=line_numbers_id class="line-numbers">
+                                {line_numbers}
+                            </div>
                             <div class="code-and-overlay">
                                 // ///////////////////////
                                 // The text entry area //

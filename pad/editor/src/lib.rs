@@ -92,6 +92,7 @@ pub fn Editor<'a>(
     let code_id = move || format!("code{id}");
     let code_area_id = move || format!("code-area{id}");
     let code_outer_id = move || format!("code-outer{id}");
+    let line_numbers_id = move || format!("line-numbers{id}");
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
     let hover_id = move || format!("hover{id}");
@@ -136,6 +137,8 @@ pub fn Editor<'a>(
         code_id: code_id(),
         code_area_id: code_area_id(),
         code_outer_id: code_outer_id(),
+        line_numbers_id: line_numbers_id(),
+        editor_wrapper_id: editor_wrapper_id(),
         set_overlay,
         set_line_count,
         set_copied_link,
@@ -256,6 +259,7 @@ pub fn Editor<'a>(
     let run = move |do_format: bool, set_cursor: bool| {
         // Format code
         let (input, seed) = format(do_format, set_cursor);
+        state.update(|s| s.update_line_number_width());
 
         // Run code
         set_output.set(view! { <div class="running-text">"Running"</div> }.into_view());
@@ -1933,7 +1937,7 @@ pub fn Editor<'a>(
                             id=code_outer_id
                             class="code code-outer sized-code"
                         >
-                            <div class="line-numbers">{line_numbers}</div>
+                            <div id=line_numbers_id class="line-numbers">{line_numbers}</div>
                             <div class="code-and-overlay">
                                 // ///////////////////////
                                 // The text entry area //

@@ -510,7 +510,7 @@ option,
     padding: 0.3em;
     height: 100%;
     display: flex;
-    gap: 0.1em;
+    gap: 0.5em;
 }
 
 .code-and-overlay {
@@ -561,7 +561,7 @@ option,
 }
 
 .line-numbers {
-    min-width: 2em;
+    text-align: right;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1612,9 +1612,15 @@ a.clean {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto 1fr auto;
 
+    --line-numbers-width: 0;
+
     .code-area {
         min-height: var(--normal-min-height);
         resize: vertical;
+    }
+
+    .output {
+        margin-left: max(calc(var(--line-numbers-width) + 0.8em), 1.45em);
     }
 }
 

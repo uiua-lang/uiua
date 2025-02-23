@@ -47,6 +47,8 @@ pub struct State {
     pub code_id: String,
     pub code_area_id: String,
     pub code_outer_id: String,
+    pub line_numbers_id: String,
+    pub editor_wrapper_id: String,
     pub set_overlay: WriteSignal<String>,
     pub set_line_count: WriteSignal<usize>,
     pub set_copied_link: WriteSignal<bool>,
@@ -146,7 +148,10 @@ impl State {
         let outer = element::<HtmlDivElement>(&self.code_outer_id);
 
         let height = format!("{}em", code.split('\n').count().max(1) as f32 * 1.25 + 0.75);
-        code_area.style().set_property("--normal-min-height", &height).unwrap();
+        code_area
+            .style()
+            .set_property("--normal-min-height", &height)
+            .unwrap();
 
         let rect = &virtual_rect(&area, code);
         let width = rect.width();
@@ -201,9 +206,25 @@ impl State {
         self.set_copied_link.set(false);
         self.set_line_count();
     }
-    fn set_line_count(&self) {
+    pub fn update_line_number_width(&self) {
+        let line_numbers = element::<HtmlDivElement>(&self.line_numbers_id);
+        let editor = element::<HtmlDivElement>(&self.editor_wrapper_id);
+        let line_numbers_width = line_numbers.get_bounding_client_rect().width();
+        let line_numbers_width_str = format!("{}px", line_numbers_width);
+        editor
+            .style()
+            .set_property("--line-numbers-width", &line_numbers_width_str)
+            .unwrap();
+    }
+    pub fn set_line_count(&self) {
         self.set_line_count
             .set(get_code(&self.code_id).split('\n').count().max(1));
+
+        let state = self.clone();
+        set_timeout(
+            move || state.update_line_number_width(),
+            Duration::from_millis(0),
+        );
     }
     pub fn clear_history(&mut self) {
         self.past.clear();

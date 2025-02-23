@@ -126,7 +126,7 @@ li {
         background-color: #171d22;
     }
 
-    #editor {
+    .editor {
         outline: 0.1em solid #606468;
         background-color: #19232d;
     }
@@ -210,7 +210,7 @@ li {
         background-color: #c6e7ec;
     }
 
-    #editor {
+    .editor {
         background-color: #dff2f3;
         outline: 0.1em solid #0004;
     }
@@ -390,9 +390,27 @@ li {
     width: 0;
 }
 
-#editor {
+.editor {
     border-radius: 0.5em;
     position: relative;
+
+    ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+        -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+    }
+
+    ::-webkit-scrollbar-thumb:window-inactive {
+        background: rgba(255, 255, 255, 0.3);
+    }
 }
 
 #drag-message {
@@ -419,9 +437,10 @@ li {
 }
 
 #settings {
+    grid-area: settings;
     display: flex;
     justify-content: space-between;
-    font-size: 0.82em;
+    font-size: 0.6em;
     padding: 0.2em;
     gap: 0.5em;
 }
@@ -472,8 +491,15 @@ option,
     width: 3em;
 }
 
-#code-area {
+.editor-area {
+    grid-area: editor;
     position: relative;
+    overflow: hidden;
+}
+
+#code-area {
+    overflow: auto;
+    height: 100%;
 }
 
 .code-outer {
@@ -488,8 +514,6 @@ option,
     min-height: 1.8em;
     display: flex;
     gap: 0.1em;
-    overflow-x: auto;
-    overflow-y: hidden;
 }
 
 .code-and-overlay {
@@ -498,7 +522,7 @@ option,
 }
 
 .code-entry {
-    margin: 0.1em 0 0 0;
+    margin: 0;
     padding: 0;
     position: absolute;
     outline: none;
@@ -540,7 +564,7 @@ option,
 }
 
 .line-numbers {
-    min-width: 1.5em;
+    min-width: 2em;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -589,6 +613,8 @@ option,
     display: flex;
     justify-content: space-between;
     min-height: 1.9em;
+    overflow-x: hidden;
+    grid-area: output;
 }
 
 .output-lines {
@@ -628,7 +654,7 @@ option,
 }
 
 #code-buttons {
-    margin: 0.2em 0.2em 0.2em 0;
+    margin: 0.2em;
     display: flex;
     flex-wrap: nowrap;
     right: 0;
@@ -724,30 +750,29 @@ option,
 #code-right-side {
     display: flex;
     position: absolute;
-    top: 0.1em;
+    top: 0.5em;
     right: 0.2em;
     padding-right: 0.3em;
-    font-size: min(1em, 3vw);
     align-items: center;
-}
-
-#glyphs-toggle-button {
-    font-weight: bolder;
-    font-size: 0.9em;
-}
-
-#glyphs-toggle-button:hover:after {
-    font-size: 0.6em;
+    gap: 0.25em;
+    z-index: 2;
 }
 
 .editor-right-button {
-    font-weight: bolder;
+    font-size: 0.75em;
+    width: 1em;
+    height: 1em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0.25em;
     opacity: 0.5;
+    padding: 0.75em;
+    transition: .25s;
 }
 
 .editor-right-button:hover {
     opacity: 1;
-    z-index: 2;
 }
 
 .info-button:hover::after,
@@ -756,13 +781,15 @@ option,
     content: attr(data-title);
     position: absolute;
     font-family: "Code Font", monospace;
-    font-size: 1em;
-    left: calc(-8em - 50%);
+    font-size: 0.75em;
+    right: 0;
+    top: 100%;
     bottom: 1.5em;
     color: #eee;
     padding: 0.2em;
     border-radius: 0.2em;
     pointer-events: none;
+    height: fit-content;
 }
 
 .editor-right-button:hover::after,
@@ -794,11 +821,11 @@ option,
 
 .glyph-buttons {
     padding: 0.1em;
-    font-size: 1.4em;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-evenly;
     align-items: baseline;
+    grid-area: glyphs;
 }
 
 .glyph-button {
@@ -1511,17 +1538,21 @@ a.clean {
     }
 }
 
-.pad-files {
+.glyph-buttons + .pad-files {
     border-top: 0.1em solid #60646838;
+
+    @media (prefers-color-scheme: light) {
+        border-color: #0000001a;
+    }
+}
+
+.pad-files {
     padding: 0.3em;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     gap: 0.3em;
-
-    @media (prefers-color-scheme: light) {
-        border-color: #0000001a;
-    }
+    grid-area: files;
 }
 
 .pad-file-tab {
@@ -1531,7 +1562,7 @@ a.clean {
     background-color: #294259;
     border-radius: 999px;
     cursor: pointer;
-    font-size: .75em;
+    font-size: .6em;
     line-height: 1em;
 
     @media (prefers-color-scheme: light) {
@@ -1552,4 +1583,113 @@ a.clean {
     text-decoration: underline dotted;
     font-size: 0.8em;
     cursor: help;
+}
+
+@media (max-width: 640px) {
+    .expand-editor-button {
+        display: none;
+    }
+}
+
+.draggable-splitter {
+    grid-area: draggable;
+    cursor: ew-resize;
+    display: none;
+    background-color: #60646838;
+
+    &:hover, &.active {
+        background-color: #60646880;
+    }
+}
+
+.normal-editor {
+    display: grid;
+    grid-template-areas:
+        'glyphs'
+        'files'
+        'settings'
+        'editor'
+        'output'
+        ;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto 1fr auto;
+}
+
+.fullscreen-editor {
+    display: grid;
+    grid-template-areas:
+        'glyphs draggable output'
+        'files draggable output'
+        'settings draggable output'
+        'editor draggable output'
+        ;
+    grid-template-columns: 1fr 0.25em 1fr;
+    grid-template-rows: auto auto auto 1fr;
+
+    border-radius: 0 !important;
+    outline: none;
+
+    position: fixed !important;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+
+    .code-outer {
+        resize: none;
+        height: 100% !important;
+        border-bottom-right-radius: 0;
+        border-bottom-right-radius: 0;
+        overflow-y: unset;
+        overflow-x: unset;
+    }
+
+    .code-entry {
+        height: 100% !important;
+    }
+
+    .output-lines {
+        width: 100%;
+        overflow: auto;
+    }
+
+    .output-wrapper {
+        transform: none;
+        overflow-x: unset;
+    }
+
+    .output-frame {
+        display: grid;
+        grid-template-areas:
+            'actions'
+            'output';
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+
+        #code-buttons {
+            grid-area: actions;
+            border-bottom: 0.1em solid #60646838;
+            margin: 0;
+            padding: 0.2em;
+        }
+
+        .output-lines {
+            grid-area: output;
+        }
+    }
+
+    .output {
+        transform: none;
+        margin: 0;
+        padding: 0.4em;
+    }
+
+    .output-diagnostics {
+        margin: 0;
+        padding: 0.4em;
+    }
+
+    .draggable-splitter {
+        display: block;
+    }
 }

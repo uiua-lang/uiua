@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.15
-- Change how `under complex` works
 - Allow for multi-value constant bindings
 - Non-dyadic `backward`?
 - `un`/`anti` `stencil`

@@ -1673,8 +1673,18 @@ pub fn Editor<'a>(
                 view! {
                     <div class="pad-file-tab" on:click=on_insert>
                         {&path_clone.to_string_lossy().into_owned()}
-                        <span class="material-symbols-rounded pad-file-tab-button" on:click=on_download>download</span>
-                        <span class="material-symbols-rounded pad-file-tab-button" on:click=on_delete>delete</span>
+                        <span
+                            class="material-symbols-rounded pad-file-tab-button"
+                            on:click=on_download
+                        >
+                            download
+                        </span>
+                        <span
+                            class="material-symbols-rounded pad-file-tab-button"
+                            on:click=on_delete
+                        >
+                            delete
+                        </span>
                     </div>
                 }
             })
@@ -1932,12 +1942,15 @@ pub fn Editor<'a>(
                         {example_tracker_element}
                     </div>
 
-                    <div id=code_area_id class="code-area" style=format!("height: {}em;", code_height_em + 1.25 / 2.0)>
-                        <div
-                            id=code_outer_id
-                            class="code code-outer sized-code"
-                        >
-                            <div id=line_numbers_id class="line-numbers">{line_numbers}</div>
+                    <div
+                        id=code_area_id
+                        class="code-area"
+                        style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
+                    >
+                        <div id=code_outer_id class="code code-outer sized-code">
+                            <div id=line_numbers_id class="line-numbers">
+                                {line_numbers}
+                            </div>
                             <div class="code-and-overlay">
                                 // ///////////////////////
                                 // The text entry area //

@@ -754,7 +754,7 @@ option,
     right: 0.2em;
     padding-right: 0.3em;
     align-items: center;
-    gap: 0.25em;
+    gap: 0;
     z-index: 2;
 }
 
@@ -1538,7 +1538,7 @@ a.clean {
     }
 }
 
-.glyph-buttons + .pad-files {
+.glyph-buttons+.pad-files {
     border-top: 0.1em solid #60646838;
 
     @media (prefers-color-scheme: light) {
@@ -1597,7 +1597,8 @@ a.clean {
     display: none;
     background-color: #60646838;
 
-    &:hover, &.active {
+    &:hover,
+    &.active {
         background-color: #60646880;
     }
 }
@@ -1610,7 +1611,7 @@ a.clean {
         'settings'
         'editor'
         'output'
-        ;
+    ;
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto 1fr auto;
 }
@@ -1622,7 +1623,7 @@ a.clean {
         'files draggable output'
         'settings draggable output'
         'editor draggable output'
-        ;
+    ;
     grid-template-columns: 1fr 0.25em 1fr;
     grid-template-rows: auto auto auto 1fr;
 

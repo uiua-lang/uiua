@@ -713,11 +713,20 @@ impl Compiler {
                         node.prepend(Node::Prim(Flip, span));
                         node
                     }
+                    4 => {
+                        let span = self.add_span(modified.modifier.span.clone());
+                        node.prepend(Node::Mod(
+                            Dip,
+                            eco_vec![Node::Prim(Flip, span).sig_node().unwrap()],
+                            span,
+                        ));
+                        node
+                    }
                     _ => {
                         self.add_error(
                             modified.modifier.span.clone(),
                             format!(
-                                "Currently, {}'s function must take 2 arguments, \
+                                "Currently, {}'s function must take 2 or 4 arguments, \
                                 but its signature is {sig}",
                                 Backward.format(),
                             ),

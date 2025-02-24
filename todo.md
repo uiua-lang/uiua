@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.15
-- Allow for multi-value constant bindings
 - Non-dyadic `backward`?
 - `un`/`anti` `stencil`
 - Multidimensional `group`

@@ -1967,7 +1967,10 @@ primitive!(
     /// ex: °˜⊂ [1 2 3]
     /// ex:  - 2 5
     ///   : ˜- 2 5
-    /// [backward] is currently only allowed with dyadic functions.
+    /// If the function takes 4 arguments, the second two arguments are reversed.
+    /// ex: ˜⊟₄ 1 2 3 4
+    /// ex: [˜∩⊟] 1 2 3 4
+    /// [backward] is currently only allowed with dyadic and tetradic functions.
     ([1], Backward, Stack, ("backward", '˜')),
     /// Call a function on two sets of values
     ///

@@ -664,12 +664,13 @@ fn multi_partition_indices(markers: &Array<i64>) -> Vec<(i64, Vec<usize>)> {
                 }
                 1 => groups[adjacent_groups[0]].1.push(curr.clone()),
                 _ => {
-                    let mut new_group = Vec::new();
-                    for (i, g) in adjacent_groups.into_iter().enumerate() {
-                        new_group.extend(groups.remove(g - i).1);
+                    let mut adjacent_groups = adjacent_groups.into_iter();
+                    let first = adjacent_groups.next().unwrap();
+                    for (i, g) in adjacent_groups.enumerate() {
+                        let group = groups.remove(g - i).1;
+                        groups[first].1.extend(group);
                     }
-                    new_group.push(curr.clone());
-                    groups.push((marker, new_group));
+                    groups[first].1.push(curr.clone());
                 }
             }
         }

@@ -510,7 +510,11 @@ impl Formatter<'_> {
         let mut max_name_len = 0;
         for (i, item) in items.iter().enumerate() {
             if i > 0 || depth > 0 {
-                self.newline(depth);
+                if matches!(item, Item::Words(words) if words.iter().all(|line| line.is_empty())) {
+                    self.output.push('\n');
+                } else {
+                    self.newline(depth);
+                }
             }
             // Calculate max name length to align single-line bindings
             match item {
@@ -1768,6 +1772,16 @@ F ← (|2
 ~ \"x\"
   ~ A B
   ~ C D
+┌─╴A
+  F ← 2
+
+  G ← 3 # hi
+└─╴
+┌─╴A
+  F ← 2
+
+  G ← 3
+└─╴
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

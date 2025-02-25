@@ -503,10 +503,21 @@ impl Value {
     }
     pub(crate) fn anti_keep(self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_nums(env, "Keep amount must be a list of natural numbers")?;
-        if self.rank() == 0 {
-            return Err(env.error("Cannot anti keep by scalar"));
-        }
-        Ok(val_as_arr!(kept, |a| a.anti_keep(&counts, env)?.into()))
+        Ok(if self.rank() == 0 {
+            if counts[0] == 0.0 {
+                return Err(env.error("Scalar anti keep cannot be 0"));
+            }
+            let count = 1.0 / counts[0];
+            match kept {
+                Value::Num(a) => a.keep_scalar_real(count, env)?.into(),
+                Value::Byte(a) => a.convert::<f64>().keep_scalar_real(count, env)?.into(),
+                Value::Complex(a) => a.keep_scalar_real(count, env)?.into(),
+                Value::Char(a) => a.keep_scalar_real(count, env)?.into(),
+                Value::Box(a) => a.keep_scalar_real(count, env)?.into(),
+            }
+        } else {
+            val_as_arr!(kept, |a| a.anti_keep(&counts, env)?.into())
+        })
     }
     pub(crate) fn undo_keep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_nums(
@@ -765,7 +776,7 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         let mut new_shape = self.shape.clone();
-        new_shape[0] = counts.len();
+        *new_shape.row_count_mut() = counts.len();
         Ok(Array::new(new_shape, new_data))
     }
     fn undo_keep(self, counts: &[f64], mut into: Self, env: &Uiua) -> UiuaResult<Self> {

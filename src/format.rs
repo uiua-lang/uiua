@@ -26,17 +26,26 @@ use crate::{
 };
 
 trait ConfigValue: Sized {
-    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<Self>;
+    fn from_value(value: &Value, env: &Uiua, requirement: Option<&'static str>)
+        -> UiuaResult<Self>;
 }
 
 impl ConfigValue for bool {
-    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<bool> {
+    fn from_value(
+        value: &Value,
+        env: &Uiua,
+        requirement: Option<&'static str>,
+    ) -> UiuaResult<bool> {
         value.as_bool(env, requirement)
     }
 }
 
 impl ConfigValue for usize {
-    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<usize> {
+    fn from_value(
+        value: &Value,
+        env: &Uiua,
+        requirement: Option<&'static str>,
+    ) -> UiuaResult<usize> {
         value.as_nat(env, requirement)
     }
 }
@@ -145,7 +154,7 @@ The following configuration options are available:
                             let requirement = requirement!([<$name:camel>], $ty);
                             let function_name = stringify!([<$name:camel>]);
                             if let Some(binding) = bindings.remove(function_name) {
-                                Some($ty::from_value(&binding, &env, requirement)?)
+                                Some($ty::from_value(&binding, &env, Some(requirement))?)
                             } else {
                                 None
                             }

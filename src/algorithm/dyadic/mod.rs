@@ -202,10 +202,10 @@ impl Value {
         val_as_arr!(self, |a| a.reshape(dims, env))
     }
     pub(crate) fn undo_reshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
-        if old_shape.as_nat(env, "").is_ok() {
+        if old_shape.as_nat(env, None).is_ok() {
             return Err(env.error("Cannot undo scalar reshape"));
         }
-        let orig_shape = old_shape.as_nats(env, "Shape should be a list of integers")?;
+        let orig_shape = old_shape.as_nats(env, Some("Shape should be a list of integers"))?;
         if env.fill().value_for(self).is_some()
             || orig_shape.iter().product::<usize>() == self.shape().iter().product::<usize>()
         {
@@ -400,7 +400,7 @@ impl Value {
     /// `rerank` this value with another
     pub fn rerank(&mut self, rank: &Self, env: &Uiua) -> UiuaResult {
         self.take_map_keys();
-        let irank = rank.as_int(env, "Rank must be an integer")?;
+        let irank = rank.as_int(env, Some("Rank must be an integer"))?;
         let shape = self.shape_mut();
         let rank = irank.unsigned_abs();
         if irank >= 0 {
@@ -448,7 +448,7 @@ impl Value {
             }
             return Ok(());
         }
-        let irank = rank.as_int(env, "Rank must be an integer")?;
+        let irank = rank.as_int(env, Some("Rank must be an integer"))?;
         if irank == 0 {
             return self.undo_deshape(None, orig_shape, env);
         }
@@ -483,8 +483,10 @@ impl Value {
     pub fn keep(self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_nums(
             env,
-            "Keep amount must be a positive real number \
+            Some(
+                "Keep amount must be a positive real number \
             or list of natural numbers",
+            ),
         )?;
         Ok(if self.rank() == 0 {
             match kept {
@@ -502,7 +504,7 @@ impl Value {
         val_as_arr!(self, |a| a.unkeep(env).map(|(a, b)| (a, b.into())))
     }
     pub(crate) fn anti_keep(self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
-        let counts = self.as_nums(env, "Keep amount must be a list of natural numbers")?;
+        let counts = self.as_nums(env, Some("Keep amount must be a list of natural numbers"))?;
         Ok(if self.rank() == 0 {
             if counts[0] == 0.0 {
                 return Err(env.error("Scalar anti keep cannot be 0"));
@@ -522,8 +524,10 @@ impl Value {
     pub(crate) fn undo_keep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_nums(
             env,
-            "Keep amount must be a positive real number \
+            Some(
+                "Keep amount must be a positive real number \
             or list of natural numbers",
+            ),
         )?;
         if self.rank() == 0 {
             let count = counts[0];
@@ -1260,13 +1264,13 @@ fn derive_undices(mut indices: Vec<isize>, rank: usize, env: &Uiua) -> UiuaResul
 impl Value {
     /// `orient` a value by this value
     pub fn orient(&self, target: &mut Self, env: &Uiua) -> UiuaResult {
-        let indices = self.as_ints(env, "Orient indices must be integers")?;
+        let indices = self.as_ints(env, Some("Orient indices must be integers"))?;
         let undices = derive_undices(indices, target.rank(), env)?;
         target.match_fill(env);
         val_as_arr!(target, |a| a.orient(undices, env))
     }
     pub(crate) fn anti_orient(&self, target: Self, env: &Uiua) -> UiuaResult<Self> {
-        let indices = self.as_ints(env, "Unorient indices must be integers")?;
+        let indices = self.as_ints(env, Some("Unorient indices must be integers"))?;
         let undices = derive_undices(indices, target.rank(), env)?;
         val_as_arr!(target, |a| a.anti_orient(undices, env).map(Into::into))
     }
@@ -1276,7 +1280,7 @@ impl Value {
         into: Self,
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        let indices = indices.as_ints(env, "Orient indices must be integers")?;
+        let indices = indices.as_ints(env, Some("Orient indices must be integers"))?;
         let undices = derive_undices(indices, self.rank(), env)?;
         self.generic_bin_into(
             into,
@@ -1509,7 +1513,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Get the `base` of a value
     pub fn base(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let base = self.as_nums(env, "Base must be a number or list of numbers")?;
+        let base = self.as_nums(env, Some("Base must be a number or list of numbers"))?;
         Ok(if self.rank() == 0 {
             match of {
                 Value::Num(n) => n.base_scalar(base[0], env)?.into(),
@@ -1535,7 +1539,7 @@ impl Value {
         })
     }
     pub(crate) fn antibase(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let base = self.as_nums(env, "Base must be a number or list of numbers")?;
+        let base = self.as_nums(env, Some("Base must be a number or list of numbers"))?;
         Ok(if self.rank() == 0 {
             match of {
                 Value::Num(n) => n.antibase_scalar(base[0], env)?.into(),
@@ -1733,7 +1737,7 @@ impl Value {
             range.memberof(b, env)
         }
 
-        let Ok(range_bound) = self.as_num(env, "") else {
+        let Ok(range_bound) = self.as_num(env, None) else {
             return fallback(self, &from, env);
         };
 
@@ -1794,7 +1798,7 @@ impl Value {
         }
 
         let Some(range_bound) =
-            (of.as_nums(env, "").ok()).filter(|nums| nums.iter().all(|f| f.fract() == 0.0))
+            (of.as_nums(env, None).ok()).filter(|nums| nums.iter().all(|f| f.fract() == 0.0))
         else {
             return fallback(of, &elems, env);
         };
@@ -1886,13 +1890,13 @@ impl Value {
                 if let Value::Box(arr) = self {
                     match arr.rank() {
                         0 => {
-                            let shape = arr.data[0].0.as_nats(env, SHAPE_REQ)?;
+                            let shape = arr.data[0].0.as_nats(env, Some(SHAPE_REQ))?;
                             gen(&shape)?.into()
                         }
                         1 => {
                             let mut data = EcoVec::new();
                             for Boxed(row) in &arr.data {
-                                let shape = row.as_nats(env, SHAPE_REQ)?;
+                                let shape = row.as_nats(env, Some(SHAPE_REQ))?;
                                 data.push(Boxed(gen(&shape)?.into()));
                             }
                             data.into()

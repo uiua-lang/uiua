@@ -294,7 +294,7 @@ fn generic<T>() -> InversionResult<T> {
 pub(crate) fn match_format_pattern(parts: EcoVec<EcoString>, env: &mut Uiua) -> UiuaResult {
     let val = env
         .pop(1)?
-        .as_string(env, "Matching a format pattern expects a string")?;
+        .as_string(env, Some("Matching a format pattern expects a string"))?;
     match parts.as_slice() {
         [] => {}
         [part] => {

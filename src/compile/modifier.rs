@@ -1534,7 +1534,7 @@ impl Compiler {
 
                 // Parse the macro output
                 let strings = match val
-                    .as_strings(env, "Code macro output must be a string or list of strings")
+                    .as_strings(env, Some("Code macro output must be a string or list of strings"))
                 {
                     Ok(strings) => strings,
                     Err(_) => val.representation().lines().map(Into::into).collect(),

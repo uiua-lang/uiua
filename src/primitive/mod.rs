@@ -912,7 +912,7 @@ impl Primitive {
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
-                if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
+                if !cond.as_nat(env, None).is_ok_and(|n| n == 1) {
                     return Err(UiuaErrorKind::Throw(
                         msg.into(),
                         env.span().clone(),
@@ -1264,30 +1264,30 @@ impl ImplPrimitive {
                 env.push(first);
             }
             ImplPrimitive::UnJoinShape => {
-                let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let shape = (env.pop(1))?.as_nats(env, Some("Shape must be natural numbers"))?;
                 let val = env.pop(2)?;
                 let (first, rest) = val.unjoin_shape(&shape, None, false, env)?;
                 env.push(rest);
                 env.push(first);
             }
             ImplPrimitive::UnJoinShapeEnd => {
-                let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let shape = (env.pop(1))?.as_nats(env, Some("Shape must be natural numbers"))?;
                 let val = env.pop(2)?;
                 let (first, rest) = val.unjoin_shape(&shape, None, true, env)?;
                 env.push(rest);
                 env.push(first);
             }
             ImplPrimitive::UnJoinShape2 => {
-                let a_shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
-                let b_shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let a_shape = (env.pop(1))?.as_nats(env, Some("Shape must be natural numbers"))?;
+                let b_shape = (env.pop(1))?.as_nats(env, Some("Shape must be natural numbers"))?;
                 let val = env.pop(2)?;
                 let (first, rest) = val.unjoin_shape(&a_shape, Some(&b_shape), false, env)?;
                 env.push(rest);
                 env.push(first);
             }
             ImplPrimitive::UnJoinShape2End => {
-                let a_shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
-                let b_shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let a_shape = (env.pop(1))?.as_nats(env, Some("Shape must be natural numbers"))?;
+                let b_shape = (env.pop(1))?.as_nats(env, Some("Shape must be natural numbers"))?;
                 let val = env.pop(2)?;
                 let (first, rest) = val.unjoin_shape(&a_shape, Some(&b_shape), true, env)?;
                 env.push(rest);
@@ -1334,22 +1334,22 @@ impl ImplPrimitive {
                 }
             }
             ImplPrimitive::UnJson => {
-                let json = env.pop(1)?.as_string(env, "JSON expects a string")?;
+                let json = env.pop(1)?.as_string(env, Some("JSON expects a string"))?;
                 let val = Value::from_json_string(&json, env)?;
                 env.push(val);
             }
             ImplPrimitive::UnBinary => {
-                let bytes = env.pop(1)?.as_bytes(env, "Binary expects bytes")?;
+                let bytes = env.pop(1)?.as_bytes(env, Some("Binary expects bytes"))?;
                 let val = Value::from_binary(&bytes, env)?;
                 env.push(val);
             }
             ImplPrimitive::UnCsv => {
-                let csv = env.pop(1)?.as_string(env, "CSV expects a string")?;
+                let csv = env.pop(1)?.as_string(env, Some("CSV expects a string"))?;
                 let val = Value::from_csv(&csv, env)?;
                 env.push(val);
             }
             ImplPrimitive::UnXlsx => {
-                let xlsx = env.pop(1)?.as_bytes(env, "XLSX expects bytes")?;
+                let xlsx = env.pop(1)?.as_bytes(env, Some("XLSX expects bytes"))?;
                 let val = Value::from_xlsx(&xlsx, env)?;
                 env.push(val);
             }
@@ -1364,7 +1364,7 @@ impl ImplPrimitive {
                 env.push(raw_mode);
             }
             ImplPrimitive::UnClip => {
-                let contents = env.pop(1)?.as_string(env, "Contents must be a string")?;
+                let contents = env.pop(1)?.as_string(env, Some("Contents must be a string"))?;
                 (env.rt.backend)
                     .set_clipboard(&contents)
                     .map_err(|e| env.error(e))?;
@@ -1451,7 +1451,7 @@ impl ImplPrimitive {
                 env.push(from.undo_select(index, into, env)?);
             }
             ImplPrimitive::UndoWhere => {
-                let shape = env.pop(1)?.as_nats(env, "Shape must be natural numbers")?;
+                let shape = env.pop(1)?.as_nats(env, Some("Shape must be natural numbers"))?;
                 let indices = env.pop(2)?;
                 let mask = indices.undo_where(&shape, env)?;
                 env.push(mask);
@@ -1467,7 +1467,7 @@ impl ImplPrimitive {
                 let rank = env.pop(1)?;
                 let shape = Shape::from(
                     env.pop(2)?
-                        .as_nats(env, "Shape must be a list of natural numbers")?,
+                        .as_nats(env, Some("Shape must be a list of natural numbers"))?,
                 );
                 let mut array = env.pop(3)?;
                 array.undo_rerank(&rank, &shape, env)?;
@@ -1510,7 +1510,7 @@ impl ImplPrimitive {
             ImplPrimitive::UndoDeshape(sub) => {
                 let shape = Shape::from(
                     env.pop(1)?
-                        .as_nats(env, "Shape must be a list of natural numbers")?,
+                        .as_nats(env, Some("Shape must be a list of natural numbers"))?,
                 );
                 let mut val = env.pop(2)?;
                 val.undo_deshape(*sub, &shape, env)?;
@@ -1712,7 +1712,7 @@ impl ImplPrimitive {
             ImplPrimitive::ValidateType | ImplPrimitive::ValidateTypeConsume => {
                 let type_num = env
                     .pop(1)?
-                    .as_nat(env, "Type number must be a natural number")?;
+                    .as_nat(env, Some("Type number must be a natural number"))?;
                 let val = env.pop(2)?;
                 if val.type_id() as usize != type_num {
                     let found = if val.element_count() == 1 {
@@ -1737,7 +1737,7 @@ impl ImplPrimitive {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 let mut res = Ok(());
-                if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
+                if !cond.as_nat(env, None).is_ok_and(|n| n == 1) {
                     res = Err(UiuaErrorKind::Throw(
                         msg.into(),
                         env.span().clone(),
@@ -1921,7 +1921,7 @@ impl ImplPrimitive {
                 let [f] = get_ops(ops, env)?;
                 let len = env
                     .pop(1)?
-                    .as_nat(env, "Rows length must be a natural number")?;
+                    .as_nat(env, Some("Rows length must be a natural number"))?;
                 let start = env.require_height(f.sig.args)?;
                 let inventory = matches!(self, ImplPrimitive::UndoInventory);
                 for i in 0..f.sig.args {
@@ -1970,10 +1970,10 @@ fn regex(env: &mut Uiua) -> UiuaResult {
     thread_local! {
         pub static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
     }
-    let pattern = env.pop(1)?.as_string(env, "Pattern must be a string")?;
+    let pattern = env.pop(1)?.as_string(env, Some("Pattern must be a string"))?;
     let target = env
         .pop(1)?
-        .as_string(env, "Matching target must be a string")?;
+        .as_string(env, Some("Matching target must be a string"))?;
     REGEX_CACHE.with(|cache| -> UiuaResult {
         let mut cache = cache.borrow_mut();
         let regex = if let Some(regex) = cache.get(&pattern) {

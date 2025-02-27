@@ -146,7 +146,7 @@ fn path_impl(
                 self.env.exec(heuristic.clone())?;
                 let h = (self.env)
                     .pop("heuristic")?
-                    .as_num(self.env, "Heuristic must be a number")?;
+                    .as_num(self.env, Some("Heuristic must be a number"))?;
                 if h < 0.0 {
                     return Err(self
                         .env
@@ -168,7 +168,7 @@ fn path_impl(
             self.env.exec(self.neighbors.clone())?;
             let (nodes, costs) = if self.neighbors.sig.outputs == 2 {
                 let costs = (self.env.pop("neighbors costs")?)
-                    .as_nums(self.env, "Costs must be a list of numbers")?;
+                    .as_nums(self.env, Some("Costs must be a list of numbers"))?;
                 let nodes = self.env.pop("neighbors nodes")?;
                 if costs.len() != nodes.row_count() {
                     return Err(self.env.error(format!(
@@ -198,7 +198,7 @@ fn path_impl(
             }
             self.env.exec(self.is_goal.clone())?;
             let is_goal = (self.env.pop("is_goal")?)
-                .as_bool(self.env, "path goal function must return a boolean")?;
+                .as_bool(self.env, Some("path goal function must return a boolean"))?;
             Ok(is_goal)
         }
     }

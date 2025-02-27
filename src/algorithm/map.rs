@@ -225,7 +225,7 @@ impl Value {
         value: Value,
         env: &Uiua,
     ) -> UiuaResult {
-        let index = index.as_nat(env, "Index must be a non-negative integer")?;
+        let index = index.as_nat(env, Some("Index must be a non-negative integer"))?;
         if index > self.row_count() {
             return Err(env.error(format!(
                 "Index {} is out of bounds for map with {} entries",

@@ -1004,9 +1004,9 @@ impl Uiua {
     /// Pop a value and try to convert it
     pub fn pop_convert<T>(
         &mut self,
-        f: impl FnOnce(&Value, &Uiua, &'static str) -> UiuaResult<T>,
+        f: impl FnOnce(&Value, &Uiua, Option<&'static str>) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        f(&self.pop(())?, self, "")
+        f(&self.pop(())?, self, None)
     }
     /// Attempt to pop a value and convert it to a boolean
     pub fn pop_bool(&mut self) -> UiuaResult<bool> {
@@ -1649,7 +1649,7 @@ impl Uiua {
         if cfg!(target_arch = "wasm32") {
             return Err(self.error("try_recv is not supported in this environment"));
         }
-        let id = id.as_nat(self, "Thread id must be a natural number")?;
+        let id = id.as_nat(self, Some("Thread id must be a natural number"))?;
         let value = match self.channel(id)?.recv.try_recv() {
             Ok(value) => value,
             Err(TryRecvError::Empty) => return Err(self.error("No value available")),

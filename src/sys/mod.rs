@@ -685,20 +685,18 @@ impl Handle {
 }
 
 impl Value {
-    /// Attempt to convert the array to systme handle
-    pub fn as_handle(&self, env: &Uiua, mut expected: &'static str) -> UiuaResult<Handle> {
-        if expected.is_empty() {
-            expected = "Expected value to be a stream handle";
-        }
+    /// Attempt to convert the array to system handle
+    pub fn as_handle(&self, env: &Uiua, expected: Option<&'static str>) -> UiuaResult<Handle> {
+        let expected = expected.unwrap_or("Expected value to be a stream handle");
         match self {
             Value::Box(b) => {
                 if let Some(b) = b.as_scalar() {
-                    b.0.as_nat(env, expected).map(|h| Handle(h as u64))
+                    b.0.as_nat(env, Some(expected)).map(|h| Handle(h as u64))
                 } else {
                     Err(env.error(format!("{expected}, but it is rank {}", b.rank())))
                 }
             }
-            value => value.as_nat(env, expected).map(|h| Handle(h as u64)),
+            value => value.as_nat(env, Some(expected)).map(|h| Handle(h as u64)),
         }
     }
 }
@@ -1216,11 +1214,13 @@ impl SysOp {
                 env.push(cowslice![height as f64, width as f64])
             }
             SysOp::Exit => {
-                let status = env.pop(1)?.as_int(env, "Status must be an integer")? as i32;
+                let status = env.pop(1)?.as_int(env, Some("Status must be an integer"))? as i32;
                 (env.rt.backend).exit(status).map_err(|e| env.error(e))?;
             }
             SysOp::RawMode => {
-                let raw_mode = env.pop(1)?.as_bool(env, "Raw mode must be a boolean")?;
+                let raw_mode = env
+                    .pop(1)?
+                    .as_bool(env, Some("Raw mode must be a boolean"))?;
                 (env.rt.backend)
                     .set_raw_mode(raw_mode)
                     .map_err(|e| env.error(e))?;
@@ -1234,7 +1234,7 @@ impl SysOp {
             SysOp::Var => {
                 let key = env
                     .pop(1)?
-                    .as_string(env, "Augument to var must be a string")?;
+                    .as_string(env, Some("Augument to var must be a string"))?;
                 let var =
                     env.rt.backend.var(&key).ok_or_else(|| {
                         env.error(format!("Environment variable `{key}` is not set"))
@@ -1242,7 +1242,7 @@ impl SysOp {
                 env.push(var);
             }
             SysOp::FOpen => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 let handle = (env.rt.backend)
                     .open_file(path.as_ref(), true)
                     .map_err(|e| env.error(e))?
@@ -1250,7 +1250,7 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::FCreate => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 let handle: Value = (env.rt.backend)
                     .create_file(path.as_ref())
                     .map_err(|e| env.error(e))?
@@ -1258,27 +1258,27 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::FMakeDir => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 (env.rt.backend)
                     .make_dir(path.as_ref())
                     .map_err(|e| env.error(e))?;
             }
             SysOp::FDelete => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 env.rt.backend.delete(&path).map_err(|e| env.error(e))?;
             }
             SysOp::FTrash => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 env.rt.backend.trash(&path).map_err(|e| env.error(e))?;
             }
             SysOp::ReadStr => {
                 let count = env
                     .pop(1)?
-                    .as_nat_or_inf(env, "Count must be an integer or infinity")?;
+                    .as_nat_or_inf(env, Some("Count must be an integer or infinity"))?;
                 if let Some(count) = count {
                     validate_size::<char>([count], env)?;
                 }
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 let s = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
@@ -1346,11 +1346,11 @@ impl SysOp {
             SysOp::ReadBytes => {
                 let count = env
                     .pop(1)?
-                    .as_nat_or_inf(env, "Count must be an integer or infinity")?;
+                    .as_nat_or_inf(env, Some("Count must be an integer or infinity"))?;
                 if let Some(count) = count {
                     validate_size::<u8>([count], env)?;
                 }
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
@@ -1370,7 +1370,7 @@ impl SysOp {
             }
             SysOp::ReadUntil => {
                 let delim = env.pop(1)?;
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 if delim.rank() > 1 {
                     return Err(env.error("Delimiter must be a rank 0 or 1 string or byte array"));
                 }
@@ -1435,7 +1435,7 @@ impl SysOp {
             }
             SysOp::Write => {
                 let data = env.pop(1)?;
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     Value::Byte(arr) => arr.data.into(),
@@ -1463,7 +1463,7 @@ impl SysOp {
                 }
             }
             SysOp::FReadAllStr => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 let bytes = (env.rt.backend)
                     .file_read_all(path.as_ref())
                     .or_else(|e| match path.as_str() {
@@ -1476,7 +1476,7 @@ impl SysOp {
                 env.push(s);
             }
             SysOp::FReadAllBytes => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 let bytes = (env.rt.backend)
                     .file_read_all(path.as_ref())
                     .or_else(|e| match path.as_str() {
@@ -1489,7 +1489,7 @@ impl SysOp {
                 env.push(Array::<u8>::from_iter(bytes));
             }
             SysOp::FWriteAll => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 let data = env.pop(2)?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
@@ -1515,22 +1515,24 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
             }
             SysOp::FExists => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 let exists = env.rt.backend.file_exists(&path);
                 env.push(exists);
             }
             SysOp::FListDir => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 let paths = env.rt.backend.list_dir(&path).map_err(|e| env.error(e))?;
                 env.push(Array::<Boxed>::from_iter(paths));
             }
             SysOp::FIsFile => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 let is_file = env.rt.backend.is_file(&path).map_err(|e| env.error(e))?;
                 env.push(is_file);
             }
             SysOp::Invoke => {
-                let path = env.pop(1)?.as_string(env, "Invoke path must be a string")?;
+                let path = env
+                    .pop(1)?
+                    .as_string(env, Some("Invoke path must be a string"))?;
                 env.rt.backend.invoke(&path).map_err(|e| env.error(e))?;
             }
             SysOp::ImShow => {
@@ -1548,7 +1550,7 @@ impl SysOp {
             SysOp::GifShow => {
                 #[cfg(feature = "gif")]
                 {
-                    let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+                    let delay = env.pop(1)?.as_num(env, Some("Delay must be a number"))?;
                     let value = env.pop(2)?;
                     let bytes = crate::encode::value_to_gif_bytes(&value, delay)
                         .map_err(|e| env.error(e))?;
@@ -1584,7 +1586,9 @@ impl SysOp {
                 env.push(contents);
             }
             SysOp::Sleep => {
-                let mut seconds = env.pop(1)?.as_num(env, "Sleep time must be a number")?;
+                let mut seconds = env
+                    .pop(1)?
+                    .as_num(env, Some("Sleep time must be a number"))?;
                 if seconds < 0.0 {
                     return Err(env.error("Sleep time must be positive"));
                 }
@@ -1599,7 +1603,9 @@ impl SysOp {
                 env.rt.backend.sleep(seconds).map_err(|e| env.error(e))?;
             }
             SysOp::TcpListen => {
-                let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
+                let addr = env
+                    .pop(1)?
+                    .as_string(env, Some("Address must be a string"))?;
                 let handle = (env.rt.backend)
                     .tcp_listen(&addr)
                     .map_err(|e| env.error(e))?;
@@ -1608,13 +1614,15 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::TlsListen => {
-                let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
+                let addr = env
+                    .pop(1)?
+                    .as_string(env, Some("Address must be a string"))?;
                 let cert = env
                     .pop(2)?
-                    .into_bytes(env, "Cert must be a byte or character array")?;
+                    .into_bytes(env, Some("Cert must be a byte or character array"))?;
                 let key = env
                     .pop(3)?
-                    .into_bytes(env, "Key must be a byte or character array")?;
+                    .into_bytes(env, Some("Key must be a byte or character array"))?;
                 let handle = (env.rt.backend)
                     .tls_listen(&addr, &cert, &key)
                     .map_err(|e| env.error(e))?;
@@ -1623,7 +1631,7 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::TcpAccept => {
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 let handle = (env.rt.backend)
                     .tcp_accept(handle)
                     .map_err(|e| env.error(e))?;
@@ -1634,7 +1642,9 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::TcpConnect => {
-                let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
+                let addr = env
+                    .pop(1)?
+                    .as_string(env, Some("Address must be a string"))?;
                 let handle = (env.rt.backend)
                     .tcp_connect(&addr)
                     .map_err(|e| env.error(e))?;
@@ -1643,7 +1653,9 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::TlsConnect => {
-                let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
+                let addr = env
+                    .pop(1)?
+                    .as_string(env, Some("Address must be a string"))?;
                 let handle = (env.rt.backend)
                     .tls_connect(&addr)
                     .map_err(|e| env.error(e))?;
@@ -1652,42 +1664,48 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::TcpAddr => {
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 let addr = env.rt.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
                 env.push(addr.to_string());
             }
             SysOp::TcpSetNonBlocking => {
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 (env.rt.backend)
                     .tcp_set_non_blocking(handle, true)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::TcpSetReadTimeout => {
-                let timeout = env.pop(1)?.as_num(env, "Timeout must be a number")?.abs();
+                let timeout = env
+                    .pop(1)?
+                    .as_num(env, Some("Timeout must be a number"))?
+                    .abs();
                 let timeout = if timeout.is_infinite() {
                     None
                 } else {
                     Some(Duration::from_secs_f64(timeout))
                 };
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 (env.rt.backend)
                     .tcp_set_read_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::TcpSetWriteTimeout => {
-                let timeout = env.pop(1)?.as_num(env, "Timeout must be a number")?.abs();
+                let timeout = env
+                    .pop(1)?
+                    .as_num(env, Some("Timeout must be a number"))?
+                    .abs();
                 let timeout = if timeout.is_infinite() {
                     None
                 } else {
                     Some(Duration::from_secs_f64(timeout))
                 };
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 (env.rt.backend)
                     .tcp_set_write_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Close => {
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 env.rt.backend.close(handle).map_err(|e| env.error(e))?;
             }
             SysOp::RunInherit => {
@@ -1727,13 +1745,15 @@ impl SysOp {
                 }
             }
             SysOp::ChangeDirectory => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let path = env.pop(1)?.as_string(env, Some("Path must be a string"))?;
                 (env.rt.backend)
                     .change_directory(&path)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::WebcamCapture => {
-                let index = env.pop(1)?.as_nat(env, "Webcam index must be an integer")?;
+                let index = env
+                    .pop(1)?
+                    .as_nat(env, Some("Webcam index must be an integer"))?;
                 let _image = (env.rt.backend)
                     .webcam_capture(index)
                     .map_err(|e| env.error(e))?;
@@ -1763,17 +1783,17 @@ impl SysOp {
                     return Err(env.error("FFI signature array must have at least two elements"));
                 }
                 let mut sig_frags = sig_def.data.into_iter().map(|b| b.0);
-                let file_name =
-                    (sig_frags.next().unwrap()).as_string(env, "FFI file name must be a string")?;
+                let file_name = (sig_frags.next().unwrap())
+                    .as_string(env, Some("FFI file name must be a string"))?;
                 let result_ty = (sig_frags.next().unwrap())
-                    .as_string(env, "FFI result type must be a string")?
+                    .as_string(env, Some("FFI result type must be a string"))?
                     .parse::<FfiType>()
                     .map_err(|e| env.error(e))?;
-                let name =
-                    (sig_frags.next().unwrap()).as_string(env, "FFI name must be a string")?;
+                let name = (sig_frags.next().unwrap())
+                    .as_string(env, Some("FFI name must be a string"))?;
                 let arg_tys = sig_frags
                     .map(|frag| {
-                        frag.as_string(env, "FFI argument type must be a string")
+                        frag.as_string(env, Some("FFI argument type must be a string"))
                             .and_then(|ty| ty.parse::<FfiType>().map_err(|e| env.error(e)))
                     })
                     .collect::<UiuaResult<Vec<_>>>()?;
@@ -1787,7 +1807,7 @@ impl SysOp {
             SysOp::MemCopy => {
                 let ty = env
                     .pop(1)?
-                    .as_string(env, "Pointer copy type must be a string")?;
+                    .as_string(env, Some("Pointer copy type must be a string"))?;
                 let ty = ty.parse::<FfiType>().map_err(|e| env.error(e))?;
                 let ptr = env
                     .pop(2)?
@@ -1797,7 +1817,7 @@ impl SysOp {
                     .ok_or_else(|| env.error("Copied pointer must be a pointer value"))?;
                 let len = env
                     .pop(3)?
-                    .as_nat(env, "Copied length must be a non-negative integer")?;
+                    .as_nat(env, Some("Copied length must be a non-negative integer"))?;
                 let value = (env.rt.backend)
                     .mem_copy(ty, ptr, len)
                     .map_err(|e| env.error(e))?;
@@ -1839,7 +1859,7 @@ impl SysOp {
         match self {
             SysOp::ReadLines => {
                 let [f] = get_ops(ops, env)?;
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 let mut read_lines = env
                     .rt
                     .backend

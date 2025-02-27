@@ -434,8 +434,10 @@ impl Value {
     pub fn range(&self, env: &Uiua) -> UiuaResult<Self> {
         let ishape = self.as_ints(
             env,
-            "Range max should be a single integer \
+            Some(
+                "Range max should be a single integer \
             or a list of integers",
+            ),
         )?;
         if self.rank() == 0 {
             let max = ishape[0];
@@ -465,7 +467,7 @@ impl Value {
     pub(crate) fn unshape(&self, env: &Uiua) -> UiuaResult<Self> {
         let ishape = self.as_ints(
             env,
-            "Shape should be a single integer or a list of integers",
+            Some("Shape should be a single integer or a list of integers"),
         )?;
         let shape = Shape::from_iter(ishape.iter().map(|n| n.unsigned_abs()));
         let elems: usize = validate_size::<f64>(shape.iter().copied(), env)?;
@@ -1324,7 +1326,7 @@ impl Value {
     }
     pub(crate) fn undo_un_bits(&self, orig_shape: &Self, env: &Uiua) -> UiuaResult<Value> {
         let min_bits_len = orig_shape
-            .as_nats(env, "Shape must be an array of natural numbers")?
+            .as_nats(env, Some("Shape must be an array of natural numbers"))?
             .pop()
             .unwrap_or(0);
         match self {
@@ -1627,7 +1629,7 @@ impl Value {
         const INDICES_ERROR: &str = "Argument to ° un ⊚ where must be an array of naturals";
         Ok(match self.shape().dims() {
             [] | [_] => {
-                let indices = self.as_nats(env, INDICES_ERROR)?;
+                let indices = self.as_nats(env, Some(INDICES_ERROR))?;
                 let is_sorted = indices
                     .iter()
                     .zip(indices.iter().skip(1))
@@ -1738,29 +1740,30 @@ impl Value {
 impl Value {
     /// Convert a string value to a list of UTF-8 bytes
     pub fn utf8(&self, env: &Uiua) -> UiuaResult<Self> {
-        let s = self.as_string(env, "Argument to utf₈ must be a string")?;
+        let s = self.as_string(env, Some("Argument to utf₈ must be a string"))?;
         Ok(Array::<u8>::from_iter(s.into_bytes()).into())
     }
     /// Convert a string value to a list of UTF-16 code units
     pub fn utf16(&self, env: &Uiua) -> UiuaResult<Self> {
-        let s = self.as_string(env, "Argument to utf₁₆ must be a string")?;
+        let s = self.as_string(env, Some("Argument to utf₁₆ must be a string"))?;
         Ok(Array::<f64>::from_iter(s.encode_utf16().map(|u| u as f64)).into())
     }
     /// Convert a list of UTF-8 bytes to a string value
     pub fn unutf8(&self, env: &Uiua) -> UiuaResult<Self> {
-        let bytes = self.as_bytes(env, "Argument to °utf₈ must be a list of bytes")?;
+        let bytes = self.as_bytes(env, Some("Argument to °utf₈ must be a list of bytes"))?;
         let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
         Ok(s.into())
     }
     /// Convert a list of UTF-16 code units to a string value
     pub fn unutf16(&self, env: &Uiua) -> UiuaResult<Self> {
-        let code_units = self.as_u16s(env, "Argument to °utf₁₆ must be a list of code units")?;
+        let code_units =
+            self.as_u16s(env, Some("Argument to °utf₁₆ must be a list of code units"))?;
         let s = String::from_utf16(&code_units).map_err(|e| env.error(e))?;
         Ok(s.into())
     }
     /// Convert a string value to a list of boxed UTF-8 grapheme clusters
     pub fn graphemes(&self, env: &Uiua) -> UiuaResult<Self> {
-        let s = self.as_string(env, "Argument to graphemes must be a string")?;
+        let s = self.as_string(env, Some("Argument to graphemes must be a string"))?;
         let mut data = EcoVec::new();
         for grapheme in s.graphemes(true) {
             data.push(Boxed(grapheme.into()));
@@ -1771,7 +1774,10 @@ impl Value {
     pub fn ungraphemes(self, env: &Uiua) -> UiuaResult<Self> {
         let mut data = EcoVec::new();
         for val in self.into_rows().map(Value::unboxed) {
-            let s = val.as_string(env, "Argument to ungraphemes must be a list of strings")?;
+            let s = val.as_string(
+                env,
+                Some("Argument to ungraphemes must be a list of strings"),
+            )?;
             data.extend(s.chars());
         }
         Ok(Array::from(data).into())
@@ -2009,7 +2015,7 @@ impl Value {
                 if value.is_map() {
                     let mut map = serde_json::Map::with_capacity(value.row_count());
                     for (k, v) in value.map_kv() {
-                        let k = k.as_string(env, "JSON map keys must be strings")?;
+                        let k = k.as_string(env, Some("JSON map keys must be strings"))?;
                         let v = v.to_json_value(env)?;
                         map.insert(k, v);
                     }
@@ -2153,7 +2159,7 @@ impl Value {
             let sheet_arrays = if self.is_map() {
                 let mut sheet_arrays = Vec::new();
                 for (k, v) in self.map_kv() {
-                    let name = k.as_string(env, "Sheet name must be a string")?;
+                    let name = k.as_string(env, Some("Sheet name must be a string"))?;
                     if v.rank() > 2 {
                         return Err(env.error(format!(
                             "Cannot write a rank-{} array to an XLSX sheet",

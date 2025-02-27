@@ -175,8 +175,8 @@ impl Value {
         b_shape: Self,
         env: &Uiua,
     ) -> UiuaResult<(Self, Self)> {
-        let a_shape = a_shape.as_nats(env, "Shape must be a list of natural numbers")?;
-        let b_shape = b_shape.as_nats(env, "Shape must be a list of natural numbers")?;
+        let a_shape = a_shape.as_nats(env, Some("Shape must be a list of natural numbers"))?;
+        let b_shape = b_shape.as_nats(env, Some("Shape must be a list of natural numbers"))?;
         val_as_arr!(self, |a| a
             .undo_join(&a_shape, &b_shape, env)
             .map(|(a, b)| (a.into(), b.into())))

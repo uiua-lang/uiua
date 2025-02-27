@@ -88,7 +88,7 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
 fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
     let k = env.pop(1)?;
     let mut xs = env.pop(2)?;
-    let k = k.as_int(env, "Tuple size must be an integer")?;
+    let k = k.as_int(env, Some("Tuple size must be an integer"))?;
     let k = if k >= 0 {
         k.unsigned_abs()
     } else {
@@ -98,7 +98,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
     'blk: {
         if let Some(prim) = f.node.as_primitive() {
             let n = if is_scalar {
-                xs.as_nat(env, "Tuples of scalar must be a natural number")?
+                xs.as_nat(env, Some("Tuples of scalar must be a natural number"))?
             } else {
                 xs.row_count()
             };
@@ -125,7 +125,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
         1 => {
             if is_scalar {
                 xs = xs
-                    .as_nat(env, "Tuples of scalar must be a natural number")?
+                    .as_nat(env, Some("Tuples of scalar must be a natural number"))?
                     .into();
             } else {
                 xs.shape_mut().insert(1, 1);
@@ -133,7 +133,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
         }
         2 => {
             let n = if is_scalar {
-                xs.as_nat(env, "Tuples of scalar must be a natural number")?
+                xs.as_nat(env, Some("Tuples of scalar must be a natural number"))?
             } else {
                 xs.row_count()
             };
@@ -207,7 +207,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                                     env.exec(f.node.clone())?;
                                     *v.insert(env.pop("tuples's function result")?.as_bool(
                                         env,
-                                        "tuples of 3 or more must return a boolean",
+                                        Some("tuples of 3 or more must return a boolean"),
                                     )?)
                                 }
                             };
@@ -244,7 +244,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                     Array::new(shape, data).into()
                 })
             }
-            let scalar = xs.as_nat(env, "Tuples of scalar must be a natural number");
+            let scalar = xs.as_nat(env, Some("Tuples of scalar must be a natural number"));
             xs = match &xs {
                 Value::Num(a) => inner(a, k, f, is_scalar, scalar, env)?,
                 Value::Byte(a) => inner(a, k, f, is_scalar, scalar, env)?,
@@ -261,14 +261,14 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
 impl Value {
     /// `choose` all combinations of `k` rows from a value
     fn choose(self, k: usize, reverse: bool, same: bool, env: &Uiua) -> UiuaResult<Self> {
-        if let Ok(n) = self.as_nat(env, "") {
+        if let Ok(n) = self.as_nat(env, None) {
             return Ok(combinations(n, k, same).into());
         }
         val_as_arr!(self, |a| a.choose(k, reverse, same, env).map(Into::into))
     }
     /// `permute` all combinations of `k` rows from a value
     fn permute(self, k: usize, env: &Uiua) -> UiuaResult<Self> {
-        if let Ok(n) = self.as_nat(env, "") {
+        if let Ok(n) = self.as_nat(env, None) {
             return Ok(permutations(n, k).into());
         }
         val_as_arr!(self, |a| a.permute(k, env).map(Into::into))

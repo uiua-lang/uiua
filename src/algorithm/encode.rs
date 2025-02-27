@@ -83,7 +83,7 @@ pub(crate) fn image_encode(env: &mut Uiua) -> UiuaResult {
     {
         let format = env
             .pop(1)?
-            .as_string(env, "Image format must be a string")?;
+            .as_string(env, Some("Image format must be a string"))?;
         let value = env.pop(2)?;
         let output_format = match format.as_str() {
             "jpg" | "jpeg" => ImageFormat::Jpeg,
@@ -145,7 +145,7 @@ pub(crate) fn image_decode(env: &mut Uiua) -> UiuaResult {
 pub(crate) fn gif_encode(env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "gif")]
     {
-        let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+        let delay = env.pop(1)?.as_num(env, Some("Delay must be a number"))?;
         let value = env.pop(2)?;
         let bytes = crate::encode::value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
         env.push(Array::<u8>::from(bytes.as_slice()));
@@ -160,7 +160,7 @@ pub(crate) fn gif_decode(env: &mut Uiua) -> UiuaResult {
     {
         let bytes = env
             .pop(1)?
-            .as_bytes(env, "Gif bytes must be a byte array")?;
+            .as_bytes(env, Some("Gif bytes must be a byte array"))?;
         let (frame_rate, value) =
             crate::encode::gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
         env.push(value);
@@ -176,10 +176,10 @@ pub(crate) fn audio_encode(env: &mut Uiua) -> UiuaResult {
     {
         let format = env
             .pop(1)?
-            .as_string(env, "Audio format must be a string")?;
+            .as_string(env, Some("Audio format must be a string"))?;
 
         const SAMPLE_RATE_REQUIREMENT: &str = "Audio sample rate must be a positive integer";
-        let sample_rate = u32::try_from(env.pop(2)?.as_nat(env, SAMPLE_RATE_REQUIREMENT)?)
+        let sample_rate = u32::try_from(env.pop(2)?.as_nat(env, Some(SAMPLE_RATE_REQUIREMENT))?)
             .map_err(|_| env.error("Audio sample rate is too high"))?;
         if sample_rate == 0 {
             return Err(env.error(format!("{SAMPLE_RATE_REQUIREMENT}, but it is zero")));
@@ -740,10 +740,11 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
                             if j > 0 {
                                 string.push(' ');
                             }
-                            string.push_str(&val.as_string(env, "Text word must be a string")?);
+                            string
+                                .push_str(&val.as_string(env, Some("Text word must be a string"))?);
                         }
                     }
-                    _ => string.push_str(&val.as_string(env, "Text line must be a string")?),
+                    _ => string.push_str(&val.as_string(env, Some("Text line must be a string"))?),
                 }
             }
         }
@@ -756,12 +757,15 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
                     if j > 0 {
                         string.push(' ');
                     }
-                    string.push_str(&val.as_string(env, "Text word must be a string")?);
+                    string.push_str(&val.as_string(env, Some("Text word must be a string"))?);
                 }
             }
         }
         val => {
-            string = val.as_string(env, "Text must be a rank 0, 1, or 2 character or box array")?
+            string = val.as_string(
+                env,
+                Some("Text must be a rank 0, 1, or 2 character or box array"),
+            )?
         }
     }
 
@@ -776,7 +780,7 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
     let mut scalar_index = 0;
     let mut set_size = false;
     for (i, row) in options.into_rows().map(Value::unboxed).enumerate() {
-        let nums = row.as_nums(env, "Options must be numbers")?;
+        let nums = row.as_nums(env, Some("Options must be numbers"))?;
         match &**row.shape() {
             [] => {
                 match scalar_index {

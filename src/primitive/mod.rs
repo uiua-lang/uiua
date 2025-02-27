@@ -1364,7 +1364,9 @@ impl ImplPrimitive {
                 env.push(raw_mode);
             }
             ImplPrimitive::UnClip => {
-                let contents = env.pop(1)?.as_string(env, Some("Contents must be a string"))?;
+                let contents = env
+                    .pop(1)?
+                    .as_string(env, Some("Contents must be a string"))?;
                 (env.rt.backend)
                     .set_clipboard(&contents)
                     .map_err(|e| env.error(e))?;
@@ -1451,7 +1453,9 @@ impl ImplPrimitive {
                 env.push(from.undo_select(index, into, env)?);
             }
             ImplPrimitive::UndoWhere => {
-                let shape = env.pop(1)?.as_nats(env, Some("Shape must be natural numbers"))?;
+                let shape = env
+                    .pop(1)?
+                    .as_nats(env, Some("Shape must be natural numbers"))?;
                 let indices = env.pop(2)?;
                 let mask = indices.undo_where(&shape, env)?;
                 env.push(mask);
@@ -1970,7 +1974,9 @@ fn regex(env: &mut Uiua) -> UiuaResult {
     thread_local! {
         pub static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
     }
-    let pattern = env.pop(1)?.as_string(env, Some("Pattern must be a string"))?;
+    let pattern = env
+        .pop(1)?
+        .as_string(env, Some("Pattern must be a string"))?;
     let target = env
         .pop(1)?
         .as_string(env, Some("Matching target must be a string"))?;

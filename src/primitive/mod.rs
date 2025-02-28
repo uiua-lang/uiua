@@ -1183,11 +1183,11 @@ impl Primitive {
             }
             Primitive::Spawn => {
                 let [f] = get_ops(ops, env)?;
-                env.spawn(f.sig.args, false, f)?;
+                env.spawn(false, f)?;
             }
             Primitive::Pool => {
                 let [f] = get_ops(ops, env)?;
-                env.spawn(f.sig.args, true, f)?;
+                env.spawn(true, f)?;
             }
             Primitive::Sys(op) => op.run_mod(ops, env)?,
             prim => {

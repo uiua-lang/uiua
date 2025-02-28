@@ -10,11 +10,13 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
+    thread::JoinHandle,
     time::Duration,
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use ecow::EcoVec;
+use parking_lot::Mutex;
 use thread_local::ThreadLocal;
 
 use crate::{
@@ -82,6 +84,8 @@ pub(crate) struct Runtime {
     pub(crate) unevaluated_constants: HashMap<usize, Node>,
     /// The system backend
     pub(crate) backend: Arc<dyn SysBackend>,
+    /// The thread pool
+    thread_pool: Arc<Mutex<Vec<JoinHandle<()>>>>,
     /// The thread interface
     thread: ThisThread,
     /// Values for output comments
@@ -215,6 +219,7 @@ impl Default for Runtime {
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(100),
             interrupted: None,
+            thread_pool: Arc::new(Mutex::new(Vec::new())),
             thread: ThisThread::default(),
             output_comments: HashMap::new(),
             memo: Arc::new(ThreadLocal::new()),
@@ -1458,14 +1463,14 @@ impl Uiua {
         }
     }
     /// Spawn a thread
-    pub(crate) fn spawn(&mut self, capture_count: usize, _pool: bool, f: SigNode) -> UiuaResult {
+    pub(crate) fn spawn(&mut self, _pool: bool, f: SigNode) -> UiuaResult {
         if !self.rt.backend.allow_thread_spawning() {
             return Err(self.error("Thread spawning is not allowed in this environment"));
         }
-        if self.rt.stack.len() < capture_count {
+        if self.rt.stack.len() < f.sig.args {
             return Err(self.error(format!(
                 "Expected at least {} value(s) on the stack, but there are {}",
-                capture_count,
+                f.sig.args,
                 self.rt.stack.len()
             )))?;
         }
@@ -1478,11 +1483,11 @@ impl Uiua {
             }),
             ..ThisThread::default()
         };
-        let mut env = Uiua {
+        let make_env = || Uiua {
             asm: self.asm.clone(),
             rt: Runtime {
                 stack: (self.rt.stack)
-                    .drain(self.rt.stack.len() - capture_count..)
+                    .drain(self.rt.stack.len() - f.sig.args..)
                     .collect(),
                 under_stack: Vec::new(),
                 local_stack: self.rt.local_stack.clone(),
@@ -1506,6 +1511,7 @@ impl Uiua {
                 unevaluated_constants: HashMap::new(),
                 test_results: Vec::new(),
                 reports: Vec::new(),
+                thread_pool: self.rt.thread_pool.clone(),
                 thread,
             },
         };
@@ -1513,8 +1519,25 @@ impl Uiua {
         let recv = {
             let (send, recv) = crossbeam_channel::unbounded();
             if _pool {
-                rayon::spawn(move || _ = send.send(env.exec(f).map(|_| env.take_stack())));
+                let max_threads = std::thread::available_parallelism()
+                    .map(|p| p.get())
+                    .unwrap_or(1);
+                // Wait until there is a free thread
+                while self.rt.thread_pool.lock().len() >= max_threads {
+                    let mut pool = self.rt.thread_pool.lock();
+                    for i in (0..pool.len()).rev() {
+                        if pool[i].is_finished() {
+                            pool.remove(i);
+                        }
+                    }
+                }
+                let mut env = make_env();
+                let handle = std::thread::Builder::new()
+                    .spawn(move || _ = send.send(env.exec(f).map(|_| env.take_stack())))
+                    .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
+                self.rt.thread_pool.lock().push(handle);
             } else {
+                let mut env = make_env();
                 std::thread::Builder::new()
                     .spawn(move || _ = send.send(env.exec(f).map(|_| env.take_stack())))
                     .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;

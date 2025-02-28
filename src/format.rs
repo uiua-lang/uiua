@@ -804,7 +804,7 @@ impl Formatter<'_> {
 
                 let mut import = import.clone();
                 let lines = &mut import.lines;
-                while lines.len() >= 3 && lines.iter().rev().take(3).all(Option::is_none) {
+                while lines.len() >= 3 && lines.iter().rev().take(2).all(Option::is_none) {
                     lines.pop();
                 }
                 // Sort each line

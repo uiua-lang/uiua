@@ -787,9 +787,7 @@ impl Parser<'_> {
                 Simple(Tilde) => self
                     .errors
                     .push(span.sp(ParseError::Unexpected(Simple(Tilde)))),
-                Newline => {
-                    lines.push(line.take());
-                }
+                Newline => lines.push(line.take()),
                 Spaces => {}
                 _ => break,
             }

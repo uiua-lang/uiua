@@ -804,6 +804,9 @@ impl Formatter<'_> {
 
                 let mut import = import.clone();
                 let lines = &mut import.lines;
+                while lines.len() >= 3 && lines.iter().rev().take(3).all(Option::is_none) {
+                    lines.pop();
+                }
                 // Sort each line
                 for line in lines.iter_mut().flatten() {
                     line.items.sort_by_key(|item| item.value.clone());
@@ -823,7 +826,7 @@ impl Formatter<'_> {
                 }
                 let one_line = lines.iter().filter(|line| line.is_some()).count() == 1;
                 for (i, line) in lines.iter_mut().enumerate() {
-                    if line.is_some() && (i > 0 || !one_line) {
+                    if line.is_some() && (i > 0 || !one_line) || line.is_none() && i > 0 {
                         self.output.push('\n');
                     }
                     if let Some(line) = line {
@@ -1782,6 +1785,9 @@ F ← (|2
 
   G ← 3
 └─╴
+~ \"example\"
+
+F ← 5
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

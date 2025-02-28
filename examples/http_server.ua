@@ -37,8 +37,8 @@ Response ← (
 )
 
 # Handlers
-NotFound      ← Response "404 Not Found" "text/plain" utf₈"Not Found"
-ServerError   ← Response "500 Internal Server Error" "text/plain"
+NotFound    ← Response "404 Not Found" "text/plain" utf₈"Not Found"
+ServerError ← Response "500 Internal Server Error" "text/plain"
 PageLoadError ← ⋅(
   /↥⌕"The system cannot find the file specified".
   ⨬(NotFound◌|ServerError))
@@ -55,8 +55,8 @@ Respond ← ◌pool(
   &p $"Request:\n_".
 
   # Route to handler
-  ⨬(Page|Home) ≍"/".
-  &p $"Response: _ bytes" ⧻.
+  ⨬(Page|Home) ⊸≍"/"
+  &p⊸($"Response: _ bytes" ⧻)
 
   # Send response
   ⊃⋅&cl&w

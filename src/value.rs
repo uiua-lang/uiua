@@ -2105,25 +2105,13 @@ impl Ord for Value {
 
 impl Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            Value::Num(arr) => arr.hash(state),
-            Value::Byte(arr) => arr.hash(state),
-            Value::Complex(arr) => arr.hash(state),
-            Value::Char(arr) => arr.hash(state),
-            Value::Box(arr) => arr.hash(state),
-        }
+        val_as_arr!(self, |arr| arr.hash(state))
     }
 }
 
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Num(array) => array.fmt(f),
-            Self::Byte(array) => array.fmt(f),
-            Self::Complex(array) => array.fmt(f),
-            Self::Char(array) => array.fmt(f),
-            Self::Box(array) => array.fmt(f),
-        }
+        val_as_arr!(self, |arr| arr.fmt(f))
     }
 }
 

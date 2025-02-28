@@ -1541,7 +1541,10 @@ impl Uiua {
             recv
         };
         #[cfg(target_arch = "wasm32")]
-        let result = env.exec(f).map(|_| env.take_stack());
+        {
+            let mut env = make_env();
+            let result = env.exec(f).map(|_| env.take_stack());
+        }
 
         let id = self.rt.thread.next_child_id;
         self.rt.thread.next_child_id += 1;

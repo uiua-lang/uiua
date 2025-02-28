@@ -10,7 +10,6 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
-    thread::JoinHandle,
     time::Duration,
 };
 
@@ -18,6 +17,7 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use ecow::EcoVec;
 use parking_lot::Mutex;
 use thread_local::ThreadLocal;
+use threadpool::ThreadPool;
 
 use crate::{
     algorithm::{self, validate_size_impl},
@@ -85,7 +85,7 @@ pub(crate) struct Runtime {
     /// The system backend
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The thread pool
-    thread_pool: Arc<Mutex<Vec<JoinHandle<()>>>>,
+    thread_pool: Arc<Mutex<Option<ThreadPool>>>,
     /// The thread interface
     thread: ThisThread,
     /// Values for output comments
@@ -219,7 +219,7 @@ impl Default for Runtime {
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(100),
             interrupted: None,
-            thread_pool: Arc::new(Mutex::new(Vec::new())),
+            thread_pool: Arc::new(Mutex::new(None)),
             thread: ThisThread::default(),
             output_comments: HashMap::new(),
             memo: Arc::new(ThreadLocal::new()),
@@ -1522,20 +1522,16 @@ impl Uiua {
                 let max_threads = std::thread::available_parallelism()
                     .map(|p| p.get())
                     .unwrap_or(1);
-                // Wait until there is a free thread
-                while self.rt.thread_pool.lock().len() >= max_threads {
-                    let mut pool = self.rt.thread_pool.lock();
-                    for i in (0..pool.len()).rev() {
-                        if pool[i].is_finished() {
-                            pool.remove(i);
-                        }
-                    }
+                let mut pool = self.rt.thread_pool.lock();
+                if pool.is_none() {
+                    *pool = Some(ThreadPool::new(max_threads));
+                }
+                let pool = pool.as_mut().unwrap();
+                while pool.active_count() >= max_threads {
+                    std::thread::yield_now();
                 }
                 let mut env = make_env();
-                let handle = std::thread::Builder::new()
-                    .spawn(move || _ = send.send(env.exec(f).map(|_| env.take_stack())))
-                    .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
-                self.rt.thread_pool.lock().push(handle);
+                pool.execute(move || _ = send.send(env.exec(f).map(|_| env.take_stack())));
             } else {
                 let mut env = make_env();
                 std::thread::Builder::new()

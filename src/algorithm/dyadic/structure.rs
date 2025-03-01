@@ -365,7 +365,7 @@ impl Value {
         val_as_arr!(from, |a| a.drop(&index, env).map(Into::into))
     }
     pub(crate) fn undo_take(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = match index.as_ints(env, "") {
+        let index = match index.as_ints(env, None) {
             Ok(indices) => indices,
             Err(_) => {
                 let with_infs = index
@@ -394,7 +394,7 @@ impl Value {
         )
     }
     pub(crate) fn undo_drop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = match index.as_ints(env, "") {
+        let index = match index.as_ints(env, None) {
             Ok(indices) => indices,
             Err(_) => {
                 let with_infs = index.as_ints_or_infs(

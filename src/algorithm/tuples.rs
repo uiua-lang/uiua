@@ -261,14 +261,14 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
 impl Value {
     /// `choose` all combinations of `k` rows from a value
     fn choose(self, k: usize, reverse: bool, same: bool, env: &Uiua) -> UiuaResult<Self> {
-        if let Ok(n) = self.as_nat(env, "") {
+        if let Ok(n) = self.as_nat(env, None) {
             return Ok(combinations(n, k, same).into());
         }
         val_as_arr!(self, |a| a.choose(k, reverse, same, env).map(Into::into))
     }
     /// `permute` all combinations of `k` rows from a value
     fn permute(self, k: usize, env: &Uiua) -> UiuaResult<Self> {
-        if let Ok(n) = self.as_nat(env, "") {
+        if let Ok(n) = self.as_nat(env, None) {
             return Ok(permutations(n, k).into());
         }
         val_as_arr!(self, |a| a.permute(k, env).map(Into::into))

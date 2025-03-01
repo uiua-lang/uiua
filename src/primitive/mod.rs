@@ -912,7 +912,7 @@ impl Primitive {
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
-                if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
+                if !cond.as_nat(env, None).is_ok_and(|n| n == 1) {
                     return Err(UiuaErrorKind::Throw(
                         msg.into(),
                         env.span().clone(),
@@ -1737,7 +1737,7 @@ impl ImplPrimitive {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 let mut res = Ok(());
-                if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
+                if !cond.as_nat(env, None).is_ok_and(|n| n == 1) {
                     res = Err(UiuaErrorKind::Throw(
                         msg.into(),
                         env.span().clone(),

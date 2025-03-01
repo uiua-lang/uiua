@@ -95,7 +95,7 @@ uiua.run_str("
 ").unwrap();
 
 let x = uiua.bound_values().remove("X").unwrap();
-assert_eq!(x.as_int(&uiua, "").unwrap(), 5);
+assert_eq!(x.as_int(&uiua, None).unwrap(), 5);
 
 let f = uiua.bound_functions().remove("F").unwrap();
 let mut comp = Compiler::new().with_assembly(uiua.take_asm());

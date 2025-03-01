@@ -685,20 +685,26 @@ impl Handle {
 }
 
 impl Value {
-    /// Attempt to convert the array to systme handle
-    pub fn as_handle(&self, env: &Uiua, mut expected: &'static str) -> UiuaResult<Handle> {
-        if expected.is_empty() {
-            expected = "Expected value to be a stream handle";
-        }
+    /// Attempt to convert the array to system handle
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_handle(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<Handle> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be a stream handle");
         match self {
             Value::Box(b) => {
                 if let Some(b) = b.as_scalar() {
-                    b.0.as_nat(env, expected).map(|h| Handle(h as u64))
+                    b.0.as_nat(env, requirement).map(|h| Handle(h as u64))
                 } else {
-                    Err(env.error(format!("{expected}, but it is rank {}", b.rank())))
+                    Err(env.error(format!("{requirement}, but it is rank {}", b.rank())))
                 }
             }
-            value => value.as_nat(env, expected).map(|h| Handle(h as u64)),
+            value => value.as_nat(env, requirement).map(|h| Handle(h as u64)),
         }
     }
 }
@@ -1278,7 +1284,7 @@ impl SysOp {
                 if let Some(count) = count {
                     validate_size::<char>([count], env)?;
                 }
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 let s = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
@@ -1350,7 +1356,7 @@ impl SysOp {
                 if let Some(count) = count {
                     validate_size::<u8>([count], env)?;
                 }
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
@@ -1370,7 +1376,7 @@ impl SysOp {
             }
             SysOp::ReadUntil => {
                 let delim = env.pop(1)?;
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 if delim.rank() > 1 {
                     return Err(env.error("Delimiter must be a rank 0 or 1 string or byte array"));
                 }
@@ -1435,7 +1441,7 @@ impl SysOp {
             }
             SysOp::Write => {
                 let data = env.pop(1)?;
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     Value::Byte(arr) => arr.data.into(),
@@ -1623,7 +1629,7 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::TcpAccept => {
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 let handle = (env.rt.backend)
                     .tcp_accept(handle)
                     .map_err(|e| env.error(e))?;
@@ -1652,12 +1658,12 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::TcpAddr => {
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 let addr = env.rt.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
                 env.push(addr.to_string());
             }
             SysOp::TcpSetNonBlocking => {
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 (env.rt.backend)
                     .tcp_set_non_blocking(handle, true)
                     .map_err(|e| env.error(e))?;
@@ -1669,7 +1675,7 @@ impl SysOp {
                 } else {
                     Some(Duration::from_secs_f64(timeout))
                 };
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 (env.rt.backend)
                     .tcp_set_read_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
@@ -1681,13 +1687,13 @@ impl SysOp {
                 } else {
                     Some(Duration::from_secs_f64(timeout))
                 };
-                let handle = env.pop(2)?.as_handle(env, "")?;
+                let handle = env.pop(2)?.as_handle(env, None)?;
                 (env.rt.backend)
                     .tcp_set_write_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Close => {
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 env.rt.backend.close(handle).map_err(|e| env.error(e))?;
             }
             SysOp::RunInherit => {
@@ -1839,7 +1845,7 @@ impl SysOp {
         match self {
             SysOp::ReadLines => {
                 let [f] = get_ops(ops, env)?;
-                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = env.pop(1)?.as_handle(env, None)?;
                 let mut read_lines = env
                     .rt
                     .backend

@@ -202,7 +202,7 @@ impl Value {
         val_as_arr!(self, |a| a.reshape(dims, env))
     }
     pub(crate) fn undo_reshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
-        if old_shape.as_nat(env, "").is_ok() {
+        if old_shape.as_nat(env, None).is_ok() {
             return Err(env.error("Cannot undo scalar reshape"));
         }
         let orig_shape = old_shape.as_nats(env, "Shape should be a list of integers")?;
@@ -1733,7 +1733,7 @@ impl Value {
             range.memberof(b, env)
         }
 
-        let Ok(range_bound) = self.as_num(env, "") else {
+        let Ok(range_bound) = self.as_num(env, None) else {
             return fallback(self, &from, env);
         };
 
@@ -1794,7 +1794,7 @@ impl Value {
         }
 
         let Some(range_bound) =
-            (of.as_nums(env, "").ok()).filter(|nums| nums.iter().all(|f| f.fract() == 0.0))
+            (of.as_nums(env, None).ok()).filter(|nums| nums.iter().all(|f| f.fract() == 0.0))
         else {
             return fallback(of, &elems, env);
         };

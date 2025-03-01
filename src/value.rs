@@ -809,8 +809,11 @@ impl Value {
     pub fn as_ints<C: ErrorContext>(
         &self,
         ctx: &C,
-        requirement: &'static str,
+        requirement: impl Into<Option<&'static str>>,
     ) -> Result<Vec<isize>, C::Error> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be array of integers");
         self.as_number_list(ctx, requirement)
     }
     pub(crate) fn as_ints_or_infs(
@@ -823,10 +826,12 @@ impl Value {
     /// Attempt to convert the array to a single boolean
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_bool(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<bool> {
-        if requirement.is_empty() {
-            requirement = "Expected value to be boolean"
-        }
+    pub fn as_bool(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<bool> {
+        let requirement = requirement.into().unwrap_or("Expected value to be boolean");
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -869,21 +874,25 @@ impl Value {
     /// Attempt to convert the array to a single natural number
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_nat(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<usize> {
-        if requirement.is_empty() {
-            requirement = "Expected value to be a natural number";
-        }
+    pub fn as_nat(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<usize> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be a natural number");
         self.as_nat_or_inf(env, requirement)?
             .ok_or_else(|| env.error(format!("{requirement}, but it is infinity")))
     }
     pub(crate) fn as_nat_or_inf(
         &self,
         env: &Uiua,
-        mut requirement: &'static str,
+        requirement: impl Into<Option<&'static str>>,
     ) -> UiuaResult<Option<usize>> {
-        if requirement.is_empty() {
-            requirement = "Expected value to be a natural number or infinity";
-        }
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be a natural number or infinity");
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -928,11 +937,11 @@ impl Value {
     pub fn as_int<C: ErrorContext>(
         &self,
         ctx: &C,
-        mut requirement: &'static str,
+        requirement: impl Into<Option<&'static str>>,
     ) -> Result<isize, C::Error> {
-        if requirement.is_empty() {
-            requirement = "Expected value to be an integer";
-        }
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be an integer");
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -968,10 +977,14 @@ impl Value {
     /// Attempt to convert the array to a single number
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_num(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<f64> {
-        if requirement.is_empty() {
-            requirement = "Expected value to be a number";
-        }
+    pub fn as_num(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<f64> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be a number");
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -997,7 +1010,14 @@ impl Value {
     /// Attempt to convert the array to a list of numbers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_nums(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<f64>> {
+    pub fn as_nums(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<Vec<f64>> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be array of numbers");
         self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a list of natural numbers
@@ -1006,8 +1026,11 @@ impl Value {
     pub fn as_nats<C: ErrorContext>(
         &self,
         ctx: &C,
-        requirement: &'static str,
+        requirement: impl Into<Option<&'static str>>,
     ) -> Result<Vec<usize>, C::Error> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be array of natural numbers");
         if let Value::Num(arr) = self {
             if let Some(&(mut n)) =
                 (arr.data.iter()).find(|&&n| n > usize::MAX as f64 && n.fract() == 0.0)
@@ -1022,19 +1045,40 @@ impl Value {
     /// Attempt to convert the array to a list of bytes
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_bytes(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<u8>> {
+    pub fn as_bytes(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<Vec<u8>> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be array of bytes");
         self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a list of u16s
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_u16s(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<u16>> {
+    pub fn as_u16s(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<Vec<u16>> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be array of unsigned 16-bit integers");
         self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a list of booleans
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_bools(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<bool>> {
+    pub fn as_bools(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<Vec<bool>> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be array of booleans");
         self.as_number_list(env, requirement)
     }
     /// Attempt to convert the array to a list of integers or infinity
@@ -1045,11 +1089,11 @@ impl Value {
     pub fn as_rank_list(
         &self,
         env: &Uiua,
-        mut requirement: &'static str,
+        requirement: impl Into<Option<&'static str>>,
     ) -> UiuaResult<Vec<Option<isize>>> {
-        if requirement.is_empty() {
-            requirement = "Elements of rank list must be integers or infinity";
-        }
+        let requirement = requirement
+            .into()
+            .unwrap_or("Elements of rank list must be integers or infinity");
         self.as_number_list(env, requirement)
     }
     pub(crate) fn as_number_list<T, C>(
@@ -1160,10 +1204,14 @@ impl Value {
     /// Attempt to convert the array to a string
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_string(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<String> {
-        if requirement.is_empty() {
-            requirement = "Expected value to be a string";
-        }
+    pub fn as_string(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<String> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be a string");
         match (self, self.rank()) {
             (Value::Char(chars), 0 | 1) => Ok(chars.data.iter().collect()),
             (Value::Char(_), n) => Err(env.error(format!("{requirement}, but its rank is {n}"))),
@@ -1187,10 +1235,14 @@ impl Value {
     /// A rank-1 character array is treated as a single string.
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_strings(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<Vec<String>> {
-        if requirement.is_empty() {
-            requirement = "Expected value to be a string or list of strings";
-        }
+    pub fn as_strings(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<Vec<String>> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be a string or list of strings");
 
         match (self, self.rank()) {
             (Value::Char(chars), 0 | 1) => Ok(vec![chars.data.iter().collect()]),
@@ -1224,10 +1276,14 @@ impl Value {
     /// Attempt to convert the array to a list of bytes
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn into_bytes(self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<Vec<u8>> {
-        if requirement.is_empty() {
-            requirement = "Expected value to be a list of bytes";
-        }
+    pub fn into_bytes(
+        self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<Vec<u8>> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be a list of bytes");
         Ok(match self {
             Value::Byte(a) => {
                 if a.rank() != 1 {
@@ -1802,7 +1858,7 @@ impl Value {
     }
     /// Raise a value to a power
     pub fn pow(self, base: Self, env: &Uiua) -> UiuaResult<Self> {
-        if let Ok(pow) = self.as_int(env, "") {
+        if let Ok(pow) = self.as_int(env, None) {
             match pow {
                 1 => return Ok(base),
                 2 => return base.clone().mul(base, env),

@@ -1501,8 +1501,14 @@ impl Value {
         let label = self.take_label();
         let other_label = other.take_label();
         let mut result = f(self, other)?;
-        if let Some(label) = label.xor(other_label) {
-            result.meta_mut().label = Some(label);
+        match (label, other_label) {
+            (Some(label), None) | (None, Some(label)) => {
+                result.meta_mut().label = Some(label);
+            }
+            (Some(a), Some(b)) if a == b => {
+                result.meta_mut().label = Some(a);
+            }
+            _ => {}
         }
         Ok(result)
     }

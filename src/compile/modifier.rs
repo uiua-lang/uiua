@@ -1682,9 +1682,6 @@ impl Compiler {
         operand: Sp<Word>,
         span: &CodeSpan,
     ) -> UiuaResult<Node> {
-        if self.pre_eval_mode == PreEvalMode::Lsp {
-            return self.word(operand);
-        }
         let orig_spans_len = self.asm.spans.len();
         let sn = self.word_sig(operand)?;
         if sn.sig.args > 0 {

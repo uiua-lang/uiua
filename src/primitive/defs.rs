@@ -2009,7 +2009,7 @@ primitive!(
     ///
     /// If only a single function is provided, its inverse will be nothing.
     /// This is useful when a function has to do some setup before the main [under]able part.
-    /// Condider this function which [keep]s only odd numbers. While [keep] is compatible with [under], `by``modulus``2` is not.
+    /// Consider this function which [keep]s only odd numbers. While [keep] is compatible with [under], `by``modulus``2` is not.
     /// ex! F ← ▽⊸◿2
     ///   : F [1 2 3 4 5]
     ///   : ⍜F(×10) [1 2 3 4 5]

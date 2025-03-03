@@ -567,7 +567,7 @@ code:
                         _ => false,
                     });
             if let Err(e) = self.item(item, from_macro, must_run, &mut prelude) {
-                if !item_errored {
+                if !item_errored || self.errors.is_empty() {
                     self.errors.push(e);
                 }
                 item_errored = true;

@@ -312,7 +312,7 @@ fn TutorialBasic() -> impl IntoView {
         <p>"At the end of most sections of this tutorial, there will be a few challenges to test your understanding."</p>
         <p>"The code you write will be run on multiple inputs and tested for correctness."</p>
         <p>"Each challenge has an example input and output followed by some test cases. There is also a hidden test case that your code is checked against, so make sure to think about edge cases!"</p>
-        <p>"Remember that you can click the "<code>"↧"</code>" on the right side of the editor to see a list of all the glyphs."</p>
+        <p>"Remember that you can click the "<span class="material-symbols-rounded">"keyboard_arrow_down"</span>" on the right side of the editor to see a list of all the glyphs."</p>
         <p>"Answers are available, but "<strong>"try to solve the challenges yourself first!"</strong></p>
         <p>"Some challenges have additional answers that use functions and concepts not yet covered in the tutorial, but which are more idiomatic."</p>
         <br/>

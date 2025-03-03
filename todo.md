@@ -2,7 +2,7 @@
 
 # 0.15
 - `un`/`anti` `stencil`
-- Multidimensional `group`
+- Multidimensional `group`?
 - Stabilize some of data definitions
   - Not data functions
   - Refactor experimental docs into tutorial

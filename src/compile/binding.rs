@@ -27,8 +27,11 @@ impl Compiler {
 
         // Get data def if this is a method
         let mut data_def = None;
-        let is_method = binding.tilde_span.is_some();
-        if let Some(tilde_span) = binding.tilde_span {
+        let is_method = if let Some(tilde_span) = binding.tilde_span {
+            self.experimental_error(&tilde_span, || {
+                "Methods are experimental. To use them, add \
+                `# Experimental!` to the top of the file."
+            });
             if let Some(def) = self.scope.data_def.clone() {
                 let span = self.add_span(tilde_span);
                 data_def = Some((def, span));
@@ -38,7 +41,10 @@ impl Compiler {
                     "Method has no data definition defined before it",
                 );
             }
-        }
+            true
+        } else {
+            false
+        };
 
         // Create meta
         let comment = prelude

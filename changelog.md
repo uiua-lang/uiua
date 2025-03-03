@@ -10,6 +10,11 @@ This version is not yet released. If you are reading this on the website, then t
 - Add subscripted [`on ⟜`](https://uiua.org/docs/on), [`by ⊸`](https://uiua.org/docs/by), [`with ⤙`](https://uiua.org/docs/with), and [`off ⤚`](https://uiua.org/docs/off)
   - These preserve N arguments rather than just the first or last
 - Add data definition methods
+- Stabilize most of data definitions
+  - Things not stabilized:
+    - Data functions
+    - Methods
+    - Field validators
 - Stabilize subscripted [`random ⚂`](https://uiua.org/docs/random)
 - Signature comments can now use a `$` rather than a `?` to automatically label arguments and outputs
 - Change [`backward ˜`](https://uiua.org/docs/backward)'s glyph back. `𝄈` will continue to work and will be formatted as `˜`.

@@ -30,6 +30,7 @@ pub enum TutorialPage {
     Macros,
     TacitCode,
     Modules,
+    DataDefs,
     Testing,
 }
 
@@ -55,6 +56,7 @@ impl TutorialPage {
             Self::Macros => "Macros",
             Self::TacitCode => "Tacit Code",
             Self::Modules => "Modules",
+            Self::DataDefs => "Data Definitions",
             Self::Testing => "Testing",
         }
     }
@@ -85,6 +87,7 @@ pub fn Tutorial() -> impl IntoView {
             TutorialPage::Macros => TutorialMacros().into_view(),
             TutorialPage::TacitCode => TutorialTacitCode().into_view(),
             TutorialPage::Modules => TutorialModules().into_view(),
+            TutorialPage::DataDefs => TutorialDataDefs().into_view(),
             TutorialPage::Testing => TutorialTesting().into_view(),
         };
         view! {
@@ -1658,6 +1661,11 @@ fn TutorialModules() -> impl IntoView {
         <p>"The "<code>"uiua module"</code>" command can be used to list or update Git modules."</p>
         <p>"You can find a curated list of Uiua modules "<a href="https://github.com/uiua-lang/uiua-modules">"here"</a>"."</p>
     }
+}
+
+#[component]
+fn TutorialDataDefs() -> impl IntoView {
+    title_markdown("Data Definitions", "/text/data_defs.md", ())
 }
 
 #[component]

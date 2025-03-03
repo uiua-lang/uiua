@@ -9,10 +9,6 @@ impl Compiler {
         top_level: bool,
         mut prelude: BindingPrelude,
     ) -> UiuaResult {
-        self.experimental_error(&data.init_span, || {
-            "Data definitions are experimental. To use them, add \
-            `# Experimental!` to the top of the file."
-        });
         // Clean up comment
         if let Some(words) = &mut data.func {
             let word = words.pop();
@@ -114,6 +110,10 @@ impl Compiler {
                 });
                 // Compile validator
                 let validator_and_inv = if let Some(validator) = data_field.validator {
+                    self.experimental_error(&data.init_span, || {
+                        "Field validators are experimental. To use them, add \
+                        `# Experimental!` to the top of the file."
+                    });
                     let mut validator = self.words_sig(validator.words)?;
                     if validator.sig.args != 1 {
                         self.add_error(
@@ -495,8 +495,12 @@ impl Compiler {
         self.scope.data_def = Some(scope_data_def.clone());
 
         let mut function_stuff = None;
-        // Call function
+        // Data functions
         if let Some(words) = data.func {
+            self.experimental_error(&data.init_span, || {
+                "Data functions are experimental. To use them, add \
+                `# Experimental!` to the top of the file."
+            });
             self.in_method(&scope_data_def, |comp| {
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());

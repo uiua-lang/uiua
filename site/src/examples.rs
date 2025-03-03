@@ -55,8 +55,7 @@ const MANDELBROT: &str = "\
 ⍥(⊸(+>2⌵:)⊙⊸(+×.))50 0. # Run
 ÷/↥⊸♭ ⊙⋅◌               # Normalize";
 const LIFE: &str = "\
-Adj  ← ♭₂-1⇡3_3
-Life ← ↥↧⟜(∩=2⤙3-|/+≡↻Adj¤)
+Life ← ↥↧⟜(∩=2⤙3/+≡↻⊂A₂C₂¤)
 ⁅×0.6 gen⊙⚂ ⊟.30 # Init
 ⇌◌⍥(⟜⊂Life)100⟜¤ # Run
 ≡(▽⟜≡▽) 4        # Upscale";

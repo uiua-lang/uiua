@@ -34,27 +34,31 @@ impl Compiler {
                 self.modified(new, subscript)
             }
             Modifier::Primitive(Primitive::Dip) => {
-                let mut branches = pack.branches.iter().cloned().rev();
-                let mut new = Modified {
-                    modifier: modifier.clone(),
-                    operands: vec![branches.next().unwrap().map(Word::Func)],
-                    pack_expansion: true,
-                };
-                for branch in branches {
-                    let mut lines = branch.value.lines;
-                    (lines.last_mut().unwrap())
-                        .push(span.clone().sp(Word::Modified(Box::new(new))));
-                    new = Modified {
-                        modifier: modifier.clone(),
-                        operands: vec![branch.span.clone().sp(Word::Func(Func {
-                            signature: None,
-                            lines,
-                            closed: true,
-                        }))],
-                        pack_expansion: true,
-                    };
+                let mut nodes = Vec::with_capacity(pack.branches.len());
+                let mut errors = Vec::new();
+                for br in pack.branches.iter().cloned() {
+                    match self.func(br.value, br.span.clone()) {
+                        Ok(node) => {
+                            let sig = self.sig_of(&node, &br.span)?;
+                            nodes.push(SigNode::new(sig, node));
+                        }
+                        Err(e) => errors.push(e),
+                    }
                 }
-                self.modified(new, subscript)
+                if !errors.is_empty() {
+                    return Err(UiuaError::from_multi(errors));
+                }
+                let mut nodes = nodes.into_iter().rev();
+                let dip_span = self.add_span(modifier.span.clone());
+                let mut res = Node::Mod(Primitive::Dip, eco_vec![nodes.next().unwrap()], dip_span);
+                for node in nodes {
+                    res = Node::Mod(
+                        Primitive::Dip,
+                        eco_vec![Node::from_iter([res, node.node]).sig_node().unwrap()],
+                        dip_span,
+                    );
+                }
+                Ok(res)
             }
             Modifier::Primitive(Primitive::Rows | Primitive::Inventory) => {
                 let mut branches = pack.branches.iter().cloned();

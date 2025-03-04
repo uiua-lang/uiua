@@ -205,7 +205,7 @@ pub fn MainPage() -> impl IntoView {
         rich_prim(
             Partition,
             "for splitting arrays by sequential keys",
-            r#"⬚@ ⊜∘≠@ ."Oh boy, neat!""#,
+            r#"⬚@ ⊜∘⊸≠@ "Oh boy, neat!""#,
         ),
         rich_prim(
             Un,

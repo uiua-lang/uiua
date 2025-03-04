@@ -1167,7 +1167,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
                 _ => unreachable!(),
             }
         };
-        for line in value.show().lines() {
+        for line in value.lines() {
             stack.push(OutputItem::Classed(class, line.to_string()));
         }
     }

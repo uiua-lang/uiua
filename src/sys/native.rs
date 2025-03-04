@@ -337,7 +337,8 @@ impl SysBackend for NativeSys {
     fn show(&self, value: Value) -> Result<(), String> {
         #[cfg(feature = "window")]
         if crate::window::use_window() {
-            return crate::window::Request::Show(crate::encode::SmartOutput::Normal(value)).send();
+            return crate::window::Request::Show(crate::encode::SmartOutput::Normal(value.show()))
+                .send();
         }
         self.print_str_stdout(&format!("{}\n", value.show()))
     }

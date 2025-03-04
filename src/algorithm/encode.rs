@@ -14,7 +14,7 @@ use crate::{Array, Uiua, UiuaResult, Value};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum SmartOutput {
-    Normal(Value),
+    Normal(String),
     Png(Vec<u8>, Option<String>),
     Gif(Vec<u8>, Option<String>),
     Wav(Vec<u8>, Option<String>),
@@ -74,7 +74,7 @@ impl SmartOutput {
             }
         }
         // Otherwise, just show the value
-        Self::Normal(value)
+        Self::Normal(value.show())
     }
 }
 

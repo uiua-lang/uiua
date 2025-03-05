@@ -203,7 +203,7 @@ impl fmt::Display for InversionError {
             InversionError::Signature(e) => write!(f, "Cannot invert invalid signature: {e}"),
             InversionError::InnerFunc(ids, inner) => {
                 write!(f, "Inversion failed:")?;
-                for id in ids {
+                for id in ids.iter().rev() {
                     write!(f, " cannot invert {id} because")?;
                 }
                 let inner = inner.to_string().to_lowercase();

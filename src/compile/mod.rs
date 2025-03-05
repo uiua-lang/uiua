@@ -448,14 +448,17 @@ impl Compiler {
         self.start_addrs.pop();
 
         // Optimize root
-        self.asm.root.optimize_full();
-        // Optimize and pre-eval functions
-        for i in 0..self.asm.functions.len() {
-            self.asm.functions.make_mut()[i].optimize_full();
-            if let Some((root, errs)) = self.pre_eval(&self.asm.functions[i]) {
-                self.asm.functions.make_mut()[i] = root;
-                self.errors.extend(errs);
+        // We only optimize if this is not an import
+        if self.current_imports.is_empty() {
+            self.asm.root.optimize_full();
+            // Optimize and pre-eval functions
+            for i in 0..self.asm.functions.len() {
                 self.asm.functions.make_mut()[i].optimize_full();
+                if let Some((root, errs)) = self.pre_eval(&self.asm.functions[i]) {
+                    self.asm.functions.make_mut()[i] = root;
+                    self.errors.extend(errs);
+                    self.asm.functions.make_mut()[i].optimize_full();
+                }
             }
         }
         // dbg!(&self.asm.root);

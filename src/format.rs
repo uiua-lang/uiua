@@ -724,9 +724,9 @@ impl Formatter<'_> {
                 self.push(&data.init_span, if data.variant { "|" } else { "~" });
                 if let Some(name) = &data.name {
                     self.push(&name.span, &name.value);
-                    self.output.push(' ');
                 }
                 if let Some(fields) = &data.fields {
+                    self.output.push(' ');
                     self.push(&fields.open_span, if fields.boxed { "{" } else { "[" });
                     let multiline = fields.trailing_newline
                         || fields.fields.len() > 1

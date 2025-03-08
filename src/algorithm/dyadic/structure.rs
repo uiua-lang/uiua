@@ -737,13 +737,20 @@ impl<T: ArrayValue> Array<T> {
         Ok(arr)
     }
     fn undo_take(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.undo_take_impl("take", "taken", index, into, env)
+        let mut undex = Vec::with_capacity(index.len());
+        let mut end = Vec::with_capacity(index.len());
+        for &i in index {
+            undex.push(i.unsigned_abs());
+            end.push(i < 0);
+        }
+        self.undo_take_impl("take", "taken", &undex, &end, into, env)
     }
     fn undo_take_impl(
         self,
         name: &str,
         past: &str,
-        index: &[isize],
+        undex: &[usize],
+        end: &[bool],
         mut into: Self,
         env: &Uiua,
     ) -> UiuaResult<Self> {
@@ -774,42 +781,48 @@ impl<T: ArrayValue> Array<T> {
                 )));
             }
         }
-        Ok(match index {
-            [] => into,
-            &[untaking] => {
-                let into = into.drop(&[Ok(untaking)], env)?;
-                if untaking >= 0 {
-                    from.join(into, true, env)
+        Ok(match (undex, end) {
+            ([], []) => into,
+            (&[untaking], &[end]) => {
+                let dropped = if end {
+                    -(untaking as isize)
                 } else {
+                    untaking as isize
+                };
+                let into = into.drop(&[Ok(dropped)], env)?;
+                if end {
                     into.join(from, true, env)
+                } else {
+                    from.join(into, true, env)
                 }?
             }
-            &[untaking, ref sub_index @ ..] => {
-                let abs_untaking = untaking.unsigned_abs();
-                if abs_untaking != from.row_count() {
+            (&[untaking, ref sub_index @ ..], &[end, ref sub_end @ ..]) => {
+                if untaking != from.row_count() {
                     return Err(env.error(format!(
                         "Attempted to undo {name}, but the {past} section's row \
-                        count was modified from {} to {}",
-                        abs_untaking,
+                        count was modified from {untaking} to {}",
                         from.row_count()
                     )));
                 }
                 let into_row_count = into.row_count();
                 let mut new_rows = Vec::with_capacity(into_row_count);
-                if untaking >= 0 {
-                    for (from, into) in from.rows().zip(into.rows()) {
-                        new_rows.push(from.undo_take_impl(name, past, sub_index, into, env)?);
-                    }
-                    new_rows.extend(into.rows().skip(abs_untaking));
-                } else {
-                    let start = into_row_count.saturating_sub(abs_untaking);
+                if end {
+                    let start = into_row_count.saturating_sub(untaking);
                     new_rows.extend(into.rows().take(start));
                     for (from, into) in from.rows().zip(into.rows().skip(start)) {
-                        new_rows.push(from.undo_take_impl(name, past, sub_index, into, env)?);
+                        new_rows
+                            .push(from.undo_take_impl(name, past, sub_index, sub_end, into, env)?);
                     }
+                } else {
+                    for (from, into) in from.rows().zip(into.rows()) {
+                        new_rows
+                            .push(from.undo_take_impl(name, past, sub_index, sub_end, into, env)?);
+                    }
+                    new_rows.extend(into.rows().skip(untaking));
                 }
                 Array::from_row_arrays(new_rows, env)?
             }
+            _ => unreachable!(),
         })
     }
     fn undo_drop(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -819,18 +832,18 @@ impl<T: ArrayValue> Array<T> {
         if into.rank() == 0 {
             into.shape.push(1);
         }
-        let index: Vec<isize> = index
-            .iter()
-            .zip(&into.shape)
-            .map(|(&i, &s)| {
-                if i >= 0 {
-                    (i - s as isize).min(0)
-                } else {
-                    (i + s as isize).max(0)
-                }
-            })
-            .collect();
-        self.undo_take_impl("drop", "dropped", &index, into, env)
+        let mut undex = Vec::with_capacity(index.len());
+        let mut end = Vec::with_capacity(index.len());
+        for (&i, &s) in index.iter().zip(&into.shape) {
+            if i >= 0 {
+                undex.push((s as isize - i).max(0) as usize);
+                end.push(true);
+            } else {
+                undex.push((i + s as isize).max(0) as usize);
+                end.push(false);
+            }
+        }
+        self.undo_take_impl("drop", "dropped", &undex, &end, into, env)
     }
     fn anti_drop(mut self, mut index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         let fill = env.array_fill::<T>().unwrap_or_else(|_| T::proxy().into());

@@ -34,7 +34,9 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
             adjacent_impl(f, xs, n, env)
         } else {
             if xs.row_count() < n {
-                env.push(xs.first_dim_zero());
+                for _ in 0..f.sig.outputs {
+                    env.push(xs.first_dim_zero());
+                }
                 return Ok(());
             }
             let win_count = xs.row_count() - (n - 1);

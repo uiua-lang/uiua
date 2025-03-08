@@ -352,8 +352,6 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Rise], No, "", "⍜⍏(↻¯1). [1 4 2 3 5]") }
             { inverse_row([Fall], No, "", "⍜⍖(↻¯1). [1 4 2 3 5]") }
             { inverse_row([Sort], No, "", "⍜⍆(↻¯1). [1 4 2 3 5]") }
-            { inverse_row([Select, By, Rise], No, "Shuffle", "°(⊏⊸⍏) [1 2 3 4 5]") }
-            { inverse_row([Select, By, Fall], No, "Shuffle", "°(⊏⊸⍖) [1 2 3 4 5]") }
             { inverse_row([Where], No, "Maintains minumum shape", "⍜⊚⊂ [1 0 0 0 0] 3") }
             { inverse_row([Classify], No, "", "⍜⊛⇌ \"hello\"") }
             { inverse_row([Deduplicate], No, "", "⍜◴⇌ \"hello\"") }

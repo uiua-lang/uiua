@@ -171,24 +171,6 @@ You can even use [under](/docs/under) on a function that has already been [un](/
 ≡⍜°□(⊂:@!) {"wow" "cool" "omg"}
 ```
 
-Let's say you wanted to utilize a struct-like pattern. Uiua does not have structs or objects with fields like many other languages do, but you can simulate them with box arrays. This can be slow, so you should not do this with any data that needs to be accessed in tight loops.
-
-[under](/docs/under) allows a field getter to also be a setter!
-
-```uiua
-Person ← {⊙⊙∘}
-Name ← °□⊡0
-Surname ← °□⊡1
-Age ← °□⊡2
-
-FmtPerson ← $"_ is _ years old" ⊃(Name|Age)
-PassYear ← ⍜Age(+1)
-
-Dan ← Person "Dan" "Danson" 31
-FmtPerson Dan
-FmtPerson PassYear Dan
-```
-
 You can find more uses of [under](/docs/under) in its documentation, including a list of all [under](/docs/under)-compatible functions and modifiers.
 
 ## [un](/docs/un) [by](/docs/by)

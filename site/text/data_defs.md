@@ -221,7 +221,7 @@ Both of those arrays are created as an "array of structs". But because Uiua is a
 Person {"Alice" "Bob" "Carol"} [21 54 49] [5 0 12]
 ```
 
-This creates only 5 boxes total, and it scales much better. It allows us to more easily work with the data in aggregate.
+This creates only 5 boxes total, and it scales much better. It also allows us to more easily work with the data in aggregate.
 
 For example, we could find the average age.
 

@@ -2428,7 +2428,7 @@ impl Compiler {
             && get(&self.scope)
                 .filter(|l| l.public || !matches!(self.scope.kind, ScopeKind::AllInModule))
                 .or_else(|| self.scopes_to_file().skip(1).find_map(get))
-                .map_or(true, |l| l.index != local.index)
+                .is_none_or(|l| l.index != local.index)
         {
             self.add_error(span.clone(), format!("`{}` is private", name));
         }

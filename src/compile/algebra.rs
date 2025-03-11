@@ -628,8 +628,8 @@ enum Term {
 impl fmt::Debug for Term {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            &Term::X(x) if x == 0.0 => write!(f, "1"),
-            &Term::X(x) if x == 1.0 => write!(f, "x"),
+            &Term::X(0.0) => write!(f, "1"),
+            &Term::X(1.0) => write!(f, "x"),
             &Term::X(x) => write!(f, "x^{}", x),
             Term::Div(expr) => {
                 write!(f, "1/")?;

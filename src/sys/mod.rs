@@ -1491,7 +1491,6 @@ impl SysOp {
                         _ => Err(e),
                     })
                     .map_err(|e| env.error(e))?;
-                let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<u8>::from_iter(bytes));
             }
             SysOp::FWriteAll => {

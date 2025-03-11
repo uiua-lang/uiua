@@ -328,11 +328,11 @@ impl Value {
     pub fn mask(&self, searched: &Self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_bin_ref(
             searched,
-            |a, b| a.mask(b, env).map(Into::into),
-            |a, b| a.mask(b, env).map(Into::into),
-            |a, b| a.mask(b, env).map(Into::into),
-            |a, b| a.mask(b, env).map(Into::into),
-            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| a.mask(b, env),
+            |a, b| a.mask(b, env),
+            |a, b| a.mask(b, env),
+            |a, b| a.mask(b, env),
+            |a, b| a.mask(b, env),
             |a, b| {
                 env.error(format!(
                     "Cannot mask {} in {} array",
@@ -552,9 +552,9 @@ impl<T: ArrayValue> Array<T> {
                     for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
                         *s = *c + *o;
                     }
-                    if (haystack.shape.dims_to_flat(&sum)).map_or(true, |k| {
-                        res[k] > 0.0 || !needle_data[j].array_eq(&haystack.data[k])
-                    }) {
+                    if (haystack.shape.dims_to_flat(&sum))
+                        .is_none_or(|k| res[k] > 0.0 || !needle_data[j].array_eq(&haystack.data[k]))
+                    {
                         matches = false;
                         break;
                     }

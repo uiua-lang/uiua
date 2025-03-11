@@ -1021,7 +1021,7 @@ impl Compiler {
                 let full_span = modified.modifier.span.clone().merge(op_span);
                 let words_look_pervasive = subscript
                     .as_ref()
-                    .map_or(true, |sub| sub.value == Subscript::N(0))
+                    .is_none_or(|sub| sub.value == Subscript::N(0))
                     && words_look_pervasive(slice::from_ref(&operand));
                 let sn = self.word_sig(operand)?;
                 if words_look_pervasive {
@@ -1582,9 +1582,9 @@ impl Compiler {
         match node {
             Node::Run(nodes) => nodes.iter().find_map(|node| self.node_unbound_index(node)),
             Node::CallGlobal(index, _)
-                if self.asm.bindings.get(*index).map_or(true, |binding| {
-                    matches!(binding.kind, BindingKind::Const(None))
-                }) && !self.macro_env.rt.unevaluated_constants.contains_key(index) =>
+                if (self.asm.bindings.get(*index))
+                    .is_none_or(|binding| matches!(binding.kind, BindingKind::Const(None)))
+                    && !self.macro_env.rt.unevaluated_constants.contains_key(index) =>
             {
                 Some(*index)
             }

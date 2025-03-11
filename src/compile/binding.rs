@@ -685,7 +685,7 @@ impl Compiler {
             }
             if let Some((nm, local)) = name_local {
                 if nm.value == macro_name
-                    && path_locals.as_ref().map_or(true, |(pl, _)| pl.is_empty())
+                    && path_locals.as_ref().is_none_or(|(pl, _)| pl.is_empty())
                 {
                     *recursive = true;
                 }

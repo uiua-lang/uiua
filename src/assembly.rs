@@ -500,8 +500,8 @@ pub struct DocCommentSig {
 impl DocCommentSig {
     /// Whether the doc comment signature matches a given function signature
     pub fn matches_sig(&self, sig: Signature) -> bool {
-        (self.args.as_ref()).map_or(true, |args| args.len() == sig.args)
-            && (self.outputs.as_ref()).map_or(true, |o| o.len() == sig.outputs)
+        (self.args.as_ref()).is_none_or(|args| args.len() == sig.args)
+            && (self.outputs.as_ref()).is_none_or(|o| o.len() == sig.outputs)
     }
     pub(crate) fn sig_string(&self) -> String {
         match (&self.args, &self.outputs) {

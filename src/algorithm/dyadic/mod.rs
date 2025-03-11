@@ -275,7 +275,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn reshape(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
         let fill = env.scalar_fill::<T>();
         let axes = derive_shape(&self.shape, dims, fill.is_ok(), env)?;
-        if (axes.first()).map_or(true, |&d| d.unsigned_abs() != self.row_count()) {
+        if (axes.first()).is_none_or(|&d| d.unsigned_abs() != self.row_count()) {
             self.take_map_keys();
         }
         let reversed_axes: Vec<usize> = (axes.iter().enumerate())
@@ -1843,9 +1843,7 @@ impl Value {
                     };
                     rows.push(row);
                 }
-                Ok(Value::Byte(
-                    Array::from_row_arrays(rows, env).map(Into::into)?,
-                ))
+                Ok(Value::Byte(Array::from_row_arrays(rows, env)?))
             }
             Ordering::Less => fallback(of, &elems, env),
         }

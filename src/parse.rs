@@ -832,7 +832,7 @@ impl Parser<'_> {
                 if self
                     .tokens
                     .get(self.index)
-                    .map_or(true, |t| !matches!(t.value, Token::Str(_)))
+                    .is_none_or(|t| !matches!(t.value, Token::Str(_)))
                 {
                     let span = start_span.merge(comp.tilde_span.clone());
                     path.push(comp);

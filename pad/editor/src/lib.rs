@@ -771,7 +771,7 @@ pub fn Editor<'a>(
                     let can_couple = code
                         .chars()
                         .nth(start as usize)
-                        .map_or(true, |c| c.is_whitespace() || "(){}[]".contains(c));
+                        .is_none_or(|c| c.is_whitespace() || "(){}[]".contains(c));
                     let at_behind =
                         code.chars().nth((start as usize).saturating_sub(1)) == Some('@');
                     if (start != end || can_couple) && !at_behind {
@@ -799,7 +799,7 @@ pub fn Editor<'a>(
                     let can_couple = code
                         .chars()
                         .nth(start as usize)
-                        .map_or(true, |c| c.is_whitespace() || "(){}[]".contains(c));
+                        .is_none_or(|c| c.is_whitespace() || "(){}[]".contains(c));
                     let at_behind =
                         code.chars().nth((start as usize).saturating_sub(1)) == Some('@');
                     if (start != end || can_couple) && !at_behind {

@@ -985,7 +985,7 @@ impl<'a> Lexer<'a> {
                                 allow_hex = false;
                                 break;
                             };
-                            code = code << 4 | digit;
+                            code = (code << 4) | digit;
                         }
                         if allow_hex {
                             replacement =
@@ -1194,7 +1194,7 @@ impl<'a> Lexer<'a> {
                     let format_raw = first_dollar && self.next_char_exact("$");
                     if first_dollar
                         && (self.next_char_exact(" ")
-                            || self.peek_char().map_or(true, |c| "\r\n".contains(c)))
+                            || self.peek_char().is_none_or(|c| "\r\n".contains(c)))
                     {
                         // Raw strings
                         let mut start = start;
@@ -1592,7 +1592,7 @@ impl<'a> Lexer<'a> {
                         let c = self
                             .next_char_if_all(|c| c.is_ascii_hexdigit())
                             .ok_or("x")?;
-                        code = code << 4 | c.chars().next().unwrap().to_digit(16).unwrap();
+                        code = (code << 4) | c.chars().next().unwrap().to_digit(16).unwrap();
                     }
                     std::char::from_u32(code).ok_or("x")?.into()
                 }
@@ -1608,7 +1608,7 @@ impl<'a> Lexer<'a> {
                                 {
                                     "}" => break,
                                     c => {
-                                        code = code << 4
+                                        code = (code << 4)
                                             | c.chars().next().unwrap().to_digit(16).unwrap()
                                     }
                                 }
@@ -1619,7 +1619,8 @@ impl<'a> Lexer<'a> {
                                 let c = self
                                     .next_char_if_all(|c| c.is_ascii_hexdigit())
                                     .ok_or("u")?;
-                                code = code << 4 | c.chars().next().unwrap().to_digit(16).unwrap();
+                                code =
+                                    (code << 4) | c.chars().next().unwrap().to_digit(16).unwrap();
                             }
                         }
                     }

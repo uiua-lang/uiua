@@ -1086,7 +1086,7 @@ impl SysBackend for NativeSys {
         let mut parts = url.rsplitn(3, '/');
         let repo_name = parts.next().ok_or("Invalid git url")?;
         let repo_owner = parts.next().ok_or("Invalid git url")?;
-        if parts.next().map_or(true, |s| s.is_empty()) {
+        if parts.next().is_none_or(|s| s.is_empty()) {
             return Err("Invalid git url".to_string());
         }
 

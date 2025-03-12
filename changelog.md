@@ -6,11 +6,12 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) and [`do ⍢`](https://uiua.org/docs/do) with net-negative signatures now preserve lower stack values between iterations
-- **Breaking Change** - [`atan ∠`](https://uiua.org/docs/atan) now interacts with [`under ⍜`](https://uiua.org/docs/under) similarly to [`couple ⊟`](https://uiua.org/docs/couple) and [`complex ℂ`](https://uiua.org/docs/complex)
+- **Breaking Change** - [`atangent ∠`](https://uiua.org/docs/atan) now interacts with [`under ⍜`](https://uiua.org/docs/under) similarly to [`couple ⊟`](https://uiua.org/docs/couple) and [`complex ℂ`](https://uiua.org/docs/complex)
 - Add subscripted [`on ⟜`](https://uiua.org/docs/on), [`by ⊸`](https://uiua.org/docs/by), [`with ⤙`](https://uiua.org/docs/with), and [`off ⤚`](https://uiua.org/docs/off)
   - These preserve N arguments rather than just the first or last
 - Add data definition methods
 - Stabilize most of data definitions
+  - A new [section](https://uiua.org/tutorial/datadefs) has been added to the tutorial
   - Things not stabilized:
     - Data functions
     - Methods
@@ -39,6 +40,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `UIUA_MAX_MB` environment variable to set the maximum size of an array in megabytes
   - This allows catching memory errors on different systems
 - Optimize [`absolute value ⌵`](https://uiua.org/docs/absolute)[`complex ℂ`](https://uiua.org/docs/complex) to not create intermediate [`complex ℂ`](https://uiua.org/docs/complex) array
+### Website
+- Add an expanded mode to the pad. Click the ⤢ button to toggle it.
+- Change pad icons
+- Add new [Data Definitions](https://uiua.org/tutorial/datadefs) tutorial
 
 ## 0.14.1 - 2024-12-23
 ### Interpreter

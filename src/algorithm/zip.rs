@@ -140,6 +140,13 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
             let f = impl_prim_mon_fast_fn(prim, span)?;
             (f, 0)
         }
+        [Node::CustomInverse(cust, _)] => {
+            return if let Ok(f) = cust.normal.as_ref() {
+                f_mon_fast_fn_impl(f.node.as_slice(), deep, env)
+            } else {
+                None
+            }
+        }
         [Node::Mod(Rows, args, _)] => {
             let (f, d) = f_mon_fast_fn(&args[0].node, env)?;
             (f, d + 1)
@@ -198,6 +205,13 @@ fn f_mon2_fast_fn_impl(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize
         &[Node::ImplPrim(prim, span)] => {
             let f = impl_prim_mon2_fast_fn(prim, span)?;
             (f, 0)
+        }
+        [Node::CustomInverse(cust, _)] => {
+            return if let Ok(f) = cust.normal.as_ref() {
+                f_mon2_fast_fn_impl(f.node.as_slice(), env)
+            } else {
+                None
+            }
         }
         [Node::Mod(Rows, args, _)] => {
             let (f, d) = f_mon2_fast_fn(args[0].node.as_slice(), env)?;

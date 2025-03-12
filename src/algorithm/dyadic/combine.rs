@@ -801,7 +801,11 @@ impl<T: ArrayValue> Array<T> {
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         self.uncouple_depth(0, env)
     }
-    pub(crate) fn uncouple_depth(self, mut depth: usize, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn uncouple_depth(
+        mut self,
+        mut depth: usize,
+        env: &Uiua,
+    ) -> UiuaResult<(Self, Self)> {
         depth = depth.min(self.rank());
         if depth == self.rank() {
             return Err(env.error("Cannot uncouple scalar"));
@@ -821,28 +825,29 @@ impl<T: ArrayValue> Array<T> {
             (first, second)
         } else {
             let stride: usize = self.shape[depth..].iter().skip(1).product();
-            let mut shape = self.shape.clone();
+            let mut shape = self.shape;
             shape.remove(depth);
             if stride == 0 {
                 let arr = Array::new(shape.clone(), EcoVec::new());
                 return Ok((arr.clone(), arr));
             }
-            let new_a_data: EcoVec<T> = self
-                .data
-                .chunks_exact(stride)
-                .step_by(2)
-                .flatten()
-                .cloned()
-                .collect();
-            let new_b_data: EcoVec<T> = self
-                .data
-                .chunks_exact(stride)
-                .skip(1)
-                .step_by(2)
-                .flatten()
-                .cloned()
-                .collect();
-            let a = Array::new(shape.clone(), new_a_data);
+            let mut new_b_data = EcoVec::with_capacity(shape.elements());
+            let slice = self.data.as_mut_slice();
+            let row_count = shape.iter().take(depth).product();
+            for i in 0..row_count {
+                let b_start = (i * 2 + 1) * stride;
+                let b_end = b_start + stride;
+                new_b_data.extend_from_slice(&slice[b_start..b_end]);
+                if i < row_count - 1 {
+                    let dest_start = (i + 1) * stride;
+                    let src_start = (i + 1) * 2 * stride;
+                    for j in 0..stride {
+                        slice[dest_start + j] = slice[src_start + j].clone();
+                    }
+                }
+            }
+            self.data.truncate(shape.elements());
+            let a = Array::new(shape.clone(), self.data);
             let b = Array::new(shape, new_b_data);
             (a, b)
         })

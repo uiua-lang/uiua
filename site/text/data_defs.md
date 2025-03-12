@@ -53,7 +53,7 @@ Person "Dave" 31
 Person~Age .
 ```
 
-As you can see, the generated constructor function also adds [labels](/tutorial/code_tactility#labels) to aid in reading the data.
+As you can see, the generated constructor function also adds [labels](/tutorial/codetactility#labels) to aid in reading the data.
 
 Notice the `{}` brackets in the example above. If we expect all fields to have the same type and shape, we can use `[]` brackets instead. This prevents the fields from being boxed, but disables labels.
 

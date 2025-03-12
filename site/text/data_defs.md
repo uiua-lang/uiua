@@ -1,6 +1,6 @@
 # Data Definitions
 
-In most cases, the data stored in an array can be thought of as *homogeneous*. All rows in the array *mean* the same thing. Maybe they are all quantities of someting, maybe they are all strings from the same source, maybe they are all coordinates in a 2D space, etc. One of the strengths of the array paradigm is that arrays can also be homogeneous across multiple axes at once.
+In most cases, the data stored in an array can be thought of as *homogeneous*. All rows in the array *mean* the same thing. Maybe they are all quantities of something, maybe they are all strings from the same source, maybe they are all coordinates in a 2D space, etc. One of the strengths of the array paradigm is that arrays can also be homogeneous across multiple axes at once.
 
 However, sometimes this is not what you want. Sometimes, you want to package together multiple values that are related but represent fundamentally different things.
 
@@ -245,4 +245,45 @@ Adding new entries is also relatively simple.
 ~Person {Name Age Score}
 Person {"Alice" "Bob" "Carol"} [21 54 49] [5 0 12]
 ⍚˜⊂ Person □"Dave" 31 2
+```
+
+## Dynamic Structure
+
+Which fields a data definition has are generally static. Fields accesses via the generated functions are static.
+
+However, we sometimes want to be a little more dynamic with our data.
+
+One common need is to be able to access a field by name *as a runtime string*. For example, imagine you want to get user input and return the corresponding field.
+
+Every data definition has a generated `Fields` constant which is a list of the field names. We can get the index of some name with [`indexof`](), then get it from the structure with [`select`]().
+
+```uiua
+~Person {Name Age Score}
+Person "Dave" 31 5
+"Age" # Imagine this is user input
+°□⊏⊗⊓□Person~Fields
+```
+
+The `Fields` constant can also be used to turn a data structure into a [`map`]().
+
+```uiua
+~Person {Name Age Score}
+Person "Dave" 31 5
+mapPerson~Fields
+```
+
+With a bit of finesse, we can also do the opposite.
+
+```uiua
+~Person {Name Age Score}
+map {"Name" "Age" "Score"} {"Dave" 31 5}
+°{°Person}getPerson~Fields
+```
+
+Using `map` may be necessary if you want to use a function like `json` that expects a map.
+
+```uiua
+~Person {Name Age Score}
+Person "Dave" 31 5
+&p json mapPerson~Fields
 ```

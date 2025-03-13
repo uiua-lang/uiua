@@ -2171,6 +2171,42 @@ impl Hash for Value {
     }
 }
 
+/// A wrapper for values that hashes their labels in addition to the normal hashing
+///
+/// Works with both [`Value`] and `&Value`
+#[derive(Debug, Clone)]
+pub struct HashLabels<T = Value>(pub T);
+
+impl PartialEq for HashLabels {
+    fn eq(&self, other: &Self) -> bool {
+        HashLabels(&self.0).eq(&HashLabels(&other.0))
+    }
+}
+impl Eq for HashLabels {}
+impl Hash for HashLabels {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        HashLabels(&self.0).hash(state);
+    }
+}
+
+impl PartialEq for HashLabels<&Value> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(other.0) && self.0.meta().label == other.0.meta().label
+    }
+}
+impl Eq for HashLabels<&Value> {}
+impl Hash for HashLabels<&Value> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+        self.0.meta().label.hash(state);
+        if let HashLabels(Value::Box(arr)) = self {
+            for Boxed(val) in &arr.data {
+                HashLabels(val).hash(state);
+            }
+        }
+    }
+}
+
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         val_as_arr!(self, |arr| arr.fmt(f))

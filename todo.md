@@ -1,17 +1,16 @@
 # Uiua Todo
 
 # 0.15
-- `un`/`anti` `stencil`
 - Multidimensional `group`?
-- Stabilize some of data definitions
-  - Not data functions
-  - Refactor experimental docs into tutorial
 - Stabilize `fft`
 - Stabilize sided subscripts for `both` and `bracket`
-- Implement some `under` inverses in terms of `un by`, rather than the other way around?
-- Reserved modifier glyphs?
 - Optimizations through calls
+
+# 0.16
 - Compile-time code string evaluation?
+- Reserved modifier glyphs?
+- Implement some `under` inverses in terms of `un by`, rather than the other way around?
+- `un`/`anti` `stencil`
 
 ## Planned Features
 Features that are planned to be implemented in the future.

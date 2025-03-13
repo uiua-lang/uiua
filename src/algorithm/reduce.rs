@@ -195,7 +195,7 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
     let (first, tail) = nodes.split_first()?;
     let (last, init) = nodes.split_last()?;
     let init_sig = || nodes_sig(init).is_ok_and(|sig| sig.args == sig.outputs);
-    let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args == 1 && sig.outputs == 1);
+    let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args >= 1 && sig.outputs == 1);
     Some(match first {
         Node::Prim(Join, _) if tail_sig() => {
             if val.rank() < 2 {
@@ -244,7 +244,7 @@ fn reduce_singleton(node: &Node, val: Value, process: impl Fn(Value) -> Value) -
     };
     let (last, init) = nodes.split_last().unwrap();
     let init_sig = || nodes_sig(init).is_ok_and(|sig| sig.args == sig.outputs);
-    let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args == 1 && sig.outputs == 1);
+    let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args >= 1 && sig.outputs == 1);
     match first {
         Node::Prim(Join, _) if tail_sig() => val,
         _ => match last {
@@ -485,140 +485,133 @@ fn generic_reduce_inner(
             Primitive::Reduce.format(),
         )));
     }
-    match sig.args {
-        0 | 1 => Err(env.error(format!(
+    if sig.args <= 1 {
+        return Err(env.error(format!(
             "{}'s function must have at least 2 arguments, \
             but its signature is {sig}",
             Primitive::Reduce.format(),
-        ))),
-        2 => {
-            let mut xs = env.pop(1)?;
-            if depth == 0 {
-                let value_fill = env.value_fill();
-                if value_fill.is_none() {
-                    if xs.row_count() == 0 {
-                        return reduce_identity(&f.node, xs).ok_or_else(|| {
-                            env.error(format!(
-                                "Cannot {} empty array. Function has no identity value.",
-                                Primitive::Reduce.format()
-                            ))
-                        });
-                    }
-                    if xs.row_count() == 1 {
-                        let row_count = if xs.rank() == 0 {
-                            None
-                        } else {
-                            Some(xs.shape_mut().remove(0))
-                        };
-                        if let Some(row_count) = row_count {
-                            xs.shape_mut().insert(0, row_count);
-                        }
-                        return Ok(reduce_singleton(&f.node, xs, process));
-                    }
-                }
-                let mut rows = xs.into_rows();
-                let mut acc = (value_fill.cloned())
-                    .or_else(|| rows.next())
-                    .ok_or_else(|| {
-                        env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
-                    })?;
-                acc = process(acc);
-                env.without_fill(|env| -> UiuaResult<Value> {
-                    for row in rows {
-                        env.push(process(row));
-                        env.push(acc);
-                        env.exec(f.clone())?;
-                        acc = env.pop("reduced function result")?;
-                    }
-                    Ok(acc)
-                })
-            } else {
-                let mut new_rows = Vec::with_capacity(xs.row_count());
-
-                // Handle empty arrays
-                if xs.row_count() == 0 {
-                    if let Some(mut xs) = reduce_identity(&f.node, xs.clone()) {
-                        if xs.element_count() == 0 {
-                            xs.shape_mut().insert(0, 0);
-                            return Ok(xs);
-                        }
-                    }
-                }
-
-                // Normal case
-                env.without_fill(|env| -> UiuaResult {
-                    for row in xs.into_rows() {
-                        env.push(row);
-                        let val = generic_reduce_inner(f.clone(), depth - 1, process, env)?;
-                        new_rows.push(val);
-                    }
-                    Ok(())
-                })?;
-                Value::from_row_values(new_rows, env)
-            }
+        )));
+    }
+    let n = sig.args;
+    let mut repeated = Vec::with_capacity(n - 2);
+    for i in 0..n - 2 {
+        repeated.push(process(env.pop(i + 1)?));
+    }
+    let mut xs = env.pop(n - 1)?;
+    let value_fill = env.value_fill();
+    if depth == 0 && value_fill.is_none() {
+        if xs.row_count() == 0 {
+            return reduce_identity(&f.node, xs).ok_or_else(|| {
+                env.error(format!(
+                    "Cannot {} empty array. Function has no identity value.",
+                    Primitive::Reduce.format()
+                ))
+            });
         }
-        n => {
-            let mut repeated = Vec::with_capacity(n - 2);
-            for i in 0..n - 2 {
-                repeated.push(process(env.pop(i + 1)?));
-            }
-            let xs = env.pop(n - 1)?;
-            if depth == 0 {
-                let mut rows = xs.into_rows();
-                let mut acc = (env.value_fill().cloned())
-                    .or_else(|| rows.next())
-                    .ok_or_else(|| {
-                        env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
-                    })?;
-                acc = process(acc);
-                env.without_fill(|env| {
-                    for row in rows {
-                        env.push(process(row));
-                        for val in repeated.iter().rev() {
-                            env.push(val.clone());
-                        }
-                        env.push(acc);
-                        env.exec(f.clone())?;
-                        acc = env.pop("reduced function result")?;
-                    }
-                    Ok(acc)
-                })
+        if xs.row_count() == 1 {
+            let row_count = if xs.rank() == 0 {
+                None
             } else {
-                let mut new_values = Vec::with_capacity(xs.row_count());
-                let mut args = repeated;
-                args.push(xs);
-                let FixedRowsData {
-                    row_count,
-                    mut rows,
-                    all_scalar,
-                    is_empty,
-                    per_meta,
-                    ..
-                } = fixed_rows(Primitive::Rows.format(), 1, args, env)?;
-                env.without_fill(|env| -> UiuaResult {
-                    for _ in 0..row_count {
-                        for arg in rows.iter_mut().rev() {
-                            match arg {
-                                Ok(rows) => env.push(rows.next().unwrap()),
-                                Err(row) => env.push(row.clone()),
-                            }
-                        }
-                        let val = generic_reduce_inner(f.clone(), depth - 1, process, env)?;
-                        new_values.push(val);
-                    }
-                    Ok(())
-                })?;
-                let mut rowsed = Value::from_row_values(new_values, env)?;
-                if all_scalar {
-                    rowsed.undo_fix();
-                } else if is_empty {
-                    rowsed.pop_row();
-                }
-                rowsed.validate_shape();
-                rowsed.set_per_meta(per_meta.clone());
-                Ok(rowsed)
+                Some(xs.shape_mut().remove(0))
+            };
+            if let Some(row_count) = row_count {
+                xs.shape_mut().insert(0, row_count);
             }
+            return Ok(reduce_singleton(&f.node, xs, process));
         }
+    }
+    if sig.args == 2 {
+        if depth == 0 {
+            let mut rows = xs.into_rows();
+            let mut acc = value_fill.cloned().or_else(|| rows.next()).ok_or_else(|| {
+                env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
+            })?;
+            acc = process(acc);
+            env.without_fill(|env| -> UiuaResult<Value> {
+                for row in rows {
+                    env.push(process(row));
+                    env.push(acc);
+                    env.exec(f.clone())?;
+                    acc = env.pop("reduced function result")?;
+                }
+                Ok(acc)
+            })
+        } else {
+            let mut new_rows = Vec::with_capacity(xs.row_count());
+
+            // Handle empty arrays
+            if xs.row_count() == 0 {
+                if let Some(mut xs) = reduce_identity(&f.node, xs.clone()) {
+                    if xs.element_count() == 0 {
+                        xs.shape_mut().insert(0, 0);
+                        return Ok(xs);
+                    }
+                }
+            }
+
+            // Normal case
+            env.without_fill(|env| -> UiuaResult {
+                for row in xs.into_rows() {
+                    env.push(row);
+                    let val = generic_reduce_inner(f.clone(), depth - 1, process, env)?;
+                    new_rows.push(val);
+                }
+                Ok(())
+            })?;
+            Value::from_row_values(new_rows, env)
+        }
+    } else if depth == 0 {
+        let mut rows = xs.into_rows();
+        let mut acc = value_fill.cloned().or_else(|| rows.next()).ok_or_else(|| {
+            env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
+        })?;
+        acc = process(acc);
+        env.without_fill(|env| {
+            for row in rows {
+                env.push(process(row));
+                for val in repeated.iter().rev() {
+                    env.push(val.clone());
+                }
+                env.push(acc);
+                env.exec(f.clone())?;
+                acc = env.pop("reduced function result")?;
+            }
+            Ok(acc)
+        })
+    } else {
+        let mut new_values = Vec::with_capacity(xs.row_count());
+        let mut args = repeated;
+        args.push(xs);
+        let FixedRowsData {
+            row_count,
+            mut rows,
+            all_scalar,
+            is_empty,
+            per_meta,
+            ..
+        } = fixed_rows(Primitive::Rows.format(), 1, args, env)?;
+        env.without_fill(|env| -> UiuaResult {
+            for _ in 0..row_count {
+                for arg in rows.iter_mut().rev() {
+                    match arg {
+                        Ok(rows) => env.push(rows.next().unwrap()),
+                        Err(row) => env.push(row.clone()),
+                    }
+                }
+                let val = generic_reduce_inner(f.clone(), depth - 1, process, env)?;
+                new_values.push(val);
+            }
+            Ok(())
+        })?;
+        let mut rowsed = Value::from_row_values(new_values, env)?;
+        if all_scalar {
+            rowsed.undo_fix();
+        } else if is_empty {
+            rowsed.pop_row();
+        }
+        rowsed.validate_shape();
+        rowsed.set_per_meta(per_meta.clone());
+        Ok(rowsed)
     }
 }
 

@@ -2058,9 +2058,7 @@ impl Value {
                     rows.push(value);
                 }
                 if rows.iter().all(|val| val.shape().is_empty())
-                    && rows
-                        .windows(2)
-                        .all(|win| win[0].type_id() == win[1].type_id())
+                    && (rows.windows(2)).all(|win| win[0].type_id() == win[1].type_id())
                 {
                     Value::from_row_values_infallible(rows)
                 } else {
@@ -2083,9 +2081,9 @@ impl Value {
                     }
                     values.push(value);
                 }
-                let mut values = if values.windows(2).all(|win| {
-                    win[0].shape() == win[1].shape() && win[0].type_name() == win[1].type_name()
-                }) {
+                let mut values = if values.iter().all(|val| val.shape().is_empty())
+                    && (values.windows(2)).all(|win| win[0].type_id() == win[1].type_id())
+                {
                     Value::from_row_values_infallible(values)
                 } else {
                     Array::from(values.into_iter().map(Boxed).collect::<EcoVec<_>>()).into()

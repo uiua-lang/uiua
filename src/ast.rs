@@ -646,14 +646,14 @@ pub struct Subscript {
     /// The numeric part
     pub num: Option<SubNum>,
     /// The sided part
-    pub side: Option<SubSide>,
+    pub sided: Option<SidedSub>,
 }
 
 impl From<i32> for Subscript {
     fn from(n: i32) -> Self {
         Self {
             num: Some(SubNum::N(n)),
-            side: None,
+            sided: None,
         }
     }
 }
@@ -668,6 +668,30 @@ pub enum SubNum {
     N(i32),
     /// The subscript is too large
     TooLarge,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct SidedSub<N = SubNum> {
+    pub side: SubSide,
+    pub num: Option<N>,
+}
+
+impl From<SubSide> for SidedSub {
+    fn from(side: SubSide) -> Self {
+        Self { side, num: None }
+    }
+}
+
+impl<N> SidedSub<N> {
+    pub(crate) fn map_n<M>(self, f: impl FnOnce(N) -> M) -> SidedSub<M> {
+        self.and_then_n(|n| Some(f(n)))
+    }
+    pub(crate) fn and_then_n<M>(self, f: impl FnOnce(N) -> Option<M>) -> SidedSub<M> {
+        SidedSub {
+            side: self.side,
+            num: self.num.and_then(f),
+        }
+    }
 }
 
 /// A sided subscript
@@ -686,7 +710,7 @@ impl Subscript {
                 return false;
             }
         }
-        self.num.is_some() || self.side.is_some()
+        self.num.is_some() || self.sided.is_some()
     }
     /// Get the numeric value, if any
     pub fn num(&self) -> Option<i32> {
@@ -706,9 +730,27 @@ impl fmt::Display for SubSide {
     }
 }
 
+impl fmt::Display for SubNum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SubNum::NegOnly => write!(f, "₋"),
+            SubNum::N(n) => {
+                if *n < 0 {
+                    write!(f, "₋")?;
+                }
+                for c in n.abs().to_string().chars() {
+                    write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
+                }
+                Ok(())
+            }
+            SubNum::TooLarge => write!(f, "…"),
+        }
+    }
+}
+
 impl fmt::Display for Subscript {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.num.is_none() && self.side.is_none() {
+        if self.num.is_none() && self.sided.is_none() {
             return write!(f, "__");
         }
         if let Some(num) = &self.num {
@@ -725,8 +767,11 @@ impl fmt::Display for Subscript {
                 SubNum::TooLarge => write!(f, "…")?,
             }
         }
-        if let Some(side) = &self.side {
-            side.fmt(f)?;
+        if let Some(sided) = &self.sided {
+            sided.side.fmt(f)?;
+            if let Some(num) = &sided.num {
+                write!(f, "{}", num)?;
+            }
         }
         Ok(())
     }

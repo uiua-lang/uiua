@@ -2037,10 +2037,10 @@ code:
                         self.word(n_span.sp(Word::Number(Ok(n as f64))))?,
                         self.primitive(prim, span),
                     ]),
-                    SubNOrSide::Side(side) => {
+                    SubNOrSide::Sided(sided) => {
                         let sub_span = self.add_span(n_span);
                         let mut node = Node::Prim(Primitive::Fix, sub_span);
-                        if side == SubSide::Right {
+                        if sided.side == SubSide::Right {
                             node = Node::Mod(
                                 Primitive::Dip,
                                 eco_vec![node.sig_node().unwrap()],
@@ -2224,21 +2224,18 @@ code:
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SubNOrSide {
     N(i32),
-    Side(SubSide),
-    Both(i32, SubSide),
+    Sided(SidedSub<i32>),
+    Both(i32, SidedSub<i32>),
 }
 
 impl From<SubNOrSide> for Subscript {
     fn from(n_or_side: SubNOrSide) -> Self {
-        let (n, side) = match n_or_side {
-            SubNOrSide::N(n) => (Some(n), None),
-            SubNOrSide::Side(side) => (None, Some(side)),
-            SubNOrSide::Both(n, side) => (Some(n), Some(side)),
+        let (num, sided) = match n_or_side {
+            SubNOrSide::N(n) => (Some(SubNum::N(n)), None),
+            SubNOrSide::Sided(sided) => (None, Some(sided.map_n(SubNum::N))),
+            SubNOrSide::Both(n, sided) => (Some(SubNum::N(n)), Some(sided.map_n(SubNum::N))),
         };
-        Self {
-            num: n.map(SubNum::N),
-            side,
-        }
+        Self { num, sided }
     }
 }
 
@@ -2253,28 +2250,35 @@ impl Compiler {
         let n_or_s = self.subscript_n_or_side(sub)?;
         self.subscript_n_only(n_or_s, for_what)
     }
-    fn subscript_n_or_side(&mut self, sub: Sp<Subscript>) -> Option<Sp<SubNOrSide>> {
-        let num = sub.value.num.and_then(|n| match n {
+    fn sub_num_n(&mut self, num: SubNum, span: &CodeSpan) -> Option<i32> {
+        match num {
             SubNum::N(n) => Some(n),
             SubNum::NegOnly => {
-                self.add_error(sub.span.clone(), "Subscript is incomplete");
+                self.add_error(span.clone(), "Subscript is incomplete");
                 None
             }
             SubNum::TooLarge => {
-                self.add_error(sub.span.clone(), "Subscript is too large");
+                self.add_error(span.clone(), "Subscript is too large");
                 None
             }
-        });
-        if sub.value.side.is_some() {
+        }
+    }
+    fn subscript_n_or_side(&mut self, sub: Sp<Subscript>) -> Option<Sp<SubNOrSide>> {
+        let num = sub.value.num.and_then(|n| self.sub_num_n(n, &sub.span));
+        if sub.value.sided.is_some() {
             self.experimental_error(&sub.span, || {
                 "Sided subscripts are experimental. \
                 To use them, add `# Experimental!` to the top of the file."
             });
         }
-        Some(sub.span.sp(match (num, sub.value.side) {
-            (Some(num), Some(side)) => SubNOrSide::Both(num, side),
+        Some(sub.span.sp(match (num, sub.value.sided) {
+            (Some(num), Some(sided)) => {
+                SubNOrSide::Both(num, sided.and_then_n(|n| self.sub_num_n(n, &sub.span)))
+            }
             (Some(num), None) => SubNOrSide::N(num),
-            (None, Some(side)) => SubNOrSide::Side(side),
+            (None, Some(sided)) => {
+                SubNOrSide::Sided(sided.and_then_n(|n| self.sub_num_n(n, &sub.span)))
+            }
             (None, None) => return None,
         }))
     }
@@ -2285,7 +2289,7 @@ impl Compiler {
     ) -> Option<Sp<i32>> {
         match n_or_side.value {
             SubNOrSide::N(n) => Some(n_or_side.span.sp(n)),
-            SubNOrSide::Side(_) | SubNOrSide::Both(..) => {
+            SubNOrSide::Sided(_) | SubNOrSide::Both(..) => {
                 self.add_error(
                     n_or_side.span,
                     format!("Sided subscripts are not allowed for {for_what}"),
@@ -2300,7 +2304,14 @@ impl Compiler {
         for_what: impl fmt::Display,
     ) -> Option<Sp<SubSide>> {
         match n_or_side.value {
-            SubNOrSide::Side(side) => Some(n_or_side.span.sp(side)),
+            SubNOrSide::Sided(sided) if sided.num.is_some() => {
+                self.add_error(
+                    n_or_side.span,
+                    format!("Quantified sided subscripts are not allowed for {for_what}"),
+                );
+                None
+            }
+            SubNOrSide::Sided(sided) => Some(n_or_side.span.sp(sided.side)),
             SubNOrSide::N(_) | SubNOrSide::Both(..) => {
                 self.add_error(
                     n_or_side.span,

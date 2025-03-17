@@ -16,7 +16,7 @@ use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    ast::{SubNum, SubSide, Subscript},
+    ast::{SidedSub, SubNum, SubSide, Subscript},
     Ident, Inputs, Primitive, WILDCARD_CHAR,
 };
 
@@ -1026,35 +1026,13 @@ impl<'a> Lexer<'a> {
                 "⟩" => self.end(CloseAngle, start),
                 "_" => {
                     if self.next_char_exact("_") {
-                        let mut side = self.sub_side(true);
-                        let mut n: Option<i32> = None;
-                        let neg = self.next_char_exact("₋")
-                            || self.next_char_exact("`")
-                            || self.next_char_exact("¯");
-                        let mut overflow = false;
-                        loop {
-                            if let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                                let n = n.get_or_insert(0);
-                                *n = *n * 10 + c.parse::<i32>().unwrap();
-                            } else if let Some(c) =
-                                self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c))
-                            {
-                                let c = c.chars().next().unwrap();
-                                let n = n.get_or_insert(0);
-                                let (m, over_m) = n.overflowing_mul(10);
-                                let (a, over_a) = m.overflowing_add(
-                                    SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32,
-                                );
-                                overflow |= over_m | over_a;
-                                *n = a;
-                            } else {
-                                break;
-                            }
-                        }
-                        side = side.or_else(|| self.sub_side(true));
-                        let num = pick_sub_num(neg, n, overflow);
-                        let sub = Subscript { num, side };
-                        self.end(Subscr(sub), start)
+                        let num = self.sub_num();
+                        let side = self.sub_side(true);
+                        let sided = side.map(|side| {
+                            let num = self.sub_num();
+                            SidedSub { side, num }
+                        });
+                        self.end(Subscr(Subscript { num, sided }), start)
                     } else {
                         self.end(Underscore, start)
                     }
@@ -1252,54 +1230,14 @@ impl<'a> Lexer<'a> {
                 }
                 // Formatted subscripts
                 c if "₋⌞⌟".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
-                    let (mut s, neg, mut side) = match c {
-                        "₋" => (String::new(), true, None),
-                        "⌞" => (String::new(), false, Some(SubSide::Left)),
-                        "⌟" => (String::new(), false, Some(SubSide::Right)),
-                        _ => (c.to_string(), false, None),
-                    };
-                    loop {
-                        if let Some(c) =
-                            self.next_char_if(|c| c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)))
-                        {
-                            s.push_str(c);
-                        } else if self.next_chars_exact(["_"; 2]) {
-                            if !neg && side.is_none() {
-                                if self.next_char_if_all(|c| "<⌞".contains(c)).is_some() {
-                                    side = Some(SubSide::Left);
-                                } else if self.next_char_if_all(|c| "⌟>".contains(c)).is_some() {
-                                    side = Some(SubSide::Right);
-                                }
-                            }
-                            while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                                let i: usize = c.parse().unwrap();
-                                s.push(SUBSCRIPT_DIGITS[i]);
-                            }
-                            if side.is_none() {
-                                if self.next_char_if_all(|c| "<⌞".contains(c)).is_some() {
-                                    side = Some(SubSide::Left);
-                                } else if self.next_char_if_all(|c| "⌟>".contains(c)).is_some() {
-                                    side = Some(SubSide::Right);
-                                }
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                    let mut n: Option<i32> = None;
-                    let mut overflow = false;
-                    for c in s.chars() {
-                        let i = SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
-                        let n = n.get_or_insert(0);
-                        let (m, over_m) = n.overflowing_mul(10);
-                        let (a, over_a) = m.overflowing_add(i);
-                        overflow |= over_m | over_a;
-                        *n = a;
-                    }
-                    side = side.or_else(|| self.sub_side(false));
-                    let num = pick_sub_num(neg, n, overflow);
-                    let sub = Subscript { num, side };
-                    self.end(Subscr(sub), start)
+                    self.loc = start;
+                    let num = self.sub_num();
+                    let side = self.sub_side(true);
+                    let sided = side.map(|side| {
+                        let num = self.sub_num();
+                        SidedSub { side, num }
+                    });
+                    self.end(Subscr(Subscript { num, sided }), start)
                 }
                 // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c) || c.chars().all(is_ident_start) || "&!‼".contains(c) => {
@@ -1466,6 +1404,29 @@ impl<'a> Lexer<'a> {
         }
 
         (processed, self.errors)
+    }
+    fn sub_num(&mut self) -> Option<SubNum> {
+        let mut n: Option<i32> = None;
+        let neg =
+            self.next_char_exact("₋") || self.next_char_exact("`") || self.next_char_exact("¯");
+        let mut overflow = false;
+        loop {
+            if let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                let n = n.get_or_insert(0);
+                *n = *n * 10 + c.parse::<i32>().unwrap();
+            } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c)) {
+                let c = c.chars().next().unwrap();
+                let n = n.get_or_insert(0);
+                let (m, over_m) = n.overflowing_mul(10);
+                let (a, over_a) = m
+                    .overflowing_add(SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32);
+                overflow |= over_m | over_a;
+                *n = a;
+            } else {
+                break;
+            }
+        }
+        pick_sub_num(neg, n, overflow)
     }
     fn ident(&mut self, start: Loc, c: &str) -> String {
         let mut s = c.to_string();
@@ -1737,56 +1698,69 @@ pub(crate) fn subscript(s: &str) -> Option<Subscript> {
     if s.is_empty() {
         return None;
     }
-    let mut chars = s.chars().peekable();
-    let first = *chars.peek().unwrap();
-    let mut neg = false;
-    let mut side = None;
-    match first {
-        '⌞' | '<' => side = Some(SubSide::Left),
-        '⌟' | '>' => side = Some(SubSide::Right),
-        '₋' | '`' | '¯' => neg = true,
-        _ => {}
+    let mut lexer = SimpleLexer::new(s);
+    let num = sub_num(&mut lexer);
+    let sided = sub_side(&mut lexer, true).map(|side| {
+        let num = sub_num(&mut lexer);
+        SidedSub { side, num }
+    });
+    Some(Subscript { num, sided })
+}
+
+struct SimpleLexer<'a> {
+    s: &'a str,
+}
+impl<'a> SimpleLexer<'a> {
+    fn new(s: &'a str) -> Self {
+        Self { s }
     }
-    if neg || side.is_some() {
-        chars.next();
-    }
-    if side.is_some() && chars.peek().is_some_and(|&c| "`¯₋".contains(c)) {
-        neg = true;
-        chars.next();
-    }
-    let mut n: Option<i32> = None;
-    let mut overflow = false;
-    while let Some(&c) = chars.peek() {
-        let Some(i) = (SUBSCRIPT_DIGITS.iter().position(|&d| c == d))
-            .or_else(|| "0123456789".chars().position(|d| c == d))
-            .map(|i| i as i32)
-        else {
-            break;
-        };
-        chars.next();
-        let n = n.get_or_insert(0);
-        let (m, over_m) = n.overflowing_mul(10);
-        let (a, over_a) = m.overflowing_add(i);
-        overflow |= over_m | over_a;
-        *n = a;
-    }
-    if let Some(c) = chars.next() {
-        if side.is_some() {
+    fn next_char_if(&mut self, f: impl Fn(char) -> bool + Copy) -> Option<char> {
+        let c = self.s.chars().next()?;
+        if !f(c) {
             return None;
+        }
+        self.s = &self.s[c.len_utf8()..];
+        Some(c)
+    }
+    fn next_char_exact(&mut self, c: char) -> bool {
+        self.next_char_if(|c2| c2 == c).is_some()
+    }
+    fn next_char(&mut self) -> Option<char> {
+        self.next_char_if(|_| true)
+    }
+}
+
+fn sub_num(lexer: &mut SimpleLexer) -> Option<SubNum> {
+    let mut n: Option<i32> = None;
+    let neg =
+        lexer.next_char_exact('₋') || lexer.next_char_exact('`') || lexer.next_char_exact('¯');
+    let mut overflow = false;
+    loop {
+        if let Some(c) = lexer.next_char_if(|c| c.is_ascii_digit()) {
+            let n = n.get_or_insert(0);
+            *n = *n * 10 + (c as u8 - b'0') as i32;
+        } else if let Some(c) = lexer.next_char_if(|c| SUBSCRIPT_DIGITS.contains(&c)) {
+            let n = n.get_or_insert(0);
+            let (m, over_m) = n.overflowing_mul(10);
+            let (a, over_a) =
+                m.overflowing_add(SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32);
+            overflow |= over_m | over_a;
+            *n = a;
         } else {
-            side = Some(match c {
-                '<' | '⌞' => SubSide::Left,
-                '>' | '⌟' => SubSide::Right,
-                _ => return None,
-            });
+            break;
         }
     }
-    if chars.next().is_some() {
-        return None;
+    pick_sub_num(neg, n, overflow)
+}
+
+fn sub_side(lexer: &mut SimpleLexer, allow_unformatted: bool) -> Option<SubSide> {
+    if allow_unformatted && lexer.next_char_exact('<') || lexer.next_char_exact('⌞') {
+        Some(SubSide::Left)
+    } else if allow_unformatted && lexer.next_char_exact('>') || lexer.next_char_exact('⌟') {
+        Some(SubSide::Right)
+    } else {
+        None
     }
-    let num = pick_sub_num(neg, n, overflow);
-    let sub = Subscript { num, side };
-    Some(sub)
 }
 
 /// Whether a string is a custom glyph

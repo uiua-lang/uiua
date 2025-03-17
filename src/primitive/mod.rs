@@ -512,7 +512,7 @@ impl Primitive {
     pub fn subscript_sig(&self, n: Option<Subscript>) -> Option<Signature> {
         use Primitive::*;
         Some(
-            match (self, n.and_then(|n| n.num), n.and_then(|n| n.side)) {
+            match (self, n.and_then(|n| n.num), n.and_then(|n| n.sided)) {
                 (prim, Some(_), None) if prim.class() == PrimClass::DyadicPervasive => {
                     Signature::new(1, 1)
                 }

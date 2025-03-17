@@ -558,8 +558,9 @@ impl Compiler {
                         let n = self.positive_subscript(n, Both, &modified.modifier.span)?;
                         self.monadic_modifier_op(modified)?.0.on_all(n, span)
                     }
-                    SubNOrSide::Side(side) => {
+                    SubNOrSide::Sided(sided) => {
                         let op = self.monadic_modifier_op(modified)?.0;
+                        let fix_count = sided.num.unwrap_or(1);
                         if op.sig.args() != 2 {
                             self.add_error(
                                 modified.modifier.span.clone().merge(nos.span),
@@ -573,7 +574,7 @@ impl Compiler {
                             op.on_all(2, span)
                         } else {
                             let sub_span = self.add_span(nos.span);
-                            let mut node = match side {
+                            let mut node = match sided {
                                 SubSide::Left => Node::Mod(
                                     On,
                                     eco_vec![Node::Prim(Flip, sub_span).sig_node().unwrap()],

@@ -282,6 +282,7 @@ impl Compiler {
             }
             node.push(Node::new_push(i));
             node.push(Node::Prim(Primitive::Pick, span));
+            node = Node::TrackCaller(node.into());
             if boxed {
                 node.push(Node::ImplPrim(ImplPrimitive::UnBox, span));
                 node.push(Node::RemoveLabel(Some(field.name.clone()), span));

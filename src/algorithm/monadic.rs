@@ -191,9 +191,10 @@ impl Value {
         arr
     }
     /// Attempt to parse the value into a number
-    pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(match (self, self.shape().dims()) {
-            (Value::Char(arr), [] | [_]) => {
+    pub fn parse_num(mut self, env: &Uiua) -> UiuaResult<Self> {
+        let per_meta = self.take_per_meta();
+        let mut parsed = match (self.rank(), self) {
+            (0 | 1, Value::Char(arr)) => {
                 let s: String = arr.data.iter().copied().collect();
                 match (
                     s.strip_suffix("i").and_then(|s| s.split_once("r")),
@@ -217,105 +218,114 @@ impl Value {
                         .or_else(|e| env.value_fill().cloned().ok_or(e))?,
                 }
             }
-            (Value::Box(arr), []) => {
-                let value = &arr.data[0].0;
+            (0, Value::Box(arr)) => {
+                let Boxed(value) = arr.into_scalar().unwrap();
                 value.parse_num(env)?
             }
-            (Value::Char(_) | Value::Box(_), _) => {
-                let mut rows = Vec::with_capacity(self.row_count());
-                for row in self.rows() {
+            (_, val @ (Value::Char(_) | Value::Box(_))) => {
+                let mut rows = Vec::with_capacity(val.row_count());
+                for row in val.into_rows() {
                     rows.push(row.parse_num(env)?);
                 }
                 Value::from_row_values(rows, env)?
             }
-            (val, _) => return Err(env.error(format!("Cannot parse {} array", val.type_name()))),
-        })
+            (_, val) => return Err(env.error(format!("Cannot parse {} array", val.type_name()))),
+        };
+        parsed.set_per_meta(per_meta);
+        Ok(parsed)
     }
-    pub(crate) fn unparse(&self, env: &Uiua) -> UiuaResult<Self> {
-        if self.rank() == 0 {
-            return match self {
-                Value::Box(b) => b.as_scalar().unwrap().as_value().unparse(env),
-                value => Ok(value.format().into()),
-            };
-        }
-
-        fn padded<T: fmt::Display>(c: char, arr: &Array<T>, env: &Uiua) -> UiuaResult<Array<char>> {
-            let mut buf = Vec::new();
-            let mut max_whole = 0;
-            let mut max_dec = 0;
-            for v in &arr.data {
-                buf.clear();
-                write!(&mut buf, "{v}").unwrap();
-                if let Some(i) = buf.iter().position(|&c| c == b'.') {
-                    max_whole = max_whole.max(i);
-                    max_dec = max_dec.max(buf.len() - i - 1);
-                } else {
-                    max_whole = max_whole.max(buf.len());
-                }
+    pub(crate) fn unparse(mut self, env: &Uiua) -> UiuaResult<Self> {
+        let per_meta = self.take_per_meta();
+        let mut unparsed = if self.rank() == 0 {
+            match self {
+                Value::Box(b) => b.into_scalar().unwrap().0.unparse(env)?,
+                value => value.format().into(),
             }
-            let max_len = if max_dec == 0 {
-                max_whole
-            } else {
-                max_whole + max_dec + 1
-            };
-            let mut new_shape = arr.shape().clone();
-            new_shape.push(max_len);
-            let elem_count = validate_size::<char>(new_shape.iter().copied(), env)?;
-            let mut new_data = eco_vec![c; elem_count];
-            if max_len > 0 {
-                for (i, s) in new_data.make_mut().chunks_exact_mut(max_len).enumerate() {
-                    let n = arr.data[i].to_string();
-                    let dot_pos = n.find('.');
-                    let skip = if max_dec == 0 {
-                        0
+        } else {
+            fn padded<T: fmt::Display>(
+                c: char,
+                arr: Array<T>,
+                env: &Uiua,
+            ) -> UiuaResult<Array<char>> {
+                let mut buf = Vec::new();
+                let mut max_whole = 0;
+                let mut max_dec = 0;
+                for v in &arr.data {
+                    buf.clear();
+                    write!(&mut buf, "{v}").unwrap();
+                    if let Some(i) = buf.iter().position(|&c| c == b'.') {
+                        max_whole = max_whole.max(i);
+                        max_dec = max_dec.max(buf.len() - i - 1);
                     } else {
-                        dot_pos
-                            .map(|i| max_dec - (n.len() - i - 1))
-                            .unwrap_or(max_dec + 1)
-                    };
-                    for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
-                        *s = c;
-                    }
-                    if dot_pos.is_none() && max_dec > 0 && c.is_ascii_digit() {
-                        s[max_whole] = '.';
+                        max_whole = max_whole.max(buf.len());
                     }
                 }
+                let max_len = if max_dec == 0 {
+                    max_whole
+                } else {
+                    max_whole + max_dec + 1
+                };
+                let mut new_shape = arr.shape().clone();
+                new_shape.push(max_len);
+                let elem_count = validate_size::<char>(new_shape.iter().copied(), env)?;
+                let mut new_data = eco_vec![c; elem_count];
+                if max_len > 0 {
+                    for (i, s) in new_data.make_mut().chunks_exact_mut(max_len).enumerate() {
+                        let n = arr.data[i].to_string();
+                        let dot_pos = n.find('.');
+                        let skip = if max_dec == 0 {
+                            0
+                        } else {
+                            dot_pos
+                                .map(|i| max_dec - (n.len() - i - 1))
+                                .unwrap_or(max_dec + 1)
+                        };
+                        for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
+                            *s = c;
+                        }
+                        if dot_pos.is_none() && max_dec > 0 && c.is_ascii_digit() {
+                            s[max_whole] = '.';
+                        }
+                    }
+                }
+                Ok(Array::new(new_shape, new_data))
             }
-            Ok(Array::new(new_shape, new_data))
-        }
 
-        Ok(match self {
-            Value::Num(arr) => {
-                if let Ok(c) = env.scalar_fill::<char>() {
-                    padded(c, arr, env)?.into()
-                } else {
+            match self {
+                Value::Num(arr) => {
+                    if let Ok(c) = env.scalar_fill::<char>() {
+                        padded(c, arr, env)?.into()
+                    } else {
+                        let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
+                            .map(Value::from)
+                            .map(Boxed)
+                            .collect();
+                        Array::new(arr.shape.clone(), new_data).into()
+                    }
+                }
+                Value::Byte(arr) => {
+                    if let Ok(c) = env.scalar_fill::<char>() {
+                        padded(c, arr, env)?.into()
+                    } else {
+                        let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
+                            .map(Value::from)
+                            .map(Boxed)
+                            .collect();
+                        Array::new(arr.shape.clone(), new_data).into()
+                    }
+                }
+                Value::Complex(arr) => {
                     let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
                         .map(Value::from)
                         .map(Boxed)
                         .collect();
                     Array::new(arr.shape.clone(), new_data).into()
                 }
+                val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
             }
-            Value::Byte(arr) => {
-                if let Ok(c) = env.scalar_fill::<char>() {
-                    padded(c, arr, env)?.into()
-                } else {
-                    let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
-                        .map(Value::from)
-                        .map(Boxed)
-                        .collect();
-                    Array::new(arr.shape.clone(), new_data).into()
-                }
-            }
-            Value::Complex(arr) => {
-                let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
-                    .map(Value::from)
-                    .map(Boxed)
-                    .collect();
-                Array::new(arr.shape.clone(), new_data).into()
-            }
-            val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
-        })
+        };
+        unparsed.set_per_meta(per_meta);
+        Ok(unparsed)
     }
 }
 

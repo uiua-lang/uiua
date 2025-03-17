@@ -854,7 +854,7 @@ impl Primitive {
                 env.push(val.box_depth(0));
             }
             Primitive::Repr => env.monadic_ref(Value::representation)?,
-            Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
+            Primitive::Parse => env.monadic_env(Value::parse_num)?,
             Primitive::Utf8 => env.monadic_ref_env(Value::utf8)?,
             Primitive::Graphemes => env.monadic_ref_env(Value::graphemes)?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,
@@ -1313,7 +1313,7 @@ impl ImplPrimitive {
                 env.push(re);
                 env.push(im);
             }
-            ImplPrimitive::UnParse => env.monadic_ref_env(Value::unparse)?,
+            ImplPrimitive::UnParse => env.monadic_env(Value::unparse)?,
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
             ImplPrimitive::StackN { n, inverse } => stack_n(env, *n, *inverse)?,

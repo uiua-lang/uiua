@@ -165,6 +165,12 @@ F ← ⨬(¯|+1|×10|∞)
 ⍤⤙≍ °△0_2 ⨬⊂⊂ [] [0] 1
 ⍤⤙≍ °△0_2 ⨬⊂⊂ [] [0] 1
 
+# Character arithmatic edge cases
+⍤⤙≍ @\0 -MaxInt @B
+⍤⤙≍ @\_ +MaxInt @B
+⍤⤙≍ @\0 -∞ @B
+⍤⤙≍ @\_ +∞ @B
+
 # Escape sequences
 ⍤⤙≍ 0 -@\0 @\0
 ⍤⤙≍ 9 -@\0 @\t

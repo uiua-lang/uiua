@@ -1128,10 +1128,12 @@ pub mod add {
         b + a.into()
     }
     pub fn num_char(a: f64, b: char) -> char {
-        char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
+        char::from_u32(((b as i64).saturating_add(a as i64)).clamp(0, char::MAX as i64) as u32)
+            .unwrap_or('\0')
     }
     pub fn char_num(a: char, b: f64) -> char {
-        char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
+        char::from_u32(((b as i64).saturating_add(a as i64)).clamp(0, char::MAX as i64) as u32)
+            .unwrap_or('\0')
     }
     pub fn byte_char(a: u8, b: char) -> char {
         char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
@@ -1165,7 +1167,8 @@ pub mod sub {
         b - a.into()
     }
     pub fn num_char(a: f64, b: char) -> char {
-        char::from_u32(((b as i64) - (a as i64)) as u32).unwrap_or('\0')
+        char::from_u32(((b as i64).saturating_sub(a as i64)).clamp(0, char::MAX as i64) as u32)
+            .unwrap_or('\0')
     }
     pub fn char_char(a: char, b: char) -> f64 {
         ((b as i64) - (a as i64)) as f64

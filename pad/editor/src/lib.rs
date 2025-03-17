@@ -1259,17 +1259,18 @@ pub fn Editor<'a>(
 
     // Select a class for the editor and code area
     let editor_class = move || {
-        let editor_size = match mode {
-            EditorMode::Example => "small-editor",
-            EditorMode::Showcase | EditorMode::Pad => "medium-editor",
-        };
+        format!(
+            "editor {}",
+            match fullscreen_enabled.get() {
+                true => "fullscreen-editor",
+                false => "normal-editor",
+            }
+        )
+    };
 
-        let editor_layout = match fullscreen_enabled.get() {
-            true => "fullscreen-editor",
-            false => "normal-editor",
-        };
-
-        format!("editor {} {}", editor_size, editor_layout)
+    let editor_size = match mode {
+        EditorMode::Example => "small-editor",
+        EditorMode::Showcase | EditorMode::Pad => "medium-editor",
     };
 
     // Hide the example arrows if there is only one example
@@ -1754,319 +1755,321 @@ pub fn Editor<'a>(
         <div id="editor-wrapper">
             <div id=editor_wrapper_id class=editor_class style=editor_style>
                 {glyph_buttons_container}
-                {file_tab_display}
-                <div id="settings" style=settings_style>
-                    <div id="settings-left">
-                        <div title="The maximum number of seconds a program can run for">
-                            "Exec limit:"
-                            <input
-                                type="number"
-                                min="0.01"
-                                max="1000000"
-                                width="3em"
-                                value=get_execution_limit
-                                on:input=on_execution_limit_change
-                            /> "s"
-                        </div>
-                        <div title="The maximum number of seconds of audio &ast will generate">
-                            <Prim prim=Primitive::Sys(SysOp::AudioStream) />
-                            " time:"
-                            <input
-                                type="number"
-                                min="1"
-                                max="600"
-                                width="3em"
-                                value=get_ast_time
-                                on:input=on_ast_time_change
-                            />
-                            "s"
-                        </div>
-                        <div title="Place the cursor on the left of the current token when formatting">
-                            "Format left:"
-                            <input
-                                type="checkbox"
-                                checked=get_right_to_left
-                                on:change=toggle_right_to_left
-                            />
-                        </div>
-                        <div title="Automatically run pad links">
-                            "Autorun links:"
-                            <input type="checkbox" checked=get_autorun on:change=toggle_autorun />
-                        </div>
-                        <div title="Automatically play audio">
-                            "Autoplay audio:"
-                            <input type="checkbox" checked=get_autoplay on:change=toggle_autoplay />
-                        </div>
-                        <div title="Show experimental primitive glyphs">
-                            "Show experimental:"
-                            <input
-                                type="checkbox"
-                                checked=get_show_experimental
-                                on:change=toggle_show_experimental
-                            />
-                        </div>
-                        <div title="Run and format together">
-                            "Run on format:"
-                            <input
-                                type="checkbox"
-                                checked=get_run_on_format
-                                on:change=toggle_run_on_format
-                            />
-                        </div>
-                        <div title="Show line values to the right of the code">
-                            "Show values:"
-                            <input
-                                type="checkbox"
-                                checked=get_inlay_values
-                                on:change=toggle_inlay_values
-                            />
-                        </div>
-                        <div>
-                            "Stack:" <select on:change=on_select_top_at_top>
-                                <option value="false" selected=get_top_at_top()>
-                                    "Top at bottom"
-                                </option>
-                                <option value="true" selected=get_top_at_top()>
-                                    "Top at top"
-                                </option>
-                            </select>
-                        </div>
-                        <div>
-                            "Font size:" <select on:change=on_select_font_size>
-                                <option value="0.6em" selected=get_font_size() == "0.6em">
-                                    "Scalar"
-                                </option>
-                                <option value="0.8em" selected=get_font_size() == "0.8em">
-                                    "Small"
-                                </option>
-                                <option value="1em" selected=get_font_size() == "1em">
-                                    "Normal"
-                                </option>
-                                <option value="1.2em" selected=get_font_size() == "1.2em">
-                                    "Big"
-                                </option>
-                                <option value="1.4em" selected=get_font_size() == "1.4em">
-                                    "Rank 3"
-                                </option>
-                            </select>
-                        </div>
-                        <div>
-                            "Font:" <select on:change=on_select_font>
-                                <option value="Uiua386" selected=get_font_name() == "Uiua386">
-                                    "Uiua386"
-                                </option>
-                                <option value="Pixua" selected=get_font_name() == "Pixua">
-                                    "Pixua"
-                                </option>
-                                <option
-                                    value="DejaVuSansMono"
-                                    selected=get_font_name() == "DejaVuSansMono"
-                                >
-                                    "DejaVu"
-                                </option>
-                            </select>
-                        </div>
-                        <button on:click=download_code>"Download Code"</button>
-                        <button on:click=copy_markdown_link>"Copy Markdown"</button>
-                    </div>
-                    <div id="settings-right">
-                        <div style="display: flex; gap: 0.2em;">
-                            <button
-                                class="info-button"
-                                data-title="Add # Experimental"
-                                on:click=on_insert_experimental
-                            >
-                                "🧪"
-                            </button>
-                            <button class="info-button" data-title=EDITOR_SHORTCUTS disabled>
-                                "🛈"
-                            </button>
-                        </div>
-                        <div style="margin-right: 0.1em">
-                            "Tokens: " {move || token_count.get()}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="editor-area">
-                    <div id=glyph_doc_id class="glyph-doc" style="display: none">
-                        {move || glyph_doc.get()}
-                        <div class="glyph-doc-ctrl-click">
-                            "Shift+click for more info (Ctrl/⌘+click for new tab)"
-                        </div>
-                    </div>
-
-                    <div id="code-right-side">
-                        <button
-                            id="glyphs-toggle-button"
-                            class="editor-right-button"
-                            data-title=show_glyphs_title
-                            on:click=toggle_show_glyphs
-                        >
-                            {show_glyphs_icon}
-                        </button>
-
-                        <button
-                            class="editor-right-button"
-                            data-title=toggle_settings_title
-                            on:click=toggle_settings_open
-                        >
-                            <span class="material-symbols-rounded">settings</span>
-                        </button>
-
-                        <button
-                            class="editor-right-button"
-                            data-title=copy_link_title
-                            on:click=copy_link
-                        >
-                            <span class="material-symbols-rounded">link</span>
-                        </button>
-
-                        {(mode == EditorMode::Pad)
-                            .then(|| {
-                                Some(
-                                    view! {
-                                        <button
-                                            class="editor-right-button"
-                                            data-title="Upload file"
-                                            on:click=upload_file_dialog
-                                        >
-                                            <span class="material-symbols-rounded">upload</span>
-                                        </button>
-
-                                        <button
-                                            class="editor-right-button expand-editor-button"
-                                            data-title=fullscreen_button_title
-                                            on:click=toggle_fullscreen
-                                        >
-                                            {fullscreen_button_icon}
-                                        </button>
-                                    },
-                                )
-                            })}
-
-                        {example_tracker_element}
-                    </div>
-
-                    <div
-                        id=code_area_id
-                        class="code-area"
-                        style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
-                    >
-                        <div id=code_outer_id class="code code-outer sized-code">
-                            <div id=line_numbers_id class="line-numbers">
-                                {line_numbers}
+                <div class=editor_size>
+                    {file_tab_display}
+                    <div id="settings" style=settings_style>
+                        <div id="settings-left">
+                            <div title="The maximum number of seconds a program can run for">
+                                "Exec limit:"
+                                <input
+                                    type="number"
+                                    min="0.01"
+                                    max="1000000"
+                                    width="3em"
+                                    value=get_execution_limit
+                                    on:input=on_execution_limit_change
+                                /> "s"
                             </div>
-                            <div class="code-and-overlay">
-                                // ///////////////////////
-                                // The text entry area //
-                                // ///////////////////////
-                                <textarea
-                                    id=code_id
-                                    class="code-entry"
-                                    autocorrect="false"
-                                    autocapitalize="off"
-                                    spellcheck="false"
-                                    translate="no"
-                                    on:paste=code_paste
-                                    on:input=code_input
-                                    on:mousemove=code_mouse_move
-                                    on:mouseleave=code_mouse_leave
-                                    value=initial_code_str
-                                ></textarea>
-                                // ///////////////////////
-                                <div id=overlay_id class="code-overlay">
-                                    {move || gen_code_view(&code_id(), &overlay.get())}
+                            <div title="The maximum number of seconds of audio &ast will generate">
+                                <Prim prim=Primitive::Sys(SysOp::AudioStream) />
+                                " time:"
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="600"
+                                    width="3em"
+                                    value=get_ast_time
+                                    on:input=on_ast_time_change
+                                />
+                                "s"
+                            </div>
+                            <div title="Place the cursor on the left of the current token when formatting">
+                                "Format left:"
+                                <input
+                                    type="checkbox"
+                                    checked=get_right_to_left
+                                    on:change=toggle_right_to_left
+                                />
+                            </div>
+                            <div title="Automatically run pad links">
+                                "Autorun links:"
+                                <input type="checkbox" checked=get_autorun on:change=toggle_autorun />
+                            </div>
+                            <div title="Automatically play audio">
+                                "Autoplay audio:"
+                                <input type="checkbox" checked=get_autoplay on:change=toggle_autoplay />
+                            </div>
+                            <div title="Show experimental primitive glyphs">
+                                "Show experimental:"
+                                <input
+                                    type="checkbox"
+                                    checked=get_show_experimental
+                                    on:change=toggle_show_experimental
+                                />
+                            </div>
+                            <div title="Run and format together">
+                                "Run on format:"
+                                <input
+                                    type="checkbox"
+                                    checked=get_run_on_format
+                                    on:change=toggle_run_on_format
+                                />
+                            </div>
+                            <div title="Show line values to the right of the code">
+                                "Show values:"
+                                <input
+                                    type="checkbox"
+                                    checked=get_inlay_values
+                                    on:change=toggle_inlay_values
+                                />
+                            </div>
+                            <div>
+                                "Stack:" <select on:change=on_select_top_at_top>
+                                    <option value="false" selected=get_top_at_top()>
+                                        "Top at bottom"
+                                    </option>
+                                    <option value="true" selected=get_top_at_top()>
+                                        "Top at top"
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
+                                "Font size:" <select on:change=on_select_font_size>
+                                    <option value="0.6em" selected=get_font_size() == "0.6em">
+                                        "Scalar"
+                                    </option>
+                                    <option value="0.8em" selected=get_font_size() == "0.8em">
+                                        "Small"
+                                    </option>
+                                    <option value="1em" selected=get_font_size() == "1em">
+                                        "Normal"
+                                    </option>
+                                    <option value="1.2em" selected=get_font_size() == "1.2em">
+                                        "Big"
+                                    </option>
+                                    <option value="1.4em" selected=get_font_size() == "1.4em">
+                                        "Rank 3"
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
+                                "Font:" <select on:change=on_select_font>
+                                    <option value="Uiua386" selected=get_font_name() == "Uiua386">
+                                        "Uiua386"
+                                    </option>
+                                    <option value="Pixua" selected=get_font_name() == "Pixua">
+                                        "Pixua"
+                                    </option>
+                                    <option
+                                        value="DejaVuSansMono"
+                                        selected=get_font_name() == "DejaVuSansMono"
+                                    >
+                                        "DejaVu"
+                                    </option>
+                                </select>
+                            </div>
+                            <button on:click=download_code>"Download Code"</button>
+                            <button on:click=copy_markdown_link>"Copy Markdown"</button>
+                        </div>
+                        <div id="settings-right">
+                            <div style="display: flex; gap: 0.2em;">
+                                <button
+                                    class="info-button"
+                                    data-title="Add # Experimental"
+                                    on:click=on_insert_experimental
+                                >
+                                    "🧪"
+                                </button>
+                                <button class="info-button" data-title=EDITOR_SHORTCUTS disabled>
+                                    "🛈"
+                                </button>
+                            </div>
+                            <div style="margin-right: 0.1em">
+                                "Tokens: " {move || token_count.get()}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="editor-area">
+                        <div id=glyph_doc_id class="glyph-doc" style="display: none">
+                            {move || glyph_doc.get()}
+                            <div class="glyph-doc-ctrl-click">
+                                "Shift+click for more info (Ctrl/⌘+click for new tab)"
+                            </div>
+                        </div>
+
+                        <div id="code-right-side">
+                            <button
+                                id="glyphs-toggle-button"
+                                class="editor-right-button"
+                                data-title=show_glyphs_title
+                                on:click=toggle_show_glyphs
+                            >
+                                {show_glyphs_icon}
+                            </button>
+
+                            <button
+                                class="editor-right-button"
+                                data-title=toggle_settings_title
+                                on:click=toggle_settings_open
+                            >
+                                <span class="material-symbols-rounded">settings</span>
+                            </button>
+
+                            <button
+                                class="editor-right-button"
+                                data-title=copy_link_title
+                                on:click=copy_link
+                            >
+                                <span class="material-symbols-rounded">link</span>
+                            </button>
+
+                            {(mode == EditorMode::Pad)
+                                .then(|| {
+                                    Some(
+                                        view! {
+                                            <button
+                                                class="editor-right-button"
+                                                data-title="Upload file"
+                                                on:click=upload_file_dialog
+                                            >
+                                                <span class="material-symbols-rounded">upload</span>
+                                            </button>
+
+                                            <button
+                                                class="editor-right-button expand-editor-button"
+                                                data-title=fullscreen_button_title
+                                                on:click=toggle_fullscreen
+                                            >
+                                                {fullscreen_button_icon}
+                                            </button>
+                                        },
+                                    )
+                                })}
+
+                            {example_tracker_element}
+                        </div>
+
+                        <div
+                            id=code_area_id
+                            class="code-area"
+                            style=format!("height: {}em;", code_height_em + 1.25 / 2.0)
+                        >
+                            <div id=code_outer_id class="code code-outer sized-code">
+                                <div id=line_numbers_id class="line-numbers">
+                                    {line_numbers}
+                                </div>
+                                <div class="code-and-overlay">
+                                    // ///////////////////////
+                                    // The text entry area //
+                                    // ///////////////////////
+                                    <textarea
+                                        id=code_id
+                                        class="code-entry"
+                                        autocorrect="false"
+                                        autocapitalize="off"
+                                        spellcheck="false"
+                                        translate="no"
+                                        on:paste=code_paste
+                                        on:input=code_input
+                                        on:mousemove=code_mouse_move
+                                        on:mouseleave=code_mouse_leave
+                                        value=initial_code_str
+                                    ></textarea>
+                                    // ///////////////////////
+                                    <div id=overlay_id class="code-overlay">
+                                        {move || gen_code_view(&code_id(), &overlay.get())}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div id=hover_id class="code-hover" />
+                    <div id=hover_id class="code-hover" />
 
-                <div class="output-frame">
-                    <div class="output-lines">
-                        <div class="output-diagnostics">{move || diag_output.get()}</div>
-                        <div class="output-wrapper">
-                            <div id=format!("output-{id}") class="output sized-code">
-                                {move || output.get()}
-                                {move || {
-                                    get_state
-                                        .get()
-                                        .challenge
-                                        .as_ref()
-                                        .map(|chal| {
-                                            let intended = chal.intended_answer.clone();
-                                            let click_intended = move |_| {
-                                                get_state.get().set_code(&intended, Cursor::Ignore);
-                                            };
-                                            view! {
-                                                <div>
-                                                    <hr />
-                                                    <button
-                                                        class="glyph-button"
-                                                        data-title="Show intended answer"
-                                                        on:click=click_intended
-                                                    >
-                                                        "📖"
-                                                    </button>
-                                                    {chal
-                                                        .best_answer
-                                                        .clone()
-                                                        .map(|ans| {
-                                                            let click_ans = move |_| {
-                                                                get_state.get().set_code(&ans, Cursor::Ignore);
-                                                            };
-                                                            view! {
-                                                                <button
-                                                                    class="glyph-button"
-                                                                    data-title="Show idiomatic answer"
-                                                                    on:click=click_ans
-                                                                >
-                                                                    "💡"
-                                                                </button>
-                                                            }
-                                                        })}
-                                                </div>
-                                            }
-                                        })
-                                }}
+                    <div class="output-frame">
+                        <div class="output-lines">
+                            <div class="output-diagnostics">{move || diag_output.get()}</div>
+                            <div class="output-wrapper">
+                                <div id=format!("output-{id}") class="output sized-code">
+                                    {move || output.get()}
+                                    {move || {
+                                        get_state
+                                            .get()
+                                            .challenge
+                                            .as_ref()
+                                            .map(|chal| {
+                                                let intended = chal.intended_answer.clone();
+                                                let click_intended = move |_| {
+                                                    get_state.get().set_code(&intended, Cursor::Ignore);
+                                                };
+                                                view! {
+                                                    <div>
+                                                        <hr />
+                                                        <button
+                                                            class="glyph-button"
+                                                            data-title="Show intended answer"
+                                                            on:click=click_intended
+                                                        >
+                                                            "📖"
+                                                        </button>
+                                                        {chal
+                                                            .best_answer
+                                                            .clone()
+                                                            .map(|ans| {
+                                                                let click_ans = move |_| {
+                                                                    get_state.get().set_code(&ans, Cursor::Ignore);
+                                                                };
+                                                                view! {
+                                                                    <button
+                                                                        class="glyph-button"
+                                                                        data-title="Show idiomatic answer"
+                                                                        on:click=click_ans
+                                                                    >
+                                                                        "💡"
+                                                                    </button>
+                                                                }
+                                                            })}
+                                                    </div>
+                                                }
+                                            })
+                                    }}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div id="code-buttons">
-                        <button
-                            class="code-button format-button run-format-button"
-                            on:click=move |_| {
-                                format(true, false);
-                            }
-                            data-title=" ctrl Enter - Format        \nshift Enter - Format and Run"
-                        >
-                            {"Format"}
-                        </button>
-                        <button
-                            class="code-button"
-                            on:click=move |_| run(get_run_on_format(), false)
-                        >
-                            {"Run"}
-                        </button>
-                        <button
-                            id="prev-example"
-                            class="code-button"
-                            style=example_arrow_style
-                            on:click=prev_example
-                        >
-                            {"<"}
-                        </button>
-                        <button
-                            id="next-example"
-                            class=next_button_class
-                            style=example_arrow_style
-                            on:click=next_example
-                        >
-                            {">"}
-                        </button>
+                        <div id="code-buttons">
+                            <button
+                                class="code-button format-button run-format-button"
+                                on:click=move |_| {
+                                    format(true, false);
+                                }
+                                data-title=" ctrl Enter - Format        \nshift Enter - Format and Run"
+                            >
+                                {"Format"}
+                            </button>
+                            <button
+                                class="code-button"
+                                on:click=move |_| run(get_run_on_format(), false)
+                            >
+                                {"Run"}
+                            </button>
+                            <button
+                                id="prev-example"
+                                class="code-button"
+                                style=example_arrow_style
+                                on:click=prev_example
+                            >
+                                {"<"}
+                            </button>
+                            <button
+                                id="next-example"
+                                class=next_button_class
+                                style=example_arrow_style
+                                on:click=next_example
+                            >
+                                {">"}
+                            </button>
+                        </div>
                     </div>
                 </div>
 

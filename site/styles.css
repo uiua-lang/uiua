@@ -817,6 +817,7 @@ option,
 }
 
 .glyph-buttons {
+    font-size: 1.4em;
     padding: 0.1em;
     display: flex;
     flex-wrap: wrap;

@@ -2062,12 +2062,10 @@ impl Value {
                 {
                     Value::from_row_values_infallible(rows)
                 } else {
-                    Array::from(
-                        rows.into_iter()
-                            .map(Value::boxed_if_not)
-                            .collect::<EcoVec<_>>(),
-                    )
-                    .into()
+                    rows.into_iter()
+                        .map(Value::boxed_if_not)
+                        .collect::<Array<_>>()
+                        .into()
                 }
             }
             serde_json::Value::Object(map) => {

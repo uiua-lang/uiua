@@ -283,7 +283,7 @@ li {
 
 #top {
     margin: 2em auto;
-    width: max(10em, min(90%, 53em));
+    width: max(10em, min(90%, 52em));
 }
 
 #header {
@@ -827,7 +827,7 @@ option,
 
 .glyph-button {
     font-family: "Code Font", monospace;
-    font-size: 0.85em;
+    font-size: 0.82em;
     padding: 0.045em;
     margin: 0em;
     background-color: transparent;

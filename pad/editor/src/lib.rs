@@ -1067,9 +1067,15 @@ pub fn Editor<'a>(
 
     let glyph_buttons_container = move || {
         show_glyphs.get().then(|| {
-            let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
+            let mut iter = Primitive::non_deprecated();
+            let mut glyph_buttons: Vec<_> = iter
+                .by_ref()
+                .take_while(|prim| !matches!(prim, Primitive::Reduce))
                 .filter_map(make_glyph_button)
                 .collect();
+            glyph_buttons.push(view!(<div style="width: 0.2em"></div>).into_view());
+            glyph_buttons.extend(make_glyph_button(Primitive::Reduce));
+            glyph_buttons.extend(iter.filter_map(make_glyph_button));
 
             // Additional code buttons
             for (glyph, title, class, surround, doc) in [

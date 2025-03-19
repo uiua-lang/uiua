@@ -200,6 +200,17 @@ Shape!(
 )
 ```
 
+If you have a lot of variants, you can put more than one on a single line.
+
+```uiua
+┌─╴Element
+  |H |He 
+  |Li |Be |B |C |N |O |F |Ne 
+  |Na |Mg |Al |Si |P |S |Cl |Ar
+  # ...
+└─╴
+```
+
 ## Structs of Arrays
 
 There is a well-known optimization for lower-level languages called "structs of arrays". It is a design pattern where instead of making a list of similar data structures, you make a single structure with a list for each field. This makes code faster by making data take up less memory and therefore making CPU cache misses less likely.

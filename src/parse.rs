@@ -334,8 +334,12 @@ impl Parser<'_> {
             Item::Import(import)
         } else if let Some(module) = self.module(in_scope) {
             Item::Module(module)
-        } else if let Some(data) = self.data_def() {
-            Item::Data(data)
+        } else if let Some(first) = self.data_def() {
+            let mut defs = vec![first];
+            while let Some(def) = self.data_def() {
+                defs.push(def);
+            }
+            Item::Data(defs)
         } else {
             let lines = self.multiline_words(true, false);
             if lines.is_empty() {

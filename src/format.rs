@@ -720,88 +720,97 @@ impl Formatter<'_> {
                     );
                 }
             }
-            Item::Data(data) => {
-                self.push(&data.init_span, if data.variant { "|" } else { "~" });
-                if let Some(name) = &data.name {
-                    self.push(&name.span, &name.value);
-                }
-                if let Some(fields) = &data.fields {
-                    self.output.push(' ');
-                    self.push(&fields.open_span, if fields.boxed { "{" } else { "[" });
-                    let multiline = fields.trailing_newline
-                        || fields.fields.len() > 1
-                            && fields.fields.iter().enumerate().any(|(i, f)| {
-                                f.init.is_some()
-                                    && (f.bar_span.is_none() && i < fields.fields.len() - 1)
-                            })
-                        || (fields.fields.iter())
-                            .filter_map(|f| f.init.as_ref())
-                            .any(|def| words_are_multiline(&def.words))
-                        || fields.fields.len() >= 5
-                            && fields.fields.iter().any(|f| f.init.is_some());
-                    if multiline {
-                        self.newline(depth + 1);
+            Item::Data(defs) => {
+                for (i, data) in defs.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push(if data.variant && defs[i - 1].variant {
+                            ' '
+                        } else {
+                            '\n'
+                        });
                     }
-                    for (i, field) in fields.fields.iter().enumerate() {
-                        if let Some(comments) = &field.comments {
-                            self.format_comments(comments, depth + 1);
+                    self.push(&data.init_span, if data.variant { "|" } else { "~" });
+                    if let Some(name) = &data.name {
+                        self.push(&name.span, &name.value);
+                    }
+                    if let Some(fields) = &data.fields {
+                        self.output.push(' ');
+                        self.push(&fields.open_span, if fields.boxed { "{" } else { "[" });
+                        let multiline = fields.trailing_newline
+                            || fields.fields.len() > 1
+                                && fields.fields.iter().enumerate().any(|(i, f)| {
+                                    f.init.is_some()
+                                        && (f.bar_span.is_none() && i < fields.fields.len() - 1)
+                                })
+                            || (fields.fields.iter())
+                                .filter_map(|f| f.init.as_ref())
+                                .any(|def| words_are_multiline(&def.words))
+                            || fields.fields.len() >= 5
+                                && fields.fields.iter().any(|f| f.init.is_some());
+                        if multiline {
+                            self.newline(depth + 1);
                         }
-                        self.push(&field.name.span, &field.name.value);
-                        let mut parts = Vec::new();
-                        if let Some(validator) = &field.validator {
-                            parts.push((&validator.open_span, ": ", &validator.words));
-                        }
-                        if let Some(default) = &field.init {
-                            parts.push((&default.arrow_span, " ← ", &default.words));
-                        }
-                        for (span, sep, words) in parts {
-                            self.push(span, sep);
-                            let mut lines = flip_unsplit_lines(split_words(words.clone()));
-                            if lines.len() == 1 {
-                                self.format_words(&lines[0], true, depth + 1);
-                            } else {
-                                let span = lines
-                                    .iter()
-                                    .find_map(|l| l.first())
-                                    .zip(lines.iter().rev().find_map(|l| l.last()))
-                                    .map(|(s, e)| s.span.clone().merge(e.span.clone()))
-                                    .unwrap_or_else(|| span.clone());
-                                lines.push(Vec::new());
-                                self.format_words(
-                                    &[span.sp(Word::Func(Func {
-                                        signature: None,
-                                        lines,
-                                        closed: true,
-                                    }))],
-                                    true,
-                                    depth + 1,
-                                );
+                        for (i, field) in fields.fields.iter().enumerate() {
+                            if let Some(comments) = &field.comments {
+                                self.format_comments(comments, depth + 1);
                             }
-                        }
-                        if i < fields.fields.len() - 1 {
-                            if multiline {
-                                self.newline(depth + 1);
-                            } else if field.validator.is_some() || field.init.is_some() {
-                                if let Some(span) = &field.bar_span {
-                                    self.push(span, "|");
+                            self.push(&field.name.span, &field.name.value);
+                            let mut parts = Vec::new();
+                            if let Some(validator) = &field.validator {
+                                parts.push((&validator.open_span, ": ", &validator.words));
+                            }
+                            if let Some(default) = &field.init {
+                                parts.push((&default.arrow_span, " ← ", &default.words));
+                            }
+                            for (span, sep, words) in parts {
+                                self.push(span, sep);
+                                let mut lines = flip_unsplit_lines(split_words(words.clone()));
+                                if lines.len() == 1 {
+                                    self.format_words(&lines[0], true, depth + 1);
                                 } else {
-                                    self.output.push('|');
+                                    let span = lines
+                                        .iter()
+                                        .find_map(|l| l.first())
+                                        .zip(lines.iter().rev().find_map(|l| l.last()))
+                                        .map(|(s, e)| s.span.clone().merge(e.span.clone()))
+                                        .unwrap_or_else(|| span.clone());
+                                    lines.push(Vec::new());
+                                    self.format_words(
+                                        &[span.sp(Word::Func(Func {
+                                            signature: None,
+                                            lines,
+                                            closed: true,
+                                        }))],
+                                        true,
+                                        depth + 1,
+                                    );
                                 }
-                            } else {
-                                self.output.push(' ');
+                            }
+                            if i < fields.fields.len() - 1 {
+                                if multiline {
+                                    self.newline(depth + 1);
+                                } else if field.validator.is_some() || field.init.is_some() {
+                                    if let Some(span) = &field.bar_span {
+                                        self.push(span, "|");
+                                    } else {
+                                        self.output.push('|');
+                                    }
+                                } else {
+                                    self.output.push(' ');
+                                }
                             }
                         }
+                        if multiline {
+                            self.newline(depth);
+                        }
+                        if let Some(span) = &fields.close_span {
+                            self.push(span, if fields.boxed { "}" } else { "]" });
+                        }
                     }
-                    if multiline {
-                        self.newline(depth);
+                    if let Some(words) = &data.func {
+                        self.output.push(' ');
+                        self.format_words(words, true, depth + 1);
                     }
-                    if let Some(span) = &fields.close_span {
-                        self.push(span, if fields.boxed { "}" } else { "]" });
-                    }
-                }
-                if let Some(words) = &data.func {
-                    self.output.push(' ');
-                    self.format_words(words, true, depth + 1);
                 }
             }
             Item::Import(import) => {

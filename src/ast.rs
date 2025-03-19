@@ -24,8 +24,8 @@ pub enum Item {
     Import(Import),
     /// A scope
     Module(Sp<ScopedModule>),
-    /// A data definition
-    Data(DataDef),
+    /// A line of data definitions
+    Data(Vec<DataDef>),
 }
 
 /// A binding

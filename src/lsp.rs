@@ -346,55 +346,57 @@ impl Spanner {
                     }
                     spans.extend(self.words_spans(&binding.words));
                 }
-                Item::Data(data) => {
-                    spans.push(data.init_span.clone().sp(SpanKind::Delimiter));
-                    if let Some(name) = &data.name {
-                        spans.push(name.span.clone().sp(SpanKind::Ident {
-                            docs: self.binding_docs(&name.span),
-                            original: true,
-                        }));
-                        if let Some(fields) = &data.fields {
-                            spans.push(
-                                name.span
-                                    .clone()
-                                    .end_to(&fields.open_span)
-                                    .sp(SpanKind::Whitespace),
-                            );
-                        }
-                    }
-                    if let Some(fields) = &data.fields {
-                        spans.push(fields.open_span.clone().sp(SpanKind::Delimiter));
-                        let mut prev: Option<CodeSpan> = None;
-                        for field in &fields.fields {
-                            if let Some(prev) = prev {
-                                let curr = field.span();
-                                if prev.end.line == curr.start.line {
-                                    spans.push(prev.end_to(&curr).sp(SpanKind::Whitespace))
-                                }
-                            }
-                            spans.push(field.name.span.clone().sp(SpanKind::Ident {
-                                docs: self.binding_docs(&field.name.span),
+                Item::Data(defs) => {
+                    for data in defs {
+                        spans.push(data.init_span.clone().sp(SpanKind::Delimiter));
+                        if let Some(name) = &data.name {
+                            spans.push(name.span.clone().sp(SpanKind::Ident {
+                                docs: self.binding_docs(&name.span),
                                 original: true,
                             }));
-                            if let Some(validator) = &field.validator {
-                                spans.push(validator.open_span.clone().sp(SpanKind::Delimiter));
-                                spans.extend(self.words_spans(&validator.words));
-                                if let Some(close_span) = &validator.close_span {
-                                    spans.push(close_span.clone().sp(SpanKind::Delimiter));
+                            if let Some(fields) = &data.fields {
+                                spans.push(
+                                    name.span
+                                        .clone()
+                                        .end_to(&fields.open_span)
+                                        .sp(SpanKind::Whitespace),
+                                );
+                            }
+                        }
+                        if let Some(fields) = &data.fields {
+                            spans.push(fields.open_span.clone().sp(SpanKind::Delimiter));
+                            let mut prev: Option<CodeSpan> = None;
+                            for field in &fields.fields {
+                                if let Some(prev) = prev {
+                                    let curr = field.span();
+                                    if prev.end.line == curr.start.line {
+                                        spans.push(prev.end_to(&curr).sp(SpanKind::Whitespace))
+                                    }
                                 }
+                                spans.push(field.name.span.clone().sp(SpanKind::Ident {
+                                    docs: self.binding_docs(&field.name.span),
+                                    original: true,
+                                }));
+                                if let Some(validator) = &field.validator {
+                                    spans.push(validator.open_span.clone().sp(SpanKind::Delimiter));
+                                    spans.extend(self.words_spans(&validator.words));
+                                    if let Some(close_span) = &validator.close_span {
+                                        spans.push(close_span.clone().sp(SpanKind::Delimiter));
+                                    }
+                                }
+                                if let Some(init) = &field.init {
+                                    spans.push(init.arrow_span.clone().sp(SpanKind::Delimiter));
+                                    spans.extend(self.words_spans(&init.words));
+                                }
+                                prev = Some(field.span());
                             }
-                            if let Some(init) = &field.init {
-                                spans.push(init.arrow_span.clone().sp(SpanKind::Delimiter));
-                                spans.extend(self.words_spans(&init.words));
+                            if let Some(span) = &fields.close_span {
+                                spans.push(span.clone().sp(SpanKind::Delimiter));
                             }
-                            prev = Some(field.span());
                         }
-                        if let Some(span) = &fields.close_span {
-                            spans.push(span.clone().sp(SpanKind::Delimiter));
+                        if let Some(words) = &data.func {
+                            spans.extend(self.words_spans(words));
                         }
-                    }
-                    if let Some(words) = &data.func {
-                        spans.extend(self.words_spans(words));
                     }
                 }
                 Item::Import(import) => {

@@ -590,7 +590,12 @@ code:
             Item::Words(lines) => self.top_level_words(lines, from_macro, must_run, true, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
-            Item::Data(data) => self.data_def(data, true, take(prelude)),
+            Item::Data(defs) => {
+                for data in defs {
+                    self.data_def(data, true, take(prelude))?
+                }
+                Ok(())
+            }
         }
     }
     /// Compile top-level words

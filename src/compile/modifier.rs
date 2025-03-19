@@ -1060,6 +1060,9 @@ impl Compiler {
                                 Node::ImplMod(ImplPrimitive::EachSub(n), eco_vec![sn], span)
                             }
                             SubNOrSide::Side(side) => {
+                                self.experimental_error_it(&n.span, || {
+                                    format!("Sided {}", Primitive::Each.format())
+                                });
                                 let sub_span = self.add_span(n.span);
                                 let mut node = match side {
                                     SubSide::Left => Node::Prim(Fix, sub_span),
@@ -1110,6 +1113,9 @@ impl Compiler {
                             }
                         }
                         SubNOrSide::Side(side) => {
+                            self.experimental_error_it(&n.span, || {
+                                format!("Sided {}", prim.format())
+                            });
                             let sub_span = self.add_span(n.span);
                             let mut node = match side {
                                 SubSide::Left => Node::Prim(Fix, sub_span),

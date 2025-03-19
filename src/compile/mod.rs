@@ -2043,6 +2043,7 @@ code:
                         self.primitive(prim, span),
                     ]),
                     SubNOrSide::Side(side) => {
+                        self.experimental_error_it(&n_span, || format!("Sided {}", prim.format()));
                         let sub_span = self.add_span(n_span);
                         let mut node = Node::Prim(Primitive::Fix, sub_span);
                         if side == SubSide::Right {
@@ -2261,13 +2262,7 @@ impl Compiler {
                 self.add_error(sub.span.clone(), "Subscript is too large");
                 None
             }
-            Subscript::Side(side) => {
-                self.experimental_error(&sub.span, || {
-                    "Sided subscripts are experimental. \
-                    To use them, add `# Experimental!` to the top of the file."
-                });
-                Some(sub.span.sp(SubNOrSide::Side(side)))
-            }
+            Subscript::Side(side) => Some(sub.span.sp(SubNOrSide::Side(side))),
         }
     }
     fn subscript_n_only(
@@ -2362,12 +2357,24 @@ impl Compiler {
     }
     fn experimental_error<S>(&mut self, span: &CodeSpan, message: impl FnOnce() -> S)
     where
-        S: ToString,
+        S: fmt::Display,
     {
         if !self.allow_experimental() {
             self.scope.experimental_error = true;
             self.add_error(span.clone(), message().to_string());
         }
+    }
+    fn experimental_error_it<S>(&mut self, span: &CodeSpan, thing: impl FnOnce() -> S)
+    where
+        S: fmt::Display,
+    {
+        self.experimental_error(span, || {
+            format!(
+                "{} is experimental. Add `# Experimental!` \
+                to the top of the file to use it.",
+                thing()
+            )
+        })
     }
     fn allow_experimental(&self) -> bool {
         let take = self

@@ -27,7 +27,7 @@ This version is not yet released. If you are reading this on the website, then t
   - It is part of a stack manipulation paradigm that Uiua is slowly moving away from
   - [`with ⤙`](https://uiua.org/docs/with) and [`below ◡`](https://uiua.org/docs/below) replace the vast majority of [`over ,`](https://uiua.org/docs/over)'s use cases
   - You can find a short blog post about this change [here](https://uiua.org/blog/its-so-over)
-- Stabilize [sided subscripts](https://uiua.org/tutorial/morestack#sided-subscripts) for [`both ∩`](https://uiua.org/docs/both) and [`bracket ⊓`](https://uiua.org/docs/bracket)
+- Stabilize [sided subscripts](https://uiua.org/tutorial/evenmorestack#sided-subscripts) for [`both ∩`](https://uiua.org/docs/both) and [`bracket ⊓`](https://uiua.org/docs/bracket)
 - Add sided subscripts for [`reach 𝄐`](https://uiua.org/docs/reach)
 - Add the [`# External!`](https://www.uiua.org/tutorial/documentation#external) semantic comment to mark functions that are provided via Rust code
   - These functions don't require a Uiua implementation and will show up in the LSP

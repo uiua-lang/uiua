@@ -200,6 +200,8 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &BracketPat,
     &OnPat,
     &ByPat,
+    &WithPat,
+    &OffPat,
     &RowsPat,
     &Trivial,
     &ScanPat,
@@ -401,6 +403,20 @@ inverse!(BracketPat, input, asm, Bracket, span, [f, g], {
 
 inverse!(OnPat, input, asm, On, span, [f], {
     let inv = Mod(On, eco_vec![f.anti_inverse(asm)?], span);
+    Ok((input, inv))
+});
+
+inverse!(WithPat, input, asm, With, span, [f], {
+    let mut f = f.node.clone();
+    f.prepend(Prim(Flip, span));
+    let inv = Mod(Off, eco_vec![f.anti_inverse(asm)?.sig_node()?], span);
+    Ok((input, inv))
+});
+
+inverse!(OffPat, input, asm, Off, span, [f], {
+    let mut inner = f.node.anti_inverse(asm)?;
+    inner.prepend(Prim(Flip, span));
+    let inv = Mod(With, eco_vec![inner.sig_node()?], span);
     Ok((input, inv))
 });
 

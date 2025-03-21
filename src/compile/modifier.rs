@@ -1098,12 +1098,21 @@ impl Compiler {
                     .and_then(|n| self.subscript_n_or_side(n))
                     .filter(|i| i.value != 1)
                 {
+                    let n_span = n.span;
                     match n.value {
                         SubNOrSide::N(n) => {
-                            let n = self.positive_subscript(n, prim, &modified.modifier.span)?;
+                            let mut n =
+                                self.positive_subscript(n, prim, &modified.modifier.span)?;
                             if n == 0 {
                                 sn.node
                             } else {
+                                if n > 10 {
+                                    self.add_error(
+                                        n_span,
+                                        format!("{} max subscript is 10", prim.format()),
+                                    );
+                                    n = 10;
+                                }
                                 let mut node = Node::Mod(prim, eco_vec![sn], span);
                                 for _ in 1..n {
                                     node =
@@ -1113,10 +1122,10 @@ impl Compiler {
                             }
                         }
                         SubNOrSide::Side(side) => {
-                            self.experimental_error_it(&n.span, || {
+                            self.experimental_error_it(&n_span, || {
                                 format!("Sided {}", prim.format())
                             });
-                            let sub_span = self.add_span(n.span);
+                            let sub_span = self.add_span(n_span);
                             let mut node = match side {
                                 SubSide::Left => Node::Prim(Fix, sub_span),
                                 SubSide::Right => match sn.sig.args {

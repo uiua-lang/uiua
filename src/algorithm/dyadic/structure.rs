@@ -454,13 +454,13 @@ impl<T: ArrayValue> Array<T> {
         if let Ok(fill_val) = &fill {
             if !self.shape[index.len()..].ends_with(&fill_val.shape) {
                 fill = Err(Cow::Owned(format!(
-                    "Cannot take {} {} of array with \
-                    shape {} with fill of shape {}",
-                    index.len(),
-                    if index.len() == 1 { "axis" } else { "axes" },
+                    ". A fill is set, but its shape {} \
+                    is not compatible with the array's shape {} \
+                    when doing a {}-axis take",
+                    fill_val.shape,
                     self.shape,
-                    fill_val.shape
-                )));
+                    index.len()
+                )))
             }
         }
 

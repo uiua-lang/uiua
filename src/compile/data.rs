@@ -358,10 +358,9 @@ impl Compiler {
                 if boxed {
                     arg.node.push(Node::Label(field.name.clone(), span));
                 } else if data.variant {
-                    arg.node.push(Node::ImplPrim(
-                        ImplPrimitive::ValidateNonBoxedVariant,
-                        field.span,
-                    ))
+                    arg.node.push(Node::TrackCaller(
+                        Node::ImplPrim(ImplPrimitive::ValidateNonBoxedVariant, field.span).into(),
+                    ));
                 }
                 if !inner.is_empty() {
                     for _ in 0..arg.sig.args {

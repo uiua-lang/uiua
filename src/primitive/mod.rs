@@ -1757,7 +1757,7 @@ impl ImplPrimitive {
                 }
                 if val.rank() > 0 {
                     return Err(env.error(format!(
-                        "Non-boxed variant field must be rank 0 or 1, but it is rank {}",
+                        "Non-boxed variant field must be rank 0, but it is rank {}",
                         val.rank()
                     )));
                 }

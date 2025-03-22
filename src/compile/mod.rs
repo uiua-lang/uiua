@@ -449,7 +449,11 @@ impl Compiler {
 
         // Optimize root
         // We only optimize if this is not an import
-        if self.current_imports.is_empty() {
+        let do_optimize = match src {
+            InputSrc::File(_) => self.current_imports.len() <= 1,
+            _ => self.current_imports.is_empty(),
+        };
+        if do_optimize {
             self.asm.root.optimize_full();
             // Optimize and pre-eval functions
             for i in 0..self.asm.functions.len() {

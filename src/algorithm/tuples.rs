@@ -88,20 +88,22 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
 fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
     let k = env.pop(1)?;
     let mut xs = env.pop(2)?;
+
+    let is_scalar = xs.rank() == 0;
+    let n = if is_scalar {
+        xs.as_nat(env, "Tuples of scalar must be a natural number")?
+    } else {
+        xs.row_count()
+    };
+
     let k = k.as_int(env, "Tuple size must be an integer")?;
     let k = if k >= 0 {
         k.unsigned_abs()
     } else {
-        xs.row_count().saturating_sub(k.unsigned_abs())
+        n.saturating_sub(k.unsigned_abs())
     };
-    let is_scalar = xs.rank() == 0;
     'blk: {
         if let Some(prim) = f.node.as_primitive() {
-            let n = if is_scalar {
-                xs.as_nat(env, "Tuples of scalar must be a natural number")?
-            } else {
-                xs.row_count()
-            };
             let res = match prim {
                 Primitive::Lt => xs.choose(k, false, false, env)?,
                 Primitive::Le if n >= k => xs.choose(k, false, true, env)?,

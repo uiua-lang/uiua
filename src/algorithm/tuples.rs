@@ -96,12 +96,17 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
         xs.row_count()
     };
 
-    let k = k.as_int(env, "Tuple size must be an integer")?;
-    let k = if k >= 0 {
-        k.unsigned_abs()
+    let k = if k.as_num(env, None).is_ok_and(|k| k == f64::INFINITY) {
+        n
     } else {
-        n.saturating_sub(k.unsigned_abs())
+        let k = k.as_int(env, "Tuple size must be an integer or infinity")?;
+        if k >= 0 {
+            k.unsigned_abs()
+        } else {
+            n.saturating_sub(k.unsigned_abs())
+        }
     };
+
     'blk: {
         if let Some(prim) = f.node.as_primitive() {
             let res = match prim {

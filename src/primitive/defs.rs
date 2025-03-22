@@ -1588,7 +1588,9 @@ primitive!(
     /// ex:   ⧅≠ 2  4
     ///   : ⍉ ⧅≠ 2 ⇡4
     /// A negative size will subtract from the length of the array. This is useful if you want to, for example, get a versions of the array with each row removed.
+    /// A size of [infinity] will use the [length] of the array directly. This is useful for permutations.
     /// ex: ⧅<¯1 ⇡4
+    ///   : ⧅≠ ∞ ⇡4
     ///
     /// If [tuples] is given a monadic function, it takes only one argument.
     /// The function will be called on all prefixes of the array.

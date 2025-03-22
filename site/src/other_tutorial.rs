@@ -226,7 +226,7 @@ pub fn Documentation() -> impl IntoView {
         <p>"When writing code that other people might use, it is important that error messages point to a useful place. When a function errors, the error message often refers to the base built-in function that emitted the error."</p>
         <Editor example="F ← +@a\nF 5\nF @b"/> // Should fail
         <p>"However, that position in the code might not be useful to the person trying to figure out where they went wrong."</p>
-        <p>"The "<code>"# Tracker caller!"</code>" semantic comment tells a function to emit errors at its call site rather than from within. It can be placed either inside the function's body, or on the line just above it."</p>
+        <p>"The "<code>"# Track caller!"</code>" semantic comment tells a function to emit errors at its call site rather than from within. It can be placed either inside the function's body, or on the line just above it."</p>
         <Editor example="F ← +@a # Track caller!\nF 5\nF @b"/> // Should fail
         <p>"Notice the difference in the error messages."</p>
 

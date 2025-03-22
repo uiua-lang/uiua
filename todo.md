@@ -2,11 +2,10 @@
 
 # 0.15
 - Multidimensional `group`?
-- Stabilize `fft`
-- Stabilize sided subscripts for `both` and `bracket`
 - Optimizations through calls
 
 # 0.16
+- Stabilize `fft`
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?
 - Implement some `under` inverses in terms of `un by`, rather than the other way around?

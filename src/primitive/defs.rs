@@ -1693,7 +1693,7 @@ primitive!(
     /// [repeat]ing a negative number of times will repeat the function's [un]-inverse.
     /// ex: ⍥(×2)¯5 1024
     ///
-    /// The repetition count may be given as a subscript
+    /// The repetition count may be given as a subscript.
     /// ex: ⍥₅(×2) 32
     ///   : ⍥₋₅(×2) 1024
     ///

@@ -88,7 +88,7 @@ map "cba" [1 3 2]
 ⍤⤙≍ "bdd" get 2_4_4 map [1 2 3 4] "abcd"
 ⍤⤙≍ "dcba" get 4_3_2_1 map [1 2 3 4] "abcd"
 
-# # Multi-key insert
+# # Multi-key insert (not currently allowed because of ambiguity)
 # ⍤⤙≍ map 1_2 "ab" insert 1_2 "ab" map [] ""
 # ⍤⤙≍ map [1_2] ["ab"] insert 1_2 "ab" map ⤙+@a °△0_2
 
@@ -100,3 +100,7 @@ map "cba" [1 3 2]
 ⍤⤙≍ {+@0°△0_2 []} {°map} remove "df"_"as" map "as"_"df" 1_2
 
 ⍤⤙≍ {[] map [¯1] [5]} ⨬⋅∘⍚(insert⊙5) [0 1] [¯1 ¯1] {[] []}
+
+# Put in arrays
+⍤⤙≍ ⊃¤[∘] map [1 2 3] [4 5 6]
+⍤⤙≍ [3_4 7_8] [map 1_2 3_4 map 5_6 7_8]

@@ -892,8 +892,14 @@ impl Value {
             new_shape
         }
 
-        if values.is_empty() {
-            return Ok(Value::default());
+        match values.len() {
+            0 => return Ok(Value::default()),
+            1 => {
+                let mut val = values.into_iter().next().unwrap();
+                val.fix();
+                return Ok(val);
+            }
+            _ => {}
         }
         let to_reserve = values.len();
         let max_shape = values

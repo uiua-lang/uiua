@@ -1,10 +1,7 @@
 # Uiua Todo
 
-# 0.15
-- Multidimensional `group`?
-- Optimizations through calls
-
 # 0.16
+- Multidimensional `group`?
 - Stabilize `fft`
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

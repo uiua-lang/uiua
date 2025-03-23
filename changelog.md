@@ -23,6 +23,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`backward ˜`](https://uiua.org/docs/backward)
 - Add [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) for parity with [`select ⊏`](https://uiua.org/docs/select)
 - Add subscripts for [`bits ⋯`](https://uiua.org/docs/bits) to force the number of bits
+- Allow [`tuples ⧅`](https://uiua.org/docs/tuples) to take [`infinity ∞`](https://uiua.org/docs/infinity) as a first argument
 - Deprecate [`over ,`](https://uiua.org/docs/over)
   - It is part of a stack manipulation paradigm that Uiua is slowly moving away from
   - [`with ⤙`](https://uiua.org/docs/with) and [`below ◡`](https://uiua.org/docs/below) replace the vast majority of [`over ,`](https://uiua.org/docs/over)'s use cases

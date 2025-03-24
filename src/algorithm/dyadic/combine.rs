@@ -13,7 +13,7 @@ use crate::{
 
 fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
     debug_assert_eq!(shape.len(), out.len());
-    if index >= shape.iter().product() {
+    if index >= shape.iter().product::<usize>() {
         return false;
     }
     for (&s, o) in shape.iter().zip(out).rev() {

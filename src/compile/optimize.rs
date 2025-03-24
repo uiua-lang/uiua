@@ -127,6 +127,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &((2, Pow), (Dup, Mul)),
     &((Complex, Abs), AbsComplex),
     &ByToDup,
+    &RowsFlipOpt,
     &InlineCustomInverse,
     &TransposeOpt,
     &ReduceTableOpt,
@@ -583,6 +584,30 @@ impl Optimization for ByToDup {
             // }
         }
         false
+    }
+}
+
+#[derive(Debug)]
+struct RowsFlipOpt;
+impl Optimization for RowsFlipOpt {
+    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
+        match_and_replace(nodes, |nodes| {
+            let [Mod(Rows, args, span), ..] = nodes else {
+                return None;
+            };
+            let [f] = args.as_slice() else {
+                return None;
+            };
+            if f.sig != (2, 1) {
+                return None;
+            }
+            let [Prim(Flip, flip_span), rest @ ..] = f.node.as_slice() else {
+                return None;
+            };
+            let args = eco_vec![Node::from_iter(rest.iter().cloned()).sig_node().ok()?];
+            let node = Node::from_iter([Prim(Flip, *flip_span), Mod(Rows, args, *span)]);
+            Some((1, node))
+        })
     }
 }
 

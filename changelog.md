@@ -47,6 +47,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add an expanded mode to the pad. Click the ⤢ button to toggle it.
 - Change pad icons
 - Add new [Data Definitions](https://uiua.org/tutorial/datadefs) tutorial
+- Add a [Format String Tricks](https://uiua.org/tutorial/strings#format-string-tricks) section to the [Working with Strings](https://uiua.org/tutorial/strings) tutorial
 
 ## 0.14.1 - 2024-12-23
 ### Interpreter

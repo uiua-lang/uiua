@@ -900,6 +900,7 @@ F 10 11"/>
         <Editor example="1 2 3\n$$ _\\__\\__"/>
         <p>"Because format strings are just functions, you can use them with modifiers like "<Prim prim=Reduce/>". This is a common way to join a list of "<Prim prim=Box/>"ed strings."</p>
         <Editor example="/$\"_ _\" {\"Separated\" \"by\" \"spaces\"}"/>
+        <p>"The "<A href="/tutorial/strings">"Working with Strings"</A>" tutorial has a "<A href="/tutorial/strings#format-string-tricks">"section"</A>" with more format string tricks."</p>
 
         <Hd id="stack-signatures">"Stack Signatures"</Hd>
         <p>"Bindings and inline functions can have a "<em>"stack signature"</em>" declared with a "<code>"|"</code>" followed by 1 or 2 numbers separated by a "<code>"."</code>". The first number is the number of arguments the function pops from the stack. The second number is the number of values the function pushes to the stack."</p>

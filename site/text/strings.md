@@ -114,6 +114,62 @@ F "abcdefg"
 F "ababab|abababab"
 ```
 
+## Format String Tricks
+
+As discussed [in the main tutorial](/tutorial/functions#format-strings), format strings allow you to create strings with interpolated values.
+
+```uiua
+$"_ + _ = _" 1 2 3
+```
+
+Format strings have some non-obvious uses though.
+
+You can use [`reduce`]() with a format string to intersperse a delimiter between formatted items.
+
+```uiua
+/$"_ - _" ⇡5
+```
+
+```uiua
+/$"_ and _" {"red" "blue" "green"}
+```
+
+[`un`]() with a format string attempts to match and extract substrings, a sort of simplified [`regex`]().
+
+```uiua
+°$"_(_) = _" "f(x) = x^2"
+```
+
+```uiua
+°$"_,_" "1,2,3,4"
+```
+
+[`un`]() [`reduce`]() with a format string splits by a delimiter. The results are [`box`]()ed.
+
+```uiua
+°/$"_;_" "5;cool;26;([])"
+```
+
+By combining these with [`under`](), you can modify certain substrings.
+
+```uiua
+⍜(⋕°$"_,_"|×10) "2,3,4"
+```
+
+```uiua
+⍜°/$"_;_"(⍚⊂⊙@s) "apple;banana;cherry;durian"
+```
+
+You can use [`fork`]() or [`bracket`]() to pre-format certain fragments of the string.
+
+While this example could be written shorter with other stack manipulation modifiers, using [`fork`]() in this way makes it easier to understand what is happening, as each `_` in the format string gets its own branch in the [`fork`]().
+
+```uiua
+F ← $"_ is _ year_ old." ⊃(∘|⋅∘|▽⊙@s≠1⋅∘)
+F "Dave" 31
+F "Remi" 1
+```
+
 ## [`regex`]()
 
 When a string search operation is especially complicated, you can always fall back to regular expressions using [`regex`]().

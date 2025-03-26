@@ -107,6 +107,13 @@ M![G H I] ⇡3
 ⍤⤙≍ [1] [H]
 ⍤⤙≍ [2] [I]
 
+┌─╴Wup
+  X ← 5
+└─╴
+A! ←^ $"Wup!(_)" ⊢
+B! ← A!X ^0
+⍤⤙≍ 5 B!
+
 # Experimental!
 
 # Inline macros

@@ -245,7 +245,7 @@ impl Compiler {
             );
             let words = binding.words.clone();
             let mut recursive = false;
-            self.analyze_macro_body(&name, &words, &mut recursive);
+            self.analyze_macro_body(&name, &words, false, &mut recursive);
             if recursive {
                 self.experimental_error(span, || {
                     "Recursive index macros are experimental. \
@@ -625,21 +625,30 @@ impl Compiler {
         }
         Ok(())
     }
-    fn analyze_macro_body(&mut self, macro_name: &str, words: &[Sp<Word>], recursive: &mut bool) {
+    fn analyze_macro_body(
+        &mut self,
+        macro_name: &str,
+        words: &[Sp<Word>],
+        mut code_macro: bool,
+        recursive: &mut bool,
+    ) {
         for word in words {
             let mut path_locals = None;
             let mut name_local = None;
             match &word.value {
-                Word::Strand(items) => self.analyze_macro_body(macro_name, items, recursive),
+                Word::Strand(items) => {
+                    self.analyze_macro_body(macro_name, items, code_macro, recursive)
+                }
                 Word::Array(arr) => arr.lines.iter().for_each(|line| {
-                    self.analyze_macro_body(macro_name, line, recursive);
+                    self.analyze_macro_body(macro_name, line, code_macro, recursive);
                 }),
                 Word::Func(func) => func.lines.iter().for_each(|line| {
-                    self.analyze_macro_body(macro_name, line, recursive);
+                    self.analyze_macro_body(macro_name, line, code_macro, recursive);
                 }),
                 Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
-                    (branch.value.lines.iter())
-                        .for_each(|line| self.analyze_macro_body(macro_name, line, recursive))
+                    (branch.value.lines.iter()).for_each(|line| {
+                        self.analyze_macro_body(macro_name, line, code_macro, recursive)
+                    })
                 }),
                 Word::Ref(r) => match self.ref_local(r) {
                     Ok(Some((pl, l))) => {
@@ -662,6 +671,7 @@ impl Compiler {
                             Ok(Some((pl, l))) => {
                                 path_locals = Some((&r.path, pl));
                                 name_local = Some((&r.name, l));
+                                code_macro |= self.code_macros.contains_key(&l.index);
                             }
                             Ok(None) => {}
                             Err(e) => self.errors.push(e),
@@ -675,16 +685,21 @@ impl Compiler {
                             let recursive = &mut *recursive;
                             if let Err(e) = self.in_scope(ScopeKind::AllInModule, move |comp| {
                                 comp.scope.names.extend(names);
-                                comp.analyze_macro_body(macro_name, &m.operands, recursive);
+                                comp.analyze_macro_body(macro_name, &m.operands, false, recursive);
                                 Ok(())
                             }) {
                                 self.errors.push(e);
                             }
                         } else {
-                            self.analyze_macro_body(macro_name, &m.operands, recursive)
+                            // Name errors are ignored in code macros
+                            let error_count = self.errors.len();
+                            self.analyze_macro_body(macro_name, &m.operands, code_macro, recursive);
+                            if code_macro {
+                                self.errors.truncate(error_count);
+                            }
                         }
                     } else {
-                        self.analyze_macro_body(macro_name, &m.operands, recursive)
+                        self.analyze_macro_body(macro_name, &m.operands, code_macro, recursive)
                     }
                 }
                 _ => {}

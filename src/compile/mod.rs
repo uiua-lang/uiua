@@ -1597,7 +1597,7 @@ code:
             } else {
                 Err(self.error(
                     r.name.span.clone(),
-                    format!("Item `{}` not found", r.name.value,),
+                    format!("Item `{}` not found", r.name.value),
                 ))
             }
         } else if let Some(local) = self.find_name(&r.name.value, r.in_macro_arg) {

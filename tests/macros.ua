@@ -107,12 +107,20 @@ M![G H I] ⇡3
 ⍤⤙≍ [1] [H]
 ⍤⤙≍ [2] [I]
 
+# Macro arg validation should ignore error from code macro args
 ┌─╴Wup
   X ← 5
 └─╴
 A! ←^ $"Wup!(_)" ⊢
 B! ← A!X ^0
 ⍤⤙≍ 5 B!
+
+# Modules should overwrite macros
+Foo! ←^ repr⊢
+┌─╴Foo
+  X ← 5
+└─╴
+⍤⤙≍ 5 Foo!(X)
 
 # Experimental!
 

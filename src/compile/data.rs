@@ -58,7 +58,7 @@ impl Compiler {
                     },
                 );
                 // Add local
-                self.scope.names.insert(name.value.clone(), local);
+                self.scope.add_module_name(name.value.clone(), local);
                 (self.code_meta.global_references).insert(name.span.clone(), local.index);
                 return Ok(());
             } else if self.scope.data_def.is_some() {

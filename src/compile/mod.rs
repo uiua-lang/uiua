@@ -249,6 +249,13 @@ impl Default for Scope {
     }
 }
 
+impl Scope {
+    pub(crate) fn add_module_name(&mut self, name: EcoString, local: LocalName) {
+        self.names.swap_remove(format!("{name}!").as_str());
+        self.names.insert(name, local);
+    }
+}
+
 /// The index of a named local in the bindings, and whether it is public
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LocalName {

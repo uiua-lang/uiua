@@ -1,7 +1,8 @@
 # Uiua Todo
 
 # 0.16
-- Multidimensional `group`?
+- `un group` and `un partition`
+- Sided `fill`?
 - Stabilize `fft`
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

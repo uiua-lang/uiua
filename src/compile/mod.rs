@@ -2114,7 +2114,7 @@ code:
                             self.add_error(span.clone(), "Cannot take 0th root");
                         }
                         Node::from_iter([
-                            Node::new_push(1.0 / n.max(1) as f64),
+                            Node::new_push(1.0 / n as f64),
                             self.primitive(Pow, span),
                         ])
                     }

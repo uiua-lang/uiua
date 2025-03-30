@@ -2352,6 +2352,8 @@ primitive!(
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: ⌊×10 [⍥⚂5]
+    /// The range can be given with a subscript.
+    /// ex: [⍥⚂₁₀5]
     ///
     /// `each``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
     /// ex: ⌊×10 ∵⋅⚂ ⇡10

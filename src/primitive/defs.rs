@@ -1218,8 +1218,8 @@ primitive!(
     /// ex: ▽ [1 0 2 3 1] [8 3 9 2 0]
     ///
     /// By making the first array a mask derived from the second, [keep] becomes a filter.
-    /// In this example, the input string is [duplicate]ed, and a mask is created from it using `greater or equal``@a`. Then, [keep] uses the mask to filter the string.
-    /// ex: ▽≥@a . "lOWERCASe onLY"
+    /// In this example, and a mask is created from it using `greater or equal``@a`, preserving the original string with [by]. Then, [keep] uses the mask to filter the string.
+    /// ex: ▽⊸≥@a "lOWERCASe onLY"
     ///
     /// [keep] with a scalar for the first argument repeats each row of the second argument that many times.
     /// ex: ▽ 3 [1 2 3]
@@ -1241,7 +1241,9 @@ primitive!(
     /// ex: ▽ 1.5 ⇡10
     ///
     /// [under][keep] allows you to modify part of an array according to a mask.
-    /// ex: ⍜▽(+1) =@s. "mississippi"
+    /// ex: ⍜▽(+1) ⊸=@s "mississippi"
+    /// If the kept array is modified to have a higher rank, each row will be "put back" into a different copy of the original array.
+    /// ex: ⍜▽(⊞+⇡5) ⊸≠@  "a bcd ef"
     ///
     /// [anti][keep] puts the rows of an array at the corresponding `1`s and [fill]s the rest.
     /// ex: ⬚@-⌝▽ 0_1_1_0_0_1 "abc"

@@ -797,6 +797,7 @@ impl<T: ArrayValue> Array<T> {
         let into_row_len = into.row_len();
         match from.rank().cmp(&into.rank()) {
             Ordering::Equal => {
+                // Normal same-rank case
                 if from.row_count() != true_count {
                     return Err(env.error(format!(
                         "Attempted to undo keep, but the length of \
@@ -827,6 +828,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
             Ordering::Less => {
+                // If the from rank is reduced, the from array is copied to each row (or subrow) of the into array
                 if !into.shape.ends_with(&from.shape) {
                     return Err(env.error(format!(
                         "Cannot undo keep of array with shape {} \
@@ -850,36 +852,44 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
             Ordering::Greater => {
-                if from.row_count() != true_count {
+                // If the from rank is increased, the *into* array is copied to each row (or subrow) of the *from* array
+                let target_dim = from.rank().saturating_sub(into.rank());
+                if from.shape[target_dim] != true_count {
                     return Err(env.error(format!(
-                        "Attempted to undo keep, but the length of \
-                        the kept array changed from {true_count} to {}",
-                        from.row_count()
+                        "Cannot undo keep because the axis corresponding to \
+                        the kept array changed from {true_count} to {} in shape {}",
+                        from.shape[target_dim], from.shape,
                     )));
                 }
-                if from.rank() - into.rank() > 1 || from.shape[2..] != into.shape[1..] {
+                if from.shape[target_dim + 1..] != into.shape[1..] {
                     return Err(env.error(format!(
-                        "Cannot undo keep of array with shape {} \
-                        into array with shape {}",
-                        from.shape, into.shape
+                        "Cannot undo keep because the original shape {} \
+                        and the new shape {} do not have matching suffixes",
+                        into.shape, from.shape,
                     )));
                 }
-                let mut rows = Vec::with_capacity(
-                    into.row_count() + from.shape[..2].iter().product::<usize>() - true_count,
-                );
-                let mut from_rows = from.into_rows();
-                for (&count, into_row) in counts.iter().zip(into.into_rows()) {
-                    if count < 1.0 {
-                        rows.push(into_row);
-                    } else {
-                        let from_row = from_rows.next().expect(
-                            "number of true counts was verified \
-                            to match from row count",
-                        );
-                        rows.extend(from_row.into_rows());
+                let new_shape: Shape = from
+                    .shape
+                    .iter()
+                    .take(from.rank() - into.rank())
+                    .copied()
+                    .chain(into.shape.iter().copied())
+                    .collect();
+                let mut new_rows = EcoVec::with_capacity(new_shape.elements());
+                for row in from.row_slices() {
+                    let mut from_subrows = row.chunks_exact(into.row_len());
+                    for (&count, into_slice) in counts.iter().zip(into.row_slices()) {
+                        if count < 1.0 {
+                            new_rows.extend_from_slice(into_slice);
+                        } else {
+                            new_rows.extend_from_slice(from_subrows.next().expect(
+                                "number of true counts was verified \
+                                to match from row count",
+                            ));
+                        }
                     }
                 }
-                into = Array::from_row_arrays_infallible(rows);
+                into = Array::new(new_shape, new_rows);
             }
         }
         Ok(into)

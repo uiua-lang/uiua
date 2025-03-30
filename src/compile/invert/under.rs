@@ -123,12 +123,12 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &(
         Abs,
         (CopyUnd(1), Abs),
-        (TransposeN(-1), PopUnd(1), Sign, Mul, Transpose),
+        (Transpose, PopUnd(1), Sign, Mul, TransposeN(-1)),
     ),
     &(
         Sign,
         (CopyUnd(1), Sign),
-        (TransposeN(-1), PopUnd(1), Flip, SetSign, Transpose),
+        (Transpose, PopUnd(1), Flip, SetSign, TransposeN(-1)),
     ),
     // Mod
     &MaybeVal((

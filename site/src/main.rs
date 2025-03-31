@@ -21,8 +21,10 @@ use leptos_router::*;
 use rand::prelude::*;
 use uiua::{now, ConstantDef, Primitive, SysOp};
 use uiua_editor::{
-    binding_name_class,
-    utils::{get_april_fools_colors, set_april_fools_colors, ChallengeDef},
+    binding_name_class, lang,
+    utils::{
+        get_april_fools_2025_setting, get_april_fools_2025_time, set_april_fools_2025, ChallengeDef,
+    },
     Editor, EditorMode, Prim, EDITOR_SHORTCUTS,
 };
 use wasm_bindgen::JsCast;
@@ -104,7 +106,7 @@ pub fn Site() -> impl IntoView {
         _ => "/assets/uiua-logo.png",
     };
 
-    let toggle_april_fools_colors = move |_| set_april_fools_colors(!get_april_fools_colors());
+    let toggle_april_fools_colors = move |_| set_april_fools_2025(!get_april_fools_2025_setting());
 
     view! {
         <Router>
@@ -117,19 +119,32 @@ pub fn Site() -> impl IntoView {
                         <div id="top">
                             <div id="header">
                                 <div id="header-left">
-                                    <h1><A id="header-uiua" href="/"><img src=logo_src style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
+                                    <h1>
+                                        <A id="header-uiua" href="/">
+                                            <img src=logo_src style="height: 1em" alt={format!("{} logo", lang())} />
+                                            " "{lang}
+                                        </A>
+                                    </h1>
                                     <p id="subtitle">{ subtitle.clone() }</p>
                                 </div>
                                 <div id="nav">
-                                    <div title="Enable April Fool's colors">
-                                        "April Fool's:"
-                                        <input
-                                            type="checkbox"
-                                            checked=get_april_fools_colors
-                                            on:change=toggle_april_fools_colors
-                                        />
-                                    </div>
-                                    <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support Uiua's development"</a>
+                                    {
+                                        if get_april_fools_2025_time() {
+                                            Some(view!(
+                                                <div title="Enable April Fool's colors (refresh after changing)">
+                                                    "April Fool's:"
+                                                    <input
+                                                        type="checkbox"
+                                                        checked=get_april_fools_2025_setting
+                                                        on:change=toggle_april_fools_colors
+                                                    />
+                                                </div>
+                                            ))
+                                        } else {
+                                            None
+                                        }
+                                    }
+                                    <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support "{lang}"'s development"</a>
                                     <a href="/">"Home"</a>
                                 </div>
                             </div>
@@ -249,7 +264,7 @@ pub fn MainPage() -> impl IntoView {
     rich_prims.reverse();
 
     view! {
-        <Title text="Uiua"/>
+        <Title text=lang()/>
         <div id="links">
             <div>
                 <A href="/install">"Installation"</A>
@@ -272,63 +287,63 @@ pub fn MainPage() -> impl IntoView {
                 "You can run with ctrl/shift + enter.",
             ]}/>
         <br/>
-        <p class="main-text">"Uiua "<span class="wee-wuh-span">"("<i>"wee-wuh "</i><button on:click=|_| weewuh() class="sound-button">"🔉"</button>")"</span>" is a general purpose, stack-based, array-oriented programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
-        <p class="main-text">"Uiua lets you write code that is as short as possible while remaining readable, so you can focus on problems rather than ceremony."</p>
+        <p class="main-text">{lang}" "<span class="wee-wuh-span">"("<i>"wee-wuh "</i><button on:click=|_| weewuh() class="sound-button">"🔉"</button>")"</span>" is a general purpose, stack-based, array-oriented programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
+        <p class="main-text">{lang}" lets you write code that is as short as possible while remaining readable, so you can focus on problems rather than ceremony."</p>
         <p class="main-text">"The language is not yet stable, as its design space is still being explored. However, it is already quite powerful and fun to use!"</p>
         <div class="features">
             <div>
                 <div>
                     <Hd id="a-loving-union">"A Loving Union"</Hd>
-                    <p>"Uiua combines the stack-based and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
+                    <p>{lang}" combines the stack-based and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
                     <Editor example="⇌[⍥◡+9].1"/>
                     <p>"If this code seems weird and unreadable, that's okay! It's important to remember that "<a href="https://vector-of-bool.github.io/2018/10/31/become-perl.html">"foreign ≠ confusing"</a>"."</p>
                 </div>
                 <div>
                     <Hd id="true-arrays">"True Arrays"</Hd>
-                    <p>"Uiua's one and only composite data type, the array, is based on those of APL, J, and BQN. They are multidimensional and rank-polymorphic, meaning that an operation that applies to one item also applies to many items."</p>
+                    <p>{lang}"'s one and only composite data type, the array, is based on those of APL, J, and BQN. They are multidimensional and rank-polymorphic, meaning that an operation that applies to one item also applies to many items."</p>
                     <Editor example="◿5 ↯3_4 ⇡12"/>
                 </div>
                 <div>
                     <Hd id="rich-primitives">"Rich Primitives"</Hd>
-                    <p>"Uiua has lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
+                    <p>{lang}" has lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
                     { rich_prims }
                 </div>
                 <div>
                     <Hd id="syntactic-simplicity">"Syntactic Simplicity"</Hd>
-                    <p>"Uiua has a simple, context-free, LL(3) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/tutorial/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code reads a little bit like a Lisp, but with fewer parentheses."</p>
+                    <p>{lang}" has a simple, context-free, LL(3) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/tutorial/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, "{lang}" code reads a little bit like a Lisp, but with fewer parentheses."</p>
                 </div>
                 <div>
                     <Hd id="system-apis">"System APIs"</Hd>
-                    <p>"Uiua has functions for spawning threads, interacting with the file system, communicating over network sockets, and "<A href="/docs/system">"more"</A>"."</p>
+                    <p>{lang}" has functions for spawning threads, interacting with the file system, communicating over network sockets, and "<A href="/docs/system">"more"</A>"."</p>
                 </div>
                 <div>
                     <Hd id="rust-ingegration">"Rust Integration"</Hd>
-                    <p>"Uiua can be embedded in Rust programs "<a href="https://docs.rs/uiua">"as a library"</a>"."</p>
+                    <p>{lang}" can be embedded in Rust programs "<a href="https://docs.rs/uiua">"as a library"</a>"."</p>
                 </div>
                 <div>
                     <Hd id="ffi">"FFI"</Hd>
-                    <p>"Uiua has experimental support for calling functions from shared libraries through "<Prim prim=Sys(SysOp::Ffi)/>"."</p>
+                    <p>{lang}" has experimental support for calling functions from shared libraries through "<Prim prim=Sys(SysOp::Ffi)/>"."</p>
                 </div>
             </div>
             <div>
                 <div>
                     <Hd id="friendly-glyphs">"Friendly Glyphs"</Hd>
-                    <p>"Uiua uses special characters for built-in functions that remind you what they do!"</p>
+                    <p>{lang}" uses special characters for built-in functions that remind you what they do!"</p>
                     <Editor example="⚂ # Random number"/>
                     <Editor example="⇡8 # Range up to"/>
                     <Editor example="⇌ 1_2_3_4 # Reverse"/>
                     <Editor example="⌕ 0_2 [0 2 5 0 2 1] # Find"/>
                     <Editor example="⊟ 1_2_3 4_5_6 # Couple"/>
-                    <p>"Unlike other array languages, Uiua does not have monadic and dyadic versions of each glyph. Every glyph does only one thing, so you don't need to parse an entire expression to know which version it is."</p>
+                    <p>"Unlike other array languages, "{lang}" does not have monadic and dyadic versions of each glyph. Every glyph does only one thing, so you don't need to parse an entire expression to know which version it is."</p>
                 </div>
                 <div>
                     <Hd id="unicode-formatter">"Unicode Formatter"</Hd>
-                    <p>"Uiua has the terseness and expressivity afforded by Unicode glyphs without the need for special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
+                    <p>{lang}" has the terseness and expressivity afforded by Unicode glyphs without the need for special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
                     <Editor example="floor*10[repeatrand5]" help={&["", "Click to format ⇡⇡⇡            "]}/>
                 </div>
                 <div>
                     <Hd id="multimedia-output">"Multimedia Output"</Hd>
-                    <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples. You can even make GIFs!"</p>
+                    <p>{lang}" has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples. You can even make GIFs!"</p>
                     {
                         if cfg!(debug_assertions) {
                             None
@@ -342,17 +357,17 @@ pub fn MainPage() -> impl IntoView {
                             })
                         }
                     }
-                    <p>"The Uiua logo was made with Uiua! Check example 5 at the top of the page."</p>
+                    <p>"The "{lang}" logo was made with "{lang}"! Check example 5 at the top of the page."</p>
                 </div>
                 <div>
                     <Hd id="language-server">"Language Server"</Hd>
-                    <p>"The Uiua interpreter has a built-in language server that uses the "<a href="https://microsoft.github.io/language-server-protocol/">"Language Server Protocol"</a>", so you can "<A href="/install#editor-support">"use it with your favorite editor"</A>"."</p>
+                    <p>"The "{lang}" interpreter has a built-in language server that uses the "<a href="https://microsoft.github.io/language-server-protocol/">"Language Server Protocol"</a>", so you can "<A href="/install#editor-support">"use it with your favorite editor"</A>"."</p>
                 </div>
             </div>
         </div>
         <div>
             <Hd id="getting-started">"Getting Started"</Hd>
-            <p>"For more examples of what Uiua code looks like and what it can do, see the examples in the editor at the top of this page."</p>
+            <p>"For more examples of what "{lang}" code looks like and what it can do, see the examples in the editor at the top of this page."</p>
             <p>"For a quick overview of how the language works, see the "<A href="/tour">"Language Tour"</A>"."</p>
             <p>"For a full tutorial, see the "<A href="/docs#tutorial">"Tutorial"</A>"."</p>
             <p>"For a reference of all the built-in functions, the documentation has a "<A href="/docs#functions">"full list"</A>"."</p>
@@ -472,10 +487,16 @@ pub fn Tour() -> impl IntoView {
 #[component]
 pub fn PadPage() -> impl IntoView {
     let src = pad_src();
-    let version = format!("Uiua {}", uiua::VERSION);
-    let help = &["Note: Uiua is not yet stable", &version];
+    let version = format!("{} {}", lang(), uiua::VERSION);
+    let help = &[
+        match lang() {
+            "Weewuh" => "Note: Weewuh is not yet stable",
+            _ => "Note: Uiua is not yet stable",
+        },
+        &version,
+    ];
     view! {
-        <Title text="Pad - Uiua"/>
+        <Title text=format!("Pad - {}", lang())/>
         <Editor mode=EditorMode::Pad example={ &src } help=help/>
         <br/>
         <br/>
@@ -488,7 +509,7 @@ pub fn PadPage() -> impl IntoView {
                      _ = window().navigator().clipboard().write_text(CODE)
                 };
                 Some(view! {
-                    <p>"Join the official "<a href={format!("https://adventofcode.com/{year}")}>"Advent of Code "{year}</a>" Uiua community leaderboard "<a href={format!("https://adventofcode.com/{year}/leaderboard/private")}>"here!"</a>"  "<button on:click=copy_code>"Copy code"</button></p>
+                    <p>"Join the official "<a href={format!("https://adventofcode.com/{year}")}>"Advent of Code "{year}</a>" "{lang}" community leaderboard "<a href={format!("https://adventofcode.com/{year}/leaderboard/private")}>"here!"</a>"  "<button on:click=copy_code>"Copy code"</button></p>
                 })
             } else {
                 None

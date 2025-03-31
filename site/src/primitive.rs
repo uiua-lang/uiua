@@ -2,7 +2,7 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{PrimClass, PrimDocFragment, PrimDocLine, Primitive, SysOp};
-use uiua_editor::Editor;
+use uiua_editor::{lang, Editor};
 
 use crate::{Hd, Prim, Prims};
 
@@ -154,9 +154,9 @@ pub fn AllFunctions() -> impl IntoView {
         Default::default(),
     );
     view! {
-        <Title text="All Functions - Uiua Docs"/>
+        <Title text=format!("All Functions - {} Docs", lang())/>
         <h1>"All Functions"</h1>
-        <p>"This is a list of every built-in function in Uiua, provided for your scrolling pleasure."</p>
+        <p>"This is a list of every built-in function in "{lang}", provided for your scrolling pleasure."</p>
         <p>"For a searchable list, see the "<A href="/docs#functions">"main docs page"</A>"."</p>
         { move || list.get() }
     }

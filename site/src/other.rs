@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use leptos::*;
 use leptos_meta::*;
 use uiua::{ConstClass, Primitive, SysOp, CONSTANTS};
-use uiua_editor::Editor;
+use uiua_editor::{lang, Editor};
 
 use crate::{
     markdown::{markdown_view, Markdown},
@@ -14,12 +14,12 @@ use crate::{
 #[component]
 pub fn Technical() -> impl IntoView {
     view! {
-        <Title text="Technical Details - Uiua Docs"/>
+        <Title text=format!("Technical Details - {} Docs", lang())/>
         <h1>"Technical Details"</h1>
 
         <Hd id="the-interpreter">"The Interpreter"</Hd>
-        <p>"The Uiua interpreter is written in Rust."</p>
-        <p>"Uiua code is compiled into a simple bytecode assembly. This assembly is then usually immediately executed by the interpreter."</p>
+        <p>"The "{lang}" interpreter is written in Rust."</p>
+        <p>{lang}" code is compiled into a simple bytecode assembly. This assembly is then usually immediately executed by the interpreter."</p>
         <p>"Built-in functions are implemented in Rust so they can be as fast as possible. User-defined functions are passed around as chunks of bytecode."</p>
 
         <Hd id="arrays">"Arrays"</Hd>
@@ -29,8 +29,8 @@ pub fn Technical() -> impl IntoView {
         <p>"Array shapes are stored in a special array type that only allocates when there are more than 3 items."</p>
 
         <Hd id="website">"The Website"</Hd>
-        <p>"The Uiua website is written using the "<a href="https://leptos.dev/">Leptos</a>" framework and hosted on GitHub pages."</p>
-        <p>"Leptos compiles to webassembly, which allows the entire Uiua interpreter to be compiled and used by the site's editor."</p>
+        <p>"The "{lang}" website is written using the "<a href="https://leptos.dev/">Leptos</a>" framework and hosted on GitHub pages."</p>
+        <p>"Leptos compiles to webassembly, which allows the entire "{lang}" interpreter to be compiled and used by the site's editor."</p>
         <p>"The online editor is implemented as a "<code>"contenteditable"</code>" div with lots of custom behaviors."</p>
     }
 }
@@ -39,10 +39,10 @@ pub fn Technical() -> impl IntoView {
 pub fn Install() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text="Installation - Uiua Docs"/>
-        <Hd id="installing-uiua">"Installing Uiua"</Hd>
-        <p><strong>"If your OS is supported, then the newest version of the Uiua interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</strong></p>
-        <p>"Otherwise, the native Uiua interpreter can be installed via Cargo."</p>
+        <Title text=format!("Installation - {} Docs", lang())/>
+        <Hd id="installing-uiua">"Installing "{lang}""</Hd>
+        <p><strong>"If your OS is supported, then the newest version of the "{lang}" interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</strong></p>
+        <p>"Otherwise, the native "{lang}" interpreter can be installed via Cargo."</p>
         <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.78)."</p>
         <p>"Once you have that, run one of the following commands:"</p>
         <code class="code-block">"cargo install uiua -F full"</code>
@@ -66,25 +66,25 @@ pub fn Install() -> impl IntoView {
                 <p><code>"window"</code>" - Enables output in a window."</p>
             </li>
         </ul>
-        <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>
+        <p>"If you want the most recent development version of "{lang}", you can install from the git repository."</p>
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
 
         <Hd id="fonts">"Fonts"</Hd>
-        <p>"Uiua supports a few custom fonts, but "<a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">"Uiua386"</a>" is the primary one."</p>
+        <p>{lang}" supports a few custom fonts, but "<a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">{lang}"386"</a>" is the primary one."</p>
         <ul>
-            <li><a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">"Uiua386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
-            <li>"Jonathan Perret's "<a href="https://github.com/jonathanperret/uiua386color">"Uiua386Color"</a>" - a colored version of Uiua386"</li>
+            <li><a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">{lang}"386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
+            <li>"Jonathan Perret's "<a href="https://github.com/jonathanperret/uiua386color">{lang}"386Color"</a>" - a colored version of "{lang}"386"</li>
             <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/DejaVuSansMono.ttf">"DejaVuSansMono"</a>" - a modified version"</li>
         </ul>
-        <p>"Uiua was originally designed to be used with stock "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>", but further development and glyph choices target Uiua386."</p>
+        <p>{lang}" was originally designed to be used with stock "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>", but further development and glyph choices target "{lang}"386."</p>
 
         <Hd id="editor-support">"Editor Support"</Hd>
-        <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>
-        <p>"For Vim/Neovim, Apeiros-46B maintains a "<a href="https://github.com/Apeiros-46B/uiua.vim">"Uiua syntax highlighting plugin"</a>"."</p>
-        <p>"For Vim, sputnick1124 maintains a "<a href="https://github.com/sputnick1124/uiua.vim">"Uiua plugin"</a>"."</p>
+        <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">{lang}" language extension for VSCode"</a>" is available."</p>
+        <p>"For Vim/Neovim, Apeiros-46B maintains a "<a href="https://github.com/Apeiros-46B/uiua.vim">{lang}" syntax highlighting plugin"</a>"."</p>
+        <p>"For Vim, sputnick1124 maintains a "<a href="https://github.com/sputnick1124/uiua.vim">{lang}" plugin"</a>"."</p>
         <p>"Language support in Neovim is easy with "<a href="https://github.com/neovim/nvim-lspconfig">"nvim-lspconfig"</a>"."</p>
-        <p>"For Emacs, crmsnbleyd maintains a "<a href="https://github.com/crmsnbleyd/uiua-ts-mode">"Uiua mode"</a>"."</p>
-        <p>"These require Uiua to be installed and in your "<code>"PATH"</code>"."</p>
+        <p>"For Emacs, crmsnbleyd maintains a "<a href="https://github.com/crmsnbleyd/uiua-ts-mode">{lang}" mode"</a>"."</p>
+        <p>"These require "{lang}" to be installed and in your "<code>"PATH"</code>"."</p>
 
         <Hd id="basic-usage">"Basic Usage"</Hd>
         <p>"Running just "<code>"uiua"</code>" will display the help message if there are no "<code>".ua"</code>" files in the directory."</p>
@@ -110,10 +110,10 @@ uiua watch -w"
 
         <Hd id="local-site">"Running the Site Locally"</Hd>
         <p>"This website is a static, single-page application. As such, it can be build and run locally, without connecting to a server."</p>
-        <p>"To do this, you will need "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installed. You will also need the "<a href="https://github.com/uiua-lang/uiua">"Uiua repository"</a>" cloned locally."</p>
+        <p>"To do this, you will need "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installed. You will also need the "<a href="https://github.com/uiua-lang/uiua">{lang}" repository"</a>" cloned locally."</p>
         <p>"You need to have both "<a href="https://trunkrs.dev">"Trunk"</a>" and the "<code>"wasm32-unknown-unknown"</code>" target installed. To get both of these, run:"</p>
         <code class="code-block">"cargo install trunk\nrustup target add wasm32-unknown-unknown"</code>
-        <p>"Then, from the root of the Uiua repository, run:"</p>
+        <p>"Then, from the root of the "{lang}" repository, run:"</p>
         <code class="code-block">"cd site\ntrunk serve"</code>
         <p>"The site will be available at "<code>"http://localhost:8080"</code>"."</p>
     }
@@ -123,14 +123,14 @@ uiua watch -w"
 pub fn RightToLeft() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text="Right-to-Left - Uiua Docs"/>
+        <Title text=format!("Right-to-Left - {} Docs", lang())/>
         <Hd id="right-to-left">"Right-to-Left"</Hd>
-        <p>"One of the most asked questions about Uiua is \"Why does code execute right-to-left?\" It's a valid question. Every other stack-oriented language I know goes left-to-right."</p>
-        <p>"The simple answer is that while Uiua is stack-"<em>"based"</em>", it is not stack-"<em>"oriented"</em>"."</p>
+        <p>"One of the most asked questions about "{lang}" is \"Why does code execute right-to-left?\" It's a valid question. Every other stack-oriented language I know goes left-to-right."</p>
+        <p>"The simple answer is that while "{lang}" is stack-"<em>"based"</em>", it is not stack-"<em>"oriented"</em>"."</p>
         <p>"The misunderstanding is largely my own fault. The initial version of the website said \"stack-oriented\" everywhere and made references to FORTH. I have since rectified this."</p>
-        <p>"When you write Uiua code the stack should just be a tool, a convention. It's how you pass values around. "<strong>"The stack should not guide how you think about solving problems in Uiua."</strong></p>
-        <p>"Uiua is about composing arrays. The stack makes it possible to do this without naming local variables. This is the entire reason for its presence in the language. In particular, the stack can be used to construct arbitrary combinators and data flows. It is an extremely powerful mechanism for this purpose."</p>
-        <p>"You should not think of Uiua syntax like a FORTH. You should think of it like any of the numerous other languages that put functions before their arguments. This group includes languages of vastly different kinds, like C, Haskell, and Lisp."</p>
+        <p>"When you write "{lang}" code the stack should just be a tool, a convention. It's how you pass values around. "<strong>"The stack should not guide how you think about solving problems in "{lang}"."</strong></p>
+        <p>{lang}" is about composing arrays. The stack makes it possible to do this without naming local variables. This is the entire reason for its presence in the language. In particular, the stack can be used to construct arbitrary combinators and data flows. It is an extremely powerful mechanism for this purpose."</p>
+        <p>"You should not think of "{lang}" syntax like a FORTH. You should think of it like any of the numerous other languages that put functions before their arguments. This group includes languages of vastly different kinds, like C, Haskell, and Lisp."</p>
         <p>"The left side of an expression is "<em>"not"</em>" the end or the beginning. It is the "<em>"root"</em>". The expression is a tree with branches that converge and diverge in different ways. It is not a list of instructions."</p>
         <p>"This allows us to separate the execution model from the mental model. With a separate mental model, why does it matter which direction the code executes? Why can't the root be on the right?"</p>
         <p>"Of course, "<em>"now"</em>" the decision is arbitrary. I'm used to languages that put the root on the left, so that is what I chose."</p>
@@ -187,7 +187,7 @@ pub fn Constants() -> impl IntoView {
         view!(<div>{tables}</div>)
     });
     view! {
-        <Title text="Constants - Uiua Docs"/>
+        <Title text=format!("Constants - {} Docs", lang())/>
         <h1>"Constants"</h1>
         <p>"These constants are available in every scope. However, unlike formattable constants like "<Prim prim=Pi/>", these constants can be shadowed within a scope."</p>
         <Editor example="e\ne ← 5\ne"/>
@@ -202,16 +202,16 @@ pub fn Constants() -> impl IntoView {
 pub fn Optimizations() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text="Optimizations - Uiua Docs"/>
+        <Title text=format!("Optimizations - {} Docs", lang())/>
         <h1>"Optimizations"</h1>
-        <p>"The Uiua interpreter contains a number of optimizations that you can take advantage of to improve the performance of your code."</p>
+        <p>"The "{lang}" interpreter contains a number of optimizations that you can take advantage of to improve the performance of your code."</p>
 
         <Hd id="pervasive-functions">"Pervasive Functions"</Hd>
         <p>"All pervasive functions run on arrays in hot loops that should have performance comparable to an implementation in a languages like C or Rust. This includes all mathematical and comparison functions."</p>
         <p>"The interpreter does its best to re-use allocated memory when possible instead of copying. Arrays are reference-counted, so an array's memory is only copied when it is modified "<em>"and"</em>" a duplicate exists somewhere. "<Prim prim=Dup/>" does not copy actual array memory. It only copies pointers and increments reference counts."</p>
         <p>"In this example, only the last line results in a copy:"</p>
         <Editor no_run=true example="+1 ⇡10\n×. ⇡10\n×+1⇡10⇡10\n+1.⇡10"/>
-        <p>"Using pervasive functions whenever possible, on the largest arrays possible, is the best way to get good performance out of Uiua."</p>
+        <p>"Using pervasive functions whenever possible, on the largest arrays possible, is the best way to get good performance out of "{lang}"."</p>
 
         <Hd id="iterating-modifiers">"Iterating Modifiers"</Hd>
         <p>"The modifiers "<Prim prim=Reduce/>", "<Prim prim=Scan/>", and "<Prim prim=Table/>" have special-case optimizations when used with certain functions. These optimizations eliminate all interpreter overhead while the loops are running, and are therefore very fast."</p>
@@ -314,7 +314,7 @@ pub fn Optimizations() -> impl IntoView {
 #[component]
 pub fn Changelog() -> impl IntoView {
     view! {
-        <Title text="Changelog - Uiua Docs"/>
+        <Title text=format!("Changelog - {} Docs", lang())/>
         { markdown_view(include_str!("../../changelog.md")) }
     }
 }
@@ -466,9 +466,9 @@ pub fn Combinators() -> impl IntoView {
         })
         .collect::<Vec<_>>();
     view! {
-        <Title text="Combinators - Uiua Docs"/>
+        <Title text=format!("Combinators - {} Docs", lang())/>
         <h1>"Combinators"</h1>
-        <p>"This page contains a list of implementations of common combinators in Uiua. While it's not really necessary to know these to write Uiua programs, you may find the information interesting."</p>
+        <p>"This page contains a list of implementations of common combinators in "{lang}". While it's not really necessary to know these to write "{lang}" programs, you may find the information interesting."</p>
         <p>"A combinator is a function that only refers to its arguments. "<a href="https://en.wikipedia.org/wiki/Combinatory_logic">"Combinatory logic"</a>" is the branch of logic that deals with combinators."</p>
         <p>"Ever since Raymond Smullyan's book "<a href="https://en.wikipedia.org/wiki/To_Mock_a_Mockingbird">"To Mock a Mockingbird"</a>", people have been calling combinators by bird names. These bird names are included in the table."</p>
         <Hd id="reading">"Reading the Table"</Hd>
@@ -567,7 +567,7 @@ pub fn Subscripts() -> impl IntoView {
     ];
 
     view! {
-        <Title text="Subscripts - Uiua Docs"/>
+        <Title text=format!("Subscripts - {} Docs", lang())/>
         <h1>"Subscripts"</h1>
         <p>"By suffixing some functions or modifiers with a subscript number, their behavior can be modified."</p>
         <p>"Subscript numbers are typed with a "<code>"__"</code>" followed by some digits. The formatter will turn them into subscript digit characters."</p>
@@ -613,10 +613,10 @@ pub fn Subscripts() -> impl IntoView {
 #[component]
 pub fn Experimental() -> impl IntoView {
     view! {
-        <Title text="Experimental Features - Uiua Docs"/>
+        <Title text=format!("Experimental Features - {} Docs", lang())/>
         <h1>"Experimental Features"</h1>
-        <p>"Uiua has a number of features that are considered experimental. They are available in the interpreter for testing, but may be removed or changed in the future."</p>
-        <p>"Using experimental features requires an "<code>"# Experimental!"</code>" comment to be placed at the top of a Uiua source file."</p>
+        <p>{lang}" has a number of features that are considered experimental. They are available in the interpreter for testing, but may be removed or changed in the future."</p>
+        <p>"Using experimental features requires an "<code>"# Experimental!"</code>" comment to be placed at the top of a "{lang}" source file."</p>
 
         <Hd id="functions-modifiers">"Experimental Functions and Modifiers"</Hd>
         <ul>{

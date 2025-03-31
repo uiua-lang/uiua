@@ -1,9 +1,11 @@
-✅ ← ⍤⟜≍:0 &runi
+✅ ← ⍤⤙≍ 0 &runi
 
-¬∊ &args □"resume"
-⍥(✅ {"git" "checkout" "site" "--"}
+$Branch ⍣(°□⊡+1)"main"⊸(↧⊃(⊗□"-b"|⊗□"--branch")) &args
+$Resume ¬∊ &args □"resume"
+⊸⍥(
+  ✅ {"git" "checkout" "site" "--"}
   ✅ {"git" "reset" "--hard" "origin/site"}
-  ✅ {"git" "rebase" "main"}
+  ✅ {"git" "rebase" ∘}
 )
 &cd "site"
 ✅ {"cargo" "test" "-p" "site" "gen_blog_html"}
@@ -11,4 +13,4 @@
 ✅ {"git" "add" "--all"}
 ✅ {"git" "commit" "--amend" "--no-edit"}
 ✅ {"git" "push" "-f"}
-✅ {"git" "checkout" "main"}
+✅ {"git" "checkout" ∘}

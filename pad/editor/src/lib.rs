@@ -236,7 +236,7 @@ pub fn Editor<'a>(
         // Update title
         if let EditorMode::Pad = mode {
             let title = derive_title(&input);
-            (window().document().unwrap()).set_title(&format!("Uiua - {title}"));
+            (window().document().unwrap()).set_title(&format!("{} - {title}", lang()));
         }
 
         // Update URL
@@ -1110,7 +1110,7 @@ pub fn Editor<'a>(
                 (
                     "¯",
                     "(`) negative",
-                    if get_april_fools_colors() {
+                    if get_april_fools_2025() {
                         "text-gradient lesbian"
                     } else {
                         "number-literal"
@@ -1121,7 +1121,7 @@ pub fn Editor<'a>(
                 (
                     "@",
                     "character",
-                    if get_april_fools_colors() {
+                    if get_april_fools_2025() {
                         "text-gradient bright-rainbow"
                     } else {
                         "string-literal-span"
@@ -1132,7 +1132,7 @@ pub fn Editor<'a>(
                 (
                     "$",
                     "format/multiline string",
-                    if get_april_fools_colors() {
+                    if get_april_fools_2025() {
                         "text-gradient bright-rainbow"
                     } else {
                         "string-literal-span"
@@ -1143,7 +1143,7 @@ pub fn Editor<'a>(
                 (
                     "\"",
                     "string",
-                    if get_april_fools_colors() {
+                    if get_april_fools_2025() {
                         "text-gradient bright-rainbow"
                     } else {
                         "string-literal-span"
@@ -1593,7 +1593,7 @@ pub fn Editor<'a>(
         set_top_at_top(orientation);
         run(false, false);
     };
-    let toggle_april_fools_colors = move |_| set_april_fools_colors(!get_april_fools_colors());
+    let toggle_april_fools_colors = move |_| set_april_fools_2025(!get_april_fools_2025_setting());
     set_font_name(&get_font_name());
     set_font_size(&get_font_size());
     let on_insert_experimental = move |_| insert_experimental();
@@ -1840,7 +1840,7 @@ pub fn Editor<'a>(
                             "April Fool's:"
                             <input
                                 type="checkbox"
-                                checked=get_april_fools_colors
+                                checked=get_april_fools_2025_setting
                                 on:change=toggle_april_fools_colors
                             />
                         </div>
@@ -1884,7 +1884,7 @@ pub fn Editor<'a>(
                         <div>
                             "Font:" <select on:change=on_select_font>
                                 <option value="Uiua386" selected=get_font_name() == "Uiua386">
-                                    "Uiua386"
+                                    {lang}
                                 </option>
                                 <option value="Pixua" selected=get_font_name() == "Pixua">
                                     "Pixua"
@@ -2194,9 +2194,9 @@ pub(crate) use code_font;
 fn sig_class(sig: Signature) -> &'static str {
     match sig.args {
         0 => code_font!("noadic-function"),
-        1 if get_april_fools_colors() => code_font!("text-gradient aro"),
+        1 if get_april_fools_2025() => code_font!("text-gradient aro"),
         1 => code_font!("monadic-function"),
-        2 if get_april_fools_colors() => code_font!("text-gradient gay"),
+        2 if get_april_fools_2025() => code_font!("text-gradient gay"),
         2 => code_font!("dyadic-function"),
         3 => code_font!("triadic-function"),
         4 => code_font!("tetradic-function"),
@@ -2206,9 +2206,9 @@ fn sig_class(sig: Signature) -> &'static str {
 
 fn modifier_class(margs: usize) -> &'static str {
     match margs {
-        0 | 1 if get_april_fools_colors() => code_font!("text-gradient pan"),
+        0 | 1 if get_april_fools_2025() => code_font!("text-gradient pan"),
         0 | 1 => code_font!("monadic-modifier"),
-        2 if get_april_fools_colors() => code_font!("text-gradient fluid"),
+        2 if get_april_fools_2025() => code_font!("text-gradient fluid"),
         2 => code_font!("dyadic-modifier"),
         _ => code_font!("triadic-modifier"),
     }
@@ -2235,7 +2235,7 @@ fn prim_sig_class(prim: Primitive, subscript: Option<i32>) -> &'static str {
         {
             code_font!("stack-function")
         }
-        prim if prim.class() == PrimClass::Constant && get_april_fools_colors() => {
+        prim if prim.class() == PrimClass::Constant && get_april_fools_2025() => {
             code_font!("text-gradient lesbian")
         }
         prim if prim.class() == PrimClass::Constant => code_font!("number-literal"),
@@ -2296,3 +2296,11 @@ ctrl/⌘ 4       - Toggle multiline string
 ctrl/⌘ Z       - Undo
 ctrl/⌘ Y       - Redo
 ctrl/⌘ E       - Insert # Experimental! comment";
+
+pub fn lang() -> &'static str {
+    if get_april_fools_2025() {
+        "Weewuh"
+    } else {
+        "Uiua"
+    }
+}

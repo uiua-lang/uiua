@@ -3,6 +3,7 @@ use std::time::Duration;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use uiua_editor::lang;
 
 use crate::markdown::*;
 
@@ -42,8 +43,8 @@ pub fn Blog() -> impl IntoView {
 #[component]
 fn BlogHome() -> impl IntoView {
     view! {
-        <Title text="Uiua Blog"/>
-        <h1>"Uiua Blog"</h1>
+        <Title text=format!("{} Blog", lang())/>
+        <h1>{lang}" Blog"</h1>
         <BlogRssButton/>
         {
             let list = include_str!("../blog/list.txt");
@@ -62,7 +63,7 @@ fn BlogHome() -> impl IntoView {
 #[component]
 fn BlogPage(name: String) -> impl IntoView {
     view! {
-        <Title text={format!("{name} - Uiua Blog")}/>
+        <Title text={format!("{name} - {} Blog", lang())}/>
         <A href="/blog">"Back to Blog Home"</A>
         <BlogRssButton/>
         <br/>

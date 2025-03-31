@@ -9,6 +9,7 @@ use leptos::{leptos_dom::helpers::location, *};
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{PrimClass, Primitive, SysOpClass};
+use uiua_editor::lang;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
@@ -110,7 +111,7 @@ pub fn Docs() -> impl IntoView {
 
 pub fn title_markdown(title: &str, src: &str, end: impl IntoView) -> impl IntoView {
     view! {
-        <Title text={format!("{} - Uiua Docs", title)}/>
+        <Title text={format!("{} - {} Docs", lang(), title)}/>
         <Markdown src=src/>
         { end }
     }
@@ -197,8 +198,8 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
     let update_title = move || {
         current_prim
             .get()
-            .map(|p| format!("{} - Uiua Docs", p.name()))
-            .unwrap_or_else(|| "Uiua Docs".to_owned())
+            .map(|p| format!("{} - {} Docs", lang(), p.name()))
+            .unwrap_or_else(|| format!("{} Docs", lang()))
     };
 
     set_timeout(
@@ -225,8 +226,8 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <p>"Otherwise, read on for more detailed documentation."</p>
 
         <Hd id="tutorial">"Tutorial"</Hd>
-        <h3><strong><em>"If you are new to Uiua, you will likely be lost if you don't read this!"</em></strong></h3>
-        <p>"These pages introduce Uiua concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
+        <h3><strong><em>"If you are new to "{lang}", you will likely be lost if you don't read this!"</em></strong></h3>
+        <p>"These pages introduce "{lang}" concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
         <p>"They are meant to be read in order, but feel free to skip around!"</p>
         <ul>{ all::<TutorialPage>()
             .map(|p| view!( <li><A href={format!("/tutorial/{}", p.path())}>{p.title()}</A></li>))
@@ -242,11 +243,11 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
 
         <Hd id="other-docs">"Other Docs"</Hd>
         <ul>
-            <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
+            <li><A href="/docs/install">"Installation"</A>" - how to install and use "{lang}"'s interpreter"</li>
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
             <li><A href="/docs/constants">"Constants"</A>" - a list of the shadowable constants"</li>
             <li><A href="/docs/subscripts">"Subscripts"</A>" - a list of subscript-compatible functions"</li>
-            <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
+            <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the "{lang}" formatter"</li>
             <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
             <li><A href="/docs/experimental">"Experimental Features"</A>" - an overview of experimental features"</li>
             <li><A href="/docs/idioms">"Idioms"</A>" - commonly useful, non-obvious idioms. Also "<A href="/docs/idioms#aliases">"aliases"</A>"."</li>
@@ -254,11 +255,16 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
 
         <Hd id="other-pages">"Other Pages"</Hd>
         <ul>
-            <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
-            <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
-            <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
-            <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in Uiua"</li>
-            <li><a href="https://tankorsmash.unison-services.cloud/s/uiuisms-service/">"Uiuisms"</a>" - a community catalog of many common Uiua snippets"</li>
+            <li><A href="/docs/design">"Design"</A>" - reasons for some of "{lang}"'s design decisions"</li>
+            <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about "{lang}"'s design gets its own page"</li>
+            <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the "{lang}" interpreter and this website"</li>
+            <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in "{lang}</li>
+            <li><a href="https://tankorsmash.unison-services.cloud/s/uiuisms-service/">{
+                match lang() {
+                    "Weewuh" => "Weewisms",
+                    _ => "Uiuisms",
+                }
+            }</a>" - a community catalog of many common "{lang}" snippets"</li>
             <li>
                 <A href="/primitives.json" on:click = |_| _ = location().set_href("/primitives.json")>"Primitives JSON"</A>
                 " - a JSON file of all the primitives, for tooling and other projects"</li>

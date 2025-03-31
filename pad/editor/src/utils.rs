@@ -663,13 +663,13 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                     let color_class = match &kind {
                         SpanKind::Primitive(prim, sig) => prim_sig_class(*prim, *sig),
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
-                        SpanKind::Number if get_april_fools_colors() => "text-gradient lesbian",
+                        SpanKind::Number if get_april_fools_2025() => "text-gradient lesbian",
                         SpanKind::Number => "number-literal",
-                        SpanKind::String | SpanKind::ImportSrc(_) if get_april_fools_colors() => {
+                        SpanKind::String | SpanKind::ImportSrc(_) if get_april_fools_2025() => {
                             "text-gradient bright-rainbow"
                         }
                         SpanKind::String | SpanKind::ImportSrc(_) => "string-literal-span",
-                        SpanKind::Comment | SpanKind::OutputComment if get_april_fools_colors() => {
+                        SpanKind::Comment | SpanKind::OutputComment if get_april_fools_2025() => {
                             "text-gradient graynbow"
                         }
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
@@ -1491,19 +1491,23 @@ pub fn set_inlay_values(inlay_values: bool) {
     set_local_var("inlay-values", inlay_values);
 }
 
-pub fn get_april_fools_colors() -> bool {
-    get_local_var("april-fools-2025", || true) && {
-        let date = Date::new_0();
-        logging::log!(
-            "{} {} {}",
-            date.get_full_year(),
-            date.get_month(),
-            date.get_date()
-        );
-        date.get_full_year() <= 2025 && date.get_month() <= 3 && date.get_date() <= 1
-    }
+pub fn get_april_fools_2025_setting() -> bool {
+    get_local_var("april-fools-2025", || true)
 }
-pub fn set_april_fools_colors(enabled: bool) {
+pub fn get_april_fools_2025_time() -> bool {
+    let date = Date::new_0();
+    logging::log!(
+        "{} {} {}",
+        date.get_full_year(),
+        date.get_month(),
+        date.get_date()
+    );
+    date.get_full_year() <= 2025 && date.get_month() <= 3 && date.get_date() <= 1
+}
+pub fn get_april_fools_2025() -> bool {
+    get_april_fools_2025_setting() && get_april_fools_2025_time()
+}
+pub fn set_april_fools_2025(enabled: bool) {
     set_local_var("april-fools-2025", enabled);
     update_style();
 }

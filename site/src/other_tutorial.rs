@@ -1,9 +1,11 @@
+use std::borrow::Cow;
+
 use enum_iterator::{all, Sequence};
 use leptos::*;
 use leptos_meta::Title;
 use leptos_router::*;
 use uiua::{Primitive, SysOp};
-use uiua_editor::Editor;
+use uiua_editor::{lang, Editor};
 
 use crate::{title_markdown, Challenge, Hd, Prim, Prims};
 
@@ -53,17 +55,19 @@ impl OtherTutorialPage {
             OtherTutorialPage::Ranges => "Ranges",
         }
     }
-    pub fn description(&self) -> &'static str {
-        match self {
+    pub fn description(&self) -> Cow<'static, str> {
+        Cow::Borrowed(match self {
             OtherTutorialPage::Strings => "how to manipulate strings",
             OtherTutorialPage::FilesAndStreams => "how to read and write files and streams",
             OtherTutorialPage::EvenMoreStack => "more ways to manipulate the stack",
             OtherTutorialPage::Audio => "how to generate and play audio",
             OtherTutorialPage::Images => "how to generate images and GIFs",
-            OtherTutorialPage::Documentation => "how to document Uiua code",
+            OtherTutorialPage::Documentation => {
+                return Cow::Owned(format!("how to document {} code", lang()))
+            }
             OtherTutorialPage::CodeTactility => "tools for debugging and editing code",
             OtherTutorialPage::Ranges => "various ways to generate ranges",
-        }
+        })
     }
 }
 
@@ -84,9 +88,9 @@ pub struct OtherTutorialParams {
 pub fn Audio() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text="Audio Output - Uiua Docs"/>
+        <Title text=format!("Audio Output - {} Docs", lang())/>
         <h1>"Audio Output"</h1>
-        <p>"Uiua has a built-in support for audio output."</p>
+        <p>{lang}" has a built-in support for audio output."</p>
 
         <Hd id="basic-synthesis">"Basic Synthesis"</Hd>
         <p>"In the online editor, you need only make an array that looks like audio samples."</p>
@@ -107,7 +111,7 @@ pub fn Audio() -> impl IntoView {
         <p>"My favorite way to make multiple notes is to "<Prim prim=Table/>" different frequencies with the time array."</p>
         <p>"Then, if you want a chord, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Add glyph_only=true/>" to add them together."</p>
         <p>"If you want sequence instead, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Join glyph_only=true/>"."</p>
-        <p>"You can calculate freqencies "<code>"f"</code>" that are a certain number of half-steps "<code>"n"</code>" from another with the formula "<code>"f×2^(n/12)"</code>" which can be written in Uiua as"<Prims prims=[Mul]/><code>"f"</code><Prims prims=[Pow]/><Prims prims=[Flip]/><code>"2"</code><Prims prims=[Div]/><code>"12 n"</code>"."</p>
+        <p>"You can calculate freqencies "<code>"f"</code>" that are a certain number of half-steps "<code>"n"</code>" from another with the formula "<code>"f×2^(n/12)"</code>" which can be written in "{lang}" as"<Prims prims=[Mul]/><code>"f"</code><Prims prims=[Pow]/><Prims prims=[Flip]/><code>"2"</code><Prims prims=[Div]/><code>"12 n"</code>"."</p>
         <p>"In this example, we make both a chord and a sequence from the same notes. We use "<Prim prim=Sin glyph_only=true/><Prim prim=Mul glyph_only=true/><Prim prim=Tau glyph_only=true/>" to make a sine wave instead of a saw wave."</p>
         <Editor example="\
 f ← ×220ⁿ:2÷12 [0 4 7]
@@ -116,7 +120,7 @@ s ← ∿×τ⊞×f ÷⟜⇡&asr
 ÷⧻f/⊂s"/>
 
         <Hd id="native-audio">"Native Audio"</Hd>
-        <p>"If running code in the native Uiua interpreter, arrays will not be automatically turned into audio."</p>
+        <p>"If running code in the native "{lang}" interpreter, arrays will not be automatically turned into audio."</p>
         <p>"Instead, you must use the "<Prim prim=Sys(SysOp::AudioPlay)/>" system function to play it."</p>
         <p><Prim prim=Sys(SysOp::AudioPlay)/>" should work fine on the website as well, but it is not necessary."</p>
         <Editor example="&ap÷2×¬◿1×4:±∿×τ×55.÷:⇡×2. &asr"/>
@@ -127,9 +131,9 @@ s ← ∿×τ⊞×f ÷⟜⇡&asr
 pub fn ImagesAndGifs() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text="Images and GIFs - Uiua Docs"/>
+        <Title text=format!("Images and GIFs - {} Docs", lang())/>
         <h1>"Images and GIFs"</h1>
-        <p>"Uiua has built-in support for generating images and GIFs."</p>
+        <p>{lang}" has built-in support for generating images and GIFs."</p>
 
         <Hd id="images">"Images"</Hd>
         <p>"Creating an image is as simple as creating an array of pixel data."</p>
@@ -152,7 +156,7 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <Editor example="< ⊞⊙∘ -0.4 : ×0.2∿×τ . ÷⟜⇡100\n[⍉.⇌.]\n△. # Not a valid image shape\n⍉:\n△. # Valid image shape"/>
         <p>"Of course, images need not be sqaure."</p>
         <Editor example="⊞< :+1/2÷3∿×τ: ∩(÷100⇡) 100 300"/>
-        <p>"The "<code>"Logo"</code>" constant is a quick way to get the Uiua logo as an image."</p>
+        <p>"The "<code>"Logo"</code>" constant is a quick way to get the "{lang}" logo as an image."</p>
         <Editor example="Logo"/>
         <p>"The "<Prim prim=Keep/>" function can be used to scale an image vertically. "<Prims prims=[Rows, Keep]/>" scales it horizontally. Non-integer scales are allowed."</p>
         <Editor example="▽ 0.5 Logo"/>
@@ -198,9 +202,9 @@ fn strings_challenges() -> impl IntoView {
 #[component]
 pub fn Documentation() -> impl IntoView {
     view! {
-        <Title text="Documenting Code - Uiua Docs"/>
+        <Title text=format!("Documenting Code - {} Docs", lang())/>
         <h1>"Documenting Code"</h1>
-        <p>"Uiua interprets comments in certain contexts as documentation."</p>
+        <p>{lang}" interprets comments in certain contexts as documentation."</p>
         <p>"For example, writing a comment directly above a binding will make it the documentation for that binding. A binding's documentation will be show when hovering over any references to it, both on this site and when using the language server "<A href="/docs/install#editor-support">"in your native editor"</A>"."</p>
         <p>"Hover over any of the instances of the name "<code>"Avg"</code>" in the example below to see the documentation."</p>
         <Editor example="# Get the average of an array\nAvg ← ÷⧻⟜/+\nAvg [1 2 7 6]"/>
@@ -214,7 +218,7 @@ pub fn Documentation() -> impl IntoView {
         <p>"These names should follow the same conventions as binding names."</p>
         <Editor example="# Do the thing\n# ? x y\nFoo ← ≡↻⇡⧻⟜¤"/> // Should fail
         <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Stack/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
-        <p>"If you also want to give names to a function's outputs, you can list them in front of the "<code>"?"</code>". This lets you read the comment signature right-to-left, the same way as normal Uiua code."</p>
+        <p>"If you also want to give names to a function's outputs, you can list them in front of the "<code>"?"</code>". This lets you read the comment signature right-to-left, the same way as normal "{lang}" code."</p>
         <Editor example="# Quotient Remainder ? Divisor Dividend\nDivRem ← ⌊⊃÷◿\nDivRem 3 7"/>
         <p>"These kinds of comments can also be put at the end of lines. The signature of the line will be checked against the signature specified in the comment."</p>
         <Editor example="1 2 # A B ?\n+⌵  # Sum ? A B\n⇡+5 # Res ? Foo Bar"/> // Should fail
@@ -242,8 +246,8 @@ pub fn Documentation() -> impl IntoView {
 
         <Hd id="external"><code>"# External!"</code></Hd>
 
-        <p>"The "<code>"# External!"</code>" semantic comment marks functions that are provided by Rust code. These functions don't require a Uiua implementation and will show up in the LSP."</p>
-        <p>"This is useful when trying to integrate Uiua into different environments while maintaining editor support."</p>
+        <p>"The "<code>"# External!"</code>" semantic comment marks functions that are provided by Rust code. These functions don't require a "{lang}" implementation and will show up in the LSP."</p>
+        <p>"This is useful when trying to integrate "{lang}" into different environments while maintaining editor support."</p>
         <p>"A signature must be declared."</p>
         <Editor example="F ← |2 # External!"/>
         <p>"Calling an "<code>"# External!"</code>" function that hasn't been bound will throw an error."</p>
@@ -256,7 +260,7 @@ pub fn Documentation() -> impl IntoView {
 fn EvenMoreStack() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text="Even More Stack Manipulation - Uiua Docs"/>
+        <Title text=format!("Even More Stack Manipulation - {} Docs", lang())/>
         <h1>"Even More Stack Manipulation"</h1>
         <p>"In the "<A href="/tutorial/morestack">"More Stack Manipulation"</A>" tutorial, we learned about various ways of working with the stack including "<Prim prim=Fork/>", "<Prim prim=Bracket/>", "<Prim prim=Both/>", and "<Prim prim=Dip/>". We even touched briefly on "<Prim prim=On/>" and "<Prim prim=By/>"."</p>
         <p>"But "<Prim prim=On/>" and "<Prim prim=By/>" are just two modifiers in a larger category."</p>

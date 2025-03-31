@@ -21,7 +21,9 @@ use leptos_router::*;
 use rand::prelude::*;
 use uiua::{now, ConstantDef, Primitive, SysOp};
 use uiua_editor::{
-    binding_name_class, utils::ChallengeDef, Editor, EditorMode, Prim, EDITOR_SHORTCUTS,
+    binding_name_class,
+    utils::{get_april_fools_colors, set_april_fools_colors, ChallengeDef},
+    Editor, EditorMode, Prim, EDITOR_SHORTCUTS,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlAudioElement};
@@ -102,6 +104,8 @@ pub fn Site() -> impl IntoView {
         _ => "/assets/uiua-logo.png",
     };
 
+    let toggle_april_fools_colors = move |_| set_april_fools_colors(!get_april_fools_colors());
+
     view! {
         <Router>
             <ScrollToHash/>
@@ -117,6 +121,14 @@ pub fn Site() -> impl IntoView {
                                     <p id="subtitle">{ subtitle.clone() }</p>
                                 </div>
                                 <div id="nav">
+                                    <div title="Enable April Fool's colors">
+                                        "April Fool's:"
+                                        <input
+                                            type="checkbox"
+                                            checked=get_april_fools_colors
+                                            on:change=toggle_april_fools_colors
+                                        />
+                                    </div>
                                     <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support Uiua's development"</a>
                                     <a href="/">"Home"</a>
                                 </div>

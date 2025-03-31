@@ -1107,25 +1107,47 @@ pub fn Editor<'a>(
                     Some(('(', ')')),
                     "tutorial/functions#inline-functions",
                 ),
-                ("¯", "(`) negative", "number-literal", None, ""),
+                (
+                    "¯",
+                    "(`) negative",
+                    if get_april_fools_colors() {
+                        "text-gradient lesbian"
+                    } else {
+                        "number-literal"
+                    },
+                    None,
+                    "",
+                ),
                 (
                     "@",
                     "character",
-                    "string-literal-span",
+                    if get_april_fools_colors() {
+                        "text-gradient bright-rainbow"
+                    } else {
+                        "string-literal-span"
+                    },
                     None,
                     "tutorial/types#characters",
                 ),
                 (
                     "$",
                     "format/multiline string",
-                    "string-literal-span",
+                    if get_april_fools_colors() {
+                        "text-gradient bright-rainbow"
+                    } else {
+                        "string-literal-span"
+                    },
                     None,
                     "tutorial/functions#format-strings",
                 ),
                 (
                     "\"",
                     "string",
-                    "string-literal-span",
+                    if get_april_fools_colors() {
+                        "text-gradient bright-rainbow"
+                    } else {
+                        "string-literal-span"
+                    },
                     Some(('"', '"')),
                     "tutorial/types#characters",
                 ),
@@ -1571,6 +1593,7 @@ pub fn Editor<'a>(
         set_top_at_top(orientation);
         run(false, false);
     };
+    let toggle_april_fools_colors = move |_| set_april_fools_colors(!get_april_fools_colors());
     set_font_name(&get_font_name());
     set_font_size(&get_font_size());
     let on_insert_experimental = move |_| insert_experimental();
@@ -1811,6 +1834,14 @@ pub fn Editor<'a>(
                                 type="checkbox"
                                 checked=get_run_on_format
                                 on:change=toggle_run_on_format
+                            />
+                        </div>
+                        <div title="Enable April Fool's colors">
+                            "April Fool's:"
+                            <input
+                                type="checkbox"
+                                checked=get_april_fools_colors
+                                on:change=toggle_april_fools_colors
                             />
                         </div>
                         <div title="Show line values to the right of the code">
@@ -2163,7 +2194,9 @@ pub(crate) use code_font;
 fn sig_class(sig: Signature) -> &'static str {
     match sig.args {
         0 => code_font!("noadic-function"),
+        1 if get_april_fools_colors() => code_font!("text-gradient aro"),
         1 => code_font!("monadic-function"),
+        2 if get_april_fools_colors() => code_font!("text-gradient gay"),
         2 => code_font!("dyadic-function"),
         3 => code_font!("triadic-function"),
         4 => code_font!("tetradic-function"),
@@ -2173,7 +2206,9 @@ fn sig_class(sig: Signature) -> &'static str {
 
 fn modifier_class(margs: usize) -> &'static str {
     match margs {
+        0 | 1 if get_april_fools_colors() => code_font!("text-gradient pan"),
         0 | 1 => code_font!("monadic-modifier"),
+        2 if get_april_fools_colors() => code_font!("text-gradient fluid"),
         2 => code_font!("dyadic-modifier"),
         _ => code_font!("triadic-modifier"),
     }
@@ -2192,13 +2227,16 @@ fn prim_sig_class(prim: Primitive, subscript: Option<i32>) -> &'static str {
         Primitive::Couple => match subscript.unwrap_or(2) {
             0 => code_font!("monadic-function aroace text-gradient"),
             1 => code_font!("monadic-function aro text-gradient"),
-            2 => code_font!("dyadic-function"),
+            2 => sig_class((2, 1).into()),
             _ => code_font!("dyadic-function poly text-gradient"),
         },
         prim if matches!(prim.class(), PrimClass::Stack | PrimClass::Debug)
             && prim.modifier_args().is_none() =>
         {
             code_font!("stack-function")
+        }
+        prim if prim.class() == PrimClass::Constant && get_april_fools_colors() => {
+            code_font!("text-gradient lesbian")
         }
         prim if prim.class() == PrimClass::Constant => code_font!("number-literal"),
         prim => {

@@ -1,4 +1,5 @@
 use base64::engine::{general_purpose::URL_SAFE, Engine};
+use js_sys::Date;
 use leptos::*;
 use std::path::Path;
 use std::{
@@ -662,8 +663,15 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                     let color_class = match &kind {
                         SpanKind::Primitive(prim, sig) => prim_sig_class(*prim, *sig),
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
+                        SpanKind::Number if get_april_fools_colors() => "text-gradient lesbian",
                         SpanKind::Number => "number-literal",
+                        SpanKind::String | SpanKind::ImportSrc(_) if get_april_fools_colors() => {
+                            "text-gradient bright-rainbow"
+                        }
                         SpanKind::String | SpanKind::ImportSrc(_) => "string-literal-span",
+                        SpanKind::Comment | SpanKind::OutputComment if get_april_fools_colors() => {
+                            "text-gradient graynbow"
+                        }
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(None, _) => "number-literal",
@@ -1481,6 +1489,23 @@ pub fn get_inlay_values() -> bool {
 }
 pub fn set_inlay_values(inlay_values: bool) {
     set_local_var("inlay-values", inlay_values);
+}
+
+pub fn get_april_fools_colors() -> bool {
+    get_local_var("april-fools-2025", || true) && {
+        let date = Date::new_0();
+        logging::log!(
+            "{} {} {}",
+            date.get_full_year(),
+            date.get_month(),
+            date.get_date()
+        );
+        date.get_full_year() <= 2025 && date.get_month() <= 3 && date.get_date() <= 1
+    }
+}
+pub fn set_april_fools_colors(enabled: bool) {
+    set_local_var("april-fools-2025", enabled);
+    update_style();
 }
 
 fn update_style() {

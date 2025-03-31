@@ -2298,9 +2298,12 @@ ctrl/⌘ Y       - Redo
 ctrl/⌘ E       - Insert # Experimental! comment";
 
 pub fn lang() -> &'static str {
+    #[cfg(target_arch = "wasm32")]
     if get_april_fools_2025() {
         "Weewuh"
     } else {
         "Uiua"
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    "Uiua"
 }

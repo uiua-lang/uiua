@@ -8,7 +8,11 @@ const X_MATRIX: &str = "\
 ⊞=. # Identity matrix
 ⊸⇌  # Reverse
 ↥   # Max";
-const UIUA: &str = "\
+pub const UIUA: &str = "\
+\"Unabashedly I utilize arrays\"
+⊸≠@  # Mask of non-spaces
+⊜⊢   # All first letters";
+pub const WEEWUH: &str = "\
 \"We each eat whole ugly hams\"
 ⊸≠@  # Mask of non-spaces
 ⊜⊢   # All first letters";
@@ -45,7 +49,9 @@ Quad 1 ¯3 2";
 const STRIPES: &str = "\
 [⊞⊃⊃+↥-].⇡300
 ⍉ ÷2 +1.2 ∿ ÷10";
-const PALINDROME: &str = r#"$ uiua racecar wow cool!
+pub const PALINDROME: &str = r#"$ uiua racecar wow cool!
+⬚@ ⊜(⊂⊏:"❌✅" ≍⊸⇌.)⊸≠@ "#;
+pub const WEEWUH_PALINDROME: &str = r#"$ weewuh racecar wow cool!
 ⬚@ ⊜(⊂⊏:"❌✅" ≍⊸⇌.)⊸≠@ "#;
 const AUTOMATA: &str = "\
 Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌⧈∘3⇌ ⊂⊂0:0)

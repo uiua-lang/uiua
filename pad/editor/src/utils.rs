@@ -1505,7 +1505,12 @@ pub fn get_april_fools_2025_time() -> bool {
     date.get_full_year() <= 2025 && date.get_month() <= 3 && date.get_date() <= 1
 }
 pub fn get_april_fools_2025() -> bool {
-    get_april_fools_2025_setting() && get_april_fools_2025_time()
+    #[cfg(target_arch = "wasm32")]
+    {
+        get_april_fools_2025_setting() && get_april_fools_2025_time()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    false
 }
 pub fn set_april_fools_2025(enabled: bool) {
     set_local_var("april-fools-2025", enabled);

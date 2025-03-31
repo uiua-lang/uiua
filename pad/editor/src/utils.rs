@@ -1502,7 +1502,7 @@ pub fn get_april_fools_2025_time() -> bool {
         date.get_month(),
         date.get_date()
     );
-    date.get_full_year() <= 2025 && date.get_month() <= 3 && date.get_date() <= 1
+    date.get_month() == 3 && date.get_date() == 1
 }
 pub fn get_april_fools_2025() -> bool {
     #[cfg(target_arch = "wasm32")]

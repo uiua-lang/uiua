@@ -23,7 +23,8 @@ use uiua::{now, ConstantDef, Primitive, SysOp};
 use uiua_editor::{
     binding_name_class, lang,
     utils::{
-        get_april_fools_2025_setting, get_april_fools_2025_time, set_april_fools_2025, ChallengeDef,
+        get_april_fools_2025, get_april_fools_2025_setting, get_april_fools_2025_time,
+        set_april_fools_2025, ChallengeDef,
     },
     Editor, EditorMode, Prim, EDITOR_SHORTCUTS,
 };
@@ -98,6 +99,7 @@ pub fn Site() -> impl IntoView {
         .unwrap();
 
     let logo_src = match visits % 9 {
+        _ if get_april_fools_2025() => "/assets/weewuh-logo.png",
         1 => "/assets/uiua-logo.png",
         3 => "/assets/uiua-logo-pride.png",
         5 => "/assets/uiua-logo-scrambledine.png",
@@ -281,7 +283,11 @@ pub fn MainPage() -> impl IntoView {
         </div>
         <Editor
             mode=EditorMode::Showcase
-            examples=examples::EXAMPLES.iter().map(ToString::to_string).collect()
+            examples=examples::EXAMPLES
+                .iter()
+                .map(|&ex| if ex == examples::LOGO && get_april_fools_2025() {examples::WEEWUH_LOGO}else{ex})
+                .map(ToString::to_string)
+                .collect()
             help={&[
                 "Type a glyph's name, then run to format the names into glyphs.",
                 "You can run with ctrl/shift + enter.",

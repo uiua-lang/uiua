@@ -285,7 +285,18 @@ pub fn MainPage() -> impl IntoView {
             mode=EditorMode::Showcase
             examples=examples::EXAMPLES
                 .iter()
-                .map(|&ex| if ex == examples::LOGO && get_april_fools_2025() {examples::WEEWUH_LOGO}else{ex})
+                .map(|&ex|
+                    if get_april_fools_2025() {
+                        match ex {
+                            examples::UIUA => examples::WEEWUH,
+                            examples::LOGO => examples::WEEWUH_LOGO,
+                            examples::PALINDROME => examples::WEEWUH_PALINDROME,
+                            _ => ex,
+                        }
+                    } else{
+                        ex
+                    }
+                )
                 .map(ToString::to_string)
                 .collect()
             help={&[

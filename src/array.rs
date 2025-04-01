@@ -1,6 +1,7 @@
 use std::{
     any::TypeId,
     cmp::Ordering,
+    f64::consts::{PI, TAU},
     fmt,
     hash::{Hash, Hasher},
     sync::Arc,
@@ -852,7 +853,7 @@ pub const WILDCARD_CHAR: char = '\u{100000}';
 
 /// Round to a number of significant decimal places
 fn round_sig_dec(f: f64, n: i32) -> f64 {
-    if f.fract() == 0.0 || f.is_infinite() {
+    if f.fract() == 0.0 || f.is_infinite() || [PI / 2.0, PI, TAU].contains(&f) {
         return f;
     }
     let mul = 10f64.powf(n as f64 - f.fract().abs().log10().ceil());
@@ -922,7 +923,16 @@ impl ArrayValue for f64 {
             mean = inf_balance.signum() as f64 * f64::INFINITY;
         }
         if min == max {
-            format!("all {}", min.grid_string(false))
+            if nan_count == 0 {
+                format!("all {}", min.grid_string(false))
+            } else {
+                format!(
+                    "{} {}s and {} NaNs",
+                    elems.len() - nan_count,
+                    min.grid_string(false),
+                    nan_count
+                )
+            }
         } else {
             let mut s = format!(
                 "{}-{} μ{}",

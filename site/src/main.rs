@@ -108,7 +108,10 @@ pub fn Site() -> impl IntoView {
         _ => "/assets/uiua-logo.png",
     };
 
-    let toggle_april_fools_colors = move |_| set_april_fools_2025(!get_april_fools_2025_setting());
+    let toggle_april_fools_colors = move |_| {
+        set_april_fools_2025(!get_april_fools_2025_setting());
+        _ = window().location().reload();
+    };
 
     view! {
         <Router>

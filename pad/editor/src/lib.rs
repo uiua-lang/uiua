@@ -2238,6 +2238,9 @@ fn prim_sig_class(prim: Primitive, subscript: Option<i32>) -> &'static str {
         prim if prim.class() == PrimClass::Constant && get_april_fools_2025() => {
             code_font!("text-gradient lesbian")
         }
+        Primitive::Rand if get_april_fools_2025() => {
+            code_font!("text-gradient random")
+        }
         prim if prim.class() == PrimClass::Constant => code_font!("number-literal"),
         prim => {
             if let Some(m) = prim.modifier_args() {

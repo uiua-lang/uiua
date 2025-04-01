@@ -1522,6 +1522,17 @@ a.clean {
             #A8A8A8 80%);
 }
 
+.random {
+    animation: animate-random 1s linear infinite;
+    background-image: linear-gradient(90deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000,#ffff00);
+    background-size: 700% 100%;
+}
+
+@keyframes animate-random {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 0%; }
+}
+
 @media (prefers-color-scheme: dark) {
 
     .image-visibility {

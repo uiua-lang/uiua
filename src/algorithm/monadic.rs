@@ -1994,8 +1994,11 @@ impl Value {
     pub(crate) fn to_json_value(&self, env: &Uiua) -> UiuaResult<serde_json::Value> {
         Ok(match self {
             Value::Num(n) if n.rank() == 0 => {
+                let meta = n.meta();
                 let n = n.data[0];
-                if n.fract() == 0.0 && n.abs() < i64::MAX as f64 {
+                if meta.flags.contains(ArrayFlags::BOOLEAN_LITERAL) && (n == 0.0 || n == 1.0) {
+                    serde_json::Value::Bool(n != 0.0)
+                } else if n.fract() == 0.0 && n.abs() < i64::MAX as f64 {
                     serde_json::Value::Number((n as i64).into())
                 } else {
                     serde_json::Number::from_f64(n)

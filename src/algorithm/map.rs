@@ -793,13 +793,11 @@ fn coerce_values(
     action2: &'static str,
     action3: &'static str,
 ) -> Result<Value, String> {
-    {
-        if let Value::Byte(keys) = a {
-            *a = Value::Num(keys.convert_ref());
-        }
-        if let Value::Byte(values) = b {
-            b = Value::Num(values.convert_ref());
-        }
+    if let Value::Byte(keys) = a {
+        *a = Value::Num(keys.convert_ref());
+    }
+    if let Value::Byte(values) = b {
+        b = Value::Num(values.convert_ref());
     }
     if a.shape() == [0] {
         let mut b_clone = b.clone();

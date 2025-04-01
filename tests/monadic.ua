@@ -132,6 +132,8 @@ A ← [[1_2 1_2] [3_3 1_2]]
 ⍤⤙≍ {"what's" "the" "plan"} °json $ ["what's","the","plan"]
 ⍤⤙≍ ⇌map {"foo" "baz"} {"bar" 1_2_3} °json $ {"foo": "bar", "baz": [1, 2, 3]}
 ⍤⤙≍ [True False] °json "[true,false]"
+json insert "b" True map {"a"} {1_2_3_4}
+⍤⤙≍ $ {"a":[1,2,3,4],"b":true}
 
 # Csv
 ⍤⟜≍ ⟜⍜csv∘ [{"hi" "there"} {"my" "friend"}]

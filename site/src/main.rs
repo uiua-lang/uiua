@@ -23,8 +23,8 @@ use uiua::{now, ConstantDef, Primitive, SysOp};
 use uiua_editor::{
     binding_name_class, lang,
     utils::{
-        get_april_fools_2025, get_april_fools_2025_setting, get_april_fools_2025_time,
-        set_april_fools_2025, ChallengeDef,
+        get_april_fools_setting, get_april_fools_time, its_called_weewuh, set_april_fools,
+        ChallengeDef,
     },
     Editor, EditorMode, Prim, EDITOR_SHORTCUTS,
 };
@@ -99,7 +99,7 @@ pub fn Site() -> impl IntoView {
         .unwrap();
 
     let logo_src = match visits % 9 {
-        _ if get_april_fools_2025() => "/assets/weewuh-logo.png",
+        _ if its_called_weewuh() => "/assets/weewuh-logo.png",
         1 => "/assets/uiua-logo.png",
         3 => "/assets/uiua-logo-pride.png",
         5 => "/assets/uiua-logo-scrambledine.png",
@@ -109,7 +109,7 @@ pub fn Site() -> impl IntoView {
     };
 
     let toggle_april_fools_colors = move |_| {
-        set_april_fools_2025(!get_april_fools_2025_setting());
+        set_april_fools(!get_april_fools_setting());
         _ = window().location().reload();
     };
 
@@ -134,13 +134,13 @@ pub fn Site() -> impl IntoView {
                                 </div>
                                 <div id="nav">
                                     {
-                                        if get_april_fools_2025_time() {
+                                        if get_april_fools_time() {
                                             Some(view!(
                                                 <div title="Enable April Fool's colors (refresh after changing)">
                                                     "April Fool's:"
                                                     <input
                                                         type="checkbox"
-                                                        checked=get_april_fools_2025_setting
+                                                        checked=get_april_fools_setting
                                                         on:change=toggle_april_fools_colors
                                                     />
                                                 </div>
@@ -289,7 +289,7 @@ pub fn MainPage() -> impl IntoView {
             examples=examples::EXAMPLES
                 .iter()
                 .map(|&ex|
-                    if get_april_fools_2025() {
+                    if its_called_weewuh() {
                         match ex {
                             examples::UIUA => examples::WEEWUH,
                             examples::LOGO => examples::WEEWUH_LOGO,

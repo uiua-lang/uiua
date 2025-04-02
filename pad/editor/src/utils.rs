@@ -663,13 +663,13 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                     let color_class = match &kind {
                         SpanKind::Primitive(prim, sig) => prim_sig_class(*prim, *sig),
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
-                        SpanKind::Number if get_april_fools_2025() => "text-gradient lesbian",
+                        SpanKind::Number if get_april_fools() => "text-gradient number-lesbian",
                         SpanKind::Number => "number-literal",
-                        SpanKind::String | SpanKind::ImportSrc(_) if get_april_fools_2025() => {
+                        SpanKind::String | SpanKind::ImportSrc(_) if get_april_fools() => {
                             "text-gradient bright-rainbow"
                         }
                         SpanKind::String | SpanKind::ImportSrc(_) => "string-literal-span",
-                        SpanKind::Comment | SpanKind::OutputComment if get_april_fools_2025() => {
+                        SpanKind::Comment | SpanKind::OutputComment if get_april_fools() => {
                             "text-gradient graynbow"
                         }
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
@@ -1491,30 +1491,30 @@ pub fn set_inlay_values(inlay_values: bool) {
     set_local_var("inlay-values", inlay_values);
 }
 
-pub fn get_april_fools_2025_setting() -> bool {
-    get_local_var("april-fools-2025", || true)
+pub fn get_april_fools_setting() -> bool {
+    get_local_var("april-fools", || true)
 }
-pub fn get_april_fools_2025_time() -> bool {
+pub fn get_april_fools_time() -> bool {
     let date = Date::new_0();
-    logging::log!(
-        "{} {} {}",
-        date.get_full_year(),
-        date.get_month(),
-        date.get_date()
-    );
     date.get_month() == 3 && date.get_date() == 1
 }
-pub fn get_april_fools_2025() -> bool {
+pub fn set_april_fools(enabled: bool) {
+    set_local_var("april-fools", enabled);
+    update_style();
+}
+fn get_april_fools() -> bool {
     #[cfg(target_arch = "wasm32")]
     {
-        get_april_fools_2025_setting() && get_april_fools_2025_time()
+        get_april_fools_setting() && get_april_fools_time()
     }
     #[cfg(not(target_arch = "wasm32"))]
     false
 }
-pub fn set_april_fools_2025(enabled: bool) {
-    set_local_var("april-fools-2025", enabled);
-    update_style();
+pub fn very_gay() -> bool {
+    get_april_fools()
+}
+pub fn its_called_weewuh() -> bool {
+    get_april_fools()
 }
 
 fn update_style() {

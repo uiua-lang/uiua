@@ -1324,6 +1324,14 @@ a.clean {
 
 .pan {
     background-image: linear-gradient(180deg,
+            #FF218C 45%,
+            #FFD800 45%,
+            #FFD800 64%,
+            #21B1FF 64%);
+}
+
+.monadic-pan {
+    background-image: linear-gradient(180deg,
             #FF218C 30%,
             #FFD800 30%,
             #FFD800 67%,
@@ -1345,6 +1353,22 @@ a.clean {
 }
 
 .gay {
+    background-image: linear-gradient(180deg,
+            #078d70 20%,
+            #26ceaa 20%,
+            #26ceaa 32%,
+            #98e8c1 32%,
+            #98e8c1 44%,
+            #ffffff 44%,
+            #ffffff 56%,
+            #7bade2 56%,
+            #7bade2 68%,
+            #5049cc 68%,
+            #5049cc 80%,
+            #3d1a78 80%);
+}
+
+.dyadic-gay {
     background-image: linear-gradient(180deg,
             #078d70 20%,
             #26ceaa 20%,
@@ -1371,6 +1395,19 @@ a.clean {
 }
 
 .aro {
+    background-image: linear-gradient(180deg,
+            #000000 36%,
+            #A9A9A9 36%,
+            #A9A9A9 47%,
+            #FFFFFF 47%,
+            #FFFFFF 58%,
+            #A7D379 58%,
+            #A7D379 69%,
+            #3DA542 69%);
+
+}
+
+.monadic-aro {
     background-image: linear-gradient(180deg,
             #000000 30%,
             #A9A9A9 30%,
@@ -1418,6 +1455,18 @@ a.clean {
 
 .fluid {
     background-image: linear-gradient(180deg,
+            #FF76A4 36%,
+            #FFFFFF 36%,
+            #FFFFFF 47%,
+            #C011D7 47%,
+            #C011D7 58%,
+            #000000 58%,
+            #000000 69%,
+            #2F3CBE 69%);
+}
+
+.dyadic-fluid {
+    background-image: linear-gradient(180deg,
             #FF76A4 30%,
             #FFFFFF 30%,
             #FFFFFF 40%,
@@ -1437,6 +1486,18 @@ a.clean {
 }
 
 .lesbian {
+    background-image: linear-gradient(180deg,
+            #d42c00 34%,
+            #fd9855 34%,
+            #fd9855 45%,
+            #FFFFFF 45%,
+            #FFFFFF 56%,
+            #d161a2 56%,
+            #d161a2 67%,
+            #a20161 67%);
+}
+
+.number-lesbian {
     background-image: linear-gradient(180deg,
             #d42c00 30%,
             #fd9855 30%,
@@ -1476,18 +1537,38 @@ a.clean {
             #340C46 60%)
 }
 
-.caution {
+.nb {
+    background-image: linear-gradient(180deg,
+            #FCF434 30%,
+            #FFFFFF 30%,
+            #FFFFFF 50%,
+            #9C59D1 50%,
+            #9C59D1 70%,
+            #2C2C2C 70%);
+}
+
+.nb2 {
     background-image: linear-gradient(135deg,
-            #000000 30%,
-            #FFF000 30%,
-            #FFF000 40%,
-            #000000 40%,
-            #000000 50%,
-            #FFF000 50%,
-            #FFF000 60%,
-            #000000 60%,
-            #000000 70%,
-            #FFF000 70%);
+            #FCF434 30%,
+            #FFFFFF 30%,
+            #FFFFFF 50%,
+            #9C59D1 50%,
+            #9C59D1 70%,
+            #2C2C2C 70%);
+}
+
+.rainbow {
+    background-image: linear-gradient(180deg,
+            #E40303 30%,
+            #FFA52C 30%,
+            #FFA52C 40%,
+            #FFFF41 40%,
+            #FFFF41 50%,
+            #008018 50%,
+            #008018 60%,
+            #0000F9 60%,
+            #0000F9 70%,
+            #86007D 70%);
 }
 
 .bright-rainbow {
@@ -1522,15 +1603,34 @@ a.clean {
             #A8A8A8 80%);
 }
 
+.caution {
+    background-image: linear-gradient(135deg,
+            #000000 30%,
+            #FFF000 30%,
+            #FFF000 40%,
+            #000000 40%,
+            #000000 50%,
+            #FFF000 50%,
+            #FFF000 60%,
+            #000000 60%,
+            #000000 70%,
+            #FFF000 70%);
+}
+
 .random {
     animation: animate-random 1s linear infinite;
-    background-image: linear-gradient(90deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000,#ffff00);
+    background-image: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000, #ffff00);
     background-size: 700% 100%;
 }
 
 @keyframes animate-random {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 100% 0%; }
+    0% {
+        background-position: 0% 0%;
+    }
+
+    100% {
+        background-position: 100% 0%;
+    }
 }
 
 @media (prefers-color-scheme: dark) {

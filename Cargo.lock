@@ -7562,3 +7562,13 @@ dependencies = [
  "quote",
  "syn 2.0.87",
 ]
+
+[[patch.unused]]
+name = "zip"
+version = "2.5.0"
+source = "git+https://github.com//zip-rs/zip2?rev=77cde6a#77cde6a909feac44c75603811d78049a832a6fa2"
+
+[[patch.unused]]
+name = "zip"
+version = "2.5.0"
+source = "git+https://github.com/zip-rs/zip2?rev=77cde6a#77cde6a909feac44c75603811d78049a832a6fa2"

@@ -172,3 +172,10 @@ members = ["site", "tests_ffi", "pad/editor"]
 
 [profile.dev]
 incremental = true
+
+# Patches
+[patch.crates-io]
+zip = {git = "https://github.com/zip-rs/zip2", rev = "77cde6a"}
+
+[patch.'https://github.com/zip-rs/zip2']
+zip = {git = "https://github.com//zip-rs/zip2", rev = "77cde6a"}

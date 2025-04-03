@@ -2,8 +2,10 @@
 
 Uiua is not yet stable.
 
-## 0.15.0 - 2025-??-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
+<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+
+## 0.15.0 - 2025-04-03
+You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
 ### Language
 - **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) and [`do ⍢`](https://uiua.org/docs/do) with net-negative signatures now preserve lower stack values between iterations
 - **Breaking Change** - [`atangent ∠`](https://uiua.org/docs/atan) now interacts with [`under ⍜`](https://uiua.org/docs/under) similarly to [`couple ⊟`](https://uiua.org/docs/couple) and [`complex ℂ`](https://uiua.org/docs/complex)

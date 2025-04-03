@@ -6,7 +6,7 @@
 
 Uiua 0.15.0 is now available!
 
-You can find the full changelog [here](https://uiua.org/docs/changelog#0.15.0---2025-03-??).
+You can find the full changelog [here](https://uiua.org/docs/changelog#0.15.0---2025-04-03).
 
 You can download pre-built binaries [here](https://github.com/uiua-lang/uiua/releases).
 
@@ -131,6 +131,6 @@ Thanks to everyone who contributed to this release!
 
 As always, a big thank you to Uiua's wonderful [GitHub sponsors](https://github.com/sponsors/uiua-lang)!
 
-Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.14.0---2024-12-20).
+Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.15.0---2025-04-03).
 
 You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!

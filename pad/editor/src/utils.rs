@@ -663,13 +663,13 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                     let color_class = match &kind {
                         SpanKind::Primitive(prim, sig) => prim_sig_class(*prim, *sig),
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
-                        SpanKind::Number if get_april_fools() => "text-gradient number-lesbian",
+                        SpanKind::Number if very_gay() => "text-gradient number-lesbian",
                         SpanKind::Number => "number-literal",
-                        SpanKind::String | SpanKind::ImportSrc(_) if get_april_fools() => {
+                        SpanKind::String | SpanKind::ImportSrc(_) if very_gay() => {
                             "text-gradient bright-rainbow"
                         }
                         SpanKind::String | SpanKind::ImportSrc(_) => "string-literal-span",
-                        SpanKind::Comment | SpanKind::OutputComment if get_april_fools() => {
+                        SpanKind::Comment | SpanKind::OutputComment if very_gay() => {
                             "text-gradient graynbow"
                         }
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
@@ -1511,10 +1511,49 @@ fn get_april_fools() -> bool {
     false
 }
 pub fn very_gay() -> bool {
-    get_april_fools()
+    get_gayness() == Gayness::VeryGay || get_april_fools()
+}
+pub fn at_least_a_little_gay() -> bool {
+    get_gayness() >= Gayness::Ally || get_april_fools()
 }
 pub fn its_called_weewuh() -> bool {
     get_april_fools()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Gayness {
+    None,
+    Ally,
+    VeryGay,
+}
+impl Gayness {
+    pub const fn str(&self) -> &'static str {
+        match self {
+            Gayness::None => "None 😢",
+            Gayness::Ally => "Ally",
+            Gayness::VeryGay => "Very Gay",
+        }
+    }
+}
+impl From<&str> for Gayness {
+    fn from(s: &str) -> Self {
+        if s == Gayness::None.str() {
+            Gayness::None
+        } else if s == Gayness::VeryGay.str() {
+            Gayness::VeryGay
+        } else {
+            Gayness::Ally
+        }
+    }
+}
+pub fn get_gayness() -> Gayness {
+    get_local_var("gayness", || Gayness::Ally.str().to_owned())
+        .as_str()
+        .into()
+}
+pub fn set_gayness(gayness: Gayness) {
+    set_local_var("gayness", gayness.str());
+    _ = window().location().reload();
 }
 
 fn update_style() {

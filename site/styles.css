@@ -1644,7 +1644,6 @@ a.clean {
 @media (prefers-color-scheme: light) {
 
     .trans,
-    .bi,
     .pan,
     .ace,
     .aro,
@@ -1658,6 +1657,11 @@ a.clean {
     .queer,
     .gay,
     .lesbian,
+    .monadic-pan,
+    .dyadic-gay,
+    .monadic-aro,
+    .dyadic-fluid,
+    .number-lesbian,
     .caution {
         -webkit-text-stroke: 0.01em #000;
     }
@@ -1676,6 +1680,10 @@ a.clean {
     .fluid,
     .gay,
     .lesbian,
+    .dyadic-gay,
+    .monadic-aro,
+    .dyadic-fluid,
+    .number-lesbian,
     .caution {
         -webkit-text-stroke: 0.01em #fff8;
     }

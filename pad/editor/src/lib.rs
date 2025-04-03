@@ -1593,7 +1593,10 @@ pub fn Editor<'a>(
         set_top_at_top(orientation);
         run(false, false);
     };
-    let toggle_april_fools_colors = move |_| set_april_fools(!get_april_fools_setting());
+    let on_select_gayness = move |event: Event| {
+        let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
+        set_gayness(input.value().as_str().into());
+    };
     set_font_name(&get_font_name());
     set_font_size(&get_font_size());
     let on_insert_experimental = move |_| insert_experimental();
@@ -1836,13 +1839,19 @@ pub fn Editor<'a>(
                                 on:change=toggle_run_on_format
                             />
                         </div>
-                        <div title="Enable April Fool's colors">
-                            "April Fool's:"
-                            <input
-                                type="checkbox"
-                                checked=get_april_fools_setting
-                                on:change=toggle_april_fools_colors
-                            />
+                        <div title="Enable LGBTQ+ colors">
+                            "Gayness:"
+                            <select on:change=on_select_gayness>
+                                <option value={Gayness::None.str()} selected={get_gayness() == Gayness::None}>
+                                    {Gayness::None.str()}
+                                </option>
+                                <option value={Gayness::Ally.str()} selected={get_gayness() == Gayness::Ally}>
+                                    {Gayness::Ally.str()}
+                                </option>
+                                <option value={Gayness::VeryGay.str()} selected={get_gayness() == Gayness::VeryGay}>
+                                    {Gayness::VeryGay.str()}
+                                </option>
+                            </select>
                         </div>
                         <div title="Show line values to the right of the code">
                             "Show values:"
@@ -2217,19 +2226,25 @@ fn modifier_class(margs: usize) -> &'static str {
 fn prim_sig_class(prim: Primitive, subscript: Option<i32>) -> &'static str {
     match prim {
         Primitive::Identity => code_font!("stack-function"),
-        Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
-        Primitive::Both => match subscript.unwrap_or(2) {
+        Primitive::Transpose if at_least_a_little_gay() => {
+            code_font!("monadic-function trans text-gradient")
+        }
+        Primitive::Both if at_least_a_little_gay() => match subscript.unwrap_or(2) {
             0 => code_font!("monadic-function aroace text-gradient"),
             1 => code_font!("monadic-function aro text-gradient"),
             2 => code_font!("monadic-modifier bi text-gradient"),
             _ => code_font!("dyadic-function pan text-gradient"),
         },
         Primitive::Couple => match subscript.unwrap_or(2) {
-            0 => code_font!("monadic-function aroace text-gradient"),
-            1 => code_font!("monadic-function aro text-gradient"),
+            0 if at_least_a_little_gay() => {
+                code_font!("monadic-function aroace text-gradient")
+            }
+            1 if at_least_a_little_gay() => code_font!("monadic-function aro text-gradient"),
             2 => sig_class((2, 1).into()),
-            _ => code_font!("dyadic-function poly text-gradient"),
+            _ if at_least_a_little_gay() => code_font!("dyadic-function poly text-gradient"),
+            n => sig_class((n.unsigned_abs() as usize, 1).into()),
         },
+        Primitive::Rand if very_gay() => code_font!("text-gradient random"),
         prim if matches!(prim.class(), PrimClass::Stack | PrimClass::Debug)
             && prim.modifier_args().is_none() =>
         {
@@ -2237,9 +2252,6 @@ fn prim_sig_class(prim: Primitive, subscript: Option<i32>) -> &'static str {
         }
         prim if prim.class() == PrimClass::Constant && very_gay() => {
             code_font!("text-gradient number-lesbian")
-        }
-        Primitive::Rand if very_gay() => {
-            code_font!("text-gradient random")
         }
         prim if prim.class() == PrimClass::Constant => code_font!("number-literal"),
         prim => {

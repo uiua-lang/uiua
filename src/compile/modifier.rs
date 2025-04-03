@@ -859,7 +859,7 @@ impl Compiler {
                     SigNode::new(sig, node)
                 };
                 let span = self.add_span(modified.modifier.span.clone());
-                let un = if self.allow_experimental() {
+                let un = if normal.sig == (1, 1) || self.allow_experimental() {
                     if f.sig.args == f.sig.outputs {
                         let (f_before, f_after) = f
                             .node

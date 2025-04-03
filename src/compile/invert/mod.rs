@@ -231,8 +231,8 @@ impl fmt::Display for InversionError {
             InversionError::UnUnderExperimental => {
                 write!(
                     f,
-                    "{} {} is experimental. To enable it, \
-                    add `# Experimental!` to the top of the file.",
+                    "{} {} for non-monadic functions is experimental. To \
+                    enable it, add `# Experimental!` to the top of the file.",
                     Primitive::Un.format(),
                     Primitive::Under.format()
                 )

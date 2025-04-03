@@ -1547,9 +1547,14 @@ impl From<&str> for Gayness {
     }
 }
 pub fn get_gayness() -> Gayness {
-    get_local_var("gayness", || Gayness::Ally.str().to_owned())
-        .as_str()
-        .into()
+    #[cfg(target_arch = "wasm32")]
+    {
+        get_local_var("gayness", || Gayness::Ally.str().to_owned())
+            .as_str()
+            .into()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    Gayness::Ally
 }
 pub fn set_gayness(gayness: Gayness) {
     set_local_var("gayness", gayness.str());

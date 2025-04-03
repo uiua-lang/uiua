@@ -4,6 +4,8 @@
 - `un group` and `un partition`
 - Sided `fill`?
 - Stabilize `fft`
+  - May require a custom implementation 😵‍💫
+- Respect user newlines more in multiline function packs
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?
 - Implement some `under` inverses in terms of `un by`, rather than the other way around?

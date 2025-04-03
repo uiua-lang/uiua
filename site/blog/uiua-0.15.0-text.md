@@ -67,6 +67,40 @@ Shape!(⊃(Area|Format) Circle 4)
 Shape!(⊃(Area|Format) Rectangle 3 5)
 ```
 
+## [`backward ˜`] Stabilization
+
+The [`backward ˜`](https://www.uiua.org/docs/backward) modifier has been stabilized. [`backward ˜`](https://www.uiua.org/docs/backward) [`flip :`](https://www.uiua.org/docs/flip)s the arguments of its function.
+
+```uiua
+ - 3 5
+˜- 3 5
+```
+
+```uiua
+ map 1_2_3 "abc"
+˜map 1_2_3 "abc"
+```
+
+```uiua
+⊂ 0 [1 2 3]
+˜⊂ 0 [1 2 3]
+```
+
+```uiua
+°˜⊂ [1 2 3 4]
+```
+
+[`backward ˜`](https://www.uiua.org/docs/backward) is usually used on dyadic functions, but it can also be used on tetradic (4 argument) functions. In this case, it swaps the second and third arguments, leaving the first and fourth arguments unchanged. This can be a useful stack permutation.
+
+```uiua
+ ⊟₄ 1 2 3 4
+˜⊟₄ 1 2 3 4
+```
+
+```uiua
+˜∩⬚0↙ ◡˜∩⧻ [1 2 3] [4 5 6 7 8]
+```
+
 ## Sided Subscripts
 
 Sided subscripts are [subscripts](https://www.uiua.org/docs/subscripts) that instead of changing how a function works based on a number, do it based on a "side", either left or right.
@@ -84,3 +118,19 @@ There is a [short tutorial section](https://www.uiua.org/tutorial/evenmorestack#
 {⊓⌟⊂⊟ 1_2 3_4 5_6}
 {⊓⌞⊂⊟ 1_2 3_4 5_6}
 ```
+
+## [`over ,`](https://www.uiua.org/docs/over) Deprecation
+
+The [`over ,`](https://www.uiua.org/docs/over) function has been deprecated in favor of more structured stack manipulation modifiers.
+
+You can read more about this change in the short [blog post](https://www.uiua.org/blog/its-so-over).
+
+## ✨
+
+Thanks to everyone who contributed to this release!
+
+As always, a big thank you to Uiua's wonderful [GitHub sponsors](https://github.com/sponsors/uiua-lang)!
+
+Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.14.0---2024-12-20).
+
+You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!

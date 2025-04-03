@@ -1,3 +1,4 @@
+uiua-0.15.0(52a5f6f8-6898-44f3-a193-2125945276b6): 2025-04-03 - Announcing Uiua 0.15.0
 its-so-over(a3e86902-43f2-4fb5-bdd1-62b15bcc8fd0): 2025-02-15 - It's So Over
 uiua-0.14.0(a516e01b-732f-4e30-aba2-9599fedfffab): 2024-12-20 - Announcing Uiua 0.14.0
 subscripts(820eeae1-7c05-4c3c-877c-0675dd7517aa): 2024-11-25 - Subscripts

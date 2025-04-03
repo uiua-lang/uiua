@@ -82,7 +82,7 @@ The [`backward ˜`](https://www.uiua.org/docs/backward) modifier has been stabil
 ```
 
 ```uiua
-⊂ 0 [1 2 3]
+ ⊂ 0 [1 2 3]
 ˜⊂ 0 [1 2 3]
 ```
 

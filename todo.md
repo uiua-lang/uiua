@@ -1,7 +1,7 @@
 # Uiua Todo
 
 # 0.16
-- `un group` and `un partition`
+- `un partition`
 - Higher-level function pack dividers
 - Sided `fill`?
 - Stabilize `fft`

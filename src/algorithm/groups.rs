@@ -851,3 +851,30 @@ where
     }
     Ok(())
 }
+
+pub fn un_group(f: SigNode, env: &mut Uiua) -> UiuaResult {
+    if f.sig != (1, 1) {
+        return Err(env.error(format!(
+            "{}{}'s function signature must be |1, but it is {}",
+            Primitive::Un.format(),
+            Primitive::Group.format(),
+            f.sig
+        )));
+    }
+    let x = env.pop(1)?;
+    let mut indices = EcoVec::with_capacity(x.row_count());
+    let mut ungrouped = Vec::with_capacity(x.row_count());
+    for (i, row) in x.into_rows().enumerate() {
+        env.push(row);
+        env.exec(f.clone())?;
+        let val = env.pop("ungrouped value")?;
+        let count = val.row_count();
+        for _ in 0..count {
+            indices.push(i as f64);
+        }
+        ungrouped.extend(val.into_rows());
+    }
+    env.push(Value::from_row_values(ungrouped, env)?);
+    env.push(Array::from(indices));
+    Ok(())
+}

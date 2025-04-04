@@ -227,6 +227,7 @@ impl fmt::Display for ImplPrimitive {
             UnJoinEnd | UnJoinShapeEnd | UnJoinShape2End => write!(f, "{Un}({Join}{Flip})"),
             UnKeep => write!(f, "{Un}{Keep}"),
             UnScan => write!(f, "{Un}{Scan}"),
+            UnGroup => write!(f, "{Un}{Group}"),
             UnStack => write!(f, "{Un}{Stack}"),
             UnDump => write!(f, "{Un}{Dump}"),
             UnFill => write!(f, "{Un}{Fill}"),
@@ -1894,6 +1895,10 @@ impl ImplPrimitive {
             ImplPrimitive::SplitByKeepEmpty => {
                 let [f] = get_ops(ops, env)?;
                 groups::split_by(f, false, true, env)?;
+            }
+            ImplPrimitive::UnGroup => {
+                let [f] = get_ops(ops, env)?;
+                groups::un_group(f, env)?
             }
             &ImplPrimitive::EachSub(n) => {
                 let [f] = get_ops(ops, env)?;

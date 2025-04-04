@@ -118,9 +118,6 @@ impl<T: Clone> CowSlice<T> {
         }
     }
     /// Get an iterator over slices with the given size
-    ///
-    /// # Panics
-    /// Panics if the size is zero or is not a divisor of the length
     pub fn into_slices(
         self,
         size: usize,

@@ -82,6 +82,7 @@ image = {version = "0.25", optional = true, default-features = false, features =
 json5 = {version = "0.4.1", optional = true}
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.3", optional = true}
+zip = {version = "=2.5.0", optional = true}
 # NOTE: Including as a dependency to activate the bytemuck feature flag
 nokhwa = {version = "0.10.7", optional = true, features = ["input-native"]}
 num-complex = {version = ">=0.4.1", optional = true, default-features = false, features = ["bytemuck"]}
@@ -160,7 +161,7 @@ tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
 web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "nokhwa"]
 window = ["eframe", "rmp-serde", "image", "native-dialog"]
-xlsx = ["calamine", "simple_excel_writer"]
+xlsx = ["calamine", "simple_excel_writer", "zip"]
 # Use system static libraries instead of building them
 system = ["libffi?/system"]
 

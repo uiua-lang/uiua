@@ -1053,11 +1053,11 @@ impl Primitive {
             Primitive::Do => loops::do_(ops, env)?,
             Primitive::Group => {
                 let [f] = get_ops(ops, env)?;
-                loops::group(f, env)?
+                groups::group(f, env)?
             }
             Primitive::Partition => {
                 let [f] = get_ops(ops, env)?;
-                loops::partition(f, env)?
+                groups::partition(f, env)?
             }
             Primitive::Tuples => tuples::tuples(ops, env)?,
             Primitive::Stencil => stencil::stencil(ops, env)?,
@@ -1516,8 +1516,8 @@ impl ImplPrimitive {
                 val.undo_deshape(*sub, &shape, env)?;
                 env.push(val)
             }
-            ImplPrimitive::UndoPartition2 => loops::undo_partition_part2(env)?,
-            ImplPrimitive::UndoGroup2 => loops::undo_group_part2(env)?,
+            ImplPrimitive::UndoPartition2 => groups::undo_partition_part2(env)?,
+            ImplPrimitive::UndoGroup2 => groups::undo_group_part2(env)?,
             ImplPrimitive::UndoJoin => {
                 let a_shape = env.pop(1)?;
                 let b_shape = env.pop(2)?;
@@ -1834,8 +1834,8 @@ impl ImplPrimitive {
                 env.exec(f)?;
                 env.insert_stack(outputs, kept)?;
             }
-            ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(ops, env)?,
-            ImplPrimitive::UndoGroup1 => loops::undo_group_part1(ops, env)?,
+            ImplPrimitive::UndoPartition1 => groups::undo_partition_part1(ops, env)?,
+            ImplPrimitive::UndoGroup1 => groups::undo_group_part1(ops, env)?,
             ImplPrimitive::ReduceContent => reduce::reduce_content(ops, env)?,
             ImplPrimitive::ReduceConjoinInventory => zip::reduce_conjoin_inventory(ops, env)?,
             ImplPrimitive::AstarFirst => {
@@ -1885,15 +1885,15 @@ impl ImplPrimitive {
             }
             ImplPrimitive::SplitByScalar => {
                 let [f] = get_ops(ops, env)?;
-                loops::split_by(f, true, false, env)?;
+                groups::split_by(f, true, false, env)?;
             }
             ImplPrimitive::SplitBy => {
                 let [f] = get_ops(ops, env)?;
-                loops::split_by(f, false, false, env)?;
+                groups::split_by(f, false, false, env)?;
             }
             ImplPrimitive::SplitByKeepEmpty => {
                 let [f] = get_ops(ops, env)?;
-                loops::split_by(f, false, true, env)?;
+                groups::split_by(f, false, true, env)?;
             }
             &ImplPrimitive::EachSub(n) => {
                 let [f] = get_ops(ops, env)?;

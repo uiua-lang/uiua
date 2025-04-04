@@ -2,6 +2,7 @@
 
 # 0.16
 - `un group` and `un partition`
+- Higher-level function pack dividers
 - Sided `fill`?
 - Stabilize `fft`
   - May require a custom implementation 😵‍💫

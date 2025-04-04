@@ -1731,6 +1731,11 @@ primitive!(
     /// The indices may be multidimensional.
     /// ex: ⊕□ [0_2 2_1] ["ab" "cd"]
     ///
+    /// [un][group] works if [group]'s function is monadic and [un]-invertible.
+    /// A list of indices and a list of ungrouped values will be returned.
+    /// The most common function to use with this is [box].
+    /// ex: °⊕□ {1 2_3_4 5_6}
+    ///
     /// [under][group] works if [group]'s function is [under]able.
     /// ex: ⍜⊕□≡⇌ ≠@ . $ These are some words
     /// The length of each group must not change.

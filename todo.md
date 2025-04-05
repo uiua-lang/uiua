@@ -1,12 +1,12 @@
 # Uiua Todo
 
 # 0.16
-- `un partition`
 - Higher-level function pack dividers
 - Sided `fill`?
 - Stabilize `fft`
   - May require a custom implementation 😵‍💫
 - Respect user newlines more in multiline function packs
+- progressive `indexof`
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?
 - Implement some `under` inverses in terms of `un by`, rather than the other way around?

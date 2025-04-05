@@ -208,6 +208,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &ReduceMulPat,
     &ReduceFormatPat,
     &GroupPat,
+    &PartitionPat,
     &PrimesPat,
     &CustomPat,
     &FormatPat,
@@ -624,6 +625,15 @@ inverse!(GroupPat, input, asm, Group, span, [f], {
     }
     let f_inv = f.un_inverse(asm)?;
     let inv = ImplMod(UnGroup, eco_vec![f_inv], span);
+    Ok((input, inv))
+});
+
+inverse!(PartitionPat, input, asm, Partition, span, [f], {
+    if f.sig != (1, 1) {
+        return generic();
+    }
+    let f_inv = f.un_inverse(asm)?;
+    let inv = ImplMod(UnPartition, eco_vec![f_inv], span);
     Ok((input, inv))
 });
 

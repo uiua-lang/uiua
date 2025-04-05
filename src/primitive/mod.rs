@@ -228,6 +228,7 @@ impl fmt::Display for ImplPrimitive {
             UnKeep => write!(f, "{Un}{Keep}"),
             UnScan => write!(f, "{Un}{Scan}"),
             UnGroup => write!(f, "{Un}{Group}"),
+            UnPartition => write!(f, "{Un}{Partition}"),
             UnStack => write!(f, "{Un}{Stack}"),
             UnDump => write!(f, "{Un}{Dump}"),
             UnFill => write!(f, "{Un}{Fill}"),
@@ -1899,6 +1900,10 @@ impl ImplPrimitive {
             ImplPrimitive::UnGroup => {
                 let [f] = get_ops(ops, env)?;
                 groups::un_group(f, env)?
+            }
+            ImplPrimitive::UnPartition => {
+                let [f] = get_ops(ops, env)?;
+                groups::un_partition(f, env)?
             }
             &ImplPrimitive::EachSub(n) => {
                 let [f] = get_ops(ops, env)?;

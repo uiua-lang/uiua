@@ -878,3 +878,47 @@ pub fn un_group(f: SigNode, env: &mut Uiua) -> UiuaResult {
     env.push(Array::from(indices));
     Ok(())
 }
+
+pub fn un_partition(f: SigNode, env: &mut Uiua) -> UiuaResult {
+    if f.sig != (1, 1) {
+        return Err(env.error(format!(
+            "{}{}'s function signature must be |1, but it is {}",
+            Primitive::Un.format(),
+            Primitive::Partition.format(),
+            f.sig
+        )));
+    }
+    let x = env.pop(1)?;
+    let mut indices = EcoVec::with_capacity(x.row_count());
+    let mut unpartitioned = Vec::with_capacity(x.row_count());
+    if let Some(fill) = env.value_fill().cloned() {
+        for (i, row) in x.into_rows().enumerate() {
+            env.push(row);
+            env.exec(f.clone())?;
+            let val = env.pop("unpartitioned value")?;
+            let count = val.row_count();
+            if i > 0 {
+                indices.push(0.0);
+                unpartitioned.push(fill.clone());
+            }
+            for _ in 0..count {
+                indices.push(1.0);
+            }
+            unpartitioned.extend(val.into_rows());
+        }
+    } else {
+        for (i, row) in x.into_rows().enumerate() {
+            env.push(row);
+            env.exec(f.clone())?;
+            let val = env.pop("unpartitioned value")?;
+            let count = val.row_count();
+            for _ in 0..count {
+                indices.push((i + 1) as f64);
+            }
+            unpartitioned.extend(val.into_rows());
+        }
+    }
+    env.push(Value::from_row_values(unpartitioned, env)?);
+    env.push(Array::from(indices));
+    Ok(())
+}

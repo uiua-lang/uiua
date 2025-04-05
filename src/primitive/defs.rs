@@ -1779,6 +1779,14 @@ primitive!(
     /// If we wanted to group the indices that are adjacent, we could use the array to [partition] its own indices.
     /// ex: ⊜□:⇡△.. ↯4_4 [0 1 1 2 2]
     ///
+    /// [un][partition] works if [partition]'s function is monadic and [un]-invertible.
+    /// A list of markers and a list of unpartitioned values will be returned.
+    /// The most common function to use with this is [box].
+    /// By default, the markers will be increasing integers starting from `1`.
+    /// ex: °⊜□ {"Hey" "there" "buddy"}
+    /// If a [fill] value is provided, the markers will all be `1`, and the gaps will be filled with the fill value.
+    /// ex: ⬚@-°⊜□ {"Hey" "there" "buddy"}
+    ///
     /// [under][partition] works if [partition]'s function is [under]able.
     /// ex: ⍜⊜□⇌  ≠@ . $ These are some words
     /// ex: ⍜⊜□≡⇌ ≠@ . $ These are some words
@@ -3312,6 +3320,7 @@ impl_primitive!(
     (3(2), UnJoinShape2End),
     (1(2), UnKeep),
     (1(2)[1], UnGroup),
+    (1(2)[1], UnPartition),
     (1, UnSort, Impure),
     (1, UnJson),
     (1, UnBinary),

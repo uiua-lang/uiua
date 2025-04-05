@@ -296,9 +296,9 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Reduce, Mul], No, "Prime factors", "°/× 60") }
             { inverse_row_impl(view!(<code class="string-literal-span">"$\"_…_\""</code>), No, "Pattern match and extract", "{°$\"_ - _(_)_\"} \"a - bc(de) - f\"") }
             { inverse_row_impl(view!(<Prims prims=[Reduce]/><code class="string-literal-span">"$\"_…_\""</code>), No, "Must have 2 args and only text between", "°/$\"_ - _\" \"a - bc - d\"") }
+            { inverse_row([Partition], No, "Inner function must be invertible", "°⊜□ {\"Hey\" \"there\" \"buddy\"}") }
             { inverse_row([Group], No, "Inner function must be invertible", "°⊕□ {1 2_3_4 5_6}") }
             { inverse_row([Repeat], Required, "Inner function must be invertible", "°(⍥(×2)5) 1024") }
-            { inverse_row([Trace], No, "", "°⸮ 5") }
             { inverse_row([Stack], No, "", "°? 5") }
             { inverse_row([Dump], No, "", "°dump△ [2 3 4]") }
             { inverse_row([Pop], RequiresFill, "", "⬚5°◌") }

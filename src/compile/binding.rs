@@ -645,7 +645,7 @@ impl Compiler {
                 Word::Func(func) => func.lines.iter().for_each(|line| {
                     self.analyze_macro_body(macro_name, line, code_macro, recursive);
                 }),
-                Word::Pack(pack) => pack.lexical_order().for_each(|branch| {
+                Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
                     (branch.value.lines.iter()).for_each(|line| {
                         self.analyze_macro_body(macro_name, line, code_macro, recursive)
                     })

@@ -620,8 +620,8 @@ impl Spanner {
                 Word::Func(func) => spans.extend(self.func_spans(func, &word.span)),
                 Word::Pack(pack) => {
                     let mut kind = if let Some(inline) = pack
-                        .lexical_order()
-                        .next()
+                        .branches
+                        .first()
                         .and_then(|br| self.code_meta.function_sigs.get(&br.span))
                     {
                         SpanKind::FuncDelim(inline.sig, inline.set_inverses)
@@ -629,7 +629,7 @@ impl Spanner {
                         SpanKind::Delimiter
                     };
                     spans.push(word.span.just_start(self.inputs()).sp(kind.clone()));
-                    for (i, branch) in pack.lexical_order().enumerate() {
+                    for (i, branch) in pack.branches.iter().enumerate() {
                         let start_span = branch.span.just_start(self.inputs());
                         if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {
                             kind = if let Some(SigDecl {

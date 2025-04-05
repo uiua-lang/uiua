@@ -7,7 +7,6 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under) for monadic functions
 - Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⊜`](https://uiua.org/docs/partition) for monadic functions
-- Add experimental [pack table delimiter `‖`](https://uiua.org/docs/experimental#pack-tables)
 
 ## 0.15.0 - 2025-04-03
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).

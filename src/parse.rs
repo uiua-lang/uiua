@@ -1,13 +1,6 @@
 //! The Uiua parser
 
-use std::{
-    collections::HashMap,
-    error::Error,
-    f64::consts::PI,
-    fmt,
-    mem::{replace, take},
-    slice,
-};
+use std::{collections::HashMap, error::Error, f64::consts::PI, fmt, mem::replace, slice};
 
 use ecow::EcoString;
 
@@ -1153,7 +1146,8 @@ impl Parser<'_> {
                 }) = args.first()
                 {
                     operands.extend(
-                        pack.lexical_order()
+                        pack.branches
+                            .iter()
                             .map(|branch| Word::Func(branch.value.clone())),
                     );
                 } else {
@@ -1373,39 +1367,27 @@ impl Parser<'_> {
             // Match initial function contents
             let first = self.func_contents();
             // Try to match pack branches
-            let mut branch_rows = Vec::new();
-            let mut row = Vec::new();
-            loop {
-                let start = if let Some(start) = self.exact(DoubleBar) {
-                    branch_rows.push(take(&mut row));
-                    start
-                } else if let Some(start) = self.exact(Bar.into()) {
-                    start
-                } else {
-                    if !row.is_empty() {
-                        branch_rows.push(row);
-                    }
-                    break;
-                };
+            let mut branches = Vec::new();
+            while let Some(start) = self.exact(Bar.into()) {
                 let (signature, lines, span) = self.func_contents();
                 let span = if let Some(span) = span {
                     start.merge(span)
                 } else {
                     start
                 };
-                row.push(span.sp(Func {
+                branches.push(span.sp(Func {
                     signature,
                     lines,
                     closed: true,
-                }));
+                }))
             }
             let end = self.expect_close(CloseParen.into());
-            if let Some(last) = branch_rows.last_mut().and_then(|r| r.last_mut()) {
+            if let Some(last) = branches.last_mut() {
                 last.span.merge_with(end.span.clone());
             }
             let (first_sig, first_lines, first_func_span) = first;
             let mut outer_span = start.clone().merge(end.span);
-            if branch_rows.is_empty() {
+            if branches.is_empty() {
                 // Normal func
                 let func = Func {
                     signature: first_sig,
@@ -1450,9 +1432,9 @@ impl Parser<'_> {
                     lines: first_lines,
                     closed: true,
                 });
-                branch_rows[0].insert(0, first);
+                branches.insert(0, first);
                 outer_span.sp(Word::Pack(FunctionPack {
-                    branch_rows,
+                    branches,
                     closed: end.value,
                 }))
             }
@@ -1666,16 +1648,12 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
             Word::Array(arr)
         }
         Word::Pack(mut pack) => {
-            pack.branch_rows = pack
-                .branch_rows
+            pack.branches = pack
+                .branches
                 .into_iter()
-                .map(|row| {
-                    row.into_iter()
-                        .map(|mut br| {
-                            br.value.lines = flip_unsplit_lines(br.value.lines);
-                            br
-                        })
-                        .collect()
+                .map(|mut br| {
+                    br.value.lines = flip_unsplit_lines(br.value.lines);
+                    br
                 })
                 .collect();
             Word::Pack(pack)
@@ -1711,17 +1689,12 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
             Word::Array(arr)
         }
         Word::Pack(mut pack) => {
-            pack.branch_rows = pack
-                .branch_rows
+            pack.branches = pack
+                .branches
                 .into_iter()
-                .map(|row| {
-                    row.into_iter()
-                        .map(|mut br| {
-                            br.value.lines =
-                                br.value.lines.into_iter().flat_map(split_words).collect();
-                            br
-                        })
-                        .collect()
+                .map(|mut br| {
+                    br.value.lines = br.value.lines.into_iter().flat_map(split_words).collect();
+                    br
                 })
                 .collect();
             Word::Pack(pack)
@@ -1777,7 +1750,7 @@ pub(crate) fn max_placeholder(words: &[Sp<Word>]) -> Option<usize> {
             }
             Word::Modified(m) => set(max_placeholder(&m.operands)),
             Word::Pack(pack) => {
-                for branch in pack.lexical_order() {
+                for branch in &pack.branches {
                     for line in &branch.value.lines {
                         set(max_placeholder(line));
                     }

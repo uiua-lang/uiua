@@ -817,7 +817,7 @@ primitive!(
     /// ex: /◇⊂       {"Join" "these" "strings"}
     /// ex: /◇(⊂⊂:@ ) {"Join" "these" "strings"}
     ///
-    /// Subscripted [box] combines that many values into a list of boxes
+    /// Subscripted [box] combines that many values into a list of boxes.
     /// ex: □₂ 5 "abc"
     /// ex: □₃ 1 2_3 4_5_6
     /// ex: □₀

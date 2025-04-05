@@ -1231,59 +1231,8 @@ impl Parser<'_> {
             }
             let span = start.merge(end);
             span.sp(Word::MultilineFormatString(lines))
-        } else if let Some(start) = self.exact(OpenBracket.into()) {
-            let mut has_newline = self.ignore_whitespace();
-            let signature = self.signature(true);
-            if signature.is_some() {
-                has_newline = false;
-            }
-            has_newline |= self.ignore_whitespace();
-            let mut items = self.multiline_words(false, true);
-            if has_newline {
-                items.insert(0, Vec::new());
-            }
-            let end = self.expect_close(CloseBracket.into());
-            let span = start.merge(end.span);
-            let arr = Arr {
-                signature,
-                lines: items,
-                boxes: false,
-                closed: end.value,
-            };
-            if arr_is_normal_di(&arr) {
-                self.diagnostics.push(Diagnostic::new(
-                    format!(
-                        "Prefer `{}` ({}) over `[{}{}]`",
-                        Primitive::Couple,
-                        Primitive::Couple.name(),
-                        Primitive::Dip,
-                        Primitive::Identity
-                    ),
-                    span.clone(),
-                    DiagnosticKind::Style,
-                    self.inputs.clone(),
-                ));
-            }
-            span.sp(Word::Array(arr))
-        } else if let Some(start) = self.exact(OpenCurly.into()) {
-            let mut has_newline = self.ignore_whitespace();
-            let signature = self.signature(true);
-            if signature.is_some() {
-                has_newline = false;
-            }
-            has_newline |= self.ignore_whitespace();
-            let mut items = self.multiline_words(false, true);
-            if has_newline {
-                items.insert(0, Vec::new());
-            }
-            let end = self.expect_close(CloseCurly.into());
-            let span = start.merge(end.span);
-            span.sp(Word::Array(Arr {
-                signature,
-                lines: items,
-                boxes: true,
-                closed: end.value,
-            }))
+        } else if let Some(arr) = self.array() {
+            arr.map(Word::Array)
         } else if let Some(spaces) = self.spaces() {
             spaces
         } else if let Some(word) = self.func() {
@@ -1312,6 +1261,54 @@ impl Parser<'_> {
             }
         }
         Some(word)
+    }
+    fn array(&mut self) -> Option<Sp<Arr>> {
+        let mut boxes = false;
+        let reset = self.index;
+        let down_span = self.exact(DownArrow);
+        let start = if let Some(start) = self.exact(OpenBracket.into()) {
+            start
+        } else if let Some(start) = self.exact(OpenCurly.into()) {
+            boxes = true;
+            start
+        } else {
+            self.index = reset;
+            return None;
+        };
+        let mut has_newline = self.ignore_whitespace();
+        let signature = self.signature(true);
+        if signature.is_some() {
+            has_newline = false;
+        }
+        has_newline |= self.ignore_whitespace();
+        let mut items = self.multiline_words(false, true);
+        if has_newline {
+            items.insert(0, Vec::new());
+        }
+        let end = self.expect_close(if boxes { CloseCurly } else { CloseBracket }.into());
+        let span = start.merge(end.span);
+        let arr = Arr {
+            down_span,
+            signature,
+            lines: items,
+            boxes,
+            closed: end.value,
+        };
+        if !boxes && arr_is_normal_di(&arr) {
+            self.diagnostics.push(Diagnostic::new(
+                format!(
+                    "Prefer `{}` ({}) over `[{}{}]`",
+                    Primitive::Couple,
+                    Primitive::Couple.name(),
+                    Primitive::Dip,
+                    Primitive::Identity
+                ),
+                span.clone(),
+                DiagnosticKind::Style,
+                self.inputs.clone(),
+            ));
+        }
+        Some(span.sp(arr))
     }
     fn num(&mut self) -> Option<Sp<Result<f64, String>>> {
         let span = self.exact(Token::Number)?;
@@ -1363,6 +1360,8 @@ impl Parser<'_> {
         None
     }
     fn func(&mut self) -> Option<Sp<Word>> {
+        let reset = self.index;
+        let down_span = self.exact(DownArrow);
         Some(if let Some(mut start) = self.exact(OpenParen.into()) {
             // Match initial function contents
             let first = self.func_contents();
@@ -1434,11 +1433,13 @@ impl Parser<'_> {
                 });
                 branches.insert(0, first);
                 outer_span.sp(Word::Pack(FunctionPack {
+                    down_span,
                     branches,
                     closed: end.value,
                 }))
             }
         } else {
+            self.index = reset;
             return None;
         })
     }

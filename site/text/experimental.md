@@ -1,3 +1,63 @@
+## Lexical Ordering
+
+
+Consider this example:
+
+```uiua
+3 6
+⊃(+
+| -
+| ×
+| ÷
+)
+```
+Notice that even though [divide](/docs/divide) is on the last line of the pack, its result (`2`) is *under* the results of all the other functions. This is because the collapsed version of this code looks like this:
+
+```uiua
+⊃(+|-|×|÷) 3 6
+```
+
+Those need to do the same thing for consistency reasons, but the first example seems backwards! The function that is further down in the actual source runs first, so to read in execution order, we have to read from the bottom up.
+
+To solve this, we can prefix function pack with a `↓` symbol, which formats from `|,`. See how it changes the flow of the pack:
+
+```uiua
+# Experimental!
+3 6
+⊃↓(
+  +
+| -
+| ×
+| ÷
+)
+```
+Now the result of `÷` is at the top of the stack! Each function in the pack lines up with its result in the output.
+
+Note that collapsing this code actually changes its behavior.
+
+```uiua
+# Experimental!
+⊃↓(+|-|×|÷) 3 6
+```
+
+This is because a pack with a `↓` ignores syntax tree ordering and only considers the layout of the code in the actual source.
+
+This kind of function pack is said to be *lexically ordered*.
+
+The lexical ordering symbol `↓` can also be used on stack array notation to make the lines run in the normal top-down order instead of bottom-up.
+
+```uiua
+# Experimental!
+[1 2
+ 3 4]
+```
+
+```uiua
+# Experimental!
+↓[1 2
+  3 4]
+```
+
 ## Inline Macros
 
 Following an inline function's `()`s with one or more `!`s will make it an inline index macro.

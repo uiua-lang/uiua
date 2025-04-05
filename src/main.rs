@@ -1304,6 +1304,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             | SpanKind::Whitespace
             | SpanKind::Placeholder(_)
             | SpanKind::Delimiter
+            | SpanKind::LexOrder
             | SpanKind::FuncDelim(..)
             | SpanKind::Obverse(_) => None,
         };

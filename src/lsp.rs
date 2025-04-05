@@ -40,6 +40,7 @@ pub enum SpanKind {
     Whitespace,
     Placeholder(usize),
     Delimiter,
+    LexOrder,
     FuncDelim(Signature, SetInverses),
     MacroDelim(usize),
     ImportSrc(ImportSrc),
@@ -603,6 +604,9 @@ impl Spanner {
                     }
                 }
                 Word::Array(arr) => {
+                    if let Some(down_span) = &arr.down_span {
+                        spans.push(down_span.clone().sp(SpanKind::LexOrder));
+                    }
                     spans.push(word.span.just_start(self.inputs()).sp(SpanKind::Delimiter));
                     if let Some(sig) = &arr.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
@@ -619,6 +623,9 @@ impl Spanner {
                 }
                 Word::Func(func) => spans.extend(self.func_spans(func, &word.span)),
                 Word::Pack(pack) => {
+                    if let Some(down_span) = &pack.down_span {
+                        spans.push(down_span.clone().sp(SpanKind::LexOrder));
+                    }
                     let mut kind = if let Some(inline) = pack
                         .branches
                         .first()

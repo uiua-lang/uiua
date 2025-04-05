@@ -1355,6 +1355,12 @@ code:
                 }
             }
             Word::Array(arr) => {
+                if let Some(down_span) = &arr.down_span {
+                    self.experimental_error(down_span, || {
+                        "Lexical ordering is experimental. To use it, \
+                        add `# Experimental!` to the top of the file."
+                    });
+                }
                 // Track span for LSP
                 if !arr.boxes
                     && (arr.lines.iter().flatten())
@@ -1372,8 +1378,15 @@ code:
                 let line_count = arr.lines.len();
                 let any_contents = arr.lines.iter().flatten().any(|w| w.value.is_code());
                 let mut inner = Node::empty();
-                for line in arr.lines.into_iter().rev() {
-                    inner.push(self.line(line, false)?);
+                // Compile lines
+                if arr.down_span.is_some() {
+                    for line in arr.lines {
+                        inner.push(self.line(line, false)?);
+                    }
+                } else {
+                    for line in arr.lines.into_iter().rev() {
+                        inner.push(self.line(line, false)?);
+                    }
                 }
                 // Validate inner loop correctness
                 let len = match inner.sig() {
@@ -1476,7 +1489,7 @@ code:
                     word.span.clone(),
                     "Function packs are not allowed without a modifier",
                 );
-                if let Some(first) = pack.branches.into_iter().next() {
+                if let Some(first) = pack.into_lexical_order().next() {
                     self.word(first.map(Word::Func))?
                 } else {
                     Node::empty()
@@ -2098,7 +2111,7 @@ code:
                         use crate::Complex;
                         let rotation = match n {
                             // Ensure that common cases are exact
-                            1 | 0 | -1 => Complex::ONE,
+                            -1..=1 => Complex::ONE,
                             2 | -2 => -Complex::ONE,
                             4 => Complex::I,
                             -4 => -Complex::I,

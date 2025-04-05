@@ -1049,6 +1049,9 @@ impl Formatter<'_> {
                 }
             }
             Word::Array(arr) => {
+                if let Some(down_span) = &arr.down_span {
+                    self.push(down_span, "↓");
+                }
                 if arr.boxes {
                     self.output.push('{');
                 } else {
@@ -1072,6 +1075,10 @@ impl Formatter<'_> {
             }
             Word::Func(func) => self.func(func, depth),
             Word::Pack(pack) => {
+                if let Some(down_span) = &pack.down_span {
+                    self.push(down_span, "↓");
+                }
+
                 let start_indent =
                     (self.output.lines().last()).map_or(0, |line| line.chars().count());
                 let indent = self.config.multiline_indent * depth;

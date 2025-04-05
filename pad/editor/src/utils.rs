@@ -775,7 +775,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             add_prim_view(prim, text, title, color_class, &mut frag_views);
                         }
                         SpanKind::String | SpanKind::ImportSrc(ImportSrc::File(_)) => {
-                            let class = format!("code-span {}", color_class);
+                            let class = format!("code-span {color_class}");
                             if text == "@ " {
                                 let space_class =
                                     format!("code-span space-character {}", color_class);
@@ -829,7 +829,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             frag_views.push(view);
                         }
                         SpanKind::Signature => {
-                            let class = format!("code-span {}", color_class);
+                            let class = format!("code-span {color_class}");
                             let title = format!("{kind:?}").to_lowercase();
                             frag_views.push(
                                 view! {
@@ -841,7 +841,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             )
                         }
                         SpanKind::Placeholder(_) => {
-                            let class = format!("code-span {}", color_class);
+                            let class = format!("code-span {color_class}");
                             let title = "placeholder";
                             frag_views.push(
                                 view! {
@@ -885,7 +885,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             )
                         }
                         SpanKind::FuncDelim(sig, set_inverses) => {
-                            let class = format!("code-span {}", color_class);
+                            let class = format!("code-span {color_class}");
                             let mut title = sig.to_string();
                             if !set_inverses.is_empty() {
                                 title.push('\n');
@@ -901,7 +901,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             )
                         }
                         SpanKind::Subscript(prim, _) => {
-                            let class = format!("code-span {}", color_class);
+                            let class = format!("code-span {color_class}");
                             let title = if let Some(prim) = prim {
                                 format!("subscript for {}", prim.format())
                             } else {
@@ -976,6 +976,18 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             }
                             let class =
                                 format!("code-span {} {}", binding_class(&text, &docs), private);
+                            frag_views.push(
+                                view! {
+                                    <span class=class data-title=title>
+                                        {text}
+                                    </span>
+                                }
+                                .into_view(),
+                            )
+                        }
+                        SpanKind::LexOrder => {
+                            let class = format!("code-span {color_class}");
+                            let title = "lexical order";
                             frag_views.push(
                                 view! {
                                     <span class=class data-title=title>

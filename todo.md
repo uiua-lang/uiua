@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.16
-- Higher-level function pack dividers
 - Sided `fill`?
 - Stabilize `fft`
   - May require a custom implementation 😵‍💫

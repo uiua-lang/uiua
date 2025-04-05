@@ -496,6 +496,8 @@ impl fmt::Display for Ref {
 /// A stack array notation term
 #[derive(Clone, Serialize)]
 pub struct Arr {
+    /// The span of preceding `↓`
+    pub down_span: Option<CodeSpan>,
     /// The array's inner signature
     pub signature: Option<Sp<Signature>>,
     /// The words in the array
@@ -548,10 +550,37 @@ impl fmt::Debug for Func {
 /// A function pack
 #[derive(Debug, Clone, Serialize)]
 pub struct FunctionPack {
+    /// The span of preceding `↓`
+    pub down_span: Option<CodeSpan>,
     /// The branches of the pack
     pub branches: Vec<Sp<Func>>,
     /// Whether a closing parenthesis was found
     pub closed: bool,
+}
+
+impl FunctionPack {
+    /// Iterate over the branches in lexical order
+    pub fn lexical_order(&self) -> impl DoubleEndedIterator<Item = &Sp<Func>> {
+        let mut branches: Vec<_> = self.branches.iter().collect();
+        branches.sort_by_key(|func| func.span.start.col);
+        if self.down_span.is_some() {
+            branches.sort_by_key(|func| -(func.span.start.line as i32));
+        } else {
+            branches.sort_by_key(|func| func.span.start.line);
+        }
+        branches.into_iter()
+    }
+    /// Iterate over the branches in lexical order
+    pub fn into_lexical_order(self) -> impl DoubleEndedIterator<Item = Sp<Func>> {
+        let mut branches = self.branches;
+        branches.sort_by_key(|func| func.span.start.col);
+        if self.down_span.is_some() {
+            branches.sort_by_key(|func| -(func.span.start.line as i32));
+        } else {
+            branches.sort_by_key(|func| func.span.start.line);
+        }
+        branches.into_iter()
+    }
 }
 
 /// A modifier with operands

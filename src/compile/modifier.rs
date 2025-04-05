@@ -22,11 +22,17 @@ impl Compiler {
         else {
             return Ok(None);
         };
+        if let Some(down_span) = &pack.down_span {
+            self.experimental_error(down_span, || {
+                "Lexical ordering is experimental. To use it, \
+                add `# Experimental!` to the top of the file."
+            });
+        }
         match &modifier.value {
             Modifier::Macro(..) => {
                 let new = Modified {
                     modifier: modifier.clone(),
-                    operands: (pack.branches.iter())
+                    operands: (pack.lexical_order())
                         .map(|b| b.clone().map(Word::Func))
                         .collect(),
                     pack_expansion: true,
@@ -36,7 +42,7 @@ impl Compiler {
             Modifier::Primitive(Primitive::Dip) => {
                 let mut nodes = Vec::with_capacity(pack.branches.len());
                 let mut errors = Vec::new();
-                for br in pack.branches.iter().cloned() {
+                for br in pack.lexical_order().cloned() {
                     match self.func(br.value, br.span.clone()) {
                         Ok(node) => {
                             let sig = self.sig_of(&node, &br.span)?;
@@ -61,7 +67,7 @@ impl Compiler {
                 Ok(res)
             }
             Modifier::Primitive(Primitive::Rows | Primitive::Inventory) => {
-                let mut branches = pack.branches.iter().cloned();
+                let mut branches = pack.lexical_order().cloned();
                 let mut new = Modified {
                     modifier: modifier.clone(),
                     operands: vec![branches.next().unwrap().map(Word::Func)],
@@ -89,7 +95,7 @@ impl Compiler {
             Modifier::Primitive(
                 Primitive::Fork | Primitive::Bracket | Primitive::Try | Primitive::Fill,
             ) => {
-                let mut branches = pack.branches.iter().cloned().rev();
+                let mut branches = pack.lexical_order().cloned().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),
                     operands: {
@@ -117,7 +123,7 @@ impl Compiler {
             }
             Modifier::Primitive(Primitive::On) => {
                 let mut words = Vec::new();
-                for branch in pack.branches.iter().cloned() {
+                for branch in pack.lexical_order().cloned() {
                     let mut word = Word::Modified(Box::new(Modified {
                         modifier: modifier.clone(),
                         operands: vec![branch.clone().map(Word::Func)],
@@ -134,7 +140,7 @@ impl Compiler {
                 self.words(words)
             }
             Modifier::Primitive(Primitive::Switch) => self.switch(
-                (pack.branches.iter().cloned())
+                (pack.lexical_order().cloned())
                     .map(|sp| sp.map(Word::Func))
                     .collect(),
                 modifier.span.clone(),
@@ -142,7 +148,7 @@ impl Compiler {
             Modifier::Primitive(Primitive::Obverse) => {
                 let mut nodes = Vec::new();
                 let mut spans = Vec::new();
-                for br in &pack.branches {
+                for br in pack.lexical_order() {
                     let word = br.clone().map(Word::Func);
                     let span = word.span.clone();
                     let sn = self.word_sig(word)?;
@@ -277,7 +283,7 @@ impl Compiler {
                 self.handle_primitive_deprecation(Primitive::Astar, &modifier.span);
                 self.handle_primitive_experimental(Primitive::Astar, &modifier.span);
                 let mut args = EcoVec::with_capacity(3);
-                for branch in pack.branches.iter().cloned() {
+                for branch in pack.lexical_order().cloned() {
                     args.push(self.word_sig(branch.map(Word::Func))?);
                 }
                 let span = self.add_span(modifier.span.clone());
@@ -285,7 +291,7 @@ impl Compiler {
             }
             Modifier::Primitive(Primitive::Path) if pack.branches.len() == 3 => {
                 let mut args = EcoVec::with_capacity(3);
-                for branch in pack.branches.iter().cloned() {
+                for branch in pack.lexical_order().cloned() {
                     args.push(self.word_sig(branch.map(Word::Func))?);
                 }
                 args.make_mut().swap(1, 2);
@@ -296,8 +302,7 @@ impl Compiler {
                 let new = Modified {
                     modifier: modifier.clone(),
                     operands: pack
-                        .branches
-                        .iter()
+                        .lexical_order()
                         .cloned()
                         .map(|w| w.map(Word::Func))
                         .collect(),
@@ -1466,8 +1471,7 @@ impl Compiler {
             let operand = operands.remove(0);
             operands = match operand.value {
                 Word::Pack(pack) => pack
-                    .branches
-                    .into_iter()
+                    .into_lexical_order()
                     .map(|b| b.map(Word::Func))
                     .collect(),
                 word => vec![operand.span.sp(word)],

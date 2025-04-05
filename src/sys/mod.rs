@@ -474,17 +474,18 @@ sys_op! {
     /// Expects a function that takes a list of sample times and returns a list of samples.
     /// The samples returned from the function must either be a rank 1 array or a rank 2 array with 2nd axis length 2.
     /// The function will be called repeatedly to generate the audio.
-    /// ex: Sp ← 1.5
-    ///   : Bass ← (
-    ///   :   +110×20⌊÷4◿8. # Choose note
-    ///   :   ±∿×π×÷Sp,     # Square wave
-    ///   :   ×2+1⌊◿2.:     # Modulation frequency
-    ///   :   ×0.2∿×π××:    # Apply modulation
+    /// ex: Sp   ← 1.5
+    ///   : Mod  ← ∿×π× # Modulate ? Freq Time
+    ///   : Note ← +110×20⌊÷4◿8
+    ///   : Bass ← ×0.2Mod×⟜(
+    ///   :   ×2+1⌊◿2      # Volume modulation freq
+    ///   : | ±Mod÷Sp⟜Note # Note
     ///   : )
-    ///   : Kick ← ∿×τ×40√√◿1
+    ///   : Kick  ← Mod80√√◿1
     ///   : Noise ← [⍥⚂10000]
-    ///   : Hit ← ×↯:Noise △. ×⊓><0.5,0.6 ÷⟜◿2
-    ///   : Hat ← ×0.3×↯:Noise △.<0.1 ÷⟜◿0.25
+    ///   : Noisy ← ×⊸(↯△⊙Noise)
+    ///   : Hit   ← Noisy /≠⊞<0.5_0.6 ÷⟜◿2
+    ///   : Hat   ← ×0.3 Noisy <0.1 ÷⟜◿0.25
     ///   : &ast(÷3/+[⊃(Hat|Kick|Hit|Bass)]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
     /// How long the audio is can be configured in the editor settings.

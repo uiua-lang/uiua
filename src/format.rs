@@ -1340,7 +1340,7 @@ impl Formatter<'_> {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 enum Compact {
     Always,
     Never,
@@ -1473,13 +1473,15 @@ impl Formatter<'_> {
         values.remove(&index).unwrap_or_default()
     }
     fn func(&mut self, func: &Func, depth: usize) {
-        let start_indent = (self.output.split('\n').last()).map_or(0, |line| line.chars().count());
+        let start_indent = (self.output.rsplit('\n').next()).map_or(0, |line| line.chars().count());
         let indent = self.config.multiline_indent * depth;
         let compact = if start_indent <= indent + 1 {
             Compact::Always
         } else {
             Compact::Never
         };
+
+        let double_nest = self.output.ends_with(['(', '{', '[']);
 
         self.output.push('(');
 
@@ -1493,7 +1495,14 @@ impl Formatter<'_> {
             }
         }
 
-        self.format_multiline_words(&func.lines, compact, true, true, true, depth + 1);
+        let depth = depth + 1
+            - ((double_nest && func.lines.first().is_some_and(|line| line.is_empty())) as usize);
+        self.format_multiline_words(&func.lines, compact, true, true, true, depth);
+        if double_nest {
+            while self.output.chars().rev().take_while(|&c| c == ' ').count() >= start_indent {
+                self.output.pop();
+            }
+        }
         self.output.push(')');
     }
     fn subscript(&mut self, sub: &Sp<Subscript>) {
@@ -1816,6 +1825,14 @@ F ← (|2
 ~ \"example\"
 
 F ← 5
+
+[(
+  1 2
+  3 4
+)]
+[(1 2
+  3 4
+)]
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

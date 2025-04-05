@@ -7,7 +7,7 @@ use ecow::{eco_vec, EcoVec};
 
 use crate::{
     algorithm::{get_ops, loops::flip, multi_output, pervade::*},
-    check::nodes_sig,
+    check::{nodes_clean_sig, nodes_sig},
     cowslice::cowslice,
     Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
     UiuaResult, Value,
@@ -236,29 +236,49 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
 }
 
 fn reduce_singleton(node: &Node, val: Value, process: impl Fn(Value) -> Value) -> Value {
-    use Primitive::*;
-    let nodes = trim_node(node);
-    let row = process(val.row(0));
-    let Some((first, tail)) = nodes.split_first() else {
+    use {Node::*, Primitive::*};
+    if val.rank() == 0 {
         return val;
-    };
-    let (last, init) = nodes.split_last().unwrap();
-    let init_sig = || nodes_sig(init).is_ok_and(|sig| sig.args == sig.outputs);
-    let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args >= 1 && sig.outputs == 1);
-    match first {
-        Node::Prim(Join, _) if tail_sig() => val,
-        _ => match last {
-            Node::Prim(Join, _) if init_sig() => {
-                if val.rank() < 2 {
-                    val
-                } else {
-                    row
-                }
-            }
-            Node::Format(parts, _) if init_sig() && parts.len() == 3 => row.format().into(),
-            _ => row,
-        },
     }
+    let row = process(val.row(0));
+    // dbg!(node, &val, &row);
+    let nodes = trim_node(node);
+    match nodes {
+        [init @ .., Prim(Join, _), Prim(Join, _)] if net_0_args(3, init) => {
+            at_least_rank(1, row.unboxed_if(any_nodes_are_unboxes(init)))
+        }
+        [init @ .., Prim(Join, _)] if net_0_args(2, init) => {
+            at_least_rank(1, row.unboxed_if(any_nodes_are_unboxes(init)))
+        }
+        [init @ .., Format(parts, _)] if net_0_args(parts.len().saturating_sub(1), init) => {
+            row.format().into()
+        }
+        [Prim(Join, _), rest @ ..] if net_0_args(1, rest) => {
+            at_least_rank(1, row.unboxed_if(any_nodes_are_unboxes(rest)))
+        }
+        nodes => row.unboxed_if(any_nodes_are_unboxes(nodes)),
+    }
+}
+
+fn net_0_args(max: usize, nodes: &[Node]) -> bool {
+    nodes_clean_sig(nodes).is_some_and(|sig| sig.args <= max && sig.args == sig.outputs)
+}
+
+fn at_least_rank(rank: usize, mut val: Value) -> Value {
+    while val.rank() < rank {
+        val.fix();
+    }
+    val
+}
+
+fn any_nodes_are_unboxes(nodes: &[Node]) -> bool {
+    use {ImplPrimitive::*, Node::*, Primitive::*};
+    nodes.iter().any(|node| match node {
+        Run(nodes) => any_nodes_are_unboxes(nodes),
+        ImplPrim(UnBox, _) => true,
+        Mod(Dip | Both, args, _) if args.len() == 1 => any_nodes_are_unboxes(&args[0].node),
+        _ => false,
+    })
 }
 
 macro_rules! reduce_math {
@@ -446,12 +466,20 @@ pub fn reduce_content(ops: Ops, env: &mut Uiua) -> UiuaResult {
         let (mut acc, rows) = if let Some(val) = env.value_fill() {
             (val.clone(), xs.into_rows().map(Value::unboxed))
         } else {
-            if xs.row_count() == 0 {
-                env.push(match xs {
-                    Value::Box(_) => Value::default(),
-                    value => value,
-                });
-                return Ok(());
+            match xs.row_count() {
+                0 => {
+                    env.push(match xs {
+                        Value::Box(_) => Value::default(),
+                        value => value,
+                    });
+                    return Ok(());
+                }
+                1 => {
+                    let val = reduce_singleton(&f.node, xs, Value::unboxed);
+                    env.push(val);
+                    return Ok(());
+                }
+                _ => {}
             }
             let mut rows = xs.into_rows().map(Value::unboxed);
             (rows.next().unwrap(), rows)

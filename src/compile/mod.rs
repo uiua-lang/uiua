@@ -2095,19 +2095,16 @@ code:
                             .collect()
                     }
                     Neg => {
-                        self.subscript_experimental(prim, &span);
-                        if n == 0 {
-                            self.add_error(span.clone(), "Cannot have the 0th root of unity");
-                        }
-                        // Ensure that common cases are exact
-                        let root_of_unity = match n {
-                            1 | -1 => crate::Complex::ONE,
-                            2 | -2 => -crate::Complex::ONE,
-                            4 => crate::Complex::I,
-                            -4 => -crate::Complex::I,
-                            _ => (crate::Complex::I * (std::f64::consts::TAU / n as f64)).exp(),
+                        use crate::Complex;
+                        let rotation = match n {
+                            // Ensure that common cases are exact
+                            1 | 0 | -1 => Complex::ONE,
+                            2 | -2 => -Complex::ONE,
+                            4 => Complex::I,
+                            -4 => -Complex::I,
+                            _ => Complex::from_polar(1.0, std::f64::consts::TAU / n as f64),
                         };
-                        Node::from_iter([Node::new_push(root_of_unity), self.primitive(Mul, span)])
+                        Node::from_iter([Node::new_push(rotation), self.primitive(Mul, span)])
                     }
                     Sqrt => {
                         if n == 0 {

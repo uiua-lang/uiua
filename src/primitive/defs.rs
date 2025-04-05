@@ -199,6 +199,12 @@ primitive!(
     /// ex: ¯ "Hello, World!"
     /// Use this with [absolute value] to lowercase a string.
     /// ex: ¯⌵ "Hello, World!"
+    ///
+    /// Subscripted [negate] will rotate a number one nth of a turn in the complex plane.
+    /// ex: ¯₂ 5
+    /// ex: ¯₄ 5
+    /// ex: ⁅₃ ¯₃ 5
+    /// ex: [⍥₄⊸¯₄ ℂ1 2]
     (
         1,
         Neg,

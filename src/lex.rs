@@ -637,6 +637,7 @@ pub enum Token {
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
+    DoubleBar,
     OpenAngle,
     CloseAngle,
     OpenModule,
@@ -761,6 +762,7 @@ impl fmt::Display for Token {
             },
             Token::OpenModule => write!(f, "┌─╴"),
             Token::CloseModule => write!(f, "└─╴"),
+            Token::DoubleBar => write!(f, "‖"),
             Token::Placeholder(i) => write!(f, "^{i}"),
         }
     }
@@ -1066,7 +1068,9 @@ impl<'a> Lexer<'a> {
                         self.end(Underscore, start)
                     }
                 }
+                "|" if self.next_char_exact(",") => self.end(DoubleBar, start),
                 "|" => self.end(Bar, start),
+                "‖" => self.end(DoubleBar, start),
                 ":" => self.end(Colon, start),
                 ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),

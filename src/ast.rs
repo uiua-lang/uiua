@@ -327,11 +327,13 @@ impl PartialEq for Word {
                 .iter()
                 .flatten()
                 .map(|w| &w.value)),
-            (Self::Pack(a), Self::Pack(b)) => (a.branches.iter())
+            (Self::Pack(a), Self::Pack(b)) => a
+                .lexical_order()
                 .flat_map(|br| &br.value.lines)
                 .flatten()
                 .map(|w| &w.value)
-                .eq((b.branches.iter())
+                .eq(b
+                    .lexical_order()
                     .flat_map(|br| &br.value.lines)
                     .flatten()
                     .map(|w| &w.value)),
@@ -548,10 +550,46 @@ impl fmt::Debug for Func {
 /// A function pack
 #[derive(Debug, Clone, Serialize)]
 pub struct FunctionPack {
-    /// The branches of the pack
-    pub branches: Vec<Sp<Func>>,
+    /// The rows of branches of the pack
+    pub branch_rows: Vec<Vec<Sp<Func>>>,
     /// Whether a closing parenthesis was found
     pub closed: bool,
+}
+
+impl FunctionPack {
+    /// Whether the pack is empty
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// The number of functions in the pack
+    pub fn len(&self) -> usize {
+        self.branch_rows.iter().map(|row| row.len()).sum()
+    }
+    /// Iterate over the functions in lexical order
+    pub fn lexical_order(&self) -> impl DoubleEndedIterator<Item = &Sp<Func>> {
+        let mut rows: Vec<_> = self.branch_rows.iter().collect();
+        rows.sort_by_key(|row| row.first().map(|func| func.span.start.col));
+        rows.reverse();
+        rows.sort_by_key(|row| row.first().map(|func| func.span.start.line));
+        rows.into_iter().rev().flatten()
+    }
+    /// Mutably iterate over the functions in lexical order
+    pub fn lexical_order_mut(&mut self) -> impl Iterator<Item = &mut Sp<Func>> {
+        let mut rows: Vec<_> = self.branch_rows.iter_mut().collect();
+        rows.sort_by_key(|row| row.first().map(|func| func.span.start.col));
+        rows.reverse();
+        rows.sort_by_key(|row| row.first().map(|func| func.span.start.line));
+        rows.into_iter().rev().flatten()
+    }
+    /// Convert the pack into an iterator over functions in lexical order
+    pub fn into_lexical_order(mut self) -> impl Iterator<Item = Sp<Func>> {
+        self.branch_rows
+            .sort_by_key(|row| row.first().map(|func| func.span.start.col));
+        self.branch_rows.reverse();
+        self.branch_rows
+            .sort_by_key(|row| row.first().map(|func| func.span.start.line));
+        self.branch_rows.into_iter().rev().flatten()
+    }
 }
 
 /// A modifier with operands

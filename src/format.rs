@@ -1076,64 +1076,99 @@ impl Formatter<'_> {
                     (self.output.lines().last()).map_or(0, |line| line.chars().count());
                 let indent = self.config.multiline_indent * depth;
 
-                let any_multiline = pack.branches.iter().any(|br| {
+                let any_multiline = pack.lexical_order().any(|br| {
                     br.value.lines.len() > 1
                         || br.value.lines.len() >= 2
                             && br.value.lines.iter().any(|line| line.is_empty())
                         || (br.value.lines.iter().flatten())
                             .any(|word| word_is_multiline(&word.value))
                 });
+                let multirow = pack.branch_rows.len() > 1;
 
                 self.output.push('(');
-                for (i, br) in pack.branches.iter().enumerate() {
-                    let mut lines = &*br.value.lines;
-
-                    while lines.first().is_some_and(|line| line.is_empty()) {
-                        lines = &lines[1..];
-                    }
-
-                    if i == 0 {
-                        let add_leading_newline =
-                            any_multiline && (start_indent > indent + 1 || lines.is_empty());
-                        if add_leading_newline {
-                            self.newline(depth + (!lines.is_empty()) as usize);
-                        }
-                    } else {
-                        self.output.push('|');
+                for (i, row) in pack.branch_rows.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push('‖');
                         if any_multiline {
                             self.output.push(' ');
                         }
                     }
-                    if let Some(sig) = &br.value.signature {
-                        self.format_signature(sig.value, any_multiline || lines.len() <= 1);
-                        if lines.is_empty() {
-                            self.output.pop();
-                        }
-                    }
-                    // Remove trailing empty lines from last branch
-                    if i == pack.branches.len() - 1
-                        && lines.last().is_some_and(|line| line.is_empty())
-                        && lines.iter().nth_back(1).is_some_and(|line| line.is_empty())
-                        && !(lines.iter().nth_back(1)).is_some_and(|line| {
-                            line.last().is_some_and(|word| word.value.is_end_of_line())
+                    let row_any_multiline = if multirow {
+                        row.iter().any(|br| {
+                            let mut lines = br.value.lines.as_slice();
+                            while lines.first().is_some_and(|line| line.is_empty()) {
+                                lines = &lines[1..];
+                            }
+                            while lines.last().is_some_and(|line| line.is_empty()) {
+                                lines = &lines[..lines.len() - 1];
+                            }
+                            (lines.iter().flatten()).any(|word| word_is_multiline(&word.value))
                         })
-                    {
-                        lines = &lines[..lines.len() - 1];
-                    }
-                    self.format_multiline_words(
-                        lines,
-                        Compact::Never,
-                        false,
-                        true,
-                        i < pack.branches.len() - 1,
-                        depth + 1,
-                    );
-                    if any_multiline
-                        && i < pack.branches.len() - 1
-                        && br.value.lines.last().is_some_and(|line| !line.is_empty())
-                        && !self.output.trim_end_matches(' ').ends_with('\n')
-                    {
-                        self.newline(depth);
+                    } else {
+                        row.iter().any(|br| {
+                            br.value.lines.len() > 1
+                                || br.value.lines.len() >= 2
+                                    && br.value.lines.iter().any(|line| line.is_empty())
+                                || (br.value.lines.iter().flatten())
+                                    .any(|word| word_is_multiline(&word.value))
+                        })
+                    };
+                    for (j, br) in row.iter().enumerate() {
+                        let mut lines = &*br.value.lines;
+                        while lines.first().is_some_and(|line| line.is_empty()) {
+                            lines = &lines[1..];
+                        }
+                        if j == 0 {
+                            let add_leading_newline = row_any_multiline
+                                && (start_indent > indent + 1 || lines.is_empty());
+                            if add_leading_newline {
+                                self.newline(depth + (!lines.is_empty()) as usize);
+                            }
+                        } else {
+                            let pre_space =
+                                multirow && self.output.trim_end_matches(' ').ends_with('\n');
+                            if pre_space {
+                                self.output.push(' ');
+                            }
+                            self.output.push('|');
+                            if row_any_multiline && !pre_space {
+                                self.output.push(' ');
+                            }
+                        }
+                        if let Some(sig) = &br.value.signature {
+                            self.format_signature(sig.value, row_any_multiline || lines.len() <= 1);
+                            if lines.is_empty() {
+                                self.output.pop();
+                            }
+                        }
+                        // Remove trailing empty lines from last branch
+                        if j == pack.branch_rows.len() - 1
+                            && lines.last().is_some_and(|line| line.is_empty())
+                            && lines.iter().nth_back(1).is_some_and(|line| line.is_empty())
+                            && !(lines.iter().nth_back(1)).is_some_and(|line| {
+                                line.last().is_some_and(|word| word.value.is_end_of_line())
+                            })
+                        {
+                            lines = &lines[..lines.len() - 1];
+                        }
+                        self.format_multiline_words(
+                            lines,
+                            Compact::Never,
+                            false,
+                            true,
+                            j < pack.branch_rows.len() - 1,
+                            depth + 1,
+                        );
+                        if row_any_multiline
+                            && j < pack.branch_rows.len() - 1
+                            && br.value.lines.last().is_some_and(|line| !line.is_empty())
+                            && !self.output.trim_end_matches(' ').ends_with('\n')
+                        {
+                            self.newline(depth);
+                            if multirow {
+                                self.output.push(' ');
+                            }
+                        }
                     }
                 }
                 self.output.push(')');
@@ -1534,7 +1569,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
                 || (func.value.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }
-        Word::Pack(pack) => pack.branches.iter().any(|br| {
+        Word::Pack(pack) => pack.lexical_order().any(|br| {
             br.value.lines.len() > 1
                 || (br.value.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
@@ -1809,6 +1844,13 @@ F ← (|2
 ~ \"example\"
 
 F ← 5
+
+{
+  ⊃(1 2
+  ‖ 3 4
+    5 6
+    7)
+}
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

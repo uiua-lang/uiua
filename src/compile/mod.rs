@@ -1476,7 +1476,7 @@ code:
                     word.span.clone(),
                     "Function packs are not allowed without a modifier",
                 );
-                if let Some(first) = pack.branches.into_iter().next() {
+                if let Some(first) = pack.into_lexical_order().next() {
                     self.word(first.map(Word::Func))?
                 } else {
                     Node::empty()
@@ -2584,7 +2584,7 @@ fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
                 recurse_words(line, f);
             }),
             Word::Modified(m) => recurse_words(&m.operands, f),
-            Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
+            Word::Pack(pack) => pack.lexical_order().for_each(|branch| {
                 (branch.value.lines.iter()).for_each(|line| recurse_words(line, f))
             }),
             _ => {}
@@ -2614,7 +2614,7 @@ fn recurse_words_mut_impl(
                 recurse_words_mut(line, f);
             }),
             Word::Modified(m) => recurse_words_mut(&mut m.operands, f),
-            Word::Pack(pack) => pack.branches.iter_mut().for_each(|branch| {
+            Word::Pack(pack) => pack.lexical_order_mut().for_each(|branch| {
                 (branch.value.lines.iter_mut()).for_each(|line| recurse_words_mut(line, f))
             }),
             Word::Subscripted(sub) => recurse_words_mut(slice::from_mut(&mut sub.word), f),

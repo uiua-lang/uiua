@@ -1013,7 +1013,21 @@ impl Compiler {
                     );
                 }
                 let span = self.add_span(modified.modifier.span.clone());
-                Node::Mod(Primitive::Fill, eco_vec![fill, f], span)
+                if let Some(side) = subscript
+                    .and_then(|sub| self.subscript_n_or_side(sub))
+                    .and_then(|ns| self.subscript_side_only(ns, Fill.format()))
+                {
+                    self.experimental_error_it(&side.span, || {
+                        format!("Sided {}", Primitive::Fill.format())
+                    });
+                    Node::ImplMod(
+                        ImplPrimitive::SidedFill(side.value),
+                        eco_vec![fill, f],
+                        span,
+                    )
+                } else {
+                    Node::Mod(Primitive::Fill, eco_vec![fill, f], span)
+                }
             }
             Comptime => {
                 let word = modified.code_operands().next().unwrap().clone();

@@ -12,6 +12,7 @@ use crate::{
     algorithm::{max_shape, validate_size},
     array::*,
     cowslice::cowslice,
+    fill::FillValue,
     value::Value,
     Shape, Uiua, UiuaResult,
 };
@@ -143,7 +144,10 @@ impl<T: ArrayValue> Array<T> {
     /// Get the `index of` the rows of this array in another
     pub fn index_of(&self, haystack: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
         let needle = self;
-        let default = (env.scalar_fill::<f64>()).unwrap_or(haystack.row_count() as f64);
+        let default = env
+            .scalar_fill::<f64>()
+            .map(|fv| fv.value)
+            .unwrap_or(haystack.row_count() as f64);
         Ok(match needle.rank().cmp(&haystack.rank()) {
             Ordering::Equal => {
                 let has_wildcard = needle.data.iter().any(T::has_wildcard)
@@ -484,7 +488,10 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         let mut arr = Array::new(temp_output_shape, data);
-        arr.fill_to_shape(&haystack.shape[..searched_for_shape.len()], 0);
+        arr.fill_to_shape(
+            &haystack.shape[..searched_for_shape.len()],
+            FillValue::new(0, None),
+        );
         arr.validate_shape();
         arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
         Ok(arr)

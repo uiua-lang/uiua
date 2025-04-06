@@ -6,6 +6,7 @@ use std::{
 
 use ecow::eco_vec;
 
+use crate::fill::FillValue;
 use crate::{algorithm::loops::flip, array::*, Uiua, UiuaError, UiuaResult, Value};
 use crate::{Complex, Shape};
 
@@ -165,8 +166,8 @@ pub(crate) fn bin_pervade_recursive<A, B, C, F>(
     (a, ash): (&[A], &[usize]),
     (b, bsh): (&[B], &[usize]),
     c: &mut [C],
-    a_fill: Option<&A>,
-    b_fill: Option<&B>,
+    a_fill: Option<&FillValue<A>>,
+    b_fill: Option<&FillValue<B>>,
     f: F,
     env: &Uiua,
 ) -> Result<(), F::Error>
@@ -218,15 +219,27 @@ where
                 }
             } else if al < bl {
                 if let Some(a_fill) = a_fill {
-                    let a_fill_row = vec![a_fill.clone(); a_row_len];
-                    let a_iter = a
-                        .chunks_exact(a_row_len)
-                        .chain(repeat(a_fill_row.as_slice()));
-                    for ((a, b), c) in a_iter
-                        .zip(b.chunks_exact(b_row_len))
-                        .zip(c.chunks_exact_mut(c_row_len))
-                    {
-                        recur(a, ash, b, bsh, c)?;
+                    let a_fill_row = vec![a_fill.value.clone(); a_row_len];
+                    if a_fill.is_left() {
+                        let a_iter = repeat(a_fill_row.as_slice())
+                            .take(*bl - *al)
+                            .chain(a.chunks_exact(a_row_len));
+                        for ((a, b), c) in a_iter
+                            .zip(b.chunks_exact(b_row_len))
+                            .zip(c.chunks_exact_mut(c_row_len))
+                        {
+                            recur(a, ash, b, bsh, c)?;
+                        }
+                    } else {
+                        let a_iter = a
+                            .chunks_exact(a_row_len)
+                            .chain(repeat(a_fill_row.as_slice()));
+                        for ((a, b), c) in a_iter
+                            .zip(b.chunks_exact(b_row_len))
+                            .zip(c.chunks_exact_mut(c_row_len))
+                        {
+                            recur(a, ash, b, bsh, c)?;
+                        }
                     }
                 } else if ash == bsh {
                     for (b, c) in b.chunks_exact(b_row_len).zip(c.chunks_exact_mut(c_row_len)) {
@@ -240,16 +253,29 @@ where
                     }
                 }
             } else if let Some(b_fill) = b_fill {
-                let b_fill_row = vec![b_fill.clone(); b_row_len];
-                let b_iter = b
-                    .chunks_exact(b_row_len)
-                    .chain(repeat(b_fill_row.as_slice()));
-                for ((a, b), c) in a
-                    .chunks_exact(a_row_len)
-                    .zip(b_iter)
-                    .zip(c.chunks_exact_mut(c_row_len))
-                {
-                    recur(a, ash, b, bsh, c)?;
+                let b_fill_row = vec![b_fill.value.clone(); b_row_len];
+                if b_fill.is_left() {
+                    let b_iter = repeat(b_fill_row.as_slice())
+                        .take(*al - *bl)
+                        .chain(b.chunks_exact(b_row_len));
+                    for ((a, b), c) in a
+                        .chunks_exact(a_row_len)
+                        .zip(b_iter)
+                        .zip(c.chunks_exact_mut(c_row_len))
+                    {
+                        recur(a, ash, b, bsh, c)?;
+                    }
+                } else {
+                    let b_iter = b
+                        .chunks_exact(b_row_len)
+                        .chain(repeat(b_fill_row.as_slice()));
+                    for ((a, b), c) in a
+                        .chunks_exact(a_row_len)
+                        .zip(b_iter)
+                        .zip(c.chunks_exact_mut(c_row_len))
+                    {
+                        recur(a, ash, b, bsh, c)?;
+                    }
                 }
             } else if ash == bsh {
                 for (a, c) in a.chunks_exact(a_row_len).zip(c.chunks_exact_mut(c_row_len)) {
@@ -376,7 +402,7 @@ where
         b: &mut [T],
         ash: &[usize],
         bsh: &[usize],
-        fill: T,
+        fill: FillValue<T>,
         f: impl Fn(T, T) -> T + Copy,
     ) {
         match (ash, bsh) {
@@ -390,7 +416,7 @@ where
                 let b_row_len = b.len() / bl;
                 if al == bl {
                     if a_row_len == 0 {
-                        let a = vec![fill; b_row_len];
+                        let a = vec![fill.value; b_row_len];
                         for b in b.chunks_exact_mut(b_row_len) {
                             reuse_fill(&a, b, ash, bsh, fill, f);
                         }
@@ -404,13 +430,23 @@ where
                         reuse_fill(&[], b, ash, bsh, fill, f);
                     }
                 } else {
-                    let fill_row = vec![fill; a_row_len];
-                    for (a, b) in a
-                        .chunks_exact(a_row_len)
-                        .chain(repeat(fill_row.as_slice()))
-                        .zip(b.chunks_exact_mut(b_row_len))
-                    {
-                        reuse_fill(a, b, ash, bsh, fill, f);
+                    let fill_row = vec![fill.value; a_row_len];
+                    if fill.is_left() {
+                        for (a, b) in repeat(fill_row.as_slice())
+                            .take(*bl - *al)
+                            .chain(a.chunks_exact(a_row_len))
+                            .zip(b.chunks_exact_mut(b_row_len))
+                        {
+                            reuse_fill(a, b, ash, bsh, fill, f);
+                        }
+                    } else {
+                        for (a, b) in a
+                            .chunks_exact(a_row_len)
+                            .chain(repeat(fill_row.as_slice()))
+                            .zip(b.chunks_exact_mut(b_row_len))
+                        {
+                            reuse_fill(a, b, ash, bsh, fill, f);
+                        }
                     }
                 }
             }
@@ -425,7 +461,7 @@ where
         c: &mut [T],
         ash: &[usize],
         bsh: &[usize],
-        fill: T,
+        fill: FillValue<T>,
         f: impl Fn(T, T) -> T + Copy,
     ) {
         match (ash, bsh) {
@@ -463,28 +499,53 @@ where
                         }
                     }
                     Ordering::Less => {
-                        let a_fill_row = vec![fill; a_row_len];
-                        let a_iter = a
-                            .chunks_exact(a_row_len)
-                            .chain(repeat(a_fill_row.as_slice()));
-                        for ((a, b), c) in a_iter
-                            .zip(b.chunks_exact(b_row_len))
-                            .zip(c.chunks_exact_mut(c_row_len))
-                        {
-                            use_new_fill(a, b, c, ash, bsh, fill, f);
+                        let a_fill_row = vec![fill.value; a_row_len];
+                        if fill.is_left() {
+                            let a_iter = repeat(a_fill_row.as_slice())
+                                .take(*bl - *al)
+                                .chain(a.chunks_exact(a_row_len));
+                            for ((a, b), c) in a_iter
+                                .zip(b.chunks_exact(b_row_len))
+                                .zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                use_new_fill(a, b, c, ash, bsh, fill, f);
+                            }
+                        } else {
+                            let a_iter = a
+                                .chunks_exact(a_row_len)
+                                .chain(repeat(a_fill_row.as_slice()));
+                            for ((a, b), c) in a_iter
+                                .zip(b.chunks_exact(b_row_len))
+                                .zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                use_new_fill(a, b, c, ash, bsh, fill, f);
+                            }
                         }
                     }
                     Ordering::Greater => {
-                        let b_fill_row = vec![fill; b_row_len];
-                        let b_iter = b
-                            .chunks_exact(b_row_len)
-                            .chain(repeat(b_fill_row.as_slice()));
-                        for ((a, b), c) in a
-                            .chunks_exact(a_row_len)
-                            .zip(b_iter)
-                            .zip(c.chunks_exact_mut(c_row_len))
-                        {
-                            use_new_fill(a, b, c, ash, bsh, fill, f);
+                        let b_fill_row = vec![fill.value; b_row_len];
+                        if fill.is_left() {
+                            let b_iter = repeat(b_fill_row.as_slice())
+                                .take(*al - *bl)
+                                .chain(b.chunks_exact(b_row_len));
+                            for ((a, b), c) in a
+                                .chunks_exact(a_row_len)
+                                .zip(b_iter)
+                                .zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                use_new_fill(a, b, c, ash, bsh, fill, f);
+                            }
+                        } else {
+                            let b_iter = b
+                                .chunks_exact(b_row_len)
+                                .chain(repeat(b_fill_row.as_slice()));
+                            for ((a, b), c) in a
+                                .chunks_exact(a_row_len)
+                                .zip(b_iter)
+                                .zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                use_new_fill(a, b, c, ash, bsh, fill, f);
+                            }
                         }
                     }
                 }

@@ -3233,6 +3233,7 @@ macro_rules! impl_primitive {
             WithSub(usize),
             OffSub(usize),
             NBits(usize),
+            SidedFill(SubSide),
             /// Push the maximum row count of N values
             MaxRowCount(usize),
         }

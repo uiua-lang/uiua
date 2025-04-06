@@ -111,7 +111,7 @@ where
         _ => WindowAction::Default(multi_output(f.sig.outputs, Vec::new()), EcoVec::new()),
     };
 
-    let fill = env.scalar_fill::<T>().ok();
+    let fill = env.scalar_fill::<T>().ok().map(|fv| fv.value);
     if dims.len() == 1 && (fill.is_none() || dims[0].fill == 0) {
         // Linear optimization
         let dim = dims[0];

@@ -891,7 +891,7 @@ pub fn un_partition(f: SigNode, env: &mut Uiua) -> UiuaResult {
     let x = env.pop(1)?;
     let mut indices = EcoVec::with_capacity(x.row_count());
     let mut unpartitioned = Vec::with_capacity(x.row_count());
-    if let Some(fill) = env.value_fill().cloned() {
+    if let Some(fill) = env.value_fill().map(|fv| fv.value.clone()) {
         for (i, row) in x.into_rows().enumerate() {
             env.push(row);
             env.exec(f.clone())?;

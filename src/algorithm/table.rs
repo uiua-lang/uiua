@@ -525,14 +525,14 @@ fn reduce_table_bytes(
                     $ff_complex,
                     complex::$arith,
                     Complex::new($iden, $ciden),
-                    env.scalar_fill::<Complex>().ok(),
+                    env.scalar_fill::<Complex>().ok().map(|fv| fv.value),
                 )),
                 Primitive::Couple | Primitive::Join => env.push(frtljc($xs, $ys, $ff, $iden, fill)),
                 _ => return Err((xs, ys)),
             }
         }};
     }
-    let fill = env.scalar_fill::<f64>().ok();
+    let fill = env.scalar_fill::<f64>().ok().map(|fv| fv.value);
     match fp {
         Primitive::Add => {
             all_gs!(
@@ -561,7 +561,7 @@ fn reduce_table_bytes(
             )
         }
         Primitive::Min => {
-            let byte_fill = env.scalar_fill::<u8>().ok();
+            let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
             if xs.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                 all_gs!(
                     xs.convert(),
@@ -589,7 +589,7 @@ fn reduce_table_bytes(
             }
         }
         Primitive::Max => {
-            let byte_fill = env.scalar_fill::<u8>().ok();
+            let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
             if xs.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                 all_gs!(
                     xs.convert(),
@@ -706,7 +706,7 @@ macro_rules! reduce_table_math {
             if f_flipped || g_flipped {
                 return Ok(Err((xs, ys)));
             }
-            let fill = env.scalar_fill::<$ty>().ok();
+            let fill = env.scalar_fill::<$ty>().ok().map(|fv| fv.value);
             macro_rules! all_gs {
                 ($ff:expr, $ff_complex:expr, $iden:expr, $ciden:expr) => {
                     match g_prim {
@@ -747,7 +747,7 @@ macro_rules! reduce_table_math {
                             $ff_complex,
                             complex::$f,
                             Complex::new($iden, $ciden),
-                            env.scalar_fill::<Complex>().ok(),
+                            env.scalar_fill::<Complex>().ok().map(|fv| fv.value),
                         )),
                         Primitive::Couple | Primitive::Join => {
                             env.push(frtljc(xs, ys, $ff, $iden.into(), fill))

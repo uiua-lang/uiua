@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.16
-- Sided `fill`?
 - Stabilize `fft`
   - May require a custom implementation 😵‍💫
 - Respect user newlines more in multiline function packs

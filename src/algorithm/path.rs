@@ -403,7 +403,7 @@ fn path_impl(
                 } else {
                     path_val
                 });
-            } else if let Some(val) = env.value_fill().cloned() {
+            } else if let Some(val) = env.value_fill().map(|fv| fv.value.clone()) {
                 env.push(val);
             } else {
                 return Err(env.error("No path found"));

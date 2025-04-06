@@ -222,7 +222,7 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut picked = self.data.clone();
-        let fill = env.scalar_fill::<T>();
+        let fill = env.scalar_fill::<T>().map(|fv| fv.value);
         for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
             let row_len: usize = self.shape[d + 1..].iter().product();
             let s = s as isize;
@@ -452,12 +452,12 @@ impl<T: ArrayValue> Array<T> {
 
         let mut fill = env.array_fill::<T>().map_err(Cow::Borrowed);
         if let Ok(fill_val) = &fill {
-            if !self.shape[index.len()..].ends_with(&fill_val.shape) {
+            if !self.shape[index.len()..].ends_with(&fill_val.value.shape) {
                 fill = Err(Cow::Owned(format!(
                     ". A fill is set, but its shape {} \
                     is not compatible with the array's shape {} \
                     when doing a {}-axis take",
-                    fill_val.shape,
+                    fill_val.value.shape,
                     self.shape,
                     index.len()
                 )))
@@ -479,10 +479,13 @@ impl<T: ArrayValue> Array<T> {
                         match fill {
                             Ok(fill) => {
                                 filled = true;
-                                let fill_elems = fill.element_count();
+                                let fill_elems = fill.value.element_count();
                                 if fill_elems > 0 {
                                     let reps = (abs_taking - row_count) * row_len / fill_elems;
-                                    self.data.extend_repeat_slice(&fill.data, reps);
+                                    self.data.extend_repeat_slice_fill(
+                                        fill.map_ref(|arr| arr.data.as_slice()),
+                                        reps,
+                                    );
                                 }
                             }
                             Err(e) => {
@@ -504,11 +507,14 @@ impl<T: ArrayValue> Array<T> {
                     match fill {
                         Ok(fill) => {
                             filled = true;
-                            let fill_elems = fill.element_count();
+                            let fill_elems = fill.value.element_count();
                             let diff = abs_taking - row_count;
                             if fill_elems > 0 {
                                 let reps = diff * row_len / fill_elems;
-                                self.data.extend_repeat_slice(&fill.data, reps);
+                                self.data.extend_repeat_slice_fill(
+                                    fill.map_ref(|arr| arr.data.as_slice()),
+                                    reps,
+                                );
                             }
                             self.data.as_mut_slice().rotate_right(diff * row_len);
                         }
@@ -573,10 +579,13 @@ impl<T: ArrayValue> Array<T> {
                                     .zip(&self.shape[1..])
                                     .map(|(&i, &s)| i.map_or(s, isize::unsigned_abs))
                                     .product();
-                                let fill_elems = fill.element_count();
+                                let fill_elems = fill.value.element_count();
                                 if fill_elems > 0 {
                                     let reps = (abs_taking - row_count) * row_len / fill_elems;
-                                    arr.data.extend_repeat_slice(&fill.data, reps);
+                                    arr.data.extend_repeat_slice_fill(
+                                        fill.map_ref(|arr| arr.data.as_slice()),
+                                        reps,
+                                    );
                                 }
                             }
                             Err(e) => {
@@ -609,11 +618,14 @@ impl<T: ArrayValue> Array<T> {
                                     .zip(&self.shape[1..])
                                     .map(|(&i, &s)| i.map_or(s, |i| i.unsigned_abs()))
                                     .product();
-                                let fill_elems = fill.element_count();
+                                let fill_elems = fill.value.element_count();
                                 let diff = abs_taking - row_count;
                                 if fill_elems > 0 {
                                     let reps = diff * row_len / fill_elems;
-                                    arr.data.extend_repeat_slice(&fill.data, reps);
+                                    arr.data.extend_repeat_slice_fill(
+                                        fill.map_ref(|arr| arr.data.as_slice()),
+                                        reps,
+                                    );
                                 }
                                 arr.data.as_mut_slice().rotate_right(diff * row_len);
                             }
@@ -846,7 +858,10 @@ impl<T: ArrayValue> Array<T> {
         self.undo_take_impl("drop", "dropped", &undex, &end, into, env)
     }
     fn anti_drop(mut self, mut index: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        let fill = env.array_fill::<T>().unwrap_or_else(|_| T::proxy().into());
+        let fill = env
+            .array_fill::<T>()
+            .map(|fv| fv.value)
+            .unwrap_or_else(|_| T::proxy().into());
         if self.shape.len() < index.len() {
             return Err(env.error(format!(
                 "Index array specifies {} axes, \
@@ -1178,7 +1193,7 @@ impl<T: ArrayValue> Array<T> {
             let mut selected = CowSlice::with_capacity(self.row_len() * indices.len());
             let row_len = self.row_len();
             let row_count = self.row_count();
-            let fill = env.scalar_fill::<T>();
+            let fill = env.scalar_fill::<T>().map(|fv| fv.value);
             let map_keys = self
                 .is_map()
                 .then(|| {
@@ -1421,7 +1436,7 @@ impl<T: ArrayValue> Array<T> {
         let mut fill = None;
         let mut fill_rep = 0;
         if !indices_are_total {
-            let fill_arr = env.array_fill::<T>().map_err(|e| {
+            let fill_arr = env.array_fill::<T>().map(|fv| fv.value).map_err(|e| {
                 env.error(format!(
                     "Cannot invert selection of non-total indices without a fill{e}"
                 ))
@@ -1532,7 +1547,7 @@ impl<T: ArrayValue> Array<T> {
         let mut fill_rep = 0;
         // Get fill if not total
         if !indices_are_total {
-            let fill_arr = env.array_fill::<T>().map_err(|e| {
+            let fill_arr = env.array_fill::<T>().map(|fv| fv.value).map_err(|e| {
                 env.error(format!(
                     "Cannot invert pick of non-total indices without a fill{e}"
                 ))

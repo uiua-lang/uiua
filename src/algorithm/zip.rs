@@ -853,8 +853,8 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
         row_count,
         ..
     } = fixed_rows(Primitive::Inventory.format(), 1, args, env)?;
-    let mut acc = if let Some(val) = env.value_fill() {
-        val.clone()
+    let mut acc = if let Some(fv) = env.value_fill() {
+        fv.value.clone()
     } else if row_count == 0 {
         env.push(Array::<Boxed>::default());
         return Ok(());

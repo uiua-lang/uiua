@@ -1,10 +1,43 @@
-use crate::{Array, Boxed, Complex, Uiua, Value};
+use crate::{ast::SubSide, Array, Boxed, Complex, Uiua, Value};
 
 pub struct Fill<'a> {
     env: &'a Uiua,
-    value_fill: fn(env: &'a Uiua) -> Option<&'a Value>,
-    other_value_fill: fn(env: &'a Uiua) -> Option<&'a Value>,
+    value_fill: fn(env: &'a Uiua) -> Option<&'a FillValue>,
+    other_value_fill: fn(env: &'a Uiua) -> Option<&'a FillValue>,
     other_error: &'static str,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct FillValue<T = Value> {
+    pub value: T,
+    pub side: Option<SubSide>,
+}
+
+impl<T> FillValue<T> {
+    pub fn new(val: impl Into<T>, side: impl Into<Option<SubSide>>) -> Self {
+        Self {
+            value: val.into(),
+            side: side.into(),
+        }
+    }
+    pub fn try_map<U, E>(&self, f: impl FnOnce(&T) -> Result<U, E>) -> Result<FillValue<U>, E> {
+        Ok(FillValue {
+            value: f(&self.value)?,
+            side: self.side,
+        })
+    }
+    pub fn map_ref<'a, U>(&'a self, f: impl FnOnce(&'a T) -> U) -> FillValue<U> {
+        FillValue {
+            value: f(&self.value),
+            side: self.side,
+        }
+    }
+    pub fn is_left(&self) -> bool {
+        self.side == Some(SubSide::Left)
+    }
+    pub fn is_right(&self) -> bool {
+        self.side == Some(SubSide::Right)
+    }
 }
 
 impl<'a> Fill<'a> {
@@ -24,102 +57,111 @@ impl<'a> Fill<'a> {
             other_error: ". A normal fill is set, but not an unfill.",
         }
     }
-    pub fn value(&self) -> Option<&Value> {
+    pub fn value(&self) -> Option<&FillValue> {
         (self.value_fill)(self.env)
     }
-    pub(crate) fn num_scalar(&self) -> Result<f64, &'static str> {
+    fn value_map<U>(
+        &self,
+        f: impl FnOnce(&Value) -> Result<U, &'static str>,
+    ) -> Result<FillValue<U>, &'static str> {
         match self.value() {
-            Some(Value::Num(n)) if n.rank() == 0 => Ok(n.data[0]),
-            Some(Value::Num(_)) => Err(self.error(true)),
-            Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0] as f64),
-            Some(Value::Byte(_)) => Err(self.error(true)),
-            _ => Err(self.error(false)),
+            Some(val) => val.try_map(f),
+            None => Err(self.error(false)),
         }
     }
-    pub(crate) fn num_array(&self) -> Result<Array<f64>, &'static str> {
-        match self.value() {
-            Some(Value::Num(n)) => Ok(n.clone()),
-            Some(Value::Byte(n)) => Ok(n.convert_ref()),
+    pub(crate) fn num_scalar(&self) -> Result<FillValue<f64>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Num(n) if n.rank() == 0 => Ok(n.data[0]),
+            Value::Num(_) => Err(self.error(true)),
+            Value::Byte(n) if n.rank() == 0 => Ok(n.data[0] as f64),
+            Value::Byte(_) => Err(self.error(true)),
             _ => Err(self.error(false)),
-        }
+        })
     }
-    pub(crate) fn byte_scalar(&self) -> Result<u8, &'static str> {
-        match self.value() {
-            Some(Value::Num(n))
+    pub(crate) fn num_array(&self) -> Result<FillValue<Array<f64>>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Num(n) => Ok(n.clone()),
+            Value::Byte(n) => Ok(n.convert_ref()),
+            _ => Err(self.error(false)),
+        })
+    }
+    pub(crate) fn byte_scalar(&self) -> Result<FillValue<u8>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Num(n)
                 if n.rank() == 0
                     && n.data[0].fract() == 0.0
                     && (0.0..=255.0).contains(&n.data[0]) =>
             {
                 Ok(n.data[0] as u8)
             }
-            Some(Value::Num(n)) if n.rank() == 0 => Err(self.error(false)),
-            Some(Value::Num(_)) => Err(self.error(true)),
-            Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0]),
-            Some(Value::Byte(_)) => Err(self.error(true)),
+            Value::Num(n) if n.rank() == 0 => Err(self.error(false)),
+            Value::Num(_) => Err(self.error(true)),
+            Value::Byte(n) if n.rank() == 0 => Ok(n.data[0]),
+            Value::Byte(_) => Err(self.error(true)),
             _ => Err(self.error(false)),
-        }
+        })
     }
-    pub(crate) fn byte_array(&self) -> Result<Array<u8>, &'static str> {
-        match self.value() {
-            Some(Value::Num(n))
+    pub(crate) fn byte_array(&self) -> Result<FillValue<Array<u8>>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Num(n)
                 if (n.data.iter()).all(|&n| n.fract() == 0.0 && (0.0..=255.0).contains(&n)) =>
             {
                 Ok(n.convert_ref_with(|n| n as u8))
             }
-            Some(Value::Byte(n)) => Ok(n.clone()),
+            Value::Byte(n) => Ok(n.clone()),
             _ => Err(self.error(false)),
-        }
+        })
     }
-    pub(crate) fn char_scalar(&self) -> Result<char, &'static str> {
-        match self.value() {
-            Some(Value::Char(c)) if c.rank() == 0 => Ok(c.data[0]),
-            Some(Value::Char(_)) => Err(self.error(true)),
+    pub(crate) fn char_scalar(&self) -> Result<FillValue<char>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Char(c) if c.rank() == 0 => Ok(c.data[0]),
+            Value::Char(_) => Err(self.error(true)),
             _ => Err(self.error(false)),
-        }
+        })
     }
-    pub(crate) fn char_array(&self) -> Result<Array<char>, &'static str> {
-        match self.value() {
-            Some(Value::Char(c)) => Ok(c.clone()),
+    pub(crate) fn char_array(&self) -> Result<FillValue<Array<char>>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Char(c) => Ok(c.clone()),
             _ => Err(self.error(false)),
-        }
+        })
     }
-    pub(crate) fn box_scalar(&self) -> Result<Boxed, &'static str> {
-        match self.value() {
-            Some(Value::Box(b)) if b.rank() == 0 => Ok(b.data[0].clone()),
-            Some(Value::Box(_)) => Err(self.error(true)),
-            Some(val) => Ok(Boxed(val.clone())),
-            None => Err(self.error(false)),
-        }
+    pub(crate) fn box_scalar(&self) -> Result<FillValue<Boxed>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Box(b) if b.rank() == 0 => Ok(b.data[0].clone()),
+            Value::Box(_) => Err(self.error(true)),
+            val => Ok(Boxed(val.clone())),
+        })
     }
-    pub(crate) fn box_array(&self) -> Result<Array<Boxed>, &'static str> {
-        match self.value() {
-            Some(Value::Box(b)) => Ok(b.clone()),
-            Some(val) => Ok(Array::new([], [Boxed(val.clone())])),
-            None => Err(self.error(false)),
-        }
+    pub(crate) fn box_array(&self) -> Result<FillValue<Array<Boxed>>, &'static str> {
+        self.value_map(|val| {
+            Ok(match val {
+                Value::Box(b) => b.clone(),
+                val => Array::new([], [Boxed(val.clone())]),
+            })
+        })
     }
-    pub(crate) fn complex_scalar(&self) -> Result<Complex, &'static str> {
-        match self.value() {
-            Some(Value::Num(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0], 0.0)),
-            Some(Value::Num(_)) => Err(self.error(true)),
-            Some(Value::Byte(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0] as f64, 0.0)),
-            Some(Value::Byte(_)) => Err(self.error(true)),
-            Some(Value::Complex(c)) if c.rank() == 0 => Ok(c.data[0]),
-            Some(Value::Complex(_)) => Err(self.error(true)),
+    pub(crate) fn complex_scalar(&self) -> Result<FillValue<Complex>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Num(n) if n.rank() == 0 => Ok(Complex::new(n.data[0], 0.0)),
+            Value::Num(_) => Err(self.error(true)),
+            Value::Byte(n) if n.rank() == 0 => Ok(Complex::new(n.data[0] as f64, 0.0)),
+            Value::Byte(_) => Err(self.error(true)),
+            Value::Complex(c) if c.rank() == 0 => Ok(c.data[0]),
+            Value::Complex(_) => Err(self.error(true)),
             _ => Err(self.error(false)),
-        }
+        })
     }
-    pub(crate) fn complex_array(&self) -> Result<Array<Complex>, &'static str> {
-        match self.value() {
-            Some(Value::Num(n)) => Ok(n.convert_ref()),
-            Some(Value::Byte(n)) => Ok(n.convert_ref()),
-            Some(Value::Complex(c)) => Ok(c.clone()),
+    pub(crate) fn complex_array(&self) -> Result<FillValue<Array<Complex>>, &'static str> {
+        self.value_map(|val| match val {
+            Value::Num(n) => Ok(n.convert_ref()),
+            Value::Byte(n) => Ok(n.convert_ref()),
+            Value::Complex(c) => Ok(c.clone()),
             _ => Err(self.error(false)),
-        }
+        })
     }
-    pub(crate) fn value_for(&self, val: &Value) -> Option<&Value> {
-        let fill = self.value()?;
-        match (val, fill) {
+    pub(crate) fn value_for(&self, val: &Value) -> Option<&FillValue> {
+        let fill = &self.value()?;
+        match (val, &fill.value) {
             (Value::Num(_) | Value::Byte(_), Value::Num(_) | Value::Byte(_))
             | (Value::Char(_), Value::Char(_))
             | (Value::Complex(_), Value::Complex(_))
@@ -129,7 +171,7 @@ impl<'a> Fill<'a> {
     }
     fn error(&self, scalar: bool) -> &'static str {
         if scalar {
-            match self.value() {
+            match self.value().map(|fv| &fv.value) {
                 Some(Value::Num(_)) => ". A number fill is set, but is is not a scalar.",
                 Some(Value::Byte(_)) => ". A number fill is set, but is is not a scalar.",
                 Some(Value::Char(_)) => ". A character fill is set, but is is not a scalar.",
@@ -144,7 +186,7 @@ impl<'a> Fill<'a> {
                 }
             }
         } else {
-            match self.value() {
+            match self.value().map(|fv| &fv.value) {
                 Some(Value::Num(_)) => ". A number fill is set, but the array is not numbers.",
                 Some(Value::Byte(_)) => ". A number fill is set, but the array is not numbers.",
                 Some(Value::Char(_)) => {

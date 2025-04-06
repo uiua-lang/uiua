@@ -2049,6 +2049,7 @@ code:
                                 | (Reach | On | By | With | Off)
                                 | (Rows | Each | Inventory)
                                 | (Repeat | Tuples | Stencil)
+                                | (Fill)
                         ) {
                             self.add_error(
                                 m.modifier.span.clone().merge(n.span.clone()),

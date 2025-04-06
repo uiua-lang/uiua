@@ -24,6 +24,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::{
     array::*,
     cowslice::{cowslice, CowSlice},
+    fill::FillValue,
     grid_fmt::GridFmt,
     val_as_arr,
     value::Value,
@@ -62,8 +63,8 @@ impl Value {
             Ordering::Equal => {
                 // First scalar
                 if shape.contains(&0) {
-                    if let Some(fill) = env.value_fill() {
-                        *self = fill.clone();
+                    if let Some(fv) = env.value_fill() {
+                        *self = fv.value.clone();
                     } else {
                         return Err(env.error(format!(
                             "Cannot get first scalar of an empty array (shape {shape})"
@@ -205,17 +206,17 @@ impl Value {
                         let re = parse_uiua_num(re.into(), env);
                         let im = parse_uiua_num(im.into(), env);
                         re.and_then(|re| im.map(|im| Complex { re, im }.into()))
-                            .or_else(|e| env.value_fill().cloned().ok_or(e))?
+                            .or_else(|e| env.value_fill().map(|fv| fv.value.clone()).ok_or(e))?
                     }
                     (_, _, Some((re, im))) => {
                         let re = parse_uiua_num(re.into(), env);
                         let im = parse_uiua_num(im.into(), env);
                         re.and_then(|re| im.map(|im| Complex { re, im: -im }.into()))
-                            .or_else(|e| env.value_fill().cloned().ok_or(e))?
+                            .or_else(|e| env.value_fill().map(|fv| fv.value.clone()).ok_or(e))?
                     }
                     _ => parse_uiua_num(s.into(), env)
                         .map(Into::into)
-                        .or_else(|e| env.value_fill().cloned().ok_or(e))?,
+                        .or_else(|e| env.value_fill().map(|fv| fv.value.clone()).ok_or(e))?,
                 }
             }
             (0, Value::Box(arr)) => {
@@ -244,6 +245,7 @@ impl Value {
         } else {
             fn padded<T: fmt::Display>(
                 c: char,
+                _right: bool,
                 arr: Array<T>,
                 env: &Uiua,
             ) -> UiuaResult<Array<char>> {
@@ -294,7 +296,7 @@ impl Value {
             match self {
                 Value::Num(arr) => {
                     if let Ok(c) = env.scalar_fill::<char>() {
-                        padded(c, arr, env)?.into()
+                        padded(c.value, c.is_right(), arr, env)?.into()
                     } else {
                         let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
                             .map(Value::from)
@@ -305,7 +307,7 @@ impl Value {
                 }
                 Value::Byte(arr) => {
                     if let Ok(c) = env.scalar_fill::<char>() {
-                        padded(c, arr, env)?.into()
+                        padded(c.value, c.is_right(), arr, env)?.into()
                     } else {
                         let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
                             .map(Value::from)
@@ -643,7 +645,7 @@ impl<T: ArrayValue> Array<T> {
             [] => Ok(self),
             [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
-                    self.data.extend_repeat(&fill, self.row_len());
+                    self.data.extend_repeat(&fill.value, self.row_len());
                     self.shape = rest.into();
                     Ok(self)
                 }
@@ -674,7 +676,7 @@ impl<T: ArrayValue> Array<T> {
             [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
                     self.shape = self.shape[..depth].iter().chain(rest).copied().collect();
-                    self.data.extend_repeat(&fill, self.shape.elements());
+                    self.data.extend_repeat(&fill.value, self.shape.elements());
                     self.validate_shape();
                     Ok(self)
                 }
@@ -718,7 +720,7 @@ impl<T: ArrayValue> Array<T> {
             [] => Ok(self),
             [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
-                    self.data.extend_repeat(&fill, self.row_len());
+                    self.data.extend_repeat(&fill.value, self.row_len());
                     self.shape = rest.into();
                     Ok(self)
                 }
@@ -747,7 +749,7 @@ impl<T: ArrayValue> Array<T> {
             [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
                     self.shape = self.shape[..depth].iter().chain(rest).copied().collect();
-                    self.data.extend_repeat(&fill, self.shape.elements());
+                    self.data.extend_repeat(&fill.value, self.shape.elements());
                     Ok(self)
                 }
                 Err(e) => Err(env
@@ -1542,7 +1544,7 @@ impl Value {
                         }
                     }
                     env.scalar_fill::<f64>()
-                        .map(Array::scalar)
+                        .map(|fv| fv.value.into())
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
                 Value::Byte(bytes) => {
@@ -1552,7 +1554,7 @@ impl Value {
                         }
                     }
                     env.scalar_fill::<f64>()
-                        .map(Array::scalar)
+                        .map(|fv| fv.value.into())
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
                 value => Err(env.error(format!(
@@ -1578,7 +1580,7 @@ impl Value {
                         }
                     }
                     env.scalar_fill::<f64>()
-                        .map(Array::scalar)
+                        .map(|fv| fv.value.into())
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
                 Value::Byte(bytes) => {
@@ -1594,7 +1596,7 @@ impl Value {
                         }
                     }
                     env.scalar_fill::<f64>()
-                        .map(Array::scalar)
+                        .map(|fv| fv.value.into())
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
                 value => Err(env.error(format!(
@@ -1811,6 +1813,7 @@ impl<T: ArrayValue> Array<T> {
         if self.row_count() == 0 {
             return env
                 .scalar_fill::<f64>()
+                .map(|fv| fv.value)
                 .map_err(|e| env.error(format!("Cannot get min index of an empty array{e}")));
         }
         let index = self
@@ -1829,6 +1832,7 @@ impl<T: ArrayValue> Array<T> {
         if self.row_count() == 0 {
             return env
                 .scalar_fill::<f64>()
+                .map(|fv| fv.value)
                 .map_err(|e| env.error(format!("Cannot get max index of an empty array{e}")));
         }
         let index = self
@@ -1847,6 +1851,7 @@ impl<T: ArrayValue> Array<T> {
         if self.row_count() == 0 {
             return env
                 .scalar_fill::<f64>()
+                .map(|fv| fv.value)
                 .map_err(|e| env.error(format!("Cannot get min index of an empty array{e}")));
         }
         let index = self
@@ -1865,6 +1870,7 @@ impl<T: ArrayValue> Array<T> {
         if self.row_count() == 0 {
             return env
                 .scalar_fill::<f64>()
+                .map(|fv| fv.value)
                 .map_err(|e| env.error(format!("Cannot get max index of an empty array{e}")));
         }
         let index = self
@@ -2112,8 +2118,9 @@ impl Value {
         return Err(env.error("CSV support is not enabled in this environment"));
         #[cfg(feature = "csv")]
         {
-            let delimiter = u8::try_from(env.scalar_fill::<char>().unwrap_or(','))
-                .map_err(|_| env.error("CSV delimiter must be ASCII"))?;
+            let delimiter =
+                u8::try_from(env.scalar_fill::<char>().map(|fv| fv.value).unwrap_or(','))
+                    .map_err(|_| env.error("CSV delimiter must be ASCII"))?;
 
             let mut buf = Vec::new();
             let mut writer = csv::WriterBuilder::new()
@@ -2220,8 +2227,12 @@ impl Value {
         return Err(env.error("CSV support is not enabled in this environment"));
         #[cfg(feature = "csv")]
         {
-            let delimiter = u8::try_from(env.scalar_unfill::<char>().unwrap_or(','))
-                .map_err(|_| env.error("CSV delimiter must be ASCII"))?;
+            let delimiter = u8::try_from(
+                env.scalar_unfill::<char>()
+                    .map(|fv| fv.value)
+                    .unwrap_or(','),
+            )
+            .map_err(|_| env.error("CSV delimiter must be ASCII"))?;
 
             let mut reader = csv::ReaderBuilder::new()
                 .has_headers(false)
@@ -2229,8 +2240,11 @@ impl Value {
                 .delimiter(delimiter)
                 .from_reader(csv_str.as_bytes());
 
-            let fill = env.value_fill().cloned().unwrap_or_else(|| "".into());
-            env.with_fill(fill, |env| {
+            let fill = env
+                .value_fill()
+                .cloned()
+                .unwrap_or_else(|| FillValue::new("", None));
+            env.with_fill(fill.value, fill.side, |env| {
                 let mut rows = Vec::new();
                 for result in reader.records() {
                     let record = result.map_err(|e| env.error(e))?;
@@ -2254,9 +2268,12 @@ impl Value {
             let mut workbook: Xlsx<_> =
                 open_workbook_from_rs(std::io::Cursor::new(_xlsx)).map_err(|e| env.error(e))?;
             let sheet_names = workbook.sheet_names();
-            let fill = env.value_fill().cloned().unwrap_or_else(|| "".into());
+            let fill = env
+                .value_fill()
+                .cloned()
+                .unwrap_or_else(|| FillValue::new("", None));
             let mut sheet_values = EcoVec::new();
-            env.with_fill(fill, |env| {
+            env.with_fill(fill.value, fill.side, |env| {
                 for sheet_name in &sheet_names {
                     let sheet = workbook
                         .worksheet_range(sheet_name)

@@ -21,7 +21,8 @@ use threadpool::ThreadPool;
 
 use crate::{
     algorithm::{self, validate_size_impl},
-    fill::Fill,
+    ast::SubSide,
+    fill::{Fill, FillValue},
     invert::match_format_pattern,
     lex::Span,
     Array, ArrayLen, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function,
@@ -52,9 +53,9 @@ pub(crate) struct Runtime {
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
-    fill_stack: Vec<Value>,
+    fill_stack: Vec<FillValue>,
     /// The unfill stack
-    unfill_stack: Vec<Value>,
+    unfill_stack: Vec<FillValue>,
     /// The fill boundary stack
     fill_boundary_stack: Vec<(usize, usize)>,
     /// The depth of arrays under construction
@@ -1345,7 +1346,7 @@ impl Uiua {
         }
         Ok(self.rt.stack.split_off(len - n))
     }
-    pub(crate) fn value_fill(&self) -> Option<&Value> {
+    pub(crate) fn value_fill(&self) -> Option<&FillValue> {
         if (self.rt.fill_boundary_stack.last()).is_some_and(|&(i, _)| i >= self.rt.fill_stack.len())
         {
             None
@@ -1353,7 +1354,7 @@ impl Uiua {
             self.last_fill()
         }
     }
-    pub(crate) fn value_unfill(&self) -> Option<&Value> {
+    pub(crate) fn value_unfill(&self) -> Option<&FillValue> {
         if (self.rt.fill_boundary_stack.last())
             .is_some_and(|&(_, i)| i >= self.rt.unfill_stack.len())
         {
@@ -1362,10 +1363,10 @@ impl Uiua {
             self.last_unfill()
         }
     }
-    pub(crate) fn last_fill(&self) -> Option<&Value> {
+    pub(crate) fn last_fill(&self) -> Option<&FillValue> {
         self.rt.fill_stack.last()
     }
-    pub(crate) fn last_unfill(&self) -> Option<&Value> {
+    pub(crate) fn last_unfill(&self) -> Option<&FillValue> {
         self.rt.unfill_stack.last()
     }
     pub(crate) fn fill(&self) -> Fill {
@@ -1377,10 +1378,11 @@ impl Uiua {
     /// Do something with the fill context set
     pub(crate) fn with_fill<T>(
         &mut self,
-        value: Value,
+        val: Value,
+        side: Option<SubSide>,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        self.rt.fill_stack.push(value);
+        self.rt.fill_stack.push(FillValue { value: val, side });
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
         res
@@ -1388,10 +1390,11 @@ impl Uiua {
     /// Do something with the unfill context set
     pub(crate) fn with_unfill<T>(
         &mut self,
-        value: Value,
+        val: Value,
+        side: Option<SubSide>,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        self.rt.unfill_stack.push(value);
+        self.rt.unfill_stack.push(FillValue { value: val, side });
         let res = in_ctx(self);
         self.rt.unfill_stack.pop();
         res
@@ -1417,8 +1420,8 @@ impl Uiua {
                 self.push(Value::default());
             }
         }
-        for value in fills.into_iter().rev() {
-            self.push(value);
+        for fv in fills.into_iter().rev() {
+            self.push(fv.value);
         }
         but(self)?;
         self.without_fill(|env| in_ctx(env))
@@ -1435,8 +1438,8 @@ impl Uiua {
                 self.push(Value::default());
             }
         }
-        for value in fills.into_iter().rev() {
-            self.push(value);
+        for fv in fills.into_iter().rev() {
+            self.push(fv.value);
         }
         but(self)?;
         self.without_fill(|env| in_ctx(env))

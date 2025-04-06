@@ -24,6 +24,7 @@ use crate::{
     array::*,
     boxed::Boxed,
     cowslice::{cowslice, extend_repeat, CowSlice},
+    fill::FillValue,
     val_as_arr,
     value::Value,
     Shape, Uiua, UiuaResult, RNG,
@@ -229,7 +230,7 @@ impl<T: Clone> Array<T> {
     pub(crate) fn reshape_scalar_integer(
         &mut self,
         count: usize,
-        fill: Option<T>,
+        fill: Option<FillValue<T>>,
     ) -> Result<(), SizeError> {
         if count == 0 {
             self.data.clear();
@@ -238,7 +239,7 @@ impl<T: Clone> Array<T> {
         }
         let elem_count = validate_size_of::<T>([count - 1, self.data.len()])?;
         if let Some(fill) = fill {
-            self.data.extend_repeat(&fill, elem_count);
+            self.data.extend_repeat_fill(&fill, elem_count);
         } else {
             self.data.reserve(elem_count);
             let row = self.data.to_vec();
@@ -288,7 +289,7 @@ impl<T: ArrayValue> Array<T> {
             match env.scalar_fill::<T>() {
                 Ok(fill) => {
                     let start = self.data.len();
-                    self.data.extend_repeat(&fill, target_len - start);
+                    self.data.extend_repeat_fill(&fill, target_len - start);
                 }
                 Err(e) => {
                     if self.data.is_empty() {
@@ -750,7 +751,7 @@ impl<T: ArrayValue> Array<T> {
                 let fill = if let Some(fill) = &fill {
                     fill
                 } else {
-                    let f = env.scalar_fill::<T>().map_err(|e| {
+                    let f = env.scalar_fill::<T>().map(|fv| fv.value).map_err(|e| {
                         env.error(format!("Anti keep with 0s requires a fill value{e}"))
                     })?;
                     fill = Some(f);
@@ -763,7 +764,7 @@ impl<T: ArrayValue> Array<T> {
                 let fill = if let Some(fill) = &fill {
                     fill
                 } else {
-                    let f = env.scalar_fill::<T>().map_err(|e| {
+                    let f = env.scalar_fill::<T>().map(|fv| fv.value).map_err(|e| {
                         env.error(format!(
                             "Anti keep ran out of rows so it \
                             requires a fill value{e}"
@@ -911,27 +912,35 @@ pub(super) fn pad_keep_counts<'a>(
             env.either_array_fill()
         } {
             Ok(fill) => {
-                if let Some(n) = fill.data.iter().find(|&&n| n.fract() != 0.0) {
+                if let Some(n) = fill.value.data.iter().find(|&&n| n.fract() != 0.0) {
                     return Err(env.error(format!(
                         "Fill value for keep must be an array of \
                         integers, but one of the values is {n}"
                     )));
                 }
-                match fill.rank() {
+                match fill.value.rank() {
                     0 => {
-                        let fill = fill.data[0];
+                        let fill_val = fill.value.data[0];
                         let amount = amount.to_mut();
-                        amount.extend(repeat(fill).take(len - amount.len()));
+                        let count = len - amount.len();
+                        amount.extend(repeat(fill_val).take(count));
+                        if fill.is_left() {
+                            amount.rotate_right(count);
+                        }
                     }
                     1 => {
                         let amount = amount.to_mut();
-                        amount.extend((fill.data.iter().copied().cycle()).take(len - amount.len()));
+                        let count = len - amount.len();
+                        amount.extend((fill.value.data.iter().copied().cycle()).take(count));
+                        if fill.is_left() {
+                            amount.rotate_right(count);
+                        }
                     }
                     _ => {
                         return Err(env.error(format!(
                             "Fill value for keep must be a scalar or a 1D array, \
                             but it has shape {}",
-                            fill.shape
+                            fill.value.shape
                         )));
                     }
                 }
@@ -1020,7 +1029,7 @@ impl<T: ArrayValue> Array<T> {
             }
             rotate(b, ash, a);
             if let Ok(fill) = &fill {
-                fill_shift(b, ash, a, fill.clone());
+                fill_shift(b, ash, a, fill.value.clone());
                 filled = true;
             }
             Ok(())
@@ -1356,7 +1365,7 @@ impl<T: ArrayValue> Array<T> {
     fn orient(&mut self, undices: Vec<usize>, env: &Uiua) -> UiuaResult {
         if undices.len() > self.rank() {
             return match env.scalar_fill() {
-                Ok(fill) => self.filled_orient(undices, fill, env),
+                Ok(fill) => self.filled_orient(undices, fill.value, env),
                 Err(e) => Err(env
                     .error(format!(
                         "Cannot orient array of rank {} with {} indices{e}",
@@ -1372,7 +1381,7 @@ impl<T: ArrayValue> Array<T> {
             .any(|(a, b)| a == b)
         {
             return match env.scalar_fill() {
-                Ok(fill) => self.filled_orient(undices, fill, env),
+                Ok(fill) => self.filled_orient(undices, fill.value, env),
                 Err(e) => Err(env
                     .error(format!("Orient indices must be unique{e}"))
                     .fill()),
@@ -1639,7 +1648,7 @@ impl<T: RealArrayValue> Array<T> {
         })
     }
     fn base_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
-        let fill = env.scalar_fill::<f64>().ok();
+        let fill = env.scalar_fill::<f64>().ok().map(|fv| fv.value);
         for base in bases.iter().copied().chain(fill) {
             if base == 0.0 {
                 return Err(env.error("Base cannot contain 0s"));
@@ -1714,7 +1723,11 @@ impl<T: RealArrayValue> Array<T> {
         if row_len > 0 {
             let slice = data.make_mut();
             let mut bases = bases.to_vec();
-            bases.extend(repeat(fill.unwrap_or(1.0)).take(row_len.saturating_sub(bases.len())));
+            let count = row_len.saturating_sub(bases.len());
+            bases.extend(repeat(fill.as_ref().map(|fv| fv.value).unwrap_or(1.0)).take(count));
+            if fill.is_some_and(|fv| fv.is_left()) {
+                bases.rotate_right(count);
+            }
             let scan: Vec<f64> = bases
                 .iter()
                 .scan(1.0, |acc, b| {

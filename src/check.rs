@@ -624,7 +624,7 @@ impl VirtualEnv {
                     self.repeat(f, BasicValue::Num(f64::INFINITY))?;
                     self.push(BasicValue::Other);
                 }
-                UnFill => self.fill(args)?,
+                UnFill | SidedFill(_) => self.fill(args)?,
                 UnBoth => {
                     let [f] = get_args_nodes(args)?;
                     let mut args = Vec::with_capacity(f.sig.args);

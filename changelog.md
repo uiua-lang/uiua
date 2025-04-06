@@ -10,6 +10,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`negate ¯`](https://uiua.org/docs/negate) subscripts
 - Add experimental [lexical ordering](https://uiua.org/docs/experimental#lexical-ordering) syntax
   - This enables some function packs and array notation to execute in the order they are normally read
+- Add experimental sided [`fill ⬚`](https://uiua.org/docs/fill)
+  - This allows filling from the left instead of the right
 
 ## 0.15.0 - 2025-04-03
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).

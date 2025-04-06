@@ -900,7 +900,7 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
             height.unwrap_or_else(|| buffer.layout_runs().map(|run| run.line_height).sum::<f32>());
 
         // Init array shape/data
-        let fill = env.array_fill::<f64>();
+        let fill = env.array_fill::<f64>().map(|fv| fv.value);
         let colored = color.is_some() || fill.is_ok();
         let pixel_shape: &[usize] = if colored { &[4] } else { &[] };
         let mut canvas_shape = Shape::from_iter([canvas_height as usize, canvas_width as usize]);

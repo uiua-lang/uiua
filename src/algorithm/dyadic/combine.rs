@@ -7,6 +7,7 @@ use ecow::EcoVec;
 use crate::{
     algorithm::{max_shape, validate_size_impl, validate_size_of, FillContext, Indexable},
     cowslice::cowslice,
+    fill::FillValue,
     val_as_arr, Array, ArrayValue, Boxed, Complex, FormatShape, Primitive, Shape, Uiua, UiuaResult,
     Value,
 };
@@ -65,7 +66,7 @@ fn shape_index_to_data_index_test() {
 
 impl<T: ArrayValue> Array<T> {
     /// Fill the array with the given value so it matches the given shape
-    pub fn fill_to_shape(&mut self, shape: &[usize], fill_value: T) {
+    pub fn fill_to_shape(&mut self, shape: &[usize], fill: FillValue<T>) {
         while self.rank() < shape.len() {
             self.shape.insert(0, 1);
         }
@@ -73,7 +74,8 @@ impl<T: ArrayValue> Array<T> {
             return;
         }
         let target_size = shape.iter().product();
-        let mut new_data = cowslice![fill_value; target_size];
+        let is_left = fill.is_left();
+        let mut new_data = cowslice![fill.value; target_size];
         let new_slice = new_data.as_mut_slice();
         let mut curr = vec![0; shape.len()];
         for new_data_index in 0..target_size {
@@ -81,6 +83,15 @@ impl<T: ArrayValue> Array<T> {
             if let Some(data_index) = shape_index_to_data_index(&curr, &self.shape) {
                 new_slice[new_data_index] = self.data[data_index].clone();
             }
+        }
+        if is_left && self.rank() == shape.len() {
+            let offset = shape
+                .first()
+                .copied()
+                .unwrap_or(1)
+                .saturating_sub(self.row_count());
+            let row_len: usize = shape.iter().skip(1).product();
+            new_slice.rotate_right(offset * row_len);
         }
         self.data = new_data;
         self.shape = shape.into();

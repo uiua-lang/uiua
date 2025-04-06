@@ -16,7 +16,7 @@ use ecow::{EcoString, EcoVec};
 use tinyvec::TinyVec;
 
 use crate::{
-    cowslice::ecovec_extend_cowslice, Array, ArrayValue, Boxed, CodeSpan, Complex,
+    cowslice::ecovec_extend_cowslice, fill::FillValue, Array, ArrayValue, Boxed, CodeSpan, Complex,
     ExactDoubleIterator, Inputs, Ops, PersistentMeta, Shape, SigNode, Signature, Span, Uiua,
     UiuaError, UiuaErrorKind, UiuaResult, Value,
 };
@@ -235,11 +235,11 @@ impl FillError for Infallible {
 }
 
 pub trait FillContext: ErrorContext {
-    fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str>;
-    fn array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str>;
-    fn scalar_unfill<T: ArrayValue>(&self) -> Result<T, &'static str>;
-    fn array_unfill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str>;
-    fn either_array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
+    fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str>;
+    fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str>;
+    fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str>;
+    fn array_unfill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str>;
+    fn either_array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
         self.array_fill::<T>().or_else(|_| self.array_unfill::<T>())
     }
     fn fill_error(error: Self::Error) -> Self::Error;
@@ -260,16 +260,16 @@ pub trait FillContext: ErrorContext {
 }
 
 impl FillContext for Uiua {
-    fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+    fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
         T::get_scalar_fill(&self.fill())
     }
-    fn array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
+    fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
         T::get_array_fill(&self.fill())
     }
-    fn scalar_unfill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+    fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
         T::get_scalar_fill(&self.unfill())
     }
-    fn array_unfill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
+    fn array_unfill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
         T::get_array_fill(&self.unfill())
     }
     fn fill_error(error: Self::Error) -> Self::Error {
@@ -281,16 +281,16 @@ impl FillContext for Uiua {
 }
 
 impl FillContext for () {
-    fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+    fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
         Err(". No fill is set.")
     }
-    fn array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
+    fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
         Err(". No fill is set.")
     }
-    fn scalar_unfill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+    fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
         Err(". No unfill is set.")
     }
-    fn array_unfill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
+    fn array_unfill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
         Err(". No unfill is set.")
     }
     fn fill_error(error: Self::Error) -> Self::Error {
@@ -302,16 +302,16 @@ impl FillContext for () {
 }
 
 impl FillContext for (&CodeSpan, &Inputs) {
-    fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+    fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
         Err(". No fill is set.")
     }
-    fn array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
+    fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
         Err(". No fill is set.")
     }
-    fn scalar_unfill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+    fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
         Err(". No unfill is set.")
     }
-    fn array_unfill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
+    fn array_unfill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str> {
         Err(". No unfill is set.")
     }
     fn fill_error(error: Self::Error) -> Self::Error {

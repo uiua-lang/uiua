@@ -28,6 +28,7 @@ use serde::*;
 use crate::{
     algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
+    ast::SubSide,
     boxed::Boxed,
     encode,
     grid_fmt::GridFmt,
@@ -343,6 +344,7 @@ impl fmt::Display for ImplPrimitive {
                     .collect();
                 write!(f, "{Stack}{n_str}")
             }
+            SidedFill(side) => write!(f, "{Fill}{side}"),
             RepeatWithInverse => write!(f, "{Repeat}"),
             RepeatCountConvergence => write!(f, "{Un}{Repeat}"),
             ValidateType => write!(f, "{Un}…{Type}{Dup}"),
@@ -426,7 +428,7 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
 });
 
 macro_rules! fill {
-    ($ops:expr, $env:expr, $with:ident, $without_but:ident) => {{
+    ($ops:expr, $side:expr, $env:expr, $with:ident, $without_but:ident) => {{
         let env = $env;
         let [fill, f] = get_ops($ops, env)?;
         let outputs = fill.sig.outputs;
@@ -442,7 +444,7 @@ macro_rules! fill {
         }
         env.exec(fill)?;
         let fill_value = env.pop("fill value")?;
-        env.$with(fill_value, |env| env.exec(f))?;
+        env.$with(fill_value, $side.into(), |env| env.exec(f))?;
     }};
 }
 
@@ -1136,7 +1138,7 @@ impl Primitive {
             }
 
             // Misc
-            Primitive::Fill => fill!(ops, env, with_fill, without_fill_but),
+            Primitive::Fill => fill!(ops, None, env, with_fill, without_fill_but),
             Primitive::Try => algorithm::try_(ops, env)?,
             Primitive::Case => {
                 let [f] = get_ops(ops, env)?;
@@ -1228,8 +1230,8 @@ impl ImplPrimitive {
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
             ImplPrimitive::UnPop => {
-                let val = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
-                env.push(val.clone());
+                let fv = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
+                env.push(fv.value.clone());
             }
             ImplPrimitive::UnCouple => {
                 let coupled = env.pop(1)?;
@@ -1869,7 +1871,8 @@ impl ImplPrimitive {
             ImplPrimitive::RepeatCountConvergence => loops::repeat(ops, false, true, env)?,
             ImplPrimitive::UnScan => reduce::unscan(ops, env)?,
             ImplPrimitive::UnDump => dump(ops, env, true)?,
-            ImplPrimitive::UnFill => fill!(ops, env, with_unfill, without_unfill_but),
+            ImplPrimitive::UnFill => fill!(ops, None, env, with_unfill, without_unfill_but),
+            &ImplPrimitive::SidedFill(side) => fill!(ops, side, env, with_fill, without_fill_but),
             ImplPrimitive::ReduceTable => table::reduce_table(ops, env)?,
             ImplPrimitive::UnBoth => {
                 let [f] = get_ops(ops, env)?;
@@ -2001,8 +2004,11 @@ fn regex(env: &mut Uiua) -> UiuaResult {
             let row: EcoVec<Boxed> = caps
                 .iter()
                 .flat_map(|m| {
-                    m.map(|m| Boxed(Value::from(m.as_str())))
-                        .or_else(|| env.value_fill().cloned().map(Value::boxed_if_not))
+                    m.map(|m| Boxed(Value::from(m.as_str()))).or_else(|| {
+                        env.value_fill()
+                            .map(|fv| fv.value.clone())
+                            .map(Value::boxed_if_not)
+                    })
                 })
                 .collect();
             matches.append(row.into(), false, env)?;

@@ -59,7 +59,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
             }
         }
         (Some((prim, _flipped)), Value::Byte(bytes)) => {
-            let fill = env.scalar_fill::<f64>().ok();
+            let fill = env.scalar_fill::<f64>().ok().map(|fv| fv.value);
             if fill.is_none() && env.value_fill().is_some() {
                 return generic_reduce(f, Value::Byte(bytes), depth, env);
             }
@@ -84,7 +84,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                         .into()
                 }
                 Primitive::Mul if bytes.meta().flags.is_boolean() => {
-                    let byte_fill = env.scalar_fill::<u8>().ok();
+                    let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(bytes, 1.0, fill, depth, mul::num_num, mul::num_byte)
                             .into()
@@ -97,7 +97,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                         .into()
                 }
                 Primitive::Or => {
-                    let byte_fill = env.scalar_fill::<u8>().ok();
+                    let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(bytes, 0.0, fill, depth, or::num_num, or::num_byte)
                             .into()
@@ -108,7 +108,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     }
                 }
                 Primitive::Max => {
-                    let byte_fill = env.scalar_fill::<u8>().ok();
+                    let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -124,7 +124,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     }
                 }
                 Primitive::Min => {
-                    let byte_fill = env.scalar_fill::<u8>().ok();
+                    let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -294,7 +294,7 @@ macro_rules! reduce_math {
         where
             $ty: From<f64>,
         {
-            let fill = env.scalar_fill::<$ty>().ok();
+            let fill = env.scalar_fill::<$ty>().ok().map(|fv| fv.value);
             if fill.is_none() && env.value_fill().is_some() {
                 return Err(xs);
             }
@@ -463,8 +463,8 @@ pub fn reduce_content(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
     let xs = env.pop(1)?;
     if let (1, Some(Primitive::Join)) = (xs.rank(), f.node.as_primitive()) {
-        let (mut acc, rows) = if let Some(val) = env.value_fill() {
-            (val.clone(), xs.into_rows().map(Value::unboxed))
+        let (mut acc, rows) = if let Some(fv) = env.value_fill() {
+            (fv.value.clone(), xs.into_rows().map(Value::unboxed))
         } else {
             match xs.row_count() {
                 0 => {
@@ -551,9 +551,12 @@ fn generic_reduce_inner(
     if sig.args == 2 {
         if depth == 0 {
             let mut rows = xs.into_rows();
-            let mut acc = value_fill.cloned().or_else(|| rows.next()).ok_or_else(|| {
-                env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
-            })?;
+            let mut acc = value_fill
+                .map(|fv| fv.value.clone())
+                .or_else(|| rows.next())
+                .ok_or_else(|| {
+                    env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
+                })?;
             acc = process(acc);
             env.without_fill(|env| -> UiuaResult<Value> {
                 for row in rows {
@@ -590,9 +593,12 @@ fn generic_reduce_inner(
         }
     } else if depth == 0 {
         let mut rows = xs.into_rows();
-        let mut acc = value_fill.cloned().or_else(|| rows.next()).ok_or_else(|| {
-            env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
-        })?;
+        let mut acc = value_fill
+            .map(|fv| fv.value.clone())
+            .or_else(|| rows.next())
+            .ok_or_else(|| {
+                env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
+            })?;
         acc = process(acc);
         env.without_fill(|env| {
             for row in rows {
@@ -763,7 +769,7 @@ fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
             if xs.row_count() == 0 {
                 env.push(
                     env.value_fill()
-                        .cloned()
+                        .map(|fv| fv.value.clone())
                         .unwrap_or_else(|| (xs.first_dim_zero())),
                 );
                 return Ok(());
@@ -772,7 +778,7 @@ fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
             let mut rows = xs.into_rows();
             let mut acc = env
                 .value_fill()
-                .cloned()
+                .map(|fv| fv.value.clone())
                 .unwrap_or_else(|| rows.next().unwrap());
             let mut scanned = Vec::with_capacity(row_count);
             scanned.push(acc.clone());

@@ -26,6 +26,8 @@ macro_rules! cowslice {
 pub(crate) use cowslice;
 use ecow::EcoVec;
 
+use crate::fill::FillValue;
+
 /// The backing buffer for Uiua's arrays' data
 ///
 /// `CowSlice`s are reference-counted buffers that also have associated start and end indices.
@@ -237,8 +239,26 @@ impl<T: Clone> CowSlice<T> {
         self.modify_end(|data| extend_repeat(data, elem, count))
     }
     #[track_caller]
+    pub fn extend_repeat_fill(&mut self, fill: &FillValue<T>, count: usize) {
+        self.modify_end(|data| {
+            extend_repeat(data, &fill.value, count);
+            if fill.is_left() {
+                data.make_mut().rotate_right(count);
+            }
+        });
+    }
+    #[track_caller]
     pub fn extend_repeat_slice(&mut self, slice: &[T], count: usize) {
         self.modify_end(|data| extend_repeat_slice(data, slice, count))
+    }
+    #[track_caller]
+    pub fn extend_repeat_slice_fill(&mut self, slice: FillValue<&[T]>, count: usize) {
+        self.modify_end(|data| {
+            extend_repeat_slice(data, slice.value, count);
+            if slice.is_left() {
+                data.make_mut().rotate_right(count * slice.value.len());
+            }
+        })
     }
     #[track_caller]
     pub unsafe fn extend_from_trusted<I>(&mut self, iter: I)

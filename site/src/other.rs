@@ -537,12 +537,12 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Both,
             "Use left-most or right-most argument twice",
-            "# Experimental!\n[∩⌞⊟ @a@b@c]\n[∩⌟⊟ @a@b@c]",
+            "[∩⌞⊟ @a@b@c]\n[∩⌟⊟ @a@b@c]",
         ),
         subscript(
             Bracket,
             "Use left-most or right-most argument twice",
-            "# Experimental!\n{⊓⌞⊟□₂ @a@b@c}\n{⊓⌟⊟□₂ @a@b@c}",
+            "{⊓⌞⊟□₂ @a@b@c}\n{⊓⌟⊟□₂ @a@b@c}",
         ),
         subscript(
             Rows,
@@ -563,6 +563,11 @@ pub fn Subscripts() -> impl IntoView {
             Reach,
             "Put the second argument above or below the outputs",
             "# Experimental!\n{𝄐⌞⊟ 1 2 3}\n{𝄐⌟⊟ 1 2 3}",
+        ),
+        subscript(
+            Fill,
+            "Fill from the left instead of the right",
+            "# Experimental!\n ⬚0[1_2_3 4_5 6]\n⬚⌟0[1_2_3 4_5 6]\n⬚⌞0[1_2_3 4_5 6]",
         ),
     ];
 

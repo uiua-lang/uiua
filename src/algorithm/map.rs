@@ -113,7 +113,8 @@ impl Value {
         }
         // An empty array cannot have the key
         if self.row_count() == 0 {
-            return (env.value_fill().cloned()).ok_or_else(|| env.error("Key not found in map"));
+            return (env.value_fill().map(|fv| fv.value.clone()))
+                .ok_or_else(|| env.error("Key not found in map"));
         }
 
         let keys =
@@ -132,7 +133,7 @@ impl Value {
             Ok(self.row(index))
         } else {
             env.value_fill()
-                .cloned()
+                .map(|fv| fv.value.clone())
                 .ok_or_else(|| env.error("Key not found in map"))
         }
     }

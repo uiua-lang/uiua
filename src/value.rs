@@ -209,14 +209,21 @@ impl Value {
     }
     pub(crate) fn proxy_scalar(&self, env: &Uiua) -> Self {
         match self {
-            Self::Num(_) => env.scalar_fill().unwrap_or_else(|_| f64::proxy()).into(),
-            Self::Byte(_) => env.scalar_fill().unwrap_or_else(|_| u8::proxy()).into(),
-            Self::Complex(_) => env
-                .scalar_fill()
+            Self::Num(_) => (env.scalar_fill().map(|fv| fv.value))
+                .unwrap_or_else(|_| f64::proxy())
+                .into(),
+            Self::Byte(_) => (env.scalar_fill().map(|fv| fv.value))
+                .unwrap_or_else(|_| u8::proxy())
+                .into(),
+            Self::Complex(_) => (env.scalar_fill().map(|fv| fv.value))
                 .unwrap_or_else(|_| Complex::proxy())
                 .into(),
-            Self::Char(_) => env.scalar_fill().unwrap_or_else(|_| char::proxy()).into(),
-            Self::Box(_) => env.scalar_fill().unwrap_or_else(|_| Boxed::proxy()).into(),
+            Self::Char(_) => (env.scalar_fill().map(|fv| fv.value))
+                .unwrap_or_else(|_| char::proxy())
+                .into(),
+            Self::Box(_) => (env.scalar_fill().map(|fv| fv.value))
+                .unwrap_or_else(|_| Boxed::proxy())
+                .into(),
         }
     }
     pub(crate) fn proxy_row(&self, env: &Uiua) -> Self {
@@ -229,7 +236,9 @@ impl Value {
             Self::Num(_) => Array::new(
                 shape,
                 CowSlice::from_elem(
-                    env.scalar_fill().unwrap_or_else(|_| f64::proxy()),
+                    env.scalar_fill()
+                        .map(|fv| fv.value)
+                        .unwrap_or_else(|_| f64::proxy()),
                     elem_count,
                 ),
             )
@@ -237,7 +246,9 @@ impl Value {
             Self::Byte(_) => Array::new(
                 shape,
                 CowSlice::from_elem(
-                    env.scalar_fill().unwrap_or_else(|_| u8::proxy()),
+                    env.scalar_fill()
+                        .map(|fv| fv.value)
+                        .unwrap_or_else(|_| u8::proxy()),
                     elem_count,
                 ),
             )
@@ -245,7 +256,9 @@ impl Value {
             Self::Complex(_) => Array::new(
                 shape,
                 CowSlice::from_elem(
-                    env.scalar_fill().unwrap_or_else(|_| Complex::proxy()),
+                    env.scalar_fill()
+                        .map(|fv| fv.value)
+                        .unwrap_or_else(|_| Complex::proxy()),
                     elem_count,
                 ),
             )
@@ -253,7 +266,9 @@ impl Value {
             Self::Char(_) => Array::new(
                 shape,
                 CowSlice::from_elem(
-                    env.scalar_fill().unwrap_or_else(|_| char::proxy()),
+                    env.scalar_fill()
+                        .map(|fv| fv.value)
+                        .unwrap_or_else(|_| char::proxy()),
                     elem_count,
                 ),
             )
@@ -261,7 +276,9 @@ impl Value {
             Self::Box(_) => Array::new(
                 shape,
                 CowSlice::from_elem(
-                    env.scalar_fill().unwrap_or_else(|_| Boxed::proxy()),
+                    env.scalar_fill()
+                        .map(|fv| fv.value)
+                        .unwrap_or_else(|_| Boxed::proxy()),
                     elem_count,
                 ),
             )
@@ -271,11 +288,14 @@ impl Value {
     pub(crate) fn fill(&mut self, env: &Uiua) -> Result<Value, &'static str> {
         self.match_fill(env);
         match self {
-            Value::Num(_) => env.array_fill::<f64>().map(Into::into),
-            Value::Byte(_) => env.array_fill::<u8>().map(Into::into),
-            Value::Complex(_) => env.array_fill::<Complex>().map(Into::into),
-            Value::Char(_) => env.array_fill::<char>().map(Into::into),
-            Value::Box(_) => env.array_fill::<Boxed>().map(Into::into),
+            Value::Num(_) => env.array_fill::<f64>().map(|fv| fv.value).map(Into::into),
+            Value::Byte(_) => env.array_fill::<u8>().map(|fv| fv.value).map(Into::into),
+            Value::Complex(_) => env
+                .array_fill::<Complex>()
+                .map(|fv| fv.value)
+                .map(Into::into),
+            Value::Char(_) => env.array_fill::<char>().map(|fv| fv.value).map(Into::into),
+            Value::Box(_) => env.array_fill::<Boxed>().map(|fv| fv.value).map(Into::into),
         }
     }
     pub(crate) fn first_dim_zero(&self) -> Self {

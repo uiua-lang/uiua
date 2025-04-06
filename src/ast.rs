@@ -686,7 +686,7 @@ pub enum Subscript {
 }
 
 /// A sided subscript
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum SubSide {
     Left,

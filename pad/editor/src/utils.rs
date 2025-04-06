@@ -699,7 +699,11 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             );
                             let class = format!(
                                 "code-span code-underline {}",
-                                code_font!("nb2 text-gradient")
+                                if at_least_a_little_gay() {
+                                    code_font!("nb2 text-gradient")
+                                } else {
+                                    "monadic-modifier"
+                                }
                             );
                             let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
                             let onclick = move |event: web_sys::MouseEvent| {

@@ -4,6 +4,10 @@ Uiua is not yet stable.
 
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.15.1 - 2025-04-06
+### Interpreter
+- Fix builds on some systems
+
 ## 0.15.0 - 2025-04-03
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
 ### Language

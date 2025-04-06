@@ -245,7 +245,7 @@ impl Value {
         } else {
             fn padded<T: fmt::Display>(
                 c: char,
-                _right: bool,
+                right: bool,
                 arr: Array<T>,
                 env: &Uiua,
             ) -> UiuaResult<Array<char>> {
@@ -275,15 +275,21 @@ impl Value {
                     for (i, s) in new_data.make_mut().chunks_exact_mut(max_len).enumerate() {
                         let n = arr.data[i].to_string();
                         let dot_pos = n.find('.');
-                        let skip = if max_dec == 0 {
-                            0
+                        if right {
+                            for (s, c) in s.iter_mut().zip(n.chars()) {
+                                *s = c;
+                            }
                         } else {
-                            dot_pos
-                                .map(|i| max_dec - (n.len() - i - 1))
-                                .unwrap_or(max_dec + 1)
-                        };
-                        for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
-                            *s = c;
+                            let skip = if max_dec == 0 {
+                                0
+                            } else {
+                                dot_pos
+                                    .map(|i| max_dec - (n.len() - i - 1))
+                                    .unwrap_or(max_dec + 1)
+                            };
+                            for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
+                                *s = c;
+                            }
                         }
                         if dot_pos.is_none() && max_dec > 0 && c.is_ascii_digit() {
                             s[max_whole] = '.';

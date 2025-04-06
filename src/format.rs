@@ -1074,77 +1074,7 @@ impl Formatter<'_> {
                 }
             }
             Word::Func(func) => self.func(func, depth),
-            Word::Pack(pack) => {
-                if let Some(down_span) = &pack.down_span {
-                    self.push(down_span, "↓");
-                }
-
-                let start_indent =
-                    (self.output.lines().last()).map_or(0, |line| line.chars().count());
-                let indent = self.config.multiline_indent * depth;
-
-                let any_multiline = pack.branches.iter().any(|br| {
-                    br.value.lines.len() > 1
-                        || br.value.lines.len() >= 2
-                            && br.value.lines.iter().any(|line| line.is_empty())
-                        || (br.value.lines.iter().flatten())
-                            .any(|word| word_is_multiline(&word.value))
-                });
-
-                self.output.push('(');
-                for (i, br) in pack.branches.iter().enumerate() {
-                    let mut lines = &*br.value.lines;
-
-                    while lines.first().is_some_and(|line| line.is_empty()) {
-                        lines = &lines[1..];
-                    }
-
-                    if i == 0 {
-                        let add_leading_newline =
-                            any_multiline && (start_indent > indent + 1 || lines.is_empty());
-                        if add_leading_newline {
-                            self.newline(depth + (!lines.is_empty()) as usize);
-                        }
-                    } else {
-                        self.output.push('|');
-                        if any_multiline {
-                            self.output.push(' ');
-                        }
-                    }
-                    if let Some(sig) = &br.value.signature {
-                        self.format_signature(sig.value, any_multiline || lines.len() <= 1);
-                        if lines.is_empty() {
-                            self.output.pop();
-                        }
-                    }
-                    // Remove trailing empty lines from last branch
-                    if i == pack.branches.len() - 1
-                        && lines.last().is_some_and(|line| line.is_empty())
-                        && lines.iter().nth_back(1).is_some_and(|line| line.is_empty())
-                        && !(lines.iter().nth_back(1)).is_some_and(|line| {
-                            line.last().is_some_and(|word| word.value.is_end_of_line())
-                        })
-                    {
-                        lines = &lines[..lines.len() - 1];
-                    }
-                    self.format_multiline_words(
-                        lines,
-                        Compact::Never,
-                        false,
-                        true,
-                        i < pack.branches.len() - 1,
-                        depth + 1,
-                    );
-                    if any_multiline
-                        && i < pack.branches.len() - 1
-                        && br.value.lines.last().is_some_and(|line| !line.is_empty())
-                        && !self.output.trim_end_matches(' ').ends_with('\n')
-                    {
-                        self.newline(depth);
-                    }
-                }
-                self.output.push(')');
-            }
+            Word::Pack(pack) => self.pack(pack, depth),
             Word::Primitive(prim) => self.format_primitive(*prim, &word.span),
             Word::Modified(m) => {
                 self.format_modifier(&m.modifier, depth);
@@ -1511,6 +1441,137 @@ impl Formatter<'_> {
             _ => self.push(&sub.span, &sub.value.to_string()),
         }
     }
+    fn pack(&mut self, pack: &FunctionPack, depth: usize) {
+        if let Some(down_span) = &pack.down_span {
+            self.push(down_span, "↓");
+        }
+
+        let start_indent = (self.output.lines().last()).map_or(0, |line| line.chars().count());
+        let indent = self.config.multiline_indent * depth;
+
+        self.output.push('(');
+
+        if pack.branches.iter().all(|br| !br.value.is_multiline()) {
+            // If all branches are single-line, we can put multiple branches on the same line
+            let mut rows: Vec<Vec<&Sp<Func>>> = Vec::new();
+            for br in &pack.branches {
+                if rows.last_mut().is_some_and(|line| {
+                    line.last()
+                        .is_some_and(|br2| br.span.start.line == br2.span.start.line)
+                }) {
+                    rows.last_mut().unwrap().push(br);
+                } else {
+                    rows.push(vec![br]);
+                }
+            }
+            let row_count = rows.len();
+            for (i, row) in rows.into_iter().enumerate() {
+                for (j, br) in row.into_iter().enumerate() {
+                    let mut lines = &*br.value.lines;
+                    while lines.first().is_some_and(|line| line.is_empty()) {
+                        lines = &lines[1..];
+                    }
+
+                    if (i, j) == (0, 0) {
+                        let add_leading_newline =
+                            row_count > 1 && (start_indent > indent + 1 || lines.is_empty());
+                        if add_leading_newline {
+                            self.newline(depth + (!lines.is_empty()) as usize);
+                        }
+                    } else {
+                        if j > 0 && row_count > 1 {
+                            self.output.push(' ');
+                        }
+                        self.output.push('|');
+                        if row_count > 1 {
+                            self.output.push(' ');
+                        }
+                    }
+                    if let Some(sig) = &br.value.signature {
+                        self.format_signature(sig.value, lines.len() <= 1);
+                        if lines.is_empty() {
+                            self.output.pop();
+                        }
+                    }
+                    self.format_multiline_words(
+                        lines,
+                        Compact::Never,
+                        false,
+                        true,
+                        i < pack.branches.len() - 1,
+                        depth + 1,
+                    );
+                }
+                if row_count > 1
+                    && i < row_count - 1
+                    && !self.output.trim_end_matches(' ').ends_with('\n')
+                {
+                    self.newline(depth);
+                }
+            }
+        } else {
+            // If any branch is multiline, we put all branches on separate lines
+            let any_multiline = pack.branches.iter().any(|br| {
+                br.value.lines.len() > 1
+                    || br.value.lines.len() >= 2
+                        && br.value.lines.iter().any(|line| line.is_empty())
+                    || (br.value.lines.iter().flatten()).any(|word| word_is_multiline(&word.value))
+            });
+
+            for (i, br) in pack.branches.iter().enumerate() {
+                let mut lines = &*br.value.lines;
+
+                while lines.first().is_some_and(|line| line.is_empty()) {
+                    lines = &lines[1..];
+                }
+
+                if i == 0 {
+                    let add_leading_newline =
+                        any_multiline && (start_indent > indent + 1 || lines.is_empty());
+                    if add_leading_newline {
+                        self.newline(depth + (!lines.is_empty()) as usize);
+                    }
+                } else {
+                    self.output.push('|');
+                    if any_multiline {
+                        self.output.push(' ');
+                    }
+                }
+                if let Some(sig) = &br.value.signature {
+                    self.format_signature(sig.value, any_multiline || lines.len() <= 1);
+                    if lines.is_empty() {
+                        self.output.pop();
+                    }
+                }
+                // Remove trailing empty lines from last branch
+                if i == pack.branches.len() - 1
+                    && lines.last().is_some_and(|line| line.is_empty())
+                    && lines.iter().nth_back(1).is_some_and(|line| line.is_empty())
+                    && !(lines.iter().nth_back(1)).is_some_and(|line| {
+                        line.last().is_some_and(|word| word.value.is_end_of_line())
+                    })
+                {
+                    lines = &lines[..lines.len() - 1];
+                }
+                self.format_multiline_words(
+                    lines,
+                    Compact::Never,
+                    false,
+                    true,
+                    i < pack.branches.len() - 1,
+                    depth + 1,
+                );
+                if any_multiline
+                    && i < pack.branches.len() - 1
+                    && br.value.lines.last().is_some_and(|line| !line.is_empty())
+                    && !self.output.trim_end_matches(' ').ends_with('\n')
+                {
+                    self.newline(depth);
+                }
+            }
+        }
+        self.output.push(')');
+    }
 }
 
 fn words_are_multiline(words: &[Sp<Word>]) -> bool {
@@ -1702,6 +1763,8 @@ fn native() -> &'static dyn SysBackend {
 #[cfg(test)]
 fn formatter_idempotence() {
     let input = "\
+⊃(|)
+⊃(+|-|×|÷)
 F ← (
   ⊃(+
   | -))
@@ -1833,6 +1896,17 @@ F ← 5
 [(1 2
   3 4
 )]
+
+⊃(∘ | ¯ | ±
+| ⌵ | ∿ | √
+| ⁅ | ⌊ | ⌈
+)
+
+∘⊃(
+  ∘ | ¯ | ±
+| ⌵ | ∿ | √
+| ⁅ | ⌊ | ⌈
+)
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

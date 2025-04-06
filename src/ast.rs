@@ -531,6 +531,24 @@ pub struct Func {
     pub closed: bool,
 }
 
+impl Func {
+    /// Get the lines of the function without leading or trailing empty lines
+    pub fn trimmed_lines(&self) -> &[Vec<Sp<Word>>] {
+        let mut lines = self.lines.as_slice();
+        while lines.first().is_some_and(|line| line.is_empty()) {
+            lines = &lines[1..];
+        }
+        while lines.last().is_some_and(|line| line.is_empty()) {
+            lines = &lines[..lines.len() - 1];
+        }
+        lines
+    }
+    /// Whether the function visibly has multiple lines
+    pub fn is_multiline(&self) -> bool {
+        self.trimmed_lines().len() > 1
+    }
+}
+
 impl fmt::Debug for Func {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut d = f.debug_tuple("func");

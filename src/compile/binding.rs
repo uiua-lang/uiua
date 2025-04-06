@@ -86,17 +86,23 @@ impl Compiler {
                 _ => None,
             }) {
                 if let Ok(Some((path_locals, local))) = self.ref_local(r) {
-                    self.validate_local(&r.name.value, local, &r.name.span);
-                    (self.code_meta.global_references)
-                        .insert(binding.name.span.clone(), local.index);
-                    for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                    let is_noadic_function = match &self.asm.bindings[local.index].kind {
+                        BindingKind::Func(f) if f.sig.args == 0 => true,
+                        _ => false,
+                    };
+                    if !is_noadic_function {
+                        self.validate_local(&r.name.value, local, &r.name.span);
                         (self.code_meta.global_references)
-                            .insert(comp.module.span.clone(), local.index);
+                            .insert(binding.name.span.clone(), local.index);
+                        for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                            (self.code_meta.global_references)
+                                .insert(comp.module.span.clone(), local.index);
+                        }
+                        (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
+                        let local = LocalName { public, ..local };
+                        self.scope.names.insert(name, local);
+                        return Ok(());
                     }
-                    (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
-                    let local = LocalName { public, ..local };
-                    self.scope.names.insert(name, local);
-                    return Ok(());
                 }
             }
         }

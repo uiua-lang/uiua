@@ -275,10 +275,12 @@ fn TutorialBasic() -> impl IntoView {
         <p>"The formatter will align consecutive end-of-line comments. Try it out!"</p>
         <Editor example="%2 8 # Line\n@x # these\n1 # up"/>
 
-        <h3>"Output Comments"</h3>
+        <Hd id="output-comments">"Output Comments"</Hd>
         <p>"A comment that starts with additional "<code>"#"</code>"s is an "<em>"output comment"</em>". The formatter replaces the text of an output comment with as many values from the stack as there are extra "<code>"#"</code>"s."</p>
         <p>"Click Run to try it out!"</p>
-        <Editor example="1 2 3\n####\n+\n###\n+\n##"/>
+        <Editor example="1 2 4\n####\n+\n###\n+\n##"/>
+        <p>"Output comments on the same line as other code show the state of the stack after the code is run. This is useful for debugging."</p>
+        <Editor example="+1 2 ##\n×3 4 ##"/>
 
         <Hd id="stack-functions">"Stack Functions"</Hd>
         <p>"There are a few functions that work on the stack itself. Some of these are critical and can be found scattered across all "{lang}" code."</p>
@@ -875,8 +877,7 @@ X 5"/>
         <Editor example="\
 F ← (
   ### Run to see values here!
-  +×.
-  ##
+  +×. ##
 )
 F 3 5
 F 2 9

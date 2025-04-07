@@ -946,10 +946,20 @@ code:
         }
     }
     // Compile a line, checking an end-of-line signature comment
-    fn line(&mut self, line: Vec<Sp<Word>>, must_be_callable: bool) -> UiuaResult<Node> {
+    fn line(&mut self, mut line: Vec<Sp<Word>>, must_be_callable: bool) -> UiuaResult<Node> {
         let comment_sig = line_sig(&line);
+        let output_comment = if line
+            .last()
+            .is_some_and(|w| matches!(w.value, Word::OutputComment { .. }))
+        {
+            let word = line.pop().unwrap();
+            Some(self.word(word)?)
+        } else {
+            None
+        };
         // Actually compile the line
         let mut node = self.words(line)?;
+        node.extend(output_comment);
         // Validate line signature
         if let Some(comment_sig) = comment_sig {
             self.apply_node_comment(&mut node, &comment_sig.value, "Line", &comment_sig.span);

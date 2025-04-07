@@ -562,8 +562,8 @@ impl Compiler {
                     .into(),
                 );
                 let comment = match &def_name {
-                    Some(def_name) => format!("Names of `{def_name}`'s fields"),
-                    None => "Names of fields".into(),
+                    Some(def_name) => format!("Create a new `{def_name}` SoA\n{def_name} ?"),
+                    None => "Create a new SoA instance\nInstance ?".into(),
                 };
                 let meta = BindingMeta {
                     comment: Some(DocComment::from(comment.as_str())),

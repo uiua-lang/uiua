@@ -329,7 +329,7 @@ impl Compiler {
         let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
         let compile = |comp: &mut Compiler| -> UiuaResult<Node> {
             // Compile the words
-            let node = comp.words(binding.words);
+            let node = comp.line(binding.words, false);
             // Add an error binding if there was an error
             let mut node = match node {
                 Ok(node) => node,

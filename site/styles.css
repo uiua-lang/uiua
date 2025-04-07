@@ -1025,6 +1025,10 @@ option,
     color: #f576d8;
 }
 
+.pentadic-function {
+    color: #d876f5;
+}
+
 .variadic-function {
     background-image: linear-gradient(170deg,
             #ed5e6a 34%,

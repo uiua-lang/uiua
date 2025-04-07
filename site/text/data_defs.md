@@ -258,6 +258,29 @@ Person {"Alice" "Bob" "Carol"} [21 54 49] [5 0 12]
 ⍚˜⊂ Person □"Dave" 31 2
 ```
 
+For non-boxing data definitions, constructing a struct of arrays when some of the fields have a default value works properly.
+
+```uiua
+~Color [r g b a ← 1]
+Color [1 0 0] [0 1 0] [0 0 1]
+```
+
+However, this is not the case for boxing data definitions. Notice here how there is only one `Score` value for every person.
+
+```uiua
+~Person {Name Age Score ← 0}
+Person {"Alice" "Bob" "Carol"} [21 54 49]
+```
+
+For this reason, boxing data definitions have a `SoA` constructor that properly initializes lists of default fields.
+
+```uiua
+~Person {Name Age Score ← 0}
+Person~SoA {"Alice" "Bob" "Carol"} [21 54 49]
+```
+
+The `SoA` constructor is only available for boxing data definitions that have at least one non-default field.
+
 ## Dynamic Structure
 
 Which fields a data definition has are generally static. Fields accesses via the generated functions are static.

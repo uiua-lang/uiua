@@ -40,7 +40,7 @@
 ⍤⤙≍ 5 Foo~Bar~a Foo~Bar 5
 
 ┌─╴S
-  ~{A B C}
+  ~ {A B C}
   PopA  ← :⍜A(:°(⊂:))
   PushB ← ⍜⊙B(⊂:)
 └─╴
@@ -69,7 +69,7 @@ S~PushB
 ⍤⤙≍ ¤[1 2 3] Foo [1 2 3]
 
 ┌─╴Foo
-  ~{Bar Baz}
+  ~ {Bar Baz}
   ~AddBar     ← +Bar
   ~Sum        ← AddBar Baz # ? Foo
   ~WithBarSum ← Foo~Sum New 10 Baz
@@ -89,5 +89,15 @@ F! ← ^0 Foo
 ⍤⤙≍ 5 F!Foo!Bar
 
 # Unnamed top-level def
-~{Foo Bar}
+~ {Foo Bar}
 ⍤⤙≍ [3 5] [⊃Foo Bar] New 3 5
+
+# SoA
+~F [a b c ← 0]
+⍤⤙≍ [1_2_3 4_5_6 0_0_0] F 1_2_3 4_5_6
+~F [a ← 0|b c]
+⍤⤙≍ [0_0_0 1_2_3 4_5_6] F 1_2_3 4_5_6
+~F {a b c ← 0}
+⍤⤙≍ {1_2_3 4_5_6 0_0_0} F~SoA 1_2_3 4_5_6
+~F {a ← 0|b c}
+⍤⤙≍ {0_0_0 1_2_3 4_5_6} F~SoA 1_2_3 4_5_6

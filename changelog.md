@@ -9,6 +9,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⊜`](https://uiua.org/docs/partition) for monadic functions
 - Stabilize [`negate ¯`](https://uiua.org/docs/negate) subscripts
 - [Output comments](https://uiua.org/tutorial/basic#output-comments) now show values *after* their line rather than before it
+- Add `SoA` constructor to boxing data definitions
+  - This makes it easier to initialize data definitions that have defaults as structs-of-arrays
 - Add experimental [lexical ordering](https://uiua.org/docs/experimental#lexical-ordering) syntax
   - This enables some function packs and array notation to execute in the order they are normally read
 - Add experimental sided [`fill ⬚`](https://uiua.org/docs/fill)

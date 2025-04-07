@@ -404,7 +404,7 @@ impl Compiler {
             Signature::new(constructor_args, 1),
             node,
         );
-        let local = LocalName {
+        let contructor_local = LocalName {
             index: self.next_global,
             public: true,
         };
@@ -545,12 +545,57 @@ impl Compiler {
             self.compile_bind_function("Call".into(), local, func, span, BindingMeta::default())?;
         }
 
+        // Bind the SoA constructor
+        if boxed {
+            if let Some(len_index) = fields.iter().position(|f| f.init.is_none()) {
+                let mask = (fields.iter().enumerate())
+                    .fold(0, |acc, (i, f)| acc | ((f.init.is_some() as u64) << i));
+                let node = Node::TrackCaller(
+                    Node::from_iter([
+                        Node::Call(constructor_func.clone(), span),
+                        Node::NormalizeSoA {
+                            len_index,
+                            mask,
+                            span,
+                        },
+                    ])
+                    .into(),
+                );
+                let comment = match &def_name {
+                    Some(def_name) => format!("Names of `{def_name}`'s fields"),
+                    None => "Names of fields".into(),
+                };
+                let meta = BindingMeta {
+                    comment: Some(DocComment::from(comment.as_str())),
+                    ..Default::default()
+                };
+                let name = Ident::from("SoA");
+                let func = self.asm.add_function(
+                    FunctionId::Named(name.clone()),
+                    Signature::new(constructor_args, 1),
+                    node,
+                );
+                let local = LocalName {
+                    index: self.next_global,
+                    public: true,
+                };
+                self.next_global += 1;
+                self.compile_bind_function(name, local, func, span, meta)?;
+            }
+        }
+
         // Bind the constructor
         let meta = BindingMeta {
             comment: Some(DocComment::from(comment.as_str())),
             ..Default::default()
         };
-        self.compile_bind_function(constructor_name, local, constructor_func, span, meta)?;
+        self.compile_bind_function(
+            constructor_name,
+            contructor_local,
+            constructor_func,
+            span,
+            meta,
+        )?;
 
         Ok(())
     }

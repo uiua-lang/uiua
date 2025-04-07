@@ -697,6 +697,7 @@ impl VirtualEnv {
             }
             Node::GetLocal { .. } => self.handle_args_outputs(0, 1),
             Node::SetLocal { .. } => self.handle_args_outputs(1, 0),
+            Node::NormalizeSoA { .. } => self.handle_args_outputs(1, 1),
         }
         // println!("{node:?} -> {} ({})", self.stack.sig(), self.under.sig());
         Ok(())

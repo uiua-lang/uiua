@@ -1048,7 +1048,9 @@ impl Value {
 
         // Fill value
         value.match_fill(ctx);
-        if value.shape() != &max_shape {
+        if !allow_ext && value.shape() != &max_shape
+            || allow_ext && !max_shape.ends_with(value.shape())
+        {
             match &mut value {
                 Value::Num(arr) => match ctx.scalar_fill::<f64>() {
                     Ok(fill) => arr.fill_to_shape(&max_shape, fill),
@@ -1107,6 +1109,11 @@ impl Value {
         value.reserve_min(total_elements);
 
         // Combine the arrays
+        if allow_ext {
+            for d in max_shape.iter().take(max_shape.len() - value.rank()).rev() {
+                value.reshape_scalar(Ok(*d as isize), ctx)?;
+            }
+        }
         value.shape_mut().insert(0, 1);
         value.take_label();
         Ok(match value {

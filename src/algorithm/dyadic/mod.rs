@@ -30,6 +30,10 @@ use crate::{
     Shape, Uiua, UiuaResult, RNG,
 };
 
+use super::{
+    shape_prefixes_match, validate_size, validate_size_of, ArrayCmpSlice, FillContext, SizeError,
+};
+
 macro_rules! par_if {
     ($cond:expr, $if_true:expr, $if_false:expr) => {{
         #[cfg(not(target_arch = "wasm32"))]
@@ -44,10 +48,6 @@ macro_rules! par_if {
         $if_false
     }};
 }
-
-use super::{
-    shape_prefixes_match, validate_size, validate_size_of, ArrayCmpSlice, FillContext, SizeError,
-};
 
 impl Value {
     pub(crate) fn bin_coerce_to_boxes<T, C: FillContext, E: ToString>(
@@ -221,8 +221,12 @@ impl Value {
             )))
         }
     }
-    pub(crate) fn reshape_scalar(&mut self, count: Result<isize, bool>, env: &Uiua) -> UiuaResult {
-        val_as_arr!(self, |a| a.reshape_scalar(count, env))
+    pub(crate) fn reshape_scalar<C: FillContext>(
+        &mut self,
+        count: Result<isize, bool>,
+        ctx: &C,
+    ) -> Result<(), C::Error> {
+        val_as_arr!(self, |a| a.reshape_scalar(count, ctx))
     }
 }
 
@@ -254,15 +258,19 @@ impl<T: Clone> Array<T> {
 
 impl<T: ArrayValue> Array<T> {
     /// `reshape` this array by replicating it as the rows of a new array
-    pub fn reshape_scalar(&mut self, count: Result<isize, bool>, env: &Uiua) -> UiuaResult {
+    pub fn reshape_scalar<C: FillContext>(
+        &mut self,
+        count: Result<isize, bool>,
+        ctx: &C,
+    ) -> Result<(), C::Error> {
         self.take_map_keys();
         match count {
             Ok(count) => {
                 if count < 0 {
                     self.reverse();
                 }
-                self.reshape_scalar_integer(count.unsigned_abs(), env.scalar_fill::<T>().ok())
-                    .map_err(|e| env.error(e))
+                self.reshape_scalar_integer(count.unsigned_abs(), ctx.scalar_fill::<T>().ok())
+                    .map_err(|e| ctx.error(e))
             }
             Err(rev) => {
                 if rev {

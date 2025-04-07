@@ -367,6 +367,7 @@ inverse!(
         len,
         inner,
         boxed,
+        allow_ext,
         prim,
         span
     },
@@ -377,6 +378,7 @@ inverse!(
                 inv.prepend(Node::Unpack {
                     count: *len,
                     unbox: *boxed,
+                    allow_ext: *allow_ext,
                     span: *span,
                     prim: *prim,
                 });
@@ -529,6 +531,7 @@ inverse!(
     Unpack {
         count,
         unbox,
+        allow_ext,
         prim,
         span,
         ..
@@ -539,6 +542,7 @@ inverse!(
             len: ArrayLen::Static(count),
             inner: Node::empty().into(),
             boxed: unbox,
+            allow_ext,
             prim,
             span,
         });

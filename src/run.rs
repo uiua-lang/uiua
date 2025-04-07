@@ -591,9 +591,12 @@ impl Uiua {
                 len,
                 inner,
                 boxed,
+                allow_ext,
                 span,
                 ..
-            } => self.with_span(span, |env| env.make_array(len, inner.into(), boxed)),
+            } => self.with_span(span, |env| {
+                env.make_array(len, inner.into(), boxed, allow_ext)
+            }),
             Node::Call(f, span) => self.call_with_span(&f, span),
             Node::CustomInverse(cust, span) => match &cust.normal {
                 Ok(normal) => self.exec_with_span(normal.clone(), span),
@@ -668,6 +671,7 @@ impl Uiua {
                 span,
                 prim,
                 unbox,
+                ..
             } => self.with_span(span, |env| {
                 let arr = env.pop(1)?;
                 if arr.row_count() != count || arr.shape() == [] {
@@ -1050,7 +1054,13 @@ impl Uiua {
     pub(crate) fn touch_stack(&self, n: usize) -> UiuaResult {
         self.require_height(n).map(drop)
     }
-    pub(crate) fn make_array(&mut self, len: ArrayLen, inner: Node, boxed: bool) -> UiuaResult {
+    pub(crate) fn make_array(
+        &mut self,
+        len: ArrayLen,
+        inner: Node,
+        boxed: bool,
+        allow_ext: bool,
+    ) -> UiuaResult {
         let start_height = self.stack_height();
         self.rt.array_depth += 1;
         let res = self.exec(inner);
@@ -1075,7 +1085,7 @@ impl Uiua {
             let elems: usize = values.iter().map(Value::element_count).sum();
             let elem_size = values.first().map_or(size_of::<f64>(), Value::elem_size);
             validate_size_impl(elem_size, [elems]).map_err(|e| self.error(e))?;
-            Value::from_row_values(values, self)?
+            Value::from_row_values_impl(values, self, allow_ext)?
         };
         self.push(val);
         Ok(())

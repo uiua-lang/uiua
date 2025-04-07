@@ -1360,6 +1360,7 @@ code:
                     len: ArrayLen::Static(sig.outputs),
                     inner: inner.into(),
                     boxed: false,
+                    allow_ext: false,
                     prim: None,
                     span,
                 }
@@ -1489,6 +1490,7 @@ code:
                     len,
                     inner: inner.into(),
                     boxed: arr.boxes,
+                    allow_ext: false,
                     prim: None,
                     span,
                 }
@@ -2178,6 +2180,7 @@ code:
                             len: ArrayLen::Static(self.positive_subscript(n, Couple, &span)?),
                             inner: Node::empty().into(),
                             boxed: false,
+                            allow_ext: true,
                             prim: Some(Couple),
                             span: self.add_span(span),
                         },
@@ -2186,6 +2189,7 @@ code:
                         len: ArrayLen::Static(self.positive_subscript(n, Box, &span)?),
                         inner: Node::empty().into(),
                         boxed: true,
+                        allow_ext: false,
                         prim: Some(Box),
                         span: self.add_span(span),
                     },
@@ -2208,6 +2212,7 @@ code:
                                 Node::Unpack {
                                     count: n,
                                     unbox: false,
+                                    allow_ext: false,
                                     prim: Some(First),
                                     span,
                                 },
@@ -2219,6 +2224,7 @@ code:
                                 Node::Unpack {
                                     count: n,
                                     unbox: false,
+                                    allow_ext: false,
                                     prim: Some(Last),
                                     span,
                                 },

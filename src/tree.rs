@@ -21,7 +21,14 @@ use crate::{
 
 node!(
     /// Create an array
-    Array { len: ArrayLen, inner: Arc<Node>, boxed: bool, prim: Option<Primitive>, span: usize },
+    Array {
+        len: ArrayLen,
+        inner: Arc<Node>,
+        boxed: bool,
+        allow_ext: bool,
+        prim: Option<Primitive>,
+        span: usize
+    },
     /// Get a global value
     CallGlobal(index(usize), sig(Signature)),
     /// Call a recursive macro
@@ -41,7 +48,13 @@ node!(
     /// A switch with branches
     Switch { branches: Ops, sig: Signature, under_cond: bool, span: usize },
     /// Unpack an array onto the stack
-    Unpack { count: usize, unbox: bool, prim: Option<Primitive>, span: usize },
+    Unpack {
+        count: usize,
+        unbox: bool,
+        allow_ext: bool,
+        prim: Option<Primitive>,
+        span: usize
+    },
     /// Set some values for an output comment
     SetOutputComment { i: usize, n: usize },
     /// Validate that a value has a certain type

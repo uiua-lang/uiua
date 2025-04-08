@@ -2303,7 +2303,7 @@ primitive!(
     ([2], Try, Misc, ("try", '⍣')),
     /// Call a pattern matching case
     ///
-    /// [case] calls its function and prevents errors from escaping a single [try].
+    /// [case] calls its function and allows errors to escape from a single [try].
     /// Its primary use is in pattern matching.
     /// Consider this function:
     /// ex: F ← ⍣(

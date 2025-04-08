@@ -1357,24 +1357,37 @@ fn TutorialMoreArray() -> impl IntoView {
         <Editor example="≡⊂ 1_2_3 4_5_6"/>
         <p>"Usually, the arrays must have the same number of rows."</p>
         <Editor example="≡⊂ 1_2_3 4_5"/> // Should fail
-        <p>"However, there is an exception for arrays that have exactly one row. In this case, that row will be repeated for each row of the other array(s)."</p>
+        <p>"However, there is an exception for scalars and for arrays that have exactly one row. In this case, that scalar/row will be repeated for each row of the other array(s)."</p>
         <Editor example="≡⊂ 1_2_3 4"/>
-        <Editor example="≡⊂ 1 2_3_4"/>
+        <Editor example="≡⊂ 4 1_2_3"/>
         <Editor example="≡(⊂⊂) 1 2_3_4 5"/>
-        <p>"Notice that the second argument here is a 2D array with 1 row of 2 elements. It will be repeated just like the scalars above."</p>
+        <p>"Notice that the second argument of this next example is a 2D array with 1 row of 2 elements. It will be repeated just like the scalars above."</p>
         <Editor example="≡⊟ [1_2 3_4 5_6] [¯1_0]"/>
-        <p>"If we want to combine each row of one array with copies of another, we can turn one of the arrays into a single row array with "<Prim prim=Fix/>". "<Prim prim=Fix/>" adds a 1 to the front of the shape of an array."</p>
-        <Editor example="¤.1_2_3"/>
+        <p>"If we want to combine each row of one array with copies of another, we can turn one of the arrays into a single row array with "<Prim prim=Fix/>". "<Prim prim=Fix/>" adds a 1 to the front of the shape of an array, and is equivalent to wrapping it in a pair of square brackets. Both of these methods create an array that only contains the singular row."</p>
+            <Editor example="$WithoutFixing 1_2_3
+$Fixed ¤1_2_3
+$Bracketed [1_2_3]"/>
         <p>"Here, we "<Prim prim=Fix/>" "<code>"1_2_3"</code>" so that it is reused for each row of "<code>"4_5_6"</code>"."</p>
         <Editor example="≡⊂ ¤ 1_2_3 4_5_6"/>
         <p>"If we have a bunch of arrays and want to choose which ones are fixed and which are not, we can use planet notation."</p>
         <Editor example="≡⊂ ⊙¤ 1_2_3 4_5_6"/>
-        <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘¤¤∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
         <Editor example="≡(⊂⊂⊂) ⊙∩¤     1_2_3 4_5_6 7_8_9 10_11_12"/>
         <p><Prim prim=Fix/>" also works without "<Prim prim=Rows/>" with pervasive dyadic functions."</p>
         <Editor example="-  [1 2 3]  [4 5 6]\n- ¤[1 2 3]  [4 5 6]\n-  [1 2 3] ¤[4 5 6]"/>
         <Editor example="-  1_3 [3_4 5_6 7_8]"/> // Should fail
         <Editor example="- ¤1_3 [3_4 5_6 7_8]"/>
+        <h3>"Recap"</h3>
+        <p>"When arrays are iterated over, their rows will be used in sequence. However, there is a special case: if the array has only one row (that is, its shape starts with a 1), it will be treated like a scalar and repeated in its entirety in each iteration. "</p>
+        <p>"This applies, of course, to scalars:"</p>
+        <Editor example="+ 2 [50 60 70]"/>
+        <p>"And to "<Prim prim=Fix/>"'ed arrays"</p>
+        <Editor example="+ ¤[2 3] [50 60 70]"/>
+        <p>"Notice how the result of the latter is equivalent to the following, where each addition contains the entire fixed array as a value while the non-fixed array is iterated over."</p>
+            <Editor example="[
+  +[2 3] 50
+  +[2 3] 60
+  +[2 3] 70
+]"/>
 
         <Hd id="operating-at-different-ranks">"Operating at Different Ranks"</Hd>
         <p><Prim prim=Rows/>" is the bread and butter of traversing an array's structure. It calls its function on each row of an array, but what if you want to go deeper?"</p>

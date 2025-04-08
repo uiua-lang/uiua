@@ -1365,7 +1365,7 @@ fn TutorialMoreArray() -> impl IntoView {
         <Editor example="≡⊂ [[2 3]] [50 60 70]"/>
         <Editor example="≡⊂ [50 60 70] [[2 3]] "/>
         <p>"Notice how in this last example, the array "<code>[[2 3]]</code>" is an array of a single row (that is, "<code>[2 3]</code>"), so it is repeated across all iterations. It would be equivalent to the following:"</p>
-        <Editor example="[\n\t≡⊂ [2 3] 50\n\t≡⊂ [2 3] 60\n\t≡⊂ [2 3] 70\n]"/>
+        <Editor example="[\n  ≡⊂ [2 3] 50\n  ≡⊂ [2 3] 60\n  ≡⊂ [2 3] 70\n]"/>
         <p>"The rows don't have to be scalars themselves: the second argument here is a 2D array with 1 row of 2 elements. It will be repeated just like the scalars above."</p>
         <Editor example="≡⊟ [1_2 3_4 5_6] [¯1_0]"/>
         <p>"Surrounding an array with brackets every time we want it to be repeated instead of being iterated through is unwieldly and impractical, so uiua has its own primitive for it: "<Prim prim=Fix/>", which adds the aforementioned "<code>1</code>" to the shape."</p>

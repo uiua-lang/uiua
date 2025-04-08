@@ -585,7 +585,7 @@ impl Parser<'_> {
                     count += 1 + if chars.binary_search(&c).is_ok() {
                         0
                     } else {
-                        c.len_utf16()
+                        2 * c.len_utf16()
                     };
                 });
                 count

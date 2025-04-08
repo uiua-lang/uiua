@@ -573,7 +573,7 @@ impl Parser<'_> {
                     chars.extend(Primitive::non_deprecated().filter_map(|p| p.glyph()));
                     chars.extend(' '..='~');
                     chars.extend(SUBSCRIPT_DIGITS);
-                    chars.extend("←↚‼₋⌞⌟".chars());
+                    chars.extend("←↚‼₋⌞⌟↓".chars());
                     chars.sort_unstable();
                     chars
                 };
@@ -582,10 +582,10 @@ impl Parser<'_> {
                 debug_assert!(chars.len() < 256);
                 let mut count = 0;
                 iter_chars(&self.tokens[words_start..words_end], self.inputs, |c| {
-                    count += if chars.binary_search(&c).is_ok() {
-                        1
+                    count += 1 + if chars.binary_search(&c).is_ok() {
+                        0
                     } else {
-                        c.len_utf16() * 2
+                        c.len_utf16()
                     };
                 });
                 count

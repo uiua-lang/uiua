@@ -1364,9 +1364,7 @@ fn TutorialMoreArray() -> impl IntoView {
         <p>"Notice that the second argument of this next example is a 2D array with 1 row of 2 elements. It will be repeated just like the scalars above."</p>
         <Editor example="≡⊟ [1_2 3_4 5_6] [¯1_0]"/>
         <p>"If we want to combine each row of one array with copies of another, we can turn one of the arrays into a single row array with "<Prim prim=Fix/>". "<Prim prim=Fix/>" adds a 1 to the front of the shape of an array, and is equivalent to wrapping it in a pair of square brackets. Both of these methods create an array that only contains the singular row."</p>
-            <Editor example="$WithoutFixing 1_2_3
-$Fixed ¤1_2_3
-$Bracketed [1_2_3]"/>
+        <Editor example="¤1_2_3 [1_2_3] # Equivalent"/>
         <p>"Here, we "<Prim prim=Fix/>" "<code>"1_2_3"</code>" so that it is reused for each row of "<code>"4_5_6"</code>"."</p>
         <Editor example="≡⊂ ¤ 1_2_3 4_5_6"/>
         <p>"If we have a bunch of arrays and want to choose which ones are fixed and which are not, we can use planet notation."</p>

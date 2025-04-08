@@ -1352,6 +1352,7 @@ fn TutorialMoreArray() -> impl IntoView {
         <h1>"Advanced Array Manipulation"</h1>
         <p>"Sometimes the operation you need to perform on an array is more complicated than modifiers like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allow."</p>
 
+
         <Hd id="fix"><Prim prim=Fix/></Hd>
         <p><Prim prim=Rows/>" can be used to iterate over multiple arrays. The nth row of each array will be passed to the function, and the result will be put in a new array."</p>
         <Editor example="≡⊂ 1_2_3 4_5_6"/>

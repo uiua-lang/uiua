@@ -1356,21 +1356,25 @@ fn TutorialMoreArray() -> impl IntoView {
         <Hd id="fix"><Prim prim=Fix/></Hd>
         <p><Prim prim=Rows/>" can be used to iterate over multiple arrays. The nth row of each array will be passed to the function, and the result will be put in a new array."</p>
         <Editor example="≡⊂ 1_2_3 4_5_6"/>
-        <p>"Usually, the arrays must have the same number of rows."</p>
+        <p>"This works because both arrays have the same shape ("<code>[3]</code>"). If they didn't, we would get a runtime error."</p>
         <Editor example="≡⊂ 1_2_3 4_5"/> // Should fail
-        <p>"However, there is an exception for arrays that have exactly one row. In this case, that row will be repeated for each row of the other array(s)."</p>
-        <Editor example="≡⊂ 1_2_3 4"/>
-        <Editor example="≡⊂ 1 2_3_4"/>
-        <Editor example="≡(⊂⊂) 1 2_3_4 5"/>
-        <p>"Notice that the second argument here is a 2D array with 1 row of 2 elements. It will be repeated just like the scalars above."</p>
+        <p>"There are exactly two exceptions to the shape requirement: if one of the arrays is a scalar, it is repeated.."</p>
+        <Editor example="≡⊂ 2 [50 60 70]"/>
+        <Editor example="≡⊂ [50 60 70] 2"/>
+        <p>".. and if one of the arrays contains a single row (that is, its shape starts with a "<code>1</code>"), that row will be repeated instead."</p>
+        <Editor example="≡⊂ [[2 3]] [50 60 70]"/>
+        <Editor example="≡⊂ [50 60 70] [[2 3]] "/>
+        <p>"Notice how in this last example, the array "<code>[[2 3]]</code>" is an array of a single row (that is, "<code>[2 3]</code>"), so it is repeated across all iterations. It would be equivalent to the following:"</p>
+        <Editor example="[\n\t≡⊂ [2 3] 50\n\t≡⊂ [2 3] 60\n\t≡⊂ [2 3] 70\n]"/>
+        <p>"The rows don't have to be scalars themselves: the second argument here is a 2D array with 1 row of 2 elements. It will be repeated just like the scalars above."</p>
         <Editor example="≡⊟ [1_2 3_4 5_6] [¯1_0]"/>
-        <p>"If we want to combine each row of one array with copies of another, we can turn one of the arrays into a single row array with "<Prim prim=Fix/>". "<Prim prim=Fix/>" adds a 1 to the front of the shape of an array."</p>
-        <Editor example="¤.1_2_3"/>
-        <p>"Here, we "<Prim prim=Fix/>" "<code>"1_2_3"</code>" so that it is reused for each row of "<code>"4_5_6"</code>"."</p>
-        <Editor example="≡⊂ ¤ 1_2_3 4_5_6"/>
+        <p>"Surrounding an array with brackets every time we want it to be repeated instead of being iterated through is unwieldly and impractical, so uiua has its own primitive for it: "<Prim prim=Fix/>", which adds the aforementioned "<code>1</code>" to the shape."</p>
+        <Editor example="¤1_2_3  # Fixing is equivalent to...\n[1_2_3] # ...surrounding with brackets"/>
+        <p>"With it, we can rewrite the previous examples as:"</p>
+        <Editor example="≡⊂ ¤[2 3] [50 60 70]"/>
+        <Editor example="≡⊂ [50 60 70] ¤[2 3] "/>
         <p>"If we have a bunch of arrays and want to choose which ones are fixed and which are not, we can use planet notation."</p>
         <Editor example="≡⊂ ⊙¤ 1_2_3 4_5_6"/>
-        <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘¤¤∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
         <Editor example="≡(⊂⊂⊂) ⊙∩¤     1_2_3 4_5_6 7_8_9 10_11_12"/>
         <p><Prim prim=Fix/>" also works without "<Prim prim=Rows/>" with pervasive dyadic functions."</p>
         <Editor example="-  [1 2 3]  [4 5 6]\n- ¤[1 2 3]  [4 5 6]\n-  [1 2 3] ¤[4 5 6]"/>

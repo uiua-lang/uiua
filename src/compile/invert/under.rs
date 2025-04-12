@@ -413,7 +413,7 @@ under!(BothPat, input, g_sig, inverse, asm, {
         } else {
             (node, None)
         };
-        let to_copy = f_after.node.under_sig()?.args;
+        let to_copy = f_after.sig.under_args;
         if to_copy > 0 {
             node.prepend(CopyToUnder(to_copy, span));
         }
@@ -426,7 +426,7 @@ under!(BothPat, input, g_sig, inverse, asm, {
     let after = if inverse || balanced {
         ImplMod(UnBoth, eco_vec![f_after], span)
     } else {
-        let to_discard = f_after.node.under_sig()?.args;
+        let to_discard = f_after.sig.under_args;
         if to_discard > 0 {
             f_after.node.push(PopUnder(to_discard, span));
             (0..to_discard).for_each(|_| f_after.node.push(Prim(Pop, span)));

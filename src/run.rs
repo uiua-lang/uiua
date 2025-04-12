@@ -887,9 +887,8 @@ impl Uiua {
     /// Call and truncate the stack to before the args were pushed if the call fails
     pub(crate) fn exec_clean_stack(&mut self, sn: SigNode) -> UiuaResult {
         let sig = sn.sig;
-        let under_sig = sn.node.under_sig().unwrap_or(Signature::new(0, 0));
         let bottom = self.stack_height().saturating_sub(sig.args);
-        let under_bottom = self.rt.under_stack.len().saturating_sub(under_sig.args);
+        let under_bottom = self.rt.under_stack.len().saturating_sub(sn.sig.under_args);
         let res = self.exec(sn.node);
         if res.is_err() {
             self.truncate_stack(bottom);
@@ -901,10 +900,9 @@ impl Uiua {
     pub(crate) fn exec_maintain_sig(&mut self, sn: SigNode) -> UiuaResult {
         let mut args = self.stack()[self.stack().len().saturating_sub(sn.sig.args)..].to_vec();
         args.reverse();
-        let under_sig = sn.node.under_sig().unwrap_or(Signature::new(0, 0));
         let target_height = (self.stack_height() + sn.sig.outputs).saturating_sub(sn.sig.args);
         let under_target_height =
-            (self.rt.under_stack.len() + under_sig.outputs).saturating_sub(under_sig.args);
+            (self.rt.under_stack.len() + sn.sig.under_outputs).saturating_sub(sn.sig.under_args);
         let res = self.exec(sn);
         match self.stack_height().cmp(&target_height) {
             Ordering::Equal => {}

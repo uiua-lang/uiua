@@ -486,7 +486,7 @@ impl Primitive {
     /// Get the primitive's signature, if it is always well-defined
     pub fn sig(&self) -> Option<Signature> {
         let (args, outputs) = self.args().zip(self.outputs())?;
-        Some(Signature { args, outputs })
+        Some(Signature::new(args, outputs))
     }
     /// Check if this primitive is a modifier
     pub fn is_modifier(&self) -> bool {

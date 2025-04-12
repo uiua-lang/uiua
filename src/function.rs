@@ -12,6 +12,10 @@ pub struct Signature {
     pub args: usize,
     /// The number of values the function pushes onto the stack
     pub outputs: usize,
+    /// The number of arguments the function pops off the under stack
+    pub under_args: usize,
+    /// The number of values the function pushes onto the under stack
+    pub under_outputs: usize,
 }
 
 impl From<(usize, usize)> for Signature {
@@ -29,7 +33,21 @@ impl From<Signature> for (usize, usize) {
 impl Signature {
     /// Create a new signature with the given number of arguments and outputs
     pub const fn new(args: usize, outputs: usize) -> Self {
-        Self { args, outputs }
+        Self {
+            args,
+            outputs,
+            under_args: 0,
+            under_outputs: 0,
+        }
+    }
+    /// Set the number of arguments and outputs of the under stack
+    pub fn with_under(self, under_args: usize, under_outputs: usize) -> Self {
+        Self {
+            args: self.args,
+            outputs: self.outputs,
+            under_args,
+            under_outputs,
+        }
     }
     /// Check if this signature changes the stack size by the same amount as another signature
     pub fn is_compatible_with(self, other: Self) -> bool {
@@ -51,7 +69,10 @@ impl Signature {
     pub fn compose(self, other: Self) -> Self {
         let args = other.args + self.args.saturating_sub(other.outputs);
         let outputs = self.outputs + other.outputs.saturating_sub(self.args);
-        Self::new(args, outputs)
+        let under_args = other.under_args + self.under_args.saturating_sub(other.under_outputs);
+        let under_outputs =
+            self.under_outputs + other.under_outputs.saturating_sub(self.under_args);
+        Self::new(args, outputs).with_under(under_args, under_outputs)
     }
     /// Get the un-inverse of this signature
     pub fn inverse(self) -> Self {

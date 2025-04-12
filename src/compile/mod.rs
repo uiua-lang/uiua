@@ -1109,6 +1109,7 @@ code:
                         Some(Signature {
                             args: 1,
                             outputs: 1,
+                            ..
                         }),
                         _,
                     )),

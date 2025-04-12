@@ -20,11 +20,7 @@ use crate::{
 impl Node {
     /// Get the signature of this node
     pub fn sig(&self) -> Result<Signature, SigCheckError> {
-        VirtualEnv::from_node(self, false).map(|env| env.stack.sig())
-    }
-    /// Get the signature of this node on the under stack
-    pub fn under_sig(&self) -> Result<Signature, SigCheckError> {
-        VirtualEnv::from_node(self, true).map(|env| env.under.sig())
+        nodes_all_sigs(self.as_slice())
     }
     /// Convert this node to a [`SigNode`]
     pub fn sig_node(self) -> Result<SigNode, SigCheckError> {
@@ -38,20 +34,20 @@ impl Node {
 }
 
 pub fn nodes_sig(nodes: &[Node]) -> Result<Signature, SigCheckError> {
-    VirtualEnv::from_nodes(nodes, false).map(|env| env.stack.sig())
+    VirtualEnv::from_nodes(nodes).map(|env| env.stack.sig())
 }
 
 pub fn nodes_clean_sig(nodes: &[Node]) -> Option<Signature> {
-    let sigs = nodes_all_sigs(nodes, true).ok()?;
-    if sigs.under != (0, 0) {
+    let sig = nodes_all_sigs(nodes).ok()?;
+    if sig.under_args != 0 || sig.under_outputs != 0 {
         None
     } else {
-        Some(sigs.stack)
+        Some(sig)
     }
 }
 
-fn nodes_all_sigs(nodes: &[Node], recursive: bool) -> Result<AllSignatures, SigCheckError> {
-    type AllSigsCache = HashMap<u64, AllSignatures>;
+fn nodes_all_sigs(nodes: &[Node]) -> Result<Signature, SigCheckError> {
+    type AllSigsCache = HashMap<u64, Signature>;
     thread_local! {
         static CACHE: RefCell<AllSigsCache> = RefCell::new(AllSigsCache::new());
     }
@@ -62,20 +58,14 @@ fn nodes_all_sigs(nodes: &[Node], recursive: bool) -> Result<AllSignatures, SigC
         if let Some(sigs) = cache.borrow().get(&hash) {
             return Ok(*sigs);
         }
-        let env = VirtualEnv::from_nodes(nodes, recursive)?;
-        let sigs = AllSignatures {
-            stack: env.stack.sig(),
-            under: env.under.sig(),
-        };
-        cache.borrow_mut().insert(hash, sigs);
-        Ok(sigs)
+        let env = VirtualEnv::from_nodes(nodes)?;
+        let mut sig = env.stack.sig();
+        let under_sig = env.under.sig();
+        sig.under_args = under_sig.args;
+        sig.under_outputs = under_sig.outputs;
+        cache.borrow_mut().insert(hash, sig);
+        Ok(sig)
     })
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct AllSignatures {
-    pub stack: Signature,
-    pub under: Signature,
 }
 
 /// An environment that emulates the runtime but only keeps track of the stack.
@@ -84,7 +74,6 @@ struct VirtualEnv {
     under: Stack,
     array_depth: usize,
     node_depth: usize,
-    recursive: bool,
 }
 
 #[derive(Debug, Default)]
@@ -122,16 +111,29 @@ impl Stack {
             BasicValue::Other
         }
     }
+    fn handle_args_outputs(&mut self, args: usize, outputs: usize) {
+        if args < 100 && outputs < 100 {
+            for _ in 0..args {
+                self.pop();
+            }
+            for _ in 0..outputs {
+                self.push(BasicValue::Other);
+            }
+        } else {
+            self.pop_n(args);
+            self.push_n(outputs);
+        }
+    }
     /// Set the current stack height as a potential minimum.
     /// At the end of checking, the minimum stack height is a component in calculating the signature.
     fn set_min_height(&mut self) {
         self.min_height = self.min_height.max((-self.height).max(0) as usize);
     }
     fn sig(&self) -> Signature {
-        Signature {
-            args: self.min_height,
-            outputs: (self.height + self.min_height as i32).max(0) as usize,
-        }
+        Signature::new(
+            self.min_height,
+            (self.height + self.min_height as i32).max(0) as usize,
+        )
     }
 }
 
@@ -233,31 +235,23 @@ impl FromIterator<f64> for BasicValue {
 const MAX_NODE_DEPTH: usize = if cfg!(debug_assertions) { 26 } else { 50 };
 
 impl VirtualEnv {
-    fn from_nodes(nodes: &[Node], recursive: bool) -> Result<Self, SigCheckError> {
+    fn from_nodes(nodes: &[Node]) -> Result<Self, SigCheckError> {
         // println!("\ncheck sig: {nodes:?}");
         let mut env = VirtualEnv {
             stack: Stack::default(),
             under: Stack::default(),
             array_depth: 0,
             node_depth: 0,
-            recursive,
         };
         env.nodes(nodes)?;
         Ok(env)
-    }
-    fn from_node(node: &Node, recursive: bool) -> Result<Self, SigCheckError> {
-        Self::from_nodes(slice::from_ref(node), recursive)
     }
     fn nodes(&mut self, nodes: &[Node]) -> Result<(), SigCheckError> {
         nodes.iter().try_for_each(|node| self.node(node))
     }
     fn sig_node(&mut self, sn: &SigNode) -> Result<(), SigCheckError> {
-        if self.recursive {
-            self.node(&sn.node)
-        } else {
-            self.handle_sig(sn.sig);
-            Ok(())
-        }
+        self.handle_sig(sn.sig);
+        Ok(())
     }
     fn node(&mut self, node: &Node) -> Result<(), SigCheckError> {
         use ImplPrimitive::*;
@@ -728,20 +722,12 @@ impl VirtualEnv {
         self.stack.pop()
     }
     fn handle_args_outputs(&mut self, args: usize, outputs: usize) {
-        if args < 100 && outputs < 100 {
-            for _ in 0..args {
-                self.pop();
-            }
-            for _ in 0..outputs {
-                self.push(BasicValue::Other);
-            }
-        } else {
-            self.stack.pop_n(args);
-            self.stack.push_n(outputs);
-        }
+        self.stack.handle_args_outputs(args, outputs);
     }
     fn handle_sig(&mut self, sig: Signature) {
-        self.handle_args_outputs(sig.args, sig.outputs)
+        self.stack.handle_args_outputs(sig.args, sig.outputs);
+        self.under
+            .handle_args_outputs(sig.under_args, sig.under_outputs);
     }
     fn fill(&mut self, args: &[SigNode]) -> Result<(), SigCheckError> {
         let [fill, f] = get_args_nodes(args)?;

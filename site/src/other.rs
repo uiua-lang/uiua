@@ -519,6 +519,8 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Last, "Last N values", "⊣₂ \"hello\""),
         subscript(Bits, "Force N bits", "⋯₄ [1 2 3]"),
         subscript(Rand, "Random integer", "⚂₁₀₀"),
+        subscript(Len, "Length of the Nth axis", "⧻₁ °△2_3_4_5"),
+        subscript(Shape, "Shape of the first N axes", "△₂ °△2_3_4_5"),
         subscript(On, "First N values", "{⟜₂[⊙⊙∘] 1 2 3}"),
         subscript(By, "Last N values", "{⊸₂[⊙⊙∘] 1 2 3}"),
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),

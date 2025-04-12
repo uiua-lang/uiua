@@ -513,6 +513,9 @@ primitive!(
     /// Use [un][by][length] to set the [length] of an array. Over-taking will cycle rows.
     /// ex: °⊸⧻ 5 "hello, world"
     ///   : °⊸⧻ 10 "abc"
+    ///
+    /// Subscripted [length] gets the length of a certain axis
+    /// ex: ⧻₁ °△[2 3 4]
     (1, Len, MonadicArray, ("length", '⧻')),
     /// Get the dimensions of an array
     ///
@@ -523,6 +526,9 @@ primitive!(
     ///
     /// [un][shape] creates an array of incrementing elements with the given shape.
     /// ex: °△ 2_3_4
+    ///
+    /// Subscripted [shape] gets the shape from the first few axes
+    /// ex: △₂ °△[2 3 4 5]
     ///
     /// It is a triangle`△` because a triangle is a shape.
     (1, Shape, MonadicArray, ("shape", '△')),

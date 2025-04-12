@@ -515,7 +515,7 @@ primitive!(
     ///   : °⊸⧻ 10 "abc"
     ///
     /// Subscripted [length] gets the length of a certain axis
-    /// ex: ⧻₁ °△[2 3 4]
+    /// ex: ⧻₁ °△2_3_4
     (1, Len, MonadicArray, ("length", '⧻')),
     /// Get the dimensions of an array
     ///
@@ -528,7 +528,7 @@ primitive!(
     /// ex: °△ 2_3_4
     ///
     /// Subscripted [shape] gets the shape from the first few axes
-    /// ex: △₂ °△[2 3 4 5]
+    /// ex: △₂ °△2_3_4_5
     ///
     /// It is a triangle`△` because a triangle is a shape.
     (1, Shape, MonadicArray, ("shape", '△')),

@@ -346,6 +346,7 @@ impl Compiler {
             .sum();
         let mut node = if has_fields {
             let mut inner = Node::default();
+            let mut sig = Signature::new(0, 0);
             for field in fields.iter().rev() {
                 let mut arg = if let Some(sn) = &field.init {
                     sn.clone()
@@ -364,15 +365,11 @@ impl Compiler {
                 }
                 if !inner.is_empty() {
                     for _ in 0..arg.sig.args {
-                        inner = Node::Mod(
-                            Primitive::Dip,
-                            eco_vec![inner
-                                .sig_node()
-                                .expect("Field initializer should have a signature")],
-                            span,
-                        );
+                        inner = Node::Mod(Primitive::Dip, eco_vec![SigNode::new(sig, inner)], span);
                     }
                 }
+                sig.args += arg.sig.args;
+                sig.outputs += arg.sig.outputs;
                 inner.push(arg.node);
             }
             Node::Array {

@@ -20,11 +20,11 @@ use crate::{
 impl Node {
     /// Get the signature of this node
     pub fn sig(&self) -> Result<Signature, SigCheckError> {
-        VirtualEnv::from_node(self).map(|env| env.stack.sig())
+        VirtualEnv::from_node(self, false).map(|env| env.stack.sig())
     }
     /// Get the signature of this node on the under stack
     pub fn under_sig(&self) -> Result<Signature, SigCheckError> {
-        VirtualEnv::from_node(self).map(|env| env.under.sig())
+        VirtualEnv::from_node(self, true).map(|env| env.under.sig())
     }
     /// Convert this node to a [`SigNode`]
     pub fn sig_node(self) -> Result<SigNode, SigCheckError> {
@@ -38,10 +38,19 @@ impl Node {
 }
 
 pub fn nodes_sig(nodes: &[Node]) -> Result<Signature, SigCheckError> {
-    VirtualEnv::from_nodes(nodes).map(|env| env.stack.sig())
+    VirtualEnv::from_nodes(nodes, false).map(|env| env.stack.sig())
 }
 
-pub fn nodes_all_sigs(nodes: &[Node]) -> Result<AllSignatures, SigCheckError> {
+pub fn nodes_clean_sig(nodes: &[Node]) -> Option<Signature> {
+    let sigs = nodes_all_sigs(nodes, true).ok()?;
+    if sigs.under != (0, 0) {
+        None
+    } else {
+        Some(sigs.stack)
+    }
+}
+
+fn nodes_all_sigs(nodes: &[Node], recursive: bool) -> Result<AllSignatures, SigCheckError> {
     type AllSigsCache = HashMap<u64, AllSignatures>;
     thread_local! {
         static CACHE: RefCell<AllSigsCache> = RefCell::new(AllSigsCache::new());
@@ -53,7 +62,7 @@ pub fn nodes_all_sigs(nodes: &[Node]) -> Result<AllSignatures, SigCheckError> {
         if let Some(sigs) = cache.borrow().get(&hash) {
             return Ok(*sigs);
         }
-        let env = VirtualEnv::from_nodes(nodes)?;
+        let env = VirtualEnv::from_nodes(nodes, recursive)?;
         let sigs = AllSignatures {
             stack: env.stack.sig(),
             under: env.under.sig(),
@@ -61,15 +70,6 @@ pub fn nodes_all_sigs(nodes: &[Node]) -> Result<AllSignatures, SigCheckError> {
         cache.borrow_mut().insert(hash, sigs);
         Ok(sigs)
     })
-}
-
-pub fn nodes_clean_sig(nodes: &[Node]) -> Option<Signature> {
-    let sigs = nodes_all_sigs(nodes).ok()?;
-    if sigs.under != (0, 0) {
-        None
-    } else {
-        Some(sigs.stack)
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -83,6 +83,8 @@ struct VirtualEnv {
     stack: Stack,
     under: Stack,
     array_depth: usize,
+    node_depth: usize,
+    recursive: bool,
 }
 
 #[derive(Debug, Default)]
@@ -228,26 +230,42 @@ impl FromIterator<f64> for BasicValue {
     }
 }
 
+const MAX_NODE_DEPTH: usize = if cfg!(debug_assertions) { 26 } else { 50 };
+
 impl VirtualEnv {
-    fn from_nodes(nodes: &[Node]) -> Result<Self, SigCheckError> {
+    fn from_nodes(nodes: &[Node], recursive: bool) -> Result<Self, SigCheckError> {
         // println!("\ncheck sig: {nodes:?}");
         let mut env = VirtualEnv {
             stack: Stack::default(),
             under: Stack::default(),
             array_depth: 0,
+            node_depth: 0,
+            recursive,
         };
         env.nodes(nodes)?;
         Ok(env)
     }
-    fn from_node(node: &Node) -> Result<Self, SigCheckError> {
-        Self::from_nodes(slice::from_ref(node))
+    fn from_node(node: &Node, recursive: bool) -> Result<Self, SigCheckError> {
+        Self::from_nodes(slice::from_ref(node), recursive)
     }
     fn nodes(&mut self, nodes: &[Node]) -> Result<(), SigCheckError> {
         nodes.iter().try_for_each(|node| self.node(node))
     }
+    fn sig_node(&mut self, sn: &SigNode) -> Result<(), SigCheckError> {
+        if self.recursive {
+            self.node(&sn.node)
+        } else {
+            self.handle_sig(sn.sig);
+            Ok(())
+        }
+    }
     fn node(&mut self, node: &Node) -> Result<(), SigCheckError> {
         use ImplPrimitive::*;
         use Primitive::*;
+        if self.node_depth > MAX_NODE_DEPTH {
+            return Err("Function is too complex".into());
+        }
+        self.node_depth += 1;
         match node {
             Node::Run(nodes) => nodes.iter().try_for_each(|node| self.node(node))?,
             Node::Push(val) => self.push(BasicValue::from_val(val)),
@@ -427,7 +445,7 @@ impl VirtualEnv {
                 }
                 Each | Rows | Inventory => {
                     let [f] = get_args_nodes(args)?;
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                 }
                 Table | Tuples => {
                     let [sig] = get_args(args)?;
@@ -513,35 +531,35 @@ impl VirtualEnv {
                     for _ in 0..f.sig.args {
                         args.push(self.pop());
                     }
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                     for arg in args.into_iter().rev() {
                         self.push(arg);
                     }
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                 }
                 Dip => {
                     let [f] = get_args_nodes(args)?;
                     let x = self.pop();
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                     self.push(x);
                 }
                 Gap => {
                     let [f] = get_args_nodes(args)?;
                     _ = self.pop();
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                 }
                 Reach => {
                     let [f] = get_args_nodes(args)?;
                     let x = self.pop();
                     _ = self.pop();
                     self.push(x);
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                 }
                 On => {
                     let [f] = get_args_nodes(args)?;
                     let x = self.pop();
                     self.push(x.clone());
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                     self.push(x);
                 }
                 By => {
@@ -554,7 +572,7 @@ impl VirtualEnv {
                     for arg in args.into_iter().rev() {
                         self.push(arg);
                     }
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                     if let Some(x) = x {
                         self.push(x);
                     }
@@ -597,7 +615,7 @@ impl VirtualEnv {
                     let [sn] = get_args_nodes(args)?;
                     let args = sn.sig.args.max(n);
                     self.handle_args_outputs(args, args);
-                    self.node(&sn.node)?;
+                    self.sig_node(sn)?;
                     self.handle_args_outputs(0, n);
                 }
                 ReduceContent | ReduceDepth(_) => {
@@ -631,11 +649,11 @@ impl VirtualEnv {
                     for _ in 0..f.sig.args {
                         args.push(self.pop());
                     }
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                     for arg in args.into_iter().rev() {
                         self.push(arg);
                     }
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                 }
                 UnBracket => {
                     let [f, g] = get_args(args)?;
@@ -643,12 +661,12 @@ impl VirtualEnv {
                 }
                 EachSub(_) => {
                     let [f] = get_args_nodes(args)?;
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                 }
                 UndoRows | UndoInventory => {
                     let [f] = get_args_nodes(args)?;
                     let _len = self.stack.pop();
-                    self.node(&f.node)?;
+                    self.sig_node(f)?;
                 }
                 UnScan => self.handle_args_outputs(1, 1),
                 SplitBy | SplitByScalar | SplitByKeepEmpty => {
@@ -693,12 +711,13 @@ impl VirtualEnv {
             Node::TrackCaller(inner) | Node::NoInline(inner) => self.node(inner)?,
             Node::WithLocal { inner, .. } => {
                 let _val = self.stack.remove(inner.sig.args);
-                self.node(&inner.node)?;
+                self.sig_node(inner)?;
             }
             Node::GetLocal { .. } => self.handle_args_outputs(0, 1),
             Node::SetLocal { .. } => self.handle_args_outputs(1, 0),
             Node::NormalizeSoA { .. } => self.handle_args_outputs(1, 1),
         }
+        self.node_depth -= 1;
         // println!("{node:?} -> {} ({})", self.stack.sig(), self.under.sig());
         Ok(())
     }
@@ -727,10 +746,10 @@ impl VirtualEnv {
     fn fill(&mut self, args: &[SigNode]) -> Result<(), SigCheckError> {
         let [fill, f] = get_args_nodes(args)?;
         if fill.sig.outputs > 0 || fill.sig.args > 0 && fill.sig.outputs != 0 {
-            self.node(&fill.node)?;
+            self.sig_node(fill)?;
         }
         self.handle_args_outputs(fill.sig.outputs, 0);
-        self.node(&f.node)
+        self.sig_node(f)
     }
     fn repeat(
         &mut self,

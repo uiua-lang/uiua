@@ -115,6 +115,11 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                 Primitive::Gt => xs.choose(k, true, false, env)?,
                 Primitive::Ge if n >= k => xs.choose(k, true, true, env)?,
                 Primitive::Ne => xs.permute(k, env)?,
+                Primitive::Eq | Primitive::Match if is_scalar => {
+                    let n = xs.as_nat(env, "Tuples of scalar must be a natural number")?;
+                    env.push(n);
+                    return Ok(());
+                }
                 _ => break 'blk,
             };
             env.push(res);

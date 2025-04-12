@@ -1327,26 +1327,20 @@ impl Compiler {
             "Inline macros are experimental. \
             To use them, add `# Experimental!` to the top of the file."
         });
-        let mut words: Vec<_> = flip_unsplit_lines(
-            (mac.func.value.lines.into_iter())
-                .flat_map(split_words)
-                .collect(),
-        )
-        .into_iter()
-        .flatten()
-        .collect();
         // Track
         self.code_meta
             .inline_macros
-            .insert(mac.func.span, ident_modifier_args(&mac.ident.value));
+            .insert(mac.func.span.clone(), ident_modifier_args(&mac.ident.value));
         Ok(if mac.caret_span.is_some() {
-            let root = self.words_sig(words)?;
+            let root = self.func(mac.func.value, mac.func.span.clone())?;
+            let sig = self.sig_of(&root, &mac.func.span)?;
             let code_mac = CodeMacro {
-                root,
+                root: SigNode::new(sig, root),
                 names: Default::default(),
             };
             self.code_macro(None, span, operands, code_mac)?
         } else {
+            let mut words: Vec<_> = mac.func.value.lines.into_iter().rev().flatten().collect();
             // Expand
             self.expand_index_macro(None, &mut words, operands, span.clone(), true)?;
             // Compile

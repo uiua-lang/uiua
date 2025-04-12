@@ -272,13 +272,8 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &FlipPat,
     &DipPat,
     &StashContraPat,
-    &FromUnPat {
-        require_under: true,
-    },
+    &FromUnPat,
     &ConstPat,
-    &FromUnPat {
-        require_under: false,
-    },
 ];
 
 trait UnderPattern: fmt::Debug + Sync {
@@ -465,22 +460,11 @@ under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {
     Ok((&[], before, after))
 });
 
-#[derive(Debug)]
-/// Derives under inverses from un inverses
-struct FromUnPat {
-    require_under: bool,
-}
-
-impl UnderPattern for FromUnPat {
-    fn under_extract<'a>(
-        &self,
-        input: &'a [Node],
-        _: Signature,
-        _: bool,
-        asm: &Assembly,
-    ) -> InversionResult<(&'a [Node], Node, Node)> {
-        for pat in (UN_PATTERNS.iter()).filter(|pat| !self.require_under || pat.allowed_in_under())
-        {
+under!(
+    "Derives under inverses from un inverses",
+    (FromUnPat, input, _, _, asm),
+    {
+        for pat in UN_PATTERNS.iter().filter(|pat| pat.allowed_in_under()) {
             if let Ok((inp, inv)) = pat.invert_extract(input, asm) {
                 let node = Node::from(&input[..input.len() - inp.len()]);
                 dbgln!("matched un pattern for under {pat:?}\n  on {input:?}\n  to {node:?}\n  and {inv:?}");
@@ -489,7 +473,7 @@ impl UnderPattern for FromUnPat {
         }
         generic()
     }
-}
+);
 
 under!(
     "Derives under inverses from anti inverses",

@@ -15,6 +15,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This enables some function packs and array notation to execute in the order they are normally read
 - Add experimental sided [`fill ⬚`](https://uiua.org/docs/fill)
   - This allows filling from the left instead of the right
+- Add numeric subscripts for [`length ⧻`](https://uiua.org/docs/length) to get the length of a specific axis
+- Add numeric subscripts for [`shape △`](https://uiua.org/docs/shape) to get the shape of the first few axes
 ### Interpreter
 - The formatter will now allow putting multiple function pack branches on a single line
 

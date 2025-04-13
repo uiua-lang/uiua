@@ -3,7 +3,12 @@ use std::{collections::VecDeque, mem::take};
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::{pervade::*, validate_size, FillContext, MultiOutput},
+    algorithm::{
+        pervade::*,
+        validate_size,
+        zip::{f_mon_fast_fn, ValueMonFn},
+        FillContext, MultiOutput,
+    },
     cowslice::extend_repeat,
     val_as_arr, Array, ArrayValue, Boxed, Node, Primitive, Shape, SigNode, Uiua, UiuaResult, Value,
 };
@@ -75,7 +80,7 @@ where
     Array<T>: Into<Value>,
 {
     enum WindowAction<T> {
-        Id(EcoVec<T>),
+        Id(EcoVec<T>, Option<(ValueMonFn, usize)>),
         Box(EcoVec<Boxed>, EcoVec<T>),
         Default(MultiOutput<Vec<Value>>, EcoVec<T>),
     }
@@ -105,24 +110,38 @@ where
                 (shape_prefix.iter().copied()).chain(window_shape.iter().copied()),
                 env,
             )?;
-            WindowAction::Id(EcoVec::with_capacity(size))
+            WindowAction::Id(EcoVec::with_capacity(size), None)
         }
         Node::Prim(Primitive::Box, _) => WindowAction::Box(EcoVec::new(), EcoVec::new()),
-        _ => WindowAction::Default(multi_output(f.sig.outputs(), Vec::new()), EcoVec::new()),
+        node => {
+            if let Some(f) = f_mon_fast_fn(node, env) {
+                let size = validate_size::<T>(
+                    (shape_prefix.iter().copied()).chain(window_shape.iter().copied()),
+                    env,
+                )?;
+                WindowAction::Id(EcoVec::with_capacity(size), Some(f))
+            } else {
+                WindowAction::Default(multi_output(f.sig.outputs(), Vec::new()), EcoVec::new())
+            }
+        }
     };
 
     let fill = env.scalar_fill::<T>().ok().map(|fv| fv.value);
     if dims.len() == 1 && (fill.is_none() || dims[0].fill == 0) {
         // Linear optimization
         let dim = dims[0];
-        if dim.size == dim.stride && matches!(&action, WindowAction::Id(_)) {
+        if dim.size == dim.stride && matches!(&action, WindowAction::Id(..)) {
             // Simple chunking
             let chunk_count = arr.shape[0] / dim.size;
             arr.shape[0] = dim.size;
             arr.shape.insert(0, chunk_count);
             arr.data.truncate(arr.shape.elements());
             arr.take_map_keys();
-            env.push(arr);
+            let mut val: Value = arr.into();
+            if let WindowAction::Id(_, Some((f, d))) = &action {
+                val = f(val, dims.len() + d, env)?;
+            }
+            env.push(val);
             return Ok(());
         } else {
             // General case
@@ -132,7 +151,7 @@ where
                 .saturating_sub(dim.size.saturating_sub(dim.stride))
                 / dim.stride;
             match action {
-                WindowAction::Id(mut data) => {
+                WindowAction::Id(mut data, f) => {
                     for i in 0..win_count {
                         data.extend_from_slice(
                             &arr.data[i * dim.stride * row_len..][..dim.size * row_len],
@@ -141,7 +160,11 @@ where
                     let mut new_shape = arr.shape;
                     new_shape[0] = dim.size;
                     new_shape.insert(0, win_count);
-                    env.push(Array::new(new_shape, data));
+                    let mut val: Value = Array::new(new_shape, data).into();
+                    if let Some((f, d)) = f {
+                        val = f(val, dims.len() + d, env)?;
+                    }
+                    env.push(val);
                     return Ok(());
                 }
                 WindowAction::Box(mut boxes, _) => {
@@ -190,7 +213,7 @@ where
                 // Add cell
                 if let Some(i) = arr.shape.i_dims_to_flat(&curr) {
                     match &mut action {
-                        WindowAction::Id(data)
+                        WindowAction::Id(data, _)
                         | WindowAction::Box(_, data)
                         | WindowAction::Default(_, data) => {
                             data.extend_from_slice(&arr.data[i * cell_len..][..cell_len])
@@ -198,7 +221,7 @@ where
                     }
                 } else {
                     match &mut action {
-                        WindowAction::Id(data)
+                        WindowAction::Id(data, _)
                         | WindowAction::Box(_, data)
                         | WindowAction::Default(_, data) => extend_repeat(data, &fill, cell_len),
                     }
@@ -216,7 +239,7 @@ where
             }
             // End action window
             match &mut action {
-                WindowAction::Id(_) => {}
+                WindowAction::Id(..) => {}
                 WindowAction::Box(boxes, data) => {
                     let arr = Array::new(window_shape.clone(), take(data));
                     boxes.push(Boxed(arr.into()));
@@ -242,11 +265,14 @@ where
             break;
         }
         match action {
-            WindowAction::Id(data) => {
+            WindowAction::Id(data, f) => {
                 let mut shape = shape_prefix;
                 shape.extend(window_shape);
-                let arr = Array::new(shape, data);
-                env.push(arr);
+                let mut val: Value = Array::new(shape, data).into();
+                if let Some((f, d)) = f {
+                    val = f(val, dims.len() + d, env)?;
+                }
+                env.push(val);
             }
             WindowAction::Box(boxes, _) => {
                 let arr = Array::new(shape_prefix, boxes);

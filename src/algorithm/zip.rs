@@ -12,7 +12,7 @@ use crate::{
 
 use super::{fill_value_shapes, fixed_rows, multi_output, FixedRowsData, MultiOutput};
 
-type ValueMonFn = Rc<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
+pub(crate) type ValueMonFn = Rc<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 type ValueMon2Fn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<(Value, Value)>>;
 type ValueDyFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
 
@@ -115,7 +115,7 @@ fn impl_prim_mon2_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMon2F
     })
 }
 
-fn f_mon_fast_fn(node: &Node, env: &Uiua) -> Option<(ValueMonFn, usize)> {
+pub(crate) fn f_mon_fast_fn(node: &Node, env: &Uiua) -> Option<(ValueMonFn, usize)> {
     thread_local! {
         static CACHE: RefCell<HashMap<Node, Option<(ValueMonFn, usize)>>>
             = RefCell::new(HashMap::new());

@@ -266,7 +266,7 @@ pub fn Optimizations() -> impl IntoView {
                 <tr><td><Prim prim=Reduce/></td></tr>
             </table>
         </div>
-        <p>"This optimization applies not just to "<Prim prim=Rows/>", but also "<Prim prim=Each/>", "<Prims prims=[Rows, Rows]/>", "<Prims prims=[Rows, Rows, Rows]/>", etc."</p>
+        <p>"This optimization applies not just to "<Prim prim=Rows/>", but also "<Prim prim=Stencil/>", "<Prim prim=Each/>", "<Prims prims=[Rows, Rows]/>", "<Prims prims=[Rows, Rows, Rows]/>", etc."</p>
 
         <Hd id="complexity">"Complexity"</Hd>
         <p>"Some combinations of functions are special-cased in the interpreter to run in less time complexity or in fewer operations than is implied by each function individually."</p>

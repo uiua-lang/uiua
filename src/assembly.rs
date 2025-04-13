@@ -135,6 +135,7 @@ impl Assembly {
             kind: global,
             span: span.unwrap_or_else(CodeSpan::dummy),
             meta,
+            used: local.public,
         };
         if local.index < self.bindings.len() {
             self.bindings.make_mut()[local.index] = binding;
@@ -145,6 +146,7 @@ impl Assembly {
                     public: false,
                     span: CodeSpan::dummy(),
                     meta: BindingMeta::default(),
+                    used: true,
                 });
             }
             self.bindings.push(binding);
@@ -209,6 +211,7 @@ impl Assembly {
                 public,
                 span: CodeSpan::dummy(),
                 meta: BindingMeta::default(),
+                used: true,
             });
         }
 
@@ -394,6 +397,8 @@ pub struct BindingInfo {
     pub span: CodeSpan,
     /// Metadata about the binding
     pub meta: BindingMeta,
+    /// Whether the binding was used
+    pub used: bool,
 }
 
 /// Metadata about a binding

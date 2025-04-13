@@ -2075,6 +2075,8 @@ mod server {
                 };
                 Some(uiua_span_to_lsp(span, &doc.asm.inputs))
             };
+
+            // Errors
             for err in &doc.errors {
                 match &err.kind {
                     UiuaErrorKind::Run { message, .. } => {
@@ -2117,6 +2119,7 @@ mod server {
                 }
             }
 
+            // Diagnostics
             for diag in &doc.diagnostics {
                 let sev = match diag.kind {
                     crate::DiagnosticKind::Warning => DiagnosticSeverity::WARNING,
@@ -2129,6 +2132,20 @@ mod server {
                         severity: Some(sev),
                         range: uiua_span_to_lsp(span, &doc.asm.inputs),
                         message: diag.message.clone(),
+                        ..Default::default()
+                    });
+                }
+            }
+
+            // Unused
+            for binfo in &doc.asm.bindings {
+                if binfo.span.src == path && !binfo.used {
+                    self.debug(&format!("unused: {binfo:?}")).await;
+                    diagnostics.push(Diagnostic {
+                        severity: Some(DiagnosticSeverity::HINT),
+                        range: uiua_span_to_lsp(&binfo.span, &doc.asm.inputs),
+                        message: "Unused private binding".into(),
+                        tags: Some(vec![DiagnosticTag::UNNECESSARY]),
                         ..Default::default()
                     });
                 }

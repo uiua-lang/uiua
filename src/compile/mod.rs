@@ -1868,8 +1868,10 @@ code:
         None
     }
     fn global_index(&mut self, index: usize, single_ident: bool, span: CodeSpan) -> Node {
-        let global = self.asm.bindings[index].kind.clone();
-        match global {
+        let binfo = &mut self.asm.bindings.make_mut()[index];
+        binfo.used = true;
+        let bkind = binfo.kind.clone();
+        match bkind {
             BindingKind::Const(Some(val)) => Node::new_push(val),
             BindingKind::Const(None) => Node::CallGlobal(index, Signature::new(0, 1)),
             BindingKind::Func(f) => {

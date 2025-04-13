@@ -871,26 +871,31 @@ under!(
     {
         let mut befores = EcoVec::with_capacity(branches.len());
         let mut afters = EcoVec::with_capacity(branches.len());
+        let mut do_sig = *sig;
         let mut undo_sig: Option<Signature> = None;
         for branch in branches {
             // Calc under f
             let (before, after) = branch.under_inverse(g_sig, inverse, asm)?;
+            let before_sig = before.sig;
             let after_sig = after.sig;
             befores.push(before);
             afters.push(after);
             // Aggregate sigs
             let undo_sig = undo_sig.get_or_insert(after_sig);
             if after_sig.is_compatible_with(*undo_sig) {
+                do_sig = do_sig.max_with(before_sig);
                 *undo_sig = undo_sig.max_with(after_sig);
             } else if after_sig.outputs() == undo_sig.outputs() {
-                undo_sig.update_args(|a| a.max(after_sig.args()))
+                do_sig.update_under_outputs(|a| a.max(before_sig.under_outputs()));
+                undo_sig.update_args(|a| a.max(after_sig.args()));
+                undo_sig.update_under_args(|a| a.max(after_sig.under_args()));
             } else {
                 return generic();
             }
         }
         let before = Node::Switch {
             branches: befores,
-            sig: *sig,
+            sig: do_sig,
             span: *span,
             under_cond: true,
         };

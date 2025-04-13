@@ -1963,7 +1963,8 @@ code:
                 if arg.sig.is_compatible_with(*sig) {
                     *sig = sig.max_with(arg.sig);
                 } else if arg.sig.outputs() == sig.outputs() {
-                    sig.update_args(|a| a.max(arg.sig.args()))
+                    sig.update_args(|a| a.max(arg.sig.args()));
+                    sig.update_under_args(|a| a.max(arg.sig.under_args()));
                 } else {
                     self.add_error(
                         span.clone(),
@@ -1980,6 +1981,7 @@ code:
         let mut sig = sig.unwrap_or_else(|| flex_funcs.next().unwrap().0.sig);
         for (arg, _) in flex_funcs {
             sig.update_args(|a| a.max(arg.sig.args()));
+            sig.update_under_args(|a| a.max(arg.sig.under_args()));
         }
 
         let span = self.add_span(span.clone());

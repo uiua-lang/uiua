@@ -691,7 +691,25 @@ impl fmt::Debug for Node {
                 }
                 write!(f, "\"")
             }
-            Node::Switch { branches, .. } => write!(f, "<switch {}>", branches.len()),
+            Node::Switch {
+                branches,
+                sig,
+                under_cond,
+                ..
+            } => {
+                write!(f, "⨬{sig}")?;
+                if *under_cond || sig.under() != (0, 0) {
+                    write!(f, "⍜({})", sig.under())?;
+                }
+                write!(f, "(")?;
+                for (i, br) in branches.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "|")?;
+                    }
+                    br.node.fmt(f)?;
+                }
+                write!(f, ")")
+            }
             Node::CustomInverse(cust, _) => cust.fmt(f),
             Node::Unpack {
                 count,

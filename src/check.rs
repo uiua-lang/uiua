@@ -294,10 +294,10 @@ impl VirtualEnv {
                 sig, under_cond, ..
             } => {
                 let cond = self.pop();
+                self.handle_sig(sig);
                 if under_cond {
                     self.under.push(cond);
                 }
-                self.handle_sig(sig);
             }
             Node::Format(parts, ..) => self.handle_args_outputs(parts.len().saturating_sub(1), 1),
             Node::MatchFormatPattern(parts, ..) => {

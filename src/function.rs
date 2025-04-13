@@ -81,6 +81,14 @@ impl Signature {
     pub fn update_outputs(&mut self, f: impl FnOnce(usize) -> usize) {
         self.outputs = f(self.outputs()) as u16;
     }
+    /// Update the number of under arguments
+    pub fn update_under_args(&mut self, f: impl FnOnce(usize) -> usize) {
+        self.under_args = f(self.under_args()) as u16;
+    }
+    /// Update the number of under outputs
+    pub fn update_under_outputs(&mut self, f: impl FnOnce(usize) -> usize) {
+        self.under_outputs = f(self.under_outputs()) as u16;
+    }
     /// Update the number of arguments and outputs
     pub fn update_args_outputs(&mut self, f: impl FnOnce(usize, usize) -> (usize, usize)) {
         let (args, outputs) = f(self.args(), self.outputs());
@@ -130,6 +138,10 @@ impl Signature {
             return None;
         }
         Some(Signature::new(self.outputs() + 1, self.args() - 1))
+    }
+    /// The signature on the under stack
+    pub fn under(self) -> Signature {
+        Signature::new(self.under_args(), self.under_outputs())
     }
 }
 

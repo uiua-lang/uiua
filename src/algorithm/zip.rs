@@ -5,9 +5,14 @@ use std::{cell::RefCell, collections::HashMap, iter::repeat, mem::swap, rc::Rc};
 use ecow::eco_vec;
 
 use crate::{
-    algorithm::pervade::bin_pervade_values, cowslice::CowSlice, get_ops, random,
-    types::push_empty_rows_value, val_as_arr, value::Value, Array, Boxed, ImplPrimitive, Node, Ops,
-    PersistentMeta, Primitive, Shape, SigNode, Uiua, UiuaResult,
+    algorithm::{pervade::bin_pervade_values, reduce},
+    cowslice::CowSlice,
+    get_ops, random,
+    types::push_empty_rows_value,
+    val_as_arr,
+    value::Value,
+    Array, Boxed, ImplPrimitive, Node, Ops, PersistentMeta, Primitive, Shape, SigNode, Uiua,
+    UiuaResult,
 };
 
 use super::{fill_value_shapes, fixed_rows, multi_output, FixedRowsData, MultiOutput};
@@ -118,7 +123,7 @@ fn impl_prim_mon2_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMon2F
 pub(crate) fn f_mon_fast_fn(node: &Node, env: &Uiua) -> Option<(ValueMonFn, usize)> {
     thread_local! {
         static CACHE: RefCell<HashMap<Node, Option<(ValueMonFn, usize)>>>
-            = RefCell::new(HashMap::new());
+        = RefCell::new(HashMap::new());
     }
     CACHE.with(|cache| {
         if !cache.borrow().contains_key(node) {
@@ -151,6 +156,16 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
             let (f, d) = f_mon_fast_fn(&args[0].node, env)?;
             (f, d + 1)
         }
+        [Node::Mod(Reduce, args, _)] if args[0].sig == (2, 1) => {
+            let args = args.clone();
+            let f = Rc::new(move |val, depth, env: &mut Uiua| -> UiuaResult<Value> {
+                env.push(val);
+                reduce::reduce(args.clone(), depth, env)?;
+                let val = env.pop("reduced function result")?;
+                Ok(val)
+            });
+            (f, 0)
+        }
         [Node::Prim(Pop, _), Node::Push(repl)] => {
             let replacement = repl.clone();
             (
@@ -158,27 +173,29 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
                 0,
             )
         }
-        instrs if !deep => {
+        nodes if !deep => {
             let mut start = 0;
             let mut depth = 0;
             let mut func: Option<ValueMonFn> = None;
             'outer: loop {
                 for len in [1, 2] {
                     let end = start + len;
-                    if end > instrs.len() {
+                    if end > nodes.len() {
                         break 'outer;
                     }
-                    let nodes = &instrs[start..end];
+                    let nodes = &nodes[start..end];
                     let Some((f, d)) = f_mon_fast_fn_impl(nodes, true, env) else {
                         continue;
                     };
                     depth += d;
-                    func = func.map(|func| {
+                    func = Some(if let Some(func) = func {
                         mon_fn(
                             move |val: Value, depth: usize, env: &mut Uiua| -> UiuaResult<Value> {
                                 f(func(val, depth, env)?, depth, env)
                             },
                         )
+                    } else {
+                        f
                     });
                     start = end;
                     continue 'outer;

@@ -940,7 +940,8 @@ inverse!(DupPat, input, asm, Prim(Dup, dup_span), {
     let monadic_i = (0..=dyadic_whole.len())
         .rev()
         .find(|&i| {
-            nodes_clean_sig(&dyadic_whole[..i]).is_some_and(|sig| sig.args() == 0 && sig.outputs() == 0)
+            nodes_clean_sig(&dyadic_whole[..i])
+                .is_some_and(|sig| sig.args() == 0 && sig.outputs() == 0)
         })
         .ok_or(Generic)?;
     let monadic_part = &dyadic_whole[..monadic_i];

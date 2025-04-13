@@ -118,7 +118,7 @@ fn anti_inverse_impl(mut input: &[Node], asm: &Assembly, for_un: bool) -> Invers
         for pattern in (ANTI_PATTERNS.iter()).filter(|pat| !for_un || pat.allowed_in_un()) {
             match pattern.invert_extract(curr, asm) {
                 Ok((new, anti_inv)) => {
-                    if nodes_clean_sig(new).is_none_or(|sig| sig.args != sig.outputs) {
+                    if nodes_clean_sig(new).is_none_or(|sig| sig.args() != sig.outputs()) {
                         continue;
                     }
                     dbgln!("matched anti pattern {pattern:?}\n  on {curr:?}\n  to {anti_inv:?}");
@@ -426,7 +426,7 @@ inverse!(OffPat, input, asm, Off, span, [f], {
 
 inverse!(ByPat, input, asm, By, span, [f], {
     // Under's undo step
-    if f.sig.args == 1 {
+    if f.sig.args() == 1 {
         if let [Prim(Shape, span), Prim(Len, _)] = f.node.as_slice() {
             // Set rank
             let before = Node::from_iter([
@@ -455,8 +455,8 @@ inverse!(ByPat, input, asm, By, span, [f], {
             return Ok((input, CustomInverse(adjust_rank.into(), *span)));
         } else if let Ok((before, after)) = f.node.under_inverse(Signature::new(1, 1), false, asm) {
             let mut inv = before;
-            (0..f.sig.outputs).for_each(|_| inv.push(Prim(Pop, span)));
-            for _ in 0..f.sig.outputs {
+            (0..f.sig.outputs()).for_each(|_| inv.push(Prim(Pop, span)));
+            for _ in 0..f.sig.outputs() {
                 inv = Mod(Dip, eco_vec![inv.sig_node()?], span);
             }
             inv.push(after);
@@ -760,7 +760,7 @@ inverse!(JoinPat, input, asm, {
         let before_inv = invert_inner(before, asm)?;
         let before_sig = nodes_clean_sig(&before_inv).ok_or(Generic)?;
         let mut node = Node::empty();
-        let count = before_sig.outputs.saturating_sub(before_sig.args) + 1;
+        let count = before_sig.outputs().saturating_sub(before_sig.args()) + 1;
         let prim = if count <= 1 {
             if flip {
                 UnJoinEnd
@@ -926,7 +926,7 @@ inverse!(DupPat, input, asm, Prim(Dup, dup_span), {
     else {
         // Pattern matching
         let sig = nodes_sig(input)?;
-        return if sig.args == sig.outputs {
+        return if sig.args() == sig.outputs() {
             let inv = Node::from_iter([Prim(Over, dup_span), ImplPrim(MatchPattern, dup_span)]);
             Ok((input, inv))
         } else {
@@ -940,7 +940,7 @@ inverse!(DupPat, input, asm, Prim(Dup, dup_span), {
     let monadic_i = (0..=dyadic_whole.len())
         .rev()
         .find(|&i| {
-            nodes_clean_sig(&dyadic_whole[..i]).is_some_and(|sig| sig.args == 0 && sig.outputs == 0)
+            nodes_clean_sig(&dyadic_whole[..i]).is_some_and(|sig| sig.args() == 0 && sig.outputs() == 0)
         })
         .ok_or(Generic)?;
     let monadic_part = &dyadic_whole[..monadic_i];

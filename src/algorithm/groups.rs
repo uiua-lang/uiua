@@ -15,7 +15,7 @@ use super::multi_output;
 pub fn split_by(f: SigNode, by_scalar: bool, keep_empty: bool, env: &mut Uiua) -> UiuaResult {
     let delim = env.pop(1)?;
     let haystack = env.pop(2)?;
-    if f.sig.args != 1
+    if f.sig.args() != 1
         || haystack.rank() > 1
         || delim.rank() > 1
         || by_scalar && !(delim.rank() == 0 || delim.rank() == 1 && delim.row_count() == 1)
@@ -68,12 +68,12 @@ pub fn split_by(f: SigNode, by_scalar: bool, keep_empty: bool, env: &mut Uiua) -
             let val = Value::from_row_values(parts, env)?;
             env.push(val);
         } else {
-            let mut outputs = multi_output(f.sig.outputs, Vec::new());
+            let mut outputs = multi_output(f.sig.outputs(), Vec::new());
             env.without_fill(|env| -> UiuaResult {
                 for part in parts {
                     env.push(part);
                     env.exec(f.clone())?;
-                    for i in 0..f.sig.outputs {
+                    for i in 0..f.sig.outputs() {
                         outputs[i].push(env.pop("split by output")?);
                     }
                 }
@@ -751,7 +751,7 @@ where
 {
     let sig = f.sig;
     let indices = env.pop(1)?.as_number_array(env, indices_error)?;
-    let values: Vec<Value> = (0..sig.args.max(1))
+    let values: Vec<Value> = (0..sig.args().max(1))
         .map(|i| env.pop(i + 2))
         .collect::<UiuaResult<_>>()?;
 
@@ -825,18 +825,18 @@ where
             })
         })
         .collect();
-    let mut rows = multi_output(sig.outputs, Vec::with_capacity(groups.len()));
+    let mut rows = multi_output(sig.outputs(), Vec::with_capacity(groups.len()));
     env.without_fill(|env| -> UiuaResult {
         for _ in 0..group_count {
             for group in groups.iter_mut().rev() {
                 env.push(group.next().unwrap());
             }
             env.exec(f.clone())?;
-            for i in 0..sig.outputs {
+            for i in 0..sig.outputs() {
                 let value = env.pop(|| format!("{}'s function result", prim.format()))?;
                 rows[i].push(value);
             }
-            if sig.args == 0 {
+            if sig.args() == 0 {
                 env.pop("excess value")?;
             }
         }

@@ -2201,7 +2201,7 @@ macro_rules! code_font {
 pub(crate) use code_font;
 
 fn sig_class(sig: Signature) -> &'static str {
-    match sig.args {
+    match sig.args() {
         0 => code_font!("noadic-function"),
         1 if very_gay() => code_font!("text-gradient monadic-aro"),
         1 => code_font!("monadic-function"),

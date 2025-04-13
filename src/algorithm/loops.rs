@@ -30,7 +30,7 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
         return Ok(());
     }
     let n = env.pop("repetition count")?;
-    env.require_height(f.sig.args)?;
+    env.require_height(f.sig.args())?;
     fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
         Ok(match value {
             Value::Num(n) => n,
@@ -53,7 +53,7 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
     } else {
         // Array
         let sig = f.sig;
-        if sig.args != sig.outputs {
+        if sig.args() != sig.outputs() {
             return Err(env.error(format!(
                 "{} with a non-scalar repetition count \
                 must use a function with the same number \
@@ -63,12 +63,12 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
             )));
         }
         // Collect arguments
-        let mut args = Vec::with_capacity(sig.args + 1);
+        let mut args = Vec::with_capacity(sig.args() + 1);
         let mut new_shape = n.shape().clone();
         let mut true_shape = Shape::SCALAR;
         let n_shape = n.shape().clone();
         args.push(n);
-        for i in 0..sig.args {
+        for i in 0..sig.args() {
             let arg = env.pop(i + 1)?;
             if arg.rank() > 0
                 && n_shape.len() > 0
@@ -96,11 +96,11 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
             row_count,
             is_empty,
             ..
-        } = fixed_rows(Primitive::Repeat.format(), sig.outputs, args, env)?;
+        } = fixed_rows(Primitive::Repeat.format(), sig.outputs(), args, env)?;
 
         // Switch with each selector element
-        let mut outputs = multi_output(sig.outputs, Vec::new());
-        let mut rows_to_sel = Vec::with_capacity(sig.args);
+        let mut outputs = multi_output(sig.outputs(), Vec::new());
+        let mut rows_to_sel = Vec::with_capacity(sig.args());
         for _ in 0..row_count {
             let n = rep_count(
                 match &mut rows[0] {
@@ -141,7 +141,7 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
                         env.push(row);
                     }
                     repeat_impl(f.clone(), inv.clone(), elem, env)?;
-                    for i in 0..sig.outputs {
+                    for i in 0..sig.outputs() {
                         let res = env.pop("repeat output")?;
                         // println!("    res: {:?}", res);
                         outputs[i].push(res);
@@ -173,12 +173,12 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
         let f = inv.ok_or_else(|| env.error("No inverse found"))?;
         (f, -n)
     };
-    let preserve_count = f.sig.args.saturating_sub(f.sig.outputs);
-    let preserved = env.copy_n_down(preserve_count, f.sig.args)?;
+    let preserve_count = f.sig.args().saturating_sub(f.sig.outputs());
+    let preserved = env.copy_n_down(preserve_count, f.sig.args())?;
     let mut convergence_count = 0;
     if n.is_infinite() {
         // Converging repeat
-        if sig.args == 0 {
+        if sig.args() == 0 {
             return Err(env.error(format!(
                 "Converging {}'s function must have at least 1 argument",
                 Primitive::Repeat.format()
@@ -188,7 +188,7 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
         env.push(prev.clone());
         loop {
             if preserve_count > 0 {
-                env.insert_stack(sig.outputs, preserved.iter().cloned())?;
+                env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
             }
             env.exec(f.clone())?;
             let next = env.pop("converging function result")?;
@@ -208,8 +208,8 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
             return Err(env.error("Repetitions must be an integer or infinity"));
         }
         let n = n as usize;
-        if sig.outputs > sig.args {
-            let delta = sig.outputs - sig.args;
+        if sig.outputs() > sig.args() {
+            let delta = sig.outputs() - sig.args();
             if validate_size_impl(size_of::<Value>(), [n, delta]).is_err() {
                 return Err(env.error(format!(
                     "{} would create too many values on the stack",
@@ -219,19 +219,19 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
         }
         for _ in 0..n {
             if preserve_count > 0 {
-                env.insert_stack(sig.outputs, preserved.iter().cloned())?;
+                env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
             }
             env.exec(f.clone())?;
         }
     }
-    env.remove_n(preserve_count, sig.args)?;
+    env.remove_n(preserve_count, sig.args())?;
     Ok(convergence_count)
 }
 
 pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let [body, cond] = get_ops(ops, env)?;
-    let cond_sig_err = if cond.sig.outputs == 0 {
+    let cond_sig_err = if cond.sig.outputs() == 0 {
         Some(env.error(format!(
             "Do's condition function must return at least 1 value, \
             but its signature is {}",
@@ -240,13 +240,13 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     } else {
         None
     };
-    let copy_count = (cond.sig.args).saturating_sub(cond.sig.outputs.saturating_sub(1));
+    let copy_count = (cond.sig.args()).saturating_sub(cond.sig.outputs().saturating_sub(1));
     let cond_sub_sig = Signature::new(
-        cond.sig.args,
-        (cond.sig.outputs + copy_count).saturating_sub(1),
+        cond.sig.args(),
+        (cond.sig.outputs() + copy_count).saturating_sub(1),
     );
     let comp_sig = body.sig.compose(cond_sub_sig);
-    let sig_err = match comp_sig.args.cmp(&comp_sig.outputs) {
+    let sig_err = match comp_sig.args().cmp(&comp_sig.outputs()) {
         Ordering::Less if env.rt.array_depth == 0 => Some(env.error(format!(
             "Do's functions cannot have a positive net stack \
             change outside an array, but the composed signature of \
@@ -255,8 +255,8 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
         ))),
         _ => None,
     };
-    let preserve_count = comp_sig.args.saturating_sub(comp_sig.outputs);
-    let preserved = env.copy_n_down(preserve_count, comp_sig.args)?;
+    let preserve_count = comp_sig.args().saturating_sub(comp_sig.outputs());
+    let preserved = env.copy_n_down(preserve_count, comp_sig.args())?;
     loop {
         // Make sure there are enough values
         if env.stack().len() < copy_count {
@@ -282,12 +282,12 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
         // Call body
         if preserve_count > 0 {
-            env.insert_stack(comp_sig.outputs, preserved.iter().cloned())?;
+            env.insert_stack(comp_sig.outputs(), preserved.iter().cloned())?;
         }
         env.exec(body.clone())?;
         if let Some(err) = sig_err {
             return Err(err);
         }
     }
-    env.remove_n(preserve_count, comp_sig.args)
+    env.remove_n(preserve_count, comp_sig.args())
 }

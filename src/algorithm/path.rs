@@ -84,7 +84,7 @@ fn path_impl(
         ("goal", isg_sig, &[1]),
         ("heuristic", heu_sig, &[1]),
     ] {
-        if !req_out.contains(&sig.outputs) {
+        if !req_out.contains(&sig.outputs()) {
             let count = if req_out.len() == 1 {
                 "1"
             } else {
@@ -97,8 +97,8 @@ fn path_impl(
             )));
         }
     }
-    let has_costs = nei_sig.outputs == 2;
-    let arg_count = nei_sig.args.max(heu_sig.args).max(isg_sig.args) - 1;
+    let has_costs = nei_sig.outputs() == 2;
+    let arg_count = nei_sig.args().max(heu_sig.args()).max(isg_sig.args()) - 1;
     let mut args = Vec::with_capacity(arg_count);
     for i in 0..arg_count {
         args.push(env.pop(i + 1)?);
@@ -136,7 +136,7 @@ fn path_impl(
     impl PathEnv<'_> {
         fn heuristic(&mut self, node: &Value) -> UiuaResult<f64> {
             Ok(if let Some(heuristic) = &self.heuristic {
-                let heu_args = heuristic.sig.args;
+                let heu_args = heuristic.sig.args();
                 for arg in (self.args.iter()).take(heu_args.saturating_sub(1)).rev() {
                     self.env.push(arg.clone());
                 }
@@ -158,7 +158,7 @@ fn path_impl(
             })
         }
         fn neighbors(&mut self, node: &Value) -> UiuaResult<Vec<(Value, f64)>> {
-            let nei_args = self.neighbors.sig.args;
+            let nei_args = self.neighbors.sig.args();
             for arg in (self.args.iter()).take(nei_args.saturating_sub(1)).rev() {
                 self.env.push(arg.clone());
             }
@@ -166,7 +166,7 @@ fn path_impl(
                 self.env.push(node.clone());
             }
             self.env.exec(self.neighbors.clone())?;
-            let (nodes, costs) = if self.neighbors.sig.outputs == 2 {
+            let (nodes, costs) = if self.neighbors.sig.outputs() == 2 {
                 let costs = (self.env.pop("neighbors costs")?)
                     .as_nums(self.env, "Costs must be a list of numbers")?;
                 let nodes = self.env.pop("neighbors nodes")?;
@@ -189,7 +189,7 @@ fn path_impl(
             Ok(nodes.into_rows().zip(costs).collect())
         }
         fn is_goal(&mut self, node: &Value) -> UiuaResult<bool> {
-            let isg_args = self.is_goal.sig.args;
+            let isg_args = self.is_goal.sig.args();
             for arg in (self.args.iter()).take(isg_args.saturating_sub(1)).rev() {
                 self.env.push(arg.clone());
             }

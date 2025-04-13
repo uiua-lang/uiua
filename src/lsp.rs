@@ -1645,7 +1645,7 @@ mod server {
             let mut prev_line = 0;
             let mut prev_char = 0;
             let for_prim = |p: Primitive, sub: Option<i32>| {
-                let args = p.subscript_sig(sub).map(|sig| sig.args).or(p.args());
+                let args = p.subscript_sig(sub).map(|sig| sig.args()).or(p.args());
                 Some(match p.class() {
                     PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
                         if p.modifier_args().is_none() =>
@@ -1680,7 +1680,7 @@ mod server {
                         docs: Some(docs), ..
                     } => match docs.kind {
                         BindingDocsKind::Constant(_) => continue,
-                        BindingDocsKind::Function { sig, .. } => match sig.args {
+                        BindingDocsKind::Function { sig, .. } => match sig.args() {
                             0 => NOADIC_FUNCTION_STT,
                             1 => MONADIC_FUNCTION_STT,
                             2 => DYADIC_FUNCTION_STT,

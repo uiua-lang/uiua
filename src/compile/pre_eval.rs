@@ -100,7 +100,8 @@ impl Compiler {
             for end in (start + 1..=node.len()).rev() {
                 let section = &node[start..end];
                 if self.can_pre_eval(section)
-                    && nodes_clean_sig(section).is_some_and(|sig| sig.args == 0 && sig.outputs > 0)
+                    && nodes_clean_sig(section)
+                        .is_some_and(|sig| sig.args() == 0 && sig.outputs() > 0)
                 {
                     // println!("section: {section:?}");
                     let mut success = false;

@@ -750,7 +750,7 @@ impl Uiua {
                 self.exec(inner)
             }
             Node::WithLocal { def, inner, span } => self.with_span(span, |env| {
-                let val = env.remove_nth_back(inner.sig.args)?;
+                let val = env.remove_nth_back(inner.sig.args())?;
                 env.rt.local_stack.push((def, val));
                 let res = env.exec(inner);
                 env.rt.local_stack.pop();
@@ -887,8 +887,12 @@ impl Uiua {
     /// Call and truncate the stack to before the args were pushed if the call fails
     pub(crate) fn exec_clean_stack(&mut self, sn: SigNode) -> UiuaResult {
         let sig = sn.sig;
-        let bottom = self.stack_height().saturating_sub(sig.args);
-        let under_bottom = self.rt.under_stack.len().saturating_sub(sn.sig.under_args);
+        let bottom = self.stack_height().saturating_sub(sig.args());
+        let under_bottom = self
+            .rt
+            .under_stack
+            .len()
+            .saturating_sub(sn.sig.under_args());
         let res = self.exec(sn.node);
         if res.is_err() {
             self.truncate_stack(bottom);
@@ -898,11 +902,11 @@ impl Uiua {
     }
     /// Call and maintain the stack delta if the call fails
     pub(crate) fn exec_maintain_sig(&mut self, sn: SigNode) -> UiuaResult {
-        let mut args = self.stack()[self.stack().len().saturating_sub(sn.sig.args)..].to_vec();
+        let mut args = self.stack()[self.stack().len().saturating_sub(sn.sig.args())..].to_vec();
         args.reverse();
-        let target_height = (self.stack_height() + sn.sig.outputs).saturating_sub(sn.sig.args);
-        let under_target_height =
-            (self.rt.under_stack.len() + sn.sig.under_outputs).saturating_sub(sn.sig.under_args);
+        let target_height = (self.stack_height() + sn.sig.outputs()).saturating_sub(sn.sig.args());
+        let under_target_height = (self.rt.under_stack.len() + sn.sig.under_outputs())
+            .saturating_sub(sn.sig.under_args());
         let res = self.exec(sn);
         match self.stack_height().cmp(&target_height) {
             Ordering::Equal => {}
@@ -977,7 +981,7 @@ impl Uiua {
             return Err(err);
         }
         let height_diff = self.rt.stack.len() as isize - start_height as isize;
-        let sig_diff = sig.outputs as isize - sig.args as isize;
+        let sig_diff = sig.outputs() as isize - sig.args() as isize;
         if height_diff != sig_diff {
             let message = format!(
                 "Function modified the stack by {height_diff} values, but its \
@@ -1519,10 +1523,10 @@ impl Uiua {
         if !self.rt.backend.allow_thread_spawning() {
             return Err(self.error("Thread spawning is not allowed in this environment"));
         }
-        if self.rt.stack.len() < f.sig.args {
+        if self.rt.stack.len() < f.sig.args() {
             return Err(self.error(format!(
                 "Expected at least {} value(s) on the stack, but there are {}",
-                f.sig.args,
+                f.sig.args(),
                 self.rt.stack.len()
             )))?;
         }
@@ -1539,7 +1543,7 @@ impl Uiua {
             asm: self.asm.clone(),
             rt: Runtime {
                 stack: (self.rt.stack)
-                    .drain(self.rt.stack.len() - f.sig.args..)
+                    .drain(self.rt.stack.len() - f.sig.args()..)
                     .collect(),
                 under_stack: Vec::new(),
                 local_stack: self.rt.local_stack.clone(),

@@ -1232,7 +1232,11 @@ fn color_prim(prim: Primitive, sub: Option<i32>) -> Option<Color> {
             if let Some(margs) = prim.modifier_args() {
                 Some(color_mod(margs))
             } else {
-                match prim.subscript_sig(sub).map(|sig| sig.args).or(prim.args()) {
+                match prim
+                    .subscript_sig(sub)
+                    .map(|sig| sig.args())
+                    .or(prim.args())
+                {
                     Some(n) => color_func(n),
                     _ => None,
                 }
@@ -1275,7 +1279,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             SpanKind::Ident {
                 docs: Some(docs), ..
             } => match docs.kind {
-                BindingDocsKind::Function { sig, .. } => match sig.args {
+                BindingDocsKind::Function { sig, .. } => match sig.args() {
                     0 => Some(NOADIC),
                     1 => Some(MONADIC),
                     2 => Some(DYADIC),

@@ -467,7 +467,7 @@ impl Compiler {
                     let n = self.positive_subscript(sub.value, On, &sub.span)?;
                     Node::ImplMod(ImplPrimitive::OnSub(n), eco_vec![sn], span)
                 } else {
-                    let prim = if sn.sig.args == 0 { Dip } else { On };
+                    let prim = if sn.sig.args() == 0 { Dip } else { On };
                     Node::Mod(prim, eco_vec![sn], span)
                 }
             }
@@ -479,7 +479,7 @@ impl Compiler {
                     .filter(|n| n.value > 1)
                 {
                     let n = self.positive_subscript(sub.value, By, &sub.span)?;
-                    if n == sn.sig.args {
+                    if n == sn.sig.args() {
                         self.emit_diagnostic(
                             format!(
                                 "Prefer {} over subscripted {} here",
@@ -491,7 +491,7 @@ impl Compiler {
                         )
                     }
                     Node::ImplMod(ImplPrimitive::BySub(n), eco_vec![sn], span)
-                } else if sn.sig.args == 0 {
+                } else if sn.sig.args() == 0 {
                     sn.node.prepend(Node::Prim(Identity, span));
                     sn.node
                 } else {
@@ -536,7 +536,7 @@ impl Compiler {
                     );
                 }
                 let span = self.add_span(modified.modifier.span.clone());
-                match (f.sig.args, g.sig.args) {
+                match (f.sig.args(), g.sig.args()) {
                     (0, _) => Node::from_iter([g.node, f.node]),
                     (1, 0) => Node::from_iter([Node::Mod(Dip, eco_vec![g], span), f.node]),
                     (1, _) => Node::from_iter([Node::Mod(On, eco_vec![g], span), f.node]),
@@ -558,7 +558,7 @@ impl Compiler {
                     }
                     SubNOrSide::Side(side) => {
                         let op = self.monadic_modifier_op(modified)?.0;
-                        if op.sig.args != 2 {
+                        if op.sig.args() != 2 {
                             self.add_error(
                                 modified.modifier.span.clone().merge(n.span),
                                 format!(
@@ -601,7 +601,7 @@ impl Compiler {
                 };
                 let span = self.add_span(modified.modifier.span.clone());
                 let (a, b, _, _) = self.dyadic_modifier_ops(modified)?;
-                if a.sig.args != 2 || b.sig.args != 2 {
+                if a.sig.args() != 2 || b.sig.args() != 2 {
                     self.add_error(
                         modified.modifier.span.clone().merge(side.span),
                         format!(
@@ -635,11 +635,11 @@ impl Compiler {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let sig = sn.sig;
-                let (inner, before) = match sn.sig.args {
+                let (inner, before) = match sn.sig.args() {
                     0 => (SigNode::new((2, 2), Node::Prim(Identity, span)), sn.node),
                     1 => {
-                        sn.sig.outputs += 1;
-                        sn.sig.args = 2;
+                        sn.sig.update_outputs(|o| o + 1);
+                        sn.sig.update_args(|_| 2);
                         (sn, Node::empty())
                     }
                     _ => (sn, Node::empty()),
@@ -652,7 +652,7 @@ impl Compiler {
                     {
                         let n = self.positive_subscript(sub.value, prim, &sub.span)?;
                         let prim = if prim == Off {
-                            if n == sig.args {
+                            if n == sig.args() {
                                 self.emit_diagnostic(
                                     format!(
                                         "Prefer {} over subscripted {} here",
@@ -675,7 +675,7 @@ impl Compiler {
             }
             prim @ (Above | Below) => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
-                if sn.sig.args < 2 {
+                if sn.sig.args() < 2 {
                     self.emit_diagnostic(
                         format!(
                             "The current behavior of {} with < 2 arguments \
@@ -685,15 +685,15 @@ impl Compiler {
                         DiagnosticKind::Warning,
                         modified.modifier.span.clone(),
                     );
-                    sn.sig.args += 1;
-                    sn.sig.outputs += 1;
+                    sn.sig.update_args(|a| a + 1);
+                    sn.sig.update_outputs(|o| o + 1);
                 }
                 let span = self.add_span(modified.modifier.span.clone());
                 Node::Mod(prim, eco_vec![sn], span)
             }
             Slf => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
-                match sig.args {
+                match sig.args() {
                     0 | 1 => {
                         self.add_error(
                             modified.modifier.span.clone(),
@@ -716,7 +716,7 @@ impl Compiler {
             }
             Backward => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
-                match sig.args {
+                match sig.args() {
                     2 => {
                         let span = self.add_span(modified.modifier.span.clone());
                         node.prepend(Node::Prim(Flip, span));
@@ -751,7 +751,7 @@ impl Compiler {
                     Node::ImplPrim(ImplPrimitive::UnBox, span)
                         .sig_node()
                         .unwrap()
-                        .on_all(sn.sig.args, span),
+                        .on_all(sn.sig.args(), span),
                 );
                 sn.node
             }
@@ -797,7 +797,7 @@ impl Compiler {
                 let inner_sig = sn.sig;
                 let mut node = Node::Mod(Primitive::Tuples, eco_vec![sn], span);
                 if let Some(n) = subscript.and_then(|n| self.subscript_n(n, Tuples.format())) {
-                    if inner_sig.args != 2 {
+                    if inner_sig.args() != 2 {
                         self.add_error(
                             modified.modifier.span.clone().merge(n.span),
                             format!(
@@ -817,7 +817,7 @@ impl Compiler {
                 let inner_sig = sn.sig;
                 let mut node = Node::Mod(Primitive::Stencil, eco_vec![sn], span);
                 if let Some(n) = subscript.and_then(|n| self.subscript_n(n, Stencil.format())) {
-                    if inner_sig.args != 1 {
+                    if inner_sig.args() != 1 {
                         self.add_error(
                             modified.modifier.span.clone().merge(n.span),
                             format!(
@@ -865,7 +865,7 @@ impl Compiler {
                 };
                 let span = self.add_span(modified.modifier.span.clone());
                 let un = if normal.sig == (1, 1) || self.allow_experimental() {
-                    if f.sig.args == f.sig.outputs {
+                    if f.sig.args() == f.sig.outputs() {
                         let (f_before, f_after) = f
                             .node
                             .under_inverse(g.sig, true, &self.asm)
@@ -952,23 +952,21 @@ impl Compiler {
                         _ => false,
                     };
                     if noreturn {
-                        handler.sig.outputs = tried.sig.outputs;
+                        handler.sig.set_outputs(tried.sig.outputs());
                     }
                 }
 
-                match tried.sig.outputs.cmp(&handler.sig.outputs) {
+                match tried.sig.outputs().cmp(&handler.sig.outputs()) {
                     Ordering::Equal => {}
-                    Ordering::Less => {
-                        tried.sig.args += handler.sig.outputs - tried.sig.outputs;
-                        tried.sig.outputs = handler.sig.outputs;
-                    }
-                    Ordering::Greater => {
-                        handler.sig.args += tried.sig.outputs - handler.sig.outputs;
-                        handler.sig.outputs = tried.sig.outputs;
-                    }
+                    Ordering::Less => tried.sig.update_args_outputs(|a, o| {
+                        (a + handler.sig.outputs() - o, handler.sig.outputs())
+                    }),
+                    Ordering::Greater => handler.sig.update_args_outputs(|a, o| {
+                        (a + tried.sig.outputs() - o, tried.sig.outputs())
+                    }),
                 }
 
-                if handler.sig.args > tried.sig.args + 1 {
+                if handler.sig.args() > tried.sig.args() + 1 {
                     self.add_error(
                         handler_span.clone(),
                         format!(
@@ -1001,7 +999,7 @@ impl Compiler {
                 let fill_word = operands.next().unwrap();
                 let fill_span = fill_word.span.clone();
                 let fill = self.word_sig(fill_word)?;
-                if fill.sig.outputs > 1 && !self.scope.fill_sig_error {
+                if fill.sig.outputs() > 1 && !self.scope.fill_sig_error {
                     self.scope.fill_sig_error = true;
                     self.add_error(
                         fill_span,
@@ -1085,7 +1083,7 @@ impl Compiler {
                                 let sub_span = self.add_span(n.span);
                                 let mut node = match side {
                                     SubSide::Left => Node::Prim(Fix, sub_span),
-                                    SubSide::Right => match sn.sig.args {
+                                    SubSide::Right => match sn.sig.args() {
                                         0 => Node::empty(),
                                         1 => Node::Prim(Fix, sub_span),
                                         n => {
@@ -1147,7 +1145,7 @@ impl Compiler {
                             let sub_span = self.add_span(n_span);
                             let mut node = match side {
                                 SubSide::Left => Node::Prim(Fix, sub_span),
-                                SubSide::Right => match sn.sig.args {
+                                SubSide::Right => match sn.sig.args() {
                                     0 => Node::empty(),
                                     1 => Node::Prim(Fix, sub_span),
                                     n => {
@@ -1174,7 +1172,7 @@ impl Compiler {
             Table => {
                 // Normal table compilation, but get some diagnostics
                 let (sn, span) = self.monadic_modifier_op(modified)?;
-                match sn.sig.args {
+                match sn.sig.args() {
                     0 => self.emit_diagnostic(
                         format!("{} of 0 arguments is redundant", Table.format()),
                         DiagnosticKind::Advice,
@@ -1197,7 +1195,7 @@ impl Compiler {
                     match sn.node {
                         Node::Mod(Fork, args, fork_span)
                             if (args.iter()).all(|arg| arg.node.is_pure(Purity::Pure, asm))
-                                && args.windows(2).all(|w| w[0].sig.args == w[1].sig.args) =>
+                                && args.windows(2).all(|w| w[0].sig.args() == w[1].sig.args()) =>
                         {
                             let args: EcoVec<SigNode> = args
                                 .into_iter()
@@ -1213,7 +1211,7 @@ impl Compiler {
             }
             Fold => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
-                if sn.sig.args <= sn.sig.outputs {
+                if sn.sig.args() <= sn.sig.outputs() {
                     self.experimental_error(&modified.modifier.span, || {
                         format!(
                             "{} with arguments ≤ outputs is experimental. To use it, \
@@ -1283,7 +1281,10 @@ impl Compiler {
             }
             Sig => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
-                Node::from_iter([Node::new_push(sn.sig.outputs), Node::new_push(sn.sig.args)])
+                Node::from_iter([
+                    Node::new_push(sn.sig.outputs()),
+                    Node::new_push(sn.sig.args()),
+                ])
             }
             Derivative => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
@@ -1485,7 +1486,7 @@ impl Compiler {
                 word => vec![operand.span.sp(word)],
             };
         }
-        let op_sigs = if mac.root.sig.args == 2 {
+        let op_sigs = if mac.root.sig.args() == 2 {
             // If the macro function has 2 arguments, we pass the signatures
             // of the operands as well
             let mut sig_data: EcoVec<u8> = EcoVec::with_capacity(operands.len() * 2);
@@ -1501,7 +1502,7 @@ impl Compiler {
                     );
                     e.with_info([(message, None)])
                 })?;
-                sig_data.extend_from_slice(&[sn.sig.args as u8, sn.sig.outputs as u8]);
+                sig_data.extend_from_slice(&[sn.sig.args() as u8, sn.sig.outputs() as u8]);
             }
             // Discard unnecessary instructions and spans
             Some(Array::<u8>::new([operands.len(), 2], sig_data))
@@ -1715,13 +1716,13 @@ impl Compiler {
     ) -> UiuaResult<Node> {
         let orig_spans_len = self.asm.spans.len();
         let sn = self.word_sig(operand)?;
-        if sn.sig.args > 0 {
+        if sn.sig.args() > 0 {
             return Err(self.error(
                 span.clone(),
                 format!(
                     "{}'s function must have no arguments, but it has {}",
                     prim.format(),
-                    sn.sig.args
+                    sn.sig.args()
                 ),
             ));
         }
@@ -1749,13 +1750,13 @@ impl Compiler {
             if self.errors.is_empty() {
                 self.add_error(span.clone(), format!("Compile-time evaluation failed: {e}"));
             }
-            vec![Value::default(); sn.sig.outputs]
+            vec![Value::default(); sn.sig.outputs()]
         } else {
             stack
         };
         self.asm.spans.truncate(orig_spans_len);
         comp.asm.root.truncate(asm_root_len);
-        let val_count = sn.sig.outputs;
+        let val_count = sn.sig.outputs();
         let mut node = Node::empty();
         for value in values.into_iter().rev().take(val_count).rev() {
             node.push(Node::new_push(value));

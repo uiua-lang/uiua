@@ -9,13 +9,13 @@ use crate::{CodeSpan, Ident, Primitive};
 #[serde(from = "(usize, usize)", into = "(usize, usize)")]
 pub struct Signature {
     /// The number of arguments the function pops off the stack
-    pub args: usize,
+    args: u16,
     /// The number of values the function pushes onto the stack
-    pub outputs: usize,
+    outputs: u16,
     /// The number of arguments the function pops off the under stack
-    pub under_args: usize,
+    under_args: u16,
     /// The number of values the function pushes onto the under stack
-    pub under_outputs: usize,
+    under_outputs: u16,
 }
 
 impl From<(usize, usize)> for Signature {
@@ -26,7 +26,7 @@ impl From<(usize, usize)> for Signature {
 
 impl From<Signature> for (usize, usize) {
     fn from(sig: Signature) -> Self {
-        (sig.args, sig.outputs)
+        (sig.args(), sig.outputs())
     }
 }
 
@@ -34,8 +34,8 @@ impl Signature {
     /// Create a new signature with the given number of arguments and outputs
     pub const fn new(args: usize, outputs: usize) -> Self {
         Self {
-            args,
-            outputs,
+            args: args as u16,
+            outputs: outputs as u16,
             under_args: 0,
             under_outputs: 0,
         }
@@ -45,9 +45,47 @@ impl Signature {
         Self {
             args: self.args,
             outputs: self.outputs,
-            under_args,
-            under_outputs,
+            under_args: under_args as u16,
+            under_outputs: under_outputs as u16,
         }
+    }
+    /// Get the number of arguments
+    pub const fn args(&self) -> usize {
+        self.args as usize
+    }
+    /// Get the number of outputs
+    pub const fn outputs(&self) -> usize {
+        self.outputs as usize
+    }
+    /// Get the number of under arguments
+    pub const fn under_args(&self) -> usize {
+        self.under_args as usize
+    }
+    /// Get the number of under outputs
+    pub const fn under_outputs(&self) -> usize {
+        self.under_outputs as usize
+    }
+    /// Set the number of arguments
+    pub const fn set_args(&mut self, args: usize) {
+        self.args = args as u16;
+    }
+    /// Set the number of outputs
+    pub const fn set_outputs(&mut self, outputs: usize) {
+        self.outputs = outputs as u16;
+    }
+    /// Update the number of arguments
+    pub fn update_args(&mut self, f: impl FnOnce(usize) -> usize) {
+        self.args = f(self.args()) as u16;
+    }
+    /// Update the number of outputs
+    pub fn update_outputs(&mut self, f: impl FnOnce(usize) -> usize) {
+        self.outputs = f(self.outputs()) as u16;
+    }
+    /// Update the number of arguments and outputs
+    pub fn update_args_outputs(&mut self, f: impl FnOnce(usize, usize) -> (usize, usize)) {
+        let (args, outputs) = f(self.args(), self.outputs());
+        self.args = args as u16;
+        self.outputs = outputs as u16;
     }
     /// Check if this signature changes the stack size by the same amount as another signature
     pub fn is_compatible_with(self, other: Self) -> bool {
@@ -63,33 +101,41 @@ impl Signature {
     }
     /// Get the signature that has the maximum of the arguments and outputs of this signature and another
     pub fn max_with(self, other: Self) -> Self {
-        Self::new(self.args.max(other.args), self.outputs.max(other.outputs))
+        Self::new(
+            self.args().max(other.args()),
+            self.outputs().max(other.outputs()),
+        )
+        .with_under(
+            self.under_args().max(other.under_args()),
+            self.under_outputs().max(other.under_outputs()),
+        )
     }
     /// Compose signatures as if a function with signature `other` was called before a function with signature `self`
     pub fn compose(self, other: Self) -> Self {
-        let args = other.args + self.args.saturating_sub(other.outputs);
-        let outputs = self.outputs + other.outputs.saturating_sub(self.args);
-        let under_args = other.under_args + self.under_args.saturating_sub(other.under_outputs);
+        let args = other.args() + self.args().saturating_sub(other.outputs());
+        let outputs = self.outputs() + other.outputs().saturating_sub(self.args());
+        let under_args =
+            other.under_args() + self.under_args().saturating_sub(other.under_outputs());
         let under_outputs =
-            self.under_outputs + other.under_outputs.saturating_sub(self.under_args);
+            self.under_outputs() + other.under_outputs().saturating_sub(self.under_args());
         Self::new(args, outputs).with_under(under_args, under_outputs)
     }
     /// Get the un-inverse of this signature
     pub fn inverse(self) -> Self {
-        Self::new(self.outputs, self.args)
+        Self::new(self.outputs(), self.args())
     }
     /// The the anti-inverse of this signature
     pub fn anti(self) -> Option<Self> {
         if self.args == 0 {
             return None;
         }
-        Some(Signature::new(self.outputs + 1, self.args - 1))
+        Some(Signature::new(self.outputs() + 1, self.args() - 1))
     }
 }
 
 impl PartialEq<(usize, usize)> for Signature {
     fn eq(&self, other: &(usize, usize)) -> bool {
-        self.args == other.0 && self.outputs == other.1
+        self.args() == other.0 && self.outputs() == other.1
     }
 }
 

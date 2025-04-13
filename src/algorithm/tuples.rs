@@ -11,14 +11,14 @@ use super::{monadic::range, table::table_impl, validate_size};
 
 pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
-    if f.sig.outputs > 1 {
+    if f.sig.outputs() > 1 {
         return Err(env.error(format!(
             "{}'s function must have at most 1 output, \
             but its signature is {}",
             Primitive::Tuples.format(),
             f.sig
         )));
-    } else if f.sig.args > 1 && f.sig.outputs == 0 {
+    } else if f.sig.args() > 1 && f.sig.outputs() == 0 {
         return Err(env.error(format!(
             "{}'s function must have 1 argument if it has 0 outputs, \
             but its signature is {}",
@@ -26,7 +26,7 @@ pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
             f.sig
         )));
     }
-    match f.sig.args {
+    match f.sig.args() {
         1 => tuple1(f, env)?,
         2 => tuple2(f, env)?,
         _ => {
@@ -42,7 +42,7 @@ pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
 }
 
 fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
-    let has_output = f.sig.outputs == 1;
+    let has_output = f.sig.outputs() == 1;
     let mut xs = env.pop(1)?;
     if xs.rank() == 0 {
         env.push(xs);

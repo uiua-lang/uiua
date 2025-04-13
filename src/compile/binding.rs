@@ -87,7 +87,7 @@ impl Compiler {
             }) {
                 if let Ok(Some((path_locals, local))) = self.ref_local(r) {
                     let is_noadic_function = match &self.asm.bindings[local.index].kind {
-                        BindingKind::Func(f) if f.sig.args == 0 => true,
+                        BindingKind::Func(f) if f.sig.args() == 0 => true,
                         _ => false,
                     };
                     if !is_noadic_function {
@@ -290,7 +290,9 @@ impl Compiler {
                 if let [Node::Prim(Primitive::Dup, span), rest @ ..] = node.as_slice() {
                     if let Span::Code(dup_span) = comp.get_span(*span) {
                         if let Ok(rest_sig) = nodes_sig(rest) {
-                            if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
+                            if rest_sig.args() == sig.args()
+                                && rest_sig.outputs() + 1 == sig.outputs()
+                            {
                                 comp.emit_diagnostic(
                                     "Functions should consume their arguments. \
                                         Try removing this.",
@@ -377,10 +379,10 @@ impl Compiler {
                 let sig = sig.value;
                 let span = self.add_span(span.clone());
                 let zero = Value::from(0);
-                for _ in 0..sig.args {
+                for _ in 0..sig.args() {
                     node.push(Node::Prim(Primitive::Pop, span));
                 }
-                for _ in 0..sig.outputs {
+                for _ in 0..sig.outputs() {
                     node.push(Node::Push(zero.clone()));
                 }
                 node.prepend(Node::Prim(Primitive::Assert, span));
@@ -412,7 +414,7 @@ impl Compiler {
                         inner: SigNode::new(sig, node).into(),
                         span,
                     };
-                    sig.args += 1;
+                    sig.update_args(|a| a + 1);
                 }
 
                 if sig == (0, 1) && !self_referenced && !is_func && !is_obverse && !is_method {
@@ -457,7 +459,7 @@ impl Compiler {
                         let Ok(sig) = nodes_sig(nodes) else {
                             break;
                         };
-                        if sig.outputs > 0 {
+                        if sig.outputs() > 0 {
                             has_stack_value = true;
                             break;
                         }

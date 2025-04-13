@@ -346,13 +346,13 @@ macro_rules! under {
 }
 
 under!(DipPat, input, g_sig, inverse, asm, Dip, span, [f], {
-    if f.sig.args == 0 {
+    if f.sig.args() == 0 {
         return generic();
     }
     // F inverse
     let inner_g_sig = Signature::new(
-        g_sig.args.saturating_sub(1),
-        g_sig.outputs.saturating_sub(1),
+        g_sig.args().saturating_sub(1),
+        g_sig.outputs().saturating_sub(1),
     );
     let (f_before, f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
     // Rest inverse
@@ -360,8 +360,9 @@ under!(DipPat, input, g_sig, inverse, asm, Dip, span, [f], {
     let rest_before_sig = rest_before.sig()?;
     let rest_after_sig = rest_after.sig()?;
 
-    let bal_symmetric = g_sig.args + rest_before_sig.args <= g_sig.outputs + rest_after_sig.outputs;
-    let bal_assymetic = rest_before_sig.args > 1 && rest_before_sig == rest_after_sig.inverse();
+    let bal_symmetric =
+        g_sig.args() + rest_before_sig.args() <= g_sig.outputs() + rest_after_sig.outputs();
+    let bal_assymetic = rest_before_sig.args() > 1 && rest_before_sig == rest_after_sig.inverse();
     let balanced = bal_symmetric || bal_assymetic;
 
     // Make before
@@ -396,12 +397,12 @@ under!(BothPat, input, g_sig, inverse, asm, {
         return generic();
     };
     let inner_g_sig = Signature::new(
-        g_sig.args.saturating_sub(1),
-        g_sig.outputs.saturating_sub(1),
+        g_sig.args().saturating_sub(1),
+        g_sig.outputs().saturating_sub(1),
     );
     let (f_before, mut f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
 
-    let balanced = g_sig.args <= g_sig.outputs && !(val.is_some() && f.sig == (1, 1));
+    let balanced = g_sig.args() <= g_sig.outputs() && !(val.is_some() && f.sig == (1, 1));
     // Make before
     let mut before = val.unwrap_or_default();
     before.push(if !inverse || balanced {
@@ -413,7 +414,7 @@ under!(BothPat, input, g_sig, inverse, asm, {
         } else {
             (node, None)
         };
-        let to_copy = f_after.sig.under_args;
+        let to_copy = f_after.sig.under_args();
         if to_copy > 0 {
             node.prepend(CopyToUnder(to_copy, span));
         }
@@ -426,7 +427,7 @@ under!(BothPat, input, g_sig, inverse, asm, {
     let after = if inverse || balanced {
         ImplMod(UnBoth, eco_vec![f_after], span)
     } else {
-        let to_discard = f_after.sig.under_args;
+        let to_discard = f_after.sig.under_args();
         if to_discard > 0 {
             f_after.node.push(PopUnder(to_discard, span));
             (0..to_discard).for_each(|_| f_after.node.push(Prim(Pop, span)));
@@ -438,7 +439,7 @@ under!(BothPat, input, g_sig, inverse, asm, {
 
 under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {
     // F inverse
-    let inner_g_sig = Signature::new(g_sig.args.saturating_sub(1), g_sig.outputs);
+    let inner_g_sig = Signature::new(g_sig.args().saturating_sub(1), g_sig.outputs());
     let (f_before, f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
     // Rest inverse
     let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;
@@ -449,9 +450,9 @@ under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {
     before.push(rest_before);
     // Make after
     let mut after = rest_after;
-    let after_inner = if g_sig.args == g_sig.outputs {
+    let after_inner = if g_sig.args() == g_sig.outputs() {
         Mod(Dip, eco_vec![f_after], span)
-    } else if g_sig.args + rest_before_sig.args <= g_sig.outputs + rest_after_sig.outputs {
+    } else if g_sig.args() + rest_before_sig.args() <= g_sig.outputs() + rest_after_sig.outputs() {
         Mod(On, eco_vec![f_after], span)
     } else {
         f_after.node
@@ -536,7 +537,7 @@ under!(RowsPat, input, g_sig, inverse, asm, {
     };
     let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
     let befores = Node::from_iter([
-        ImplPrim(MaxRowCount(f.sig.args), *span),
+        ImplPrim(MaxRowCount(f.sig.args()), *span),
         Mod(
             Dip,
             eco_vec![Mod(*prim, eco_vec![f_before], *span).sig_node()?],
@@ -587,7 +588,7 @@ under!(RepeatPat, input, g_sig, inverse, asm, {
 
 under!(FoldPat, input, g_sig, inverse, asm, Fold, span, [f], {
     let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
-    if f_before.sig.outputs > f_before.sig.args || f_after.sig.outputs > f_after.sig.args {
+    if f_before.sig.outputs() > f_before.sig.args() || f_after.sig.outputs() > f_after.sig.args() {
         return generic();
     }
     let before = Node::from_iter([
@@ -612,14 +613,14 @@ under!(
         let normal = cust.normal.clone()?;
         let (mut before, mut after, to_save) = if let Some((before, after)) = cust.under.clone() {
             // An under inverse is explicitly defined
-            if before.sig.outputs < normal.sig.outputs {
+            if before.sig.outputs() < normal.sig.outputs() {
                 return generic();
             }
-            let to_save = before.sig.outputs - normal.sig.outputs;
+            let to_save = before.sig.outputs() - normal.sig.outputs();
             (before.node, after.node, to_save)
         } else if let Some(anti) = cust.anti.clone() {
             // An anti inverse is defined
-            let to_save = anti.sig.args - normal.sig.outputs;
+            let to_save = anti.sig.args() - normal.sig.outputs();
             let before = Mod(On, eco_vec![normal.clone()], *span);
             let after = anti.node;
             (before, after, to_save)
@@ -662,7 +663,7 @@ under!(DupPat, input, g_sig, inverse, asm, Prim(Dup, dup_span), {
     let (monadic_i, monadic_sig) = (0..=dyadic_whole.len())
         .rev()
         .filter_map(|i| nodes_clean_sig(&dyadic_whole[..i]).map(|sig| (i, sig)))
-        .find(|(_, sig)| sig.args == sig.outputs)
+        .find(|(_, sig)| sig.args() == sig.outputs())
         .ok_or(Generic)?;
     let monadic_part = &dyadic_whole[..monadic_i];
     let dyadic_part = &dyadic_whole[monadic_i..];
@@ -881,8 +882,8 @@ under!(
             let undo_sig = undo_sig.get_or_insert(after_sig);
             if after_sig.is_compatible_with(*undo_sig) {
                 *undo_sig = undo_sig.max_with(after_sig);
-            } else if after_sig.outputs == undo_sig.outputs {
-                undo_sig.args = undo_sig.args.max(after_sig.args)
+            } else if after_sig.outputs() == undo_sig.outputs() {
+                undo_sig.update_args(|a| a.max(after_sig.args()))
             } else {
                 return generic();
             }
@@ -926,11 +927,11 @@ partition_group!(PartitionPat, Partition, UndoPartition1, UndoPartition2);
 partition_group!(GroupPat, Group, UndoGroup1, UndoGroup2);
 
 under!(ReversePat, input, g_sig, _, _, Prim(Reverse, span), {
-    if g_sig.outputs == 1 {
+    if g_sig.outputs() == 1 {
         return generic();
     }
-    let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
-        g_sig.outputs.max(1)
+    let count = if g_sig.args() == 1 || g_sig.outputs() == g_sig.args() * 2 {
+        g_sig.outputs().max(1)
     } else {
         1
     };
@@ -945,7 +946,7 @@ under!(ReversePat, input, g_sig, _, _, Prim(Reverse, span), {
 });
 
 under!(TransposePat, input, g_sig, _, _, {
-    if g_sig.outputs == 1 {
+    if g_sig.outputs() == 1 {
         return generic();
     }
     let (before, span, amnt, input) = match input {
@@ -953,8 +954,8 @@ under!(TransposePat, input, g_sig, _, _, {
         [node @ ImplPrim(TransposeN(amnt), span), input @ ..] => (node, *span, *amnt, input),
         _ => return generic(),
     };
-    let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
-        g_sig.outputs.max(1)
+    let count = if g_sig.args() == 1 || g_sig.outputs() == g_sig.args() * 2 {
+        g_sig.outputs().max(1)
     } else {
         1
     };
@@ -963,8 +964,8 @@ under!(TransposePat, input, g_sig, _, _, {
 });
 
 under!(RotatePat, input, g_sig, _, _, Prim(Rotate, span), {
-    let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
-        g_sig.outputs.max(1)
+    let count = if g_sig.args() == 1 || g_sig.outputs() == g_sig.args() * 2 {
+        g_sig.outputs().max(1)
     } else {
         1
     };
@@ -1020,8 +1021,8 @@ under!(FlipPat, input, g_sig, inverse, asm, Prim(Flip, span), {
     let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;
     let rest_before_sig = nodes_sig(&rest_before)?;
     let rest_after_sig = nodes_sig(&rest_after)?;
-    let total_args = g_sig.args + rest_before_sig.args + rest_after_sig.args;
-    let total_outputs = g_sig.outputs + rest_before_sig.outputs + rest_after_sig.outputs;
+    let total_args = g_sig.args() + rest_before_sig.args() + rest_after_sig.args();
+    let total_outputs = g_sig.outputs() + rest_before_sig.outputs() + rest_after_sig.outputs();
     let before = Prim(Flip, span);
     let after = if total_outputs < total_args {
         Node::empty()
@@ -1036,14 +1037,14 @@ under!(ConstPat, input, _, _, asm, {
     for end in 1..=input.len() {
         let frag = &input[..end];
         if let Some(sig) = nodes_clean_sig(frag) {
-            match sig.args {
+            match sig.args() {
                 0 => {}
                 1 => return generic(),
                 _ => {
                     // println!("frag: {:?}", frag);
                     if let Some(sig) = un_inverse(frag, asm).ok().and_then(|inv| inv.clean_sig()) {
                         // println!("inv sig: {:?}", sig);
-                        if sig.args < sig.outputs {
+                        if sig.args() < sig.outputs() {
                             return generic();
                         }
                     }

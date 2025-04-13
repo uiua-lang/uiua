@@ -266,7 +266,7 @@ impl Optimization for ReduceConjoinInventoryOpt {
             let ([inv_f], [rc_f]) = (inv_args.as_slice(), rc_args.as_slice()) else {
                 return None;
             };
-            if inv_f.sig.outputs != 1 {
+            if inv_f.sig.outputs() != 1 {
                 return None;
             }
             let Some(Join) = rc_f.node.as_primitive() else {
@@ -396,7 +396,7 @@ impl Optimization for SplitByOpt {
             let [f] = args.as_slice() else {
                 return None;
             };
-            if f.sig.args != 1 {
+            if f.sig.args() != 1 {
                 return None;
             }
             Some((f.clone(), *span))

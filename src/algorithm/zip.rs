@@ -375,7 +375,7 @@ pub fn each(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let [f] = get_ops(ops, env)?;
     let sig = f.sig;
-    match sig.args {
+    match sig.args() {
         0 => env.without_fill(|env| env.exec(f)),
         1 => each1(f, env.pop(1)?, env),
         2 => each2(f, env.pop(1)?, env.pop(2)?, env),
@@ -399,7 +399,7 @@ fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
             return Ok(());
         }
     }
-    let outputs = f.sig.outputs;
+    let outputs = f.sig.outputs();
     let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
     let new_shape = xs.shape().clone();
     let is_empty = outputs > 0 && xs.row_count() == 0;
@@ -448,7 +448,7 @@ fn each2(f: SigNode, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult
         let val = f(xs, ys, xrank, yrank, env)?;
         env.push(val);
     } else {
-        let outputs = f.sig.outputs;
+        let outputs = f.sig.outputs();
         let mut xs_shape = xs.shape().to_vec();
         let mut ys_shape = ys.shape().to_vec();
         let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
@@ -509,7 +509,7 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             fill_value_shapes(a, b, true, env)?;
         }
     }
-    let outputs = f.sig.outputs;
+    let outputs = f.sig.outputs();
     let is_empty = args.iter().any(|v| v.element_count() == 0);
     let elem_count = args.iter().map(Value::element_count).max().unwrap() + is_empty as usize;
     let mut new_values = multi_output(outputs, Vec::with_capacity(elem_count));
@@ -566,7 +566,7 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 
 pub fn rows(f: SigNode, inv: bool, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    match f.sig.args {
+    match f.sig.args() {
         0 => env.without_fill(|env| env.exec(f)),
         1 => rows1(f, env.pop(1)?, inv, env),
         2 => rows2(f, env.pop(1)?, env.pop(2)?, inv, env),
@@ -619,7 +619,7 @@ pub fn rows1(f: SigNode, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult
             }
         }
     }
-    let outputs = f.sig.outputs;
+    let outputs = f.sig.outputs();
     let is_scalar = xs.rank() == 0;
     let is_empty = outputs > 0 && xs.row_count() == 0;
     let mut new_rows = multi_output(
@@ -653,7 +653,7 @@ pub fn rows1(f: SigNode, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult
 }
 
 fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.sig.outputs;
+    let outputs = f.sig.outputs();
     let both_scalar = xs.rank() == 0 && ys.rank() == 0;
     match (xs.row_count(), ys.row_count()) {
         (_, 1) => {
@@ -791,7 +791,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
 }
 
 fn rowsn(f: SigNode, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.sig.outputs;
+    let outputs = f.sig.outputs();
     let prim = if inv {
         Primitive::Inventory
     } else {
@@ -837,15 +837,15 @@ fn rowsn(f: SigNode, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult 
 
 pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
-    if f.sig.outputs != 1 {
+    if f.sig.outputs() != 1 {
         return Err(env.error(format!(
             "{}'s function does not return a single value. \
             This is a bug in the interpreter.",
             ImplPrimitive::ReduceConjoinInventory
         )));
     }
-    let mut args = Vec::with_capacity(f.sig.args);
-    for i in 0..f.sig.args {
+    let mut args = Vec::with_capacity(f.sig.args());
+    for i in 0..f.sig.args() {
         args.push(env.pop(i + 1)?);
     }
     let FixedRowsData {

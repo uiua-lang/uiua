@@ -114,12 +114,12 @@ where
 {
     if inventory {
         let per_meta = take(per_meta);
-        for _ in 0..f.sig.outputs.saturating_sub(1) {
+        for _ in 0..f.sig.outputs().saturating_sub(1) {
             let mut arr = Array::<Boxed>::new([0], CowSlice::default());
             arr.set_per_meta(per_meta.clone());
             env.push(arr);
         }
-        if f.sig.outputs > 0 {
+        if f.sig.outputs() > 0 {
             let mut arr = Array::<Boxed>::new([0], CowSlice::default());
             arr.set_per_meta(per_meta);
             env.push(arr);

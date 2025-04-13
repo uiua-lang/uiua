@@ -21,7 +21,7 @@ pub fn table(ops: Ops, env: &mut Uiua) -> UiuaResult {
 
 pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    match f.sig.args {
+    match f.sig.args() {
         0 => env.exec(f),
         1 => rows1(f, env.pop(1)?, false, env),
         n => {
@@ -69,13 +69,13 @@ pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
 
 fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.sig;
-    match sig.args {
+    match sig.args() {
         2 => {
             let x_scalar = xs.rank() == 0;
             let y_scalar = ys.rank() == 0;
-            validate_size::<f64>([sig.outputs, xs.row_count(), ys.row_count()], env)?;
+            validate_size::<f64>([sig.outputs(), xs.row_count(), ys.row_count()], env)?;
             let new_shape = Shape::from([xs.row_count(), ys.row_count()]);
-            let outputs = sig.outputs;
+            let outputs = sig.outputs();
             let mut items = multi_output(outputs, Value::builder(xs.row_count() * ys.row_count()));
             let y_rows = ys.into_rows().collect::<Vec<_>>();
             env.without_fill(|env| -> UiuaResult {
@@ -114,7 +114,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
             }
             validate_size::<f64>(
                 [
-                    sig.outputs,
+                    sig.outputs(),
                     xs.row_count(),
                     ys.row_count(),
                     zs.row_count(),
@@ -126,7 +126,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
             for arg in [&xs, &ys, &zs].into_iter().chain(&others) {
                 new_shape.push(arg.row_count());
             }
-            let outputs = sig.outputs;
+            let outputs = sig.outputs();
             let other_rows_product = others.iter().map(|a| a.row_count()).product::<usize>();
             let mut items = multi_output(
                 outputs,
@@ -172,7 +172,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
 
 pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    validate_size::<f64>([f.sig.outputs, xs.row_count(), ys.row_count()], env)?;
+    validate_size::<f64>([f.sig.outputs(), xs.row_count(), ys.row_count()], env)?;
     match (f.node.as_flipped_primitive(), xs, ys) {
         (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env)? {

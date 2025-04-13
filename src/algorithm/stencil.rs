@@ -12,7 +12,7 @@ use super::{get_ops, loops::flip, multi_output, Ops};
 
 pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
-    if f.sig.args == 0 {
+    if f.sig.args() == 0 {
         return Err(env.error(format!(
             "{}'s function must have at least 1 argument, but its signature is {}",
             Primitive::Stencil.format(),
@@ -20,7 +20,7 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
         )));
     }
     // Adjacent stencil
-    if f.sig.args > 1 {
+    if f.sig.args() > 1 {
         if env.value_fill().is_some() {
             return Err(env.error(format!(
                 "Filled adjacent {} is not currently supported",
@@ -29,24 +29,24 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
         let mut xs = env.pop(1)?;
         xs.match_fill(env);
-        let n = f.sig.args;
+        let n = f.sig.args();
         return if f.sig == (2, 1) {
             adjacent_impl(f, xs, n, env)
         } else {
             if xs.row_count() < n {
-                for _ in 0..f.sig.outputs {
+                for _ in 0..f.sig.outputs() {
                     env.push(xs.first_dim_zero());
                 }
                 return Ok(());
             }
             let win_count = xs.row_count() - (n - 1);
-            let mut new_rows = multi_output(f.sig.outputs, Vec::with_capacity(win_count));
+            let mut new_rows = multi_output(f.sig.outputs(), Vec::with_capacity(win_count));
             for w in 0..win_count {
                 for i in (0..n).rev() {
                     env.push(xs.row(w + i));
                 }
                 env.exec(f.clone())?;
-                for i in 0..f.sig.outputs {
+                for i in 0..f.sig.outputs() {
                     new_rows[i].push(env.pop("stencil's function result")?);
                 }
             }
@@ -108,7 +108,7 @@ where
             WindowAction::Id(EcoVec::with_capacity(size))
         }
         Node::Prim(Primitive::Box, _) => WindowAction::Box(EcoVec::new(), EcoVec::new()),
-        _ => WindowAction::Default(multi_output(f.sig.outputs, Vec::new()), EcoVec::new()),
+        _ => WindowAction::Default(multi_output(f.sig.outputs(), Vec::new()), EcoVec::new()),
     };
 
     let fill = env.scalar_fill::<T>().ok().map(|fv| fv.value);
@@ -225,7 +225,7 @@ where
                     let arr = Array::new(window_shape.clone(), take(data));
                     env.push(arr);
                     env.exec(f.clone())?;
-                    for i in 0..f.sig.outputs {
+                    for i in 0..f.sig.outputs() {
                         output[i].push(env.pop("stencil's function result")?);
                     }
                 }

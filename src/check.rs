@@ -39,7 +39,7 @@ pub fn nodes_sig(nodes: &[Node]) -> Result<Signature, SigCheckError> {
 
 pub fn nodes_clean_sig(nodes: &[Node]) -> Option<Signature> {
     let sig = nodes_all_sigs(nodes).ok()?;
-    if sig.under_args != 0 || sig.under_outputs != 0 {
+    if sig.under_args() != 0 || sig.under_outputs() != 0 {
         None
     } else {
         Some(sig)
@@ -59,10 +59,8 @@ fn nodes_all_sigs(nodes: &[Node]) -> Result<Signature, SigCheckError> {
             return Ok(*sigs);
         }
         let env = VirtualEnv::from_nodes(nodes)?;
-        let mut sig = env.stack.sig();
         let under_sig = env.under.sig();
-        sig.under_args = under_sig.args;
-        sig.under_outputs = under_sig.outputs;
+        let sig = (env.stack.sig()).with_under(under_sig.args(), under_sig.outputs());
         cache.borrow_mut().insert(hash, sig);
         Ok(sig)
     })
@@ -309,11 +307,11 @@ impl VirtualEnv {
             Node::Mod(Astar, args, _) | Node::ImplMod(AstarFirst, args, _) => {
                 let _start = self.pop();
                 let [neighbors, heuristic, is_goal] = get_args(args)?;
-                let has_costs = neighbors.outputs == 2;
+                let has_costs = neighbors.outputs() == 2;
                 let args = neighbors
-                    .args
-                    .max(heuristic.args)
-                    .max(is_goal.args)
+                    .args()
+                    .max(heuristic.args())
+                    .max(is_goal.args())
                     .saturating_sub(1);
                 self.handle_args_outputs(args, 1 + has_costs as usize);
             }
@@ -321,45 +319,45 @@ impl VirtualEnv {
                 let _n = self.pop();
                 let _start = self.pop();
                 let [neighbors, heuristic, is_goal] = get_args(args)?;
-                let has_costs = neighbors.outputs == 2;
+                let has_costs = neighbors.outputs() == 2;
                 let args = neighbors
-                    .args
-                    .max(heuristic.args)
-                    .max(is_goal.args)
+                    .args()
+                    .max(heuristic.args())
+                    .max(is_goal.args())
                     .saturating_sub(1);
                 self.handle_args_outputs(args, 1 + has_costs as usize);
             }
             Node::ImplMod(AstarPop, args, _) => {
                 let _start = self.pop();
                 let [neighbors, heuristic, is_goal] = get_args(args)?;
-                let has_costs = neighbors.outputs == 2;
+                let has_costs = neighbors.outputs() == 2;
                 let args = neighbors
-                    .args
-                    .max(heuristic.args)
-                    .max(is_goal.args)
+                    .args()
+                    .max(heuristic.args())
+                    .max(is_goal.args())
                     .saturating_sub(1);
                 self.handle_args_outputs(args, has_costs as usize);
             }
             Node::Mod(Path, args, _) | Node::ImplMod(PathFirst, args, _) => {
                 let _start = self.pop();
                 let [neighbors, is_goal] = get_args(args)?;
-                let has_costs = neighbors.outputs == 2;
-                let args = neighbors.args.max(is_goal.args).saturating_sub(1);
+                let has_costs = neighbors.outputs() == 2;
+                let args = neighbors.args().max(is_goal.args()).saturating_sub(1);
                 self.handle_args_outputs(args, 1 + has_costs as usize);
             }
             Node::ImplMod(PathTake, args, _) => {
                 let _n = self.pop();
                 let _start = self.pop();
                 let [neighbors, is_goal] = get_args(args)?;
-                let has_costs = neighbors.outputs == 2;
-                let args = neighbors.args.max(is_goal.args).saturating_sub(1);
+                let has_costs = neighbors.outputs() == 2;
+                let args = neighbors.args().max(is_goal.args()).saturating_sub(1);
                 self.handle_args_outputs(args, 1 + has_costs as usize);
             }
             Node::ImplMod(PathPop, args, _) => {
                 let _start = self.pop();
                 let [neighbors, is_goal] = get_args(args)?;
-                let has_costs = neighbors.outputs == 2;
-                let args = neighbors.args.max(is_goal.args).saturating_sub(1);
+                let has_costs = neighbors.outputs() == 2;
+                let args = neighbors.args().max(is_goal.args()).saturating_sub(1);
                 self.handle_args_outputs(args, has_costs as usize);
             }
             Node::Prim(prim, _) => match prim {
@@ -434,8 +432,8 @@ impl VirtualEnv {
             Node::Mod(prim, args, _) => match prim {
                 Reduce | Scan => {
                     let [sig] = get_args(args)?;
-                    let args = sig.args.saturating_sub(sig.outputs);
-                    self.handle_args_outputs(args, sig.outputs);
+                    let args = sig.args().saturating_sub(sig.outputs());
+                    self.handle_args_outputs(args, sig.outputs());
                 }
                 Each | Rows | Inventory => {
                     let [f] = get_args_nodes(args)?;
@@ -447,18 +445,18 @@ impl VirtualEnv {
                 }
                 Stencil => {
                     let [sig] = get_args(args)?;
-                    if sig.args <= 1 {
+                    if sig.args() <= 1 {
                         let _size = self.pop();
                     }
-                    self.handle_args_outputs(1, sig.outputs);
+                    self.handle_args_outputs(1, sig.outputs());
                 }
                 Group | Partition => {
                     let [sig] = get_args(args)?;
-                    self.handle_args_outputs(sig.args.max(1) + 1, sig.outputs);
+                    self.handle_args_outputs(sig.args().max(1) + 1, sig.outputs());
                 }
                 Spawn | Pool => {
                     let [sig] = get_args(args)?;
-                    self.handle_args_outputs(sig.args, 1);
+                    self.handle_args_outputs(sig.args(), 1);
                 }
                 Repeat => {
                     let [f] = get_args_nodes(args)?;
@@ -467,20 +465,22 @@ impl VirtualEnv {
                 }
                 Do => {
                     let [body, cond] = get_args(args)?;
-                    let copy_count = cond.args.saturating_sub(cond.outputs.saturating_sub(1));
-                    let cond_sub_sig =
-                        Signature::new(cond.args, (cond.outputs + copy_count).saturating_sub(1));
+                    let copy_count = cond.args().saturating_sub(cond.outputs().saturating_sub(1));
+                    let cond_sub_sig = Signature::new(
+                        cond.args(),
+                        (cond.outputs() + copy_count).saturating_sub(1),
+                    );
                     let comp_sig = body.compose(cond_sub_sig);
-                    if comp_sig.args < comp_sig.outputs && self.array_depth == 0 {
-                        self.handle_args_outputs(comp_sig.args, comp_sig.outputs);
+                    if comp_sig.args() < comp_sig.outputs() && self.array_depth == 0 {
+                        self.handle_args_outputs(comp_sig.args(), comp_sig.outputs());
                         return Err(SigCheckError::from(format!(
                             "do with a function with signature {comp_sig}"
                         ))
-                        .loop_variable(self.stack.sig().args));
+                        .loop_variable(self.stack.sig().args()));
                     }
                     self.handle_args_outputs(
-                        comp_sig.args,
-                        comp_sig.outputs + cond_sub_sig.outputs.saturating_sub(cond.args),
+                        comp_sig.args(),
+                        comp_sig.outputs() + cond_sub_sig.outputs().saturating_sub(cond.args()),
                     );
                 }
                 Un => {
@@ -513,16 +513,16 @@ impl VirtualEnv {
                 }
                 Fork => {
                     let [f, g] = get_args(args)?;
-                    self.handle_args_outputs(f.args.max(g.args), f.outputs + g.outputs);
+                    self.handle_args_outputs(f.args().max(g.args()), f.outputs() + g.outputs());
                 }
                 Bracket => {
                     let [f, g] = get_args(args)?;
-                    self.handle_args_outputs(f.args + g.args, f.outputs + g.outputs);
+                    self.handle_args_outputs(f.args() + g.args(), f.outputs() + g.outputs());
                 }
                 Both => {
                     let [f] = get_args_nodes(args)?;
-                    let mut args = Vec::with_capacity(f.sig.args);
-                    for _ in 0..f.sig.args {
+                    let mut args = Vec::with_capacity(f.sig.args());
+                    for _ in 0..f.sig.args() {
                         args.push(self.pop());
                     }
                     self.sig_node(f)?;
@@ -558,8 +558,8 @@ impl VirtualEnv {
                 }
                 By => {
                     let [f] = get_args_nodes(args)?;
-                    let mut args = Vec::with_capacity(f.sig.args);
-                    for _ in 0..f.sig.args {
+                    let mut args = Vec::with_capacity(f.sig.args());
+                    for _ in 0..f.sig.args() {
                         args.push(self.pop());
                     }
                     let x = args.last().cloned();
@@ -573,11 +573,11 @@ impl VirtualEnv {
                 }
                 Above | Below => {
                     let [f] = get_args(args)?;
-                    self.handle_args_outputs(f.args, f.args + f.outputs);
+                    self.handle_args_outputs(f.args(), f.args() + f.outputs());
                 }
                 With | Off => {
                     let [f] = get_args(args)?;
-                    self.handle_args_outputs(f.args, f.outputs + 1);
+                    self.handle_args_outputs(f.args(), f.outputs() + 1);
                 }
                 Sys(SysOp::ReadLines) => {
                     let [f] = get_args(args)?;
@@ -585,7 +585,10 @@ impl VirtualEnv {
                 }
                 Sys(SysOp::AudioStream) => {
                     let [f] = get_args(args)?;
-                    self.handle_args_outputs(f.args.saturating_sub(1), f.outputs.saturating_sub(1));
+                    self.handle_args_outputs(
+                        f.args().saturating_sub(1),
+                        f.outputs().saturating_sub(1),
+                    );
                 }
                 prim if prim.modifier_args().is_some() => {
                     if let Some(sig) = prim.sig() {
@@ -607,15 +610,15 @@ impl VirtualEnv {
             Node::ImplMod(prim, args, _) => match prim {
                 &OnSub(n) | &BySub(n) | &WithSub(n) | &OffSub(n) => {
                     let [sn] = get_args_nodes(args)?;
-                    let args = sn.sig.args.max(n);
+                    let args = sn.sig.args().max(n);
                     self.handle_args_outputs(args, args);
                     self.sig_node(sn)?;
                     self.handle_args_outputs(0, n);
                 }
                 ReduceContent | ReduceDepth(_) => {
                     let [sig] = get_args(args)?;
-                    let args = sig.args.saturating_sub(sig.outputs);
-                    self.handle_args_outputs(args, sig.outputs);
+                    let args = sig.args().saturating_sub(sig.outputs());
+                    self.handle_args_outputs(args, sig.outputs());
                 }
                 ReduceConjoinInventory => {
                     let [sig] = get_args(args)?;
@@ -639,8 +642,8 @@ impl VirtualEnv {
                 UnFill | SidedFill(_) => self.fill(args)?,
                 UnBoth => {
                     let [f] = get_args_nodes(args)?;
-                    let mut args = Vec::with_capacity(f.sig.args);
-                    for _ in 0..f.sig.args {
+                    let mut args = Vec::with_capacity(f.sig.args());
+                    for _ in 0..f.sig.args() {
                         args.push(self.pop());
                     }
                     self.sig_node(f)?;
@@ -651,7 +654,7 @@ impl VirtualEnv {
                 }
                 UnBracket => {
                     let [f, g] = get_args(args)?;
-                    self.handle_args_outputs(f.args + g.args, f.outputs + g.outputs);
+                    self.handle_args_outputs(f.args() + g.args(), f.outputs() + g.outputs());
                 }
                 EachSub(_) => {
                     let [f] = get_args_nodes(args)?;
@@ -665,7 +668,7 @@ impl VirtualEnv {
                 UnScan => self.handle_args_outputs(1, 1),
                 SplitBy | SplitByScalar | SplitByKeepEmpty => {
                     let [f] = get_args(args)?;
-                    self.handle_args_outputs(2, f.outputs);
+                    self.handle_args_outputs(2, f.outputs());
                 }
                 prim => {
                     let args = prim
@@ -704,7 +707,7 @@ impl VirtualEnv {
             }
             Node::TrackCaller(inner) | Node::NoInline(inner) => self.node(inner)?,
             Node::WithLocal { inner, .. } => {
-                let _val = self.stack.remove(inner.sig.args);
+                let _val = self.stack.remove(inner.sig.args());
                 self.sig_node(inner)?;
             }
             Node::GetLocal { .. } => self.handle_args_outputs(0, 1),
@@ -725,16 +728,16 @@ impl VirtualEnv {
         self.stack.handle_args_outputs(args, outputs);
     }
     fn handle_sig(&mut self, sig: Signature) {
-        self.stack.handle_args_outputs(sig.args, sig.outputs);
+        self.stack.handle_args_outputs(sig.args(), sig.outputs());
         self.under
-            .handle_args_outputs(sig.under_args, sig.under_outputs);
+            .handle_args_outputs(sig.under_args(), sig.under_outputs());
     }
     fn fill(&mut self, args: &[SigNode]) -> Result<(), SigCheckError> {
         let [fill, f] = get_args_nodes(args)?;
-        if fill.sig.outputs > 0 || fill.sig.args > 0 && fill.sig.outputs != 0 {
+        if fill.sig.outputs() > 0 || fill.sig.args() > 0 && fill.sig.outputs() != 0 {
             self.sig_node(fill)?;
         }
-        self.handle_args_outputs(fill.sig.outputs, 0);
+        self.handle_args_outputs(fill.sig.outputs(), 0);
         self.sig_node(f)
     }
     fn repeat(
@@ -742,7 +745,7 @@ impl VirtualEnv {
         &SigNode { sig, ref node }: &SigNode,
         n: BasicValue,
     ) -> Result<(), SigCheckError> {
-        if sig.args < sig.outputs {
+        if sig.args() < sig.outputs() {
             // More outputs than arguments
             if let BasicValue::Num(n) = n {
                 let sig = if n >= 0.0 { sig } else { sig.inverse() };
@@ -755,8 +758,8 @@ impl VirtualEnv {
                                 self.node(node)?;
                             }
                         } else {
-                            let args = sig.args;
-                            let outputs = n * (sig.outputs - sig.args) + sig.args;
+                            let args = sig.args();
+                            let outputs = n * (sig.outputs() - sig.args()) + sig.args();
                             if validate_size_of::<BasicValue>([outputs]).is_err() {
                                 return Err("repeat with excessive outputs".into());
                             }
@@ -766,11 +769,11 @@ impl VirtualEnv {
                 } else if n.is_infinite() {
                     // If n is infinite, then we must be in an array
                     if self.array_depth == 0 {
-                        self.handle_args_outputs(sig.args, sig.outputs);
+                        self.handle_args_outputs(sig.args(), sig.outputs());
                         return Err(SigCheckError::from(format!(
                             "repeat with infinity and a function with signature {sig}"
                         ))
-                        .loop_variable(self.stack.sig().args));
+                        .loop_variable(self.stack.sig().args()));
                     } else {
                         self.handle_sig(sig);
                     }
@@ -780,11 +783,11 @@ impl VirtualEnv {
             } else {
                 // If there is no number, then we must be in an array
                 if self.array_depth == 0 {
-                    self.handle_args_outputs(sig.args, sig.outputs);
+                    self.handle_args_outputs(sig.args(), sig.outputs());
                     return Err(SigCheckError::from(format!(
                         "repeat with no number and a function with signature {sig}"
                     ))
-                    .loop_variable(self.stack.sig().args));
+                    .loop_variable(self.stack.sig().args()));
                 } else {
                     self.handle_sig(sig);
                 }

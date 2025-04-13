@@ -115,7 +115,7 @@ impl Compiler {
                         `# Experimental!` to the top of the file."
                     });
                     let mut validator = self.words_sig(validator.words)?;
-                    if validator.sig.args != 1 {
+                    if validator.sig.args() != 1 {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
@@ -125,7 +125,7 @@ impl Compiler {
                             ),
                         );
                     }
-                    if validator.sig.outputs > 1 {
+                    if validator.sig.outputs() > 1 {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
@@ -136,10 +136,10 @@ impl Compiler {
                         );
                     }
                     let mut validation_only = false;
-                    if validator.sig.outputs == 0 {
+                    if validator.sig.outputs() == 0 {
                         validation_only = true;
                         validator.node.prepend(Node::Prim(Primitive::Dup, span));
-                        validator.sig.outputs = 1;
+                        validator.sig.set_outputs(1);
                     }
 
                     let inverse = validator.node.un_inverse(&self.asm);
@@ -226,7 +226,7 @@ impl Compiler {
                     if let Some((va_node, _)) = &validator_and_inv {
                         sn.node.push(va_node.clone());
                     }
-                    if sn.sig.outputs != 1 {
+                    if sn.sig.outputs() != 1 {
                         self.add_error(
                             data_field.name.span.clone(),
                             format!(
@@ -342,7 +342,7 @@ impl Compiler {
         // Make constructor
         let constructor_args: usize = fields
             .iter()
-            .map(|f| f.init.as_ref().map(|sn| sn.sig.args).unwrap_or(1))
+            .map(|f| f.init.as_ref().map(|sn| sn.sig.args()).unwrap_or(1))
             .sum();
         let mut node = if has_fields {
             let mut inner = Node::default();
@@ -364,12 +364,12 @@ impl Compiler {
                     ));
                 }
                 if !inner.is_empty() {
-                    for _ in 0..arg.sig.args {
+                    for _ in 0..arg.sig.args() {
                         inner = Node::Mod(Primitive::Dip, eco_vec![SigNode::new(sig, inner)], span);
                     }
                 }
-                sig.args += arg.sig.args;
-                sig.outputs += arg.sig.outputs;
+                sig.update_args(|a| a + arg.sig.args());
+                sig.update_outputs(|o| o + arg.sig.outputs());
                 inner.push(arg.node);
             }
             Node::Array {
@@ -411,7 +411,7 @@ impl Compiler {
             None => "Create a new data instance\nInstance ?".into(),
         };
         for field in &fields {
-            match field.init.as_ref().map(|sn| sn.sig.args) {
+            match field.init.as_ref().map(|sn| sn.sig.args()) {
                 Some(0) => continue,
                 Some(1) | None => {
                     comment.push(' ');
@@ -508,7 +508,7 @@ impl Compiler {
                 let inner = comp.words_sig(words)?;
                 let span = comp.add_span(word_span.clone());
                 let mut construct = Node::Call(constructor_func.clone(), span);
-                for _ in 0..inner.sig.args {
+                for _ in 0..inner.sig.args() {
                     construct = Node::Mod(
                         Primitive::Dip,
                         eco_vec![construct.sig_node().unwrap()],

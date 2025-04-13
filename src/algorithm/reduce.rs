@@ -22,7 +22,7 @@ pub fn reduce(ops: Ops, depth: usize, env: &mut Uiua) -> UiuaResult {
 }
 
 pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResult {
-    if f.sig.args < 2 {
+    if f.sig.args() < 2 {
         return Err(env.error(format!(
             "{}'s function must have at least 2 arguments, \
             but its signature is {}",
@@ -194,8 +194,8 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
     let len: usize = shape.iter().product();
     let (first, tail) = nodes.split_first()?;
     let (last, init) = nodes.split_last()?;
-    let init_sig = || nodes_sig(init).is_ok_and(|sig| sig.args == sig.outputs);
-    let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args >= 1 && sig.outputs == 1);
+    let init_sig = || nodes_sig(init).is_ok_and(|sig| sig.args() == sig.outputs());
+    let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args() >= 1 && sig.outputs() == 1);
     Some(match first {
         Node::Prim(Join, _) if tail_sig() => {
             if val.rank() < 2 {
@@ -261,7 +261,7 @@ fn reduce_singleton(node: &Node, val: Value, process: impl Fn(Value) -> Value) -
 }
 
 fn net_0_args(max: usize, nodes: &[Node]) -> bool {
-    nodes_clean_sig(nodes).is_some_and(|sig| sig.args <= max && sig.args == sig.outputs)
+    nodes_clean_sig(nodes).is_some_and(|sig| sig.args() <= max && sig.args() == sig.outputs())
 }
 
 fn at_least_rank(rank: usize, mut val: Value) -> Value {
@@ -506,21 +506,21 @@ fn generic_reduce_inner(
     env: &mut Uiua,
 ) -> UiuaResult<Value> {
     let sig = f.sig;
-    if sig.outputs != 1 {
+    if sig.outputs() != 1 {
         return Err(env.error(format!(
             "{}'s function must have exactly 1 output, \
             but its signature is {sig}",
             Primitive::Reduce.format(),
         )));
     }
-    if sig.args <= 1 {
+    if sig.args() <= 1 {
         return Err(env.error(format!(
             "{}'s function must have at least 2 arguments, \
             but its signature is {sig}",
             Primitive::Reduce.format(),
         )));
     }
-    let n = sig.args;
+    let n = sig.args();
     let mut repeated = Vec::with_capacity(n - 2);
     for i in 0..n - 2 {
         repeated.push(process(env.pop(i + 1)?));
@@ -548,7 +548,7 @@ fn generic_reduce_inner(
             return Ok(reduce_singleton(&f.node, xs, process));
         }
     }
-    if sig.args == 2 {
+    if sig.args() == 2 {
         if depth == 0 {
             let mut rows = xs.into_rows();
             let mut acc = value_fill
@@ -653,7 +653,7 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let [f] = get_ops(ops, env)?;
     let xs = env.pop(1)?;
-    if xs.rank() == 0 && f.sig.args <= 2 {
+    if xs.rank() == 0 && f.sig.args() <= 2 {
         return Err(env.error(format!("Cannot {} rank 0 array", Primitive::Scan.format())));
     }
     if env.value_fill().is_some() {
@@ -752,14 +752,14 @@ where
 
 fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.sig;
-    if sig.outputs != 1 {
+    if sig.outputs() != 1 {
         return Err(env.error(format!(
             "{}'s function must have 1 output, \
             but its signature is {sig}",
             Primitive::Scan.format(),
         )));
     }
-    match sig.args {
+    match sig.args() {
         0 | 1 => Err(env.error(format!(
             "{}'s function must have at least 2 arguments, \
             but its signature is {sig}",
@@ -938,12 +938,12 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let [f] = get_ops(ops, env)?;
     let sig = f.sig;
-    let (iterable_count, acc_count, collect_count) = if sig.args > sig.outputs {
-        (sig.args - sig.outputs, sig.outputs, 0)
+    let (iterable_count, acc_count, collect_count) = if sig.args() > sig.outputs() {
+        (sig.args() - sig.outputs(), sig.outputs(), 0)
     } else {
-        let iter = sig.args.min(1);
-        let acc = sig.args.saturating_sub(iter);
-        let collect = sig.outputs - acc;
+        let iter = sig.args().min(1);
+        let acc = sig.args().saturating_sub(iter);
+        let collect = sig.outputs() - acc;
         (iter, acc, collect)
     };
     let mut arrays = Vec::with_capacity(iterable_count);

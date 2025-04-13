@@ -733,13 +733,14 @@ code:
                         && !line_node.is_empty()
                         && binding_count_before == binding_count_after
                         && root_len_before == self.asm.root.len()
-                        && self.asm.root.len() >= sig.args
-                        && (self.asm.root.iter().rev().take(sig.args))
+                        && self.asm.root.len() >= sig.args()
+                        && (self.asm.root.iter().rev().take(sig.args()))
                             .all(|node| matches!(node, Node::Push(_)))
                     {
                         // The nodes for evaluation are the preceding
                         // push nodes, followed by the current line
-                        let mut node = Node::from(&self.asm.root[self.asm.root.len() - sig.args..]);
+                        let mut node =
+                            Node::from(&self.asm.root[self.asm.root.len() - sig.args()..]);
                         node.extend(line_node.iter().cloned());
                         if let Some((node, errs)) = self.pre_eval(&node) {
                             self.errors.extend(errs);
@@ -755,7 +756,7 @@ code:
                                 self.code_meta.top_level_values.insert(span, vals);
                             }
                             // Truncate root
-                            self.asm.root.truncate(self.asm.root.len() - sig.args);
+                            self.asm.root.truncate(self.asm.root.len() - sig.args());
                             // Set line node to the pre-evaluated node
                             line_node = node;
                         }
@@ -996,7 +997,7 @@ code:
         // Validate comment signature
         if let Ok(mut sig) = node.sig() {
             if let ScopeKind::Method(_) = self.scope.kind {
-                sig.args += 1;
+                sig.update_args(|a| a + 1);
             }
             if !comment_sig.matches_sig(sig) {
                 let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
@@ -1103,18 +1104,9 @@ code:
                 // Flip monadic dup diagnostic
                 (
                     Some(PrevWord(None, Some(Primitive::Dup), _, a_span)),
-                    Some(PrevWord(
-                        _,
-                        _,
-                        Some(Signature {
-                            args: 1,
-                            outputs: 1,
-                            ..
-                        }),
-                        _,
-                    )),
+                    Some(PrevWord(_, _, Some(sig), _)),
                     Some(Primitive::Flip),
-                ) => {
+                ) if *sig == (1, 1) => {
                     self.emit_diagnostic(
                         format!(
                             "Prefer {} over {} {} here",
@@ -1314,7 +1306,7 @@ code:
                     .map(|word| self.word_sig(word))
                     .collect::<UiuaResult<Vec<_>>>()?;
                 // Check item sigs
-                let has_functions = op_nodes.iter().any(|sn| sn.sig.args > 0);
+                let has_functions = op_nodes.iter().any(|sn| sn.sig.args() > 0);
                 if has_functions {
                     return Err(
                         self.error(word.span.clone(), "Functions are not allowed in strands")
@@ -1358,7 +1350,7 @@ code:
                 }
                 let sig = self.sig_of(&inner, &word.span)?;
                 Node::Array {
-                    len: ArrayLen::Static(sig.outputs),
+                    len: ArrayLen::Static(sig.outputs()),
                     inner: inner.into(),
                     boxed: false,
                     allow_ext: false,
@@ -1408,14 +1400,14 @@ code:
                             inner = self.force_sig(inner, declared_sig.value, &declared_sig.span);
                             sig = declared_sig.value;
                         }
-                        if sig.outputs == 0 && any_contents {
+                        if sig.outputs() == 0 && any_contents {
                             self.emit_diagnostic(
                                 "Array wraps function with no outputs. This is probably not what you want.",
                                 DiagnosticKind::Advice,
                                 word.span.clone(),
                             )
                         }
-                        ArrayLen::Static(sig.outputs)
+                        ArrayLen::Static(sig.outputs())
                     }
                     Err(e) => match e.kind {
                         SigCheckErrorKind::LoopVariable { args } => ArrayLen::Dynamic(args),
@@ -1538,14 +1530,14 @@ code:
         if new_sig == sig {
             return node;
         }
-        let delta = sig.outputs as isize - sig.args as isize;
-        let new_delta = new_sig.outputs as isize - new_sig.args as isize;
+        let delta = sig.outputs() as isize - sig.args() as isize;
+        let new_delta = new_sig.outputs() as isize - new_sig.args() as isize;
         match delta.cmp(&new_delta) {
             Ordering::Equal => {
-                if sig.args < new_sig.args {
+                if sig.args() < new_sig.args() {
                     let spandex = self.add_span(span.clone());
                     let mut dip = Node::empty();
-                    for _ in 0..new_sig.args {
+                    for _ in 0..new_sig.args() {
                         dip = Node::Mod(Primitive::Dip, eco_vec![dip.sig_node().unwrap()], spandex);
                     }
                     node.prepend(dip);
@@ -1562,7 +1554,7 @@ code:
                 let mut extra = Node::from_iter(
                     (0..diff).map(|i| Node::new_push(Boxed(Value::from(format!("dbg-{}", i + 1))))),
                 );
-                for _ in 0..sig.outputs {
+                for _ in 0..sig.outputs() {
                     extra = Node::Mod(Primitive::Dip, eco_vec![extra.sig_node().unwrap()], spandex);
                 }
                 node.push(extra);
@@ -1581,7 +1573,7 @@ code:
                 let spandex = self.add_span(span.clone());
                 let mut pops =
                     Node::from_iter((0..diff).map(|_| Node::Prim(Primitive::Pop, spandex)));
-                for _ in 0..new_sig.outputs {
+                for _ in 0..new_sig.outputs() {
                     pops = Node::Mod(Primitive::Dip, eco_vec![pops.sig_node().unwrap()], spandex);
                 }
                 node.push(pops);
@@ -1837,7 +1829,7 @@ code:
                 if let (true, &Node::WithLocal { def, .. }) = (single_ident, root) {
                     if self.scopes().any(|sc| sc.kind == ScopeKind::Method(def)) {
                         let mut inner = Node::GetLocal { def, span };
-                        for _ in 0..sig.args.saturating_sub(1) {
+                        for _ in 0..sig.args().saturating_sub(1) {
                             inner = Node::Mod(
                                 Primitive::Dip,
                                 eco_vec![inner.sig_node().unwrap()],
@@ -1970,8 +1962,8 @@ code:
             for (arg, span) in rigid_funcs {
                 if arg.sig.is_compatible_with(*sig) {
                     *sig = sig.max_with(arg.sig);
-                } else if arg.sig.outputs == sig.outputs {
-                    sig.args = sig.args.max(arg.sig.args)
+                } else if arg.sig.outputs() == sig.outputs() {
+                    sig.update_args(|a| a.max(arg.sig.args()))
                 } else {
                     self.add_error(
                         span.clone(),
@@ -1987,7 +1979,7 @@ code:
         let mut flex_funcs = flex_indices.into_iter().map(|i| &br[i]);
         let mut sig = sig.unwrap_or_else(|| flex_funcs.next().unwrap().0.sig);
         for (arg, _) in flex_funcs {
-            sig.args = sig.args.max(arg.sig.args);
+            sig.update_args(|a| a.max(arg.sig.args()));
         }
 
         let span = self.add_span(span.clone());

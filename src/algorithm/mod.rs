@@ -496,13 +496,13 @@ pub fn switch(
             ));
         };
         // Discard unused arguments
-        let discard_start = env.rt.stack.len().saturating_sub(sig.args);
+        let discard_start = env.rt.stack.len().saturating_sub(sig.args());
         if discard_start > env.rt.stack.len() {
             return Err(env.error("Stack was empty when discarding excess switch arguments."));
         }
         // `saturating_sub` and `max` handle incorrect explicit signatures
-        let discard_end = (discard_start + sig.args + f.sig.outputs)
-            .saturating_sub(f.sig.args + sig.outputs)
+        let discard_end = (discard_start + sig.args() + f.sig.outputs())
+            .saturating_sub(f.sig.args() + sig.outputs())
             .max(discard_start);
         if discard_end > env.rt.stack.len() {
             return Err(env.error("Stack was empty when discarding excess switch arguments."));
@@ -512,10 +512,10 @@ pub fn switch(
     } else {
         // Array
         // Collect arguments
-        let mut args = Vec::with_capacity(sig.args + 1);
+        let mut args = Vec::with_capacity(sig.args() + 1);
         let mut new_shape = selector.shape().clone();
         args.push(selector);
-        for i in 0..sig.args {
+        for i in 0..sig.args() {
             let arg = env.pop(i + 1)?;
             args.push(arg);
         }
@@ -526,22 +526,22 @@ pub fn switch(
             is_empty,
             all_scalar,
             ..
-        } = fixed_rows("switch", sig.outputs, args, env)?;
+        } = fixed_rows("switch", sig.outputs(), args, env)?;
         // Collect functions
         let args: Vec<usize> = branches
             .iter()
             .map(|sn| {
-                if sn.sig.outputs < sig.outputs {
-                    sn.sig.args + sig.outputs - sn.sig.outputs
+                if sn.sig.outputs() < sig.outputs() {
+                    sn.sig.args() + sig.outputs() - sn.sig.outputs()
                 } else {
-                    sn.sig.args
+                    sn.sig.args()
                 }
             })
             .collect();
 
         // Switch with each selector element
-        let mut outputs = multi_output(sig.outputs, Vec::new());
-        let mut rows_to_sel = Vec::with_capacity(sig.args);
+        let mut outputs = multi_output(sig.outputs(), Vec::new());
+        let mut rows_to_sel = Vec::with_capacity(sig.args());
         for _ in 0..row_count {
             let selector = match &mut rows[0] {
                 Ok(selector) => selector.next().unwrap(),
@@ -587,7 +587,7 @@ pub fn switch(
                         }
                     }
                     env.exec(node.clone())?;
-                    for i in 0..sig.outputs {
+                    for i in 0..sig.outputs() {
                         outputs[i].push(env.pop("switch output")?);
                     }
                 }
@@ -621,18 +621,18 @@ pub fn try_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f, handler] = get_ops(ops, env)?;
     let f_sig = f.sig;
     let handler_sig = handler.sig;
-    if env.stack_height() < f_sig.args {
-        for i in 0..f_sig.args {
+    if env.stack_height() < f_sig.args() {
+        for i in 0..f_sig.args() {
             env.pop(i + 1)?;
         }
     }
-    let backup = env.clone_stack_top(f_sig.args.min(handler_sig.args))?;
+    let backup = env.clone_stack_top(f_sig.args().min(handler_sig.args()))?;
     if let Err(mut err) = env.exec_clean_stack(f) {
         if err.is_case {
             err.is_case = false;
             return Err(err);
         }
-        if handler_sig.args > f_sig.args {
+        if handler_sig.args() > f_sig.args() {
             (env.rt.backend).save_error_color(err.to_string(), err.report().to_string());
             env.push(err.value());
         }

@@ -870,10 +870,10 @@ impl Formatter<'_> {
     }
     fn format_signature(&mut self, sig: Signature, trailing_space: bool) {
         self.output.push('|');
-        self.output.push_str(&sig.args.to_string());
-        if sig.outputs != 1 {
+        self.output.push_str(&sig.args().to_string());
+        if sig.outputs() != 1 {
             self.output.push('.');
-            self.output.push_str(&sig.outputs.to_string());
+            self.output.push_str(&sig.outputs().to_string());
         }
         if trailing_space {
             self.output.push(' ');

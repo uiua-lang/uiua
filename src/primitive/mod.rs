@@ -431,7 +431,7 @@ macro_rules! fill {
     ($ops:expr, $side:expr, $env:expr, $with:ident, $without_but:ident) => {{
         let env = $env;
         let [fill, f] = get_ops($ops, env)?;
-        let outputs = fill.sig.outputs;
+        let outputs = fill.sig.outputs();
         if outputs > 1 {
             return Err(env.error(format!(
                 "{} function can have at most 1 output, but its signature is {}",
@@ -440,7 +440,7 @@ macro_rules! fill {
             )));
         }
         if outputs == 0 {
-            return env.$without_but(fill.sig.args, |env| env.exec(fill), |env| env.exec(f));
+            return env.$without_but(fill.sig.args(), |env| env.exec(fill), |env| env.exec(f));
         }
         env.exec(fill)?;
         let fill_value = env.pop("fill value")?;
@@ -1069,21 +1069,21 @@ impl Primitive {
             // Stack
             Primitive::Fork => {
                 let [f, g] = get_ops(ops, env)?;
-                let f_args = env.prepare_fork(f.sig.args, g.sig.args)?;
+                let f_args = env.prepare_fork(f.sig.args(), g.sig.args())?;
                 env.exec(g)?;
                 env.push_all(f_args);
                 env.exec(f)?;
             }
             Primitive::Bracket => {
                 let [f, g] = get_ops(ops, env)?;
-                let vals = env.take_n(f.sig.args)?;
+                let vals = env.take_n(f.sig.args())?;
                 env.exec(g)?;
                 env.push_all(vals);
                 env.exec(f)?;
             }
             Primitive::Both => {
                 let [f] = get_ops(ops, env)?;
-                let vals = env.take_n(f.sig.args)?;
+                let vals = env.take_n(f.sig.args())?;
                 env.exec(f.node.clone())?;
                 env.push_all(vals);
                 env.exec(f.node)?;
@@ -1102,23 +1102,23 @@ impl Primitive {
             }
             Primitive::By => {
                 let [f] = get_ops(ops, env)?;
-                env.dup_values(1, f.sig.args.max(1))?;
+                env.dup_values(1, f.sig.args().max(1))?;
                 env.exec(f)?;
             }
             Primitive::Above => {
                 let [f] = get_ops(ops, env)?;
-                let vals = env.copy_n(f.sig.args)?;
+                let vals = env.copy_n(f.sig.args())?;
                 env.exec(f)?;
                 env.push_all(vals);
             }
             Primitive::Below => {
                 let [f] = get_ops(ops, env)?;
-                env.dup_values(f.sig.args, f.sig.args)?;
+                env.dup_values(f.sig.args(), f.sig.args())?;
                 env.exec(f)?;
             }
             Primitive::With => {
                 let [f] = get_ops(ops, env)?;
-                let val = env.copy_nth(f.sig.args - 1)?;
+                let val = env.copy_nth(f.sig.args() - 1)?;
                 env.exec(f)?;
                 env.push(val);
             }
@@ -1127,11 +1127,11 @@ impl Primitive {
                 let val = env.copy_nth(0)?;
                 env.exec(f.node)?;
                 env.push(val);
-                env.rotate_up(1, f.sig.outputs + 1)?;
+                env.rotate_up(1, f.sig.outputs() + 1)?;
             }
             Primitive::Content => {
                 let [f] = get_ops(ops, env)?;
-                for val in env.n_mut(f.sig.args)? {
+                for val in env.n_mut(f.sig.args())? {
                     val.unbox();
                 }
                 env.exec(f)?;
@@ -1158,8 +1158,8 @@ impl Primitive {
             }
             Primitive::Memo => {
                 let [f] = get_ops(ops, env)?;
-                let mut args = Vec::with_capacity(f.sig.args);
-                for i in 0..f.sig.args {
+                let mut args = Vec::with_capacity(f.sig.args());
+                for i in 0..f.sig.args() {
                     args.push(env.pop(i + 1)?);
                 }
                 let mut memo = env.rt.memo.get_or_default().borrow_mut();
@@ -1178,7 +1178,7 @@ impl Primitive {
                     env.push(arg.clone());
                 }
                 env.exec(f.node.clone())?;
-                let outputs = env.clone_stack_top(f.sig.outputs)?;
+                let outputs = env.clone_stack_top(f.sig.outputs())?;
                 let mut memo = env.rt.memo.get_or_default().borrow_mut();
                 memo.borrow_mut()
                     .entry(f.node)
@@ -1822,18 +1822,18 @@ impl ImplPrimitive {
             }
             &ImplPrimitive::BySub(n) => {
                 let [f] = get_ops(ops, env)?;
-                env.dup_values(n, n.max(f.sig.args))?;
+                env.dup_values(n, n.max(f.sig.args()))?;
                 env.exec(f)?;
             }
             &ImplPrimitive::WithSub(n) => {
                 let [f] = get_ops(ops, env)?;
-                let kept = env.copy_n_down(n, n.max(f.sig.args))?;
+                let kept = env.copy_n_down(n, n.max(f.sig.args()))?;
                 env.exec(f)?;
                 env.push_all(kept);
             }
             &ImplPrimitive::OffSub(n) => {
                 let [f] = get_ops(ops, env)?;
-                let outputs = f.sig.outputs;
+                let outputs = f.sig.outputs();
                 let kept = env.copy_n(n)?;
                 env.exec(f)?;
                 env.insert_stack(outputs, kept)?;
@@ -1877,14 +1877,14 @@ impl ImplPrimitive {
             ImplPrimitive::UnBoth => {
                 let [f] = get_ops(ops, env)?;
                 env.exec(f.node.clone())?;
-                let vals = env.take_n(f.sig.outputs)?;
+                let vals = env.take_n(f.sig.outputs())?;
                 env.exec(f.node)?;
                 env.push_all(vals);
             }
             ImplPrimitive::UnBracket => {
                 let [f, g] = get_ops(ops, env)?;
                 env.exec(f.node)?;
-                let f_outputs = env.pop_n(f.sig.outputs)?;
+                let f_outputs = env.pop_n(f.sig.outputs())?;
                 env.exec(g.node)?;
                 env.push_all(f_outputs);
             }
@@ -1911,7 +1911,7 @@ impl ImplPrimitive {
             &ImplPrimitive::EachSub(n) => {
                 let [f] = get_ops(ops, env)?;
                 let sig = f.sig;
-                let vals = env.pop_n(sig.args)?;
+                let vals = env.pop_n(sig.args())?;
                 let max_shape = vals
                     .iter()
                     .map(Value::shape)
@@ -1923,7 +1923,7 @@ impl ImplPrimitive {
                     env.push(val);
                 }
                 zip::rows(f, false, env)?;
-                for mut value in env.pop_n(sig.outputs)? {
+                for mut value in env.pop_n(sig.outputs())? {
                     if let Some(max_shape) = &max_shape {
                         value.undo_deshape(Some(n + 1), max_shape, env)?;
                     }
@@ -1935,9 +1935,9 @@ impl ImplPrimitive {
                 let len = env
                     .pop(1)?
                     .as_nat(env, "Rows length must be a natural number")?;
-                let start = env.require_height(f.sig.args)?;
+                let start = env.require_height(f.sig.args())?;
                 let inventory = matches!(self, ImplPrimitive::UndoInventory);
-                for i in 0..f.sig.args {
+                for i in 0..f.sig.args() {
                     let val = &env.stack()[start + i];
                     if val.row_count() != len {
                         return Err(env.error(format!(
@@ -1954,7 +1954,7 @@ impl ImplPrimitive {
                     }
                     env.stack_mut()[start + i].reverse();
                 }
-                let outputs = f.sig.outputs;
+                let outputs = f.sig.outputs();
                 zip::rows(f, inventory, env)?;
                 let start = env.require_height(outputs)?;
                 for val in &mut env.stack_mut()[start..] {
@@ -2185,7 +2185,7 @@ fn stack_boundaries(env: &Uiua) -> Vec<(usize, &Option<FunctionId>)> {
     let mut height = 0;
     for frame in env.call_frames().rev() {
         let delta = env.stack_height() as isize - frame.start_height as isize;
-        height = height.max((frame.sig.args as isize + delta).max(0) as usize);
+        height = height.max((frame.sig.args() as isize + delta).max(0) as usize);
         if matches!(frame.id, Some(FunctionId::Main)) {
             break;
         }

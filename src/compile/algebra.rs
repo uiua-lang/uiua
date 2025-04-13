@@ -514,8 +514,8 @@ impl<'a> AlgebraEnv<'a> {
                 }
                 By => {
                     let [f] = get_ops(args)?;
-                    let mut args = Vec::with_capacity(f.sig.args);
-                    for _ in 0..f.sig.args {
+                    let mut args = Vec::with_capacity(f.sig.args());
+                    for _ in 0..f.sig.args() {
                         args.push(self.pop()?);
                     }
                     self.stack.extend(args.last().cloned());
@@ -526,8 +526,8 @@ impl<'a> AlgebraEnv<'a> {
                 }
                 Both => {
                     let [f] = get_ops(args)?;
-                    let mut args = Vec::with_capacity(f.sig.args);
-                    for _ in 0..f.sig.args {
+                    let mut args = Vec::with_capacity(f.sig.args());
+                    for _ in 0..f.sig.args() {
                         args.push(self.pop()?);
                     }
                     self.node(&f.node)?;
@@ -538,8 +538,8 @@ impl<'a> AlgebraEnv<'a> {
                 }
                 Bracket => {
                     let [f, g] = get_ops(args)?;
-                    let mut args = Vec::with_capacity(f.sig.args);
-                    for _ in 0..f.sig.args {
+                    let mut args = Vec::with_capacity(f.sig.args());
+                    for _ in 0..f.sig.args() {
                         args.push(self.pop()?);
                     }
                     self.node(&g.node)?;
@@ -550,12 +550,12 @@ impl<'a> AlgebraEnv<'a> {
                 }
                 Fork => {
                     let [f, g] = get_ops(args)?;
-                    if f.sig.args > g.sig.args {
-                        let mut f_args = Vec::with_capacity(f.sig.args);
-                        for _ in 0..f.sig.args {
+                    if f.sig.args() > g.sig.args() {
+                        let mut f_args = Vec::with_capacity(f.sig.args());
+                        for _ in 0..f.sig.args() {
                             f_args.push(self.pop()?);
                         }
-                        for arg in f_args.iter().rev().take(g.sig.args) {
+                        for arg in f_args.iter().rev().take(g.sig.args()) {
                             self.stack.push(arg.clone());
                         }
                         self.node(&g.node)?;
@@ -564,8 +564,8 @@ impl<'a> AlgebraEnv<'a> {
                         }
                         self.node(&f.node)?;
                     } else {
-                        let mut f_args = Vec::with_capacity(f.sig.args);
-                        for _ in 0..f.sig.args {
+                        let mut f_args = Vec::with_capacity(f.sig.args());
+                        for _ in 0..f.sig.args() {
                             f_args.push(self.pop()?);
                         }
                         for arg in f_args.iter().rev() {

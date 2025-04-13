@@ -1852,11 +1852,11 @@ impl SysOp {
                     .read_lines(handle)
                     .map_err(|e| env.error(e))?;
                 let sig = f.sig;
-                if sig.args == 0 {
+                if sig.args() == 0 {
                     return env.exec(f);
                 }
-                let acc_count = sig.args.saturating_sub(1);
-                let out_count = sig.outputs.saturating_sub(acc_count);
+                let acc_count = sig.args().saturating_sub(1);
+                let out_count = sig.outputs().saturating_sub(acc_count);
                 let mut outputs = multi_output(out_count, Vec::new());
                 env.without_fill(|env| {
                     read_lines(
@@ -1879,8 +1879,8 @@ impl SysOp {
             }
             SysOp::AudioStream => {
                 let [f] = get_ops(ops, env)?;
-                let push_time = f.sig.args > 0;
-                if f.sig != (0, 1) && f.sig.args != f.sig.outputs {
+                let push_time = f.sig.args() > 0;
+                if f.sig != (0, 1) && f.sig.args() != f.sig.outputs() {
                     return Err(env.error(format!(
                         "&ast's function must have the same number \
                         of inputs and outputs, but its signature is {}",

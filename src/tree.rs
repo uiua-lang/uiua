@@ -132,15 +132,14 @@ impl SigNode {
                 let prev_pow_2 = (n as f64).log2() as usize;
                 for _ in 0..prev_pow_2 {
                     let mut sig = sn.sig;
-                    sig.args *= 2;
-                    sig.outputs *= 2;
+                    sig.update_args_outputs(|a, o| (a * 2, o * 2));
                     let node = Node::Mod(Primitive::Both, eco_vec![sn], span);
                     sn = SigNode::new(sig, node);
                 }
                 let remain = n - 2usize.pow(prev_pow_2 as u32);
                 if remain > 0 {
                     let SigNode { mut sig, node } = sn;
-                    let args = inner.sig.args;
+                    let args = inner.sig.args();
                     let mut both = node.clone();
                     for _ in 0..remain {
                         for _ in 0..args {
@@ -148,10 +147,9 @@ impl SigNode {
                             both = Node::Mod(Primitive::Dip, eco_vec![inner], span);
                         }
                         both.push(inner.node.clone());
-                        sig.args += args;
-                        sig.outputs += args;
-                        sig.outputs += inner.sig.outputs;
-                        sig.outputs -= inner.sig.args;
+                        sig.update_args_outputs(|a, o| {
+                            (a + args, o + args + inner.sig.outputs() - inner.sig.args())
+                        });
                     }
                     both
                 } else {
@@ -176,7 +174,7 @@ impl From<Arc<Node>> for Node {
 
 impl Serialize for SigNode {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        (self.sig.args, self.sig.outputs, &self.node).serialize(serializer)
+        (self.sig.args(), self.sig.outputs(), &self.node).serialize(serializer)
     }
 }
 

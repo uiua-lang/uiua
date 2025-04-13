@@ -351,7 +351,7 @@ pub fn Combinators() -> impl IntoView {
         ),
         (
             view!(<Prim prim=Dup/>).into_view(),
-            ("≍⇌.", 1, "Σ", "Violet Starling"),
+            ("≍⊸⇌", 1, "Σ", "Violet Starling"),
         ),
         (view!(<Prim prim=Dip/>).into_view(), ("⊟⊙⇌", 2, "D", "Dove")),
         (View::default(), ("⊟⇌", 2, "Δ", "Zebra Dove")),

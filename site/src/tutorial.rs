@@ -279,7 +279,7 @@ fn TutorialBasic() -> impl IntoView {
         <p>"A comment that starts with additional "<code>"#"</code>"s is an "<em>"output comment"</em>". The formatter replaces the text of an output comment with as many values from the stack as there are extra "<code>"#"</code>"s."</p>
         <p>"Click Run to try it out!"</p>
         <Editor example="1 2 4\n####\n+\n###\n+\n##"/>
-        <p>"Output comments on the same line as other code show the state of the stack after the code is run. This is useful for debugging."</p>
+        <p>"Output comments on the same line as other code show the values at the top of the stack after the code is run. This is useful for debugging."</p>
         <Editor example="+1 2 ##\n×3 4 ##"/>
 
         <Hd id="stack-functions">"Stack Functions"</Hd>
@@ -541,6 +541,9 @@ fn TutorialArrays() -> impl IntoView {
         <p>"You can also click the names of functions in the site text to see their documentation."</p>
         <p><Prim prim=Couple/>" turns two arrays into rows of a new array."</p>
         <Editor example="⊟ 1_2_3 [4 5 6]"/>
+        <p><Prim prim=Join/>" joins two arrays end-to-end."</p>
+        <Editor example="⊂ 1_2_3 4"/>
+        <Editor example="⊂ 1_2_3 [4 5 6 7]"/>
         <p><Prim prim=First/>" and "<Prim prim=Last/>" get the first or last row of an array."</p>
         <Editor example="⊢ [4 7 1]"/>
         <Editor example="⊢ [1_2 3_4 5_6]"/>
@@ -744,7 +747,7 @@ fn TutorialTypes() -> impl IntoView {
                 <p>"You can "<Prim prim=Sub/>" a "{number}" from a "{character}" to get another "{character}"."</p>
                 <p>"You can "<Prim prim=Sub/>" two "{character}"s to get a "{number}"."</p>
                 <p>"You can "<Prim prim=Mul/>" or "<Prim prim=Div/>" a "{character}" by a "{number}" to possibly toggle its case."</p>
-                <p><em>"No"</em>" other binary arithmetic operations can be done on "{character}"s."</p>
+                <p><em>"No"</em>" other dyadic arithmetic operations can be done on "{character}"s."</p>
             }
         }
         <Editor example="+1 @a"/>

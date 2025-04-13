@@ -50,10 +50,9 @@ thread_local! {
 
 fn weewuh() {
     let i = (now() % 1.0 * 100.0) as u32;
-    let last_digit = i % 10;
-    let src = match last_digit {
-        0..=1 => "/assets/ooh-ee-ooh-ah.mp3",
-        2..=4 => "/assets/wee-wah.mp3",
+    let src = match i {
+        0 => "/assets/ooh-ee-ooh-ah.mp3",
+        1..=4 => "/assets/wee-wah.mp3",
         _ => "/assets/wee-wuh.mp3",
     };
     if let Ok(audio) = HtmlAudioElement::new_with_src(src) {

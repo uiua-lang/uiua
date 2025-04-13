@@ -85,6 +85,10 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMonFn>
             Value::transpose_depth(&mut v, d, n);
             Ok(v)
         }),
+        DeshapeSub(i) => spanned_mon_fn(span, move |mut v, d, env| {
+            Value::deshape_sub(&mut v, i, d, true, env)?;
+            Ok(v)
+        }),
         ReplaceRand => spanned_mon_fn(span, |v, d, _| {
             let shape = &v.shape()[..d.min(v.rank())];
             let elem_count: usize = shape.iter().product();

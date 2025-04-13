@@ -10,7 +10,7 @@ use std::{
     fmt,
     io::Write,
     iter::{self, once},
-    mem::size_of,
+    mem::{size_of, take},
     ptr, slice,
     time::Duration,
 };
@@ -52,8 +52,16 @@ impl Value {
         let deshaped = self.shape_mut().split_off(depth).into_iter().product();
         self.shape_mut().push(deshaped);
     }
-    pub(crate) fn deshape_sub(&mut self, irank: i32, extend: bool, env: &Uiua) -> UiuaResult {
-        if irank > 0 && irank as usize == self.rank() {
+    pub(crate) fn deshape_sub(
+        &mut self,
+        irank: i32,
+        mut depth: usize,
+        extend: bool,
+        env: &Uiua,
+    ) -> UiuaResult {
+        depth = depth.min(self.rank());
+        let deep_rank = self.rank() - depth;
+        if irank > 0 && irank as usize == deep_rank {
             return Ok(());
         }
         self.take_map_keys();
@@ -62,60 +70,74 @@ impl Value {
         match irank.cmp(&0) {
             Ordering::Equal => {
                 // First scalar
-                if shape.contains(&0) {
-                    if let Some(fv) = env.value_fill() {
-                        *self = fv.value.clone();
+                if depth == 0 {
+                    if shape.contains(&0) {
+                        if let Some(fv) = env.value_fill() {
+                            *self = fv.value.clone();
+                        } else {
+                            return Err(env.error(format!(
+                                "Cannot get first scalar of an empty array (shape {shape})"
+                            )));
+                        }
                     } else {
-                        return Err(env.error(format!(
-                            "Cannot get first scalar of an empty array (shape {shape})"
-                        )));
+                        *shape = [].into();
+                        val_as_arr!(self, |arr| arr.data.truncate(1));
                     }
                 } else {
-                    *shape = [].into();
-                    val_as_arr!(self, |arr| arr.data.truncate(1));
+                    let row_len: usize = shape.iter().skip(depth).product();
+                    shape.truncate(depth);
+                    let elem_count = shape.elements();
+                    val_as_arr!(self, |arr| {
+                        let slice = arr.data.as_mut_slice();
+                        for i in 1..elem_count {
+                            slice[i] = take(&mut slice[i * row_len]);
+                        }
+                        arr.data.truncate(elem_count);
+                    });
                 }
             }
             Ordering::Greater => {
                 // Positive rank
-                match rank.cmp(&shape.len()) {
+                match rank.cmp(&deep_rank) {
                     Ordering::Equal => {}
                     Ordering::Less => {
+                        let mut new_shape: Shape = shape.iter().take(depth).copied().collect();
                         let mid = shape.len() + 1 - rank;
-                        let new_first_dim: usize = shape[..mid].iter().product();
-                        *shape = once(new_first_dim)
-                            .chain(shape[mid..].iter().copied())
-                            .collect();
+                        let new_first_dim: usize = shape[depth..mid].iter().product();
+                        new_shape.extend(once(new_first_dim).chain(shape[mid..].iter().copied()));
+                        *shape = new_shape;
                     }
                     Ordering::Greater => {
                         if extend {
                             for _ in 0..rank - shape.len() {
-                                shape.insert(0, 1);
+                                shape.insert(depth, 1);
                             }
                         } else {
-                            shape.insert(0, 1);
+                            shape.insert(depth, 1);
                         }
                     }
                 }
             }
             Ordering::Less => {
                 // Negative rank
-                if rank + 1 > shape.len() {
+                if rank + 1 > deep_rank {
                     return if extend {
                         Err(env.error(format!(
                             "Negative {} has magnitude {}, but the \
-                        rank-{} array cannot be reduced that much",
+                            rank-{} array cannot be reduced that much",
                             Primitive::Deshape.format(),
                             rank,
-                            shape.len()
+                            deep_rank
                         )))
                     } else {
                         Ok(())
                     };
                 }
-                let new_first_dim: usize = shape[..=rank].iter().product();
-                *shape = once(new_first_dim)
-                    .chain(shape[rank + 1..].iter().copied())
-                    .collect();
+                let mut new_shape: Shape = shape.iter().take(depth).copied().collect();
+                let new_first_dim: usize = shape[depth..=depth + rank].iter().product();
+                new_shape
+                    .extend(once(new_first_dim).chain(shape[depth + rank + 1..].iter().copied()));
+                *shape = new_shape;
             }
         }
         self.validate_shape();

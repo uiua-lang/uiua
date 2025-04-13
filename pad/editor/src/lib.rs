@@ -1350,6 +1350,12 @@ pub fn Editor<'a>(
                         false => "auto",
                     },
                 );
+            if !*s {
+                set_timeout(
+                    move || state.update(|state| state.update_line_number_width()),
+                    Duration::ZERO,
+                );
+            }
         })
     };
 

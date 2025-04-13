@@ -2231,6 +2231,22 @@ code:
                         let span = self.add_span(span);
                         Node::ImplPrim(ImplPrimitive::NBits(n), span)
                     }
+                    Len => {
+                        let span = self.add_span(span);
+                        Node::from_iter([
+                            Node::Prim(Shape, span),
+                            Node::new_push(n),
+                            Node::Prim(Select, span),
+                        ])
+                    }
+                    Shape => {
+                        let span = self.add_span(span);
+                        Node::from_iter([
+                            Node::Prim(Shape, span),
+                            Node::new_push(n),
+                            Node::Prim(Take, span),
+                        ])
+                    }
                     _ => {
                         self.add_error(
                             span.clone(),

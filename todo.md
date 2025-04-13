@@ -1,12 +1,9 @@
 # Uiua Todo
 
 # 0.16
-- Add SoA constructor to data defs
-  - Should properly initialize defaults
 - Improve how suggestions are supplied to LSP
 - Fix bug in complicated nested box formatting
   - Reproduce: `{$x ⍜(≡⊢|⍚$x) ∵□°△2_3}`
-- Optimize monadic `stencil` with `rows` optimizations
 - Stabilize `fft`
   - Requirs a custom implementation 😵‍💫
 - Respect user newlines more in multiline function packs

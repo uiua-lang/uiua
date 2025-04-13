@@ -898,8 +898,15 @@ pub fn un_partition(f: SigNode, env: &mut Uiua) -> UiuaResult {
             let val = env.pop("unpartitioned value")?;
             let count = val.row_count();
             if i > 0 {
-                indices.push(0.0);
-                unpartitioned.push(fill.clone());
+                if fill.rank() == val.rank() {
+                    for row in fill.rows() {
+                        indices.push(0.0);
+                        unpartitioned.push(row.clone());
+                    }
+                } else {
+                    indices.push(0.0);
+                    unpartitioned.push(fill.clone());
+                }
             }
             for _ in 0..count {
                 indices.push(1.0);

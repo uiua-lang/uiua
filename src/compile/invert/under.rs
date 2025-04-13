@@ -618,7 +618,10 @@ under!(
             }
             let to_save = before.sig.outputs() - normal.sig.outputs();
             (before.node, after.node, to_save)
-        } else if let Some(anti) = cust.anti.clone() {
+        } else if let Some(anti) = (cust.anti.as_ref())
+            .filter(|_| !cust.prefer_under_normal)
+            .cloned()
+        {
             // An anti inverse is defined
             let to_save = anti.sig.args() - normal.sig.outputs();
             let before = Mod(On, eco_vec![normal.clone()], *span);

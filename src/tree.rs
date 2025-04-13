@@ -226,6 +226,8 @@ pub struct CustomInverse {
     ///
     /// Inverses that are not set by obverse may be overridden
     pub is_obverse: bool,
+    /// Whether to prefer undering the normal function over using the anti inverse
+    pub prefer_under_normal: bool,
 }
 
 impl Default for CustomInverse {
@@ -236,6 +238,7 @@ impl Default for CustomInverse {
             under: None,
             anti: None,
             is_obverse: false,
+            prefer_under_normal: false,
         }
     }
 }

@@ -845,10 +845,16 @@ impl Compiler {
             }
             Anti => {
                 let (sn, span) = self.monadic_modifier_op(modified)?;
-                match sn.node.anti_inverse(&self.asm) {
-                    Ok(inv) => inv,
-                    Err(e) => return Err(self.error(span, e)),
-                }
+                self.add_span(span.clone());
+                let normal = sn.anti_inverse(&self.asm);
+                let cust = CustomInverse {
+                    normal,
+                    anti: Some(sn),
+                    prefer_under_normal: true,
+                    ..Default::default()
+                };
+                let span = self.add_span(modified.modifier.span.clone());
+                Node::CustomInverse(cust.into(), span)
             }
             Under => {
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
@@ -917,6 +923,7 @@ impl Compiler {
                     anti: None,
                     under: Some((sn.clone(), SigNode::default())),
                     is_obverse: true,
+                    prefer_under_normal: false,
                 };
                 if sn.sig == sn.sig.inverse() {
                     cust.un = Some(sn.clone());

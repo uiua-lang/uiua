@@ -19,8 +19,8 @@ pub fn Technical() -> impl IntoView {
 
         <Hd id="the-interpreter">"The Interpreter"</Hd>
         <p>"The "{lang}" interpreter is written in Rust."</p>
-        <p>{lang}" code is compiled into a simple bytecode assembly. This assembly is then usually immediately executed by the interpreter."</p>
-        <p>"Built-in functions are implemented in Rust so they can be as fast as possible. User-defined functions are passed around as chunks of bytecode."</p>
+        <p>{lang}" code is compiled into an IR tree assembly. This assembly is then usually immediately executed by the interpreter."</p>
+        <p>"Built-in functions are implemented in Rust so they can be as fast as possible. User-defined functions are passed around as IR trees."</p>
 
         <Hd id="arrays">"Arrays"</Hd>
         <p>"Values on the stack are implemented as Rust "<code>"enum"</code>"s, where each variant contains a different array type."</p>

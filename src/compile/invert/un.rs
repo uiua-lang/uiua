@@ -264,6 +264,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &(Keep, AntiKeep),
     &(Base, AntiBase),
     &(AntiBase, Base),
+    &(Pop, Pop),
     &MatrixDivPat,
     &NoUnder(AntiCouplePat),
     &AntiFillPat,

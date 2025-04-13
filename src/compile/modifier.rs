@@ -893,9 +893,15 @@ impl Compiler {
                         Node::CustomInverse(cust.into(), span),
                     ))
                 };
+                let under = if normal.sig.args() == normal.sig.outputs() {
+                    Some((normal.clone(), normal.clone()))
+                } else {
+                    None
+                };
                 let cust = CustomInverse {
                     normal: Ok(normal),
                     un,
+                    under,
                     ..Default::default()
                 };
                 let span = self.add_span(modified.modifier.span.clone());

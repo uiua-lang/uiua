@@ -227,6 +227,7 @@ impl fmt::Display for ImplPrimitive {
             UnJoin | UnJoinShape | UnJoinShape2 => write!(f, "{Un}{Join}"),
             UnJoinEnd | UnJoinShapeEnd | UnJoinShape2End => write!(f, "{Un}({Join}{Flip})"),
             UnKeep => write!(f, "{Un}{Keep}"),
+            UnTake => write!(f, "{Un}{Take}"),
             UnScan => write!(f, "{Un}{Scan}"),
             UnGroup => write!(f, "{Un}{Group}"),
             UnPartition => write!(f, "{Un}{Partition}"),
@@ -1304,6 +1305,12 @@ impl ImplPrimitive {
                 let (counts, dedup) = val.unkeep(env)?;
                 env.push(dedup);
                 env.push(counts);
+            }
+            ImplPrimitive::UnTake => {
+                let mut val = env.pop(1)?;
+                let taken = val.un_take(env)?;
+                env.push(val);
+                env.push(taken);
             }
             ImplPrimitive::UnAtan => {
                 let x = env.pop(1)?;

@@ -11,6 +11,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [Output comments](https://uiua.org/tutorial/basic#output-comments) now show values *after* their line rather than before it
 - Add `SoA` constructor to boxing data definitions
   - This makes it easier to initialize data definitions that have defaults as structs-of-arrays
+- Add [`un °`](https://uiua.org/docs/un) [`fill ⬚`](https://uiua.org/docs/fill)ed [`take ↙`](https://uiua.org/docs/take)
 - Add experimental [lexical ordering](https://uiua.org/docs/experimental#lexical-ordering) syntax
   - This enables some function packs and array notation to execute in the order they are normally read
 - Add experimental sided [`fill ⬚`](https://uiua.org/docs/fill)

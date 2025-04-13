@@ -1083,6 +1083,10 @@ primitive!(
     /// [infinity] can be used to take every row along an axis.
     /// ex: ↯2_3_4⇡24
     ///   : ↙¯1_∞_2.
+    ///
+    /// [un][fill]ed [take] will trim rows from the end of an array and return the pre-trimmed dimensions.
+    /// ex: °⬚@-↙ "abc-----"
+    /// ex: °⬚0↙ [10_20_0_0 30_40_0_0 0_0_0_0]
     (2, Take, DyadicArray, ("take", '↙')),
     /// Drop the first n rows of an array
     ///
@@ -3332,6 +3336,7 @@ impl_primitive!(
     (3(2), UnJoinShape2),
     (3(2), UnJoinShape2End),
     (1(2), UnKeep),
+    (1(2), UnTake),
     (1(2)[1], UnGroup),
     (1(2)[1], UnPartition),
     (1, UnSort, Impure),

@@ -433,6 +433,10 @@ impl Value {
     pub(crate) fn drop_n(&mut self, n: usize) {
         val_as_arr!(self, |a| a.drop_front_n(n))
     }
+    pub(crate) fn un_take(&mut self, env: &Uiua) -> UiuaResult<Value> {
+        self.match_fill(env);
+        val_as_arr!(self, |a| a.un_take(env))
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -1015,6 +1019,58 @@ impl<T: ArrayValue> Array<T> {
         let start = n * row_len;
         self.data = self.data.slice(start..);
         self.shape[0] -= n;
+    }
+    fn un_take(&mut self, env: &Uiua) -> UiuaResult<Value> {
+        let fill = env
+            .scalar_unfill::<T>()
+            .map_err(|e| env.error(format!("Cannot untake without a fill value{e}")))?
+            .value;
+        if self.shape.contains(&0) {
+            return Ok(Value::from(0.0));
+        }
+        let mut curr_row_len = self.element_count();
+        let mut take_amnt = EcoVec::new();
+        for (i, d) in self.shape.clone().into_iter().enumerate() {
+            let prev_row_len = curr_row_len;
+            curr_row_len /= d;
+            let taken = (self.data.chunks_exact(prev_row_len))
+                .map(|row| {
+                    row.rchunks_exact(curr_row_len)
+                        .take_while(|row| row.iter().all(|x| x.array_eq(&fill)))
+                        .count()
+                })
+                .min()
+                .unwrap();
+            let remaining_per_row = (d - taken) * curr_row_len;
+            if i == 0 {
+                self.data.truncate(remaining_per_row);
+                self.shape[i] -= taken;
+            } else {
+                let max = self.element_count() / prev_row_len;
+                let slice = self.data.as_mut_slice();
+                for j in 1..max {
+                    for k in 0..remaining_per_row {
+                        slice[j * remaining_per_row + k] = slice[j * prev_row_len + k].clone();
+                    }
+                }
+                self.shape[i] -= taken;
+                self.data.truncate(self.shape.elements());
+            }
+            take_amnt.push(taken as f64);
+        }
+        while take_amnt.last() == Some(&0.0) {
+            take_amnt.pop();
+        }
+        for (t, &d) in take_amnt.make_mut().iter_mut().zip(&self.shape) {
+            *t += d as f64;
+        }
+        if take_amnt.len() == 1 {
+            return Ok(take_amnt[0].into());
+        }
+        let mut take_amnt = Value::from(take_amnt);
+        take_amnt.compress();
+        self.validate_shape();
+        Ok(take_amnt)
     }
 }
 

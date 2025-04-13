@@ -2140,7 +2140,6 @@ mod server {
             // Unused
             for binfo in &doc.asm.bindings {
                 if binfo.span.src == path && !binfo.used {
-                    self.debug(&format!("unused: {binfo:?}")).await;
                     diagnostics.push(Diagnostic {
                         severity: Some(DiagnosticSeverity::HINT),
                         range: uiua_span_to_lsp(&binfo.span, &doc.asm.inputs),

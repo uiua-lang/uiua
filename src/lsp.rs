@@ -161,14 +161,14 @@ pub struct CodeMeta {
     pub global_references: HashMap<CodeSpan, usize>,
     /// A map of references to shadowable constants
     pub constant_references: HashSet<Sp<Ident>>,
+    /// A map of identifiers to possible completions
+    pub completions: HashMap<CodeSpan, Vec<Completion>>,
     /// Spans of functions and their signatures and whether they are explicit
     pub function_sigs: SigDecls,
     /// A map of macro invocations to their expansions
     pub macro_expansions: HashMap<CodeSpan, (Option<Ident>, String)>,
     /// A map of inline macro functions to their number of arguments
     pub inline_macros: HashMap<CodeSpan, usize>,
-    /// A map of incomplete ref paths to their module's index
-    pub incomplete_refs: HashMap<CodeSpan, usize>,
     /// A map of top-level binding names to their indices
     pub top_level_names: HashMap<Ident, LocalName>,
     /// A map of the spans of top-level lines to values
@@ -183,6 +183,17 @@ pub struct CodeMeta {
     pub import_srcs: HashMap<CodeSpan, ImportSrc>,
     /// A map of obverse spans to their set inverses
     pub obverses: HashMap<CodeSpan, SetInverses>,
+}
+
+/// A completion suggestion
+#[derive(Debug, Clone)]
+pub struct Completion {
+    /// The text of the completion
+    pub text: String,
+    /// The index of the binding
+    pub index: usize,
+    /// Whether this is a replacement
+    pub replace: bool,
 }
 
 /// Data for the signature of a function
@@ -1235,7 +1246,7 @@ mod server {
         async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
             fn make_completion(
                 doc: &LspDoc,
-                name: String,
+                text: String,
                 span: &CodeSpan,
                 binding: &BindingInfo,
             ) -> CompletionItem {
@@ -1254,14 +1265,15 @@ mod server {
                     BindingKind::Error => CompletionItemKind::FUNCTION,
                 };
                 CompletionItem {
-                    label: name.clone(),
+                    label: text.clone(),
                     kind: Some(kind),
                     label_details: Some(CompletionItemLabelDetails {
                         description: (binding.kind.sig())
                             .map(|sig| format!("{:<4}", sig.to_string())),
                         ..Default::default()
                     }),
-                    sort_text: name.split('~').last().map(Into::into),
+                    sort_text: text.split('~').last().map(Into::into),
+                    filter_text: text.split('~').last().map(Into::into),
                     documentation: binding.meta.comment.as_ref().map(|c| {
                         Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
@@ -1270,8 +1282,9 @@ mod server {
                     }),
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                         range: uiua_span_to_lsp(span, &doc.asm.inputs),
-                        new_text: name,
+                        new_text: text,
                     })),
+                    deprecated: binding.meta.deprecation.is_some().then_some(true),
                     ..Default::default()
                 }
             }
@@ -1283,44 +1296,6 @@ mod server {
                 return Ok(None);
             };
             let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
-
-            // Find an incomplete ref path at the cursor position
-            if let Some((span, index)) =
-                doc.code_meta.incomplete_refs.iter().find(|(span, _)| {
-                    span.end.line as usize == line && span.end.col as usize == col
-                })
-            {
-                match &doc.asm.bindings[*index].kind {
-                    BindingKind::Import(module) => {
-                        let mut completions = Vec::new();
-                        let mut span = span.clone();
-                        span.start = span.end;
-                        for binding in self.bindings_in_file(doc_uri, module) {
-                            if !binding.public {
-                                continue;
-                            }
-                            let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-                            completions.push(make_completion(&doc, item_name, &span, &binding));
-                        }
-                        return Ok(Some(CompletionResponse::Array(completions)));
-                    }
-                    BindingKind::Module(module) => {
-                        let mut completions = Vec::new();
-                        let mut span = span.clone();
-                        span.start = span.end;
-                        for (name, local) in &module.names {
-                            if !local.public {
-                                continue;
-                            }
-                            let item_name = name.to_string();
-                            let binfo = doc.asm.bindings.get(local.index).unwrap();
-                            completions.push(make_completion(&doc, item_name, &span, binfo));
-                        }
-                        return Ok(Some(CompletionResponse::Array(completions)));
-                    }
-                    _ => (),
-                }
-            }
 
             // Find the span at the cursor position
             let Some(sp) = (doc.spans.iter()).find(|sp| sp.span.contains_line_col_end(line, col))
@@ -1335,10 +1310,25 @@ mod server {
             let Ok(token) = std::str::from_utf8(&doc.input.as_bytes()[sp.span.byte_range()]) else {
                 return Ok(None);
             };
-            let lower_token = token.to_lowercase();
+
+            let mut completions = Vec::new();
+
+            // Collect binding completions
+            let path = uri_path(doc_uri);
+            if let Some((span, compls)) = (doc.code_meta.completions.iter())
+                .find(|(span, _)| span.contains_line_col_end(line, col) && span.src == path)
+            {
+                let mut end_span = span.clone();
+                end_span.start = end_span.end;
+                for compl in compls {
+                    let binfo = &doc.asm.bindings[compl.index];
+                    let span = if compl.replace { span } else { &end_span };
+                    completions.push(make_completion(&doc, compl.text.clone(), span, binfo));
+                }
+            }
 
             // Collect primitive completions
-            let mut completions: Vec<_> = Primitive::non_deprecated()
+            let prim_completions = Primitive::non_deprecated()
                 .filter(|p| p.name().starts_with(token))
                 .map(|prim| {
                     CompletionItem {
@@ -1389,60 +1379,12 @@ mod server {
                         )),
                         ..Default::default()
                     }
-                })
-                .collect();
-
-            // Collect binding completions
-            for (name, local) in &doc.code_meta.top_level_names {
-                let binding = &doc.asm.bindings[local.index];
-
-                match &binding.kind {
-                    BindingKind::Import(module) => {
-                        for binding in self.bindings_in_file(doc_uri, module) {
-                            if !binding.public {
-                                continue;
-                            }
-                            let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-                            if !item_name.to_lowercase().starts_with(&lower_token) {
-                                continue;
-                            }
-                            completions.push(make_completion(
-                                &doc,
-                                format!("{name}~{item_name}"),
-                                &sp.span,
-                                &binding,
-                            ));
-                        }
-                    }
-                    BindingKind::Module(module) => {
-                        for (item_name, local) in &module.names {
-                            if !local.public && !name.to_lowercase().starts_with(&lower_token) {
-                                continue;
-                            }
-                            completions.push(make_completion(
-                                &doc,
-                                format!("{name}~{item_name}"),
-                                &sp.span,
-                                &doc.asm.bindings[local.index],
-                            ));
-                        }
-                    }
-                    _ => (),
-                }
-
-                if !name.to_lowercase().starts_with(&lower_token) {
-                    continue;
-                }
-                completions.push(make_completion(&doc, name.to_string(), &sp.span, binding));
-            }
+                });
+            completions.extend(prim_completions);
 
             // Collect constant completions
             for constant in &CONSTANTS {
-                if !constant
-                    .name
-                    .to_lowercase()
-                    .starts_with(&token.to_lowercase())
-                {
+                if !constant.name.starts_with(token) {
                     continue;
                 }
                 completions.push(CompletionItem {
@@ -1453,6 +1395,8 @@ mod server {
                         range: uiua_span_to_lsp(&sp.span, &doc.asm.inputs),
                         new_text: constant.name.into(),
                     })),
+                    sort_text: Some(format!("\u{ffff}{}", constant.name)),
+                    filter_text: Some(format!("\u{ffff}{}", constant.name)),
                     ..Default::default()
                 });
             }
@@ -2410,27 +2354,6 @@ mod server {
     impl Backend {
         fn doc(&self, uri: &Url) -> Option<Arc<LspDoc>> {
             self.docs.get(uri).map(|doc| Arc::clone(&doc))
-        }
-        fn bindings_in_file(
-            &self,
-            doc_uri: &Url,
-            path: &Path,
-        ) -> impl Iterator<Item = BindingInfo> + '_ {
-            let doc_uri = doc_uri.clone();
-            let canonical_path = path.canonicalize().ok();
-            self.docs.get(&doc_uri).into_iter().flat_map(move |doc| {
-                (doc.asm.bindings.iter())
-                    .filter(|binfo| {
-                        let path = match &binfo.span.src {
-                            InputSrc::File(file) => file.to_path_buf(),
-                            InputSrc::Str(_) | InputSrc::Macro(_) => uri_path(&doc_uri),
-                            InputSrc::Literal(_) => return false,
-                        };
-                        path.canonicalize().ok() == canonical_path
-                    })
-                    .cloned()
-                    .collect::<Vec<_>>()
-            })
         }
         async fn debug(&self, message: impl Into<String>) {
             self.client

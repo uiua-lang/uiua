@@ -31,7 +31,7 @@ use crate::{
     function::DynamicFunction,
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
-    lsp::{CodeMeta, ImportSrc, SetInverses, SigDecl},
+    lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
     parse::{flip_unsplit_lines, max_placeholder, parse, split_words},
     Array, ArrayLen, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
     DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
@@ -1278,7 +1278,7 @@ code:
                 Node::Format(parts, span)
             }
             Word::Ref(r) => self.reference(r)?,
-            Word::IncompleteRef { path, in_macro_arg } => {
+            Word::IncompleteRef { path, in_macro_arg } => 'blk: {
                 if let Some((_, locals)) = self.ref_path(&path, in_macro_arg)? {
                     self.add_error(
                         path.last().unwrap().tilde_span.clone(),
@@ -1290,9 +1290,28 @@ code:
                             .global_references
                             .insert(comp.module.span, local.index);
                     }
-                    self.code_meta
-                        .incomplete_refs
-                        .insert(word.span.clone(), locals.last().unwrap().index);
+                    let index = locals.last().unwrap().index;
+                    let names = match &self.asm.bindings[index].kind {
+                        BindingKind::Import(path) => &self.imports[path].names,
+                        BindingKind::Module(module) => &module.names,
+                        _ => break 'blk Node::empty(),
+                    };
+                    let mut completions = Vec::new();
+                    for (name, local) in names {
+                        if !local.public {
+                            continue;
+                        }
+                        completions.push(Completion {
+                            text: name.into(),
+                            index: local.index,
+                            replace: false,
+                        });
+                    }
+                    if !completions.is_empty() {
+                        self.code_meta
+                            .completions
+                            .insert(word.span.clone(), completions);
+                    }
                 }
                 Node::empty()
             }
@@ -1774,7 +1793,39 @@ code:
             self.ident(r.name.value, r.name.span, r.in_macro_arg)
         }
     }
+    fn completions(&self, prefix: &str, names: &LocalNames, public_only: bool) -> Vec<Completion> {
+        let mut completions = Vec::new();
+        for (name, local) in names {
+            if public_only && !local.public {
+                continue;
+            }
+            if name.starts_with(prefix) {
+                completions.push(Completion {
+                    text: name.into(),
+                    index: local.index,
+                    replace: true,
+                });
+            }
+            let subnames = match &self.asm.bindings[local.index].kind {
+                BindingKind::Module(m) => &m.names,
+                BindingKind::Import(path) => &self.imports[path].names,
+                _ => continue,
+            };
+            let subcompletions = self.completions(prefix, subnames, true);
+            completions.extend(subcompletions.into_iter().map(|c| Completion {
+                text: format!("{name}~{}", c.text),
+                ..c
+            }));
+        }
+        completions
+    }
     fn ident(&mut self, ident: Ident, span: CodeSpan, skip_local: bool) -> UiuaResult<Node> {
+        // Add completions
+        let completions = self.completions(&ident, &self.scope.names, false);
+        if !completions.is_empty() {
+            self.code_meta.completions.insert(span.clone(), completions);
+        }
+
         if let Some(curr) = (self.current_bindings.last_mut()).filter(|curr| curr.name == ident) {
             // Name is a recursive call
             let Some(sig) = curr.signature else {
@@ -1782,7 +1833,7 @@ code:
                     span,
                     format!(
                         "Recursive function `{ident}` must have a \
-                            signature declared after the ←."
+                        signature declared after the ←."
                     ),
                 ));
             };

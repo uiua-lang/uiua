@@ -20,6 +20,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - The formatter will now allow putting multiple function pack branches on a single line
 - Optimize [`stencil ⧈`](https://uiua.org/docs/stencil) when used with with monadic functions that are optimized for [`rows ≡`](https://uiua.org/docs/rows)
+- LSP completions now properly respect scoping
 
 ## 0.15.1 - 2025-04-06
 ### Interpreter

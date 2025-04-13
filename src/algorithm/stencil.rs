@@ -5,7 +5,7 @@ use ecow::EcoVec;
 use crate::{
     algorithm::{
         pervade::*,
-        validate_size,
+        validate_size, validate_size_of,
         zip::{f_mon_fast_fn, ValueMonFn},
         FillContext, MultiOutput,
     },
@@ -114,11 +114,13 @@ where
         }
         Node::Prim(Primitive::Box, _) => WindowAction::Box(EcoVec::new(), EcoVec::new()),
         node => {
-            if let Some(f) = f_mon_fast_fn(node, env) {
-                let size = validate_size::<T>(
+            if let Some((f, size)) = f_mon_fast_fn(node, env).and_then(|f| {
+                validate_size_of::<T>(
                     (shape_prefix.iter().copied()).chain(window_shape.iter().copied()),
-                    env,
-                )?;
+                )
+                .ok()
+                .map(|size| (f, size))
+            }) {
                 WindowAction::Id(EcoVec::with_capacity(size), Some(f))
             } else {
                 WindowAction::Default(multi_output(f.sig.outputs(), Vec::new()), EcoVec::new())

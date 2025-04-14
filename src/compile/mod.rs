@@ -2127,6 +2127,9 @@ code:
                         self.word(n_span.sp(Word::Number(Ok(n as f64))))?,
                         self.primitive(prim, span),
                     ]),
+                    SubNOrSide::Bottom => {
+                        todo!()
+                    }
                     SubNOrSide::Side(side) => {
                         self.experimental_error_it(&n_span, || format!("Sided {}", prim.format()));
                         let sub_span = self.add_span(n_span);
@@ -2321,6 +2324,7 @@ code:
 enum SubNOrSide {
     N(i32),
     Side(SubSide),
+    Bottom,
 }
 
 impl From<SubNOrSide> for Subscript {
@@ -2328,6 +2332,7 @@ impl From<SubNOrSide> for Subscript {
         match n_or_side {
             SubNOrSide::N(n) => Subscript::N(n),
             SubNOrSide::Side(side) => Subscript::Side(side),
+            SubNOrSide::Bottom => Subscript::Bottom,
         }
     }
 }
@@ -2337,6 +2342,7 @@ impl PartialEq<i32> for SubNOrSide {
         match self {
             SubNOrSide::N(n) => *n == *other,
             SubNOrSide::Side(_) => false,
+            SubNOrSide::Bottom => false,
         }
     }
 }
@@ -2349,10 +2355,7 @@ impl Compiler {
     fn subscript_n_or_side(&mut self, sub: Sp<Subscript>) -> Option<Sp<SubNOrSide>> {
         match sub.value {
             Subscript::N(n) => Some(sub.span.sp(SubNOrSide::N(n))),
-            Subscript::Empty => {
-                self.add_error(sub.span.clone(), "Subscript is incomplete");
-                None
-            }
+            Subscript::Bottom => Some(sub.span.sp(SubNOrSide::Bottom)),
             Subscript::NegOnly => {
                 self.add_error(sub.span.clone(), "Subscript is incomplete");
                 None
@@ -2371,6 +2374,13 @@ impl Compiler {
     ) -> Option<Sp<i32>> {
         match n_or_side.value {
             SubNOrSide::N(n) => Some(n_or_side.span.sp(n)),
+            SubNOrSide::Bottom => {
+                self.add_error(
+                    n_or_side.span,
+                    format!("Bottom subscript is not allowed for {for_what}"),
+                );
+                None
+            }
             SubNOrSide::Side(_) => {
                 self.add_error(
                     n_or_side.span,
@@ -2390,6 +2400,13 @@ impl Compiler {
                 self.add_error(
                     n_or_side.span,
                     format!("Numeric subscripts are not allowed for {for_what}"),
+                );
+                None
+            }
+            SubNOrSide::Bottom => {
+                self.add_error(
+                    n_or_side.span,
+                    format!("Bottom subscript is not allowed for {for_what}"),
                 );
                 None
             }

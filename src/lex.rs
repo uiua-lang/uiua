@@ -758,7 +758,7 @@ impl fmt::Display for Token {
             Token::Newline => write!(f, "newline"),
             Token::Spaces => write!(f, "space(s)"),
             Token::Subscr(sub) => match sub {
-                Subscript::Empty => write!(f, "__"),
+                Subscript::Bottom => write!(f, "₌"),
                 sub => sub.fmt(f),
             },
             Token::OpenModule => write!(f, "┌─╴"),
@@ -1262,7 +1262,8 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 // Formatted subscripts
-                c if "₋⌞⌟".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
+                c if "₋⌞⌟₌".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) =>
+                {
                     match c {
                         "⌞" => {
                             self.end(Subscr(Subscript::Side(SubSide::Left)), start);
@@ -1270,6 +1271,10 @@ impl<'a> Lexer<'a> {
                         }
                         "⌟" => {
                             self.end(Subscr(Subscript::Side(SubSide::Right)), start);
+                            continue;
+                        }
+                        "₌" => {
+                            self.end(Subscr(Subscript::Bottom), start);
                             continue;
                         }
                         _ => {}
@@ -1493,6 +1498,10 @@ impl<'a> Lexer<'a> {
                     s.push_str(right);
                     break s;
                 }
+                if let Some(bottom) = self.next_char_if_all(|c| "₌".contains(c)) {
+                    s.push_str(bottom);
+                    break s;
+                }
                 if !got_neg {
                     if let Some(neg) = self.next_char_if_all(|c| "₋`¯".contains(c)) {
                         s.push_str(neg);
@@ -1513,7 +1522,7 @@ impl<'a> Lexer<'a> {
             } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c)) {
                 s.push_str(c);
                 started_subscript = true;
-            } else if let Some(c) = self.next_char_if(|c| "⌞⌟".contains(c)) {
+            } else if let Some(c) = self.next_char_if(|c| "⌞⌟₌".contains(c)) {
                 s.push_str(c);
                 break s;
             } else {
@@ -1728,6 +1737,7 @@ pub(crate) fn subscript(s: &str) -> Option<Subscript> {
     match s {
         "⌞" | "<" => return Some(Subscript::Side(SubSide::Left)),
         "⌟" | ">" => return Some(Subscript::Side(SubSide::Right)),
+        "₌" => return Some(Subscript::Bottom),
         _ => {}
     }
     let mut chars = s.chars().peekable();
@@ -1793,6 +1803,9 @@ fn place_exclams(ident: &str, count: usize) -> Ident {
 fn canonicalize_subscripts(ident: Ident) -> Ident {
     if !ident.contains('_') {
         return ident;
+    }
+    if let Some(ident) = ident.strip_suffix("__") {
+        return format!("{ident}₌").into();
     }
     // This hasty canonicalization is okay because the stricter
     // rules about the syntax are handled in the lexer
@@ -1860,7 +1873,7 @@ fn pick_subscript(neg: bool, n: Option<i32>, overflow: bool) -> Subscript {
         return Subscript::TooLarge;
     }
     match (neg, n) {
-        (false, None) => Subscript::Empty,
+        (false, None) => Subscript::Bottom,
         (true, None) => Subscript::NegOnly,
         (false, Some(n)) => Subscript::N(n),
         (true, Some(n)) => Subscript::N(-n),

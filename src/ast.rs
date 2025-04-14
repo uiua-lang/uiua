@@ -691,8 +691,8 @@ pub struct Subscripted {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(tag = "type", content = "value")]
 pub enum Subscript {
-    /// Just __
-    Empty,
+    /// Just __ or ₌
+    Bottom,
     /// Just a negative sign
     NegOnly,
     /// A number
@@ -737,7 +737,7 @@ impl fmt::Display for SubSide {
 impl fmt::Display for Subscript {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Subscript::Empty => write!(f, "__"),
+            Subscript::Bottom => write!(f, "₌"),
             Subscript::NegOnly => write!(f, "₋"),
             Subscript::N(n) => {
                 if *n < 0 {

@@ -556,6 +556,13 @@ impl Compiler {
                         let n = self.positive_subscript(n, Both, &modified.modifier.span)?;
                         self.monadic_modifier_op(modified)?.0.on_all(n, span)
                     }
+                    SubNOrSide::Bottom => {
+                        self.add_error(
+                            modified.modifier.span.clone().merge(n.span),
+                            format!("Bottom {} is not allowed", Both.format()),
+                        );
+                        self.monadic_modifier_op(modified)?.0.on_all(2, span)
+                    }
                     SubNOrSide::Side(side) => {
                         let op = self.monadic_modifier_op(modified)?.0;
                         if op.sig.args() != 2 {
@@ -1089,6 +1096,9 @@ impl Compiler {
                             SubNOrSide::N(n) => {
                                 Node::ImplMod(ImplPrimitive::EachSub(n), eco_vec![sn], span)
                             }
+                            SubNOrSide::Bottom => {
+                                todo!()
+                            }
                             SubNOrSide::Side(side) => {
                                 self.experimental_error_it(&n.span, || {
                                     format!("Sided {}", Primitive::Each.format())
@@ -1150,6 +1160,9 @@ impl Compiler {
                                 }
                                 node
                             }
+                        }
+                        SubNOrSide::Bottom => {
+                            todo!()
                         }
                         SubNOrSide::Side(side) => {
                             self.experimental_error_it(&n_span, || {

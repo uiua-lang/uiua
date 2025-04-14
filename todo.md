@@ -1,14 +1,11 @@
 # Uiua Todo
 
 # 0.16
-- Fix bug in complicated nested box formatting
-  - Reproduce: `{$x ⍜(≡⊢|⍚$x) ∵□°△2_3}`
-- Stabilize `fft`
-  - Requirs a custom implementation 😵‍💫
-- Respect user newlines more in multiline function packs
 - progressive `indexof`
 - `bytes` function for various byte encodings
 - Last-axis subscripts
+- Stabilize `fft`
+  - Requirs a custom implementation 😵‍💫
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?
 - Implement some `under` inverses in terms of `un by`, rather than the other way around?

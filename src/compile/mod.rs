@@ -2143,6 +2143,13 @@ code:
                     }
                 }
             }
+            Word::Primitive(EncodeBytes) => {
+                let Some(side) = self.subscript_side_only(n, EncodeBytes.format()) else {
+                    return self.word(sub.word);
+                };
+                let span = self.add_span(sub.word.span);
+                Node::ImplPrim(ImplPrimitive::SidedEncodeBytes(side.value), span)
+            }
             Word::Primitive(prim) => {
                 let Some(n) = self.subscript_n_only(n, prim.format()) else {
                     return self.word(sub.word);

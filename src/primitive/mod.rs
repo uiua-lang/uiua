@@ -202,6 +202,7 @@ impl fmt::Display for ImplPrimitive {
                 write!(f, "{Bits}")?;
                 fmt_subscript(f, *n as i32)
             }
+            SidedEncodeBytes(side) => write!(f, "{EncodeBytes}{side}"),
             Root => write!(f, "{Anti}{Pow}"),
             Cos => write!(f, "cos"),
             Asin => write!(f, "{Un}{Sin}"),
@@ -244,11 +245,13 @@ impl fmt::Display for ImplPrimitive {
             UnDatetime => write!(f, "{Un}{DateTime}"),
             UnBoth => write!(f, "{Un}{Both}"),
             UnBracket => write!(f, "{Un}{Bracket}"),
+            DecodeBytes(Some(side)) => write!(f, "{Un}{EncodeBytes}{side}"),
+            DecodeBytes(None) => write!(f, "{Un}{EncodeBytes}"),
             ImageDecode => write!(f, "{Un}{ImageEncode}"),
             GifDecode => write!(f, "{Un}{GifEncode}"),
             AudioDecode => write!(f, "{Un}{AudioEncode}"),
-            UnRawMode => write!(f, "{Un}{}", Primitive::Sys(SysOp::RawMode)),
-            UnClip => write!(f, "{Un}{}", Primitive::Sys(SysOp::Clip)),
+            UnRawMode => write!(f, "{Un}{}", Sys(SysOp::RawMode)),
+            UnClip => write!(f, "{Un}{}", Sys(SysOp::Clip)),
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoUnBits => write!(f, "{Under}{Un}{Bits}"),
             AntiBase => write!(f, "{Anti}{Base}"),
@@ -557,7 +560,7 @@ impl Primitive {
         matches!(
             self,
             (Reach | Slf | Above | Around)
-                | (Or | Base | Fft | Layout | Binary)
+                | (Or | Base | Fft | Layout | Binary | EncodeBytes)
                 | Astar
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen | Breakpoint)
@@ -859,6 +862,12 @@ impl Primitive {
                     return Err(env.error("Box nesting too deep"));
                 }
                 env.push(val.box_depth(0));
+            }
+            Primitive::EncodeBytes => {
+                let format = env.pop(1)?;
+                let value = env.pop(2)?;
+                let bytes = format.encode_bytes(value, None, env)?;
+                env.push(bytes);
             }
             Primitive::Repr => env.monadic_ref(Value::representation)?,
             Primitive::Parse => env.monadic_env(Value::parse_num)?,
@@ -1222,6 +1231,18 @@ impl ImplPrimitive {
         match self {
             ImplPrimitive::DeshapeSub(i) => {
                 env.monadic_mut_env(|val, env| val.deshape_sub(*i, 0, true, env))?
+            }
+            &ImplPrimitive::SidedEncodeBytes(side) => {
+                let format = env.pop(1)?;
+                let value = env.pop(2)?;
+                let bytes = format.encode_bytes(value, Some(side), env)?;
+                env.push(bytes);
+            }
+            &ImplPrimitive::DecodeBytes(side) => {
+                let format = env.pop(1)?;
+                let bytes = env.pop(2)?;
+                let value = format.decode_bytes(bytes, side, env)?;
+                env.push(value);
             }
             ImplPrimitive::NBits(n) => {
                 let val = env.pop(1)?;

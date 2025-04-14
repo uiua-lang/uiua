@@ -1,3 +1,5 @@
+use crate::ast::SubSide;
+
 use super::*;
 
 impl Node {
@@ -263,6 +265,24 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &(Base, AntiBase),
     &(AntiBase, Base),
     &(Pop, Pop),
+    &(EncodeBytes, DecodeBytes(None)),
+    &(DecodeBytes(None), EncodeBytes),
+    &(
+        DecodeBytes(Some(SubSide::Left)),
+        SidedEncodeBytes(SubSide::Left),
+    ),
+    &(
+        DecodeBytes(Some(SubSide::Right)),
+        SidedEncodeBytes(SubSide::Right),
+    ),
+    &(
+        SidedEncodeBytes(SubSide::Left),
+        DecodeBytes(Some(SubSide::Left)),
+    ),
+    &(
+        SidedEncodeBytes(SubSide::Right),
+        DecodeBytes(Some(SubSide::Right)),
+    ),
     &MatrixDivPat,
     &NoUnder(AntiCouplePat),
     &AntiFillPat,

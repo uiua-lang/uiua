@@ -1,12 +1,13 @@
 //! En/decode Uiua arrays to/from media formats
 
+use ecow::eco_vec;
 #[cfg(feature = "audio_encode")]
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 #[cfg(feature = "image")]
 use image::{DynamicImage, ImageFormat};
 use serde::*;
 
-use crate::SysBackend;
+use crate::{ast::SubSide, cowslice::CowSlice, SysBackend};
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
 
@@ -75,6 +76,188 @@ impl SmartOutput {
         }
         // Otherwise, just show the value
         Self::Normal(value.show())
+    }
+}
+
+impl Value {
+    /// Encode a value as bytes
+    pub fn encode_bytes(
+        &self,
+        mut data: Self,
+        side: Option<SubSide>,
+        env: &Uiua,
+    ) -> UiuaResult<Array<u8>> {
+        let format = self.as_string(env, "Format must be a string")?;
+        let format = format.as_str();
+        let elem_size = match format {
+            "u8" | "i8" => 1,
+            "u16" | "i16" => 2,
+            "u32" | "i32" => 4,
+            "u64" | "i64" => 8,
+            "u128" | "i128" => 16,
+            "f32" => 4,
+            "f64" => 8,
+            _ => return Err(env.error(format!("Invalid byte format: {}", format))),
+        };
+        // Early return when a byte array can be reused
+        if let Value::Byte(mut arr) = data {
+            match format {
+                "u8" => return Ok(arr),
+                "i8" => {
+                    for i in arr.data.as_mut_slice() {
+                        *i = (*i).min(i8::MAX as u8);
+                    }
+                    return Ok(arr);
+                }
+                _ => data = arr.into(),
+            }
+        }
+        let mut bytes = CowSlice::from_elem(0, data.element_count() * elem_size);
+        let slice = bytes.as_mut_slice();
+        fn write<T: Copy, const N: usize>(src: &[T], dst: &mut [u8], f: impl Fn(T) -> [u8; N]) {
+            for (i, &src) in src.iter().enumerate() {
+                dst[i * N..][..N].copy_from_slice(&f(src));
+            }
+        }
+        macro_rules! write {
+            ($arr:expr, $ty:ty) => {
+                match side {
+                    None => write(&$arr.data, slice, |n| (n as $ty).to_ne_bytes()),
+                    Some(SubSide::Left) => write(&$arr.data, slice, |n| (n as $ty).to_le_bytes()),
+                    Some(SubSide::Right) => write(&$arr.data, slice, |n| (n as $ty).to_be_bytes()),
+                }
+            };
+        }
+        let mut shape = match data {
+            Value::Byte(arr) => {
+                match format {
+                    "u8" | "i8" => unreachable!("handled above"),
+                    "u16" => write!(arr, u16),
+                    "i16" => write!(arr, i16),
+                    "u32" => write!(arr, u32),
+                    "i32" => write!(arr, i32),
+                    "u64" => write!(arr, u64),
+                    "i64" => write!(arr, i64),
+                    "u128" => write!(arr, u128),
+                    "i128" => write!(arr, i128),
+                    "f32" => write!(arr, f32),
+                    "f64" => write!(arr, f64),
+                    format => unreachable!("format {format} is not supported"),
+                }
+                arr.shape
+            }
+            Value::Num(arr) => {
+                match format {
+                    "u8" => write!(arr, u8),
+                    "i8" => write!(arr, i8),
+                    "u16" => write!(arr, u16),
+                    "i16" => write!(arr, i16),
+                    "u32" => write!(arr, u32),
+                    "i32" => write!(arr, i32),
+                    "u64" => write!(arr, u64),
+                    "i64" => write!(arr, i64),
+                    "u128" => write!(arr, u128),
+                    "i128" => write!(arr, i128),
+                    "f32" => write!(arr, f32),
+                    "f64" => write!(arr, f64),
+                    format => unreachable!("format {format} is not supported"),
+                }
+                arr.shape
+            }
+            value => {
+                return Err(env.error(format!(
+                    "Cannot encode {} as bytes",
+                    value.type_name_plural()
+                )))
+            }
+        };
+        if elem_size != 1 {
+            shape.push(elem_size);
+        }
+        Ok(Array::new(shape, bytes))
+    }
+    /// Decode a value from bytes
+    pub fn decode_bytes(
+        &self,
+        bytes: Self,
+        side: Option<SubSide>,
+        env: &Uiua,
+    ) -> UiuaResult<Value> {
+        let format = self.as_string(env, "Format must be a string")?;
+        let format = format.as_str();
+        let elem_size = match format {
+            "u8" | "i8" => 1,
+            "u16" | "i16" => 2,
+            "u32" | "i32" => 4,
+            "u64" | "i64" => 8,
+            "u128" | "i128" => 16,
+            "f32" => 4,
+            "f64" => 8,
+            _ => return Err(env.error(format!("Invalid byte format: {}", format))),
+        };
+        let bytes = match bytes {
+            Value::Byte(arr) if format == "u8" => return Ok(arr.into()),
+            Value::Byte(arr) => arr,
+            Value::Num(arr) if format == "u8" => {
+                return Ok(arr.convert_ref_with(|n| n as u8).into())
+            }
+            Value::Num(arr) => arr.convert_ref_with(|n| n as u8),
+            value => {
+                return Err(env.error(format!(
+                    "Cannot decode {} as bytes",
+                    value.type_name_plural()
+                )))
+            }
+        };
+        let mut new_shape = bytes.shape;
+        if new_shape.len() > 1 && elem_size > 1 {
+            let last_dim = *new_shape.last().unwrap();
+            if last_dim != elem_size {
+                return Err(env.error(format!(
+                    "Bytes shape {} does not match format {}",
+                    new_shape, format
+                )));
+            }
+            new_shape.pop();
+        }
+        let mut data = eco_vec![0.0; new_shape.elements()];
+        let slice = data.make_mut();
+        fn read<const N: usize>(src: &[u8], dst: &mut [f64], f: impl Fn([u8; N]) -> f64) {
+            let mut curr = [0; N];
+            for (i, src) in src.chunks_exact(N).enumerate() {
+                curr.copy_from_slice(src);
+                dst[i] = f(curr);
+            }
+        }
+        macro_rules! read {
+            ($ty:ty) => {
+                match side {
+                    None => read(&bytes.data, slice, |arr| <$ty>::from_ne_bytes(arr) as f64),
+                    Some(SubSide::Left) => {
+                        read(&bytes.data, slice, |arr| <$ty>::from_le_bytes(arr) as f64)
+                    }
+                    Some(SubSide::Right) => {
+                        read(&bytes.data, slice, |arr| <$ty>::from_be_bytes(arr) as f64)
+                    }
+                }
+            };
+        }
+        match format {
+            "u8" => unreachable!("handled above"),
+            "i8" => read!(i8),
+            "u16" => read!(u16),
+            "i16" => read!(i16),
+            "u32" => read!(u32),
+            "i32" => read!(i32),
+            "u64" => read!(u64),
+            "i64" => read!(i64),
+            "u128" => read!(u128),
+            "i128" => read!(i128),
+            "f32" => read!(f32),
+            "f64" => read!(f64),
+            format => unreachable!("format {format} is not supported"),
+        }
+        Ok(Array::new(new_shape, data).into())
     }
 }
 

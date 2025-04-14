@@ -3,9 +3,9 @@
 # 0.16
 - progressive `indexof`
 - `bytes` function for various byte encodings
-- Last-axis subscripts
 - Stabilize `fft`
   - Requirs a custom implementation 😵‍💫
+- Last-axis subscripts or modifier?
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?
 - Implement some `under` inverses in terms of `un by`, rather than the other way around?

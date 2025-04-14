@@ -3069,8 +3069,10 @@ primitive!(
     (1, Xlsx, Encoding, "xlsx"),
     /// Encode an array into a compact binary representation
     ///
-    /// This is useful for saving arrays to files.
+    /// This is useful for saving Uiua arrays to files.
     /// Being `# Experimental`, the format is currently subject to backward-incompatible changes.
+    /// The format is not meant to be compatible with any other existing format. For en/decoding binary data from external sources, use [bytes].
+    ///
     /// Any array can be encoded unless it:
     /// - contains an I/O handle or FFI pointer
     /// - has a rank `greater than``255`
@@ -3120,6 +3122,53 @@ primitive!(
     ///   : ⍜⊜□⍚(⊂@,)∊" \n". repr # add commas
     ///   : &p ⍜▽∵⋅@-=@¯.        # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
+    /// Convert a value to a byte representation
+    ///
+    /// This function exists to interface with externally en/decoded binary data.
+    /// If you want to simply read/write Uiua arrays to/from files, you may want to use [binary] instead.
+    ///
+    /// The first argument is the format, and the second is a number array to encode.
+    ///
+    /// Supported formats are:
+    /// - `u8`
+    /// - `i8`
+    /// - `u16`
+    /// - `i16`
+    /// - `u32`
+    /// - `i32`
+    /// - `u64`
+    /// - `i64`
+    /// - `u128`
+    /// - `i128`
+    /// - `f32`
+    /// - `f64`
+    ///
+    /// Numbers that do not fit in a format's range will be clamped to the range.
+    /// ex: # Experimental!
+    ///   : bytes "u8"  [1 2 3 256]
+    ///   : bytes "u16" [1 2 3 256]
+    /// The result will always be a byte array. If the specified format takes more than 1 byte, the result will have an additional axis in its shape.
+    /// ex: # Experimental!
+    ///   : bytes "u8"  [1_2_3 4_5_6e9]
+    ///   : bytes "f32" [1_2_3 4_5_6e9]
+    ///   : bytes "f64" [1_2_3 4_5_6e9]
+    ///
+    /// [anti][bytes] will decode a byte array based on the format.
+    /// ex: # Experimental!
+    ///   : [[24 45 68 84 251 33 249 63]
+    ///   :  [24 45 68 84 251 33 9 64]
+    ///   :  [24 45 68 84 251 33 25 64]
+    ///   :  [0 0 0 0 0 0 240 127]]
+    ///   : ⌝bytes "f64"
+    ///
+    /// By default, [bytes] en/decodes in native endianness.
+    /// You can specify little or big endian with a sided subscript.
+    /// Left (`⌞`) is little endian, and right (`⌟`) is big endian.
+    /// ex: # Experimental!
+    ///   : bytes  "u64" 1234567890 # Native endian
+    ///   : bytes⌞ "u64" 1234567890 # Little endian
+    ///   : bytes⌟ "u64" 1234567890 # Big endian
+    (2, EncodeBytes, Misc, "bytes"),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.
@@ -3244,6 +3293,8 @@ macro_rules! impl_primitive {
             OffSub(usize),
             NBits(usize),
             SidedFill(SubSide),
+            SidedEncodeBytes(SubSide),
+            DecodeBytes(Option<SubSide>),
             /// Push the maximum row count of N values
             MaxRowCount(usize),
         }
@@ -3262,6 +3313,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n,
                     ImplPrimitive::NBits(_) => 1,
+                    ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
                     _ => return None
                 })
             }
@@ -3274,6 +3326,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n + 1,
                     ImplPrimitive::NBits(_) => 1,
+                    ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })
@@ -3348,12 +3401,12 @@ impl_primitive!(
     (1, UnDatetime),
     (2, ProgressiveIndexOf),
     (2(0), MatchPattern),
-    (2(1), MatchLe),
-    (2(1), MatchGe),
+    (2, MatchLe),
+    (2, MatchGe),
     (1(2), ImageDecode),
     (1(2), GifDecode),
     (1(3), AudioDecode),
-    (0(1), UnRawMode, Impure),
+    (0, UnRawMode, Impure),
     (1(0), UnClip, Mutating),
     // Unders
     (1, UndoFix),

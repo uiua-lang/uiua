@@ -2,7 +2,6 @@
 
 # 0.16
 - progressive `indexof`
-- `bytes` function for various byte encodings
 - Stabilize `fft`
   - Requirs a custom implementation 😵‍💫
 - Last-axis subscripts or modifier?

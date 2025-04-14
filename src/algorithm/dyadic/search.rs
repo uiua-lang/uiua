@@ -142,6 +142,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// Get the `index of` the rows of this array in another
+    #[allow(clippy::mut_range_bound)]
     pub fn index_of(&self, haystack: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
         let needle = self;
         let default = env
@@ -162,17 +163,24 @@ impl<T: ArrayValue> Array<T> {
                         result_data.push(index);
                     }
                 } else {
-                    let mut members = HashMap::with_capacity(haystack.row_count());
-                    for (i, of) in haystack.row_slices().enumerate() {
-                        members.entry(ArrayCmpSlice(of)).or_insert(i);
-                    }
-                    for elem in needle.row_slices() {
-                        result_data.push(
-                            members
-                                .get(&ArrayCmpSlice(elem))
-                                .map(|i| *i as f64)
-                                .unwrap_or(default),
-                        );
+                    let mut cache = HashMap::with_capacity(haystack.row_count());
+                    let mut next = 0;
+                    'needle: for nelem in needle.row_slices() {
+                        let nelem_key = ArrayCmpSlice(nelem);
+                        if let Some(i) = cache.get(&nelem_key) {
+                            result_data.push(*i as f64);
+                        } else {
+                            for i in next..haystack.row_count() {
+                                let of_key = ArrayCmpSlice(haystack.row_slice(i));
+                                cache.entry(of_key).or_insert(i);
+                                if of_key == nelem_key {
+                                    result_data.push(i as f64);
+                                    next = i + 1;
+                                    continue 'needle;
+                                }
+                            }
+                            result_data.push(default);
+                        }
                     }
                 }
                 let shape: Shape = needle.shape.iter().take(1).copied().collect();

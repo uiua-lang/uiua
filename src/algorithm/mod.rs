@@ -675,6 +675,14 @@ pub fn format(parts: &[EcoString], env: &mut Uiua) -> UiuaResult {
 #[derive(Debug)]
 struct ArrayCmpSlice<'a, T>(&'a [T]);
 
+impl<T> Clone for ArrayCmpSlice<'_, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for ArrayCmpSlice<'_, T> {}
+
 impl<T: ArrayValue> PartialEq for ArrayCmpSlice<'_, T> {
     fn eq(&self, other: &Self) -> bool {
         self.0.len() == other.0.len() && self.0.iter().zip(other.0).all(|(a, b)| a.array_eq(b))

@@ -252,7 +252,6 @@ impl fmt::Display for ImplPrimitive {
             AudioDecode => write!(f, "{Un}{AudioEncode}"),
             UnRawMode => write!(f, "{Un}{}", Sys(SysOp::RawMode)),
             UnClip => write!(f, "{Un}{}", Sys(SysOp::Clip)),
-            ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoUnBits => write!(f, "{Under}{Un}{Bits}"),
             AntiBase => write!(f, "{Anti}{Base}"),
             UndoReverse { n, .. } => write!(f, "{Under}{Reverse}({n})"),
@@ -406,6 +405,7 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::Fix, &["fx"]),
         (Primitive::Box, &["bx"]),
         (Primitive::IndexOf, &["idx"]),
+        (Primitive::ProgressiveIndexOf, &["pidx"]),
         (Primitive::Switch, &["sw"]),
         (Primitive::Stencil, &["st", "win"]),
         (Primitive::Floor, &["flr", "flor"]),
@@ -560,7 +560,7 @@ impl Primitive {
         matches!(
             self,
             (Reach | Slf | Above | Around)
-                | (Or | Base | Fft | Layout | Binary | EncodeBytes)
+                | (Or | ProgressiveIndexOf | Base | Fft | Layout | Binary | EncodeBytes)
                 | Astar
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen | Breakpoint)
@@ -856,6 +856,7 @@ impl Primitive {
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
+            Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
                 if val.box_nesting() > 1000 {
@@ -1389,7 +1390,6 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnFft => algorithm::unfft(env)?,
             ImplPrimitive::UnDatetime => env.monadic_ref_env(Value::undatetime)?,
-            ImplPrimitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             ImplPrimitive::ImageDecode => encode::image_decode(env)?,
             ImplPrimitive::GifDecode => encode::gif_decode(env)?,
             ImplPrimitive::AudioDecode => encode::audio_decode(env)?,

@@ -3,7 +3,6 @@
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
-    slice,
 };
 
 use ecow::{eco_vec, EcoVec};
@@ -14,7 +13,7 @@ use crate::{
     cowslice::cowslice,
     fill::FillValue,
     value::Value,
-    Shape, Uiua, UiuaResult,
+    Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{ArrayCmpSlice, FillContext};
@@ -165,15 +164,15 @@ impl<T: ArrayValue> Array<T> {
                 } else {
                     let mut cache = HashMap::with_capacity(haystack.row_count());
                     let mut next = 0;
-                    'needle: for nelem in needle.row_slices() {
-                        let nelem_key = ArrayCmpSlice(nelem);
-                        if let Some(i) = cache.get(&nelem_key) {
+                    'needle: for elem in needle.row_slices() {
+                        let elem_key = ArrayCmpSlice(elem);
+                        if let Some(i) = cache.get(&elem_key) {
                             result_data.push(*i as f64);
                         } else {
                             for i in next..haystack.row_count() {
                                 let of_key = ArrayCmpSlice(haystack.row_slice(i));
                                 cache.entry(of_key).or_insert(i);
-                                if of_key == nelem_key {
+                                if of_key == elem_key {
                                     result_data.push(i as f64);
                                     next = i + 1;
                                     continue 'needle;
@@ -226,65 +225,81 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     /// Get the `progressive index of` the rows of this array in another
+    #[allow(clippy::mut_range_bound)]
     fn progressive_index_of(&self, haystack: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
         let needle = self;
+        let default = env
+            .scalar_fill::<f64>()
+            .map(|fv| fv.value)
+            .unwrap_or(haystack.row_count() as f64);
         Ok(match needle.rank().cmp(&haystack.rank()) {
             Ordering::Equal => {
-                let mut cache = HashMap::new();
-                let mut result_data = eco_vec![0.0; needle.row_count()];
-                let slice = result_data.make_mut();
-                let default = haystack.row_count();
-                if needle.rank() == 1 {
-                    for (dest, elem) in slice.iter_mut().zip(&needle.data) {
-                        let key = ArrayCmpSlice(slice::from_ref(elem));
-                        *dest = if let Some(i) = cache.get_mut(&key) {
-                            *i += 1;
-                            *i = if *i < haystack.data.len() {
-                                (haystack.data[*i..].iter())
-                                    .position(|of| of.array_eq(elem))
-                                    .map(|idx| idx + *i)
-                                    .unwrap_or(default)
-                            } else {
-                                default
-                            };
-                            *i
-                        } else {
-                            let i = (haystack.data.iter())
-                                .position(|of| of.array_eq(elem))
-                                .unwrap_or(default);
-                            cache.insert(key, i);
-                            i
-                        } as f64;
+                if needle.data.iter().any(T::has_wildcard) {
+                    return Err(env.error(format!(
+                        "{} cannot be used when the needle has wildcards",
+                        Primitive::ProgressiveIndexOf.format()
+                    )));
+                }
+                let has_wildcard = haystack.data.iter().any(T::has_wildcard);
+                let mut result_data = EcoVec::with_capacity(needle.row_count());
+                if has_wildcard {
+                    let mut cache = HashMap::with_capacity(needle.row_count());
+                    'needle: for elem in needle.row_slices() {
+                        let elem_key = ArrayCmpSlice(elem);
+                        let start_index = cache.get(&elem_key).map(|&i| i + 1).unwrap_or(0);
+                        for i in start_index..haystack.row_count() {
+                            let of_key = ArrayCmpSlice(haystack.row_slice(i));
+                            if of_key == elem_key {
+                                result_data.push(i as f64);
+                                cache.insert(elem_key, i);
+                                continue 'needle;
+                            }
+                        }
+                        result_data.push(default);
                     }
                 } else {
-                    let haystack_row_len = haystack.row_len();
-                    for (dest, row) in slice.iter_mut().zip(needle.row_slices()) {
-                        let key = ArrayCmpSlice(row);
-                        *dest = if let Some(i) = cache.get_mut(&key) {
-                            *i += 1;
-                            *i = haystack.data[*i * haystack_row_len..]
-                                .chunks_exact(haystack_row_len)
-                                .position(|of| ArrayCmpSlice(of) == key)
-                                .map(|idx| idx + *i)
-                                .unwrap_or(default);
-                            *i
+                    let mut cache = HashMap::with_capacity(haystack.row_count());
+                    let mut next = 0;
+                    'needle: for elem in needle.row_slices() {
+                        let elem_key = ArrayCmpSlice(elem);
+                        if let Some((i, new)) = cache.get(&elem_key).copied() {
+                            if new {
+                                result_data.push(i as f64);
+                                cache.insert(elem_key, (i, false));
+                                continue 'needle;
+                            } else {
+                                for j in i + 1..haystack.row_count() {
+                                    let of_key = ArrayCmpSlice(haystack.row_slice(j));
+                                    if of_key == elem_key {
+                                        result_data.push(j as f64);
+                                        cache.insert(elem_key, (j, false));
+                                        continue 'needle;
+                                    }
+                                }
+                            }
                         } else {
-                            let i = haystack
-                                .data
-                                .chunks_exact(haystack_row_len)
-                                .position(|of| ArrayCmpSlice(of) == key)
-                                .unwrap_or(default);
-                            cache.insert(key, i);
-                            i
-                        } as f64;
+                            for i in next..haystack.row_count() {
+                                let of_key = ArrayCmpSlice(haystack.row_slice(i));
+                                let eq = of_key == elem_key;
+                                cache.entry(of_key).or_insert((i, !eq));
+                                if eq {
+                                    result_data.push(i as f64);
+                                    next = i + 1;
+                                    continue 'needle;
+                                }
+                            }
+                        }
+                        cache.insert(elem_key, (haystack.row_count(), false));
+                        result_data.push(default);
                     }
                 }
-                Array::new(
-                    needle.shape.iter().take(1).copied().collect::<Shape>(),
-                    result_data,
-                )
+                let shape: Shape = needle.shape.iter().take(1).copied().collect();
+                Array::new(shape, result_data)
             }
             Ordering::Greater => {
+                if needle.row_count() == 0 {
+                    return Ok(Array::new(needle.shape.clone(), EcoVec::new()));
+                }
                 let mut rows = Vec::with_capacity(needle.row_count());
                 for elem in needle.rows() {
                     rows.push(elem.progressive_index_of(haystack, env)?);
@@ -292,19 +307,24 @@ impl<T: ArrayValue> Array<T> {
                 Array::from_row_arrays(rows, env)?
             }
             Ordering::Less => {
+                if !haystack.shape.ends_with(&needle.shape) {
+                    let shape = Shape::from(
+                        &haystack.shape[..haystack.shape.len() - needle.shape.len() - 1],
+                    );
+                    let elem = haystack.shape.row_count() as f64;
+                    let data = eco_vec![elem; shape.elements()];
+                    return Ok(Array::new(shape, data));
+                }
                 if haystack.rank() - needle.rank() == 1 {
-                    if needle.rank() == 0 {
-                        let needle = &needle.data[0];
-                        Array::from(
-                            (haystack.data.iter())
-                                .position(|of| needle.array_eq(of))
-                                .unwrap_or(haystack.row_count()) as f64,
-                        )
-                    } else {
-                        ((haystack.rows().position(|r| r == *needle))
-                            .unwrap_or(haystack.row_count()) as f64)
-                            .into()
-                    }
+                    (haystack
+                        .row_slices()
+                        .position(|r| {
+                            r.len() == needle.data.len()
+                                && r.iter().zip(&needle.data).all(|(a, b)| a.array_eq(b))
+                        })
+                        .map(|i| i as f64)
+                        .unwrap_or(default))
+                    .into()
                 } else {
                     let mut rows = Vec::with_capacity(haystack.row_count());
                     for of in haystack.rows() {

@@ -1336,6 +1336,23 @@ primitive!(
     ///
     /// [indexof] is closely related to [memberof].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
+    /// Get sequential indices of each row of an array in another
+    ///
+    /// Unlike [indexof], [progressive indexof] will never return the same index twice.
+    /// ex: # Experimental!
+    ///   : ⊗ "hello dog" "lego helmet"
+    ///   : ⊘ "hello dog" "lego helmet"
+    ///
+    /// If the searched-for array has a greater rank than the searched-in array, the next index for each row of the searched-for array will be tracked separately.
+    /// Notice here that the indices of the `1`s are `2` and `3` but index of the both `2`s is `4`. This is because the `1`s are in the same row while the `2`s are in different rows.
+    /// ex: # Experimental!
+    ///   : ⊘ [1_1_2 2_3_3] [0 0 1 1 2 2 3]
+    ///
+    /// [fill] can be used to set the value of missing items. This includes rows in the searched-for array that have run out of corresponding items in the searched-for array.
+    /// ex: # Experimental!
+    ///   :   ⊘ [4 8 2 9 1] [1 2 3 4]
+    ///   : ⬚∞⊘ [4 8 2 9 1] [1 2 3 4]
+    (2, ProgressiveIndexOf, DyadicArray, ("progressive indexof", '⊘')),
     /// Get the base digits of a number
     ///
     /// When passed a scalar number, [base] returns the base-N digits of the numbers in an array.
@@ -3399,7 +3416,6 @@ impl_primitive!(
     (1, UnXlsx),
     (1, UnFft),
     (1, UnDatetime),
-    (2, ProgressiveIndexOf),
     (2(0), MatchPattern),
     (2, MatchLe),
     (2, MatchGe),

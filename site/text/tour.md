@@ -354,7 +354,7 @@ Pervasive functions work on [box](/docs/box)ed elements without needing to [un](
 +5 {1 2_3_4 5_6}
 ```
 
-For more complex operations, you can use to use the [inventory](/docs/inventory) modifier, which calls a function on the content of each box.
+For more complex operations, you can use the [inventory](/docs/inventory) modifier, which calls a function on the content of each box.
 
 ```uiua
 {"dog" "cat" "fish"}
@@ -395,7 +395,7 @@ The [un](/docs/un)-inverse of a function must have the opposite number of argume
 ⬚@-⌝⊏ [1 2 5] "bcf"
 ```
 
-[under](/docs/under) is probably Uiua's most powerful modifier. It calls it's first function, calls it's second function, then undoes its first.
+[under](/docs/under) is probably Uiua's most powerful modifier. It calls its first function, calls its second function, then undoes its first.
 
 This is useful for everything from mathematics to string processing to automatically closing file handles.
 

@@ -1342,7 +1342,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⊗ "hello dog" "lego helmet"
     ///   : ⊘ "hello dog" "lego helmet"
-    ///
+    /// When no more rows from the searched-in array match the next row of the searched-for array, the resulting index will be the [length] of the searched-in array.
+    /// ex: # Experimental!
+    ///   : ⊘ [1 1 1 1 1 1 1 1] [1 1 1 1 0 0 0 0 0 0 0 0]
+    /// ex: # Experimental!
+    ///   : ⊘ [1 2 3 1 2 3 1 2 3] [1 2 3]
     /// If the searched-for array has a greater rank than the searched-in array, the next index for each row of the searched-for array will be tracked separately.
     /// Notice here that the indices of the `1`s are `2` and `3` but index of the both `2`s is `4`. This is because the `1`s are in the same row while the `2`s are in different rows.
     /// ex: # Experimental!

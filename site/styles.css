@@ -163,7 +163,8 @@ li {
         color: #947bec;
     }
 
-    code {
+    code,
+    .code-background {
         background-color: #0004;
     }
 
@@ -247,7 +248,8 @@ li {
         color: #6a4bfb;
     }
 
-    code {
+    code,
+    .code-background {
         background-color: #fff8;
     }
 

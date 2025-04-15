@@ -466,17 +466,17 @@ pub fn Prims<const N: usize>(
 #[allow(clippy::needless_lifetimes)]
 fn Const<'a>(con: &'a ConstantDef) -> impl IntoView {
     let name_class = binding_name_class(con.name);
-    let outer_style = if name_class.is_some() {
-        "background-color: #0004"
+    let outer_class = if name_class.is_some() {
+        "prim-code-a code-background"
     } else {
-        ""
+        "prim-code-a"
     };
     let inner_class = format!(
         "prim-code stack-function {}",
         name_class.unwrap_or_default()
     );
     view! {
-        <a href={format!("/docs/constants#{}", con.name)} class="prim-code-a" style=outer_style>
+        <a href={format!("/docs/constants#{}", con.name)} class=outer_class>
             <code
                 id={con.name}
                 class=inner_class

@@ -209,12 +209,33 @@ where
                         *c = f.call(a.clone(), b.clone(), env)?;
                     }
                 } else {
-                    for ((a, b), c) in a
-                        .chunks_exact(a_row_len)
-                        .zip(b.chunks_exact(b_row_len))
-                        .zip(c.chunks_exact_mut(c_row_len))
-                    {
-                        recur(a, ash, b, bsh, c)?;
+                    match (a_row_len, b_row_len) {
+                        (0, 0) => {}
+                        (0, _) => {
+                            let a = vec![a_fill.unwrap().value.clone(); b_row_len];
+                            for (b, c) in
+                                b.chunks_exact(b_row_len).zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                recur(&a, ash, b, bsh, c)?;
+                            }
+                        }
+                        (_, 0) => {
+                            let b = vec![b_fill.unwrap().value.clone(); a_row_len];
+                            for (a, c) in
+                                a.chunks_exact(a_row_len).zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                recur(a, ash, &b, bsh, c)?;
+                            }
+                        }
+                        _ => {
+                            for ((a, b), c) in a
+                                .chunks_exact(a_row_len)
+                                .zip(b.chunks_exact(b_row_len))
+                                .zip(c.chunks_exact_mut(c_row_len))
+                            {
+                                recur(a, ash, b, bsh, c)?;
+                            }
+                        }
                     }
                 }
             } else if al < bl {
@@ -223,7 +244,7 @@ where
                     if a_fill.is_left() {
                         let a_iter = repeat(a_fill_row.as_slice())
                             .take(*bl - *al)
-                            .chain(a.chunks_exact(a_row_len));
+                            .chain(a.chunks_exact(a_row_len.max(1)));
                         for ((a, b), c) in a_iter
                             .zip(b.chunks_exact(b_row_len))
                             .zip(c.chunks_exact_mut(c_row_len))
@@ -232,7 +253,7 @@ where
                         }
                     } else {
                         let a_iter = a
-                            .chunks_exact(a_row_len)
+                            .chunks_exact(a_row_len.max(1))
                             .chain(repeat(a_fill_row.as_slice()));
                         for ((a, b), c) in a_iter
                             .zip(b.chunks_exact(b_row_len))
@@ -257,7 +278,7 @@ where
                 if b_fill.is_left() {
                     let b_iter = repeat(b_fill_row.as_slice())
                         .take(*al - *bl)
-                        .chain(b.chunks_exact(b_row_len));
+                        .chain(b.chunks_exact(b_row_len.max(1)));
                     for ((a, b), c) in a
                         .chunks_exact(a_row_len)
                         .zip(b_iter)
@@ -267,7 +288,7 @@ where
                     }
                 } else {
                     let b_iter = b
-                        .chunks_exact(b_row_len)
+                        .chunks_exact(b_row_len.max(1))
                         .chain(repeat(b_fill_row.as_slice()));
                     for ((a, b), c) in a
                         .chunks_exact(a_row_len)
@@ -795,7 +816,7 @@ where {
         let mut this_shape = new_shape.clone();
         this_shape.extend_from_slice(&new_val.shape()[1..]);
         *new_val.shape_mut() = this_shape;
-        new_val.validate_shape();
+        new_val.validate();
         new_values.push(new_val);
     }
     Ok(new_values)

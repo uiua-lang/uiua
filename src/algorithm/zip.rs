@@ -11,8 +11,8 @@ use crate::{
     types::push_empty_rows_value,
     val_as_arr,
     value::Value,
-    Array, Boxed, ImplPrimitive, Node, Ops, PersistentMeta, Primitive, Shape, SigNode, Uiua,
-    UiuaResult,
+    Array, ArrayValue, Boxed, ImplPrimitive, Node, Ops, PersistentMeta, Primitive, Shape, SigNode,
+    Uiua, UiuaResult,
 };
 
 use super::{fill_value_shapes, fixed_rows, multi_output, FixedRowsData, MultiOutput};
@@ -286,7 +286,7 @@ impl Value {
     }
 }
 
-impl<T: Clone> Array<T> {
+impl<T: ArrayValue> Array<T> {
     fn repeat_shape(&mut self, mut shape_prefix: Shape) {
         let count = shape_prefix.elements();
         swap(&mut self.shape, &mut shape_prefix);
@@ -304,7 +304,7 @@ impl<T: Clone> Array<T> {
                 self.data = new_data;
             }
         }
-        self.validate_shape();
+        self.validate();
     }
 }
 
@@ -451,7 +451,7 @@ fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         }
         new_shape.extend_from_slice(eached.shape().row_slice());
         *eached.shape_mut() = new_shape;
-        eached.validate_shape();
+        eached.validate();
         eached.set_per_meta(per_meta.clone());
         env.push(eached);
     }
@@ -849,7 +849,7 @@ fn rowsn(f: SigNode, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult 
         } else if is_empty {
             rowsed.pop_row();
         }
-        rowsed.validate_shape();
+        rowsed.validate();
         rowsed.set_per_meta(per_meta.clone());
         env.push(rowsed);
     }

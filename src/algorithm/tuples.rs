@@ -132,7 +132,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
             xs = xs.first_dim_zero();
             xs.shape_mut()[0] = 1;
             xs.shape_mut().insert(1, 0);
-            xs.validate_shape();
+            xs.validate();
         }
         1 => {
             if is_scalar {
@@ -183,7 +183,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                 xs = Value::from_row_values(rows, env)?;
                 xs.shape_mut()[0] /= 2;
                 xs.shape_mut().insert(1, 2);
-                xs.validate_shape();
+                xs.validate();
             }
         }
         k => {

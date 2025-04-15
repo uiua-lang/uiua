@@ -95,7 +95,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
         };
-        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+        arr.meta_mut().flags.insert(ArrayFlags::BOOLEAN);
         Ok(arr)
     }
 }
@@ -398,7 +398,7 @@ impl<T: ArrayValue> Array<T> {
                 Err(_) => {
                     let data = cowslice![0; haystack.element_count()];
                     let mut arr = Array::new(haystack.shape.clone(), data);
-                    arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+                    arr.meta_mut().flags.insert(ArrayFlags::BOOLEAN);
                     return Ok(arr);
                 }
             }
@@ -520,8 +520,8 @@ impl<T: ArrayValue> Array<T> {
             &haystack.shape[..searched_for_shape.len()],
             FillValue::new(0, None),
         );
-        arr.validate_shape();
-        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+        arr.validate();
+        arr.meta_mut().flags.insert(ArrayFlags::BOOLEAN);
         Ok(arr)
     }
     /// Try to `mask` this array in another

@@ -109,7 +109,7 @@ impl Compiler {
                         Ok(Some(values)) => {
                             // println!("values: {values:?}");
                             for val in &values {
-                                val.validate_shape();
+                                val.validate();
                             }
                             let new = new.get_or_insert_with(|| node[..start].into());
                             new.extend(values.into_iter().map(Node::Push));

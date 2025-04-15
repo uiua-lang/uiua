@@ -298,6 +298,8 @@ impl<T: ArrayValue> Array<T> {
                 into = from.undo_pick(&index_shape[1..], index_row, into, env)?;
             }
         }
+        into.take_sorted_flags();
+        into.validate();
         Ok(into)
     }
     fn unpick_single(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -339,6 +341,8 @@ impl<T: ArrayValue> Array<T> {
         {
             *x = i;
         }
+        into.take_sorted_flags();
+        into.validate();
         Ok(into)
     }
 }
@@ -491,6 +495,7 @@ impl<T: ArrayValue> Array<T> {
                                         reps,
                                     );
                                 }
+                                self.take_sorted_flags();
                             }
                             Err(e) => {
                                 return Err(env
@@ -521,6 +526,7 @@ impl<T: ArrayValue> Array<T> {
                                 );
                             }
                             self.data.as_mut_slice().rotate_right(diff * row_len);
+                            self.take_sorted_flags();
                         }
                         Err(e) => {
                             return Err(env
@@ -547,7 +553,7 @@ impl<T: ArrayValue> Array<T> {
                 } else if filled {
                     self.shape.push(abs_taking);
                 }
-                self.validate_shape();
+                self.validate();
                 self
             }
             &[taking, ref sub_index @ ..] => {
@@ -591,6 +597,7 @@ impl<T: ArrayValue> Array<T> {
                                         reps,
                                     );
                                 }
+                                arr.take_sorted_flags();
                             }
                             Err(e) => {
                                 return Err(env
@@ -652,7 +659,7 @@ impl<T: ArrayValue> Array<T> {
                 for (i, s) in index.iter().zip(&mut *arr.shape) {
                     *s = i.map_or(*s, isize::unsigned_abs);
                 }
-                arr.validate_shape();
+                arr.validate();
                 arr
             }
         };
@@ -699,7 +706,7 @@ impl<T: ArrayValue> Array<T> {
                     self.shape.push(1);
                 }
                 self.shape[0] = self.shape[0].saturating_sub(abs_dropping);
-                self.validate_shape();
+                self.validate();
                 self
             }
             &[dropping, ref sub_index @ ..] => {
@@ -894,6 +901,7 @@ impl<T: ArrayValue> Array<T> {
         if index.iter().all(|&p| p == 0) {
             return Ok(self);
         }
+        self.take_sorted_flags();
 
         // Single axis case
         if index.len() == 1 {
@@ -919,7 +927,7 @@ impl<T: ArrayValue> Array<T> {
                     .rotate_right(n.unsigned_abs() * reps * fill.shape.elements());
             }
             self.shape[0] += n.unsigned_abs();
-            self.validate_shape();
+            self.validate();
             return Ok(self);
         }
 
@@ -1069,7 +1077,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut take_amnt = Value::from(take_amnt);
         take_amnt.compress();
-        self.validate_shape();
+        self.validate();
         Ok(take_amnt)
     }
 }
@@ -1114,7 +1122,7 @@ impl Value {
                 keep
             });
             sorted_indices.reverse();
-            from.validate_shape();
+            from.validate();
             if idx_shape.is_empty() {
                 idx_shape = Cow::Owned(vec![n]);
             } else {
@@ -1246,6 +1254,12 @@ impl<T: ArrayValue> Array<T> {
             }
             Ok(arr)
         } else {
+            let indices_sorted_up = indices_shape.len() == 1 && indices.is_sorted();
+            let indices_sorted_down =
+                indices_shape.len() == 1 && indices.is_sorted_by(|&a, &b| a >= b);
+            let selected_sorted_up = self.is_sorted_up();
+            let selected_sorted_down = self.is_sorted_down();
+
             let mut selected = CowSlice::with_capacity(self.row_len() * indices.len());
             let row_len = self.row_len();
             let row_count = self.row_count();
@@ -1321,6 +1335,15 @@ impl<T: ArrayValue> Array<T> {
             if let Some(map_keys) = map_keys {
                 array.map(map_keys, &()).unwrap();
             }
+            array.mark_sorted_up(
+                indices_sorted_up && selected_sorted_up
+                    || indices_sorted_down && selected_sorted_down,
+            );
+            array.mark_sorted_down(
+                indices_sorted_up && selected_sorted_down
+                    || indices_sorted_down && selected_sorted_up,
+            );
+            array.validate();
             Ok(array)
         }
     }
@@ -1365,7 +1388,8 @@ impl<T: ArrayValue> Array<T> {
                             .rotate_right(from_element_count);
                         into.shape[0] += from_row_count;
                         into.shape[0] -= 1;
-                        into.validate_shape();
+                        into.take_sorted_flags();
+                        into.validate();
                         return Ok(into);
                     }
                     if from.row_count() < indices_row_count {
@@ -1448,7 +1472,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
         }
-
+        into.take_sorted_flags();
         Ok(into)
     }
     fn anti_select(

@@ -46,6 +46,8 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
             new_shape.push(shape[depth] * shape[depth + 1]);
             new_shape.extend_from_slice(&shape[depth + 2..]);
             *xs.shape_mut() = new_shape;
+            xs.take_sorted_flags();
+            xs.validate();
             env.push(xs);
         }
         (Some((prim, flipped)), Value::Num(nums)) => {
@@ -63,7 +65,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
             if fill.is_none() && env.value_fill().is_some() {
                 return generic_reduce(f, Value::Byte(bytes), depth, env);
             }
-            env.push::<Value>(match prim {
+            let mut val: Value = match prim {
                 Primitive::Add => {
                     fast_reduce_different(bytes, 0.0, fill, depth, add::num_num, add::num_byte)
                         .into()
@@ -140,7 +142,10 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     }
                 }
                 _ => return generic_reduce(f, Value::Byte(bytes), depth, env),
-            })
+            };
+            val.take_sorted_flags();
+            val.validate();
+            env.push(val);
         }
         (_, xs) if f.sig == (2, 1) => {
             if depth == 0 && env.value_fill().is_none() {
@@ -383,7 +388,7 @@ where
                 arr.data.extend(Some(identity));
             }
             arr.shape = Shape::default();
-            arr.validate_shape();
+            arr.validate();
             arr
         }
         (_, 0) => {
@@ -413,7 +418,7 @@ where
             });
             arr.data.truncate(row_len);
             arr.shape.remove(0);
-            arr.validate_shape();
+            arr.validate();
             arr
         }
         (_, depth) => {
@@ -446,7 +451,7 @@ where
                 arr.data.truncate(chunk_count * chunk_row_len);
             }
             arr.shape.remove(depth);
-            arr.validate_shape();
+            arr.validate();
             arr
         }
     }
@@ -454,7 +459,9 @@ where
 
 fn generic_reduce(f: SigNode, xs: Value, depth: usize, env: &mut Uiua) -> UiuaResult {
     env.push(xs);
-    let val = generic_reduce_inner(f, depth, identity, env)?;
+    let mut val = generic_reduce_inner(f, depth, identity, env)?;
+    val.take_sorted_flags();
+    val.validate();
     env.push(val);
     Ok(())
 }
@@ -643,7 +650,7 @@ fn generic_reduce_inner(
         } else if is_empty {
             rowsed.pop_row();
         }
-        rowsed.validate_shape();
+        rowsed.validate();
         rowsed.set_per_meta(per_meta.clone());
         Ok(rowsed)
     }
@@ -661,7 +668,9 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
     match (f.node.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
-            let arr = match prim {
+            let mut sorted_up = false;
+            let mut sorted_down = false;
+            let mut arr = match prim {
                 Primitive::Eq => fast_scan(nums, |a, b| is_eq::num_num(a, b) as f64),
                 Primitive::Ne => fast_scan(nums, |a, b| is_ne::num_num(a, b) as f64),
                 Primitive::Add => fast_scan(nums, add::num_num),
@@ -674,39 +683,60 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
                 Primitive::Modulus => fast_scan(nums, modulus::num_num),
                 Primitive::Atan if flipped => fast_scan(nums, flip(atan2::num_num)),
                 Primitive::Atan => fast_scan(nums, atan2::num_num),
-                Primitive::Max => fast_scan(nums, max::num_num),
-                Primitive::Min => fast_scan(nums, min::num_num),
+                Primitive::Max => {
+                    sorted_up = true;
+                    fast_scan(nums, max::num_num)
+                }
+                Primitive::Min => {
+                    sorted_down = true;
+                    fast_scan(nums, min::num_num)
+                }
                 _ => return generic_scan(f, Value::Num(nums), env),
             };
+            arr.mark_sorted_up(sorted_up);
+            arr.mark_sorted_down(sorted_down);
+            arr.validate();
             env.push(arr);
             Ok(())
         }
         (Some((prim, flipped)), Value::Byte(bytes)) => {
-            match prim {
-                Primitive::Eq => env.push(fast_scan(bytes, is_eq::generic)),
-                Primitive::Ne => env.push(fast_scan(bytes, is_ne::generic)),
-                Primitive::Add => env.push(fast_scan::<f64>(bytes.convert(), add::num_num)),
+            let mut sorted_up = false;
+            let mut sorted_down = false;
+            let mut val: Value = match prim {
+                Primitive::Eq => fast_scan(bytes, is_eq::generic).into(),
+                Primitive::Ne => fast_scan(bytes, is_ne::generic).into(),
+                Primitive::Add => fast_scan::<f64>(bytes.convert(), add::num_num).into(),
                 Primitive::Sub if flipped => {
-                    env.push(fast_scan::<f64>(bytes.convert(), flip(sub::num_num)))
+                    fast_scan::<f64>(bytes.convert(), flip(sub::num_num)).into()
                 }
-                Primitive::Sub => env.push(fast_scan::<f64>(bytes.convert(), sub::num_num)),
-                Primitive::Mul => env.push(fast_scan::<f64>(bytes.convert(), mul::num_num)),
+                Primitive::Sub => fast_scan::<f64>(bytes.convert(), sub::num_num).into(),
+                Primitive::Mul => fast_scan::<f64>(bytes.convert(), mul::num_num).into(),
                 Primitive::Div if flipped => {
-                    env.push(fast_scan::<f64>(bytes.convert(), flip(div::num_num)))
+                    fast_scan::<f64>(bytes.convert(), flip(div::num_num)).into()
                 }
-                Primitive::Div => env.push(fast_scan::<f64>(bytes.convert(), div::num_num)),
+                Primitive::Div => fast_scan::<f64>(bytes.convert(), div::num_num).into(),
                 Primitive::Modulus if flipped => {
-                    env.push(fast_scan::<f64>(bytes.convert(), flip(modulus::num_num)))
+                    fast_scan::<f64>(bytes.convert(), flip(modulus::num_num)).into()
                 }
-                Primitive::Modulus => env.push(fast_scan::<f64>(bytes.convert(), modulus::num_num)),
+                Primitive::Modulus => fast_scan::<f64>(bytes.convert(), modulus::num_num).into(),
                 Primitive::Atan if flipped => {
-                    env.push(fast_scan::<f64>(bytes.convert(), flip(atan2::num_num)))
+                    fast_scan::<f64>(bytes.convert(), flip(atan2::num_num)).into()
                 }
-                Primitive::Atan => env.push(fast_scan::<f64>(bytes.convert(), atan2::num_num)),
-                Primitive::Max => env.push(fast_scan(bytes, u8::max)),
-                Primitive::Min => env.push(fast_scan(bytes, u8::min)),
+                Primitive::Atan => fast_scan::<f64>(bytes.convert(), atan2::num_num).into(),
+                Primitive::Max => {
+                    sorted_up = true;
+                    fast_scan(bytes, u8::max).into()
+                }
+                Primitive::Min => {
+                    sorted_down = true;
+                    fast_scan(bytes, u8::min).into()
+                }
                 _ => return generic_scan(f, Value::Byte(bytes), env),
-            }
+            };
+            val.mark_sorted_up(sorted_up);
+            val.mark_sorted_down(sorted_down);
+            val.validate();
+            env.push(val);
             Ok(())
         }
         (_, xs) => generic_scan(f, xs, env),

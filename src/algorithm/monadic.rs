@@ -140,7 +140,8 @@ impl Value {
                 *shape = new_shape;
             }
         }
-        self.validate_shape();
+        self.take_sorted_flags();
+        self.validate();
         Ok(())
     }
     pub(crate) fn undo_deshape(
@@ -180,7 +181,7 @@ impl Value {
                 return Ok(());
             }
             *self.shape_mut() = new_shape;
-            self.validate_shape();
+            self.validate();
             Ok(())
         } else {
             let mut new_shape = self.shape().clone();
@@ -435,7 +436,9 @@ impl<T: ArrayValue> Array<T> {
         if let Some(keys) = self.map_keys_mut() {
             keys.unfix();
         }
-        self.shape.unfix().map_err(|e| env.error(e))
+        self.shape.unfix().map_err(|e| env.error(e))?;
+        self.validate();
+        Ok(())
     }
     /// Collapse the top two dimensions of the array's shape
     pub fn undo_fix(&mut self) {
@@ -443,6 +446,7 @@ impl<T: ArrayValue> Array<T> {
             keys.unfix();
         }
         _ = self.shape.unfix();
+        self.validate();
     }
 }
 
@@ -479,7 +483,7 @@ impl Value {
         )?;
         if self.rank() == 0 {
             let max = ishape[0];
-            return Ok(if max >= 0 {
+            let mut value: Value = if max >= 0 {
                 if max <= 256 {
                     (0..max).map(|i| i as u8).collect()
                 } else {
@@ -489,7 +493,10 @@ impl Value {
             } else {
                 validate_size::<f64>([max.unsigned_abs()], env)?;
                 (max..0).map(|i| i as f64).rev().collect()
-            });
+            };
+            value.mark_sorted_up(max >= 0);
+            value.mark_sorted_down(max <= 0);
+            return Ok(value);
         }
         if ishape.is_empty() {
             return Ok(Array::<f64>::new(0, CowSlice::new()).into());
@@ -497,10 +504,14 @@ impl Value {
         let mut shape = Shape::from_iter(ishape.iter().map(|d| d.unsigned_abs()));
         shape.push(shape.len());
         let data = range(&ishape, env)?;
-        Ok(match data {
+        let mut value: Value = match data {
             Ok(data) => Array::new(shape, data).into(),
             Err(data) => Array::new(shape, data).into(),
-        })
+        };
+        let first_max = ishape.first().copied().unwrap_or(0);
+        value.mark_sorted_up(first_max >= 0);
+        value.mark_sorted_down(first_max <= 0);
+        Ok(value)
     }
     pub(crate) fn unshape(&self, env: &Uiua) -> UiuaResult<Self> {
         let ishape = self.as_ints(
@@ -511,11 +522,14 @@ impl Value {
         let elems: usize = validate_size::<f64>(shape.iter().copied(), env)?;
         let data = EcoVec::from_iter((0..elems).map(|i| i as f64));
         let mut arr = Array::new(shape, data);
+        let first_max = ishape.first().copied().unwrap_or(0);
         for (i, s) in ishape.into_iter().enumerate() {
             if s < 0 {
                 arr.reverse_depth(i);
             }
         }
+        arr.mark_sorted_up(first_max >= 0);
+        arr.mark_sorted_down(first_max <= 0);
         Ok(arr.into())
     }
 }
@@ -705,7 +719,7 @@ impl<T: ArrayValue> Array<T> {
                 Ok(fill) => {
                     self.shape = self.shape[..depth].iter().chain(rest).copied().collect();
                     self.data.extend_repeat(&fill.value, self.shape.elements());
-                    self.validate_shape();
+                    self.validate();
                     Ok(self)
                 }
                 Err(e) => Err(env
@@ -717,7 +731,7 @@ impl<T: ArrayValue> Array<T> {
             },
             [1, ..] => {
                 self.shape.remove(depth);
-                self.validate_shape();
+                self.validate();
                 Ok(self)
             }
             [n, rest @ ..] => {
@@ -737,7 +751,7 @@ impl<T: ArrayValue> Array<T> {
                 }
                 self.shape.remove(depth);
                 self.data.truncate(self.shape.elements());
-                self.validate_shape();
+                self.validate();
                 Ok(self)
             }
         }
@@ -786,7 +800,7 @@ impl<T: ArrayValue> Array<T> {
             },
             [1, ..] => {
                 self.shape.remove(depth);
-                self.validate_shape();
+                self.validate();
                 Ok(self)
             }
             [n, rest @ ..] => {
@@ -806,7 +820,7 @@ impl<T: ArrayValue> Array<T> {
                 }
                 self.shape.remove(depth);
                 self.data.truncate(self.shape.elements());
-                self.validate_shape();
+                self.validate();
                 Ok(self)
             }
         }
@@ -835,7 +849,7 @@ impl Value {
     }
 }
 
-impl<T: Clone> Array<T> {
+impl<T: ArrayValue> Array<T> {
     /// Reverse the rows of the array
     pub fn reverse(&mut self) {
         self.reverse_depth(0);
@@ -850,6 +864,8 @@ impl<T: Clone> Array<T> {
         if chunk_size == 0 {
             return;
         }
+        let sorted_up = self.is_sorted_up();
+        let sorted_down = self.is_sorted_down();
         let data = self.data.as_mut_slice();
         let chunk_row_count = self.shape[depth];
         let chunk_row_len = chunk_size / chunk_row_count;
@@ -872,7 +888,12 @@ impl<T: Clone> Array<T> {
                     keys.reverse();
                 }
             }
+            self.mark_sorted_up(sorted_down);
+            self.mark_sorted_down(sorted_up);
+        } else {
+            self.take_sorted_flags();
         }
+        self.validate();
     }
 }
 
@@ -926,6 +947,7 @@ impl<T: ArrayValue> Array<T> {
         if trans_rank < 2 || depth + trans_count == self.rank() || trans_count == 0 {
             return;
         }
+        self.take_sorted_flags();
         let forward = amnt.is_positive();
         // Early return if any dimension is 0, because there are no elements
         if self.shape[depth..].iter().any(|&d| d == 0) || depth > 0 && self.shape[depth - 1] == 0 {
@@ -1026,6 +1048,8 @@ impl Value {
         if let Some(map_keys) = map_keys {
             val.meta_mut().map_keys = Some(map_keys);
         }
+        val.mark_sorted_up(self.is_sorted_up());
+        val.validate();
         val
     }
     pub(crate) fn classify_depth(&self, depth: usize) -> Self {
@@ -1034,6 +1058,7 @@ impl Value {
         if let Some(map_keys) = map_keys {
             val.meta_mut().map_keys = Some(map_keys);
         }
+        val.validate();
         val
     }
     /// `deduplicate` the rows of the value
@@ -1190,6 +1215,10 @@ impl<T: ArrayValue> Array<T> {
                 chunk.clone_from_slice(&new_chunk);
             }
         }
+        if depth == 0 {
+            self.mark_sorted_up(true);
+            self.mark_sorted_down(false);
+        }
     }
     pub(crate) fn sort_down_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
@@ -1234,6 +1263,10 @@ impl<T: ArrayValue> Array<T> {
                 chunk.clone_from_slice(&new_chunk);
             }
         }
+        if depth == 0 {
+            self.mark_sorted_up(false);
+            self.mark_sorted_down(true);
+        }
     }
     /// `classify` the rows of the array
     pub fn classify(&self) -> Vec<usize> {
@@ -1256,7 +1289,7 @@ impl<T: ArrayValue> Array<T> {
         let row_row_count = row_shape.row_count();
         let classified_shape = Shape::from(&self.shape[..=depth.min(self.rank() - 1)]);
         let mut i = 0;
-        if row_row_count < 256 {
+        let val: Value = if row_row_count < 256 {
             // Fits in a u8
             let mut classified = eco_vec![0u8; classified_shape.elements()];
             if row_shape.elements() == 0 || row_shape.row_len() == 0 {
@@ -1290,7 +1323,9 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
             Array::new(classified_shape, classified).into()
-        }
+        };
+        val.validate();
+        val
     }
     /// `deduplicate` the rows of the array
     pub fn deduplicate(&mut self, env: &Uiua) -> UiuaResult {
@@ -1315,6 +1350,7 @@ impl<T: ArrayValue> Array<T> {
             let keys = Value::from(unique).keep(keys, env)?;
             self.map(keys, env)?;
         }
+        self.validate();
         Ok(())
     }
     /// Mask the `unique` rows of the array
@@ -1459,7 +1495,7 @@ impl<T: RealArrayValue> Array<T> {
             arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
             arr.into()
         };
-        val.validate_shape();
+        val.validate();
         Ok(val)
     }
 }
@@ -2488,7 +2524,8 @@ impl Value {
         }
         arr.data = new_data.into();
         arr.shape.push(6);
-        arr.validate_shape();
+        arr.reset_meta_flags();
+        arr.validate();
         Ok(arr)
     }
     pub(crate) fn undatetime(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -2605,7 +2642,7 @@ impl Value {
             new_data.into()
         };
         arr.shape.pop();
-        arr.validate_shape();
+        arr.validate();
         Ok(arr)
     }
 }

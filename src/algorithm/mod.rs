@@ -607,7 +607,7 @@ pub fn switch(
             }
             new_shape.extend_from_slice(&new_value.shape()[1..]);
             *new_value.shape_mut() = new_shape;
-            new_value.validate_shape();
+            new_value.validate();
             env.push(new_value);
         }
     }
@@ -673,7 +673,7 @@ pub fn format(parts: &[EcoString], env: &mut Uiua) -> UiuaResult {
 
 #[repr(transparent)]
 #[derive(Debug)]
-struct ArrayCmpSlice<'a, T>(&'a [T]);
+pub(crate) struct ArrayCmpSlice<'a, T>(pub &'a [T]);
 
 impl<T> Clone for ArrayCmpSlice<'_, T> {
     fn clone(&self) -> Self {

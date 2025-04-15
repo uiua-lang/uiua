@@ -398,6 +398,69 @@ impl Value {
     pub fn map_keys_mut(&mut self) -> Option<&mut MapKeys> {
         self.get_meta_mut().and_then(|meta| meta.map_keys.as_mut())
     }
+    /// Check if the value is sorted ascending
+    pub fn is_sorted_up(&self) -> bool {
+        self.meta().flags.contains(ArrayFlags::SORTED_UP)
+    }
+    /// Check if the value is sorted descending
+    pub fn is_sorted_down(&self) -> bool {
+        self.meta().flags.contains(ArrayFlags::SORTED_DOWN)
+    }
+    /// Take the sorted flags
+    pub fn take_sorted_flags(&mut self) -> ArrayFlags {
+        if let Some(meta) = self.get_meta_mut() {
+            meta.take_sorted_flags()
+        } else {
+            ArrayFlags::NONE
+        }
+    }
+    /// Or the sorted flags
+    pub fn or_sorted_flags(&mut self, mut flags: ArrayFlags) {
+        flags &= ArrayFlags::SORTEDNESS;
+        if flags == ArrayFlags::NONE {
+            return;
+        }
+        self.meta_mut().flags |= flags & ArrayFlags::SORTEDNESS;
+    }
+    /// Or with reversed sorted flags
+    pub fn or_sorted_flags_rev(&mut self, mut flags: ArrayFlags) {
+        flags &= ArrayFlags::SORTEDNESS;
+        if flags == ArrayFlags::NONE {
+            return;
+        }
+        let mut rev_flags = ArrayFlags::NONE;
+        if flags.contains(ArrayFlags::SORTED_UP) {
+            rev_flags |= ArrayFlags::SORTED_DOWN;
+        }
+        if flags.contains(ArrayFlags::SORTED_DOWN) {
+            rev_flags |= ArrayFlags::SORTED_UP;
+        }
+        self.meta_mut().flags |= rev_flags;
+    }
+    /// Mark the value as sorted ascending
+    ///
+    /// It is a logic error to set this to `true` when it is not the case
+    pub(crate) fn mark_sorted_up(&mut self, sorted: bool) {
+        if sorted {
+            self.meta_mut().flags.insert(ArrayFlags::SORTED_UP);
+        } else if let Some(meta) = self.get_meta_mut() {
+            meta.flags.remove(ArrayFlags::SORTED_UP);
+        }
+    }
+    /// Mark the value as sorted descending
+    ///
+    /// It is a logic error to set this to `true` when it is not the case
+    pub(crate) fn mark_sorted_down(&mut self, sorted: bool) {
+        if sorted {
+            self.meta_mut().flags.insert(ArrayFlags::SORTED_DOWN);
+        } else if let Some(meta) = self.get_meta_mut() {
+            meta.flags.remove(ArrayFlags::SORTED_DOWN);
+        }
+    }
+    /// Set the sortedness flags according to the value's data
+    pub fn derive_sortedness(&mut self) {
+        val_as_arr!(self, |arr| arr.derive_sortedness())
+    }
     /// Reset this value's metadata flags
     pub fn reset_meta_flags(&mut self) {
         self.get_meta_mut().map(ArrayMeta::reset_flags);
@@ -420,7 +483,10 @@ impl Value {
         if let Some(keys) = self.map_keys_mut() {
             keys.unfix();
         }
-        self.shape_mut().unfix().map_err(|e| env.error(e))
+        self.shape_mut().unfix().map_err(|e| env.error(e))?;
+        self.take_sorted_flags();
+        self.validate();
+        Ok(())
     }
     /// Collapse the top two dimensions of the array's shape
     pub fn undo_fix(&mut self) {
@@ -430,10 +496,13 @@ impl Value {
             }
         }
         _ = self.shape_mut().unfix();
+        self.take_sorted_flags();
+        self.validate();
     }
+    /// Ensure the value's invariants are upheld
     #[track_caller]
-    pub(crate) fn validate_shape(&self) {
-        val_as_arr!(self, |arr| arr.validate_shape());
+    pub(crate) fn validate(&self) {
+        val_as_arr!(self, |arr| arr.validate());
     }
     /// Get the row at the given index
     #[track_caller]
@@ -1732,15 +1801,23 @@ impl<const N: usize> From<[i32; N]> for Value {
     }
 }
 
-macro_rules! value_un_impl {
-    ($name:ident, $(
-        $([$(|$meta:ident| $pred:expr,)* $in_place:ident, $f:ident])?
-        $(($make_new:ident, $f2:ident))?
-    ),* $(,)?) => {
+macro_rules! value_mon_impl {
+    (
+        $name:ident,
+        $(
+            $([$(|$meta:ident| $pred:expr,)* $in_place:ident, $f:ident])?
+            $(($make_new:ident, $f2:ident))?
+        ),*
+        $(|$sorted_val:ident, $sorted_flags:ident| $sorted_body:expr)?
+    ) => {
         impl Value {
-            #[allow(clippy::redundant_closure_call)]
-            pub(crate) fn $name(self, env: &Uiua) -> UiuaResult<Self> {
-                self.keep_meta(|val| Ok(match val {
+            #[allow(unused_mut, clippy::redundant_closure_call)]
+            pub(crate) fn $name(mut self, env: &Uiua) -> UiuaResult<Self> {
+                $(
+                    stringify!($sorted_val);
+                    let sorted_flags = self.take_sorted_flags();
+                )?
+                let mut val: Value = self.keep_meta(|val| Ok(match val {
                     $($(Self::$in_place(mut array) $(if (|$meta: &ArrayMeta| $pred)(array.meta()))* => {
                         for val in &mut array.data {
                             *val = $name::$f(*val);
@@ -1764,56 +1841,85 @@ macro_rules! value_un_impl {
                     }
                     #[allow(unreachable_patterns)]
                     val => return Err($name::error(val.type_name(), env))
-                }))
+                }))?;
+                $((|$sorted_val: &mut Value, $sorted_flags| $sorted_body)(&mut val, sorted_flags);)?
+                val.validate();
+                Ok(val)
             }
         }
     }
 }
 
-value_un_impl!(
+value_mon_impl!(
     scalar_neg,
     [Num, num],
     (Byte, byte),
     [Complex, com],
     [Char, char]
 );
-value_un_impl!(
+value_mon_impl!(
     not,
     [Num, num],
     [|meta| meta.flags.is_boolean(), Byte, bool],
     (Byte, byte),
-    [Complex, com]
+    [Complex, com],
+    |val, flags| val.or_sorted_flags_rev(flags)
 );
-value_un_impl!(
+value_mon_impl!(
     scalar_abs,
     [Num, num],
     (Byte, byte),
     (Complex, com),
     [Char, char]
 );
-value_un_impl!(sign, [Num, num], [Byte, byte], [Complex, com], (Char, char));
-value_un_impl!(
+value_mon_impl!(
+    sign,
+    [Num, num],
+    [Byte, byte],
+    [Complex, com],
+    (Char, char),
+    |val, flags| val.or_sorted_flags(flags)
+);
+value_mon_impl!(
     sqrt,
     [Num, num],
     [|meta| meta.flags.is_boolean(), Byte, bool],
     (Byte, byte),
     [Complex, com]
 );
-value_un_impl!(sin, [Num, num], (Byte, byte), [Complex, com]);
-value_un_impl!(cos, [Num, num], (Byte, byte), [Complex, com]);
-value_un_impl!(asin, [Num, num], (Byte, byte), [Complex, com]);
-value_un_impl!(acos, [Num, num], (Byte, byte), [Complex, com]);
-value_un_impl!(floor, [Num, num], [Byte, byte], [Complex, com]);
-value_un_impl!(ceil, [Num, num], [Byte, byte], [Complex, com]);
-value_un_impl!(round, [Num, num], [Byte, byte], [Complex, com]);
-value_un_impl!(
+value_mon_impl!(sin, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(cos, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(asin, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(acos, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(
+    floor,
+    [Num, num],
+    [Byte, byte],
+    [Complex, com],
+    |val, flags| val.or_sorted_flags(flags)
+);
+value_mon_impl!(
+    ceil,
+    [Num, num],
+    [Byte, byte],
+    [Complex, com],
+    |val, flags| val.or_sorted_flags(flags)
+);
+value_mon_impl!(
+    round,
+    [Num, num],
+    [Byte, byte],
+    [Complex, com],
+    |val, flags| val.or_sorted_flags(flags)
+);
+value_mon_impl!(
     complex_re,
     [Num, generic],
     [Byte, generic],
     (Complex, com),
     [Char, generic]
 );
-value_un_impl!(complex_im, [Num, num], [Byte, byte], (Complex, com));
+value_mon_impl!(complex_im, [Num, num], [Byte, byte], (Complex, com));
 
 impl Value {
     /// Get the `absolute value` of a value
@@ -1845,8 +1951,9 @@ impl Value {
         }
     }
     /// `negate` a value
-    pub fn neg(self, env: &Uiua) -> UiuaResult<Self> {
-        match self {
+    pub fn neg(mut self, env: &Uiua) -> UiuaResult<Self> {
+        let sorted_flags = self.take_sorted_flags();
+        let mut val = match self {
             Value::Char(mut chars) if chars.rank() == 1 && env.scalar_fill::<char>().is_ok() => {
                 let mut new_data = EcoVec::with_capacity(chars.data.len());
                 for c in chars.data {
@@ -1858,7 +1965,7 @@ impl Value {
                 }
                 chars.data = new_data.into();
                 chars.shape = chars.data.len().into();
-                Ok(chars.into())
+                chars.into()
             }
             Value::Char(chars) if chars.rank() > 1 && env.scalar_fill::<char>().is_ok() => {
                 let mut rows = Vec::new();
@@ -1877,10 +1984,12 @@ impl Value {
                 let last = arr.shape.pop().unwrap();
                 arr.shape = chars.shape;
                 *arr.shape.last_mut().unwrap() = last;
-                Ok(arr.into())
+                arr.into()
             }
-            value => value.scalar_neg(env),
-        }
+            value => value.scalar_neg(env)?,
+        };
+        val.or_sorted_flags_rev(sorted_flags);
+        Ok(val)
     }
     /// Raise a value to a power
     pub fn pow(self, base: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -1908,7 +2017,7 @@ fn optimize_types(a: Value, b: Value) -> (Value, Value) {
     }
 }
 
-macro_rules! value_bin_impl {
+macro_rules! value_dy_impl {
     ($name:ident, $(
         $(($na:ident, $nb:ident, $f1:ident))*
         $([$(|$meta:ident| $pred:expr,)* $ip:ident, $f2:ident $(, $reset_meta:literal)?])*
@@ -1917,9 +2026,11 @@ macro_rules! value_bin_impl {
             #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
             pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 let (mut a, mut b) = optimize_types(self, other);
+                a.take_sorted_flags(); // TODO: make this conditional
+                b.take_sorted_flags();
                 a.match_fill(env);
                 b.match_fill(env);
-                a.keep_metas(b, |a, b| { Ok(match (a, b) {
+                let mut val = a.keep_metas(b, |a, b| { Ok(match (a, b) {
                     $($((Value::$ip(mut a), Value::$ip(mut b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;
                         f(a.meta()) && f(b.meta())
@@ -1966,15 +2077,17 @@ macro_rules! value_bin_impl {
                         val
                     },
                     (a, b) => return Err($name::error(a.type_name(), b.type_name(), env)),
-                })})
+                })})?;
+                val.validate();
+                Ok(val)
             }
         }
     };
 }
 
-macro_rules! value_bin_math_impl {
+macro_rules! value_dy_math_impl {
     ($name:ident $(,$($tt:tt)*)?) => {
-        value_bin_impl!(
+        value_dy_impl!(
             $name,
             $($($tt)*)?
             [Num, num_num],
@@ -1990,7 +2103,7 @@ macro_rules! value_bin_math_impl {
     };
 }
 
-value_bin_math_impl!(
+value_dy_math_impl!(
     add,
     (Num, Char, num_char),
     (Char, Num, char_num),
@@ -1998,13 +2111,13 @@ value_bin_math_impl!(
     (Char, Byte, char_byte),
     [|meta| meta.flags.is_boolean(), Byte, bool_bool, true],
 );
-value_bin_math_impl!(
+value_dy_math_impl!(
     sub,
     (Num, Char, num_char),
     (Char, Char, char_char),
     (Byte, Char, byte_char),
 );
-value_bin_math_impl!(
+value_dy_math_impl!(
     mul,
     (Num, Char, num_char),
     (Char, Num, char_num),
@@ -2012,34 +2125,34 @@ value_bin_math_impl!(
     (Char, Byte, char_byte),
     [|meta| meta.flags.is_boolean(), Byte, bool_bool],
 );
-value_bin_math_impl!(
+value_dy_math_impl!(
     set_sign,
     (Num, Char, num_char),
     (Char, Num, char_num),
     (Byte, Char, byte_char),
     (Char, Byte, char_byte),
 );
-value_bin_math_impl!(div, (Num, Char, num_char), (Byte, Char, byte_char),);
-value_bin_math_impl!(modulus, (Complex, Complex, com_com));
-value_bin_math_impl!(or, [|meta| meta.flags.is_boolean(), Byte, bool_bool]);
-value_bin_math_impl!(scalar_pow);
-value_bin_math_impl!(root);
-value_bin_math_impl!(log);
-value_bin_math_impl!(atan2);
-value_bin_math_impl!(
+value_dy_math_impl!(div, (Num, Char, num_char), (Byte, Char, byte_char),);
+value_dy_math_impl!(modulus, (Complex, Complex, com_com));
+value_dy_math_impl!(or, [|meta| meta.flags.is_boolean(), Byte, bool_bool]);
+value_dy_math_impl!(scalar_pow);
+value_dy_math_impl!(root);
+value_dy_math_impl!(log);
+value_dy_math_impl!(atan2);
+value_dy_math_impl!(
     min,
     [Char, generic],
     (Box, Box, generic),
     [|meta| meta.flags.is_boolean(), Byte, bool_bool],
 );
-value_bin_math_impl!(
+value_dy_math_impl!(
     max,
     [Char, generic],
     (Box, Box, generic),
     [|meta| meta.flags.is_boolean(), Byte, bool_bool],
 );
 
-value_bin_impl!(
+value_dy_impl!(
     complex,
     (Num, Num, num_num),
     (Byte, Byte, byte_byte),
@@ -2052,7 +2165,7 @@ value_bin_impl!(
     (Byte, Complex, x_com),
 );
 
-value_bin_impl!(
+value_dy_impl!(
     abs_complex,
     [Num, num],
     (Byte, Byte, num),
@@ -2068,7 +2181,7 @@ value_bin_impl!(
 macro_rules! eq_impls {
     ($($name:ident),*) => {
         $(
-            value_bin_impl!(
+            value_dy_impl!(
                 $name,
                 // Value comparable
                 [Num, same_type],
@@ -2097,7 +2210,7 @@ macro_rules! eq_impls {
 macro_rules! cmp_impls {
     ($($name:ident),*) => {
         $(
-            value_bin_impl!(
+            value_dy_impl!(
                 $name,
                 // Value comparable
                 [Num, same_type],

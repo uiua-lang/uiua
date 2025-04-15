@@ -460,6 +460,13 @@
     "class": "Stack",
     "description": "Duplicate a function's last argument before calling it"
   },
+  "bytes": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Convert a value to a byte representation",
+    "experimental": true
+  },
   "case": {
     "glyph": "⍩",
     "outputs": 1,
@@ -1038,6 +1045,14 @@
     "outputs": 1,
     "class": "DyadicPervasive",
     "description": "Raise a value to a power"
+  },
+  "progressive indexof": {
+    "glyph": "⊘",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Get sequential indices of each row of an array in another",
+    "experimental": true
   },
   "quote": {
     "args": 0,

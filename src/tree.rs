@@ -313,7 +313,10 @@ impl Node {
     }
     /// Create a push node from a value
     pub fn new_push(val: impl Into<Value>) -> Self {
-        Self::Push(val.into())
+        let mut value = val.into();
+        value.compress();
+        value.derive_sortedness();
+        Self::Push(value)
     }
     /// Get a slice of the nodes in this node
     pub fn as_slice(&self) -> &[Node] {

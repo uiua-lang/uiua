@@ -95,7 +95,8 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data = new_data;
         self.shape = shape.into();
-        self.validate_shape();
+        self.take_sorted_flags();
+        self.validate();
     }
 }
 
@@ -240,7 +241,7 @@ impl<T: ArrayValue> Array<T> {
         ctx: &C,
     ) -> Result<Self, C::Error> {
         crate::profile_function!();
-        let res = match self.rank().cmp(&other.rank()) {
+        let mut res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
                 if self.shape() == [0] {
                     return Ok(other);
@@ -382,7 +383,8 @@ impl<T: ArrayValue> Array<T> {
                 res
             }
         };
-        res.validate_shape();
+        res.take_sorted_flags();
+        res.validate();
         Ok(res)
     }
     fn append<C: FillContext>(
@@ -447,7 +449,8 @@ impl<T: ArrayValue> Array<T> {
             }
             self.meta_mut().map_keys = Some(a);
         }
-        self.validate_shape();
+        self.take_sorted_flags();
+        self.validate();
         Ok(())
     }
     pub(crate) fn undo_join(
@@ -487,7 +490,7 @@ impl<T: ArrayValue> Array<T> {
                 let b_data = self.data.slice((ash[0] * self.row_len())..);
                 self.shape[0] = ash[0];
                 self.data = self.data.slice(..(ash[0] * self.row_len()));
-                self.validate_shape();
+                self.validate();
                 let b = Array::new(b_shape, b_data);
                 Ok((self, b))
             }
@@ -538,7 +541,7 @@ impl<T: ArrayValue> Array<T> {
                 self.data = self.data.slice(self.row_len()..);
             }
             self.shape[0] -= 1;
-            self.validate_shape();
+            self.validate();
             (first, self)
         } else {
             let n: usize = self.shape[..depth].iter().product();
@@ -585,7 +588,7 @@ impl<T: ArrayValue> Array<T> {
             let removed = Array::new(removed_shape, removed_data);
             self.data = remaining_data;
             self.shape = remaining_shape;
-            self.validate_shape();
+            self.validate();
             (removed, self)
         })
     }
@@ -657,7 +660,7 @@ impl<T: ArrayValue> Array<T> {
             unjoined_shape[0] = unjoin_count;
         }
         self.shape[0] -= unjoin_count;
-        self.validate_shape();
+        self.validate();
         let mut unjoined = Array::new(unjoined_shape, unjoined_slice);
         if let Some(keys) = self.map_keys_mut() {
             if !a_shape.is_empty() {
@@ -802,10 +805,19 @@ impl<T: ArrayValue> Array<T> {
                     }
                 }
             }
+            self.take_sorted_flags();
+            other.take_sorted_flags();
         }
+        let (sorted_up, sorted_down) = match (*self).cmp(&other) {
+            Ordering::Equal => (false, false),
+            Ordering::Less => (true, false),
+            Ordering::Greater => (false, true),
+        };
         self.data.extend_from_cowslice(other.data);
         self.shape.insert(0, 2);
-        self.validate_shape();
+        self.mark_sorted_up(sorted_up);
+        self.mark_sorted_down(sorted_down);
+        self.validate();
         Ok(())
     }
     /// Uncouple the array into two arrays

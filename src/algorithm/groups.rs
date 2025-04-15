@@ -278,7 +278,7 @@ where
             last_marker = marker;
         }
         self.data.truncate(self.shape[0] * row_len);
-        self.validate_shape();
+        self.validate();
         self
     }
     fn partition_lasts(mut self, markers: &[i64]) -> Self {
@@ -310,7 +310,7 @@ where
         }
         data.rotate_right(self.shape[0] * row_len);
         self.data.truncate(self.shape[0] * row_len);
-        self.validate_shape();
+        self.validate();
         self
     }
 }
@@ -729,7 +729,7 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
     for &dim in indices.shape().iter().rev() {
         val.shape_mut().insert(0, dim);
     }
-    val.validate_shape();
+    val.validate();
     env.push(val);
     Ok(())
 }
@@ -819,7 +819,7 @@ where
             groups.map(move |mut group| {
                 if group.row_count() == 0 {
                     group.shape_mut().clone_from(&empty_shape);
-                    group.validate_shape();
+                    group.validate();
                 }
                 group
             })

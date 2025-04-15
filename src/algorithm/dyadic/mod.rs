@@ -230,7 +230,7 @@ impl Value {
     }
 }
 
-impl<T: Clone> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub(crate) fn reshape_scalar_integer(
         &mut self,
         count: usize,
@@ -252,11 +252,10 @@ impl<T: Clone> Array<T> {
             }
         }
         self.shape.insert(0, count);
+        self.take_sorted_flags();
+        self.validate();
         Ok(())
     }
-}
-
-impl<T: ArrayValue> Array<T> {
     /// `reshape` this array by replicating it as the rows of a new array
     pub fn reshape_scalar<C: FillContext>(
         &mut self,
@@ -326,10 +325,11 @@ impl<T: ArrayValue> Array<T> {
             self.data.truncate(target_len);
         }
         self.shape = shape;
-        self.validate_shape();
         for s in reversed_axes {
             self.reverse_depth(s);
         }
+        self.take_sorted_flags();
+        self.validate();
         Ok(())
     }
 }
@@ -440,7 +440,7 @@ impl Value {
                 .chain(shape[rank..].iter().copied())
                 .collect();
         }
-        self.validate_shape();
+        self.validate();
         Ok(())
     }
     pub(crate) fn undo_rerank(
@@ -482,7 +482,7 @@ impl Value {
             return Ok(());
         }
         *self.shape_mut() = new_shape;
-        self.validate_shape();
+        self.validate();
         Ok(())
     }
 }
@@ -563,7 +563,7 @@ impl Value {
     }
 }
 
-impl<T: Clone + Send + Sync> Array<T> {
+impl<T: ArrayValue> Array<T> {
     /// `keep` this array by replicating it as the rows of a new array
     pub fn keep_scalar_integer(mut self, count: usize, env: &Uiua) -> UiuaResult<Self> {
         let elem_count = validate_size::<T>([count, self.data.len()], env)?;
@@ -576,7 +576,7 @@ impl<T: Clone + Send + Sync> Array<T> {
                 self.data
                     .extend_from_trusted((0..count).map(|_| value.clone()))
             };
-            self.validate_shape();
+            self.validate();
             return Ok(self);
         }
         Ok(match count {
@@ -598,7 +598,7 @@ impl<T: Clone + Send + Sync> Array<T> {
                 }
                 self.shape[0] *= count;
                 self.data = new_data.into();
-                self.validate_shape();
+                self.validate();
                 self
             }
         })
@@ -638,7 +638,7 @@ impl<T: ArrayValue> Array<T> {
             self.shape[0] = new_row_count;
         }
         self.data = new_data.into();
-        self.validate_shape();
+        self.validate();
         Ok(self)
     }
     /// `keep` this array with some counts
@@ -648,6 +648,7 @@ impl<T: ArrayValue> Array<T> {
         }
         self.take_map_keys();
         let counts = pad_keep_counts(counts, self.row_count(), false, env)?;
+        let sorted_flags = self.take_sorted_flags();
         if self.rank() == 0 {
             if counts.len() != 1 {
                 return Err(env.error("Scalar array can only be kept with a single number"));
@@ -706,7 +707,8 @@ impl<T: ArrayValue> Array<T> {
                 self.shape[0] = new_len;
             }
         }
-        self.validate_shape();
+        self.or_sorted_flags(sorted_flags);
+        self.validate();
         Ok(self)
     }
     fn unkeep(mut self, env: &Uiua) -> UiuaResult<(Value, Self)> {
@@ -738,7 +740,7 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data.truncate(dest * row_len);
         self.shape[0] = dest;
-        self.validate_shape();
+        self.validate();
         Ok((counts.into(), self))
     }
     fn anti_keep(&self, counts: &[f64], env: &Uiua) -> UiuaResult<Self> {
@@ -901,6 +903,7 @@ impl<T: ArrayValue> Array<T> {
                 into = Array::new(new_shape, new_rows);
             }
         }
+        into.take_sorted_flags();
         Ok(into)
     }
 }
@@ -1006,6 +1009,7 @@ impl Value {
             }
             Value::Box(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
         }
+        rotated.take_sorted_flags();
         Ok(())
     }
 }
@@ -1051,6 +1055,7 @@ impl<T: ArrayValue> Array<T> {
                 keys.rotate(by);
             }
         }
+        self.take_sorted_flags();
         Ok(())
     }
 }
@@ -1164,7 +1169,7 @@ impl<T: ArrayValue> Array<T> {
 
         self.shape[1] *= self.shape[0];
         self.shape.remove(0);
-        self.validate_shape();
+        self.validate();
 
         Ok(self)
     }
@@ -1421,6 +1426,8 @@ impl<T: ArrayValue> Array<T> {
                 slice[j] = elem;
             }
         }
+        into.take_sorted_flags();
+        into.validate();
     }
     fn anti_orient(mut self, mut undices: Vec<usize>, env: &Uiua) -> UiuaResult<Self> {
         fn derive_anti_orient_data(

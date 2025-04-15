@@ -1,7 +1,11 @@
 # Uiua Todo
 
 # 0.16
-- progressive `indexof`
+- Sortedness flags
+  - Further abstract `ArrayMeta` struct to reduce code size
+  - Keep sortedness flags in some dyadic math ops
+  - Test examples
+  - Actually use the flags
 - Stabilize `fft`
   - Requirs a custom implementation 😵‍💫
 - Last-axis subscripts or modifier?

@@ -155,7 +155,7 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
             let mut new_shape = new_shape.clone();
             new_shape.extend_from_slice(&new_value.shape()[1..]);
             *new_value.shape_mut() = new_shape;
-            new_value.validate_shape();
+            new_value.validate();
             if is_empty {
                 new_value.pop_row();
             }

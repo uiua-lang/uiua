@@ -216,6 +216,8 @@ impl Value {
             self.append(value, false, env)?;
         }
         self.meta_mut().map_keys = Some(keys);
+        self.take_sorted_flags();
+        self.validate();
         Ok(())
     }
     #[allow(clippy::unit_arg)]

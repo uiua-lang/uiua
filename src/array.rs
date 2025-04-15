@@ -13,7 +13,10 @@ use ecow::{EcoString, EcoVec};
 use serde::{de::DeserializeOwned, *};
 
 use crate::{
-    algorithm::map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
+    algorithm::{
+        map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
+        ArrayCmpSlice,
+    },
     cowslice::{cowslice, CowSlice},
     fill::{Fill, FillValue},
     grid_fmt::{ElemAlign, GridFmt},
@@ -68,6 +71,12 @@ impl ArrayMeta {
     pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
         self.label = per_meta.label;
         self.map_keys = per_meta.map_keys;
+    }
+    /// Take the sorted flags
+    pub fn take_sorted_flags(&mut self) -> ArrayFlags {
+        let flags = self.flags & ArrayFlags::SORTEDNESS;
+        self.flags &= !flags;
+        flags
     }
     /// Reset the flags
     pub fn reset_flags(&mut self) {
@@ -140,6 +149,14 @@ bitflags! {
         const BOOLEAN = 1;
         /// The array was *created from* a boolean
         const BOOLEAN_LITERAL = 2;
+        /// The array is sorted ascending
+        const SORTED_UP = 4;
+        /// The array is sorted descending
+        const SORTED_DOWN = 8;
+        /// Value-related flags that are true about the rows as well
+        const VALUE = Self::BOOLEAN.bits() | Self::BOOLEAN_LITERAL.bits();
+        /// Sortedness-related flags
+        const SORTEDNESS = Self::SORTED_UP.bits() | Self::SORTED_DOWN.bits();
     }
 }
 
@@ -252,17 +269,19 @@ where
 
 #[track_caller]
 #[inline(always)]
-pub(crate) fn validate_shape(shape: &[usize], len: usize) {
-    let elems = if shape.contains(&0) {
-        0
-    } else {
-        shape.iter().product()
-    };
-    debug_assert_eq!(
-        elems, len,
-        "shape {shape:?} does not match data length {}",
-        len
-    );
+pub(crate) fn validate_shape(_shape: &[usize], _len: usize) {
+    #[cfg(debug_assertions)]
+    {
+        let elems = if _shape.contains(&0) {
+            0
+        } else {
+            _shape.iter().product()
+        };
+        assert_eq!(
+            elems, _len,
+            "shape {_shape:?} does not match data length {_len}"
+        )
+    }
 }
 
 impl<T> Array<T> {
@@ -280,12 +299,6 @@ impl<T> Array<T> {
             data,
             meta: None,
         }
-    }
-    #[track_caller]
-    #[inline(always)]
-    /// Debug-only function to validate that the shape matches the data length
-    pub(crate) fn validate_shape(&self) {
-        validate_shape(&self.shape, self.data.len());
     }
     /// Get the number of rows in the array
     pub fn row_count(&self) -> usize {
@@ -362,6 +375,64 @@ impl<T> Array<T> {
     pub fn map_keys_mut(&mut self) -> Option<&mut MapKeys> {
         self.get_meta_mut().and_then(|meta| meta.map_keys.as_mut())
     }
+    /// Check if the array is sorted ascending
+    pub fn is_sorted_up(&self) -> bool {
+        self.meta().flags.contains(ArrayFlags::SORTED_UP)
+    }
+    /// Check if the array is sorted descending
+    pub fn is_sorted_down(&self) -> bool {
+        self.meta().flags.contains(ArrayFlags::SORTED_DOWN)
+    }
+    /// Take the sorted flags
+    pub fn take_sorted_flags(&mut self) -> ArrayFlags {
+        if let Some(meta) = self.get_meta_mut() {
+            meta.take_sorted_flags()
+        } else {
+            ArrayFlags::NONE
+        }
+    }
+    /// Or the sorted flags
+    pub fn or_sorted_flags(&mut self, flags: ArrayFlags) {
+        if flags == ArrayFlags::NONE {
+            return;
+        }
+        self.meta_mut().flags |= flags & ArrayFlags::SORTEDNESS;
+    }
+    /// Or with reversed sorted flags
+    pub fn or_sorted_flags_rev(&mut self, mut flags: ArrayFlags) {
+        flags &= ArrayFlags::SORTEDNESS;
+        if flags == ArrayFlags::NONE {
+            return;
+        }
+        let mut rev_flags = ArrayFlags::NONE;
+        if flags.contains(ArrayFlags::SORTED_UP) {
+            rev_flags |= ArrayFlags::SORTED_DOWN;
+        }
+        if flags.contains(ArrayFlags::SORTED_DOWN) {
+            rev_flags |= ArrayFlags::SORTED_UP;
+        }
+        self.meta_mut().flags |= rev_flags;
+    }
+    /// Mark the array as sorted ascending
+    ///
+    /// It is a logic error to set this to `true` when it is not the case
+    pub(crate) fn mark_sorted_up(&mut self, sorted: bool) {
+        if sorted {
+            self.meta_mut().flags.insert(ArrayFlags::SORTED_UP);
+        } else if let Some(meta) = self.get_meta_mut() {
+            meta.flags.remove(ArrayFlags::SORTED_UP);
+        }
+    }
+    /// Mark the array as sorted descending
+    ///
+    /// It is a logic error to set this to `true` when it is not the case
+    pub(crate) fn mark_sorted_down(&mut self, sorted: bool) {
+        if sorted {
+            self.meta_mut().flags.insert(ArrayFlags::SORTED_DOWN);
+        } else if let Some(meta) = self.get_meta_mut() {
+            meta.flags.remove(ArrayFlags::SORTED_DOWN);
+        }
+    }
     /// Reset all metadata flags
     pub fn reset_meta_flags(&mut self) {
         self.get_meta_mut().map(ArrayMeta::reset_flags);
@@ -397,6 +468,32 @@ impl<T> Array<T> {
     }
 }
 
+impl<T: Clone> Array<T> {
+    /// Get a row array
+    #[track_caller]
+    pub fn row(&self, row: usize) -> Self {
+        if self.rank() == 0 {
+            let mut row = self.clone();
+            row.take_map_keys();
+            row.take_label();
+            return row;
+        }
+        let row_count = self.row_count();
+        if row >= row_count {
+            panic!("row index out of bounds: {} >= {}", row, row_count);
+        }
+        let row_len = self.row_len();
+        let start = row * row_len;
+        let end = start + row_len;
+        let mut row = Self::new(&self.shape[1..], self.data.slice(start..end));
+        let value_flags = self.meta().flags & ArrayFlags::VALUE;
+        if value_flags != ArrayFlags::NONE {
+            row.meta_mut().flags = value_flags;
+        }
+        row
+    }
+}
+
 impl<T: ArrayValue> Array<T> {
     /// Create a scalar array
     pub fn scalar(data: T) -> Self {
@@ -428,7 +525,24 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Get an iterator over the row arrays of the array
     pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
-        (0..self.row_count()).map(|row| self.row(row))
+        let value_flags = self.meta().flags & ArrayFlags::VALUE;
+        let set_value_flags = value_flags != ArrayFlags::NONE;
+        let row_len = self.row_len();
+        (0..self.row_count()).map(move |row| {
+            if self.rank() == 0 {
+                let mut row = self.clone();
+                row.take_map_keys();
+                row.take_label();
+                return row;
+            }
+            let start = row * row_len;
+            let end = start + row_len;
+            let mut row = Array::<T>::new(&self.shape[1..], self.data.slice(start..end));
+            if set_value_flags {
+                row.meta_mut().flags = value_flags;
+            }
+            row
+        })
     }
     pub(crate) fn row_shaped_slice(&self, index: usize, row_shape: Shape) -> Self {
         let row_len = row_shape.elements();
@@ -460,28 +574,6 @@ impl<T: ArrayValue> Array<T> {
             .map(move |data| Self::new(row_sh.clone(), data));
         let zero = (0..zero_count).map(move |_| Self::new(row_shape.clone(), CowSlice::new()));
         nonzero.chain(zero)
-    }
-    /// Get a row array
-    #[track_caller]
-    pub fn row(&self, row: usize) -> Self {
-        if self.rank() == 0 {
-            let mut row = self.clone();
-            row.take_map_keys();
-            row.take_label();
-            return row;
-        }
-        let row_count = self.row_count();
-        if row >= row_count {
-            panic!("row index out of bounds: {} >= {}", row, row_count);
-        }
-        let row_len = self.row_len();
-        let start = row * row_len;
-        let end = start + row_len;
-        let mut row = Self::new(&self.shape[1..], self.data.slice(start..end));
-        if self.meta().flags != ArrayFlags::NONE {
-            row.meta_mut().flags = self.meta().flags;
-        }
-        row
     }
     #[track_caller]
     pub(crate) fn depth_row(&self, depth: usize, row: usize) -> Self {
@@ -544,7 +636,7 @@ impl<T: ArrayValue> Array<T> {
         let data = self.data.split_off(self.data.len() - self.row_len());
         self.shape[0] -= 1;
         let shape: Shape = self.shape[1..].into();
-        self.validate_shape();
+        self.validate();
         Some(Self::new(shape, data))
     }
     /// Get a mutable slice of a row
@@ -552,6 +644,65 @@ impl<T: ArrayValue> Array<T> {
     pub fn row_slice_mut(&mut self, row: usize) -> &mut [T] {
         let row_len = self.row_len();
         &mut self.data.as_mut_slice()[row * row_len..(row + 1) * row_len]
+    }
+    /// Set the sortedness flags according to the array's data
+    pub fn derive_sortedness(&mut self) {
+        let mut sorted_up = true;
+        let mut sorted_down = true;
+        let mut rows = self.row_slices().map(ArrayCmpSlice);
+        if let Some(mut prev) = rows.next() {
+            for row in rows {
+                match prev.cmp(&row) {
+                    Ordering::Equal => {}
+                    Ordering::Less => {
+                        sorted_down = false;
+                        if !sorted_up {
+                            break;
+                        }
+                    }
+                    Ordering::Greater => {
+                        sorted_up = false;
+                        if !sorted_down {
+                            break;
+                        }
+                    }
+                }
+                prev = row;
+            }
+        } else {
+            drop(rows);
+        }
+        self.mark_sorted_up(sorted_up);
+        self.mark_sorted_down(sorted_down);
+    }
+    #[track_caller]
+    #[inline(always)]
+    /// Debug-only to ensure the array's invariants are upheld
+    pub(crate) fn validate(&self) {
+        #[cfg(debug_assertions)]
+        {
+            validate_shape(&self.shape, self.data.len());
+            let is_sorted_up = self.is_sorted_up();
+            let is_sorted_down = self.is_sorted_down();
+            if is_sorted_up || is_sorted_down {
+                let mut rows = (0..self.row_count()).map(|i| self.row_slice(i));
+                if let Some(prev) = rows.next() {
+                    let mut prev = ArrayCmpSlice(prev);
+                    for row in rows {
+                        let row = ArrayCmpSlice(row);
+                        assert!(
+                            !is_sorted_up || prev <= row,
+                            "Array marked as sorted up is not"
+                        );
+                        assert!(
+                            !is_sorted_down || prev >= row,
+                            "Array marked as sorted down is not"
+                        );
+                        prev = row;
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -102,7 +102,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
                 }
                 new_shape.extend_from_slice(&tabled.shape()[1..]);
                 *tabled.shape_mut() = new_shape;
-                tabled.validate_shape();
+                tabled.validate();
                 env.push(tabled);
             }
         }
@@ -162,7 +162,7 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
                 let mut new_shape = new_shape.clone();
                 new_shape.extend_from_slice(&tabled.shape()[1..]);
                 *tabled.shape_mut() = new_shape;
-                tabled.validate_shape();
+                tabled.validate();
                 env.push(tabled);
             }
         }

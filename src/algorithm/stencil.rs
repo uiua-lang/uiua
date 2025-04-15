@@ -286,7 +286,7 @@ where
                     let mut new_shape = shape_prefix.clone();
                     new_shape.extend_from_slice(&val.shape()[1..]);
                     *val.shape_mut() = new_shape;
-                    val.validate_shape();
+                    val.validate();
                     env.push(val);
                 }
             }
@@ -477,7 +477,7 @@ fn fast_adjacent<T>(
     f: impl Fn(T, T) -> T,
 ) -> UiuaResult<Array<T>>
 where
-    T: Copy,
+    T: ArrayValue + Copy,
 {
     match arr.rank() {
         0 => Err(env.error("Cannot get adjacency of scalar")),
@@ -494,7 +494,7 @@ where
             }
             arr.data.truncate(arr.data.len() - (n - 1));
             arr.shape[0] -= n - 1;
-            arr.validate_shape();
+            arr.validate();
             Ok(arr)
         }
         _ => {
@@ -517,7 +517,7 @@ where
             }
             arr.data.truncate(arr.data.len() - (n - 1) * row_len);
             arr.shape[0] -= n - 1;
-            arr.validate_shape();
+            arr.validate();
             Ok(arr)
         }
     }

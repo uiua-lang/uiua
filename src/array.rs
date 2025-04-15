@@ -150,6 +150,12 @@ impl ArrayMeta {
         self.flags &= !flags;
         flags
     }
+    /// Take the value flags
+    pub fn take_value_flags(&mut self) -> ArrayFlags {
+        let flags = self.flags & ArrayFlags::VALUE;
+        self.flags &= !flags;
+        flags
+    }
     /// Set the label for the value
     pub fn set_label(&mut self, label: Option<EcoString>) {
         if label.is_none() && self.label.is_none() {
@@ -180,14 +186,8 @@ impl ArrayMeta {
         if flags == ArrayFlags::NONE {
             return;
         }
-        let mut rev_flags = ArrayFlags::NONE;
-        if flags.contains(ArrayFlags::SORTED_UP) {
-            rev_flags |= ArrayFlags::SORTED_DOWN;
-        }
-        if flags.contains(ArrayFlags::SORTED_DOWN) {
-            rev_flags |= ArrayFlags::SORTED_UP;
-        }
-        self.flags |= rev_flags;
+        flags.reverse_sorted();
+        self.flags |= flags;
     }
     /// Mark the array as sorted ascending
     ///
@@ -293,6 +293,13 @@ impl ArrayFlags {
     /// Reset all flags
     pub fn reset(&mut self) {
         *self = Self::NONE;
+    }
+    /// Reverse the sorted flags
+    pub fn reverse_sorted(&mut self) {
+        let sorted_up = self.contains(Self::SORTED_UP);
+        let sorted_down = self.contains(Self::SORTED_DOWN);
+        self.set(Self::SORTED_UP, sorted_down);
+        self.set(Self::SORTED_DOWN, sorted_up);
     }
 }
 

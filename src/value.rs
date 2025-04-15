@@ -1708,10 +1708,7 @@ macro_rules! value_mon_impl {
         impl Value {
             #[allow(unused_mut, clippy::redundant_closure_call)]
             pub(crate) fn $name(mut self, env: &Uiua) -> UiuaResult<Self> {
-                $(
-                    stringify!($sorted_val);
-                    let sorted_flags = self.meta.take_sorted_flags();
-                )?
+                let _sorted_flags = self.meta.take_sorted_flags();
                 let mut val: Value = self.keep_meta(|val| Ok(match val {
                     $($(Self::$in_place(mut array) $(if (|$meta: &ArrayMeta| $pred)(&array.meta))* => {
                         for val in &mut array.data {
@@ -1737,7 +1734,7 @@ macro_rules! value_mon_impl {
                     #[allow(unreachable_patterns)]
                     val => return Err($name::error(val.type_name(), env))
                 }))?;
-                $((|$sorted_val: &mut Value, $sorted_flags| $sorted_body)(&mut val, sorted_flags);)?
+                $((|$sorted_val: &mut Value, $sorted_flags| $sorted_body)(&mut val, _sorted_flags);)?
                 val.validate();
                 Ok(val)
             }
@@ -1912,16 +1909,34 @@ fn optimize_types(a: Value, b: Value) -> (Value, Value) {
     }
 }
 
+/// Macro to generate a dyadic pervasive function on [`Value`]s.
 macro_rules! value_dy_impl {
-    ($name:ident, $(
-        $(($na:ident, $nb:ident, $f1:ident))*
-        $([$(|$meta:ident| $pred:expr,)* $ip:ident, $f2:ident $(, $reset_meta:literal)?])*
-    ),* ) => {
+    (
+        $name:ident,
+        $(
+            $(($na:ident, $nb:ident, $f1:ident))*
+            $([$(|$meta:ident| $pred:expr,)* $ip:ident, $f2:ident $(, $reset_value_flags:literal)?])*
+        ),*
+        $({
+            get_pre: |$get_pre_a:ident, $get_pre_b:ident| $get_pre_body:expr,
+            handle_pre: |$pre_a:ident: $pre_ty:ty, $pre_b:ident, $handle_val:ident| $handle_body:expr,
+        })?
+    ) => {
         impl Value {
-            #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
+            #[allow(unreachable_patterns, unused_assignments, unused_mut, clippy::wrong_self_convention)]
             pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 let (mut a, mut b) = optimize_types(self, other);
-                a.meta.take_sorted_flags(); // TODO: make this conditional
+                let mut handle_pre: Option<&dyn Fn(&mut Value)> = None;
+                $(
+                    let get_pre = |$get_pre_a: &mut Value, $get_pre_b: &Value| $get_pre_body;
+                    let pre_a = get_pre(&mut a, &b);
+                    let pre_b = get_pre(&mut b, &a);
+                    let f = move |val: &mut Value| {
+                        (|$pre_a: $pre_ty, $pre_b: $pre_ty, $handle_val: &mut Value| $handle_body)(pre_a, pre_b, val)
+                    };
+                    handle_pre = Some(&f);
+                )?
+                a.meta.take_sorted_flags();
                 b.meta.take_sorted_flags();
                 a.match_fill(env);
                 b.match_fill(env);
@@ -1932,14 +1947,20 @@ macro_rules! value_dy_impl {
                     })* => {
                         bin_pervade_mut(a, &mut b, env, $name::$f2)?;
                         let mut val: Value = b.into();
-                        $(if $reset_meta {
-                            val.meta.reset_flags();
+                        $(if $reset_value_flags {
+                            val.meta.take_value_flags();
                         })*
+                        if let Some(handle_pre) = handle_pre {
+                            handle_pre(&mut val);
+                        }
                         val
                     },)*)*
                     $($((Value::$na(a), Value::$nb(b)) => {
                         let mut val: Value = bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f1))?.into();
-                        val.meta.reset_flags();
+                        val.meta.take_value_flags();
+                        if let Some(handle_pre) = handle_pre {
+                            handle_pre(&mut val);
+                        }
                         val
                     },)*)*
                     (Value::Box(a), Value::Box(b)) => {
@@ -1952,7 +1973,10 @@ macro_rules! value_dy_impl {
                         let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
                             Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();
-                        val.meta.reset_flags();
+                        val.meta.take_value_flags();
+                        if let Some(handle_pre) = handle_pre {
+                            handle_pre(&mut val);
+                        }
                         val
                     }
                     (Value::Box(a), b) => {
@@ -1960,7 +1984,10 @@ macro_rules! value_dy_impl {
                         let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
                             Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();
-                        val.meta.reset_flags();
+                        val.meta.take_value_flags();
+                        if let Some(handle_pre) = handle_pre {
+                            handle_pre(&mut val);
+                        }
                         val
                     },
                     (a, Value::Box(b)) => {
@@ -1968,7 +1995,10 @@ macro_rules! value_dy_impl {
                         let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
                             Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();
-                        val.meta.reset_flags();
+                        val.meta.take_value_flags();
+                        if let Some(handle_pre) = handle_pre {
+                            handle_pre(&mut val);
+                        }
                         val
                     },
                     (a, b) => return Err($name::error(a.type_name(), b.type_name(), env)),
@@ -1980,8 +2010,54 @@ macro_rules! value_dy_impl {
     };
 }
 
+/// Macro to generate a dyadic pervasive math function on [`Value`]s.
 macro_rules! value_dy_math_impl {
-    ($name:ident $(,$($tt:tt)*)?) => {
+    // The generated function will maintain the sortedness of
+    // the result if one of the inputs is a scalar number
+    ($name:ident $(,($($tt:tt)*))? , maintain_sortedness) => {
+        value_dy_math_impl!(
+            $name
+            $(,($($tt)*))?,
+            pre {
+                get_pre: |a, b| (b.shape == [] && b.type_id() == f64::TYPE_ID)
+                    .then_some(a.meta.take_sorted_flags()),
+                handle_pre: |a: Option<ArrayFlags>, b, val| {
+                    if let Some(flags) = a.or(b) {
+                        val.meta.or_sorted_flags(flags);
+                    }
+                },
+            }
+        );
+    };
+    // The generated function will maintain the sortedness of
+    // the result if one of the inputs is a scalar number,
+    // reversing the sortedness if the number is negative
+    ($name:ident $(,($($tt:tt)*))? , signed_sortedness) => {
+        value_dy_math_impl!(
+            $name
+            $(,($($tt)*))?,
+            pre {
+                get_pre: |a, b| {
+                    let negative = match b {
+                        Value::Num(arr) if arr.shape == [] => arr.data[0] < 0.0,
+                        Value::Byte(arr) if arr.shape == [] => false,
+                        _ => return None,
+                    };
+                    let mut flags = a.meta.take_sorted_flags();
+                    if negative {
+                        flags.reverse_sorted();
+                    }
+                    Some(flags)
+                },
+                handle_pre: |a: Option<ArrayFlags>, b, val| {
+                    if let Some(flags) = a.or(b) {
+                        val.meta.or_sorted_flags(flags);
+                    }
+                },
+            }
+        );
+    };
+    ($name:ident $(,($($tt:tt)*))? $(,pre {$($after:tt)*})?) => {
         value_dy_impl!(
             $name,
             $($($tt)*)?
@@ -1994,57 +2070,79 @@ macro_rules! value_dy_math_impl {
             (Num, Complex, x_com),
             (Complex, Byte, com_x),
             (Byte, Complex, x_com),
+            $({$($after)*})?
         );
     };
 }
 
 value_dy_math_impl!(
     add,
-    (Num, Char, num_char),
-    (Char, Num, char_num),
-    (Byte, Char, byte_char),
-    (Char, Byte, char_byte),
-    [|meta| meta.flags.is_boolean(), Byte, bool_bool, true],
+    (
+        (Num, Char, num_char),
+        (Char, Num, char_num),
+        (Byte, Char, byte_char),
+        (Char, Byte, char_byte),
+        [|meta| meta.flags.is_boolean(), Byte, bool_bool, true]
+    ),
+    maintain_sortedness
 );
 value_dy_math_impl!(
     sub,
-    (Num, Char, num_char),
-    (Char, Char, char_char),
-    (Byte, Char, byte_char),
+    (
+        (Num, Char, num_char),
+        (Char, Char, char_char),
+        (Byte, Char, byte_char),
+    ),
+    maintain_sortedness
 );
 value_dy_math_impl!(
     mul,
-    (Num, Char, num_char),
-    (Char, Num, char_num),
-    (Byte, Char, byte_char),
-    (Char, Byte, char_byte),
-    [|meta| meta.flags.is_boolean(), Byte, bool_bool],
+    (
+        (Num, Char, num_char),
+        (Char, Num, char_num),
+        (Byte, Char, byte_char),
+        (Char, Byte, char_byte),
+        [|meta| meta.flags.is_boolean(), Byte, bool_bool],
+    ),
+    signed_sortedness
 );
 value_dy_math_impl!(
     set_sign,
-    (Num, Char, num_char),
-    (Char, Num, char_num),
-    (Byte, Char, byte_char),
-    (Char, Byte, char_byte),
+    (
+        (Num, Char, num_char),
+        (Char, Num, char_num),
+        (Byte, Char, byte_char),
+        (Char, Byte, char_byte),
+    )
 );
-value_dy_math_impl!(div, (Num, Char, num_char), (Byte, Char, byte_char),);
-value_dy_math_impl!(modulus, (Complex, Complex, com_com));
-value_dy_math_impl!(or, [|meta| meta.flags.is_boolean(), Byte, bool_bool]);
+value_dy_math_impl!(
+    div,
+    ((Num, Char, num_char), (Byte, Char, byte_char)),
+    signed_sortedness
+);
+value_dy_math_impl!(modulus, ((Complex, Complex, com_com)));
+value_dy_math_impl!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]));
 value_dy_math_impl!(scalar_pow);
 value_dy_math_impl!(root);
 value_dy_math_impl!(log);
 value_dy_math_impl!(atan2);
 value_dy_math_impl!(
     min,
-    [Char, generic],
-    (Box, Box, generic),
-    [|meta| meta.flags.is_boolean(), Byte, bool_bool],
+    (
+        [Char, generic],
+        (Box, Box, generic),
+        [|meta| meta.flags.is_boolean(), Byte, bool_bool],
+    ),
+    maintain_sortedness
 );
 value_dy_math_impl!(
     max,
-    [Char, generic],
-    (Box, Box, generic),
-    [|meta| meta.flags.is_boolean(), Byte, bool_bool],
+    (
+        [Char, generic],
+        (Box, Box, generic),
+        [|meta| meta.flags.is_boolean(), Byte, bool_bool],
+    ),
+    maintain_sortedness
 );
 
 value_dy_impl!(

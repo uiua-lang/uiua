@@ -2,7 +2,6 @@
 
 # 0.16
 - Sortedness flags
-  - Keep sortedness flags in some dyadic math ops
   - Test examples
   - Actually use the flags
 - Stabilize `fft`

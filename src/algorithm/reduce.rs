@@ -40,13 +40,13 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                 env.push(xs);
                 return Ok(());
             }
-            let shape = xs.shape();
+            let shape = &xs.shape;
             let mut new_shape = Shape::with_capacity(xs.rank() - 1);
             new_shape.extend_from_slice(&shape[..depth]);
             new_shape.push(shape[depth] * shape[depth + 1]);
             new_shape.extend_from_slice(&shape[depth + 2..]);
-            *xs.shape_mut() = new_shape;
-            xs.take_sorted_flags();
+            xs.shape = new_shape;
+            xs.meta.take_sorted_flags();
             xs.validate();
             env.push(xs);
         }
@@ -85,7 +85,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     fast_reduce_different(bytes, 0.0, fill, depth, sub::num_num, sub::num_byte)
                         .into()
                 }
-                Primitive::Mul if bytes.meta().flags.is_boolean() => {
+                Primitive::Mul if bytes.meta.flags.is_boolean() => {
                     let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(bytes, 1.0, fill, depth, mul::num_num, mul::num_byte)
@@ -103,7 +103,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     if fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(bytes, 0.0, fill, depth, or::num_num, or::num_byte)
                             .into()
-                    } else if bytes.meta().flags.is_boolean() {
+                    } else if bytes.meta.flags.is_boolean() {
                         fast_reduce(bytes, 0, byte_fill, depth, or::bool_bool).into()
                     } else {
                         fast_reduce(bytes, 0, byte_fill, depth, or::byte_byte).into()
@@ -143,7 +143,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                 }
                 _ => return generic_reduce(f, Value::Byte(bytes), depth, env),
             };
-            val.take_sorted_flags();
+            val.meta.take_sorted_flags();
             val.validate();
             env.push(val);
         }
@@ -194,7 +194,7 @@ fn trim_node(node: &Node) -> &[Node] {
 fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
     use Primitive::*;
     let nodes = trim_node(node);
-    let mut shape = val.shape().clone();
+    let mut shape = val.shape.clone();
     shape.make_row();
     let len: usize = shape.iter().product();
     let (first, tail) = nodes.split_first()?;
@@ -204,10 +204,10 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
     Some(match first {
         Node::Prim(Join, _) if tail_sig() => {
             if val.rank() < 2 {
-                val.shape_mut()[0] = 0;
+                val.shape[0] = 0;
             } else {
-                let first = val.shape_mut().remove(0);
-                val.shape_mut()[0] *= first;
+                let first = val.shape.remove(0);
+                val.shape[0] *= first;
             }
             val
         }
@@ -225,10 +225,10 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
             Node::Prim(Atan, _) if init_sig() => Array::new(shape, eco_vec![0.0; len]).into(),
             Node::Prim(Join, _) if init_sig() => {
                 if val.rank() < 2 {
-                    val.shape_mut()[0] = 0;
+                    val.shape[0] = 0;
                 } else {
-                    let first = val.shape_mut().remove(0);
-                    val.shape_mut()[0] *= first;
+                    let first = val.shape.remove(0);
+                    val.shape[0] *= first;
                 }
                 val
             }
@@ -460,7 +460,7 @@ where
 fn generic_reduce(f: SigNode, xs: Value, depth: usize, env: &mut Uiua) -> UiuaResult {
     env.push(xs);
     let mut val = generic_reduce_inner(f, depth, identity, env)?;
-    val.take_sorted_flags();
+    val.meta.take_sorted_flags();
     val.validate();
     env.push(val);
     Ok(())
@@ -492,7 +492,7 @@ pub fn reduce_content(ops: Ops, env: &mut Uiua) -> UiuaResult {
             (rows.next().unwrap(), rows)
         };
         if acc.rank() == 0 {
-            acc.shape_mut().insert(0, 1);
+            acc.shape.insert(0, 1);
         }
         for row in rows {
             acc = acc.join(row, true, env)?;
@@ -547,10 +547,10 @@ fn generic_reduce_inner(
             let row_count = if xs.rank() == 0 {
                 None
             } else {
-                Some(xs.shape_mut().remove(0))
+                Some(xs.shape.remove(0))
             };
             if let Some(row_count) = row_count {
-                xs.shape_mut().insert(0, row_count);
+                xs.shape.insert(0, row_count);
             }
             return Ok(reduce_singleton(&f.node, xs, process));
         }
@@ -580,8 +580,8 @@ fn generic_reduce_inner(
             // Handle empty arrays
             if xs.row_count() == 0 {
                 if let Some(mut xs) = reduce_identity(&f.node, xs.clone()) {
-                    if xs.element_count() == 0 {
-                        xs.shape_mut().insert(0, 0);
+                    if xs.shape.elements() == 0 {
+                        xs.shape.insert(0, 0);
                         return Ok(xs);
                     }
                 }
@@ -651,7 +651,7 @@ fn generic_reduce_inner(
             rowsed.pop_row();
         }
         rowsed.validate();
-        rowsed.set_per_meta(per_meta.clone());
+        rowsed.meta.set_per_meta(per_meta.clone());
         Ok(rowsed)
     }
 }
@@ -693,8 +693,8 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
                 }
                 _ => return generic_scan(f, Value::Num(nums), env),
             };
-            arr.mark_sorted_up(sorted_up);
-            arr.mark_sorted_down(sorted_down);
+            arr.meta.mark_sorted_up(sorted_up);
+            arr.meta.mark_sorted_down(sorted_down);
             arr.validate();
             env.push(arr);
             Ok(())
@@ -733,8 +733,8 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
                 }
                 _ => return generic_scan(f, Value::Byte(bytes), env),
             };
-            val.mark_sorted_up(sorted_up);
-            val.mark_sorted_down(sorted_down);
+            val.meta.mark_sorted_up(sorted_up);
+            val.meta.mark_sorted_down(sorted_down);
             val.validate();
             env.push(val);
             Ok(())

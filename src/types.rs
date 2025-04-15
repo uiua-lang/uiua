@@ -32,7 +32,7 @@ impl Value {
     fn ty(&self) -> Ty {
         Ty {
             scalar: self.scalar_ty(),
-            shape: self.shape().clone(),
+            shape: self.shape.clone(),
             int: match self {
                 Value::Num(n) if self.rank() == 0 && n.data[0].fract() == 0.0 => {
                     Some(n.data[0] as isize)
@@ -45,7 +45,7 @@ impl Value {
     fn row_ty(&self) -> Ty {
         Ty {
             scalar: self.scalar_ty(),
-            shape: self.shape().row(),
+            shape: self.shape.row(),
             int: match self {
                 Value::Num(n) if self.rank() == 0 && n.data[0].fract() == 0.0 => {
                     Some(n.data[0] as isize)
@@ -116,12 +116,12 @@ where
         let per_meta = take(per_meta);
         for _ in 0..f.sig.outputs().saturating_sub(1) {
             let mut arr = Array::<Boxed>::new([0], CowSlice::default());
-            arr.set_per_meta(per_meta.clone());
+            arr.meta.set_per_meta(per_meta.clone());
             env.push(arr);
         }
         if f.sig.outputs() > 0 {
             let mut arr = Array::<Boxed>::new([0], CowSlice::default());
-            arr.set_per_meta(per_meta);
+            arr.meta.set_per_meta(per_meta);
             env.push(arr);
         }
         return true;
@@ -142,12 +142,12 @@ where
             let mut tys = rt.stack.into_iter().rev();
             for ty in tys.by_ref().take(count.saturating_sub(1)) {
                 let mut val = make_val(ty);
-                val.set_per_meta(per_meta.clone());
+                val.meta.set_per_meta(per_meta.clone());
                 env.push(val);
             }
             if let Some(ty) = tys.next() {
                 let mut val = make_val(ty);
-                val.set_per_meta(per_meta);
+                val.meta.set_per_meta(per_meta);
                 env.push(val);
             }
             true

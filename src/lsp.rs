@@ -1251,7 +1251,7 @@ mod server {
                 binding: &BindingInfo,
             ) -> CompletionItem {
                 let kind = match &binding.kind {
-                    BindingKind::Const(Some(val)) if val.meta().map_keys.is_some() => {
+                    BindingKind::Const(Some(val)) if val.meta.map_keys.is_some() => {
                         CompletionItemKind::STRUCT
                     }
                     BindingKind::Const(_) => CompletionItemKind::CONSTANT,

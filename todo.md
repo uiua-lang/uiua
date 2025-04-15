@@ -2,7 +2,6 @@
 
 # 0.16
 - Sortedness flags
-  - Further abstract `ArrayMeta` struct to reduce code size
   - Keep sortedness flags in some dyadic math ops
   - Test examples
   - Actually use the flags

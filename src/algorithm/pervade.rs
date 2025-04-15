@@ -369,10 +369,10 @@ where
 
     let fill = env.scalar_fill::<T>();
     let (new_shape, requires_fill) =
-        derive_new_shape(a.shape(), b.shape(), fill.as_ref().err().copied(), env)?;
+        derive_new_shape(&a.shape, &b.shape, fill.as_ref().err().copied(), env)?;
     let fill = if requires_fill { fill.ok() } else { None };
 
-    // dbg!(a.shape(), b.shape(), &new_shape, &fill);
+    // dbg!(a.shape, b.shape, &new_shape, &fill);
 
     fn reuse_no_fill<T: ArrayValue + Copy>(
         a: &[T],
@@ -705,10 +705,10 @@ pub(crate) fn bin_pervade_values(
     f: impl FnMut(Value, Value, &mut Uiua) -> UiuaResult<MultiOutput<Value>> + Clone,
 ) -> UiuaResult<MultiOutput<Value>> {
     let new_shape = derive_new_shape(
-        a.shape(),
-        b.shape(),
-        a_fill.as_ref().map(|a| a.shape()).map_err(|&e| e),
-        b_fill.as_ref().map(|b| b.shape()).map_err(|&e| e),
+        &a.shape,
+        &b.shape,
+        a_fill.as_ref().map(|a| &a.shape).map_err(|&e| e),
+        b_fill.as_ref().map(|b| &b.shape).map_err(|&e| e),
         env,
     )?;
 
@@ -728,7 +728,7 @@ where {
                 output.push(new);
             }
         };
-        match (&**a.shape(), &**b.shape()) {
+        match (&*a.shape, &*b.shape) {
             ([], []) => add_outputs(f(a, b, env)?),
             ([], [_]) => {
                 for b in b.into_rows() {
@@ -770,7 +770,7 @@ where {
                 }
                 (Ordering::Less, None, _) => {
                     debug_assert_eq!(a.row_count(), 1);
-                    a.shape_mut().remove(0);
+                    a.shape.remove(0);
                     for b in b.into_rows() {
                         recur(a.clone(), b, a_fill, b_fill, outputs, env, f.clone())?;
                     }
@@ -789,7 +789,7 @@ where {
                 }
                 (Ordering::Greater, _, None) => {
                     debug_assert_eq!(b.row_count(), 1);
-                    b.shape_mut().remove(0);
+                    b.shape.remove(0);
                     for a in a.into_rows() {
                         recur(a, b.clone(), a_fill, b_fill, outputs, env, f.clone())?;
                     }
@@ -814,8 +814,8 @@ where {
     for output in outputs {
         let mut new_val = Value::from_row_values(output, env)?;
         let mut this_shape = new_shape.clone();
-        this_shape.extend_from_slice(&new_val.shape()[1..]);
-        *new_val.shape_mut() = this_shape;
+        this_shape.extend_from_slice(&new_val.shape[1..]);
+        new_val.shape = this_shape;
         new_val.validate();
         new_values.push(new_val);
     }

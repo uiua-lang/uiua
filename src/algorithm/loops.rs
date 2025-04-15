@@ -64,15 +64,15 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
         }
         // Collect arguments
         let mut args = Vec::with_capacity(sig.args() + 1);
-        let mut new_shape = n.shape().clone();
+        let mut new_shape = n.shape.clone();
         let mut true_shape = Shape::SCALAR;
-        let n_shape = n.shape().clone();
+        let n_shape = n.shape.clone();
         args.push(n);
         for i in 0..sig.args() {
             let arg = env.pop(i + 1)?;
             if arg.rank() > 0
                 && n_shape.len() > 0
-                && !(arg.shape().iter().skip(1))
+                && !(arg.shape.iter().skip(1))
                     .zip(n_shape.iter().skip(1))
                     .all(|(a, b)| *a == 1 || *b == 1 || a == b)
             {
@@ -81,10 +81,10 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
                     when argument {} has shape {}",
                     Primitive::Repeat.format(),
                     i + 1,
-                    arg.shape()
+                    arg.shape
                 )));
             }
-            for (a, &b) in new_shape.iter_mut().zip(arg.shape()) {
+            for (a, &b) in new_shape.iter_mut().zip(&arg.shape) {
                 true_shape.push(pervade_dim(*a, b));
                 *a = (*a).max(b);
             }
@@ -122,10 +122,10 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
                 if n.rank() > row.rank() || is_empty {
                     rows_to_sel.push(Err(row));
                 } else if row.row_count() == 1 && n.row_count() >= 1 {
-                    let row_shape = row.shape()[n.rank()..].into();
+                    let row_shape = row.shape[n.rank()..].into();
                     rows_to_sel.push(Err(row.into_row_shaped_slices(row_shape).next().unwrap()));
                 } else {
-                    let row_shape = row.shape()[n.rank()..].into();
+                    let row_shape = row.shape[n.rank()..].into();
                     rows_to_sel.push(Ok(row.into_row_shaped_slices(row_shape)));
                 }
             }
@@ -153,8 +153,8 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
         for output in outputs.into_iter().rev() {
             let mut new_value = Value::from_row_values(output, env)?;
             let mut new_shape = new_shape.clone();
-            new_shape.extend_from_slice(&new_value.shape()[1..]);
-            *new_value.shape_mut() = new_shape;
+            new_shape.extend_from_slice(&new_value.shape[1..]);
+            new_value.shape = new_shape;
             new_value.validate();
             if is_empty {
                 new_value.pop_row();

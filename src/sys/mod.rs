@@ -680,7 +680,7 @@ impl From<usize> for Handle {
 impl Handle {
     pub(crate) fn value(self, kind: HandleKind) -> Value {
         let mut arr = Array::from(self.0 as f64);
-        arr.meta_mut().handle_kind = Some(kind);
+        arr.meta.handle_kind = Some(kind);
         Boxed(arr.into()).into()
     }
 }
@@ -1545,7 +1545,7 @@ impl SysOp {
                     let value = env.pop(1)?;
                     let image = crate::encode::value_to_image(&value).map_err(|e| env.error(e))?;
                     (env.rt.backend)
-                        .show_image(image, value.meta().label.as_deref())
+                        .show_image(image, value.meta.label.as_deref())
                         .map_err(|e| env.error(e))?;
                 }
                 #[cfg(not(feature = "image"))]
@@ -1559,7 +1559,7 @@ impl SysOp {
                     let bytes = crate::encode::value_to_gif_bytes(&value, delay)
                         .map_err(|e| env.error(e))?;
                     (env.rt.backend)
-                        .show_gif(bytes, value.meta().label.as_deref())
+                        .show_gif(bytes, value.meta.label.as_deref())
                         .map_err(|e| env.error(e))?;
                 }
                 #[cfg(not(feature = "gif"))]
@@ -1575,7 +1575,7 @@ impl SysOp {
                     )
                     .map_err(|e| env.error(e))?;
                     (env.rt.backend)
-                        .play_audio(bytes, value.meta().label.as_deref())
+                        .play_audio(bytes, value.meta.label.as_deref())
                         .map_err(|e| env.error(e))?;
                 }
                 #[cfg(not(feature = "audio_encode"))]
@@ -1797,7 +1797,7 @@ impl SysOp {
                 let ty = ty.parse::<FfiType>().map_err(|e| env.error(e))?;
                 let ptr = env
                     .pop(2)?
-                    .meta()
+                    .meta
                     .pointer
                     .map(|p| p.get())
                     .ok_or_else(|| env.error("Copied pointer must be a pointer value"))?;
@@ -1812,7 +1812,7 @@ impl SysOp {
             SysOp::MemFree => {
                 let ptr = env
                     .pop(1)?
-                    .meta()
+                    .meta
                     .pointer
                     .map(|p| p.get())
                     .ok_or_else(|| env.error("Freed pointer must be a pointer value"))?;
@@ -1901,7 +1901,7 @@ impl SysOp {
                     let samples = samples.as_num_array().ok_or_else(|| {
                         stream_env.error("Audio stream function must return a numeric array")
                     })?;
-                    match samples.shape().dims() {
+                    match samples.shape.dims() {
                         [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
                         &[n, 2] => {
                             let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
@@ -1921,7 +1921,7 @@ impl SysOp {
                             "Audio stream function must return either a \
                             rank 1 array or a rank 2 array with 2 rows, \
                             but its shape is {}",
-                            samples.shape()
+                            samples.shape
                         ))),
                     }
                 }));

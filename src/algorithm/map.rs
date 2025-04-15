@@ -19,14 +19,14 @@ use super::{ErrorContext, FillContext};
 impl<T: ArrayValue> Array<T> {
     /// Check if the array is a map
     pub fn is_map(&self) -> bool {
-        self.meta().map_keys.as_ref().is_some()
+        self.meta.map_keys.as_ref().is_some()
     }
     /// Get the keys and values of a map array
     pub fn map_kv(&self) -> impl Iterator<Item = (Value, Array<T>)> {
         self.map_kv_inner().into_iter()
     }
     fn map_kv_inner(&self) -> Vec<(Value, Array<T>)> {
-        let Some(map_keys) = self.meta().map_keys.as_ref() else {
+        let Some(map_keys) = self.meta.map_keys.as_ref() else {
             return Vec::new();
         };
         let mut kv = Vec::with_capacity(map_keys.len);
@@ -71,7 +71,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
         }
-        values.meta_mut().map_keys = Some(map_keys);
+        values.meta.map_keys = Some(map_keys);
         Ok(())
     }
 }
@@ -79,7 +79,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Check if the value is a map
     pub fn is_map(&self) -> bool {
-        self.meta().map_keys.as_ref().is_some()
+        self.meta.map_keys.as_ref().is_some()
     }
     /// Get the keys and values of a map array
     pub fn map_kv(&self) -> Vec<(Value, Value)> {
@@ -95,6 +95,7 @@ impl Value {
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {
         let keys = self
+            .meta
             .take_map_keys()
             .ok_or_else(|| env.error("Value is not a map"))?;
         Ok((keys.normalized(), self))
@@ -102,7 +103,7 @@ impl Value {
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
         // Check for higher-ranked keys
-        if let Some(keys) = self.meta().map_keys.as_ref() {
+        if let Some(keys) = self.meta.map_keys.as_ref() {
             if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
                 let mut values = Vec::with_capacity(key.row_count());
                 for key in key.rows() {
@@ -117,8 +118,7 @@ impl Value {
                 .ok_or_else(|| env.error("Key not found in map"));
         }
 
-        let keys =
-            (self.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
+        let keys = (self.meta.map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
         if keys.len != self.row_count() {
             return Err(env.error(format!(
                 "Cannot read from map with {} keys and {} value(s)",
@@ -139,7 +139,7 @@ impl Value {
     }
     /// Check if a map array contains a key
     pub fn has_key(&self, key: &Value, env: &Uiua) -> UiuaResult<Array<u8>> {
-        if let Some(keys) = self.meta().map_keys.as_ref() {
+        if let Some(keys) = self.meta.map_keys.as_ref() {
             if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
                 let mut values = EcoVec::with_capacity(key.row_count());
                 for key in key.rows() {
@@ -152,8 +152,7 @@ impl Value {
         if self.row_count() == 0 {
             return Ok(0.into());
         }
-        let keys =
-            (self.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
+        let keys = (self.meta.map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
         Ok(keys.get(key).is_some().into())
     }
     /// Insert a key-value pair into a map array
@@ -165,8 +164,8 @@ impl Value {
         //             "You appear to be inserting multiple keys. \
         //             Inserted keys and values must have the same length, \
         //             but their shapes are {} and {}",
-        //             key.shape(),
-        //             value.shape()
+        //             key.shape,
+        //             value.shape
         //         )));
         //     }
         //     for (key, value) in key.into_rows().zip(value.into_rows()) {
@@ -179,10 +178,11 @@ impl Value {
             self.map(Value::default(), env)?;
         }
         if self.rank() == 0 {
-            self.shape_mut().insert(0, 1);
+            self.shape.insert(0, 1);
         }
         let row_count = self.row_count();
         let mut keys = self
+            .meta
             .take_map_keys()
             .ok_or_else(|| env.error("Value is not a map"))?;
         if keys.len != row_count {
@@ -215,8 +215,8 @@ impl Value {
         } else {
             self.append(value, false, env)?;
         }
-        self.meta_mut().map_keys = Some(keys);
-        self.take_sorted_flags();
+        self.meta.map_keys = Some(keys);
+        self.meta.take_sorted_flags();
         self.validate();
         Ok(())
     }
@@ -236,7 +236,10 @@ impl Value {
                 self.row_count()
             )));
         }
-        let mut keys = (self.take_map_keys()).ok_or_else(|| env.error("Value is not a map"))?;
+        let mut keys = self
+            .meta
+            .take_map_keys()
+            .ok_or_else(|| env.error("Value is not a map"))?;
         for i in &mut keys.indices {
             if *i >= index {
                 *i += 1;
@@ -275,13 +278,13 @@ impl Value {
                 },
             )?;
         };
-        self.meta_mut().map_keys = Some(keys);
+        self.meta.map_keys = Some(keys);
         Ok(())
     }
     /// Return a key's value to what it used to be, including if it didn't exist before
     pub fn undo_insert(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
         let orig_keys =
-            (original.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value was not a map"))?;
+            (original.meta.map_keys.as_ref()).ok_or_else(|| env.error("Value was not a map"))?;
         if let Some(index) = orig_keys.get(&key) {
             self.insert_at(index.into(), key, original.row(index), env)?;
         } else {
@@ -291,7 +294,7 @@ impl Value {
     }
     /// Remove a key-value pair from a map array
     pub fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult {
-        if let Some(keys) = self.meta().map_keys.as_ref() {
+        if let Some(keys) = self.meta.map_keys.as_ref() {
             if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
                 for key in key.into_rows() {
                     self.remove(key, env)?;
@@ -304,7 +307,9 @@ impl Value {
             return Ok(());
         }
         let row_count = self.row_count();
-        let keys = (self.get_meta_mut().and_then(|m| m.map_keys.as_mut()))
+        let keys = self
+            .meta
+            .map_keys_mut()
             .ok_or_else(|| env.error("Value is not a map"))?;
         if keys.len != row_count {
             return Err(env.error(format!(
@@ -331,7 +336,7 @@ impl Value {
     /// Re-insert a key-value pair to a modified map array if it got removed
     pub fn undo_remove(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
         let keys =
-            (original.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value wasn't a map"))?;
+            (original.meta.map_keys.as_ref()).ok_or_else(|| env.error("Value wasn't a map"))?;
         if let Some(index) = keys.get(&key) {
             self.insert_at(index.into(), key, original.row(index), env)?;
         }
@@ -692,10 +697,10 @@ impl MapKeys {
             *index += self.len;
         }
         if self.keys.rank() == 0 {
-            self.keys.shape_mut().insert(0, 1);
+            self.keys.shape.insert(0, 1);
         }
         if other.keys.rank() == 0 {
-            other.keys.shape_mut().insert(0, 1);
+            other.keys.shape.insert(0, 1);
         }
         let mut to_remove = Vec::new();
         let mut to_insert: Vec<_> = (other.keys.into_rows())
@@ -802,9 +807,9 @@ fn coerce_values(
     if let Value::Byte(values) = b {
         b = Value::Num(values.convert_ref());
     }
-    if a.shape() == [0] {
+    if a.shape == [0] {
         let mut b_clone = b.clone();
-        b_clone.shape_mut().insert(0, 1);
+        b_clone.shape.insert(0, 1);
         *a = b_clone.first_dim_zero();
         return Ok(b);
     }
@@ -823,8 +828,8 @@ fn coerce_values(
         (Value::Num(arr), Value::Num(item)) if arr.rank() > 0 && arr.shape[1..] != item.shape => {
             Err(format!(
                 "Cannot {action1} shape {} {action2} shape {} {action3}",
-                item.shape(),
-                FormatShape(&arr.shape()[1..])
+                item.shape,
+                FormatShape(&arr.shape[1..])
             ))
         }
         (Value::Complex(arr), Value::Complex(item))
@@ -832,26 +837,26 @@ fn coerce_values(
         {
             Err(format!(
                 "Cannot {action1} shape {} {action2} shape {} {action3}",
-                item.shape(),
-                FormatShape(&arr.shape()[1..])
+                item.shape,
+                FormatShape(&arr.shape[1..])
             ))
         }
         (Value::Box(arr), Value::Box(item)) if arr.rank() > 0 && arr.shape[1..] != item.shape => {
             Err(format!(
                 "Cannot {action1} shape {} {action2} shape {} {action3}",
-                item.shape(),
-                FormatShape(&arr.shape()[1..])
+                item.shape,
+                FormatShape(&arr.shape[1..])
             ))
         }
         (val @ Value::Num(_), owned @ Value::Num(_))
         | (val @ Value::Complex(_), owned @ Value::Complex(_))
         | (val @ Value::Char(_), owned @ Value::Char(_))
         | (val @ Value::Box(_), owned @ Value::Box(_)) => {
-            if val.rank() > 0 && &val.shape()[1..] != owned.shape() {
+            if val.rank() > 0 && val.shape[1..] != owned.shape {
                 Err(format!(
                     "Cannot {action1} shape {} {action2} shape {} {action3}",
-                    owned.shape(),
-                    FormatShape(&val.shape()[1..])
+                    owned.shape,
+                    FormatShape(&val.shape[1..])
                 ))
             } else {
                 Ok(owned)

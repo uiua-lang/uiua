@@ -4,6 +4,7 @@ use std::{
     f64::consts::{PI, TAU},
     fmt,
     hash::{Hash, Hasher},
+    ops::{Deref, DerefMut},
     sync::Arc,
 };
 
@@ -35,14 +36,18 @@ use crate::{
 )]
 #[repr(C)]
 pub struct Array<T> {
-    pub(crate) shape: Shape,
+    /// The array's shape
+    pub shape: Shape,
     pub(crate) data: CowSlice<T>,
-    pub(crate) meta: Option<Arc<ArrayMeta>>,
+    /// The array's metadata
+    pub meta: ArrayMeta,
 }
 
 /// Non-shape metadata for an array
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ArrayMeta {
+#[repr(C)]
+#[non_exhaustive]
+pub struct ArrayMetaInner {
     /// The label
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<EcoString>,
@@ -60,35 +65,50 @@ pub struct ArrayMeta {
     pub handle_kind: Option<HandleKind>,
 }
 
+/// Default metadata for an array
+static DEFAULT_META_INNER: ArrayMetaInner = ArrayMetaInner {
+    label: None,
+    flags: ArrayFlags::NONE,
+    map_keys: None,
+    pointer: None,
+    handle_kind: None,
+};
+
+/// Non-shape metadata for an array
+///
+/// This wraps an optional pointer to a [`ArrayMetaInner`], whose fields can be accessed via `Deref` and `DerefMut`.
+///
+/// Mutably accessing the fields via the `DerefMut` implementation will populate the metadata.
+/// To avoid this, use [`ArrayMeta::get_mut`].
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+#[repr(C)]
+pub struct ArrayMeta(Option<Arc<ArrayMetaInner>>);
+
+impl Deref for ArrayMeta {
+    type Target = ArrayMetaInner;
+    fn deref(&self) -> &Self::Target {
+        self.0.as_deref().unwrap_or(&DEFAULT_META_INNER)
+    }
+}
+
+impl DerefMut for ArrayMeta {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        Arc::make_mut(self.0.get_or_insert_with(Default::default))
+    }
+}
+
 impl ArrayMeta {
-    /// Take the persistent metadata
-    pub fn take_per_meta(&mut self) -> PersistentMeta {
-        let label = self.label.take();
-        let map_keys = self.map_keys.take();
-        PersistentMeta { label, map_keys }
+    fn get_inner_mut(&mut self) -> Option<&mut ArrayMetaInner> {
+        self.0.as_mut().map(Arc::make_mut)
     }
-    /// Set the persistent metadata
-    pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
-        self.label = per_meta.label;
-        self.map_keys = per_meta.map_keys;
+    /// Get a mutable reference to the metadata, but only if any exists
+    pub fn get_mut(&mut self) -> Option<&mut Self> {
+        self.0.is_some().then_some(self)
     }
-    /// Take the sorted flags
-    pub fn take_sorted_flags(&mut self) -> ArrayFlags {
-        let flags = self.flags & ArrayFlags::SORTEDNESS;
-        self.flags &= !flags;
-        flags
-    }
-    /// Reset the flags
-    pub fn reset_flags(&mut self) {
-        self.flags.reset();
-    }
-    /// Combine the metadata with another
-    pub fn combine(&mut self, other: &Self) {
-        self.flags &= other.flags;
-        self.map_keys = None;
-        if self.handle_kind != other.handle_kind {
-            self.handle_kind = None;
-        }
+    /// Get a mutable reference to the map keys, if any exist
+    pub fn map_keys_mut(&mut self) -> Option<&mut MapKeys> {
+        self.get_inner_mut()?.map_keys.as_mut()
     }
     /// Check if the metadata is the default
     pub fn is_default(&self) -> bool {
@@ -97,6 +117,111 @@ impl ArrayMeta {
             && self.handle_kind.is_none()
             && self.pointer.is_none()
             && self.flags.is_empty()
+    }
+    /// Check if the array is sorted ascending
+    pub fn is_sorted_up(&self) -> bool {
+        self.flags.contains(ArrayFlags::SORTED_UP)
+    }
+    /// Check if the array is sorted descending
+    pub fn is_sorted_down(&self) -> bool {
+        self.flags.contains(ArrayFlags::SORTED_DOWN)
+    }
+    /// Take the persistent metadata
+    pub fn take_per_meta(&mut self) -> PersistentMeta {
+        self.get_inner_mut()
+            .map(|inner| {
+                let label = inner.label.take();
+                let map_keys = inner.map_keys.take();
+                PersistentMeta { label, map_keys }
+            })
+            .unwrap_or_default()
+    }
+    /// Take the label from the metadata
+    pub fn take_label(&mut self) -> Option<EcoString> {
+        self.get_inner_mut()?.label.take()
+    }
+    /// Take the map keys from the metadata
+    pub fn take_map_keys(&mut self) -> Option<MapKeys> {
+        self.get_inner_mut()?.map_keys.take()
+    }
+    /// Take the sorted flags
+    pub fn take_sorted_flags(&mut self) -> ArrayFlags {
+        let flags = self.flags & ArrayFlags::SORTEDNESS;
+        self.flags &= !flags;
+        flags
+    }
+    /// Set the label for the value
+    pub fn set_label(&mut self, label: Option<EcoString>) {
+        if label.is_none() && self.label.is_none() {
+            return;
+        }
+        self.label = label;
+    }
+    /// Set the persistent metadata
+    pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
+        if self.map_keys.is_some() != per_meta.map_keys.is_some() {
+            self.map_keys = per_meta.map_keys;
+        }
+        if self.label.is_some() != per_meta.label.is_some() {
+            self.label = per_meta.label;
+        }
+    }
+    /// Or the sorted flags
+    pub fn or_sorted_flags(&mut self, mut flags: ArrayFlags) {
+        flags &= ArrayFlags::SORTEDNESS;
+        if flags == ArrayFlags::NONE {
+            return;
+        }
+        self.flags |= flags;
+    }
+    /// Or with reversed sorted flags
+    pub fn or_sorted_flags_rev(&mut self, mut flags: ArrayFlags) {
+        flags &= ArrayFlags::SORTEDNESS;
+        if flags == ArrayFlags::NONE {
+            return;
+        }
+        let mut rev_flags = ArrayFlags::NONE;
+        if flags.contains(ArrayFlags::SORTED_UP) {
+            rev_flags |= ArrayFlags::SORTED_DOWN;
+        }
+        if flags.contains(ArrayFlags::SORTED_DOWN) {
+            rev_flags |= ArrayFlags::SORTED_UP;
+        }
+        self.flags |= rev_flags;
+    }
+    /// Mark the array as sorted ascending
+    ///
+    /// It is a logic error to set this to `true` when it is not the case
+    pub(crate) fn mark_sorted_up(&mut self, sorted: bool) {
+        if sorted {
+            self.flags.insert(ArrayFlags::SORTED_UP);
+        } else if let Some(inner) = self.get_inner_mut() {
+            inner.flags.remove(ArrayFlags::SORTED_UP);
+        }
+    }
+    /// Mark the array as sorted descending
+    ///
+    /// It is a logic error to set this to `true` when it is not the case
+    pub(crate) fn mark_sorted_down(&mut self, sorted: bool) {
+        if sorted {
+            self.flags.insert(ArrayFlags::SORTED_DOWN);
+        } else if let Some(inner) = self.get_inner_mut() {
+            inner.flags.remove(ArrayFlags::SORTED_DOWN);
+        }
+    }
+    /// Combine the metadata with another
+    pub fn combine(&mut self, other: &Self) {
+        if let Some(other) = other.0.as_deref() {
+            self.flags &= other.flags;
+            self.map_keys = None;
+            if self.handle_kind != other.handle_kind {
+                self.handle_kind = None;
+            }
+        }
+    }
+    /// Reset the flags
+    pub fn reset_flags(&mut self) {
+        self.flags.reset();
     }
 }
 
@@ -171,15 +296,6 @@ impl ArrayFlags {
     }
 }
 
-/// Default metadata for an array
-pub static DEFAULT_META: ArrayMeta = ArrayMeta {
-    label: None,
-    flags: ArrayFlags::NONE,
-    map_keys: None,
-    pointer: None,
-    handle_kind: None,
-};
-
 /// Array metadata that can be persisted across operations
 #[derive(Clone, Default)]
 pub struct PersistentMeta {
@@ -228,7 +344,7 @@ impl<T: ArrayValue> Default for Array<T> {
         Self {
             shape: 0.into(),
             data: CowSlice::new(),
-            meta: None,
+            meta: ArrayMeta::default(),
         }
     }
 }
@@ -297,7 +413,7 @@ impl<T> Array<T> {
         Self {
             shape,
             data,
-            meta: None,
+            meta: ArrayMeta::default(),
         }
     }
     /// Get the number of rows in the array
@@ -316,126 +432,9 @@ impl<T> Array<T> {
     pub fn rank(&self) -> usize {
         self.shape.len()
     }
-    /// Get the shape of the array
-    pub fn shape(&self) -> &Shape {
-        &self.shape
-    }
-    /// Get a mutable reference to the shape of the array
-    pub fn shape_mut(&mut self) -> &mut Shape {
-        &mut self.shape
-    }
     /// Iterate over the elements of the array
     pub fn elements(&self) -> impl ExactDoubleIterator<Item = &T> {
         self.data.iter()
-    }
-    /// Get the metadata of the array
-    pub fn meta(&self) -> &ArrayMeta {
-        self.meta.as_deref().unwrap_or(&DEFAULT_META)
-    }
-    pub(crate) fn meta_mut_impl(meta: &mut Option<Arc<ArrayMeta>>) -> &mut ArrayMeta {
-        let meta = meta.get_or_insert_with(Default::default);
-        Arc::make_mut(meta)
-    }
-    /// Get a mutable reference to the metadata of the array if it exists
-    pub fn get_meta_mut(&mut self) -> Option<&mut ArrayMeta> {
-        self.meta.as_mut().map(Arc::make_mut)
-    }
-    /// Get a mutable reference to the metadata of the array
-    pub fn meta_mut(&mut self) -> &mut ArrayMeta {
-        Self::meta_mut_impl(&mut self.meta)
-    }
-    /// Take the label from the metadata
-    pub fn take_label(&mut self) -> Option<EcoString> {
-        self.get_meta_mut().and_then(|meta| meta.label.take())
-    }
-    /// Take the map keys from the metadata
-    pub fn take_map_keys(&mut self) -> Option<MapKeys> {
-        self.get_meta_mut().and_then(|meta| meta.map_keys.take())
-    }
-    /// The the persistent metadata of the array
-    pub fn take_per_meta(&mut self) -> PersistentMeta {
-        self.get_meta_mut()
-            .map(ArrayMeta::take_per_meta)
-            .unwrap_or_default()
-    }
-    /// Set the map keys in the metadata
-    pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
-        if self.meta().map_keys.is_some() != per_meta.map_keys.is_some() {
-            self.meta_mut().map_keys = per_meta.map_keys;
-        }
-        if self.meta().label.is_some() != per_meta.label.is_some() {
-            self.meta_mut().label = per_meta.label;
-        }
-    }
-    /// Get a reference to the map keys
-    pub fn map_keys(&self) -> Option<&MapKeys> {
-        self.meta().map_keys.as_ref()
-    }
-    /// Get a mutable reference to the map keys
-    pub fn map_keys_mut(&mut self) -> Option<&mut MapKeys> {
-        self.get_meta_mut().and_then(|meta| meta.map_keys.as_mut())
-    }
-    /// Check if the array is sorted ascending
-    pub fn is_sorted_up(&self) -> bool {
-        self.meta().flags.contains(ArrayFlags::SORTED_UP)
-    }
-    /// Check if the array is sorted descending
-    pub fn is_sorted_down(&self) -> bool {
-        self.meta().flags.contains(ArrayFlags::SORTED_DOWN)
-    }
-    /// Take the sorted flags
-    pub fn take_sorted_flags(&mut self) -> ArrayFlags {
-        if let Some(meta) = self.get_meta_mut() {
-            meta.take_sorted_flags()
-        } else {
-            ArrayFlags::NONE
-        }
-    }
-    /// Or the sorted flags
-    pub fn or_sorted_flags(&mut self, flags: ArrayFlags) {
-        if flags == ArrayFlags::NONE {
-            return;
-        }
-        self.meta_mut().flags |= flags & ArrayFlags::SORTEDNESS;
-    }
-    /// Or with reversed sorted flags
-    pub fn or_sorted_flags_rev(&mut self, mut flags: ArrayFlags) {
-        flags &= ArrayFlags::SORTEDNESS;
-        if flags == ArrayFlags::NONE {
-            return;
-        }
-        let mut rev_flags = ArrayFlags::NONE;
-        if flags.contains(ArrayFlags::SORTED_UP) {
-            rev_flags |= ArrayFlags::SORTED_DOWN;
-        }
-        if flags.contains(ArrayFlags::SORTED_DOWN) {
-            rev_flags |= ArrayFlags::SORTED_UP;
-        }
-        self.meta_mut().flags |= rev_flags;
-    }
-    /// Mark the array as sorted ascending
-    ///
-    /// It is a logic error to set this to `true` when it is not the case
-    pub(crate) fn mark_sorted_up(&mut self, sorted: bool) {
-        if sorted {
-            self.meta_mut().flags.insert(ArrayFlags::SORTED_UP);
-        } else if let Some(meta) = self.get_meta_mut() {
-            meta.flags.remove(ArrayFlags::SORTED_UP);
-        }
-    }
-    /// Mark the array as sorted descending
-    ///
-    /// It is a logic error to set this to `true` when it is not the case
-    pub(crate) fn mark_sorted_down(&mut self, sorted: bool) {
-        if sorted {
-            self.meta_mut().flags.insert(ArrayFlags::SORTED_DOWN);
-        } else if let Some(meta) = self.get_meta_mut() {
-            meta.flags.remove(ArrayFlags::SORTED_DOWN);
-        }
-    }
-    /// Reset all metadata flags
-    pub fn reset_meta_flags(&mut self) {
-        self.get_meta_mut().map(ArrayMeta::reset_flags);
     }
     /// Get an iterator over the row slices of the array
     pub fn row_slices(
@@ -452,20 +451,6 @@ impl<T> Array<T> {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
     }
-    /// Combine the metadata of two arrays
-    ///
-    /// This combines:
-    /// - flags
-    /// - map keys
-    /// - handle kind
-    ///
-    /// Notably, this does not combine the label, as label
-    /// combination should be more nuanced.
-    pub fn combine_meta(&mut self, other: &ArrayMeta) {
-        if !(self.meta.is_none() && other.is_default()) {
-            self.meta_mut().combine(other);
-        }
-    }
 }
 
 impl<T: Clone> Array<T> {
@@ -474,8 +459,8 @@ impl<T: Clone> Array<T> {
     pub fn row(&self, row: usize) -> Self {
         if self.rank() == 0 {
             let mut row = self.clone();
-            row.take_map_keys();
-            row.take_label();
+            row.meta.take_map_keys();
+            row.meta.take_label();
             return row;
         }
         let row_count = self.row_count();
@@ -486,9 +471,9 @@ impl<T: Clone> Array<T> {
         let start = row * row_len;
         let end = start + row_len;
         let mut row = Self::new(&self.shape[1..], self.data.slice(start..end));
-        let value_flags = self.meta().flags & ArrayFlags::VALUE;
+        let value_flags = self.meta.flags & ArrayFlags::VALUE;
         if value_flags != ArrayFlags::NONE {
-            row.meta_mut().flags = value_flags;
+            row.meta.flags = value_flags;
         }
         row
     }
@@ -525,21 +510,21 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Get an iterator over the row arrays of the array
     pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
-        let value_flags = self.meta().flags & ArrayFlags::VALUE;
+        let value_flags = self.meta.flags & ArrayFlags::VALUE;
         let set_value_flags = value_flags != ArrayFlags::NONE;
         let row_len = self.row_len();
         (0..self.row_count()).map(move |row| {
             if self.rank() == 0 {
                 let mut row = self.clone();
-                row.take_map_keys();
-                row.take_label();
+                row.meta.take_map_keys();
+                row.meta.take_label();
                 return row;
             }
             let start = row * row_len;
             let end = start + row_len;
             let mut row = Array::<T>::new(&self.shape[1..], self.data.slice(start..end));
             if set_value_flags {
-                row.meta_mut().flags = value_flags;
+                row.meta.flags = value_flags;
             }
             row
         })
@@ -579,8 +564,8 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn depth_row(&self, depth: usize, row: usize) -> Self {
         if self.rank() <= depth {
             let mut row = self.clone();
-            row.take_map_keys();
-            row.take_label();
+            row.meta.take_map_keys();
+            row.meta.take_label();
             return row;
         }
         let row_count: usize = self.shape[..depth + 1].iter().product();
@@ -672,8 +657,8 @@ impl<T: ArrayValue> Array<T> {
         } else {
             drop(rows);
         }
-        self.mark_sorted_up(sorted_up);
-        self.mark_sorted_down(sorted_down);
+        self.meta.mark_sorted_up(sorted_up);
+        self.meta.mark_sorted_down(sorted_down);
     }
     #[track_caller]
     #[inline(always)]
@@ -682,8 +667,8 @@ impl<T: ArrayValue> Array<T> {
         #[cfg(debug_assertions)]
         {
             validate_shape(&self.shape, self.data.len());
-            let is_sorted_up = self.is_sorted_up();
-            let is_sorted_down = self.is_sorted_down();
+            let is_sorted_up = self.meta.is_sorted_up();
+            let is_sorted_down = self.meta.is_sorted_down();
             if is_sorted_up || is_sorted_down {
                 let mut rows = (0..self.row_count()).map(|i| self.row_slice(i));
                 if let Some(prev) = rows.next() {
@@ -760,7 +745,7 @@ impl<T: Clone> Array<T> {
 impl Array<u8> {
     pub(crate) fn json_bool(b: bool) -> Self {
         let mut arr = Self::from(b);
-        arr.meta_mut().flags |= ArrayFlags::BOOLEAN_LITERAL;
+        arr.meta.flags |= ArrayFlags::BOOLEAN_LITERAL;
         arr
     }
 }
@@ -785,10 +770,10 @@ impl Array<Boxed> {
 
 impl<T: ArrayValue + ArrayCmp<U>, U: ArrayValue> PartialEq<Array<U>> for Array<T> {
     fn eq(&self, other: &Array<U>) -> bool {
-        if self.shape() != other.shape() {
+        if self.shape != other.shape {
             return false;
         }
-        if self.map_keys() != other.map_keys() {
+        if self.meta.map_keys != other.meta.map_keys {
             return false;
         }
         self.data
@@ -825,7 +810,7 @@ impl<T: ArrayValue> Ord for Array<T> {
 
 impl<T: ArrayValue> Hash for Array<T> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        if let Some(keys) = self.map_keys() {
+        if let Some(keys) = &self.meta.map_keys {
             keys.hash(hasher);
         }
         T::TYPE_ID.hash(hasher);
@@ -888,7 +873,7 @@ impl From<Vec<bool>> for Array<u8> {
 impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
         let mut arr = Self::new(Shape::SCALAR, cowslice![u8::from(data)]);
-        arr.meta_mut().flags |= ArrayFlags::BOOLEAN;
+        arr.meta.flags |= ArrayFlags::BOOLEAN;
         arr
     }
 }
@@ -1309,10 +1294,10 @@ impl ArrayValue for Boxed {
         }
         let smallest_rank = elems.iter().map(|e| e.0.rank()).min().unwrap();
         let largest_rank = elems.iter().map(|e| e.0.rank()).max().unwrap();
-        let smallest_shape = (elems.iter().map(|e| e.0.shape()))
+        let smallest_shape = (elems.iter().map(|e| &e.0.shape))
             .min_by_key(|s| s.elements())
             .unwrap();
-        let largest_shape = (elems.iter().map(|e| e.0.shape()))
+        let largest_shape = (elems.iter().map(|e| &e.0.shape))
             .max_by_key(|s| s.elements())
             .unwrap();
         let rank_summary = if smallest_rank == largest_rank {
@@ -1585,11 +1570,7 @@ impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
             }
             ArrayRep::Full(shape, data, meta) => {
                 let data = T::make_data(data);
-                Self {
-                    shape,
-                    data,
-                    meta: Some(meta.into()),
-                }
+                Self { shape, data, meta }
             }
         }
     }
@@ -1597,20 +1578,24 @@ impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
 
 impl<T: ArrayValueSer> From<Array<T>> for ArrayRep<T> {
     fn from(mut arr: Array<T>) -> Self {
-        if let Some(meta) = arr.meta.take().filter(|meta| **meta != DEFAULT_META) {
-            let mut meta = Arc::unwrap_or_clone(meta);
-            let map_keys = meta.map_keys.take();
-            if meta == DEFAULT_META {
+        if let Some(inner) = (arr.meta.0.take()).filter(|meta| **meta != DEFAULT_META_INNER) {
+            let mut inner = Arc::unwrap_or_clone(inner);
+            let map_keys = inner.map_keys.take();
+            if inner == DEFAULT_META_INNER {
                 if let Some(map_keys) = map_keys {
                     let keys = map_keys.normalized();
                     return ArrayRep::Map(arr.shape, keys, T::make_collection(arr.data));
                 }
             } else {
-                meta.map_keys = map_keys;
+                inner.map_keys = map_keys;
             }
-            meta.flags &= !ArrayFlags::BOOLEAN;
-            if meta != DEFAULT_META {
-                return ArrayRep::Full(arr.shape, T::make_collection(arr.data), meta);
+            inner.flags &= !ArrayFlags::BOOLEAN;
+            if inner != DEFAULT_META_INNER {
+                return ArrayRep::Full(
+                    arr.shape,
+                    T::make_collection(arr.data),
+                    ArrayMeta(Some(inner.into())),
+                );
             }
         }
         match arr.rank() {

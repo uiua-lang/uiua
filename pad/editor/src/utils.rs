@@ -496,7 +496,7 @@ fn build_code_lines(id: &str, code: &str) -> CodeLines {
                 continue;
             };
             for (j, val) in values.iter().rev().enumerate() {
-                let (short, long) = if val.rank() > 1 || val.element_count() > 1000 {
+                let (short, long) = if val.rank() > 1 || val.shape.elements() > 1000 {
                     (val.shape_string(), make_long(val.show()))
                 } else {
                     let long = val.show();
@@ -1171,7 +1171,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
             SmartOutput::Svg { svg, original } => {
                 stack.push(OutputItem::Svg(
                     svg,
-                    original.meta().label.as_ref().map(Into::into),
+                    original.meta.label.as_ref().map(Into::into),
                 ));
                 continue;
             }

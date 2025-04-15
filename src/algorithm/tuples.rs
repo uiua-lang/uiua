@@ -49,9 +49,9 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
         return env.exec(f);
     }
     let mut results = Vec::new();
-    let mut per_meta = xs.take_per_meta();
+    let mut per_meta = xs.meta.take_per_meta();
     if xs.row_count() == 0 {
-        xs.shape_mut().insert(0, 0);
+        xs.shape.insert(0, 0);
         if push_empty_rows_value(&f, [&xs], false, &mut per_meta, env) {
             return Ok(());
         } else {
@@ -130,8 +130,8 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
         0 if is_scalar => xs = 0.into(),
         0 => {
             xs = xs.first_dim_zero();
-            xs.shape_mut()[0] = 1;
-            xs.shape_mut().insert(1, 0);
+            xs.shape[0] = 1;
+            xs.shape.insert(1, 0);
             xs.validate();
         }
         1 => {
@@ -140,7 +140,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                     .as_nat(env, "Tuples of scalar must be a natural number")?
                     .into();
             } else {
-                xs.shape_mut().insert(1, 1);
+                xs.shape.insert(1, 1);
             }
         }
         2 => {
@@ -181,8 +181,8 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                     }
                 }
                 xs = Value::from_row_values(rows, env)?;
-                xs.shape_mut()[0] /= 2;
-                xs.shape_mut().insert(1, 2);
+                xs.shape[0] /= 2;
+                xs.shape.insert(1, 2);
                 xs.validate();
             }
         }

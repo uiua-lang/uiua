@@ -95,7 +95,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
         };
-        arr.meta_mut().flags.insert(ArrayFlags::BOOLEAN);
+        arr.meta.flags.insert(ArrayFlags::BOOLEAN);
         Ok(arr)
     }
 }
@@ -383,8 +383,8 @@ impl<T: ArrayValue> Array<T> {
         let mut haystack = haystack;
 
         let mut local_searched: Self;
-        let any_dim_greater = (needle.shape().iter().rev())
-            .zip(haystack.shape().iter().rev())
+        let any_dim_greater = (needle.shape.iter().rev())
+            .zip(haystack.shape.iter().rev())
             .any(|(a, b)| a > b);
         if needle.rank() > haystack.rank() || any_dim_greater {
             // Fill
@@ -398,7 +398,7 @@ impl<T: ArrayValue> Array<T> {
                 Err(_) => {
                     let data = cowslice![0; haystack.element_count()];
                     let mut arr = Array::new(haystack.shape.clone(), data);
-                    arr.meta_mut().flags.insert(ArrayFlags::BOOLEAN);
+                    arr.meta.flags.insert(ArrayFlags::BOOLEAN);
                     return Ok(arr);
                 }
             }
@@ -521,7 +521,7 @@ impl<T: ArrayValue> Array<T> {
             FillValue::new(0, None),
         );
         arr.validate();
-        arr.meta_mut().flags.insert(ArrayFlags::BOOLEAN);
+        arr.meta.flags.insert(ArrayFlags::BOOLEAN);
         Ok(arr)
     }
     /// Try to `mask` this array in another

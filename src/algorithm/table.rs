@@ -100,8 +100,8 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
                 if x_scalar {
                     new_shape.remove(0);
                 }
-                new_shape.extend_from_slice(&tabled.shape()[1..]);
-                *tabled.shape_mut() = new_shape;
+                new_shape.extend_from_slice(&tabled.shape[1..]);
+                tabled.shape = new_shape;
                 tabled.validate();
                 env.push(tabled);
             }
@@ -160,8 +160,8 @@ fn generic_table(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
             for items in items.into_iter().rev() {
                 let mut tabled = items.finish();
                 let mut new_shape = new_shape.clone();
-                new_shape.extend_from_slice(&tabled.shape()[1..]);
-                *tabled.shape_mut() = new_shape;
+                new_shape.extend_from_slice(&tabled.shape[1..]);
+                tabled.shape = new_shape;
                 tabled.validate();
                 env.push(tabled);
             }
@@ -790,7 +790,7 @@ where
     G: ArrayValue,
     F: ArrayValue + Copy,
 {
-    let mut acc = eco_vec![default.unwrap_or(identity); b.shape().elements()];
+    let mut acc = eco_vec![default.unwrap_or(identity); b.shape.elements()];
     let acc_slice = acc.make_mut();
     for a in a.data {
         for (&b, c) in b.data.iter().zip(&mut *acc_slice) {
@@ -812,7 +812,7 @@ where
     T: ArrayValue + Copy,
     F: ArrayValue + Copy,
 {
-    let mut acc = eco_vec![default.unwrap_or(identity); b.shape().elements() * 2];
+    let mut acc = eco_vec![default.unwrap_or(identity); b.shape.elements() * 2];
     let acc_slice = acc.make_mut();
     for a in a.data {
         let mut i = 0;

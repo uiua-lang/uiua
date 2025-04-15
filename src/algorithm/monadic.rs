@@ -46,11 +46,11 @@ impl Value {
             }
         }
         if self.is_map() {
-            self.take_map_keys();
+            self.meta.take_map_keys();
         }
         depth = depth.min(self.rank());
-        let deshaped = self.shape_mut().split_off(depth).into_iter().product();
-        self.shape_mut().push(deshaped);
+        let deshaped = self.shape.split_off(depth).into_iter().product();
+        self.shape.push(deshaped);
     }
     pub(crate) fn deshape_sub(
         &mut self,
@@ -64,8 +64,8 @@ impl Value {
         if irank > 0 && irank as usize == deep_rank {
             return Ok(());
         }
-        self.take_map_keys();
-        let shape = self.shape_mut();
+        self.meta.take_map_keys();
+        let shape = &mut self.shape;
         let rank = irank.unsigned_abs() as usize;
         match irank.cmp(&0) {
             Ordering::Equal => {
@@ -140,7 +140,7 @@ impl Value {
                 *shape = new_shape;
             }
         }
-        self.take_sorted_flags();
+        self.meta.take_sorted_flags();
         self.validate();
         Ok(())
     }
@@ -167,32 +167,32 @@ impl Value {
                 // Positive rank
                 (orig_shape.iter())
                     .take((orig_shape.len() + 1).saturating_sub(rank))
-                    .chain((self.shape().iter()).skip(rank.saturating_sub(orig_shape.len()).max(1)))
+                    .chain((self.shape.iter()).skip(rank.saturating_sub(orig_shape.len()).max(1)))
                     .copied()
                     .collect()
             } else {
                 // Negative rank
                 (orig_shape.iter().take(rank + 1))
-                    .chain(self.shape().iter().skip(1))
+                    .chain(self.shape.iter().skip(1))
                     .copied()
                     .collect()
             };
-            if validate_size::<u8>(new_shape.iter().copied(), env)? != self.element_count() {
+            if validate_size::<u8>(new_shape.iter().copied(), env)? != self.shape.elements() {
                 return Ok(());
             }
-            *self.shape_mut() = new_shape;
+            self.shape = new_shape;
             self.validate();
             Ok(())
         } else {
-            let mut new_shape = self.shape().clone();
+            let mut new_shape = self.shape.clone();
             if new_shape.len() > 0 {
                 new_shape.remove(0);
             }
             for &d in orig_shape.iter().rev() {
                 new_shape.insert(0, d);
             }
-            if new_shape.elements() == self.element_count() {
-                *self.shape_mut() = new_shape;
+            if new_shape.elements() == self.shape.elements() {
+                self.shape = new_shape;
                 Ok(())
             } else {
                 let spec: Vec<Result<isize, bool>> =
@@ -206,17 +206,17 @@ impl Value {
         if depth == 0 {
             return Boxed(self).into();
         }
-        let per_meta = self.take_per_meta();
-        let new_shape: Shape = self.shape()[..depth].into();
-        let row_shape: Shape = self.shape()[depth..].into();
+        let per_meta = self.meta.take_per_meta();
+        let new_shape: Shape = self.shape[..depth].into();
+        let row_shape: Shape = self.shape[depth..].into();
         let data: EcoVec<Boxed> = self.into_row_shaped_slices(row_shape).map(Boxed).collect();
         let mut arr = Array::new(new_shape, data);
-        arr.set_per_meta(per_meta);
+        arr.meta.set_per_meta(per_meta);
         arr
     }
     /// Attempt to parse the value into a number
     pub fn parse_num(mut self, env: &Uiua) -> UiuaResult<Self> {
-        let per_meta = self.take_per_meta();
+        let per_meta = self.meta.take_per_meta();
         let mut parsed = match (self.rank(), self) {
             (0 | 1, Value::Char(arr)) => {
                 let s: String = arr.data.iter().copied().collect();
@@ -255,11 +255,11 @@ impl Value {
             }
             (_, val) => return Err(env.error(format!("Cannot parse {} array", val.type_name()))),
         };
-        parsed.set_per_meta(per_meta);
+        parsed.meta.set_per_meta(per_meta);
         Ok(parsed)
     }
     pub(crate) fn unparse(mut self, env: &Uiua) -> UiuaResult<Self> {
-        let per_meta = self.take_per_meta();
+        let per_meta = self.meta.take_per_meta();
         let mut unparsed = if self.rank() == 0 {
             match self {
                 Value::Box(b) => b.into_scalar().unwrap().0.unparse(env)?,
@@ -290,7 +290,7 @@ impl Value {
                 } else {
                     max_whole + max_dec + 1
                 };
-                let mut new_shape = arr.shape().clone();
+                let mut new_shape = arr.shape.clone();
                 new_shape.push(max_len);
                 let elem_count = validate_size::<char>(new_shape.iter().copied(), env)?;
                 let mut new_data = eco_vec![c; elem_count];
@@ -355,7 +355,7 @@ impl Value {
                 val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
             }
         };
-        unparsed.set_per_meta(per_meta);
+        unparsed.meta.set_per_meta(per_meta);
         Ok(unparsed)
     }
 }
@@ -415,7 +415,7 @@ impl<T: ArrayValue> Array<T> {
             return;
         }
         if self.is_map() {
-            self.take_map_keys();
+            self.meta.take_map_keys();
         }
         self.shape.deshape();
     }
@@ -426,14 +426,14 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn fix_depth(&mut self, depth: usize) {
         let depth = self.shape.fix_depth(depth);
         if depth == 0 {
-            if let Some(keys) = self.map_keys_mut() {
+            if let Some(keys) = self.meta.map_keys_mut() {
                 keys.fix();
             }
         }
     }
     /// Remove a 1-length dimension from the front of the array's shape
     pub fn unfix(&mut self, env: &Uiua) -> UiuaResult {
-        if let Some(keys) = self.map_keys_mut() {
+        if let Some(keys) = self.meta.map_keys_mut() {
             keys.unfix();
         }
         self.shape.unfix().map_err(|e| env.error(e))?;
@@ -442,7 +442,7 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Collapse the top two dimensions of the array's shape
     pub fn undo_fix(&mut self) {
-        if let Some(keys) = self.map_keys_mut() {
+        if let Some(keys) = self.meta.map_keys_mut() {
             keys.unfix();
         }
         _ = self.shape.unfix();
@@ -459,16 +459,16 @@ where
         if depth == 0 {
             return Boxed(self.into()).into();
         }
-        let per_meta = self.take_per_meta();
-        let new_shape: Shape = self.shape()[..depth].into();
-        let row_shape: Shape = self.shape()[depth..].into();
+        let per_meta = self.meta.take_per_meta();
+        let new_shape: Shape = self.shape[..depth].into();
+        let row_shape: Shape = self.shape[depth..].into();
         let data: EcoVec<Boxed> = self
             .into_row_shaped_slices(row_shape)
             .map(Value::from)
             .map(Boxed)
             .collect();
         let mut arr = Array::new(new_shape, data);
-        arr.set_per_meta(per_meta);
+        arr.meta.set_per_meta(per_meta);
         arr
     }
 }
@@ -494,8 +494,8 @@ impl Value {
                 validate_size::<f64>([max.unsigned_abs()], env)?;
                 (max..0).map(|i| i as f64).rev().collect()
             };
-            value.mark_sorted_up(max >= 0);
-            value.mark_sorted_down(max <= 0);
+            value.meta.mark_sorted_up(max >= 0);
+            value.meta.mark_sorted_down(max <= 0);
             return Ok(value);
         }
         if ishape.is_empty() {
@@ -509,8 +509,8 @@ impl Value {
             Err(data) => Array::new(shape, data).into(),
         };
         let first_max = ishape.first().copied().unwrap_or(0);
-        value.mark_sorted_up(first_max >= 0);
-        value.mark_sorted_down(first_max <= 0);
+        value.meta.mark_sorted_up(first_max >= 0);
+        value.meta.mark_sorted_down(first_max <= 0);
         Ok(value)
     }
     pub(crate) fn unshape(&self, env: &Uiua) -> UiuaResult<Self> {
@@ -528,8 +528,8 @@ impl Value {
                 arr.reverse_depth(i);
             }
         }
-        arr.mark_sorted_up(first_max >= 0);
-        arr.mark_sorted_down(first_max <= 0);
+        arr.meta.mark_sorted_up(first_max >= 0);
+        arr.meta.mark_sorted_down(first_max <= 0);
         Ok(arr.into())
     }
 }
@@ -702,8 +702,8 @@ impl<T: ArrayValue> Array<T> {
                 let row_len = self.row_len();
                 self.shape.remove(0);
                 self.data.truncate(row_len);
-                self.take_map_keys();
-                self.take_label();
+                self.meta.take_map_keys();
+                self.meta.take_label();
                 Ok(self)
             }
         }
@@ -775,8 +775,8 @@ impl<T: ArrayValue> Array<T> {
                 self.shape.remove(0);
                 let prefix_len = self.data.len() - row_len;
                 self.data = self.data[prefix_len..].into();
-                self.take_map_keys();
-                self.take_label();
+                self.meta.take_map_keys();
+                self.meta.take_label();
                 Ok(self)
             }
         }
@@ -864,8 +864,8 @@ impl<T: ArrayValue> Array<T> {
         if chunk_size == 0 {
             return;
         }
-        let sorted_up = self.is_sorted_up();
-        let sorted_down = self.is_sorted_down();
+        let sorted_up = self.meta.is_sorted_up();
+        let sorted_down = self.meta.is_sorted_down();
         let data = self.data.as_mut_slice();
         let chunk_row_count = self.shape[depth];
         let chunk_row_len = chunk_size / chunk_row_count;
@@ -883,15 +883,15 @@ impl<T: ArrayValue> Array<T> {
 
         // Reverse map keys
         if depth == 0 {
-            if let Some(meta) = self.get_meta_mut() {
+            if let Some(meta) = self.meta.get_mut() {
                 if let Some(keys) = &mut meta.map_keys {
                     keys.reverse();
                 }
             }
-            self.mark_sorted_up(sorted_down);
-            self.mark_sorted_down(sorted_up);
+            self.meta.mark_sorted_up(sorted_down);
+            self.meta.mark_sorted_down(sorted_up);
         } else {
-            self.take_sorted_flags();
+            self.meta.take_sorted_flags();
         }
         self.validate();
     }
@@ -935,7 +935,7 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn transpose_depth(&mut self, mut depth: usize, amnt: i32) {
         crate::profile_function!();
         if depth == 0 && self.is_map() {
-            self.take_map_keys();
+            self.meta.take_map_keys();
         }
         if self.rank() == 0 {
             return;
@@ -947,7 +947,7 @@ impl<T: ArrayValue> Array<T> {
         if trans_rank < 2 || depth + trans_count == self.rank() || trans_count == 0 {
             return;
         }
-        self.take_sorted_flags();
+        self.meta.take_sorted_flags();
         let forward = amnt.is_positive();
         // Early return if any dimension is 0, because there are no elements
         if self.shape[depth..].iter().any(|&d| d == 0) || depth > 0 && self.shape[depth - 1] == 0 {
@@ -1043,20 +1043,20 @@ impl Value {
         if self.rank() == 0 {
             return 0.into();
         }
-        let map_keys = self.map_keys().cloned();
+        let map_keys = self.meta.map_keys.clone();
         let mut val: Value = val_as_arr!(self, Array::classify).into_iter().collect();
         if let Some(map_keys) = map_keys {
-            val.meta_mut().map_keys = Some(map_keys);
+            val.meta.map_keys = Some(map_keys);
         }
-        val.mark_sorted_up(self.is_sorted_up());
+        val.meta.mark_sorted_up(self.meta.is_sorted_up());
         val.validate();
         val
     }
     pub(crate) fn classify_depth(&self, depth: usize) -> Self {
-        let map_keys = self.map_keys().cloned();
+        let map_keys = self.meta.map_keys.clone();
         let mut val = val_as_arr!(self, |a| a.classify_depth(depth));
         if let Some(map_keys) = map_keys {
-            val.meta_mut().map_keys = Some(map_keys);
+            val.meta.map_keys = Some(map_keys);
         }
         val.validate();
         val
@@ -1174,10 +1174,10 @@ impl<T: ArrayValue> Array<T> {
     }
     pub(crate) fn sort_up_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
-        if self.rank() == depth || self.element_count() == 0 {
+        if self.rank() == depth || self.shape.elements() == 0 {
             return;
         }
-        if let Some(Some(keys)) = (depth == 0).then(|| self.take_map_keys()) {
+        if let Some(Some(keys)) = (depth == 0).then(|| self.meta.take_map_keys()) {
             let keys = keys.normalized();
             let rise = self.rise_indices();
             self.sort_up();
@@ -1216,16 +1216,16 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         if depth == 0 {
-            self.mark_sorted_up(true);
-            self.mark_sorted_down(false);
+            self.meta.mark_sorted_up(true);
+            self.meta.mark_sorted_down(false);
         }
     }
     pub(crate) fn sort_down_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
-        if self.rank() == depth || self.element_count() == 0 {
+        if self.rank() == depth || self.shape.elements() == 0 {
             return;
         }
-        if let Some(Some(keys)) = (depth == 0).then(|| self.take_map_keys()) {
+        if let Some(Some(keys)) = (depth == 0).then(|| self.meta.take_map_keys()) {
             let keys = keys.normalized();
             let fall = self.fall_indices();
             self.sort_down();
@@ -1264,8 +1264,8 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         if depth == 0 {
-            self.mark_sorted_up(false);
-            self.mark_sorted_down(true);
+            self.meta.mark_sorted_up(false);
+            self.meta.mark_sorted_down(true);
         }
     }
     /// `classify` the rows of the array
@@ -1333,6 +1333,7 @@ impl<T: ArrayValue> Array<T> {
             return Ok(());
         }
         let map_keys_unique = self
+            .meta
             .take_map_keys()
             .map(|keys| (keys.normalized(), self.unique()));
         let mut deduped = CowSlice::new();
@@ -1358,7 +1359,7 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return 1u8.into();
         }
-        let map_keys = self.map_keys().cloned();
+        let map_keys = self.meta.map_keys.clone();
         let mut seen = HashSet::new();
         let mut mask = eco_vec![0u8; self.row_count()];
         let mask_slice = mask.make_mut();
@@ -1368,8 +1369,8 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         let mut arr = Array::new([self.row_count()], mask);
-        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
-        arr.meta_mut().map_keys = map_keys;
+        arr.meta.flags.set(ArrayFlags::BOOLEAN, true);
+        arr.meta.map_keys = map_keys;
         arr
     }
     /// Count the number of unique rows in the array
@@ -1492,7 +1493,7 @@ impl<T: RealArrayValue> Array<T> {
                 }
             }
             let mut arr = Array::new(shape, new_data);
-            arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+            arr.meta.flags.set(ArrayFlags::BOOLEAN, true);
             arr.into()
         };
         val.validate();
@@ -1701,7 +1702,7 @@ impl Value {
     }
     fn unwhere_impl(&self, min_size: &[usize], env: &Uiua) -> UiuaResult<Self> {
         const INDICES_ERROR: &str = "Argument to ° un ⊚ where must be an array of naturals";
-        Ok(match self.shape().dims() {
+        Ok(match self.shape.dims() {
             [] | [_] => {
                 let indices = self.as_nats(env, INDICES_ERROR)?;
                 let is_sorted = indices
@@ -1984,7 +1985,7 @@ impl Array<f64> {
             max = max.max(n as usize);
         }
 
-        if self.element_count() == 1 {
+        if self.shape.elements() == 1 {
             let mut n = self.data[0] as usize;
             let mut primes = EcoVec::new();
             for d in 2..=self.data[0].sqrt().ceil() as usize {
@@ -2064,7 +2065,7 @@ impl Value {
     pub(crate) fn to_json_value(&self, env: &Uiua) -> UiuaResult<serde_json::Value> {
         Ok(match self {
             Value::Num(n) if n.rank() == 0 => {
-                let meta = n.meta();
+                let meta = &n.meta;
                 let n = n.data[0];
                 if meta.flags.contains(ArrayFlags::BOOLEAN_LITERAL) && (n == 0.0 || n == 1.0) {
                     serde_json::Value::Bool(n != 0.0)
@@ -2078,7 +2079,7 @@ impl Value {
             }
             Value::Byte(bytes) if bytes.rank() == 0 => {
                 let b = bytes.data[0];
-                if bytes.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL) {
+                if bytes.meta.flags.contains(ArrayFlags::BOOLEAN_LITERAL) {
                     serde_json::Value::Bool(b != 0)
                 } else {
                     serde_json::Value::Number(b.into())
@@ -2135,12 +2136,12 @@ impl Value {
                 let mut rows = Vec::with_capacity(arr.len());
                 for value in arr {
                     let mut value = Value::from_json_value(value, _env)?;
-                    if value.map_keys().is_some() {
+                    if value.meta.map_keys.is_some() {
                         value = Boxed(value).into();
                     }
                     rows.push(value);
                 }
-                if rows.iter().all(|val| val.shape().is_empty())
+                if rows.iter().all(|val| val.shape.is_empty())
                     && (rows.windows(2)).all(|win| win[0].type_id() == win[1].type_id())
                 {
                     Value::from_row_values_infallible(rows)
@@ -2157,12 +2158,12 @@ impl Value {
                 for (k, v) in map {
                     keys.push(Boxed(k.into()));
                     let mut value = Value::from_json_value(v, _env)?;
-                    if value.map_keys().is_some() {
+                    if value.meta.map_keys.is_some() {
                         value = Boxed(value).into();
                     }
                     values.push(value);
                 }
-                let mut values = if values.iter().all(|val| val.shape().is_empty())
+                let mut values = if values.iter().all(|val| val.shape.is_empty())
                     && (values.windows(2)).all(|win| win[0].type_id() == win[1].type_id())
                 {
                     Value::from_row_values_infallible(values)
@@ -2402,7 +2403,7 @@ impl Value {
             0 => match self {
                 Value::Num(arr) => {
                     let n = arr.data[0];
-                    let bool_lit = arr.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL);
+                    let bool_lit = arr.meta.flags.contains(ArrayFlags::BOOLEAN_LITERAL);
                     if n == 0.0 && bool_lit {
                         "False".into()
                     } else if n == 1.0 && bool_lit {
@@ -2413,7 +2414,7 @@ impl Value {
                 }
                 Value::Byte(arr) => {
                     let b = arr.data[0];
-                    let bool_lit = arr.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL);
+                    let bool_lit = arr.meta.flags.contains(ArrayFlags::BOOLEAN_LITERAL);
                     if b == 0 && bool_lit {
                         "False".into()
                     } else if b == 1 && bool_lit {
@@ -2484,14 +2485,14 @@ impl Value {
                 s
             }
         };
-        if let Some(map_keys) = self.map_keys() {
+        if let Some(map_keys) = &self.meta.map_keys {
             s = format!(
                 "map {} {}",
                 map_keys.clone().normalized().representation(),
                 s
             );
         }
-        if let Some(label) = &self.meta().label {
+        if let Some(label) = &self.meta.label {
             s = format!("${label} {s}");
         }
         s
@@ -2524,7 +2525,7 @@ impl Value {
         }
         arr.data = new_data.into();
         arr.shape.push(6);
-        arr.reset_meta_flags();
+        arr.meta.reset_flags();
         arr.validate();
         Ok(arr)
     }
@@ -2770,7 +2771,7 @@ impl Value {
                 } else {
                     BinType::F64
                 };
-                write_ty_meta(ty, arr.meta(), bytes, depth, env)?;
+                write_ty_meta(ty, &arr.meta, bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 fn write(nums: &[f64], bytes: &mut Vec<u8>, f: impl Fn(f64, &mut Vec<u8>)) {
                     for &n in nums {
@@ -2793,26 +2794,26 @@ impl Value {
                 }
             }
             Value::Byte(arr) => {
-                write_ty_meta(BinType::U8, arr.meta(), bytes, depth, env)?;
+                write_ty_meta(BinType::U8, &arr.meta, bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 bytes.extend(&arr.data);
             }
             Value::Char(arr) => {
-                write_ty_meta(BinType::Char, arr.meta(), bytes, depth, env)?;
+                write_ty_meta(BinType::Char, &arr.meta, bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 let s: String = arr.data.iter().copied().collect();
                 bytes.extend((s.len() as u32).to_le_bytes());
                 bytes.extend(s.as_bytes());
             }
             Value::Box(arr) => {
-                write_ty_meta(BinType::Box, arr.meta(), bytes, depth, env)?;
+                write_ty_meta(BinType::Box, &arr.meta, bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 for Boxed(v) in &arr.data {
                     v.to_binary_impl(bytes, depth + 1, env)?;
                 }
             }
             Value::Complex(arr) => {
-                write_ty_meta(BinType::Complex, arr.meta(), bytes, depth, env)?;
+                write_ty_meta(BinType::Complex, &arr.meta, bytes, depth, env)?;
                 write_shape(&arr.shape, bytes);
                 for Complex { re, im } in &arr.data {
                     bytes.extend(re.to_le_bytes());
@@ -2974,7 +2975,7 @@ impl Value {
             }
         };
         if let Some((meta, map_keys)) = meta {
-            *val.meta_mut() = meta;
+            val.meta = meta;
             if let Some(keys) = map_keys {
                 val.map(keys, env)?;
             }

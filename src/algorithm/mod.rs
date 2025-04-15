@@ -373,7 +373,7 @@ where
                 for &dim in target.iter().take(fixes).rev() {
                     arr.reshape_scalar_integer(dim, None)?;
                 }
-            } else if arr.shape() == target {
+            } else if arr.shape == *target {
                 for &dim in target.iter().cycle().take(fixes) {
                     arr.reshape_scalar_integer(dim, None)?;
                 }
@@ -389,7 +389,7 @@ where
     match arr.row_count().cmp(&target_row_count) {
         Ordering::Less => match ctx.scalar_fill() {
             Ok(fill) => {
-                let mut target_shape = arr.shape().to_vec();
+                let mut target_shape = arr.shape.to_vec();
                 target_shape[0] = target_row_count;
                 arr.fill_to_shape(&target_shape, fill);
             }
@@ -414,8 +414,8 @@ where
         },
         Ordering::Greater => {}
         Ordering::Equal => {
-            let target_shape = max_shape(arr.shape(), target);
-            if arr.shape() != *target_shape {
+            let target_shape = max_shape(&arr.shape, target);
+            if arr.shape != *target_shape {
                 match ctx.scalar_fill() {
                     Ok(fill) => {
                         arr.fill_to_shape(&target_shape, fill);
@@ -441,11 +441,11 @@ pub(crate) fn fill_value_shapes<C>(
 where
     C: FillContext,
 {
-    let a_err = fill_value_shape(a, b.shape(), expand_fixed, ctx).err();
-    let b_err = fill_value_shape(b, a.shape(), expand_fixed, ctx).err();
+    let a_err = fill_value_shape(a, &b.shape, expand_fixed, ctx).err();
+    let b_err = fill_value_shape(b, &a.shape, expand_fixed, ctx).err();
 
-    if shape_prefixes_match(a.shape(), b.shape())
-        || !expand_fixed && (a.shape().starts_with(&[1]) || b.shape().starts_with(&[1]))
+    if shape_prefixes_match(&a.shape, &b.shape)
+        || !expand_fixed && (a.shape.starts_with(&[1]) || b.shape.starts_with(&[1]))
     {
         Ok(())
     } else {
@@ -454,10 +454,10 @@ where
                 e.to_string()
             }
             (Some(e), _) | (_, Some(e)) => {
-                format!("Shapes {} and {} do not match{e}", a.shape(), b.shape())
+                format!("Shapes {} and {} do not match{e}", a.shape, b.shape)
             }
             (None, None) => {
-                format!("Shapes {} and {} do not match", a.shape(), b.shape())
+                format!("Shapes {} and {} do not match", a.shape, b.shape)
             }
         })))
     }
@@ -513,7 +513,7 @@ pub fn switch(
         // Array
         // Collect arguments
         let mut args = Vec::with_capacity(sig.args() + 1);
-        let mut new_shape = selector.shape().clone();
+        let mut new_shape = selector.shape.clone();
         args.push(selector);
         for i in 0..sig.args() {
             let arg = env.pop(i + 1)?;
@@ -567,7 +567,7 @@ pub fn switch(
                     rows_to_sel.push(Err(row));
                 } else {
                     // println!(" (iterated)");
-                    let row_shape = row.shape()[selector.rank()..].into();
+                    let row_shape = row.shape[selector.rank()..].into();
                     rows_to_sel.push(Ok(row.into_row_shaped_slices(row_shape)));
                 }
             }
@@ -605,8 +605,8 @@ pub fn switch(
             } else if is_empty {
                 new_value.pop_row();
             }
-            new_shape.extend_from_slice(&new_value.shape()[1..]);
-            *new_value.shape_mut() = new_shape;
+            new_shape.extend_from_slice(&new_value.shape[1..]);
+            new_value.shape = new_shape;
             new_value.validate();
             env.push(new_value);
         }
@@ -741,8 +741,7 @@ fn fixed_rows(
             if a_row_count != b_row_count && !(a_row_count == 1 || b_row_count == 1) {
                 return Err(env.error(format!(
                     "Cannot {prim} arrays with different number of rows, shapes {} and {}",
-                    args[a].shape(),
-                    args[b].shape(),
+                    args[a].shape, args[b].shape,
                 )));
             }
         }
@@ -763,7 +762,7 @@ fn fixed_rows(
                 let proxy = is_empty.then(|| v.proxy_row(env));
                 row_count = row_count.max(v.row_count());
                 all_1 = false;
-                per_meta.push(v.take_per_meta());
+                per_meta.push(v.meta.take_per_meta());
                 Ok(v.into_rows().chain(proxy))
             }
         })

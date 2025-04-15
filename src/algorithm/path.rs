@@ -206,7 +206,7 @@ fn path_impl(
     let mut if_empty = start.clone();
     if_empty.fix();
     if_empty = if_empty.first_dim_zero();
-    if_empty.shape_mut().insert(0, 0);
+    if_empty.shape.insert(0, 0);
 
     // Initialize state
     let mut to_see = BinaryHeap::new();
@@ -313,12 +313,11 @@ fn path_impl(
     let make_path = |path: Vec<usize>| {
         if let Some(&[a, b]) = path
             .windows(2)
-            .find(|w| backing[w[0]].shape() != backing[w[1]].shape())
+            .find(|w| backing[w[0]].shape != backing[w[1]].shape)
         {
             return Err(env.error(format!(
                 "Cannot make path from nodes with incompatible shapes {} and {}",
-                backing[a].shape(),
-                backing[b].shape()
+                backing[a].shape, backing[b].shape
             )));
         }
         let path: Vec<_> = path.into_iter().map(|i| backing[i].clone()).collect();

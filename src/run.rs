@@ -616,11 +616,12 @@ impl Uiua {
             }
             Node::Label(label, span) => self.with_span(span, |env| {
                 env.monadic_mut(|val| {
-                    val.set_label(if label.is_empty() { None } else { Some(label) });
+                    val.meta
+                        .set_label(if label.is_empty() { None } else { Some(label) });
                 })
             }),
             Node::RemoveLabel(_, span) => {
-                self.with_span(span, |env| env.monadic_mut(|val| val.set_label(None)))
+                self.with_span(span, |env| env.monadic_mut(|val| val.meta.set_label(None)))
             }
             Node::ValidateType {
                 index,
@@ -632,7 +633,7 @@ impl Uiua {
                 self.with_span(span, |env| {
                     let val = env.pop(index)?;
                     if val.type_id() != type_num {
-                        let found = if val.element_count() == 1 {
+                        let found = if val.shape.elements() == 1 {
                             val.type_name()
                         } else {
                             val.type_name_plural()
@@ -674,7 +675,7 @@ impl Uiua {
                 ..
             } => self.with_span(span, |env| {
                 let arr = env.pop(1)?;
-                if arr.row_count() != count || arr.shape() == [] {
+                if arr.row_count() != count || arr.shape == [] {
                     let prim_text;
                     let prim_text = if let Some(prim) = prim {
                         prim_text = prim.to_string();
@@ -684,7 +685,7 @@ impl Uiua {
                     } else {
                         "[]"
                     };
-                    return Err(env.error(if arr.shape() == [] {
+                    return Err(env.error(if arr.shape == [] {
                         format!(
                             "This °{prim_text} expects an array with {count} rows, \
                             but the array is a scalar"
@@ -802,18 +803,18 @@ impl Uiua {
                     ));
                 };
                 let data = arr.data.as_mut_slice();
-                let shape = data[len_index].0.shape().clone();
+                let shape = data[len_index].0.shape.clone();
                 let mut i = 0;
                 while mask != 0 {
                     if mask & 1 == 1 {
                         for &d in shape.iter().rev() {
                             data[i].0.reshape_scalar(Ok(d as isize), env)?;
                         }
-                    } else if i != len_index && !shape_prefixes_match(&shape, data[i].0.shape()) {
+                    } else if i != len_index && !shape_prefixes_match(&shape, &data[i].0.shape) {
                         return Err(env.error(format!(
                             "Fields {len_index} and {i} have incompatible \
                             shapes {shape} and {}",
-                            data[i].0.shape()
+                            data[i].0.shape
                         )));
                     }
                     mask >>= 1;
@@ -1125,7 +1126,7 @@ impl Uiua {
         let val = if values.is_empty() && boxed {
             Array::<Boxed>::default().into()
         } else {
-            let elems: usize = values.iter().map(Value::element_count).sum();
+            let elems: usize = values.iter().map(|v| v.shape.elements()).sum();
             let elem_size = values.first().map_or(size_of::<f64>(), Value::elem_size);
             validate_size_impl(elem_size, [elems]).map_err(|e| self.error(e))?;
             Value::from_row_values_impl(values, self, allow_ext)?
@@ -1682,8 +1683,8 @@ impl Uiua {
             }
             let mut val = Value::from_row_values(rows, self)?;
             let mut shape = ids.shape;
-            shape.extend_from_slice(&val.shape()[1..]);
-            *val.shape_mut() = shape;
+            shape.extend_from_slice(&val.shape[1..]);
+            val.shape = shape;
             self.push(val);
         }
         Ok(())
@@ -1718,8 +1719,8 @@ impl Uiua {
         }
         let mut val = Value::from_row_values(values, self)?;
         let mut shape = ids.shape;
-        shape.extend_from_slice(&val.shape()[1..]);
-        *val.shape_mut() = shape;
+        shape.extend_from_slice(&val.shape[1..]);
+        val.shape = shape;
         self.push(val);
         Ok(())
     }

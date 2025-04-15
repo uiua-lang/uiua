@@ -175,14 +175,14 @@ impl GridFmt for Value {
             let Value::Box(b) = self else {
                 break 'box_list;
             };
-            if b.rank() != 1 || b.meta().map_keys.is_some() {
+            if b.rank() != 1 || b.meta.map_keys.is_some() {
                 break 'box_list;
             }
             let mut item_lines = Vec::new();
-            if b.data.iter().all(|Boxed(val)| val.meta().label.is_some())
+            if b.data.iter().all(|Boxed(val)| val.meta.label.is_some())
                 && (b.data.len() >= 4
                     || (b.data.iter())
-                        .any(|Boxed(val)| val.rank() > 1 || val.meta().map_keys.is_some()))
+                        .any(|Boxed(val)| val.rank() > 1 || val.meta.map_keys.is_some()))
             {
                 // Struct
                 let mut b = b.clone();
@@ -209,7 +209,7 @@ impl GridFmt for Value {
                     }
                 }
                 let mut only_row = Vec::new();
-                if let Some(label) = &b.meta().label {
+                if let Some(label) = &b.meta.label {
                     only_row.extend(label.chars());
                     only_row.push(':');
                     only_row.push(' ');
@@ -309,7 +309,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
         let mut first_align: Option<ElemAlign> = None;
-        let mut grid = if let Some(pointer) = self.meta().pointer.filter(|p| p.raw) {
+        let mut grid = if let Some(pointer) = self.meta.pointer.filter(|p| p.raw) {
             vec![boxed_scalar(params.boxed)
                 .chain(format!("0x{:x}", pointer.ptr).chars())
                 .collect()]
@@ -326,7 +326,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             vec![row]
         } else {
             // Hashmap
-            if let Some(keys) = &self.meta().map_keys {
+            if let Some(keys) = &self.meta.map_keys {
                 first_align = Some(match &keys.keys {
                     Value::Num(_) => f64::alignment(),
                     Value::Byte(_) => u8::alignment(),
@@ -345,7 +345,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     metagrid.push(vec![key, vec![" → ".chars().collect()], value]);
                 }
                 if metagrid.is_empty() {
-                    let mut keys_row_shape = keys.keys.shape().clone();
+                    let mut keys_row_shape = keys.keys.shape.clone();
                     keys_row_shape.make_row();
                     let mut row = match &keys.keys {
                         Value::Num(_) => shape_row::<f64>(&keys_row_shape),
@@ -486,7 +486,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         };
 
         // Add handle kind
-        if let Some(kind) = &self.meta().handle_kind {
+        if let Some(kind) = &self.meta.handle_kind {
             if grid.len() == 1 {
                 grid[0] = (kind.to_string().chars().chain(['(']))
                     .chain(take(&mut grid[0]))
@@ -510,7 +510,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
         // Add label
         if params.label {
-            if let Some(label) = &self.meta().label {
+            if let Some(label) = &self.meta.label {
                 if grid.len() == 1 {
                     grid[0] = (label.chars().chain([':', ' ']))
                         .chain(take(&mut grid[0]))
@@ -528,7 +528,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         }
 
         // Add pointer
-        if let Some(pointer) = self.meta().pointer.filter(|p| !p.raw) {
+        if let Some(pointer) = self.meta.pointer.filter(|p| !p.raw) {
             if grid.len() == 1 {
                 grid[0].extend(format!("(0x{:x})", pointer.ptr).chars());
             }
@@ -558,8 +558,8 @@ impl<T: ArrayValue> Array<T> {
     /// Get a string representation of the shape of the array
     pub fn shape_string(&self) -> String {
         let base: String = shape_row::<T>(&self.shape).into_iter().collect();
-        if let Some(keys) = &self.meta().map_keys {
-            let mut keys_shape = keys.keys.shape().clone();
+        if let Some(keys) = &self.meta.map_keys {
+            let mut keys_shape = keys.keys.shape.clone();
             keys_shape[0] = self.row_count();
             let mut s: String = match keys.keys {
                 Value::Num(_) => shape_row::<f64>(&keys_shape),

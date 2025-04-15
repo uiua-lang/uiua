@@ -1490,7 +1490,7 @@ code:
                         Ok(val) => {
                             self.code_meta
                                 .array_shapes
-                                .insert(word.span.clone(), val.shape().clone());
+                                .insert(word.span.clone(), val.shape.clone());
                             return Ok(Node::new_push(val));
                         }
                         Err(e) if e.is_fill => {}

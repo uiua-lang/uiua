@@ -95,7 +95,7 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data = new_data;
         self.shape = shape.into();
-        self.take_sorted_flags();
+        self.meta.take_sorted_flags();
         self.validate();
     }
 }
@@ -243,17 +243,17 @@ impl<T: ArrayValue> Array<T> {
         crate::profile_function!();
         let mut res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
-                if self.shape() == [0] {
+                if self.shape == [0] {
                     return Ok(other);
                 }
                 let map_keys = (self.rank() == 0)
-                    .then(|| self.take_map_keys().zip(other.take_map_keys()))
+                    .then(|| self.meta.take_map_keys().zip(other.meta.take_map_keys()))
                     .flatten();
                 if other.shape.row_count() == 0 {
                     validate_size_of::<T>(once(1).chain(other.shape[1..].iter().copied()))
                         .map_err(|e| ctx.error(e))?;
                 }
-                other.combine_meta(self.meta());
+                other.meta.combine(&self.meta);
                 let target_shape = match ctx.scalar_fill::<T>() {
                     Ok(fill) => {
                         let target_shape = max_shape(&self.shape, &other.shape);
@@ -276,11 +276,10 @@ impl<T: ArrayValue> Array<T> {
                                     other.rank()
                                 ))));
                             }
-                            if self.shape() != other.shape()[1..] {
+                            if self.shape != other.shape[1..] {
                                 return Err(C::fill_error(ctx.error(format!(
                                     "Cannot join arrays of shapes {} and {}{e}",
-                                    self.shape(),
-                                    other.shape()
+                                    self.shape, other.shape
                                 ))));
                             }
                         }
@@ -299,23 +298,23 @@ impl<T: ArrayValue> Array<T> {
                     for i in to_remove.into_iter().rev() {
                         other.remove_row(i);
                     }
-                    other.meta_mut().map_keys = Some(a);
+                    other.meta.map_keys = Some(a);
                 }
                 other
             }
             Ordering::Greater => {
-                if other.shape() == 0 {
+                if other.shape == 0 {
                     return Ok(self);
                 }
                 self.append(other, allow_ext, ctx)?;
                 self
             }
             Ordering::Equal => {
-                let map_keys = self.take_map_keys().zip(other.take_map_keys());
+                let map_keys = self.meta.take_map_keys().zip(other.meta.take_map_keys());
                 let mut res = if self.rank() == 0 {
                     debug_assert_eq!(other.rank(), 0);
-                    if let Some(label) = self.take_label().xor(other.take_label()) {
-                        self.meta_mut().label = Some(label);
+                    if let Some(label) = self.meta.take_label().xor(other.meta.take_label()) {
+                        self.meta.label = Some(label);
                     }
                     self.data.extend(other.data.into_iter().next());
                     self.shape = 2.into();
@@ -342,25 +341,24 @@ impl<T: ArrayValue> Array<T> {
                             Err(e) => {
                                 return Err(C::fill_error(ctx.error(format!(
                                     "Cannot join arrays of shapes {} and {}. {e}",
-                                    self.shape(),
-                                    other.shape()
+                                    self.shape, other.shape
                                 ))));
                             }
                         }
                     }
 
                     if self.data.len() >= other.data.len() {
-                        if self.meta().label.is_none() {
-                            if let Some(label) = other.take_label() {
-                                self.meta_mut().label = Some(label);
+                        if self.meta.label.is_none() {
+                            if let Some(label) = other.meta.take_label() {
+                                self.meta.label = Some(label);
                             }
                         }
                         self.data.extend_from_cowslice(other.data);
                         self.shape[0] += other.shape[0];
                     } else {
-                        if other.meta().label.is_none() {
-                            if let Some(label) = self.take_label() {
-                                other.meta_mut().label = Some(label);
+                        if other.meta.label.is_none() {
+                            if let Some(label) = self.meta.take_label() {
+                                other.meta.label = Some(label);
                             }
                         }
                         let rot_len = self.data.len();
@@ -378,12 +376,12 @@ impl<T: ArrayValue> Array<T> {
                     for i in to_remove.into_iter().rev() {
                         res.remove_row(i);
                     }
-                    res.meta_mut().map_keys = Some(a);
+                    res.meta.map_keys = Some(a);
                 }
                 res
             }
         };
-        res.take_sorted_flags();
+        res.meta.take_sorted_flags();
         res.validate();
         Ok(res)
     }
@@ -398,9 +396,9 @@ impl<T: ArrayValue> Array<T> {
                 .map_err(|e| ctx.error(e))?;
         }
         let map_keys = (other.rank() == 0)
-            .then(|| self.take_map_keys().zip(other.take_map_keys()))
+            .then(|| self.meta.take_map_keys().zip(other.meta.take_map_keys()))
             .flatten();
-        self.combine_meta(other.meta());
+        self.meta.combine(&other.meta);
         if self.shape[1..] == other.shape {
             self.data.extend_from_cowslice(other.data);
         } else if allow_ext && self.shape[1..].ends_with(&other.shape) {
@@ -429,11 +427,11 @@ impl<T: ArrayValue> Array<T> {
                             self.rank()
                         ))));
                     }
-                    if &self.shape()[1..] != other.shape() {
+                    if self.shape[1..] != other.shape {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot join arrays of shapes {} and {}{e}",
-                            other.shape(),
-                            FormatShape(&self.shape()[1..]),
+                            other.shape,
+                            FormatShape(&self.shape[1..]),
                         ))));
                     }
                 }
@@ -447,9 +445,9 @@ impl<T: ArrayValue> Array<T> {
             for i in to_remove.into_iter().rev() {
                 self.remove_row(i);
             }
-            self.meta_mut().map_keys = Some(a);
+            self.meta.map_keys = Some(a);
         }
-        self.take_sorted_flags();
+        self.meta.take_sorted_flags();
         self.validate();
         Ok(())
     }
@@ -472,7 +470,7 @@ impl<T: ArrayValue> Array<T> {
             }
             return self.uncouple(env);
         }
-        if self.map_keys().is_some() {
+        if self.meta.map_keys.is_some() {
             return Err(env.error("Cannot undo join of map arrays"));
         }
         match ash.len().cmp(&bsh.len()) {
@@ -662,11 +660,11 @@ impl<T: ArrayValue> Array<T> {
         self.shape[0] -= unjoin_count;
         self.validate();
         let mut unjoined = Array::new(unjoined_shape, unjoined_slice);
-        if let Some(keys) = self.map_keys_mut() {
+        if let Some(keys) = self.meta.map_keys_mut() {
             if !a_shape.is_empty() {
                 let mut unjoined_keys = keys.clone();
                 unjoined_keys.take(unjoin_count);
-                unjoined.meta_mut().map_keys = Some(unjoined_keys);
+                unjoined.meta.map_keys = Some(unjoined_keys);
             }
             keys.drop(unjoin_count);
         }
@@ -761,13 +759,13 @@ impl<T: ArrayValue> Array<T> {
         ctx: &C,
     ) -> Result<(), C::Error> {
         crate::profile_function!();
-        self.combine_meta(other.meta());
-        match (self.take_label(), other.take_label()) {
+        self.meta.combine(&other.meta);
+        match (self.meta.take_label(), other.meta.take_label()) {
             (Some(a), Some(b)) => {
-                self.meta_mut().label = Some(if self.rank() >= other.rank() { a } else { b })
+                self.meta.label = Some(if self.rank() >= other.rank() { a } else { b })
             }
-            (Some(a), None) => self.meta_mut().label = Some(a),
-            (None, Some(b)) => self.meta_mut().label = Some(b),
+            (Some(a), None) => self.meta.label = Some(a),
+            (None, Some(b)) => self.meta.label = Some(b),
             (None, None) => {}
         }
         if self.shape != other.shape {
@@ -781,8 +779,7 @@ impl<T: ArrayValue> Array<T> {
                     let err = || {
                         Err(C::fill_error(ctx.error(format!(
                             "Cannot couple arrays with shapes {} and {}{e}",
-                            self.shape(),
-                            other.shape()
+                            self.shape, other.shape
                         ))))
                     };
                     if allow_ext {
@@ -805,8 +802,8 @@ impl<T: ArrayValue> Array<T> {
                     }
                 }
             }
-            self.take_sorted_flags();
-            other.take_sorted_flags();
+            self.meta.take_sorted_flags();
+            other.meta.take_sorted_flags();
         }
         let (sorted_up, sorted_down) = match (*self).cmp(&other) {
             Ordering::Equal => (false, false),
@@ -815,8 +812,8 @@ impl<T: ArrayValue> Array<T> {
         };
         self.data.extend_from_cowslice(other.data);
         self.shape.insert(0, 2);
-        self.mark_sorted_up(sorted_up);
-        self.mark_sorted_down(sorted_down);
+        self.meta.mark_sorted_up(sorted_up);
+        self.meta.mark_sorted_down(sorted_down);
         self.validate();
         Ok(())
     }
@@ -946,7 +943,7 @@ impl Value {
         let to_reserve = values.len();
         let max_shape = values
             .iter()
-            .fold(Shape::SCALAR, |a: Shape, b| max_shape(a, b.shape()));
+            .fold(Shape::SCALAR, |a: Shape, b| max_shape(a, &b.shape));
         let mut row_values;
         let mut value = match &values[0] {
             Value::Num(_) => {
@@ -1060,8 +1057,7 @@ impl Value {
 
         // Fill value
         value.match_fill(ctx);
-        if !allow_ext && value.shape() != &max_shape
-            || allow_ext && !max_shape.ends_with(value.shape())
+        if !allow_ext && value.shape != max_shape || allow_ext && !max_shape.ends_with(&value.shape)
         {
             match &mut value {
                 Value::Num(arr) => match ctx.scalar_fill::<f64>() {
@@ -1069,7 +1065,7 @@ impl Value {
                     Err(e) => {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape()
+                            arr.shape
                         ))))
                     }
                 },
@@ -1078,7 +1074,7 @@ impl Value {
                     Err(e) => {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape()
+                            arr.shape
                         ))))
                     }
                 },
@@ -1087,7 +1083,7 @@ impl Value {
                     Err(e) => {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape()
+                            arr.shape
                         ))))
                     }
                 },
@@ -1096,7 +1092,7 @@ impl Value {
                     Err(e) => {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape()
+                            arr.shape
                         ))))
                     }
                 },
@@ -1105,7 +1101,7 @@ impl Value {
                     Err(e) => {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
-                            arr.shape()
+                            arr.shape
                         ))))
                     }
                 },
@@ -1115,7 +1111,7 @@ impl Value {
         // Validate size and reserve space
         let total_elements = validate_size_impl(
             value.elem_size(),
-            value.shape().iter().copied().chain([to_reserve]),
+            value.shape.iter().copied().chain([to_reserve]),
         )
         .map_err(|e| ctx.error(e))?;
         value.reserve_min(total_elements);
@@ -1126,8 +1122,8 @@ impl Value {
                 value.reshape_scalar(Ok(*d as isize), ctx)?;
             }
         }
-        value.shape_mut().insert(0, 1);
-        value.take_label();
+        value.shape.insert(0, 1);
+        value.meta.take_label();
         Ok(match value {
             Value::Num(mut a) => {
                 for val in row_values {
@@ -1216,7 +1212,7 @@ impl<T: ArrayValue> Array<T> {
             return Ok(Self::default());
         };
         if let Some(row) = row_values.next() {
-            let total_elements = total_rows * arr.shape().iter().product::<usize>();
+            let total_elements = total_rows * arr.shape.iter().product::<usize>();
             arr.data.reserve_min(total_elements);
             arr.couple_impl(row, false, ctx)?;
             for row in row_values {

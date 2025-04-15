@@ -136,12 +136,12 @@ impl Value {
                         let a = if a >= 0 {
                             a as usize
                         } else {
-                            into.shape()[i] - a.unsigned_abs()
+                            into.shape[i] - a.unsigned_abs()
                         };
                         let b = if b >= 0 {
                             b as usize
                         } else {
-                            into.shape()[i] - b.unsigned_abs()
+                            into.shape[i] - b.unsigned_abs()
                         };
                         a == b
                     });
@@ -236,7 +236,7 @@ impl<T: ArrayValue> Array<T> {
                         let message = format!(
                             "Index {i} is out of bounds of length {s} \
                             (dimension {d}) in shape {}{e}",
-                            self.shape()
+                            self.shape
                         );
                         return Err(env.error(message).fill());
                     }
@@ -285,7 +285,7 @@ impl<T: ArrayValue> Array<T> {
                 "Attempted to undo pick, but the shape of the picked \
                 array changed from {} to {}",
                 FormatShape(&expected_shape),
-                self.shape()
+                self.shape
             )));
         }
         let index_row_len: usize = index_shape[1..].iter().product();
@@ -298,7 +298,7 @@ impl<T: ArrayValue> Array<T> {
                 into = from.undo_pick(&index_shape[1..], index_row, into, env)?;
             }
         }
-        into.take_sorted_flags();
+        into.meta.take_sorted_flags();
         into.validate();
         Ok(into)
     }
@@ -310,18 +310,18 @@ impl<T: ArrayValue> Array<T> {
                 index.len()
             )));
         }
-        let expected_shape = &into.shape()[index.len()..];
+        let expected_shape = &into.shape[index.len()..];
         if self.shape != expected_shape {
             return Err(env.error(format!(
                 "Attempted to undo pick, but the shape of the picked \
                 array changed from {} to {}",
                 FormatShape(expected_shape),
-                self.shape()
+                self.shape
             )));
         }
         let mut start = 0;
         let has_fill = env.scalar_fill::<T>().is_ok() || env.scalar_unfill::<T>().is_ok();
-        for (i, (&ind, &s)) in index.iter().zip(into.shape()).enumerate() {
+        for (i, (&ind, &s)) in index.iter().zip(&into.shape).enumerate() {
             let ind = if ind >= 0 {
                 ind as usize
             } else {
@@ -341,7 +341,7 @@ impl<T: ArrayValue> Array<T> {
         {
             *x = i;
         }
-        into.take_sorted_flags();
+        into.meta.take_sorted_flags();
         into.validate();
         Ok(into)
     }
@@ -375,7 +375,7 @@ impl Value {
                 let with_infs = index
                     .as_ints_or_infs(env, "Taken amount must be a list of integers or infinity")?;
                 let mut indices = Vec::with_capacity(with_infs.len());
-                for (i, d) in with_infs.into_iter().zip(into.shape()) {
+                for (i, d) in with_infs.into_iter().zip(&into.shape) {
                     indices.push(i.unwrap_or(*d as isize));
                 }
                 indices
@@ -406,7 +406,7 @@ impl Value {
                     "Dropped amount must be a list of integers or infinity",
                 )?;
                 let mut indices = Vec::with_capacity(with_infs.len());
-                for (i, d) in with_infs.into_iter().zip(into.shape()) {
+                for (i, d) in with_infs.into_iter().zip(&into.shape) {
                     indices.push(i.unwrap_or(*d as isize));
                 }
                 indices
@@ -472,7 +472,7 @@ impl<T: ArrayValue> Array<T> {
             }
         }
 
-        let map_keys = self.take_map_keys();
+        let map_keys = self.meta.take_map_keys();
         let row_count = self.row_count();
         let mut arr = match index {
             [] => self,
@@ -495,7 +495,7 @@ impl<T: ArrayValue> Array<T> {
                                         reps,
                                     );
                                 }
-                                self.take_sorted_flags();
+                                self.meta.take_sorted_flags();
                             }
                             Err(e) => {
                                 return Err(env
@@ -526,7 +526,7 @@ impl<T: ArrayValue> Array<T> {
                                 );
                             }
                             self.data.as_mut_slice().rotate_right(diff * row_len);
-                            self.take_sorted_flags();
+                            self.meta.take_sorted_flags();
                         }
                         Err(e) => {
                             return Err(env
@@ -597,7 +597,7 @@ impl<T: ArrayValue> Array<T> {
                                         reps,
                                     );
                                 }
-                                arr.take_sorted_flags();
+                                arr.meta.take_sorted_flags();
                             }
                             Err(e) => {
                                 return Err(env
@@ -679,13 +679,13 @@ impl<T: ArrayValue> Array<T> {
                     map_keys.drop(row_count - taking.unsigned_abs());
                 }
             }
-            arr.meta_mut().map_keys = Some(map_keys);
+            arr.meta.map_keys = Some(map_keys);
         }
         Ok(arr)
     }
     /// `drop` from this array
     pub fn drop(mut self, index: &[Result<isize, bool>], env: &Uiua) -> UiuaResult<Self> {
-        let map_keys = self.take_map_keys();
+        let map_keys = self.meta.take_map_keys();
         if self.rank() == 0 {
             self.shape.push(1);
         }
@@ -755,7 +755,7 @@ impl<T: ArrayValue> Array<T> {
                     map_keys.take(taken);
                 }
             }
-            arr.meta_mut().map_keys = Some(map_keys);
+            arr.meta.map_keys = Some(map_keys);
         }
         Ok(arr)
     }
@@ -777,7 +777,7 @@ impl<T: ArrayValue> Array<T> {
         mut into: Self,
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        if self.map_keys().is_some() {
+        if self.meta.map_keys.is_some() {
             return Err(env.error("Cannot undo take from map array"));
         }
         let into_rank = into.rank();
@@ -849,7 +849,7 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     fn undo_drop(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
-        if self.map_keys().is_some() {
+        if self.meta.map_keys.is_some() {
             return Err(env.error("Cannot undo drop from map array"));
         }
         if into.rank() == 0 {
@@ -901,7 +901,7 @@ impl<T: ArrayValue> Array<T> {
         if index.iter().all(|&p| p == 0) {
             return Ok(self);
         }
-        self.take_sorted_flags();
+        self.meta.take_sorted_flags();
 
         // Single axis case
         if index.len() == 1 {
@@ -1249,16 +1249,16 @@ impl<T: ArrayValue> Array<T> {
                 rows.push(self.select(&indices_shape[1..], indices_row, env)?);
             }
             let mut arr = Array::from_row_arrays(rows, env)?;
-            if let Some(label) = &self.meta().label {
-                arr.meta_mut().label = Some(label.clone());
+            if let Some(label) = &self.meta.label {
+                arr.meta.label = Some(label.clone());
             }
             Ok(arr)
         } else {
             let indices_sorted_up = indices_shape.len() == 1 && indices.is_sorted();
             let indices_sorted_down =
                 indices_shape.len() == 1 && indices.is_sorted_by(|&a, &b| a >= b);
-            let selected_sorted_up = self.is_sorted_up();
-            let selected_sorted_down = self.is_sorted_down();
+            let selected_sorted_up = self.meta.is_sorted_up();
+            let selected_sorted_down = self.meta.is_sorted_down();
 
             let mut selected = CowSlice::with_capacity(self.row_len() * indices.len());
             let row_len = self.row_len();
@@ -1271,7 +1271,7 @@ impl<T: ArrayValue> Array<T> {
                     if !indices_are_total {
                         return None;
                     }
-                    let keys = self.take_map_keys().unwrap().normalized();
+                    let keys = self.meta.take_map_keys().unwrap().normalized();
                     Some(val_as_arr!(keys, |keys| {
                         let mut keys = keys;
                         keys.select(indices_shape, indices, env).unwrap().into()
@@ -1335,11 +1335,11 @@ impl<T: ArrayValue> Array<T> {
             if let Some(map_keys) = map_keys {
                 array.map(map_keys, &()).unwrap();
             }
-            array.mark_sorted_up(
+            array.meta.mark_sorted_up(
                 indices_sorted_up && selected_sorted_up
                     || indices_sorted_down && selected_sorted_down,
             );
-            array.mark_sorted_down(
+            array.meta.mark_sorted_down(
                 indices_sorted_up && selected_sorted_down
                     || indices_sorted_down && selected_sorted_up,
             );
@@ -1388,7 +1388,7 @@ impl<T: ArrayValue> Array<T> {
                             .rotate_right(from_element_count);
                         into.shape[0] += from_row_count;
                         into.shape[0] -= 1;
-                        into.take_sorted_flags();
+                        into.meta.take_sorted_flags();
                         into.validate();
                         return Ok(into);
                     }
@@ -1472,7 +1472,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
         }
-        into.take_sorted_flags();
+        into.meta.take_sorted_flags();
         Ok(into)
     }
     fn anti_select(

@@ -881,9 +881,7 @@ impl Primitive {
             Primitive::First => env.monadic_env(Value::first)?,
             Primitive::Last => env.monadic_env(Value::last)?,
             Primitive::Len => env.monadic_ref(Value::row_count)?,
-            Primitive::Shape => {
-                env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
-            }
+            Primitive::Shape => env.monadic_ref(|v| v.shape.iter().copied().collect::<Value>())?,
             Primitive::Bits => env.monadic_ref_env(|val, env| val.bits(None, env))?,
             Primitive::Base => env.dyadic_rr_env(Value::base)?,
             Primitive::Reshape => {
@@ -1618,13 +1616,13 @@ impl ImplPrimitive {
                 let got = env.pop(2)?;
                 match (&expected, &got) {
                     (Value::Num(a), Value::Num(b))
-                        if a.shape() == b.shape()
+                        if a.shape == b.shape
                             && (a.data.iter().zip(&b.data)).all(|(a, b)| (a - b).abs() < 1e-12) =>
                     {
                         return Ok(())
                     }
                     (Value::Complex(a), Value::Complex(b))
-                        if a.shape() == b.shape()
+                        if a.shape == b.shape
                             && a.data.iter().zip(&b.data).all(|(a, b)| {
                                 (a.re - b.re).abs() < 1e-12 && (a.im - b.im).abs() < 1e-12
                             }) =>
@@ -1650,16 +1648,16 @@ impl ImplPrimitive {
                             got.type_name_plural()
                         )
                     }
-                    (true, false) if expected.shape() != got.shape() => format!(
+                    (true, false) if expected.shape != got.shape => format!(
                         "expected {} but got array with shape {}",
                         expected.grid_string(false),
-                        got.shape()
+                        got.shape
                     ),
                     (true, false) => format!(
                         "expected {} but found {} array with shape {}",
                         expected.grid_string(false),
                         got.type_name(),
-                        got.shape()
+                        got.shape
                     ),
                     (false, true) if expected.type_id() != got.type_id() => {
                         format!(
@@ -1668,15 +1666,15 @@ impl ImplPrimitive {
                             got.grid_string(false)
                         )
                     }
-                    (false, true) if expected.shape() != got.shape() => format!(
+                    (false, true) if expected.shape != got.shape => format!(
                         "expected array with shape {} but got {}",
-                        expected.shape(),
+                        expected.shape,
                         got.grid_string(false)
                     ),
                     (false, true) => format!(
                         "expected {} array with shape {} but got {}",
                         expected.type_name(),
-                        expected.shape(),
+                        expected.shape,
                         got.grid_string(false)
                     ),
                     (false, false) if expected.type_id() != got.type_id() => {
@@ -1686,26 +1684,24 @@ impl ImplPrimitive {
                             got.type_name_plural()
                         )
                     }
-                    (false, false) if expected.shape() != got.shape() => format!(
+                    (false, false) if expected.shape != got.shape => format!(
                         "expected shape {} but got shape {}",
-                        expected.shape(),
-                        got.shape()
+                        expected.shape, got.shape
                     ),
                     (false, false) => {
-                        let different = if expected.type_id() == got.type_id()
-                            && expected.shape() == got.shape()
-                        {
-                            " different"
-                        } else {
-                            ""
-                        };
+                        let different =
+                            if expected.type_id() == got.type_id() && expected.shape == got.shape {
+                                " different"
+                            } else {
+                                ""
+                            };
                         format!(
                             "expected {} array with shape {} but \
                             got{different} {} array with shape {}",
                             expected.type_name(),
-                            expected.shape(),
+                            expected.shape,
                             got.type_name(),
-                            got.shape()
+                            got.shape
                         )
                     }
                 };
@@ -1749,7 +1745,7 @@ impl ImplPrimitive {
                     .as_nat(env, "Type number must be a natural number")?;
                 let val = env.pop(2)?;
                 if val.type_id() as usize != type_num {
-                    let found = if val.element_count() == 1 {
+                    let found = if val.shape.elements() == 1 {
                         val.type_name()
                     } else {
                         val.type_name_plural()
@@ -1944,7 +1940,7 @@ impl ImplPrimitive {
                 let vals = env.pop_n(sig.args())?;
                 let max_shape = vals
                     .iter()
-                    .map(Value::shape)
+                    .map(|v| &v.shape)
                     .max_by_key(|sh| sh.len())
                     .cloned();
                 let max_rank = max_shape.as_ref().map(|sh| sh.len()).unwrap_or(0);
@@ -1979,7 +1975,7 @@ impl ImplPrimitive {
                                 Primitive::Rows
                             }
                             .format(),
-                            val.shape()
+                            val.shape
                         )));
                     }
                     env.stack_mut()[start + i].reverse();

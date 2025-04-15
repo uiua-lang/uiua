@@ -126,8 +126,8 @@ impl<T: Clone + std::fmt::Debug + Send + Sync> Array<T> {
                 return Err(ctx.error(format!(
                     "Cannot combine arrays with shapes {} and {} \
                     because shape prefixes {} and {} are not compatible",
-                    a.shape(),
-                    b.shape(),
+                    a.shape,
+                    b.shape,
                     FormatShape(a_prefix),
                     FormatShape(b_prefix)
                 )));
@@ -208,7 +208,7 @@ impl Value {
         }
         let orig_shape = old_shape.as_nats(env, "Shape should be a list of integers")?;
         if env.fill().value_for(self).is_some()
-            || orig_shape.iter().product::<usize>() == self.shape().iter().product::<usize>()
+            || orig_shape.iter().product::<usize>() == self.shape.iter().product::<usize>()
         {
             let orig_shape_spec: Vec<_> = orig_shape.iter().map(|&d| Ok(d as isize)).collect();
             self.reshape_impl(&orig_shape_spec, env)
@@ -217,7 +217,7 @@ impl Value {
                 "Cannot unreshape array because its old shape was {}, \
                 but its new shape is {}, which has a different number of elements",
                 FormatShape(&orig_shape),
-                self.shape()
+                self.shape
             )))
         }
     }
@@ -252,7 +252,7 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         self.shape.insert(0, count);
-        self.take_sorted_flags();
+        self.meta.take_sorted_flags();
         self.validate();
         Ok(())
     }
@@ -262,7 +262,7 @@ impl<T: ArrayValue> Array<T> {
         count: Result<isize, bool>,
         ctx: &C,
     ) -> Result<(), C::Error> {
-        self.take_map_keys();
+        self.meta.take_map_keys();
         match count {
             Ok(count) => {
                 if count < 0 {
@@ -284,7 +284,7 @@ impl<T: ArrayValue> Array<T> {
         let fill = env.scalar_fill::<T>();
         let axes = derive_shape(&self.shape, dims, fill.is_ok(), env)?;
         if (axes.first()).is_none_or(|&d| d.unsigned_abs() != self.row_count()) {
-            self.take_map_keys();
+            self.meta.take_map_keys();
         }
         let reversed_axes: Vec<usize> = (axes.iter().enumerate())
             .filter_map(|(i, &s)| if s < 0 { Some(i) } else { None })
@@ -328,7 +328,7 @@ impl<T: ArrayValue> Array<T> {
         for s in reversed_axes {
             self.reverse_depth(s);
         }
-        self.take_sorted_flags();
+        self.meta.take_sorted_flags();
         self.validate();
         Ok(())
     }
@@ -408,9 +408,9 @@ fn derive_shape(
 impl Value {
     /// `rerank` this value with another
     pub fn rerank(&mut self, rank: &Self, env: &Uiua) -> UiuaResult {
-        self.take_map_keys();
+        self.meta.take_map_keys();
         let irank = rank.as_int(env, "Rank must be an integer")?;
-        let shape = self.shape_mut();
+        let shape = &mut self.shape;
         let rank = irank.unsigned_abs();
         if irank >= 0 {
             // Positive rank
@@ -466,22 +466,20 @@ impl Value {
             // Positive rank
             (orig_shape.iter())
                 .take(orig_shape.len().saturating_sub(rank))
-                .chain(
-                    (self.shape().iter()).skip((rank + 1).saturating_sub(orig_shape.len()).max(1)),
-                )
+                .chain((self.shape.iter()).skip((rank + 1).saturating_sub(orig_shape.len()).max(1)))
                 .copied()
                 .collect()
         } else {
             // Negative rank
             (orig_shape.iter().take(rank))
-                .chain(self.shape().iter().skip(1))
+                .chain(self.shape.iter().skip(1))
                 .copied()
                 .collect()
         };
-        if validate_size::<u8>(new_shape.iter().copied(), env)? != self.element_count() {
+        if validate_size::<u8>(new_shape.iter().copied(), env)? != self.shape.elements() {
             return Ok(());
         }
-        *self.shape_mut() = new_shape;
+        self.shape = new_shape;
         self.validate();
         Ok(())
     }
@@ -646,9 +644,9 @@ impl<T: ArrayValue> Array<T> {
         if counts.iter().any(|&n| n.fract() != 0.0) {
             return Err(env.error("Keep amount must be a list of integers"));
         }
-        self.take_map_keys();
+        self.meta.take_map_keys();
         let counts = pad_keep_counts(counts, self.row_count(), false, env)?;
-        let sorted_flags = self.take_sorted_flags();
+        let sorted_flags = self.meta.take_sorted_flags();
         if self.rank() == 0 {
             if counts.len() != 1 {
                 return Err(env.error("Scalar array can only be kept with a single number"));
@@ -707,12 +705,12 @@ impl<T: ArrayValue> Array<T> {
                 self.shape[0] = new_len;
             }
         }
-        self.or_sorted_flags(sorted_flags);
+        self.meta.or_sorted_flags(sorted_flags);
         self.validate();
         Ok(self)
     }
     fn unkeep(mut self, env: &Uiua) -> UiuaResult<(Value, Self)> {
-        self.take_map_keys();
+        self.meta.take_map_keys();
         if self.rank() == 0 {
             return Err(env.error("Cannot unkeep scalar array"));
         }
@@ -903,7 +901,7 @@ impl<T: ArrayValue> Array<T> {
                 into = Array::new(new_shape, new_rows);
             }
         }
-        into.take_sorted_flags();
+        into.meta.take_sorted_flags();
         Ok(into)
     }
 }
@@ -1009,7 +1007,7 @@ impl Value {
             }
             Value::Box(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
         }
-        rotated.take_sorted_flags();
+        rotated.meta.take_sorted_flags();
         Ok(())
     }
 }
@@ -1047,15 +1045,15 @@ impl<T: ArrayValue> Array<T> {
             Ok(())
         })?;
         if filled {
-            self.reset_meta_flags();
+            self.meta.reset_flags();
         }
         if depth == 0 {
-            if let Some(keys) = self.map_keys_mut() {
+            if let Some(keys) = self.meta.map_keys_mut() {
                 let by = by.data[0];
                 keys.rotate(by);
             }
         }
-        self.take_sorted_flags();
+        self.meta.take_sorted_flags();
         Ok(())
     }
 }
@@ -1194,13 +1192,12 @@ impl Value {
 impl Array<f64> {
     pub(crate) fn matrix_mul(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
         let (a, b) = (self, other);
-        let a_row_shape = a.shape().row();
-        let b_row_shape = b.shape().row();
+        let a_row_shape = a.shape.row();
+        let b_row_shape = b.shape.row();
         if !shape_prefixes_match(&a_row_shape, &b_row_shape) {
             return Err(env.error(format!(
                 "Cannot multiply arrays of shape {} and {}",
-                a.shape(),
-                b.shape()
+                a.shape, b.shape
             )));
         }
         let prod_shape = if a_row_shape.len() >= b_row_shape.len() {
@@ -1257,16 +1254,14 @@ impl Array<f64> {
             return Err(env.error(format!(
                 "Matrix division requires arrays of rank 2, \
                 but their shapes are {} and {}",
-                a.shape(),
-                b.shape()
+                a.shape, b.shape
             )));
         }
         if [a.shape[0], a.shape[1]] != [b.shape[1], b.shape[0]] {
             return Err(env.error(format!(
                 "Matrix division requires arrays of compatible shapes, \
                 but their shapes are {} and {}",
-                a.shape(),
-                b.shape()
+                a.shape, b.shape
             )));
         }
         // let mut result_data = eco_vec![0.0; a.element_count().max(b.element_count())];
@@ -1426,7 +1421,7 @@ impl<T: ArrayValue> Array<T> {
                 slice[j] = elem;
             }
         }
-        into.take_sorted_flags();
+        into.meta.take_sorted_flags();
         into.validate();
     }
     fn anti_orient(mut self, mut undices: Vec<usize>, env: &Uiua) -> UiuaResult<Self> {
@@ -1837,8 +1832,8 @@ impl Value {
             return fallback(of, &elems, env);
         };
 
-        if !(elems.rank() == 0 || elems.shape().ends_with(&[range_bound.len()])) {
-            let new_shape = &elems.shape()[..elems.rank() - 1];
+        if !(elems.rank() == 0 || elems.shape.ends_with(&[range_bound.len()])) {
+            let new_shape = &elems.shape[..elems.rank() - 1];
             return Ok(Value::Byte(Array::new(
                 new_shape,
                 CowSlice::from_elem(0, new_shape.iter().product()),

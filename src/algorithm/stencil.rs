@@ -66,7 +66,7 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let mut xs = env.pop(2)?;
     xs.match_fill(env);
     let has_fill = env.fill().value_for(&xs).is_some();
-    let dims = derive_dims(&size, xs.shape(), has_fill, env)?;
+    let dims = derive_dims(&size, &xs.shape, has_fill, env)?;
     val_as_arr!(xs, |arr| stencil_array(arr, &dims, f, env))
 }
 
@@ -138,7 +138,7 @@ where
             arr.shape[0] = dim.size;
             arr.shape.insert(0, chunk_count);
             arr.data.truncate(arr.shape.elements());
-            arr.take_map_keys();
+            arr.meta.take_map_keys();
             let mut val: Value = arr.into();
             if let WindowAction::Id(_, Some((f, d))) = &action {
                 val = f(val, dims.len() + d, env)?;
@@ -284,8 +284,8 @@ where
                 for rows in outputs.into_iter().rev() {
                     let mut val = Value::from_row_values(rows, env)?;
                     let mut new_shape = shape_prefix.clone();
-                    new_shape.extend_from_slice(&val.shape()[1..]);
-                    *val.shape_mut() = new_shape;
+                    new_shape.extend_from_slice(&val.shape[1..]);
+                    val.shape = new_shape;
                     val.validate();
                     env.push(val);
                 }

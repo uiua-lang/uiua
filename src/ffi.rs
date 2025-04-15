@@ -281,7 +281,7 @@ mod enabled {
                     *len = if let FfiType::Struct { .. } = &**inner {
                         arg.map(Value::row_count)
                     } else {
-                        arg.map(Value::element_count)
+                        arg.map(|v| v.shape.elements())
                     };
                 }
             }
@@ -366,7 +366,7 @@ mod enabled {
                 ($ty:ty) => {{
                     let ptr = unsafe { cif.call::<*const $ty>(fptr, &bindings.args) };
                     let mut val = Value::default();
-                    val.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
+                    val.meta.pointer = Some(MetaPtr::new(ptr, true));
                     results.push(val);
                 }};
             }
@@ -480,7 +480,7 @@ mod enabled {
                         Some((&val, ptr)) => {
                             let mut val = Value::from(val as $numty);
                             if let Some(ptr) = ptr {
-                                val.meta_mut().pointer = Some(MetaPtr::new(ptr, false));
+                                val.meta.pointer = Some(MetaPtr::new(ptr, false));
                             }
                             results.push(val)
                         }
@@ -549,7 +549,7 @@ mod enabled {
                                     dbgln!("    inner ptr to char: {ptr:p}");
                                     results.push(if ptr.is_null() {
                                         let mut val = Value::default();
-                                        val.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
+                                        val.meta.pointer = Some(MetaPtr::new(ptr, true));
                                         val
                                     } else {
                                         let s = CStr::from_ptr(ptr)
@@ -564,13 +564,13 @@ mod enabled {
                                     let ptr = *ptr;
                                     dbgln!("    inner ptr to void: {ptr:p}");
                                     let mut val = Value::from(ptr as usize);
-                                    val.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
+                                    val.meta.pointer = Some(MetaPtr::new(ptr, true));
                                     results.push(val);
                                 },
                                 _ => {
                                     let ptr = *bindings.get::<*mut ()>(i);
                                     let mut val = Value::from(ptr as usize);
-                                    val.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
+                                    val.meta.pointer = Some(MetaPtr::new(ptr, true));
                                     results.push(val);
                                 }
                             },
@@ -889,8 +889,8 @@ mod enabled {
                         let repr = self.value_to_struct_repr(val, fields)?;
                         self.push_repr_ptr(repr)
                     }
-                    (_, arg) if arg.meta().pointer.is_some() => {
-                        let ptr = arg.meta().pointer.unwrap().get_mut();
+                    (_, arg) if arg.meta.pointer.is_some() => {
+                        let ptr = arg.meta.pointer.unwrap().get_mut();
                         self.push_raw_ptr(ptr);
                         ptr
                     }
@@ -974,7 +974,7 @@ mod enabled {
                             "Array of {} with shape {} is not a valid \
                             argument {i} for FFI type {ty}",
                             arg.type_name_plural(),
-                            arg.shape()
+                            arg.shape
                         ))
                     }
                 },
@@ -987,7 +987,7 @@ mod enabled {
                         "Array of {} with shape {} is not a valid \
                             argument {i} for FFI type {ty}",
                         arg.type_name_plural(),
-                        arg.shape()
+                        arg.shape
                     ))
                 }
             };
@@ -1072,7 +1072,7 @@ mod enabled {
                     }
                     // Pointers
                     (FfiType::Ptr { inner, .. }, value) => {
-                        if let Some(ptr_u) = value.meta().pointer {
+                        if let Some(ptr_u) = value.meta.pointer {
                             repr[range].copy_from_slice(&ptr_u.ptr.to_ne_bytes());
                         } else {
                             match (&**inner, value) {
@@ -1163,7 +1163,7 @@ mod enabled {
                                 transmute::<[u8; size_of::<*const u8>()], *const u8>(bytes)
                             };
                             let mut row = Value::default();
-                            row.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
+                            row.meta.pointer = Some(MetaPtr::new(ptr, true));
                             rows.push(row);
                         }
                         inner => {
@@ -1179,7 +1179,7 @@ mod enabled {
                                 .into_rows()
                                 .next()
                                 .unwrap();
-                            row.meta_mut().pointer = Some(MetaPtr::new(ptr, false));
+                            row.meta.pointer = Some(MetaPtr::new(ptr, false));
                             rows.push(row);
                         }
                     },
@@ -1194,7 +1194,7 @@ mod enabled {
             }
             Ok(
                 if fields.iter().all(|f| f.is_scalar() && fields[0] == *f)
-                    && rows.iter().all(|r| r.shape() == rows[0].shape())
+                    && rows.iter().all(|r| r.shape == rows[0].shape)
                 {
                     Value::from_row_values_infallible(rows)
                 } else {

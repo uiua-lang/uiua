@@ -90,7 +90,7 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMonFn>
             Ok(v)
         }),
         ReplaceRand => spanned_mon_fn(span, |v, d, _| {
-            let shape = &v.shape()[..d.min(v.rank())];
+            let shape = &v.shape[..d.min(v.rank())];
             let elem_count: usize = shape.iter().product();
             let mut data = eco_vec![0.0; elem_count];
             for n in data.make_mut() {
@@ -279,7 +279,7 @@ fn f_mon2_fast_fn_impl(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize
 impl Value {
     fn replace_depth(&self, mut replacement: Value, depth: usize) -> Value {
         let depth = self.rank().min(depth);
-        let prefix = &self.shape()[..depth];
+        let prefix = &self.shape[..depth];
         val_as_arr!(&mut replacement, |arr| arr
             .repeat_shape(Shape::from(prefix)));
         replacement
@@ -421,10 +421,10 @@ fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         }
     }
     let outputs = f.sig.outputs();
-    let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
-    let new_shape = xs.shape().clone();
+    let mut new_values = multi_output(outputs, Vec::with_capacity(xs.shape.elements()));
+    let new_shape = xs.shape.clone();
     let is_empty = outputs > 0 && xs.row_count() == 0;
-    let per_meta = xs.take_per_meta();
+    let per_meta = xs.meta.take_per_meta();
     env.without_fill(|env| -> UiuaResult {
         if is_empty {
             env.push(xs.proxy_scalar(env));
@@ -449,10 +449,10 @@ fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         if is_empty {
             eached.pop_row();
         }
-        new_shape.extend_from_slice(eached.shape().row_slice());
-        *eached.shape_mut() = new_shape;
+        new_shape.extend_from_slice(eached.shape.row_slice());
+        eached.shape = new_shape;
         eached.validate();
-        eached.set_per_meta(per_meta.clone());
+        eached.meta.set_per_meta(per_meta.clone());
         env.push(eached);
     }
     Ok(())
@@ -470,10 +470,10 @@ fn each2(f: SigNode, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult
         env.push(val);
     } else {
         let outputs = f.sig.outputs();
-        let mut xs_shape = xs.shape().to_vec();
-        let mut ys_shape = ys.shape().to_vec();
+        let mut xs_shape = xs.shape.to_vec();
+        let mut ys_shape = ys.shape.to_vec();
         let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
-        let per_meta = xs.take_per_meta().xor(ys.take_per_meta());
+        let per_meta = xs.meta.take_per_meta().xor(ys.meta.take_per_meta());
         let xs_fill = xs.fill(env);
         let ys_fill = ys.fill(env);
         let new_values = env.without_fill(|env| {
@@ -515,7 +515,7 @@ fn each2(f: SigNode, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult
             }
         })?;
         for mut eached in new_values.into_iter().rev() {
-            eached.set_per_meta(per_meta.clone());
+            eached.meta.set_per_meta(per_meta.clone());
             env.push(eached);
         }
     }
@@ -531,16 +531,16 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         }
     }
     let outputs = f.sig.outputs();
-    let is_empty = args.iter().any(|v| v.element_count() == 0);
-    let elem_count = args.iter().map(Value::element_count).max().unwrap() + is_empty as usize;
+    let is_empty = args.iter().any(|v| v.shape.elements() == 0);
+    let elem_count = args.iter().map(|v| v.shape.elements()).max().unwrap() + is_empty as usize;
     let mut new_values = multi_output(outputs, Vec::with_capacity(elem_count));
     let new_shape = args
         .iter()
-        .map(Value::shape)
+        .map(|v| &v.shape)
         .max_by_key(|s| s.len())
         .unwrap()
         .clone();
-    let per_meta = PersistentMeta::xor_all(args.iter_mut().map(|v| v.take_per_meta()));
+    let per_meta = PersistentMeta::xor_all(args.iter_mut().map(|v| v.meta.take_per_meta()));
     env.without_fill(|env| -> UiuaResult {
         if is_empty {
             for arg in args.into_iter().rev() {
@@ -554,7 +554,7 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             let mut arg_elems: Vec<_> = args
                 .into_iter()
                 .map(|val| {
-                    let repetitions = elem_count / val.element_count().max(1);
+                    let repetitions = elem_count / val.shape.elements().max(1);
                     val.into_elements()
                         .flat_map(move |elem| repeat(elem).take(repetitions))
                 })
@@ -577,9 +577,9 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         if is_empty {
             eached.pop_row();
         }
-        new_shape.extend_from_slice(&eached.shape().row());
-        *eached.shape_mut() = new_shape;
-        eached.set_per_meta(per_meta.clone());
+        new_shape.extend_from_slice(&eached.shape.row());
+        eached.shape = new_shape;
+        eached.meta.set_per_meta(per_meta.clone());
         env.push(eached);
     }
     Ok(())
@@ -615,7 +615,7 @@ fn collect_outputs(
         } else if is_empty {
             val.pop_row();
         }
-        val.set_per_meta(per_meta.clone());
+        val.meta.set_per_meta(per_meta.clone());
         env.push(val);
     }
     Ok(())
@@ -647,7 +647,7 @@ pub fn rows1(f: SigNode, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult
         outputs,
         Vec::with_capacity(xs.row_count() + is_empty as usize),
     );
-    let mut per_meta = xs.take_per_meta();
+    let mut per_meta = xs.meta.take_per_meta();
     env.without_fill(|env| -> UiuaResult {
         if is_empty {
             if push_empty_rows_value(&f, [&xs], inv, &mut per_meta, env) {
@@ -682,7 +682,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
             ys = ys.unboxed_if(inv);
             let is_empty = outputs > 0 && xs.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-            let mut per_meta = xs.take_per_meta();
+            let mut per_meta = xs.meta.take_per_meta();
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
                     ys.fix();
@@ -716,7 +716,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
             xs = xs.unboxed_if(inv);
             let is_empty = outputs > 0 && ys.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
-            let mut per_meta = ys.take_per_meta();
+            let mut per_meta = ys.meta.take_per_meta();
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
                     xs.fix();
@@ -773,7 +773,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
                 outputs,
                 Vec::with_capacity(xs.row_count() + is_empty as usize),
             );
-            let mut per_meta = xs.take_per_meta().xor(ys.take_per_meta());
+            let mut per_meta = xs.meta.take_per_meta().xor(ys.meta.take_per_meta());
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
                     if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
@@ -850,7 +850,7 @@ fn rowsn(f: SigNode, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult 
             rowsed.pop_row();
         }
         rowsed.validate();
-        rowsed.set_per_meta(per_meta.clone());
+        rowsed.meta.set_per_meta(per_meta.clone());
         env.push(rowsed);
     }
     Ok(())

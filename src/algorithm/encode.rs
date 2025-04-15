@@ -31,7 +31,7 @@ impl SmartOutput {
             && matches!(&value, Value::Num(arr) if arr.elements().all(|x| x.abs() <= 5.0))
         {
             if let Ok(bytes) = value_to_wav_bytes(&value, backend.audio_sample_rate()) {
-                let label = value.meta().label.as_ref().map(Into::into);
+                let label = value.meta.label.as_ref().map(Into::into);
                 return Self::Wav(bytes, label);
             }
         }
@@ -43,7 +43,7 @@ impl SmartOutput {
                 && image.height() >= MIN_AUTO_IMAGE_DIM as u32
             {
                 if let Ok(bytes) = image_to_bytes(&image, ImageFormat::Png) {
-                    let label = value.meta().label.as_ref().map(Into::into);
+                    let label = value.meta.label.as_ref().map(Into::into);
                     return Self::Png(bytes, label);
                 }
             }
@@ -51,11 +51,11 @@ impl SmartOutput {
         // Try to convert the value to a gif
         #[cfg(feature = "gif")]
         if let Ok(bytes) = value_to_gif_bytes(&value, 16.0) {
-            match value.shape().dims() {
+            match value.shape.dims() {
                 &[f, h, w] | &[f, h, w, _]
                     if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
                 {
-                    let label = value.meta().label.as_ref().map(Into::into);
+                    let label = value.meta.label.as_ref().map(Into::into);
                     return Self::Gif(bytes, label);
                 }
                 _ => {}
@@ -112,7 +112,7 @@ impl Value {
                 _ => data = arr.into(),
             }
         }
-        let mut bytes = CowSlice::from_elem(0, data.element_count() * elem_size);
+        let mut bytes = CowSlice::from_elem(0, data.shape.elements() * elem_size);
         let slice = bytes.as_mut_slice();
         fn write<T: Copy, const N: usize>(src: &[T], dst: &mut [u8], f: impl Fn(T) -> [u8; N]) {
             for (i, &src) in src.iter().enumerate() {
@@ -497,7 +497,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
         _ => return Err("Image must be a numeric array".into()),
     };
     #[allow(clippy::match_ref_pats)]
-    let [height, width, px_size] = match value.shape().dims() {
+    let [height, width, px_size] = match value.shape.dims() {
         &[a, b] => [a, b, 1],
         &[a, b, c] => [a, b, c],
         _ => unreachable!("Shape checked above"),
@@ -528,7 +528,7 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     let orig = audio;
     let mut audio = audio;
     let mut transposed;
-    if audio.rank() == 2 && audio.shape()[1] > 5 {
+    if audio.rank() == 2 && audio.shape[1] > 5 {
         transposed = audio.clone();
         transposed.transpose();
         audio = &transposed;
@@ -538,7 +538,7 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
         Value::Byte(byte) => byte.data.iter().map(|&b| b as f64).collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
-    let (length, mut channels) = match &**audio.shape() {
+    let (length, mut channels) = match &*audio.shape {
         [_] => (interleaved.len(), vec![interleaved]),
         &[len, ch] => (
             len,
@@ -556,7 +556,7 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     if channels.len() > 5 {
         return Err(format!(
             "Audio can have at most 5 channels, but its shape is {}",
-            orig.shape()
+            orig.shape
         ));
     }
 
@@ -960,7 +960,7 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
     let mut set_size = false;
     for (i, row) in options.into_rows().map(Value::unboxed).enumerate() {
         let nums = row.as_nums(env, "Options must be numbers")?;
-        match &**row.shape() {
+        match &*row.shape {
             [] => {
                 match scalar_index {
                     0 => {
@@ -1035,7 +1035,7 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
                 return Err(env.error(format!(
                     "Layout options must have [], [2], [3], or [4]\
                     but option {i} has shape {}",
-                    row.shape()
+                    row.shape
                 )))
             }
         }

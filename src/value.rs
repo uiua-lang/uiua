@@ -5,13 +5,14 @@ use std::{
     hash::{Hash, Hasher},
     iter::once,
     mem::{size_of, take},
+    ops::{Deref, DerefMut},
 };
 
-use ecow::{EcoString, EcoVec};
+use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    algorithm::{map::MapKeys, pervade::*, ErrorContext, FillContext},
+    algorithm::{pervade::*, ErrorContext, FillContext},
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
@@ -83,7 +84,7 @@ impl Value {
     /// A NULL pointer value for use in `&ffi`
     pub(crate) fn null() -> Self {
         let mut arr = Array::<u8>::default();
-        arr.meta_mut().pointer = Some(MetaPtr::null());
+        arr.meta.pointer = Some(MetaPtr::null());
         Value::from(arr)
     }
     pub(crate) fn builder(capacity: usize) -> ValueBuilder {
@@ -132,7 +133,7 @@ impl Value {
     }
     /// Get an iterator over the rows of the value
     pub fn rows(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
-        if self.shape().first() == Some(&1) {
+        if self.shape.first() == Some(&1) {
             let mut row = self.clone();
             row.undo_fix();
             Box::new(once(row))
@@ -160,7 +161,7 @@ impl Value {
     }
     /// Consume the value and get an iterator over its rows
     pub fn into_rows(mut self) -> Box<dyn ExactDoubleIterator<Item = Self>> {
-        if self.shape().first() == Some(&1) {
+        if self.shape.first() == Some(&1) {
             self.undo_fix();
             Box::new(once(self))
         } else {
@@ -201,11 +202,11 @@ impl Value {
     }
     /// Get the number of rows
     pub fn row_count(&self) -> usize {
-        self.shape().first().copied().unwrap_or(1)
+        self.shape.first().copied().unwrap_or(1)
     }
     /// Get the number of element in each row
     pub fn row_len(&self) -> usize {
-        self.shape().iter().skip(1).product()
+        self.shape.iter().skip(1).product()
     }
     pub(crate) fn proxy_scalar(&self, env: &Uiua) -> Self {
         match self {
@@ -230,7 +231,7 @@ impl Value {
         if self.rank() == 0 {
             return self.proxy_scalar(env);
         }
-        let shape: Shape = self.shape()[1..].into();
+        let shape: Shape = self.shape[1..].into();
         let elem_count = shape.iter().product();
         match self {
             Self::Num(_) => Array::new(
@@ -303,7 +304,7 @@ impl Value {
     }
     /// Get the rank
     pub fn rank(&self) -> usize {
-        self.shape().len()
+        self.shape.len()
     }
     pub(crate) fn pop_row(&mut self) -> Option<Self> {
         val_as_arr!(self, |array| array.pop_row().map(Value::from))
@@ -319,151 +320,41 @@ impl Value {
     }
 }
 
+/// A representation of a [`Value`] that allows direct access to the
+/// inner [`Array`]'s shape and metadata, regardless of element type
 #[repr(C)]
-struct Repr {
-    discriminant: u8,
-    _arr: Array<f64>,
+pub struct ValueRepr {
+    _discriminant: u8,
+    /// The value's shape
+    pub shape: Shape,
+    _data: CowSlice<f64>,
+    /// The value's metadata
+    pub meta: ArrayMeta,
+}
+
+impl Deref for Value {
+    type Target = ValueRepr;
+    fn deref(&self) -> &Self::Target {
+        // Safety: The layout of `Value` should always match that of `Value`
+        unsafe { &*(self as *const Self as *const ValueRepr) }
+    }
+}
+
+impl DerefMut for Value {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        // Safety: The layout of `Value` should always match that of `Value`
+        unsafe { &mut *(self as *mut Self as *mut ValueRepr) }
+    }
 }
 
 impl Value {
-    /// # Safety
-    /// The value or layout of data accessed from the Repr's array must not be dependent on the array's type
-    unsafe fn repr(&self) -> &Repr {
-        &*(self as *const Self as *const Repr)
-    }
-    /// # Safety
-    /// The value or layout of data accessed from the Repr's array must not be dependent on the array's type
-    unsafe fn repr_mut(&mut self) -> &mut Repr {
-        &mut *(self as *mut Self as *mut Repr)
-    }
-    /// Get the shape of the value
-    pub fn shape(&self) -> &Shape {
-        &unsafe { self.repr() }._arr.shape
-    }
-    /// Get a mutable reference to the shape
-    pub fn shape_mut(&mut self) -> &mut Shape {
-        &mut unsafe { self.repr_mut() }._arr.shape
-    }
-    /// Get the number of elements
-    pub fn element_count(&self) -> usize {
-        self.shape().elements()
-    }
     /// Get the value's metadata
     pub fn meta(&self) -> &ArrayMeta {
-        unsafe { self.repr() }._arr.meta()
+        &self.meta
     }
     /// Get a mutable reference to the value's metadata
     pub fn meta_mut(&mut self) -> &mut ArrayMeta {
-        unsafe { self.repr_mut() }._arr.meta_mut()
-    }
-    /// Get a mutable reference to the value's metadata
-    pub fn get_meta_mut(&mut self) -> Option<&mut ArrayMeta> {
-        unsafe { self.repr_mut() }._arr.get_meta_mut()
-    }
-    /// Take the label from the value
-    pub fn take_label(&mut self) -> Option<EcoString> {
-        self.get_meta_mut().and_then(|meta| meta.label.take())
-    }
-    /// Take the map keys from the value
-    pub fn take_map_keys(&mut self) -> Option<MapKeys> {
-        self.get_meta_mut().and_then(|meta| meta.map_keys.take())
-    }
-    /// Take the persistent metadata from the value
-    pub fn take_per_meta(&mut self) -> PersistentMeta {
-        self.get_meta_mut()
-            .map(ArrayMeta::take_per_meta)
-            .unwrap_or_default()
-    }
-    /// Set the label for the value
-    pub fn set_label(&mut self, label: Option<EcoString>) {
-        if label.is_none() && self.meta().label.is_none() {
-            return;
-        }
-        self.meta_mut().label = label;
-    }
-    /// Set the persistent metadata for the value
-    pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
-        if self.meta().map_keys.is_some() != per_meta.map_keys.is_some() {
-            self.meta_mut().map_keys = per_meta.map_keys;
-        }
-        if self.meta().label.is_some() != per_meta.label.is_some() {
-            self.meta_mut().label = per_meta.label;
-        }
-    }
-    /// Get the value's map keys
-    pub fn map_keys(&self) -> Option<&MapKeys> {
-        self.meta().map_keys.as_ref()
-    }
-    /// Get a mutable reference to the value's map keys
-    pub fn map_keys_mut(&mut self) -> Option<&mut MapKeys> {
-        self.get_meta_mut().and_then(|meta| meta.map_keys.as_mut())
-    }
-    /// Check if the value is sorted ascending
-    pub fn is_sorted_up(&self) -> bool {
-        self.meta().flags.contains(ArrayFlags::SORTED_UP)
-    }
-    /// Check if the value is sorted descending
-    pub fn is_sorted_down(&self) -> bool {
-        self.meta().flags.contains(ArrayFlags::SORTED_DOWN)
-    }
-    /// Take the sorted flags
-    pub fn take_sorted_flags(&mut self) -> ArrayFlags {
-        if let Some(meta) = self.get_meta_mut() {
-            meta.take_sorted_flags()
-        } else {
-            ArrayFlags::NONE
-        }
-    }
-    /// Or the sorted flags
-    pub fn or_sorted_flags(&mut self, mut flags: ArrayFlags) {
-        flags &= ArrayFlags::SORTEDNESS;
-        if flags == ArrayFlags::NONE {
-            return;
-        }
-        self.meta_mut().flags |= flags & ArrayFlags::SORTEDNESS;
-    }
-    /// Or with reversed sorted flags
-    pub fn or_sorted_flags_rev(&mut self, mut flags: ArrayFlags) {
-        flags &= ArrayFlags::SORTEDNESS;
-        if flags == ArrayFlags::NONE {
-            return;
-        }
-        let mut rev_flags = ArrayFlags::NONE;
-        if flags.contains(ArrayFlags::SORTED_UP) {
-            rev_flags |= ArrayFlags::SORTED_DOWN;
-        }
-        if flags.contains(ArrayFlags::SORTED_DOWN) {
-            rev_flags |= ArrayFlags::SORTED_UP;
-        }
-        self.meta_mut().flags |= rev_flags;
-    }
-    /// Mark the value as sorted ascending
-    ///
-    /// It is a logic error to set this to `true` when it is not the case
-    pub(crate) fn mark_sorted_up(&mut self, sorted: bool) {
-        if sorted {
-            self.meta_mut().flags.insert(ArrayFlags::SORTED_UP);
-        } else if let Some(meta) = self.get_meta_mut() {
-            meta.flags.remove(ArrayFlags::SORTED_UP);
-        }
-    }
-    /// Mark the value as sorted descending
-    ///
-    /// It is a logic error to set this to `true` when it is not the case
-    pub(crate) fn mark_sorted_down(&mut self, sorted: bool) {
-        if sorted {
-            self.meta_mut().flags.insert(ArrayFlags::SORTED_DOWN);
-        } else if let Some(meta) = self.get_meta_mut() {
-            meta.flags.remove(ArrayFlags::SORTED_DOWN);
-        }
-    }
-    /// Set the sortedness flags according to the value's data
-    pub fn derive_sortedness(&mut self) {
-        val_as_arr!(self, |arr| arr.derive_sortedness())
-    }
-    /// Reset this value's metadata flags
-    pub fn reset_meta_flags(&mut self) {
-        self.get_meta_mut().map(ArrayMeta::reset_flags);
+        &mut self.meta
     }
     /// Add a 1-length dimension to the front of the array's shape
     pub fn fix(&mut self) {
@@ -471,32 +362,36 @@ impl Value {
     }
     pub(crate) fn fix_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
-        self.shape_mut().fix_depth(depth);
+        self.shape.fix_depth(depth);
         if depth == 0 {
-            if let Some(keys) = self.map_keys_mut() {
+            if let Some(keys) = self.meta.map_keys_mut() {
                 keys.fix();
             }
         }
     }
+    /// Set the sortedness flags according to the value's data
+    pub fn derive_sortedness(&mut self) {
+        val_as_arr!(self, |array| array.derive_sortedness());
+    }
     /// Remove a 1-length dimension from the front of the array's shape
     pub fn unfix(&mut self, env: &Uiua) -> UiuaResult {
-        if let Some(keys) = self.map_keys_mut() {
+        if let Some(keys) = self.meta.map_keys_mut() {
             keys.unfix();
         }
-        self.shape_mut().unfix().map_err(|e| env.error(e))?;
-        self.take_sorted_flags();
+        self.shape.unfix().map_err(|e| env.error(e))?;
+        self.meta.take_sorted_flags();
         self.validate();
         Ok(())
     }
     /// Collapse the top two dimensions of the array's shape
     pub fn undo_fix(&mut self) {
-        if let Some(keys) = self.map_keys_mut() {
+        if let Some(keys) = self.meta.map_keys_mut() {
             if !keys.unfix() {
-                self.take_map_keys();
+                self.meta.take_map_keys();
             }
         }
-        _ = self.shape_mut().unfix();
-        self.take_sorted_flags();
+        _ = self.shape.unfix();
+        self.meta.take_sorted_flags();
         self.validate();
     }
     /// Ensure the value's invariants are upheld
@@ -1270,7 +1165,7 @@ impl Value {
                             .map_err(|e| env.error(format!("{requirement}, but {num} is {e}")))?,
                     );
                 }
-                Array::new(self.shape().clone(), result)
+                Array::new(self.shape.clone(), result)
             }
             Value::Byte(bytes) => {
                 let mut result = EcoVec::with_capacity(bytes.element_count());
@@ -1280,7 +1175,7 @@ impl Value {
                             .map_err(|e| env.error(format!("{requirement}, but {byte} is {e}")))?,
                     );
                 }
-                Array::new(self.shape().clone(), result)
+                Array::new(self.shape.clone(), result)
             }
             value => {
                 return Err(env.error(format!(
@@ -1523,7 +1418,7 @@ impl Value {
                     let mut arr = Array::new(take(&mut nums.shape), bytes);
                     arr.meta = meta;
                     if boolean {
-                        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+                        arr.meta.flags.set(ArrayFlags::BOOLEAN, true);
                     }
                     *self = arr.into();
                 }
@@ -1537,7 +1432,7 @@ impl Value {
                     }
                 }
                 if boolean {
-                    bytes.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+                    bytes.meta.flags.set(ArrayFlags::BOOLEAN, true);
                 }
             }
             _ => {}
@@ -1574,10 +1469,10 @@ impl Value {
     }
     /// Propogate a value's label accross an operation
     pub fn keep_label(mut self, f: impl FnOnce(Self) -> UiuaResult<Self>) -> UiuaResult<Self> {
-        let label = self.take_label();
+        let label = self.meta.take_label();
         let mut result = f(self)?;
         if let Some(label) = label {
-            result.meta_mut().label = Some(label);
+            result.meta.label = Some(label);
         }
         Ok(result)
     }
@@ -1587,15 +1482,15 @@ impl Value {
         mut other: Self,
         f: impl FnOnce(Self, Self) -> UiuaResult<Self>,
     ) -> UiuaResult<Self> {
-        let label = self.take_label();
-        let other_label = other.take_label();
+        let label = self.meta.take_label();
+        let other_label = other.meta.take_label();
         let mut result = f(self, other)?;
         match (label, other_label) {
             (Some(label), None) | (None, Some(label)) => {
-                result.meta_mut().label = Some(label);
+                result.meta.label = Some(label);
             }
             (Some(a), Some(b)) if a == b => {
-                result.meta_mut().label = Some(a);
+                result.meta.label = Some(a);
             }
             _ => {}
         }
@@ -1603,10 +1498,10 @@ impl Value {
     }
     /// Propogate a value's map keys accross an operation
     pub fn keep_map_key(mut self, f: impl FnOnce(Self) -> UiuaResult<Self>) -> UiuaResult<Self> {
-        let keys = self.take_map_keys();
+        let keys = self.meta.take_map_keys();
         let mut result = f(self)?;
         if let Some(keys) = keys {
-            result.meta_mut().map_keys = Some(keys);
+            result.meta.map_keys = Some(keys);
         }
         Ok(result)
     }
@@ -1616,11 +1511,11 @@ impl Value {
         mut other: Self,
         f: impl FnOnce(Self, Self) -> UiuaResult<Self>,
     ) -> UiuaResult<Self> {
-        let keys = self.take_map_keys();
-        let other_keys = other.take_map_keys();
+        let keys = self.meta.take_map_keys();
+        let other_keys = other.meta.take_map_keys();
         let mut result = f(self, other)?;
         if let Some(keys) = keys.xor(other_keys) {
-            result.meta_mut().map_keys = Some(keys);
+            result.meta.map_keys = Some(keys);
         }
         Ok(result)
     }
@@ -1638,8 +1533,8 @@ impl Value {
     }
     pub(crate) fn match_fill<C: FillContext>(&mut self, ctx: &C) {
         if let Value::Byte(arr) = self {
-            if arr.meta().flags.is_boolean() && ctx.scalar_fill::<f64>().is_ok() {
-                arr.meta_mut().flags.remove(ArrayFlags::BOOLEAN);
+            if arr.meta.flags.is_boolean() && ctx.scalar_fill::<f64>().is_ok() {
+                arr.meta.flags.remove(ArrayFlags::BOOLEAN);
             }
             if ctx.number_only_fill() {
                 let shape = take(&mut arr.shape);
@@ -1815,10 +1710,10 @@ macro_rules! value_mon_impl {
             pub(crate) fn $name(mut self, env: &Uiua) -> UiuaResult<Self> {
                 $(
                     stringify!($sorted_val);
-                    let sorted_flags = self.take_sorted_flags();
+                    let sorted_flags = self.meta.take_sorted_flags();
                 )?
                 let mut val: Value = self.keep_meta(|val| Ok(match val {
-                    $($(Self::$in_place(mut array) $(if (|$meta: &ArrayMeta| $pred)(array.meta()))* => {
+                    $($(Self::$in_place(mut array) $(if (|$meta: &ArrayMeta| $pred)(&array.meta))* => {
                         for val in &mut array.data {
                             *val = $name::$f(*val);
                         }
@@ -1863,7 +1758,7 @@ value_mon_impl!(
     [|meta| meta.flags.is_boolean(), Byte, bool],
     (Byte, byte),
     [Complex, com],
-    |val, flags| val.or_sorted_flags_rev(flags)
+    |val, flags| val.meta.or_sorted_flags_rev(flags)
 );
 value_mon_impl!(
     scalar_abs,
@@ -1878,7 +1773,7 @@ value_mon_impl!(
     [Byte, byte],
     [Complex, com],
     (Char, char),
-    |val, flags| val.or_sorted_flags(flags)
+    |val, flags| val.meta.or_sorted_flags(flags)
 );
 value_mon_impl!(
     sqrt,
@@ -1896,21 +1791,21 @@ value_mon_impl!(
     [Num, num],
     [Byte, byte],
     [Complex, com],
-    |val, flags| val.or_sorted_flags(flags)
+    |val, flags| val.meta.or_sorted_flags(flags)
 );
 value_mon_impl!(
     ceil,
     [Num, num],
     [Byte, byte],
     [Complex, com],
-    |val, flags| val.or_sorted_flags(flags)
+    |val, flags| val.meta.or_sorted_flags(flags)
 );
 value_mon_impl!(
     round,
     [Num, num],
     [Byte, byte],
     [Complex, com],
-    |val, flags| val.or_sorted_flags(flags)
+    |val, flags| val.meta.or_sorted_flags(flags)
 );
 value_mon_impl!(
     complex_re,
@@ -1933,7 +1828,7 @@ impl Value {
                 Ok(chars.into())
             }
             Value::Char(mut chars) if chars.rank() > 1 && env.scalar_fill::<char>().is_ok() => {
-                let meta = chars.get_meta_mut().map(take);
+                let meta = chars.meta.get_mut().map(take);
                 let mut rows = Vec::new();
                 for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
                     rows.push(Array::<char>::from_iter(
@@ -1944,7 +1839,7 @@ impl Value {
                 let last = arr.shape.pop().unwrap();
                 arr.shape = chars.shape;
                 *arr.shape.last_mut().unwrap() = last;
-                arr.meta = meta.map(Into::into);
+                arr.meta = meta.unwrap_or_default();
                 Ok(arr.into())
             }
             value => value.scalar_abs(env),
@@ -1952,7 +1847,7 @@ impl Value {
     }
     /// `negate` a value
     pub fn neg(mut self, env: &Uiua) -> UiuaResult<Self> {
-        let sorted_flags = self.take_sorted_flags();
+        let sorted_flags = self.meta.take_sorted_flags();
         let mut val = match self {
             Value::Char(mut chars) if chars.rank() == 1 && env.scalar_fill::<char>().is_ok() => {
                 let mut new_data = EcoVec::with_capacity(chars.data.len());
@@ -1988,7 +1883,7 @@ impl Value {
             }
             value => value.scalar_neg(env)?,
         };
-        val.or_sorted_flags_rev(sorted_flags);
+        val.meta.or_sorted_flags_rev(sorted_flags);
         Ok(val)
     }
     /// Raise a value to a power
@@ -2026,25 +1921,25 @@ macro_rules! value_dy_impl {
             #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
             pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 let (mut a, mut b) = optimize_types(self, other);
-                a.take_sorted_flags(); // TODO: make this conditional
-                b.take_sorted_flags();
+                a.meta.take_sorted_flags(); // TODO: make this conditional
+                b.meta.take_sorted_flags();
                 a.match_fill(env);
                 b.match_fill(env);
                 let mut val = a.keep_metas(b, |a, b| { Ok(match (a, b) {
                     $($((Value::$ip(mut a), Value::$ip(mut b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;
-                        f(a.meta()) && f(b.meta())
+                        f(&a.meta) && f(&b.meta)
                     })* => {
                         bin_pervade_mut(a, &mut b, env, $name::$f2)?;
                         let mut val: Value = b.into();
                         $(if $reset_meta {
-                            val.reset_meta_flags();
+                            val.meta.reset_flags();
                         })*
                         val
                     },)*)*
                     $($((Value::$na(a), Value::$nb(b)) => {
                         let mut val: Value = bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f1))?.into();
-                        val.reset_meta_flags();
+                        val.meta.reset_flags();
                         val
                     },)*)*
                     (Value::Box(a), Value::Box(b)) => {
@@ -2057,7 +1952,7 @@ macro_rules! value_dy_impl {
                         let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
                             Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();
-                        val.reset_meta_flags();
+                        val.meta.reset_flags();
                         val
                     }
                     (Value::Box(a), b) => {
@@ -2065,7 +1960,7 @@ macro_rules! value_dy_impl {
                         let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
                             Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();
-                        val.reset_meta_flags();
+                        val.meta.reset_flags();
                         val
                     },
                     (a, Value::Box(b)) => {
@@ -2073,7 +1968,7 @@ macro_rules! value_dy_impl {
                         let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
                             Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();
-                        val.reset_meta_flags();
+                        val.meta.reset_flags();
                         val
                     },
                     (a, b) => return Err($name::error(a.type_name(), b.type_name(), env)),
@@ -2241,12 +2136,12 @@ cmp_impls!(other_is_lt, other_is_le, other_is_gt, other_is_ge);
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        if let Some(a) = self.meta().pointer {
+        if let Some(a) = self.meta.pointer {
             if a.raw {
-                return other.meta().pointer.is_some_and(|b| a == b);
+                return other.meta.pointer.is_some_and(|b| a == b);
             }
         }
-        if let Some(b) = other.meta().pointer {
+        if let Some(b) = other.meta.pointer {
             if b.raw {
                 return false;
             }
@@ -2324,14 +2219,14 @@ impl Hash for HashLabels {
 
 impl PartialEq for HashLabels<&Value> {
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq(other.0) && self.0.meta().label == other.0.meta().label
+        self.0.eq(other.0) && self.0.meta.label == other.0.meta.label
     }
 }
 impl Eq for HashLabels<&Value> {}
 impl Hash for HashLabels<&Value> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
-        self.0.meta().label.hash(state);
+        self.0.meta.label.hash(state);
         if let HashLabels(Value::Box(arr)) = self {
             for Boxed(val) in &arr.data {
                 HashLabels(val).hash(state);
@@ -2389,7 +2284,7 @@ impl ValueBuilder {
             value.append(row, false, ctx)?;
         } else {
             row.reserve_min(self.capacity);
-            row.shape_mut().insert(0, 1);
+            row.shape.insert(0, 1);
             self.value = Some(row);
         }
         self.rows += 1;

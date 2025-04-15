@@ -46,7 +46,7 @@ impl PreEvalMode {
                 matches!(
                     node,
                     Node::Push(val)
-                        if val.element_count() > MAX_PRE_EVAL_ELEMS
+                        if val.shape.elements() > MAX_PRE_EVAL_ELEMS
                         || val.rank() > MAX_PRE_EVAL_RANK
                 )
             }) {
@@ -176,7 +176,7 @@ impl Compiler {
                 Ok(()) => {
                     let stack = env.take_stack();
                     let res = if stack.iter().any(|v| {
-                        v.element_count() > MAX_PRE_EVAL_ELEMS || v.rank() > MAX_PRE_EVAL_RANK
+                        v.shape.elements() > MAX_PRE_EVAL_ELEMS || v.rank() > MAX_PRE_EVAL_RANK
                     }) {
                         None
                     } else {

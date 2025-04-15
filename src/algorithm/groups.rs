@@ -234,7 +234,7 @@ where
                 source: self,
             })
         } else {
-            let row_shape: Shape = self.shape()[markers.rank()..].into();
+            let row_shape: Shape = self.shape[markers.rank()..].into();
             let indices = multi_partition_indices(markers);
             for (_, indices) in indices {
                 let mut group = Vec::with_capacity(indices.len());
@@ -386,7 +386,7 @@ fn multi_partition_indices(markers: &Array<i64>) -> Vec<(i64, Vec<usize>)> {
         }
         // Increment the current index
         for (i, c) in curr.iter_mut().enumerate().rev() {
-            if *c < markers.shape()[i] - 1 {
+            if *c < markers.shape[i] - 1 {
                 *c += 1;
                 break;
             }
@@ -394,7 +394,7 @@ fn multi_partition_indices(markers: &Array<i64>) -> Vec<(i64, Vec<usize>)> {
         }
     }
     let mut shape_muls: Vec<usize> = markers
-        .shape()
+        .shape
         .iter()
         .rev()
         .scan(1, |mul, &dim| {
@@ -492,7 +492,7 @@ pub fn undo_partition_part2(env: &mut Uiua) -> UiuaResult {
         }
         env.push(Value::from_row_values(unpartitioned, env)?);
     } else {
-        let row_shape: Shape = original.shape()[markers.rank()..].into();
+        let row_shape: Shape = original.shape[markers.rank()..].into();
         let indices = multi_partition_indices(&markers);
         let row_elem_count: usize = row_shape.iter().product();
         let untransformed_rows = untransformed.into_rows().map(Value::unboxed);
@@ -591,7 +591,7 @@ impl<T: ArrayValue> Array<T> {
         };
         let buckets = (max_index.max(-1) + 1).max(0) as usize;
         let mut groups: Vec<Vec<Self>> = vec![Vec::new(); buckets];
-        let row_shape = self.shape()[indices.rank()..].into();
+        let row_shape = self.shape[indices.rank()..].into();
         for (&g, r) in (indices.data.iter()).zip(self.into_row_shaped_slices(row_shape)) {
             if g >= 0 && g < buckets as isize {
                 groups[g as usize].push(r);
@@ -725,9 +725,9 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
         return Err(env.error("A group's length was modified between grouping and ungrouping"));
     }
     let mut val = Value::from_row_values(ungrouped, env)?;
-    val.shape_mut().remove(0);
-    for &dim in indices.shape().iter().rev() {
-        val.shape_mut().insert(0, dim);
+    val.shape.remove(0);
+    for &dim in indices.shape.iter().rev() {
+        val.shape.insert(0, dim);
     }
     val.validate();
     env.push(val);
@@ -762,12 +762,12 @@ where
     }
 
     for xs in &values {
-        if !xs.shape().starts_with(indices.shape()) {
+        if !xs.shape.starts_with(&indices.shape) {
             return Err(env.error(format!(
                 "Cannot {} array of shape {} with indices of shape {}",
                 prim.format(),
-                xs.shape(),
-                indices.shape()
+                xs.shape,
+                indices.shape
             )));
         }
     }
@@ -795,8 +795,8 @@ where
                     return Err(env.error(format!(
                         "Cannot {} array of shape {} with indices of shape {}",
                         prim.format(),
-                        xs.shape(),
-                        indices.shape()
+                        xs.shape,
+                        indices.shape
                     )));
                 }
                 env.push(lens(&indices.data));
@@ -811,14 +811,14 @@ where
     let mut groups: Vec<_> = values
         .into_iter()
         .map(|xs| {
-            let mut empty_shape = xs.shape().clone();
+            let mut empty_shape = xs.shape.clone();
             is_scalar |= empty_shape.is_empty();
             *empty_shape.row_count_mut() = 0;
             let groups = get_groups(xs, &indices).into_iter();
             group_count = groups.size_hint().0;
             groups.map(move |mut group| {
                 if group.row_count() == 0 {
-                    group.shape_mut().clone_from(&empty_shape);
+                    group.shape.clone_from(&empty_shape);
                     group.validate();
                 }
                 group

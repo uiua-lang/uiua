@@ -1,6 +1,12 @@
 //! Algorithms for zipping modifiers
 
-use std::{cell::RefCell, collections::HashMap, iter::repeat, mem::swap, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    iter::repeat,
+    mem::{swap, take},
+    rc::Rc,
+};
 
 use ecow::eco_vec;
 
@@ -676,6 +682,19 @@ pub fn rows1(f: SigNode, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult
 fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
     let outputs = f.sig.outputs();
     let both_scalar = xs.rank() == 0 && ys.rank() == 0;
+    if both_scalar {
+        // Simple path if both are scalars
+        env.push(ys.unboxed_if(inv));
+        env.push(xs.unboxed_if(inv));
+        let outputs = f.sig.outputs();
+        env.exec(f)?;
+        if inv {
+            for val in env.n_mut(outputs)? {
+                *val = Boxed(take(val)).into();
+            }
+        }
+        return Ok(());
+    }
     match (xs.row_count(), ys.row_count()) {
         (_, 1) => {
             ys.undo_fix();
@@ -709,7 +728,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
                 }
                 Ok(())
             })?;
-            collect_outputs(new_rows, both_scalar, is_empty, per_meta, env)
+            collect_outputs(new_rows, false, is_empty, per_meta, env)
         }
         (1, _) => {
             xs.undo_fix();
@@ -743,7 +762,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
                 }
                 Ok(())
             })?;
-            collect_outputs(new_rows, both_scalar, is_empty, per_meta, env)
+            collect_outputs(new_rows, false, is_empty, per_meta, env)
         }
         (a, b) => {
             if a != b {
@@ -806,7 +825,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
                 }
                 Ok(())
             })?;
-            collect_outputs(new_rows, both_scalar, is_empty, per_meta, env)
+            collect_outputs(new_rows, false, is_empty, per_meta, env)
         }
     }
 }

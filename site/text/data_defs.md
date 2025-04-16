@@ -272,14 +272,13 @@ However, this is not the case for boxing data definitions. Notice here how there
 Person {"Alice" "Bob" "Carol"} [21 54 49]
 ```
 
-For this reason, boxing data definitions have a `SoA` constructor that properly initializes lists of default fields.
+We can use the idiom `/⍚⊂≡` to properly initializes lists of default fields as well as repeat items.
 
 ```uiua
 ~Person {Name Age Score ← 0}
-Person~SoA {"Alice" "Bob" "Carol"} [21 54 49]
+/⍚⊂≡Person {"Alice" "Bob" "Carol"} [21 54 49]
+/⍚⊂≡Person {"Alice" "Bob" "Carol"} 30
 ```
-
-The `SoA` constructor is only available for boxing data definitions that have at least one non-default field.
 
 ## Dynamic Structure
 

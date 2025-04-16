@@ -77,8 +77,6 @@ node!(
     GetLocal { def: usize, span: usize },
     /// Set a local value
     SetLocal { def: usize, span: usize },
-    /// Normalize a struct-of-arrays data def
-    NormalizeSoA { len_index: usize, mask: u64, span: usize },
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),
@@ -744,9 +742,6 @@ impl fmt::Debug for Node {
             }
             Node::GetLocal { def, .. } => write!(f, "get-local {def}"),
             Node::SetLocal { def, .. } => write!(f, "set-local {def}"),
-            Node::NormalizeSoA {
-                len_index, mask, ..
-            } => write!(f, "normalize-soa({len_index}, {mask})"),
         }
     }
 }

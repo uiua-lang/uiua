@@ -1352,7 +1352,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⊘ [1_1_2 2_3_3] [0 0 1 1 2 2 3]
     ///
-    /// [fill] can be used to set the value of missing items. This includes rows in the searched-for array that have run out of corresponding items in the searched-for array.
+    /// [fill] can be used to set the value of missing items. This includes rows in the searched-for array that have run out of corresponding items in the searched-in array.
     /// ex: # Experimental!
     ///   :   ⊘ [4 8 2 9 1] [1 2 3 4]
     ///   : ⬚∞⊘ [4 8 2 9 1] [1 2 3 4]

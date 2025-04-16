@@ -1249,7 +1249,10 @@ impl<T: ArrayValue> Array<T> {
         if depth == 0 {
             self.meta.mark_sorted_up(true);
             self.meta.mark_sorted_down(false);
+        } else {
+            self.meta.take_sorted_flags();
         }
+        self.validate();
     }
     pub(crate) fn sort_down_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
@@ -1300,7 +1303,10 @@ impl<T: ArrayValue> Array<T> {
         if depth == 0 {
             self.meta.mark_sorted_up(false);
             self.meta.mark_sorted_down(true);
+        } else {
+            self.meta.take_sorted_flags();
         }
+        self.validate();
     }
     /// `classify` the rows of the array
     pub fn classify(&self) -> Vec<usize> {

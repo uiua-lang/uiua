@@ -305,6 +305,7 @@ pub fn Optimizations() -> impl IntoView {
             <li>"A range is generated with "<Prim prim=Range/>" or "<Prim prim=Un/><Prim prim=Shape/>"."</li>
             <li>"An array is passed to "<Prims prims=[Scan, Min]/>" or "<Prims prims=[Scan, Max]/>"."</li>
             <li>"Two arrays are "<Prim prim=Couple/>"d."</li>
+            <li><Prim prim=Reshape/>" is called with at least one scalar argument."</li>
         </ul>
         <p>"The default behavior of most primitives is to clear sortedness flags. However, sortedness flags are maintained in these cases:"</p>
         <ul>

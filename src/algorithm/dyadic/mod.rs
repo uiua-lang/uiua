@@ -242,6 +242,7 @@ impl<T: ArrayValue> Array<T> {
             return Ok(());
         }
         let elem_count = validate_size_of::<T>([count - 1, self.data.len()])?;
+        let has_fill = fill.is_some();
         if let Some(fill) = fill {
             self.data.extend_repeat_fill(&fill, elem_count);
         } else {
@@ -252,7 +253,12 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         self.shape.insert(0, count);
-        self.meta.take_sorted_flags();
+        if has_fill {
+            self.meta.take_sorted_flags();
+        } else {
+            self.meta.mark_sorted_up(true);
+            self.meta.mark_sorted_down(true);
+        }
         self.validate();
         Ok(())
     }
@@ -282,7 +288,9 @@ impl<T: ArrayValue> Array<T> {
     /// `reshape` the array
     pub fn reshape(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
         let fill = env.scalar_fill::<T>();
-        let axes = derive_shape(&self.shape, dims, fill.is_ok(), env)?;
+        let has_fill = fill.is_ok();
+        let was_scalar = self.rank() == 0;
+        let axes = derive_shape(&self.shape, dims, has_fill, env)?;
         if (axes.first()).is_none_or(|&d| d.unsigned_abs() != self.row_count()) {
             self.meta.take_map_keys();
         }
@@ -293,7 +301,7 @@ impl<T: ArrayValue> Array<T> {
         validate_size::<T>(shape.iter().copied(), env)?;
         let target_len: usize = shape.iter().product();
         if self.data.len() < target_len {
-            match env.scalar_fill::<T>() {
+            match fill {
                 Ok(fill) => {
                     let start = self.data.len();
                     self.data.extend_repeat_fill(&fill, target_len - start);
@@ -328,7 +336,12 @@ impl<T: ArrayValue> Array<T> {
         for s in reversed_axes {
             self.reverse_depth(s);
         }
-        self.meta.take_sorted_flags();
+        if was_scalar && !has_fill {
+            self.meta.mark_sorted_up(true);
+            self.meta.mark_sorted_down(true);
+        } else {
+            self.meta.take_sorted_flags();
+        }
         self.validate();
         Ok(())
     }

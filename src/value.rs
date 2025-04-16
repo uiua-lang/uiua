@@ -2060,7 +2060,7 @@ macro_rules! value_dy_math_impl {
                 },
                 handle_pre: |a: Option<ArrayFlags>, b, val| {
                     if let Some(flags) = a.or(b) {
-                        val.meta.or_sorted_flags(dbg!(flags));
+                        val.meta.or_sorted_flags(flags);
                     }
                 },
             }

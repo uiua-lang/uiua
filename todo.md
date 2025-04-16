@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.16
-- Sortedness flags
-  - Document behavior
 - Stabilize `fft`
   - Requirs a custom implementation 😵‍💫
 - Last-axis subscripts or modifier?

@@ -5,7 +5,9 @@ use std::{cmp::Ordering, iter::once};
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::{max_shape, validate_size_impl, validate_size_of, FillContext, Indexable},
+    algorithm::{
+        max_shape, validate_size_impl, validate_size_of, ArrayCmpSlice, FillContext, Indexable,
+    },
     cowslice::cowslice,
     fill::FillValue,
     val_as_arr, Array, ArrayValue, Boxed, Complex, FormatShape, Primitive, Shape, Uiua, UiuaResult,
@@ -241,6 +243,8 @@ impl<T: ArrayValue> Array<T> {
         ctx: &C,
     ) -> Result<Self, C::Error> {
         crate::profile_function!();
+        let mut sorted_up = false;
+        let mut sorted_down = false;
         let mut res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
                 if self.shape == [0] {
@@ -282,6 +286,24 @@ impl<T: ArrayValue> Array<T> {
                                     self.shape, other.shape
                                 ))));
                             }
+                            match other.row_count() {
+                                0 => {
+                                    sorted_up = true;
+                                    sorted_down = true;
+                                }
+                                n => {
+                                    if other.meta.is_sorted_up() || other.meta.is_sorted_down() {
+                                        let row_len = other.row_len();
+                                        let b_slice = &other.data[(n - 1) * row_len..];
+                                        let ordering =
+                                            ArrayCmpSlice(&self.data).cmp(&ArrayCmpSlice(b_slice));
+                                        sorted_up = other.meta.is_sorted_up()
+                                            && ordering != Ordering::Greater;
+                                        sorted_down = other.meta.is_sorted_down()
+                                            && ordering != Ordering::Less;
+                                    }
+                                }
+                            }
                         }
                         other.shape
                     }
@@ -307,7 +329,7 @@ impl<T: ArrayValue> Array<T> {
                     return Ok(self);
                 }
                 self.append(other, allow_ext, ctx)?;
-                self
+                return Ok(self);
             }
             Ordering::Equal => {
                 let map_keys = self.meta.take_map_keys().zip(other.meta.take_map_keys());
@@ -318,12 +340,16 @@ impl<T: ArrayValue> Array<T> {
                         (Some(a), Some(b)) if a == b => Some(a),
                         _ => None,
                     };
+                    let ordering = self.data[0].array_cmp(&other.data[0]);
+                    sorted_up = ordering != Ordering::Greater;
+                    sorted_down = ordering != Ordering::Less;
                     self.meta.set_label(label);
                     self.data.extend(other.data.into_iter().next());
                     self.shape = 2.into();
                     self
                 } else {
                     if self.shape[1..] != other.shape[1..] {
+                        // Fill
                         match ctx.scalar_fill::<T>() {
                             Ok(fill) => {
                                 if map_keys.is_some() {
@@ -346,6 +372,37 @@ impl<T: ArrayValue> Array<T> {
                                     "Cannot join arrays of shapes {} and {}. {e}",
                                     self.shape, other.shape
                                 ))));
+                            }
+                        }
+                    } else {
+                        // Set sorted flags
+                        match (self.row_count(), other.row_count()) {
+                            (0, 0) => {
+                                sorted_up = true;
+                                sorted_down = true;
+                            }
+                            (_, 0) => {
+                                sorted_up = self.meta.is_sorted_up();
+                                sorted_down = self.meta.is_sorted_down();
+                            }
+                            (0, _) => {
+                                sorted_up = other.meta.is_sorted_up();
+                                sorted_down = other.meta.is_sorted_down();
+                            }
+                            (a, _b) => {
+                                let both_sorted_up =
+                                    self.meta.is_sorted_up() && other.meta.is_sorted_up();
+                                let both_sorted_down =
+                                    self.meta.is_sorted_down() && other.meta.is_sorted_down();
+                                if both_sorted_up || both_sorted_down {
+                                    let row_len = self.row_len();
+                                    let a_slice = &self.data[(a - 1) * row_len..];
+                                    let b_slice = &other.data[0..row_len];
+                                    let ordering =
+                                        ArrayCmpSlice(a_slice).cmp(&ArrayCmpSlice(b_slice));
+                                    sorted_up = both_sorted_up && ordering != Ordering::Greater;
+                                    sorted_down = both_sorted_down && ordering != Ordering::Less;
+                                }
                             }
                         }
                     }
@@ -384,7 +441,8 @@ impl<T: ArrayValue> Array<T> {
                 res
             }
         };
-        res.meta.take_sorted_flags();
+        res.meta.mark_sorted_up(sorted_up);
+        res.meta.mark_sorted_down(sorted_down);
         res.validate();
         Ok(res)
     }
@@ -394,6 +452,8 @@ impl<T: ArrayValue> Array<T> {
         allow_ext: bool,
         ctx: &C,
     ) -> Result<(), C::Error> {
+        let mut sorted_up = false;
+        let mut sorted_down = false;
         if self.shape.row_count() == 0 {
             validate_size_of::<T>(once(1).chain(self.shape[1..].iter().copied()))
                 .map_err(|e| ctx.error(e))?;
@@ -403,6 +463,21 @@ impl<T: ArrayValue> Array<T> {
             .flatten();
         self.meta.combine(&other.meta);
         if self.shape[1..] == other.shape {
+            match self.row_count() {
+                0 => {
+                    sorted_up = true;
+                    sorted_down = true;
+                }
+                n => {
+                    if self.meta.is_sorted_up() || self.meta.is_sorted_down() {
+                        let row_len = self.row_len();
+                        let a_slice = &self.data[(n - 1) * row_len..];
+                        let ordering = ArrayCmpSlice(a_slice).cmp(&ArrayCmpSlice(&other.data));
+                        sorted_up = self.meta.is_sorted_up() && ordering != Ordering::Greater;
+                        sorted_down = self.meta.is_sorted_down() && ordering != Ordering::Less;
+                    }
+                }
+            }
             self.data.extend_from_cowslice(other.data);
         } else if allow_ext && self.shape[1..].ends_with(&other.shape) {
             if !other.shape.contains(&0) {
@@ -450,7 +525,8 @@ impl<T: ArrayValue> Array<T> {
             }
             self.meta.map_keys = Some(a);
         }
-        self.meta.take_sorted_flags();
+        self.meta.mark_sorted_up(sorted_up);
+        self.meta.mark_sorted_down(sorted_down);
         self.validate();
         Ok(())
     }

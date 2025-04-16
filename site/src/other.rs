@@ -321,6 +321,7 @@ pub fn Optimizations() -> impl IntoView {
             <li>"A sorted array is "<Prim prim=Un/><Prim prim=Keep/>"d."</li>
             <li>"Two sorted arrays are passed to "<Prim prim=Select/>"."</li>
             <li>"A sorted array is passed as the second argument to "<Prim prim=Keep/>", "<Prim prim=Take/>", or "<Prim prim=Drop/>" (without a "<Prim prim=Fill/>" value)."</li>
+            <li>"Two sorted arrays are "<Prim prim=Join/>"ed appropriately."</li>
         </ul>
         <p>"Sortedness flags are used to improve the performance of:"</p>
         <ul>

@@ -4,12 +4,14 @@ use std::{
     cell::RefCell,
     cmp::Ordering,
     convert::Infallible,
-    env, fmt,
+    env,
+    f64::consts::{PI, TAU},
+    fmt,
     hash::{Hash, Hasher},
     iter,
     mem::size_of,
     ops::Deref,
-    option,
+    option, ptr,
 };
 
 use ecow::{EcoString, EcoVec};
@@ -781,35 +783,15 @@ fn fixed_rows(
     })
 }
 
-#[cfg(not(feature = "fft"))]
 pub fn fft(env: &mut Uiua) -> UiuaResult {
-    Err(env.error("FFT is not available in this environment"))
+    fft_impl(false, env)
 }
 
-#[cfg(not(feature = "fft"))]
 pub fn unfft(env: &mut Uiua) -> UiuaResult {
-    Err(env.error("FFT is not available in this environment"))
+    fft_impl(true, env)
 }
 
-#[cfg(feature = "fft")]
-pub fn fft(env: &mut Uiua) -> UiuaResult {
-    fft_impl(env, rustfft::FftPlanner::plan_fft_forward)
-}
-
-#[cfg(feature = "fft")]
-pub fn unfft(env: &mut Uiua) -> UiuaResult {
-    fft_impl(env, rustfft::FftPlanner::plan_fft_inverse)
-}
-
-#[cfg(feature = "fft")]
-fn fft_impl(
-    env: &mut Uiua,
-    plan: fn(&mut rustfft::FftPlanner<f64>, usize) -> std::sync::Arc<dyn rustfft::Fft<f64>>,
-) -> UiuaResult {
-    use bytemuck::must_cast_slice_mut;
-
-    use rustfft::{num_complex::Complex64, FftPlanner};
-
+fn fft_impl(inverse: bool, env: &mut Uiua) -> UiuaResult {
     use crate::Complex;
 
     let mut arr: Array<Complex> = match env.pop(1)? {
@@ -820,29 +802,172 @@ fn fft_impl(
             return Err(env.error(format!("Cannot perform FFT on a {} array", val.type_name())));
         }
     };
-    if arr.rank() == 0 {
-        env.push(0);
-        return Ok(());
-    }
-    let list_row_len: usize = arr.shape[arr.rank() - 1..].iter().product();
-    if list_row_len == 0 {
+
+    let n = arr.row_count();
+    let row_len = arr.row_len();
+    if n <= 1 || row_len == 0 {
         env.push(arr);
         return Ok(());
     }
-    let mut planner = FftPlanner::new();
-    let scaling_factor = 1.0 / (list_row_len as f64).sqrt();
-    for row in arr.data.as_mut_slice().chunks_exact_mut(list_row_len) {
-        let fft = plan(&mut planner, row.len());
-        // NOTE: This works as long as Uiua's `complex` and `num_complex::Complex64` have
-        // the same layout. the `Complex64` layout should remain stable since they are
-        // maintaining compatibility with C. So we only need to ensure that we keep
-        // the same (real, imaginary) ordering that they do.
-        let slice: &mut [Complex64] = must_cast_slice_mut(row);
-        fft.process(slice);
-        for c in row {
-            *c *= scaling_factor;
+    let data = arr.data.as_mut_slice();
+
+    if inverse {
+        for x in &mut *data {
+            x.im = -x.im;
         }
     }
+
+    if n.is_power_of_two() {
+        // Cooley-Tukey FFT for power-of-two sizes
+        if arr.shape.len() == 1 {
+            fft_power_of_2_list(data);
+        } else {
+            fft_power_of_2_array(n, row_len, data);
+        }
+    } else {
+        // Bluestein FFT for non-power-of-two sizes
+        let m = n.next_power_of_two();
+        let mut a = vec![Complex::ZERO; m * row_len];
+        let mut b = vec![Complex::ZERO; m * row_len];
+        for i in 0..n {
+            let angle = PI * (i as u64 * i as u64) as f64 / n as f64;
+            let w1 = Complex::from_polar(1.0, -angle);
+            let w2 = Complex::from_polar(1.0, angle);
+            let start = i * row_len;
+            for j in 0..row_len {
+                a[start + j] = data[start + j] * w1;
+                b[start + j] = w2;
+            }
+        }
+        for i in 1..n {
+            for j in 0..row_len {
+                b[(m - i) * row_len + j] = b[i * row_len + j];
+            }
+        }
+
+        // Convolve
+        fft_power_of_2_array(m, row_len, &mut a);
+        fft_power_of_2_array(m, row_len, &mut b);
+        for (a, b) in a.iter_mut().zip(&b) {
+            *a *= *b;
+            a.im = -a.im;
+        }
+        fft_power_of_2_array(m, row_len, &mut a);
+        for x in &mut a {
+            x.im = -x.im;
+            *x /= m as f64;
+        }
+
+        for i in 0..n {
+            let angle = PI * (i as u64 * i as u64) as f64 / n as f64;
+            let w = Complex::from_polar(1.0, -angle);
+            let start = i * row_len;
+            for j in 0..row_len {
+                data[start + j] = a[start + j] * w;
+            }
+        }
+    }
+
+    if inverse {
+        for x in &mut *data {
+            x.im = -x.im;
+        }
+    }
+
+    let scaling_factor = 1.0 / (n as f64).sqrt();
+    for x in &mut *data {
+        *x *= scaling_factor;
+    }
+
+    arr.meta.take_sorted_flags();
+    arr.validate();
     env.push(arr);
     Ok(())
+}
+
+fn fft_power_of_2_list(data: &mut [Complex]) {
+    let n = data.len();
+    assert!(n.is_power_of_two());
+    // Bit reversal permutation
+    let mut j = 0;
+    for i in 1..n {
+        let mut bit = n >> 1;
+        while j & bit != 0 {
+            j ^= bit;
+            bit >>= 1;
+        }
+        j ^= bit;
+        if i < j {
+            data.swap(i, j);
+        }
+    }
+
+    // Cooley-Tukey FFT
+    let mut len = 2;
+    while len <= n {
+        let wlen = match len {
+            2 => Complex::new(-1.0, 0.0),
+            4 => Complex::new(0.0, -1.0),
+            _ => Complex::from_polar(1.0, -TAU / len as f64),
+        };
+        for i in (0..n).step_by(len) {
+            for j in 0..len / 2 {
+                let w = wlen.powi(j as i32);
+                let u = data[i + j];
+                let v_w = data[i + j + len / 2];
+                data[i + j] = v_w.mul_add(w, u);
+                data[i + j + len / 2] = v_w.mul_add(-w, u);
+            }
+        }
+        len *= 2;
+    }
+}
+
+fn fft_power_of_2_array(n: usize, row_len: usize, data: &mut [Complex]) {
+    assert!(n.is_power_of_two());
+    // Bit reversal permutation
+    let mut j = 0;
+    for i in 1..n {
+        let mut bit = n >> 1;
+        while j & bit != 0 {
+            j ^= bit;
+            bit >>= 1;
+        }
+        j ^= bit;
+        if i >= j {
+            continue;
+        }
+        // Safty: i and j are both less than n and are not equal
+        unsafe {
+            ptr::swap_nonoverlapping(
+                &mut data[i * row_len] as *mut _,
+                &mut data[j * row_len] as *mut _,
+                row_len,
+            );
+        }
+    }
+
+    // Cooley-Tukey FFT
+    let mut len = 2;
+    while len <= n {
+        let wlen = match len {
+            2 => Complex::new(-1.0, 0.0),
+            4 => Complex::new(0.0, -1.0),
+            _ => Complex::from_polar(1.0, -TAU / len as f64),
+        };
+        for i in (0..n).step_by(len) {
+            for j in 0..len / 2 {
+                let w = wlen.powi(j as i32);
+                let u_start = (i + j) * row_len;
+                let v_start = (i + j + len / 2) * row_len;
+                for k in 0..row_len {
+                    let u = data[u_start + k];
+                    let v_w = data[v_start + k];
+                    data[u_start + k] = v_w.mul_add(w, u);
+                    data[v_start + k] = v_w.mul_add(-w, u);
+                }
+            }
+        }
+        len *= 2;
+    }
 }

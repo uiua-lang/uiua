@@ -87,7 +87,14 @@ impl Complex {
     /// Get the absolute value of a complex number
     pub fn abs(self) -> f64 {
         // Do not use `self.re.hypot(self.im)` because it is slower, especially on WASM
-        (self.re * self.re + self.im * self.im).sqrt()
+        (self.re.mul_add(self.re, self.im * self.im)).sqrt()
+    }
+    /// Get the complex conjugate of a complex number
+    pub fn conj(self) -> Self {
+        Self {
+            re: self.re,
+            im: -self.im,
+        }
     }
     /// Get the arctangent of a complex number
     pub fn atan2(self, x: impl Into<Self>) -> Complex {
@@ -114,16 +121,22 @@ impl Complex {
     }
     /// Convert polar coordinates to a complex number
     pub fn from_polar(r: f64, theta: f64) -> Self {
-        r * Self::new(theta.cos(), theta.sin())
+        let (sin, cos) = theta.sin_cos();
+        r * Self::new(cos, sin)
     }
-    /// Raise a complex number to a complex power
-    pub fn powc(self, power: impl Into<Self>) -> Self {
-        let power = power.into();
-        if power.im == 0.0 {
-            return self.powf(power.re);
+    /// Raise a complex number to an integer power
+    pub fn powi(self, power: i32) -> Self {
+        match power {
+            0 => return Self::ONE,
+            1 => return self,
+            2 => return self * self,
+            _ => {}
+        }
+        if power < 0 {
+            return Self::ONE / self.powi(-power);
         }
         let (r, theta) = self.to_polar();
-        ((r.ln() + Self::I * theta) * power).exp()
+        Self::from_polar(r.powi(power), theta * power as f64)
     }
     /// Raise a complex number to a real power
     pub fn powf(self, power: f64) -> Self {
@@ -135,6 +148,15 @@ impl Complex {
         }
         let (r, theta) = self.to_polar();
         Self::from_polar(r.powf(power), theta * power)
+    }
+    /// Raise a complex number to a complex power
+    pub fn powc(self, power: impl Into<Self>) -> Self {
+        let power = power.into();
+        if power.im == 0.0 {
+            return self.powf(power.re);
+        }
+        let (r, theta) = self.to_polar();
+        ((r.ln() + Self::I * theta) * power).exp()
     }
     /// Calculate the exponential of a complex number
     pub fn exp(self) -> Self {
@@ -194,6 +216,15 @@ impl Complex {
             Some(self.re)
         } else {
             None
+        }
+    }
+    /// Multiply and add complex numers
+    pub fn mul_add(self, mul: impl Into<Self>, add: impl Into<Self>) -> Self {
+        let mul = mul.into();
+        let add = add.into();
+        Self {
+            re: self.re.mul_add(mul.re, (-self.im).mul_add(mul.im, add.re)),
+            im: self.re.mul_add(mul.im, self.im.mul_add(mul.re, add.im)),
         }
     }
 }
@@ -284,8 +315,8 @@ impl Mul for Complex {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         Self {
-            re: self.re * rhs.re - self.im * rhs.im,
-            im: self.re * rhs.im + self.im * rhs.re,
+            re: self.re.mul_add(rhs.re, -self.im * rhs.im),
+            im: self.re.mul_add(rhs.im, self.im * rhs.re),
         }
     }
 }
@@ -313,10 +344,10 @@ impl Mul<Complex> for f64 {
 impl Div for Complex {
     type Output = Self;
     fn div(self, rhs: Self) -> Self::Output {
-        let denom = rhs.re * rhs.re + rhs.im * rhs.im;
+        let denom = rhs.re.mul_add(rhs.re, rhs.im * rhs.im);
         Self {
-            re: (self.re * rhs.re + self.im * rhs.im) / denom,
-            im: (self.im * rhs.re - self.re * rhs.im) / denom,
+            re: (self.re.mul_add(rhs.re, self.im * rhs.im)) / denom,
+            im: (self.im.mul_add(rhs.re, -self.re * rhs.im)) / denom,
         }
     }
 }

@@ -1620,18 +1620,20 @@ impl Value {
         let counts =
             self.as_natural_array(env, "Argument to where must be an array of naturals")?;
         let total: usize = counts.data.iter().fold(0, |acc, &b| acc.saturating_add(b));
-        Ok(match self.rank() {
+        let mut val: Value = match self.rank() {
             0 => {
                 validate_size::<u8>([total], env)?;
                 let data = eco_vec![0u8; total];
-                Array::new([total], data).into()
+                let mut arr = Array::new([total], data);
+                arr.meta.mark_sorted_down(true);
+                arr.into()
             }
             1 => {
                 validate_size::<f64>([total], env)?;
                 let mut data = EcoVec::with_capacity(total);
                 for (i, &b) in counts.data.iter().enumerate() {
+                    let i = i as f64;
                     for _ in 0..b {
-                        let i = i as f64;
                         data.push(i);
                     }
                 }
@@ -1653,7 +1655,10 @@ impl Value {
                 let shape = Shape::from([total, counts.rank()].as_ref());
                 Array::new(shape, data).into()
             }
-        })
+        };
+        val.meta.mark_sorted_up(true);
+        val.validate();
+        Ok(val)
     }
     /// Get the `first` index `where` the value is nonzero
     pub fn first_where(&self, env: &Uiua) -> UiuaResult<Array<f64>> {

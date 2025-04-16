@@ -301,16 +301,20 @@ pub fn Optimizations() -> impl IntoView {
         <ul>
             <li>"An inline array with all-constant values (i.e "<code>"1_2_3"</code>" or "<code>"[7 6 6 4]"</code>") is already sorted at compile time."</li>
             <li>"The "<Prim prim=Sort/>" function is used."</li>
+            <li>"The "<Prim prim=Where/>" function is used."</li>
             <li>"A range is generated with "<Prim prim=Range/>" or "<Prim prim=Un/><Prim prim=Shape/>"."</li>
             <li>"An array is passed to "<Prims prims=[Scan, Min]/>" or "<Prims prims=[Scan, Max]/>"."</li>
             <li>"Two arrays are "<Prim prim=Couple/>"d."</li>
         </ul>
         <p>"The default behavior of most primitives is to clear sortedness flags. However, sortedness flags are maintained in these cases:"</p>
         <ul>
+            <li>"A sorted array is "<Prim prim=Neg/>"d."</li>
             <li>"A sorted array is passed to "<Prim prim=Add/>" or "<Prim prim=Sub/>" along with a scalar."</li>
             <li>"A sorted array is "<Prim prim=Mul/>"d or "<Prim prim=Div/>"d with a scalar. The sort flags will be swapped if the scalar is negative."</li>
+            <li>"A sorted array is passed to "<Prim prim=Min/>" or "<Prim prim=Max/>" along with a scalar."</li>
             <li>"A sorted array is "<Prim prim=Reverse/>"d. The sort flags will be swapped."</li>
             <li>"A sorted array is "<Prim prim=Deduplicate/>"d or "<Prim prim=Classify/>"d."</li>
+            <li>"A sorted array is "<Prim prim=Un/><Prim prim=Keep/>"d."</li>
             <li>"Two sorted arrays are passed to "<Prim prim=Select/>"."</li>
             <li>"A sorted array is passed as the second argument to "<Prim prim=Keep/>", "<Prim prim=Take/>", or "<Prim prim=Drop/>" (without a "<Prim prim=Fill/>" value)."</li>
         </ul>

@@ -309,6 +309,9 @@ pub fn Optimizations() -> impl IntoView {
         <p>"The default behavior of most primitives is to clear sortedness flags. However, sortedness flags are maintained in these cases:"</p>
         <ul>
             <li>"A sorted array is "<Prim prim=Neg/>"d."</li>
+            <li>"A sorted array is "<Prim prim=Sign/>"ed."</li>
+            <li>"A sorted array is "<Prim prim=Floor/>"ed, "<Prim prim=Ceil/>"ed, or "<Prim prim=Round/>"ed."</li>
+            <li>"Two sorted arrays are "<Prim prim=Add/>"ed."</li>
             <li>"A sorted array is passed to "<Prim prim=Add/>" or "<Prim prim=Sub/>" along with a scalar."</li>
             <li>"A sorted array is "<Prim prim=Mul/>"d or "<Prim prim=Div/>"d with a scalar. The sort flags will be swapped if the scalar is negative."</li>
             <li>"A sorted array is passed to "<Prim prim=Min/>" or "<Prim prim=Max/>" along with a scalar."</li>

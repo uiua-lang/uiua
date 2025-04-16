@@ -1927,6 +1927,8 @@ macro_rules! value_dy_impl {
             pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 let (mut a, mut b) = optimize_types(self, other);
                 let mut handle_pre: Option<&dyn Fn(&mut Value)> = None;
+                a.match_fill(env);
+                b.match_fill(env);
                 $(
                     let get_pre = |$get_pre_a: &mut Value, $get_pre_b: &Value, $get_pre_left: bool| $get_pre_body;
                     let pre_a = get_pre(&mut a, &b, false);
@@ -1934,12 +1936,12 @@ macro_rules! value_dy_impl {
                     let f = move |val: &mut Value| {
                         (|$pre_a: $pre_ty, $pre_b: $pre_ty, $handle_val: &mut Value| $handle_body)(pre_a, pre_b, val)
                     };
-                    handle_pre = Some(&f);
+                    if env.fill().value_for(&a).is_none() && env.fill().value_for(&b).is_none() {
+                        handle_pre = Some(&f);
+                    }
                 )?
                 a.meta.take_sorted_flags();
                 b.meta.take_sorted_flags();
-                a.match_fill(env);
-                b.match_fill(env);
                 let mut val = a.keep_metas(b, |a, b| { Ok(match (a, b) {
                     $($((Value::$ip(mut a), Value::$ip(mut b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;
@@ -2015,7 +2017,7 @@ macro_rules! value_dy_math_impl {
     // The generated function will maintain the sortedness of
     // the result if one of the inputs is a scalar number.
     // The $left parameter determines whether the scalar is the left argument.
-    ($name:ident $(,($($tt:tt)*))? , maintain_sortedness$(($left:expr))?) => {
+    ($name:ident $(,($($tt:tt)*))? , maintain_scalar_sortedness$(($left:expr))?) => {
         value_dy_math_impl!(
             $name
             $(,($($tt)*))?,
@@ -2039,10 +2041,36 @@ macro_rules! value_dy_math_impl {
         );
     };
     // The generated function will maintain the sortedness of
+    // the result if both of the inputs have the same sortedness.
+    ($name:ident $(,($($tt:tt)*))? , maintain_both_sortedness) => {
+        value_dy_math_impl!(
+            $name
+            $(,($($tt)*))?,
+            pre {
+                get_pre: |a, b, _left| {
+                    if a.type_id() != f64::TYPE_ID || b.type_id() != f64::TYPE_ID {
+                        return None;
+                    }
+                    let a_flags = a.meta.take_sorted_flags();
+                    Some(if b.shape == [] {
+                        a_flags
+                    } else {
+                        a_flags & (b.meta.flags & ArrayFlags::SORTEDNESS)
+                    })
+                },
+                handle_pre: |a: Option<ArrayFlags>, b, val| {
+                    if let Some(flags) = a.or(b) {
+                        val.meta.or_sorted_flags(dbg!(flags));
+                    }
+                },
+            }
+        );
+    };
+    // The generated function will maintain the sortedness of
     // the result if one of the inputs is a scalar number,
     // reversing the sortedness if the number is negative.
     // The $left parameter determines whether the scalar is the left argument.
-    ($name:ident $(,($($tt:tt)*))? , signed_sortedness$(($left:expr))?) => {
+    ($name:ident $(,($($tt:tt)*))? , signed_scalar_sortedness$(($left:expr))?) => {
         value_dy_math_impl!(
             $name
             $(,($($tt)*))?,
@@ -2097,7 +2125,7 @@ value_dy_math_impl!(
         (Char, Byte, char_byte),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool, true]
     ),
-    maintain_sortedness
+    maintain_both_sortedness
 );
 value_dy_math_impl!(
     sub,
@@ -2106,7 +2134,7 @@ value_dy_math_impl!(
         (Char, Char, char_char),
         (Byte, Char, byte_char),
     ),
-    maintain_sortedness(true)
+    maintain_scalar_sortedness(true)
 );
 value_dy_math_impl!(
     mul,
@@ -2117,7 +2145,7 @@ value_dy_math_impl!(
         (Char, Byte, char_byte),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool],
     ),
-    signed_sortedness
+    signed_scalar_sortedness
 );
 value_dy_math_impl!(
     set_sign,
@@ -2131,7 +2159,7 @@ value_dy_math_impl!(
 value_dy_math_impl!(
     div,
     ((Num, Char, num_char), (Byte, Char, byte_char)),
-    signed_sortedness(true)
+    signed_scalar_sortedness(true)
 );
 value_dy_math_impl!(modulus, ((Complex, Complex, com_com)));
 value_dy_math_impl!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]));
@@ -2146,7 +2174,7 @@ value_dy_math_impl!(
         (Box, Box, generic),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool],
     ),
-    maintain_sortedness
+    maintain_both_sortedness
 );
 value_dy_math_impl!(
     max,
@@ -2155,7 +2183,7 @@ value_dy_math_impl!(
         (Box, Box, generic),
         [|meta| meta.flags.is_boolean(), Byte, bool_bool],
     ),
-    maintain_sortedness
+    maintain_both_sortedness
 );
 
 value_dy_impl!(

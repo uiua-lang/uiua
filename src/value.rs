@@ -201,12 +201,14 @@ impl Value {
         }
     }
     /// Get the number of rows
+    #[inline(always)]
     pub fn row_count(&self) -> usize {
-        self.shape.first().copied().unwrap_or(1)
+        self.shape.row_count()
     }
     /// Get the number of element in each row
+    #[inline(always)]
     pub fn row_len(&self) -> usize {
-        self.shape.iter().skip(1).product()
+        self.shape.row_len()
     }
     pub(crate) fn proxy_scalar(&self, env: &Uiua) -> Self {
         match self {
@@ -303,6 +305,7 @@ impl Value {
         val_as_arr!(self, |array| array.first_dim_zero().into())
     }
     /// Get the rank
+    #[inline(always)]
     pub fn rank(&self) -> usize {
         self.shape.len()
     }

@@ -54,6 +54,7 @@ impl Shape {
         self.dims.remove(index)
     }
     /// Get the row count
+    #[inline(always)]
     pub fn row_count(&self) -> usize {
         self.dims.first().copied().unwrap_or(1)
     }

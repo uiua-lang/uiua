@@ -429,18 +429,21 @@ impl<T> Array<T> {
         }
     }
     /// Get the number of rows in the array
+    #[inline(always)]
     pub fn row_count(&self) -> usize {
-        self.shape.first().copied().unwrap_or(1)
+        self.shape.row_count()
     }
     /// Get the number of elements in the array
     pub fn element_count(&self) -> usize {
         self.data.len()
     }
     /// Get the number of elements in a row
+    #[inline(always)]
     pub fn row_len(&self) -> usize {
-        self.shape.iter().skip(1).product()
+        self.shape.row_len()
     }
     /// Get the rank of the array
+    #[inline(always)]
     pub fn rank(&self) -> usize {
         self.shape.len()
     }

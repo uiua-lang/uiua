@@ -22,7 +22,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Add numeric subscripts for [`shape △`](https://uiua.org/docs/shape) to get the shape of the first few axes
 ### Interpreter
 - The formatter will now allow putting multiple function pack branches on a single line
-- Optimize [`stencil ⧈`](https://uiua.org/docs/stencil) when used with with monadic functions that are optimized for [`rows ≡`](https://uiua.org/docs/rows)
+- Optimizations
+  - [`stencil ⧈`](https://uiua.org/docs/stencil) is now optimized when used with with monadic functions that are optimized for [`rows ≡`](https://uiua.org/docs/rows)
+  - Add sortedness flags to arrays to allow short-circuiting some operations
 - LSP improvements
   - Completions now properly respect scoping
   - Unused private bindings are now dimmed

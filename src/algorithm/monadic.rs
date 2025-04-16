@@ -1097,6 +1097,13 @@ impl<T: ArrayValue> Array<T> {
         let mut indices = (0..self.row_count())
             .map(|i| i as f64)
             .collect::<EcoVec<_>>();
+        if self.meta.is_sorted_up() {
+            return indices.into();
+        }
+        if self.meta.is_sorted_down() {
+            indices.make_mut().reverse();
+            return indices.into();
+        }
         indices.make_mut().par_sort_by(|&a, &b| {
             self.row_slice(a as usize)
                 .iter()
@@ -1115,6 +1122,13 @@ impl<T: ArrayValue> Array<T> {
             return Vec::new();
         }
         let mut indices: Vec<usize> = (0..self.row_count()).collect();
+        if self.meta.is_sorted_up() {
+            return indices;
+        }
+        if self.meta.is_sorted_down() {
+            indices.reverse();
+            return indices;
+        }
         indices.par_sort_by(|&a, &b| {
             self.row_slice(a)
                 .iter()
@@ -1136,6 +1150,13 @@ impl<T: ArrayValue> Array<T> {
         let mut indices = (0..self.row_count())
             .map(|i| i as f64)
             .collect::<EcoVec<_>>();
+        if self.meta.is_sorted_down() {
+            return indices.into();
+        }
+        if self.meta.is_sorted_up() {
+            indices.make_mut().reverse();
+            return indices.into();
+        }
         indices.make_mut().par_sort_by(|&a, &b| {
             self.row_slice(a as usize)
                 .iter()
@@ -1154,6 +1175,13 @@ impl<T: ArrayValue> Array<T> {
             return Vec::new();
         }
         let mut indices: Vec<usize> = (0..self.row_count()).collect();
+        if self.meta.is_sorted_down() {
+            return indices;
+        }
+        if self.meta.is_sorted_up() {
+            indices.reverse();
+            return indices;
+        }
         indices.par_sort_by(|&a, &b| {
             self.row_slice(a)
                 .iter()
@@ -1174,7 +1202,10 @@ impl<T: ArrayValue> Array<T> {
     }
     pub(crate) fn sort_up_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
-        if self.rank() == depth || self.shape.elements() == 0 {
+        if self.rank() == depth
+            || self.shape.elements() == 0
+            || depth == 0 && self.meta.is_sorted_up()
+        {
             return;
         }
         if let Some(Some(keys)) = (depth == 0).then(|| self.meta.take_map_keys()) {
@@ -1222,7 +1253,10 @@ impl<T: ArrayValue> Array<T> {
     }
     pub(crate) fn sort_down_depth(&mut self, depth: usize) {
         let depth = depth.min(self.rank());
-        if self.rank() == depth || self.shape.elements() == 0 {
+        if self.rank() == depth
+            || self.shape.elements() == 0
+            || depth == 0 && self.meta.is_sorted_down()
+        {
             return;
         }
         if let Some(Some(keys)) = (depth == 0).then(|| self.meta.take_map_keys()) {
@@ -1270,14 +1304,30 @@ impl<T: ArrayValue> Array<T> {
     }
     /// `classify` the rows of the array
     pub fn classify(&self) -> Vec<usize> {
-        let mut classes = HashMap::new();
         let mut classified = Vec::with_capacity(self.row_count());
-        for row in self.row_slices() {
-            let new_class = classes.len();
-            let class = *classes.entry(ArrayCmpSlice(row)).or_insert(new_class);
-            classified.push(class);
+        if self.meta.is_sorted_up() {
+            let mut rows = self.row_slices().map(ArrayCmpSlice);
+            if let Some(mut prev) = rows.next() {
+                let mut curr_class = 0;
+                classified.push(curr_class);
+                for row in rows {
+                    if row != prev {
+                        curr_class += 1;
+                        prev = row;
+                    }
+                    classified.push(curr_class);
+                }
+            }
+            classified
+        } else {
+            let mut classes = HashMap::new();
+            for row in self.row_slices().map(ArrayCmpSlice) {
+                let new_class = classes.len();
+                let class = *classes.entry(row).or_insert(new_class);
+                classified.push(class);
+            }
+            classified
         }
-        classified
     }
     fn classify_depth(&self, mut depth: usize) -> Value {
         if self.rank() == 0 {
@@ -1336,16 +1386,42 @@ impl<T: ArrayValue> Array<T> {
             .meta
             .take_map_keys()
             .map(|keys| (keys.normalized(), self.unique()));
-        let mut deduped = CowSlice::new();
-        let mut seen = HashSet::new();
+        let row_count = self.row_count();
+        let row_len = self.row_len();
         let mut new_len = 0;
-        for row in self.row_slices() {
-            if seen.insert(ArrayCmpSlice(row)) {
-                deduped.extend_from_slice(row);
-                new_len += 1;
+        if self.meta.is_sorted_up() || self.meta.is_sorted_down() {
+            if row_count > 0 {
+                let slice = self.data.as_mut_slice();
+                if row_count > 0 {
+                    new_len += 1;
+                }
+                for i in 1..row_count {
+                    let prev_start = (new_len - 1) * row_len;
+                    let prev_end = prev_start + row_len;
+                    let curr_start = i * row_len;
+                    let curr_end = curr_start + row_len;
+                    if ArrayCmpSlice(&slice[prev_start..prev_end])
+                        != ArrayCmpSlice(&slice[curr_start..curr_end])
+                    {
+                        for j in 0..row_len {
+                            slice[new_len * row_len + j] = slice[curr_start + j].clone();
+                        }
+                        new_len += 1;
+                    }
+                }
+                self.data.truncate(new_len * row_len);
             }
+        } else {
+            let mut seen = HashSet::new();
+            let mut deduped = CowSlice::new();
+            for row in self.row_slices() {
+                if seen.insert(ArrayCmpSlice(row)) {
+                    deduped.extend_from_slice(row);
+                    new_len += 1;
+                }
+            }
+            self.data = deduped;
         }
-        self.data = deduped;
         self.shape[0] = new_len;
         if let Some((keys, unique)) = map_keys_unique {
             let keys = Value::from(unique).keep(keys, env)?;
@@ -1795,7 +1871,9 @@ impl Value {
         self.unwhere_impl(shape, env)
     }
     pub(crate) fn all_same(&self) -> bool {
-        if self.row_count() <= 1 {
+        if self.row_count() <= 1
+            || self.rank() == 1 && self.meta.is_sorted_up() && self.meta.is_sorted_down()
+        {
             return true;
         }
         val_as_arr!(self, |arr| {
@@ -1872,7 +1950,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub(crate) fn first_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
-        if self.rank() == 0 {
+        if self.rank() == 0 || self.meta.is_sorted_up() {
             return Ok(0.0);
         }
         if self.row_count() == 0 {
@@ -1929,7 +2007,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(index as f64)
     }
     pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
-        if self.rank() == 0 {
+        if self.rank() == 0 || self.meta.is_sorted_up() {
             return Ok(0.0);
         }
         if self.row_count() == 0 {

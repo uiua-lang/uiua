@@ -1918,7 +1918,7 @@ macro_rules! value_dy_impl {
             $([$(|$meta:ident| $pred:expr,)* $ip:ident, $f2:ident $(, $reset_value_flags:literal)?])*
         ),*
         $({
-            get_pre: |$get_pre_a:ident, $get_pre_b:ident| $get_pre_body:expr,
+            get_pre: |$get_pre_a:ident, $get_pre_b:ident, $get_pre_left:ident| $get_pre_body:expr,
             handle_pre: |$pre_a:ident: $pre_ty:ty, $pre_b:ident, $handle_val:ident| $handle_body:expr,
         })?
     ) => {
@@ -1928,9 +1928,9 @@ macro_rules! value_dy_impl {
                 let (mut a, mut b) = optimize_types(self, other);
                 let mut handle_pre: Option<&dyn Fn(&mut Value)> = None;
                 $(
-                    let get_pre = |$get_pre_a: &mut Value, $get_pre_b: &Value| $get_pre_body;
-                    let pre_a = get_pre(&mut a, &b);
-                    let pre_b = get_pre(&mut b, &a);
+                    let get_pre = |$get_pre_a: &mut Value, $get_pre_b: &Value, $get_pre_left: bool| $get_pre_body;
+                    let pre_a = get_pre(&mut a, &b, false);
+                    let pre_b = get_pre(&mut b, &a, true);
                     let f = move |val: &mut Value| {
                         (|$pre_a: $pre_ty, $pre_b: $pre_ty, $handle_val: &mut Value| $handle_body)(pre_a, pre_b, val)
                     };
@@ -2013,14 +2013,23 @@ macro_rules! value_dy_impl {
 /// Macro to generate a dyadic pervasive math function on [`Value`]s.
 macro_rules! value_dy_math_impl {
     // The generated function will maintain the sortedness of
-    // the result if one of the inputs is a scalar number
-    ($name:ident $(,($($tt:tt)*))? , maintain_sortedness) => {
+    // the result if one of the inputs is a scalar number.
+    // The $left parameter determines whether the scalar is the left argument.
+    ($name:ident $(,($($tt:tt)*))? , maintain_sortedness$(($left:expr))?) => {
         value_dy_math_impl!(
             $name
             $(,($($tt)*))?,
             pre {
-                get_pre: |a, b| (b.shape == [] && b.type_id() == f64::TYPE_ID)
-                    .then_some(a.meta.take_sorted_flags()),
+                get_pre: |a, b, _left| {
+                    if b.shape != [] || b.type_id() != f64::TYPE_ID {
+                        return None;
+                    }
+                    let mut flags = a.meta.take_sorted_flags();
+                    $(if _left != $left {
+                        flags.reverse_sorted();
+                    })?
+                    Some(flags)
+                },
                 handle_pre: |a: Option<ArrayFlags>, b, val| {
                     if let Some(flags) = a.or(b) {
                         val.meta.or_sorted_flags(flags);
@@ -2031,13 +2040,14 @@ macro_rules! value_dy_math_impl {
     };
     // The generated function will maintain the sortedness of
     // the result if one of the inputs is a scalar number,
-    // reversing the sortedness if the number is negative
-    ($name:ident $(,($($tt:tt)*))? , signed_sortedness) => {
+    // reversing the sortedness if the number is negative.
+    // The $left parameter determines whether the scalar is the left argument.
+    ($name:ident $(,($($tt:tt)*))? , signed_sortedness$(($left:expr))?) => {
         value_dy_math_impl!(
             $name
             $(,($($tt)*))?,
             pre {
-                get_pre: |a, b| {
+                get_pre: |a, b, _left| {
                     let negative = match b {
                         Value::Num(arr) if arr.shape == [] => arr.data[0] < 0.0,
                         Value::Byte(arr) if arr.shape == [] => false,
@@ -2047,6 +2057,9 @@ macro_rules! value_dy_math_impl {
                     if negative {
                         flags.reverse_sorted();
                     }
+                    $(if _left != $left {
+                        flags.reverse_sorted();
+                    })?
                     Some(flags)
                 },
                 handle_pre: |a: Option<ArrayFlags>, b, val| {
@@ -2093,7 +2106,7 @@ value_dy_math_impl!(
         (Char, Char, char_char),
         (Byte, Char, byte_char),
     ),
-    maintain_sortedness
+    maintain_sortedness(true)
 );
 value_dy_math_impl!(
     mul,
@@ -2118,7 +2131,7 @@ value_dy_math_impl!(
 value_dy_math_impl!(
     div,
     ((Num, Char, num_char), (Byte, Char, byte_char)),
-    signed_sortedness
+    signed_sortedness(true)
 );
 value_dy_math_impl!(modulus, ((Complex, Complex, com_com)));
 value_dy_math_impl!(or, ([|meta| meta.flags.is_boolean(), Byte, bool_bool]));

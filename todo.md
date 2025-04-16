@@ -2,8 +2,7 @@
 
 # 0.16
 - Sortedness flags
-  - Test examples
-  - Actually use the flags
+  - Document behavior
 - Stabilize `fft`
   - Requirs a custom implementation 😵‍💫
 - Last-axis subscripts or modifier?

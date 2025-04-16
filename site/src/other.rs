@@ -295,6 +295,37 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[Abs, Complex]/></th><td>"Make intermediate "<Prim prim=Complex/>" array then get "<Prim prim=Abs/></td><td>"Directly compute the magnitude"</td></tr>
         </table>
 
+        <Hd id="sortedness-flags">"Sortedness Flags"</Hd>
+        <p>"The interpreter can sometimes mark arrays as being sorted up and/or down. These flags allow certain short-circuiting behavior for some algorithms."</p>
+        <p>"Sortedness flags are set when:"</p>
+        <ul>
+            <li>"An inline array with all-constant values (i.e "<code>"1_2_3"</code>" or "<code>"[7 6 6 4]"</code>") is already sorted at compile time."</li>
+            <li>"The "<Prim prim=Sort/>" function is used."</li>
+            <li>"A range is generated with "<Prim prim=Range/>" or "<Prim prim=Un/><Prim prim=Shape/>"."</li>
+            <li>"An array is passed to "<Prims prims=[Scan, Min]/>" or "<Prims prims=[Scan, Max]/>"."</li>
+            <li>"Two arrays are "<Prim prim=Couple/>"d."</li>
+        </ul>
+        <p>"The default behavior of most primitives is to clear sortedness flags. However, sortedness flags are maintained in these cases:"</p>
+        <ul>
+            <li>"A sorted array is passed to "<Prim prim=Add/>" or "<Prim prim=Sub/>" along with a scalar."</li>
+            <li>"A sorted array is "<Prim prim=Mul/>"d or "<Prim prim=Div/>"d with a scalar. The sort flags will be swapped if the scalar is negative."</li>
+            <li>"A sorted array is "<Prim prim=Reverse/>"d. The sort flags will be swapped."</li>
+            <li>"A sorted array is "<Prim prim=Deduplicate/>"d or "<Prim prim=Classify/>"d."</li>
+            <li>"Two sorted arrays are passed to "<Prim prim=Select/>"."</li>
+            <li>"A sorted array is passed as the second argument to "<Prim prim=Keep/>", "<Prim prim=Take/>", or "<Prim prim=Drop/>" (without a "<Prim prim=Fill/>" value)."</li>
+        </ul>
+        <p>"Sortedness flags are used to improve the performance of:"</p>
+        <ul>
+            <li><Prim prim=Sort/></li>
+            <li><Prim prim=Rise/>" and "<Prim prim=Fall/></li>
+            <li><Prim prim=First/><Prim prim=Rise/>" and "<Prim prim=Last/><Prim prim=Fall/></li>
+            <li><Prim prim=Deduplicate/>" and "<Prim prim=Classify/></li>
+            <li><Prims prims=[Reduce, Min]/>" and "<Prims prims=[Reduce, Max]/>"on rank-1 arrays"</li>
+            <li><Prims prims=[Scan, Min]/>" and "<Prims prims=[Scan, Max]/>"on rank-1 arrays"</li>
+            <li>"The "<a href="#complexity">"above"</a>" optimizations for checking if all rows of an array are the same"</li>
+            <li>"More may be added in the future"</li>
+        </ul>
+
         <Hd id="other-optimizations">"Other Optimizations"</Hd>
         <ul>
             <li><Prims prims=[Table, Fork]/><code>"F"</code><code>"G"</code>" is optimized to "<Prims prims=[Fork, Table]/><code>"F"</code><Prims prims=[Table]/><code>"G"</code>" for pure functions."</li>

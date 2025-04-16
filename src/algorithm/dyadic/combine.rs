@@ -313,9 +313,12 @@ impl<T: ArrayValue> Array<T> {
                 let map_keys = self.meta.take_map_keys().zip(other.meta.take_map_keys());
                 let mut res = if self.rank() == 0 {
                     debug_assert_eq!(other.rank(), 0);
-                    if let Some(label) = self.meta.take_label().xor(other.meta.take_label()) {
-                        self.meta.label = Some(label);
-                    }
+                    let label = match (self.meta.take_label(), other.meta.take_label()) {
+                        (Some(label), None) | (None, Some(label)) => Some(label),
+                        (Some(a), Some(b)) if a == b => Some(a),
+                        _ => None,
+                    };
+                    self.meta.set_label(label);
                     self.data.extend(other.data.into_iter().next());
                     self.shape = 2.into();
                     self

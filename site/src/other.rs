@@ -296,7 +296,7 @@ pub fn Optimizations() -> impl IntoView {
         </table>
 
         <Hd id="sortedness-flags">"Sortedness Flags"</Hd>
-        <p>"The interpreter can sometimes mark arrays as being sorted up and/or down. These flags allow certain short-circuiting behavior for some algorithms."</p>
+        <p>"The interpreter can sometimes mark arrays as being sorted up and/or down. These flags allow certain short-circuiting or optimized behavior for some algorithms."</p>
         <p>"Sortedness flags are set when:"</p>
         <ul>
             <li>"An inline array with all-constant values (i.e "<code>"1_2_3"</code>" or "<code>"[7 6 6 4]"</code>") is already sorted at compile time."</li>

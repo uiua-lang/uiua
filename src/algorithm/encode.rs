@@ -210,15 +210,19 @@ impl Value {
             }
         };
         let mut new_shape = bytes.shape;
-        if new_shape.len() > 1 && elem_size > 1 {
-            let last_dim = *new_shape.last().unwrap();
+        if new_shape == [] {
+            new_shape.push(1);
+        }
+        if new_shape.len() > 1 {
+            let last_dim = new_shape.pop().unwrap();
             if last_dim != elem_size {
                 return Err(env.error(format!(
-                    "Bytes shape {} does not match format {}",
-                    new_shape, format
+                    "Bytes shape has last axis size {last_dim}, \
+                    which does not match format {format}"
                 )));
             }
-            new_shape.pop();
+        } else {
+            new_shape[0] = (new_shape[0] / elem_size).max(1);
         }
         let mut data = eco_vec![0.0; new_shape.elements()];
         let slice = data.make_mut();

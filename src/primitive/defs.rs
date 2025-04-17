@@ -204,7 +204,7 @@ primitive!(
     /// ex: ¯₂ 5
     /// ex: ¯₄ 5
     /// ex: ⁅₃ ¯₃ 5
-    /// ex: ⍥₄⟜¯₄ ℂ1 2
+    /// ex: [⍥₄⊸¯₄ ℂ1 2]
     (
         1,
         Neg,
@@ -1714,10 +1714,17 @@ primitive!(
     /// ex: ⍥+5 3 10
     /// In this example, `2` is [join]ed with `1` `5` times.
     /// ex: ⍥⊂5 1 2
-    /// If the net stack change of the function is positive, then outputs of the function at the top of the stack exceeding the number of arguments will be collected into arrays.
+    ///
+    /// If the net stack change of the function is positive, then outputs of the function that are lower on the stack exceeding the number of arguments will be collected into arrays.
     /// ex: ⌊×10 ⍥⚂5
-    /// ex: ⍥⟜√4 6561
-    /// ex: ⍥⟜⤙+10 1 1
+    /// [by] or [below] can be used to put collected values below others.
+    /// ex: ⍥⊸√4 6561
+    /// ex: ⍥◡+10 1 1
+    /// Note that depending on how the stack in the function is managed, the collected arrays may contain different results.
+    /// ex: ⍥(⊸+1)4 10 # Omit final value
+    ///   : ⍥(.+1)4 10 # Omit initial value
+    /// This is because length of the accumulated arrays will always be the same as the number of repetitions, so they cannot contain both the initial and final values.
+    ///
     /// Repeating [infinity] times will do a fixed-point iteration.
     /// The loop will end when the top value of the function's output is equal to the top value of the function's input.
     /// For example, this could be used to flatten a deeply nested array.
@@ -2224,9 +2231,9 @@ primitive!(
     ///   : ⍢(×3|<100.) 1
     /// The net stack change of the two functions, minus the condition, is called the *composed signature*.
     /// The composed signatures of the above examples all have a net stack change of `0`.
-    /// A positive composed signature net stack change is only allowed inside an array.
-    /// ex! ⍢(×2.|<1000) 1
-    /// ex: [⍢(×2.|<1000)] 1
+    // /// A positive composed signature net stack change is only allowed inside an array.
+    // /// ex! ⍢(×2.|<1000) 1
+    // /// ex: [⍢(×2.|<1000)] 1
     /// A negative composed signature net stack change will reuse values lower on the stack.
     /// ex: ⍢(×|<100) 1 2
     /// ex: ⍢(⊂⤚(×⊢)|<100⊢) 1 2

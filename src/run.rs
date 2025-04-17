@@ -1174,10 +1174,10 @@ impl Uiua {
         &mut self,
         n: usize,
         depth: usize,
-    ) -> UiuaResult<impl Iterator<Item = Value> + '_> {
+    ) -> UiuaResult<impl DoubleEndedIterator<Item = Value> + '_> {
         debug_assert!(depth >= n);
         let start = self.require_height(depth)?;
-        Ok(self.rt.stack.drain(start..start + n))
+        Ok(self.rt.stack.drain(start..start + n).rev())
     }
     /// Rotate the stack up at some depth
     pub fn rotate_up(&mut self, n: usize, depth: usize) -> UiuaResult {

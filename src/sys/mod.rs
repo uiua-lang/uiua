@@ -482,7 +482,7 @@ sys_op! {
     ///   : | ±Mod÷Sp⟜Note # Note
     ///   : )
     ///   : Kick  ← Mod80√√◿1
-    ///   : Noise ← ⍥⚂10000
+    ///   : Noise ← [⍥⚂10000]
     ///   : Noisy ← ×⊸(↯△⊙Noise)
     ///   : Hit   ← Noisy /≠⊞<0.5_0.6 ÷⟜◿2
     ///   : Hat   ← ×0.3 Noisy <0.1 ÷⟜◿0.25

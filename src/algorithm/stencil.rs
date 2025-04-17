@@ -494,6 +494,7 @@ where
             }
             arr.data.truncate(arr.data.len() - (n - 1));
             arr.shape[0] -= n - 1;
+            arr.meta.take_sorted_flags();
             arr.validate();
             Ok(arr)
         }
@@ -517,6 +518,7 @@ where
             }
             arr.data.truncate(arr.data.len() - (n - 1) * row_len);
             arr.shape[0] -= n - 1;
+            arr.meta.take_sorted_flags();
             arr.validate();
             Ok(arr)
         }

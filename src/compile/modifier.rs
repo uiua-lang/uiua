@@ -925,9 +925,6 @@ impl Compiler {
                     is_obverse: true,
                     prefer_under_normal: false,
                 };
-                if sn.sig == sn.sig.inverse() {
-                    cust.un = Some(sn.clone());
-                }
                 if sn.sig.anti() == Some(sn.sig) {
                     cust.anti = Some(sn.clone());
                 }

@@ -484,7 +484,7 @@ F ← ⌅(+|-) # Track Caller!
 ⍤⤙≍ 3 ⌝F 2 5
 
 # Composition with contra inverse
-F ← ⌅⍜⊢¯ ⊏⊙"nubtqphsoe" -@0 °⋕
+F ← ⍜⊢¯ ⊏⊙"nubtqphsoe" -@0 °⋕
 ⍤⤙≍ ⟜(°F F) 118
 
 # Contra flip as anti inverse

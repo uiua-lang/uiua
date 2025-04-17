@@ -932,6 +932,10 @@ impl<T: ArrayValue> Array<T> {
     pub fn transpose(&mut self) {
         self.transpose_depth(0, 1);
     }
+    /// Untranspose the array
+    pub fn untranspose(&mut self) {
+        self.transpose_depth(0, -1);
+    }
     pub(crate) fn transpose_depth(&mut self, mut depth: usize, amnt: i32) {
         crate::profile_function!();
         if depth == 0 && self.is_map() {

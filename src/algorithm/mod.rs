@@ -821,11 +821,15 @@ fn fft_impl(
         }
     };
     if arr.rank() == 0 {
-        env.push(0);
+        env.push(arr);
         return Ok(());
     }
+
+    arr.transpose();
+
     let list_row_len: usize = arr.shape[arr.rank() - 1..].iter().product();
     if list_row_len == 0 {
+        arr.untranspose();
         env.push(arr);
         return Ok(());
     }
@@ -843,6 +847,7 @@ fn fft_impl(
             *c *= scaling_factor;
         }
     }
+    arr.untranspose();
     env.push(arr);
     Ok(())
 }

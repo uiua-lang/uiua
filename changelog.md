@@ -6,6 +6,8 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) no longer uses the fill value as the first row
+- **Breaking Change** - [`fft`](https://uiua.org/docs/fft) now works along an array's first axis rather than its last
+  - This is more consistent with other functions
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under) for monadic functions
 - Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⊜`](https://uiua.org/docs/partition) for monadic functions
 - Stabilize [`negate ¯`](https://uiua.org/docs/negate) subscripts

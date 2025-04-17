@@ -825,29 +825,28 @@ fn fft_impl(
         return Ok(());
     }
 
-    arr.transpose();
+    for _ in 0..arr.rank() {
+        arr.transpose();
 
-    let list_row_len: usize = arr.shape[arr.rank() - 1..].iter().product();
-    if list_row_len == 0 {
-        arr.untranspose();
-        env.push(arr);
-        return Ok(());
-    }
-    let mut planner = FftPlanner::new();
-    let scaling_factor = 1.0 / (list_row_len as f64).sqrt();
-    for row in arr.data.as_mut_slice().chunks_exact_mut(list_row_len) {
-        let fft = plan(&mut planner, row.len());
-        // NOTE: This works as long as Uiua's `complex` and `num_complex::Complex64` have
-        // the same layout. the `Complex64` layout should remain stable since they are
-        // maintaining compatibility with C. So we only need to ensure that we keep
-        // the same (real, imaginary) ordering that they do.
-        let slice: &mut [Complex64] = must_cast_slice_mut(row);
-        fft.process(slice);
-        for c in row {
-            *c *= scaling_factor;
+        let list_row_len: usize = arr.shape[arr.rank() - 1..].iter().product();
+        if list_row_len == 0 {
+            continue;
+        }
+        let mut planner = FftPlanner::new();
+        let scaling_factor = 1.0 / (list_row_len as f64).sqrt();
+        for row in arr.data.as_mut_slice().chunks_exact_mut(list_row_len) {
+            let fft = plan(&mut planner, row.len());
+            // NOTE: This works as long as Uiua's `complex` and `num_complex::Complex64` have
+            // the same layout. the `Complex64` layout should remain stable since they are
+            // maintaining compatibility with C. So we only need to ensure that we keep
+            // the same (real, imaginary) ordering that they do.
+            let slice: &mut [Complex64] = must_cast_slice_mut(row);
+            fft.process(slice);
+            for c in row {
+                *c *= scaling_factor;
+            }
         }
     }
-    arr.untranspose();
     env.push(arr);
     Ok(())
 }

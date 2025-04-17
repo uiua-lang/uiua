@@ -2901,7 +2901,7 @@ primitive!(
     ///
     /// The input array must be either real or complex.
     /// The result will always be complex.
-    /// Multi-dimensional arrays are supported. Each rank-1 row is treated as a separate array.
+    /// Multi-dimensional arrays are supported. The algorithm will be run across each axis.
     ///
     /// In this example, we generate some data that is the sum of some [sine] waves.
     /// We then run [fft] on it and create a plot of the resulting frequency bins.
@@ -2918,6 +2918,12 @@ primitive!(
     ///   : [220 277 330 440] # Frequencies
     ///   : ⬚0↙ &asr °⊚       # Put 1 in buffer for each frequency
     ///   : ◌°ℂ °fft          # Run inverse FFT and get the real part
+    ///
+    /// Because [fft] runs on every axis of an array, we can get the frequency domain of each color channel of an image using [under][un][transpose][fft].
+    /// ex: # Experimental!
+    ///   : Lena
+    ///   : ▽⟜≡▽0.5
+    ///   : ⌵⍜°⍉≡fft .
     (1, Fft, Misc, "fft"),
     /// Find shortest paths in a graph
     ((2)[3], Astar, Misc, "astar"),

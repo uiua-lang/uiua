@@ -315,7 +315,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <Hd id="a-loving-union">"A Loving Union"</Hd>
                     <p>{lang}" combines the stack-based and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
-                    <Editor example="⇌[⍥◡+9].1"/>
+                    <Editor example="⍥⟜⤙+9 .1"/>
                     <p>"If this code seems weird and unreadable, that's okay! It's important to remember that "<a href="https://vector-of-bool.github.io/2018/10/31/become-perl.html">"foreign ≠ confusing"</a>"."</p>
                 </div>
                 <div>
@@ -359,7 +359,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <Hd id="unicode-formatter">"Unicode Formatter"</Hd>
                     <p>{lang}" has the terseness and expressivity afforded by Unicode glyphs without the need for special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
-                    <Editor example="floor*10[repeatrand5]" help={&["", "Click to format ⇡⇡⇡            "]}/>
+                    <Editor example="floor*10repeatrand5" help={&["", "Click to format ⇡⇡⇡            "]}/>
                 </div>
                 <div>
                     <Hd id="multimedia-output">"Multimedia Output"</Hd>

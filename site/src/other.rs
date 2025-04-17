@@ -552,7 +552,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Deshape, "Change rank", "♭₂ ⇡ 2_2"),
         subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
         subscript(Sqrt, "Nth root", "√₃ [8 27 125]"),
-        subscript(Neg, "Turn one Nth in the complex plane", "⁅₃ [⍥₄⊸¯₈] 1"),
+        subscript(Neg, "Turn one Nth in the complex plane", "⁅₃ ⍥₄⟜¯₄ 1"),
         subscript(Round, "To N decimal places", "⁅₃ π"),
         subscript(Floor, "To N decimal places", "# Experimental!\n⌊₄ π\n⌊₄ τ"),
         subscript(Ceil, "To N decimal places", "# Experimental!\n⌈₄ π\n⌈₄ τ"),

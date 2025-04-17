@@ -54,9 +54,9 @@ pub const PALINDROME: &str = r#"$ uiua racecar wow cool!
 pub const WEEWUH_PALINDROME: &str = r#"$ weewuh racecar wow cool!
 ≡⊂ ˜⊏"❌✅" ⬚@ ⊜⊸(≍⊸⇌)⊸≠@ "#;
 const AUTOMATA: &str = "\
-Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌⧈∘3⇌ ⊂⊂0⊙0)
-=⌊÷2⟜⇡ 500          # Init
-⇌[◌⍥⟜⊸Rule⌊÷2⧻⤙] 30 # Run";
+Rule ← ˜⊏⊓⋯₈(°⋯⧈⇌3⊂⊂⊃⊣⟜⊢)
+=⌊⊃÷₂⇡ 500        # Init
+⍥⤙⟜Rule ⌊÷2◡⋅⧻ 30 # Run";
 const ROMAN: &str = r#"K ← "IVXLCDM"
 N ← [1 5 10 50 100 500 1000]
 F ← /+-⊃(↻1×|×¬)⊸(⧈>⊂⊙0) ⊏⊙N ⊗⊙K
@@ -67,9 +67,9 @@ const MANDELBROT: &str = "\
 ⍥(⊸(+>2⌵:)⊙⊸(+×.))50 0. # Run
 ÷/↥⊸♭ ⊙⋅◌               # Normalize";
 const LIFE: &str = "\
-Life ← ↥↧⟜(∩=2⤙3/+≡↻⊂A₂C₂¤)
+Life ← ↥∩=₃⟜+⊸(/+≡↻⊂A₂C₂¤)
 ⁅×0.6 gen⊙⚂ ⊟.30 # Init
-⇌◌⍥(⟜⊂Life)100⟜¤ # Run
+⍥⟜Life100        # Run
 ≡(▽⟜≡▽) 4        # Upscale";
 
 pub const EXAMPLES: &[&str] = &[

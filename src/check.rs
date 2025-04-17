@@ -373,9 +373,10 @@ impl VirtualEnv {
                 }
                 Both => {
                     let [f] = get_args_nodes(args)?;
-                    for _ in 0..2 {
-                        self.sig_node(f)?;
-                    }
+                    self.stack.pop_n(f.sig.args());
+                    self.sig_node(f)?;
+                    self.stack.push_n(f.sig.args());
+                    self.sig_node(f)?;
                 }
                 Dip => {
                     let [f] = get_args_nodes(args)?;
@@ -478,9 +479,10 @@ impl VirtualEnv {
                 UnFill | SidedFill(_) => self.fill(args)?,
                 UnBoth => {
                     let [f] = get_args_nodes(args)?;
-                    for _ in 0..2 {
-                        self.sig_node(f)?;
-                    }
+                    self.stack.pop_n(f.sig.args());
+                    self.sig_node(f)?;
+                    self.stack.push_n(f.sig.args());
+                    self.sig_node(f)?;
                 }
                 UnBracket => {
                     let [f, g] = get_args(args)?;

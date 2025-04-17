@@ -204,7 +204,7 @@ primitive!(
     /// ex: ¯₂ 5
     /// ex: ¯₄ 5
     /// ex: ⁅₃ ¯₃ 5
-    /// ex: [⍥₄⊸¯₄ ℂ1 2]
+    /// ex: ⍥₄⟜¯₄ ℂ1 2
     (
         1,
         Neg,
@@ -1710,15 +1710,14 @@ primitive!(
     /// ex: ⍥(+2)5 0
     /// ex: ⍥(⊂2)5 []
     /// If the net stack change of the function is negative, then lower stack values will be preserved between iterations.
+    /// In this example, `10` is added to `3` `5` times.
     /// ex: ⍥+5 3 10
+    /// In this example, `2` is [join]ed with `1` `5` times.
     /// ex: ⍥⊂5 1 2
-    /// If the net stack change of the function is positive, then either the number of repetitions must be static, or the [repeat] must be wrapped in an array.
-    /// ex: F ← ⍥(⊢.)2
-    ///   : F [1_2 3_4]
-    /// ex! F ← ⍥(⊢.)⊙[1_2 3_4]
-    ///   : F 2
-    /// ex: F ← {⍥(⊢.)⊙[1_2 3_4]}
-    ///   : F 2
+    /// If the net stack change of the function is positive, then outputs of the function at the top of the stack exceeding the number of arguments will be collected into arrays.
+    /// ex: ⌊×10 ⍥⚂5
+    /// ex: ⍥⟜√4 6561
+    /// ex: ⍥⟜⤙+10 1 1
     /// Repeating [infinity] times will do a fixed-point iteration.
     /// The loop will end when the top value of the function's output is equal to the top value of the function's input.
     /// For example, this could be used to flatten a deeply nested array.
@@ -2403,9 +2402,9 @@ primitive!(
     /// ex: [⚂⚂⚂]
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: ⌊×10 [⍥⚂5]
+    /// ex: ⌊×10 ⍥⚂5
     /// The range can be given with a subscript.
-    /// ex: [⍥⚂₁₀5]
+    /// ex: ⍥⚂₁₀5
     ///
     /// `each``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
     /// ex: ⌊×10 ∵⋅⚂ ⇡10
@@ -2574,8 +2573,8 @@ primitive!(
     /// Generate a unique tag
     ///
     /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.
-    /// ex: [⍥tag5]
-    ///   : [⍥tag5]
+    /// ex: ⍥tag5
+    ///   : ⍥tag5
     (0, Tag, Misc, "tag", Impure),
     /// Check the type of an array
     ///

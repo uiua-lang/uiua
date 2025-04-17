@@ -50,10 +50,12 @@ impl Signature {
         }
     }
     /// Get the number of arguments
+    #[inline(always)]
     pub const fn args(&self) -> usize {
         self.args as usize
     }
     /// Get the number of outputs
+    #[inline(always)]
     pub const fn outputs(&self) -> usize {
         self.outputs as usize
     }

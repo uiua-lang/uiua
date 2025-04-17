@@ -193,8 +193,11 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
                 env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
             }
             env.exec(f.clone())?;
-            for i in 0..excess_count {
-                excess_rows[i].push(env.pop("excess output")?);
+            for (i, row) in env
+                .remove_n(excess_count, sig.args() + excess_count)?
+                .enumerate()
+            {
+                excess_rows[i].push(row);
             }
             let next = env.pop("converging function result")?;
             let converged = next == prev;
@@ -227,21 +230,24 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
                 env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
             }
             env.exec(f.clone())?;
-            for i in 0..excess_count {
-                excess_rows[i].push(env.pop("excess output")?);
+            for (i, row) in env
+                .remove_n(excess_count, sig.args() + excess_count)?
+                .enumerate()
+            {
+                excess_rows[i].push(row);
             }
         }
+    }
+    // Remove preserved/excess values
+    if excess_count > 0 {
+        _ = env.remove_n(sig.args(), sig.args())?;
+    } else if preserve_count > 0 {
+        _ = env.remove_n(preserve_count, sig.args())?;
     }
     // Collect excess values
     for rows in excess_rows.into_iter().rev() {
         let new_val = Value::from_row_values(rows, env)?;
         env.push(new_val);
-    }
-    // Remove preserved values
-    if excess_count > 0 {
-        env.remove_n(sig.args(), excess_count + sig.args())?;
-    } else {
-        env.remove_n(preserve_count, sig.args())?;
     }
     Ok(convergence_count)
 }
@@ -307,5 +313,5 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
             return Err(err);
         }
     }
-    env.remove_n(preserve_count, comp_sig.args())
+    env.remove_n(preserve_count, comp_sig.args()).map(drop)
 }

@@ -1170,11 +1170,14 @@ impl Uiua {
     /// Remove some values from the stack
     ///
     /// `depth` must be greater than or equal to `n`
-    pub fn remove_n(&mut self, n: usize, depth: usize) -> UiuaResult {
+    pub fn remove_n(
+        &mut self,
+        n: usize,
+        depth: usize,
+    ) -> UiuaResult<impl Iterator<Item = Value> + '_> {
         debug_assert!(depth >= n);
         let start = self.require_height(depth)?;
-        self.rt.stack.drain(start..start + n);
-        Ok(())
+        Ok(self.rt.stack.drain(start..start + n))
     }
     /// Rotate the stack up at some depth
     pub fn rotate_up(&mut self, n: usize, depth: usize) -> UiuaResult {

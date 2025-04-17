@@ -391,20 +391,15 @@ inverse!(
         span
     },
     {
-        match len {
-            ArrayLen::Static(len) => {
-                let mut inv = un_inverse(inner.as_slice(), asm)?;
-                inv.prepend(Node::Unpack {
-                    count: *len,
-                    unbox: *boxed,
-                    allow_ext: *allow_ext,
-                    span: *span,
-                    prim: *prim,
-                });
-                Ok((input, inv))
-            }
-            ArrayLen::Dynamic(_) => generic(),
-        }
+        let mut inv = un_inverse(inner.as_slice(), asm)?;
+        inv.prepend(Node::Unpack {
+            count: *len,
+            unbox: *boxed,
+            allow_ext: *allow_ext,
+            span: *span,
+            prim: *prim,
+        });
+        Ok((input, inv))
     }
 );
 
@@ -558,7 +553,7 @@ inverse!(
     {
         let mut inv = un_inverse(input, asm)?;
         inv.push(Array {
-            len: ArrayLen::Static(count),
+            len: count,
             inner: Node::empty().into(),
             boxed: unbox,
             allow_ext,

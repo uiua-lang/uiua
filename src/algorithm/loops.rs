@@ -173,8 +173,10 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
         let f = inv.ok_or_else(|| env.error("No inverse found"))?;
         (f, -n)
     };
-    let preserve_count = f.sig.args().saturating_sub(f.sig.outputs());
+    let excess_count = sig.outputs().saturating_sub(sig.args());
+    let preserve_count = sig.args().saturating_sub(sig.outputs());
     let preserved = env.copy_n_down(preserve_count, f.sig.args())?;
+    let mut excess_rows = vec![Vec::new(); excess_count];
     let mut convergence_count = 0;
     if n.is_infinite() {
         // Converging repeat
@@ -191,6 +193,9 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
                 env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
             }
             env.exec(f.clone())?;
+            for i in 0..excess_count {
+                excess_rows[i].push(env.pop("excess output")?);
+            }
             let next = env.pop("converging function result")?;
             let converged = next == prev;
             if converged {
@@ -222,9 +227,22 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
                 env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
             }
             env.exec(f.clone())?;
+            for i in 0..excess_count {
+                excess_rows[i].push(env.pop("excess output")?);
+            }
         }
     }
-    env.remove_n(preserve_count, sig.args())?;
+    // Collect excess values
+    for rows in excess_rows.into_iter().rev() {
+        let new_val = Value::from_row_values(rows, env)?;
+        env.push(new_val);
+    }
+    // Remove preserved values
+    if excess_count > 0 {
+        env.remove_n(sig.args(), excess_count + sig.args())?;
+    } else {
+        env.remove_n(preserve_count, sig.args())?;
+    }
     Ok(convergence_count)
 }
 
@@ -247,9 +265,9 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     );
     let comp_sig = body.sig.compose(cond_sub_sig);
     let sig_err = match comp_sig.args().cmp(&comp_sig.outputs()) {
-        Ordering::Less if env.rt.array_depth == 0 => Some(env.error(format!(
+        Ordering::Less => Some(env.error(format!(
             "Do's functions cannot have a positive net stack \
-            change outside an array, but the composed signature of \
+            change, but the composed signature of \
             {} and {}, minus the condition, is {comp_sig}",
             body.sig, cond.sig
         ))),

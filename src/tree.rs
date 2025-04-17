@@ -22,7 +22,7 @@ use crate::{
 node!(
     /// Create an array
     Array {
-        len: ArrayLen,
+        len: usize,
         inner: Arc<Node>,
         boxed: bool,
         allow_ext: bool,
@@ -184,26 +184,6 @@ impl<'de> Deserialize<'de> for SigNode {
 }
 
 pub(crate) type Ops = EcoVec<SigNode>;
-
-/// The length of an array when being constructed
-///
-/// This is used by [`Node::Array`]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ArrayLen {
-    /// A static number of rows
-    Static(usize),
-    /// A dynamic number of rows. Pulls is this number of values.
-    Dynamic(usize),
-}
-
-impl fmt::Display for ArrayLen {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Static(n) => write!(f, "{n}"),
-            Self::Dynamic(n) => write!(f, "?{n}"),
-        }
-    }
-}
 
 /// A custom inverse node
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

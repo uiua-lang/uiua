@@ -25,10 +25,9 @@ use crate::{
     fill::{Fill, FillValue},
     invert::match_format_pattern,
     lex::Span,
-    Array, ArrayLen, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function,
-    FunctionId, Ident, Inputs, IntoSysBackend, LocalName, Node, Primitive, Report, SafeSys,
-    SigNode, Signature, SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, Value,
-    VERSION,
+    Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function, FunctionId,
+    Ident, Inputs, IntoSysBackend, LocalName, Node, Primitive, Report, SafeSys, SigNode, Signature,
+    SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, Value, VERSION,
 };
 
 /// The Uiua interpreter
@@ -58,8 +57,6 @@ pub(crate) struct Runtime {
     unfill_stack: Vec<FillValue>,
     /// The fill boundary stack
     fill_boundary_stack: Vec<(usize, usize)>,
-    /// The depth of arrays under construction
-    pub(crate) array_depth: usize,
     /// A limit on the execution duration in milliseconds
     pub(crate) execution_limit: Option<f64>,
     /// The time at which execution started
@@ -204,7 +201,6 @@ impl Default for Runtime {
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
             unfill_stack: Vec::new(),
-            array_depth: 0,
             backend: Arc::new(SafeSys::default()),
             time_instrs: false,
             last_time: 0.0,
@@ -1059,23 +1055,13 @@ impl Uiua {
     }
     pub(crate) fn make_array(
         &mut self,
-        len: ArrayLen,
+        len: usize,
         inner: Node,
         boxed: bool,
         allow_ext: bool,
     ) -> UiuaResult {
-        let start_height = self.stack_height();
-        self.rt.array_depth += 1;
-        let res = self.exec(inner);
-        self.rt.array_depth -= 1;
-        res?;
-        let start = match len {
-            ArrayLen::Static(len) => {
-                self.require_height(len)?;
-                self.stack_height() - len
-            }
-            ArrayLen::Dynamic(len) => start_height - len,
-        };
+        self.exec(inner)?;
+        let start = self.require_height(len)?;
         let values = self.rt.stack.drain(start..).rev();
         let values: Vec<Value> = if boxed {
             values.map(Boxed).map(Value::from).collect()
@@ -1512,7 +1498,6 @@ impl Uiua {
                 unfill_stack: Vec::new(),
                 recur_stack: self.rt.recur_stack.clone(),
                 call_stack: Vec::from_iter(self.rt.call_stack.last().cloned()),
-                array_depth: 0,
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,
                 cli_arguments: self.rt.cli_arguments.clone(),

@@ -1,4 +1,4 @@
-use crate::{ArrayLen, DefInfo};
+use crate::DefInfo;
 
 use super::*;
 
@@ -373,7 +373,7 @@ impl Compiler {
                 inner.push(arg.node);
             }
             Node::Array {
-                len: ArrayLen::Static(fields.len()),
+                len: fields.len(),
                 inner: inner.into(),
                 boxed,
                 allow_ext: true,

@@ -26,18 +26,18 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ast::*,
-    check::{nodes_sig, SigCheckErrorKind},
+    check::nodes_sig,
     format::{format_word, format_words},
     function::DynamicFunction,
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
     parse::{flip_unsplit_lines, max_placeholder, parse, split_words},
-    Array, ArrayLen, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
-    DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
-    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
-    RunMode, SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind,
-    UiuaResult, Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
+    Array, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic, DiagnosticKind,
+    DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc,
+    IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity, RunMode, SemanticComment,
+    SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
+    EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
 pub use pre_eval::PreEvalMode;
 
@@ -761,7 +761,6 @@ code:
                         }
                     }
                 }
-                Err(e) if matches!(e.kind, SigCheckErrorKind::LoopVariable { .. }) => {}
                 Err(e) => self.add_error(span, e),
             }
             self.asm.root.push(line_node)
@@ -1368,7 +1367,7 @@ code:
                 }
                 let sig = self.sig_of(&inner, &word.span)?;
                 Node::Array {
-                    len: ArrayLen::Static(sig.outputs()),
+                    len: sig.outputs(),
                     inner: inner.into(),
                     boxed: false,
                     allow_ext: false,
@@ -1425,26 +1424,14 @@ code:
                                 word.span.clone(),
                             )
                         }
-                        ArrayLen::Static(sig.outputs())
+                        sig.outputs()
                     }
-                    Err(e) => match e.kind {
-                        SigCheckErrorKind::LoopVariable { args } => ArrayLen::Dynamic(args),
-                        SigCheckErrorKind::LoopOverreach => {
-                            return Err(self.error(
-                                word.span.clone(),
-                                format!(
-                                    "Array with variable number of arguments \
-                                    cannot be constructed: {e}"
-                                ),
-                            ))
-                        }
-                        _ => {
-                            return Err(self.error(
-                                word.span.clone(),
-                                format!("Cannot infer array signature: {e}"),
-                            ))
-                        }
-                    },
+                    Err(e) => {
+                        return Err(self.error(
+                            word.span.clone(),
+                            format!("Cannot infer array signature: {e}"),
+                        ))
+                    }
                 };
                 // Diagnostic for array of characters
                 if line_count <= 1
@@ -2231,7 +2218,7 @@ code:
                         1 => self.primitive(Fix, span),
                         2 => self.primitive(Couple, span),
                         n => Node::Array {
-                            len: ArrayLen::Static(self.positive_subscript(n, Couple, &span)?),
+                            len: self.positive_subscript(n, Couple, &span)?,
                             inner: Node::empty().into(),
                             boxed: false,
                             allow_ext: true,
@@ -2240,7 +2227,7 @@ code:
                         },
                     },
                     Box => Node::Array {
-                        len: ArrayLen::Static(self.positive_subscript(n, Box, &span)?),
+                        len: self.positive_subscript(n, Box, &span)?,
                         inner: Node::empty().into(),
                         boxed: true,
                         allow_ext: false,

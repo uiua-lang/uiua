@@ -17,7 +17,7 @@ use crate::{
     assembly::{Assembly, Function},
     check::{nodes_clean_sig, nodes_sig, SigCheckError},
     compile::algebra::algebraic_inverse,
-    ArrayLen, CustomInverse, FunctionId,
+    CustomInverse, FunctionId,
     ImplPrimitive::{self, *},
     Node::{self, *},
     Primitive::{self, *},

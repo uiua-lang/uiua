@@ -5,6 +5,10 @@ Uiua is not yet stable.
 ## 0.16.0 - 2025-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) and [`do ⍢`](https://uiua.org/docs/do) now accumulate excess values into arrays if their function has more outputs than arguments
+  - This makes a lot of accumulation patterns much shorter and simpler
+  - These loops now always have well-defined signatures
+  - This breaks the common pattern of wrapping these loops in `[]`s, which is now unnecessary and will need to be changed in your code
 - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) no longer uses the fill value as the first row
 - **Breaking Change** - [`fft`](https://uiua.org/docs/fft) now works along every axis of an array rather than only its last
   - This is more consistent with other functions

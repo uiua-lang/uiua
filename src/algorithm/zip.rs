@@ -73,7 +73,6 @@ fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueMonFn> {
             v.fix_depth(d);
             Ok(v)
         }),
-        Box => spanned_mon_fn(span, |v, d, _| Ok(v.box_depth(d).into())),
         First => spanned_mon_fn(span, |v, d, env| v.first_depth(d, env)),
         Last => spanned_mon_fn(span, |v, d, env| v.last_depth(d, env)),
         Sort => spanned_mon_fn(span, |mut v, d, _| {
@@ -147,6 +146,12 @@ pub(crate) fn f_mon_fast_fn(node: &Node, env: &Uiua) -> Option<(ValueMonFn, usiz
 fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMonFn, usize)> {
     use Primitive::*;
     Some(match nodes {
+        // Box cannot be combined with other depth primives because
+        // it is often used to fix shape mismatches between rows.
+        // We handle it separately here.
+        &[Node::Prim(Box, span)] if !deep => {
+            (spanned_mon_fn(span, |v, d, _| Ok(v.box_depth(d).into())), 0)
+        }
         &[Node::Prim(prim, span)] => {
             let f = prim_mon_fast_fn(prim, span)?;
             (f, 0)
@@ -191,7 +196,7 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
                 for len in [1, 2] {
                     let end = start + len;
                     if end > nodes.len() {
-                        break 'outer;
+                        break;
                     }
                     let nodes = &nodes[start..end];
                     let Some((f, d)) = f_mon_fast_fn_impl(nodes, true, env) else {
@@ -210,10 +215,13 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
                     start = end;
                     continue 'outer;
                 }
-                return None;
+                if start == nodes.len() {
+                    break;
+                } else {
+                    return None;
+                }
             }
-            let func = func?;
-            (func, depth)
+            (func?, depth)
         }
         _ => return None,
     })

@@ -145,7 +145,6 @@ struct IndexMacro {
     words: Vec<Sp<Word>>,
     names: LocalNames,
     sig: Option<Signature>,
-    hygenic: bool,
     recursive: bool,
 }
 

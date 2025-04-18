@@ -1353,7 +1353,7 @@ impl Compiler {
         } else {
             let mut words: Vec<_> = mac.func.value.lines.into_iter().rev().flatten().collect();
             // Expand
-            self.expand_index_macro(None, &mut words, operands, span.clone(), true)?;
+            self.expand_index_macro(None, &mut words, operands, span.clone(), false)?;
             // Compile
             let node = self.suppress_diagnostics(|comp| comp.words(words))?;
             // Add
@@ -1410,7 +1410,7 @@ impl Compiler {
                         &mut mac.words,
                         operands,
                         modifier_span.clone(),
-                        mac.hygenic,
+                        true,
                     )?;
                     // Handle recursion
                     // Recursive macros work by creating a binding for the expansion.

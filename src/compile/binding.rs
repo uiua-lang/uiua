@@ -268,7 +268,6 @@ impl Compiler {
             let mac = IndexMacro {
                 words,
                 names: self.scope.names.clone(),
-                hygenic: true,
                 sig: binding.signature.map(|s| s.value),
                 recursive,
             };

@@ -122,6 +122,14 @@ Foo! ←^ repr⊢
 └─╴
 ⍤⤙≍ 5 Foo!(X)
 
+# Macros use correct identifiers
+┌─╴M ~ F!
+  X  ← 5
+  F! ← +X^0
+└─╴
+X ← 3
+⍤⤙≍ 8 F!X
+
 # Experimental!
 
 # Inline macros
@@ -132,3 +140,5 @@ Foo! ←^ repr⊢
   +1
   ×2
 )!5
+F ← 5
+⍤⤙≍ 5 (^0)!F

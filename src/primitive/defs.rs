@@ -2231,18 +2231,12 @@ primitive!(
     ///   : ⍢(×3|<100.) 1
     /// The net stack change of the two functions, minus the condition, is called the *composed signature*.
     /// The composed signatures of the above examples all have a net stack change of `0`.
-    // /// A positive composed signature net stack change is only allowed inside an array.
-    // /// ex! ⍢(×2.|<1000) 1
-    // /// ex: [⍢(×2.|<1000)] 1
-    /// A negative composed signature net stack change will reuse values lower on the stack.
+    /// A composed signature with a positive net stack change is only allowed inside an array.
+    /// ex: ⍢(⊸×2|≤1000) 10
+    /// ex: ⍢(.×2|≤1000) 10
+    /// A composed signature with a negative net stack change will reuse values lower on the stack.
     /// ex: ⍢(×|<100) 1 2
     /// ex: ⍢(⊂⤚(×⊢)|<100⊢) 1 2
-    ///
-    /// Even if signatures are invalid, [do] will alway run its condition function at least once.
-    /// If the condition returns true, it will always run its body function at least once.
-    /// This is helpful when initially setting up a loop so that you can debug if necessary.
-    /// ex! ⍢(+|?) 5 3
-    /// ex! ⍢(?..+|>2) 5 3
     ([2], Do, IteratingModifier, ("do", '⍢')),
     /// Set the fill value for a function
     ///

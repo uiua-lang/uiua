@@ -324,16 +324,13 @@ impl VirtualEnv {
                         (cond.outputs() + copy_count).saturating_sub(1),
                     );
                     let comp_sig = body.compose(cond_sub_sig);
-                    if comp_sig.args() < comp_sig.outputs() {
-                        self.handle_args_outputs(comp_sig.args(), comp_sig.outputs());
-                        return Err(SigCheckError::from(format!(
-                            "do with a function with signature {comp_sig}"
-                        )));
-                    }
                     self.handle_args_outputs(
                         comp_sig.args(),
                         comp_sig.outputs() + cond_sub_sig.outputs().saturating_sub(cond.args()),
                     );
+                    if comp_sig.args() < comp_sig.outputs() {
+                        self.stack.pop_n(comp_sig.args());
+                    }
                 }
                 Un => {
                     let [sig] = get_args(args)?;

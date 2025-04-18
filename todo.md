@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.16
-- Stabilize `fft`
-  - Requirs a custom implementation 😵‍💫
 - Last-axis subscripts or modifier?
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

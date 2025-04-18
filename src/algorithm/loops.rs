@@ -1,6 +1,6 @@
 //! Algorithms for looping modifiers
 
-use std::{cmp::Ordering, mem::size_of};
+use std::mem::size_of;
 
 use crate::{
     algorithm::{fixed_rows, get_ops, pervade::pervade_dim, FixedRowsData},
@@ -270,15 +270,8 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
         (cond.sig.outputs() + copy_count).saturating_sub(1),
     );
     let comp_sig = body.sig.compose(cond_sub_sig);
-    let sig_err = match comp_sig.args().cmp(&comp_sig.outputs()) {
-        Ordering::Less => Some(env.error(format!(
-            "Do's functions cannot have a positive net stack \
-            change, but the composed signature of \
-            {} and {}, minus the condition, is {comp_sig}",
-            body.sig, cond.sig
-        ))),
-        _ => None,
-    };
+    let excess_count = comp_sig.outputs().saturating_sub(comp_sig.args());
+    let mut excess_rows = vec![Vec::new(); excess_count];
     let preserve_count = comp_sig.args().saturating_sub(comp_sig.outputs());
     let preserved = env.copy_n_down(preserve_count, comp_sig.args())?;
     loop {
@@ -299,9 +292,6 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
         let cond = (env.pop("do condition")?).as_bool(env, "Do condition must be a boolean")?;
         if !cond {
-            if let Some(err) = sig_err {
-                return Err(err);
-            }
             break;
         }
         // Call body
@@ -309,9 +299,23 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
             env.insert_stack(comp_sig.outputs(), preserved.iter().cloned())?;
         }
         env.exec(body.clone())?;
-        if let Some(err) = sig_err {
-            return Err(err);
+        for (i, row) in env
+            .remove_n(excess_count, comp_sig.args() + excess_count)?
+            .enumerate()
+        {
+            excess_rows[i].push(row);
         }
     }
-    env.remove_n(preserve_count, comp_sig.args()).map(drop)
+    // Remove preserved/excess values
+    if excess_count > 0 {
+        _ = env.remove_n(comp_sig.args(), comp_sig.args())?;
+    } else if preserve_count > 0 {
+        _ = env.remove_n(preserve_count, comp_sig.args())?;
+    }
+    // Collect excess values
+    for rows in excess_rows.into_iter().rev() {
+        let new_val = Value::from_row_values(rows, env)?;
+        env.push(new_val);
+    }
+    Ok(())
 }

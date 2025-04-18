@@ -1221,10 +1221,10 @@ impl Compiler {
             }
             Fold => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
-                if sn.sig.args() <= sn.sig.outputs() {
+                if sn.sig.args() < sn.sig.outputs() {
                     self.experimental_error(&modified.modifier.span, || {
                         format!(
-                            "{} with arguments ≤ outputs is experimental. To use it, \
+                            "{} with arguments < outputs is experimental. To use it, \
                             add `# Experimental!` to the top of the file.",
                             prim.format()
                         )

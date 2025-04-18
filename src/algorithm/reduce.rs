@@ -6,7 +6,7 @@ use std::{convert::identity, iter::repeat};
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
-    algorithm::{get_ops, loops::flip, multi_output, pervade::*},
+    algorithm::{get_ops, loops::flip, pervade::*},
     check::{nodes_clean_sig, nodes_sig},
     cowslice::cowslice,
     Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
@@ -1049,7 +1049,7 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let [f] = get_ops(ops, env)?;
     let sig = f.sig;
-    let (iterable_count, acc_count, collect_count) = if sig.args() > sig.outputs() {
+    let (iterable_count, acc_count, excess_count) = if sig.args() > sig.outputs() {
         (sig.args() - sig.outputs(), sig.outputs(), 0)
     } else {
         let iter = sig.args().min(1);
@@ -1095,7 +1095,7 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
     if row_count == 0 && arrays.iter().all(Result::is_err) {
         row_count = 1;
     }
-    let mut collect = multi_output(collect_count, Vec::with_capacity(row_count));
+    let mut excess_rows = vec![Vec::new(); excess_count];
     for _ in 0..row_count {
         for array in arrays.iter_mut().rev() {
             env.push(match array {
@@ -1104,17 +1104,23 @@ pub fn fold(ops: Ops, env: &mut Uiua) -> UiuaResult {
             });
         }
         env.exec(f.clone())?;
-        for collected in &mut collect {
-            collected.push(env.remove_nth_back(acc_count)?);
+        if excess_count > 0 {
+            for (i, row) in env
+                .remove_n(excess_count, acc_count + excess_count)?
+                .enumerate()
+            {
+                excess_rows[i].push(row);
+            }
         }
     }
-    let accs = env.pop_n(acc_count)?;
-    for collected in collect.into_iter().rev() {
-        let val = Value::from_row_values(collected, env)?;
-        env.push(val);
+    // Remove preserved/excess values
+    if excess_count > 0 {
+        _ = env.remove_n(acc_count, acc_count)?;
     }
-    for acc in accs {
-        env.push(acc);
+    // Collect excess values
+    for rows in excess_rows.into_iter().rev() {
+        let new_val = Value::from_row_values(rows, env)?;
+        env.push(new_val);
     }
     Ok(())
 }

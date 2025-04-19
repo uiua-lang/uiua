@@ -2,7 +2,6 @@
 
 # 0.16
 - Semi-pervasive `rotate`
-- Give `base` a glyph
 - More square grid layout
 - Last-axis subscripts or modifier?
 - Compile-time code string evaluation?

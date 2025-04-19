@@ -685,12 +685,14 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     }
     let row_shape = &shape[1..];
     let cell_size = data.len() / cell_count;
+    let start_len = metagrid.len();
     for (i, cell) in data.chunks(cell_size).enumerate() {
-        if i > 0 && rank > 2 {
-            for _ in 0..rank - 2 {
+        if i > 0 && rank > 2 && rank % 2 == 0 {
+            for _ in 0..(rank - 2) / 2 {
                 metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
             }
         }
+        let len_before = metagrid.len();
         fmt_array(row_shape, cell, params, metagrid);
         if T::compress_list_grid() && rank == 2 {
             let (left, right) = T::grid_fmt_delims(false);
@@ -699,6 +701,18 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                     row.insert(0, left);
                     row.push(right);
                 }
+            }
+        }
+        if i > 0 && rank > 2 && rank % 2 == 1 {
+            let rows = metagrid.split_off(len_before);
+            for (mrow, row) in metagrid.iter_mut().skip(start_len).zip(rows) {
+                let len = if T::extra_padding() {
+                    rank - 1
+                } else {
+                    (rank + 1) / 2
+                };
+                mrow.push(vec![vec![' '; len]]);
+                mrow.extend(row);
             }
         }
     }

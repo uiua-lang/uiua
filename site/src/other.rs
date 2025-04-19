@@ -391,7 +391,7 @@ pub fn Combinators() -> impl IntoView {
             ("⊂⟜¯", 1, "S", "Starling"),
         ),
         (
-            view!(<Prim prim=Dup/>).into_view(),
+            view!(<Prim prim=By/>).into_view(),
             ("≍⊸⇌", 1, "Σ", "Violet Starling"),
         ),
         (view!(<Prim prim=Dip/>).into_view(), ("⊟⊙⇌", 2, "D", "Dove")),

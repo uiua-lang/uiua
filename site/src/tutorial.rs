@@ -517,7 +517,8 @@ fn TutorialArrays() -> impl IntoView {
         <p>"Here, we create a "<Prim prim=Range/>" array of all the numbers up to "<code>"24"</code>" and turn it into a 3-dimensional array with the shape "<code>"[2 3 4]"</code>"."</p>
         <Editor example="↯2_3_4 ⇡24"/>
         <p>"Notice there are "<code>"2"</code>" big cells, each with "<code>"3"</code>" rows of "<code>"4"</code>" elements."</p>
-        <p>"This expands to any number of dimensions. The more dimensions, the more space between the cells representing earlier axes."</p>
+        <p>"This expands to any number of dimensions. The elements of the last axis are always laid out horizontally. The rows of the second-to-last axis are always laid out vertically. The third-to-last axis is horizontal, the fourth-to-last is vertical, etc."</p>
+        <p>"We can see here that the shape "<code>"[2 3 2 5]"</code>" appears almost like a 2×3 matrix of 2×5 matrices."</p>
         <Editor example="↯2_3_2_5 ⇡60"/>
 
         <Hd id="pervasion">"Pervasion"</Hd>

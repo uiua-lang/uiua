@@ -16,9 +16,9 @@ use ecow::{EcoString, EcoVec};
 use tinyvec::TinyVec;
 
 use crate::{
-    cowslice::ecovec_extend_cowslice, fill::FillValue, Array, ArrayValue, Boxed, CodeSpan, Complex,
-    ExactDoubleIterator, Inputs, Ops, PersistentMeta, Shape, SigNode, Signature, Span, Uiua,
-    UiuaError, UiuaErrorKind, UiuaResult, Value,
+    cowslice::ecovec_extend_cowslice, fill::FillValue, grid_fmt::GridFmt, Array, ArrayValue, Boxed,
+    CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops, PersistentMeta, Shape, SigNode, Signature,
+    Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
 };
 
 mod dyadic;
@@ -91,7 +91,11 @@ pub struct SizeError(f64);
 
 impl fmt::Display for SizeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Array of {} elements would be too large", self.0)
+        write!(
+            f,
+            "Array of {} elements would be too large",
+            self.0.grid_string(false)
+        )
     }
 }
 

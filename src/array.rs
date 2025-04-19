@@ -967,8 +967,8 @@ pub trait ArrayValue:
     fn compress_list_grid() -> bool {
         false
     }
-    /// Whether to add extra padding between the cells of high-rank arrays when grid formatting
-    fn extra_padding() -> bool {
+    /// Whether to divide cells with box drawing lines when grid formatting
+    fn box_lines() -> bool {
         false
     }
     /// Get a nested value
@@ -1307,7 +1307,7 @@ impl ArrayValue for Boxed {
     fn has_wildcard(&self) -> bool {
         self.0.has_wildcard()
     }
-    fn extra_padding() -> bool {
+    fn box_lines() -> bool {
         true
     }
     fn summarize(elems: &[Self]) -> String {

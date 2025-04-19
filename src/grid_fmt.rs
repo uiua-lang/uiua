@@ -1,6 +1,7 @@
 //! Pretty printing Uiua arrays
 
 use std::{
+    collections::HashMap,
     f64::consts::{PI, TAU},
     iter::once,
     mem::take,
@@ -23,6 +24,13 @@ pub struct GridFmtParams {
     pub boxed: bool,
     pub label: bool,
     pub depth: usize,
+    pub parent_rank: usize,
+}
+
+impl GridFmtParams {
+    fn appear_boxed(&self) -> bool {
+        self.boxed && self.parent_rank == 0
+    }
 }
 
 pub trait GridFmt {
@@ -310,15 +318,18 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         let mut metagrid: Option<Metagrid> = None;
         let mut first_align: Option<ElemAlign> = None;
         let mut grid = if let Some(pointer) = self.meta.pointer.filter(|p| p.raw) {
-            vec![boxed_scalar(params.boxed)
+            vec![boxed_scalar(params.appear_boxed())
                 .chain(format!("0x{:x}", pointer.ptr).chars())
                 .collect()]
         } else if self.shape.is_empty() && !self.is_map() {
             // Scalar
-            self.data[0].fmt_grid(params)
+            self.data[0].fmt_grid(GridFmtParams {
+                boxed: params.appear_boxed(),
+                ..params
+            })
         } else if self.shape == [0] && !self.is_map() {
             // Empty list
-            let (left, right) = T::grid_fmt_delims(params.boxed);
+            let (left, right) = T::grid_fmt_delims(params.appear_boxed());
             let inner = T::empty_list_inner();
             let mut row = vec![left];
             row.extend(inner.chars());
@@ -365,6 +376,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             // Default array formatting
             let mut metagrid = metagrid.unwrap_or_else(|| {
                 let mut metagrid = Metagrid::new();
+                let params = GridFmtParams {
+                    boxed: false,
+                    parent_rank: self.rank(),
+                    ..params
+                };
                 fmt_array(&self.shape, &self.data, params, &mut metagrid);
                 metagrid
             });
@@ -427,38 +443,117 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 }
             }
             // Pad each metagrid cell to its row's max height and column's max width
-            for row in 0..metagrid_height {
-                let row_height = row_heights[row];
+            let horiz_at = |i: usize| {
+                (0..self.rank())
+                    .rev()
+                    .step_by(2)
+                    .scan(1, |prod, d| {
+                        let is_mul = i % *prod == 0;
+                        *prod *= self.shape[d];
+                        Some(is_mul)
+                    })
+                    .filter(|&is_mul| is_mul)
+                    .count()
+                    .saturating_sub(1)
+            };
+            let vert_at = |i: usize| {
+                (0..self.rank().saturating_sub(1))
+                    .rev()
+                    .step_by(2)
+                    .scan(1, |prod, d| {
+                        let is_mul = i % *prod == 0;
+                        *prod *= self.shape[d];
+                        Some(is_mul)
+                    })
+                    .filter(|&is_mul| is_mul)
+                    .count()
+                    .saturating_sub(1)
+            };
+            for i in 0..metagrid_height {
+                let row_height = row_heights[i];
                 let mut subrows = vec![vec![]; row_height];
-                for (i, ((col_width, max_lr_lens), cell)) in (column_widths.iter())
+                let mut div_pos = HashMap::new();
+                for (j, ((col_width, max_lr_lens), cell)) in (column_widths.iter())
                     .zip(&max_lr_lens)
-                    .zip(&mut metagrid[row])
+                    .zip(&mut metagrid[i])
                     .enumerate()
                 {
                     let align = first_align
-                        .filter(|_| i == 0)
+                        .filter(|_| j == 0)
                         .or_else(|| requires_summary.then_some(ElemAlign::None))
                         .unwrap_or(T::alignment());
                     pad_grid_center(*col_width, row_height, align, Some(*max_lr_lens), cell);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
+                        if T::box_lines() && j > 0 {
+                            let horiz = horiz_at(j);
+                            if horiz == 0 {
+                                div_pos.insert(subrow.len(), j);
+                                subrow.push('│');
+                            } else {
+                                for _ in 0..horiz {
+                                    div_pos.insert(subrow.len(), j);
+                                    subrow.push('║');
+                                }
+                            }
+                        }
                         subrow.extend(cell_row);
                     }
+                }
+                if T::box_lines() && i > 0 {
+                    let len = grid.last().unwrap().len();
+                    let mut row = Vec::with_capacity(len);
+                    let vert = vert_at(i);
+                    // println!("vert: {vert}");
+                    for k in 0..len {
+                        let c = if let Some(j) = div_pos.get(&k).copied() {
+                            let horiz = horiz_at(j);
+                            // println!("j: {j}, horiz: {horiz}");
+                            match (horiz, vert) {
+                                (0, 0) => '┼',
+                                (0, _) => '╪',
+                                (_, 0) => '╫',
+                                (_, _) => '╬',
+                            }
+                        } else {
+                            match vert {
+                                0 => '─',
+                                _ => '═',
+                            }
+                        };
+                        row.push(c);
+                    }
+                    for _ in 0..vert.max(1) - 1 {
+                        grid.push(row.clone());
+                    }
+                    grid.push(row);
                 }
                 grid.extend(subrows);
             }
             // Outline the grid
+            // println!(
+            //     "rank: {}, box_lines: {}, params: {:?}",
+            //     self.rank(),
+            //     T::box_lines(),
+            //     params
+            // );
             let grid_row_count = grid.len();
             if self.rank() == 0 && self.is_map() {
+                // Don't surrond maplings
+            } else if params.boxed
+                && params.parent_rank > 0
+                && !(self.shape.contains(&1) || T::compress_list_grid())
+            {
+                // Don't surround if going to draw box separators later
             } else if grid_row_count == 1 && self.rank() == 1 {
                 // Add brackets to lists
                 let (left, right) = if requires_summary || self.is_map() {
-                    if params.boxed {
-                        Boxed::grid_fmt_delims(params.boxed)
+                    if params.appear_boxed() {
+                        Boxed::grid_fmt_delims(params.appear_boxed())
                     } else {
                         ('[', ']')
                     }
                 } else {
-                    T::grid_fmt_delims(params.boxed)
+                    T::grid_fmt_delims(params.appear_boxed())
                 };
                 grid[0].insert(0, left);
                 grid[0].push(right);
@@ -474,13 +569,24 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     None,
                     &mut grid,
                 );
-                grid[0][0] = if params.boxed { '╓' } else { '╭' };
+                grid[0][0] = if params.appear_boxed() {
+                    '╓'
+                } else if T::box_lines() {
+                    '┌'
+                } else {
+                    '╭'
+                };
                 grid[0][1] = '─';
                 for i in 0..apparent_rank.saturating_sub(1) {
-                    grid[i + 1][0] = if params.boxed { '╟' } else { '╷' };
+                    grid[i + 1][0] = if params.appear_boxed() { '╟' } else { '╷' };
                 }
-                *grid.last_mut().unwrap().last_mut().unwrap() =
-                    if params.boxed { '╜' } else { '╯' };
+                *grid.last_mut().unwrap().last_mut().unwrap() = if params.appear_boxed() {
+                    '╜'
+                } else if T::box_lines() {
+                    '┘'
+                } else {
+                    '╯'
+                };
             }
             grid
         };
@@ -669,8 +775,8 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                     boxed: false,
                     ..params
                 });
-                if i > 0 {
-                    pad_grid_min(grid[0].len() + 1, grid.len(), &mut grid)
+                if i > 0 && !T::box_lines() {
+                    pad_grid_min(grid[0].len() + 1, grid.len(), &mut grid);
                 }
                 row.push(grid);
             }
@@ -687,7 +793,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     let cell_size = data.len() / cell_count;
     let start_len = metagrid.len();
     for (i, cell) in data.chunks(cell_size).enumerate() {
-        if i > 0 && rank > 2 && rank % 2 == 0 {
+        if i > 0 && rank > 2 && !T::box_lines() && rank % 2 == 0 {
             for _ in 0..(rank - 2) / 2 {
                 metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
             }
@@ -703,15 +809,12 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 }
             }
         }
-        if i > 0 && rank > 2 && rank % 2 == 1 {
+        if i > 0 && (rank > 2 || T::box_lines()) && rank % 2 == 1 {
             let rows = metagrid.split_off(len_before);
             for (mrow, row) in metagrid.iter_mut().skip(start_len).zip(rows) {
-                let len = if T::extra_padding() {
-                    rank - 1
-                } else {
-                    (rank + 1) / 2
-                };
-                mrow.push(vec![vec![' '; len]]);
+                if !T::box_lines() {
+                    mrow.push(vec![vec![' '; (rank + 1) / 2]])
+                }
                 mrow.extend(row);
             }
         }

@@ -31,17 +31,6 @@ impl From<BoxedRep> for Boxed {
     }
 }
 
-impl Boxed {
-    /// Get the inner value
-    pub fn as_value(&self) -> &Value {
-        &self.0
-    }
-    /// Get the inner value mutably
-    pub fn as_value_mut(&mut self) -> &mut Value {
-        &mut self.0
-    }
-}
-
 impl fmt::Debug for Boxed {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)

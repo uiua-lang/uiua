@@ -2215,7 +2215,8 @@ fn sig_class(sig: Signature) -> &'static str {
         2 => code_font!("dyadic-function"),
         3 => code_font!("triadic-function"),
         4 => code_font!("tetradic-function"),
-        _ => code_font!("pentadic-function"),
+        5 => code_font!("pentadic-function"),
+        _ => code_font!("hexadic-function"),
     }
 }
 

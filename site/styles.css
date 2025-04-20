@@ -1024,23 +1024,15 @@ option,
 }
 
 .tetradic-function {
-    color: #f576d8;
+    color: #f590c8;
 }
 
 .pentadic-function {
-    color: #d876f5;
+    color: #f870a0;
 }
 
-.variadic-function {
-    background-image: linear-gradient(170deg,
-            #ed5e6a 34%,
-            #95d16a 34%,
-            #95d16a 45%,
-            #54b0fc 45%,
-            #54b0fc 56%,
-            #8078f1 56%,
-            #8078f1 67%,
-            #f576d8 67%);
+.hexadic-function {
+    color: #ff5080;
 }
 
 .monadic-modifier {
@@ -1052,7 +1044,7 @@ option,
 }
 
 .triadic-modifier {
-    color: #F5A9B8
+    color: #40f0a0
 }
 
 .space-character {
@@ -1060,6 +1052,18 @@ option,
     border-radius: 0.3em;
     border-style: dashed;
     margin: 0 -2px;
+}
+
+.number-literal {
+    color: #f08050;
+}
+
+.comment-span {
+    color: #888;
+}
+
+.value-hint {
+    color: #8888;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1088,19 +1092,6 @@ option,
     .strand-span {
         color: #0008;
     }
-}
-
-.number-literal {
-    color: #f85;
-}
-
-
-.comment-span {
-    color: #888;
-}
-
-.value-hint {
-    color: #8888;
 }
 
 @media (prefers-color-scheme: dark) {

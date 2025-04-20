@@ -574,12 +574,10 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[1 2 [7 8 9]]"/> // Should fail
         <p>"By using "<Prim prim=Box/>", we can turn any value into a "<strong>"box"</strong>" that contains that value. We can then put these boxes into an array together."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
-        <p>"The "<code>"{}"</code>"s in the output hint at some syntax that will be introduced shortly."</p>
+        <p>"The "<Prim prim=Box/>"ed items in the array are separated by "<code>"│"</code>"s."</p>
         <p><Prim prim=Un/><Prim prim=Box/>" extracts a "<Prim prim=Box/>"ed value."</p>
         <Editor example="°□ .□[1 2 3]"/>
-        <p>"The "<code>"⟦⟧"</code>"s indicate that a list is "<Prim prim=Box/>"ed."</p>
-        <p><Prim prim=Box/>"ed strings also have special output delimiters, using "<code>"⌜⌟"</code>"s."</p>
-        <Editor example="□\"banana\""/>
+        <p>"The "<code>"□"</code>"in front of the list indicates that it is "<Prim prim=Box/>"ed."</p>
         <p>"Having to write "<Prim prim=Box glyph_only=true/>" everywhere is annoying, and so..."</p>
 
         <Hd id="nested-arrays">"Nested Arrays"</Hd>
@@ -587,12 +585,12 @@ fn TutorialArrays() -> impl IntoView {
         <p>"Using "<code>"{}"</code>"s instead of "<code>"[]"</code>"s for stack array notation will automatically "<Prim prim=Box/>" every item."</p>
         <Editor example="{1 2 [7 8 9]}"/>
         <p>"This is very useful for making lists of strings."</p>
-        <Editor example=r#"[""{lang}"" "APL" "J" "BQN" "K" "Q"] # Fails"#/>
-        <Editor example=r#"{""{lang}"" "APL" "J" "BQN" "K" "Q"} # Works!"#/>
+        <Editor example=r#"["Uiua" "APL" "J" "BQN" "K" "Q"] # Fails"#/>
+        <Editor example=r#"{"Uiua" "APL" "J" "BQN" "K" "Q"} # Works!"#/>
         <p>"Functions that require their arguments to have matching types may require "<Prim prim=Box/>"ing an argument."</p>
         <p>"For example, to check if a string is in a list of "<Prim prim=Box/>"ed strings with "<Prim prim=MemberOf/>", you would need to "<Prim prim=Box/>" the string first."</p>
         <Editor example=
-r#"Langs ← {""{lang}"" "APL" "J" "BQN" "K" "Q"}
+r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 ∊ Langs □"APL""#/>
         <p>"Pervasive functions work through boxes and preserve the maximum "<Prim prim=Box/>" depth of their arguments."</p>
         <Editor example="¯ 1\n¯ □1\n¯ □□1"/>

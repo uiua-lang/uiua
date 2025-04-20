@@ -446,7 +446,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 };
                 grid[0].insert(0, left);
                 grid[0].push(right);
-                if self.row_count() <= 1 && params.parent_rank == 0 {
+                if T::box_lines() && self.row_count() <= 1 && params.parent_rank == 0 {
                     grid[0].insert(1, Primitive::Box.glyph().unwrap());
                 }
             } else {

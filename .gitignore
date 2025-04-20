@@ -19,7 +19,7 @@ site/dist
 *.dll
 profile.yaml
 uiua.tmLanguage.json
-!/tests_*/*
+!/tests*/*
 !/examples/*
 !/site/*.ua
 !/site/text/*.ua

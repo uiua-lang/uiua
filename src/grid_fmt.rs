@@ -215,10 +215,9 @@ impl GridFmt for Boxed {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut grid = self.0.fmt_grid(params);
         // println!(
-        //     "  shape: {}, parent rank: {}, depth: {}, is box: {}",
+        //     "  shape: {}, parent rank: {}, is box: {}",
         //     self.0.shape,
         //     params.parent_rank,
-        //     params.depth,
         //     matches!(self.0, Value::Box(_))
         // );
         if params.parent_rank == 0
@@ -249,13 +248,12 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
         let mut first_align: Option<ElemAlign> = None;
-        println!(
-            "shape: {}, parent rank: {}, depth: {}, box lines: {}",
-            self.shape,
-            params.parent_rank,
-            params.depth,
-            T::box_lines()
-        );
+        // println!(
+        //     "shape: {}, parent rank: {}, box lines: {}",
+        //     self.shape,
+        //     params.parent_rank,
+        //     T::box_lines()
+        // );
         let mut outlined = false;
         let mut grid = if let Some(pointer) = self.meta.pointer.filter(|p| p.raw) {
             vec![format!("0x{:x}", pointer.ptr).chars().collect()]
@@ -421,6 +419,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
                         subrow.extend(cell_row);
                         let horiz = horiz_at(j);
+                        // Add column dividers
                         if T::box_lines()
                             && !self.is_map()
                             && (j + 1 < metagrid_width
@@ -438,6 +437,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 }
                 let len = subrows.last().unwrap().len();
                 grid.extend(subrows);
+                // Add row dividers
                 let vert = vert_at(i);
                 let vert_offset = 2 + vert * 2;
                 if T::box_lines()
@@ -469,6 +469,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 // Don't surrond maplings
             } else if params.parent_rank > 0
                 && !(T::box_lines() && self.rank() <= 1)
+                && !(!T::box_lines() && self.rank() >= 2 && self.shape.starts_with(&[1]))
                 && !T::compress_list_grid()
             {
                 // Don't surround if going to draw box separators later

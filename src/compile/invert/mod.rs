@@ -189,6 +189,7 @@ pub enum InversionError {
     UnUnderExperimental,
     UnUnderSignature(Signature),
     ReduceFormat,
+    Pretty,
 }
 
 pub type InversionResult<T = ()> = Result<T, InversionError>;
@@ -252,6 +253,7 @@ impl fmt::Display for InversionError {
                 "Only format functions with 2 arguments \
                 and text only between them can be inverted"
             ),
+            InversionError::Pretty => write!(f, "Nah, let's keep things pretty"),
         }
     }
 }

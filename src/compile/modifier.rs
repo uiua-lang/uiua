@@ -841,7 +841,12 @@ impl Compiler {
             Un => {
                 let (sn, span) = self.monadic_modifier_op(modified)?;
                 self.add_span(span.clone());
-                let normal = sn.un_inverse(&self.asm);
+                let mut normal = sn.un_inverse(&self.asm);
+                if let Node::Prim(Pretty, _) = sn.node {
+                    if let Err(e) = &mut normal {
+                        *e = InversionError::Pretty;
+                    }
+                }
                 let cust = CustomInverse {
                     normal,
                     un: Some(sn),

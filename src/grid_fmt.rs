@@ -402,7 +402,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .unwrap_or(T::alignment());
                     pad_grid_center(*col_width, row_height, align, Some(*max_lr_lens), cell);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
-                        if T::box_lines() && j > 0 {
+                        if T::box_lines() && j > 0 && !self.is_map() {
                             for &line in Line::set(horiz_at(j)) {
                                 div_pos.insert(subrow.len(), line);
                                 subrow.push(line.vert());
@@ -411,7 +411,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         subrow.extend(cell_row);
                     }
                 }
-                if T::box_lines() && i > 0 {
+                if T::box_lines() && i > 0 && !self.is_map() {
                     let len = grid.last().unwrap().len();
                     let vert = vert_at(i);
                     for row_line in Line::set(vert) {

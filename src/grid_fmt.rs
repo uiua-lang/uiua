@@ -233,7 +233,7 @@ impl GridFmt for Boxed {
         // );
         if params.parent_rank == 0
             || self.0.shape.is_empty()
-                && !(params.parent_rank == 1 && matches!(self.0, Value::Box(_)))
+                && !(params.parent_rank == 1 && matches!(self.0, Value::Box(_) | Value::Char(_)))
         {
             let symbol = if params.parent_rank == 0 {
                 Primitive::Box.glyph().unwrap()

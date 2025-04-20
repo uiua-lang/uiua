@@ -1,9 +1,9 @@
 Unique! ←^ (
   ⧅<2
   /$"_\n_" ⍚(
-    $"_\n⍤ _" ⊃(
+    $"_\n_" ⊃(
       /$"¬≍ pretty _ pretty _"
-    | /$"$ (_) and (_) give ambiguous output"
+    | /$"⍤$ (_) and (_) give ambiguous output"
     )
   )
 )
@@ -48,3 +48,5 @@ Unique!(
 | {¤"hi" °△2_2}
 | {¤"hi" °△1_2_2}
 )
+
+Unique!({@a}|{□@a})

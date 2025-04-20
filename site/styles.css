@@ -640,6 +640,7 @@ option,
     padding: 0.4em 0;
     font-family: "Code Font", monospace;
     transform: rotateX(180deg);
+    line-height: 1em;
 }
 
 .output:empty,

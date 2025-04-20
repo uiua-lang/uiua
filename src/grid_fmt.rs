@@ -469,6 +469,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     .count()
                     .saturating_sub(1)
             };
+
             for i in 0..metagrid_height {
                 let row_height = row_heights[i];
                 let mut subrows = vec![vec![]; row_height];
@@ -485,15 +486,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     pad_grid_center(*col_width, row_height, align, Some(*max_lr_lens), cell);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
                         if T::box_lines() && j > 0 {
-                            let horiz = horiz_at(j);
-                            if horiz == 0 {
-                                div_pos.insert(subrow.len(), j);
-                                subrow.push('│');
-                            } else {
-                                for _ in 0..horiz {
-                                    div_pos.insert(subrow.len(), j);
-                                    subrow.push('║');
-                                }
+                            for &line in Line::set(horiz_at(j)) {
+                                div_pos.insert(subrow.len(), line);
+                                subrow.push(line.vert());
                             }
                         }
                         subrow.extend(cell_row);
@@ -501,41 +496,23 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 }
                 if T::box_lines() && i > 0 {
                     let len = grid.last().unwrap().len();
-                    let mut row = Vec::with_capacity(len);
                     let vert = vert_at(i);
-                    // println!("vert: {vert}");
-                    for k in 0..len {
-                        let c = if let Some(j) = div_pos.get(&k).copied() {
-                            let horiz = horiz_at(j);
-                            // println!("j: {j}, horiz: {horiz}");
-                            match (horiz, vert) {
-                                (0, 0) => '┼',
-                                (0, _) => '╪',
-                                (_, 0) => '╫',
-                                (_, _) => '╬',
-                            }
-                        } else {
-                            match vert {
-                                0 => '─',
-                                _ => '═',
-                            }
-                        };
-                        row.push(c);
+                    for row_line in Line::set(vert) {
+                        let mut row = Vec::with_capacity(len);
+                        for k in 0..len {
+                            let c = if let Some(col_line) = div_pos.get(&k).copied() {
+                                row_line.intersect(col_line)
+                            } else {
+                                row_line.horiz()
+                            };
+                            row.push(c);
+                        }
+                        grid.push(row);
                     }
-                    for _ in 0..vert.max(1) - 1 {
-                        grid.push(row.clone());
-                    }
-                    grid.push(row);
                 }
                 grid.extend(subrows);
             }
             // Outline the grid
-            // println!(
-            //     "rank: {}, box_lines: {}, params: {:?}",
-            //     self.rank(),
-            //     T::box_lines(),
-            //     params
-            // );
             let grid_row_count = grid.len();
             if self.rank() == 0 && self.is_map() {
                 // Don't surrond maplings
@@ -622,9 +599,13 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .chain(take(&mut grid[0]))
                         .collect();
                 } else {
-                    let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
-                    grid[0].truncate(trunc);
-                    grid[0].push(' ');
+                    if "╓┌╭".contains(grid[0][0]) {
+                        let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
+                        grid[0].truncate(trunc);
+                        grid[0].push(' ');
+                    } else {
+                        grid.insert(0, Vec::new());
+                    }
                     grid[0].extend(label.chars());
                     while grid[0].len() < grid[1].len() {
                         grid[0].push(' ');
@@ -914,6 +895,79 @@ fn pad_grid_min(width: usize, height: usize, grid: &mut Grid) {
         row.truncate(width);
         while row.len() < width {
             row.insert(0, ' ');
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Line {
+    Single,
+    Double,
+    OpenSingle,
+    CloseSingle,
+    OpenDouble,
+    CloseDouble,
+}
+impl Line {
+    fn set(n: usize) -> &'static [Line] {
+        match n {
+            0 => &[Line::Single],
+            1 => &[Line::Double],
+            2 => &[Line::OpenSingle, Line::CloseSingle],
+            _ => &[Line::OpenDouble, Line::CloseDouble],
+        }
+    }
+    fn vert(&self) -> char {
+        match self {
+            Line::Single | Line::OpenSingle | Line::CloseSingle => '│',
+            Line::Double | Line::OpenDouble | Line::CloseDouble => '║',
+        }
+    }
+    fn horiz(&self) -> char {
+        match self {
+            Line::Single | Line::OpenSingle | Line::CloseSingle => '─',
+            Line::Double | Line::OpenDouble | Line::CloseDouble => '═',
+        }
+    }
+    fn intersect(&self, column: Self) -> char {
+        use Line::*;
+        match (self, column) {
+            (Single, Single) => '┼',
+            (Single, Double) => '╫',
+            (Single, OpenSingle) => '┤',
+            (Single, CloseSingle) => '├',
+            (Single, OpenDouble) => '╢',
+            (Single, CloseDouble) => '╟',
+            (Double, Single) => '╪',
+            (Double, Double) => '╬',
+            (Double, OpenSingle) => '╡',
+            (Double, CloseSingle) => '╞',
+            (Double, OpenDouble) => '╣',
+            (Double, CloseDouble) => '╠',
+            (OpenSingle, Single) => '┴',
+            (OpenSingle, Double) => '╨',
+            (OpenSingle, OpenSingle) => '┘',
+            (OpenSingle, CloseSingle) => '└',
+            (OpenSingle, OpenDouble) => '╜',
+            (OpenSingle, CloseDouble) => '╙',
+            (CloseSingle, Single) => '┬',
+            (CloseSingle, Double) => '╥',
+            (CloseSingle, OpenSingle) => '┐',
+            (CloseSingle, CloseSingle) => '┌',
+            (CloseSingle, OpenDouble) => '╖',
+            (CloseSingle, CloseDouble) => '╓',
+            (OpenDouble, Single) => '╧',
+            (OpenDouble, Double) => '╩',
+            (OpenDouble, OpenSingle) => '╛',
+            (OpenDouble, CloseSingle) => '╘',
+            (OpenDouble, OpenDouble) => '╝',
+            (OpenDouble, CloseDouble) => '╚',
+            (CloseDouble, Single) => '╤',
+            (CloseDouble, Double) => '╦',
+            (CloseDouble, OpenSingle) => '╕',
+            (CloseDouble, CloseSingle) => '╒',
+            (CloseDouble, OpenDouble) => '╗',
+            (CloseDouble, CloseDouble) => '╔',
         }
     }
 }

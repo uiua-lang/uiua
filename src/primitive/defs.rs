@@ -3149,6 +3149,8 @@ primitive!(
     ///   : ⍜⊜□⍚(⊂@,)∊" \n". repr # add commas
     ///   : &p ⍜▽∵⋅@-=@¯.        # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
+    /// Convert a value to its pretty-printed output representation
+    (1, Pretty, Misc, "pretty"),
     /// Convert a value to a byte representation
     ///
     /// This function exists to interface with externally en/decoded binary data.

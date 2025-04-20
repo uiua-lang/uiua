@@ -871,6 +871,25 @@ impl Primitive {
                 env.push(bytes);
             }
             Primitive::Repr => env.monadic_ref(Value::representation)?,
+            Primitive::Pretty => {
+                let val = env.pop(1)?;
+                let pretty = val.grid_string(true);
+                let width = pretty
+                    .lines()
+                    .map(|line| line.chars().count())
+                    .max()
+                    .unwrap_or(0);
+                let height = pretty.lines().count();
+                let shape = Shape::from([height, width]);
+                let mut data = EcoVec::with_capacity(shape.elements());
+                for line in pretty.lines() {
+                    data.extend(line.chars());
+                    while data.len() % width != 0 {
+                        data.push(' ');
+                    }
+                }
+                env.push(Array::new(shape, data));
+            }
             Primitive::Parse => env.monadic_env(Value::parse_num)?,
             Primitive::Utf8 => env.monadic_ref_env(Value::utf8)?,
             Primitive::Graphemes => env.monadic_ref_env(Value::graphemes)?,

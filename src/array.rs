@@ -872,7 +872,13 @@ impl<T: ArrayValue> FromIterator<T> for Array<T> {
 
 impl From<String> for Array<char> {
     fn from(s: String) -> Self {
-        Self::new(s.len(), s.chars().collect::<CowSlice<_>>())
+        s.chars().collect()
+    }
+}
+
+impl From<&str> for Array<char> {
+    fn from(s: &str) -> Self {
+        s.chars().collect()
     }
 }
 

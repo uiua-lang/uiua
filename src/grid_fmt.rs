@@ -249,13 +249,13 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
         let mut first_align: Option<ElemAlign> = None;
-        // println!(
-        //     "shape: {}, parent rank: {}, depth: {}, box lines: {}",
-        //     self.shape,
-        //     params.parent_rank,
-        //     params.depth,
-        //     T::box_lines()
-        // );
+        println!(
+            "shape: {}, parent rank: {}, depth: {}, box lines: {}",
+            self.shape,
+            params.parent_rank,
+            params.depth,
+            T::box_lines()
+        );
         let mut outlined = false;
         let mut grid = if let Some(pointer) = self.meta.pointer.filter(|p| p.raw) {
             vec![format!("0x{:x}", pointer.ptr).chars().collect()]

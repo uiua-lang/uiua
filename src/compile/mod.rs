@@ -579,7 +579,7 @@ code:
                         }),
                         _ => false,
                     });
-            if let Err(e) = self.item(item, from_macro, must_run, &mut prelude) {
+            if let Err(e) = self.item(item, must_run, &mut prelude) {
                 if !item_errored || self.errors.is_empty() {
                     self.errors.push(e);
                 }
@@ -588,16 +588,10 @@ code:
         }
         Ok(())
     }
-    fn item(
-        &mut self,
-        item: Item,
-        from_macro: bool,
-        must_run: bool,
-        prelude: &mut BindingPrelude,
-    ) -> UiuaResult {
+    fn item(&mut self, item: Item, must_run: bool, prelude: &mut BindingPrelude) -> UiuaResult {
         match item {
             Item::Module(m) => self.module(m, take(prelude)),
-            Item::Words(lines) => self.top_level_words(lines, from_macro, must_run, true, prelude),
+            Item::Words(lines) => self.top_level_words(lines, must_run, true, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
             Item::Data(defs) => {
@@ -612,7 +606,6 @@ code:
     fn top_level_words(
         &mut self,
         mut lines: Vec<Vec<Sp<Word>>>,
-        from_macro: bool,
         must_run: bool,
         precomp: bool,
         prelude: &mut BindingPrelude,
@@ -702,7 +695,6 @@ code:
                 Ok(sig) => {
                     // Compile test assert
                     if self.mode != RunMode::Normal
-                        && !from_macro
                         && !self
                             .scopes()
                             .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))

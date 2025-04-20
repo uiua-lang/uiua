@@ -19,14 +19,14 @@ use super::{ErrorContext, FillContext};
 impl<T: ArrayValue> Array<T> {
     /// Check if the array is a map
     pub fn is_map(&self) -> bool {
-        self.meta.map_keys.as_ref().is_some()
+        self.meta.map_keys.is_some()
     }
     /// Get the keys and values of a map array
     pub fn map_kv(&self) -> impl Iterator<Item = (Value, Array<T>)> {
         self.map_kv_inner().into_iter()
     }
     fn map_kv_inner(&self) -> Vec<(Value, Array<T>)> {
-        let Some(map_keys) = self.meta.map_keys.as_ref() else {
+        let Some(map_keys) = &self.meta.map_keys else {
             return Vec::new();
         };
         let mut kv = Vec::with_capacity(map_keys.len);

@@ -213,26 +213,31 @@ impl GridFmt for char {
 
 impl GridFmt for Boxed {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
-        let mut grid = match &self.0 {
-            Value::Num(array) => array.fmt_grid(params),
-            Value::Byte(array) => array.fmt_grid(params),
-            Value::Complex(array) => array.fmt_grid(params),
-            Value::Char(array) => array.fmt_grid(params),
-            Value::Box(array) => array.fmt_grid(params),
-        };
-        if params.parent_rank == 0 {
+        let mut grid = self.0.fmt_grid(params);
+        // println!(
+        //     "  shape: {}, parent rank: {}, depth: {}, is box: {}",
+        //     self.0.shape,
+        //     params.parent_rank,
+        //     params.depth,
+        //     matches!(self.0, Value::Box(_))
+        // );
+        if params.parent_rank == 0
+            || self.0.shape.is_empty()
+                && !(params.parent_rank == 1 && matches!(self.0, Value::Box(_)))
+        {
+            let symbol = if params.parent_rank == 0 {
+                Primitive::Box.glyph().unwrap()
+            } else {
+                '∙'
+            };
             match grid.len() {
                 0 => {}
-                1 => {
-                    grid = vec![once(Primitive::Box.glyph().unwrap())
-                        .chain(grid.into_iter().flatten())
-                        .collect()];
-                }
+                1 => grid = vec![once(symbol).chain(grid.into_iter().flatten()).collect()],
                 height => {
                     for row in &mut grid {
                         row.insert(0, ' ');
                     }
-                    grid[(height - 1) / 2][0] = Primitive::Box.glyph().unwrap();
+                    grid[(height - 1) / 2][0] = symbol;
                 }
             }
         }
@@ -244,10 +249,22 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
         let mut first_align: Option<ElemAlign> = None;
+        // println!(
+        //     "shape: {}, parent rank: {}, depth: {}, box lines: {}",
+        //     self.shape,
+        //     params.parent_rank,
+        //     params.depth,
+        //     T::box_lines()
+        // );
+        let mut outlined = false;
         let mut grid = if let Some(pointer) = self.meta.pointer.filter(|p| p.raw) {
             vec![format!("0x{:x}", pointer.ptr).chars().collect()]
-        } else if self.shape.is_empty() && !self.is_map() {
+        } else if self.rank() == 0 && !self.is_map() {
             // Scalar
+            let params = GridFmtParams {
+                parent_rank: self.rank(),
+                ..params
+            };
             self.data[0].fmt_grid(params)
         } else if self.shape == [0] && !self.is_map() {
             // Empty list
@@ -365,7 +382,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     .rev()
                     .step_by(2)
                     .scan(1, |prod, d| {
-                        let is_mul = i % *prod == 0;
+                        let is_mul = (i + 1) % *prod == 0;
                         *prod *= self.shape[d];
                         Some(is_mul)
                     })
@@ -378,7 +395,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     .rev()
                     .step_by(2)
                     .scan(1, |prod, d| {
-                        let is_mul = i % *prod == 0;
+                        let is_mul = (i + 1) % *prod == 0;
                         *prod *= self.shape[d];
                         Some(is_mul)
                     })
@@ -402,42 +419,61 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .unwrap_or(T::alignment());
                     pad_grid_center(*col_width, row_height, align, Some(*max_lr_lens), cell);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
-                        if T::box_lines() && j > 0 && !self.is_map() {
-                            for &line in Line::set(horiz_at(j)) {
-                                div_pos.insert(subrow.len(), line);
+                        subrow.extend(cell_row);
+                        let horiz = horiz_at(j);
+                        if T::box_lines()
+                            && !self.is_map()
+                            && (j + 1 < metagrid_width
+                                || self.shape[self.rank() - 1 - horiz * 2] == 1)
+                        {
+                            for mut line in Line::set(horiz) {
+                                if j + 1 == metagrid_width {
+                                    line = line.singleton();
+                                }
+                                div_pos.insert(subrow.len(), *line);
                                 subrow.push(line.vert());
                             }
                         }
-                        subrow.extend(cell_row);
                     }
                 }
-                if T::box_lines() && i > 0 && !self.is_map() {
-                    let len = grid.last().unwrap().len();
-                    let vert = vert_at(i);
-                    for row_line in Line::set(vert) {
+                let len = subrows.last().unwrap().len();
+                grid.extend(subrows);
+                let vert = vert_at(i);
+                let vert_offset = 2 + vert * 2;
+                if T::box_lines()
+                    && !self.is_map()
+                    && (i + 1 < metagrid_height
+                        || self.rank() >= vert_offset && self.shape[self.rank() - vert_offset] == 1)
+                {
+                    for mut row_line in Line::set(vert) {
+                        if i + 1 == metagrid_height {
+                            row_line = row_line.singleton();
+                        }
+                        let row_c = row_line.horiz();
                         let mut row = Vec::with_capacity(len);
                         for k in 0..len {
                             let c = if let Some(col_line) = div_pos.get(&k).copied() {
                                 row_line.intersect(col_line)
                             } else {
-                                row_line.horiz()
+                                row_c
                             };
                             row.push(c);
                         }
                         grid.push(row);
                     }
                 }
-                grid.extend(subrows);
             }
             // Outline the grid
             let grid_row_count = grid.len();
             if self.rank() == 0 && self.is_map() {
                 // Don't surrond maplings
             } else if params.parent_rank > 0
-                && !(self.shape.contains(&1) || T::compress_list_grid())
+                && !(T::box_lines() && self.rank() <= 1)
+                && !T::compress_list_grid()
             {
                 // Don't surround if going to draw box separators later
             } else if grid_row_count == 1 && self.rank() == 1 {
+                outlined = true;
                 // Add brackets to lists
                 let (left, right) = if requires_summary || self.is_map() {
                     ('[', ']')
@@ -446,10 +482,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 };
                 grid[0].insert(0, left);
                 grid[0].push(right);
-                if T::box_lines() && self.row_count() <= 1 && params.parent_rank == 0 {
+                if T::box_lines() && self.row_count() == 0 && params.parent_rank == 0 {
                     grid[0].insert(1, Primitive::Box.glyph().unwrap());
                 }
             } else {
+                outlined = true;
                 let apparent_rank = if requires_summary { 1 } else { self.rank() };
                 // Add corners to non-vectors
                 let width = grid[0].len();
@@ -488,10 +525,18 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             if self.shape.is_empty() {
                 grid[0].push('ℂ');
             } else if grid.len() == 1 {
-                grid[0].insert(1, 'ℂ');
-                grid[0].insert(2, ' ');
-            } else {
+                let offset = outlined as usize;
+                grid[0].insert(offset, 'ℂ');
+                grid[0].insert(offset + 1, ' ');
+            } else if outlined {
                 grid[0][2] = 'ℂ';
+            } else {
+                for row in &mut grid {
+                    row.push(' ');
+                    row.push(' ');
+                    row.rotate_right(2);
+                }
+                grid[0][0] = 'ℂ';
             }
         }
 
@@ -502,7 +547,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     grid[0] = (label.chars().chain([':', ' ']))
                         .chain(take(&mut grid[0]))
                         .collect();
-                } else if "┌╭".contains(grid[0][1]) {
+                } else if grid[0].len() >= 2 && "┌╭".contains(grid[0][1]) {
                     grid[0] = label
                         .chars()
                         .chain(take(&mut grid[0]).into_iter().skip(1))
@@ -815,6 +860,8 @@ enum Line {
     CloseSingle,
     OpenDouble,
     CloseDouble,
+    ForceSingle,
+    ForceDouble,
 }
 impl Line {
     fn set(n: usize) -> &'static [Line] {
@@ -827,27 +874,36 @@ impl Line {
     }
     fn vert(&self) -> char {
         match self {
-            Line::Single | Line::OpenSingle | Line::CloseSingle => '│',
-            Line::Double | Line::OpenDouble | Line::CloseDouble => '║',
+            Line::Single | Line::OpenSingle | Line::CloseSingle | Line::ForceSingle => '│',
+            Line::Double | Line::OpenDouble | Line::CloseDouble | Line::ForceDouble => '║',
         }
     }
     fn horiz(&self) -> char {
         match self {
-            Line::Single | Line::OpenSingle | Line::CloseSingle => '─',
-            Line::Double | Line::OpenDouble | Line::CloseDouble => '═',
+            Line::Single | Line::OpenSingle | Line::CloseSingle | Line::ForceSingle => '─',
+            Line::Double | Line::OpenDouble | Line::CloseDouble | Line::ForceDouble => '═',
+        }
+    }
+    fn singleton(&self) -> &Self {
+        match self {
+            Line::Single => &Line::OpenSingle,
+            Line::CloseSingle => &Line::ForceSingle,
+            Line::Double => &Line::OpenDouble,
+            Line::CloseDouble => &Line::ForceDouble,
+            line => line,
         }
     }
     fn intersect(&self, column: Self) -> char {
         use Line::*;
         match (self, column) {
-            (Single, Single) => '┼',
-            (Single, Double) => '╫',
+            (Single, Single) | (ForceSingle, ForceSingle) => '┼',
+            (Single, Double) | (ForceSingle, ForceDouble) => '╫',
             (Single, OpenSingle) => '┤',
             (Single, CloseSingle) => '├',
             (Single, OpenDouble) => '╢',
             (Single, CloseDouble) => '╟',
-            (Double, Single) => '╪',
-            (Double, Double) => '╬',
+            (Double, Single) | (ForceDouble, ForceSingle) => '╪',
+            (Double, Double) | (ForceDouble, ForceDouble) => '╬',
             (Double, OpenSingle) => '╡',
             (Double, CloseSingle) => '╞',
             (Double, OpenDouble) => '╣',
@@ -876,6 +932,10 @@ impl Line {
             (CloseDouble, CloseSingle) => '╒',
             (CloseDouble, OpenDouble) => '╗',
             (CloseDouble, CloseDouble) => '╔',
+            (ForceSingle, _) => '─',
+            (ForceDouble, _) => '═',
+            (_, ForceSingle) => '│',
+            (_, ForceDouble) => '║',
         }
     }
 }

@@ -402,27 +402,30 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .unwrap_or(T::alignment());
                     pad_grid_center(*col_width, row_height, align, Some(*max_lr_lens), cell);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
-                        if T::box_lines() && j > 0 && !self.is_map() {
+                        if j > 0 && !self.is_map() {
                             for &line in Line::set(horiz_at(j)) {
                                 div_pos.insert(subrow.len(), line);
-                                subrow.push(line.vert());
+                                subrow.push(line.vert(T::box_lines()));
                             }
                         }
                         subrow.extend(cell_row);
                     }
                 }
-                if T::box_lines() && i > 0 && !self.is_map() {
+                // Calculate box column borders
+                if i > 0 && !self.is_map() {
                     let len = grid.last().unwrap().len();
                     let vert = vert_at(i);
                     for row_line in Line::set(vert) {
+                        let Some(row_c) = row_line.horiz(T::box_lines()) else {
+                            continue;
+                        };
                         let mut row = Vec::with_capacity(len);
                         for k in 0..len {
-                            let c = if let Some(col_line) = div_pos.get(&k).copied() {
-                                row_line.intersect(col_line)
+                            row.push(if let Some(col_line) = div_pos.get(&k).copied() {
+                                row_line.intersect(col_line, T::box_lines())
                             } else {
-                                row_line.horiz()
-                            };
-                            row.push(c);
+                                row_c
+                            });
                         }
                         grid.push(row);
                     }
@@ -662,12 +665,8 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 .collect();
             row.push(vec![s.chars().collect()]);
         } else {
-            for (i, val) in data.iter().enumerate() {
-                let mut grid = val.fmt_grid(params);
-                if i > 0 && !T::box_lines() {
-                    pad_grid_min(grid[0].len() + 1, grid.len(), &mut grid);
-                }
-                row.push(grid);
+            for val in data {
+                row.push(val.fmt_grid(params));
             }
         }
         metagrid.push(row);
@@ -682,11 +681,6 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     let cell_size = data.len() / cell_count;
     let start_len = metagrid.len();
     for (i, cell) in data.chunks(cell_size).enumerate() {
-        if i > 0 && rank > 2 && !T::box_lines() && rank % 2 == 0 {
-            for _ in 0..(rank - 2) / 2 {
-                metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
-            }
-        }
         let len_before = metagrid.len();
         fmt_array(row_shape, cell, params, metagrid);
         if T::compress_list_grid() && rank == 2 {
@@ -701,9 +695,6 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         if i > 0 && (rank > 2 || T::box_lines()) && rank % 2 == 1 {
             let rows = metagrid.split_off(len_before);
             for (mrow, row) in metagrid.iter_mut().skip(start_len).zip(rows) {
-                if !T::box_lines() {
-                    mrow.push(vec![vec![' '; (rank + 1) / 2]])
-                }
                 mrow.extend(row);
             }
         }
@@ -794,19 +785,6 @@ fn pad_grid_center(
     }
 }
 
-fn pad_grid_min(width: usize, height: usize, grid: &mut Grid) {
-    grid.truncate(height);
-    while grid.len() < height {
-        grid.insert(0, vec![' '; width]);
-    }
-    for row in grid.iter_mut() {
-        row.truncate(width);
-        while row.len() < width {
-            row.insert(0, ' ');
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Line {
     Single,
@@ -825,57 +803,88 @@ impl Line {
             _ => &[Line::OpenDouble, Line::CloseDouble],
         }
     }
-    fn vert(&self) -> char {
-        match self {
-            Line::Single | Line::OpenSingle | Line::CloseSingle => '│',
-            Line::Double | Line::OpenDouble | Line::CloseDouble => '║',
+    fn vert(&self, boxed: bool) -> char {
+        match (self, boxed) {
+            (Line::Single | Line::OpenSingle | Line::CloseSingle, true) => '│',
+            (Line::Double | Line::OpenDouble | Line::CloseDouble, true) => '║',
+            (Line::Single, false) => ' ',
+            (Line::OpenSingle, false) => '╷',
+            (Line::CloseSingle, false) => '╵',
+            (Line::Double, false) => '╵',
+            (Line::OpenDouble, false) => '╻',
+            (Line::CloseDouble, false) => '╹',
         }
     }
-    fn horiz(&self) -> char {
-        match self {
-            Line::Single | Line::OpenSingle | Line::CloseSingle => '─',
-            Line::Double | Line::OpenDouble | Line::CloseDouble => '═',
-        }
+    fn horiz(&self, boxed: bool) -> Option<char> {
+        Some(match (self, boxed) {
+            (Line::Single | Line::OpenSingle | Line::CloseSingle, true) => '─',
+            (Line::Double | Line::OpenDouble | Line::CloseDouble, true) => '═',
+            (Line::Single, false) => return None,
+            (Line::OpenSingle, false) => '╶',
+            (Line::CloseSingle, false) => '╴',
+            (Line::Double, false) => '╶',
+            (Line::OpenDouble, false) => '╺',
+            (Line::CloseDouble, false) => '╸',
+        })
     }
-    fn intersect(&self, column: Self) -> char {
+    fn intersect(&self, column: Self, boxed: bool) -> char {
+        let row = *self;
         use Line::*;
-        match (self, column) {
-            (Single, Single) => '┼',
-            (Single, Double) => '╫',
-            (Single, OpenSingle) => '┤',
-            (Single, CloseSingle) => '├',
-            (Single, OpenDouble) => '╢',
-            (Single, CloseDouble) => '╟',
-            (Double, Single) => '╪',
-            (Double, Double) => '╬',
-            (Double, OpenSingle) => '╡',
-            (Double, CloseSingle) => '╞',
-            (Double, OpenDouble) => '╣',
-            (Double, CloseDouble) => '╠',
-            (OpenSingle, Single) => '┴',
-            (OpenSingle, Double) => '╨',
-            (OpenSingle, OpenSingle) => '┘',
-            (OpenSingle, CloseSingle) => '└',
-            (OpenSingle, OpenDouble) => '╜',
-            (OpenSingle, CloseDouble) => '╙',
-            (CloseSingle, Single) => '┬',
-            (CloseSingle, Double) => '╥',
-            (CloseSingle, OpenSingle) => '┐',
-            (CloseSingle, CloseSingle) => '┌',
-            (CloseSingle, OpenDouble) => '╖',
-            (CloseSingle, CloseDouble) => '╓',
-            (OpenDouble, Single) => '╧',
-            (OpenDouble, Double) => '╩',
-            (OpenDouble, OpenSingle) => '╛',
-            (OpenDouble, CloseSingle) => '╘',
-            (OpenDouble, OpenDouble) => '╝',
-            (OpenDouble, CloseDouble) => '╚',
-            (CloseDouble, Single) => '╤',
-            (CloseDouble, Double) => '╦',
-            (CloseDouble, OpenSingle) => '╕',
-            (CloseDouble, CloseSingle) => '╒',
-            (CloseDouble, OpenDouble) => '╗',
-            (CloseDouble, CloseDouble) => '╔',
+        match (row, column, boxed) {
+            (Single, Single, _) => '┼',
+            (Single, Double, true) => '╫',
+            (Single, Double, false) => '╂',
+            (Single, OpenSingle, _) => '┤',
+            (Single, CloseSingle, _) => '├',
+            (Single, OpenDouble, true) => '╢',
+            (Single, OpenDouble, false) => '┨',
+            (Single, CloseDouble, true) => '╟',
+            (Single, CloseDouble, false) => '┠',
+            (Double, Single, true) => '╪',
+            (Double, Single, false) => '╶',
+            (Double, Double, true) => '╬',
+            (Double, Double, false) => '└',
+            (Double, OpenSingle, true) => '╡',
+            (Double, OpenSingle, false) => '╷',
+            (Double, CloseSingle, true) => '╞',
+            (Double, CloseSingle, false) => '└',
+            (Double, OpenDouble, true) => '╣',
+            (Double, OpenDouble, false) => '╻',
+            (Double, CloseDouble, true) => '╠',
+            (Double, CloseDouble, false) => '╹',
+            (OpenSingle, Single, true) => '┴',
+            (OpenSingle, Single, false) => '╶',
+            (OpenSingle, Double, true) => '╨',
+            (OpenSingle, Double, false) => '└',
+            (OpenSingle, OpenSingle, true) => '┘',
+            (OpenSingle, OpenSingle, false) => '╴',
+            (OpenSingle, CloseSingle, _) => '└',
+            (OpenSingle, OpenDouble, true) => '╜',
+            (OpenSingle, OpenDouble, false) => '╴',
+            (OpenSingle, CloseDouble, true) => '╙',
+            (OpenSingle, CloseDouble, false) => '┖',
+            (CloseSingle, Single, _) => '╴',
+            (CloseSingle, Double, true) => '╥',
+            (CloseSingle, Double, false) => '╴',
+            (CloseSingle, OpenSingle, _) => '┐',
+            (CloseSingle, CloseSingle, true) => '┌',
+            (CloseSingle, CloseSingle, false) => '╶',
+            (CloseSingle, OpenDouble, true) => '╖',
+            (CloseSingle, OpenDouble, false) => '┒',
+            (CloseSingle, CloseDouble, true) => '╓',
+            (CloseSingle, CloseDouble, false) => '╶',
+            (OpenDouble, Single, _) => '╧',
+            (OpenDouble, Double, _) => '╩',
+            (OpenDouble, OpenSingle, _) => '╛',
+            (OpenDouble, CloseSingle, _) => '╘',
+            (OpenDouble, OpenDouble, _) => '╝',
+            (OpenDouble, CloseDouble, _) => '╚',
+            (CloseDouble, Single, _) => '╤',
+            (CloseDouble, Double, _) => '╦',
+            (CloseDouble, OpenSingle, _) => '╕',
+            (CloseDouble, CloseSingle, _) => '╒',
+            (CloseDouble, OpenDouble, _) => '╗',
+            (CloseDouble, CloseDouble, _) => '╔',
         }
     }
 }

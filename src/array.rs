@@ -956,12 +956,8 @@ pub trait ArrayValue:
         " "
     }
     /// Delimiters for grid formatting
-    fn grid_fmt_delims(boxed: bool) -> (char, char) {
-        if boxed {
-            ('⟦', '⟧')
-        } else {
-            ('[', ']')
-        }
+    fn grid_fmt_delims() -> (char, char) {
+        ('[', ']')
     }
     /// Whether to compress all items of a list when grid formatting
     fn compress_list_grid() -> bool {
@@ -1200,12 +1196,8 @@ impl ArrayValue for char {
     fn proxy() -> Self {
         ' '
     }
-    fn grid_fmt_delims(boxed: bool) -> (char, char) {
-        if boxed {
-            ('⌜', '⌟')
-        } else {
-            ('"', '"')
-        }
+    fn grid_fmt_delims() -> (char, char) {
+        ('"', '"')
     }
     fn compress_list_grid() -> bool {
         true

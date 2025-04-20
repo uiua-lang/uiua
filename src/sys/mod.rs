@@ -1966,8 +1966,8 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
         },
         Value::Box(arr) => match arr.rank() {
             0 | 1 => {
-                for bx in &arr.data {
-                    match bx.as_value() {
+                for Boxed(val) in &arr.data {
+                    match val {
                         Value::Char(arr) if arr.rank() <= 1 => {
                             strings.push(arr.data.iter().collect::<String>())
                         }

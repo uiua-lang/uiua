@@ -3150,6 +3150,15 @@ primitive!(
     ///   : &p ⍜▽∵⋅@-=@¯.        # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
     /// Convert a value to its pretty-printed output representation
+    ///
+    /// The output will always be a rank-2 character array.
+    /// ex: pretty 5
+    /// ex: pretty 1_2_3
+    /// ex: pretty °△2_3
+    /// ex: pretty {[1_2] [3_4 5_6]}
+    /// ex: pretty [{[1_2] 3} {4_5 [6_7 8_9]}]
+    ///
+    /// [&s] is equivalent to `rows``&p``pretty`.
     (1, Pretty, Misc, "pretty"),
     /// Convert a value to a byte representation
     ///

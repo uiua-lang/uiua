@@ -189,6 +189,8 @@ sys_op! {
     ///   : &s π
     ///   : &s @U
     ///
+    /// [&s] is equivalent to `rows``&p``pretty`.
+    ///
     /// To print values in a more standard way, see [&p].
     (1(0), Show, StdIO, "&s", "show", Mutating),
     /// Print a value to stdout

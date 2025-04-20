@@ -21,9 +21,11 @@ type Metagrid = Grid<Grid>;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GridFmtParams {
-    pub label: bool,
-    pub depth: usize,
-    pub parent_rank: usize,
+    label: bool,
+    depth: usize,
+    parent_rank: usize,
+    max_boxed_rank: usize,
+    max_boxed_len: usize,
 }
 
 pub trait GridFmt {
@@ -172,10 +174,19 @@ impl GridFmt for Value {
             Value::Byte(b) => b.fmt_grid(params),
             Value::Complex(c) => c.fmt_grid(params),
             Value::Char(c) => c.fmt_grid(params),
-            Value::Box(v) => v.fmt_grid(GridFmtParams {
-                depth: params.depth + 1,
-                ..params
-            }),
+            Value::Box(v) => {
+                let max_boxed_rank = v.data.iter().map(|Boxed(v)| v.rank()).max().unwrap_or(0);
+                v.fmt_grid(GridFmtParams {
+                    depth: params.depth + 1,
+                    max_boxed_rank,
+                    max_boxed_len: (v.data.iter())
+                        .filter(|Boxed(v)| v.rank() == max_boxed_rank)
+                        .map(|Boxed(v)| v.row_count())
+                        .max()
+                        .unwrap_or(0),
+                    ..params
+                })
+            }
         }
     }
 }
@@ -249,10 +260,12 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         let mut metagrid: Option<Metagrid> = None;
         let mut first_align: Option<ElemAlign> = None;
         // println!(
-        //     "shape: {}, parent rank: {}, box lines: {}",
+        //     "shape: {}, box lines: {}, parent rank: {}, max boxed rank: {}, max boxed len: {}",
         //     self.shape,
+        //     T::box_lines(),
         //     params.parent_rank,
-        //     T::box_lines()
+        //     params.max_boxed_rank,
+        //     params.max_boxed_len
         // );
         let mut outlined = false;
         let mut grid = if let Some(pointer) = self.meta.pointer.filter(|p| p.raw) {
@@ -415,7 +428,14 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .filter(|_| j == 0)
                         .or_else(|| requires_summary.then_some(ElemAlign::None))
                         .unwrap_or(T::alignment());
-                    pad_grid_center(*col_width, row_height, align, Some(*max_lr_lens), cell);
+                    pad_grid_center(
+                        *col_width,
+                        row_height,
+                        align,
+                        false,
+                        Some(*max_lr_lens),
+                        cell,
+                    );
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
                         subrow.extend(cell_row);
                         let horiz = horiz_at(j);
@@ -467,12 +487,26 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let grid_row_count = grid.len();
             if self.rank() == 0 && self.is_map() {
                 // Don't surrond maplings
-            } else if params.parent_rank > 0
-                && !(T::box_lines() && self.rank() <= 1)
-                && !(!T::box_lines() && self.rank() >= 2 && self.shape.starts_with(&[1]))
-                && !T::compress_list_grid()
+            } else if !(params.parent_rank == 0
+                || T::box_lines() && self.rank() <= 1
+                || !T::box_lines() && self.rank() < params.max_boxed_rank
+                || T::compress_list_grid() && self.rank() <= 1)
             {
                 // Don't surround if going to draw box separators later
+                if !T::box_lines()
+                    && self.row_count() == 1
+                    && (params.max_boxed_len == 1 || T::compress_list_grid())
+                {
+                    // Disambiguate fixed arrays
+                    let fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();
+                    for row in &mut grid {
+                        row.extend(repeat(' ').take(fix_amnt));
+                        row.rotate_right(fix_amnt);
+                    }
+                    for i in 0..fix_amnt {
+                        grid[0][i] = Primitive::Fix.glyph().unwrap();
+                    }
+                }
             } else if grid_row_count == 1 && self.rank() == 1 {
                 outlined = true;
                 // Add brackets to lists
@@ -496,6 +530,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     width + 4,
                     (height + 2).max(apparent_rank + 1),
                     ElemAlign::None,
+                    true,
                     None,
                     &mut grid,
                 );
@@ -768,14 +803,15 @@ pub enum ElemAlign {
 fn pad_grid_center(
     width: usize,
     height: usize,
-    align: ElemAlign,
+    horiz_align: ElemAlign,
+    center_vert: bool,
     lr_lens: Option<(usize, usize)>,
     grid: &mut Grid,
 ) {
     grid.truncate(height);
     if grid.len() < height {
         let diff = height - grid.len();
-        let post_pad = diff / 2;
+        let post_pad = if center_vert { diff / 2 } else { diff };
         let pre_pad = diff - post_pad;
         for _ in 0..pre_pad {
             grid.insert(0, vec![' '; width]);
@@ -787,7 +823,7 @@ fn pad_grid_center(
     for row in grid.iter_mut() {
         if row.len() < width {
             let diff = width - row.len();
-            let (pre, post) = match align {
+            let (pre, post) = match horiz_align {
                 ElemAlign::Left => (0, diff),
                 ElemAlign::Right => (diff, 0),
                 ElemAlign::None => {

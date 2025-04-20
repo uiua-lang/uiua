@@ -637,10 +637,17 @@ impl Compiler {
                 let sig = sn.sig;
                 let (inner, before) = match sn.sig.args() {
                     0 => (SigNode::new((2, 2), Node::Prim(Identity, span)), sn.node),
-                    1 => {
+                    1 if prim == With => {
                         sn.sig.update_outputs(|o| o + 1);
                         sn.sig.update_args(|_| 2);
                         (sn, Node::empty())
+                    }
+                    1 if prim == Off => {
+                        let mut outer_sig = sig;
+                        outer_sig.update_outputs(|o| o + 1);
+                        outer_sig.update_args(|_| 2);
+                        let inner = Node::Mod(Dip, eco_vec![sn], span);
+                        (SigNode::new(outer_sig, inner), Node::empty())
                     }
                     _ => (sn, Node::empty()),
                 };

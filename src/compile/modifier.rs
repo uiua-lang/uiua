@@ -635,6 +635,9 @@ impl Compiler {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let sig = sn.sig;
+                let sub = subscript
+                    .and_then(|sub| self.subscript_n(sub, prim))
+                    .filter(|n| n.value > 1);
                 let (inner, before) = match sn.sig.args() {
                     0 => (SigNode::new((2, 2), Node::Prim(Identity, span)), sn.node),
                     1 if prim == With => {
@@ -642,7 +645,7 @@ impl Compiler {
                         sn.sig.update_args(|_| 2);
                         (sn, Node::empty())
                     }
-                    1 if prim == Off => {
+                    1 if prim == Off && sub.is_none() => {
                         let mut outer_sig = sig;
                         outer_sig.update_outputs(|o| o + 1);
                         outer_sig.update_args(|_| 2);
@@ -653,10 +656,7 @@ impl Compiler {
                 };
                 Node::from_iter([
                     before,
-                    if let Some(sub) = subscript
-                        .and_then(|sub| self.subscript_n(sub, prim))
-                        .filter(|n| n.value > 1)
-                    {
+                    if let Some(sub) = sub {
                         let n = self.positive_subscript(sub.value, prim, &sub.span)?;
                         let prim = if prim == Off {
                             if n == sig.args() {

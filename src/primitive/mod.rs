@@ -1861,8 +1861,10 @@ impl ImplPrimitive {
                 let [f] = get_ops(ops, env)?;
                 let outputs = f.sig.outputs();
                 let kept = env.copy_n(n)?;
+                let temp = env.pop_n(n.saturating_sub(f.sig.args()))?;
                 env.exec(f)?;
                 env.insert_stack(outputs, kept)?;
+                env.push_all(temp);
             }
             ImplPrimitive::UndoPartition1 => groups::undo_partition_part1(ops, env)?,
             ImplPrimitive::UndoGroup1 => groups::undo_group_part1(ops, env)?,

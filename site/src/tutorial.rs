@@ -512,14 +512,14 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example=" △[1_2_3 4_5_6 7_8_9]\n ⧻[1_2_3 4_5_6 7_8_9]\n⧻△[1_2_3 4_5_6 7_8_9] # Rank"/>
 
         <Hd id="output">"Pretty Array Output"</Hd>
-        <p>"The online editor and native interpreter both pretty-print any values that remain on the stack when a program is finished. (This can be invoked manually using the "<Prim prim=Sys(SysOp::Show)/>" function.)"</p>
+        <p>"The online editor and native interpreter both pretty-print any values that remain on the stack when a program is finished. (This can be invoked manually using the "<Prim prim=Sys(SysOp::Show)/>" or "<Prim prim=Pretty/>" functions.)"</p>
         <p>"To understand how the pretty-printed output corresponds to the actual array, we can use "<Prim prim=Reshape/>" to create a multidimensional array. "<Prim prim=Reshape/>" uses its first argument as a new shape for its second argument."</p>
         <p>"Here, we create a "<Prim prim=Range/>" array of all the numbers up to "<code>"24"</code>" and turn it into a 3-dimensional array with the shape "<code>"[2 3 4]"</code>"."</p>
         <Editor example="↯2_3_4 ⇡24"/>
         <p>"Notice there are "<code>"2"</code>" big cells, each with "<code>"3"</code>" rows of "<code>"4"</code>" elements."</p>
         <p>"This expands to any number of dimensions. The elements of the last axis are always laid out horizontally. The rows of the second-to-last axis are always laid out vertically. The third-to-last axis is horizontal, the fourth-to-last is vertical, etc."</p>
-        <p>"We can see here that the shape "<code>"[2 3 2 5]"</code>" appears almost like a 2×3 matrix of 2×5 matrices."</p>
-        <Editor example="↯2_3_2_5 ⇡60"/>
+        <p>"We can see here that the shape "<code>"[2 3 4 5]"</code>" appears almost like a 2×3 matrix of 4×5 matrices."</p>
+        <Editor example="↯2_3_4_5 ⇡120"/>
 
         <Hd id="pervasion">"Pervasion"</Hd>
         <p>"Most operations that apply to scalars are what is called "<em>"pervasive"</em>" when it comes to arrays. This means that the operation automatically applies to every item in the array."</p>

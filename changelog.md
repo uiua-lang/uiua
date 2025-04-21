@@ -12,13 +12,13 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) no longer uses the fill value as the first row
 - **Breaking Change** - [`fft`](https://uiua.org/docs/fft) now works along every axis of an array rather than only its last
   - This is more consistent with other functions
+- **Breaking Change** - Change how [`off ⤚`](https://uiua.org/docs/off) works on monadic functions
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under) for monadic functions
 - Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⊜`](https://uiua.org/docs/partition) for monadic functions
 - Stabilize [`negate ¯`](https://uiua.org/docs/negate) subscripts
 - [Output comments](https://uiua.org/tutorial/basic#output-comments) now show values on the stack *after* their line rather than before it
 - Add [`un °`](https://uiua.org/docs/un) [`fill ⬚`](https://uiua.org/docs/fill)ed [`take ↙`](https://uiua.org/docs/take)
 - Give [`base ⊥`](https://uiua.org/docs/base) a glyph
-- Change how [`off ⤚`](https://uiua.org/docs/off) works on monadic functions
 - Add experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) for finding sequential indices of each row of an array in another
 - Add experimental [lexical ordering](https://uiua.org/docs/experimental#lexical-ordering) syntax
   - This enables some function packs and array notation to execute in the order they are normally read

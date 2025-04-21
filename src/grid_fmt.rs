@@ -496,6 +496,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 if !T::box_lines()
                     && self.row_count() == 1
                     && (params.max_boxed_len == 1 || T::compress_list_grid())
+                    && params.max_boxed_rank != 1
                 {
                     // Disambiguate fixed arrays
                     let fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();

@@ -453,6 +453,10 @@ fn fast_table_list_join_or_couple<T: ArrayValue + Default>(
 
 pub fn reduce_table(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f, g] = get_ops(ops, env)?;
+    if let Some((Primitive::Join, _)) = f.node.as_flipped_primitive() {
+        table_impl(g, env)?;
+        return reduce_impl(f, 0, env);
+    }
     let xs = env.pop(1)?;
     let ys = env.pop(2)?;
     if xs.rank() == 1 && ys.rank() == 1 {

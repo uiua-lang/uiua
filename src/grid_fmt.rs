@@ -487,15 +487,54 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let grid_row_count = grid.len();
             if self.rank() == 0 && self.is_map() {
                 // Don't surrond maplings
-            } else if !(params.parent_rank == 0
-                || T::box_lines() && self.rank() <= 1
+            } else if params.parent_rank == 0
+                || T::box_lines() && self.rank() <= 1 && params.parent_rank <= 1
                 || !T::box_lines() && self.rank() < params.max_boxed_rank
-                || T::compress_list_grid() && self.rank() <= 1)
+                || T::compress_list_grid() && self.rank() <= 1
             {
+                // Normal surrounding
+                if grid_row_count == 1 && self.rank() == 1 {
+                    outlined = true;
+                    // Add brackets to lists
+                    let (left, right) = if requires_summary || self.is_map() {
+                        ('[', ']')
+                    } else {
+                        T::grid_fmt_delims()
+                    };
+                    grid[0].insert(0, left);
+                    grid[0].push(right);
+                    if T::box_lines() && self.row_count() == 0 && params.parent_rank == 0 {
+                        grid[0].insert(1, Primitive::Box.glyph().unwrap());
+                    }
+                } else {
+                    outlined = true;
+                    let apparent_rank = if requires_summary { 1 } else { self.rank() };
+                    // Add corners to non-vectors
+                    let width = grid[0].len();
+                    let height = grid.len();
+                    pad_grid_center(
+                        width + 4,
+                        (height + 2).max(apparent_rank + 1),
+                        ElemAlign::None,
+                        true,
+                        None,
+                        &mut grid,
+                    );
+                    grid[0][0] = if T::box_lines() { '┌' } else { '╭' };
+                    grid[0][1] = '─';
+                    for i in 0..apparent_rank.saturating_sub(1) {
+                        grid[i + 1][0] = '╷';
+                    }
+                    *grid.last_mut().unwrap().last_mut().unwrap() =
+                        if T::box_lines() { '┘' } else { '╯' };
+                }
+            } else {
                 // Don't surround if going to draw box separators later
                 if !T::box_lines()
                     && self.row_count() == 1
-                    && (params.max_boxed_len == 1 || T::compress_list_grid())
+                    && (params.max_boxed_len == 1
+                        || T::compress_list_grid()
+                        || self.row_count() == 1 && self.rank() < params.max_boxed_rank)
                     && params.max_boxed_rank != 1
                 {
                     // Disambiguate fixed arrays
@@ -508,40 +547,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         grid[0][i] = Primitive::Fix.glyph().unwrap();
                     }
                 }
-            } else if grid_row_count == 1 && self.rank() == 1 {
-                outlined = true;
-                // Add brackets to lists
-                let (left, right) = if requires_summary || self.is_map() {
-                    ('[', ']')
-                } else {
-                    T::grid_fmt_delims()
-                };
-                grid[0].insert(0, left);
-                grid[0].push(right);
-                if T::box_lines() && self.row_count() == 0 && params.parent_rank == 0 {
-                    grid[0].insert(1, Primitive::Box.glyph().unwrap());
-                }
-            } else {
-                outlined = true;
-                let apparent_rank = if requires_summary { 1 } else { self.rank() };
-                // Add corners to non-vectors
-                let width = grid[0].len();
-                let height = grid.len();
-                pad_grid_center(
-                    width + 4,
-                    (height + 2).max(apparent_rank + 1),
-                    ElemAlign::None,
-                    true,
-                    None,
-                    &mut grid,
-                );
-                grid[0][0] = if T::box_lines() { '┌' } else { '╭' };
-                grid[0][1] = '─';
-                for i in 0..apparent_rank.saturating_sub(1) {
-                    grid[i + 1][0] = '╷';
-                }
-                *grid.last_mut().unwrap().last_mut().unwrap() =
-                    if T::box_lines() { '┘' } else { '╯' };
             }
             grid
         };

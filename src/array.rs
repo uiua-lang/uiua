@@ -11,7 +11,9 @@ use std::{
 use bitflags::bitflags;
 use bytemuck::must_cast;
 use ecow::{EcoString, EcoVec};
+use rayon::prelude::*;
 use serde::{de::DeserializeOwned, *};
+use voracious_radix_sort::RadixSort;
 
 use crate::{
     algorithm::{
@@ -997,6 +999,10 @@ pub trait ArrayValue:
     fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]> + Clone) -> usize {
         rows.map(|row| row.len()).max().unwrap_or(0)
     }
+    /// Sort a list of elements
+    fn sort_list(list: &mut [Self]) {
+        list.par_sort_by(Self::array_cmp)
+    }
 }
 
 // NOTE: must_cast to f64 only works if f64 and u64 have same endianness.
@@ -1126,6 +1132,13 @@ impl ArrayValue for f64 {
             max_whole_len
         }
     }
+    fn sort_list(list: &mut [Self]) {
+        if list.len() < 1000 || list.iter().any(|&n| n.is_nan()) {
+            list.par_sort_by(Self::array_cmp);
+        } else {
+            list.voracious_mt_sort(rayon::current_num_threads());
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1177,6 +1190,13 @@ impl ArrayValue for u8 {
     }
     fn alignment() -> ElemAlign {
         ElemAlign::Right
+    }
+    fn sort_list(list: &mut [Self]) {
+        if list.len() < 1000 {
+            list.par_sort_by(Self::array_cmp);
+        } else {
+            list.voracious_mt_sort(rayon::current_num_threads());
+        }
     }
 }
 
@@ -1276,6 +1296,13 @@ impl ArrayValue for char {
                 }
                 s
             }
+        }
+    }
+    fn sort_list(list: &mut [Self]) {
+        if list.len() < 1000 || list.contains(&WILDCARD_CHAR) {
+            list.par_sort_by(Self::array_cmp)
+        } else {
+            list.voracious_mt_sort(rayon::current_num_threads());
         }
     }
 }

@@ -1,7 +1,14 @@
 pub mod backend;
 pub mod utils;
 
-use std::{cell::Cell, iter::repeat, mem::take, path::PathBuf, rc::Rc, time::Duration};
+use std::{
+    cell::Cell,
+    iter::{once, repeat},
+    mem::take,
+    path::PathBuf,
+    rc::Rc,
+    time::Duration,
+};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
@@ -984,6 +991,18 @@ pub fn Editor<'a>(
         }
     };
 
+    let on_insert_experimental = move |_| insert_experimental();
+    let add_experimental_button = view! {
+        <button
+            class="info-button"
+            data-title="Add # Experimental"
+            on:click=on_insert_experimental
+        >
+            "🧪"
+        </button>
+    }
+    .into_view();
+
     // Glyph hover doc
     let (glyph_doc, set_glyph_doc) = create_signal(View::default());
     let onmouseleave = move |_| {
@@ -1039,14 +1058,10 @@ pub fn Editor<'a>(
             );
             _ = glyph_doc_element().style().remove_property("display");
         };
-        let mut class = "glyph-button glyph-title".to_string();
-        if prim.is_experimental() {
-            class.push_str(" experimental-glyph-button");
-        }
         Some(
             view! {
                 <button
-                    class=class
+                    class="glyph-button glyph-title"
                     data-title=title
                     on:click=onclick
                     on:mouseover=onmouseover
@@ -1065,17 +1080,14 @@ pub fn Editor<'a>(
         EditorMode::Showcase | EditorMode::Pad => true,
     });
 
+    let glyph_add_experimental_button = add_experimental_button.clone();
+
     let glyph_buttons_container = move || {
         show_glyphs.get().then(|| {
-            let mut iter = Primitive::non_deprecated();
-            let mut glyph_buttons: Vec<_> = iter
-                .by_ref()
-                .take_while(|prim| !matches!(prim, Primitive::Reduce))
+            let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
+                .filter(|prim| !prim.is_experimental())
                 .filter_map(make_glyph_button)
                 .collect();
-            glyph_buttons.push(view!(<div style="width: 0.2em"></div>).into_view());
-            glyph_buttons.extend(make_glyph_button(Primitive::Reduce));
-            glyph_buttons.extend(iter.filter_map(make_glyph_button));
 
             // Additional code buttons
             for (glyph, title, class, surround, doc) in [
@@ -1275,7 +1287,18 @@ pub fn Editor<'a>(
                 .into_view(),
             );
 
-            view! { <div class="glyph-buttons">{glyph_buttons}</div> }
+            let experimental_glyph_buttons: Vec<_> = once(glyph_add_experimental_button.clone())
+                .chain(
+                    Primitive::non_deprecated()
+                        .filter(|prim| prim.is_experimental())
+                        .filter_map(make_glyph_button),
+                )
+                .collect();
+
+            view! { <div class="glyph-buttons">
+                {glyph_buttons}
+                <div class="experimental-glyph-buttons">{experimental_glyph_buttons}</div>
+            </div> }
         })
     };
 
@@ -1605,7 +1628,6 @@ pub fn Editor<'a>(
     };
     set_font_name(&get_font_name());
     set_font_size(&get_font_size());
-    let on_insert_experimental = move |_| insert_experimental();
 
     // File upload dialog opening
     let upload_file_dialog = move |_| {
@@ -1917,13 +1939,7 @@ pub fn Editor<'a>(
                     </div>
                     <div id="settings-right">
                         <div style="display: flex; gap: 0.2em;">
-                            <button
-                                class="info-button"
-                                data-title="Add # Experimental"
-                                on:click=on_insert_experimental
-                            >
-                                "🧪"
-                            </button>
+                            {add_experimental_button}
                             <button class="info-button" data-title=EDITOR_SHORTCUTS disabled>
                                 "🛈"
                             </button>

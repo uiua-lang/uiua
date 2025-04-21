@@ -1581,7 +1581,7 @@ fn update_style() {
     let font_name = get_font_name();
     let font_size = get_font_size();
     let show_experimental = if get_show_experimental() {
-        "block"
+        "flex"
     } else {
         "none"
     };
@@ -1600,7 +1600,7 @@ fn update_style() {
     new_style.set_inner_text(&format!(
         "@font-face {{ font-family: 'Code Font'; src: url('/{font_name}.ttf') format('truetype'); }}\n\
         .sized-code {{ font-size: {font_size}; }}\n\
-        .experimental-glyph-button {{ display: {show_experimental}; }}\n\
+        .experimental-glyph-buttons {{ display: {show_experimental}; }}\n\
         .format-button {{ display: {run_on_format}; }}",
     ));
     document().head().unwrap().append_child(&new_style).unwrap();

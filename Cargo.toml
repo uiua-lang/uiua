@@ -37,7 +37,6 @@ threadpool = "1.8.1"
 time = {version = "0.3.36", features = ["local-offset"]}
 tinyvec = {version = "1", features = ["alloc", "serde"]}
 unicode-segmentation = "1.10"
-voracious_radix_sort = {version = "1", features = ["voracious_multithread"]}
 
 # Native dependencies
 httparse = {version = "1.8.0", optional = true}

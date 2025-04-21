@@ -1212,7 +1212,6 @@ impl<T: ArrayValue> Array<T> {
         {
             return;
         }
-        // Sort maps by their keys
         if let Some(Some(keys)) = (depth == 0).then(|| self.meta.take_map_keys()) {
             let keys = keys.normalized();
             let rise = self.rise_indices();
@@ -1223,7 +1222,6 @@ impl<T: ArrayValue> Array<T> {
             self.map(new_keys, &()).unwrap();
             return;
         }
-        // Normal sort
         let chunk_len: usize = self.shape[depth..].iter().product();
         let subrow_len: usize = self.shape[depth + 1..].iter().product();
         if chunk_len == 0 || subrow_len == 0 {
@@ -1234,7 +1232,7 @@ impl<T: ArrayValue> Array<T> {
         let mut indices = Vec::with_capacity(chunk_len / subrow_len);
         for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
             if is_list {
-                T::sort_list(chunk);
+                chunk.par_sort_by(T::array_cmp);
             } else {
                 indices.extend(0..chunk.len() / subrow_len);
                 indices.par_sort_by(|&a, &b| {

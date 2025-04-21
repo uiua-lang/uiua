@@ -571,10 +571,12 @@ fn TutorialArrays() -> impl IntoView {
         <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape, meaning that all rows along an axis always have the same length. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
         <p>"However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In "{lang}", an array of heterogeneous values can be simulated with an array of "<em>"boxes"</em>"."</p>
         <p>"The array below cannot be constructed normally because its rows have different "<Prim prim=Shape/>"s."</p>
-        <Editor example="[1 2 [7 8 9]]"/> // Should fail
+        <Editor example="[1_2 3 [4 5 6] [7]]"/> // Should fail
         <p>"By using "<Prim prim=Box/>", we can turn any value into a "<strong>"box"</strong>" that contains that value. We can then put these boxes into an array together."</p>
-        <Editor example="[□1 □2 □[7 8 9]]"/>
-        <p>"The "<Prim prim=Box/>"ed items in the array are separated by "<code>"│"</code>"s."</p>
+        <Editor example="[□1_2 □3 □[4 5 6] □[7]]"/>
+        <p>"The "<Prim prim=Box/>"ed items in the array are separated by "<code>"│"</code>"s. Scalars are marked with a "<code>"∙"</code>" to distinguish them from single-row lists."</p>
+        <p>"This is "<em>"not"</em>" an array of numbers. It is an array of boxes! Notice that the "<Prim prim=Shape/>" of the array has nothing to do with the shape of any of the boxed values."</p>
+        <Editor example="△ [□1_2 □3 □[4 5 6] □[7]]"/>
         <p><Prim prim=Un/><Prim prim=Box/>" extracts a "<Prim prim=Box/>"ed value."</p>
         <Editor example="°□ .□[1 2 3]"/>
         <p>"The "<code>"□"</code>"in front of the list indicates that it is "<Prim prim=Box/>"ed."</p>
@@ -583,7 +585,7 @@ fn TutorialArrays() -> impl IntoView {
         <Hd id="nested-arrays">"Nested Arrays"</Hd>
         <p>{lang}" has a special syntax for making arrays where every item is "<Prim prim=Box/>"ed."</p>
         <p>"Using "<code>"{}"</code>"s instead of "<code>"[]"</code>"s for stack array notation will automatically "<Prim prim=Box/>" every item."</p>
-        <Editor example="{1 2 [7 8 9]}"/>
+        <Editor example="{1_2 3 [4 5 6] [7]}"/>
         <p>"This is very useful for making lists of strings."</p>
         <Editor example=r#"["Uiua" "APL" "J" "BQN" "K" "Q"] # Fails"#/>
         <Editor example=r#"{"Uiua" "APL" "J" "BQN" "K" "Q"} # Works!"#/>
@@ -602,8 +604,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 >  [1 2 3]  [1 2 5]
 > □[1 2 3] □[1 2 5]
 >  "banana"  "orange"
-> □"banana" □"orange"
-> □"banana"  "orange""#/>
+> □"banana" □"orange""#/>
         <p>"Non-pervasive functions often require "<Prim prim=Un/><Prim prim=Box/>"ing the arguments to get at the value you want."</p>
         <p>"Consider this difference:"</p>
         <Editor example="△    ⊢{1_2_3 5_6}\n△ °□ ⊢{1_2_3 5_6}"/>

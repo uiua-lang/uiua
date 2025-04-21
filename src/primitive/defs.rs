@@ -812,15 +812,16 @@ primitive!(
     /// [under][un][box] is useful when you want to re-[box] the result.
     /// ex: $ Reverse these words
     ///   : ⊜□≠@ .
-    ///   : ∵⍜°□⇌.
+    ///   : ≡⍜°□⇌.
     /// ex: {"Hey" "there" "world"}
     ///   : ≡⍜°□(⊂⊢.)
-    /// ex: PrepLen ← $"_ _"⧻.
-    ///   : .⊜□≠@ . $ Prepend the word length
-    ///   : ∵⍜°□PrepLen
     /// [under][un][box] works because `un``un``box` is just `box`. For each element, it [un][box]es the array out, does something to it, then [box]es the result.
     /// ex: .{1_2_3 4_5 [7]}
-    ///   : ∵⍜°□(⬚0↙3)
+    ///   : ≡⍜°□(⬚0↙3)
+    /// However, [rows][under][un][box] is such a common pattern, that this is what the [inventory] modifier does.
+    /// ex: PrepLen ← $"_ _"⧻.
+    ///   : .⊜□≠@ . $ Prepend the word length
+    ///   : ⍚PrepLen
     /// If you do not need to re-[box] the result, you can use [content] instead.
     /// [content] [un][box]es all box elements that are passed to a function before calling it.
     /// ex: {1_2_3 9_2 5_5_5_5}

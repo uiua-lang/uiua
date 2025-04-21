@@ -3,7 +3,6 @@
 # 0.16
 - Semi-pervasive `rotate`
 - Replace `progressive index of` with `occurrence count`
-- More square grid layout
 - Last-axis subscripts or modifier?
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

@@ -999,8 +999,8 @@ impl Value {
     pub(crate) fn rotate_depth(
         &self,
         rotated: &mut Self,
-        a_depth: usize,
-        b_depth: usize,
+        mut a_depth: usize,
+        mut b_depth: usize,
         env: &Uiua,
     ) -> UiuaResult {
         if self.row_count() == 0 {
@@ -1008,14 +1008,19 @@ impl Value {
         }
         let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
         rotated.match_fill(env);
+        a_depth = a_depth.min(self.rank());
+        b_depth = b_depth.min(rotated.rank());
         match rotated {
-            Value::Num(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
-            Value::Byte(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
-            Value::Complex(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
-            Value::Char(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
-            Value::Box(a) if a.rank() == a_depth => {
-                for Boxed(val) in a.data.as_mut_slice() {
-                    self.rotate_depth(val, a_depth, b_depth, env)?;
+            Value::Num(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Byte(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Complex(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Char(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Box(b) if b.rank() == b_depth => {
+                let row_shape: Shape = self.shape.iter().skip(a_depth).copied().collect();
+                for (rot, Boxed(val)) in
+                    self.row_shaped_slices(row_shape).zip(b.data.as_mut_slice())
+                {
+                    rot.rotate_depth(val, 0, 0, env)?;
                 }
             }
             Value::Box(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,

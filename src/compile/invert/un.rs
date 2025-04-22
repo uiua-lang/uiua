@@ -55,17 +55,24 @@ pub fn un_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
     }) {
         return cached;
     }
-    let res = un_inverse_impl(input, asm);
+    let res = un_inverse_impl(input, asm, false);
     CACHE.with(|cache| cache.borrow_mut().insert(hash, res.clone()));
     res
 }
 
-fn un_inverse_impl(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
+fn un_inverse_impl(
+    input: &[Node],
+    asm: &Assembly,
+    require_for_under: bool,
+) -> InversionResult<Node> {
     let mut node = Node::empty();
     let mut curr = input;
     let mut error = Generic;
     'find_pattern: loop {
-        for pattern in UN_PATTERNS {
+        for pattern in UN_PATTERNS
+            .iter()
+            .filter(|pat| pat.allowed_in_under() || !require_for_under)
+        {
             match pattern.invert_extract(curr, asm) {
                 Ok((new, inv)) => {
                     dbgln!("matched pattern {pattern:?}\n  on {curr:?}\n  to {inv:?}");
@@ -738,7 +745,7 @@ inverse!(JoinPat, input, asm, {
         .find(|&i| nodes_clean_sig(&input[i..join_index]).is_some_and(|sig| sig == (0, 1)))
     {
         let mut node = ImplPrim(UnJoin, join_span);
-        node.extend(un_inverse(&input[i..join_index], asm)?);
+        node.extend(un_inverse_impl(&input[i..join_index], asm, true)?);
         node.extend(un_inverse(&input[..i], asm)?);
         input = &input[join_index + 1..];
         node

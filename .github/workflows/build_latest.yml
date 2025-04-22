@@ -72,7 +72,7 @@ jobs:
         run: cargo build --bin uiua --features ${{matrix.features}} --release --target ${{matrix.target}} --verbose
 
       - name: Zip
-        run: zip -j uiua-bin-${{matrix.target}}${{matrix.name}}.zip ./target/${{matrix.target}}/release/uiua${{env.BINARY_EXT}}
+        run: 7z a -tzip uiua-bin-${{matrix.target}}${{matrix.name}}.zip ./target/${{matrix.target}}/release/uiua${{env.BINARY_EXT}}
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1

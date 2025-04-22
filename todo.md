@@ -2,6 +2,9 @@
 
 # 0.16
 - More rows optimizations
+- `hsv` function
+- Optimize `unsort`
+- Optimize `sort` to be in-place by modifying rayon code
 - Last-axis subscripts or modifier?
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

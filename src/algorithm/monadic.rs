@@ -1231,24 +1231,25 @@ impl<T: ArrayValue> Array<T> {
         if chunk_len == 0 || subrow_len == 0 {
             return;
         }
-        let is_list = self.rank() == depth + 1;
-        let mut new_chunk = Vec::with_capacity(chunk_len);
-        let mut indices = Vec::with_capacity(chunk_len / subrow_len);
-        for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
-            if is_list {
+        if self.rank() == depth + 1 {
+            // Sort simple list
+            for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
                 T::sort_list(chunk, true);
-            } else {
-                indices.extend(0..chunk.len() / subrow_len);
-                indices.par_sort_by(|&a, &b| {
-                    chunk[a * subrow_len..(a + 1) * subrow_len]
-                        .iter()
-                        .zip(&chunk[b * subrow_len..(b + 1) * subrow_len])
-                        .map(|(a, b)| a.array_cmp(b))
-                        .find(|x| x != &Ordering::Equal)
-                        .unwrap_or(Ordering::Equal)
+            }
+        } else {
+            // Sort arrays lexicographically
+            let mut new_chunk = Vec::with_capacity(chunk_len);
+            let mut indices = vec![0; chunk_len / subrow_len];
+            for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
+                for (i, idx) in indices.iter_mut().enumerate() {
+                    *idx = i;
+                }
+                indices.par_sort_unstable_by(|&a, &b| {
+                    ArrayCmpSlice(&chunk[a * subrow_len..(a + 1) * subrow_len])
+                        .cmp(&ArrayCmpSlice(&chunk[b * subrow_len..(b + 1) * subrow_len]))
                 });
                 new_chunk.clear();
-                for i in indices.drain(..) {
+                for &i in &indices {
                     new_chunk.extend_from_slice(&chunk[i * subrow_len..(i + 1) * subrow_len]);
                 }
                 chunk.clone_from_slice(&new_chunk);
@@ -1285,24 +1286,25 @@ impl<T: ArrayValue> Array<T> {
         if chunk_len == 0 || subrow_len == 0 {
             return;
         }
-        let is_list = self.rank() == depth + 1;
-        let mut new_chunk = Vec::with_capacity(chunk_len);
-        let mut indices = Vec::with_capacity(chunk_len / subrow_len);
-        for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
-            if is_list {
+        if self.rank() == depth + 1 {
+            // Sort simple list
+            for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
                 T::sort_list(chunk, false);
-            } else {
-                indices.extend(0..chunk.len() / subrow_len);
-                indices.par_sort_by(|&a, &b| {
-                    chunk[a * subrow_len..(a + 1) * subrow_len]
-                        .iter()
-                        .zip(&chunk[b * subrow_len..(b + 1) * subrow_len])
-                        .map(|(a, b)| b.array_cmp(a))
-                        .find(|x| x != &Ordering::Equal)
-                        .unwrap_or(Ordering::Equal)
+            }
+        } else {
+            // Sort arrays lexicographically
+            let mut new_chunk = Vec::with_capacity(chunk_len);
+            let mut indices = vec![0; chunk_len / subrow_len];
+            for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
+                for (i, idx) in indices.iter_mut().enumerate() {
+                    *idx = i;
+                }
+                indices.par_sort_unstable_by(|&a, &b| {
+                    ArrayCmpSlice(&chunk[b * subrow_len..(b + 1) * subrow_len])
+                        .cmp(&ArrayCmpSlice(&chunk[a * subrow_len..(a + 1) * subrow_len]))
                 });
                 new_chunk.clear();
-                for i in indices.drain(..) {
+                for &i in &indices {
                     new_chunk.extend_from_slice(&chunk[i * subrow_len..(i + 1) * subrow_len]);
                 }
                 chunk.clone_from_slice(&new_chunk);

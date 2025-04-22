@@ -39,8 +39,12 @@ pub struct CowSlice<T> {
 }
 
 impl<T> CowSlice<T> {
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            data: EcoVec::new(),
+            start: 0,
+            end: 0,
+        }
     }
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
@@ -324,11 +328,7 @@ fn cow_slice_modify() {
 
 impl<T> Default for CowSlice<T> {
     fn default() -> Self {
-        Self {
-            data: EcoVec::new(),
-            start: 0,
-            end: 0,
-        }
+        Self::new()
     }
 }
 

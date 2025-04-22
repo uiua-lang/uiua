@@ -35,7 +35,7 @@ serde_tuple = "0.5.0"
 thread_local = "1"
 threadpool = "1.8.1"
 time = {version = "0.3.36", features = ["local-offset"]}
-tinyvec = {version = "1", features = ["alloc", "serde"]}
+tinyvec = {version = "1", features = ["alloc", "serde", "latest_stable_rust"]}
 unicode-segmentation = "1.10"
 
 # Native dependencies

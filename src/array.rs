@@ -414,6 +414,12 @@ pub(crate) fn validate_shape(_shape: &[usize], _len: usize) {
 }
 
 impl<T> Array<T> {
+    /// An empty list
+    pub const EMPTY_LIST: Self = Array {
+        shape: Shape::EMPTY_LIST,
+        data: CowSlice::new(),
+        meta: ArrayMeta(None),
+    };
     #[track_caller]
     /// Create an array from a shape and data
     ///
@@ -1000,11 +1006,15 @@ pub trait ArrayValue:
     }
     /// Sort a list of this type
     fn sort_list(list: &mut [Self], up: bool) {
-        if up {
-            list.par_sort_by(Self::array_cmp);
-        } else {
-            list.par_sort_by(|a, b| b.array_cmp(a));
-        }
+        default_sort_list(list, up)
+    }
+}
+
+fn default_sort_list<T: ArrayCmp + Send>(list: &mut [T], up: bool) {
+    if up {
+        list.par_sort_unstable_by(T::array_cmp);
+    } else {
+        list.par_sort_unstable_by(|a, b| b.array_cmp(a));
     }
 }
 

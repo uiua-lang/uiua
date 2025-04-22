@@ -20,6 +20,13 @@ impl Shape {
     pub const SCALAR: Self = Shape {
         dims: TinyVec::Inline(ArrayVec::from_array_empty([0; 3])),
     };
+    /// An empty list shape
+    pub const EMPTY_LIST: Self = Shape {
+        dims: TinyVec::Inline(match ArrayVec::try_from_array_len([0, 0, 0], 1) {
+            Ok(v) => v,
+            Err(_) => unreachable!(),
+        }),
+    };
     /// Create a new scalar shape with the given capacity
     pub fn with_capacity(capacity: usize) -> Self {
         Shape {

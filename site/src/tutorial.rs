@@ -1373,7 +1373,7 @@ fn TutorialMoreArray() -> impl IntoView {
         <p>"If we have a several arrays and want to choose which ones are fixed and which are not, we can use planet notation."</p>
         <Editor example="≡⊂ ⊙¤ 1_2_3 4_5_6"/>
         <Editor example="≡(⊂⊂⊂) ⊙∩¤ 1_2_3 4_5_6 7_8_9 10_11_12"/>
-        <p><Prim prim=Fix/>" also with pervasive dyadic functions with without "<Prim prim=Rows/>"."</p>
+        <p><Prim prim=Fix/>" also works with pervasive dyadic functions without "<Prim prim=Rows/>"."</p>
         <Editor example="+  [1 2 3]  [10 20 30]\n+ ¤[1 2 3]  [10 20 30]\n+  [1 2 3] ¤[10 20 30]"/>
         <Editor example="- 1_2 [3_4 5_6 7_8]"/> // Should fail
         <Editor example="-¤1_2 [3_4 5_6 7_8]"/>

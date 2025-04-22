@@ -1236,7 +1236,7 @@ impl<T: ArrayValue> Array<T> {
         let mut indices = Vec::with_capacity(chunk_len / subrow_len);
         for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
             if is_list {
-                chunk.par_sort_by(T::array_cmp);
+                T::sort_list(chunk, true);
             } else {
                 indices.extend(0..chunk.len() / subrow_len);
                 indices.par_sort_by(|&a, &b| {
@@ -1290,7 +1290,7 @@ impl<T: ArrayValue> Array<T> {
         let mut indices = Vec::with_capacity(chunk_len / subrow_len);
         for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
             if is_list {
-                chunk.par_sort_by(|a, b| b.array_cmp(a));
+                T::sort_list(chunk, false);
             } else {
                 indices.extend(0..chunk.len() / subrow_len);
                 indices.par_sort_by(|&a, &b| {

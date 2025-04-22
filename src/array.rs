@@ -11,6 +11,7 @@ use std::{
 use bitflags::bitflags;
 use bytemuck::must_cast;
 use ecow::{EcoString, EcoVec};
+use rayon::prelude::*;
 use serde::{de::DeserializeOwned, *};
 
 use crate::{
@@ -997,6 +998,14 @@ pub trait ArrayValue:
     fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]> + Clone) -> usize {
         rows.map(|row| row.len()).max().unwrap_or(0)
     }
+    /// Sort a list of this type
+    fn sort_list(list: &mut [Self], up: bool) {
+        if up {
+            list.par_sort_by(Self::array_cmp);
+        } else {
+            list.par_sort_by(|a, b| b.array_cmp(a));
+        }
+    }
 }
 
 // NOTE: must_cast to f64 only works if f64 and u64 have same endianness.
@@ -1177,6 +1186,31 @@ impl ArrayValue for u8 {
     }
     fn alignment() -> ElemAlign {
         ElemAlign::Right
+    }
+    fn sort_list(list: &mut [Self], up: bool) {
+        let mut counts: [usize; 256] = [0; 256];
+        for x in &mut *list {
+            counts[*x as usize] += 1;
+        }
+        let mut i = 0;
+        if up {
+            for (j, &count) in counts.iter().enumerate() {
+                let n = j as u8;
+                for _ in 0..count {
+                    list[i] = n;
+                    i += 1;
+                }
+            }
+        } else {
+            let offset = list.len().saturating_sub(1);
+            for (j, &count) in counts.iter().enumerate() {
+                let n = j as u8;
+                for _ in 0..count {
+                    list[offset - i] = n;
+                    i += 1;
+                }
+            }
+        }
     }
 }
 

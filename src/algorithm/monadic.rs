@@ -1087,6 +1087,10 @@ impl Value {
             Value::Complex(arr) => arr.data.iter().all(|&c| c.re == 1.0 && c.im == 1.0),
         }
     }
+    /// Count which occurence of each row that row is
+    pub fn occurence_count(&self) -> Array<f64> {
+        val_as_arr!(self, Array::occurence_count)
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -1465,6 +1469,39 @@ impl<T: ArrayValue> Array<T> {
         self.row_slices()
             .filter(|row| seen.insert(ArrayCmpSlice(row)))
             .count()
+    }
+    /// Count which occurence of each row that row is
+    pub fn occurence_count(&self) -> Array<f64> {
+        let mut data = EcoVec::with_capacity(self.row_count());
+        let shape: Shape = self.shape.iter().take(1).copied().collect();
+        if self.row_count() == 0 {
+            return Array::new(shape, data);
+        }
+        let slice = data.make_mut();
+        if self.meta.is_sorted_up() {
+            let mut rows = self.row_slices().map(ArrayCmpSlice);
+            let mut prev = rows.next().unwrap();
+            slice[0] = 0.0;
+            let mut next_count = 1.0;
+            for (row, count) in rows.zip(slice.iter_mut().skip(1)) {
+                if row == prev {
+                    *count = next_count;
+                    next_count += 1.0;
+                } else {
+                    *count = 0.0;
+                    next_count = 1.0;
+                }
+                prev = row;
+            }
+        } else {
+            let mut counts = HashMap::new();
+            for (row, count) in self.row_slices().zip(slice.iter_mut()) {
+                let curr = counts.entry(ArrayCmpSlice(row)).or_insert(0.0);
+                *count = *curr;
+                *curr += 1.0;
+            }
+        }
+        Array::new(shape, data)
     }
 }
 

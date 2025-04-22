@@ -1,8 +1,7 @@
 # Uiua Todo
 
 # 0.16
-- Semi-pervasive `rotate`
-- Replace `progressive index of` with `occurrence count`
+- More rows optimizations
 - Last-axis subscripts or modifier?
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

@@ -751,6 +751,16 @@ primitive!(
     /// ex: $ Count the characters in this string
     ///   : ⊕($"_ _"⊃⊢⧻) ⊛.⍆
     (1, Classify, MonadicArray, ("classify", '⊛')),
+    /// Mark each row of an array with its occurrence count
+    ///
+    /// Each row in the array becomes a number corresponding to the number of times it has already appeared in the array.
+    /// ex: # Experimental!
+    ///   : ⧆ "aabccdab"
+    /// ex: # Experimental!
+    ///   : ⧆ "lego helmet"
+    /// ex: # Experimental!
+    ///   : ⧆ [1_2 4_3 1_2 3_0]
+    (1, Occurrences, MonadicArray, ("occurrences", '⧆')),
     /// Remove duplicate rows from an array
     ///
     /// ex: ◴ 7_7_8_0_1_2_0
@@ -1276,25 +1286,25 @@ primitive!(
     ///
     /// [keep]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Keep, DyadicArray, ("keep", '▽')),
-    /// Find the occurences of one array in another
+    /// Find the occurrences of one array in another
     ///
-    /// A `1` marker will be placed the the start of each occurence of the first array in the second array.
+    /// A `1` marker will be placed the the start of each occurrence of the first array in the second array.
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
     /// ex: ⌕ "ab" "abracadabra"
     /// If the searched-in array is multidimensional, the `1` marker will be placed in the minimum index "top left" corner.
     /// ex: ⌕ 1_2 . ↯4_4⇡3
     /// ex: ⌕ [1_2 2_0] . ↯4_4⇡3
     ///
-    /// If you want to mark the entire occurence, use [mask] instead.
+    /// If you want to mark the entire occurrence, use [mask] instead.
     (2, Find, DyadicArray, ("find", '⌕')),
-    /// Mask the occurences of one array in another
+    /// Mask the occurrences of one array in another
     ///
-    /// Occurences of the first array in the second array will be marked with increasing numbers.
-    /// While [find] only marks the start of each occurence, [mask] marks the entire occurence.
+    /// Occurrences of the first array in the second array will be marked with increasing numbers.
+    /// While [find] only marks the start of each occurrence, [mask] marks the entire occurrence.
     /// ex: ⦷ "ab" "abracadabra"
     /// ex: ⦷ [1 2 3].[0 1 2 3 1 2 3 4 5 1 2 3 4 5 6]
-    /// Increasing numbers are used so that adjacent occurences can be distinguished.
-    /// An occurence that would overlap with a previous occurence is not marked.
+    /// Increasing numbers are used so that adjacent occurrences can be distinguished.
+    /// An occurrence that would overlap with a previous occurrence is not marked.
     /// ex: ⦷ [3 4 3 4].[0 3 4 3 4 3 4 0 0 3 4 3 4 0]
     ///
     /// Arbitrary rank arrays are supported.

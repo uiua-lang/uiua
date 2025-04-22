@@ -560,7 +560,8 @@ impl Primitive {
         matches!(
             self,
             (Reach | Slf | Above | Around)
-                | (Or | ProgressiveIndexOf | Base | Fft | Layout | Binary | EncodeBytes)
+                | (Or | Occurrences | ProgressiveIndexOf | Base | Fft)
+                | (Layout | Binary | EncodeBytes)
                 | Astar
                 | (Derivative | Integral)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen | Breakpoint)
@@ -850,6 +851,7 @@ impl Primitive {
             Primitive::Select => env.dyadic_oo_env(Value::select)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
             Primitive::Classify => env.monadic_ref(Value::classify)?,
+            Primitive::Occurrences => env.monadic_ref(Value::occurrences)?,
             Primitive::Deduplicate => env.monadic_mut_env(Value::deduplicate)?,
             Primitive::Unique => env.monadic_ref(Value::unique)?,
             Primitive::MemberOf => env.dyadic_rr_env(Value::memberof)?,

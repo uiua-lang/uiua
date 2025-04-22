@@ -309,8 +309,7 @@
     "args": 1,
     "outputs": 1,
     "class": "Tcp",
-    "description": "Create a TLS listener and bind it to an address",
-    "experimental": true
+    "description": "Create a TLS listener and bind it to an address"
   },
   "&ts": {
     "args": 0,
@@ -359,16 +358,6 @@
     "class": "InversionModifier",
     "description": "Invert the behavior of a function, treating its first argument as a constant"
   },
-  "around": {
-    "ascii": "'",
-    "glyph": "’",
-    "args": 2,
-    "outputs": 3,
-    "class": "Stack",
-    "description": "Duplicate the top value on the stack to the third-to-top position",
-    "experimental": true,
-    "deprecated": true
-  },
   "assert": {
     "glyph": "⍤",
     "args": 2,
@@ -381,7 +370,6 @@
     "modifier_args": 3,
     "class": "Misc",
     "description": "Find shortest paths in a graph",
-    "experimental": true,
     "deprecated": true
   },
   "atangent": {
@@ -405,6 +393,7 @@
     "description": "Call a function with its arguments reversed"
   },
   "base": {
+    "glyph": "⊥",
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",
@@ -954,6 +943,14 @@
     "class": "InversionModifier",
     "description": "Define the various inverses of a function"
   },
+  "occurrences": {
+    "glyph": "⧆",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Mark each row of an array with its occurrence count",
+    "experimental": true
+  },
   "off": {
     "glyph": "⤚",
     "outputs": 1,
@@ -1045,6 +1042,12 @@
     "outputs": 1,
     "class": "DyadicPervasive",
     "description": "Raise a value to a power"
+  },
+  "pretty": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Convert a value to its pretty-printed output representation"
   },
   "progressive indexof": {
     "glyph": "⊘",

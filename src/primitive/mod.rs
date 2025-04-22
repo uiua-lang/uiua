@@ -548,25 +548,8 @@ impl Primitive {
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
             Astar => format!("use {} instead", Path.format()),
             Over => format!("use {With} or {Below} instead"),
-            Around => format!("use {On}{Flip}, {Off}{Identity}, or sided subscripts instead"),
             _ => return None,
         })
-    }
-    /// Check if this primitive is experimental
-    #[allow(unused_parens)]
-    pub fn is_experimental(&self) -> bool {
-        use Primitive::*;
-        use SysOp::*;
-        matches!(
-            self,
-            (Reach | Slf | Above | Around)
-                | (Or | Occurrences | ProgressiveIndexOf | Base | Fft)
-                | (Layout | Binary | EncodeBytes)
-                | Astar
-                | (Derivative | Integral)
-                | Sys(Ffi | MemCopy | MemFree | TlsListen | Breakpoint)
-                | (Stringify | Quote | Sig)
-        )
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {
@@ -934,13 +917,6 @@ impl Primitive {
                 env.push(b.clone());
                 env.push(a);
                 env.push(b);
-            }
-            Primitive::Around => {
-                let a = env.pop(1)?;
-                let b = env.pop(2)?;
-                env.push(a.clone());
-                env.push(b);
-                env.push(a);
             }
             Primitive::Pop => {
                 env.pop(1)?;

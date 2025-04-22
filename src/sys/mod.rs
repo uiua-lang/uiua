@@ -66,7 +66,7 @@ macro_rules! sys_op {
         (
             $args:literal$(($outputs:expr))?$([$mod_args:expr])?,
             $variant:ident, $class:ident, $name:literal, $long_name:literal
-            $(,$purity:ident)*
+            $(,$purity:ident)* $(,{experimental: $experimental:literal})?
         )
     ),* $(,)?) => {
         /// A system function
@@ -141,6 +141,14 @@ macro_rules! sys_op {
                     _ => Purity::Impure
                 }
             }
+            /// Check if the system function is experimental
+            #[allow(unused_parens)]
+            pub fn is_experimental(&self) -> bool {
+                match self {
+                    $($(SysOp::$variant => $experimental,)*)*
+                    _ => false
+                }
+            }
         }
     };
 }
@@ -179,7 +187,7 @@ sys_op! {
     /// Once the execution has completed, the final stack state will be shown as normal. Running again will start from the beginning.
     ///
     /// In the native interpreter, [&b] pauses execution, prints the stack, and waits for the user to press enter.
-    (0(0), Breakpoint, Misc, "&b", "breakpoint", Mutating),
+    (0(0), Breakpoint, Misc, "&b", "breakpoint", Mutating, { experimental: true }),
     /// Print a nicely formatted representation of a value to stdout
     ///
     /// [&s] will print the value the same way it would appear at the end of a program, or from [?].
@@ -619,7 +627,7 @@ sys_op! {
     ///
     /// Coverage of types that are supported for binding is currently best-effort.
     /// If you encounter a type that you need support for, please [open an issue](https://github.com/uiua-lang/uiua/issues/new).
-    (2, Ffi, Ffi, "&ffi", "foreign function interface", Mutating),
+    (2, Ffi, Ffi, "&ffi", "foreign function interface", Mutating, { experimental: true }),
     /// Copy data from a pointer into an array
     ///
     /// *Warning ⚠️: [&memcpy] can lead to undefined behavior if used incorrectly.*
@@ -646,7 +654,7 @@ sys_op! {
     ///   : Lib ← &ffi ⊂□"example.dll"
     ///   : GetInts ← Lib {"int*" "get_ints" "int"}
     ///   : ⊃&memfree(&memcpy "int":3) GetInts 3
-    (3, MemCopy, Ffi, "&memcpy", "foreign function interface - copy", Mutating),
+    (3, MemCopy, Ffi, "&memcpy", "foreign function interface - copy", Mutating, { experimental: true }),
     /// Free a pointer
     ///
     /// *Warning ⚠️: [&memfree] can lead to undefined behavior if used incorrectly.*
@@ -654,7 +662,7 @@ sys_op! {
     /// This is useful for freeing memory allocated by a foreign function.
     /// Expects a pointer.
     /// See [&memcpy] for an example.
-    (1(0), MemFree, Ffi, "&memfree", "free memory", Mutating),
+    (1(0), MemFree, Ffi, "&memfree", "free memory", Mutating, { experimental: true }),
 }
 
 /// A handle to an IO stream

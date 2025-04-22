@@ -14,7 +14,7 @@ macro_rules! primitive {
                 $(($outputs:expr))?
                 $([$mod_args:expr])?
             ,)?
-            $variant:ident, $class:ident, $names:expr $(,$purity:ident)*
+            $variant:ident, $class:ident, $names:expr $(,$purity:ident)* $(,{experimental: $experimental:literal})?
         )
     ),* $(,)?) => {
         /// A built-in function
@@ -90,6 +90,15 @@ macro_rules! primitive {
                     _ => Purity::Pure
                 }
             }
+            /// Check if this primitive is experimental
+            #[allow(unused_parens)]
+            pub fn is_experimental(&self) -> bool {
+                match self {
+                    $($(Primitive::$variant => $experimental,)*)*
+                    Primitive::Sys(op) => op.is_experimental(),
+                    _ => false
+                }
+            }
         }
     };
 }
@@ -122,18 +131,6 @@ primitive!(
     /// [over] is often used in examples of functions with two inputs to show both inputs and the output.
     /// ex: [+,, +3 4 5]
     (2(3), Over, Stack, ("over", ',')),
-    /// Duplicate the top value on the stack to the third-to-top position
-    ///
-    /// Formats from `'`.
-    ///
-    /// ex: # Experimental!
-    ///   : [’ 1 2 3]
-    /// This can be usful when used with [both] or [bracket] to combine one array with each of two others.
-    /// ex: # Experimental!
-    ///   : [∩+’] 10 2 5
-    /// ex: # Experimental!
-    ///   : [⊓+×’] 10 2 5
-    (2(3), Around, Stack, ("around", AsciiToken::Quote, '’')),
     /// Swap the top two values on the stack
     ///
     /// ex: [: 1 2 3 4 5]
@@ -436,7 +433,7 @@ primitive!(
     ///   : [⊃/∨/↥] [0 0]
     ///   : [⊃/∨/↥] [0]
     ///   : [⊃/∨/↥] []
-    (2, Or, DyadicPervasive, ("or", '∨')),
+    (2, Or, DyadicPervasive, ("or", '∨'), { experimental: true }),
     /// Raise a value to a power
     ///
     /// The second value is raised to the power of the first.
@@ -760,7 +757,7 @@ primitive!(
     ///   : ⧆ "lego helmet"
     /// ex: # Experimental!
     ///   : ⧆ [1_2 4_3 1_2 3_0]
-    (1, Occurrences, MonadicArray, ("occurrences", '⧆')),
+    (1, Occurrences, MonadicArray, ("occurrences", '⧆'), { experimental: true }),
     /// Remove duplicate rows from an array
     ///
     /// ex: ◴ 7_7_8_0_1_2_0
@@ -1373,7 +1370,7 @@ primitive!(
     /// ex: # Experimental!
     ///   :   ⊘ [4 8 2 9 1] [1 2 3 4]
     ///   : ⬚∞⊘ [4 8 2 9 1] [1 2 3 4]
-    (2, ProgressiveIndexOf, DyadicArray, ("progressive indexof", '⊘')),
+    (2, ProgressiveIndexOf, DyadicArray, ("progressive indexof", '⊘'), { experimental: true }),
     /// Get the base digits of a number
     ///
     /// When passed a scalar number, [base] returns the base-N digits of the numbers in an array.
@@ -1423,7 +1420,7 @@ primitive!(
     ///   : ⌝⊥[12 20] [1 12]
     ///   : ⌝⊥[12 20 ∞] [11 1 3]
     ///   : ⬚10⌝⊥[12 20] [3 13 6 6 1 4]
-    (2, Base, DyadicArray, ("base", '⊥')),
+    (2, Base, DyadicArray, ("base", '⊥'), { experimental: true }),
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].
@@ -1915,7 +1912,7 @@ primitive!(
     ///   : {𝄐⌞⊟ 1 2 3}
     /// ex: # Experimental!
     ///   : {𝄐⌟⊟ 1 2 3}
-    ([1], Reach, Planet, ("reach", '𝄐')),
+    ([1], Reach, Planet, ("reach", '𝄐'), { experimental: true }),
     /// Call a function but keep its first argument on the top of the stack
     ///
     /// ex: [⟜+ 2 5]
@@ -2018,7 +2015,7 @@ primitive!(
     ///   : [◠(++) 1 2 3]
     ///
     /// See also: [below]
-    ([1], Above, Stack, ("above", '◠')),
+    ([1], Above, Stack, ("above", '◠'), { experimental: true }),
     /// Keep all arguments to a function below the outputs on the stack
     ///
     /// ex: [◡+ 1 2]
@@ -2036,7 +2033,7 @@ primitive!(
     ///   : ˙⊞+ 1_2_3
     /// ex: # Experimental!
     ///   : ˙(⊂⊂) π
-    ([1], Slf, Stack, ("self", '˙')),
+    ([1], Slf, Stack, ("self", '˙'), { experimental: true }),
     /// Call a function with its arguments reversed
     ///
     /// This is a modifier version of [flip].
@@ -2886,14 +2883,14 @@ primitive!(
     ///   : F!(+ 1 2)
     ///
     /// The opposite of [stringify] is [quote].
-    (0[1], Stringify, Comptime, "stringify"),
+    (0[1], Stringify, Comptime, "stringify", { experimental: true }),
     /// Convert a string into code at compile time
     ///
     /// ex: # Experimental!
     ///   : quote("+1") 5
     ///
     /// The opposite of [quote] is [stringify].
-    (0[1], Quote, Comptime, "quote"),
+    (0[1], Quote, Comptime, "quote", { experimental: true }),
     /// Get the signature of a function
     ///
     /// ex: # Experimental!
@@ -2911,7 +2908,7 @@ primitive!(
     ///
     /// At the moment, this is only useful for debugging.
     /// While theoretically, it could be used in a macro to choose a branch of a [switch] appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
-    (0(2)[1], Sig, Comptime, "signature"),
+    (0(2)[1], Sig, Comptime, "signature", { experimental: true }),
     /// Run the Fast Fourier Transform on an array
     ///
     /// The Fast Fourier Transform (FFT) is an optimized algorithm for computing the Discrete Fourier Transform (DFT). The DFT is a transformation that converts a signal from the time domain to the frequency domain.
@@ -2941,7 +2938,7 @@ primitive!(
     ///   : Lena
     ///   : ▽⟜≡▽0.5
     ///   : ⌵⍜°⍉≡fft .
-    (1, Fft, Misc, "fft"),
+    (1, Fft, Misc, "fft", { experimental: true }),
     /// Find shortest paths in a graph
     ((2)[3], Astar, Misc, "astar"),
     /// Find the shortest path between two things
@@ -3023,7 +3020,7 @@ primitive!(
     ///   : ∂(∿×2) ×τ÷⟜⇡8
     ///
     /// See also: [integral]
-    ([1], Derivative, Misc, ("derivative", '∂')),
+    ([1], Derivative, Misc, ("derivative", '∂'), { experimental: true }),
     /// Calculate an antiderivative of a mathematical expression
     ///
     /// Basic polynomials are supported, along with [sine] and [logarithm].
@@ -3046,7 +3043,7 @@ primitive!(
     ///   : ∫(×∿.) ×τ÷⟜⇡8
     ///
     /// See also: [derivative]
-    ([1], Integral, Misc, ("integral", '∫')),
+    ([1], Integral, Misc, ("integral", '∫'), { experimental: true }),
     /// Encode an array into a JSON string
     ///
     /// ex: json [1 2 3]
@@ -3152,7 +3149,7 @@ primitive!(
     /// Complex arrays are always encoded as f64 pairs.
     /// ex: # Experimental!
     ///   : ÷∩⧻⟜binary ℂ0 ⇡256
-    (1, Binary, Encoding, "binary"),
+    (1, Binary, Encoding, "binary", { experimental: true }),
     /// Convert a value to its code representation
     ///
     /// ex: repr π
@@ -3223,7 +3220,7 @@ primitive!(
     ///   : bytes  "u64" 1234567890 # Native endian
     ///   : bytes⌞ "u64" 1234567890 # Little endian
     ///   : bytes⌟ "u64" 1234567890 # Big endian
-    (2, EncodeBytes, Misc, "bytes"),
+    (2, EncodeBytes, Misc, "bytes", { experimental: true }),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.
@@ -3310,7 +3307,7 @@ primitive!(
     /// [fill] sets the background color.
     /// ex: # Experimental!
     ///   : ⬚[1 0 0] layout {100 0_1_0} "Green on Red!"
-    (2, Layout, Encoding, "layout", Impure),
+    (2, Layout, Encoding, "layout", Impure, { experimental: true }),
 );
 
 macro_rules! impl_primitive {

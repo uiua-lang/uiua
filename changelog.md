@@ -22,14 +22,15 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`un °`](https://uiua.org/docs/un) [`fill ⬚`](https://uiua.org/docs/fill)ed [`take ↙`](https://uiua.org/docs/take)
 - Give [`base ⊥`](https://uiua.org/docs/base) a glyph
 - Add the [`pretty`](https://uiua.org/docs/pretty) function, which gives the string representation of an array's pretty-printed output
+- Add numeric subscripts for [`length ⧻`](https://uiua.org/docs/length) to get the length of a specific axis
+- Add numeric subscripts for [`shape △`](https://uiua.org/docs/shape) to get the shape of the first few axes
 - Add experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) for finding sequential indices of each row of an array in another
 - Add experimental [lexical ordering](https://uiua.org/docs/experimental#lexical-ordering) syntax
   - This enables some function packs and array notation to execute in the order they are normally read
 - Add experimental sided [`fill ⬚`](https://uiua.org/docs/fill)
   - This allows filling from the left instead of the right
 - Add experimental [`bytes`](https://uiua.org/docs/bytes) function for encoding and decoding byte arrays
-- Add numeric subscripts for [`length ⧻`](https://uiua.org/docs/length) to get the length of a specific axis
-- Add numeric subscripts for [`shape △`](https://uiua.org/docs/shape) to get the shape of the first few axes
+- Remove previously deprecated `around ’`
 ### Interpreter
 - Improve pretty-printed array layout
   - High-rank arrays take up less vertical space and more horizontal space

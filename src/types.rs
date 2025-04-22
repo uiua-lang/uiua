@@ -189,13 +189,6 @@ impl TypeRt<'_> {
                     self.stack.push(a);
                     self.stack.push(b);
                 }
-                Around => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(a.clone());
-                    self.stack.push(b);
-                    self.stack.push(a);
-                }
                 Not | Sign | Neg | Abs | Sqrt | Floor | Ceil | Round => {
                     let x = self.pop()?;
                     self.stack.push(x);

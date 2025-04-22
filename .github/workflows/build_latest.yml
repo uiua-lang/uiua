@@ -20,12 +20,14 @@ jobs:
     name: Create release
     needs: test
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
     - uses: actions/checkout@v4
     - name: Delete old release
       run: gh release delete latest --yes || true
     - name: Prepare release notes
-      run: echo "## Current Binaries\n\nThis release contains binaries for the latest `main` branch." >> release_notes.md
+      run: echo "## Latest Binaries\n\nThis release contains binaries for the latest \`main\` branch." >> release_notes.md
     - name: Create release
       uses: softprops/action-gh-release@v1
       with:

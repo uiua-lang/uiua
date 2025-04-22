@@ -3,8 +3,22 @@ name: Validate
 on:
   push:
     branches: ["main"]
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/**"
+      - "site/**"
+      - "pad/**"
+      - "tests*/**"
   pull_request:
     branches: ["main"]
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/**"
+      - "site/**"
+      - "pad/**"
+      - "tests*/**"
 
 env:
   CARGO_TERM_COLOR: always

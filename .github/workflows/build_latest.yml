@@ -30,7 +30,7 @@ jobs:
     - name: Delete old release
       run: gh release delete latest --yes || true
     - name: Prepare release notes
-      run: echo "## Latest Binaries\n\nThis release contains binaries for the latest \`main\` branch." >> release_notes.md
+      run: echo "This release contains binaries for the latest \`main\` branch." >> release_notes.md
     - name: Create release
       uses: softprops/action-gh-release@v1
       with:

@@ -342,7 +342,11 @@ impl VirtualEnv {
                 }
                 Fold => {
                     let [f] = get_args(args)?;
-                    self.handle_sig(f);
+                    if f.outputs() >= f.args() {
+                        self.handle_args_outputs(f.args(), f.outputs() + 1 - f.args());
+                    } else {
+                        self.handle_sig(f);
+                    }
                 }
                 Try => {
                     let [f_sig, _handler_sig] = get_args(args)?;

@@ -1198,7 +1198,7 @@ impl Value {
         // Combine the arrays
         if allow_ext {
             for d in max_shape.iter().take(max_shape.len() - value.rank()).rev() {
-                value.reshape_scalar(Ok(*d as isize), ctx)?;
+                value.reshape_scalar(Ok(*d as isize), true, ctx)?;
             }
         }
         value.shape.insert(0, 1);

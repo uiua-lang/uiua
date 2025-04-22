@@ -1152,6 +1152,12 @@ primitive!(
     /// [rotate] works through boxes.
     /// ex: ↻1 □[1 2 3 4]
     /// ex: ≡↻1 {1_2_3 4_5_6}
+    ///
+    /// If the rotation amount is `2` or greater, multiple copies of the rotated array will be made, each rotated by a different row of the rotation amount.
+    /// ex: ↻ [[1] [2] [4]] [0 0 0 0 0 0 1]
+    ///   : ↻ ≡¤1_2_4       [0 0 0 0 0 0 1]
+    /// ex: [.. 0_0_0_0 0_0_0_1]
+    ///   : ↻ [0_0 1_2 0_3]
     (2, Rotate, DyadicArray, ("rotate", '↻')),
     /// Change the order of the axes of an array
     ///

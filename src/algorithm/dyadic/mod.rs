@@ -193,7 +193,7 @@ impl Value {
         )?;
         if shape.rank() == 0 {
             let n = target_shape[0];
-            val_as_arr!(self, |a| a.reshape_scalar(n, env))
+            val_as_arr!(self, |a| a.reshape_scalar(n, true, env))
         } else {
             self.reshape_impl(&target_shape, env)
         }
@@ -224,9 +224,10 @@ impl Value {
     pub(crate) fn reshape_scalar<C: FillContext>(
         &mut self,
         count: Result<isize, bool>,
+        use_fill: bool,
         ctx: &C,
     ) -> Result<(), C::Error> {
-        val_as_arr!(self, |a| a.reshape_scalar(count, ctx))
+        val_as_arr!(self, |a| a.reshape_scalar(count, use_fill, ctx))
     }
 }
 
@@ -266,6 +267,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn reshape_scalar<C: FillContext>(
         &mut self,
         count: Result<isize, bool>,
+        use_fill: bool,
         ctx: &C,
     ) -> Result<(), C::Error> {
         self.meta.take_map_keys();
@@ -274,7 +276,12 @@ impl<T: ArrayValue> Array<T> {
                 if count < 0 {
                     self.reverse();
                 }
-                self.reshape_scalar_integer(count.unsigned_abs(), ctx.scalar_fill::<T>().ok())
+                let fill = if use_fill {
+                    ctx.scalar_fill::<T>().ok()
+                } else {
+                    None
+                };
+                self.reshape_scalar_integer(count.unsigned_abs(), fill)
                     .map_err(|e| ctx.error(e))
             }
             Err(rev) => {
@@ -1010,6 +1017,13 @@ impl Value {
         rotated.match_fill(env);
         a_depth = a_depth.min(self.rank());
         b_depth = b_depth.min(rotated.rank());
+        if self.rank() - a_depth > 1 {
+            a_depth = self.rank() - 1;
+            b_depth = self.rank() - 1;
+            for dim in self.shape.iter().take(self.rank() - 1).rev() {
+                rotated.reshape_scalar(Ok(*dim as isize), false, env)?;
+            }
+        }
         match rotated {
             Value::Num(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Byte(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, env)?,

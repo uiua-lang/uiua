@@ -16,6 +16,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under) for monadic functions
 - Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⊜`](https://uiua.org/docs/partition) for monadic functions
 - Stabilize [`negate ¯`](https://uiua.org/docs/negate) subscripts
+- The first argument to [`rotate ↻`](https://uiua.org/docs/rotate) can now be rank > 1.
+  - This creates an array with multiple copies of the target array rotated by different amounts
 - [Output comments](https://uiua.org/tutorial/basic#output-comments) now show values on the stack *after* their line rather than before it
 - Add [`un °`](https://uiua.org/docs/un) [`fill ⬚`](https://uiua.org/docs/fill)ed [`take ↙`](https://uiua.org/docs/take)
 - Give [`base ⊥`](https://uiua.org/docs/base) a glyph

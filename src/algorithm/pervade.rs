@@ -760,7 +760,7 @@ where {
                     let mut a_fill_val = a_fill.clone();
                     if a_fill_val.rank() + 1 < a.rank() {
                         for &d in ash[..a.rank() - a_fill_val.rank() - 1].iter().rev() {
-                            a_fill_val.reshape_scalar(Ok(d as isize), env)?;
+                            a_fill_val.reshape_scalar(Ok(d as isize), true, env)?;
                         }
                     }
                     let a_iter = a.into_rows().chain(repeat(a_fill_val));
@@ -779,7 +779,7 @@ where {
                     let mut b_fill_val = b_fill.clone();
                     if b_fill_val.rank() + 1 < b.rank() {
                         for &d in bsh[..b.rank() - b_fill_val.rank() - 1].iter().rev() {
-                            b_fill_val.reshape_scalar(Ok(d as isize), env)?;
+                            b_fill_val.reshape_scalar(Ok(d as isize), true, env)?;
                         }
                     }
                     let b_iter = b.into_rows().chain(repeat(b_fill_val));

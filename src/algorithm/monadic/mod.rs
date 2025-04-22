@@ -1310,13 +1310,15 @@ impl<T: RealArrayValue> Array<T> {
         for &n in &self.data {
             if !n.is_int() {
                 return Err(env.error(format!(
-                    "Array must be a list of integers, but {n} is not an integer"
+                    "Array must be a list of integers, but {} is not an integer",
+                    n.grid_string(false)
                 )));
             }
             let n = n.to_f64();
             if n.abs() > u128::MAX as f64 {
                 return Err(env.error(format!(
-                    "{n} is too large for the {} algorithm",
+                    "{} is too large for the {} algorithm",
+                    n.grid_string(false),
                     Primitive::Bits.format()
                 )));
             }
@@ -1392,7 +1394,8 @@ where
         for &n in &self.data {
             if !n.is_int() {
                 return Err(env.error(format!(
-                    "Array must be a list of integers, but {n} is not an integer"
+                    "Array must be a list of integers, but {} is not an integer",
+                    n.grid_string(false)
                 )));
             }
         }
@@ -2396,14 +2399,15 @@ impl Value {
         let mut new_data = eco_vec![0.0; size];
         let slice = new_data.make_mut();
         for (i, &n) in arr.data.iter().enumerate() {
-            let dur = time::Duration::checked_seconds_f64(n)
-                .ok_or_else(|| env.error(format!("{n} is not a valid time")))?;
+            let dur = time::Duration::checked_seconds_f64(n).ok_or_else(|| {
+                env.error(format!("{} is not a valid time", n.grid_string(false)))
+            })?;
             let dt = if n >= 0.0 {
                 OffsetDateTime::UNIX_EPOCH.checked_add(dur)
             } else {
                 OffsetDateTime::UNIX_EPOCH.checked_sub(dur)
             }
-            .ok_or_else(|| env.error(format!("{n} is not a valid time")))?;
+            .ok_or_else(|| env.error(format!("{} is not a valid time", n.grid_string(false))))?;
             slice[i * 6] = dt.year() as f64;
             slice[i * 6 + 1] = dt.month() as u8 as f64;
             slice[i * 6 + 2] = dt.day() as f64;

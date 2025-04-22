@@ -78,7 +78,8 @@ impl Value {
                             )));
                         } else {
                             return Err(env.error(format!(
-                                "Index must be an array of integers, but {n} is not an integer"
+                                "Index must be an array of integers, but {} is not an integer",
+                                n.grid_string(false)
                             )));
                         }
                     } else {

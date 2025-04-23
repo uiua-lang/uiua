@@ -1352,33 +1352,35 @@ fn TutorialPatternMatching() -> impl IntoView {
 fn TutorialMoreArray() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text=format!("Advanced Array Manipulation - {} Docs", lang())/>
-        <h1>"Advanced Array Manipulation"</h1>
+        <Title text=format!("More Array Manipulation - {} Docs", lang())/>
+        <h1>"More Array Manipulation"</h1>
         <p>"Sometimes the operation you need to perform on an array is more complicated than modifiers like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allow."</p>
+
 
         <Hd id="fix"><Prim prim=Fix/></Hd>
         <p><Prim prim=Rows/>" can be used to iterate over multiple arrays. The nth row of each array will be passed to the function, and the result will be put in a new array."</p>
         <Editor example="≡⊂ 1_2_3 4_5_6"/>
-        <p>"Usually, the arrays must have the same number of rows."</p>
+        <p>"This works because both arrays have the same shape (in this case, "<code>[3]</code>"). If they didn't, we would get an error."</p>
         <Editor example="≡⊂ 1_2_3 4_5"/> // Should fail
-        <p>"However, there is an exception for arrays that have exactly one row. In this case, that row will be repeated for each row of the other array(s)."</p>
-        <Editor example="≡⊂ 1_2_3 4"/>
+        <p>"However, there is an exception to this rule. If one of the arrays has exactly one row, that array will be repeated for each row of the other array. This includes scalars."</p>
         <Editor example="≡⊂ 1 2_3_4"/>
-        <Editor example="≡(⊂⊂) 1 2_3_4 5"/>
-        <p>"Notice that the second argument here is a 2D array with 1 row of 2 elements. It will be repeated just like the scalars above."</p>
-        <Editor example="≡⊟ [1_2 3_4 5_6] [¯1_0]"/>
-        <p>"If we want to combine each row of one array with copies of another, we can turn one of the arrays into a single row array with "<Prim prim=Fix/>". "<Prim prim=Fix/>" adds a 1 to the front of the shape of an array."</p>
-        <Editor example="¤.1_2_3"/>
-        <p>"Here, we "<Prim prim=Fix/>" "<code>"1_2_3"</code>" so that it is reused for each row of "<code>"4_5_6"</code>"."</p>
-        <Editor example="≡⊂ ¤ 1_2_3 4_5_6"/>
-        <p>"If we have a bunch of arrays and want to choose which ones are fixed and which are not, we can use planet notation."</p>
+        <Editor example="≡⊂ 1_2_3 4"/>
+        <Editor example="≡⊂ [1_2] 3_4_5"/>
+        <Editor example="≡⊂ 1_2_3 [4_5]"/>
+        <p>"Notice how in this last example, the array "<code>"[4_5]"</code>" is an array of a single row, so that row is repeated across all iterations. It would be equivalent to:"</p>
+        <Editor example="[\n  ⊂ 1 4_5\n  ⊂ 2 4_5\n  ⊂ 3 4_5\n]"/>
+        <p>"The "<Prim prim=Fix/>" function turns an array into an array of a single row by prepending a "<code>"1"</code>" to the array's shape. This is equivalent to wrapping in "<code>"[]"</code>" as above, but it is shorter and better communicates the intention of \"fixing\" an array during iteration."</p>
+        <Editor example="¤1_2_3  # Fixing is equivalent to...\n[1_2_3] # ...surrounding with brackets"/>
+        <p>"With "<Prim prim=Fix/>", we can rewrite the previous examples."</p>
+        <Editor example="≡⊂ ¤1_2 3_4_5"/>
+        <Editor example="≡⊂ 1_2_3 ¤4_5"/>
+        <p>"If we have a several arrays and want to choose which ones are fixed and which are not, we can use planet notation."</p>
         <Editor example="≡⊂ ⊙¤ 1_2_3 4_5_6"/>
-        <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘¤¤∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
-        <Editor example="≡(⊂⊂⊂) ⊙∩¤     1_2_3 4_5_6 7_8_9 10_11_12"/>
-        <p><Prim prim=Fix/>" also works without "<Prim prim=Rows/>" with pervasive dyadic functions."</p>
-        <Editor example="-  [1 2 3]  [4 5 6]\n- ¤[1 2 3]  [4 5 6]\n-  [1 2 3] ¤[4 5 6]"/>
-        <Editor example="-  1_3 [3_4 5_6 7_8]"/> // Should fail
-        <Editor example="- ¤1_3 [3_4 5_6 7_8]"/>
+        <Editor example="≡(⊂⊂⊂) ⊙∩¤ 1_2_3 4_5_6 7_8_9 10_11_12"/>
+        <p><Prim prim=Fix/>" also works with pervasive dyadic functions without "<Prim prim=Rows/>"."</p>
+        <Editor example="+  [1 2 3]  [10 20 30]\n+ ¤[1 2 3]  [10 20 30]\n+  [1 2 3] ¤[10 20 30]"/>
+        <Editor example="- 1_2 [3_4 5_6 7_8]"/> // Should fail
+        <Editor example="-¤1_2 [3_4 5_6 7_8]"/>
 
         <Hd id="operating-at-different-ranks">"Operating at Different Ranks"</Hd>
         <p><Prim prim=Rows/>" is the bread and butter of traversing an array's structure. It calls its function on each row of an array, but what if you want to go deeper?"</p>

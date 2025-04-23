@@ -29,8 +29,8 @@ fn idioms() -> impl IntoView {
             }
         }
         idioms.push(view!(<tr>
-            <td style="text-wrap: wrap"><pre>{comment}</pre></td>
-            <td style="width: 62%"><Editor example={&code}/></td>
+            <td style="text-wrap: wrap">{comment}</td>
+            <td><Editor example={&code}/></td>
         </tr>));
     }
     idioms
@@ -78,7 +78,11 @@ pub fn Idioms() -> impl IntoView {
         <p>"This page contains short "{lang}" idioms that may be non-obvious from simply knowing the primitives themselves."</p>
         <p>"There are also lists of "<A href="#aliases">"aliases"</A>" below."</p>
         <p>"You can contribute to this list by submitting a PR to the repo. The list is defined "<a href="https://github.com/uiua-lang/uiua/blob/main/site/text/idioms.ua">"here"</a>". Keep in mind these are meant to be both short and useful. Idioms above 10 characters in length (without inputs), or which are not useful for everyday tasks, will not be accepted."</p>
-        <table class="bordered-table" style="width: 100%">
+        <table class="bordered-table" style="width: 100%; table-layout: fixed">
+            <colgroup>
+                <col style="width: 50%"/>
+                <col style="width: max(50%, 10em)"/>
+            </colgroup>
             { idioms() }
         </table>
 

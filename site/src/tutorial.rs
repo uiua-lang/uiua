@@ -255,7 +255,7 @@ fn TutorialBasic() -> impl IntoView {
         <Editor example="cei 1.5\nceil 1.5\nceili 1.5\nceilin 1.5\nceiling 1.5"/>
         <p>"You don't even have to remove spaces between built-in function names. The formatter will figure it out!"</p>
         <Editor example="roundsqrtpi"/>
-        <p>"On this site, you can also click the ↧ symbol on any editor to show a palette of all the "{lang}" glyphs. You can then click on any glyph to insert it into the editor."</p>
+        <p>"On this site, you can also click the "<span class="material-symbols-rounded">"keyboard_arrow_down"</span>" symbol on any editor to show a palette of all the "{lang}" glyphs. You can then click on any glyph to insert it into the editor."</p>
         <p>"Here is a table of all the glyphs that are typed with ASCII characters that get converted to glyphs."</p>
         <table class="left-header-table">
             <tr>
@@ -537,7 +537,7 @@ fn TutorialArrays() -> impl IntoView {
 
         <Hd id="useful-array-operations">"Useful Array Operations"</Hd>
         <p>"You don't need to memorize all of these right now. This is just a brief introduction to some of the array operations so that you won't be surprised when you see them later."</p>
-        <p>"If you ever see a glyph that you don't recognize in an example, you can hold ctrl/⌘ and mouse over it in the editor to learn its name."</p>
+        <p>"If you ever see a glyph that you don't recognize in an example, you can mouse over it in the editor to learn its name."</p>
         <p>"You can ctrl/⌘-click any glyph in the editor to see its documentation."</p>
         <p>"You can also click the names of functions in the site text to see their documentation."</p>
         <p><Prim prim=Couple/>" turns two arrays into rows of a new array."</p>

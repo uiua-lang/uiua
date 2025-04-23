@@ -615,6 +615,20 @@ impl Primitive {
                 &[(Partition, "p"), (Identity, "i"), (By, "b"), (Ne, "n")],
             ),
             ("kbn", &[(Keep, "k"), (By, "b"), (Ne, "n")]),
+            ("ftd", &[(Fork, "f"), (Take, "t"), (Drop, "d")]),
+            ("fdt", &[(Fork, "f"), (Drop, "d"), (Take, "t")]),
+            (
+                "adnoad",
+                &[
+                    (Anti, "a"),
+                    (Drop, "d"),
+                    (Neg, "n"),
+                    (On, "o"),
+                    (Anti, "a"),
+                    (Drop, "d"),
+                ],
+            ),
+            ("perf", &[(Dip, "p"), (Pop, "e"), (Under, "r"), (Now, "f")]),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

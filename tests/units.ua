@@ -630,3 +630,7 @@ path(
 [(1 2
   3 4)]
 ⍤⤙≍
+
+# Grid format empty arrays
+◌pretty °△0_0_0
+◌pretty °△0_0_0_0

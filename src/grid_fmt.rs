@@ -388,37 +388,22 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 }
             }
             // Pad each metagrid cell to its row's max height and column's max width
-            let horiz_at = |i: usize| {
-                (0..self.rank())
-                    .rev()
-                    .step_by(2)
-                    .scan(1, |prod, d| {
-                        let is_mul = (i + 1) % *prod == 0;
-                        *prod *= self.shape[d];
-                        Some(is_mul)
-                    })
-                    .filter(|&is_mul| is_mul)
-                    .count()
-                    .saturating_sub(1)
-            };
-            let vert_at = |i: usize| {
-                (0..self.rank().saturating_sub(1))
-                    .rev()
-                    .step_by(2)
-                    .scan(1, |prod, d| {
-                        let is_mul = (i + 1) % *prod == 0;
-                        *prod *= self.shape[d];
-                        Some(is_mul)
-                    })
-                    .filter(|&is_mul| is_mul)
-                    .count()
-                    .saturating_sub(1)
-            };
-
             for i in 0..metagrid_height {
                 let row_height = row_heights[i];
                 let mut subrows = vec![vec![]; row_height];
                 let mut div_pos = HashMap::new();
+                // Vertical offset for row dividers
+                let vert = (0..self.rank().saturating_sub(1))
+                    .rev()
+                    .step_by(2)
+                    .scan(1, |prod, d| {
+                        let is_mul = (i + 1) % (*prod).max(1) == 0;
+                        *prod *= self.shape[d];
+                        Some(is_mul)
+                    })
+                    .filter(|&is_mul| is_mul)
+                    .count()
+                    .saturating_sub(1);
                 for (j, ((col_width, max_lr_lens), cell)) in (column_widths.iter())
                     .zip(&max_lr_lens)
                     .zip(&mut metagrid[i])
@@ -428,6 +413,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .filter(|_| j == 0)
                         .or_else(|| requires_summary.then_some(ElemAlign::None))
                         .unwrap_or(T::alignment());
+                    // Pad
                     pad_grid_center(
                         *col_width,
                         row_height,
@@ -436,9 +422,20 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         Some(*max_lr_lens),
                         cell,
                     );
+                    // Horizontal offset for column dividers
+                    let horiz = (0..self.rank())
+                        .rev()
+                        .step_by(2)
+                        .scan(1, |prod, d| {
+                            let is_mul = (j + 1) % (*prod).max(1) == 0;
+                            *prod *= self.shape[d];
+                            Some(is_mul)
+                        })
+                        .filter(|&is_mul| is_mul)
+                        .count()
+                        .saturating_sub(1);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
                         subrow.extend(cell_row);
-                        let horiz = horiz_at(j);
                         // Add column dividers
                         if T::box_lines()
                             && !self.is_map()
@@ -458,7 +455,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 let len = subrows.last().unwrap().len();
                 grid.extend(subrows);
                 // Add row dividers
-                let vert = vert_at(i);
                 let vert_offset = 2 + vert * 2;
                 if T::box_lines()
                     && !self.is_map()

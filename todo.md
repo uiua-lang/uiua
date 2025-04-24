@@ -5,6 +5,7 @@
 - Optimize `unsort`
 - More rows optimizations
 - `hsv` function
+- Line number signatures in pad
 - Last-axis subscripts or modifier?
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

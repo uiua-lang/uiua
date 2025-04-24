@@ -3,8 +3,8 @@ use std::collections::{hash_map::Entry, HashMap};
 use ecow::EcoVec;
 
 use crate::{
-    get_ops, types::push_empty_rows_value, val_as_arr, Array, ArrayValue, Ops, Primitive, SigNode,
-    Uiua, UiuaResult, Value,
+    get_ops, grid_fmt::GridFmt, types::push_empty_rows_value, val_as_arr, Array, ArrayValue, Ops,
+    Primitive, SigNode, Uiua, UiuaResult, Value,
 };
 
 use super::{monadic::range, table::table_impl, validate_size};
@@ -256,6 +256,15 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                     Array::new(shape, data).into()
                 })
             }
+            if xs.row_count() == 0 {
+                env.push(if is_scalar {
+                    0.into()
+                } else {
+                    xs.shape.insert(1, k);
+                    xs
+                });
+                return Ok(());
+            }
             let scalar = xs.as_nat(env, "Tuples of scalar must be a natural number");
             xs = match &xs {
                 Value::Num(a) => inner(a, k, f, is_scalar, scalar, env)?,
@@ -318,7 +327,10 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Combinatorial explosion"));
         }
         if combinations > usize::MAX as f64 {
-            return Err(env.error(format!("{combinations} combinations would be too many")));
+            return Err(env.error(format!(
+                "{} combinations would be too many",
+                combinations.grid_string(false)
+            )));
         }
         shape[0] = combinations.round() as usize;
         shape.insert(1, k);
@@ -436,7 +448,10 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Combinatorial explosion"));
         }
         if permutations > usize::MAX as f64 {
-            return Err(env.error(format!("{permutations} permutations would be too many")));
+            return Err(env.error(format!(
+                "{} permutations would be too many",
+                permutations.grid_string(false)
+            )));
         }
         shape[0] = permutations.round() as usize;
         shape.insert(1, k);

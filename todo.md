@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.16
+- Site deploy action
 - Optimize `sort` to be in-place by modifying rayon code
 - Optimize `unsort`
 - More rows optimizations

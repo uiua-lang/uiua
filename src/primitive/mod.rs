@@ -1367,16 +1367,7 @@ impl ImplPrimitive {
                 let val = env.pop(1)?;
                 env.push(val.unboxed());
             }
-            ImplPrimitive::UnSort => {
-                let arr = env.pop(1)?;
-                if arr.row_count() < 2 {
-                    env.push(arr);
-                } else {
-                    let mut rows: Vec<Value> = arr.into_rows().collect();
-                    RNG.with_borrow_mut(|rng| rows.shuffle(rng));
-                    env.push(Value::from_row_values_infallible(rows));
-                }
-            }
+            ImplPrimitive::UnSort => env.monadic_mut(Value::shuffle)?,
             ImplPrimitive::UnJson => {
                 let json = env.pop(1)?.as_string(env, "JSON expects a string")?;
                 let val = Value::from_json_string(&json, env)?;
@@ -2064,12 +2055,17 @@ thread_local! {
 
 /// Generate a random number, equivalent to [`Primitive::Rand`]
 pub fn random() -> f64 {
-    RNG.with(|rng| rng.borrow_mut().gen::<f64>())
+    random_with(|rng| rng.gen())
+}
+
+/// Access the interpreter's random number generator for the thread
+pub fn random_with<T>(f: impl FnOnce(&mut SmallRng) -> T) -> T {
+    RNG.with(|rng| f(&mut rng.borrow_mut()))
 }
 
 /// Seed the random number generator
 pub fn seed_random(seed: u64) {
-    RNG.with(|rng| *rng.borrow_mut() = SmallRng::seed_from_u64(seed));
+    random_with(|rng| *rng = SmallRng::seed_from_u64(seed));
 }
 
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {

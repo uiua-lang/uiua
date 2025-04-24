@@ -1,9 +1,10 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, ptr};
 
 use ecow::EcoVec;
+use rand::Rng;
 use rayon::prelude::*;
 
-use crate::{algorithm::ArrayCmpSlice, val_as_arr, Array, ArrayValue, Value};
+use crate::{algorithm::ArrayCmpSlice, random_with, val_as_arr, Array, ArrayValue, Value};
 
 impl Value {
     /// Get the `rise` of the value
@@ -27,6 +28,10 @@ impl Value {
     }
     pub(crate) fn sort_down_depth(&mut self, depth: usize) {
         val_as_arr!(self, |a| a.sort_down_depth(depth))
+    }
+    /// Shuffle the value
+    pub fn shuffle(&mut self) {
+        val_as_arr!(self, Array::shuffle)
     }
 }
 
@@ -254,5 +259,27 @@ impl<T: ArrayValue> Array<T> {
             self.meta.take_sorted_flags();
         }
         self.validate();
+    }
+    /// Shuffle the array
+    pub fn shuffle(&mut self) {
+        if self.row_count() < 2 {
+            return;
+        }
+        random_with(|rng| {
+            let row_count = self.row_count();
+            let row_len = self.row_len();
+            let slice = self.data.as_mut_slice();
+            for i in (1..row_count).rev() {
+                let j = rng.gen_range(0..i);
+                // Safety: i and j are in bounds and not equal
+                unsafe {
+                    ptr::swap_nonoverlapping(
+                        slice.as_mut_ptr().add(i * row_len),
+                        slice.as_mut_ptr().add(j * row_len),
+                        row_len,
+                    )
+                };
+            }
+        });
     }
 }

@@ -74,6 +74,8 @@ pub struct Compiler {
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are deprecated
     deprecated_prim_errors: HashSet<Primitive>,
+    /// Constants that have emitted errors because they are deprecated
+    deprecated_const_errors: HashSet<&'static str>,
     /// Accumulated diagnostics
     diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
@@ -107,6 +109,7 @@ impl Default for Compiler {
             in_try: false,
             errors: Vec::new(),
             deprecated_prim_errors: HashSet::new(),
+            deprecated_const_errors: HashSet::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             comptime: true,
@@ -1825,6 +1828,20 @@ code:
             Ok(self.global_index(local.index, true, span))
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
+            if let Some(suggestion) = constant.deprecation {
+                if self.deprecated_const_errors.insert(constant.name) {
+                    let suggestion = if suggestion.is_empty() {
+                        String::new()
+                    } else {
+                        format!(". {suggestion}")
+                    };
+                    let message = format!(
+                        "{} is deprecated and will be removed in a future version{}",
+                        constant.name, suggestion
+                    );
+                    self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone());
+                }
+            }
             self.code_meta
                 .constant_references
                 .insert(span.clone().sp(ident));

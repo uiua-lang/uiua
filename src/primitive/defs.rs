@@ -870,7 +870,7 @@ primitive!(
     /// [fill][un][parse] pads the strings to make a character array instead of a box array.
     /// ex: ⬚@ °⋕ +9÷4⇡10
     /// ex: ⬚@0°⋕ +9÷4⇡10
-    (1, Parse, Misc, ("parse", '⋕')),
+    (1, Parse, Encoding, ("parse", '⋕')),
     /// Check if two arrays are exactly the same
     ///
     /// ex: ≍ 1_2_3 [1 2 3]
@@ -2424,7 +2424,7 @@ primitive!(
     /// `each``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
     /// ex: ⌊×10 ∵⋅⚂ ⇡10
     /// ex: ⌊×10 ⊞⋅⋅⚂ .⇡10
-    (0, Rand, Misc, ("random", '⚂'), Impure),
+    (0, Rand, Rng, ("random", '⚂'), Impure),
     /// Memoize a function
     ///
     /// If a function is [memo]ized, then its results are cached.
@@ -2538,7 +2538,7 @@ primitive!(
     ///   : ∩(⌊×10)
     /// For non-determinism, [random] can be used as a seed.
     /// ex: ⌊×10 gen 3_4 ⚂
-    (2, Gen, Misc, "gen"),
+    (2, Gen, Rng, "gen"),
     /// Match a regex pattern
     ///
     /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match
@@ -2554,7 +2554,7 @@ primitive!(
     /// ex: ⬚""regex "a(b)?" "a ab"
     ///
     /// Uiua uses the [Rust regex crate](https://docs.rs/regex/latest/regex/) internally.
-    (2, Regex, Misc, "regex"),
+    (2, Regex, Algorithm, "regex"),
     /// Convert a string to UTF-8 bytes
     ///
     /// ex: utf₈ "hello!"
@@ -2610,7 +2610,7 @@ primitive!(
     /// ex: now
     /// [under][now] can be used to time a function.
     /// ex: ⍜now(5&sl1)
-    (0, Now, Misc, "now", Impure),
+    (0, Now, Time, "now", Impure),
     /// Get the date and time information from a time
     ///
     /// You can use [now] to get the current time in seconds since the Unix epoch.
@@ -2639,12 +2639,12 @@ primitive!(
     /// ex: ⍜°datetime∘ [2023 2 29]
     /// ex: ⍜°datetime∘ [1917 5 0]
     /// ex: ⍜°datetime∘ [1996 12 ¯100]
-    (1, DateTime, Misc, "datetime"),
+    (1, DateTime, Time, "datetime"),
     /// Get the local timezone offset
     ///
     /// ex: timezone
     /// ex: datetime +×3600 timezone now
-    (0, TimeZone, Misc, "timezone", Impure),
+    (0, TimeZone, Time, "timezone", Impure),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`
@@ -2938,9 +2938,9 @@ primitive!(
     ///   : Lena
     ///   : ▽⟜≡▽0.5
     ///   : ⌵⍜°⍉≡fft .
-    (1, Fft, Misc, "fft", { experimental: true }),
+    (1, Fft, Algorithm, "fft", { experimental: true }),
     /// Find shortest paths in a graph
-    ((2)[3], Astar, Misc, "astar"),
+    ((2)[3], Astar, Algorithm, "astar"),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.
@@ -2993,7 +2993,7 @@ primitive!(
     /// For example, you can use it to find edits to a string to turn it into another string.
     /// ex: ⊢path(+⊙¤ ⊂¯.⊞=. °⊏)≍ "thud" "uiua"
     /// [path] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
-    ((2)[2], Path, Misc, "path"),
+    ((2)[2], Path, Algorithm, "path"),
     /// Calculate the derivative of a mathematical expression
     ///
     /// Basic polynomials are supported, along with [sine] and [logarithm].
@@ -3020,7 +3020,7 @@ primitive!(
     ///   : ∂(∿×2) ×τ÷⟜⇡8
     ///
     /// See also: [integral]
-    ([1], Derivative, Misc, ("derivative", '∂'), { experimental: true }),
+    ([1], Derivative, Algorithm, ("derivative", '∂'), { experimental: true }),
     /// Calculate an antiderivative of a mathematical expression
     ///
     /// Basic polynomials are supported, along with [sine] and [logarithm].
@@ -3043,7 +3043,7 @@ primitive!(
     ///   : ∫(×∿.) ×τ÷⟜⇡8
     ///
     /// See also: [derivative]
-    ([1], Integral, Misc, ("integral", '∫'), { experimental: true }),
+    ([1], Integral, Algorithm, ("integral", '∫'), { experimental: true }),
     /// Encode an array into a JSON string
     ///
     /// ex: json [1 2 3]
@@ -3220,7 +3220,7 @@ primitive!(
     ///   : bytes  "u64" 1234567890 # Native endian
     ///   : bytes⌞ "u64" 1234567890 # Little endian
     ///   : bytes⌟ "u64" 1234567890 # Big endian
-    (2, EncodeBytes, Misc, "bytes", { experimental: true }),
+    (2, EncodeBytes, Encoding, "bytes", { experimental: true }),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.
@@ -3271,6 +3271,42 @@ primitive!(
     ///
     /// See also: [&ap]
     (3, AudioEncode, Encoding, "audio"),
+    /// Get the current operating system
+    ///
+    /// Returns a string representation.
+    /// ex: os
+    (0, Os, Environment, "os", Impure),
+    /// Get the current operating system family
+    ///
+    /// Returns a string representation.
+    /// ex: osfamily
+    (0, OsFamily, Environment, "osfamily", Impure),
+    /// Get the current architecture
+    ///
+    /// Returns a string representation.
+    /// ex: arch
+    (0, Arch, Environment, "arch", Impure),
+    /// Get the DLL extension for the current platform
+    ///
+    /// Does not include the leading dot.
+    /// ex: dllext
+    (0, DllExt, Environment, "dllext", Impure),
+    /// Get the executable extension for the current platform
+    ///
+    /// Does not include the leading dot.
+    /// ex: exeext
+    (0, ExeExt, Environment, "exeext", Impure),
+    /// Get the primary path separator for the current platform
+    ///
+    /// Returns a scalar character.
+    /// ex: pathsep
+    (0, PathSep, Environment, "pathsep", Impure),
+    /// Get the number of processors on the current system
+    ///
+    /// Returns a scalar integer.
+    /// ex: numprocs
+    (0, NumProcs, Environment, "numprocs", Impure),
+    /// Get the current
     /// Render text into an image array
     ///
     /// In the most basic usage, the first argument is a font size and the second argument is the text to render.

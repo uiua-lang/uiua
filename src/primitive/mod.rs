@@ -58,7 +58,11 @@ pub enum PrimClass {
     Thread,
     Map,
     Encoding,
+    Algorithm,
     Misc,
+    Rng,
+    Time,
+    Environment,
     Sys(SysOpClass),
 }
 
@@ -100,6 +104,10 @@ impl fmt::Debug for PrimClass {
             Thread => write!(f, "Thread"),
             Map => write!(f, "Map"),
             Encoding => write!(f, "Encoding"),
+            Algorithm => write!(f, "Algorithm"),
+            Rng => write!(f, "RNG"),
+            Time => write!(f, "Time"),
+            Environment => write!(f, "Environment"),
             Misc => write!(f, "Misc"),
             Sys(op) => op.fmt(f),
         }
@@ -1039,6 +1047,13 @@ impl Primitive {
                     self.format()
                 )))
             }
+            Primitive::Os => env.push(std::env::consts::OS),
+            Primitive::OsFamily => env.push(std::env::consts::FAMILY),
+            Primitive::Arch => env.push(std::env::consts::ARCH),
+            Primitive::DllExt => env.push(std::env::consts::DLL_EXTENSION),
+            Primitive::ExeExt => env.push(std::env::consts::EXE_EXTENSION),
+            Primitive::PathSep => env.push(std::path::MAIN_SEPARATOR),
+            Primitive::NumProcs => env.push(num_cpus::get()),
             Primitive::Sys(io) => io.run(env)?,
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

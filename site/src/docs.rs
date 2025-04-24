@@ -482,6 +482,10 @@ impl Allowed {
                 PrimClass::Thread => "threads",
                 PrimClass::Map => "map-functions",
                 PrimClass::Encoding => "encoding",
+                PrimClass::Algorithm => "algorithms",
+                PrimClass::Rng => "rng",
+                PrimClass::Time => "time",
+                PrimClass::Environment => "environment",
                 PrimClass::Misc => "misc-functions",
                 PrimClass::Sys(_) => "system-functions",
             };
@@ -560,6 +564,10 @@ impl Allowed {
                 PrimClass::Thread => ("Thread".into_view(), "Work with OS threads"),
                 PrimClass::Map => ("Map".into_view(), "Use arrays as hash maps"),
                 PrimClass::Encoding => ("Encoding".into_view(), "Convert to and from different encodings"),
+                PrimClass::Algorithm => ("Algorithms".into_view(), "Useful, specific algorithms"),
+                PrimClass::Rng => ("Random Number Generation".into_view(), "Generate random numbers"),
+                PrimClass::Time => ("Time".into_view(), "Work with time"),
+                PrimClass::Environment => ("Environment".into_view(), "Get information about the environment"),
                 PrimClass::Misc => ("Miscellaneous".into_view(), ""),
                 PrimClass::Sys(class) => {
                     match class {

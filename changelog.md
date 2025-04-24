@@ -24,6 +24,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`pretty`](https://uiua.org/docs/pretty) function, which gives the string representation of an array's pretty-printed output
 - Add numeric subscripts for [`length ⧻`](https://uiua.org/docs/length) to get the length of a specific axis
 - Add numeric subscripts for [`shape △`](https://uiua.org/docs/shape) to get the shape of the first few axes
+- Deprecate various environment-relate constants and replace them with noadic functions
+  - This prevents the details of the compiling environment being used instead of the details from the actual running environment
+  - Deprecrated: `Os`, `Family`, `Arch`, `ExeExt`, `DllExt`, `Sep`, `NumProcs`
+  - Replacements: `os`, `osfamily`, `arch`, `exeext`, `dllext`, `pathsep`, `numprocs`
 - Add experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) for finding sequential indices of each row of an array in another
 - Add experimental [lexical ordering](https://uiua.org/docs/experimental#lexical-ordering) syntax
   - This enables some function packs and array notation to execute in the order they are normally read

@@ -498,10 +498,10 @@ F ← ⍜⊢¯ ⊏⊙"nubtqphsoe" -@0 °⋕
 ⍤⤙≍ 2 °(⊏:[1 2 3 4]) 3
 
 # ThisFile
-⍤⤙≍ $"tests_units.ua" Sep ThisFile
-⍤⤙≍ ThisFile /◇⊂ {ThisFileDir Sep ThisFileName}
-◌&fras /◇⊂ {WorkingDir Sep ThisFile}
-◌&fras /◇⊂ {WorkingDir Sep ThisFileDir Sep ThisFileName}
+⍤⤙≍ $"tests_units.ua" pathsep ThisFile
+⍤⤙≍ ThisFile /◇⊂ {ThisFileDir pathsep ThisFileName}
+◌&fras /◇⊂ {WorkingDir pathsep ThisFile}
+◌&fras /◇⊂ {WorkingDir pathsep ThisFileDir pathsep ThisFileName}
 
 # Pointer equality
 ⍤⤙≍ 1 ≍ NULL NULL

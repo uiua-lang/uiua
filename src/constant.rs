@@ -22,6 +22,8 @@ pub struct ConstantDef {
     pub value: Lazy<ConstantValue>,
     /// The constant's documentation
     pub doc: Lazy<String>,
+    /// The suggested replacement because of deprecation
+    pub deprecation: Option<&'static str>,
 }
 
 impl ConstantDef {
@@ -32,6 +34,10 @@ impl ConstantDef {
     /// Get the constant's documentation as fragments
     pub fn doc_frags(&self) -> Vec<PrimDocFragment> {
         parse_doc_line_fragments(self.doc())
+    }
+    /// Check if the constant is deprecated
+    pub fn is_deprecated(&self) -> bool {
+        self.deprecation.is_some()
     }
 }
 
@@ -101,7 +107,16 @@ where
 }
 
 macro_rules! constant {
-    ($($(#[doc = $doc:literal])+ ($(#[$attr:meta])* $name:literal, $class:ident, $value:expr)),* $(,)?) => {
+    ($(
+        $(#[doc = $doc:literal])+
+        (
+            $(#[$attr:meta])*
+            $name:literal,
+            $class:ident,
+            $value:expr
+            $(, deprecated($deprecation:literal))?
+        )
+    ),* $(,)?) => {
         const COUNT: usize = {
             let mut count = 0;
             $(
@@ -114,6 +129,7 @@ macro_rules! constant {
             count
         };
         /// The list of all shadowable constants
+        #[allow(path_statements)]
         pub static CONSTANTS: [ConstantDef; COUNT] =
             [$(
                 $(#[$attr])*
@@ -130,6 +146,7 @@ macro_rules! constant {
                         s.pop();
                         s
                     }),
+                    deprecation: { None::<&'static str> $(; Some($deprecation))? }
                 },
             )*];
     };
@@ -185,17 +202,17 @@ constant!(
         [0, 1, -1], [1, 0, -1], [0, -1, -1], [-1, 0, -1]
     ]),
     /// A string identifying the operating system
-    ("Os", System, std::env::consts::OS),
+    ("Os", System, std::env::consts::OS, deprecated("Use the os function instead")),
     /// A string identifying family of the operating system
-    ("Family", System, std::env::consts::FAMILY),
+    ("Family", System, std::env::consts::FAMILY, deprecated("Use the osfamily function instead")),
     /// A string identifying the architecture of the CPU
-    ("Arch", System, std::env::consts::ARCH),
+    ("Arch", System, std::env::consts::ARCH, deprecated("Use the arch function instead")),
     /// The executable file extension
-    ("ExeExt", System, std::env::consts::EXE_EXTENSION),
+    ("ExeExt", System, std::env::consts::EXE_EXTENSION, deprecated("Use the exeext function instead")),
     /// The file extension for shared libraries
-    ("DllExt", System, std::env::consts::DLL_EXTENSION),
+    ("DllExt", System, std::env::consts::DLL_EXTENSION, deprecated("Use the dllext function instead")),
     /// The primary path separator character
-    ("Sep", System, std::path::MAIN_SEPARATOR),
+    ("Sep", System, std::path::MAIN_SEPARATOR, deprecated("Use the pathsep function instead")),
     /// The path of the current source file relative to `WorkingDir`
     ("ThisFile", System, ConstantValue::ThisFile),
     /// The name of the current source file
@@ -205,7 +222,7 @@ constant!(
     /// The compile-time working directory
     ("WorkingDir", System, ConstantValue::WorkingDir),
     /// The number of processors available
-    ("NumProcs", System, num_cpus::get() as f64),
+    ("NumProcs", System, num_cpus::get() as f64, deprecated("Use the numprocs function instead")),
     /// A boolean `true` value for use in `json`
     ("True", External, Array::json_bool(true)),
     /// A boolean `false` value for use in `json`

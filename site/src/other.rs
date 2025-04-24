@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use leptos::*;
 use leptos_meta::*;
 use uiua::{ConstClass, Primitive, SysOp, CONSTANTS};
@@ -151,17 +149,6 @@ pub fn RightToLeft() -> impl IntoView {
 pub fn Constants() -> impl IntoView {
     use ConstClass::*;
     use Primitive::*;
-    let mut by_class: BTreeMap<ConstClass, Vec<View>> = BTreeMap::new();
-    for con in CONSTANTS.iter().filter(|con| !con.doc.trim().is_empty()) {
-        let view = view!(<tr>
-            <td><Const con=con/></td>
-            <td><div class="const-desc">{
-                doc_line_fragments_to_view(&con.doc_frags())
-            }</div></td>
-        </tr>)
-        .into_view();
-        by_class.entry(con.class).or_default().push(view);
-    }
     let class_cols = [
         vec![Math, Time, Color, Flags],
         vec![External, Media, Spatial, System, Fun],
@@ -171,8 +158,13 @@ pub fn Constants() -> impl IntoView {
         for class in col_classes {
             let mut rows = Vec::new();
             for con in CONSTANTS.iter().filter(|con| con.class == class) {
+                let style = if con.is_deprecated() {
+                    "text-decoration: line-through;"
+                } else {
+                    ""
+                };
                 let view = view!(<tr>
-                    <td><Const con=con/></td>
+                    <td><div style=style><Const con=con/></div></td>
                     <td><div class="const-desc">{
                         doc_line_fragments_to_view(&con.doc_frags())
                     }</div></td>

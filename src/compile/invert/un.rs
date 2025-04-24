@@ -292,6 +292,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     ),
     &MatrixDivPat,
     &NoUnder(AntiCouplePat),
+    &NoUnder(AntiArrayPat),
     &AntiFillPat,
     &AntiTrivial,
     &AntiRepeatPat,
@@ -928,6 +929,36 @@ inverse!(AntiCouplePat, input, _, Prim(Couple, span), {
     ]);
     Ok((input, inv))
 });
+
+inverse!(
+    AntiArrayPat,
+    input,
+    asm,
+    ref,
+    Array {
+        len,
+        inner,
+        boxed,
+        allow_ext,
+        prim,
+        span
+    },
+    {
+        let mut inner = un_inverse(inner.as_slice(), asm)?;
+        inner.prepend(Node::Unpack {
+            count: *len,
+            unbox: *boxed,
+            allow_ext: *allow_ext,
+            span: *span,
+            prim: *prim,
+        });
+        let inv = Node::from_iter([
+            Mod(Dip, eco_vec![inner.sig_node()?], *span),
+            ImplPrim(MatchPattern, *span),
+        ]);
+        Ok((input, inv))
+    }
+);
 
 inverse!(ContraCouplePat, input, _, Prim(Couple, span), {
     let inv = Node::from_iter([

@@ -23,16 +23,16 @@ deshapebytable*. # List of products
 keepnotbymember  # Keep not in list";
 pub const LOGO: &str = "\
 U ← /=⊞<0.2_0.7 /+×⟜ⁿ1_2
-I ← >⌵/ℂ: # Circle
+I ← <⊙(⌵/ℂ) # Circle
 u ← +0.1↧¤ ⊃(I0.95|⊂⊙0.5⇌°√)
 A ← ×⊃U(I1) # Alpha
-⍜°⍉(⊂⊃u A) -1÷÷2⟜(⇡↯2) 200";
+⍜°⍉(⊂⊃u A) ⊞⊟.-1×2÷⟜⇡200";
 pub const WEEWUH_LOGO: &str = "\
 Wee ← /=⊞<¯0.5_¯0.1 /+⍜⊣(+⊃(×4ⁿ4|×¯3ⁿ2))
-w   ← >⌵/ℂ: # Circle
+w   ← <⊙(⌵/ℂ) # Circle
 u   ← +0.1↧¤ ⊃(w0.95|⊂⊙0.5⇌°√)
 h   ← ×⊃Wee(w1) # Alpha
-⍜°⍉(⊂⊃u h) -1÷÷2⟜(⇡↯2) 200";
+⍜°⍉(⊂⊃u h) ⊞⊟.-1×2÷⟜⇡200";
 const CHORD: &str = "\
 [0 4 7 10]     # Notes
 ×220 ˜ⁿ2÷12    # Freqs

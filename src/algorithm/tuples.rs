@@ -3,8 +3,8 @@ use std::collections::{hash_map::Entry, HashMap};
 use ecow::EcoVec;
 
 use crate::{
-    get_ops, grid_fmt::GridFmt, types::push_empty_rows_value, val_as_arr, Array, ArrayValue, Ops,
-    Primitive, SigNode, Uiua, UiuaResult, Value,
+    get_ops, grid_fmt::GridFmt, types::push_empty_rows_value, val_as_arr, Array, ArrayValue, Node,
+    Ops, Primitive, SigNode, Uiua, UiuaResult, Value,
 };
 
 use super::{monadic::range, table::table_impl, validate_size};
@@ -108,23 +108,44 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
     };
 
     'blk: {
-        if let Some(prim) = f.node.as_primitive() {
-            let res = match prim {
-                Primitive::Lt => xs.choose(k, false, false, env)?,
-                Primitive::Le if n >= k => xs.choose(k, false, true, env)?,
-                Primitive::Gt => xs.choose(k, true, false, env)?,
-                Primitive::Ge if n >= k => xs.choose(k, true, true, env)?,
-                Primitive::Ne => xs.permute(k, env)?,
-                Primitive::Eq | Primitive::Match if is_scalar => {
-                    let n = xs.as_nat(env, "Tuples of scalar must be a natural number")?;
-                    env.push(n);
-                    return Ok(());
+        let res = match f.node.as_slice() {
+            [Node::Prim(Primitive::Lt, _)] => xs.choose(k, false, false, env)?,
+            [Node::Prim(Primitive::Le, _)] if n >= k => xs.choose(k, false, true, env)?,
+            [Node::Prim(Primitive::Gt, _)] => xs.choose(k, true, false, env)?,
+            [Node::Prim(Primitive::Ge, _)] if n >= k => xs.choose(k, true, true, env)?,
+            [Node::Prim(Primitive::Ne, _)] => xs.permute(k, env)?,
+            [Node::Prim(Primitive::Eq | Primitive::Match, _)] if is_scalar => {
+                let n = xs.as_nat(env, "Tuples of scalar must be a natural number")?;
+                env.push(n);
+                return Ok(());
+            }
+            [Node::Prim(Primitive::Pop, _), Node::Prim(Primitive::Pop, _), Node::Push(val)] => {
+                if let Ok(reps) = val.as_nat(env, None) {
+                    if k > 2 && reps > 1 {
+                        return Err(val
+                            .as_bool(env, "tuples of 3 or more must return a boolean")
+                            .unwrap_err());
+                    }
+                    if is_scalar {
+                        ((n as f64).powi(k as i32) * reps as f64).into()
+                    } else {
+                        xs.permute_all(k, reps, env)?
+                    }
+                } else {
+                    break 'blk;
                 }
-                _ => break 'blk,
-            };
-            env.push(res);
-            return Ok(());
-        }
+            }
+            [Node::Prim(Primitive::Pop, _), Node::Prim(Primitive::Len, _)] => {
+                if is_scalar {
+                    ((n as f64).powi(k as i32)).into()
+                } else {
+                    xs.permute_all(k, 1, env)?
+                }
+            }
+            _ => break 'blk,
+        };
+        env.push(res);
+        return Ok(());
     }
     match k {
         0 if is_scalar => xs = 0.into(),
@@ -237,6 +258,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                         count += 1;
                     }
                     // Increment curr
+                    env.respect_execution_limit()?;
                     for i in (0..k).rev() {
                         if curr[i] == row_count - 1 {
                             curr[i] = 0;
@@ -293,6 +315,12 @@ impl Value {
             return Ok(permutations(n, k).into());
         }
         val_as_arr!(self, |a| a.permute(k, env).map(Into::into))
+    }
+    fn permute_all(self, k: usize, reps: usize, env: &Uiua) -> UiuaResult<Self> {
+        if let Ok(n) = self.as_nat(env, None) {
+            return Ok((n as f64).powi(k as i32).into());
+        }
+        val_as_arr!(self, |a| a.permute_all(k, reps, env).map(Into::into))
     }
 }
 
@@ -479,6 +507,44 @@ impl<T: ArrayValue> Array<T> {
                     for &i in &perm[..k] {
                         data.extend_from_slice(&self.data[i * row_len..][..row_len]);
                     }
+                    continue 'outer;
+                }
+            }
+            break;
+        }
+        Ok(Array::new(shape, data))
+    }
+    fn permute_all(self, k: usize, reps: usize, env: &Uiua) -> UiuaResult<Self> {
+        let n = self.row_count();
+        let permutations = (n as f64).powi(k as i32) * reps as f64;
+        if permutations.is_nan() {
+            return Err(env.error("Combinatorial explosion"));
+        }
+        if permutations > usize::MAX as f64 {
+            return Err(env.error(format!(
+                "{} permutations would be too many",
+                permutations.grid_string(false)
+            )));
+        }
+        let mut shape = self.shape.clone();
+        shape[0] = permutations.round() as usize;
+        shape.insert(1, k);
+        let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
+        let mut data = EcoVec::with_capacity(elem_count);
+        let row_len = self.row_len();
+        let mut curr = vec![0; k];
+        'outer: loop {
+            for _ in 0..reps {
+                for &i in &curr {
+                    data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+                }
+            }
+            // Increment curr
+            for i in (0..k).rev() {
+                if curr[i] == n - 1 {
+                    curr[i] = 0;
+                } else {
+                    curr[i] += 1;
                     continue 'outer;
                 }
             }

@@ -251,6 +251,8 @@ pub fn Optimizations() -> impl IntoView {
                 <tr><td><Prim prim=Box/></td></tr>
                 <tr><td><Prim prim=First/></td></tr>
                 <tr><td><Prims prims=[First, Reverse] show_names=true/></td></tr>
+                <tr><td><Prims prims=[Sort]/>" / "<Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></td></tr>
+                <tr><td><Prims prims=[Reverse, Sort]/>" / "<Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></td></tr>
             </table>
             <table class="bordered-table cell-centered-table">
                 <tr><td><Prims prims=[Gap, Rand] show_names=true/></td></tr>
@@ -259,8 +261,6 @@ pub fn Optimizations() -> impl IntoView {
                 <tr><td><Prim prim=Gap/><code>"constant"</code></td></tr>
                 <tr><td><Prim prim=On/><code>"constant"</code></td></tr>
                 <tr><td><Prim prim=By/><code>"constant"</code></td></tr>
-                <tr><td><Prims prims=[Sort]/>" / "<Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></td></tr>
-                <tr><td><Prims prims=[Reverse, Sort]/>" / "<Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></td></tr>
                 <tr><td><Prims prims=[Un, Couple] show_names=true/></td></tr>
                 <tr><td><Prims prims=[Un, Join] show_names=true/></td></tr>
                 <tr><td><Prim prim=Rotate/></td></tr>
@@ -337,16 +337,29 @@ pub fn Optimizations() -> impl IntoView {
 
         <Hd id="other-optimizations">"Other Optimizations"</Hd>
         <ul>
-            <li><Prims prims=[Table, Fork]/><code>"F"</code><code>"G"</code>" is optimized to "<Prims prims=[Fork, Table]/><code>"F"</code><Prims prims=[Table]/><code>"G"</code>" for pure functions."</li>
             <li><Prim prim=Group/>" and "<Prim prim=Partition/>" are optimized to be fast with "<Prim prim=Len/>", "<Prim prim=First/>", "<Prim prim=Last/>"."</li>
-            <li><Prim prim=Repeat/>" with a simple-enough function and a small constant count will compile to an unrolled loop."</li>
-            <li>"The following splitting patterns are optimized for monadic function "<code>"F"</code>":"
-                <table class="bordered-table">
-                    <tr><td><Prims prims=[Partition]/><code>"F"</code><Prims prims=[By, Ne]/></td></tr>
-                    <tr><td><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Ne]/><code>"constant"</code><Prims prims=[Dup]/></td></tr>
-                    <tr><td><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Not, By, Mask]/></td></tr>
-                    <tr><td><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Not, Mask]/><code>"constant"</code><Prims prims=[Dup]/></td></tr>
-                </table>
+            <li>
+                <Prim prim=Tuples/>" with the following functions:"
+                <ul>
+                    <li><Prim prim=Lt/></li>
+                    <li><Prim prim=Le/></li>
+                    <li><Prim prim=Gt/></li>
+                    <li><Prim prim=Ge/></li>
+                    <li><Prim prim=Ne/></li>
+                    <li><Prim prim=Eq/></li>
+                    <li><Prim prim=Match/></li>
+                    <li><Prims prims=[Gap, Gap]/><code>"constant"</code></li>
+                    <li><Prims prims=[Gap, Len]/></li>
+                </ul>
+            </li>
+            <li>
+                "The following splitting patterns are optimized for monadic function "<code>"F"</code>":"
+                <ul>
+                    <li><Prims prims=[Partition]/><code>"F"</code><Prims prims=[By, Ne]/></li>
+                    <li><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Ne]/><code>"constant"</code><Prims prims=[Dup]/></li>
+                    <li><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Not, By, Mask]/></li>
+                    <li><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Not, Mask]/><code>"constant"</code><Prims prims=[Dup]/></li>
+                </ul>
             </li>
         </ul>
     }

@@ -39,6 +39,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Optimizations
   - [`stencil ⧈`](https://uiua.org/docs/stencil) is now optimized when used with with monadic functions that are optimized for [`rows ≡`](https://uiua.org/docs/rows)
   - Add sortedness flags to arrays to allow short-circuiting some operations
+  - Optimize [`tuples ⧅`](https://uiua.org/docs/tuples) with `⋅⋅1` and `⋅⧻`
 - LSP improvements
   - Completions now properly respect scoping
   - Unused private bindings are now dimmed

@@ -839,6 +839,7 @@ impl Compiler {
                 node
             }
             Un => {
+                invert::dbgln!("\n//////////////\n// begin UN //\n//////////////");
                 let (sn, span) = self.monadic_modifier_op(modified)?;
                 self.add_span(span.clone());
                 let mut normal = sn.un_inverse(&self.asm);
@@ -847,15 +848,21 @@ impl Compiler {
                         *e = InversionError::Pretty;
                     }
                 }
-                let cust = CustomInverse {
-                    normal,
-                    un: Some(sn),
-                    ..Default::default()
-                };
-                let span = self.add_span(modified.modifier.span.clone());
-                Node::CustomInverse(cust.into(), span)
+                invert::dbgln!("////////////\n// end UN //\n////////////\n");
+                if let Ok(Node::CustomInverse(..)) = normal.as_ref().map(|sn| &sn.node) {
+                    normal.unwrap().node
+                } else {
+                    let cust = CustomInverse {
+                        normal,
+                        un: Some(sn),
+                        ..Default::default()
+                    };
+                    let span = self.add_span(modified.modifier.span.clone());
+                    Node::CustomInverse(cust.into(), span)
+                }
             }
             Anti => {
+                invert::dbgln!("\n////////////////\n// begin ANTI //\n////////////////");
                 let (sn, span) = self.monadic_modifier_op(modified)?;
                 self.add_span(span.clone());
                 let normal = sn.anti_inverse(&self.asm);
@@ -866,9 +873,11 @@ impl Compiler {
                     ..Default::default()
                 };
                 let span = self.add_span(modified.modifier.span.clone());
+                invert::dbgln!("//////////////\n// end ANTI //\n//////////////\n");
                 Node::CustomInverse(cust.into(), span)
             }
             Under => {
+                invert::dbgln!("\n/////////////////\n// begin UNDER //\n/////////////////");
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
                 let normal = {
                     let (f_before, f_after) = f
@@ -883,27 +892,19 @@ impl Compiler {
                 };
                 let span = self.add_span(modified.modifier.span.clone());
                 let un = if normal.sig == (1, 1) || self.allow_experimental() {
-                    if f.sig.args() == f.sig.outputs() {
-                        let (f_before, f_after) = f
-                            .node
-                            .under_inverse(g.sig, true, &self.asm)
-                            .map_err(|e| self.error(f_span.clone(), e))?;
-                        (g.node.un_inverse(&self.asm).ok())
-                            .map(|g_inv| -> UiuaResult<SigNode> {
-                                let mut node = f_before;
-                                node.push(g_inv);
-                                node.push(f_after);
-                                let sig = self.sig_of(&node, &f_span)?;
-                                Ok(SigNode::new(sig, node))
-                            })
-                            .transpose()?
-                    } else {
-                        let cust = CustomInverse::from(InversionError::UnUnderSignature(f.sig));
-                        Some(SigNode::new(
-                            normal.sig.inverse(),
-                            Node::CustomInverse(cust.into(), span),
-                        ))
-                    }
+                    let (f_before, f_after) = f
+                        .node
+                        .under_inverse(g.sig, true, &self.asm)
+                        .map_err(|e| self.error(f_span.clone(), e))?;
+                    (g.node.un_inverse(&self.asm).ok())
+                        .map(|g_inv| -> UiuaResult<SigNode> {
+                            let mut node = f_before;
+                            node.push(g_inv);
+                            node.push(f_after);
+                            let sig = self.sig_of(&node, &f_span)?;
+                            Ok(SigNode::new(sig, node))
+                        })
+                        .transpose()?
                 } else {
                     let cust = CustomInverse::from(InversionError::UnUnderExperimental);
                     Some(SigNode::new(
@@ -912,7 +913,7 @@ impl Compiler {
                     ))
                 };
                 let under = if normal.sig.args() == normal.sig.outputs() {
-                    Some((normal.clone(), normal.clone()))
+                    un.clone().map(|un| (normal.clone(), un))
                 } else {
                     None
                 };
@@ -923,6 +924,7 @@ impl Compiler {
                     ..Default::default()
                 };
                 let span = self.add_span(modified.modifier.span.clone());
+                invert::dbgln!("///////////////\n// end UNDER //\n///////////////\n");
                 Node::CustomInverse(cust.into(), span)
             }
             Obverse => {

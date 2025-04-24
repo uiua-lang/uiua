@@ -30,12 +30,12 @@ pub(crate) const DEBUG: bool = false;
 
 macro_rules! dbgln {
     ($($arg:tt)*) => {
-        if DEBUG {
+        if crate::compile::invert::DEBUG {
             println!($($arg)*); // Allow println
         }
     }
 }
-use dbgln;
+pub(crate) use dbgln;
 
 trait AsNode: fmt::Debug + Sync {
     fn as_node(&self, span: usize) -> Node;

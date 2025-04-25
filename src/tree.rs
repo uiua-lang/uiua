@@ -923,6 +923,54 @@ impl Node {
             Ok(())
         }
     }
+    /// Check if the node is known to always throw
+    ///
+    /// May have false negatives. Will not have false positives.
+    pub fn is_noreturn<'a>(&'a self, asm: &'a Assembly) -> bool {
+        use Primitive::*;
+        fn recurse<'a>(
+            node: &'a Node,
+            asm: &'a Assembly,
+            visited: &mut IndexSet<&'a Function>,
+        ) -> bool {
+            let len = visited.len();
+            let res = 'blk: {
+                if let Some(i) =
+                    (node.as_slice().iter()).position(|n| matches!(n, Node::Prim(Assert, _)))
+                {
+                    let init = &node.as_slice()[..i];
+                    let noreturn = match init {
+                        [.., Node::Push(val), Node::Prim(Dup | Flip, _)] if *val != 1 => true,
+                        [.., Node::Format(..) | Node::Prim(Couple | Join, _) | Node::Array { .. }, Node::Prim(Dup, _)] => {
+                            true
+                        }
+                        [.., Node::Push(val), Node::Push(_)] if *val != 1 => true,
+                        [.., Node::Mod(Dip, args, _)]
+                            if args.len() == 1
+                                && matches!(&args[0].node, Node::Push(val) if *val != 1) =>
+                        {
+                            true
+                        }
+                        _ => false,
+                    };
+                    if noreturn {
+                        break 'blk true;
+                    }
+                }
+                match node {
+                    Node::Mod(Dip | Gap | On | By | With | Off, inner, _) => {
+                        recurse(&inner[0].node, asm, visited)
+                    }
+                    Node::Call(f, _) => visited.insert(f) && recurse(&asm[f], asm, visited),
+                    Node::WithLocal { inner, .. } => recurse(&inner.node, asm, visited),
+                    _ => false,
+                }
+            };
+            visited.truncate(len);
+            res
+        }
+        recurse(self, asm, &mut IndexSet::new())
+    }
 }
 
 impl Deref for Node {

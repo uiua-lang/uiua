@@ -2326,23 +2326,28 @@ primitive!(
     /// If the handler function has 0 arguments, then it is simply called. This is a nice way to provide a default value.
     /// ex: ⍣⋕0 "5"
     ///   : ⍣⋕0 "dog"
-    /// The handler function will be passed at most the same arguments as the tried function, plus the error. It will only be passed as many arguments as it takes.
+    /// The handler function will be passed the original arguments, followed by the error value below them on the stack. It will not be passed arguments it doesn't need.
     /// Normal runtime errors become strings. If you only care about the error, you can use [gap] or [pop] to ignore the arguments passed to the handler.
     /// ex: ⍣(+1)⋅$"Error: _" 2   # No error
     /// ex: ⍣(+@a)⋅$"Error: _" @b # Error
     /// Errors thrown with [assert] can be any value.
-    /// ex: ⍣(⍤5>10.)⋅(×5) 12 # No error
-    /// ex: ⍣(⍤5>10.)⋅(×5) 7  # Error
+    /// ex: ⍣(⍤5⊸>10)⋅(×5) 12 # No error
+    /// ex: ⍣(⍤5⊸>10)⋅(×5) 7  # Error
     /// We can see how values are passed to the handler by wrapping them in an array.
     /// ex: ⍣⋕{⊙∘} "5"   # No error
     ///   : ⍣⋕{⊙∘} "dog" # Error
-    /// ex: ⍣(⍤0.+)10    3 5 # Ignore both arguments and error
-    ///   : ⍣(⍤0.+)¤     3 5 # First argument only
-    ///   : ⍣(⍤0.+)⊟     3 5 # Both arguments
-    ///   : ⍣(⍤0.+)[⊙⊙∘] 3 5 # Both arguments and error
+    /// ex: ⍣(⍤0.+)10 3 5 # Ignore both arguments and error
+    ///   : ⍣(⍤0.+)⊟₁ 3 5 # First argument only
+    ///   : ⍣(⍤0.+)⊟₂ 3 5 # Both arguments
+    ///   : ⍣(⍤0.+)⊟₃ 3 5 # Both arguments and error
     /// If we want to provide a default value from the stack, we can ignore it in the tried function with [gap] and then use [identity] in the handler.
     /// ex: ⍣⋅⋕∘ 5 "12"  # No error
     ///   : ⍣⋅⋕∘ 5 "dog" # Error
+    /// The handler function may actually take *more* arguments than the first function. These additional arguments will be passed above the error. This can be used to pass additional context to the handler.
+    /// ex: F ← ⍣+$"You can't add _ and _ because _: _"
+    ///   : F 2 3 "...you can"
+    ///   : F @a @b "they are both characters"
+    ///   : F [1 2] [3 4 5] "they have wrong shapes"
     /// [try] works with function packs of more than 2 functions. Each function will by tried in order, and all functions after the first will be passed the error value from the previous function.
     /// ex: F ← ⍣(⋕|{⊂2⊙∘}|{⊙∘})
     ///   : F "5"

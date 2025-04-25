@@ -951,40 +951,28 @@ impl Compiler {
                 self.in_try = in_try;
                 let (mut tried, mut handler, _, handler_span) = nodes?;
 
-                // Adjust handler signature if it is a noreturn function
-                // if let [init @ .., Node::Prim(Assert, _)] = handler.node.as_slice() {
-                //     let noreturn = match init {
-                //         [.., Node::Push(val), Node::Prim(Dup | Flip, _)] if *val != 1 => true,
-                //         [.., Node::Format(..), Node::Prim(Dup, _)] => true,
-                //         [.., Node::Push(val), Node::Push(_)] if *val != 1 => true,
-                //         [.., Node::Mod(Dip, args, _)]
-                //             if args.len() == 1
-                //                 && matches!(&args[0].node, Node::Push(val) if *val != 1) =>
-                //         {
-                //             true
-                //         }
-                //         _ => false,
-                //     };
-                //     if noreturn {
-                //         handler.sig.set_outputs(tried.sig.outputs());
-                //     }
-                // }
-
-                // match tried.sig.outputs().cmp(&handler.sig.outputs()) {
-                //     Ordering::Equal => {}
-                //     Ordering::Less => tried.sig.update_args_outputs(|a, o| {
-                //         (a + handler.sig.outputs() - o, handler.sig.outputs())
-                //     }),
-                //     Ordering::Greater => handler.sig.update_args_outputs(|a, o| {
-                //         (a + tried.sig.outputs() - o, tried.sig.outputs())
-                //     }),
-                // }
                 let span = self.add_span(modified.modifier.span.clone());
-                if handler.sig.outputs() < tried.sig.outputs() {
+
+                // Normalize noreturn tried function
+                if tried.node.is_noreturn(&self.asm) {
+                    tried.sig.update_args_outputs(|a, o| {
+                        (
+                            a.max(handler.sig.args().saturating_sub(1)),
+                            o.max(handler.sig.outputs()),
+                        )
+                    });
+                }
+
+                // Handler must have at least as many outputs as tried
+                if handler.sig.outputs() < tried.sig.outputs()
+                    && !handler.node.is_noreturn(&self.asm)
+                {
                     let diff = tried.sig.outputs() - handler.sig.outputs();
                     (handler.sig).update_args_outputs(|a, o| (a + diff, o + diff));
                 }
+                // Tried must have at least 1 arg less than handler
                 if tried.sig.args() + 1 < handler.sig.args() {
+                    // Tried must pop arguments that are only for the handler
                     let arg_diff = handler.sig.args() - tried.sig.args() - 1;
                     let mut pre =
                         SigNode::new((arg_diff, 0), eco_vec![Node::Prim(Pop, span); arg_diff]);
@@ -996,17 +984,18 @@ impl Compiler {
                     }
                     tried.sig.update_args(|a| a + arg_diff);
                     tried.node.prepend(pre.node);
-                }
-                if tried.sig.outputs() < handler.sig.outputs() {
+                } else if tried.sig.outputs() < handler.sig.outputs() {
                     let diff = handler.sig.outputs() - tried.sig.outputs();
                     tried.sig.update_args_outputs(|a, o| (a + diff, o + diff));
                 }
+                // Handler must have at least as many args as tried
                 if handler.sig.args() < tried.sig.args() {
                     let arg_diff = tried.sig.args() - handler.sig.args();
                     if handler.sig.outputs() <= tried.sig.outputs() {
                         let output_diff = tried.sig.outputs() - handler.sig.outputs();
                         let diff_diff = arg_diff.saturating_sub(output_diff);
                         if diff_diff > 0 {
+                            // Handler must pop arguments that are only for the tried
                             let mut pre = SigNode::new(
                                 (diff_diff, 0),
                                 eco_vec![Node::Prim(Pop, span); diff_diff],

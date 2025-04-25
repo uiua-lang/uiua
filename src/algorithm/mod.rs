@@ -22,10 +22,10 @@ use crate::{
 };
 
 mod dyadic;
-pub mod encode;
 pub mod groups;
 pub mod loops;
 pub mod map;
+pub mod media;
 mod monadic;
 pub mod path;
 pub mod pervade;

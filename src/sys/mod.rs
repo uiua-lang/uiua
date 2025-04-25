@@ -1553,7 +1553,7 @@ impl SysOp {
                 #[cfg(feature = "image")]
                 {
                     let value = env.pop(1)?;
-                    let image = crate::encode::value_to_image(&value).map_err(|e| env.error(e))?;
+                    let image = crate::media::value_to_image(&value).map_err(|e| env.error(e))?;
                     (env.rt.backend)
                         .show_image(image, value.meta.label.as_deref())
                         .map_err(|e| env.error(e))?;
@@ -1566,7 +1566,7 @@ impl SysOp {
                 {
                     let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
                     let value = env.pop(2)?;
-                    let bytes = crate::encode::value_to_gif_bytes(&value, delay)
+                    let bytes = crate::media::value_to_gif_bytes(&value, delay)
                         .map_err(|e| env.error(e))?;
                     (env.rt.backend)
                         .show_gif(bytes, value.meta.label.as_deref())
@@ -1579,7 +1579,7 @@ impl SysOp {
                 #[cfg(feature = "audio_encode")]
                 {
                     let value = env.pop(1)?;
-                    let bytes = crate::encode::value_to_wav_bytes(
+                    let bytes = crate::media::value_to_wav_bytes(
                         &value,
                         env.rt.backend.audio_sample_rate(),
                     )
@@ -1754,7 +1754,7 @@ impl SysOp {
                     .webcam_capture(index)
                     .map_err(|e| env.error(e))?;
                 #[cfg(feature = "image")]
-                env.push(crate::encode::rgb_image_to_array(_image));
+                env.push(crate::media::rgb_image_to_array(_image));
                 #[cfg(not(feature = "image"))]
                 return Err(env.error("Webcam capture is not supported in this environment"));
             }

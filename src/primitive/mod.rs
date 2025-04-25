@@ -30,7 +30,7 @@ use crate::{
     array::Array,
     ast::SubSide,
     boxed::Boxed,
-    encode,
+    media,
     grid_fmt::GridFmt,
     lex::{AsciiToken, SUBSCRIPT_DIGITS},
     sys::*,
@@ -1028,10 +1028,10 @@ impl Primitive {
             Primitive::Xlsx => {
                 env.monadic_ref_env(|value, env| value.to_xlsx(env).map(EcoVec::from))?
             }
-            Primitive::ImageEncode => encode::image_encode(env)?,
-            Primitive::GifEncode => encode::gif_encode(env)?,
-            Primitive::AudioEncode => encode::audio_encode(env)?,
-            Primitive::Layout => env.dyadic_oo_env(encode::layout_text)?,
+            Primitive::ImageEncode => media::image_encode(env)?,
+            Primitive::GifEncode => media::gif_encode(env)?,
+            Primitive::AudioEncode => media::audio_encode(env)?,
+            Primitive::Layout => env.dyadic_oo_env(media::layout_text)?,
             Primitive::Fft => algorithm::fft(env)?,
             Primitive::Stringify
             | Primitive::Quote
@@ -1401,9 +1401,9 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnFft => algorithm::unfft(env)?,
             ImplPrimitive::UnDatetime => env.monadic_ref_env(Value::undatetime)?,
-            ImplPrimitive::ImageDecode => encode::image_decode(env)?,
-            ImplPrimitive::GifDecode => encode::gif_decode(env)?,
-            ImplPrimitive::AudioDecode => encode::audio_decode(env)?,
+            ImplPrimitive::ImageDecode => media::image_decode(env)?,
+            ImplPrimitive::GifDecode => media::gif_decode(env)?,
+            ImplPrimitive::AudioDecode => media::audio_decode(env)?,
             ImplPrimitive::UnRawMode => {
                 let raw_mode = env.rt.backend.get_raw_mode().map_err(|e| env.error(e))?;
                 env.push(raw_mode);

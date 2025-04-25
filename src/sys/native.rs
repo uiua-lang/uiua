@@ -337,7 +337,7 @@ impl SysBackend for NativeSys {
     fn show(&self, value: Value) -> Result<(), String> {
         #[cfg(feature = "window")]
         if crate::window::use_window() {
-            return crate::window::Request::Show(crate::encode::SmartOutput::Normal(value.show()))
+            return crate::window::Request::Show(crate::media::SmartOutput::Normal(value.show()))
                 .send();
         }
         self.print_str_stdout(&format!("{}\n", value.show()))
@@ -669,8 +669,8 @@ impl SysBackend for NativeSys {
         } else {
             #[cfg(feature = "window")]
             if crate::window::use_window() {
-                return crate::window::Request::Show(crate::encode::SmartOutput::Png(
-                    crate::encode::image_to_bytes(&image, image::ImageFormat::Png)
+                return crate::window::Request::Show(crate::media::SmartOutput::Png(
+                    crate::media::image_to_bytes(&image, image::ImageFormat::Png)
                         .map_err(|e| e.to_string())?,
                     _label.map(Into::into),
                 ))
@@ -694,7 +694,7 @@ impl SysBackend for NativeSys {
     fn show_gif(&self, gif_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
         #[cfg(feature = "window")]
         if crate::window::use_window() {
-            return crate::window::Request::Show(crate::encode::SmartOutput::Gif(
+            return crate::window::Request::Show(crate::media::SmartOutput::Gif(
                 gif_bytes,
                 _label.map(Into::into),
             ))
@@ -722,7 +722,7 @@ impl SysBackend for NativeSys {
         use hodaun::*;
         #[cfg(feature = "window")]
         if crate::window::use_window() {
-            return crate::window::Request::Show(crate::encode::SmartOutput::Wav(
+            return crate::window::Request::Show(crate::media::SmartOutput::Wav(
                 wav_bytes,
                 _label.map(Into::into),
             ))
@@ -1196,7 +1196,7 @@ impl SysBackend for NativeSys {
 pub fn print_stack(stack: &[Value], color: bool) {
     #[cfg(feature = "window")]
     if crate::window::use_window() {
-        use crate::{encode::SmartOutput, window::Request};
+        use crate::{media::SmartOutput, window::Request};
         _ = Request::Separator.send();
         _ = Request::ShowAll(
             (stack.iter())

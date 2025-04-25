@@ -283,7 +283,7 @@ pub(crate) fn image_encode(env: &mut Uiua) -> UiuaResult {
             format => return Err(env.error(format!("Invalid image format: {}", format))),
         };
         let bytes =
-            crate::encode::value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
+            crate::media::value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
         env.push(Array::<u8>::from(bytes.as_slice()));
         Ok(())
     }
@@ -317,7 +317,7 @@ pub(crate) fn image_decode(env: &mut Uiua) -> UiuaResult {
         };
         let format = image::guess_format(&bytes)
             .map_err(|e| env.error(format!("Failed to read image: {e}")))?;
-        let array = crate::encode::image_bytes_to_array(&bytes, true).map_err(|e| env.error(e))?;
+        let array = crate::media::image_bytes_to_array(&bytes, true).map_err(|e| env.error(e))?;
         env.push(array);
         env.push(match format {
             image::ImageFormat::Jpeg => "jpeg".into(),
@@ -334,7 +334,7 @@ pub(crate) fn gif_encode(env: &mut Uiua) -> UiuaResult {
     {
         let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
         let value = env.pop(2)?;
-        let bytes = crate::encode::value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
+        let bytes = crate::media::value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
         env.push(Array::<u8>::from(bytes.as_slice()));
         Ok(())
     }
@@ -349,7 +349,7 @@ pub(crate) fn gif_decode(env: &mut Uiua) -> UiuaResult {
             .pop(1)?
             .as_bytes(env, "Gif bytes must be a byte array")?;
         let (frame_rate, value) =
-            crate::encode::gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
+            crate::media::gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
         env.push(value);
         env.push(frame_rate);
         Ok(())
@@ -375,7 +375,7 @@ pub(crate) fn audio_encode(env: &mut Uiua) -> UiuaResult {
         let value = env.pop(3)?;
         let bytes = match format.as_str() {
             "wav" => {
-                crate::encode::value_to_wav_bytes(&value, sample_rate).map_err(|e| env.error(e))?
+                crate::media::value_to_wav_bytes(&value, sample_rate).map_err(|e| env.error(e))?
             }
             format => {
                 return Err(env.error(format!("Invalid or unsupported audio format: {format}")))
@@ -413,7 +413,7 @@ pub(crate) fn audio_decode(env: &mut Uiua) -> UiuaResult {
             _ => return Err(env.error("Audio bytes must be a numeric array")),
         };
         let (array, sample_rate) =
-            crate::encode::array_from_wav_bytes(&bytes).map_err(|e| env.error(e))?;
+            crate::media::array_from_wav_bytes(&bytes).map_err(|e| env.error(e))?;
         env.push(array);
         env.push(sample_rate as usize);
         env.push("wav");

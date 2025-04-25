@@ -180,7 +180,7 @@ pub mod window;
 
 #[allow(unused_imports)]
 pub use self::{
-    algorithm::encode,
+    algorithm::media,
     array::*,
     assembly::*,
     boxed::*,

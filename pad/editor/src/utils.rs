@@ -14,7 +14,7 @@ use uiua::UiuaErrorKind;
 
 use uiua::{
     ast::Item,
-    encode::SmartOutput,
+    media::SmartOutput,
     lsp::{BindingDocsKind, ImportSrc},
     Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
     Spans, Uiua, UiuaError, UiuaResult, Value,

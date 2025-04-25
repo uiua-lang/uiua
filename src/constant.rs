@@ -350,16 +350,16 @@ constant!(
     /// Emoji hair components
     ("Hair", Fun, "🦰🦱🦲🦳"),
     /// The Uiua logo
-    (#[cfg(feature = "image")] "Logo", Media, crate::encode::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
+    (#[cfg(feature = "image")] "Logo", Media, crate::media::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
     /// Ethically sourced Lena picture
     /// Morten Rieger Hannemose
     /// 2019
     /// https://mortenhannemose.github.io/lena/
-    (#[cfg(feature = "image")] "Lena", Media, crate::encode::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
+    (#[cfg(feature = "image")] "Lena", Media, crate::media::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
     /// A picture of two cats
     ///
     /// Their names are Murphy and Louie
-    (#[cfg(feature = "image")] "Cats", Media, crate::encode::image_bytes_to_array(include_bytes!("assets/cats.webp"), false).unwrap()),
+    (#[cfg(feature = "image")] "Cats", Media, crate::media::image_bytes_to_array(include_bytes!("assets/cats.webp"), false).unwrap()),
     /// Sample music data
     ("Music", Media, ConstantValue::Music),
     /// Lorem Ipsum text

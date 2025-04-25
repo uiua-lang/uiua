@@ -378,7 +378,7 @@ impl SysBackend for WebBackend {
                 Err(err) => return Err(format!("{err}")),
             }
         }
-        let bytes = uiua::encode::stereo_to_wave_bytes(
+        let bytes = uiua::media::stereo_to_wave_bytes(
             &samples,
             |s| (s * i16::MAX as f64) as i16,
             16,

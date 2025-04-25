@@ -177,6 +177,15 @@ repr[{[[1 2][2 3]][3 4]}{[[1 2][2 3]]□{[[1 2][2 3]]□□[3 4]}}]
 ⍤⤙≍ [1 2 4 4 8] ⍆ [4 8 2 1 4]
 ⍤⤙≍ [2_1_1 5_2_0 5_3_5] ⍆ [5_3_5 2_1_1 5_2_0]
 
+# HSV
+⍤⤙≍ [0 5/9 0.9] hsv [0.9 0.4 0.4]
+⍤⤙≍ [τ/3 5/9 0.9] hsv [0.4 0.9 0.4]
+⍤⤙≍ [×2τ/3 5/9 0.9] hsv [0.4 0.4 0.9]
+⍤⤙≍ [0 0.5 1 0.5] hsv [1 0.5 0.5 0.5]
+⍤⤙≍ ⟜⍜hsv∘ [Red Orange Yellow Green Cyan Blue Purple Magenta]
+⍤⤙≍ ⟜⍜hsv∘ [Red Orange Yellow Green Cyan Blue Purple Magenta]
+⍤⤙≍ ∩(⁅₁₂♭) ⟜⍜hsv∘ ▽⟜≡▽0.5 Lena
+
 # Experimental!
 
 # Occurrences

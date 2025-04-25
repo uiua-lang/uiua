@@ -245,6 +245,7 @@ impl fmt::Display for ImplPrimitive {
             UnFill => write!(f, "{Un}{Fill}"),
             UnBox => write!(f, "{Un}{Box}"),
             UnSort => write!(f, "{Un}{Sort}"),
+            UnHsv => write!(f, "{Un}{Hsv}"),
             UnJson => write!(f, "{Un}{Json}"),
             UnBinary => write!(f, "{Un}{Binary}"),
             UnCsv => write!(f, "{Un}{Csv}"),
@@ -1022,6 +1023,7 @@ impl Primitive {
             Primitive::Trace => trace(env, false)?,
             Primitive::Stack => stack(env, false)?,
             Primitive::Regex => regex(env)?,
+            Primitive::Hsv => env.monadic_env(Value::rgb_to_hsv)?,
             Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
             Primitive::Binary => env.monadic_ref_env(Value::to_binary)?,
             Primitive::Csv => env.monadic_ref_env(Value::to_csv)?,
@@ -1379,6 +1381,7 @@ impl ImplPrimitive {
                 env.push(val.unboxed());
             }
             ImplPrimitive::UnSort => env.monadic_mut(Value::shuffle)?,
+            ImplPrimitive::UnHsv => env.monadic_env(Value::hsv_to_rgb)?,
             ImplPrimitive::UnJson => {
                 let json = env.pop(1)?.as_string(env, "JSON expects a string")?;
                 let val = Value::from_json_string(&json, env)?;

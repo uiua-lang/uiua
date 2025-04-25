@@ -1946,6 +1946,103 @@ impl Array<f64> {
     }
 }
 
+impl Value {
+    /// Convert a value from RGB to HSV
+    pub fn rgb_to_hsv(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.rgb_to_hsv(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().rgb_to_hsv(env).map(Into::into),
+            val => Err(env.error(format!("Cannot convert {} to HSV", val.type_name_plural()))),
+        }
+    }
+    /// Convert a value from HSV to RGB
+    pub fn hsv_to_rgb(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Num(arr) => arr.hsv_to_rgb(env).map(Into::into),
+            Value::Byte(arr) => arr.convert_ref::<f64>().hsv_to_rgb(env).map(Into::into),
+            val => Err(env.error(format!("Cannot convert {} to RGB", val.type_name_plural()))),
+        }
+    }
+}
+
+impl Array<f64> {
+    /// Convert an array from RGB to HSV
+    pub fn rgb_to_hsv(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to HSV must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+        let channels = *self.shape.last().unwrap();
+        for rgb in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [r, g, b, ..] = *rgb else {
+                unreachable!();
+            };
+            let max = r.max(g).max(b);
+            let min = r.min(g).min(b);
+            let delta = max - min;
+            let recip_delta = if delta != 0.0 { 1.0 / delta } else { 0.0 };
+            let h = if delta != 0.0 {
+                (TAU * if max == r {
+                    ((g - b) * recip_delta).rem_euclid(6.0)
+                } else if max == g {
+                    (b - r).mul_add(recip_delta, 2.0)
+                } else {
+                    (r - g).mul_add(recip_delta, 4.0)
+                }) / 6.0
+            } else {
+                0.0
+            };
+            let s = if max == 0.0 { 0.0 } else { 1.0 - min / max };
+            let v = max;
+            rgb[0] = h;
+            rgb[1] = s;
+            rgb[2] = v;
+        }
+        self.meta.take_sorted_flags();
+        self.validate();
+        Ok(self)
+    }
+    /// Convert an array from HSV to RGB
+    pub fn hsv_to_rgb(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
+            return Err(env.error(format!(
+                "Array to convert to RBG must have a shape \
+                ending with 3 or 4, but its shape is {}",
+                self.shape
+            )));
+        }
+        let channels = *self.shape.last().unwrap();
+        for hsv in self.data.as_mut_slice().chunks_exact_mut(channels) {
+            let [h, s, v, ..] = *hsv else {
+                unreachable!();
+            };
+            let h = h / TAU * 6.0;
+            let i = h.floor() as usize;
+            let f = h - i as f64;
+            let p = v * (1.0 - s);
+            let q = v * (1.0 - f * s);
+            let t = v * (1.0 - (1.0 - f) * s);
+            let (r, g, b) = match i % 6 {
+                0 => (v, t, p),
+                1 => (q, v, p),
+                2 => (p, v, t),
+                3 => (p, q, v),
+                4 => (t, p, v),
+                _ => (v, p, q),
+            };
+            hsv[0] = r;
+            hsv[1] = g;
+            hsv[2] = b;
+        }
+        self.meta.take_sorted_flags();
+        self.validate();
+        Ok(self)
+    }
+}
+
 fn f64_repr(n: f64) -> String {
     let abs = n.abs();
     let pos = if abs == PI / 2.0 {

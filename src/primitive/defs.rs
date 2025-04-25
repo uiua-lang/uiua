@@ -2555,6 +2555,20 @@ primitive!(
     ///
     /// Uiua uses the [Rust regex crate](https://docs.rs/regex/latest/regex/) internally.
     (2, Regex, Algorithm, "regex"),
+    /// Convert a color array from RGB to HSV
+    ///
+    /// The last axis of the array must be `3` or `4`. This axis is the color channels. If present, a fourth channel is interpreted as an alpha channel and will be ignored.
+    /// Hue is in radians between `0` and `tau`. Saturation and value are between `0` and `1`.
+    /// ex: hsv [1 0 0]
+    /// ex: hsv [0 1 0]
+    /// ex: hsv [0 0 1]
+    /// ex: hsv [Yellow Cyan Magenta]
+    /// ex: hsv [Orange Purple Black White]
+    /// [un][hsv] convert from HSV to RGB. This means it can be used with [under] to do various color manipulations.
+    /// ex: ⍜(⊡0°⍉hsv|+π) ▽⟜≡▽0.5 Lena # Opposite hue
+    /// ex: ⍜(⊡1°⍉hsv|÷2) ▽⟜≡▽0.5 Lena # Half saturation
+    /// ex: ⍜(⊡2°⍉hsv|÷2) ▽⟜≡▽0.5 Lena # Half value
+    (1, Hsv, Algorithm, "hsv"),
     /// Convert a string to UTF-8 bytes
     ///
     /// ex: utf₈ "hello!"
@@ -3479,6 +3493,7 @@ impl_primitive!(
     (1(2)[1], UnGroup),
     (1(2)[1], UnPartition),
     (1, UnSort, Impure),
+    (1, UnHsv),
     (1, UnJson),
     (1, UnBinary),
     (1, UnCsv),

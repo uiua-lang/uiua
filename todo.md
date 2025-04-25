@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.16
-- Optimize `sort` to be in-place by modifying rayon code
 - More rows optimizations
 - Prevent more cloning in `try`
 - Line number signatures in pad

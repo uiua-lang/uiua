@@ -45,6 +45,10 @@ This version is not yet released. If you are reading this on the website, then t
   - [`stencil ⧈`](https://uiua.org/docs/stencil) is now optimized when used with with monadic functions that are optimized for [`rows ≡`](https://uiua.org/docs/rows)
   - Add sortedness flags to arrays to allow short-circuiting some operations
   - Optimize [`tuples ⧅`](https://uiua.org/docs/tuples) with `⋅⋅1` and `⋅⧻`
+  - The main sorting algorith for [`sort ⍆`](https://uiua.org/docs/sort) is now implemented in the interpreter source code rather than a library
+    - This allows it to sort arrays in place without allocating memory
+    - Observed performance improvements of ~2.5x
+  - [`sort ⍆`](https://uiua.org/docs/sort) on lists of bytes now uses counting sort, for massive performance improvements
 - LSP improvements
   - Completions now properly respect scoping
   - Unused private bindings are now dimmed

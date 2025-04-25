@@ -683,7 +683,10 @@ primitive!(
     /// ex: °⍆ [1 2 3 4]
     ///   : °⍆ [1 2 3 4]
     /// [under][sort] sort reverses the sorting operation when undoing.
-    /// ex: ⍜⍆(↻1). [3 1 5 2 4]
+    /// ex: ⍜⍆(↻1) . [3 1 5 2 4]
+    ///
+    /// The current [sort] implementation is a parallel [Introsort](https://en.wikipedia.org/wiki/Introsort). It has O(n log n) worst-case time complexity and O(log n) space complexity. It sorts the array in place and allocates no heap memory.
+    /// If an array is rank-`1` and known to be all bytes, it will be sorted with counting sort.
     (1, Sort, MonadicArray, ("sort", '⍆')),
     /// Get the indices into an array if it were sorted ascending
     ///

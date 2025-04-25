@@ -19,7 +19,7 @@ use image::{GenericImageView, ImageFormat};
 use load::SizedTexture;
 use serde::*;
 
-use crate::encode::SmartOutput;
+use crate::media::SmartOutput;
 
 static USE_WINDOW: AtomicBool = AtomicBool::new(false);
 pub fn use_window() -> bool {

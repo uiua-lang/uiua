@@ -823,7 +823,7 @@ impl App {
             #[cfg(all(not(feature = "audio"), feature = "audio_encode"))]
             SmartOutput::Wav(bytes, label) => {
                 let mut value =
-                    crate::Value::from(crate::encode::array_from_wav_bytes(&bytes).unwrap().0);
+                    crate::Value::from(crate::media::array_from_wav_bytes(&bytes).unwrap().0);
                 value.meta.set_label(label.map(Into::into));
                 OutputItem::Code(value.show())
             }

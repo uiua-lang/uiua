@@ -293,15 +293,15 @@ opt!(
         ImplMod(PathPop, args.clone(), *span)
     ),
     (
-        [Mod(Astar, args, span), Prim(First, _)],
+        [ImplMod(Astar, args, span), Prim(First, _)],
         ImplMod(AstarFirst, args.clone(), *span)
     ),
     (
-        [Mod(Astar, args, span), Push(n), Prim(Take, _)],
+        [ImplMod(Astar, args, span), Push(n), Prim(Take, _)],
         [Push(n.clone()), ImplMod(AstarTake, args.clone(), *span)]
     ),
     (
-        [Mod(Astar, args, span), Prim(Pop, _)],
+        [ImplMod(Astar, args, span), Prim(Pop, _)],
         ImplMod(AstarPop, args.clone(), *span)
     ),
 );
@@ -328,7 +328,7 @@ impl Optimization for PathOpt {
                 let node = Mod(Fill, eco_vec![get_fill.clone(), inner], *fill_span);
                 Some((2, node))
             }
-            [Mod(Astar, args, span), Mod(Fill, fill_args, fill_span), ..] => {
+            [ImplMod(Astar, args, span), Mod(Fill, fill_args, fill_span), ..] => {
                 let [get_fill, filled] = fill_args.as_slice() else {
                     return None;
                 };

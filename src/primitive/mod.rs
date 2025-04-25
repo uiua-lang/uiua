@@ -313,6 +313,7 @@ impl fmt::Display for ImplPrimitive {
             MatchPattern => write!(f, "pattern match"),
             MatchLe => write!(f, "match ≤"),
             MatchGe => write!(f, "match ≥"),
+            Astar => write!(f, "{Path}"),
             AstarFirst => write!(f, "{First}{Astar}"),
             AstarTake => write!(f, "{Take}…{Astar}"),
             AstarPop => write!(f, "{Pop}{Astar}"),
@@ -554,7 +555,6 @@ impl Primitive {
             ),
             Trace => format!("use subscripted {} instead", Stack.format()),
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
-            Astar => format!("use {} instead", Path.format()),
             Over => format!("use {With} or {Below} instead"),
             _ => return None,
         })
@@ -1185,10 +1185,6 @@ impl Primitive {
                 })?;
             }
             Primitive::Dump => dump(ops, env, false)?,
-            Primitive::Astar => {
-                let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
-                path::path(neighbors, is_goal, Some(heuristic), env)?;
-            }
             Primitive::Path => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;
                 path::path(neighbors, is_goal, None, env)?;
@@ -1882,6 +1878,10 @@ impl ImplPrimitive {
                 env.exec(f)?;
                 env.insert_stack(outputs, kept)?;
                 env.push_all(temp);
+            }
+            ImplPrimitive::Astar => {
+                let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
+                path::path(neighbors, is_goal, Some(heuristic), env)?;
             }
             ImplPrimitive::UndoPartition1 => groups::undo_partition_part1(ops, env)?,
             ImplPrimitive::UndoGroup1 => groups::undo_group_part1(ops, env)?,

@@ -279,16 +279,6 @@ impl Compiler {
                 let span = self.add_span(modifier.span.clone());
                 Ok(Node::CustomInverse(cust.into(), span))
             }
-            Modifier::Primitive(Primitive::Astar) if pack.branches.len() == 2 => {
-                self.handle_primitive_deprecation(Primitive::Astar, &modifier.span);
-                self.handle_primitive_experimental(Primitive::Astar, &modifier.span);
-                let mut args = EcoVec::with_capacity(3);
-                for branch in pack.lexical_order().cloned() {
-                    args.push(self.word_sig(branch.map(Word::Func))?);
-                }
-                let span = self.add_span(modifier.span.clone());
-                Ok(Node::Mod(Primitive::Path, args, span))
-            }
             Modifier::Primitive(Primitive::Path) if pack.branches.len() == 3 => {
                 let mut args = EcoVec::with_capacity(3);
                 for branch in pack.lexical_order().cloned() {
@@ -296,7 +286,7 @@ impl Compiler {
                 }
                 args.make_mut().swap(1, 2);
                 let span = self.add_span(modifier.span.clone());
-                Ok(Node::Mod(Primitive::Astar, args, span))
+                Ok(Node::ImplMod(ImplPrimitive::Astar, args, span))
             }
             m if m.args() >= 2 => {
                 let new = Modified {

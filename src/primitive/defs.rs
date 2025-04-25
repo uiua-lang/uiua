@@ -2939,10 +2939,6 @@ primitive!(
     ///   : ▽⟜≡▽0.5
     ///   : ⌵⍜°⍉≡fft .
     (1, Fft, Algorithm, "fft", { experimental: true }),
-    /// Find shortest paths in a graph
-    ///
-    /// [astar] is deprecated. Use [path] instead.
-    ((2)[3], Astar, Algorithm, "astar"),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.
@@ -3546,6 +3542,7 @@ impl_primitive!(
     (1, ReplaceRand, Impure),
     (2, ReplaceRand2, Impure),
     (1, CountUnique),
+    ((2)[3], Astar),
     ((2)[3], AstarFirst),
     ((1)[3], AstarPop),
     ((1)[3], AstarTake),

@@ -4,6 +4,7 @@
 - Optimize `sort` to be in-place by modifying rayon code
 - More rows optimizations
 - `hsv` function
+- Prevent more cloning in `try`
 - Line number signatures in pad
 - Last-axis subscripts or modifier?
 - Compile-time code string evaluation?

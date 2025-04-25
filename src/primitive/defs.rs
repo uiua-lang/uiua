@@ -2940,6 +2940,8 @@ primitive!(
     ///   : ⌵⍜°⍉≡fft .
     (1, Fft, Algorithm, "fft", { experimental: true }),
     /// Find shortest paths in a graph
+    ///
+    /// [astar] is deprecated. Use [path] instead.
     ((2)[3], Astar, Algorithm, "astar"),
     /// Find the shortest path between two things
     ///

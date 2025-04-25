@@ -151,7 +151,6 @@ impl<T: ArrayValue> Array<T> {
         self.sort_down_depth(0);
     }
     pub(crate) fn sort_up_depth(&mut self, depth: usize) {
-        dbg!();
         let depth = depth.min(self.rank());
         if self.rank() == depth
             || self.shape.elements() == 0
@@ -159,7 +158,6 @@ impl<T: ArrayValue> Array<T> {
         {
             return;
         }
-        dbg!();
         if let Some(Some(keys)) = (depth == 0).then(|| self.meta.take_map_keys()) {
             let keys = keys.normalized();
             let rise = self.rise_indices();
@@ -170,13 +168,11 @@ impl<T: ArrayValue> Array<T> {
             self.map(new_keys, &()).unwrap();
             return;
         }
-        dbg!();
         let chunk_len: usize = self.shape[depth..].iter().product();
         let subrow_len: usize = self.shape[depth + 1..].iter().product();
         if chunk_len == 0 || subrow_len == 0 {
             return;
         }
-        dbg!();
         if self.rank() == depth + 1 {
             // Sort simple list
             for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {

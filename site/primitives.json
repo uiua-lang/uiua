@@ -745,6 +745,12 @@
     "class": "Map",
     "description": "Check if a map array has a key"
   },
+  "hsv": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Algorithm",
+    "description": "Convert a color array from RGB to HSV"
+  },
   "identity": {
     "glyph": "∘",
     "args": 1,

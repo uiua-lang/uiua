@@ -581,6 +581,16 @@ impl<const N: usize> From<[Node; N]> for Node {
     }
 }
 
+impl From<EcoVec<Node>> for Node {
+    fn from(nodes: EcoVec<Node>) -> Self {
+        if nodes.len() == 1 {
+            nodes.into_iter().next().unwrap()
+        } else {
+            Node::Run(nodes)
+        }
+    }
+}
+
 impl FromIterator<Node> for Node {
     fn from_iter<T: IntoIterator<Item = Node>>(iter: T) -> Self {
         let mut iter = iter.into_iter();

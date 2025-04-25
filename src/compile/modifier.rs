@@ -952,32 +952,85 @@ impl Compiler {
                 let (mut tried, mut handler, _, handler_span) = nodes?;
 
                 // Adjust handler signature if it is a noreturn function
-                if let [init @ .., Node::Prim(Assert, _)] = handler.node.as_slice() {
-                    let noreturn = match init {
-                        [.., Node::Push(val), Node::Prim(Dup | Flip, _)] if *val != 1 => true,
-                        [.., Node::Format(..), Node::Prim(Dup, _)] => true,
-                        [.., Node::Push(val), Node::Push(_)] if *val != 1 => true,
-                        [.., Node::Mod(Dip, args, _)]
-                            if args.len() == 1
-                                && matches!(&args[0].node, Node::Push(val) if *val != 1) =>
-                        {
-                            true
+                // if let [init @ .., Node::Prim(Assert, _)] = handler.node.as_slice() {
+                //     let noreturn = match init {
+                //         [.., Node::Push(val), Node::Prim(Dup | Flip, _)] if *val != 1 => true,
+                //         [.., Node::Format(..), Node::Prim(Dup, _)] => true,
+                //         [.., Node::Push(val), Node::Push(_)] if *val != 1 => true,
+                //         [.., Node::Mod(Dip, args, _)]
+                //             if args.len() == 1
+                //                 && matches!(&args[0].node, Node::Push(val) if *val != 1) =>
+                //         {
+                //             true
+                //         }
+                //         _ => false,
+                //     };
+                //     if noreturn {
+                //         handler.sig.set_outputs(tried.sig.outputs());
+                //     }
+                // }
+
+                // match tried.sig.outputs().cmp(&handler.sig.outputs()) {
+                //     Ordering::Equal => {}
+                //     Ordering::Less => tried.sig.update_args_outputs(|a, o| {
+                //         (a + handler.sig.outputs() - o, handler.sig.outputs())
+                //     }),
+                //     Ordering::Greater => handler.sig.update_args_outputs(|a, o| {
+                //         (a + tried.sig.outputs() - o, tried.sig.outputs())
+                //     }),
+                // }
+                let span = self.add_span(modified.modifier.span.clone());
+                if handler.sig.outputs() < tried.sig.outputs() {
+                    let diff = tried.sig.outputs() - handler.sig.outputs();
+                    (handler.sig).update_args_outputs(|a, o| (a + diff, o + diff));
+                }
+                if tried.sig.args() + 1 < handler.sig.args() {
+                    let arg_diff = handler.sig.args() - tried.sig.args() - 1;
+                    let mut pre =
+                        SigNode::new((arg_diff, 0), eco_vec![Node::Prim(Pop, span); arg_diff]);
+                    for _ in 0..tried.sig.args() {
+                        pre = SigNode::new(
+                            (pre.sig.args() + 1, pre.sig.outputs() + 1),
+                            Node::Mod(Dip, eco_vec![pre], span),
+                        );
+                    }
+                    tried.sig.update_args(|a| a + arg_diff);
+                    tried.node.prepend(pre.node);
+                }
+                if tried.sig.outputs() < handler.sig.outputs() {
+                    let diff = handler.sig.outputs() - tried.sig.outputs();
+                    tried.sig.update_args_outputs(|a, o| (a + diff, o + diff));
+                }
+                if handler.sig.args() < tried.sig.args() {
+                    let arg_diff = tried.sig.args() - handler.sig.args();
+                    if handler.sig.outputs() <= tried.sig.outputs() {
+                        let output_diff = tried.sig.outputs() - handler.sig.outputs();
+                        let diff_diff = arg_diff.saturating_sub(output_diff);
+                        if diff_diff > 0 {
+                            let mut pre = SigNode::new(
+                                (diff_diff, 0),
+                                eco_vec![Node::Prim(Pop, span); diff_diff],
+                            );
+                            for _ in 0..handler.sig.args() + arg_diff - diff_diff {
+                                pre = SigNode::new(
+                                    (pre.sig.args() + 1, pre.sig.outputs() + 1),
+                                    Node::Mod(Dip, eco_vec![pre], span),
+                                );
+                            }
+                            (handler.sig)
+                                .update_args_outputs(|a, o| (a + arg_diff, o + output_diff));
+                            handler.node.prepend(pre.node);
+                        } else {
+                            (handler.sig).update_args_outputs(|a, o| (a + arg_diff, o + arg_diff));
                         }
-                        _ => false,
-                    };
-                    if noreturn {
-                        handler.sig.set_outputs(tried.sig.outputs());
+                    } else {
+                        (handler.sig).update_args_outputs(|a, o| (a + arg_diff, o + arg_diff));
                     }
                 }
-
-                match tried.sig.outputs().cmp(&handler.sig.outputs()) {
-                    Ordering::Equal => {}
-                    Ordering::Less => tried.sig.update_args_outputs(|a, o| {
-                        (a + handler.sig.outputs() - o, handler.sig.outputs())
-                    }),
-                    Ordering::Greater => handler.sig.update_args_outputs(|a, o| {
-                        (a + tried.sig.outputs() - o, tried.sig.outputs())
-                    }),
+                if handler.sig.args() == tried.sig.args()
+                    && handler.sig.outputs() + 1 == tried.sig.outputs()
+                {
+                    handler.sig.update_args_outputs(|a, o| (a + 1, o + 1));
                 }
 
                 if handler.sig.args() > tried.sig.args() + 1 {
@@ -993,7 +1046,6 @@ impl Compiler {
                     );
                 }
 
-                let span = self.add_span(modified.modifier.span.clone());
                 Node::Mod(Primitive::Try, eco_vec![tried, handler], span)
             }
             Switch => self.switch(

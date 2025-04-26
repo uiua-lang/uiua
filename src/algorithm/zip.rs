@@ -188,6 +188,15 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
                 0,
             )
         }
+        [Node::CopyToUnder(1, _)] => (
+            Rc::new(move |val, depth, env| {
+                for row in val.depth_rows(depth) {
+                    env.push_under(row);
+                }
+                Ok(val)
+            }),
+            0,
+        ),
         nodes if !deep => {
             let mut start = 0;
             let mut depth = 0;

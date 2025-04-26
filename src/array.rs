@@ -531,7 +531,7 @@ impl<T: ArrayValue> Array<T> {
         }
     }
     /// Get an iterator over the row arrays of the array
-    pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
+    pub fn rows(&self) -> impl ExactDoubleIterator<Item = Self> + '_ {
         let value_flags = self.meta.flags & ArrayFlags::VALUE;
         let set_value_flags = value_flags != ArrayFlags::NONE;
         let row_len = self.row_len();
@@ -561,7 +561,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn row_shaped_slices(
         &self,
         row_shape: Shape,
-    ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
+    ) -> impl ExactDoubleIterator<Item = Self> + '_ {
         let row_len = row_shape.elements();
         let row_count = self.element_count() / row_len;
         (0..row_count).map(move |i| {
@@ -600,6 +600,16 @@ impl<T: ArrayValue> Array<T> {
         Self::new(&self.shape[depth + 1..], self.data.slice(start..end))
     }
     #[track_caller]
+    pub(crate) fn depth_rows(&self, depth: usize) -> impl ExactDoubleIterator<Item = Self> + '_ {
+        let row_count: usize = self.shape[..depth].iter().product();
+        let row_len: usize = self.shape[depth..].iter().product();
+        (0..row_count).map(move |row| {
+            let start = row * row_len;
+            let end = start + row_len;
+            Self::new(&self.shape[depth..], self.data.slice(start..end))
+        })
+    }
+    #[track_caller]
     /// Create an array that is a slice of this array's rows
     ///
     /// Generally doesn't allocate
@@ -619,7 +629,7 @@ impl<T: ArrayValue> Array<T> {
         Self::new(shape, self.data.slice(start..end))
     }
     /// Consume the array and get an iterator over its rows
-    pub fn into_rows(self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
+    pub fn into_rows(self) -> impl ExactDoubleIterator<Item = Self> {
         (0..self.row_count()).map(move |i| self.row(i))
     }
     pub(crate) fn first_dim_zero(&self) -> Self {

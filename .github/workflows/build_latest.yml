@@ -12,6 +12,7 @@ on:
       - "tests*/**"
       - "changelog.md"
       - "readme.md"
+      - ".github/workflows/build_latest.yml"
 
 env:
   CARGO_TERM_COLOR: always

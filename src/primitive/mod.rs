@@ -556,7 +556,7 @@ impl Primitive {
             ),
             Trace => format!("use subscripted {} instead", Stack.format()),
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
-            Over => format!("use {With} or {Below} instead"),
+            Over => format!("use {} or {} instead", Below.format(), Fork.format()),
             _ => return None,
         })
     }

@@ -1163,7 +1163,7 @@ primitive!(
     /// ex: ↻1 □[1 2 3 4]
     /// ex: ≡↻1 {1_2_3 4_5_6}
     ///
-    /// If the rotation amount is `2` or greater, multiple copies of the rotated array will be made, each rotated by a different row of the rotation amount.
+    /// If the rotation amount is rank `2` or greater, multiple copies of the rotated array will be made, each rotated by a different row of the rotation amount.
     /// ex: ↻ [[1] [2] [4]] [0 0 0 0 0 0 1]
     ///   : ↻ ≡¤1_2_4       [0 0 0 0 0 0 1]
     /// ex: [.. 0_0_0_0 0_0_0_1]
@@ -1398,7 +1398,7 @@ primitive!(
     /// [fill] can be used to set a repeating base after the array.
     /// ex: # Experimental!
     ///   :  ⬚10⊥[12 20] 999999
-    /// Non-integer ⊥s are supported.
+    /// Non-integer bases are supported.
     /// ex: # Experimental!
     ///   : ⊥ π [η π τ]
     /// ex: # Experimental!

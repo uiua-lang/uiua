@@ -172,11 +172,11 @@ impl<'a> Fill<'a> {
     fn error(&self, scalar: bool) -> &'static str {
         if scalar {
             match self.value().map(|fv| &fv.value) {
-                Some(Value::Num(_)) => ". A number fill is set, but is is not a scalar.",
-                Some(Value::Byte(_)) => ". A number fill is set, but is is not a scalar.",
-                Some(Value::Char(_)) => ". A character fill is set, but is is not a scalar.",
-                Some(Value::Complex(_)) => ". A complex fill is set, but is is not a scalar.",
-                Some(Value::Box(_)) => ". A box fill is set, but is is not a scalar.",
+                Some(Value::Num(_)) => ". A number fill is set, but it is not a scalar.",
+                Some(Value::Byte(_)) => ". A number fill is set, but it is not a scalar.",
+                Some(Value::Char(_)) => ". A character fill is set, but it is not a scalar.",
+                Some(Value::Complex(_)) => ". A complex fill is set, but it is not a scalar.",
+                Some(Value::Box(_)) => ". A box fill is set, but it is not a scalar.",
                 None => {
                     if (self.other_value_fill)(self.env).is_some() {
                         self.other_error

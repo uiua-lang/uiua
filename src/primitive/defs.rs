@@ -384,7 +384,7 @@ primitive!(
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [multiply] can be used as a logical AND.
-    /// ex: ◡×⊓≥≤5⤙8 . [6 2 5 9 6 5 0 4]
+    /// ex: ◡×⊓⌟≥≤5 8 . [6 2 5 9 6 5 0 4]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
     /// Divide values
     ///
@@ -1347,9 +1347,9 @@ primitive!(
     ///
     /// You can use the returned indices with [select] to get the rows that were found.
     /// If you expect any of the searched-for rows to be missing, you can use [fill] to set a default value.
-    /// ex: A ← [2 3 5 7 11 13]
-    ///   : .⊗⤙A [1 2 3 4 5]
-    ///   : ⬚∞˜⊏A
+    /// ex: [2 3 5 7 11 13]
+    ///   : [1 2 3 4 5]
+    ///   : ◡⬚∞⊏ ⤚⊗
     ///
     /// [indexof] is closely related to [memberof].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
@@ -1976,12 +1976,6 @@ primitive!(
     /// [with] can be used to copy a value from deep in the stack, or to move it.
     /// ex: [⤙⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤙⊙⊙⊙◌ 1 2 3 4]
-    /// [with] with a monadic function will be coerced to take 2 arguments.
-    /// ex! [⤙¯ 2]
-    /// ex: [⤙¯ 2 5]
-    /// [with] with a noadic function will be coerced to `with``identity`.
-    /// ex: [1⤙2 3]
-    /// ex: [⤙1 2 3]
     /// If you do not want these behaviors, use [on] instead.
     /// Subscripted [with] keeps the last N arguments above the outputs on the stack.
     /// ex: {⤙₂[⊙⊙∘] 1 2 3}
@@ -2001,11 +1995,6 @@ primitive!(
     /// [off] can be used to copy a value from the top of the stack to a position deeper, or to move it.
     /// ex: [⤚⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
-    /// [off] with a monadic function will be coerced to take 2 arguments.
-    /// ex! [⤚¯ 2]
-    /// ex: [⤚¯ 2 5]
-    /// [off] with a noadic function will be coerced to `off``identity`.
-    /// ex: [⤚1 2 3]
     /// If you do not want these behaviors, use [by] instead.
     /// Subscripted [off] keeps the first N arguments below the outputs on the stack.
     /// ex: {⤚₂[⊙⊙∘] 1 2 3}
@@ -2070,13 +2059,11 @@ primitive!(
     /// If we call the function `f` and the values `a`, `b`, and `c`, then the patterns are:
     /// - `fac fbc`
     /// - `fab fac`
-    /// Both involve applying a stack idiom before calling [both].
-    /// For `fac fbc`, the idiom is `dip``with``identity`.
-    /// For `fab fac`, the idiom is `on``flip`.
+    /// These patterns can be achieved with [both] with sided subscripts.
     /// For example, if you wanted to check that a number is divisible by two other numbers:
-    /// ex: F ← ∩(=0◿) ⊙⤙∘
+    /// ex: F ← ∩⌟(=0◿)
     ///   : F 3 5 ⇡16
-    /// ex: G ← ∩(=0◿:) ⤚∘
+    /// ex: G ← ∩⌞(=0˜◿)
     ///   : G ⇡16 3 5
     ([1], Both, Planet, ("both", '∩')),
     /// Define the various inverses of a function
@@ -2198,7 +2185,7 @@ primitive!(
     /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
     /// ex: ⍜∩(×.)+ 3 4
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
-    /// ex: ⍜∩°□(⊂⊢⤙∘) □[1 2 3] □[4 5 6 7 8]
+    /// ex: ⍜∩°□(⊂◡⋅⊢) □[1 2 3] □[4 5 6 7 8]
     ///
     /// [obverse] can be used to define a function's [under] behavior.
     ///
@@ -2229,8 +2216,9 @@ primitive!(
     /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
     /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
     /// ex: [⊓(+|-|×|÷) 10 20 5 8 3 7 2 5]
-    /// [bracket] is a nice way to check if a number is within a range.
-    /// ex: ◡×⊓≥≤5⤙8 . [6 2 5 9 6 5 0 4]
+    /// [bracket] with sided subscripts reuses a value in both functions.
+    /// One use of this is to check if a number is within a range.
+    /// ex: ◡×⊓⌟≥≤5 8 . [6 2 5 9 6 5 0 4]
     ([2], Bracket, Planet, ("bracket", '⊓')),
     /// Repeat a function while a condition holds
     ///

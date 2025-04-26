@@ -628,6 +628,23 @@ impl Compiler {
                 let sub = subscript
                     .and_then(|sub| self.subscript_n(sub, prim))
                     .filter(|n| n.value > 1);
+                if sig.args() < 2 {
+                    self.emit_diagnostic(
+                        format!(
+                            "The current behavior of {} with {} argument{} \
+                            is deprecated and may be changed or removed in the future. \
+                            Use {}, {}, or {} instead",
+                            prim.format(),
+                            sig.args(),
+                            if sig.args() == 1 { "" } else { "s" },
+                            Fork.format(),
+                            Bracket.format(),
+                            Below.format()
+                        ),
+                        DiagnosticKind::Warning,
+                        modified.modifier.span.clone(),
+                    );
+                }
                 let (inner, before) = match sn.sig.args() {
                     0 => (SigNode::new((2, 2), Node::Prim(Identity, span)), sn.node),
                     1 if prim == With => {

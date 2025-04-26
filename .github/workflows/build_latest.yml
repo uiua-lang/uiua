@@ -79,6 +79,7 @@ jobs:
     - name: Build site
       run: |
         git checkout site
+        git branch --set-upstream-to=origin/site
         git reset --hard origin/site
         git rebase main || { echo "Rebase failed, aborting."; git rebase --abort; exit 1; }
         cd site
@@ -90,7 +91,7 @@ jobs:
   # Create the release without assets
   create_release:
     name: Create release
-    needs: test_bin
+    needs: [test_bin, build_site]
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

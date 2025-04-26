@@ -178,66 +178,69 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
     let preserved = env.copy_n_down(preserve_count, f.sig.args())?;
     let mut excess_rows = vec![Vec::new(); excess_count];
     let mut convergence_count = 0;
-    if n.is_infinite() {
-        // Converging repeat
-        if sig.args() == 0 {
-            return Err(env.error(format!(
-                "Converging {}'s function must have at least 1 argument",
-                Primitive::Repeat.format()
-            )));
-        }
-        let mut prev = env.pop(1)?;
-        env.push(prev.clone());
-        loop {
-            if preserve_count > 0 {
-                env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
-            }
-            env.exec(f.clone())?;
-            for (i, row) in env
-                .remove_n(excess_count, sig.args() + excess_count)?
-                .enumerate()
-            {
-                excess_rows[i].push(row);
-            }
-            let next = env.pop("converging function result")?;
-            let converged = next == prev;
-            if converged {
-                env.push(next);
-                break;
-            } else {
-                env.push(next.clone());
-                prev = next;
-            }
-            convergence_count += 1;
-        }
-    } else {
-        // Normal repeat
-        if n.fract() != 0.0 {
-            return Err(env.error("Repetitions must be an integer or infinity"));
-        }
-        let n = n as usize;
-        if sig.outputs() > sig.args() {
-            let delta = sig.outputs() - sig.args();
-            if validate_size_impl(size_of::<Value>(), [n, delta]).is_err() {
+    env.without_fill(|env| -> UiuaResult {
+        if n.is_infinite() {
+            // Converging repeat
+            if sig.args() == 0 {
                 return Err(env.error(format!(
-                    "{} would create too many values on the stack",
+                    "Converging {}'s function must have at least 1 argument",
                     Primitive::Repeat.format()
                 )));
             }
-        }
-        for _ in 0..n {
-            if preserve_count > 0 {
-                env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
+            let mut prev = env.pop(1)?;
+            env.push(prev.clone());
+            loop {
+                if preserve_count > 0 {
+                    env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
+                }
+                env.exec(f.clone())?;
+                for (i, row) in env
+                    .remove_n(excess_count, sig.args() + excess_count)?
+                    .enumerate()
+                {
+                    excess_rows[i].push(row);
+                }
+                let next = env.pop("converging function result")?;
+                let converged = next == prev;
+                if converged {
+                    env.push(next);
+                    break;
+                } else {
+                    env.push(next.clone());
+                    prev = next;
+                }
+                convergence_count += 1;
             }
-            env.exec(f.clone())?;
-            for (i, row) in env
-                .remove_n(excess_count, sig.args() + excess_count)?
-                .enumerate()
-            {
-                excess_rows[i].push(row);
+        } else {
+            // Normal repeat
+            if n.fract() != 0.0 {
+                return Err(env.error("Repetitions must be an integer or infinity"));
+            }
+            let n = n as usize;
+            if sig.outputs() > sig.args() {
+                let delta = sig.outputs() - sig.args();
+                if validate_size_impl(size_of::<Value>(), [n, delta]).is_err() {
+                    return Err(env.error(format!(
+                        "{} would create too many values on the stack",
+                        Primitive::Repeat.format()
+                    )));
+                }
+            }
+            for _ in 0..n {
+                if preserve_count > 0 {
+                    env.insert_stack(sig.outputs(), preserved.iter().cloned())?;
+                }
+                env.exec(f.clone())?;
+                for (i, row) in env
+                    .remove_n(excess_count, sig.args() + excess_count)?
+                    .enumerate()
+                {
+                    excess_rows[i].push(row);
+                }
             }
         }
-    }
+        Ok(())
+    })?;
     // Remove preserved/excess values
     if excess_count > 0 {
         _ = env.remove_n(sig.args(), sig.args())?;

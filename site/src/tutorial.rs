@@ -555,7 +555,7 @@ fn TutorialArrays() -> impl IntoView {
         <p><Prim prim=Rotate/>" rotates the rows of an array by some amount."</p>
         <Editor example="↻2 [1 2 3 4 5]"/>
         <p><Prim prim=Deshape/>" flattens an array into a 1D array."</p>
-        <Editor example="♭ .[1_2 3_4 5_6]"/>
+        <Editor example="♭ . [1_2 3_4 5_6]"/>
         <p><Prim prim=Take/>" and "<Prim prim=Drop/>" isolate part of an array."</p>
         <Editor example="↙3 [1 2 3 4 5]\n↘3 [1 2 3 4 5]"/>
         <p><Prim prim=Pick/>" indexes an array. Longer indices index deeper into the array."</p>
@@ -564,7 +564,9 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="⊡1   [1_2_3 4_5_6]\n⊡1_1 [1_2_3 4_5_6]"/>
         <p><Prim prim=Select/>" uses a list of indices to select rows of an array."</p>
         <Editor example="⊏ [0 2 1 1 2] ↯3_3⇡9"/>
-        <Editor example="⊏[3 5 0 1 7 8 9 5 1 2 5 3 10] \"their sinks\""/>
+        <Editor example="⊏ [3 5 0 1 7 8 9 5 1 2 5 3 10] \"their sinks\""/>
+        <p><Prim prim=Transpose/>" rotates the axes of an array. This is useful for changing which axis other functions will work on."</p>
+        <Editor example="⍉ . [1_2_3 4_5_6]"/>
 
         <Hd id="array-model">"The Array Model"</Hd>
         <p>"For curious array aficionados, "{lang}" uses an array model resembling "<a href="https://aplwiki.com/wiki/Box">"J's Boxed array model"</a>"."</p>

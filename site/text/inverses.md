@@ -65,8 +65,23 @@ For example [un](/docs/un) [shape](/docs/shape) generates an array of incrementi
 This is often used in examples to quickly generate a high-rank array.
 
 [un](/docs/un) [select](/docs/select) produces an array of indices for the array's rows without removing the array itself from the stack.
+
 ```uiua
 °⊏ "enumerate"
+```
+
+[un](/docs/un) [transpose](/docs/transpose) transposes an array in the other direction.
+
+```uiua
+△    °△2_2_3
+△  ⍉ °△2_2_3
+△ °⍉ °△2_2_3
+```
+
+```uiua
+   °△2_2_3
+ ⍉ °△2_2_3
+°⍉ °△2_2_3
 ```
 
 You can find more uses of [un](/docs/un) in its documentation, including a list of all [un](/docs/un)-compatible functions and modifiers.

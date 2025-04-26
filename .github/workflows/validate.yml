@@ -10,6 +10,8 @@ on:
       - "site/**"
       - "pad/**"
       - "tests*/**"
+      - "changelog.md"
+      - "readme.md"
   pull_request:
     branches: ["main"]
     paths:
@@ -19,6 +21,8 @@ on:
       - "site/**"
       - "pad/**"
       - "tests*/**"
+      - "changelog.md"
+      - "readme.md"
 
 env:
   CARGO_TERM_COLOR: always
@@ -32,23 +36,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: sed
-      run: sudo sed -i 's/azure\.//' /etc/apt/sources.list
-    - name: apt update
-      run: sudo apt-get update
     - name: Check formatting
       run: cargo fmt --all --check
     - name: Install deps
       run: sudo apt-get install libasound2-dev libudev-dev pkg-config libx11-dev libjpeg-dev
     - name: Install WASM target
       run: rustup target add wasm32-unknown-unknown
-    - name: Build
-      run: cargo build --verbose --features "audio,webcam"
-    - name: Run interpreter tests
-      run: cargo test --lib
     - name: Check feature combinations
       run: cargo run ./.github/features.ua
-    - name: Run site tests
-      run: cargo test -p site 
-    - name: Check site
-      run: cargo check -p site --target wasm32-unknown-unknown

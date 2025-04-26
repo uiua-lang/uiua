@@ -39,16 +39,16 @@ const CHORD: &str = "\
 ∿×τ ⊞× ÷⟜⇡&asr # Generate
 ÷⧻⟜/+⍉         # Mix";
 const SPIRAL: &str = "\
-↯⟜(×20-1×2÷⟜⇡)200 # Xs
--≡⊃∠(⍜∩°√+)⊸⍉     # Spiral field
--π◿τ⊞-×τ÷⟜⇡20     # Animate";
+↯⟜(×20-⊸¬÷⟜⇡)200 # Xs
+-⊃∠(⌵ℂ)⊸⍉        # Spiral field
+-π◿τ⊞-×τ÷⟜⇡20    # Animate";
 const QUADRATIC: &str = "\
 Disc ← -⊃(××4⊙⋅∘)⋅°√
 Quad ← ÷⊃(×2|-⊃⋅∘(⊟⊸¯ √ℂ0 Disc))
 Quad 1 ¯3 2";
 const STRIPES: &str = "\
-[⊞⊃⊃+↥-].⇡300
-⍉ ÷2 +1.2 ∿ ÷10";
+⍉ [⊞⊃⊃+↥-].⇡300
+÷2 +1.2 ∿ ÷10";
 pub const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ≡⊂ ˜⊏"❌✅" ⬚@ ⊜⊸(≍⊸⇌)⊸≠@ "#;
 pub const WEEWUH_PALINDROME: &str = r#"$ weewuh racecar wow cool!
@@ -63,9 +63,9 @@ F ← /+-⊃(↻1×|×¬)⊸(⧈>⊂⊙0) ⊏⊙N ⊗⊙K
 F "LVII"
 F "MCMXCIV""#;
 const MANDELBROT: &str = "\
-×2 ⊞ℂ⤙-1/4 -1/2÷⟜⇡300   # Init
-⍥(⊸(+>2⌵:)⊙⊸(+×.))50 0. # Run
-÷/↥⊸♭ ⊙⋅◌               # Normalize";
+×2 ⊞ℂ⤙-1/4 -1/2÷⟜⇡300 # Init
+>2⌵ ⍥⟜⊸(+⊙°√) 50 .    # Run
+÷⧻⟜/+                 # Normalize";
 const LIFE: &str = "\
 Life ← ↥∩=₃⟜+⊸(/+↻⊂A₂C₂)
 ⁅×0.6 gen⊙⚂ ⊟.30 # Init

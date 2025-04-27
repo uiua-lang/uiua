@@ -51,6 +51,8 @@ impl Value {
         depth = depth.min(self.rank());
         let deshaped = self.shape.split_off(depth).into_iter().product();
         self.shape.push(deshaped);
+        self.meta.take_sorted_flags();
+        self.validate();
     }
     pub(crate) fn deshape_sub(
         &mut self,

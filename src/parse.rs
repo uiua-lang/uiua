@@ -1413,12 +1413,12 @@ impl Parser<'_> {
             } else {
                 // Function pack
                 let first_span = if first_lines.len() > 1 {
-                    let code_words = first_lines
+                    let mut code_words = first_lines
                         .iter()
                         .flatten()
                         .filter(|word| word.value.is_code());
-                    if let Some(first_word) = code_words.clone().next() {
-                        let last_word = code_words.last().unwrap();
+                    if let Some(first_word) = code_words.by_ref().next() {
+                        let last_word = code_words.next_back().unwrap_or(first_word);
                         start.start = first_word.span.start;
                         start.end = last_word.span.end;
                     }

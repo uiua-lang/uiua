@@ -7,7 +7,7 @@ use std::{
     env,
     fmt::Display,
     fs,
-    iter::repeat,
+    iter::repeat_n,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -995,7 +995,13 @@ impl Formatter<'_> {
                 let curr_line_pos = if self.output.ends_with('\n') {
                     0
                 } else {
-                    (self.output.split('\n').last().unwrap_or_default().chars()).count()
+                    (self
+                        .output
+                        .split('\n')
+                        .next_back()
+                        .unwrap_or_default()
+                        .chars())
+                    .count()
                 };
                 for (i, line) in lines.iter().enumerate() {
                     let mut line = line.value.as_str();
@@ -1022,7 +1028,13 @@ impl Formatter<'_> {
                 let curr_line_pos = if self.output.ends_with('\n') {
                     0
                 } else {
-                    (self.output.split('\n').last().unwrap_or_default().chars()).count()
+                    (self
+                        .output
+                        .split('\n')
+                        .next_back()
+                        .unwrap_or_default()
+                        .chars())
+                    .count()
                 };
                 for (i, line) in lines.iter().enumerate() {
                     if i > 0 {
@@ -1104,7 +1116,7 @@ impl Formatter<'_> {
                 let beginning_of_line = self
                     .output
                     .split('\n')
-                    .last()
+                    .next_back()
                     .unwrap_or_default()
                     .trim()
                     .is_empty();
@@ -1144,7 +1156,7 @@ impl Formatter<'_> {
                 } else {
                     self.output
                         .split('\n')
-                        .last()
+                        .next_back()
                         .unwrap_or_default()
                         .chars()
                         .count()
@@ -1225,7 +1237,7 @@ impl Formatter<'_> {
                             s.push(' ');
                         }
                     }
-                    s.extend(repeat('#').take(*n + 1));
+                    s.extend(repeat_n('#', *n + 1));
                     s.push(' ');
                     s.push_str(&line);
                 }
@@ -1292,7 +1304,7 @@ impl Formatter<'_> {
         }
         let prevent_compact = (lines.iter().flatten())
             .filter(|word| !matches!(word.value, Word::Spaces))
-            .last()
+            .next_back()
             .is_some_and(|word| word.value.is_end_of_line());
         if lines.len() == 1
             && !prevent_compact
@@ -1317,7 +1329,7 @@ impl Formatter<'_> {
             lines = &lines[1..];
             has_leading_newline = true;
         }
-        let curr_line = self.output.split('\n').last().unwrap_or_default();
+        let curr_line = self.output.split('\n').next_back().unwrap_or_default();
         let start_line_pos = if self.output.ends_with('\n') {
             0
         } else {

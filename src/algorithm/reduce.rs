@@ -1,7 +1,7 @@
 //! Algorithms for reducing modifiers
 
 use core::f64;
-use std::{convert::identity, iter::repeat};
+use std::convert::identity;
 
 use ecow::{eco_vec, EcoVec};
 
@@ -489,7 +489,7 @@ where
             let data_slice = arr.data.as_mut_slice();
             if chunk_len == 0 {
                 let val = default.unwrap_or(identity);
-                arr.data = repeat(val).take(chunk_count * chunk_row_len).collect();
+                arr.data = cowslice![val; chunk_count * chunk_row_len];
             } else {
                 for c in 0..chunk_count {
                     let chunk_start = c * chunk_len;

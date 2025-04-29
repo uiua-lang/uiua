@@ -1,5 +1,6 @@
 //! Algorithms for pervasive array operations
 
+use std::iter::repeat_n;
 use std::{
     cmp::Ordering, convert::Infallible, fmt::Display, iter::repeat, marker::PhantomData, mem::swap,
 };
@@ -242,8 +243,7 @@ where
                 if let Some(a_fill) = a_fill {
                     let a_fill_row = vec![a_fill.value.clone(); a_row_len];
                     if a_fill.is_left() {
-                        let a_iter = repeat(a_fill_row.as_slice())
-                            .take(*bl - *al)
+                        let a_iter = repeat_n(a_fill_row.as_slice(), *bl - *al)
                             .chain(a.chunks_exact(a_row_len.max(1)));
                         for ((a, b), c) in a_iter
                             .zip(b.chunks_exact(b_row_len))
@@ -276,8 +276,7 @@ where
             } else if let Some(b_fill) = b_fill {
                 let b_fill_row = vec![b_fill.value.clone(); b_row_len];
                 if b_fill.is_left() {
-                    let b_iter = repeat(b_fill_row.as_slice())
-                        .take(*al - *bl)
+                    let b_iter = repeat_n(b_fill_row.as_slice(), *al - *bl)
                         .chain(b.chunks_exact(b_row_len.max(1)));
                     for ((a, b), c) in a
                         .chunks_exact(a_row_len)
@@ -453,8 +452,7 @@ where
                 } else {
                     let fill_row = vec![fill.value; a_row_len];
                     if fill.is_left() {
-                        for (a, b) in repeat(fill_row.as_slice())
-                            .take(*bl - *al)
+                        for (a, b) in repeat_n(fill_row.as_slice(), *bl - *al)
                             .chain(a.chunks_exact(a_row_len))
                             .zip(b.chunks_exact_mut(b_row_len))
                         {
@@ -522,8 +520,7 @@ where
                     Ordering::Less => {
                         let a_fill_row = vec![fill.value; a_row_len];
                         if fill.is_left() {
-                            let a_iter = repeat(a_fill_row.as_slice())
-                                .take(*bl - *al)
+                            let a_iter = repeat_n(a_fill_row.as_slice(), *bl - *al)
                                 .chain(a.chunks_exact(a_row_len));
                             for ((a, b), c) in a_iter
                                 .zip(b.chunks_exact(b_row_len))
@@ -546,8 +543,7 @@ where
                     Ordering::Greater => {
                         let b_fill_row = vec![fill.value; b_row_len];
                         if fill.is_left() {
-                            let b_iter = repeat(b_fill_row.as_slice())
-                                .take(*al - *bl)
+                            let b_iter = repeat_n(b_fill_row.as_slice(), *al - *bl)
                                 .chain(b.chunks_exact(b_row_len));
                             for ((a, b), c) in a
                                 .chunks_exact(a_row_len)

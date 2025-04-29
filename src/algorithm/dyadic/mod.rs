@@ -9,7 +9,7 @@ use std::{
     borrow::Cow,
     cmp::Ordering,
     hash::{DefaultHasher, Hash, Hasher},
-    iter::{once, repeat},
+    iter::{once, repeat_n},
     mem::{replace, swap, take},
 };
 
@@ -952,7 +952,7 @@ pub(super) fn pad_keep_counts<'a>(
                         let fill_val = fill.value.data[0];
                         let amount = amount.to_mut();
                         let count = len - amount.len();
-                        amount.extend(repeat(fill_val).take(count));
+                        amount.extend(repeat_n(fill_val, count));
                         if fill.is_left() {
                             amount.rotate_right(count);
                         }
@@ -1724,7 +1724,7 @@ impl<T: RealArrayValue> Array<T> {
                 .iter()
                 .copied()
                 .chain(
-                    fill.map(|fill| repeat(fill).take(fill_digits))
+                    fill.map(|fill| repeat_n(fill, fill_digits))
                         .into_iter()
                         .flatten(),
                 )
@@ -1766,7 +1766,10 @@ impl<T: RealArrayValue> Array<T> {
             let slice = data.make_mut();
             let mut bases = bases.to_vec();
             let count = row_len.saturating_sub(bases.len());
-            bases.extend(repeat(fill.as_ref().map(|fv| fv.value).unwrap_or(1.0)).take(count));
+            bases.extend(repeat_n(
+                fill.as_ref().map(|fv| fv.value).unwrap_or(1.0),
+                count,
+            ));
             if fill.is_some_and(|fv| fv.is_left()) {
                 bases.rotate_right(count);
             }

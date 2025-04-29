@@ -3,7 +3,7 @@
 use std::{
     cell::RefCell,
     collections::HashMap,
-    iter::repeat,
+    iter::repeat_n,
     mem::{swap, take},
     rc::Rc,
 };
@@ -579,7 +579,7 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 .map(|val| {
                     let repetitions = elem_count / val.shape.elements().max(1);
                     val.into_elements()
-                        .flat_map(move |elem| repeat(elem).take(repetitions))
+                        .flat_map(move |elem| repeat_n(elem, repetitions))
                 })
                 .collect();
             for _ in 0..elem_count {

@@ -671,7 +671,7 @@ impl Uiua {
                 ..
             } => self.with_span(span, |env| {
                 let arr = env.pop(1)?;
-                if arr.row_count() != count || arr.shape == [] {
+                if arr.row_count() != count || arr.shape.is_empty() {
                     let prim_text;
                     let prim_text = if let Some(prim) = prim {
                         prim_text = prim.to_string();
@@ -681,7 +681,7 @@ impl Uiua {
                     } else {
                         "[]"
                     };
-                    return Err(env.error(if arr.shape == [] {
+                    return Err(env.error(if arr.shape.is_empty() {
                         format!(
                             "This °{prim_text} expects an array with {count} rows, \
                             but the array is a scalar"

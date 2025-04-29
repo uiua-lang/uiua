@@ -1,7 +1,7 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
-    iter::repeat,
+    iter::repeat_n,
     mem::{replace, take},
 };
 
@@ -390,9 +390,7 @@ impl MapKeys {
         let old_indices = take(indices);
         *keys = Array::new(
             keys_shape,
-            repeat(K::empty_cell())
-                .take(new_capacity * key_row_len)
-                .collect::<EcoVec<_>>(),
+            repeat_n(K::empty_cell(), new_capacity * key_row_len).collect::<EcoVec<_>>(),
         );
         *indices = vec![0; new_capacity];
         let key_data = keys.data.as_mut_slice();

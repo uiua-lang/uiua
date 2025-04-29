@@ -3,7 +3,7 @@ pub mod utils;
 
 use std::{
     cell::Cell,
-    iter::{once, repeat},
+    iter::{once, repeat_n},
     mem::take,
     path::PathBuf,
     rc::Rc,
@@ -748,8 +748,7 @@ pub fn Editor<'a>(
                         // Toggle comments off
                         for line in range {
                             let space_count = line.chars().take_while(|c| *c == ' ').count();
-                            *line = repeat(' ')
-                                .take(space_count)
+                            *line = repeat_n(' ', space_count)
                                 .chain(
                                     line.trim()
                                         .trim_start_matches(prefix)

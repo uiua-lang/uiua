@@ -187,7 +187,7 @@ impl Value {
             Ok(())
         } else {
             let mut new_shape = self.shape.clone();
-            if new_shape.len() > 0 {
+            if !new_shape.is_empty() {
                 new_shape.remove(0);
             }
             for &d in orig_shape.iter().rev() {

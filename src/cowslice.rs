@@ -12,15 +12,9 @@ use std::{
 use serde::*;
 
 macro_rules! cowslice {
-    ($($item:expr),* $(,)?) => {
-        $crate::cowslice::CowSlice::from([$($item),*])
-    };
-    ($item:expr; $len:expr) => {{
-        let len = $len;
-        let mut cs = $crate::cowslice::CowSlice::with_capacity(len);
-        cs.extend(std::iter::repeat($item).take(len));
-        cs
-    }}
+    ($($tt:tt)*) => {
+        $crate::cowslice::CowSlice::from(::ecow::eco_vec![$($tt)*])
+    }
 }
 
 pub(crate) use cowslice;

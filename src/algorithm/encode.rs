@@ -461,7 +461,7 @@ impl Value {
             }
         };
         let mut new_shape = bytes.shape;
-        if new_shape == [] {
+        if new_shape.is_empty() {
             new_shape.push(1);
         }
         if new_shape.len() > 1 {

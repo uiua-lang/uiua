@@ -3,7 +3,7 @@
 use std::{
     collections::HashMap,
     f64::consts::{PI, TAU},
-    iter::{once, repeat},
+    iter::{once, repeat_n},
     mem::take,
 };
 
@@ -536,7 +536,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     // Disambiguate fixed arrays
                     let fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();
                     for row in &mut grid {
-                        row.extend(repeat(' ').take(fix_amnt));
+                        row.extend(repeat_n(' ', fix_amnt));
                         row.rotate_right(fix_amnt);
                     }
                     for i in 0..fix_amnt {
@@ -592,7 +592,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .collect();
                     for row in grid.iter_mut().skip(1) {
                         let ext = label.chars().count() - 1;
-                        row.extend(repeat(' ').take(ext));
+                        row.extend(repeat_n(' ', ext));
                         row.rotate_right(ext);
                     }
                 } else {
@@ -785,7 +785,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
             let rows = metagrid.split_off(len_before);
             for (mrow, row) in metagrid.iter_mut().skip(start_len).zip(rows) {
                 if !T::box_lines() {
-                    mrow.push(vec![vec![' '; (rank + 1) / 2]])
+                    mrow.push(vec![vec![' '; rank.div_ceil(2)]]);
                 }
                 mrow.extend(row);
             }
@@ -829,7 +829,7 @@ fn pad_grid_center(
                 ElemAlign::Left => (0, diff),
                 ElemAlign::Right => (diff, 0),
                 ElemAlign::None => {
-                    let post = (diff + 1) / 2;
+                    let post = diff.div_ceil(2);
                     let pre = diff - post;
                     (pre, post)
                 }

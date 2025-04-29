@@ -549,7 +549,7 @@ impl<T: ArrayValue> Array<T> {
 
         if haystack.rank() == 1 {
             // Fast path for rank-1 arrays
-            if needle.data.len() > 0 {
+            if !needle.data.is_empty() {
                 let mut curr = 0;
                 let mut i = 0;
                 while i < haystack.data.len() + 1 - needle.data.len() {

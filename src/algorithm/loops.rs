@@ -71,7 +71,7 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
         for i in 0..sig.args() {
             let arg = env.pop(i + 1)?;
             if arg.rank() > 0
-                && n_shape.len() > 0
+                && !n_shape.is_empty()
                 && !(arg.shape.iter().skip(1))
                     .zip(n_shape.iter().skip(1))
                     .all(|(a, b)| *a == 1 || *b == 1 || a == b)

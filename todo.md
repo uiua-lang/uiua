@@ -1,8 +1,10 @@
 # Uiua Todo
 
 # 0.16
-- More rows optimizations
 - Prevent more cloning in `try`
+- Binary search in `memberof` and `indexof` for sorted arrays
+- `add` N `range` optimization
+- More rows optimizations
 - Line number signatures in pad
 - Last-axis subscripts or modifier?
 - Compile-time code string evaluation?

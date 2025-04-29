@@ -252,7 +252,7 @@ where
         }
     }
     fn partition_firsts(mut self, markers: &[i64]) -> Self {
-        if self.shape.len() == 0 {
+        if self.shape.is_empty() {
             self.shape.insert(0, 0);
         } else {
             self.shape[0] = 0;
@@ -283,7 +283,7 @@ where
     }
     fn partition_lasts(mut self, markers: &[i64]) -> Self {
         let row_count = self.row_count();
-        if self.shape.len() == 0 {
+        if self.shape.is_empty() {
             self.shape.insert(0, 0);
         } else {
             self.shape[0] = 0;
@@ -610,7 +610,7 @@ impl<T: ArrayValue> Array<T> {
         data.truncate(buckets * row_len);
         let data_slice = data.as_mut_slice();
         let mut shape = self.shape.clone();
-        if shape.len() == 0 {
+        if shape.is_empty() {
             shape.insert(0, buckets);
         } else {
             shape[0] = buckets;
@@ -638,7 +638,7 @@ impl<T: ArrayValue> Array<T> {
         data.truncate(buckets * row_len);
         let data_slice = data.as_mut_slice();
         let mut shape = self.shape.clone();
-        if shape.len() == 0 {
+        if shape.is_empty() {
             shape.insert(0, buckets);
         } else {
             shape[0] = buckets;

@@ -203,9 +203,7 @@ where
     env.without_fill(|env| -> UiuaResult {
         'windows: loop {
             // Reset offset
-            for o in &mut offset {
-                *o = 0;
-            }
+            offset.fill(0);
             // println!("corner: {corner:?}");
             'window: loop {
                 // Update curr

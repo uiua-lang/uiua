@@ -692,7 +692,7 @@ pub(crate) fn layout_text(options: Value, text: Value, env: &Uiua) -> UiuaResult
 
 #[cfg(feature = "font_shaping")]
 fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {
-    use std::{cell::RefCell, iter::repeat};
+    use std::{cell::RefCell, iter::repeat_n};
 
     use cosmic_text::*;
     use ecow::eco_vec;
@@ -918,7 +918,7 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
                 ],
                 _ => return Err(env.error("Fill color must be a list of 3 or 4 numbers")),
             };
-            repeat(color).take(elem_count / 4).flatten().collect()
+            repeat_n(color, elem_count / 4).flatten().collect()
         } else {
             eco_vec![0.0; elem_count]
         };

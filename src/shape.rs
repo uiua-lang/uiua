@@ -85,7 +85,7 @@ impl Shape {
     }
     /// Make the shape its row shape
     pub fn make_row(&mut self) {
-        if self.len() > 0 {
+        if !self.is_empty() {
             self.dims.remove(0);
         }
     }

@@ -1272,8 +1272,8 @@ mod server {
                             .map(|sig| format!("{:<4}", sig.to_string())),
                         ..Default::default()
                     }),
-                    sort_text: text.split('~').last().map(Into::into),
-                    filter_text: text.split('~').last().map(Into::into),
+                    sort_text: text.split('~').next_back().map(Into::into),
+                    filter_text: text.split('~').next_back().map(Into::into),
                     documentation: binding.meta.comment.as_ref().map(|c| {
                         Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,

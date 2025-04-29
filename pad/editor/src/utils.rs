@@ -872,7 +872,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             }
                             // Normalize to a pastel color
                             for c in &mut components {
-                                *c = 0.5 + 0.5 * *c;
+                                *c = (*c).mul_add(0.5, 0.5);
                             }
                             let components = components.map(|c| (c * 255.0).round() as u8);
                             let style = format!(

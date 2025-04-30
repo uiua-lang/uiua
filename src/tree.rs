@@ -797,6 +797,7 @@ impl Node {
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, purity, asm, visited)),
                 Node::WithLocal { inner, .. } => recurse(&inner.node, purity, asm, visited),
+                Node::Dynamic(_) => false,
                 _ => true,
             };
             visited.truncate(len);

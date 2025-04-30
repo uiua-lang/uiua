@@ -11,11 +11,11 @@ impl Compiler {
         let last_word = binding.words.iter().last();
 
         // If marked external and already bound, don't bind again
-        let external = prelude.external
+        let is_external = prelude.external
             || last_word.is_some_and(|w| {
                 matches!(w.value, Word::SemanticComment(SemanticComment::External))
             });
-        if external
+        if is_external
             && self.scopes().any(|sc| {
                 sc.names
                     .get(&binding.name.value)
@@ -119,7 +119,7 @@ impl Compiler {
         // Handle macro
         let max_placeholder = max_placeholder(&binding.words);
         if binding.code_macro {
-            if external {
+            if is_external {
                 self.add_error(span.clone(), "Macros cannot be external");
             }
             if is_method {
@@ -235,7 +235,7 @@ impl Compiler {
             }
         }
         if max_placeholder.is_some() || ident_margs > 0 {
-            if external {
+            if is_external {
                 self.add_error(span.clone(), "Macros cannot be external");
             }
             if is_method {
@@ -367,7 +367,7 @@ impl Compiler {
             .any(|n| matches!(n, Node::CustomInverse(cust, _) if cust.is_obverse));
 
         // Normalize external
-        if external {
+        if is_external {
             if node.is_empty() {
                 let Some(sig) = &binding.signature else {
                     return Err(self.error(
@@ -416,7 +416,13 @@ impl Compiler {
                     sig.update_args(|a| a + 1);
                 }
 
-                if sig == (0, 1) && !self_referenced && !is_func && !is_obverse && !is_method {
+                if sig == (0, 1)
+                    && !self_referenced
+                    && !is_func
+                    && !is_obverse
+                    && !is_method
+                    && !is_external
+                {
                     // Binding is a constant
                     let val = if let [Node::Push(v)] = node.as_slice() {
                         Some(v.clone())

@@ -366,7 +366,26 @@ fn prim_dy_fast_fn(
         Atan => spanned_dy_fn(span, Value::atan2),
         Rotate if !b_filled => Box::new(move |a, mut b, ad, bd, env| {
             env.with_span(span, |env| {
-                a.rotate_depth(&mut b, ad, bd, env)?;
+                a.rotate_depth(&mut b, ad, bd, true, env)?;
+                Ok(b)
+            })
+        }),
+        _ => return None,
+    })
+}
+
+fn impl_prim_dy_fast_fn(
+    prim: ImplPrimitive,
+    span: usize,
+    _a_filled: bool,
+    b_filled: bool,
+) -> Option<ValueDyFn> {
+    use std::boxed::Box;
+    use ImplPrimitive::*;
+    Some(match prim {
+        AntiRotate if !b_filled => Box::new(move |a, mut b, ad, bd, env| {
+            env.with_span(span, |env| {
+                a.rotate_depth(&mut b, ad, bd, false, env)?;
                 Ok(b)
             })
         }),
@@ -396,6 +415,10 @@ pub(crate) fn f_dy_fast_fn(
     match nodes {
         &[Node::Prim(prim, span)] => {
             let f = prim_dy_fast_fn(prim, span, a_filled, b_filled)?;
+            return Some((f, 0, 0));
+        }
+        &[Node::ImplPrim(prim, span)] => {
+            let f = impl_prim_dy_fast_fn(prim, span, a_filled, b_filled)?;
             return Some((f, 0, 0));
         }
         [Node::Mod(Rows, args, _)] => {

@@ -3482,6 +3482,7 @@ impl_primitive!(
     (2, AntiSelect),
     (2, AntiPick),
     (2, AntiKeep),
+    (2, AntiRotate),
     (1(2), UnJoin),
     (1(2), UnJoinEnd),
     (2(2), UnJoinShape),

@@ -233,6 +233,7 @@ impl fmt::Display for ImplPrimitive {
             AntiSelect => write!(f, "{Anti}{Select}"),
             AntiPick => write!(f, "{Anti}{Pick}"),
             AntiKeep => write!(f, "{Anti}{Keep}"),
+            AntiRotate => write!(f, "{Anti}{Rotate}"),
             UnJoin | UnJoinShape | UnJoinShape2 => write!(f, "{Un}{Join}"),
             UnJoinEnd | UnJoinShapeEnd | UnJoinShape2End => write!(f, "{Un}({Join}{Flip})"),
             UnKeep => write!(f, "{Un}{Keep}"),
@@ -1300,6 +1301,12 @@ impl ImplPrimitive {
             ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
             ImplPrimitive::AntiDrop => env.dyadic_ro_env(Value::anti_drop)?,
             ImplPrimitive::AntiSelect => env.dyadic_oo_env(Value::anti_select)?,
+            ImplPrimitive::AntiRotate => {
+                let amnt = env.pop(1)?;
+                let mut val = env.pop(2)?;
+                amnt.anti_rotate(&mut val, env)?;
+                env.push(val);
+            }
             ImplPrimitive::AntiPick => env.dyadic_oo_env(Value::anti_pick)?,
             ImplPrimitive::AntiKeep => env.dyadic_oo_env(Value::anti_keep)?,
             ImplPrimitive::UnJoin => {
@@ -1455,13 +1462,13 @@ impl ImplPrimitive {
             }
             &ImplPrimitive::UndoRotate(n) => {
                 env.touch_stack(n + 1)?;
-                let mut amount = env.pop(1)?.scalar_neg(env)?;
+                let mut amount = env.pop(1)?;
                 if n == 1 {
                     let mut val = env.pop(2)?;
                     if amount.rank() > 0 && amount.row_count() > val.rank() {
                         amount.drop_n(amount.row_count() - val.rank());
                     }
-                    amount.rotate(&mut val, env)?;
+                    amount.anti_rotate(&mut val, env)?;
                     env.push(val);
                 } else {
                     let end = env.stack_height() - n;
@@ -1476,9 +1483,9 @@ impl ImplPrimitive {
                             if amount.rank() > 0 && amount.row_count() > val.rank() {
                                 amount.drop_n(amount.row_count() - val.rank());
                             }
-                            amount.rotate(val, env)?;
+                            amount.anti_rotate(val, env)?;
                         } else if val.rank() == max_rank {
-                            amount.rotate(val, env)?;
+                            amount.anti_rotate(val, env)?;
                         }
                     }
                     for val in vals {

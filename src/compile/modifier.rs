@@ -938,9 +938,14 @@ impl Compiler {
                 // Empty inverse case, where only one function is supplied
                 let (sn, span) = self.monadic_modifier_op(modified)?;
                 let spandex = self.add_span(span.clone());
+                let un = if sn.sig.args() == sn.sig.outputs() {
+                    Some(SigNode::new(sn.sig, Node::empty()))
+                } else {
+                    None
+                };
                 let mut cust = CustomInverse {
                     normal: Ok(sn.clone()),
-                    un: Some(SigNode::default()),
+                    un,
                     anti: None,
                     under: Some((sn.clone(), SigNode::default())),
                     is_obverse: true,

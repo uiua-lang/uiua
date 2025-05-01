@@ -1463,12 +1463,13 @@ impl ImplPrimitive {
             &ImplPrimitive::UndoRotate(n) => {
                 env.touch_stack(n + 1)?;
                 let mut amount = env.pop(1)?;
+                let depth = amount.rank().saturating_sub(1);
                 if n == 1 {
                     let mut val = env.pop(2)?;
                     if amount.rank() > 0 && amount.row_count() > val.rank() {
                         amount.drop_n(amount.row_count() - val.rank());
                     }
-                    amount.anti_rotate(&mut val, env)?;
+                    amount.rotate_depth(&mut val, depth, depth, false, env)?;
                     env.push(val);
                 } else {
                     let end = env.stack_height() - n;
@@ -1483,9 +1484,9 @@ impl ImplPrimitive {
                             if amount.rank() > 0 && amount.row_count() > val.rank() {
                                 amount.drop_n(amount.row_count() - val.rank());
                             }
-                            amount.anti_rotate(val, env)?;
+                            amount.rotate_depth(val, depth, depth, false, env)?;
                         } else if val.rank() == max_rank {
-                            amount.anti_rotate(val, env)?;
+                            amount.rotate_depth(val, depth, depth, false, env)?;
                         }
                     }
                     for val in vals {

@@ -63,7 +63,7 @@ jobs:
     - uses: actions/cache@v4
       with:
         path: target
-        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock', '.github/workflow/build_latest.yml') }}
         restore-keys: |
           build-${{ runner.os }}-
     - name: Authenticate git
@@ -89,11 +89,6 @@ jobs:
         git commit --amend --no-edit
         git push --force
         git checkout main
-    - name: Save cache
-      uses: actions/cache/save@v4
-      with:
-        path: target
-        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
   # Create the release without assets
   create_release:
     name: Create release

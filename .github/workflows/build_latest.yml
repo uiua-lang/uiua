@@ -63,7 +63,7 @@ jobs:
     - uses: actions/cache@v4
       with:
         path: target
-        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock', '.github/workflow/build_latest.yml') }}
+        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock', '.github/workflows/build_latest.yml') }}
         restore-keys: |
           build-${{ runner.os }}-
     - name: Authenticate git

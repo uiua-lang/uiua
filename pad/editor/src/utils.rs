@@ -439,7 +439,8 @@ fn build_code_lines(id: &str, code: &str) -> CodeLines {
         let span = span.span;
         push_unspanned(&mut lines, span.start.char_pos as usize, &mut end);
 
-        let text: String = chars[span.start.char_pos as usize..span.end.char_pos as usize]
+        let text: String = chars
+            [span.start.char_pos as usize..(span.end.char_pos as usize).min(chars.len())]
             .iter()
             .copied()
             .collect();

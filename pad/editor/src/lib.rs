@@ -681,9 +681,7 @@ pub fn Editor<'a>(
                     }
                 });
             }
-            "Tab" => {
-                state.update(|state| replace_code(state, "  "));
-            }
+            "Tab" => state.update(|state| replace_code(state, "  ")),
             // Select all
             "a" if os_ctrl(event) => {
                 state.update(|state| {

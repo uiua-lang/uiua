@@ -7,7 +7,7 @@ use crate::{
     Ops, Primitive, SigNode, Uiua, UiuaResult, Value,
 };
 
-use super::{monadic::range, table::table_impl, validate_size};
+use super::{monadic::numeric_range, table::table_impl, validate_size};
 
 pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
@@ -170,7 +170,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
             } else {
                 xs.row_count()
             };
-            let range: Value = match range(&[n as isize], env)? {
+            let range: Value = match numeric_range(&[n as isize], env)? {
                 Ok(data) => data.into(),
                 Err(data) => data.into(),
             };

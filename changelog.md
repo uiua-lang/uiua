@@ -12,7 +12,6 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) no longer uses the fill value as the first row
 - **Breaking Change** - [`fft`](https://uiua.org/docs/fft) now works along every axis of an array rather than only its last
   - This is more consistent with other functions
-- **Breaking Change** - Change how [`off ⤚`](https://uiua.org/docs/off) works on monadic functions
 - There are no longer signature restrictions on [`try ⍣`](https://uiua.org/docs/try)'s functions
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under) for monadic functions
 - Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⊜`](https://uiua.org/docs/partition) for monadic functions
@@ -22,12 +21,15 @@ This version is not yet released. If you are reading this on the website, then t
 - [Output comments](https://uiua.org/tutorial/basic#output-comments) now show values on the stack *after* their line rather than before it
 - Add [`un °`](https://uiua.org/docs/un) [`fill ⬚`](https://uiua.org/docs/fill)ed [`take ↙`](https://uiua.org/docs/take)
 - Give [`base ⊥`](https://uiua.org/docs/base) a glyph
+- Add the [`hsv`](https://uiua.org/docs/hsv) function, which converts between HSV and RGB color spaces
 - Add the [`pretty`](https://uiua.org/docs/pretty) function, which gives the string representation of an array's pretty-printed output
 - Add numeric subscripts for [`length ⧻`](https://uiua.org/docs/length) to get the length of a specific axis
 - Add numeric subscripts for [`shape △`](https://uiua.org/docs/shape) to get the shape of the first few axes
 - Deprecate [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off) on noadic and monadic functions
   - There was a lot of disagreement about what the behavior should be
   - They made the movement of data on the stack harder to follow
+  - **Breaking Change** - Change how [`off ⤚`](https://uiua.org/docs/off) works on monadic functions
+    - This change made the behavior more consistent before ultimate deprecation
 - Deprecate various environment-relate constants and replace them with noadic functions
   - This prevents the details of the compiling environment being used instead of the details from the actual running environment
   - Deprecrated: `Os`, `Family`, `Arch`, `ExeExt`, `DllExt`, `Sep`, `NumProcs`

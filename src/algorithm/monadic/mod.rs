@@ -20,6 +20,7 @@ use std::{
 use ecow::{eco_vec, EcoVec};
 use rayon::prelude::*;
 use time::{Date, Month, OffsetDateTime, Time};
+use unicode_normalization::UnicodeNormalization;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
@@ -478,9 +479,12 @@ where
 impl Value {
     /// Create a `range` array
     pub fn range(&self, env: &Uiua) -> UiuaResult<Self> {
+        if let Value::Char(arr) = self {
+            return arr.character_range(env).map(Into::into);
+        }
         let ishape = self.as_ints(
             env,
-            "Range max should be a single integer \
+            "Numeric range max should be a single integer \
             or a list of integers",
         )?;
         if self.rank() == 0 {
@@ -505,7 +509,7 @@ impl Value {
         }
         let mut shape = Shape::from_iter(ishape.iter().map(|d| d.unsigned_abs()));
         shape.push(shape.len());
-        let data = range(&ishape, env)?;
+        let data = numeric_range(&ishape, env)?;
         let mut value: Value = match data {
             Ok(data) => Array::new(shape, data).into(),
             Err(data) => Array::new(shape, data).into(),
@@ -536,7 +540,7 @@ impl Value {
     }
 }
 
-pub(crate) fn range(
+pub(crate) fn numeric_range(
     shape: &[isize],
     env: &Uiua,
 ) -> UiuaResult<Result<CowSlice<f64>, CowSlice<u8>>> {
@@ -622,6 +626,63 @@ pub(crate) fn range(
             }
         }
         Ok(Ok(data.into()))
+    }
+}
+
+impl Array<char> {
+    fn character_range(&self, env: &Uiua) -> UiuaResult<Self> {
+        const SKIP: &[char] = &['\u{3a2}'];
+        if self.rank() > 1 {
+            return Err(env.error(format!(
+                "Character range max must be rank 0 or 1, \
+                but its rank is {}",
+                self.rank()
+            )));
+        }
+        let maxes = self.data.as_slice();
+        let mut ranges = Vec::with_capacity(maxes.len());
+        let char_key = |c: char| {
+            (
+                c.is_uppercase(),
+                c.is_lowercase(),
+                c.is_alphabetic(),
+                c.is_numeric(),
+                c.is_control(),
+                c.is_whitespace(),
+                c.nfd().count(),
+            )
+        };
+        for &max in maxes {
+            let max_key = char_key(max);
+            let mut start = max;
+            loop {
+                if start == '\u{0}' {
+                    break;
+                }
+                let Ok(prev) = char::try_from(start as u32 - 1) else {
+                    break;
+                };
+                if SKIP.contains(&prev) {
+                    start = prev;
+                    continue;
+                }
+                let prev_key = char_key(prev);
+                if prev_key == max_key {
+                    start = prev;
+                } else {
+                    break;
+                }
+            }
+            ranges.push(EcoVec::from_iter(
+                (start..=max).filter(|c| !SKIP.contains(c)),
+            ));
+        }
+        if self.rank() == 0 {
+            let mut arr = Array::from(ranges.remove(0));
+            arr.meta.mark_sorted_up(true);
+            return Ok(arr);
+        }
+        Err(env.error("todo"))
     }
 }
 

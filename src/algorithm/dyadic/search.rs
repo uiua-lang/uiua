@@ -205,15 +205,39 @@ impl<T: ArrayValue> Array<T> {
                     return Ok(Array::new(shape, data));
                 }
                 if haystack.rank() - needle.rank() == 1 {
-                    (haystack
-                        .row_slices()
-                        .position(|r| {
-                            r.len() == needle.data.len()
-                                && r.iter().zip(&needle.data).all(|(a, b)| a.array_eq(b))
-                        })
-                        .map(|i| i as f64)
-                        .unwrap_or(default))
-                    .into()
+                    if haystack.meta.is_sorted_up() {
+                        // Binary search
+                        if haystack.row_count() == 0 {
+                            return Ok((haystack.row_count() as f64).into());
+                        }
+                        let needle_slice = ArrayCmpSlice(needle.data.as_slice());
+                        let mut l = 0;
+                        let mut r = haystack.row_count().saturating_sub(1);
+                        let mut res = None;
+                        while l <= r {
+                            let mid = l + (r - l) / 2;
+                            match ArrayCmpSlice(haystack.row_slice(mid)).cmp(&needle_slice) {
+                                Ordering::Equal => {
+                                    res = Some(mid);
+                                    break;
+                                }
+                                Ordering::Less => l = mid + 1,
+                                Ordering::Greater => r = mid.saturating_sub(1),
+                            }
+                        }
+                        (res.unwrap_or(haystack.row_count()) as f64).into()
+                    } else {
+                        // Linear search
+                        (haystack
+                            .row_slices()
+                            .position(|r| {
+                                r.len() == needle.data.len()
+                                    && r.iter().zip(&needle.data).all(|(a, b)| a.array_eq(b))
+                            })
+                            .map(|i| i as f64)
+                            .unwrap_or(default))
+                        .into()
+                    }
                 } else {
                     let mut rows = Vec::with_capacity(haystack.row_count());
                     for of in haystack.rows() {

@@ -2302,6 +2302,14 @@ code:
                             Node::Prim(Take, span),
                         ])
                     }
+                    Range => {
+                        let span = self.add_span(span);
+                        Node::from_iter([
+                            Node::Prim(Range, span),
+                            Node::new_push(n),
+                            Node::Prim(Add, span),
+                        ])
+                    }
                     _ => {
                         self.add_error(
                             span.clone(),

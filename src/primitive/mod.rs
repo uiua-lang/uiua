@@ -541,7 +541,7 @@ impl Primitive {
             (Couple | Box, Some(n)) if n >= 0 => Signature::new(n as usize, 1),
             (Couple, None) => Signature::new(2, 1),
             (Box, None) => Signature::new(1, 1),
-            (Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8 | Len | Shape, _) => {
+            (Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8 | Len | Shape | Range, _) => {
                 return self.sig()
             }
             (Stack, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),

@@ -27,6 +27,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`pretty`](https://uiua.org/docs/pretty) function, which gives the string representation of an array's pretty-printed output
 - Add numeric subscripts for [`length ⧻`](https://uiua.org/docs/length) to get the length of a specific axis
 - Add numeric subscripts for [`shape △`](https://uiua.org/docs/shape) to get the shape of the first few axes
+- Add numeric subscripts for [`range ⇡`](https://uiua.org/docs/range) to offset the range
 - Deprecate [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off) on noadic and monadic functions
   - There was a lot of disagreement about what the behavior should be
   - They made the movement of data on the stack harder to follow

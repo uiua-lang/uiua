@@ -559,6 +559,11 @@ primitive!(
     /// ex:       [1_2_3 4_5_6]
     ///   : ⊡⇡¯△. [1_2_3 4_5_6]
     ///   :  ⍜♭⇌  [1_2_3 4_5_6]
+    ///
+    /// Subscripted [range] changes the offset of the range.
+    /// ex: ⇡₁ 5
+    ///   : ⇡₂ 5
+    /// ex: ⇡₁ 2_3
     (1, Range, MonadicArray, ("range", '⇡')),
     /// Get the first row of an array
     ///

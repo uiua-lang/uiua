@@ -46,6 +46,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Improve pretty-printed array layout
   - High-rank arrays take up less vertical space and more horizontal space
   - Box arrays take up less space
+- Complex arrays are now compatible with image and GIF functions and will display as such automatically in the pad
+  - Each pixel is colored via a domain coloring function
 - The formatter will now allow putting multiple function pack branches on a single line
 - Optimizations
   - [`stencil ⧈`](https://uiua.org/docs/stencil) is now optimized when used with with monadic functions that are optimized for [`rows ≡`](https://uiua.org/docs/rows)

@@ -1,5 +1,7 @@
 //! En/decode Uiua arrays to/from media formats
 
+use std::f64::consts::E;
+
 use ecow::eco_vec;
 #[cfg(feature = "audio_encode")]
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
@@ -7,9 +9,11 @@ use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use image::{DynamicImage, ImageFormat};
 use serde::*;
 
-use crate::SysBackend;
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
+use crate::{Complex, SysBackend};
+
+use super::monadic::hsv_to_rgb;
 
 /// Conversion of a value to some media format based on the value's shape
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -302,7 +306,8 @@ pub fn image_to_bytes(image: &DynamicImage, format: ImageFormat) -> Result<Vec<u
 #[doc(hidden)]
 #[cfg(feature = "image")]
 pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
-    if ![2, 3].contains(&value.rank()) {
+    let is_complex = matches!(value, Value::Complex(_));
+    if !is_complex && ![2, 3].contains(&value.rank()) || is_complex && value.rank() != 2 {
         return Err(format!(
             "Image must be a rank 2 or 3 numeric array, but it is a rank-{} {} array",
             value.rank(),
@@ -312,11 +317,13 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     let bytes = match value {
         Value::Num(nums) => nums.data.iter().map(|f| (*f * 255.0) as u8).collect(),
         Value::Byte(bytes) => bytes.data.iter().map(|&b| (b > 0) as u8 * 255).collect(),
-        _ => return Err("Image must be a numeric array".into()),
+        Value::Complex(comp) => comp.data.iter().copied().flat_map(complex_color).collect(),
+        _ => return Err("Image must be a numeric or complex array".into()),
     };
     #[allow(clippy::match_ref_pats)]
     let [height, width, px_size] = match value.shape.dims() {
-        &[a, b] => [a, b, 1],
+        &[a, b] if is_complex => [a, b, 3],
+        &[a, b] if !is_complex => [a, b, 1],
         &[a, b, c] => [a, b, c],
         _ => unreachable!("Shape checked above"),
     };
@@ -339,6 +346,14 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
             ))
         }
     })
+}
+
+fn complex_color(c: Complex) -> [u8; 3] {
+    let h = c.arg();
+    let mag = c.abs();
+    let s = 0.3 + 0.7 * ((1.0 - mag) / 10.0).exp();
+    let v = 1.0 - (-E * mag).exp();
+    hsv_to_rgb(h, s, v).map(|c| (c * 255.0) as u8)
 }
 
 #[doc(hidden)]

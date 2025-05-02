@@ -2021,20 +2021,7 @@ impl Array<f64> {
             let [h, s, v, ..] = *hsv else {
                 unreachable!();
             };
-            let h = h / TAU * 6.0;
-            let i = h.floor() as isize;
-            let f = h - i as f64;
-            let p = v * (1.0 - s);
-            let q = v * (1.0 - f * s);
-            let t = v * (1.0 - (1.0 - f) * s);
-            let (r, g, b) = match i.rem_euclid(6) {
-                0 => (v, t, p),
-                1 => (q, v, p),
-                2 => (p, v, t),
-                3 => (p, q, v),
-                4 => (t, p, v),
-                _ => (v, p, q),
-            };
+            let [r, g, b] = hsv_to_rgb(h, s, v);
             hsv[0] = r;
             hsv[1] = g;
             hsv[2] = b;
@@ -2042,6 +2029,23 @@ impl Array<f64> {
         self.meta.take_sorted_flags();
         self.validate();
         Ok(self)
+    }
+}
+
+pub(crate) fn hsv_to_rgb(h: f64, s: f64, v: f64) -> [f64; 3] {
+    let h = h / TAU * 6.0;
+    let i = h.floor() as isize;
+    let f = h - i as f64;
+    let p = v * (1.0 - s);
+    let q = v * (1.0 - f * s);
+    let t = v * (1.0 - (1.0 - f) * s);
+    match i.rem_euclid(6) {
+        0 => [v, t, p],
+        1 => [q, v, p],
+        2 => [p, v, t],
+        3 => [p, q, v],
+        4 => [t, p, v],
+        _ => [v, p, q],
     }
 }
 

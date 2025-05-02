@@ -33,11 +33,11 @@ use crate::{
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
     parse::{flip_unsplit_lines, max_placeholder, parse, split_words},
-    Array, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic, DiagnosticKind,
-    DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc,
-    IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity, RunMode, SemanticComment,
-    SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
-    EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
+    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
+    DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
+    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
+    RunMode, SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind,
+    UiuaResult, Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
 pub use pre_eval::PreEvalMode;
 

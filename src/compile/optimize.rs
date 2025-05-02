@@ -137,7 +137,7 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &PathOpt,
     &SplitByOpt,
     &AllSameOpt,
-    &RepeatRandOpt,
+    &RangeStartOpt,
     &PopConst,
     &TraceOpt,
     &ValidateTypeOpt,
@@ -435,80 +435,13 @@ impl Optimization for SplitByOpt {
     }
 }
 
-#[derive(Debug)]
-struct RepeatRandOpt;
-impl Optimization for RepeatRandOpt {
-    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
-        match_and_replace(nodes, |mut nodes| {
-            // Extract potential repetition count before array
-            let n = if let [Node::Push(n), rest @ ..] = nodes {
-                nodes = rest;
-                Some(n)
-            } else {
-                None
-            };
-            let had_leading_n = n.is_some();
-            // Extract array
-            let [Node::Array { inner, .. }, ..] = nodes else {
-                return None;
-            };
-            let mut inner = inner.as_slice();
-            // Extract repetition count inside array if it wasn't extracted before
-            let n = if let Some(n) = n {
-                n
-            } else if let [Push(n), rest @ ..] = inner {
-                inner = rest;
-                n
-            } else {
-                return None;
-            };
-            if n.rank() != 0 {
-                return None;
-            }
-            // Extract repeat
-            let [Mod(Repeat, args, repeat_span) | ImplMod(RepeatWithInverse, args, repeat_span)] =
-                inner
-            else {
-                return None;
-            };
-            let f = args.first()?;
-
-            match f.node.as_slice() {
-                [Prim(Rand, rand_span), Push(max), mul @ Prim(Mul, _), floor @ Prim(Floor, _)] => {
-                    if max.rank() != 0 {
-                        return None;
-                    }
-                    let new = Node::from_iter([
-                        Push(n.clone()),
-                        Prim(Range, *repeat_span),
-                        Mod(
-                            Rows,
-                            eco_vec![SigNode::new((1, 1), ImplPrim(ReplaceRand, *rand_span))],
-                            *repeat_span,
-                        ),
-                        Push(max.clone()),
-                        mul.clone(),
-                        floor.clone(),
-                    ]);
-                    Some((1 + had_leading_n as usize, new))
-                }
-                [Prim(Rand, rand_span)] => {
-                    let new = Node::from_iter([
-                        Push(n.clone()),
-                        Prim(Range, *repeat_span),
-                        Mod(
-                            Rows,
-                            eco_vec![SigNode::new((1, 1), ImplPrim(ReplaceRand, *rand_span))],
-                            *repeat_span,
-                        ),
-                    ]);
-                    Some((1 + had_leading_n as usize, new))
-                }
-                _ => None,
-            }
-        })
-    }
-}
+opt!(
+    RangeStartOpt,
+    (
+        [Prim(Range, span), Push(n), Prim(Add, _)](n.rank() == 0 && n.type_id() == f64::TYPE_ID),
+        Node::from_iter([Push(n.clone()), ImplPrim(RangeStart, *span),])
+    )
+);
 
 opt!(
     TraceOpt,

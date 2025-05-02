@@ -3584,6 +3584,7 @@ impl_primitive!(
     (2[1], SplitByKeepEmpty),
     (2, AbsComplex),
     (2, MatrixDiv),
+    (2, RangeStart),
     // Implementation details
     (1, Utf16),
     ([2], RepeatWithInverse),

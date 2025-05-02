@@ -2049,7 +2049,11 @@ impl Value {
             }
         };
         whole.meta.set_per_meta(per_meta.clone());
+        whole.meta.take_sorted_flags();
+        whole.validate();
         frac.meta.set_per_meta(per_meta);
+        frac.meta.take_sorted_flags();
+        frac.validate();
         Ok((whole, frac))
     }
     /// Decompose a value into its sign and magnitude
@@ -2097,7 +2101,11 @@ impl Value {
             }
         };
         sign.meta.set_per_meta(per_meta.clone());
+        sign.meta.take_sorted_flags();
+        sign.validate();
         mag.meta.set_per_meta(per_meta);
+        mag.meta.take_sorted_flags();
+        mag.validate();
         Ok((sign, mag))
     }
 }

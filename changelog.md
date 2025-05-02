@@ -21,6 +21,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This creates an array with multiple copies of the target array rotated by different amounts
 - [Output comments](https://uiua.org/tutorial/basic#output-comments) now show values on the stack *after* their line rather than before it
 - Add [`un °`](https://uiua.org/docs/un) [`fill ⬚`](https://uiua.org/docs/fill)ed [`take ↙`](https://uiua.org/docs/take)
+- Add [`un °`](https://uiua.org/docs/un) [`add +`](https://uiua.org/docs/add) and [`un °`](https://uiua.org/docs/un) [`multiply ×`](https://uiua.org/docs/multiply)
+  - These split into fraction and whole or sign and magnitude respectively
 - Give [`base ⊥`](https://uiua.org/docs/base) a glyph
 - Add the [`pretty`](https://uiua.org/docs/pretty) function, which gives the string representation of an array's pretty-printed output
 - Add numeric subscripts for [`length ⧻`](https://uiua.org/docs/length) to get the length of a specific axis

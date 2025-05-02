@@ -90,16 +90,16 @@ You can find more uses of [un](/docs/un) in its documentation, including a list 
 
 The [un](/docs/un) inverse of a function must always have the opposite signature of that function. For example, if a function has signature `|2.1` (2 arguments, 1 output), then its inverse must have signature `|1.2`. This makes them easier to reason about, both for the programmer and for the compiler.
 
-This makes some things that *seem* like they have obvious inverses not actually work. For example, [un](/docs/un)[add](/docs/add) is *not* just [subtract](/docs/sub).
+This makes some things that *seem* like they have obvious inverses not actually work. For example, [un](/docs/un)[subtract](/docs/add) is *not* just [add](/docs/sub).
 
 ```uiua should fail
-°+ 3 5
+°- 3 5
 ```
 
 One workaround is to put one of the arguments inside the inverted function. This makes the function's signature `|1.1`, which is its own inverse.
 
 ```uiua
-°(+3) 5
+°(-3) 5
 ```
 
 However, this is not always possible, as the argument may not be static.
@@ -107,7 +107,7 @@ However, this is not always possible, as the argument may not be static.
 The [anti](/docs/anti) modifier is similar to [un](/docs/un), but it allows the use of external arguments.
 
 ```uiua
-⌝+ 3 5
+⌝- 3 5
 ```
 
 [anti](/docs/anti) is equivalent to `popunon`, and so the [anti](/docs/anti) inverse of a function with signature `|a.b` is `|(b+1).(a-1)`.

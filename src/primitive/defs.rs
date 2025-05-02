@@ -364,6 +364,9 @@ primitive!(
     /// ex: +1 2
     /// ex: +1 [2 3 4]
     /// ex: + [1 2 3] [4 5 6]
+    ///
+    /// [un][add] splits a number into fractional and integer parts.
+    /// ex: °+ [3.5 ¯5.25]
     (2, Add, DyadicPervasive, ("add", '+')),
     /// Subtract values
     ///
@@ -385,6 +388,10 @@ primitive!(
     /// Uiua does not have dedicated boolean logical operators.
     /// [multiply] can be used as a logical AND.
     /// ex: ◡×⊓⌟≥≤5 8 . [6 2 5 9 6 5 0 4]
+    ///
+    /// [un][add] splits a number into sign and magnitude.
+    /// ex: °× [1.5 0 ¯4]
+    /// ex: °× [i ℂ3 4 2]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
     /// Divide values
     ///

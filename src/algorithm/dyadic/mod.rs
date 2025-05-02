@@ -2019,7 +2019,7 @@ impl Value {
                 let frac = Array::new(arr.shape.clone(), frac_data);
                 (frac.into(), arr.into())
             }
-            Value::Char(_) => return Err(env.error("Cannot unmultiply characters")),
+            Value::Char(_) => return Err(env.error("Cannot un-add characters")),
             Value::Complex(mut arr) => {
                 let mut fract_data = eco_vec![Complex::ZERO; arr.element_count()];
                 for (c, f) in arr
@@ -2057,7 +2057,7 @@ impl Value {
         Ok((whole, frac))
     }
     /// Decompose a value into its sign and magnitude
-    pub(crate) fn un_mul(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn un_mul(mut self) -> UiuaResult<(Self, Self)> {
         let per_meta = self.meta.take_per_meta();
         let (mut sign, mut mag): (Value, Value) = match self {
             Value::Byte(arr) => {
@@ -2077,7 +2077,15 @@ impl Value {
                 let sign = Array::new(arr.shape.clone(), sign_data);
                 (sign.into(), arr.into())
             }
-            Value::Char(_) => return Err(env.error("Cannot unmultiply characters")),
+            Value::Char(mut arr) => {
+                let mut sign_data = eco_vec![0.0; arr.element_count()];
+                for (c, s) in arr.data.as_mut_slice().iter_mut().zip(sign_data.make_mut()) {
+                    *s = pervade::sign::char(*c);
+                    *c = pervade::scalar_abs::char(*c);
+                }
+                let sign = Array::new(arr.shape.clone(), sign_data);
+                (sign.into(), arr.into())
+            }
             Value::Complex(mut arr) => {
                 let mut abs_data = eco_vec![0.0; arr.element_count()];
                 for (c, a) in arr.data.as_mut_slice().iter_mut().zip(abs_data.make_mut()) {
@@ -2091,7 +2099,7 @@ impl Value {
                 let mut sign_data = EcoVec::with_capacity(arr.element_count());
                 let mut mag_data = EcoVec::with_capacity(arr.element_count());
                 for Boxed(val) in arr.data {
-                    let (mag, sign) = val.un_mul(env)?;
+                    let (mag, sign) = val.un_mul()?;
                     mag_data.push(Boxed(mag));
                     sign_data.push(Boxed(sign));
                 }

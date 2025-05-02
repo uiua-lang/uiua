@@ -389,7 +389,7 @@ primitive!(
     /// [multiply] can be used as a logical AND.
     /// ex: ◡×⊓⌟≥≤5 8 . [6 2 5 9 6 5 0 4]
     ///
-    /// [un][add] splits a number into sign and magnitude.
+    /// [un][multiply] splits a number into sign and magnitude.
     /// ex: °× [1.5 0 ¯4]
     /// ex: °× [i ℂ3 4 2]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
@@ -2571,7 +2571,7 @@ primitive!(
     /// ex: hsv [0 0 1]
     /// ex: hsv [Yellow Cyan Magenta]
     /// ex: hsv [Orange Purple Black White]
-    /// [un][hsv] convert from HSV to RGB. This means it can be used with [under] to do various color manipulations.
+    /// [un][hsv] converts from HSV to RGB. This means it can be used with [under] to do various color manipulations.
     /// ex: ⍜(⊡0°⍉hsv|+π) ▽⟜≡▽0.5 Lena # Opposite hue
     /// ex: ⍜(⊡1°⍉hsv|÷2) ▽⟜≡▽0.5 Lena # Half saturation
     /// ex: ⍜(⊡2°⍉hsv|÷2) ▽⟜≡▽0.5 Lena # Half value

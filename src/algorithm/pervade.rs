@@ -916,9 +916,7 @@ fn character_sign(a: char) -> f64 {
 pub mod sign {
     use super::*;
     pub fn num(a: f64) -> f64 {
-        if a.is_nan() {
-            f64::NAN
-        } else if a == 0.0 {
+        if a == 0.0 {
             0.0
         } else {
             a.signum()

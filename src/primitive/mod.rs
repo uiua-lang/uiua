@@ -222,6 +222,8 @@ impl fmt::Display for ImplPrimitive {
             UnMap => write!(f, "{Un}{Map}"),
             UnAtan => write!(f, "{Un}{Atan}"),
             UnComplex => write!(f, "{Un}{Complex}"),
+            UnAdd => write!(f, "{Un}{Add}"),
+            UnMul => write!(f, "{Un}{Mul}"),
             UnUtf8 => write!(f, "{Un}{Utf8}"),
             UnUtf16 => write!(f, "{Un}{Utf16}"),
             Utf16 => write!(f, "utf₁₆"),
@@ -1376,6 +1378,18 @@ impl ImplPrimitive {
                 let re = x.complex_re(env)?;
                 env.push(re);
                 env.push(im);
+            }
+            ImplPrimitive::UnAdd => {
+                let x = env.pop(1)?;
+                let (frac, whole) = x.un_add(env)?;
+                env.push(whole);
+                env.push(frac);
+            }
+            ImplPrimitive::UnMul => {
+                let x = env.pop(1)?;
+                let (sign, mag) = x.un_mul(env)?;
+                env.push(mag);
+                env.push(sign);
             }
             ImplPrimitive::UnParse => env.monadic_env(Value::unparse)?,
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,

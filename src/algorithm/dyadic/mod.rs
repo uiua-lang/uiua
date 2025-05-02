@@ -27,7 +27,7 @@ use crate::{
     fill::FillValue,
     val_as_arr,
     value::Value,
-    Shape, Uiua, UiuaResult, RNG,
+    Complex, Shape, Uiua, UiuaResult, RNG,
 };
 
 use super::{
@@ -1998,5 +1998,106 @@ impl Value {
                 Ok(self.row(i))
             }
         }
+    }
+}
+
+impl Value {
+    pub(crate) fn un_add(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        let per_meta = self.meta.take_per_meta();
+        let (mut whole, mut frac): (Value, Value) = match self {
+            Value::Byte(arr) => {
+                let frac_data = eco_vec![0u8; arr.element_count()];
+                let frac = Array::new(arr.shape.clone(), frac_data);
+                (frac.into(), arr.into())
+            }
+            Value::Num(mut arr) => {
+                let mut frac_data = eco_vec![0.0; arr.element_count()];
+                for (f, s) in arr.data.as_mut_slice().iter_mut().zip(frac_data.make_mut()) {
+                    *s = f.rem_euclid(1.0);
+                    *f = f.floor();
+                }
+                let frac = Array::new(arr.shape.clone(), frac_data);
+                (frac.into(), arr.into())
+            }
+            Value::Char(_) => return Err(env.error("Cannot unmultiply characters")),
+            Value::Complex(mut arr) => {
+                let mut fract_data = eco_vec![Complex::ZERO; arr.element_count()];
+                for (c, f) in arr
+                    .data
+                    .as_mut_slice()
+                    .iter_mut()
+                    .zip(fract_data.make_mut())
+                {
+                    *f = Complex::new(c.re.rem_euclid(1.0), c.im.rem_euclid(1.0));
+                    *c = c.floor();
+                }
+                let frac = Array::new(arr.shape.clone(), fract_data);
+                let whole = Array::new(arr.shape.clone(), arr.data);
+                (frac.into(), whole.into())
+            }
+            Value::Box(arr) => {
+                let mut whole_data = EcoVec::with_capacity(arr.element_count());
+                let mut frac_data = EcoVec::with_capacity(arr.element_count());
+                for Boxed(val) in arr.data {
+                    let (whole, frac) = val.un_add(env)?;
+                    whole_data.push(Boxed(whole));
+                    frac_data.push(Boxed(frac));
+                }
+                let whole = Array::new(arr.shape.clone(), whole_data);
+                let frac = Array::new(arr.shape.clone(), frac_data);
+                (frac.into(), whole.into())
+            }
+        };
+        whole.meta.set_per_meta(per_meta.clone());
+        frac.meta.set_per_meta(per_meta);
+        Ok((whole, frac))
+    }
+    /// Decompose a value into its sign and magnitude
+    pub(crate) fn un_mul(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        let per_meta = self.meta.take_per_meta();
+        let (mut sign, mut mag): (Value, Value) = match self {
+            Value::Byte(arr) => {
+                let mut sign_data = eco_vec![1u8; arr.element_count()];
+                for (i, s) in arr.data.iter().zip(sign_data.make_mut()) {
+                    *s = (*i != 0) as u8;
+                }
+                let sign = Array::new(arr.shape.clone(), sign_data);
+                (sign.into(), arr.into())
+            }
+            Value::Num(mut arr) => {
+                let mut sign_data = eco_vec![1.0; arr.element_count()];
+                for (f, s) in arr.data.as_mut_slice().iter_mut().zip(sign_data.make_mut()) {
+                    *s = pervade::sign::num(*f);
+                    *f = pervade::scalar_abs::num(*f);
+                }
+                let sign = Array::new(arr.shape.clone(), sign_data);
+                (sign.into(), arr.into())
+            }
+            Value::Char(_) => return Err(env.error("Cannot unmultiply characters")),
+            Value::Complex(mut arr) => {
+                let mut abs_data = eco_vec![0.0; arr.element_count()];
+                for (c, a) in arr.data.as_mut_slice().iter_mut().zip(abs_data.make_mut()) {
+                    *a = c.abs();
+                    *c = c.normalize();
+                }
+                let abs = Array::new(arr.shape.clone(), abs_data);
+                (arr.into(), abs.into())
+            }
+            Value::Box(arr) => {
+                let mut sign_data = EcoVec::with_capacity(arr.element_count());
+                let mut mag_data = EcoVec::with_capacity(arr.element_count());
+                for Boxed(val) in arr.data {
+                    let (mag, sign) = val.un_mul(env)?;
+                    mag_data.push(Boxed(mag));
+                    sign_data.push(Boxed(sign));
+                }
+                let sign = Array::new(arr.shape.clone(), sign_data);
+                let mag = Array::new(arr.shape.clone(), mag_data);
+                (sign.into(), mag.into())
+            }
+        };
+        sign.meta.set_per_meta(per_meta.clone());
+        mag.meta.set_per_meta(per_meta);
+        Ok((sign, mag))
     }
 }

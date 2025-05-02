@@ -2,7 +2,6 @@
 
 # 0.16
 - Prevent more cloning in `try`
-- Binary search in `memberof` and `indexof` for sorted arrays
 - `add` N `range` optimization
 - More rows optimizations
 - Line number signatures in pad

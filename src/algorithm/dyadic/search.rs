@@ -85,7 +85,32 @@ impl<T: ArrayValue> Array<T> {
                     return Ok(Array::new(shape, data));
                 }
                 if of.rank() - elems.rank() == 1 {
-                    of.rows().any(|r| *elems == r).into()
+                    if of.meta.is_sorted_up() {
+                        // Binary search
+                        if of.row_count() == 0 {
+                            return Ok(false.into());
+                        }
+                        let elems_slice = ArrayCmpSlice(elems.data.as_slice());
+                        let mut l = 0;
+                        let mut r = of.row_count().saturating_sub(1);
+                        let mut found = false;
+                        while l <= r {
+                            let mid = l + (r - l) / 2;
+                            match ArrayCmpSlice(of.row_slice(mid)).cmp(&elems_slice) {
+                                Ordering::Equal => {
+                                    found = true;
+                                    break;
+                                }
+                                Ordering::Less => l = mid + 1,
+                                Ordering::Greater if mid == 0 => break,
+                                Ordering::Greater => r = mid - 1,
+                            }
+                        }
+                        found.into()
+                    } else {
+                        // Linear search
+                        of.rows().any(|r| *elems == r).into()
+                    }
                 } else {
                     let mut rows = Vec::with_capacity(of.row_count());
                     for of in of.rows() {
@@ -222,7 +247,8 @@ impl<T: ArrayValue> Array<T> {
                                     break;
                                 }
                                 Ordering::Less => l = mid + 1,
-                                Ordering::Greater => r = mid.saturating_sub(1),
+                                Ordering::Greater if mid == 0 => break,
+                                Ordering::Greater => r = mid - 1,
                             }
                         }
                         (res.unwrap_or(haystack.row_count()) as f64).into()

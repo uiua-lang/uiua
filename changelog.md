@@ -61,6 +61,7 @@ This version is not yet released. If you are reading this on the website, then t
 - LSP improvements
   - Completions now properly respect scoping
   - Unused private bindings are now dimmed
+- Images in the native output window can now be easily copied to the clipboard
 
 ## 0.15.1 - 2025-04-06
 ### Interpreter

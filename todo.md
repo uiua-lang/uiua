@@ -2,10 +2,8 @@
 
 # 0.16
 - Prevent more cloning in `try`
-- `add` N `range` optimization
 - More rows optimizations
 - Line number signatures in pad
-- Copy image from window
 - Last-axis subscripts or modifier?
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

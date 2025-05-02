@@ -240,11 +240,16 @@ enum OutputItem {
 struct ImageState {
     size: [u32; 2],
     label: Option<String>,
+    copied: bool,
 }
 
 impl ImageState {
     fn new(size: [u32; 2], label: Option<String>) -> Self {
-        Self { size, label }
+        Self {
+            size,
+            label,
+            copied: false,
+        }
     }
 }
 
@@ -495,6 +500,24 @@ impl App {
                         Layout::top_down(Align::Min),
                         |ui| {
                             ui.label(format!("{}×{}", state.size[0], state.size[1]));
+                            // Copy
+                            #[cfg(feature = "clipboard")]
+                            {
+                                use arboard::*;
+                                if let Ok(mut provider) = Clipboard::new() {
+                                    let text = if state.copied { "Copied!" } else { "Copy" };
+                                    if ui.button(text).clicked() {
+                                        let image = image::load_from_memory(bytes).unwrap();
+                                        state.copied = provider
+                                            .set_image(ImageData {
+                                                width: image.width() as usize,
+                                                height: image.height() as usize,
+                                                bytes: image.into_rgba8().into_raw().into(),
+                                            })
+                                            .is_ok();
+                                    }
+                                }
+                            }
                             // Save
                             if !ui.button("Save").clicked() {
                                 return;

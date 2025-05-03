@@ -1171,7 +1171,7 @@ impl Parser<'_> {
         if let Some(n) = subscript {
             let span = word.span.clone().merge(n.span.clone());
             word = span.sp(Word::Subscripted(Box::new(crate::ast::Subscripted {
-                n,
+                script: n,
                 word,
             })));
         }
@@ -1252,7 +1252,7 @@ impl Parser<'_> {
             if let Some(n) = self.next_token_map(Token::as_subscript) {
                 let span = word.span.clone().merge(n.span.clone());
                 word = span.sp(Word::Subscripted(Box::new(crate::ast::Subscripted {
-                    n,
+                    script: n,
                     word,
                 })));
             } else {

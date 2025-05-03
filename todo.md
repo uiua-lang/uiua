@@ -2,6 +2,11 @@
 
 # 0.16
 - Mixed subscripts
+  - `both`
+  - `bracket`
+  - `rows`/`inventory`
+  - `each`
+- Items in functions
 - Line number signatures in pad
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

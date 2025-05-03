@@ -28,7 +28,7 @@ use serde::*;
 use crate::{
     algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
-    ast::SubSide,
+    ast::{NumericSubscript, SubSide, Subscript},
     boxed::Boxed,
     grid_fmt::GridFmt,
     lex::{AsciiToken, SUBSCRIPT_DIGITS},
@@ -531,8 +531,13 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     /// The modified signature of the primitive given a subscript
-    pub fn subscript_sig(&self, n: Option<i32>) -> Option<Signature> {
+    pub fn subscript_sig(&self, sub: Option<Subscript>) -> Option<Signature> {
         use Primitive::*;
+        let sub = sub?;
+        let n = match sub.num? {
+            NumericSubscript::N(n) => Some(n),
+            _ => None,
+        };
         Some(match (self, n) {
             (prim, Some(_)) if prim.class() == PrimClass::DyadicPervasive => Signature::new(1, 1),
             (

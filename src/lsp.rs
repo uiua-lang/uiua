@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    ast::{Func, InlineMacro, Item, Modifier, ModuleKind, Ref, RefComponent, Word},
+    ast::{Func, InlineMacro, Item, Modifier, ModuleKind, Ref, RefComponent, Subscript, Word},
     ident_modifier_args, is_custom_glyph,
     lex::{CodeSpan, Sp},
     parse::parse,
@@ -23,7 +23,7 @@ use crate::{
 #[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpanKind {
-    Primitive(Primitive, Option<i32>),
+    Primitive(Primitive, Option<Subscript>),
     String,
     Number,
     Comment,
@@ -44,7 +44,7 @@ pub enum SpanKind {
     FuncDelim(Signature, SetInverses),
     MacroDelim(usize),
     ImportSrc(ImportSrc),
-    Subscript(Option<Primitive>, Option<i32>),
+    Subscript(Option<Primitive>, Option<Subscript>),
     Obverse(SetInverses),
 }
 
@@ -722,7 +722,7 @@ impl Spanner {
                 }
                 #[allow(clippy::match_single_binding)]
                 Word::Subscripted(sub) => {
-                    let n = sub.n.value.n();
+                    let n = Some(sub.script.value);
                     match &sub.word.value {
                         Word::Modified(m) => {
                             match &m.modifier.value {
@@ -731,12 +731,17 @@ impl Spanner {
                                         m.modifier.span.clone().sp(SpanKind::Primitive(*p, n)),
                                     );
                                     spans.push(
-                                        sub.n.span.clone().sp(SpanKind::Subscript(Some(*p), n)),
+                                        sub.script
+                                            .span
+                                            .clone()
+                                            .sp(SpanKind::Subscript(Some(*p), n)),
                                     );
                                 }
                                 Modifier::Ref(r) => {
                                     spans.extend(self.ref_spans(r));
-                                    spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None, n)));
+                                    spans.push(
+                                        sub.script.span.clone().sp(SpanKind::Subscript(None, n)),
+                                    );
                                 }
                                 Modifier::Macro(mac) => {
                                     spans.extend(self.func_spans(&mac.func.value, &mac.func.span));
@@ -747,18 +752,21 @@ impl Spanner {
                                     }
                                     let ident_span = (mac.ident.span.clone()).sp(mac_delim_kind);
                                     spans.push(ident_span);
-                                    spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None, n)));
+                                    spans.push(
+                                        sub.script.span.clone().sp(SpanKind::Subscript(None, n)),
+                                    );
                                 }
                             }
                             spans.extend(self.words_spans(&m.operands));
                         }
                         Word::Primitive(p) => {
                             spans.push((sub.word.span.clone()).sp(SpanKind::Primitive(*p, n)));
-                            spans.push(sub.n.span.clone().sp(SpanKind::Subscript(Some(*p), n)));
+                            spans
+                                .push(sub.script.span.clone().sp(SpanKind::Subscript(Some(*p), n)));
                         }
                         _ => {
                             spans.extend(self.words_spans(slice::from_ref(&sub.word)));
-                            spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None, n)));
+                            spans.push(sub.script.span.clone().sp(SpanKind::Subscript(None, n)));
                         }
                     }
                 }
@@ -1588,7 +1596,7 @@ mod server {
             let mut tokens = Vec::new();
             let mut prev_line = 0;
             let mut prev_char = 0;
-            let for_prim = |p: Primitive, sub: Option<i32>| {
+            let for_prim = |p: Primitive, sub: Option<Subscript>| {
                 let args = p.subscript_sig(sub).map(|sig| sig.args()).or(p.args());
                 Some(match p.class() {
                     PrimClass::Stack | PrimClass::Debug | PrimClass::Planet

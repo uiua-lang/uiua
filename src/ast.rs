@@ -681,26 +681,44 @@ impl Modifier {
 /// A subscripted word
 #[derive(Clone, Serialize)]
 pub struct Subscripted {
-    /// The subscript number
-    pub n: Sp<Subscript>,
+    /// The subscript
+    pub script: Sp<Subscript>,
     /// The modified word
     pub word: Sp<Word>,
 }
 
-/// A subscript
+/// A subscripts
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
+pub struct Subscript {
+    /// The numeric part of the subscript
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub num: Option<NumericSubscript>,
+    /// The sided part of the subscript
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub side: Option<SidedSubscript>,
+}
+
+/// The numeric part of a subscript
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(tag = "type", content = "value")]
-pub enum Subscript {
-    /// Just __
-    Empty,
-    /// Just a negative sign
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+pub enum NumericSubscript {
+    /// Only a negative sign
     NegOnly,
-    /// A number
-    N(i32),
-    /// A side
-    Side(SubSide),
-    /// The subscript is too large
+    /// The number is too large to be represented
     TooLarge,
+    /// A valid number
+    #[serde(untagged)]
+    N(i32),
+}
+
+/// The sided part of a subscript
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct SidedSubscript {
+    /// The side
+    pub side: SubSide,
+    /// An additional quantifying number
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub n: Option<usize>,
 }
 
 /// A sided subscript
@@ -712,16 +730,23 @@ pub enum SubSide {
 }
 
 impl Subscript {
-    /// Get the number
-    pub fn n(&self) -> Option<i32> {
-        match self {
-            Subscript::N(n) => Some(*n),
-            _ => None,
+    /// Make a pure numeric subscript
+    pub fn numeric(i: i32) -> Self {
+        Self {
+            num: Some(NumericSubscript::N(i)),
+            side: None,
         }
     }
     /// Check if the subscript is useable
     pub fn is_useable(&self) -> bool {
-        matches!(self, Subscript::N(_) | Subscript::Side(_))
+        matches!(self.num, Some(NumericSubscript::N(_))) || self.side.is_some()
+    }
+    /// Get the numeric part of the subscript as an integer, if it exists
+    pub fn n(&self) -> Option<i32> {
+        self.num.and_then(|n| match n {
+            NumericSubscript::N(n) => Some(n),
+            _ => None,
+        })
     }
 }
 
@@ -734,12 +759,11 @@ impl fmt::Display for SubSide {
     }
 }
 
-impl fmt::Display for Subscript {
+impl fmt::Display for NumericSubscript {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Subscript::Empty => write!(f, "__"),
-            Subscript::NegOnly => write!(f, "₋"),
-            Subscript::N(n) => {
+            NumericSubscript::NegOnly => write!(f, "₋"),
+            NumericSubscript::N(n) => {
                 if *n < 0 {
                     write!(f, "₋")?;
                 }
@@ -748,15 +772,41 @@ impl fmt::Display for Subscript {
                 }
                 Ok(())
             }
-            Subscript::Side(side) => side.fmt(f),
-            Subscript::TooLarge => write!(f, "…"),
+            NumericSubscript::TooLarge => write!(f, "…"),
         }
+    }
+}
+
+impl fmt::Display for SidedSubscript {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.side.fmt(f)?;
+        if let Some(n) = self.n {
+            for c in n.to_string().chars() {
+                write!(f, "{}", SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for Subscript {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.num.is_none() && self.side.is_none() {
+            return write!(f, "__");
+        };
+        if let Some(num) = self.num {
+            num.fmt(f)?;
+        }
+        if let Some(side) = self.side {
+            side.fmt(f)?;
+        }
+        Ok(())
     }
 }
 
 impl fmt::Debug for Subscripted {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.word.value.fmt(f)?;
-        write!(f, "{}", self.n.value)
+        write!(f, "{}", self.script.value)
     }
 }

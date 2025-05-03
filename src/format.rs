@@ -1096,19 +1096,19 @@ impl Formatter<'_> {
             Word::Subscripted(sub) => match &sub.word.value {
                 Word::Modified(m) => {
                     self.format_modifier(&m.modifier, depth);
-                    self.subscript(&sub.n);
+                    self.subscript(&sub.script);
                     self.format_words(&m.operands, true, depth);
                 }
                 Word::Primitive(Primitive::Utf8) => {
                     self.push(&sub.word.span, "utf");
-                    self.subscript(&sub.n);
+                    self.subscript(&sub.script);
                 }
                 _ => {
                     self.format_word(&sub.word, depth);
                     if self.output.ends_with(SUBSCRIPT_DIGITS) {
                         self.output.push(' ');
                     }
-                    self.subscript(&sub.n);
+                    self.subscript(&sub.script);
                 }
             },
             Word::Spaces => self.push(&word.span, " "),
@@ -1448,10 +1448,7 @@ impl Formatter<'_> {
         self.output.push(')');
     }
     fn subscript(&mut self, sub: &Sp<Subscript>) {
-        match &sub.value {
-            Subscript::TooLarge => sub.span.as_str(self.inputs, |s| self.push(&sub.span, s)),
-            _ => self.push(&sub.span, &sub.value.to_string()),
-        }
+        self.push(&sub.span, &sub.value.to_string());
     }
     fn pack(&mut self, pack: &FunctionPack, depth: usize) {
         if let Some(down_span) = &pack.down_span {

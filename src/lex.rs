@@ -16,7 +16,7 @@ use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    ast::{SubSide, Subscript},
+    ast::{NumericSubscript, SidedSubscript, SubSide, Subscript},
     Ident, Inputs, Primitive, WILDCARD_CHAR,
 };
 
@@ -65,39 +65,7 @@ pub fn lex(
             byte_pos += c.len_utf8() as u32;
         }
     }
-
-    // Collect graphemes
-    let mut input_segments: Vec<&str> = input.graphemes(true).collect();
-    // Split combining characters from some base characters
-    let mut i = 0;
-    while i < input_segments.len() {
-        for pre in [" ", "\"", "@"] {
-            if let Some(rest) = input_segments[i].strip_prefix(pre) {
-                input_segments[i] = pre;
-                if !rest.is_empty() {
-                    input_segments.insert(i + 1, rest);
-                    i += 1;
-                }
-                break;
-            }
-        }
-        i += 1;
-    }
-
-    let (tokens, errors) = Lexer {
-        input,
-        input_segments,
-        loc: Loc {
-            char_pos: 0,
-            byte_pos: 0,
-            line: 1,
-            col: 1,
-        },
-        src: src.clone(),
-        tokens: VecDeque::new(),
-        errors: Vec::new(),
-    }
-    .run();
+    let (tokens, errors) = Lexer::new(input, src.clone()).run();
     (tokens, errors, src)
 }
 
@@ -757,10 +725,7 @@ impl fmt::Display for Token {
             Token::CloseAngle => write!(f, "⟩"),
             Token::Newline => write!(f, "newline"),
             Token::Spaces => write!(f, "space(s)"),
-            Token::Subscr(sub) => match sub {
-                Subscript::Empty => write!(f, "__"),
-                sub => sub.fmt(f),
-            },
+            Token::Subscr(sub) => sub.fmt(f),
             Token::OpenModule => write!(f, "┌─╴"),
             Token::CloseModule => write!(f, "└─╴"),
             Token::Placeholder(i) => write!(f, "^{i}"),
@@ -887,6 +852,39 @@ struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    fn new(input: &'a str, src: InputSrc) -> Self {
+        // Collect graphemes
+        let mut input_segments: Vec<&str> = input.graphemes(true).collect();
+        // Split combining characters from some base characters
+        let mut i = 0;
+        while i < input_segments.len() {
+            for pre in [" ", "\"", "@"] {
+                if let Some(rest) = input_segments[i].strip_prefix(pre) {
+                    input_segments[i] = pre;
+                    if !rest.is_empty() {
+                        input_segments.insert(i + 1, rest);
+                        i += 1;
+                    }
+                    break;
+                }
+            }
+            i += 1;
+        }
+
+        Lexer {
+            input,
+            input_segments,
+            loc: Loc {
+                char_pos: 0,
+                byte_pos: 0,
+                line: 1,
+                col: 1,
+            },
+            src,
+            tokens: VecDeque::new(),
+            errors: Vec::new(),
+        }
+    }
     fn peek_char(&self) -> Option<&'a str> {
         self.input_segments.get(self.loc.char_pos as usize).copied()
     }
@@ -1031,38 +1029,7 @@ impl<'a> Lexer<'a> {
                 "⟩" => self.end(CloseAngle, start),
                 "_" => {
                     if self.next_char_exact("_") {
-                        if self.next_char_exact("<") {
-                            self.end(Subscr(Subscript::Side(SubSide::Left)), start);
-                            continue;
-                        } else if self.next_char_exact(">") {
-                            self.end(Subscr(Subscript::Side(SubSide::Right)), start);
-                            continue;
-                        }
-                        let mut n: Option<i32> = None;
-                        let neg = self.next_char_exact("₋")
-                            || self.next_char_exact("`")
-                            || self.next_char_exact("¯");
-                        let mut overflow = false;
-                        loop {
-                            if let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                                let n = n.get_or_insert(0);
-                                *n = *n * 10 + c.parse::<i32>().unwrap();
-                            } else if let Some(c) =
-                                self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c))
-                            {
-                                let c = c.chars().next().unwrap();
-                                let n = n.get_or_insert(0);
-                                let (m, over_m) = n.overflowing_mul(10);
-                                let (a, over_a) = m.overflowing_add(
-                                    SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32,
-                                );
-                                overflow |= over_m | over_a;
-                                *n = a;
-                            } else {
-                                break;
-                            }
-                        }
-                        let sub = pick_subscript(neg, n, overflow);
+                        let sub = self.subscript("__");
                         self.end(Subscr(sub), start)
                     } else {
                         self.end(Underscore, start)
@@ -1123,7 +1090,7 @@ impl<'a> Lexer<'a> {
                         n += 1;
                     }
                     if n > 0 {
-                        self.end(Subscr(Subscript::N(n)), start);
+                        self.end(Subscr(Subscript::numeric(n)), start);
                     }
                 }
                 // Comments
@@ -1263,47 +1230,7 @@ impl<'a> Lexer<'a> {
                 }
                 // Formatted subscripts
                 c if "₋⌞⌟".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
-                    match c {
-                        "⌞" => {
-                            self.end(Subscr(Subscript::Side(SubSide::Left)), start);
-                            continue;
-                        }
-                        "⌟" => {
-                            self.end(Subscr(Subscript::Side(SubSide::Right)), start);
-                            continue;
-                        }
-                        _ => {}
-                    }
-                    let (mut s, neg) = if c == "₋" {
-                        (String::new(), true)
-                    } else {
-                        (c.to_string(), false)
-                    };
-                    loop {
-                        if let Some(c) =
-                            self.next_char_if(|c| c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)))
-                        {
-                            s.push_str(c);
-                        } else if self.next_chars_exact(["_"; 2]) {
-                            while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                                let i: usize = c.parse().unwrap();
-                                s.push(SUBSCRIPT_DIGITS[i]);
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                    let mut n: Option<i32> = None;
-                    let mut overflow = false;
-                    for c in s.chars() {
-                        let i = SUBSCRIPT_DIGITS.iter().position(|&d| d == c).unwrap() as i32;
-                        let n = n.get_or_insert(0);
-                        let (m, over_m) = n.overflowing_mul(10);
-                        let (a, over_a) = m.overflowing_add(i);
-                        overflow |= over_m | over_a;
-                        *n = a;
-                    }
-                    let sub = pick_subscript(neg, n, overflow);
+                    let sub = self.subscript(c);
                     self.end(Subscr(sub), start)
                 }
                 // Identifiers and unformatted glyphs
@@ -1369,20 +1296,12 @@ impl<'a> Lexer<'a> {
                         let rest = &ident[lowercase_end..];
                         if !rest.is_empty() {
                             let ident = canonicalize_ident(rest);
-                            if let Some(sub) = subscript(&ident) {
-                                self.end(Subscr(sub), start);
-                            } else {
-                                self.end(Ident(ident), start);
-                            }
+                            self.end(Ident(ident), start);
                         }
                     } else {
                         // Lone ident
                         let ident = canonicalize_ident(&ident);
-                        if let Some(sub) = subscript(&ident) {
-                            self.end(Subscr(sub), start);
-                        } else {
-                            self.end(Ident(ident), start);
-                        }
+                        self.end(Ident(ident), start);
                     }
                 }
                 // Numbers
@@ -1464,6 +1383,17 @@ impl<'a> Lexer<'a> {
                         span = span.merge(post.next().unwrap().span);
                     }
                     span.sp(Number)
+                } else if let (
+                    Token::Ident(mut ident),
+                    Some(Sp {
+                        value: Token::Subscr(sub),
+                        ..
+                    }),
+                ) = (token.value.clone(), post.tokens.front())
+                {
+                    ident.push_str(&sub.to_string());
+                    let sub_span = post.tokens.pop_front().unwrap().span;
+                    token.span.merge(sub_span).sp(Ident(ident))
                 } else {
                     token
                 },
@@ -1479,47 +1409,10 @@ impl<'a> Lexer<'a> {
         if raw.contains('\\') || is_custom_glyph(c) || !c.is_empty() && "!‼".contains(c) {
             return s;
         }
-        let mut started_subscript = false;
-        let mut got_neg = false;
-        // Handle identifiers beginning with __
-        loop {
-            if self.next_chars_exact(["_"; 2]) {
-                s.push_str("__");
-                if let Some(left) = self.next_char_if_all(|c| "⌞<".contains(c)) {
-                    s.push_str(left);
-                    break s;
-                }
-                if let Some(right) = self.next_char_if_all(|c| "⌟>".contains(c)) {
-                    s.push_str(right);
-                    break s;
-                }
-                if !got_neg {
-                    if let Some(neg) = self.next_char_if_all(|c| "₋`¯".contains(c)) {
-                        s.push_str(neg);
-                        got_neg = true;
-                    }
-                }
-                while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                    s.push_str(c);
-                }
-                started_subscript = true;
-            } else if let Some(c) =
-                self.next_char_if_all(|c| !started_subscript && is_ident_start(c))
-            {
-                s.push_str(c);
-            } else if !got_neg && self.next_char_exact("₋") {
-                s.push('₋');
-                got_neg = true;
-            } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c)) {
-                s.push_str(c);
-                started_subscript = true;
-            } else if let Some(c) = self.next_char_if(|c| "⌞⌟".contains(c)) {
-                s.push_str(c);
-                break s;
-            } else {
-                break s;
-            }
+        while let Some(c) = self.next_char_if_all(is_ident_start) {
+            s.push_str(c);
         }
+        s
     }
     fn number(&mut self, init: &str) -> bool {
         // Whole part
@@ -1563,6 +1456,116 @@ impl<'a> Lexer<'a> {
             }
         }
         true
+    }
+    fn sub_num(
+        &mut self,
+        can_parse_ascii: &mut bool,
+        got_neg: &mut bool,
+        too_large: &mut bool,
+        num: &mut Option<i32>,
+    ) {
+        loop {
+            if !*got_neg
+                && (self.next_char_exact("₋")
+                    || *can_parse_ascii && (self.next_char_exact("`") || self.next_char_exact("¯")))
+            {
+                *got_neg = true;
+            } else if let Some(c) = can_parse_ascii
+                .then(|| self.next_char_if_all(|c| c.is_ascii_digit()))
+                .flatten()
+            {
+                let num = num.get_or_insert(0);
+                let (new_num, overflow) = num.overflowing_mul(10);
+                *too_large |= overflow;
+                let (new_num, overflow) = new_num.overflowing_add(c.parse::<i32>().unwrap());
+                *too_large |= overflow;
+                *num = new_num;
+            } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_DIGITS.contains(&c)) {
+                let i = SUBSCRIPT_DIGITS
+                    .iter()
+                    .position(|&d| d == c.chars().next().unwrap())
+                    .unwrap() as i32;
+                let num = num.get_or_insert(0);
+                let (new_num, overflow) = num.overflowing_mul(10);
+                *too_large |= overflow;
+                let (new_num, overflow) = new_num.overflowing_add(i);
+                *too_large |= overflow;
+                *num = new_num;
+                *can_parse_ascii = false;
+            } else if self.next_chars_exact(["_"; 2]) {
+                *can_parse_ascii = true;
+            } else {
+                break;
+            }
+        }
+    }
+    fn subscript(&mut self, init: &str) -> Subscript {
+        let mut got_neg = false;
+        let mut too_large = false;
+        let mut can_parse_ascii = false;
+        let mut num = None;
+        let mut side = None;
+        let mut side_num = None;
+        match init {
+            "⌞" => side = Some(SubSide::Left),
+            "⌟" => side = Some(SubSide::Right),
+            "₋" => got_neg = true,
+            "__" => can_parse_ascii = true,
+            c if c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
+                num = SUBSCRIPT_DIGITS
+                    .iter()
+                    .position(|&d| d == c.chars().next().unwrap())
+                    .map(|i| i as i32);
+            }
+            _ => {}
+        }
+        // Parse number
+        if side.is_none() {
+            self.sub_num(&mut can_parse_ascii, &mut got_neg, &mut too_large, &mut num);
+        }
+        // Parse side
+        if side.is_none() {
+            if self.next_char_exact("⌞") {
+                side = Some(SubSide::Left);
+            } else if self.next_char_exact("⌟") {
+                side = Some(SubSide::Right);
+            } else if can_parse_ascii && self.next_char_exact("<") {
+                side = Some(SubSide::Left);
+            } else if can_parse_ascii && self.next_char_exact(">") {
+                side = Some(SubSide::Right);
+            }
+        }
+        // Parse side number
+        if side.is_some() {
+            let mut too_large = false;
+            self.sub_num(
+                &mut can_parse_ascii,
+                &mut true,
+                &mut too_large,
+                &mut side_num,
+            );
+            if too_large {
+                side_num = None;
+            }
+        }
+        Subscript {
+            num: if too_large {
+                Some(NumericSubscript::TooLarge)
+            } else if let Some(mut n) = num {
+                if got_neg {
+                    n = -n;
+                }
+                Some(NumericSubscript::N(n))
+            } else if got_neg {
+                Some(NumericSubscript::NegOnly)
+            } else {
+                None
+            },
+            side: side.map(|side| SidedSubscript {
+                side,
+                n: side_num.map(|n| n as usize),
+            }),
+        }
     }
     fn character(
         &mut self,
@@ -1664,6 +1667,15 @@ impl<'a> Lexer<'a> {
     }
 }
 
+pub(crate) fn subscript(s: &str) -> Option<Subscript> {
+    let sub = Lexer::new(s, InputSrc::Literal(s.into())).subscript("__");
+    if sub.num.is_some() || sub.side.is_some() {
+        Some(sub)
+    } else {
+        None
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum EscapeMode {
     All,
@@ -1719,35 +1731,6 @@ pub fn is_ident_char(c: char) -> bool {
 /// Whether a character can be among the first characters of a Uiua identifier
 pub fn is_ident_start(c: char) -> bool {
     c.is_alphabetic() && !"ⁿₙπτηℂ".contains(c)
-}
-
-pub(crate) fn subscript(s: &str) -> Option<Subscript> {
-    if s.is_empty() {
-        return None;
-    }
-    match s {
-        "⌞" | "<" => return Some(Subscript::Side(SubSide::Left)),
-        "⌟" | ">" => return Some(Subscript::Side(SubSide::Right)),
-        _ => {}
-    }
-    let mut chars = s.chars().peekable();
-    let first = *chars.peek().unwrap();
-    let neg = "₋`¯".contains(first);
-    if neg {
-        chars.next();
-    }
-    let mut n: Option<i32> = None;
-    let mut overflow = false;
-    for c in chars {
-        let i = (SUBSCRIPT_DIGITS.iter().position(|&d| c == d))
-            .or_else(|| "0123456789".chars().position(|d| c == d))? as i32;
-        let n = n.get_or_insert(0);
-        let (m, over_m) = n.overflowing_mul(10);
-        let (a, over_a) = m.overflowing_add(i);
-        overflow |= over_m | over_a;
-        *n = a;
-    }
-    Some(pick_subscript(neg, n, overflow))
 }
 
 /// Whether a string is a custom glyph
@@ -1853,16 +1836,4 @@ fn find_special(s: &str) -> Option<&'static str> {
         }
         None
     })
-}
-
-fn pick_subscript(neg: bool, n: Option<i32>, overflow: bool) -> Subscript {
-    if overflow {
-        return Subscript::TooLarge;
-    }
-    match (neg, n) {
-        (false, None) => Subscript::Empty,
-        (true, None) => Subscript::NegOnly,
-        (false, Some(n)) => Subscript::N(n),
-        (true, Some(n)) => Subscript::N(-n),
-    }
 }

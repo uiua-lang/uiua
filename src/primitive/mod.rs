@@ -2083,7 +2083,7 @@ impl ImplPrimitive {
                                 for (reused_vals, f) in repeat_n((reused_vals, f.node), n) {
                                     env.push_all(reused_vals);
                                     env.push_all(
-                                        unique_vals.drain(unique_vals.len() - unique_args..),
+                                        unique_vals.drain(unique_vals.len() - unique_args..).rev(),
                                     );
                                     env.exec(f)?;
                                 }

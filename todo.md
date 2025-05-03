@@ -2,12 +2,13 @@
 
 # 0.16
 - Mixed subscripts
-  - `both`
   - `bracket`
   - `rows`/`inventory`
   - `each`
 - Items in functions
+- Streaming gif and audio encoding
 - Line number signatures in pad
+- Rewrite parts of tutorial to use `backward` instead of `flip`
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?
 - Implement some `under` inverses in terms of `un by`, rather than the other way around?

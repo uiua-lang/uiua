@@ -3412,6 +3412,8 @@ macro_rules! impl_primitive {
             DecodeBytes(Option<SubSide>),
             /// Push the maximum row count of N values
             MaxRowCount(usize),
+            BothImpl(Subscript<u32>),
+            UnBothImpl(Subscript<u32>),
         }
 
         impl ImplPrimitive {
@@ -3453,7 +3455,10 @@ macro_rules! impl_primitive {
                     ImplPrimitive::OnSub(_)
                     | ImplPrimitive::BySub(_)
                     | ImplPrimitive::WithSub(_)
-                    | ImplPrimitive::OffSub(_) => Some(1),
+                    | ImplPrimitive::OffSub(_)
+                    | ImplPrimitive::BothImpl(_)
+                    | ImplPrimitive::UnBothImpl(_) => Some(1),
+                    ImplPrimitive::SidedFill(_) => Some(2),
                     _ => None
                 }
             }
@@ -3552,7 +3557,6 @@ impl_primitive!(
     (4, UndoInsert),
     (3, UndoRemove),
     (1(0), TryClose),
-    ([1], UnBoth),
     ([2], UnBracket),
     ([1], UndoRows),
     ([1], UndoInventory),

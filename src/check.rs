@@ -478,16 +478,18 @@ impl VirtualEnv {
                     self.push();
                 }
                 UnFill | SidedFill(_) => self.fill(args)?,
-                UnBoth => {
-                    let [f] = get_args_nodes(args)?;
-                    self.stack.pop_n(f.sig.args());
-                    self.sig_node(f)?;
-                    self.stack.push_n(f.sig.args());
-                    self.sig_node(f)?;
-                }
                 UnBracket => {
                     let [f, g] = get_args(args)?;
                     self.handle_args_outputs(f.args() + g.args(), f.outputs() + g.outputs());
+                }
+                BothImpl(sub) | UnBothImpl(sub) => {
+                    let [f] = get_args(args)?;
+                    let reused = sub.side.map(|side| side.n.unwrap_or(1)).unwrap_or(0);
+                    let n = sub.num.unwrap_or(2) as usize;
+                    let unique = f.args().saturating_sub(reused) * n;
+                    let sig = Signature::new(unique + reused, n * f.outputs())
+                        .with_under(n * f.under_args(), n * f.under_outputs());
+                    self.handle_sig(sig);
                 }
                 EachSub(_) => {
                     let [f] = get_args_nodes(args)?;

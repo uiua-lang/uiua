@@ -190,6 +190,7 @@ pub enum InversionError {
     UnUnderSignature(Signature),
     ReduceFormat,
     Pretty,
+    SidedBoth,
 }
 
 pub type InversionResult<T = ()> = Result<T, InversionError>;
@@ -254,6 +255,9 @@ impl fmt::Display for InversionError {
                 and text only between them can be inverted"
             ),
             InversionError::Pretty => write!(f, "Nah, let's keep things pretty"),
+            InversionError::SidedBoth => {
+                write!(f, "Cannot invert sided {}", Primitive::Both.format())
+            }
         }
     }
 }

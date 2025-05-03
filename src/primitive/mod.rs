@@ -14,6 +14,7 @@ use std::{
     collections::HashMap,
     f64::consts::{PI, TAU},
     fmt,
+    iter::repeat_n,
     sync::{
         atomic::{self, AtomicUsize},
         OnceLock,
@@ -256,7 +257,6 @@ impl fmt::Display for ImplPrimitive {
             UnXlsx => write!(f, "{Un}{Xlsx}"),
             UnFft => write!(f, "{Un}{Fft}"),
             UnDatetime => write!(f, "{Un}{DateTime}"),
-            UnBoth => write!(f, "{Un}{Both}"),
             UnBracket => write!(f, "{Un}{Bracket}"),
             DecodeBytes(Some(side)) => write!(f, "{Un}{EncodeBytes}{side}"),
             DecodeBytes(None) => write!(f, "{Un}{EncodeBytes}"),
@@ -371,6 +371,8 @@ impl fmt::Display for ImplPrimitive {
             ValidateNonBoxedVariant => write!(f, "|…[…]"),
             ValidateVariant => write!(f, "|…°[…]"),
             TagVariant => write!(f, "<tag variant>"),
+            BothImpl(sub) => write!(f, "{Both}{sub}"),
+            UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
         }
     }
 }
@@ -1125,14 +1127,14 @@ impl Primitive {
             }
             Primitive::Bracket => {
                 let [f, g] = get_ops(ops, env)?;
-                let vals = env.take_n(f.sig.args())?;
+                let vals = env.pop_n(f.sig.args())?;
                 env.exec(g)?;
                 env.push_all(vals);
                 env.exec(f)?;
             }
             Primitive::Both => {
                 let [f] = get_ops(ops, env)?;
-                let vals = env.take_n(f.sig.args())?;
+                let vals = env.pop_n(f.sig.args())?;
                 env.exec(f.node.clone())?;
                 env.push_all(vals);
                 env.exec(f.node)?;
@@ -1958,13 +1960,6 @@ impl ImplPrimitive {
             ImplPrimitive::UnFill => fill!(ops, None, env, with_unfill, without_unfill_but),
             &ImplPrimitive::SidedFill(side) => fill!(ops, side, env, with_fill, without_fill_but),
             ImplPrimitive::ReduceTable => table::reduce_table(ops, env)?,
-            ImplPrimitive::UnBoth => {
-                let [f] = get_ops(ops, env)?;
-                env.exec(f.node.clone())?;
-                let vals = env.take_n(f.sig.outputs())?;
-                env.exec(f.node)?;
-                env.push_all(vals);
-            }
             ImplPrimitive::UnBracket => {
                 let [f, g] = get_ops(ops, env)?;
                 env.exec(f.node)?;
@@ -2043,6 +2038,87 @@ impl ImplPrimitive {
                 let start = env.require_height(outputs)?;
                 for val in &mut env.stack_mut()[start..] {
                     val.reverse();
+                }
+            }
+            ImplPrimitive::BothImpl(sub) => {
+                let [f] = get_ops(ops, env)?;
+                match (sub.num, sub.side) {
+                    (None | Some(2), None) => {
+                        let vals = env.pop_n(f.sig.args())?;
+                        env.exec(f.node.clone())?;
+                        env.push_all(vals);
+                        env.exec(f.node)?;
+                    }
+                    (Some(0), _) => {}
+                    (Some(n), None) => {
+                        let mut vals = env.pop_n(f.sig.args() * (n as usize - 1))?;
+                        vals.reverse();
+                        env.exec(f.node.clone())?;
+                        for _ in 0..n - 1 {
+                            env.push_all(vals.drain(vals.len() - f.sig.args()..).rev());
+                            env.exec(f.node.clone())?;
+                        }
+                    }
+                    (num, Some(side)) => {
+                        let n = num.unwrap_or(2) as usize;
+                        let reused = side.n.unwrap_or(1);
+                        let unique_args = f.sig.args().saturating_sub(reused);
+                        match side.side {
+                            SubSide::Left => {
+                                let reused_vals = env.pop_n(reused)?;
+                                let mut unique_vals = env.pop_n(unique_args * n)?;
+                                unique_vals.reverse();
+                                for (reused_vals, f) in repeat_n((reused_vals, f.node), n) {
+                                    env.push_all(
+                                        unique_vals.drain(unique_vals.len() - unique_args..).rev(),
+                                    );
+                                    env.push_all(reused_vals);
+                                    env.exec(f)?;
+                                }
+                            }
+                            SubSide::Right => {
+                                let mut unique_vals = env.pop_n(unique_args * n)?;
+                                unique_vals.reverse();
+                                let reused_vals = env.pop_n(reused)?;
+                                for (reused_vals, f) in repeat_n((reused_vals, f.node), n) {
+                                    env.push_all(reused_vals);
+                                    env.push_all(
+                                        unique_vals.drain(unique_vals.len() - unique_args..),
+                                    );
+                                    env.exec(f)?;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ImplPrimitive::UnBothImpl(sub) => {
+                let [f] = get_ops(ops, env)?;
+                // dbg!(sub);
+                match (sub.num, sub.side) {
+                    (None | Some(2), None) => {
+                        env.exec(f.node.clone())?;
+                        let vals = env.pop_n(f.sig.outputs())?;
+                        env.exec(f.node)?;
+                        env.push_all(vals);
+                    }
+                    (Some(0), _) => {}
+                    (Some(n), None) => {
+                        let mut vals = Vec::with_capacity(f.sig.outputs() * (n as usize - 1));
+                        env.exec(f.node.clone())?;
+                        for _ in 0..n - 1 {
+                            vals.extend(env.pop_n(f.sig.outputs())?.into_iter().rev());
+                            env.exec(f.node.clone())?;
+                        }
+                        vals.reverse();
+                        env.push_all(vals);
+                    }
+                    (_, Some(_)) => {
+                        return Err(env.error(
+                            "Attempted to invert sided both. \
+                            This is a bug in the interpreter.",
+                        ))
+                    }
                 }
             }
             prim => {

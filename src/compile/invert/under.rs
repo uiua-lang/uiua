@@ -1,4 +1,4 @@
-use crate::{check::nodes_sig, SigNode};
+use crate::{ast::Subscript, check::nodes_sig, SigNode};
 
 use super::*;
 
@@ -381,8 +381,10 @@ under!(BothPat, input, g_sig, inverse, asm, {
     } else {
         (input, None)
     };
-    let [Mod(Both, args, span), input @ ..] = input else {
-        return generic();
+    let (sub, args, span, input) = match input {
+        [Mod(Both, args, span), input @ ..] => (Default::default(), args, span, input),
+        [ImplMod(BothImpl(sub), args, span), input @ ..] => (*sub, args, span, input),
+        _ => return generic(),
     };
     let span = *span;
     let [f] = args.as_slice() else {
@@ -398,7 +400,7 @@ under!(BothPat, input, g_sig, inverse, asm, {
     // Make before
     let mut before = val.unwrap_or_default();
     before.push(if !inverse || balanced {
-        Mod(Both, eco_vec![f_before], span)
+        ImplMod(BothImpl(sub), eco_vec![f_before], span)
     } else {
         let node = f_before.node;
         let (mut node, val) = if let Ok((nodes, val)) = Val.invert_extract(&node, asm) {
@@ -417,7 +419,8 @@ under!(BothPat, input, g_sig, inverse, asm, {
     });
     // Make after
     let after = if inverse || balanced {
-        ImplMod(UnBoth, eco_vec![f_after], span)
+        let sub = Subscript { side: None, ..sub };
+        ImplMod(UnBothImpl(sub), eco_vec![f_after], span)
     } else {
         let to_discard = f_after.sig.under_args();
         if to_discard > 0 {

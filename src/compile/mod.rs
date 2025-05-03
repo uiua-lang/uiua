@@ -2355,6 +2355,11 @@ impl<N: PartialEq> PartialEq<N> for SubNOrSide<N> {
 }
 
 impl Compiler {
+    fn validate_subscript(&mut self, sub: Sp<Subscript>) -> Sp<Subscript<i32>> {
+        let side = sub.value.side;
+        let num = (sub.value.num).and_then(|num| self.numeric_subscript_n(num, &sub.span));
+        sub.span.sp(Subscript { num, side })
+    }
     fn numeric_subscript_n(&mut self, num: NumericSubscript, span: &CodeSpan) -> Option<i32> {
         match num {
             NumericSubscript::N(n) => Some(n),

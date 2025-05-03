@@ -688,18 +688,21 @@ pub struct Subscripted {
 }
 
 /// A subscripts
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
-pub struct Subscript {
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
+#[serde(default)]
+pub struct Subscript<N = NumericSubscript> {
     /// The numeric part of the subscript
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub num: Option<NumericSubscript>,
+    pub num: Option<N>,
     /// The sided part of the subscript
     #[serde(skip_serializing_if = "Option::is_none")]
     pub side: Option<SidedSubscript>,
 }
 
 /// The numeric part of a subscript
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum NumericSubscript {
     /// Only a negative sign
@@ -712,7 +715,7 @@ pub enum NumericSubscript {
 }
 
 /// The sided part of a subscript
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct SidedSubscript {
     /// The side
     pub side: SubSide,
@@ -747,6 +750,16 @@ impl Subscript {
             NumericSubscript::N(n) => Some(n),
             _ => None,
         })
+    }
+}
+
+impl<N> Subscript<N> {
+    /// Map the numeric part of the subscript
+    pub fn map_num<M>(self, f: impl FnOnce(N) -> M) -> Subscript<M> {
+        Subscript {
+            num: self.num.map(f),
+            side: self.side,
+        }
     }
 }
 
@@ -789,12 +802,12 @@ impl fmt::Display for SidedSubscript {
     }
 }
 
-impl fmt::Display for Subscript {
+impl<N: fmt::Display> fmt::Display for Subscript<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.num.is_none() && self.side.is_none() {
             return write!(f, "__");
         };
-        if let Some(num) = self.num {
+        if let Some(num) = &self.num {
             num.fmt(f)?;
         }
         if let Some(side) = self.side {

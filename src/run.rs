@@ -1101,11 +1101,6 @@ impl Uiua {
         let under = take(&mut self.rt.under_stack);
         (stack, under)
     }
-    /// Take some values from the stack
-    pub fn take_n(&mut self, n: usize) -> UiuaResult<Vec<Value>> {
-        let height = self.require_height(n)?;
-        Ok(self.rt.stack.split_off(height))
-    }
     /// Copy some values from the stack
     pub fn copy_n(&self, n: usize) -> UiuaResult<Vec<Value>> {
         let height = self.require_height(n)?;
@@ -1341,12 +1336,10 @@ impl Uiua {
         }
         Ok(self.rt.stack.remove(len - n - 1))
     }
-    pub(crate) fn pop_n(&mut self, n: usize) -> UiuaResult<Vec<Value>> {
-        let len = self.rt.stack.len();
-        if n > len {
-            return Err(self.error(format!("Stack was empty getting argument {}", n + 1)));
-        }
-        Ok(self.rt.stack.split_off(len - n))
+    /// Pop `n` values from the stack
+    pub fn pop_n(&mut self, n: usize) -> UiuaResult<Vec<Value>> {
+        let height = self.require_height(n)?;
+        Ok(self.rt.stack.split_off(height))
     }
     pub(crate) fn value_fill(&self) -> Option<&FillValue> {
         if (self.rt.fill_boundary_stack.last()).is_some_and(|&(i, _)| i >= self.rt.fill_stack.len())

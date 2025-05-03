@@ -538,47 +538,31 @@ impl Compiler {
                 let Some(sub) = subscript else {
                     return Ok(None);
                 };
-                let Some(nos) = self.subscript_n_or_side(&sub, Both.format()) else {
-                    return Ok(None);
-                };
+                let sub = self.validate_subscript(sub);
+                let sub_span = sub.span;
+                let mut sub = sub
+                    .value
+                    .map_num(|n| self.positive_subscript(n, Both, &sub_span) as u32);
                 let span = self.add_span(modified.modifier.span.clone());
-                match nos {
-                    SubNOrSide::N(n) => {
-                        let n = self.positive_subscript(n, Both, &modified.modifier.span);
-                        self.monadic_modifier_op(modified)?.0.on_all(n, span)
-                    }
-                    SubNOrSide::Side(side) => {
-                        let op = self.monadic_modifier_op(modified)?.0;
-                        if op.sig.args() != 2 {
+                let op = self.monadic_modifier_op(modified)?.0;
+                if let Some(side) = &mut sub.side {
+                    if let Some(side_n) = side.n {
+                        if side_n > op.sig.args() {
                             self.add_error(
-                                modified.modifier.span.clone().merge(sub.span),
+                                modified.modifier.span.clone().merge(sub_span),
                                 format!(
-                                    "Sided {}'s function must have 2 arguments, \
-                                    but its signature is {}",
+                                    "Sided {}'s quantifier cannot be greater than its \
+                                    function's arguments, but {} > {}",
                                     Primitive::Both.format(),
-                                    op.sig
+                                    side_n,
+                                    op.sig.args()
                                 ),
                             );
-                            op.on_all(2, span)
-                        } else {
-                            let sub_span = self.add_span(sub.span);
-                            let mut node = match side {
-                                SubSide::Left => Node::Mod(
-                                    On,
-                                    eco_vec![Node::Prim(Flip, sub_span).sig_node().unwrap()],
-                                    sub_span,
-                                ),
-                                SubSide::Right => Node::Mod(
-                                    Dip,
-                                    eco_vec![Node::Prim(Over, sub_span).sig_node().unwrap()],
-                                    sub_span,
-                                ),
-                            };
-                            node.push(op.on_all(2, span));
-                            node
+                            side.n = Some(op.sig.args());
                         }
                     }
                 }
+                Node::ImplMod(ImplPrimitive::BothImpl(sub), eco_vec![op], span)
             }
             Bracket => {
                 let Some(sub) = subscript else {

@@ -351,7 +351,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 fn complex_color(c: Complex) -> [u8; 3] {
     let h = c.arg();
     let mag = c.abs();
-    let s = 0.3 + 0.7 * ((1.0 - mag) / 10.0).exp();
+    let s = 0.3 + 0.7 * (-mag / 10.0).exp();
     let v = 1.0 - (-E * mag).exp();
     hsv_to_rgb(h, s, v).map(|c| (c * 255.0) as u8)
 }

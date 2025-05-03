@@ -1503,54 +1503,56 @@ mod server {
                     col
                 }
             };
-            let before = String::from_utf16(&line16[..col as usize]).unwrap();
+            let mut before = String::from_utf16(&line16[..col as usize]).unwrap();
             let mut formatted = String::new();
-            let mut start = 0;
+            let mut start = col;
             if let Some(pos) = before.rfind("__") {
                 // Subscript
                 let digit_ends = params.ch.parse::<u8>().is_ok();
                 if !digit_ends {
-                    start = col.saturating_sub(before[pos..].encode_utf16().count() as u32);
                     let s = &before[pos + 2..];
-                    if let Some(sub) = subscript(s) {
+                    if let Some((sub, rest)) = subscript(s) {
                         if sub.is_useable() {
+                            start = col.saturating_sub(before[pos..].encode_utf16().count() as u32);
+                            before = rest.to_string();
                             formatted = sub.to_string();
                         }
                     }
                 }
             }
-            if formatted.is_empty() {
-                // Primitive ident
-                let mut ident = (before.chars().rev())
-                    .take_while(|&c| is_ident_char(c))
-                    .collect::<String>();
-                ident = ident.chars().rev().collect();
 
-                // Get formatted
+            // Primitive ident
+            let mut ident = (before.chars().rev())
+                .take_while(|&c| is_ident_char(c))
+                .collect::<String>();
+            ident = ident.chars().rev().collect();
+
+            // Get formatted
+            if start == col {
                 start = col.saturating_sub(ident.encode_utf16().count() as u32);
-                if ident.is_empty() {
-                    let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
-                        .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
-                        .collect();
-                    ascii_prims.sort_by_key(|(_, a)| a.len());
-                    ascii_prims.reverse();
-                    for (prim, ascii) in ascii_prims {
-                        if before.ends_with(&ascii) {
-                            formatted.push_str(&prim.to_string());
-                            start = start.saturating_sub(ascii.encode_utf16().count() as u32);
-                            break;
-                        }
-                    }
-                } else if let Some(prims) = Primitive::from_format_name_multi(&ident) {
-                    for (p, _) in prims {
-                        formatted.push_str(&p.to_string());
+            }
+            if ident.is_empty() {
+                let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
+                    .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
+                    .collect();
+                ascii_prims.sort_by_key(|(_, a)| a.len());
+                ascii_prims.reverse();
+                for (prim, ascii) in ascii_prims {
+                    if before.ends_with(&ascii) {
+                        formatted.push_str(&prim.to_string());
+                        start = start.saturating_sub(ascii.encode_utf16().count() as u32);
+                        break;
                     }
                 }
-            };
+            } else if let Some(prims) = Primitive::from_format_name_multi(&ident) {
+                for (p, _) in prims {
+                    formatted.push_str(&p.to_string());
+                }
+            }
+
             if formatted.is_empty() {
                 return Ok(None);
             }
-            self.debug(&format!("formatted: {formatted:?}")).await;
 
             // Adjust range
             let mut end = pos;

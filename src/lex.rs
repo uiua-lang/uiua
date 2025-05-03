@@ -1667,10 +1667,12 @@ impl<'a> Lexer<'a> {
     }
 }
 
-pub(crate) fn subscript(s: &str) -> Option<Subscript> {
-    let sub = Lexer::new(s, InputSrc::Literal(s.into())).subscript("__");
+pub(crate) fn subscript(s: &str) -> Option<(Subscript, &str)> {
+    let mut lexer = Lexer::new(s, InputSrc::Literal(s.into()));
+    let sub = lexer.subscript("__");
     if sub.num.is_some() || sub.side.is_some() {
-        Some(sub)
+        let rest = &s[lexer.loc.byte_pos as usize..];
+        Some((sub, rest))
     } else {
         None
     }

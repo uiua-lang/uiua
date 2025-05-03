@@ -1,10 +1,8 @@
 # Uiua Todo
 
 # 0.16
-- Prevent more cloning in `try`
-- More rows optimizations
+- Mixed subscripts
 - Line number signatures in pad
-- Last-axis subscripts or modifier?
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?
 - Implement some `under` inverses in terms of `un by`, rather than the other way around?

@@ -636,6 +636,7 @@ impl Primitive {
             ("kbn", &[(Keep, "k"), (By, "b"), (Ne, "n")]),
             ("ftd", &[(Fork, "f"), (Take, "t"), (Drop, "d")]),
             ("fdt", &[(Fork, "f"), (Drop, "d"), (Take, "t")]),
+	    ("dnod", &[(Drop, "d"), (Neg, "n"), (On, "o"), (Drop, "d")]),
             (
                 "adnoad",
                 &[

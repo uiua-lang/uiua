@@ -403,6 +403,9 @@ primitive!(
     /// ex: ÷2 [1 2 3]
     /// ex: ÷ [1 2 3] [4 5 6]
     /// ex: ÷ [¯1 0 1] "hey"
+    ///
+    /// [un][divide] splits a number into whole number denominator and numerator.
+    /// ex: °÷ [0.75 5/2 0.123 100 ¯0.5]
     (
         2,
         Div,
@@ -3477,6 +3480,7 @@ impl_primitive!(
     (1(2), UnCouple),
     (1(2), UnAdd),
     (1(2), UnMul),
+    (1(2), UnDiv),
     (1(2), UnAtan),
     (1(2), UnComplex),
     (1, UnUtf8),

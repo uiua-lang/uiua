@@ -2116,4 +2116,33 @@ impl Value {
         mag.validate();
         Ok((sign, mag))
     }
+    pub(crate) fn un_div(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        let per_meta = self.meta.take_per_meta();
+        let (mut num, mut denom): (Value, Value) = match self {
+            Value::Byte(arr) => {
+                let denom_data = eco_vec![1u8; arr.element_count()];
+                let denom = Array::new(arr.shape.clone(), denom_data);
+                (arr.into(), denom.into())
+            }
+            Value::Num(mut arr) => {
+                let mut denom_data = eco_vec![1.0; arr.element_count()];
+                for (f, d) in (arr.data.as_mut_slice().iter_mut()).zip(denom_data.make_mut()) {
+                    let gcd = pervade::or::num_num(*f, 1.0);
+                    let num = *f / gcd;
+                    *d = (num / *f).round();
+                    *f = num.round();
+                }
+                let denom = Array::new(arr.shape.clone(), denom_data);
+                (arr.into(), denom.into())
+            }
+            val => return Err(env.error(format!("Cannot un-divide a {} array", val.type_name()))),
+        };
+        num.meta.set_per_meta(per_meta.clone());
+        num.meta.take_sorted_flags();
+        num.validate();
+        denom.meta.set_per_meta(per_meta);
+        denom.meta.take_sorted_flags();
+        denom.validate();
+        Ok((num, denom))
+    }
 }

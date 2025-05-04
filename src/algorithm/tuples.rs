@@ -224,6 +224,9 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                 let mut data = EcoVec::new();
                 let mut count = 0;
                 let row_count = if is_scalar { scalar? } else { arr.row_count() };
+                if is_scalar && row_count == 0 {
+                    return Ok(0.into());
+                }
                 let row_len = arr.row_len();
                 'outer: loop {
                     // println!("curr: {curr:?}");

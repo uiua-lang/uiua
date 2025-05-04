@@ -652,6 +652,7 @@ impl Primitive {
                 ],
             ),
             ("perf", &[(Dip, "p"), (Pop, "e"), (Under, "r"), (Now, "f")]),
+            ("wrench", &[(Sub, "wr"), (By, "en"), (Not, "ch")]),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

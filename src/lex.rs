@@ -1667,15 +1667,6 @@ impl<'a> Lexer<'a> {
     }
 }
 
-pub(crate) fn subscript(s: &str) -> Option<Subscript> {
-    let sub = Lexer::new(s, InputSrc::Literal(s.into())).subscript("__");
-    if sub.num.is_some() || sub.side.is_some() {
-        Some(sub)
-    } else {
-        None
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum EscapeMode {
     All,

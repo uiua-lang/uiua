@@ -552,6 +552,15 @@ pub fn Subscripts() -> impl IntoView {
         </tr>)
     }
 
+    fn sided_subscript<'a>(prim: Primitive, meaning: &'a str, experimental: bool, example: &'a str) -> impl IntoView + 'a {
+        view!(<tr>
+            <td><Prim prim=prim/></td>
+            <td>{ meaning.to_string() }</td>
+            <td>{ vec!["✅","❌"].get(experimental as usize).unwrap().to_string() }</td>
+            <td><Editor example=example nonprogressive=true/></td>
+        </tr>)
+    }
+
     let stable = vec![
         subscript(Couple, "Group N arrays as rows", "{⊟₃ 1 2 3 4 5}"),
         subscript(Box, "Group N arrays as boxed rows", "□₃ 1_2_3 5 \"wow\""),
@@ -583,39 +592,46 @@ pub fn Subscripts() -> impl IntoView {
     ];
 
     let sided = vec![
-        subscript(
+        sided_subscript(
             Both,
             "Use left-most or right-most argument twice",
+            false,
             "[∩⌞⊟ @a@b@c]\n[∩⌟⊟ @a@b@c]",
         ),
-        subscript(
+        sided_subscript(
             Bracket,
             "Use left-most or right-most argument twice",
+            false,
             "{⊓⌞⊟□₂ @a@b@c}\n{⊓⌟⊟□₂ @a@b@c}",
         ),
-        subscript(
+        sided_subscript(
             Rows,
             "Fix left-most or right-most argument",
+            true,
             "# Experimental!\n≡⌞⊂ 1_2_3 4_5_6\n≡⌟⊂ 1_2_3 4_5_6",
         ),
-        subscript(
+        sided_subscript(
             Inventory,
             "Fix left-most or right-most argument",
+            true,
             "# Experimental!\n⍚⌞⊂ 1_2_3 4_5_6\n⍚⌟⊂ 1_2_3 4_5_6",
         ),
-        subscript(
+        sided_subscript(
             Each,
             "Fix left-most or right-most argument",
+            true,
             "# Experimental!\n∵⌞⊂ 1_2 3_4\n∵⌟⊂ 1_2 3_4",
         ),
-        subscript(
+        sided_subscript(
             Reach,
             "Put the second argument above or below the outputs",
+            true,
             "# Experimental!\n{𝄐⌞⊟ 1 2 3}\n{𝄐⌟⊟ 1 2 3}",
         ),
-        subscript(
+        sided_subscript(
             Fill,
             "Fill from the left instead of the right",
+            true,
             "# Experimental!\n ⬚0[1_2_3 4_5 6]\n⬚⌟0[1_2_3 4_5 6]\n⬚⌞0[1_2_3 4_5 6]",
         ),
     ];
@@ -645,22 +661,30 @@ pub fn Subscripts() -> impl IntoView {
             { stable }
         </table>
         <Hd id="sided">"Sided Subscripts"</Hd>
-        <p>"Sided subscripts are an "<code>"# Experimental!"</code>" feature that allows using subscripts for some common patterns that might be thought of as having a \"side\"."</p>
+        <p>"Sided subscripts are a feature that allows using subscripts for some common patterns that might be thought of as having a \"side\"."</p>
         <p>"Sided subscripts are typed like normal subscripts with "<code>"__"</code>", but followed by "<code>"<"</code>" for left or "<code>">"</code>" for right. The formatter will turn them into "<code>"⌞"</code>" and "<code>"⌟"</code>" respectively."</p>
-        <p>"Sided and numberic subscripts cannot currently be mixed."</p>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
                 <th>"Primitive"</th>
                 <th>"Meaning"</th>
+                <th>"Stable?"</th>
                 <th style="width: 60%">"Example"</th>
             </tr>
             <tr>
                 <td>"Any "<span class="dyadic-function">"dyadic"</span>" pervasive function"</td>
                 <td>"Fix left-most or right-most argument"</td>
+                <td>"❌"</td>
                 <td><Editor example="# Experimental!\n+⌞ ×100. 1_2_3\n+⌟ ×100. 1_2_3" nonprogressive=true/></td>
             </tr>
             { sided }
         </table>
+        <Hd id="mixed">"Mixed Subscripts"</Hd>
+        <p>"Some functions and modifiers allow numerical and sided subscripts to be mixed. You can use:"</p>
+        <ul>
+            <li>"a number and a direction, in any order"</li>
+            <li>"a number, a direction, and another number, in that order"</li>
+        </ul>
+        <p>"Currently, mixed subscripts are only supported by "<Prim prim=Both/>"."</p>
     }
 }
 

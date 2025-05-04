@@ -233,6 +233,8 @@ primitive!(
     /// ex: √₄81
     ///
     (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
+    /// Get the natural logarithm of a number
+    (1, Ln, MonadicPervasive, "ln"),
     /// Get the sine of a number
     ///
     /// ex: ∿ 1
@@ -3479,6 +3481,7 @@ impl_primitive!(
     (1, Cos),
     (1, Asin),
     (1, Acos),
+    (1, Exp),
     (0, UnPop, Impure),
     (1, UnBits),
     (1, UnWhere),

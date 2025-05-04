@@ -1787,6 +1787,8 @@ value_mon_impl!(
     (Byte, byte),
     [Complex, com]
 );
+value_mon_impl!(exp, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(ln, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(sin, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(cos, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(asin, [Num, num], (Byte, byte), [Complex, com]);

@@ -953,6 +953,38 @@ pub mod sqrt {
         env.error(format!("Cannot take the square root of {a}"))
     }
 }
+pub mod exp {
+    use std::f64::consts::E;
+
+    use super::*;
+    pub fn num(a: f64) -> f64 {
+        a.exp()
+    }
+    pub fn byte(a: u8) -> f64 {
+        f64::from(a).exp()
+    }
+    pub fn com(a: Complex) -> Complex {
+        Complex::new(E, 0.0).powc(a)
+    }
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot take the exponential of {a}"))
+    }
+}
+pub mod ln {
+    use super::*;
+    pub fn num(a: f64) -> f64 {
+        a.ln()
+    }
+    pub fn byte(a: u8) -> f64 {
+        f64::from(a).ln()
+    }
+    pub fn com(a: Complex) -> Complex {
+        a.ln()
+    }
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot take the natural logarithm of {a}"))
+    }
+}
 pub mod sin {
     use super::*;
     pub fn num(a: f64) -> f64 {

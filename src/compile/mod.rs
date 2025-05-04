@@ -529,35 +529,34 @@ code:
     }
     pub(crate) fn items(&mut self, items: Vec<Item>, from_macro: bool) -> UiuaResult {
         // Set scope comment
-        if let Some(Item::Words(lines)) = items.first() {
-            let mut started = false;
-            let mut comment = String::new();
-            for line in lines {
-                for word in line {
-                    match &word.value {
-                        Word::Comment(c) => {
-                            let mut c = c.as_str();
-                            if c.starts_with(' ') {
-                                c = &c[1..];
-                            }
-                            comment.push_str(c);
-                            started = true;
+        let mut started = false;
+        let mut comment = String::new();
+        let mut items_iter = items.iter();
+        while let Some(Item::Words(line)) = items_iter.next() {
+            for word in line {
+                match &word.value {
+                    Word::Comment(c) => {
+                        let mut c = c.as_str();
+                        if c.starts_with(' ') {
+                            c = &c[1..];
                         }
-                        Word::Spaces => {}
-                        _ => {
-                            comment.clear();
-                            break;
-                        }
+                        comment.push_str(c);
+                        started = true;
+                    }
+                    Word::Spaces => {}
+                    _ => {
+                        comment.clear();
+                        break;
                     }
                 }
-                if line.is_empty() && started {
-                    break;
-                }
-                comment.push('\n');
             }
-            if !comment.trim().is_empty() {
-                self.scope.comment = Some(comment.trim().into());
+            if line.is_empty() && started {
+                break;
             }
+        }
+        comment.push('\n');
+        if !comment.trim().is_empty() {
+            self.scope.comment = Some(comment.trim().into());
         }
 
         let mut prelude = BindingPrelude::default();
@@ -575,11 +574,10 @@ code:
                         {
                             true
                         }
-                        Item::Words(lines) => lines.iter().any(|line| {
-                            line.iter().find(|w| w.value.is_code()).is_some_and(|w| {
-                                matches!(w.value, Word::Primitive(Primitive::Assert))
-                            })
-                        }),
+                        Item::Words(line) => line
+                            .iter()
+                            .find(|w| w.value.is_code())
+                            .is_some_and(|w| matches!(w.value, Word::Primitive(Primitive::Assert))),
                         _ => false,
                     });
             if let Err(e) = self.item(item, must_run, &mut prelude) {
@@ -594,7 +592,7 @@ code:
     fn item(&mut self, item: Item, must_run: bool, prelude: &mut BindingPrelude) -> UiuaResult {
         match item {
             Item::Module(m) => self.module(m, take(prelude)),
-            Item::Words(lines) => self.top_level_words(lines, must_run, true, prelude),
+            Item::Words(line) => self.top_level_line(line, must_run, true, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
             Item::Data(defs) => {
@@ -605,14 +603,39 @@ code:
             }
         }
     }
-    /// Compile top-level words
-    fn top_level_words(
+    fn top_level_line(
         &mut self,
-        mut lines: Vec<Vec<Sp<Word>>>,
+        mut line: Vec<Sp<Word>>,
         must_run: bool,
         precomp: bool,
         prelude: &mut BindingPrelude,
     ) -> UiuaResult {
+        // Populate prelude
+        let mut words = line.iter().filter(|w| !matches!(w.value, Word::Spaces));
+        if words.clone().count() == 1 {
+            let word = words.next().unwrap();
+            match &word.value {
+                Word::Comment(c) => {
+                    if let Some(curr_com) = &mut prelude.comment {
+                        curr_com.push('\n');
+                        curr_com.push_str(c);
+                    } else {
+                        prelude.comment = Some(c.as_str().into());
+                    }
+                    line.clear();
+                }
+                Word::SemanticComment(SemanticComment::NoInline) => prelude.no_inline = true,
+                Word::SemanticComment(SemanticComment::TrackCaller) => prelude.track_caller = true,
+                Word::SemanticComment(SemanticComment::External) => prelude.external = true,
+                Word::SemanticComment(SemanticComment::Deprecated(s)) => {
+                    prelude.deprecation = Some(s.clone())
+                }
+                _ => *prelude = BindingPrelude::default(),
+            }
+        } else {
+            *prelude = BindingPrelude::default();
+        }
+
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
             let mut anyway = false;
             recurse_words(words, &mut |w| {
@@ -623,143 +646,97 @@ code:
             });
             anyway
         }
-
-        // Populate prelude
-        for line in &mut lines {
-            let mut words = line.iter().filter(|w| !matches!(w.value, Word::Spaces));
-            if words.clone().count() == 1 {
-                let word = words.next().unwrap();
-                match &word.value {
-                    Word::Comment(c) => {
-                        if let Some(curr_com) = &mut prelude.comment {
-                            curr_com.push('\n');
-                            curr_com.push_str(c);
-                        } else {
-                            prelude.comment = Some(c.as_str().into());
-                        }
-                        line.clear();
-                    }
-                    Word::SemanticComment(SemanticComment::NoInline) => prelude.no_inline = true,
-                    Word::SemanticComment(SemanticComment::TrackCaller) => {
-                        prelude.track_caller = true
-                    }
-                    Word::SemanticComment(SemanticComment::External) => prelude.external = true,
-                    Word::SemanticComment(SemanticComment::Deprecated(s)) => {
-                        prelude.deprecation = Some(s.clone())
-                    }
-                    _ => *prelude = BindingPrelude::default(),
-                }
-            } else {
-                *prelude = BindingPrelude::default();
-            }
-        }
         let in_test = self.scopes().any(|sc| sc.kind == ScopeKind::Test);
         let can_run = match self.mode {
             RunMode::Normal => !in_test,
             RunMode::Test => in_test,
             RunMode::All => true,
         };
-        let mut lines = VecDeque::from(flip_unsplit_lines(
-            lines.into_iter().flat_map(split_words).collect(),
-        ));
-        while let Some(line) = lines.pop_front() {
-            let assert_later = || {
-                once(&line).chain(&lines).any(|line| {
-                    line.iter()
-                        .find(|w| w.value.is_code())
-                        .is_some_and(|w| matches!(w.value, Word::Primitive(Primitive::Assert)))
-                })
-            };
-            if line.is_empty()
-                || !(can_run || must_run || assert_later() || words_should_run_anyway(&line))
-            {
-                continue;
-            }
-            let span =
-                (line.first().unwrap().span.clone()).merge(line.last().unwrap().span.clone());
-            if max_placeholder(&line).is_some() {
-                self.add_error(
-                    span.clone(),
-                    "Cannot use placeholder outside of an index macro",
-                );
-            }
-            // Compile the words
-            let binding_count_before = self.asm.bindings.len();
-            let root_len_before = self.asm.root.len();
-            let error_count_before = self.errors.len();
+        if line.is_empty() || !(can_run || must_run || words_should_run_anyway(&line)) {
+            return Ok(());
+        }
+        let span = (line.first().unwrap().span.clone()).merge(line.last().unwrap().span.clone());
+        if max_placeholder(&line).is_some() {
+            self.add_error(
+                span.clone(),
+                "Cannot use placeholder outside of an index macro",
+            );
+        }
+        // Compile the words
+        let binding_count_before = self.asm.bindings.len();
+        let root_len_before = self.asm.root.len();
+        let error_count_before = self.errors.len();
 
-            let mut line_node = self.line(line, true)?;
+        let mut line_node = self.line(line, true)?;
 
-            let binding_count_after = self.asm.bindings.len();
-            let error_count_after = self.errors.len();
+        let binding_count_after = self.asm.bindings.len();
+        let error_count_after = self.errors.len();
 
-            line_node.optimize_full();
-            match line_node.sig() {
-                Ok(sig) => {
-                    // Compile test assert
-                    if self.mode != RunMode::Normal
-                        && !self
-                            .scopes()
-                            .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
-                    {
-                        let test_assert = line_node
-                            .last_mut_recursive(&mut self.asm, |node| {
-                                if let &mut Node::Prim(Primitive::Assert, span) = node {
-                                    *node = Node::ImplPrim(ImplPrimitive::TestAssert, span);
-                                    true
-                                } else {
-                                    false
-                                }
-                            })
-                            .unwrap_or(false);
-                        if test_assert {
-                            self.asm.test_assert_count += 1;
-                        }
-                    }
-                    // Try to evaluate at comptime
-                    // This can be done when:
-                    // - the pre-eval mode is greater that `Line`
-                    // - there are at least as many push nodes preceding the current line as there are arguments to the line
-                    // - the words create no bindings
-                    if precomp
-                        && error_count_after == error_count_before
-                        && self.pre_eval_mode > PreEvalMode::Line
-                        && !line_node.is_empty()
-                        && binding_count_before == binding_count_after
-                        && root_len_before == self.asm.root.len()
-                        && self.asm.root.len() >= sig.args()
-                        && (self.asm.root.iter().rev().take(sig.args()))
-                            .all(|node| matches!(node, Node::Push(_)))
-                    {
-                        // The nodes for evaluation are the preceding
-                        // push nodes, followed by the current line
-                        let mut node =
-                            Node::from(&self.asm.root[self.asm.root.len() - sig.args()..]);
-                        node.extend(line_node.iter().cloned());
-                        if let Some((node, errs)) = self.pre_eval(&node) {
-                            self.errors.extend(errs);
-                            // Track top-level values
-                            if node.iter().all(|node| matches!(node, Node::Push(_))) {
-                                let vals: Vec<_> = node
-                                    .iter()
-                                    .map(|node| match node {
-                                        Node::Push(val) => val.clone(),
-                                        _ => unreachable!(),
-                                    })
-                                    .collect();
-                                self.code_meta.top_level_values.insert(span, vals);
+        line_node.optimize_full();
+        match line_node.sig() {
+            Ok(sig) => {
+                // Compile test assert
+                if self.mode != RunMode::Normal
+                    && !self
+                        .scopes()
+                        .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
+                {
+                    let test_assert = line_node
+                        .last_mut_recursive(&mut self.asm, |node| {
+                            if let &mut Node::Prim(Primitive::Assert, span) = node {
+                                *node = Node::ImplPrim(ImplPrimitive::TestAssert, span);
+                                true
+                            } else {
+                                false
                             }
-                            // Truncate root
-                            self.asm.root.truncate(self.asm.root.len() - sig.args());
-                            // Set line node to the pre-evaluated node
-                            line_node = node;
-                        }
+                        })
+                        .unwrap_or(false);
+                    if test_assert {
+                        self.asm.test_assert_count += 1;
                     }
                 }
-                Err(e) => self.add_error(span, e),
+                // Try to evaluate at comptime
+                // This can be done when:
+                // - the pre-eval mode is greater that `Line`
+                // - there are at least as many push nodes preceding the current line as there are arguments to the line
+                // - the words create no bindings
+                if precomp
+                    && error_count_after == error_count_before
+                    && self.pre_eval_mode > PreEvalMode::Line
+                    && !line_node.is_empty()
+                    && binding_count_before == binding_count_after
+                    && root_len_before == self.asm.root.len()
+                    && self.asm.root.len() >= sig.args()
+                    && (self.asm.root.iter().rev().take(sig.args()))
+                        .all(|node| matches!(node, Node::Push(_)))
+                {
+                    // The nodes for evaluation are the preceding
+                    // push nodes, followed by the current line
+                    let mut node = Node::from(&self.asm.root[self.asm.root.len() - sig.args()..]);
+                    node.extend(line_node.iter().cloned());
+                    if let Some((node, errs)) = self.pre_eval(&node) {
+                        self.errors.extend(errs);
+                        // Track top-level values
+                        if node.iter().all(|node| matches!(node, Node::Push(_))) {
+                            let vals: Vec<_> = node
+                                .iter()
+                                .map(|node| match node {
+                                    Node::Push(val) => val.clone(),
+                                    _ => unreachable!(),
+                                })
+                                .collect();
+                            self.code_meta.top_level_values.insert(span, vals);
+                        }
+                        // Truncate root
+                        self.asm.root.truncate(self.asm.root.len() - sig.args());
+                        // Set line node to the pre-evaluated node
+                        line_node = node;
+                    }
+                }
             }
-            self.asm.root.push(line_node)
+            Err(e) => self.add_error(span, e),
         }
+        self.asm.root.push(line_node);
         Ok(())
     }
     fn compile_bind_function(
@@ -1370,7 +1347,7 @@ code:
                     span,
                 }
             }
-            Word::Array(arr) => {
+            Word::Array(mut arr) => {
                 if let Some(down_span) = &arr.down_span {
                     self.experimental_error(down_span, || {
                         "Lexical ordering is experimental. To use it, \
@@ -1379,11 +1356,11 @@ code:
                 }
                 // Track span for LSP
                 if !arr.boxes
-                    && (arr.lines.iter().flatten())
+                    && (arr.word_lines().flatten())
                         .filter(|w| w.value.is_code())
                         .all(|w| w.value.is_literal() && !matches!(w.value, Word::Strand(_)))
                 {
-                    let just_spans: Vec<_> = (arr.lines.iter().rev().flatten())
+                    let just_spans: Vec<_> = (arr.word_lines().rev().flatten())
                         .filter(|w| w.value.is_code())
                         .map(|w| w.span.clone())
                         .collect();
@@ -1392,18 +1369,14 @@ code:
                         .insert(word.span.clone(), just_spans);
                 }
                 let line_count = arr.lines.len();
-                let any_contents = arr.lines.iter().flatten().any(|w| w.value.is_code());
-                let mut inner = Node::empty();
+                let any_contents = arr.word_lines().flatten().any(|w| w.value.is_code());
                 // Compile lines
-                if arr.down_span.is_some() {
-                    for line in arr.lines {
-                        inner.push(self.line(line, false)?);
-                    }
-                } else {
-                    for line in arr.lines.into_iter().rev() {
-                        inner.push(self.line(line, false)?);
-                    }
+                if arr.down_span.is_none() {
+                    arr.lines.reverse();
                 }
+                let root_start = self.asm.root.len();
+                self.in_scope(ScopeKind::Temp(None), |comp| comp.items(arr.lines, false))?;
+                let mut inner = self.asm.root.split_off(root_start);
                 // Validate inner loop correctness
                 let len = match inner.sig() {
                     Ok(mut sig) => {
@@ -2707,7 +2680,7 @@ fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
         f(word);
         match &word.value {
             Word::Strand(items) => recurse_words(items, f),
-            Word::Array(arr) => arr.lines.iter().for_each(|line| {
+            Word::Array(arr) => arr.word_lines().for_each(|line| {
                 recurse_words(line, f);
             }),
             Word::Func(func) => func.word_lines().for_each(|line| {
@@ -2737,7 +2710,7 @@ fn recurse_words_mut_impl(
         }
         match &mut word.value {
             Word::Strand(items) => recurse_words_mut(items, f),
-            Word::Array(arr) => arr.lines.iter_mut().for_each(|line| {
+            Word::Array(arr) => arr.word_lines_mut().for_each(|line| {
                 recurse_words_mut(line, f);
             }),
             Word::Func(func) => func.word_lines_mut().for_each(|line| {

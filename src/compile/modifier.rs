@@ -1412,9 +1412,9 @@ impl Compiler {
             let items = mac.func.value.lines;
             let mut words = Vec::new();
             let mut errored = false;
-            for item in items {
+            for item in items.into_iter().rev() {
                 match item {
-                    Item::Words(ws) => words.extend(ws.into_iter().rev().flatten()),
+                    Item::Words(ws) => words.extend(ws),
                     item => {
                         if !errored {
                             self.add_error(

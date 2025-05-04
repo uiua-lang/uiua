@@ -522,7 +522,7 @@ impl Formatter<'_> {
         let mut max_name_len = 0;
         for (i, item) in items.iter().enumerate() {
             if i > 0 || depth > 0 {
-                if matches!(item, Item::Words(words) if words.iter().all(|line| line.is_empty())) {
+                if item.is_empty_line() {
                     self.output.push('\n');
                 } else {
                     self.newline(depth);
@@ -654,11 +654,30 @@ impl Formatter<'_> {
                 self.newline(depth);
                 self.output.push_str("└─╴");
             }
-            Item::Words(lines) => {
+            Item::Words(words) => {
                 self.prev_import_function = None;
-                let lines =
-                    flip_unsplit_lines(lines.iter().cloned().flat_map(split_words).collect());
-                self.format_multiline_words(&lines, Compact::Never, false, true, false, depth);
+                let words = trim_spaces(words, true);
+                for (i, word) in words.iter().enumerate() {
+                    self.format_word(word, depth);
+                    if word_is_multiline(&word.value) && i < words.len() - 1 {
+                        for (end, empty) in [(')', "()"), (']', "[]"), ('}', "{}")] {
+                            if self.output.ends_with(end) && !self.output.ends_with(empty) {
+                                self.output.pop();
+                                while self.output.ends_with(' ') {
+                                    self.output.pop();
+                                }
+                                if !self.output.ends_with('\n') {
+                                    self.output.push('\n');
+                                }
+                                for _ in 0..self.config.multiline_indent * depth {
+                                    self.output.push(' ');
+                                }
+                                self.output.push(end);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
             Item::Binding(binding) => {
                 if let Some(tilde_span) = &binding.tilde_span {
@@ -712,7 +731,7 @@ impl Formatter<'_> {
                     self.format_words(
                         &[span.sp(Word::Func(Func {
                             signature: None,
-                            lines: vec![Item::Words(lines)],
+                            lines: lines.into_iter().map(Item::Words).collect(),
                             closed: true,
                         }))],
                         true,
@@ -778,7 +797,7 @@ impl Formatter<'_> {
                                     self.format_words(
                                         &[span.sp(Word::Func(Func {
                                             signature: None,
-                                            lines: vec![Item::Words(lines)],
+                                            lines: lines.into_iter().map(Item::Words).collect(),
                                             closed: true,
                                         }))],
                                         true,
@@ -1070,15 +1089,15 @@ impl Formatter<'_> {
                     self.output.push('[');
                 }
                 if let Some(sig) = &arr.signature {
-                    let trailing_space = arr.lines.len() <= 1
-                        && !(arr.lines.iter().flatten()).any(|word| word_is_multiline(&word.value));
+                    let trailing_space =
+                        arr.lines.len() <= 1 && !arr.lines.iter().any(item_is_multiline);
                     self.format_signature(sig.value, trailing_space);
                     if arr.lines.is_empty() {
                         self.output.pop();
                     }
                 }
 
-                self.format_multiline_words(&arr.lines, Compact::Auto, true, true, true, depth + 1);
+                self.format_inner_items(&arr.lines, Compact::Auto, true, true, true, depth + 1);
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -1290,43 +1309,41 @@ enum Compact {
 }
 
 impl Formatter<'_> {
-    fn format_multiline_words(
+    fn format_inner_items(
         &mut self,
-        mut lines: &[Vec<Sp<Word>>],
+        mut items: &[Item],
         compact: Compact,
         allow_leading_space: bool,
         mut allow_trailing_newline: bool,
         full_trim_end: bool,
         depth: usize,
     ) {
-        if lines.is_empty() {
+        println!("items:");
+        for item in items {
+            println!("  {item:?}");
+        }
+        if items.is_empty() {
             return;
         }
-        let prevent_compact = (lines.iter().flatten())
-            .filter(|word| !matches!(word.value, Word::Spaces))
-            .next_back()
-            .is_some_and(|word| word.value.is_end_of_line());
-        if lines.len() == 1
-            && !prevent_compact
-            && !lines[0].iter().any(|word| word_is_multiline(&word.value))
-        {
-            self.format_words(&lines[0], true, depth);
+        let prevent_compact = items.last().is_some_and(item_is_end_of_line);
+        if items.len() == 1 && !prevent_compact && !item_is_multiline(&items[0]) {
+            self.format_item(&items[0], 0, depth);
             return;
         }
         // Remove trailing empty lines
         if (!allow_trailing_newline || full_trim_end) && depth > 0 {
-            while lines.last().is_some_and(|line| line.is_empty())
-                && (full_trim_end && lines.iter().nth_back(1).is_some_and(|line| line.is_empty()))
-                && !(lines.iter().nth_back(1))
-                    .is_some_and(|line| line.last().is_some_and(|word| word.value.is_end_of_line()))
+            while items.last().is_some_and(Item::is_empty_line)
+                && full_trim_end
+                && (items.iter().nth_back(1)).is_some_and(Item::is_empty_line)
+                && !(items.iter().nth_back(1)).is_some_and(item_is_end_of_line)
             {
-                lines = &lines[..lines.len() - 1];
+                items = &items[..items.len() - 1];
             }
         }
         // Remove leading empty lines
         let mut has_leading_newline = false;
-        while lines.first().is_some_and(|line| line.is_empty()) {
-            lines = &lines[1..];
+        while items.first().is_some_and(|line| line.is_empty_line()) {
+            items = &items[1..];
             has_leading_newline = true;
         }
         let curr_line = self.output.split('\n').next_back().unwrap_or_default();
@@ -1343,10 +1360,11 @@ impl Formatter<'_> {
         } else {
             self.config.multiline_indent * depth
         };
-        for (i, line) in lines.iter().enumerate() {
+        for (i, item) in items.iter().enumerate() {
+            println!("  {i}: {item:?}");
             if i > 0 || (compact == Compact::Never && allow_leading_space) || has_leading_newline {
-                if line.is_empty() {
-                    if allow_trailing_newline || prevent_compact || i < lines.len() - 1 {
+                if item.is_empty_line() {
+                    if allow_trailing_newline || prevent_compact || i < items.len() - 1 {
                         self.newline(depth.saturating_sub(1));
                     }
                 } else {
@@ -1356,7 +1374,7 @@ impl Formatter<'_> {
                     }
                 }
             }
-            self.format_words(line, true, depth);
+            self.format_item(item, 0, depth);
         }
     }
     fn format_modifier(&mut self, modifier: &Sp<Modifier>, depth: usize) {
@@ -1440,42 +1458,13 @@ impl Formatter<'_> {
         let depth = depth + 1
             - ((double_nest && func.word_lines().next().is_some_and(|line| line.is_empty()))
                 as usize);
-        self.format_item_lines(&func.lines, compact, true, true, true, depth);
+        self.format_inner_items(&func.lines, compact, true, true, true, depth);
         if double_nest {
             while self.output.chars().rev().take_while(|&c| c == ' ').count() >= start_indent {
                 self.output.pop();
             }
         }
         self.output.push(')');
-    }
-    fn format_item_lines(
-        &mut self,
-        items: &[Item],
-        compact: Compact,
-        allow_leading_space: bool,
-        allow_trailing_newline: bool,
-        full_trim_end: bool,
-        depth: usize,
-    ) {
-        if items.iter().all(|item| matches!(item, Item::Words(_))) {
-            let lines: Vec<_> = items
-                .iter()
-                .flat_map(|item| match item {
-                    Item::Words(words) => words.clone(),
-                    _ => unreachable!(),
-                })
-                .collect();
-            self.format_multiline_words(
-                &lines,
-                compact,
-                allow_leading_space,
-                allow_trailing_newline,
-                full_trim_end,
-                depth,
-            );
-        } else {
-            self.format_items(items, depth);
-        }
     }
     fn subscript(&mut self, sub: &Sp<Subscript>) {
         self.push(&sub.span, &sub.value.to_string());
@@ -1506,10 +1495,10 @@ impl Formatter<'_> {
             let row_count = rows.len();
             for (i, row) in rows.into_iter().enumerate() {
                 for (j, br) in row.into_iter().enumerate() {
-                    let lines = &*br.value.lines;
-                    // while lines.first().is_some_and(|line| line.is_empty()) {
-                    //     lines = &lines[1..];
-                    // }
+                    let mut lines = &*br.value.lines;
+                    while lines.first().is_some_and(Item::is_empty_line) {
+                        lines = &lines[1..];
+                    }
 
                     if (i, j) == (0, 0) {
                         let add_leading_newline =
@@ -1532,7 +1521,7 @@ impl Formatter<'_> {
                             self.output.pop();
                         }
                     }
-                    self.format_item_lines(
+                    self.format_inner_items(
                         lines,
                         Compact::Never,
                         false,
@@ -1552,15 +1541,8 @@ impl Formatter<'_> {
             // If any branch is multiline, we put all branches on separate lines
             let any_multiline = pack.branches.iter().any(|br| {
                 br.value.lines.len() > 1
-                    || br.value.lines.len() >= 2
-                        && br.value.lines.iter().any(|item| {
-                            item.words_or(false, |words| words.iter().any(|line| line.is_empty()))
-                        })
-                    || br.value.lines.iter().any(|item| {
-                        item.words_or(true, |lines| {
-                            (lines.iter().flatten()).any(|word| word_is_multiline(&word.value))
-                        })
-                    })
+                    || br.value.lines.len() >= 2 && br.value.lines.iter().any(Item::is_empty_line)
+                    || br.value.lines.iter().any(item_is_end_of_line)
             });
 
             for (i, br) in pack.branches.iter().enumerate() {
@@ -1592,16 +1574,14 @@ impl Formatter<'_> {
                     }
                 }
                 // Remove trailing empty lines from last branch
-                // if i == pack.branches.len() - 1
-                //     && lines.last().is_some_and(|line| line.is_empty())
-                //     && lines.iter().nth_back(1).is_some_and(|line| line.is_empty())
-                //     && !(lines.iter().nth_back(1)).is_some_and(|line| {
-                //         line.last().is_some_and(|word| word.value.is_end_of_line())
-                //     })
-                // {
-                //     lines = &lines[..lines.len() - 1];
-                // }
-                self.format_item_lines(
+                if i == pack.branches.len() - 1
+                    && lines.last().is_some_and(Item::is_empty_line)
+                    && lines.iter().nth_back(1).is_some_and(Item::is_empty_line)
+                    && !(lines.iter().nth_back(1)).is_some_and(item_is_end_of_line)
+                {
+                    lines = &lines[..lines.len() - 1];
+                }
+                self.format_inner_items(
                     lines,
                     Compact::Never,
                     false,
@@ -1609,13 +1589,13 @@ impl Formatter<'_> {
                     i < pack.branches.len() - 1,
                     depth + 1,
                 );
-                // if any_multiline
-                //     && i < pack.branches.len() - 1
-                //     && br.value.lines.last().is_some_and(|line| !line.is_empty())
-                //     && !self.output.trim_end_matches(' ').ends_with('\n')
-                // {
-                //     self.newline(depth);
-                // }
+                if any_multiline
+                    && i < pack.branches.len() - 1
+                    && (br.value.lines.last()).is_some_and(|item| !item.is_empty_line())
+                    && !self.output.trim_end_matches(' ').ends_with('\n')
+                {
+                    self.newline(depth);
+                }
             }
         }
         self.output.push(')');
@@ -1629,6 +1609,17 @@ fn words_are_multiline(words: &[Sp<Word>]) -> bool {
     } else {
         false
     }
+}
+
+fn item_is_end_of_line(item: &Item) -> bool {
+    item.words_or(true, |words| {
+        (words.iter().filter(|word| word.value.is_code()).next_back())
+            .is_some_and(|word| word.value.is_end_of_line())
+    })
+}
+
+fn item_is_multiline(item: &Item) -> bool {
+    item.words_or(true, words_are_multiline)
 }
 
 pub(crate) fn word_is_multiline(word: &Word) -> bool {
@@ -1645,33 +1636,19 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::Strand(_) => false,
         Word::Array(arr) => {
             arr.lines.len() > 1
-                || (arr.lines.iter()).any(|words| {
-                    words.len() > 1 && words.iter().any(|word| word_is_multiline(&word.value))
-                })
+                || (arr.lines.iter()).any(|item| item.words_or(true, words_are_multiline))
         }
         Word::Func(func) => {
             func.lines.len() > 1
-                || (func.lines.iter()).any(|item| {
-                    item.words_or(true, |lines| {
-                        (lines.iter().flatten()).any(|word| word_is_multiline(&word.value))
-                    })
-                })
+                || (func.lines.iter()).any(|item| item.words_or(true, words_are_multiline))
         }
         Word::InlineMacro(InlineMacro { func, .. }) => {
             func.value.lines.len() > 1
-                || (func.value.lines.iter()).any(|item| {
-                    item.words_or(true, |lines| {
-                        (lines.iter().flatten()).any(|word| word_is_multiline(&word.value))
-                    })
-                })
+                || (func.value.lines.iter()).any(|item| item.words_or(true, words_are_multiline))
         }
         Word::Pack(pack) => pack.branches.iter().any(|br| {
             br.value.lines.len() > 1
-                || (br.value.lines.iter()).any(|item| {
-                    item.words_or(true, |lines| {
-                        (lines.iter().flatten()).any(|word| word_is_multiline(&word.value))
-                    })
-                })
+                || (br.value.lines.iter()).any(|item| item.words_or(true, words_are_multiline))
         }),
         Word::Primitive(_) => false,
         Word::Modified(m) => {
@@ -1679,12 +1656,8 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
                 || match &m.modifier.value {
                     Modifier::Macro(mac) => {
                         mac.func.value.lines.len() > 1
-                            || (mac.func.value.lines.iter()).any(|item| {
-                                item.words_or(true, |lines| {
-                                    (lines.iter().flatten())
-                                        .any(|word| word_is_multiline(&word.value))
-                                })
-                            })
+                            || (mac.func.value.lines.iter())
+                                .any(|item| item.words_or(true, words_are_multiline))
                     }
                     _ => false,
                 }

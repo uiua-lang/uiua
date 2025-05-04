@@ -220,7 +220,7 @@ pub fn parse(
             next_output_comment: 0,
             start_addr: &base as *const u8 as usize,
         };
-        let items = parser.items(false);
+        let items = parser.items(ItemsKind::TopLevel);
         if parser.errors.is_empty() && parser.index < parser.tokens.len() {
             parser.errors.push(
                 parser
@@ -254,6 +254,13 @@ struct Parser<'i> {
 }
 
 type FunctionContents = (Option<Sp<Signature>>, Vec<Item>, Option<CodeSpan>);
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ItemsKind {
+    TopLevel,
+    Module,
+    Function,
+}
 
 impl Parser<'_> {
     fn next_token_map<'a, T: 'a>(
@@ -297,18 +304,23 @@ impl Parser<'_> {
                 .map(|t| self.input[t.span.byte_range()].into()),
         ))
     }
-    fn items(&mut self, in_scope: bool) -> Vec<Item> {
+    fn items(&mut self, kind: ItemsKind) -> Vec<Item> {
         let mut items = Vec::new();
         while self.exact(Newline).is_some() {
             self.spaces();
         }
+        let mut trailing_newline = false;
         loop {
-            match self.item(in_scope) {
-                Some(item) => items.push(item),
+            match self.item(kind) {
+                Some(item) => {
+                    trailing_newline = false;
+                    items.push(item)
+                }
                 None => {
                     if self.exact(Newline).is_none() {
                         break;
                     }
+                    trailing_newline = true;
                     self.spaces();
                     let mut extra_newlines = false;
                     while self.exact(Newline).is_some() {
@@ -316,14 +328,17 @@ impl Parser<'_> {
                         self.spaces();
                     }
                     if extra_newlines {
-                        items.push(Item::Words(vec![Vec::new()]));
+                        items.push(Item::Words(Vec::new()));
                     }
                 }
             }
         }
+        if trailing_newline {
+            items.push(Item::Words(Vec::new()));
+        }
         items
     }
-    fn item(&mut self, in_scope: bool) -> Option<Item> {
+    fn item(&mut self, kind: ItemsKind) -> Option<Item> {
         if self.too_deep() {
             return None;
         }
@@ -332,31 +347,28 @@ impl Parser<'_> {
             Item::Binding(binding)
         } else if let Some(import) = self.import() {
             Item::Import(import)
-        } else if let Some(module) = self.module(in_scope) {
+        } else if let Some(module) = self.module(kind == ItemsKind::Module) {
             Item::Module(module)
-        } else if let Some(first) = self.data_def() {
+        } else if let Some(first) = self.data_def(kind != ItemsKind::Function) {
             let mut defs = vec![first];
-            while let Some(def) = self.data_def() {
+            while let Some(def) = self.data_def(kind != ItemsKind::Function) {
                 defs.push(def);
             }
             Item::Data(defs)
+        } else if let Some(words) = self.words() {
+            Item::Words(words)
         } else {
-            let lines = self.multiline_words(true, false);
-            if lines.is_empty() {
-                return None;
-            } else {
-                Item::Words(lines)
-            }
+            return None;
         };
         Some(item)
     }
-    fn module(&mut self, in_scope: bool) -> Option<Sp<ScopedModule>> {
+    fn module(&mut self, in_module: bool) -> Option<Sp<ScopedModule>> {
         let backup = self.index;
         let open_span = self.module_open()?;
         self.spaces();
         // Name
         let name = self.ident();
-        if in_scope && name.is_none() {
+        if in_module && name.is_none() {
             self.index = backup;
             return None;
         }
@@ -387,7 +399,7 @@ impl Parser<'_> {
             None
         };
         // Items
-        let items = self.items(true);
+        let items = self.items(ItemsKind::Module);
         let close_span = self.module_close();
         let span = if let Some(end) = close_span.clone() {
             open_span.clone().merge(end)
@@ -616,12 +628,16 @@ impl Parser<'_> {
         }
         newline
     }
-    fn data_def(&mut self) -> Option<DataDef> {
+    fn data_def(&mut self, allow_variants: bool) -> Option<DataDef> {
         let reset = self.index;
         let mut variant = false;
         let init_span = self.exact(Tilde.into()).or_else(|| {
-            variant = true;
-            self.exact(Bar.into())
+            if allow_variants {
+                variant = true;
+                self.exact(Bar.into())
+            } else {
+                None
+            }
         })?;
         self.spaces();
         let name = self.ident();
@@ -961,43 +977,6 @@ impl Parser<'_> {
             Some(words)
         }
     }
-    fn multiline_words(
-        &mut self,
-        check_for_bindings: bool,
-        extra_newline: bool,
-    ) -> Vec<Vec<Sp<Word>>> {
-        let mut lines = Vec::new();
-        while self.spaces().is_some() {}
-        let mut newlines: usize = 0;
-        loop {
-            let curr = self.index;
-            if check_for_bindings
-                && (self.binding_init().is_some()
-                    || self.import_init().is_some()
-                    || self.module_delim_hyphens().is_some())
-            {
-                self.index = curr;
-                break;
-            }
-            if let Some(words) = self.words() {
-                newlines = 0;
-                lines.push(words);
-                while self.exact(Newline).is_some() {
-                    newlines += 1;
-                    self.spaces();
-                }
-                if newlines > 1 {
-                    lines.push(Vec::new());
-                }
-            } else {
-                break;
-            }
-        }
-        if extra_newline && newlines > 0 {
-            lines.push(Vec::new());
-        }
-        lines
-    }
     fn word(&mut self) -> Option<Sp<Word>> {
         self.comment()
             .map(|c| c.map(Word::Comment))
@@ -1281,16 +1260,16 @@ impl Parser<'_> {
             has_newline = false;
         }
         has_newline |= self.ignore_whitespace();
-        let mut items = self.multiline_words(false, true);
+        let mut lines = self.items(ItemsKind::Function);
         if has_newline {
-            items.insert(0, Vec::new());
+            lines.insert(0, Item::Words(Vec::new()));
         }
         let end = self.expect_close(if boxes { CloseCurly } else { CloseBracket }.into());
         let span = start.merge(end.span);
         let arr = Arr {
             down_span,
             signature,
-            lines: items,
+            lines,
             boxes,
             closed: end.value,
         };
@@ -1464,11 +1443,11 @@ impl Parser<'_> {
         }
         let mut lines = Vec::new();
         if starts_with_newline {
-            lines.push(Item::Words(vec![Vec::new()]));
+            lines.push(Item::Words(Vec::new()));
         }
-        lines.extend(self.items(false));
+        lines.extend(self.items(ItemsKind::Function));
         if lines.is_empty() {
-            lines.push(Item::Words(vec![Vec::new()]));
+            lines.push(Item::Words(Vec::new()));
         }
         let start = signature
             .as_ref()
@@ -1539,9 +1518,9 @@ impl Parser<'_> {
 pub(crate) fn split_items(items: Vec<Item>) -> Vec<Item> {
     items
         .into_iter()
-        .map(|item| match item {
-            Item::Words(words) => Item::Words(words.into_iter().flat_map(split_words).collect()),
-            item => item,
+        .flat_map(|item| match item {
+            Item::Words(words) => split_words(words).into_iter().map(Item::Words).collect(),
+            item => vec![item],
         })
         .collect()
 }
@@ -1561,14 +1540,15 @@ pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
 pub(crate) fn flip_unsplit_items(items: Vec<Item>) -> Vec<Item> {
     flip_unsplit_items_impl(items, false)
 }
-fn flip_unsplit_items_impl(items: Vec<Item>, in_array: bool) -> Vec<Item> {
+fn flip_unsplit_items_impl(items: Vec<Item>, _in_array: bool) -> Vec<Item> {
+    // items
+    //     .into_iter()
+    //     .map(|item| match item {
+    //         Item::Words(words) => Item::Words(flip_unsplit_lines_impl(words, in_array)),
+    //         item => item,
+    //     })
+    //     .collect()
     items
-        .into_iter()
-        .map(|item| match item {
-            Item::Words(words) => Item::Words(flip_unsplit_lines_impl(words, in_array)),
-            item => item,
-        })
-        .collect()
 }
 /// Flip and/or unsplit a list of lines
 pub(crate) fn flip_unsplit_lines(lines: Vec<Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
@@ -1660,7 +1640,7 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
             Word::Func(func)
         }
         Word::Array(mut arr) => {
-            arr.lines = flip_unsplit_lines_impl(arr.lines, true);
+            arr.lines = flip_unsplit_items_impl(arr.lines, true);
             Word::Array(arr)
         }
         Word::Pack(mut pack) => {
@@ -1693,15 +1673,7 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
             Word::Func(func)
         }
         Word::Array(mut arr) => {
-            arr.lines = arr
-                .lines
-                .into_iter()
-                .flat_map(|line| {
-                    let mut split_words = split_words(line);
-                    split_words.reverse();
-                    split_words
-                })
-                .collect();
+            arr.lines = split_items(arr.lines);
             Word::Array(arr)
         }
         Word::Pack(mut pack) => {
@@ -1755,7 +1727,7 @@ pub(crate) fn max_placeholder(words: &[Sp<Word>]) -> Option<usize> {
             Word::Placeholder(i) => set(Some(*i)),
             Word::Strand(items) => set(max_placeholder(items)),
             Word::Array(arr) => {
-                for line in &arr.lines {
+                for line in arr.word_lines() {
                     set(max_placeholder(line));
                 }
             }
@@ -1820,17 +1792,20 @@ fn arr_is_normal_di(arr: &Arr) -> bool {
         return false;
     }
     let mut is_di = false;
-    single_word_and(arr.lines.iter().flatten(), |m| {
-        if let Word::Modified(m) = &m.value {
-            let Modified {
-                modifier, operands, ..
-            } = &**m;
-            if let Modifier::Primitive(Primitive::Dip) = modifier.value {
-                single_word_and(operands, |f| {
-                    is_di = matches!(f.value, Word::Primitive(Primitive::Identity));
-                })
+    single_word_and(
+        (arr.lines.iter()).flat_map(|item| item.words_or([].as_slice(), |words| words)),
+        |m| {
+            if let Word::Modified(m) = &m.value {
+                let Modified {
+                    modifier, operands, ..
+                } = &**m;
+                if let Modifier::Primitive(Primitive::Dip) = modifier.value {
+                    single_word_and(operands, |f| {
+                        is_di = matches!(f.value, Word::Primitive(Primitive::Identity));
+                    })
+                }
             }
-        }
-    });
+        },
+    );
     is_di
 }

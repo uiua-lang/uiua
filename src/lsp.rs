@@ -336,11 +336,7 @@ impl Spanner {
                         spans.push(close_span.clone().sp(SpanKind::Delimiter));
                     }
                 }
-                Item::Words(lines) => {
-                    for line in lines {
-                        spans.extend(self.words_spans(line))
-                    }
-                }
+                Item::Words(line) => spans.extend(self.words_spans(line)),
                 Item::Binding(binding) => {
                     if let Some(tilde_span) = &binding.tilde_span {
                         spans.push(tilde_span.clone().sp(SpanKind::Delimiter));
@@ -622,7 +618,7 @@ impl Spanner {
                     if let Some(sig) = &arr.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
                     }
-                    spans.extend(arr.lines.iter().flat_map(|w| self.words_spans(w)));
+                    spans.extend(self.items_spans(&arr.lines));
                     if arr.closed {
                         let end = word.span.just_end(self.inputs());
                         if end.as_str(self.inputs(), |s| s == "]")

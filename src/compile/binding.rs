@@ -652,7 +652,7 @@ impl Compiler {
                 Word::Strand(items) => {
                     self.analyze_macro_body(macro_name, items, code_macro, recursive)
                 }
-                Word::Array(arr) => arr.lines.iter().for_each(|line| {
+                Word::Array(arr) => arr.word_lines().for_each(|line| {
                     self.analyze_macro_body(macro_name, line, code_macro, recursive);
                 }),
                 Word::Func(func) => func.word_lines().for_each(|line| {

@@ -17,7 +17,7 @@ use crate::{
 #[serde(tag = "type", content = "value")]
 pub enum Item {
     /// Just some code
-    Words(Vec<Vec<Sp<Word>>>),
+    Words(Vec<Sp<Word>>),
     /// A binding
     Binding(Binding),
     /// An import
@@ -31,7 +31,7 @@ pub enum Item {
 impl PartialEq for Item {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Item::Words(a), Item::Words(b)) => lines_eq(a, b),
+            (Item::Words(a), Item::Words(b)) => words_eq(a, b),
             (Item::Binding(a), Item::Binding(b)) => a == b,
             (Item::Import(a), Item::Import(b)) => a == b,
             (Item::Module(a), Item::Module(b)) => a == b,
@@ -39,13 +39,6 @@ impl PartialEq for Item {
             _ => false,
         }
     }
-}
-
-fn lines_eq(a: &[Vec<Sp<Word>>], b: &[Vec<Sp<Word>>]) -> bool {
-    a.iter()
-        .flatten()
-        .map(|w| &w.value)
-        .eq(b.iter().flatten().map(|w| &w.value))
 }
 
 fn words_eq(a: &[Sp<Word>], b: &[Sp<Word>]) -> bool {
@@ -56,8 +49,7 @@ impl Item {
     /// Get the span of this item
     pub fn span(&self) -> Option<CodeSpan> {
         match self {
-            Item::Words(words) => (words.iter().flatten().next())
-                .zip(words.iter().flatten().last())
+            Item::Words(words) => (words.first().zip(words.last()))
                 .map(|(first, last)| first.span.clone().merge(last.span.clone())),
             Item::Binding(binding) => Some(binding.span()),
             Item::Import(import) => Some(import.span()),
@@ -78,11 +70,17 @@ impl Item {
         }
     }
     /// Operate on words or provide a default
-    pub fn words_or<T>(&self, default: T, on_words: impl FnOnce(&[Vec<Sp<Word>>]) -> T) -> T {
+    pub fn words_or<'a, T>(&'a self, default: T, on_words: impl FnOnce(&'a [Sp<Word>]) -> T) -> T {
         match self {
             Item::Words(words) => on_words(words),
             _ => default,
         }
+    }
+    /// Whether this item is an empty line
+    pub fn is_empty_line(&self) -> bool {
+        self.words_or(false, |words| {
+            words.iter().all(|w| matches!(w.value, Word::Spaces))
+        })
     }
 }
 
@@ -373,7 +371,7 @@ impl PartialEq for Word {
             (Self::MultilineFormatString(a), Self::MultilineFormatString(b)) => a == b,
             (Self::Ref(a), Self::Ref(b)) => a == b,
             (Self::Strand(a), Self::Strand(b)) => words_eq(a, b),
-            (Self::Array(a), Self::Array(b)) => lines_eq(&a.lines, &b.lines),
+            (Self::Array(a), Self::Array(b)) => a.lines == b.lines,
             (Self::Func(a), Self::Func(b)) => a.lines == b.lines,
             (Self::Pack(a), Self::Pack(b)) => (a.branches.iter().flat_map(|br| &br.value.lines))
                 .eq(b.branches.iter().flat_map(|br| &br.value.lines)),
@@ -401,9 +399,18 @@ impl Word {
     }
     /// Whether this word is a literal
     pub fn is_literal(&self) -> bool {
-        matches!(self, Word::Number(..) | Word::Char(_) | Word::String(_))
-            || matches!(self, Word::Array(arr) if arr.lines.iter().flatten().filter(|w| w.value.is_code()).all(|w| w.value.is_literal()))
-            || matches!(self, Word::Strand(items) if items.iter().all(|w| w.value.is_literal()))
+        match self {
+            Word::Number(..) | Word::Char(_) | Word::String(_) => true,
+            Word::Array(arr) => arr.lines.iter().all(|item| {
+                item.words_or(false, |words| {
+                    (words.iter())
+                        .filter(|w| w.value.is_code())
+                        .all(|w| w.value.is_literal())
+                })
+            }),
+            Word::Strand(items) => items.iter().all(|w| w.value.is_literal()),
+            _ => false,
+        }
     }
     /// Whether this word must come at the end of a line
     pub fn is_end_of_line(&self) -> bool {
@@ -543,19 +550,49 @@ pub struct Arr {
     /// The array's inner signature
     pub signature: Option<Sp<Signature>>,
     /// The words in the array
-    pub lines: Vec<Vec<Sp<Word>>>,
+    pub lines: Vec<Item>,
     /// Whether this is a box array
     pub boxes: bool,
     /// Whether a closing bracket was found
     pub closed: bool,
 }
 
+impl Arr {
+    /// Get the lines that contain words
+    pub fn word_lines(&self) -> impl DoubleEndedIterator<Item = &[Sp<Word>]> {
+        self.lines
+            .iter()
+            .filter_map(|line| match line {
+                Item::Words(words) => Some(words),
+                _ => None,
+            })
+            .map(|v| v.as_slice())
+    }
+    /// Get the mutable lines that contain words
+    pub fn word_lines_mut(&mut self) -> impl Iterator<Item = &mut Vec<Sp<Word>>> {
+        self.lines.iter_mut().filter_map(|line| match line {
+            Item::Words(words) => Some(words),
+            _ => None,
+        })
+    }
+}
+
 impl fmt::Debug for Arr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut d = f.debug_tuple("arr");
         for line in &self.lines {
-            for word in line {
-                d.field(&word.value);
+            match line {
+                Item::Words(line) => {
+                    for word in line {
+                        d.field(&word.value);
+                    }
+                    if line.is_empty() {
+                        d.field(&"newline");
+                    }
+                }
+                item => {
+                    d.field(item);
+                }
             }
         }
         d.finish()
@@ -577,16 +614,10 @@ impl Func {
     /// Get the lines of the function without leading or trailing empty lines
     pub fn trimmed_lines(&self) -> &[Item] {
         let mut lines = self.lines.as_slice();
-        while lines
-            .first()
-            .is_some_and(|line| matches!(line, Item::Words(words) if words.is_empty()))
-        {
+        while lines.first().is_some_and(Item::is_empty_line) {
             lines = &lines[1..];
         }
-        while lines
-            .last()
-            .is_some_and(|line| matches!(line, Item::Words(words) if words.is_empty()))
-        {
+        while lines.last().is_some_and(Item::is_empty_line) {
             lines = &lines[..lines.len() - 1];
         }
         lines
@@ -603,18 +634,14 @@ impl Func {
                 Item::Words(words) => Some(words),
                 _ => None,
             })
-            .flatten()
             .map(|v| v.as_slice())
     }
     /// Get the mutable lines that contain words
     pub fn word_lines_mut(&mut self) -> impl Iterator<Item = &mut Vec<Sp<Word>>> {
-        self.lines
-            .iter_mut()
-            .filter_map(|line| match line {
-                Item::Words(words) => Some(words),
-                _ => None,
-            })
-            .flatten()
+        self.lines.iter_mut().filter_map(|line| match line {
+            Item::Words(words) => Some(words),
+            _ => None,
+        })
     }
 }
 
@@ -624,14 +651,12 @@ impl fmt::Debug for Func {
         // d.field(&self.id);
         for line in &self.lines {
             match line {
-                Item::Words(words) => {
-                    for line in words {
-                        for word in line {
-                            d.field(&word.value);
-                        }
-                        if line.is_empty() {
-                            d.field(&"newline");
-                        }
+                Item::Words(line) => {
+                    for word in line {
+                        d.field(&word.value);
+                    }
+                    if line.is_empty() {
+                        d.field(&"newline");
                     }
                 }
                 item => {

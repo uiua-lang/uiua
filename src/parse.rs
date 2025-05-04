@@ -1540,9 +1540,7 @@ pub(crate) fn split_items(items: Vec<Item>) -> Vec<Item> {
     items
         .into_iter()
         .map(|item| match item {
-            Item::Words(words) => {
-                Item::Words(words.into_iter().map(split_words).flatten().collect())
-            }
+            Item::Words(words) => Item::Words(words.into_iter().flat_map(split_words).collect()),
             item => item,
         })
         .collect()

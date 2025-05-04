@@ -74,19 +74,19 @@ impl Compiler {
                     pack_expansion: true,
                 };
                 for branch in branches {
-                    let mut lines = branch.value.lines;
-                    if lines.is_empty() {
-                        lines.push(Vec::new());
+                    let mut func = Func {
+                        lines: branch.value.lines,
+                        signature: None,
+                        closed: true,
+                    };
+                    if func.word_lines().count() == 0 {
+                        func.lines.push(Item::Words(Vec::new()));
                     }
-                    (lines.first_mut().unwrap())
+                    (func.word_lines_mut().next().unwrap())
                         .insert(0, span.clone().sp(Word::Modified(Box::new(new))));
                     new = Modified {
                         modifier: modifier.clone(),
-                        operands: vec![branch.span.clone().sp(Word::Func(Func {
-                            signature: None,
-                            lines,
-                            closed: true,
-                        }))],
+                        operands: vec![branch.span.clone().sp(Word::Func(func))],
                         pack_expansion: true,
                     };
                 }
@@ -1408,9 +1408,24 @@ impl Compiler {
             };
             self.code_macro(None, span, operands, code_mac)?
         } else {
-            let mut words: Vec<_> = mac.func.value.lines.into_iter().rev().flatten().collect();
             // Expand
-            self.expand_index_macro(None, &mut words, operands, span.clone(), false)?;
+            let items = mac.func.value.lines;
+            let mut words = Vec::new();
+            let mut errored = false;
+            for item in items {
+                match item {
+                    Item::Words(ws) => words.extend(ws.into_iter().rev().flatten()),
+                    item => {
+                        if !errored {
+                            self.add_error(
+                                item.span().unwrap_or_else(|| span.clone()),
+                                format!("Macro cannot contain {}s", item.kind_str()),
+                            );
+                            errored = true;
+                        }
+                    }
+                }
+            }
             // Compile
             let node = self.suppress_diagnostics(|comp| comp.words(words))?;
             // Add
@@ -1704,14 +1719,7 @@ impl Compiler {
         let operands: Vec<Sp<Word>> = operands.into_iter().filter(|w| w.value.is_code()).collect();
         self.replace_placeholders(macro_words, &operands)?;
         // Format and store the expansion for the LSP
-        let mut words_to_format = Vec::new();
-        for word in &*macro_words {
-            match &word.value {
-                Word::Func(func) => words_to_format.extend(func.lines.iter().flatten().cloned()),
-                _ => words_to_format.push(word.clone()),
-            }
-        }
-        let formatted = format_words(&words_to_format, &self.asm.inputs);
+        let formatted = format_words(&*macro_words, &self.asm.inputs);
         (self.code_meta.macro_expansions).insert(span, (name, formatted));
         Ok(())
     }

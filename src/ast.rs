@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// A top-level item
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", content = "value")]
 pub enum Item {
     /// Just some code
@@ -28,7 +28,32 @@ pub enum Item {
     Data(Vec<DataDef>),
 }
 
+impl PartialEq for Item {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Item::Words(a), Item::Words(b)) => lines_eq(a, b),
+            (Item::Binding(a), Item::Binding(b)) => a == b,
+            (Item::Import(a), Item::Import(b)) => a == b,
+            (Item::Module(a), Item::Module(b)) => a == b,
+            (Item::Data(a), Item::Data(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+fn lines_eq(a: &[Vec<Sp<Word>>], b: &[Vec<Sp<Word>>]) -> bool {
+    a.iter()
+        .flatten()
+        .map(|w| &w.value)
+        .eq(b.iter().flatten().map(|w| &w.value))
+}
+
+fn words_eq(a: &[Sp<Word>], b: &[Sp<Word>]) -> bool {
+    a.iter().map(|w| &w.value).eq(b.iter().map(|w| &w.value))
+}
+
 impl Item {
+    /// Get the span of this item
     pub fn span(&self) -> Option<CodeSpan> {
         match self {
             Item::Words(words) => (words.iter().flatten().next())
@@ -40,6 +65,23 @@ impl Item {
             Item::Data(data) => {
                 (data.first().zip(data.last())).map(|(first, last)| first.span().merge(last.span()))
             }
+        }
+    }
+    /// Get a string representation of the kind of this item
+    pub fn kind_str(&self) -> &'static str {
+        match self {
+            Item::Words(_) => "words",
+            Item::Binding(_) => "binding",
+            Item::Import(_) => "import",
+            Item::Module(_) => "module",
+            Item::Data(_) => "data definition",
+        }
+    }
+    /// Operate on words or provide a default
+    pub fn words_or<T>(&self, default: T, on_words: impl FnOnce(&[Vec<Sp<Word>>]) -> T) -> T {
+        match self {
+            Item::Words(words) => on_words(words),
+            _ => default,
         }
     }
 }
@@ -330,27 +372,11 @@ impl PartialEq for Word {
             (Self::FormatString(a), Self::FormatString(b)) => a == b,
             (Self::MultilineFormatString(a), Self::MultilineFormatString(b)) => a == b,
             (Self::Ref(a), Self::Ref(b)) => a == b,
-            (Self::Strand(a), Self::Strand(b)) => {
-                a.iter().map(|w| &w.value).eq(b.iter().map(|w| &w.value))
-            }
-            (Self::Array(a), Self::Array(b)) => a.lines.iter().flatten().map(|w| &w.value).eq(b
-                .lines
-                .iter()
-                .flatten()
-                .map(|w| &w.value)),
-            (Self::Func(a), Self::Func(b)) => a.lines.iter().flatten().map(|w| &w.value).eq(b
-                .lines
-                .iter()
-                .flatten()
-                .map(|w| &w.value)),
-            (Self::Pack(a), Self::Pack(b)) => (a.branches.iter())
-                .flat_map(|br| &br.value.lines)
-                .flatten()
-                .map(|w| &w.value)
-                .eq((b.branches.iter())
-                    .flat_map(|br| &br.value.lines)
-                    .flatten()
-                    .map(|w| &w.value)),
+            (Self::Strand(a), Self::Strand(b)) => words_eq(a, b),
+            (Self::Array(a), Self::Array(b)) => lines_eq(&a.lines, &b.lines),
+            (Self::Func(a), Self::Func(b)) => a.lines == b.lines,
+            (Self::Pack(a), Self::Pack(b)) => (a.branches.iter().flat_map(|br| &br.value.lines))
+                .eq(b.branches.iter().flat_map(|br| &br.value.lines)),
             (Self::Primitive(a), Self::Primitive(b)) => a == b,
             (Self::Modified(a), Self::Modified(b)) => {
                 a.modifier == b.modifier
@@ -581,7 +607,7 @@ impl Func {
             .map(|v| v.as_slice())
     }
     /// Get the mutable lines that contain words
-    pub fn word_lines_mut(&mut self) -> impl Iterator<Item = &mut [Sp<Word>]> {
+    pub fn word_lines_mut(&mut self) -> impl Iterator<Item = &mut Vec<Sp<Word>>> {
         self.lines
             .iter_mut()
             .filter_map(|line| match line {
@@ -589,7 +615,6 @@ impl Func {
                 _ => None,
             })
             .flatten()
-            .map(|v| v.as_mut_slice())
     }
 }
 

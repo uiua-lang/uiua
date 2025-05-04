@@ -1667,6 +1667,17 @@ impl<'a> Lexer<'a> {
     }
 }
 
+pub(crate) fn subscript(s: &str) -> Option<(Subscript, &str)> {
+    let mut lexer = Lexer::new(s, InputSrc::Literal(s.into()));
+    let sub = lexer.subscript("__");
+    if sub.num.is_some() || sub.side.is_some() {
+        let rest = &s[lexer.loc.byte_pos as usize..];
+        Some((sub, rest))
+    } else {
+        None
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum EscapeMode {
     All,
@@ -1806,12 +1817,14 @@ thread_local! {
         ("Pi", "π", "Π"),
         ("Rho", "ρ", "Ρ"),
         ("Sigma", "σ", "Σ"),
+        ("EndSigma", "ς", "Σ"),
         ("Tau", "τ", "Τ"),
         ("Upsilon", "υ", "Υ"),
         ("Phi", "φ", "Φ"),
         ("Chi", "χ", "Χ"),
         ("Psi", "ψ", "Ψ"),
         ("Omega", "ω", "Ω"),
+        ("Digamma", "ϝ", "Ϝ"),
     ].into()
 }
 
@@ -1819,10 +1832,10 @@ fn find_special(s: &str) -> Option<&'static str> {
     SPECIAL.with(|map| {
         for &(name, lower, upper) in map {
             if s == name {
-                return Some(upper);
+                return Some(lower);
             }
             if !lower.is_empty() && s.eq_ignore_ascii_case(name) {
-                return Some(lower);
+                return Some(upper);
             }
         }
         None

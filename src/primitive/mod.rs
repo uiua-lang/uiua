@@ -216,6 +216,7 @@ impl fmt::Display for ImplPrimitive {
             Cos => write!(f, "cos"),
             Asin => write!(f, "{Un}{Sin}"),
             Acos => write!(f, "{Un}{Cos}"),
+            Exp => write!(f, "{Un}{Ln}"),
             UnPop => write!(f, "{Un}{Pop}"),
             UnBits => write!(f, "{Un}{Bits}"),
             UnWhere => write!(f, "{Un}{Where}"),
@@ -550,9 +551,10 @@ impl Primitive {
             (Couple | Box, Some(n)) if n >= 0 => Signature::new(n as usize, 1),
             (Couple, None) => Signature::new(2, 1),
             (Box, None) => Signature::new(1, 1),
-            (Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8 | Len | Shape | Range, _) => {
-                return self.sig()
-            }
+            (
+                Transpose | Sqrt | Ln | Round | Floor | Ceil | Rand | Utf8 | Len | Shape | Range,
+                _,
+            ) => return self.sig(),
             (Stack, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),
             _ => return None,
         })
@@ -638,6 +640,7 @@ impl Primitive {
             ("kbn", &[(Keep, "k"), (By, "b"), (Ne, "n")]),
             ("ftd", &[(Fork, "f"), (Take, "t"), (Drop, "d")]),
             ("fdt", &[(Fork, "f"), (Drop, "d"), (Take, "t")]),
+            ("dnod", &[(Drop, "d"), (Neg, "n"), (On, "o"), (Drop, "d")]),
             (
                 "adnoad",
                 &[
@@ -650,6 +653,7 @@ impl Primitive {
                 ],
             ),
             ("perf", &[(Dip, "p"), (Pop, "e"), (Under, "r"), (Now, "f")]),
+            ("wrench", &[(Sub, "wr"), (By, "en"), (Not, "ch")]),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]
@@ -823,6 +827,7 @@ impl Primitive {
             Primitive::Abs => env.monadic_env(Value::abs)?,
             Primitive::Sign => env.monadic_env(Value::sign)?,
             Primitive::Sqrt => env.monadic_env(Value::sqrt)?,
+            Primitive::Ln => env.monadic_env(Value::ln)?,
             Primitive::Sin => env.monadic_env(Value::sin)?,
             Primitive::Floor => env.monadic_env(Value::floor)?,
             Primitive::Ceil => env.monadic_env(Value::ceil)?,
@@ -1288,6 +1293,7 @@ impl ImplPrimitive {
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
+            ImplPrimitive::Exp => env.monadic_env(Value::exp)?,
             ImplPrimitive::UnPop => {
                 let fv = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
                 env.push(fv.value.clone());

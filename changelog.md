@@ -24,6 +24,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`un °`](https://uiua.org/docs/un) [`add +`](https://uiua.org/docs/add), [`un °`](https://uiua.org/docs/un) [`multiply ×`](https://uiua.org/docs/multiply) and [`un °`](https://uiua.org/docs/un) [`divide ÷`](https://uiua.org/docs/divide)
   - These split into fraction and whole, sign and magnitude, and denominator and numerator respectively
 - Give [`base ⊥`](https://uiua.org/docs/base) a glyph
+- Add the [`ln`](https://uiua.org/docs/ln) function, which computes the natural logarithm
 - Add the [`pretty`](https://uiua.org/docs/pretty) function, which gives the string representation of an array's pretty-printed output
 - Add numeric subscripts for [`length ⧻`](https://uiua.org/docs/length) to get the length of a specific axis
 - Add numeric subscripts for [`shape △`](https://uiua.org/docs/shape) to get the shape of the first few axes

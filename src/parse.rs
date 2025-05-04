@@ -253,7 +253,7 @@ struct Parser<'i> {
     start_addr: usize,
 }
 
-type FunctionContents = (Option<Sp<Signature>>, Vec<Vec<Sp<Word>>>, Option<CodeSpan>);
+type FunctionContents = (Option<Sp<Signature>>, Vec<Item>, Option<CodeSpan>);
 
 impl Parser<'_> {
     fn next_token_map<'a, T: 'a>(
@@ -1413,14 +1413,10 @@ impl Parser<'_> {
             } else {
                 // Function pack
                 let first_span = if first_lines.len() > 1 {
-                    let mut code_words = first_lines
-                        .iter()
-                        .flatten()
-                        .filter(|word| word.value.is_code());
-                    if let Some(first_word) = code_words.by_ref().next() {
-                        let last_word = code_words.next_back().unwrap_or(first_word);
-                        start.start = first_word.span.start;
-                        start.end = last_word.span.end;
+                    if let Some(first_span) = first_lines.iter().find_map(Item::span) {
+                        let last_span = first_lines.iter().rev().find_map(Item::span).unwrap();
+                        start.start = first_span.start;
+                        start.end = last_span.end;
                     }
                     start
                 } else {
@@ -1468,21 +1464,19 @@ impl Parser<'_> {
         }
         let mut lines = Vec::new();
         if starts_with_newline {
-            lines.push(Vec::new());
+            lines.push(Item::Words(vec![Vec::new()]));
         }
-        lines.extend(self.multiline_words(false, true));
+        lines.extend(self.items(false));
         if lines.is_empty() {
-            lines.push(Vec::new());
+            lines.push(Item::Words(vec![Vec::new()]));
         }
         let start = signature
             .as_ref()
             .map(|sig| sig.span.clone())
-            .or_else(|| lines.iter().flatten().next().map(|word| word.span.clone()));
+            .or_else(|| lines.iter().find_map(Item::span));
         let end = lines
             .iter()
-            .flatten()
-            .last()
-            .map(|word| word.span.clone())
+            .find_map(Item::span)
             .or_else(|| signature.as_ref().map(|sig| sig.span.clone()));
         let span = start.zip(end).map(|(start, end)| start.merge(end));
         (signature, lines, span)
@@ -1542,6 +1536,17 @@ impl Parser<'_> {
     }
 }
 
+pub(crate) fn split_items(items: Vec<Item>) -> Vec<Item> {
+    items
+        .into_iter()
+        .map(|item| match item {
+            Item::Words(words) => {
+                Item::Words(words.into_iter().map(split_words).flatten().collect())
+            }
+            item => item,
+        })
+        .collect()
+}
 pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
     let mut lines = vec![Vec::new()];
     for word in words {
@@ -1555,6 +1560,18 @@ pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
     lines
 }
 
+pub(crate) fn flip_unsplit_items(items: Vec<Item>) -> Vec<Item> {
+    flip_unsplit_items_impl(items, false)
+}
+fn flip_unsplit_items_impl(items: Vec<Item>, in_array: bool) -> Vec<Item> {
+    items
+        .into_iter()
+        .map(|item| match item {
+            Item::Words(words) => Item::Words(flip_unsplit_lines_impl(words, in_array)),
+            item => item,
+        })
+        .collect()
+}
 /// Flip and/or unsplit a list of lines
 pub(crate) fn flip_unsplit_lines(lines: Vec<Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
     flip_unsplit_lines_impl(lines, false)
@@ -1641,7 +1658,7 @@ fn flip_unsplit_lines_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec
 fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
     word.map(|word| match word {
         Word::Func(mut func) => {
-            func.lines = flip_unsplit_lines(func.lines);
+            func.lines = flip_unsplit_items(func.lines);
             Word::Func(func)
         }
         Word::Array(mut arr) => {
@@ -1653,7 +1670,7 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
                 .branches
                 .into_iter()
                 .map(|mut br| {
-                    br.value.lines = flip_unsplit_lines(br.value.lines);
+                    br.value.lines = flip_unsplit_items(br.value.lines);
                     br
                 })
                 .collect();
@@ -1674,7 +1691,7 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
 fn split_word(word: Sp<Word>) -> Sp<Word> {
     word.map(|word| match word {
         Word::Func(mut func) => {
-            func.lines = func.lines.into_iter().flat_map(split_words).collect();
+            func.lines = split_items(func.lines);
             Word::Func(func)
         }
         Word::Array(mut arr) => {
@@ -1694,7 +1711,7 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
                 .branches
                 .into_iter()
                 .map(|mut br| {
-                    br.value.lines = br.value.lines.into_iter().flat_map(split_words).collect();
+                    br.value.lines = split_items(br.value.lines);
                     br
                 })
                 .collect();
@@ -1745,14 +1762,14 @@ pub(crate) fn max_placeholder(words: &[Sp<Word>]) -> Option<usize> {
                 }
             }
             Word::Func(func) => {
-                for line in &func.lines {
+                for line in func.word_lines() {
                     set(max_placeholder(line));
                 }
             }
             Word::Modified(m) => set(max_placeholder(&m.operands)),
             Word::Pack(pack) => {
                 for branch in &pack.branches {
-                    for line in &branch.value.lines {
+                    for line in branch.value.word_lines() {
                         set(max_placeholder(line));
                     }
                 }

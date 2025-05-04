@@ -1937,9 +1937,7 @@ code:
     }
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Node> {
         let mut root = Node::empty();
-        for line in func.lines {
-            root.push(self.line(line, false)?);
-        }
+        self.in_scope(ScopeKind::Temp(None), |comp| comp.items(func.lines, false))?;
 
         // Validate signature
         let sig = match root.sig() {
@@ -2682,7 +2680,7 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
     words.iter().all(|word| match &word.value {
         Word::Primitive(p) if p.class().is_pervasive() => true,
         Word::Primitive(Dup | Dip | Identity | Fork | Under | Each) => true,
-        Word::Func(func) if func.lines.iter().all(|line| words_look_pervasive(line)) => true,
+        Word::Func(func) if func.word_lines().all(|line| words_look_pervasive(line)) => true,
         Word::Number(..) | Word::Char(..) => true,
         Word::Modified(m) if m.modifier.value == Modifier::Primitive(Primitive::Each) => true,
         _ => false,
@@ -2712,12 +2710,12 @@ fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
             Word::Array(arr) => arr.lines.iter().for_each(|line| {
                 recurse_words(line, f);
             }),
-            Word::Func(func) => func.lines.iter().for_each(|line| {
+            Word::Func(func) => func.word_lines().for_each(|line| {
                 recurse_words(line, f);
             }),
             Word::Modified(m) => recurse_words(&m.operands, f),
             Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
-                (branch.value.lines.iter()).for_each(|line| recurse_words(line, f))
+                (branch.value.word_lines()).for_each(|line| recurse_words(line, f))
             }),
             _ => {}
         }
@@ -2742,12 +2740,12 @@ fn recurse_words_mut_impl(
             Word::Array(arr) => arr.lines.iter_mut().for_each(|line| {
                 recurse_words_mut(line, f);
             }),
-            Word::Func(func) => func.lines.iter_mut().for_each(|line| {
+            Word::Func(func) => func.word_lines_mut().for_each(|line| {
                 recurse_words_mut(line, f);
             }),
             Word::Modified(m) => recurse_words_mut(&mut m.operands, f),
             Word::Pack(pack) => pack.branches.iter_mut().for_each(|branch| {
-                (branch.value.lines.iter_mut()).for_each(|line| recurse_words_mut(line, f))
+                (branch.value.word_lines_mut()).for_each(|line| recurse_words_mut(line, f))
             }),
             Word::Subscripted(sub) => recurse_words_mut(slice::from_mut(&mut sub.word), f),
             _ => {}

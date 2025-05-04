@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// A top-level item
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "type", content = "value")]
 pub enum Item {
     /// Just some code
@@ -28,8 +28,24 @@ pub enum Item {
     Data(Vec<DataDef>),
 }
 
+impl Item {
+    pub fn span(&self) -> Option<CodeSpan> {
+        match self {
+            Item::Words(words) => (words.iter().flatten().next())
+                .zip(words.iter().flatten().last())
+                .map(|(first, last)| first.span.clone().merge(last.span.clone())),
+            Item::Binding(binding) => Some(binding.span()),
+            Item::Import(import) => Some(import.span()),
+            Item::Module(module) => Some(module.span.clone()),
+            Item::Data(data) => {
+                (data.first().zip(data.last())).map(|(first, last)| first.span().merge(last.span()))
+            }
+        }
+    }
+}
+
 /// A binding
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Binding {
     /// Span of a ~ for a method
     pub tilde_span: Option<CodeSpan>,
@@ -61,7 +77,7 @@ impl Binding {
 }
 
 /// A scoped module
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ScopedModule {
     /// The span of the opening delimiter
     pub open_span: CodeSpan,
@@ -76,7 +92,7 @@ pub struct ScopedModule {
 }
 
 /// The kind of a module
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum ModuleKind {
     /// A named module
     Named(Sp<Ident>),
@@ -85,7 +101,7 @@ pub enum ModuleKind {
 }
 
 /// An import
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Import {
     /// The name given to the imported module
     pub name: Option<Sp<Ident>>,
@@ -98,7 +114,7 @@ pub struct Import {
 }
 
 /// A line of imported items
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ImportLine {
     /// The span of the ~
     pub tilde_span: CodeSpan,
@@ -124,7 +140,7 @@ impl Import {
 }
 
 /// A data definition
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DataDef {
     /// The span of the ~ or |
     pub init_span: CodeSpan,
@@ -139,7 +155,7 @@ pub struct DataDef {
 }
 
 /// The fields of a data definition
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DataFields {
     /// Whether the array is boxed
     pub boxed: bool,
@@ -154,7 +170,7 @@ pub struct DataFields {
 }
 
 /// A data field
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DataField {
     /// Leading comments
     pub comments: Option<Comments>,
@@ -169,7 +185,7 @@ pub struct DataField {
 }
 
 /// A data field validator
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct FieldValidator {
     /// The span of the colon (may be an open paren)
     pub open_span: CodeSpan,
@@ -180,7 +196,7 @@ pub struct FieldValidator {
 }
 
 /// A data field initializer
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct FieldInit {
     /// The span of the assignment arrow
     pub arrow_span: CodeSpan,
@@ -248,7 +264,7 @@ impl DataField {
 }
 
 /// A cluster of comments
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Comments {
     /// The normal comment lines
     pub lines: Vec<Sp<EcoString>>,
@@ -526,19 +542,25 @@ pub struct Func {
     /// The function's signature
     pub signature: Option<Sp<Signature>>,
     /// The function's code
-    pub lines: Vec<Vec<Sp<Word>>>,
+    pub lines: Vec<Item>,
     /// Whether a closing parenthesis was found
     pub closed: bool,
 }
 
 impl Func {
     /// Get the lines of the function without leading or trailing empty lines
-    pub fn trimmed_lines(&self) -> &[Vec<Sp<Word>>] {
+    pub fn trimmed_lines(&self) -> &[Item] {
         let mut lines = self.lines.as_slice();
-        while lines.first().is_some_and(|line| line.is_empty()) {
+        while lines
+            .first()
+            .is_some_and(|line| matches!(line, Item::Words(words) if words.is_empty()))
+        {
             lines = &lines[1..];
         }
-        while lines.last().is_some_and(|line| line.is_empty()) {
+        while lines
+            .last()
+            .is_some_and(|line| matches!(line, Item::Words(words) if words.is_empty()))
+        {
             lines = &lines[..lines.len() - 1];
         }
         lines
@@ -547,6 +569,28 @@ impl Func {
     pub fn is_multiline(&self) -> bool {
         self.trimmed_lines().len() > 1
     }
+    /// Get the lines that contain words
+    pub fn word_lines(&self) -> impl Iterator<Item = &[Sp<Word>]> {
+        self.lines
+            .iter()
+            .filter_map(|line| match line {
+                Item::Words(words) => Some(words),
+                _ => None,
+            })
+            .flatten()
+            .map(|v| v.as_slice())
+    }
+    /// Get the mutable lines that contain words
+    pub fn word_lines_mut(&mut self) -> impl Iterator<Item = &mut [Sp<Word>]> {
+        self.lines
+            .iter_mut()
+            .filter_map(|line| match line {
+                Item::Words(words) => Some(words),
+                _ => None,
+            })
+            .flatten()
+            .map(|v| v.as_mut_slice())
+    }
 }
 
 impl fmt::Debug for Func {
@@ -554,11 +598,20 @@ impl fmt::Debug for Func {
         let mut d = f.debug_tuple("func");
         // d.field(&self.id);
         for line in &self.lines {
-            for word in line {
-                d.field(&word.value);
-            }
-            if line.is_empty() {
-                d.field(&"newline");
+            match line {
+                Item::Words(words) => {
+                    for line in words {
+                        for word in line {
+                            d.field(&word.value);
+                        }
+                        if line.is_empty() {
+                            d.field(&"newline");
+                        }
+                    }
+                }
+                item => {
+                    d.field(item);
+                }
             }
         }
         d.finish()

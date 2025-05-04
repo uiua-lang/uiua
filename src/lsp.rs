@@ -666,7 +666,7 @@ impl Spanner {
                         if let Some(sig) = &branch.value.signature {
                             spans.push(sig.span.clone().sp(SpanKind::Signature));
                         }
-                        spans.extend(branch.value.lines.iter().flat_map(|w| self.words_spans(w)));
+                        spans.extend(self.items_spans(&branch.value.lines));
                     }
                     if pack.closed {
                         let end = word.span.just_end(self.inputs());
@@ -821,7 +821,7 @@ impl Spanner {
         if let Some(sig) = &func.signature {
             spans.push(sig.span.clone().sp(SpanKind::Signature));
         }
-        spans.extend(func.lines.iter().flat_map(|w| self.words_spans(w)));
+        spans.extend(self.items_spans(&func.lines));
         if func.closed {
             let end = span.just_end(self.inputs());
             if end.as_str(self.inputs(), |s| s == ")") || end.as_str(self.inputs(), |s| s == "}") {

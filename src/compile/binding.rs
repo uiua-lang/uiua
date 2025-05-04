@@ -655,11 +655,11 @@ impl Compiler {
                 Word::Array(arr) => arr.lines.iter().for_each(|line| {
                     self.analyze_macro_body(macro_name, line, code_macro, recursive);
                 }),
-                Word::Func(func) => func.lines.iter().for_each(|line| {
+                Word::Func(func) => func.word_lines().for_each(|line| {
                     self.analyze_macro_body(macro_name, line, code_macro, recursive);
                 }),
                 Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
-                    (branch.value.lines.iter()).for_each(|line| {
+                    (branch.value.word_lines()).for_each(|line| {
                         self.analyze_macro_body(macro_name, line, code_macro, recursive)
                     })
                 }),

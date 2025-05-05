@@ -1833,10 +1833,13 @@ fn find_special(s: &str) -> Option<&'static str> {
     SPECIAL.with(|map| {
         for &(name, lower, upper) in map {
             if s == name {
-                return Some(lower);
-            }
-            if !lower.is_empty() && s.eq_ignore_ascii_case(name) {
                 return Some(upper);
+            }
+            if !lower.is_empty()
+                && (s.chars().flat_map(char::to_lowercase))
+                    .eq(name.chars().flat_map(char::to_lowercase))
+            {
+                return Some(lower);
             }
         }
         None

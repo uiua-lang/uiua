@@ -214,6 +214,8 @@ enum ScopeKind {
     AllInModule,
     /// A temporary scope, probably for a macro
     Temp(Option<MacroLocal>),
+    /// A function scope
+    Function,
     /// A test scope between `---`s
     Test,
 }
@@ -1401,7 +1403,7 @@ impl Compiler {
                     word_lines.reverse();
                 }
                 let root_start = self.asm.root.len();
-                self.in_scope(ScopeKind::Temp(None), |comp| {
+                self.in_scope(ScopeKind::Function, |comp| {
                     comp.items(item_lines, ItemCompMode::Function)?;
                     comp.items(word_lines, ItemCompMode::Function)
                 })?;
@@ -1934,7 +1936,7 @@ impl Compiler {
     }
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Node> {
         let root_start = self.asm.root.len();
-        self.in_scope(ScopeKind::Temp(None), |comp| {
+        self.in_scope(ScopeKind::Function, |comp| {
             comp.items(func.lines, ItemCompMode::Function)
         })?;
         let mut root = self.asm.root.split_off(root_start);

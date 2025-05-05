@@ -323,7 +323,7 @@ impl Compiler {
         // Compile the body
         let in_function = self
             .scopes()
-            .any(|sc| matches!(sc.kind, ScopeKind::Temp(None)));
+            .any(|sc| matches!(sc.kind, ScopeKind::Function));
         self.current_bindings.push(CurrentBinding {
             name: name.clone(),
             signature: binding.signature.as_ref().map(|s| s.value),

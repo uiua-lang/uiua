@@ -688,7 +688,9 @@ impl Compiler {
         let binding_count_after = self.asm.bindings.len();
         let error_count_after = self.errors.len();
 
-        line_node.optimize_full();
+        if mode != ItemCompMode::Function {
+            line_node.optimize_full();
+        }
         match line_node.sig() {
             Ok(sig) => {
                 // Compile test assert

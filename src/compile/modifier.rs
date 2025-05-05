@@ -836,8 +836,8 @@ impl Compiler {
                 node
             }
             Un => {
-                invert::dbgln!("\n//////////////\n// begin UN //\n//////////////");
                 let (sn, span) = self.monadic_modifier_op(modified)?;
+                invert::dbgln!("\n//////////////\n// begin UN //\n//////////////");
                 self.add_span(span.clone());
                 let mut normal = sn.un_inverse(&self.asm);
                 if let Node::Prim(Pretty, _) = sn.node {
@@ -859,8 +859,8 @@ impl Compiler {
                 }
             }
             Anti => {
-                invert::dbgln!("\n////////////////\n// begin ANTI //\n////////////////");
                 let (sn, span) = self.monadic_modifier_op(modified)?;
+                invert::dbgln!("\n////////////////\n// begin ANTI //\n////////////////");
                 self.add_span(span.clone());
                 let normal = sn.anti_inverse(&self.asm);
                 let cust = CustomInverse {
@@ -874,8 +874,8 @@ impl Compiler {
                 Node::CustomInverse(cust.into(), span)
             }
             Under => {
-                invert::dbgln!("\n/////////////////\n// begin UNDER //\n/////////////////");
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
+                invert::dbgln!("\n/////////////////\n// begin UNDER //\n/////////////////");
                 let normal = {
                     let (f_before, f_after) = f
                         .node
@@ -1426,6 +1426,7 @@ impl Compiler {
                     }
                 }
             }
+            self.expand_index_macro(None, &mut words, operands, span.clone(), false)?;
             // Compile
             let node = self.suppress_diagnostics(|comp| comp.words(words))?;
             // Add

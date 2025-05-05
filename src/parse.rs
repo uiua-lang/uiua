@@ -355,10 +355,17 @@ impl Parser<'_> {
                 defs.push(def);
             }
             Item::Data(defs)
-        } else if let Some(words) = self.words() {
-            Item::Words(words)
         } else {
-            return None;
+            let start = self.index;
+            if self.module_delim_hyphens().is_some() {
+                self.index = start;
+                return None;
+            }
+            if let Some(words) = self.words() {
+                Item::Words(words)
+            } else {
+                return None;
+            }
         };
         Some(item)
     }

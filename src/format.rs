@@ -1095,7 +1095,7 @@ impl Formatter<'_> {
                     }
                 }
 
-                self.format_inner_items(&arr.lines, Compact::Auto, true, true, true, depth + 1);
+                self.format_inner_items(&arr.lines, true, depth + 1);
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -1297,23 +1297,8 @@ impl Formatter<'_> {
     }
 }
 
-#[derive(Debug, PartialEq)]
-enum Compact {
-    Always,
-    Never,
-    Auto,
-}
-
 impl Formatter<'_> {
-    fn format_inner_items(
-        &mut self,
-        mut items: &[Item],
-        compact: Compact,
-        allow_leading_space: bool,
-        mut allow_trailing_newline: bool,
-        full_trim_end: bool,
-        depth: usize,
-    ) {
+    fn format_inner_items(&mut self, mut items: &[Item], allow_compact: bool, depth: usize) {
         // println!("items:");
         // for item in items {
         //     println!("  {item:?}");
@@ -1330,9 +1315,9 @@ impl Formatter<'_> {
             return;
         }
         // Remove trailing empty lines
-        if (!allow_trailing_newline || full_trim_end) && depth > 0 {
+        let has_trailing_newline = items.last().is_some_and(Item::is_empty_line);
+        if depth > 0 {
             while items.last().is_some_and(Item::is_empty_line)
-                && full_trim_end
                 && (items.iter().nth_back(1)).is_some_and(Item::is_empty_line)
                 && !(items.iter().nth_back(1)).is_some_and(item_is_end_of_line)
             {
@@ -1351,28 +1336,31 @@ impl Formatter<'_> {
         } else {
             curr_line.chars().count()
         };
-        let indent = if compact != Compact::Never && !has_leading_newline {
-            if compact == Compact::Auto {
-                allow_trailing_newline = start_line_pos <= self.config.multiline_indent * depth;
-            }
-            start_line_pos
+        let depth_indent = self.config.multiline_indent * depth;
+        let starts_indented = start_line_pos > depth_indent;
+        let allow_leading_newline = starts_indented || has_trailing_newline && allow_compact;
+        let indent = if allow_leading_newline && has_leading_newline {
+            depth_indent
         } else {
-            self.config.multiline_indent * depth
+            start_line_pos
         };
+        let last_index = items.len() - 1;
         for (i, item) in items.iter().enumerate() {
-            if i > 0 || (compact == Compact::Never && allow_leading_space) || has_leading_newline {
-                if item.is_empty_line() {
-                    if allow_trailing_newline || prevent_compact || i < items.len() - 1 {
-                        self.newline(depth.saturating_sub(1));
-                    }
-                } else {
-                    self.output.push('\n');
-                    for _ in 0..indent {
-                        self.output.push(' ');
-                    }
+            let is_empty_line = item.is_empty_line();
+            if is_empty_line {
+                if i == 0 && allow_leading_newline || i > 0 && i < last_index || i == last_index {
+                    self.newline(depth.saturating_sub(1));
+                }
+            } else if i > 0 || has_leading_newline && allow_leading_newline {
+                self.output.push('\n');
+                for _ in 0..indent {
+                    self.output.push(' ');
                 }
             }
             self.format_item(item, 0, depth);
+            if !is_empty_line && i == last_index && has_leading_newline && starts_indented {
+                self.newline(depth.saturating_sub(1));
+            }
         }
     }
     fn format_modifier(&mut self, modifier: &Sp<Modifier>, depth: usize) {
@@ -1432,12 +1420,6 @@ impl Formatter<'_> {
     }
     fn func(&mut self, func: &Func, depth: usize) {
         let start_indent = (self.output.rsplit('\n').next()).map_or(0, |line| line.chars().count());
-        let indent = self.config.multiline_indent * depth;
-        let compact = if start_indent <= indent + 1 {
-            Compact::Always
-        } else {
-            Compact::Never
-        };
 
         let double_nest = self.output.ends_with(['(', '{', '[']);
 
@@ -1456,7 +1438,7 @@ impl Formatter<'_> {
         let depth = depth + 1
             - ((double_nest && func.word_lines().next().is_some_and(|line| line.is_empty()))
                 as usize);
-        self.format_inner_items(&func.lines, compact, true, true, true, depth);
+        self.format_inner_items(&func.lines, true, depth);
         if double_nest {
             while self.output.chars().rev().take_while(|&c| c == ' ').count() >= start_indent {
                 self.output.pop();
@@ -1519,14 +1501,7 @@ impl Formatter<'_> {
                             self.output.pop();
                         }
                     }
-                    self.format_inner_items(
-                        lines,
-                        Compact::Never,
-                        false,
-                        true,
-                        i < pack.branches.len() - 1,
-                        depth + 1,
-                    );
+                    self.format_inner_items(lines, false, depth + 1);
                 }
                 if row_count > 1
                     && i < row_count - 1
@@ -1579,14 +1554,7 @@ impl Formatter<'_> {
                 {
                     lines = &lines[..lines.len() - 1];
                 }
-                self.format_inner_items(
-                    lines,
-                    Compact::Never,
-                    false,
-                    true,
-                    i < pack.branches.len() - 1,
-                    depth + 1,
-                );
+                self.format_inner_items(lines, false, depth + 1);
                 if any_multiline
                     && i < pack.branches.len() - 1
                     && (br.value.lines.last()).is_some_and(|item| !item.is_empty_line())
@@ -1796,9 +1764,13 @@ fn formatter_idempotence() {
     let input = "\
 ⊃(|)
 ⊃(+|-|×|÷)
+F ← (⊃(
+    +
+  | -))
 F ← (
   ⊃(+
-  | -))
+  | -)
+)
 G ← (
   ∘
   ∘ # hi
@@ -1816,11 +1788,13 @@ G ← (
 ⊃(+
 | -)
 (1 2) (
-  5)
+  5
+)
 (1
  2
 ) (
-  5)
+  5
+)
 (1
  2
  3
@@ -1849,7 +1823,8 @@ x ← 2
 
 ┌─╴Foo
   F ← (
-    1)
+    1
+  )
   G ← (
     2
   )
@@ -1877,7 +1852,8 @@ x ← [1_2
      3_4]
 x ← [
   1_2
-  3_4]
+  3_4
+]
 x ← [
   1_2
   3_4
@@ -1886,7 +1862,8 @@ x ← {1_2
      3_4}
 x ← {
   1_2
-  3_4}
+  3_4
+}
 x ← {
   1_2
   3_4

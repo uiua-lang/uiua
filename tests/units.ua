@@ -356,6 +356,22 @@ a ← ()
 Foo⌟ ← 5
 ⍤⤙≍ 5 Foo⌟
 
+5
+F ← (
+  G ←
+  G 1
+)
+⍤⤙≍ 1 F
+⍤⤙≍ 5
+
+X  ← 3
+F! ←^ ∘
+F!(
+  X ← 5
+  Y ← 6
+)
+⍤⤙≍ [5 6] [X Y]
+
 # Constant vs Noadic function
 F ← ⚂
 G ← (⚂)

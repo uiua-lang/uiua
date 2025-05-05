@@ -321,6 +321,7 @@ impl Compiler {
             });
 
         // Compile the body
+        let already_in_binding = !self.current_bindings.is_empty();
         self.current_bindings.push(CurrentBinding {
             name: name.clone(),
             signature: binding.signature.as_ref().map(|s| s.value),
@@ -397,7 +398,8 @@ impl Compiler {
         // Resolve signature
         match node.sig() {
             Ok(mut sig) => {
-                let binds_above = node.is_empty() && no_code_words && !is_method;
+                let binds_above =
+                    !already_in_binding && node.is_empty() && no_code_words && !is_method;
                 if !binds_above {
                     // Validate signature
                     if let Some(declared_sig) = &binding.signature {

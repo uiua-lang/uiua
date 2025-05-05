@@ -1847,7 +1847,8 @@ impl Compiler {
         macro_local: Option<MacroLocal>,
         f: impl FnOnce(&mut Self) -> T,
     ) -> T {
-        let macro_names_len = names.len();
+        let orig_names = names.clone();
+        // Create temp scope
         let temp_scope = Scope {
             kind: ScopeKind::Temp(macro_local),
             names,
@@ -1855,12 +1856,19 @@ impl Compiler {
             experimental_error: self.scope.experimental_error,
             ..Default::default()
         };
+        // Run function in temp scope
         self.higher_scopes
             .push(replace(&mut self.scope, temp_scope));
         let res = f(self);
-        let mut scope = self.higher_scopes.pop().unwrap();
-        (scope.names).extend(self.scope.names.drain(macro_names_len..));
-        self.scope = scope;
+        let mut replaced_scope = self.higher_scopes.pop().unwrap();
+        // If temp scope has a new name, or if its binding index changed,
+        // then it is a new binding and should be added to the current scope
+        for (name, local) in self.scope.names.drain(..) {
+            if orig_names.get(&name).is_none_or(|l| l.index != local.index) {
+                replaced_scope.names.insert(name, local);
+            }
+        }
+        self.scope = replaced_scope;
         res
     }
 }

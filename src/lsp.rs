@@ -615,9 +615,6 @@ impl Spanner {
                         spans.push(down_span.clone().sp(SpanKind::LexOrder));
                     }
                     spans.push(word.span.just_start(self.inputs()).sp(SpanKind::Delimiter));
-                    if let Some(sig) = &arr.signature {
-                        spans.push(sig.span.clone().sp(SpanKind::Signature));
-                    }
                     spans.extend(self.items_spans(&arr.lines));
                     if arr.closed {
                         let end = word.span.just_end(self.inputs());

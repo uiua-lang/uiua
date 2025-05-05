@@ -547,8 +547,6 @@ impl fmt::Display for Ref {
 pub struct Arr {
     /// The span of preceding `↓`
     pub down_span: Option<CodeSpan>,
-    /// The array's inner signature
-    pub signature: Option<Sp<Signature>>,
     /// The words in the array
     pub lines: Vec<Item>,
     /// Whether this is a box array

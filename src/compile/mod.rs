@@ -1405,15 +1405,10 @@ impl Compiler {
                     comp.items(item_lines, ItemCompMode::Function)?;
                     comp.items(word_lines, ItemCompMode::Function)
                 })?;
-                let mut inner = self.asm.root.split_off(root_start);
-                // Validate inner loop correctness
+                let inner = self.asm.root.split_off(root_start);
+                // Calculate length
                 let len = match inner.sig() {
-                    Ok(mut sig) => {
-                        // Validate signature
-                        if let Some(declared_sig) = arr.signature {
-                            inner = self.force_sig(inner, declared_sig.value, &declared_sig.span);
-                            sig = declared_sig.value;
-                        }
+                    Ok(sig) => {
                         if sig.outputs() == 0 && any_contents {
                             self.emit_diagnostic(
                                 "Array wraps function with no outputs. This is probably not what you want.",

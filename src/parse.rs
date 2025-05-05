@@ -1268,12 +1268,7 @@ impl Parser<'_> {
             self.index = reset;
             return None;
         };
-        let mut has_newline = self.ignore_whitespace();
-        let signature = self.signature(true);
-        if signature.is_some() {
-            has_newline = false;
-        }
-        has_newline |= self.ignore_whitespace();
+        let has_newline = self.ignore_whitespace();
         let mut lines = self.items(ItemsKind::Function);
         if has_newline {
             lines.insert(0, Item::Words(Vec::new()));
@@ -1282,7 +1277,6 @@ impl Parser<'_> {
         let span = start.merge(end.span);
         let arr = Arr {
             down_span,
-            signature,
             lines,
             boxes,
             closed: end.value,

@@ -1086,14 +1086,6 @@ impl Formatter<'_> {
                 } else {
                     self.output.push('[');
                 }
-                if let Some(sig) = &arr.signature {
-                    let trailing_space =
-                        arr.lines.len() <= 1 && !arr.lines.iter().any(item_is_multiline);
-                    self.format_signature(sig.value, trailing_space);
-                    if arr.lines.is_empty() {
-                        self.output.pop();
-                    }
-                }
 
                 self.format_inner_items(&arr.lines, true, depth + 1);
                 if arr.boxes {

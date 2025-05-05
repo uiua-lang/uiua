@@ -382,6 +382,9 @@ F!(
   C C
 ]
 
+5
+⍤⤙≍ 5 (X ←)
+
 # Constant vs Noadic function
 F ← ⚂
 G ← (⚂)

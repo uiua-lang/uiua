@@ -372,6 +372,11 @@ F!(
 )
 ⍤⤙≍ [5 6] [X Y]
 
+⍤⤙≍ [1 1] [
+  C ← 1
+  C C
+]
+
 # Constant vs Noadic function
 F ← ⚂
 G ← (⚂)

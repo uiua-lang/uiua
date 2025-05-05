@@ -1369,7 +1369,7 @@ impl Compiler {
                     span,
                 }
             }
-            Word::Array(mut arr) => {
+            Word::Array(arr) => {
                 if let Some(down_span) = &arr.down_span {
                     self.experimental_error(down_span, || {
                         "Lexical ordering is experimental. To use it, \
@@ -1393,12 +1393,17 @@ impl Compiler {
                 let line_count = arr.lines.len();
                 let any_contents = arr.word_lines().flatten().any(|w| w.value.is_code());
                 // Compile lines
+                let (mut word_lines, item_lines): (Vec<_>, Vec<_>) = arr
+                    .lines
+                    .into_iter()
+                    .partition(|item| matches!(item, Item::Words(_)));
                 if arr.down_span.is_none() {
-                    arr.lines.reverse();
+                    word_lines.reverse();
                 }
                 let root_start = self.asm.root.len();
                 self.in_scope(ScopeKind::Temp(None), |comp| {
-                    comp.items(arr.lines, ItemCompMode::Function)
+                    comp.items(item_lines, ItemCompMode::Function)?;
+                    comp.items(word_lines, ItemCompMode::Function)
                 })?;
                 let mut inner = self.asm.root.split_off(root_start);
                 // Validate inner loop correctness

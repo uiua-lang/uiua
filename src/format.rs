@@ -1318,14 +1318,17 @@ impl Formatter<'_> {
         full_trim_end: bool,
         depth: usize,
     ) {
-        println!("items:");
-        for item in items {
-            println!("  {item:?}");
-        }
+        // println!("items:");
+        // for item in items {
+        //     println!("  {item:?}");
+        // }
         if items.is_empty() {
             return;
         }
-        let prevent_compact = items.last().is_some_and(item_is_end_of_line);
+        let prevent_compact = (items.iter())
+            .filter(|item| !item.is_empty_line())
+            .next_back()
+            .is_some_and(item_is_end_of_line);
         if items.len() == 1 && !prevent_compact && !item_is_multiline(&items[0]) {
             self.format_item(&items[0], 0, depth);
             return;
@@ -1361,7 +1364,6 @@ impl Formatter<'_> {
             self.config.multiline_indent * depth
         };
         for (i, item) in items.iter().enumerate() {
-            println!("  {i}: {item:?}");
             if i > 0 || (compact == Compact::Never && allow_leading_space) || has_leading_newline {
                 if item.is_empty_line() {
                     if allow_trailing_newline || prevent_compact || i < items.len() - 1 {

@@ -453,7 +453,7 @@ impl Compiler {
 
         let base = 0u8;
         self.start_addrs.push(&base as *const u8 as usize);
-        let res = self.catching_crash(input, |env| env.items(items, false));
+        let res = self.catching_crash(input, |env| env.items(items, ItemCompMode::TopLevel));
         self.start_addrs.pop();
 
         // Optimize root
@@ -527,7 +527,17 @@ code:
             .into()),
         }
     }
-    pub(crate) fn items(&mut self, items: Vec<Item>, from_macro: bool) -> UiuaResult {
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ItemCompMode {
+    TopLevel,
+    Function,
+    Macro,
+}
+
+impl Compiler {
+    fn items(&mut self, items: Vec<Item>, mode: ItemCompMode) -> UiuaResult {
         // Set scope comment
         let mut started = false;
         let mut comment = String::new();
@@ -563,7 +573,7 @@ code:
         let mut item_errored = false;
         let mut items = VecDeque::from(items);
         while let Some(item) = items.pop_front() {
-            let must_run = from_macro
+            let must_run = mode == ItemCompMode::Macro
                 || matches!(&item, Item::Words(_))
                     && items.iter().any(|item| match item {
                         Item::Binding(binding)
@@ -580,7 +590,7 @@ code:
                             .is_some_and(|w| matches!(w.value, Word::Primitive(Primitive::Assert))),
                         _ => false,
                     });
-            if let Err(e) = self.item(item, must_run, &mut prelude) {
+            if let Err(e) = self.item(item, must_run, mode, &mut prelude) {
                 if !item_errored || self.errors.is_empty() {
                     self.errors.push(e);
                 }
@@ -589,10 +599,16 @@ code:
         }
         Ok(())
     }
-    fn item(&mut self, item: Item, must_run: bool, prelude: &mut BindingPrelude) -> UiuaResult {
+    fn item(
+        &mut self,
+        item: Item,
+        must_run: bool,
+        mode: ItemCompMode,
+        prelude: &mut BindingPrelude,
+    ) -> UiuaResult {
         match item {
             Item::Module(m) => self.module(m, take(prelude)),
-            Item::Words(line) => self.top_level_line(line, must_run, true, prelude),
+            Item::Words(line) => self.top_level_line(line, must_run, mode, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
             Item::Data(defs) => {
@@ -607,7 +623,7 @@ code:
         &mut self,
         mut line: Vec<Sp<Word>>,
         must_run: bool,
-        precomp: bool,
+        mode: ItemCompMode,
         prelude: &mut BindingPrelude,
     ) -> UiuaResult {
         // Populate prelude
@@ -677,6 +693,7 @@ code:
             Ok(sig) => {
                 // Compile test assert
                 if self.mode != RunMode::Normal
+                    && mode != ItemCompMode::Function
                     && !self
                         .scopes()
                         .any(|sc| sc.kind == ScopeKind::File(FileScopeKind::Git))
@@ -697,10 +714,11 @@ code:
                 }
                 // Try to evaluate at comptime
                 // This can be done when:
+                // - the line is not in a () function
                 // - the pre-eval mode is greater that `Line`
                 // - there are at least as many push nodes preceding the current line as there are arguments to the line
                 // - the words create no bindings
-                if precomp
+                if mode != ItemCompMode::Function
                     && error_count_after == error_count_before
                     && self.pre_eval_mode > PreEvalMode::Line
                     && !line_node.is_empty()
@@ -1375,7 +1393,9 @@ code:
                     arr.lines.reverse();
                 }
                 let root_start = self.asm.root.len();
-                self.in_scope(ScopeKind::Temp(None), |comp| comp.items(arr.lines, false))?;
+                self.in_scope(ScopeKind::Temp(None), |comp| {
+                    comp.items(arr.lines, ItemCompMode::Function)
+                })?;
                 let mut inner = self.asm.root.split_off(root_start);
                 // Validate inner loop correctness
                 let len = match inner.sig() {
@@ -1468,7 +1488,7 @@ code:
                     "Function packs are not allowed without a modifier",
                 );
                 if let Some(first) = pack.into_lexical_order().next() {
-                    self.word(first.map(Word::Func))?
+                    self.func(first.value, first.span)?
                 } else {
                     Node::empty()
                 }
@@ -1909,8 +1929,11 @@ code:
         }
     }
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Node> {
-        let mut root = Node::empty();
-        self.in_scope(ScopeKind::Temp(None), |comp| comp.items(func.lines, false))?;
+        let root_start = self.asm.root.len();
+        self.in_scope(ScopeKind::Temp(None), |comp| {
+            comp.items(func.lines, ItemCompMode::Function)
+        })?;
+        let mut root = self.asm.root.split_off(root_start);
 
         // Validate signature
         let sig = match root.sig() {

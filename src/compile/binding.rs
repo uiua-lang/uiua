@@ -547,7 +547,7 @@ impl Compiler {
             ModuleKind::Test => (ScopeKind::Test, None),
         };
         let (module, ()) = self.in_scope(scope_kind, |comp| {
-            comp.items(m.items, false)?;
+            comp.items(m.items, ItemCompMode::TopLevel)?;
             comp.end_enum()?;
             Ok(())
         })?;

@@ -1767,7 +1767,7 @@ impl Compiler {
         }
         let errors_before = self.errors.len();
         let res = self
-            .items(items, true)
+            .items(items, ItemCompMode::Macro)
             .map_err(|e| e.trace_macro(name, span.clone()));
         let errors_after = self.errors.len();
         self.comptime_depth -= 1;

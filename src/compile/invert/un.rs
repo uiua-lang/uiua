@@ -147,8 +147,13 @@ fn anti_inverse_impl(mut input: &[Node], asm: &Assembly, for_un: bool) -> Invers
 
     // Leading value
     let val = if let Ok((rest, val)) = Val.invert_extract(&pre, asm) {
-        pre = rest.into();
-        Some(val)
+        let rest_sig = nodes_clean_sig(rest).ok_or(Generic)?;
+        if rest_sig == (0, 0) || rest_sig == (1, 1) {
+            pre = rest.into();
+            Some(val)
+        } else {
+            None
+        }
     } else {
         None
     };

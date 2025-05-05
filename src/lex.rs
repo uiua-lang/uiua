@@ -1667,6 +1667,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn subscript(s: &str) -> Option<(Subscript, &str)> {
     let mut lexer = Lexer::new(s, InputSrc::Literal(s.into()));
     let sub = lexer.subscript("__");

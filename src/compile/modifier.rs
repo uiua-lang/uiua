@@ -74,19 +74,19 @@ impl Compiler {
                     pack_expansion: true,
                 };
                 for branch in branches {
-                    let mut lines = branch.value.lines;
-                    if lines.is_empty() {
-                        lines.push(Vec::new());
+                    let mut func = Func {
+                        lines: branch.value.lines,
+                        signature: None,
+                        closed: true,
+                    };
+                    if func.word_lines().count() == 0 {
+                        func.lines.push(Item::Words(Vec::new()));
                     }
-                    (lines.first_mut().unwrap())
+                    (func.word_lines_mut().next().unwrap())
                         .insert(0, span.clone().sp(Word::Modified(Box::new(new))));
                     new = Modified {
                         modifier: modifier.clone(),
-                        operands: vec![branch.span.clone().sp(Word::Func(Func {
-                            signature: None,
-                            lines,
-                            closed: true,
-                        }))],
+                        operands: vec![branch.span.clone().sp(Word::Func(func))],
                         pack_expansion: true,
                     };
                 }
@@ -836,8 +836,8 @@ impl Compiler {
                 node
             }
             Un => {
-                invert::dbgln!("\n//////////////\n// begin UN //\n//////////////");
                 let (sn, span) = self.monadic_modifier_op(modified)?;
+                invert::dbgln!("\n//////////////\n// begin UN //\n//////////////");
                 self.add_span(span.clone());
                 let mut normal = sn.un_inverse(&self.asm);
                 if let Node::Prim(Pretty, _) = sn.node {
@@ -859,8 +859,8 @@ impl Compiler {
                 }
             }
             Anti => {
-                invert::dbgln!("\n////////////////\n// begin ANTI //\n////////////////");
                 let (sn, span) = self.monadic_modifier_op(modified)?;
+                invert::dbgln!("\n////////////////\n// begin ANTI //\n////////////////");
                 self.add_span(span.clone());
                 let normal = sn.anti_inverse(&self.asm);
                 let cust = CustomInverse {
@@ -874,8 +874,8 @@ impl Compiler {
                 Node::CustomInverse(cust.into(), span)
             }
             Under => {
-                invert::dbgln!("\n/////////////////\n// begin UNDER //\n/////////////////");
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
+                invert::dbgln!("\n/////////////////\n// begin UNDER //\n/////////////////");
                 let normal = {
                     let (f_before, f_after) = f
                         .node
@@ -1408,8 +1408,24 @@ impl Compiler {
             };
             self.code_macro(None, span, operands, code_mac)?
         } else {
-            let mut words: Vec<_> = mac.func.value.lines.into_iter().rev().flatten().collect();
             // Expand
+            let items = mac.func.value.lines;
+            let mut words = Vec::new();
+            let mut errored = false;
+            for item in items.into_iter().rev() {
+                match item {
+                    Item::Words(ws) => words.extend(ws),
+                    item => {
+                        if !errored {
+                            self.add_error(
+                                item.span().unwrap_or_else(|| span.clone()),
+                                format!("Macro cannot contain {}s", item.kind_str()),
+                            );
+                            errored = true;
+                        }
+                    }
+                }
+            }
             self.expand_index_macro(None, &mut words, operands, span.clone(), false)?;
             // Compile
             let node = self.suppress_diagnostics(|comp| comp.words(words))?;
@@ -1444,70 +1460,9 @@ impl Compiler {
                 "Macro makes compilation recur too deep",
             ));
         }
-        let node = if let Some(mut mac) = self.index_macros.get(&local.index).cloned() {
+        let node = if let Some(mac) = self.index_macros.get(&local.index).cloned() {
             // Index macros
-            let span = self.add_span(modifier_span.clone());
-            match self.scope.kind {
-                ScopeKind::Temp(Some(mac_local)) if mac_local.macro_index == local.index => {
-                    // Recursive
-                    if let Some(sig) = mac.sig {
-                        Node::CallMacro {
-                            index: mac_local.expansion_index,
-                            sig,
-                            span,
-                        }
-                    } else {
-                        Node::empty()
-                    }
-                }
-                _ => {
-                    // Expand
-                    self.expand_index_macro(
-                        Some(r.name.value.clone()),
-                        &mut mac.words,
-                        operands,
-                        modifier_span.clone(),
-                        true,
-                    )?;
-                    // Handle recursion
-                    // Recursive macros work by creating a binding for the expansion.
-                    // Recursive calls then call that binding.
-                    // We know that this is a recursive call if the scope tracks
-                    // a macro with the same index.
-                    let macro_local = mac.recursive.then(|| {
-                        let expansion_index = self.next_global;
-                        let count = ident_modifier_args(&r.name.value);
-                        // Add temporary binding
-                        self.asm.add_binding_at(
-                            LocalName {
-                                index: expansion_index,
-                                public: false,
-                            },
-                            BindingKind::IndexMacro(count),
-                            Some(modifier_span.clone()),
-                            BindingMeta::default(),
-                        );
-                        self.next_global += 1;
-                        MacroLocal {
-                            macro_index: local.index,
-                            expansion_index,
-                        }
-                    });
-                    // Compile
-                    let node = self.suppress_diagnostics(|comp| {
-                        comp.temp_scope(mac.names, macro_local, |comp| comp.words(mac.words))
-                    })?;
-                    // Add
-                    let sig = self.sig_of(&node, &modifier_span)?;
-                    let id = FunctionId::Macro(Some(r.name.value), r.name.span);
-                    let func = self.asm.add_function(id, sig, node);
-                    if let Some(macro_local) = macro_local {
-                        self.asm.bindings.make_mut()[macro_local.expansion_index].kind =
-                            BindingKind::Func(func.clone());
-                    }
-                    Node::Call(func, span)
-                }
-            }
+            self.index_macro(mac, operands, r.name, local, modifier_span)?
         } else if let Some(mac) = self.code_macros.get(&local.index).cloned() {
             // Code macros
             self.code_macro(Some(r.name.value), modifier_span, operands, mac)?
@@ -1530,6 +1485,77 @@ impl Compiler {
         };
         self.comptime_depth -= 1;
         Ok(node)
+    }
+    fn index_macro(
+        &mut self,
+        mut mac: IndexMacro,
+        operands: Vec<Sp<Word>>,
+        name: Sp<Ident>,
+        local: LocalName,
+        ref_span: CodeSpan,
+    ) -> UiuaResult<Node> {
+        let span = self.add_span(ref_span.clone());
+        Ok(match self.scope.kind {
+            ScopeKind::Temp(Some(mac_local)) if mac_local.macro_index == local.index => {
+                // Recursive
+                if let Some(sig) = mac.sig {
+                    Node::CallMacro {
+                        index: mac_local.expansion_index,
+                        sig,
+                        span,
+                    }
+                } else {
+                    Node::empty()
+                }
+            }
+            _ => {
+                // Expand
+                self.expand_index_macro(
+                    Some(name.value.clone()),
+                    &mut mac.words,
+                    operands,
+                    ref_span.clone(),
+                    true,
+                )?;
+                // Handle recursion
+                // Recursive macros work by creating a binding for the expansion.
+                // Recursive calls then call that binding.
+                // We know that this is a recursive call if the scope tracks
+                // a macro with the same index.
+                let macro_local = mac.recursive.then(|| {
+                    let expansion_index = self.next_global;
+                    let count = ident_modifier_args(&name.value);
+                    // Add temporary binding
+                    self.asm.add_binding_at(
+                        LocalName {
+                            index: expansion_index,
+                            public: false,
+                        },
+                        BindingKind::IndexMacro(count),
+                        Some(ref_span.clone()),
+                        BindingMeta::default(),
+                    );
+                    self.next_global += 1;
+                    MacroLocal {
+                        macro_index: local.index,
+                        expansion_index,
+                    }
+                });
+                // Compile
+                let node = self.suppress_diagnostics(|comp| {
+                    comp.temp_scope(mac.names, macro_local, |comp| comp.words(mac.words))
+                })?;
+                // Add
+                let sig = self.sig_of(&node, &ref_span)?;
+                let id = FunctionId::Macro(Some(name.value), name.span);
+                let func = self.asm.add_function(id, sig, node);
+                if let Some(macro_local) = macro_local {
+                    self.asm.bindings.make_mut()[macro_local.expansion_index].kind =
+                        BindingKind::Func(func.clone());
+                }
+                Node::Call(func, span)
+            }
+        })
     }
     fn code_macro(
         &mut self,
@@ -1704,14 +1730,7 @@ impl Compiler {
         let operands: Vec<Sp<Word>> = operands.into_iter().filter(|w| w.value.is_code()).collect();
         self.replace_placeholders(macro_words, &operands)?;
         // Format and store the expansion for the LSP
-        let mut words_to_format = Vec::new();
-        for word in &*macro_words {
-            match &word.value {
-                Word::Func(func) => words_to_format.extend(func.lines.iter().flatten().cloned()),
-                _ => words_to_format.push(word.clone()),
-            }
-        }
-        let formatted = format_words(&words_to_format, &self.asm.inputs);
+        let formatted = format_words(&*macro_words, &self.asm.inputs);
         (self.code_meta.macro_expansions).insert(span, (name, formatted));
         Ok(())
     }
@@ -1759,7 +1778,7 @@ impl Compiler {
         }
         let errors_before = self.errors.len();
         let res = self
-            .items(items, true)
+            .items(items, ItemCompMode::CodeMacro)
             .map_err(|e| e.trace_macro(name, span.clone()));
         let errors_after = self.errors.len();
         self.comptime_depth -= 1;
@@ -1838,7 +1857,8 @@ impl Compiler {
         macro_local: Option<MacroLocal>,
         f: impl FnOnce(&mut Self) -> T,
     ) -> T {
-        let macro_names_len = names.len();
+        let orig_names = names.clone();
+        // Create temp scope
         let temp_scope = Scope {
             kind: ScopeKind::Temp(macro_local),
             names,
@@ -1846,12 +1866,19 @@ impl Compiler {
             experimental_error: self.scope.experimental_error,
             ..Default::default()
         };
+        // Run function in temp scope
         self.higher_scopes
             .push(replace(&mut self.scope, temp_scope));
         let res = f(self);
-        let mut scope = self.higher_scopes.pop().unwrap();
-        (scope.names).extend(self.scope.names.drain(macro_names_len..));
-        self.scope = scope;
+        let mut replaced_scope = self.higher_scopes.pop().unwrap();
+        // If temp scope has a new name, or if its binding index changed,
+        // then it is a new binding and should be added to the current scope
+        for (name, local) in self.scope.names.drain(..) {
+            if orig_names.get(&name).is_none_or(|l| l.index != local.index) {
+                replaced_scope.names.insert(name, local);
+            }
+        }
+        self.scope = replaced_scope;
         res
     }
 }

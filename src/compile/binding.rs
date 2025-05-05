@@ -321,6 +321,7 @@ impl Compiler {
             });
 
         // Compile the body
+        let already_in_binding = !self.current_bindings.is_empty();
         self.current_bindings.push(CurrentBinding {
             name: name.clone(),
             signature: binding.signature.as_ref().map(|s| s.value),
@@ -397,7 +398,8 @@ impl Compiler {
         // Resolve signature
         match node.sig() {
             Ok(mut sig) => {
-                let binds_above = node.is_empty() && no_code_words && !is_method;
+                let binds_above =
+                    !already_in_binding && node.is_empty() && no_code_words && !is_method;
                 if !binds_above {
                     // Validate signature
                     if let Some(declared_sig) = &binding.signature {
@@ -547,7 +549,7 @@ impl Compiler {
             ModuleKind::Test => (ScopeKind::Test, None),
         };
         let (module, ()) = self.in_scope(scope_kind, |comp| {
-            comp.items(m.items, false)?;
+            comp.items(m.items, ItemCompMode::TopLevel)?;
             comp.end_enum()?;
             Ok(())
         })?;
@@ -652,17 +654,28 @@ impl Compiler {
                 Word::Strand(items) => {
                     self.analyze_macro_body(macro_name, items, code_macro, recursive)
                 }
-                Word::Array(arr) => arr.lines.iter().for_each(|line| {
-                    self.analyze_macro_body(macro_name, line, code_macro, recursive);
-                }),
-                Word::Func(func) => func.lines.iter().for_each(|line| {
-                    self.analyze_macro_body(macro_name, line, code_macro, recursive);
-                }),
-                Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
-                    (branch.value.lines.iter()).for_each(|line| {
-                        self.analyze_macro_body(macro_name, line, code_macro, recursive)
-                    })
-                }),
+                Word::Array(arr) => {
+                    if self.analyze_macro_items(macro_name, &arr.lines, code_macro, recursive) {
+                        return;
+                    }
+                }
+                Word::Func(func) => {
+                    if self.analyze_macro_items(macro_name, &func.lines, code_macro, recursive) {
+                        return;
+                    }
+                }
+                Word::Pack(pack) => {
+                    for branch in &pack.branches {
+                        if self.analyze_macro_items(
+                            macro_name,
+                            &branch.value.lines,
+                            code_macro,
+                            recursive,
+                        ) {
+                            return;
+                        }
+                    }
+                }
                 Word::Ref(r) => match self.ref_local(r) {
                     Ok(Some((pl, l))) => {
                         path_locals = Some((&r.path, pl));
@@ -733,5 +746,29 @@ impl Compiler {
                 }
             }
         }
+    }
+    /// Returns true if an error was found
+    fn analyze_macro_items(
+        &mut self,
+        macro_name: &str,
+        items: &[Item],
+        code_macro: bool,
+        recursive: &mut bool,
+    ) -> bool {
+        for item in items {
+            match item {
+                Item::Words(words) => {
+                    self.analyze_macro_body(macro_name, words, code_macro, recursive)
+                }
+                item => {
+                    self.add_error(
+                        item.span().unwrap_or_else(CodeSpan::dummy),
+                        format!("Cannot have {}s in index macros", item.kind_str()),
+                    );
+                    return true;
+                }
+            }
+        }
+        false
     }
 }

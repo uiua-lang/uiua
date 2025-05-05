@@ -1460,70 +1460,9 @@ impl Compiler {
                 "Macro makes compilation recur too deep",
             ));
         }
-        let node = if let Some(mut mac) = self.index_macros.get(&local.index).cloned() {
+        let node = if let Some(mac) = self.index_macros.get(&local.index).cloned() {
             // Index macros
-            let span = self.add_span(modifier_span.clone());
-            match self.scope.kind {
-                ScopeKind::Temp(Some(mac_local)) if mac_local.macro_index == local.index => {
-                    // Recursive
-                    if let Some(sig) = mac.sig {
-                        Node::CallMacro {
-                            index: mac_local.expansion_index,
-                            sig,
-                            span,
-                        }
-                    } else {
-                        Node::empty()
-                    }
-                }
-                _ => {
-                    // Expand
-                    self.expand_index_macro(
-                        Some(r.name.value.clone()),
-                        &mut mac.words,
-                        operands,
-                        modifier_span.clone(),
-                        true,
-                    )?;
-                    // Handle recursion
-                    // Recursive macros work by creating a binding for the expansion.
-                    // Recursive calls then call that binding.
-                    // We know that this is a recursive call if the scope tracks
-                    // a macro with the same index.
-                    let macro_local = mac.recursive.then(|| {
-                        let expansion_index = self.next_global;
-                        let count = ident_modifier_args(&r.name.value);
-                        // Add temporary binding
-                        self.asm.add_binding_at(
-                            LocalName {
-                                index: expansion_index,
-                                public: false,
-                            },
-                            BindingKind::IndexMacro(count),
-                            Some(modifier_span.clone()),
-                            BindingMeta::default(),
-                        );
-                        self.next_global += 1;
-                        MacroLocal {
-                            macro_index: local.index,
-                            expansion_index,
-                        }
-                    });
-                    // Compile
-                    let node = self.suppress_diagnostics(|comp| {
-                        comp.temp_scope(mac.names, macro_local, |comp| comp.words(mac.words))
-                    })?;
-                    // Add
-                    let sig = self.sig_of(&node, &modifier_span)?;
-                    let id = FunctionId::Macro(Some(r.name.value), r.name.span);
-                    let func = self.asm.add_function(id, sig, node);
-                    if let Some(macro_local) = macro_local {
-                        self.asm.bindings.make_mut()[macro_local.expansion_index].kind =
-                            BindingKind::Func(func.clone());
-                    }
-                    Node::Call(func, span)
-                }
-            }
+            self.index_macro(mac, operands, r.name, local, modifier_span)?
         } else if let Some(mac) = self.code_macros.get(&local.index).cloned() {
             // Code macros
             self.code_macro(Some(r.name.value), modifier_span, operands, mac)?
@@ -1546,6 +1485,77 @@ impl Compiler {
         };
         self.comptime_depth -= 1;
         Ok(node)
+    }
+    fn index_macro(
+        &mut self,
+        mut mac: IndexMacro,
+        operands: Vec<Sp<Word>>,
+        name: Sp<Ident>,
+        local: LocalName,
+        ref_span: CodeSpan,
+    ) -> UiuaResult<Node> {
+        let span = self.add_span(ref_span.clone());
+        Ok(match self.scope.kind {
+            ScopeKind::Temp(Some(mac_local)) if mac_local.macro_index == local.index => {
+                // Recursive
+                if let Some(sig) = mac.sig {
+                    Node::CallMacro {
+                        index: mac_local.expansion_index,
+                        sig,
+                        span,
+                    }
+                } else {
+                    Node::empty()
+                }
+            }
+            _ => {
+                // Expand
+                self.expand_index_macro(
+                    Some(name.value.clone()),
+                    &mut mac.words,
+                    operands,
+                    ref_span.clone(),
+                    true,
+                )?;
+                // Handle recursion
+                // Recursive macros work by creating a binding for the expansion.
+                // Recursive calls then call that binding.
+                // We know that this is a recursive call if the scope tracks
+                // a macro with the same index.
+                let macro_local = mac.recursive.then(|| {
+                    let expansion_index = self.next_global;
+                    let count = ident_modifier_args(&name.value);
+                    // Add temporary binding
+                    self.asm.add_binding_at(
+                        LocalName {
+                            index: expansion_index,
+                            public: false,
+                        },
+                        BindingKind::IndexMacro(count),
+                        Some(ref_span.clone()),
+                        BindingMeta::default(),
+                    );
+                    self.next_global += 1;
+                    MacroLocal {
+                        macro_index: local.index,
+                        expansion_index,
+                    }
+                });
+                // Compile
+                let node = self.suppress_diagnostics(|comp| {
+                    comp.temp_scope(mac.names, macro_local, |comp| comp.words(mac.words))
+                })?;
+                // Add
+                let sig = self.sig_of(&node, &ref_span)?;
+                let id = FunctionId::Macro(Some(name.value), name.span);
+                let func = self.asm.add_function(id, sig, node);
+                if let Some(macro_local) = macro_local {
+                    self.asm.bindings.make_mut()[macro_local.expansion_index].kind =
+                        BindingKind::Func(func.clone());
+                }
+                Node::Call(func, span)
+            }
+        })
     }
     fn code_macro(
         &mut self,
@@ -1768,7 +1778,7 @@ impl Compiler {
         }
         let errors_before = self.errors.len();
         let res = self
-            .items(items, ItemCompMode::Macro)
+            .items(items, ItemCompMode::CodeMacro)
             .map_err(|e| e.trace_macro(name, span.clone()));
         let errors_after = self.errors.len();
         self.comptime_depth -= 1;

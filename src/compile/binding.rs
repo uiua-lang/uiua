@@ -654,17 +654,28 @@ impl Compiler {
                 Word::Strand(items) => {
                     self.analyze_macro_body(macro_name, items, code_macro, recursive)
                 }
-                Word::Array(arr) => arr.word_lines().for_each(|line| {
-                    self.analyze_macro_body(macro_name, line, code_macro, recursive);
-                }),
-                Word::Func(func) => func.word_lines().for_each(|line| {
-                    self.analyze_macro_body(macro_name, line, code_macro, recursive);
-                }),
-                Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
-                    (branch.value.word_lines()).for_each(|line| {
-                        self.analyze_macro_body(macro_name, line, code_macro, recursive)
-                    })
-                }),
+                Word::Array(arr) => {
+                    if self.analyze_macro_items(macro_name, &arr.lines, code_macro, recursive) {
+                        return;
+                    }
+                }
+                Word::Func(func) => {
+                    if self.analyze_macro_items(macro_name, &func.lines, code_macro, recursive) {
+                        return;
+                    }
+                }
+                Word::Pack(pack) => {
+                    for branch in &pack.branches {
+                        if self.analyze_macro_items(
+                            macro_name,
+                            &branch.value.lines,
+                            code_macro,
+                            recursive,
+                        ) {
+                            return;
+                        }
+                    }
+                }
                 Word::Ref(r) => match self.ref_local(r) {
                     Ok(Some((pl, l))) => {
                         path_locals = Some((&r.path, pl));
@@ -735,5 +746,29 @@ impl Compiler {
                 }
             }
         }
+    }
+    /// Returns true if an error was found
+    fn analyze_macro_items(
+        &mut self,
+        macro_name: &str,
+        items: &[Item],
+        code_macro: bool,
+        recursive: &mut bool,
+    ) -> bool {
+        for item in items {
+            match item {
+                Item::Words(words) => {
+                    self.analyze_macro_body(macro_name, words, code_macro, recursive)
+                }
+                item => {
+                    self.add_error(
+                        item.span().unwrap_or_else(CodeSpan::dummy),
+                        format!("Cannot have {}s in index macros", item.kind_str()),
+                    );
+                    return true;
+                }
+            }
+        }
+        false
     }
 }

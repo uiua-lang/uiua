@@ -535,7 +535,7 @@ code:
 enum ItemCompMode {
     TopLevel,
     Function,
-    Macro,
+    CodeMacro,
 }
 
 impl Compiler {
@@ -575,7 +575,7 @@ impl Compiler {
         let mut item_errored = false;
         let mut item_queue = VecDeque::from(flip_unsplit_items(split_items(items)));
         while let Some(item) = item_queue.pop_front() {
-            let must_run = mode == ItemCompMode::Macro
+            let must_run = mode == ItemCompMode::CodeMacro
                 || matches!(&item, Item::Words(_))
                     && item_queue.iter().any(|item| match item {
                         Item::Binding(binding)
@@ -610,7 +610,7 @@ impl Compiler {
     ) -> UiuaResult {
         match item {
             Item::Module(m) => self.module(m, take(prelude)),
-            Item::Words(line) => self.top_level_line(line, must_run, mode, prelude),
+            Item::Words(line) => self.top_level_words(line, must_run, mode, prelude),
             Item::Binding(binding) => self.binding(binding, take(prelude)),
             Item::Import(import) => self.import(import, take(prelude).comment),
             Item::Data(defs) => {
@@ -621,7 +621,7 @@ impl Compiler {
             }
         }
     }
-    fn top_level_line(
+    fn top_level_words(
         &mut self,
         mut line: Vec<Sp<Word>>,
         must_run: bool,

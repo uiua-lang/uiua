@@ -23,6 +23,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`un °`](https://uiua.org/docs/un) [`fill ⬚`](https://uiua.org/docs/fill)ed [`take ↙`](https://uiua.org/docs/take)
 - Add [`un °`](https://uiua.org/docs/un) [`add +`](https://uiua.org/docs/add), [`un °`](https://uiua.org/docs/un) [`multiply ×`](https://uiua.org/docs/multiply) and [`un °`](https://uiua.org/docs/un) [`divide ÷`](https://uiua.org/docs/divide)
   - These split into fraction and whole, sign and magnitude, and denominator and numerator respectively
+- Functions can now contains scoped local bindings
+  - This allows for simple helper functions as well as passing bindings to macros
 - Give [`base ⊥`](https://uiua.org/docs/base) a glyph
 - Add the [`ln`](https://uiua.org/docs/ln) function, which computes the natural logarithm
 - Add the [`pretty`](https://uiua.org/docs/pretty) function, which gives the string representation of an array's pretty-printed output

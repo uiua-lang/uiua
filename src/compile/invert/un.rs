@@ -1134,7 +1134,16 @@ impl InvertPattern for Trivial {
             [node @ SetOutputComment { .. }, input @ ..] => Ok((input, node.clone())),
             [Call(f, _), input @ ..] => Ok((input, asm[f].un_inverse(asm).map_err(|e| e.func(f))?)),
             [ImplPrim(ValidateNonBoxedVariant, _), input @ ..] => Ok((input, Node::empty())),
-            _ => generic(),
+            input => {
+                for node in input {
+                    if let BindGlobal { index, .. } = node.inner() {
+                        let binding = &asm.bindings[*index];
+                        let name = binding.span.as_str(&asm.inputs, |s| s.into());
+                        return Err(InversionError::LateBinding(name));
+                    }
+                }
+                generic()
+            }
         }
     }
 }

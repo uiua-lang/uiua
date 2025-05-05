@@ -32,7 +32,9 @@ use crate::{
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
-    parse::{flip_unsplit_lines, max_placeholder, parse, split_words},
+    parse::{
+        flip_unsplit_items, flip_unsplit_lines, max_placeholder, parse, split_items, split_words,
+    },
     Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
     DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
@@ -571,11 +573,11 @@ impl Compiler {
 
         let mut prelude = BindingPrelude::default();
         let mut item_errored = false;
-        let mut items = VecDeque::from(items);
-        while let Some(item) = items.pop_front() {
+        let mut item_queue = VecDeque::from(flip_unsplit_items(split_items(items)));
+        while let Some(item) = item_queue.pop_front() {
             let must_run = mode == ItemCompMode::Macro
                 || matches!(&item, Item::Words(_))
-                    && items.iter().any(|item| match item {
+                    && item_queue.iter().any(|item| match item {
                         Item::Binding(binding)
                             if (binding.words.iter())
                                 .filter(|word| word.value.is_code())

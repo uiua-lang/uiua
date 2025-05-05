@@ -20,7 +20,7 @@ use crate::{
     grid_fmt::GridFmt,
     is_ident_char, is_ident_start,
     lex::{CodeSpan, Loc, Sp},
-    parse::{flip_unsplit_lines, parse, split_words, trim_spaces},
+    parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
     Compiler, Handle, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys, Signature,
     SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_DIGITS,
 };
@@ -519,6 +519,7 @@ impl Formatter<'_> {
         (output, self.glyph_map)
     }
     fn format_items(&mut self, items: &[Item], depth: usize) {
+        let items = flip_unsplit_items(items.to_vec());
         let mut max_name_len = 0;
         for (i, item) in items.iter().enumerate() {
             if i > 0 || depth > 0 {
@@ -534,7 +535,10 @@ impl Formatter<'_> {
                     if max_name_len == 0 {
                         max_name_len = items[i..]
                             .iter()
-                            .take_while(|item| matches!(item, Item::Binding(binding) if !words_are_multiline(&binding.words)))
+                            .take_while(|item| match item {
+                                Item::Binding(binding) => !words_are_multiline(&binding.words),
+                                _ => false,
+                            })
                             .map(|item| match item {
                                 Item::Binding(binding) => binding.name.value.chars().count(),
                                 _ => 0,
@@ -1014,13 +1018,10 @@ impl Formatter<'_> {
                 let curr_line_pos = if self.output.ends_with('\n') {
                     0
                 } else {
-                    (self
-                        .output
-                        .split('\n')
-                        .next_back()
+                    (self.output.split('\n').next_back())
                         .unwrap_or_default()
-                        .chars())
-                    .count()
+                        .chars()
+                        .count()
                 };
                 for (i, line) in lines.iter().enumerate() {
                     let mut line = line.value.as_str();
@@ -1047,13 +1048,10 @@ impl Formatter<'_> {
                 let curr_line_pos = if self.output.ends_with('\n') {
                     0
                 } else {
-                    (self
-                        .output
-                        .split('\n')
-                        .next_back()
+                    (self.output.split('\n').next_back())
                         .unwrap_or_default()
-                        .chars())
-                    .count()
+                        .chars()
+                        .count()
                 };
                 for (i, line) in lines.iter().enumerate() {
                     if i > 0 {
@@ -1173,9 +1171,7 @@ impl Formatter<'_> {
                 let start_line_pos = if self.output.ends_with('\n') {
                     0
                 } else {
-                    self.output
-                        .split('\n')
-                        .next_back()
+                    (self.output.split('\n').next_back())
                         .unwrap_or_default()
                         .chars()
                         .count()

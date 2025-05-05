@@ -1,6 +1,13 @@
 //! The Uiua parser
 
-use std::{collections::HashMap, error::Error, f64::consts::PI, fmt, mem::replace, slice};
+use std::{
+    collections::HashMap,
+    error::Error,
+    f64::consts::PI,
+    fmt,
+    mem::{replace, take},
+    slice,
+};
 
 use ecow::EcoString;
 
@@ -1547,15 +1554,28 @@ pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
 pub(crate) fn flip_unsplit_items(items: Vec<Item>) -> Vec<Item> {
     flip_unsplit_items_impl(items, false)
 }
-fn flip_unsplit_items_impl(items: Vec<Item>, _in_array: bool) -> Vec<Item> {
-    // items
-    //     .into_iter()
-    //     .map(|item| match item {
-    //         Item::Words(words) => Item::Words(flip_unsplit_lines_impl(words, in_array)),
-    //         item => item,
-    //     })
-    //     .collect()
-    items
+fn flip_unsplit_items_impl(items: Vec<Item>, in_array: bool) -> Vec<Item> {
+    let mut unsplit = Vec::new();
+    let mut curr_lines = Vec::new();
+    for item in items {
+        match item {
+            Item::Words(words) => curr_lines.push(words),
+            item => {
+                unsplit.extend(
+                    flip_unsplit_lines_impl(take(&mut curr_lines), in_array)
+                        .into_iter()
+                        .map(Item::Words),
+                );
+                unsplit.push(item)
+            }
+        }
+    }
+    unsplit.extend(
+        flip_unsplit_lines_impl(curr_lines, in_array)
+            .into_iter()
+            .map(Item::Words),
+    );
+    unsplit
 }
 /// Flip and/or unsplit a list of lines
 pub(crate) fn flip_unsplit_lines(lines: Vec<Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {

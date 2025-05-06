@@ -660,24 +660,31 @@ impl Formatter<'_> {
             }
             Item::Words(words) => {
                 self.prev_import_function = None;
-                let words = trim_spaces(words, true);
-                for (i, word) in words.iter().enumerate() {
-                    self.format_word(word, depth);
-                    if word_is_multiline(&word.value) && i < words.len() - 1 {
-                        for (end, empty) in [(')', "()"), (']', "[]"), ('}', "{}")] {
-                            if self.output.ends_with(end) && !self.output.ends_with(empty) {
-                                self.output.pop();
-                                while self.output.ends_with(' ') {
+                let lines = flip_unsplit_lines(split_words(words.to_vec()));
+                let did_split = lines.len() > 1;
+                for (i, line) in lines.into_iter().enumerate() {
+                    let line = trim_spaces(&line, true);
+                    if i > 0 || did_split && depth > 0 {
+                        self.newline(depth);
+                    }
+                    for (j, word) in line.iter().enumerate() {
+                        self.format_word(word, depth);
+                        if word_is_multiline(&word.value) && j < words.len() - 1 {
+                            for (end, empty) in [(')', "()"), (']', "[]"), ('}', "{}")] {
+                                if self.output.ends_with(end) && !self.output.ends_with(empty) {
                                     self.output.pop();
+                                    while self.output.ends_with(' ') {
+                                        self.output.pop();
+                                    }
+                                    if !self.output.ends_with('\n') {
+                                        self.output.push('\n');
+                                    }
+                                    for _ in 0..self.config.multiline_indent * depth {
+                                        self.output.push(' ');
+                                    }
+                                    self.output.push(end);
+                                    break;
                                 }
-                                if !self.output.ends_with('\n') {
-                                    self.output.push('\n');
-                                }
-                                for _ in 0..self.config.multiline_indent * depth {
-                                    self.output.push(' ');
-                                }
-                                self.output.push(end);
-                                break;
                             }
                         }
                     }
@@ -731,6 +738,7 @@ impl Formatter<'_> {
                 if lines.len() == 1 {
                     self.format_words(&lines[0], true, depth);
                 } else {
+                    lines.insert(0, Vec::new());
                     lines.push(Vec::new());
                     self.format_words(
                         &[span.sp(Word::Func(Func {

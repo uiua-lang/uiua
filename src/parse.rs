@@ -1533,6 +1533,9 @@ pub(crate) fn split_items(items: Vec<Item>) -> Vec<Item> {
         .collect()
 }
 pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
+    if !words.iter().any(|w| matches!(w.value, Word::BreakLine)) {
+        return vec![words];
+    }
     let mut lines = vec![Vec::new()];
     for word in words {
         if matches!(word.value, Word::BreakLine) {

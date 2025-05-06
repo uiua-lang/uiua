@@ -540,7 +540,7 @@ primitive!(
     /// [un][shape] creates an array of incrementing elements with the given shape.
     /// ex: °△ 2_3_4
     ///
-    /// Subscripted [shape] gets the shape from the first few axes
+    /// Subscripted [shape] gets the shape from the first few axes.
     /// ex: △₂ °△2_3_4_5
     ///
     /// It is a triangle`△` because a triangle is a shape.
@@ -2244,7 +2244,7 @@ primitive!(
     /// Repeat a function while a condition holds
     ///
     /// The first function is the loop function, and it is run as long as the condition is true.
-    /// The second function is the condition. It's top return value must be a boolean.
+    /// The second function is the condition. Its top return value must be a boolean.
     /// ex: ⍢(×2|<1000) 1
     /// Return values from the condition function that are under the condition itself will be passed to the loop function.
     /// Here is an example that evaluates a [Collatz sequence](https://en.wikipedia.org/wiki/Collatz_conjecture).
@@ -2256,7 +2256,6 @@ primitive!(
     /// ex: ⍢(×3|<100)  1
     ///   : ⍢(×3|<100.) 1
     /// The net stack change of the two functions, minus the condition, is called the *composed signature*.
-    /// The composed signatures of the above examples all have a net stack change of `0`.
     /// A composed signature with a positive net stack change is only allowed inside an array.
     /// ex: ⍢(⊸×2|≤1000) 10
     /// ex: ⍢(.×2|≤1000) 10
@@ -3033,12 +3032,12 @@ primitive!(
     ///   : # √x → 1/(2√x)
     ///   : ∂√ 1/9
     /// ex: # Experimental!
-    ///   : # x² - 2x - 4  →  2x² - 2x
+    ///   : # x² - 2x - 4  →  2x - 2
     ///   : ∂(++⊃(ⁿ2|×¯2|¯4)) [0 1 2]
     /// [derivative][sine] is a simple way to make a cosine function.
     /// ex: # Experimental!
     ///   : # sin(x) → cos(x)
-    ///   : ⍜×⁅1e3 ∂∿ ×τ÷⟜⇡8
+    ///   : ⁅₃ ∂∿ ×τ÷⟜⇡8
     /// Most derivatives that would require the chain or product rule are not supported.
     /// ex! # Experimental!
     ///   : # xsin(x)  →  sin(x) + xcos(x)
@@ -3052,7 +3051,7 @@ primitive!(
     ([1], Derivative, Algorithm, ("derivative", '∂'), { experimental: true }),
     /// Calculate an antiderivative of a mathematical expression
     ///
-    /// Basic polynomials are supported, along with [sine] and [logarithm].
+    /// Basic polynomials are supported, along with [sine].
     /// ex: # Experimental!
     ///   : # x² → x³/3
     ///   : ∫(×.) 3

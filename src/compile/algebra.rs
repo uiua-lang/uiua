@@ -465,6 +465,12 @@ impl<'a> AlgebraEnv<'a> {
                     self.stack.push(res);
                     self.handled += 1;
                 }
+                Ln => {
+                    let a = self.pop()?;
+                    let res = a.log(E.into()).ok_or(AlgebraError::TooComplex)?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
                 Sin => {
                     let a = self.pop()?;
                     self.stack.push(Term::Sin(a).into());
@@ -489,6 +495,12 @@ impl<'a> AlgebraEnv<'a> {
                 Cos => {
                     let a = self.pop()?;
                     self.stack.push(Term::Cos(a).into());
+                    self.handled += 1;
+                }
+                Exp => {
+                    let a = self.pop()?;
+                    let res = Expr::from(E).pow(a).ok_or(AlgebraError::TooComplex)?;
+                    self.stack.push(res);
                     self.handled += 1;
                 }
                 _ => return Err(AlgebraError::NotSupported(prim.to_string())),

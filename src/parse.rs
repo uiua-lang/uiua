@@ -908,7 +908,7 @@ impl Parser<'_> {
         Some(span.sp(Signature::new(args, outs)))
     }
     fn sig_inner(&mut self) -> Option<(usize, usize)> {
-        let range = self.num()?.span.byte_range();
+        let range = self.real()?.span.byte_range();
         let s = &self.input[range];
         Some(if let Some((a, o)) = s.split_once('.') {
             let a = match a.parse() {
@@ -1195,7 +1195,7 @@ impl Parser<'_> {
         } else if let Some(refer) = self.ref_() {
             refer
         } else if let Some(n) = self.num() {
-            n.map(Word::Number)
+            n
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
@@ -1297,43 +1297,43 @@ impl Parser<'_> {
         }
         Some(span.sp(arr))
     }
-    fn num(&mut self) -> Option<Sp<Result<f64, String>>> {
+    fn real(&mut self) -> Option<Sp<Result<f64, String>>> {
         let span = self.exact(Token::Number)?;
         let s = &self.input[span.byte_range()];
-        fn parse(s: &str) -> Option<f64> {
-            let mut s = s.replace(['`', '¯'], "-");
-            // Replace pi multiples
-            for (name, glyph, mul) in [("eta", 'η', 0.5), ("pi", 'π', 1.0), ("tau", 'τ', 2.0)] {
-                if s.contains(glyph) {
-                    s = s.replace(glyph, &(PI * mul).to_string());
-                } else if s.contains(name) {
-                    s = s.replace(name, &(PI * mul).to_string());
-                }
-            }
-            // Replace infinity
-            if s.contains('∞') {
-                s = s.replace('∞', "inf");
-            } else {
-                for i in (3..="infinity".len()).rev() {
-                    if s.contains(&"infinity"[..i]) {
-                        s = s.replace(&"infinity"[..i], "inf");
-                        break;
-                    }
-                }
-            }
-            s.parse().ok()
+        if s.contains('r') {
+            return None;
         }
-        let n: Result<f64, String> = match parse(s) {
-            Some(n) => Ok(n),
-            None => {
-                if let Some((n, d)) = s.split_once('/').and_then(|(n, d)| parse(n).zip(parse(d))) {
-                    Ok(n / d)
+        Some(span.sp(parse_real(s)))
+    }
+    fn num(&mut self) -> Option<Sp<Word>> {
+        if let Some(num) = self.real() {
+            return Some(num.map(Word::Number));
+        }
+        let first_span = self.exact(Token::ComplexComp)?;
+        let first_s = &self.input[first_span.byte_range()];
+        Some(if let Some(re) = first_s.strip_suffix('r') {
+            let re = first_span.sp(parse_real(re));
+            let reset = self.index;
+            let mut span = re.span.clone();
+            let im = if let Some(second_span) = self.exact(Token::ComplexComp) {
+                let second_s = &self.input[second_span.byte_range()];
+                if let Some(im) = second_s.strip_suffix('i') {
+                    span = span.merge(second_span.clone());
+                    Some(second_span.sp(parse_real(im)))
                 } else {
-                    Err(s.into())
+                    self.index = reset;
+                    None
                 }
-            }
-        };
-        Some(span.sp(n))
+            } else {
+                None
+            };
+            span.sp(Word::Complex(Some(re), im))
+        } else if let Some(im) = first_s.strip_suffix('i') {
+            let im = first_span.clone().sp(parse_real(im));
+            first_span.sp(Word::Complex(None, Some(im)))
+        } else {
+            return None;
+        })
     }
     fn prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::all() {
@@ -1829,4 +1829,43 @@ fn arr_is_normal_di(arr: &Arr) -> bool {
         },
     );
     is_di
+}
+
+fn parse_real(s: &str) -> Result<f64, String> {
+    fn parse_single(s: &str) -> Option<f64> {
+        let mut s = s.replace(['`', '¯'], "-");
+        // Replace pi multiples
+        for (name, glyph, mul) in [("eta", 'η', 0.5), ("pi", 'π', 1.0), ("tau", 'τ', 2.0)] {
+            if s.contains(glyph) {
+                s = s.replace(glyph, &(PI * mul).to_string());
+            } else if s.contains(name) {
+                s = s.replace(name, &(PI * mul).to_string());
+            }
+        }
+        // Replace infinity
+        if s.contains('∞') {
+            s = s.replace('∞', "inf");
+        } else {
+            for i in (3..="infinity".len()).rev() {
+                if s.contains(&"infinity"[..i]) {
+                    s = s.replace(&"infinity"[..i], "inf");
+                    break;
+                }
+            }
+        }
+        s.parse().ok()
+    }
+    match parse_single(s) {
+        Some(n) => Ok(n),
+        None => {
+            if let Some((n, d)) = s
+                .split_once('/')
+                .and_then(|(n, d)| parse_single(n).zip(parse_single(d)))
+            {
+                Ok(n / d)
+            } else {
+                Err(s.into())
+            }
+        }
+    }
 }

@@ -329,6 +329,10 @@ pub struct InlineMacro {
 #[serde(tag = "type", content = "value")]
 pub enum Word {
     Number(Result<f64, String>),
+    Complex(
+        Option<Sp<Result<f64, String>>>,
+        Option<Sp<Result<f64, String>>>,
+    ),
     Char(String),
     String(String),
     MultilineString(Vec<Sp<String>>),
@@ -364,6 +368,7 @@ impl PartialEq for Word {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Number(a), Self::Number(b)) => a == b,
+            (Self::Complex(a, b), Self::Complex(c, d)) => a == c && b == d,
             (Self::Char(a), Self::Char(b)) => a == b,
             (Self::String(a), Self::String(b)) => a == b,
             (Self::Label(a), Self::Label(b)) => a == b,
@@ -429,7 +434,8 @@ impl Word {
 impl fmt::Debug for Word {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Word::Number(s, ..) => write!(f, "{s:?}"),
+            Word::Number(s) => write!(f, "{s:?}"),
+            Word::Complex(re, im) => write!(f, "{re:?}r{im:?}i"),
             Word::Char(char) => write!(f, "{char:?}"),
             Word::String(string) => write!(f, "{string:?}"),
             Word::MultilineString(string) => write!(f, "{string:?}"),

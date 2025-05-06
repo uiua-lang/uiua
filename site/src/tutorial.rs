@@ -696,23 +696,25 @@ fn TutorialTypes() -> impl IntoView {
         <p>"If you want to convert a number to a whole number, you can use "<Prim prim=Floor/>", "<Prim prim=Ceil/>", or "<Prim prim=Round/>"."</p>
 
         <Hd id="complex-numbers">"Complex Numbers"</Hd>
-        <p>"Complex numbers can be created with the "<Prim prim=Complex/>" function."</p>
+        <p>"Complex number literals can be written as a number followed by a "<code>"r"</code>" or "<code>"i"</code>". These components can be placed next to each other to combine them."</p>
+        <Editor example="4r3i\n5r\n¯2i"/>
+        <p>"Complex numbers can also be created with the "<Prim prim=Complex/>" function."</p>
         <Editor example="ℂ 3 5"/>
         <Editor example="ℂ [1 2 3] [4 5 6]"/>
         <p>"While complex numbers support all the same math operations as normal numbers, they are a distinct type and cannot be used in place of normal numbers."</p>
         <p>"You can convert a complex number to a normal number with "<Prim prim=Abs/>"."</p>
-        <Editor example="⌵ ℂ3 4"/>
+        <Editor example="⌵ 4r3i"/>
         <p>"You can normalize a complex number to a unit vector with "<Prim prim=Sign/>"."</p>
-        <Editor example="± ℂ3 4"/>
+        <Editor example="± 4r3i"/>
         <p><Prim prim=Sqrt/>" only returns a complex number if it is called on a complex number. Beware of floating-point errors."</p>
-        <Editor example="√  ¯4\n√ℂ0¯4"/>
+        <Editor example="√¯4\n√¯4r"/>
         <p>"See "<Prim prim=Complex/>"'s docs for more details."</p>
         <p>"Comparing complex numbers for equality returns a normal number."</p>
-        <Editor example="= i ℂ0 1\n= i ℂ1 1"/>
+        <Editor example="= i 1r\n= i 1r1i"/>
         <p>"Comparing complex numbers for order returns a component-wise comparison."</p>
-        <Editor example="< i ℂ¯1 1\n≥ i ℂ1 1"/>
+        <Editor example="< i 1r¯1i \n≥ i 1r1i"/>
         <p>"In cases where a complex array has no elements with an imaginary part, it will be displayed in output with a "<code>"ℂ"</code>" marker."</p>
-        <Editor example="ℂ0 5\nℂ0 [1 2 3]\nℂ0 [1_2 3_4]"/>
+        <Editor example="5r\nℂ0 [1 2 3]\nℂ0 [1_2 3_4]"/>
 
         <Hd id="characters">"Characters"</Hd>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>

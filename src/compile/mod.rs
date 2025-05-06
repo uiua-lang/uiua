@@ -35,8 +35,8 @@ use crate::{
     parse::{
         flip_unsplit_items, flip_unsplit_lines, max_placeholder, parse, split_items, split_words,
     },
-    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
-    DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
+    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, Complex, CustomInverse,
+    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
     RunMode, SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind,
     UiuaResult, Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
@@ -1224,6 +1224,41 @@ impl Compiler {
         self.check_depth(&word.span)?;
         Ok(match word.value {
             Word::Number(Ok(n)) => Node::new_push(n),
+            Word::Complex(re, im) => {
+                let mut error = None;
+                let c = match (re, im) {
+                    (None, None) => Complex::ZERO,
+                    (Some(re), None) => match re.value {
+                        Ok(re) => Complex::new(re, 0.0),
+                        Err(s) => {
+                            error = Some((s, re.span));
+                            Complex::ZERO
+                        }
+                    },
+                    (None, Some(im)) => match im.value {
+                        Ok(im) => Complex::new(0.0, im),
+                        Err(s) => {
+                            error = Some((s, im.span));
+                            Complex::ZERO
+                        }
+                    },
+                    (Some(re), Some(im)) => match (re.value, im.value) {
+                        (Ok(re), Ok(im)) => Complex::new(re, im),
+                        (Err(s), _) => {
+                            error = Some((s, re.span));
+                            Complex::ZERO
+                        }
+                        (_, Err(s)) => {
+                            error = Some((s, im.span));
+                            Complex::ZERO
+                        }
+                    },
+                };
+                if let Some((s, span)) = error {
+                    self.add_error(span, format!("Invalid complex component `{s}`"));
+                }
+                Node::new_push(c)
+            }
             Word::Number(Err(s)) => {
                 self.add_error(word.span.clone(), format!("Invalid number `{s}`"));
                 Node::new_push(0.0)

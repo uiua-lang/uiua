@@ -592,6 +592,7 @@ pub enum Token {
     OutputComment(usize),
     Ident(Ident),
     Number,
+    ComplexComp,
     Char(String),
     Str(String),
     Label(Ident),
@@ -691,6 +692,7 @@ impl fmt::Display for Token {
             Token::OutputComment(_) => write!(f, "output comment"),
             Token::Ident(_) => write!(f, "identifier"),
             Token::Number => write!(f, "number"),
+            Token::ComplexComp => write!(f, "complex component"),
             Token::Char(c) => {
                 for c in c.chars() {
                     write!(f, "{c:?}")?;
@@ -1045,7 +1047,8 @@ impl<'a> Lexer<'a> {
                 "'" => self.end(Quote, start),
                 "`" => {
                     if self.number("-") {
-                        self.end(Number, start)
+                        self.end(Number, start);
+                        self.try_complex_comp();
                     } else {
                         self.end(Backtick, start)
                     }
@@ -1056,7 +1059,8 @@ impl<'a> Lexer<'a> {
                     .is_some() =>
                 {
                     self.number("-");
-                    self.end(Number, start)
+                    self.end(Number, start);
+                    self.try_complex_comp();
                 }
                 "*" => self.end(Star, start),
                 "%" => self.end(Percent, start),
@@ -1265,8 +1269,20 @@ impl<'a> Lexer<'a> {
                         .char_indices()
                         .find(|(_, c)| !c.is_ascii_lowercase() && *c != '&')
                         .map_or(ident.len(), |(i, _)| i);
-                    let lowercase = &ident[..lowercase_end];
-                    if let Some(prims) = Primitive::from_format_name_multi(lowercase) {
+                    let mut lowercase = &ident[..lowercase_end];
+                    let mut complex_comp = false;
+                    if let Some(prims) =
+                        Primitive::from_format_name_multi(lowercase).or_else(|| {
+                            let s = lowercase.strip_suffix(['r', 'i'])?;
+                            let prims = Primitive::from_format_name_multi(s)?;
+                            if !is_numbery(prims.last()?.1) {
+                                return None;
+                            }
+                            lowercase = s;
+                            complex_comp = true;
+                            Some(prims)
+                        })
+                    {
                         let first_start = start;
                         let mut start = start;
                         let prim_count = prims.len();
@@ -1293,6 +1309,21 @@ impl<'a> Lexer<'a> {
                             });
                             start = end;
                         }
+                        // Complex component
+                        if complex_comp {
+                            let end = Loc {
+                                col: start.col + 1,
+                                char_pos: start.char_pos + 1,
+                                byte_pos: start.byte_pos + 1,
+                                ..start
+                            };
+                            self.tokens.push_back(Sp {
+                                value: ComplexComp,
+                                span: self.make_span(start, end),
+                            });
+                            start = end;
+                        }
+                        // Remaining ident
                         let rest = &ident[lowercase_end..];
                         if !rest.is_empty() {
                             let ident = canonicalize_ident(rest);
@@ -1307,7 +1338,8 @@ impl<'a> Lexer<'a> {
                 // Numbers
                 c if c.chars().all(|c| c.is_ascii_digit()) => {
                     self.number(c);
-                    self.end(Number, start)
+                    self.end(Number, start);
+                    self.try_complex_comp();
                 }
                 // Newlines
                 "\n" | "\r\n" => self.end(Newline, start),
@@ -1316,17 +1348,20 @@ impl<'a> Lexer<'a> {
                     self.end(Spaces, start)
                 }
                 c if c.chars().all(|c| c.is_whitespace()) => continue,
-                c => {
-                    if c.chars().count() == 1 {
-                        let c = c.chars().next().unwrap();
+                cc => {
+                    if cc.chars().count() == 1 {
+                        let c = cc.chars().next().unwrap();
                         if let Some(prim) = Primitive::from_glyph(c) {
                             // Formatted glyphs
                             self.end(Glyph(prim), start);
+                            if is_numbery(cc) {
+                                self.try_complex_comp();
+                            }
                             continue;
                         }
                     }
                     self.errors
-                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c.into())));
+                        .push(self.end_span(start).sp(LexError::UnexpectedChar(cc.into())));
                 }
             };
         }
@@ -1361,43 +1396,60 @@ impl<'a> Lexer<'a> {
             input: self.input,
         };
 
-        let mut processed = Vec::new();
+        let mut processed: Vec<Sp<Token>> = Vec::new();
         while let Some(token) = post.next() {
+            println!("tok: {token:?}");
             let s = &self.input[token.span.byte_range()];
-            processed.push(
-                if is_signed_numbery(s) || (["`", "¯"].contains(&s) && post.nth_is(0, is_numbery))
+            let token = if is_signed_numbery(s)
+                || (["`", "¯"].contains(&s) && post.nth_is(0, is_numbery))
+            {
+                // Fractions non-digit numbers
+                let mut span = token.span;
+                if ["`", "¯"].contains(&s) {
+                    let n_tok = post.next().unwrap();
+                    span = span.merge(n_tok.span);
+                }
+                if post.nth_is(0, |s| s == "/")
+                    && post.nth_is(1, |s| {
+                        is_signed_numbery(s)
+                            || (["`", "¯"].contains(&s) && post.nth_is(2, is_numbery))
+                    })
                 {
-                    let mut span = token.span;
-                    if ["`", "¯"].contains(&s) {
-                        let n_tok = post.next().unwrap();
-                        span = span.merge(n_tok.span);
+                    let _slash = post.next().unwrap();
+                    let _neg = post.next_if(|s| ["`", "¯"].contains(&s));
+                    span = span.merge(post.next().unwrap().span);
+                }
+                span.sp(Number)
+            } else if let (
+                Token::Ident(mut ident),
+                Some(Sp {
+                    value: Token::Subscr(sub),
+                    ..
+                }),
+            ) = (token.value.clone(), post.tokens.front())
+            {
+                // Subscripts in identifiers
+                ident.push_str(&sub.to_string());
+                let sub_span = post.tokens.pop_front().unwrap().span;
+                token.span.merge(sub_span).sp(Ident(ident))
+            } else if let Token::ComplexComp = token.value {
+                // Complex components
+                if let Some(prev) = processed.last_mut() {
+                    if let Token::Number = prev.value {
+                        prev.span = prev.span.clone().merge(token.span);
+                        prev.value = Token::ComplexComp;
+                        continue;
                     }
-                    if post.nth_is(0, |s| s == "/")
-                        && post.nth_is(1, |s| {
-                            is_signed_numbery(s)
-                                || (["`", "¯"].contains(&s) && post.nth_is(2, is_numbery))
-                        })
-                    {
-                        let _slash = post.next().unwrap();
-                        let _neg = post.next_if(|s| ["`", "¯"].contains(&s));
-                        span = span.merge(post.next().unwrap().span);
-                    }
-                    span.sp(Number)
-                } else if let (
-                    Token::Ident(mut ident),
-                    Some(Sp {
-                        value: Token::Subscr(sub),
-                        ..
-                    }),
-                ) = (token.value.clone(), post.tokens.front())
-                {
-                    ident.push_str(&sub.to_string());
-                    let sub_span = post.tokens.pop_front().unwrap().span;
-                    token.span.merge(sub_span).sp(Ident(ident))
-                } else {
-                    token
-                },
-            );
+                }
+                token.span.sp(Ident(s.into()))
+            } else {
+                token
+            };
+            processed.push(token);
+        }
+
+        for tok in &processed {
+            println!("{tok:?}");
         }
 
         (processed, self.errors)
@@ -1456,6 +1508,12 @@ impl<'a> Lexer<'a> {
             }
         }
         true
+    }
+    fn try_complex_comp(&mut self) {
+        let start = self.loc;
+        if self.next_char_if_all(|c| "ri".contains(c)).is_some() {
+            self.end(Token::ComplexComp, start);
+        }
     }
     fn sub_num(
         &mut self,

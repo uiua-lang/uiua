@@ -3339,10 +3339,17 @@ primitive!(
     /// [project] orthographically projects a 3D array of voxels into a 2D image.
     /// The first argument is a parameter array.
     /// The second argument is the array to project.
+    ///
     /// The parameter array may be a numeric array representing a single parameter or a list of boxed parameters.
     /// - The first scalar encountered is the scale factor.
     /// - The second 3-element list is a "fog" color.
     /// - The first 3-element list is the camera position.
+    ///
+    /// The projected array must be rank 3 or 4.
+    /// - A rank 3 array produces a grayscale image with no alpha channel.
+    /// - A rank 4 array with last axis `2` produces a grayscale image with an alpha channel.
+    /// - A rank 4 array with last axis `3` produces an color image with no alpha channel.
+    /// - A rank 4 array with last axis `4` produces an color image with an alpha channel.
     ///
     /// Here is a simple 5x5x5 voxel scene.
     /// ex: ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
@@ -3362,6 +3369,23 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
     ///   : project {20 [1 2 1] Black}
+    ///
+    /// The image will be transparent if the projected array has transparency.
+    /// ex: # Experimental!
+    ///   : ↯5_5_5_2 0
+    ///   : ⍜⊢⋅1
+    ///   : [1_0_0 1_2_2 2_2_2 2_2_3 2_2_4]
+    ///   : [[1 1][1 1][1 0.3][1 0.3][1 0.3]]
+    ///   : ∧⍜⊙⊡⊙◌
+    ///   : project {20 [1.2 2 0.5] Black}
+    /// Color is also supported.
+    /// ex: # Experimental!
+    ///   : ↯5_5_5_4 0
+    ///   : ⍜⊢⋅1
+    ///   : [1_0_0 1_2_2 2_2_2 2_2_3 2_2_4]
+    ///   : [[1 1 1 1][1 1 1 1][1 0 0 0.3][0 1 0 0.3][0 1 1 0.3]]
+    ///   : ∧⍜⊙⊡⊙◌
+    ///   : project {20 [1 2 0.5] Black}
     (2, Project, Encoding, "project", { experimental: true }),
     /// Get the current
     /// Render text into an image array

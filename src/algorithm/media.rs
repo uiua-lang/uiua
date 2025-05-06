@@ -717,7 +717,7 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
             arr.shape
         )));
     }
-    if arr.rank() == 4 && ![3, 4].contains(&arr.shape[3]) {
+    if arr.rank() == 4 && ![2, 3, 4].contains(&arr.shape[3]) {
         return Err(env.error(format!(
             "Rank 4 projected array must have a last \
             dimension of 3, but its shape is {}",
@@ -727,15 +727,28 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
     #[derive(Clone, Copy, PartialEq)]
     enum Mode {
         Gray,
+        GrayA,
         Rgb,
         Rgba,
     }
     let mode = if arr.rank() == 3 {
         Mode::Gray
+    } else if arr.shape[3] == 2 {
+        Mode::GrayA
     } else if arr.shape[3] == 3 {
         Mode::Rgb
     } else {
         Mode::Rgba
+    };
+    let px_size = match mode {
+        Mode::Gray => 1,
+        Mode::GrayA => 2,
+        Mode::Rgb => 3,
+        Mode::Rgba => 4,
+    };
+    let color_size = match mode {
+        Mode::Gray | Mode::GrayA => 1,
+        Mode::Rgb | Mode::Rgba => 3,
     };
     let mut pos: Option<[f64; 3]> = None;
     let mut scale = None;
@@ -841,6 +854,7 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
     let mut res_shape = Shape::from([res_dim; 2]);
     let mut idxs = vec![0; res_shape.elements()];
     let mut depth_buf = vec![f64::INFINITY; res_shape.elements()];
+    let mut translucents: Vec<(usize, usize, f64)> = Vec::new();
 
     let target = [scene_radius; 3];
     let pos = [
@@ -904,8 +918,9 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
                 let arr_index = i * x_stride + j * y_stride + k;
                 match mode {
                     Mode::Gray if arr.data[arr_index] == 0.0 => continue,
+                    Mode::GrayA if arr.data[arr_index * 2 + 1] == 0.0 => continue,
                     Mode::Rgb if arr.data[arr_index * 3..][..3] == [0.0; 3] => continue,
-                    Mode::Rgba if arr.data[arr_index * 4..][3] == 0.0 => continue,
+                    Mode::Rgba if arr.data[arr_index * 4 + 3] == 0.0 => continue,
                     _ => {}
                 }
                 let corner = add([i, j, k].map(|d| d as f64), offset);
@@ -919,99 +934,159 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
                     if x < 0.0 || y < 0.0 {
                         continue;
                     }
-                    let x = x.round() as usize;
-                    let y = y.round() as usize;
+                    let x = x.floor() as usize;
+                    let y = y.floor() as usize;
                     if x >= res_dim || y >= res_dim {
                         continue;
                     }
                     let dist = mag(delta);
                     let im_index = y * res_dim + x;
                     if dist < depth_buf[im_index] {
-                        depth_buf[im_index] = dist;
-                        idxs[im_index] = arr_index;
+                        match mode {
+                            Mode::GrayA if arr.data[arr_index * 2 + 1] != 1.0 => {
+                                translucents.push((im_index, arr_index, dist))
+                            }
+                            Mode::Rgba if arr.data[arr_index * 4 + 3] != 1.0 => {
+                                translucents.push((im_index, arr_index, dist))
+                            }
+                            _ => {
+                                depth_buf[im_index] = dist;
+                                idxs[im_index] = arr_index;
+                            }
+                        }
                     }
                 }
             }
         }
     }
-    // Render
-    let fog_factor = |depth: f64| 1.0 - (depth - shell_dist) / (shell_radius * 2.0);
-    Ok(if let Some(fog) = fog {
-        if fog.windows(2).all(|w| w[0] == w[1]) && mode == Mode::Gray {
+    // Render opaques
+    let fog_mul =
+        |depth: f64, alpha: f64| 1.0 - alpha * (depth - shell_dist) / (shell_radius * 2.0);
+    if px_size != 1 {
+        res_shape.push(px_size);
+    }
+    let mut res_data = if let Some(fog) = fog {
+        if fog.windows(2).all(|w| w[0] == w[1]) && matches!(mode, Mode::Gray | Mode::GrayA) {
             // Grayscale image with grayscale fog
             let fog = fog[0];
             let mut res_data = eco_vec![0f64; res_shape.elements()];
-            for ((index, cell), depth) in idxs.into_iter().zip(res_data.make_mut()).zip(depth_buf) {
-                if depth == f64::INFINITY {
-                    continue;
-                }
-                let factor = fog_factor(depth);
-                *cell = arr.data[index] * factor + fog * (1.0 - factor);
-            }
-            Array::new(res_shape, res_data).into()
-        } else {
-            // Grayscale image with colored fog
-            res_shape.push(3);
-            let mut res_data = eco_vec![0f64; res_shape.elements()];
-            for ((index, cell), depth) in idxs
+            for ((index, px), &depth) in idxs
                 .into_iter()
-                .zip(res_data.make_mut().chunks_exact_mut(3))
-                .zip(depth_buf)
+                .zip(res_data.make_mut().chunks_exact_mut(px_size))
+                .zip(&depth_buf)
             {
                 if depth == f64::INFINITY {
                     continue;
                 }
-                let factor = fog_factor(depth);
+                let factor = fog_mul(depth, 1.0);
+                px[0] = arr.data[index * px_size] * factor + fog * (1.0 - factor);
+                if mode == Mode::GrayA {
+                    px[1] = 1.0;
+                }
+            }
+            res_data
+        } else {
+            // Image with colored fog
+            let mut res_data = eco_vec![0f64; res_shape.elements()];
+            for ((index, px), &depth) in idxs
+                .into_iter()
+                .zip(res_data.make_mut().chunks_exact_mut(px_size))
+                .zip(&depth_buf)
+            {
+                if depth == f64::INFINITY {
+                    continue;
+                }
+                let factor = fog_mul(depth, 1.0);
                 match mode {
-                    Mode::Gray => {
+                    Mode::Gray | Mode::GrayA => {
                         for i in 0..3 {
-                            cell[i] = arr.data[index] * factor + fog[i] * (1.0 - factor);
+                            px[i] = arr.data[index * px_size] * factor + fog[i] * (1.0 - factor);
                         }
                     }
                     Mode::Rgb | Mode::Rgba => {
                         for i in 0..3 {
-                            cell[i] = arr.data[index * 3 + i] * factor + fog[i] * (1.0 - factor);
+                            px[i] =
+                                arr.data[index * px_size + i] * factor + fog[i] * (1.0 - factor);
                         }
                     }
                 }
+                if matches!(mode, Mode::GrayA | Mode::Rgba) {
+                    px[px_size - 1] = 1.0;
+                }
             }
-            Array::new(res_shape, res_data).into()
+            res_data
         }
     } else {
         match mode {
-            Mode::Gray => {
+            Mode::Gray | Mode::GrayA => {
                 // Grayscale image without fog
                 let mut res_data = eco_vec![0f64; res_shape.elements()];
-                for ((index, cell), depth) in
-                    idxs.into_iter().zip(res_data.make_mut()).zip(depth_buf)
+                for ((index, px), &depth) in idxs
+                    .into_iter()
+                    .zip(res_data.make_mut().chunks_exact_mut(px_size))
+                    .zip(&depth_buf)
                 {
                     if depth == f64::INFINITY {
                         continue;
                     }
-                    *cell = arr.data[index];
+                    px[0] = arr.data[index * px_size];
+                    if mode == Mode::GrayA {
+                        px[1] = 1.0;
+                    }
                 }
-                Array::new(res_shape, res_data).into()
+                res_data
             }
             Mode::Rgb | Mode::Rgba => {
                 // Colored image without fog
-                res_shape.push(3);
                 let mut res_data = eco_vec![0f64; res_shape.elements()];
-                for ((index, cell), depth) in idxs
+                for ((index, px), &depth) in idxs
                     .into_iter()
-                    .zip(res_data.make_mut().chunks_exact_mut(3))
-                    .zip(depth_buf)
+                    .zip(res_data.make_mut().chunks_exact_mut(px_size))
+                    .zip(&depth_buf)
                 {
                     if depth == f64::INFINITY {
                         continue;
                     }
-                    for i in 0..3 {
-                        cell[i] = arr.data[index * 3 + i];
+                    for i in 0..color_size {
+                        px[i] = arr.data[index * px_size + i];
+                    }
+                    if matches!(mode, Mode::Rgba) {
+                        px[3] = 1.0;
                     }
                 }
-                Array::new(res_shape, res_data).into()
+                res_data
             }
         }
-    })
+    };
+    // Render translucents
+    translucents.sort_by(|(ai, aa, ad), (bi, ba, bd)| {
+        ((ai, aa).cmp(&(bi, ba))).then_with(|| ad.partial_cmp(bd).unwrap())
+    });
+    translucents.dedup_by_key(|(i, a, _)| (*i, *a));
+    translucents.sort_by(|(_, _, a), (_, _, b)| a.partial_cmp(b).unwrap());
+    let image = res_data.make_mut();
+    for (im_index, arr_index, dist) in translucents.into_iter().rev() {
+        if depth_buf[im_index] < dist {
+            continue;
+        }
+        let vox_alpha = arr.data[arr_index * px_size + color_size];
+        for i in 0..color_size {
+            let bg = image[im_index * px_size + i];
+            let fg = arr.data[arr_index * px_size + i];
+            let new = (1.0 - vox_alpha) * bg + vox_alpha * fg;
+            image[im_index * px_size + i] = new;
+        }
+        image[im_index * px_size + color_size] =
+            (image[im_index * px_size + color_size] + vox_alpha).min(1.0);
+        if let Some(fog) = fog {
+            let factor = fog_mul(dist, vox_alpha);
+            for i in 0..color_size {
+                image[im_index * px_size + i] =
+                    image[im_index * px_size + i] * factor + fog[i] * (1.0 - factor);
+            }
+        }
+    }
+    Ok(Array::new(res_shape, res_data).into())
 }
 
 pub(crate) fn layout_text(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {

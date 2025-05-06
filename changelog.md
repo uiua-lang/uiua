@@ -44,6 +44,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This enables some function packs and array notation to execute in the order they are normally read
 - Add experimental sided [`fill ⬚`](https://uiua.org/docs/fill)
   - This allows filling from the left instead of the right
+- Add experimental [`project`](https://uiua.org/docs/project) function, which orthographically projects a 3D array to an image
 - Add experimental [`bytes`](https://uiua.org/docs/bytes) function for encoding and decoding byte arrays
 - Remove previously deprecated `around ’`
 - Remove previously deprecated `astar`

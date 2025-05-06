@@ -3334,6 +3334,35 @@ primitive!(
     /// Returns a scalar integer.
     /// ex: numprocs
     (0, NumProcs, Environment, "numprocs", Impure),
+    /// Project an array into a 2D image
+    ///
+    /// [project] orthographically projects a 3D array of voxels into a 2D image.
+    /// The first argument is a parameter array.
+    /// The second argument is the array to project.
+    /// The parameter array may be a numeric array representing a single parameter or a list of boxed parameters.
+    /// - The first scalar encountered is the scale factor.
+    /// - The second 3-element list is a "fog" color.
+    /// - The first 3-element list is the camera position.
+    ///
+    /// Here is a simple 5x5x5 voxel scene.
+    /// ex: ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    /// If we project it with no parameters, the result is not very interesting.
+    /// ex: # Experimental!
+    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    ///   : project {}
+    /// We can scale up the image by passing a scale factor.
+    /// ex: # Experimental!
+    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    ///   : project {20}
+    /// We can change the camera position by passing a 3-element list.
+    /// ex: # Experimental!
+    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    ///   : project {20 [1 2 1]}
+    /// Passing another 3-element list will change the fog color so that we can see depth.
+    /// ex: # Experimental!
+    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    ///   : project {20 [1 2 1] Black}
+    (2, Project, Encoding, "project", { experimental: true }),
     /// Get the current
     /// Render text into an image array
     ///

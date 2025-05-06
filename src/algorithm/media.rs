@@ -880,6 +880,23 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
         (max_dim - arr.shape[1]) as f64 / 2.0,
         (max_dim - arr.shape[2]) as f64 / 2.0,
     ];
+    // Precompute scaling offsets
+    let mut voxel_surface_offsets = Vec::with_capacity(scale_steps * scale_steps * 6);
+    for i in 0..scale_steps {
+        let di = scale_start + i as f64 * scale_step;
+        for j in 0..scale_steps {
+            let dj = scale_start + j as f64 * scale_step;
+            for k in 0..scale_steps {
+                if ![i, j, k].iter().any(|&x| x == 0 || x == scale_steps - 1) {
+                    continue;
+                }
+                let dk = scale_start + k as f64 * scale_step;
+                let offset = [di, dj, dk];
+                voxel_surface_offsets.push(offset);
+            }
+        }
+    }
+    // Fill indices and depth buffer
     for i in 0..arr.shape[0] {
         for j in 0..arr.shape[1] {
             env.respect_execution_limit()?;
@@ -891,42 +908,37 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
                     Mode::Rgba if arr.data[arr_index * 4..][3] == 0.0 => continue,
                     _ => {}
                 }
-                let start = add([i, j, k].map(|d| d as f64 + scale_start), offset);
-                for i2 in 0..scale_steps {
-                    let i_step = i2 as f64 * scale_step;
-                    for j2 in 0..scale_steps {
-                        let j_step = j2 as f64 * scale_step;
-                        for k2 in 0..scale_steps {
-                            let k_step = k2 as f64 * scale_step;
-                            let center = [start[0] + i_step, start[1] + j_step, start[2] + k_step];
-                            let proj = plane_point(normal, d, center);
-                            let delta = sub(center, proj);
-                            let cam_delta = sub(proj, cam_center);
-                            let x = (shell_radius - dot(cam_delta, u)) * scale;
-                            let y = (shell_radius - dot(cam_delta, v)) * scale;
-                            if x < 0.0 || y < 0.0 {
-                                continue;
-                            }
-                            let x = x.round() as usize;
-                            let y = y.round() as usize;
-                            if x >= res_dim || y >= res_dim {
-                                continue;
-                            }
-                            let dist = mag(delta);
-                            let im_index = y * res_dim + x;
-                            if dist < depth_buf[im_index] {
-                                depth_buf[im_index] = dist;
-                                idxs[im_index] = arr_index;
-                            }
-                        }
+                let corner = add([i, j, k].map(|d| d as f64), offset);
+                for &offset in &voxel_surface_offsets {
+                    let center = add(corner, offset);
+                    let proj = plane_point(normal, d, center);
+                    let delta = sub(center, proj);
+                    let cam_delta = sub(proj, cam_center);
+                    let x = (shell_radius - dot(cam_delta, u)) * scale;
+                    let y = (shell_radius - dot(cam_delta, v)) * scale;
+                    if x < 0.0 || y < 0.0 {
+                        continue;
+                    }
+                    let x = x.round() as usize;
+                    let y = y.round() as usize;
+                    if x >= res_dim || y >= res_dim {
+                        continue;
+                    }
+                    let dist = mag(delta);
+                    let im_index = y * res_dim + x;
+                    if dist < depth_buf[im_index] {
+                        depth_buf[im_index] = dist;
+                        idxs[im_index] = arr_index;
                     }
                 }
             }
         }
     }
-    let fog_factor = |depth: f64| shell_radius / (depth - shell_dist) / 2.0;
+    // Render
+    let fog_factor = |depth: f64| 1.0 - (depth - shell_dist) / (shell_radius * 2.0);
     Ok(if let Some(fog) = fog {
         if fog.windows(2).all(|w| w[0] == w[1]) && mode == Mode::Gray {
+            // Grayscale image with grayscale fog
             let fog = fog[0];
             let mut res_data = eco_vec![0f64; res_shape.elements()];
             for ((index, cell), depth) in idxs.into_iter().zip(res_data.make_mut()).zip(depth_buf) {
@@ -938,6 +950,7 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
             }
             Array::new(res_shape, res_data).into()
         } else {
+            // Grayscale image with colored fog
             res_shape.push(3);
             let mut res_data = eco_vec![0f64; res_shape.elements()];
             for ((index, cell), depth) in idxs
@@ -967,6 +980,7 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
     } else {
         match mode {
             Mode::Gray => {
+                // Grayscale image without fog
                 let mut res_data = eco_vec![0f64; res_shape.elements()];
                 for ((index, cell), depth) in
                     idxs.into_iter().zip(res_data.make_mut()).zip(depth_buf)
@@ -979,6 +993,7 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
                 Array::new(res_shape, res_data).into()
             }
             Mode::Rgb | Mode::Rgba => {
+                // Colored image without fog
                 res_shape.push(3);
                 let mut res_data = eco_vec![0f64; res_shape.elements()];
                 for ((index, cell), depth) in idxs

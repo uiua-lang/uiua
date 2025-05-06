@@ -882,6 +882,7 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
     ];
     for i in 0..arr.shape[0] {
         for j in 0..arr.shape[1] {
+            env.respect_execution_limit()?;
             for k in 0..arr.shape[2] {
                 let arr_index = i * x_stride + j * y_stride + k;
                 match mode {

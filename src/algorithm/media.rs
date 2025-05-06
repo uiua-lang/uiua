@@ -11,7 +11,7 @@ use serde::*;
 
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
-use crate::{Complex, SysBackend};
+use crate::{Boxed, Complex, Shape, SysBackend};
 
 use super::monadic::hsv_to_rgb;
 
@@ -694,6 +694,399 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     let mut num = Value::Num(Array::new(shape, data));
     num.compress();
     Ok((frame_rate, num))
+}
+
+pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Value> {
+    let converted: Array<f64>;
+    let arr = match val {
+        Value::Num(arr) => arr,
+        Value::Byte(arr) => {
+            converted = arr.convert_ref();
+            &converted
+        }
+        val => {
+            return Err(env.error(format!(
+                "Projected array must be numeric, but it is {}",
+                val.type_name_plural()
+            )))
+        }
+    };
+    if ![3, 4].contains(&arr.rank()) {
+        return Err(env.error(format!(
+            "Projected array must be rank 3 or 4, but its shape is {}",
+            arr.shape
+        )));
+    }
+    if arr.rank() == 4 && ![2, 3, 4].contains(&arr.shape[3]) {
+        return Err(env.error(format!(
+            "Rank 4 projected array must have a last \
+            dimension of 3, but its shape is {}",
+            arr.shape
+        )));
+    }
+    #[derive(Clone, Copy, PartialEq)]
+    enum Mode {
+        Gray,
+        GrayA,
+        Rgb,
+        Rgba,
+    }
+    let mode = if arr.rank() == 3 {
+        Mode::Gray
+    } else if arr.shape[3] == 2 {
+        Mode::GrayA
+    } else if arr.shape[3] == 3 {
+        Mode::Rgb
+    } else {
+        Mode::Rgba
+    };
+    let px_size = match mode {
+        Mode::Gray => 1,
+        Mode::GrayA => 2,
+        Mode::Rgb => 3,
+        Mode::Rgba => 4,
+    };
+    let color_size = match mode {
+        Mode::Gray | Mode::GrayA => 1,
+        Mode::Rgb | Mode::Rgba => 3,
+    };
+    let mut pos: Option<[f64; 3]> = None;
+    let mut scale = None;
+    let mut fog = None;
+    fn decode(
+        val: &Value,
+        pos: &mut Option<[f64; 3]>,
+        scale: &mut Option<f64>,
+        fog: &mut Option<[f64; 3]>,
+        recurse: bool,
+        env: &Uiua,
+    ) -> UiuaResult {
+        match val {
+            Value::Num(arr) if scale.is_none() && arr.rank() == 0 => *scale = Some(arr.data[0]),
+            Value::Byte(arr) if scale.is_none() && arr.rank() == 0 => {
+                *scale = Some(arr.data[0] as f64)
+            }
+            Value::Num(arr) if pos.is_none() && arr.shape == [3] => {
+                *pos = Some(arr.data.as_slice().try_into().unwrap())
+            }
+            Value::Byte(arr) if pos.is_none() && arr.shape == [3] => {
+                *pos = Some(
+                    <[_; 3]>::try_from(arr.data.as_slice())
+                        .unwrap()
+                        .map(|x| x as f64),
+                )
+            }
+            Value::Num(arr) if fog.is_none() && arr.shape == [3] => {
+                *fog = Some(arr.data.as_slice().try_into().unwrap())
+            }
+            Value::Byte(arr) if fog.is_none() && arr.shape == [3] => {
+                *fog = Some(
+                    <[_; 3]>::try_from(arr.data.as_slice())
+                        .unwrap()
+                        .map(|x| x as f64),
+                )
+            }
+            Value::Box(arr) if recurse => {
+                for Boxed(val) in arr.data.iter() {
+                    decode(val, pos, scale, fog, false, env)?;
+                }
+            }
+            val => {
+                return Err(env.error(format!(
+                    "Invalid projection parameter {} {}",
+                    val.shape,
+                    val.type_name_plural(),
+                )))
+            }
+        }
+        Ok(())
+    }
+    decode(params, &mut pos, &mut scale, &mut fog, true, env)?;
+    let pos = pos.unwrap_or([1.0, 1.0, 1.0]);
+    let scale = scale.unwrap_or(1.0);
+
+    fn map<A: Copy, B: Copy, C, const N: usize>(
+        a: [A; N],
+        b: [B; N],
+        f: impl Fn(A, B) -> C,
+    ) -> [C; N] {
+        std::array::from_fn(|i| f(a[i], b[i]))
+    }
+    fn mul(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+        map(a, b, |a, b| a * b)
+    }
+    fn add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+        map(a, b, |a, b| a + b)
+    }
+    fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+        map(a, b, |a, b| a - b)
+    }
+    fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+        mul(a, b).iter().sum()
+    }
+    fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    }
+    fn plane_point(normal: [f64; 3], d: f64, point: [f64; 3]) -> [f64; 3] {
+        let mag = (dot(normal, point) - d) / dot(normal, normal);
+        let offset = normal.map(|n| n * mag);
+        sub(point, offset)
+    }
+    fn mag(v: [f64; 3]) -> f64 {
+        dot(v, v).sqrt()
+    }
+    fn norm(v: [f64; 3]) -> [f64; 3] {
+        let mag = mag(v);
+        v.map(|x| x / mag)
+    }
+
+    let max_dim = arr.shape.iter().take(3).copied().max().unwrap_or(0);
+    let scene_radius = max_dim as f64 / 2.0;
+    let shell_radius = (arr.shape.iter())
+        .fold(0.0, |acc, &x| acc + (x as f64).powi(2))
+        .sqrt()
+        / 2.0;
+    let res_dim = (shell_radius * 2.0 * scale).round() as usize;
+    let mut res_shape = Shape::from([res_dim; 2]);
+    let mut idxs = vec![0; res_shape.elements()];
+    let mut depth_buf = vec![f64::INFINITY; res_shape.elements()];
+    let mut translucents: Vec<(usize, usize, f64)> = Vec::new();
+
+    let target = [scene_radius; 3];
+    let pos = [
+        target[0] + scene_radius * pos[0],
+        target[1] + scene_radius * pos[1],
+        target[2] + scene_radius * pos[2],
+    ];
+    let shell_dist = mag(sub(target, pos)) - shell_radius;
+    let normal = norm(sub(target, pos));
+    let d = dot(normal, pos);
+    let cam_center = plane_point(normal, d, target);
+    let up_hint = if normal[0].abs() < 0.999 {
+        [1.0, 0.0, 0.0]
+    } else {
+        [0.0, 1.0, 0.0]
+    };
+    let u = norm(cross(up_hint, normal));
+    let v = cross(normal, u);
+
+    // println!("im radius: {shell_radius:.3}");
+    // println!("scene radius: {scene_radius:.3}");
+    // println!("shell dist: {shell_dist:.3}");
+    // println!("res_dim: {res_dim}");
+    // println!("pos: {pos:.3?}");
+    // println!("cam_center: {cam_center:.3?}");
+    // println!("target: {target:.3?}");
+    // println!("normal: {normal:.3?}");
+    // println!("u: {u:.3?}, v: {v:.3?}");
+
+    let x_stride = arr.shape[1] * arr.shape[2];
+    let y_stride = arr.shape[2];
+    let scale_start = 0.5 / scale;
+    let scale_step = 1.0 / scale;
+    let scale_steps = scale.round() as usize;
+    let offset = [
+        (max_dim - arr.shape[0]) as f64 / 2.0,
+        (max_dim - arr.shape[1]) as f64 / 2.0,
+        (max_dim - arr.shape[2]) as f64 / 2.0,
+    ];
+    // Precompute scaling offsets
+    let mut voxel_surface_offsets = Vec::with_capacity(scale_steps * scale_steps * 6);
+    for i in 0..scale_steps {
+        let di = scale_start + i as f64 * scale_step;
+        for j in 0..scale_steps {
+            let dj = scale_start + j as f64 * scale_step;
+            for k in 0..scale_steps {
+                if ![i, j, k].iter().any(|&x| x == 0 || x == scale_steps - 1) {
+                    continue;
+                }
+                let dk = scale_start + k as f64 * scale_step;
+                let offset = [di, dj, dk];
+                voxel_surface_offsets.push(offset);
+            }
+        }
+    }
+    // Fill indices and depth buffer
+    for i in 0..arr.shape[0] {
+        for j in 0..arr.shape[1] {
+            env.respect_execution_limit()?;
+            for k in 0..arr.shape[2] {
+                let arr_index = i * x_stride + j * y_stride + k;
+                match mode {
+                    Mode::Gray if arr.data[arr_index] == 0.0 => continue,
+                    Mode::GrayA if arr.data[arr_index * 2 + 1] == 0.0 => continue,
+                    Mode::Rgb if arr.data[arr_index * 3..][..3] == [0.0; 3] => continue,
+                    Mode::Rgba if arr.data[arr_index * 4 + 3] == 0.0 => continue,
+                    _ => {}
+                }
+                let corner = add([i, j, k].map(|d| d as f64), offset);
+                for &offset in &voxel_surface_offsets {
+                    let center = add(corner, offset);
+                    let proj = plane_point(normal, d, center);
+                    let delta = sub(center, proj);
+                    let cam_delta = sub(proj, cam_center);
+                    let x = (shell_radius - dot(cam_delta, u)) * scale;
+                    let y = (shell_radius - dot(cam_delta, v)) * scale;
+                    if x < 0.0 || y < 0.0 {
+                        continue;
+                    }
+                    let x = x.floor() as usize;
+                    let y = y.floor() as usize;
+                    if x >= res_dim || y >= res_dim {
+                        continue;
+                    }
+                    let dist = mag(delta);
+                    let im_index = y * res_dim + x;
+                    if dist < depth_buf[im_index] {
+                        match mode {
+                            Mode::GrayA if arr.data[arr_index * 2 + 1] != 1.0 => {
+                                translucents.push((im_index, arr_index, dist))
+                            }
+                            Mode::Rgba if arr.data[arr_index * 4 + 3] != 1.0 => {
+                                translucents.push((im_index, arr_index, dist))
+                            }
+                            _ => {
+                                depth_buf[im_index] = dist;
+                                idxs[im_index] = arr_index;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Render opaques
+    let fog_mul =
+        |depth: f64, alpha: f64| 1.0 - alpha * (depth - shell_dist) / (shell_radius * 2.0);
+    if px_size != 1 {
+        res_shape.push(px_size);
+    }
+    let mut res_data = if let Some(fog) = fog {
+        if fog.windows(2).all(|w| w[0] == w[1]) && matches!(mode, Mode::Gray | Mode::GrayA) {
+            // Grayscale image with grayscale fog
+            let fog = fog[0];
+            let mut res_data = eco_vec![0f64; res_shape.elements()];
+            for ((index, px), &depth) in idxs
+                .into_iter()
+                .zip(res_data.make_mut().chunks_exact_mut(px_size))
+                .zip(&depth_buf)
+            {
+                if depth == f64::INFINITY {
+                    continue;
+                }
+                let factor = fog_mul(depth, 1.0);
+                px[0] = arr.data[index * px_size] * factor + fog * (1.0 - factor);
+                if mode == Mode::GrayA {
+                    px[1] = 1.0;
+                }
+            }
+            res_data
+        } else {
+            // Image with colored fog
+            let mut res_data = eco_vec![0f64; res_shape.elements()];
+            for ((index, px), &depth) in idxs
+                .into_iter()
+                .zip(res_data.make_mut().chunks_exact_mut(px_size))
+                .zip(&depth_buf)
+            {
+                if depth == f64::INFINITY {
+                    continue;
+                }
+                let factor = fog_mul(depth, 1.0);
+                match mode {
+                    Mode::Gray | Mode::GrayA => {
+                        for i in 0..3 {
+                            px[i] = arr.data[index * px_size] * factor + fog[i] * (1.0 - factor);
+                        }
+                    }
+                    Mode::Rgb | Mode::Rgba => {
+                        for i in 0..3 {
+                            px[i] =
+                                arr.data[index * px_size + i] * factor + fog[i] * (1.0 - factor);
+                        }
+                    }
+                }
+                if matches!(mode, Mode::GrayA | Mode::Rgba) {
+                    px[px_size - 1] = 1.0;
+                }
+            }
+            res_data
+        }
+    } else {
+        match mode {
+            Mode::Gray | Mode::GrayA => {
+                // Grayscale image without fog
+                let mut res_data = eco_vec![0f64; res_shape.elements()];
+                for ((index, px), &depth) in idxs
+                    .into_iter()
+                    .zip(res_data.make_mut().chunks_exact_mut(px_size))
+                    .zip(&depth_buf)
+                {
+                    if depth == f64::INFINITY {
+                        continue;
+                    }
+                    px[0] = arr.data[index * px_size];
+                    if mode == Mode::GrayA {
+                        px[1] = 1.0;
+                    }
+                }
+                res_data
+            }
+            Mode::Rgb | Mode::Rgba => {
+                // Colored image without fog
+                let mut res_data = eco_vec![0f64; res_shape.elements()];
+                for ((index, px), &depth) in idxs
+                    .into_iter()
+                    .zip(res_data.make_mut().chunks_exact_mut(px_size))
+                    .zip(&depth_buf)
+                {
+                    if depth == f64::INFINITY {
+                        continue;
+                    }
+                    for i in 0..color_size {
+                        px[i] = arr.data[index * px_size + i];
+                    }
+                    if matches!(mode, Mode::Rgba) {
+                        px[3] = 1.0;
+                    }
+                }
+                res_data
+            }
+        }
+    };
+    // Render translucents
+    translucents.sort_by(|(ai, aa, ad), (bi, ba, bd)| {
+        ((ai, aa).cmp(&(bi, ba))).then_with(|| ad.partial_cmp(bd).unwrap())
+    });
+    translucents.dedup_by_key(|(i, a, _)| (*i, *a));
+    translucents.sort_by(|(_, _, a), (_, _, b)| a.partial_cmp(b).unwrap());
+    let image = res_data.make_mut();
+    for (im_index, arr_index, dist) in translucents.into_iter().rev() {
+        if depth_buf[im_index] < dist {
+            continue;
+        }
+        let vox_alpha = arr.data[arr_index * px_size + color_size];
+        for i in 0..color_size {
+            let bg = image[im_index * px_size + i];
+            let fg = arr.data[arr_index * px_size + i];
+            let new = (1.0 - vox_alpha) * bg + vox_alpha * fg;
+            image[im_index * px_size + i] = new;
+        }
+        image[im_index * px_size + color_size] =
+            (image[im_index * px_size + color_size] + vox_alpha).min(1.0);
+        if let Some(fog) = fog {
+            let factor = fog_mul(dist, vox_alpha);
+            for i in 0..color_size {
+                image[im_index * px_size + i] =
+                    image[im_index * px_size + i] * factor + fog[i] * (1.0 - factor);
+            }
+        }
+    }
+    Ok(Array::new(res_shape, res_data).into())
 }
 
 pub(crate) fn layout_text(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {

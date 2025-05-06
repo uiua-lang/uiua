@@ -1466,6 +1466,7 @@ impl<'a> Lexer<'a> {
     ) {
         loop {
             if !*got_neg
+                && num.is_none()
                 && (self.next_char_exact("₋")
                     || *can_parse_ascii && (self.next_char_exact("`") || self.next_char_exact("¯")))
             {

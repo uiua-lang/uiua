@@ -3253,10 +3253,11 @@ primitive!(
     ///
     /// The first argument is the format, and the second is the image.
     ///
-    /// The image must be a rank 2 or 3 numeric array.
+    /// The image must be a rank 2 or 3 numeric array or a rank 2 complex array.
     /// Axes 0 and 1 contain the rows and columns of the image.
     /// A rank 2 array is a grayscale image.
     /// A rank 3 array is an RGB image.
+    /// A complex array is colored with domain coloring and no alpha channel.
     /// In a rank 3 image array, the last axis must be length 1, 2, 3, or 4.
     /// A length 1 last axis is a grayscale image.
     /// A length 2 last axis is a grayscale image with an alpha channel.
@@ -3386,6 +3387,27 @@ primitive!(
     ///   : [[1 1 1 1][1 1 1 1][1 0 0 0.3][0 1 0 0.3][0 1 1 0.3]]
     ///   : ∧⍜⊙⊡⊙◌
     ///   : voxels {20 [1 2 0.5] Black}
+    ///
+    /// Like with normal image arrays, [voxels] supports complex numbers.
+    /// The same domain coloring algorithm is used as in [img] and [&ims].
+    /// By default, because there is no alpha channel, only numbers with 0 magnitude are transparent.
+    /// ex: # Experimental!
+    ///   : ⊞+⟜⊞ℂ. -⊸¬ ÷⟜⇡30
+    ///   : voxels {2}
+    /// We can set transparency by adding a 4th axis to the array. This is a complex alpha channel where the opacity is the magnitude of the complex number.
+    /// ex: # Experimental!
+    ///   : ⊞+⟜⊞ℂ. -⊸¬ ÷⟜⇡30
+    ///   : ⍜°⍉(⊟⟜(<1⌵)) # Only show <1 magnitude
+    ///   : voxels {2 [0.5 2 2]}
+    ///
+    /// You can show rotation of a voxel array by turning it into a gif.
+    /// In this example, we create a list of angles and apply each one to the camera position using [un][atan].
+    /// ex: # Experimental!
+    ///   : # Experimental!
+    ///   : -⊸¬ ÷⟜(°⍉⇡)↯3 50    # Cube from ¯1 to 1
+    ///   : <0.4⌵-⊙(+∩∿) °⊟₃ ×τ # z = (sin(τx) + sin(τy))/τ
+    ///   : ×τ÷⟜⇡30             # Rotation angles
+    ///   : ≡(voxels {2 [1 °∠] ⊙[0 0.5 1]})⊙¤
     (2, Voxels, Encoding, "voxels", { experimental: true }),
     /// Get the current
     /// Render text into an image array

@@ -439,10 +439,11 @@ sys_op! {
     /// In the default backend, the image is shown in the terminal. Here you can make it use sixel by setting the `UIUA_ENABLE_SIXEL` environment variable to `1`. Otherwise it will try to use the `kitty` or `iTerm` image protocols and fall back to half-block image printing.
     /// On the web, the image is shown in the output area.
     ///
-    /// The image must be a rank 2 or 3 numeric array.
+    /// The image must be a rank 2 or 3 numeric array or a rank 2 complex array.
     /// Axes 0 and 1 contain the rows and columns of the image.
     /// A rank 2 array is a grayscale image.
     /// A rank 3 array is an RGB image.
+    /// A complex array is colored with domain coloring and no alpha channel.
     /// In a rank 3 image array, the last axis must be length 1, 2, 3, or 4.
     /// A length 1 last axis is a grayscale image.
     /// A length 2 last axis is a grayscale image with an alpha channel.

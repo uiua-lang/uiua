@@ -2,7 +2,7 @@
 
 use std::f64::consts::E;
 
-use ecow::eco_vec;
+use ecow::{eco_vec, EcoVec};
 #[cfg(feature = "audio_encode")]
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 #[cfg(feature = "image")]
@@ -336,7 +336,9 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     let bytes = match value {
         Value::Num(nums) => nums.data.iter().map(|f| (*f * 255.0) as u8).collect(),
         Value::Byte(bytes) => bytes.data.iter().map(|&b| (b > 0) as u8 * 255).collect(),
-        Value::Complex(comp) => comp.data.iter().copied().flat_map(complex_color).collect(),
+        Value::Complex(comp) => (comp.data.iter())
+            .flat_map(|&c| complex_color(c).map(|c| (c * 255.0) as u8))
+            .collect(),
         _ => return Err("Image must be a numeric or complex array".into()),
     };
     #[allow(clippy::match_ref_pats)]
@@ -367,12 +369,12 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     })
 }
 
-fn complex_color(c: Complex) -> [u8; 3] {
+fn complex_color(c: Complex) -> [f64; 3] {
     let h = c.arg();
     let mag = c.abs();
     let s = 0.3 + 0.7 * (-mag / 10.0).exp();
     let v = 1.0 - (-E * mag).exp();
-    hsv_to_rgb(h, s, v).map(|c| (c * 255.0) as u8)
+    hsv_to_rgb(h, s, v)
 }
 
 #[doc(hidden)]
@@ -717,10 +719,48 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
 
 pub(crate) fn voxels(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Value> {
     let converted: Array<f64>;
+    if ![3, 4].contains(&val.rank()) {
+        return Err(env.error(format!(
+            "Voxel array must be rank 3 or 4, but its shape is {}",
+            val.shape
+        )));
+    }
+    if val.rank() == 4 && ![2, 3, 4].contains(&val.shape[3]) {
+        return Err(env.error(format!(
+            "Rank 4 voxel array must have a last \
+            dimension of 2, 3, or 4, but its shape is {}",
+            val.shape
+        )));
+    }
     let arr = match val {
         Value::Num(arr) => arr,
         Value::Byte(arr) => {
             converted = arr.convert_ref();
+            &converted
+        }
+        Value::Complex(arr) => {
+            let mut shape = arr.shape.clone();
+            let data: EcoVec<_> = if shape.last() == Some(&2) {
+                shape.pop();
+                shape.push(4);
+                let mut data = eco_vec![0.0; shape.elements()];
+                let slice = data.make_mut();
+                for (i, &c) in arr.data.iter().enumerate() {
+                    if i % 2 == 0 {
+                        let rgb = complex_color(c);
+                        for j in 0..3 {
+                            slice[i / 2 * 4 + j] = rgb[j];
+                        }
+                    } else {
+                        slice[i / 2 * 4 + 3] = c.abs();
+                    }
+                }
+                data
+            } else {
+                shape.push(3);
+                arr.data.iter().flat_map(|&c| complex_color(c)).collect()
+            };
+            converted = Array::new(shape, data);
             &converted
         }
         val => {
@@ -730,19 +770,6 @@ pub(crate) fn voxels(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Valu
             )))
         }
     };
-    if ![3, 4].contains(&arr.rank()) {
-        return Err(env.error(format!(
-            "Voxel array must be rank 3 or 4, but its shape is {}",
-            arr.shape
-        )));
-    }
-    if arr.rank() == 4 && ![2, 3, 4].contains(&arr.shape[3]) {
-        return Err(env.error(format!(
-            "Rank 4 voxel array must have a last \
-            dimension of 2, 3, or 4, but its shape is {}",
-            arr.shape
-        )));
-    }
     let mut pos: Option<[f64; 3]> = None;
     let mut scale = None;
     let mut fog = None;

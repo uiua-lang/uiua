@@ -433,7 +433,7 @@ where
             arr.data[1..].iter().copied().fold(first, f).into()
         };
     }
-    match (arr.rank(), depth) {
+    let mut arr = match (arr.rank(), depth) {
         (r, d) if r == d => arr,
         (1, 0) => {
             let data = arr.data.as_mut_slice();
@@ -449,7 +449,6 @@ where
                 arr.data.extend(Some(identity));
             }
             arr.shape = Shape::default();
-            arr.validate();
             arr
         }
         (_, 0) => {
@@ -479,7 +478,6 @@ where
             });
             arr.data.truncate(row_len);
             arr.shape.remove(0);
-            arr.validate();
             arr
         }
         (_, depth) => {
@@ -512,10 +510,12 @@ where
                 arr.data.truncate(chunk_count * chunk_row_len);
             }
             arr.shape.remove(depth);
-            arr.validate();
             arr
         }
-    }
+    };
+    arr.meta.take_sorted_flags();
+    arr.validate();
+    arr
 }
 
 fn generic_reduce(f: SigNode, xs: Value, depth: usize, env: &mut Uiua) -> UiuaResult {

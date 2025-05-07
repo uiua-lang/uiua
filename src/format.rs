@@ -9,6 +9,7 @@ use std::{
     fs,
     iter::repeat_n,
     path::{Path, PathBuf},
+    sync::Arc,
     time::Duration,
 };
 
@@ -183,6 +184,8 @@ The following configuration options are available:
             )*
             /// The source inputs for the formatter
             pub inputs: Inputs,
+            /// An optional backend for the formatter
+            pub backend: Option<Arc<dyn SysBackend>>,
         }
 
         paste! {
@@ -206,6 +209,7 @@ The following configuration options are available:
                         $name: $default,
                     )*
                     inputs: Inputs::default(),
+                    backend: None,
                 }
             }
         }
@@ -217,6 +221,7 @@ The following configuration options are available:
                         $name: config.$name.unwrap_or($default),
                     )*
                     inputs: Inputs::default(),
+                    backend: None,
                 }
             }
         }
@@ -1397,8 +1402,8 @@ impl Formatter<'_> {
             if !self.eval_output_comments {
                 return HashMap::new();
             }
-            let mut env = Uiua::with_backend(FormatterBackend::default())
-                .with_execution_limit(Duration::from_secs(2));
+            let mut env = Uiua::with_backend(FormatterBackend(self.config.backend.clone()))
+                .with_execution_limit(Duration::from_secs(1));
 
             let enabled = env.rt.backend.set_output_enabled(false);
             let res = env.compile_run(|comp| {
@@ -1663,7 +1668,17 @@ fn end_loc(s: &str) -> Loc {
 }
 
 #[derive(Default)]
-struct FormatterBackend {}
+struct FormatterBackend(pub Option<Arc<dyn SysBackend>>);
+
+impl FormatterBackend {
+    fn sys(&self) -> &dyn SysBackend {
+        if let Some(s) = &self.0 {
+            s.as_ref()
+        } else {
+            native()
+        }
+    }
+}
 
 impl SysBackend for FormatterBackend {
     fn any(&self) -> &dyn Any {
@@ -1682,56 +1697,71 @@ impl SysBackend for FormatterBackend {
     fn show(&self, _: Value) -> Result<(), String> {
         Ok(())
     }
+    fn show_image(&self, _: image::DynamicImage, _: Option<&str>) -> Result<(), String> {
+        Ok(())
+    }
+    fn show_gif(&self, _: Vec<u8>, _: Option<&str>) -> Result<(), String> {
+        Ok(())
+    }
     fn allow_thread_spawning(&self) -> bool {
         true
     }
     fn file_exists(&self, path: &str) -> bool {
-        native().file_exists(path)
+        self.sys().file_exists(path)
     }
     fn is_file(&self, path: &str) -> Result<bool, String> {
-        native().is_file(path)
+        self.sys().is_file(path)
     }
     fn list_dir(&self, path: &str) -> Result<Vec<String>, String> {
-        native().list_dir(path)
+        self.sys().list_dir(path)
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
-        native().file_read_all(path)
+        self.sys().file_read_all(path)
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
-        native().file_write_all(path, contents)
+        self.sys().file_write_all(path, contents)
     }
     fn open_file(&self, path: &Path, write: bool) -> Result<Handle, String> {
-        native().open_file(path, write)
+        self.sys().open_file(path, write)
     }
     fn close(&self, handle: Handle) -> Result<(), String> {
-        native().close(handle)
+        self.sys().close(handle)
     }
     fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
-        native().read(handle, len)
+        self.sys().read(handle, len)
     }
     fn read_all(&self, handle: Handle) -> Result<Vec<u8>, String> {
-        native().read_all(handle)
+        self.sys().read_all(handle)
     }
     fn read_until(&self, handle: Handle, delim: &[u8]) -> Result<Vec<u8>, String> {
-        native().read_until(handle, delim)
+        self.sys().read_until(handle, delim)
     }
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
-        native().write(handle, contents)
+        self.sys().write(handle, contents)
     }
     fn var(&self, name: &str) -> Option<String> {
-        native().var(name)
+        self.sys().var(name)
     }
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
-        native().tcp_connect(addr)
+        self.sys().tcp_connect(addr)
     }
     fn tls_connect(&self, addr: &str) -> Result<Handle, String> {
-        native().tls_connect(addr)
+        self.sys().tls_connect(addr)
     }
     fn timezone(&self) -> Result<f64, String> {
-        native().timezone()
+        self.sys().timezone()
     }
     fn breakpoint(&self, _: &Uiua) -> Result<bool, String> {
         Ok(true)
+    }
+    fn audio_sample_rate(&self) -> u32 {
+        self.sys().audio_sample_rate()
+    }
+    fn clipboard(&self) -> Result<String, String> {
+        self.sys().clipboard()
+    }
+    fn load_git_module(&self, url: &str, target: crate::GitTarget) -> Result<PathBuf, String> {
+        self.sys().load_git_module(url, target)
     }
 }
 

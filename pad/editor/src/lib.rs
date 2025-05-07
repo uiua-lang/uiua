@@ -7,6 +7,7 @@ use std::{
     mem::take,
     path::PathBuf,
     rc::Rc,
+    sync::Arc,
     time::Duration,
 };
 
@@ -35,7 +36,7 @@ use web_sys::{
 use utils::*;
 use utils::{element, format_insert_file_code, get_ast_time};
 
-use backend::{delete_file, drop_file, OutputItem};
+use backend::{delete_file, drop_file, OutputItem, WebBackend};
 use js_sys::Date;
 use std::sync::OnceLock;
 
@@ -215,6 +216,7 @@ pub fn Editor<'a>(
                 &code_text,
                 &FormatConfig {
                     trailing_newline: mode == EditorMode::Pad,
+                    backend: Some(Arc::new(WebBackend::default())),
                     ..Default::default()
                 },
             ) {

@@ -1778,7 +1778,9 @@ value_mon_impl!(
     [Byte, byte],
     [Complex, com],
     (Char, char),
-    |val, flags| val.meta.or_sorted_flags(flags)
+    |val, flags| if val.rank() < 2 {
+        val.meta.or_sorted_flags(flags)
+    }
 );
 value_mon_impl!(
     sqrt,

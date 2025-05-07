@@ -709,11 +709,13 @@ impl<T: ArrayValue> Array<T> {
                         let row = ArrayCmpSlice(row);
                         assert!(
                             !is_sorted_up || prev <= row,
-                            "Array marked as sorted up is not"
+                            "{} array marked as sorted up is not.",
+                            T::NAME
                         );
                         assert!(
                             !is_sorted_down || prev >= row,
-                            "Array marked as sorted down is not"
+                            "{} array marked as sorted down is not.",
+                            T::NAME
                         );
                         prev = row;
                     }

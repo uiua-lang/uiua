@@ -367,7 +367,11 @@ constant!(
     /// An elevation map of the world
     ///
     /// Sea level is at 0.562
-    (#[cfg(feature = "image")] "Elevation", Media, crate::media::image_bytes_to_array(include_bytes!("assets/elevation.webp"), true, false).unwrap()),
+    (
+        #[cfg(all(feature = "image", not(target_arch = "wasm32")))] "Elevation",
+        Media,
+        crate::media::image_bytes_to_array(include_bytes!("assets/elevation.webp"), true, false).unwrap()
+    ),
     /// Sample music data
     ("Music", Media, ConstantValue::Music),
     /// Lorem Ipsum text

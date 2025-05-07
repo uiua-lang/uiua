@@ -248,7 +248,10 @@ impl<T: ArrayValue> Array<T> {
             let row_len = self.row_len();
             let slice = self.data.as_mut_slice();
             for i in (1..row_count).rev() {
-                let j = rng.gen_range(0..i);
+                let j = rng.gen_range(0..=i);
+                if i == j {
+                    continue;
+                }
                 // Safety: i and j are in bounds and not equal
                 unsafe {
                     ptr::swap_nonoverlapping(

@@ -802,7 +802,7 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
         Ok(())
     }
     decode(params, &mut pos, &mut scale, &mut fog, true, env)?;
-    let pos = pos.unwrap_or([1.0, 1.0, 1.0]);
+    let mut pos_arg = pos.unwrap_or([1.0, 1.0, 1.0]);
     let scale = scale.unwrap_or(1.0);
 
     fn map<A: Copy, B: Copy, C, const N: usize>(
@@ -857,14 +857,18 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
     let mut translucents: Vec<(usize, usize, f64)> = Vec::new();
 
     let target = [scene_radius; 3];
-    let pos = [
-        target[0] + scene_radius * pos[0],
-        target[1] + scene_radius * pos[1],
-        target[2] + scene_radius * pos[2],
+    if pos_arg == [0.0; 3] {
+        pos_arg = [1.1; 3];
+    }
+    pos_arg = norm(pos_arg);
+    let cam_pos = [
+        target[0] + shell_radius * pos_arg[0],
+        target[1] + shell_radius * pos_arg[1],
+        target[2] + shell_radius * pos_arg[2],
     ];
-    let shell_dist = mag(sub(target, pos)) - shell_radius;
-    let normal = norm(sub(target, pos));
-    let d = dot(normal, pos);
+    let shell_dist = mag(sub(target, cam_pos)) - shell_radius;
+    let normal = norm(sub(target, cam_pos));
+    let d = dot(normal, cam_pos);
     let cam_center = plane_point(normal, d, target);
     let up_hint = if normal[0].abs() < 0.999 {
         [1.0, 0.0, 0.0]

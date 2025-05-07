@@ -3341,9 +3341,9 @@ primitive!(
     /// The second argument is the array to project.
     ///
     /// The parameter array may be a numeric array representing a single parameter or a list of boxed parameters.
-    /// - The first scalar encountered is the scale factor.
-    /// - The second 3-element list is a "fog" color.
-    /// - The first 3-element list is the camera position.
+    /// - The first scalar encountered is the scale factor. This is the ratio of voxel size to pixel size.
+    /// - The first 3-element list is the camera position. This position is a vector that will be normalized and placed outside the array.
+    /// - The second 3-element list is a "fog" color. Fog helps to give a sense of depth to the image.
     ///
     /// The projected array must be rank 3 or 4.
     /// - A rank 3 array produces a grayscale image with no alpha channel.

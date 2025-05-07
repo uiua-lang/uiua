@@ -1697,6 +1697,7 @@ impl SysBackend for FormatterBackend {
     fn show(&self, _: Value) -> Result<(), String> {
         Ok(())
     }
+    #[cfg(feature = "image")]
     fn show_image(&self, _: image::DynamicImage, _: Option<&str>) -> Result<(), String> {
         Ok(())
     }

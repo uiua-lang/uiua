@@ -569,6 +569,8 @@ impl Primitive {
             Trace => format!("use subscripted {} instead", Stack.format()),
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
             Over => format!("use {} or {} instead", Below.format(), Fork.format()),
+            Derivative => "just do the derivative yourself".into(),
+            Integral => "just do the integral yourself".into(),
             _ => return None,
         })
     }

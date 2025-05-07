@@ -39,6 +39,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This prevents the details of the compiling environment being used instead of the details from the actual running environment
   - Deprecrated: `Os`, `Family`, `Arch`, `ExeExt`, `DllExt`, `Sep`, `NumProcs`
   - Replacements: `os`, `osfamily`, `arch`, `exeext`, `dllext`, `pathsep`, `numprocs`
+- Deprecate [`derivative ∂`](https://uiua.org/docs/derivative) and [`integral ∫`](https://uiua.org/docs/integral)
+  - They are not very useful. Simply do the differentiation or integration yourself.
 - Add experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) for finding sequential indices of each row of an array in another
 - Add experimental [lexical ordering](https://uiua.org/docs/experimental#lexical-ordering) syntax
   - This enables some function packs and array notation to execute in the order they are normally read

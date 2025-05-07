@@ -250,6 +250,9 @@ impl<T: ArrayValue> Array<T> {
             for i in (1..row_count).rev() {
                 let j = rng.gen_range(0..=i);
                 // Safety: i and j are in bounds and not equal
+                if i == j {
+                    continue;
+                }
                 unsafe {
                     ptr::swap_nonoverlapping(
                         slice.as_mut_ptr().add(i * row_len),

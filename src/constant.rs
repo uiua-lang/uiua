@@ -350,16 +350,24 @@ constant!(
     /// Emoji hair components
     ("Hair", Fun, "🦰🦱🦲🦳"),
     /// The Uiua logo
-    (#[cfg(feature = "image")] "Logo", Media, crate::media::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
+    (#[cfg(feature = "image")] "Logo", Media, crate::media::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), false, true).unwrap()),
     /// Ethically sourced Lena picture
     /// Morten Rieger Hannemose
     /// 2019
     /// https://mortenhannemose.github.io/lena/
-    (#[cfg(feature = "image")] "Lena", Media, crate::media::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
+    (#[cfg(feature = "image")] "Lena", Media, crate::media::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false, false).unwrap()),
+    /// Depth map for Lena picture
+    (#[cfg(feature = "image")] "LenaDepth", Media, crate::media::image_bytes_to_array(include_bytes!("assets/lena_depth.png"), true, false).unwrap()),
     /// A picture of two cats
     ///
     /// Their names are Murphy and Louie
-    (#[cfg(feature = "image")] "Cats", Media, crate::media::image_bytes_to_array(include_bytes!("assets/cats.webp"), false).unwrap()),
+    (#[cfg(feature = "image")] "Cats", Media, crate::media::image_bytes_to_array(include_bytes!("assets/cats.webp"), false, false).unwrap()),
+    /// Depth map for the cats
+    (#[cfg(feature = "image")] "CatsDepth", Media, crate::media::image_bytes_to_array(include_bytes!("assets/cats_depth.png"), true, false).unwrap()),
+    /// An elevation map of the world
+    ///
+    /// Sea level is at 0.562
+    (#[cfg(feature = "image")] "Elevation", Media, crate::media::image_bytes_to_array(include_bytes!("assets/elevation.webp"), true, false).unwrap()),
     /// Sample music data
     ("Music", Media, ConstantValue::Music),
     /// Lorem Ipsum text

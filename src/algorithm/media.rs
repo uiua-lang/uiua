@@ -135,7 +135,8 @@ pub(crate) fn image_decode(env: &mut Uiua) -> UiuaResult {
         };
         let format = image::guess_format(&bytes)
             .map_err(|e| env.error(format!("Failed to read image: {e}")))?;
-        let array = crate::media::image_bytes_to_array(&bytes, true).map_err(|e| env.error(e))?;
+        let array =
+            crate::media::image_bytes_to_array(&bytes, false, true).map_err(|e| env.error(e))?;
         env.push(array);
         env.push(match format {
             image::ImageFormat::Jpeg => "jpeg".into(),
@@ -273,23 +274,41 @@ pub fn rgba_image_to_array(image: image::RgbaImage) -> Array<f64> {
 
 #[doc(hidden)]
 #[cfg(feature = "image")]
-pub fn image_bytes_to_array(bytes: &[u8], alpha: bool) -> Result<Array<f64>, String> {
-    Ok(if alpha {
-        let image = image::load_from_memory(bytes)
-            .map_err(|e| format!("Failed to read image: {}", e))?
-            .into_rgba8();
-        let shape = crate::Shape::from([image.height() as usize, image.width() as usize, 4]);
-        Array::new(
-            shape,
-            (image.into_raw().into_iter())
-                .map(|b| b as f64 / 255.0)
-                .collect::<crate::cowslice::CowSlice<_>>(),
-        )
-    } else {
-        let image = image::load_from_memory(bytes)
-            .map_err(|e| format!("Failed to read image: {}", e))?
-            .into_rgb8();
-        rgb_image_to_array(image)
+pub fn image_bytes_to_array(bytes: &[u8], gray: bool, alpha: bool) -> Result<Array<f64>, String> {
+    let image =
+        image::load_from_memory(bytes).map_err(|e| format!("Failed to read image: {}", e))?;
+    Ok(match (gray, alpha) {
+        (false, false) => rgb_image_to_array(image.into_rgb8()),
+        (false, true) => {
+            let image = image.into_rgba8();
+            let shape = crate::Shape::from([image.height() as usize, image.width() as usize, 4]);
+            Array::new(
+                shape,
+                (image.into_raw().into_iter())
+                    .map(|b| b as f64 / 255.0)
+                    .collect::<crate::cowslice::CowSlice<_>>(),
+            )
+        }
+        (true, false) => {
+            let image = image.into_luma16();
+            let shape = crate::Shape::from([image.height() as usize, image.width() as usize]);
+            Array::new(
+                shape,
+                (image.into_raw().into_iter())
+                    .map(|l| l as f64 / u16::MAX as f64)
+                    .collect::<crate::cowslice::CowSlice<_>>(),
+            )
+        }
+        (true, true) => {
+            let image = image.into_luma_alpha16();
+            let shape = crate::Shape::from([image.height() as usize, image.width() as usize, 2]);
+            Array::new(
+                shape,
+                (image.into_raw().into_iter())
+                    .map(|l| l as f64 / u16::MAX as f64)
+                    .collect::<crate::cowslice::CowSlice<_>>(),
+            )
+        }
     })
 }
 

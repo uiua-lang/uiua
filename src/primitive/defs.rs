@@ -3334,18 +3334,18 @@ primitive!(
     /// Returns a scalar integer.
     /// ex: numprocs
     (0, NumProcs, Environment, "numprocs", Impure),
-    /// Project an array into a 2D image
+    /// Project a voxel array to an image
     ///
-    /// [project] orthographically projects a 3D array of voxels into a 2D image.
+    /// [voxels] orthographically projects a 3D array of voxels to an image.
     /// The first argument is a parameter array.
-    /// The second argument is the array to project.
+    /// The second argument is the voxel array.
     ///
     /// The parameter array may be a numeric array representing a single parameter or a list of boxed parameters.
     /// - The first scalar encountered is the scale factor. This is the ratio of voxel size to pixel size.
     /// - The first 3-element list is the camera position. This position is a vector that will be normalized and placed outside the array.
     /// - The second 3-element list is a "fog" color. Fog helps to give a sense of depth to the image.
     ///
-    /// The projected array must be rank 3 or 4.
+    /// The voxel array must be rank 3 or 4.
     /// - A rank 3 array produces a grayscale image with no alpha channel.
     /// - A rank 4 array with last axis `2` produces a grayscale image with an alpha channel.
     /// - A rank 4 array with last axis `3` produces an color image with no alpha channel.
@@ -3356,28 +3356,28 @@ primitive!(
     /// If we project it with no parameters, the result is not very interesting.
     /// ex: # Experimental!
     ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
-    ///   : project {}
+    ///   : voxels {}
     /// We can scale up the image by passing a scale factor.
     /// ex: # Experimental!
     ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
-    ///   : project {20}
+    ///   : voxels {20}
     /// We can change the camera position by passing a 3-element list.
     /// ex: # Experimental!
     ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
-    ///   : project {20 [1 2 1]}
+    ///   : voxels {20 [1 2 1]}
     /// Passing another 3-element list will change the fog color so that we can see depth.
     /// ex: # Experimental!
     ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
-    ///   : project {20 [1 2 1] Black}
+    ///   : voxels {20 [1 2 1] Black}
     ///
-    /// The image will be transparent if the projected array has transparency.
+    /// The image will be transparent if the voxel array has transparency.
     /// ex: # Experimental!
     ///   : ↯5_5_5_2 0
     ///   : ⍜⊢⋅1
     ///   : [1_0_0 1_2_2 2_2_2 2_2_3 2_2_4]
     ///   : [[1 1][1 1][1 0.3][1 0.3][1 0.3]]
     ///   : ∧⍜⊙⊡⊙◌
-    ///   : project {20 [1.2 2 0.5] Black}
+    ///   : voxels {20 [1.2 2 0.5] Black}
     /// Color is also supported.
     /// ex: # Experimental!
     ///   : ↯5_5_5_4 0
@@ -3385,8 +3385,8 @@ primitive!(
     ///   : [1_0_0 1_2_2 2_2_2 2_2_3 2_2_4]
     ///   : [[1 1 1 1][1 1 1 1][1 0 0 0.3][0 1 0 0.3][0 1 1 0.3]]
     ///   : ∧⍜⊙⊡⊙◌
-    ///   : project {20 [1 2 0.5] Black}
-    (2, Project, Encoding, "project", { experimental: true }),
+    ///   : voxels {20 [1 2 0.5] Black}
+    (2, Voxels, Encoding, "voxels", { experimental: true }),
     /// Get the current
     /// Render text into an image array
     ///

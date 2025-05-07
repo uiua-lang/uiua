@@ -696,7 +696,7 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     Ok((frame_rate, num))
 }
 
-pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Value> {
+pub(crate) fn voxels(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Value> {
     let converted: Array<f64>;
     let arr = match val {
         Value::Num(arr) => arr,
@@ -706,21 +706,21 @@ pub(crate) fn project(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Val
         }
         val => {
             return Err(env.error(format!(
-                "Projected array must be numeric, but it is {}",
+                "Voxel array must be numeric, but it is {}",
                 val.type_name_plural()
             )))
         }
     };
     if ![3, 4].contains(&arr.rank()) {
         return Err(env.error(format!(
-            "Projected array must be rank 3 or 4, but its shape is {}",
+            "Voxel array must be rank 3 or 4, but its shape is {}",
             arr.shape
         )));
     }
     if arr.rank() == 4 && ![2, 3, 4].contains(&arr.shape[3]) {
         return Err(env.error(format!(
-            "Rank 4 projected array must have a last \
-            dimension of 3, but its shape is {}",
+            "Rank 4 voxel array must have a last \
+            dimension of 2, 3, or 4, but its shape is {}",
             arr.shape
         )));
     }

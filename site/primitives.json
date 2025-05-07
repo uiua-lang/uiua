@@ -1104,13 +1104,6 @@
     "description": "Get sequential indices of each row of an array in another",
     "experimental": true
   },
-  "project": {
-    "args": 2,
-    "outputs": 1,
-    "class": "Encoding",
-    "description": "Project an array into a 2D image",
-    "experimental": true
-  },
   "quote": {
     "args": 0,
     "outputs": 1,
@@ -1446,6 +1439,13 @@
     "outputs": 1,
     "class": "Encoding",
     "description": "Convert a string to UTF-8 bytes"
+  },
+  "voxels": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Encoding",
+    "description": "Project an array into a 2D image",
+    "experimental": true
   },
   "wait": {
     "args": 1,

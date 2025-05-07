@@ -6,7 +6,6 @@
   - `rows`/`inventory`
   - `each`
 - Streaming gif and audio encoding
-- Fix `under` encoding functions
 - Line number signatures in pad
 - Rewrite parts of tutorial to use `backward` instead of `flip`
 - Compile-time code string evaluation?

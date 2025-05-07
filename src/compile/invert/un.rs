@@ -296,6 +296,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
         SidedEncodeBytes(SubSide::Right),
         DecodeBytes(Some(SubSide::Right)),
     ),
+    &AntiEncodings,
     &MatrixDivPat,
     &NoUnder(AntiCouplePat),
     &NoUnder(AntiArrayPat),
@@ -1171,6 +1172,36 @@ impl InvertPattern for AntiTrivial {
                 let mut node = asm[f].clone();
                 node.extend(input.iter().cloned());
                 Ok((input, node.anti_inverse(asm).map_err(|e| e.func(f))?))
+            }
+            _ => generic(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct AntiEncodings;
+impl InvertPattern for AntiEncodings {
+    fn invert_extract<'a>(
+        &self,
+        input: &'a [Node],
+        _: &Assembly,
+    ) -> InversionResult<(&'a [Node], Node)> {
+        match input {
+            [Prim(ImageEncode, span), input @ ..] => {
+                let inv = Node::from_iter([
+                    Prim(Pop, *span),
+                    ImplPrim(ImageDecode, *span),
+                    Prim(Pop, *span),
+                ]);
+                Ok((input, inv))
+            }
+            [Prim(GifEncode, span), input @ ..] => {
+                let inv = Node::from_iter([
+                    Prim(Pop, *span),
+                    ImplPrim(GifDecode, *span),
+                    Prim(Pop, *span),
+                ]);
+                Ok((input, inv))
             }
             _ => generic(),
         }

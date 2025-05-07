@@ -899,7 +899,7 @@ pub(crate) fn voxels(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Valu
     let y_stride = arr.shape[2];
     let scale_start = 0.5 / scale;
     let scale_step = 1.0 / scale;
-    let scale_steps = scale.round() as usize;
+    let scale_steps = (scale.round() as usize).max(1);
     let offset = [
         (max_dim - arr.shape[0]) as f64 / 2.0,
         (max_dim - arr.shape[1]) as f64 / 2.0,

@@ -613,15 +613,6 @@ under!(
             }
             let to_save = before.sig.outputs() - normal.sig.outputs();
             (before.node, after.node, to_save)
-        } else if let Some(anti) = (cust.anti.as_ref())
-            .filter(|_| !cust.prefer_under_normal)
-            .cloned()
-        {
-            // An anti inverse is defined
-            let to_save = anti.sig.args() - normal.sig.outputs();
-            let before = Mod(On, eco_vec![normal.clone()], *span);
-            let after = anti.node;
-            (before, after, to_save)
         } else if !cust.is_obverse {
             // The custom inverses were not created with obverse
             // This means that a supplied un inverse can be overridden
@@ -639,8 +630,14 @@ under!(
             // A compatible un inverse is defined
             (normal.node.clone(), un.node.clone(), 0)
         } else if let Ok((before, after)) = normal.node.under_inverse(g_sig, inverse, asm) {
-            // An under inverse exists
+            // An under inverse exists for the normal
             (before, after, 0)
+        } else if let Some(anti) = cust.anti.as_ref() {
+            // An anti inverse is defined
+            let to_save = anti.sig.args() - normal.sig.outputs();
+            let before = Mod(On, eco_vec![normal.clone()], *span);
+            let after = anti.node.clone();
+            (before, after, to_save)
         } else {
             return generic();
         };

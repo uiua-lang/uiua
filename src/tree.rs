@@ -232,7 +232,11 @@ impl From<InversionError> for CustomInverse {
 
 impl fmt::Debug for CustomInverse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut s = f.debug_struct("custom inverse");
+        let mut s = if self.is_obverse {
+            f.debug_struct("obverse")
+        } else {
+            f.debug_struct("custom inverse")
+        };
         s.field("normal", &self.normal.as_ref().map(|sn| &sn.node));
         if let Some(un) = &self.un {
             s.field("un", &un.node);
@@ -243,6 +247,9 @@ impl fmt::Debug for CustomInverse {
         if let Some(under) = &self.under {
             s.field("do", &under.0.node);
             s.field("undo", &under.1.node);
+        }
+        if self.prefer_under_normal {
+            s.field("prefer_under_normal", &self.prefer_under_normal);
         }
         s.finish()
     }

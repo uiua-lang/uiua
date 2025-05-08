@@ -300,6 +300,10 @@ Test!(ⁿ:)
 Test!ₙ
 Test!(ₙ:)
 
+# Ana inverses
+⍤⤙≍ [1 0] °/ℂ i
+⍤⤙≍ ∩⁅₁₂ [.÷2√2] °/∠ η/2
+
 # Anti/contra couple
 ⍤⤙≍ 2 ⌝⊟ 1 [1 2]
 ⍤⤙≍ 1 ⊙◌°⊸⊟ [1 2] 2

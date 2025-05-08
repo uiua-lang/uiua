@@ -7,8 +7,6 @@
 - Streaming gif and audio encoding
 - Bottom subscripts
 - `tree` modifier
-- Ana inverses
-  - `ana` alias
 - Update "More Array Manipulation" tutorial
 - See if pad mem limit can be increased
 - Optional arguments

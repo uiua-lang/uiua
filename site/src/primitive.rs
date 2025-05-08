@@ -294,6 +294,12 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Orient], No, "", "°⤸ [1_2_3 4_5_6]") }
             { inverse_row([Scan], No, view!("Only works with "<Prims prims=[Add, Mul, Eq, Ne]/>), "°\\+ [1 3 6 10 15]") }
             { inverse_row([Reduce, Mul], No, "Prime factors", "°/× 60") }
+            { inverse_row_impl(
+                view!(<Prim prim=Reduce/><code class="dyadic-function">"dyadic"</code>),
+                No,
+                "Inner function must be invertible",
+                "°/ℂ i"
+            ) }
             { inverse_row_impl(view!(<code class="string-literal-span">"$\"_…_\""</code>), No, "Pattern match and extract", "{°$\"_ - _(_)_\"} \"a - bc(de) - f\"") }
             { inverse_row_impl(view!(<Prims prims=[Reduce]/><code class="string-literal-span">"$\"_…_\""</code>), No, "Must have 2 args and only text between", "°/$\"_ - _\" \"a - bc - d\"") }
             { inverse_row([Partition], No, "Inner function must be invertible", "°⊜□ {\"Hey\" \"there\" \"buddy\"}") }

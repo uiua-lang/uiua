@@ -242,6 +242,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &RequireVal((ValidateVariant, TagVariant)),
     &(Dup, (Over, Flip, MatchPattern)),
     &GetLocalPat,
+    &AnaPat,
     &PrimPat,
     &ImplPrimPat,
     &NoUnder(MatchConst),
@@ -996,6 +997,27 @@ inverse!(ContraCouplePat, input, _, Prim(Couple, span), {
         ),
     ]);
     Ok((input, inv))
+});
+
+inverse!(AnaPat, input, asm, Reduce, span, [f], {
+    if f.sig != (2, 1) {
+        return generic();
+    }
+    let inv = f.un_inverse(asm)?;
+    if inv.sig != (1, 2) {
+        return generic();
+    }
+    Ok((
+        input,
+        Array {
+            len: 2,
+            inner: inv.node.into(),
+            boxed: false,
+            allow_ext: false,
+            prim: None,
+            span,
+        },
+    ))
 });
 
 inverse!(DupPat, input, asm, Prim(Dup, dup_span), {

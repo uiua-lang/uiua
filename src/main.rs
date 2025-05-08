@@ -356,6 +356,7 @@ fn main() {
             #[cfg(feature = "audio")]
             audio_options,
             stack,
+            experimental,
             args,
         }) => {
             let config = FormatConfig {
@@ -368,7 +369,10 @@ fn main() {
             setup_audio(audio_options);
             let mut rt = Uiua::with_native_sys().with_args(args);
             let mut compiler = Compiler::with_backend(NativeSys);
-            compiler.mode(RunMode::Normal).print_diagnostics(true);
+            compiler
+                .mode(RunMode::Normal)
+                .print_diagnostics(true)
+                .experimental(experimental);
             if let Some(file) = file {
                 compiler.load_file(file).unwrap_or_else(fail);
                 rt.run_compiler(&mut compiler).unwrap_or_else(fail);
@@ -902,6 +906,8 @@ enum Comm {
         audio_options: AudioOptions,
         #[clap(short = 's', long, help = "Don't clear the stack after each line")]
         stack: bool,
+        #[clap(short = 'x', long, help = "Enabled experimental language features")]
+        experimental: bool,
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },

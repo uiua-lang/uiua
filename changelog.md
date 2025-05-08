@@ -70,6 +70,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Completions now properly respect scoping
   - Unused private bindings are now dimmed
 - Images in the native output window can now be easily copied to the clipboard
+- Add an `-x`/`--experimental` flag to the `uiua repl` command to pre-enable experimental features
 
 ## 0.15.1 - 2025-04-06
 ### Interpreter

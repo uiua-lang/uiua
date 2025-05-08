@@ -3,10 +3,10 @@
 # 0.16
 - Mixed subscripts
   - `bracket`
-  - `rows`/`inventory`
   - `each`
 - Streaming gif and audio encoding
 - Bottom subscripts
+- `tree` modifier
 - Ana inverses
   - `ana` alias
 - Update "More Array Manipulation" tutorial

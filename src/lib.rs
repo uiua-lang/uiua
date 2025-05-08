@@ -297,19 +297,31 @@ mod tests {
             let res = comp
                 .load_str_src(section, path)
                 .and_then(|comp| env.run_asm(comp.finish()));
-            if res.is_ok()
-                && comp
-                    .take_diagnostics()
-                    .into_iter()
-                    .filter(|diag| diag.kind > DiagnosticKind::Advice)
-                    .count()
-                    == 0
-            {
-                panic!(
-                    "Test succeeded when it should have failed in {}:\n{}",
-                    path.display(),
-                    section
-                );
+            match res {
+                Ok(_) => {
+                    if (comp.take_diagnostics().into_iter())
+                        .filter(|diag| diag.kind > DiagnosticKind::Advice)
+                        .count()
+                        == 0
+                    {
+                        panic!(
+                            "Test succeeded when it should have failed in {}:\n{}",
+                            path.display(),
+                            section
+                        );
+                    }
+                }
+                Err(e) => {
+                    let message = e.to_string();
+                    if message.contains("interpreter") {
+                        panic!(
+                            "Test resulted in an interpreter bug in {}:\n{}\n{}",
+                            path.display(),
+                            e.report(),
+                            section
+                        );
+                    }
+                }
             }
         }
     }

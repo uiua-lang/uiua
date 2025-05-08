@@ -1706,6 +1706,17 @@ impl Compiler {
                 Some(*index)
             }
             Node::Call(func, _) => self.node_unbound_index(&self.asm[func]),
+            Node::CustomInverse(cust, _) => cust
+                .nodes()
+                .find_map(|sn| self.node_unbound_index(&sn.node)),
+            Node::Mod(_, ops, _) | Node::ImplMod(_, ops, _) => {
+                ops.iter().find_map(|sn| self.node_unbound_index(&sn.node))
+            }
+            Node::Switch { branches, .. } => branches
+                .iter()
+                .find_map(|branch| self.node_unbound_index(&branch.node)),
+            Node::Array { inner, .. } => self.node_unbound_index(inner),
+            Node::NoInline(node) | Node::TrackCaller(node) => self.node_unbound_index(node),
             _ => None,
         }
     }

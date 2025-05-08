@@ -478,6 +478,10 @@ impl VirtualEnv {
                     self.push();
                 }
                 UnFill | SidedFill(_) => self.fill(args)?,
+                FortifyFill | FortifyUnfill => {
+                    let [f] = get_args(args)?;
+                    self.handle_sig(f);
+                }
                 UnBracket => {
                     let [f, g] = get_args(args)?;
                     self.handle_args_outputs(f.args() + g.args(), f.outputs() + g.outputs());

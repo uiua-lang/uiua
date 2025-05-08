@@ -2342,15 +2342,6 @@ enum SubNOrSide<N = i32> {
     Side(SubSide),
 }
 
-impl<N> SubNOrSide<N> {
-    fn map_n<M>(self, f: impl FnOnce(N) -> M) -> SubNOrSide<M> {
-        match self {
-            SubNOrSide::N(n) => SubNOrSide::N(f(n)),
-            SubNOrSide::Side(side) => SubNOrSide::Side(side),
-        }
-    }
-}
-
 impl<N: PartialEq> PartialEq<N> for SubNOrSide<N> {
     fn eq(&self, other: &N) -> bool {
         match self {

@@ -568,6 +568,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Rand, "Random integer", "⚂₁₀₀"),
         subscript(Len, "Length of the Nth axis", "⧻₁ °△2_3_4_5"),
         subscript(Shape, "Shape of the first N axes", "△₂ °△2_3_4_5"),
+        subscript(Range, "Start offset", "⇡₁ 5"),
         subscript(On, "First N values", "{⟜₂[⊙⊙∘] 1 2 3}"),
         subscript(By, "Last N values", "{⊸₂[⊙⊙∘] 1 2 3}"),
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),
@@ -596,12 +597,12 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Rows,
             "Fix left-most or right-most argument",
-            "# Experimental!\n≡⌞⊂ 1_2_3 4_5_6\n≡⌟⊂ 1_2_3 4_5_6",
+            "≡⌞⊂ 1_2_3 4_5_6\n≡⌟⊂ 1_2_3 4_5_6",
         ),
         subscript(
             Inventory,
             "Fix left-most or right-most argument",
-            "# Experimental!\n⍚⌞⊂ 1_2_3 4_5_6\n⍚⌟⊂ 1_2_3 4_5_6",
+            "⍚⌞⊂ 1_2_3 4_5_6\n⍚⌟⊂ 1_2_3 4_5_6",
         ),
         subscript(
             Each,
@@ -617,6 +618,29 @@ pub fn Subscripts() -> impl IntoView {
             Fill,
             "Fill from the left instead of the right",
             "# Experimental!\n ⬚0[1_2_3 4_5 6]\n⬚⌟0[1_2_3 4_5 6]\n⬚⌞0[1_2_3 4_5 6]",
+        ),
+        subscript(
+            EncodeBytes,
+            "Choose little or big endian",
+            "# Experimental!\nbytes⌞ \"u64\" 1234567890 # Little endian\nbytes⌟ \"u64\" 1234567890 # Big endian"
+        ),
+    ];
+
+    let mixed = vec![
+        subscript(
+            Both,
+            "Apply to N sets of arguments but some arguments N times",
+            "{∩₃⌞₂⊟₃} 1 2 3 4 5\n{∩₃⌟₂⊟₃} 1 2 3 4 5",
+        ),
+        subscript(
+            Rows,
+            "Apply to subarrays N deep and fix left-most or right-most argument(s)",
+            "≡₂⌞₂(⊂⊂) 1_2 3_4 [5_6 7_8]\n≡₂⌟₂(⊂⊂) [1_2 3_4] 5_6 7_8",
+        ),
+        subscript(
+            Inventory,
+            "Apply to subarrays N deep and fix left-most or right-most argument(s)",
+            "⍚₂⌞₂(⊂⊂) 1_2 3_4 [5_6 7_8]\n⍚₂⌟₂(⊂⊂) [1_2 3_4] 5_6 7_8",
         ),
     ];
 
@@ -644,10 +668,10 @@ pub fn Subscripts() -> impl IntoView {
             </tr>
             { stable }
         </table>
+
         <Hd id="sided">"Sided Subscripts"</Hd>
-        <p>"Sided subscripts are an "<code>"# Experimental!"</code>" feature that allows using subscripts for some common patterns that might be thought of as having a \"side\"."</p>
+        <p>"Sided subscripts augment a modifier or function in a way that can be thought of as having a \"side\"."</p>
         <p>"Sided subscripts are typed like normal subscripts with "<code>"__"</code>", but followed by "<code>"<"</code>" for left or "<code>">"</code>" for right. The formatter will turn them into "<code>"⌞"</code>" and "<code>"⌟"</code>" respectively."</p>
-        <p>"Sided and numberic subscripts cannot currently be mixed."</p>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
                 <th>"Primitive"</th>
@@ -657,9 +681,20 @@ pub fn Subscripts() -> impl IntoView {
             <tr>
                 <td>"Any "<span class="dyadic-function">"dyadic"</span>" pervasive function"</td>
                 <td>"Fix left-most or right-most argument"</td>
-                <td><Editor example="# Experimental!\n+⌞ ×100. 1_2_3\n+⌟ ×100. 1_2_3" nonprogressive=true/></td>
+                <td><Editor example="# Experimental!\n+⌞ ⊸×100 1_2_3\n+⌟ ⊸×100 1_2_3" nonprogressive=true/></td>
             </tr>
             { sided }
+        </table>
+
+        <Hd id="mixed">"Mixed Subscripts"</Hd>
+        <p>"Some modifiers that can take both numeric and sided subscripts can take them "<em>"both"</em>" at the same time. The numeric subscript is written first, followed by the sided subscript. Additionally, the sided subscript can be followed by "<em>"another"</em>" number to specify how many times to apply the sided behavior. This second number is called the \"side quntifier\"."</p>
+        <table class="header-centered-table cell-centered-table" style="width: 100%">
+            <tr>
+                <th>"Primitive"</th>
+                <th>"Meaning"</th>
+                <th style="width: 60%">"Example"</th>
+            </tr>
+            { mixed }
         </table>
     }
 }

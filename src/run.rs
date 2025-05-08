@@ -1377,7 +1377,11 @@ impl Uiua {
         side: Option<SubSide>,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        self.rt.fill_stack.push(FillValue { value: val, side });
+        self.rt.fill_stack.push(FillValue {
+            value: val,
+            side,
+            strength: 0,
+        });
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
         res
@@ -1389,16 +1393,42 @@ impl Uiua {
         side: Option<SubSide>,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        self.rt.unfill_stack.push(FillValue { value: val, side });
+        self.rt.unfill_stack.push(FillValue {
+            value: val,
+            side,
+            strength: 0,
+        });
         let res = in_ctx(self);
         self.rt.unfill_stack.pop();
         res
     }
+    pub(crate) fn fortify_fill(&mut self) {
+        if let Some(fv) = self.rt.fill_stack.last_mut() {
+            fv.strength += 1;
+        }
+    }
+    pub(crate) fn fortify_unfill(&mut self) {
+        if let Some(fv) = self.rt.unfill_stack.last_mut() {
+            fv.strength += 1;
+        }
+    }
     /// Do something with the top fill context unset
     pub(crate) fn without_fill<T>(&mut self, in_ctx: impl FnOnce(&mut Self) -> T) -> T {
-        self.rt
-            .fill_boundary_stack
-            .push((self.rt.fill_stack.len(), self.rt.unfill_stack.len()));
+        let mut fill_boundary = self.rt.fill_stack.len();
+        let mut unfill_boundary = self.rt.unfill_stack.len();
+        if let Some(fv) = self.rt.fill_stack.last_mut() {
+            if fv.strength > 0 {
+                fv.strength -= 1;
+                fill_boundary = self.rt.fill_stack.len() - 1;
+            }
+        };
+        if let Some(fv) = self.rt.unfill_stack.last_mut() {
+            if fv.strength > 0 {
+                fv.strength -= 1;
+                unfill_boundary = self.rt.unfill_stack.len() - 1;
+            }
+        };
+        (self.rt.fill_boundary_stack).push((fill_boundary, unfill_boundary));
         let res = in_ctx(self);
         self.rt.fill_boundary_stack.pop();
         res

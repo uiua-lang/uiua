@@ -120,8 +120,11 @@ impl SigNode {
         }
     }
     /// Call this node on N sets of arguments
-    pub fn on_all(self, n: usize, span: usize) -> Node {
-        match n {
+    pub fn on_all(self, n: usize, span: usize) -> SigNode {
+        let sig = self.sig;
+        let mut sig = sig.with_under(sig.under_args() * n, sig.under_outputs() * n);
+        sig.update_args_outputs(|a, o| (a * n, o * n));
+        let node = match n {
             0 => Node::empty(),
             1 => self.node,
             n => {
@@ -154,7 +157,8 @@ impl SigNode {
                     sn.node
                 }
             }
-        }
+        };
+        SigNode::new(sig, node)
     }
 }
 

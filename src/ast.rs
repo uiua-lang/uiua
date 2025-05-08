@@ -789,9 +789,7 @@ pub struct Subscripted {
 }
 
 /// A subscripts
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Subscript<N = NumericSubscript> {
     /// The numeric part of the subscript
@@ -800,6 +798,15 @@ pub struct Subscript<N = NumericSubscript> {
     /// The sided part of the subscript
     #[serde(skip_serializing_if = "Option::is_none")]
     pub side: Option<SidedSubscript>,
+}
+
+impl<N> Default for Subscript<N> {
+    fn default() -> Self {
+        Self {
+            num: None,
+            side: None,
+        }
+    }
 }
 
 /// The numeric part of a subscript

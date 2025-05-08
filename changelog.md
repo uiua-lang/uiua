@@ -14,6 +14,9 @@ This version is not yet released. If you are reading this on the website, then t
   - This is more consistent with other functions
 - **Breaking Change** - Change how [`off ⤚`](https://uiua.org/docs/off) works on monadic functions
 - There are no longer signature restrictions on [`try ⍣`](https://uiua.org/docs/try)'s functions
+- Allow for [mixed](https://uiua.org/docs/subscripts#mixed) numeric and sided subscripts
+  - Implemented for [`both ∩`](https://uiua.org/docs/both), [`rows ≡`](https://uiua.org/docs/rows), and [`inventory ⍚`](https://uiua.org/docs/inventory)
+- Stabilize sided subscripts for [`rows ≡`](https://uiua.org/docs/rows) and [`inventory ⍚`](https://uiua.org/docs/inventory)
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under) for monadic functions
 - Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⊜`](https://uiua.org/docs/partition) for monadic functions
 - Stabilize [`negate ¯`](https://uiua.org/docs/negate) subscripts

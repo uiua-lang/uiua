@@ -374,6 +374,8 @@ impl fmt::Display for ImplPrimitive {
             TagVariant => write!(f, "<tag variant>"),
             BothImpl(sub) => write!(f, "{Both}{sub}"),
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
+            FortifyFill => write!(f, "<fortify fill>"),
+            FortifyUnfill => write!(f, "<fortify unfill>"),
         }
     }
 }
@@ -1966,6 +1968,16 @@ impl ImplPrimitive {
             ImplPrimitive::UnDump => dump(ops, env, true)?,
             ImplPrimitive::UnFill => fill!(ops, None, env, with_unfill, without_unfill_but),
             &ImplPrimitive::SidedFill(side) => fill!(ops, side, env, with_fill, without_fill_but),
+            ImplPrimitive::FortifyFill => {
+                let [f] = get_ops(ops, env)?;
+                env.fortify_fill();
+                env.exec(f)?;
+            }
+            ImplPrimitive::FortifyUnfill => {
+                let [f] = get_ops(ops, env)?;
+                env.fortify_unfill();
+                env.exec(f)?;
+            }
             ImplPrimitive::ReduceTable => table::reduce_table(ops, env)?,
             ImplPrimitive::UnBracket => {
                 let [f, g] = get_ops(ops, env)?;

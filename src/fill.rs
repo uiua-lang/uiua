@@ -11,6 +11,7 @@ pub struct Fill<'a> {
 pub struct FillValue<T = Value> {
     pub value: T,
     pub side: Option<SubSide>,
+    pub strength: usize,
 }
 
 impl<T> FillValue<T> {
@@ -18,18 +19,21 @@ impl<T> FillValue<T> {
         Self {
             value: val.into(),
             side: side.into(),
+            strength: 0,
         }
     }
     pub fn try_map<U, E>(&self, f: impl FnOnce(&T) -> Result<U, E>) -> Result<FillValue<U>, E> {
         Ok(FillValue {
             value: f(&self.value)?,
             side: self.side,
+            strength: self.strength,
         })
     }
     pub fn map_ref<'a, U>(&'a self, f: impl FnOnce(&'a T) -> U) -> FillValue<U> {
         FillValue {
             value: f(&self.value),
             side: self.side,
+            strength: self.strength,
         }
     }
     pub fn is_left(&self) -> bool {

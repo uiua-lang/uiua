@@ -1591,11 +1591,18 @@ primitive!(
     /// ex: ≡⊂ ⊙¤ 1_2_3 4_5_6
     /// [fold] also has this behavior.
     ///
-    /// Subscripted [rows] operates N subarrays deep.
+    /// Numeric subscripted [rows] operates N subarrays deep.
     /// ex: ≡₀□ °△2_3_4
     ///   : ≡₁□ °△2_3_4
     ///   : ≡₂□ °△2_3_4
     ///   : ≡₃□ °△2_3_4
+    /// Sided [rows] [fix]es either the first or last argument so that it can be reused in multiple iterations.
+    /// ex: ≡⌞⊂ 1_2 3_4
+    ///   : ≡⌟⊂ 1_2 3_4
+    /// The side quantifier specifies how many arguments to [fix].
+    /// ex: ≡⌞₂(⊂⊂) 1_2 3_4 5_6
+    ///   : ≡⌟₂(⊂⊂) 1_2 3_4 5_6
+    /// [rows] accepts mixed numeric and sided subscripts.
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to each unboxed row of an array and re-box the results
     ///
@@ -1620,6 +1627,12 @@ primitive!(
     ///   : ⍚₁∘ °△2_3_4
     ///   : ⍚₂∘ °△2_3_4
     ///   : ⍚₃∘ °△2_3_4
+    /// Sided [inventory] [fix]es either the first or last argument so that it can be reused in multiple iterations.
+    /// ex: ⍚⌞⊂ 1_2 3_4
+    ///   : ⍚⌟⊂ 1_2 3_4
+    /// The side quantifier specifies how many arguments to [fix].
+    /// ex: ⍚⌞₂(⊂⊂) 1_2 3_4 5_6
+    ///   : ⍚⌟₂(⊂⊂) 1_2 3_4 5_6
     ([1], Inventory, IteratingModifier, ("inventory", '⍚')),
     /// Apply a function to each combination of rows of some arrays
     ///
@@ -2086,6 +2099,10 @@ primitive!(
     ///   : F 3 5 ⇡16
     /// ex: G ← ∩⌞(=0˜◿)
     ///   : G ⇡16 3 5
+    ///
+    /// [both] accepts mixed numeric and sided subscripts. The side quantifier determines how many arguments are reused on each call.
+    /// ex: ∩₃⌞⊟ 1 2 3 4
+    ///   : ∩₃⌞₂⊟₃ 1 2 3 4 5
     ([1], Both, Planet, ("both", '∩')),
     /// Define the various inverses of a function
     ///
@@ -3677,6 +3694,8 @@ impl_primitive!(
     (2(1), ValidateType),
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
+    ([1], FortifyFill),
+    ([1], FortifyUnfill),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),

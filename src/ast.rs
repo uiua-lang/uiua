@@ -473,7 +473,7 @@ impl fmt::Debug for Word {
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
             Word::Subscripted(sub) => sub.fmt(f),
             Word::InlineMacro(InlineMacro { ident, func, .. }) => {
-                write!(f, "func_macro({:?}{}))", func.value, ident.value)
+                write!(f, "inline_macro({:?}{}))", func.value, ident.value)
             }
         }
     }

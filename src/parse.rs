@@ -1239,6 +1239,9 @@ impl Parser<'_> {
         } else {
             return None;
         };
+        if matches!(word.value, Word::Spaces | Word::InlineMacro(_)) {
+            return Some(word);
+        }
         loop {
             let reset = self.index;
             self.spaces();

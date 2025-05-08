@@ -1515,7 +1515,7 @@ impl Compiler {
             Word::InlineMacro(_) => {
                 self.add_error(
                     word.span.clone(),
-                    "Inline macro was not parsed as a modifier.\
+                    "Inline macro was not parsed as a modifier. \
                     This is a bug in the interpreter",
                 );
                 Node::empty()

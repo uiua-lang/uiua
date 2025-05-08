@@ -1391,10 +1391,6 @@ impl Compiler {
         span: CodeSpan,
         operands: Vec<Sp<Word>>,
     ) -> UiuaResult<Node> {
-        self.experimental_error(&span, || {
-            "Inline macros are experimental. \
-            To use them, add `# Experimental!` to the top of the file."
-        });
         // Track
         self.code_meta
             .inline_macros

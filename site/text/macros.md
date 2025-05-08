@@ -111,22 +111,49 @@ SigOf!+
 SigOf!⊓+¯
 ```
 
+## Inline Macros
+Sometimes you want to rearrange or generate code in a one-off way without needing a reusable named macro definition.
+
+Suffixing a `()` function with `!` or `^!` will make it an inline index macro or inline code macro, respectively. Any number of `!`s can be used, just like named macros.
+
+For example, the formula for the standard deviation of a set of numbers could be written like this:
+
+```uiua
+StdDev ← √÷⊃⧻/+ ×. -⊸(÷⊃⧻/+)
+StdDev [1 2 3 4]
+```
+
+Notice, however, that we calculate the average twice. We can deduplicate that code by using an inline index macro.
+
+```uiua
+StdDev ← √(^0 ×. -⊸^0)!(÷⊃⧻/+)
+StdDev [1 2 3 4]
+```
+
+Inline code macros can be useful for programmatically generating bindings.
+
+```uiua
+(⍚$"_ify ← $\"_\_\"\n".)^!(Foo|Bar|Baz)
+Fooify 1
+Bazify Barify "bo"
+```
+
 ## Compile Time vs Run Time
 The body of a code macro is always evaluated at compile time. One consequence of this is that bindings whose values cannot be known at compile time cannot be used in a code macro.
 
 For example, because the value `5` is always the same, it is always known at compile time, and we can use a name that binds `5` in a code macro.
 
 ```uiua
-x ← 5
-F! ←^ $"_ _":x ⊢
+X ← 5
+F! ←^ $"_ _"⊙X ⊢
 F!¯
 ```
 
 However, if we use a value that cannot be known at compile time, like the result of the [rand]() function, we will get an error.
 
 ```uiua should fail
-x ← ⚂
-F! ←^ $"_ _":x ⊢
+X ← ⚂
+F! ←^ $"_ _"⊙X ⊢
 F!¯
 ``` 
 
@@ -140,8 +167,8 @@ F!¯
 The second is to use the [comptime]() modifier, which forces its function to be evaluated at compile time.
 
 ```uiua
-x ← comptime(⚂)
-F! ←^ $"_ _":x ⊢
+X ← comptime(⚂)
+F! ←^ $"_ _"⊙X ⊢
 F!¯
 ```
 
@@ -155,4 +182,3 @@ Additionally, index macros are [hygienic](https://en.wikipedia.org/wiki/hygienic
 If you conceptually just want to define your own modifier, an index macro is probably the simplest way to go.
 
 If you want the full power (and all the complexity) of compile-time meta-programming, you'll need to use a code macro.
-

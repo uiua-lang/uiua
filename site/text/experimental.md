@@ -58,41 +58,6 @@ The lexical ordering symbol `↓` can also be used on stack array notation to ma
   3 4]
 ```
 
-## Inline Macros
-
-Following an inline function's `()`s with one or more `!`s will make it an inline index macro.
-This allows `^` placeholders to be used inside the function.
-
-```uiua
-# Experimental!
-(^0^0)!↯ 2 3 4
-```
-
-```uiua
-# Experimental!
-StdDev ← √(^0^1^0)‼(÷⧻⟜/+|×.-).
-StdDev [1 2 3 4]
-```
-
-An inline code macro can be specified by putting a `^` between the `)` and the first `!`.
-
-```uiua
-# Experimental!
-(⇌)^‼(⊂1|⊂2) []
-```
-
-```uiua
-# Experimental!
-($"_ ← 5"⊢)^!X
-X
-```
-
-```uiua
-# Experimental!
-(⋅⊢)^!+
-(⋅⊢)^!⊓+¯
-```
-
 ## Data Definitions
 
 [Data definitions](/tutorial/datadefs) have a few experimental features.

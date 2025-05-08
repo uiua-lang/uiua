@@ -1774,7 +1774,7 @@ impl<T: RealArrayValue> Array<T> {
         Ok(Array::new(shape, data))
     }
     fn antibase_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
-        let fill = env.scalar_fill::<f64>().ok();
+        let fill = env.scalar_unfill::<f64>().ok();
         let mut shape = self.shape.clone();
         let row_len = shape.pop().unwrap_or(1);
         let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;

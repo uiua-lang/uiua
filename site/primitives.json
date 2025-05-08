@@ -396,8 +396,7 @@
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",
-    "description": "Get the base digits of a number",
-    "experimental": true
+    "description": "Get the base digits of a number"
   },
   "below": {
     "glyph": "◡",
@@ -626,8 +625,7 @@
     "args": 1,
     "outputs": 1,
     "class": "Algorithm",
-    "description": "Run the Fast Fourier Transform on an array",
-    "experimental": true
+    "description": "Run the Fast Fourier Transform on an array"
   },
   "fill": {
     "glyph": "⬚",

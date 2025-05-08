@@ -285,7 +285,7 @@ li {
 
 #top {
     margin: 2em auto;
-    width: max(10em, min(90%, 52em));
+    width: max(10em, min(90%, 53em));
 }
 
 #header {
@@ -824,7 +824,7 @@ option,
     padding: 0.1em;
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-evenly;
+    justify-content: space-between;
     align-items: baseline;
     grid-area: glyphs;
 }
@@ -833,7 +833,7 @@ option,
     padding: 0.1em;
     display: none;
     flex-wrap: wrap;
-    justify-content: space-around;
+    justify-content: center;
     align-items: baseline;
     grid-area: glyphs;
 }

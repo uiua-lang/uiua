@@ -552,7 +552,7 @@ pub fn Subscripts() -> impl IntoView {
         </tr>)
     }
 
-    let stable = vec![
+    let numeric = vec![
         subscript(Couple, "Group N arrays as rows", "{⊟₃ 1 2 3 4 5}"),
         subscript(Box, "Group N arrays as boxed rows", "□₃ 1_2_3 5 \"wow\""),
         subscript(Deshape, "Change rank", "♭₂ ⇡ 2_2"),
@@ -565,6 +565,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(First, "First N values", "⊢₂ \"hello\""),
         subscript(Last, "Last N values", "⊣₂ \"hello\""),
         subscript(Bits, "Force N bits", "⋯₄ [1 2 3]"),
+        subscript(Base, "Base N", "⊥₁₀ 123"),
         subscript(Rand, "Random integer", "⚂₁₀₀"),
         subscript(Len, "Length of the Nth axis", "⧻₁ °△2_3_4_5"),
         subscript(Shape, "Shape of the first N axes", "△₂ °△2_3_4_5"),
@@ -666,7 +667,7 @@ pub fn Subscripts() -> impl IntoView {
                 <td>"Constant first argument"</td>
                 <td><Editor example="⊃↙₂↻₃ [1 2 3 4 5]" nonprogressive=true/></td>
             </tr>
-            { stable }
+            { numeric }
         </table>
 
         <Hd id="sided">"Sided Subscripts"</Hd>

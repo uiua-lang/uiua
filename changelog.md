@@ -12,7 +12,6 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) no longer uses the fill value as the first row
 - **Breaking Change** - [`fft`](https://uiua.org/docs/fft) now works along every axis of an array rather than only its last
   - This is more consistent with other functions
-- **Breaking Change** - Change how [`off ⤚`](https://uiua.org/docs/off) works on monadic functions
 - There are no longer signature restrictions on [`try ⍣`](https://uiua.org/docs/try)'s functions
 - Allow for [mixed](https://uiua.org/docs/subscripts#mixed) numeric and sided subscripts
   - Implemented for [`both ∩`](https://uiua.org/docs/both), [`rows ≡`](https://uiua.org/docs/rows), and [`inventory ⍚`](https://uiua.org/docs/inventory)
@@ -20,6 +19,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`un °`](https://uiua.org/docs/un) [`under ⍜`](https://uiua.org/docs/under) for monadic functions
 - Add [`un °`](https://uiua.org/docs/un) [`group ⊕`](https://uiua.org/docs/group) and [`un °`](https://uiua.org/docs/un) [`partition ⊜`](https://uiua.org/docs/partition) for monadic functions
 - Stabilize [`negate ¯`](https://uiua.org/docs/negate) subscripts
+- Stabilize [`base ⊥`](https://uiua.org/docs/fft)
 - Stabilize [`fft`](https://uiua.org/docs/fft)
 - Stabilize [inline macros](https://uiua.org/tutorial/macros#inline-macros)
 - The first argument to [`rotate ↻`](https://uiua.org/docs/rotate) can now be rank > 1.
@@ -40,6 +40,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Deprecate [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off) on noadic and monadic functions
   - There was a lot of disagreement about what the behavior should be
   - They made the movement of data on the stack harder to follow
+  - **Breaking Change** - Change how [`off ⤚`](https://uiua.org/docs/off) works on monadic functions
+    - This change was made before deprecation was decided
 - Deprecate various environment-relate constants and replace them with noadic functions
   - This prevents the details of the compiling environment being used instead of the details from the actual running environment
   - Deprecrated: `Os`, `Family`, `Arch`, `ExeExt`, `DllExt`, `Sep`, `NumProcs`

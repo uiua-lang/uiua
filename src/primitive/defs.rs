@@ -1399,52 +1399,38 @@ primitive!(
     ///
     /// When passed a scalar number, [base] returns the base-N digits of the numbers in an array.
     /// Digits are always listed least-significant to most-significant.
-    /// ex: # Experimental!
-    ///   : ⊥ 10 123
-    /// ex: # Experimental!
-    ///   : ⊥ 2 10
-    /// ex: # Experimental!
-    ///   : ⊥ 16 256
+    /// ex: ⊥ 10 123
+    /// ex: ⊥ 2 10
+    /// ex: ⊥ 16 256
     /// When passed an array of numbers, [base] treats each digit as having a different base.
     /// Any remainder will be truncated.
-    /// ex: # Experimental!
-    ///   : ⊥ [10 2] 35 # Truncated
-    /// ex: # Experimental!
-    ///   : ⊥ [60 60 24 365.25] now
+    /// ex: ⊥ [10 2] 35 # Truncated
+    /// ex: ⊥ [60 60 24 365.25] now
     /// If you want to keep the remainder, use [infinity].
-    /// ex: # Experimental!
-    ///   : ⊥ [10 2 ∞] 35
-    /// ex: # Experimental!
-    ///   : ⊥ [60 60 24 365.25 ∞] now
+    /// ex: ⊥ [10 2 ∞] 35
+    /// ex: ⊥ [60 60 24 365.25 ∞] now
     /// [fill] can be used to set a repeating base after the array.
-    /// ex: # Experimental!
-    ///   :  ⬚10⊥[12 20] 999999
+    /// ex:  ⬚10⊥[12 20] 999999
     /// Non-integer bases are supported.
-    /// ex: # Experimental!
-    ///   : ⊥ π [η π τ]
-    /// ex: # Experimental!
-    ///   : ⊥ 1.5 [1 2 3 4 5]
+    /// ex: ⊥ π [η π τ]
+    /// ex: ⊥ 1.5 [1 2 3 4 5]
     ///
     /// [base] is compatible with [under].
-    /// ex: # Experimental!
-    ///   : ⍜(°⍉⊥4|⬚0↙3) [10 100 1000]
+    /// ex: ⍜(°⍉⊥4|⬚0↙3) [10 100 1000]
     /// It can also be used with [anti] to convert digits in a certain base back to numbers.
-    /// ex: # Experimental!
-    ///   : ⌝⊥ 2 [1 0 0 1 0]
+    /// ex: ⌝⊥ 2 [1 0 0 1 0]
     ///   : ⌝⊥ 2 [1_0_0 0_1_1 1_1_1]
     ///   : ⌝⊥ 10 [1 2 3]
     /// For a scalar base, this is equivalent to evaluating a polynomial.
     /// The polynomial x²-2x+1 could be represented like this:
-    /// ex: # Experimental!
-    ///   : ⌝⊥ 0 [1 ¯2 1]
+    /// ex: ⌝⊥ 0 [1 ¯2 1]
     ///   : ⌝⊥ 1 [1 ¯2 1]
     ///   : ⌝⊥ 2 [1 ¯2 1]
     /// [anti][base] also works with array bases:
-    /// ex: # Experimental!
-    ///   : ⌝⊥[12 20] [1 12]
+    /// ex: ⌝⊥[12 20] [1 12]
     ///   : ⌝⊥[12 20 ∞] [11 1 3]
-    ///   : ⬚10⌝⊥[12 20] [3 13 6 6 1 4]
-    (2, Base, DyadicArray, ("base", '⊥'), { experimental: true }),
+    ///   : ⌝⬚10⊥[12 20] [3 13 6 6 1 4]
+    (2, Base, DyadicArray, ("base", '⊥')),
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].

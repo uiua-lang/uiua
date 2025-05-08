@@ -1295,8 +1295,8 @@ pub fn Editor<'a>(
                 )
                 .collect();
 
-            view! { <div class="glyph-buttons">
-                {glyph_buttons}
+            view! { <div>
+                <div class="glyph-buttons">{glyph_buttons}</div>
                 <div class="experimental-glyph-buttons">{experimental_glyph_buttons}</div>
             </div> }
         })

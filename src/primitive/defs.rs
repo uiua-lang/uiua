@@ -2966,8 +2966,7 @@ primitive!(
     ///
     /// In this example, we generate some data that is the sum of some [sine] waves.
     /// We then run [fft] on it and create a plot of the resulting frequency bins.
-    /// ex: # Experimental!
-    ///   : ÷⟜⇡200             # 200 numbers between 0 and 1
+    /// ex: ÷⟜⇡200             # 200 numbers between 0 and 1
     ///   : /+∿⊞×[100 200 400] # Add some frequencies
     ///   : ⌵ fft              # Run the FFT
     ///   : ↘⌊÷2⧻.             # Drop the top half
@@ -2975,17 +2974,15 @@ primitive!(
     ///
     /// You can use [un][fft] to calculate the inverse FFT.
     /// In this example, we generate a list of `1`s representing frequency bins and run `un``fft` on it to get time-domain data. We can listen to the result as audio.
-    /// ex: # Experimental!
-    ///   : [220 277 330 440] # Frequencies
+    /// ex: [220 277 330 440] # Frequencies
     ///   : ⬚0↙ &asr °⊚       # Put 1 in buffer for each frequency
     ///   : ◌°ℂ °fft          # Run inverse FFT and get the real part
     ///
     /// Because [fft] runs on every axis of an array, we can get the frequency domain of each color channel of an image using [under][un][transpose][fft].
-    /// ex: # Experimental!
-    ///   : Lena
+    /// ex: Lena
     ///   : ▽⟜≡▽0.5
     ///   : ⌵⍜°⍉≡fft .
-    (1, Fft, Algorithm, "fft", { experimental: true }),
+    (1, Fft, Algorithm, "fft"),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.

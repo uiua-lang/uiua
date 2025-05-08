@@ -147,3 +147,7 @@ F! ←^ (
   ⋅G
 )
 ⍤⤙≍ 5 F!+
+
+# These just need to parse
+A₇₂₇! = ^0
+A⌞! = ^0

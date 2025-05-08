@@ -7,6 +7,9 @@
   - `each`
 - Streaming gif and audio encoding
 - Bottom subscripts
+- Ana inverses
+  - `ana` alias
+- Update "More Array Manipulation" tutorial
 - See if pad mem limit can be increased
 - Optional arguments
 - Line number signatures in pad

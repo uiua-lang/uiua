@@ -1361,43 +1361,56 @@ impl<'a> Lexer<'a> {
             input: self.input,
         };
 
-        let mut processed = Vec::new();
+        let mut processed: Vec<Sp<Token>> = Vec::new();
         while let Some(token) = post.next() {
             let s = &self.input[token.span.byte_range()];
-            processed.push(
-                if is_signed_numbery(s) || (["`", "¯"].contains(&s) && post.nth_is(0, is_numbery))
+            let token = if is_signed_numbery(s)
+                || (["`", "¯"].contains(&s) && post.nth_is(0, is_numbery))
+            {
+                let mut span = token.span;
+                if ["`", "¯"].contains(&s) {
+                    let n_tok = post.next().unwrap();
+                    span = span.merge(n_tok.span);
+                }
+                if post.nth_is(0, |s| s == "/")
+                    && post.nth_is(1, |s| {
+                        is_signed_numbery(s)
+                            || (["`", "¯"].contains(&s) && post.nth_is(2, is_numbery))
+                    })
                 {
-                    let mut span = token.span;
-                    if ["`", "¯"].contains(&s) {
-                        let n_tok = post.next().unwrap();
-                        span = span.merge(n_tok.span);
+                    let _slash = post.next().unwrap();
+                    let _neg = post.next_if(|s| ["`", "¯"].contains(&s));
+                    span = span.merge(post.next().unwrap().span);
+                }
+                span.sp(Number)
+            } else if let Token::Subscr(sub) = token.value {
+                // Subscript ident
+                if let Some(prev) = processed.last_mut() {
+                    if let Token::Ident(ident) = &mut prev.value {
+                        if !ident.ends_with(['!', '‼']) {
+                            ident.push_str(&sub.to_string());
+                            prev.span.merge_with(token.span);
+                            continue;
+                        }
                     }
-                    if post.nth_is(0, |s| s == "/")
-                        && post.nth_is(1, |s| {
-                            is_signed_numbery(s)
-                                || (["`", "¯"].contains(&s) && post.nth_is(2, is_numbery))
-                        })
-                    {
-                        let _slash = post.next().unwrap();
-                        let _neg = post.next_if(|s| ["`", "¯"].contains(&s));
-                        span = span.merge(post.next().unwrap().span);
+                }
+                token.span.sp(Token::Subscr(sub))
+            } else if let Token::Ident(ident) = token.value {
+                // Exlams that didn't get combined earlier
+                if ident.chars().all(|c| "!‼".contains(c)) {
+                    if let Some(prev) = processed.last_mut() {
+                        if let Token::Ident(prev_ident) = &mut prev.value {
+                            prev_ident.push_str(&ident);
+                            prev.span.merge_with(token.span);
+                            continue;
+                        }
                     }
-                    span.sp(Number)
-                } else if let (
-                    Token::Ident(mut ident),
-                    Some(Sp {
-                        value: Token::Subscr(sub),
-                        ..
-                    }),
-                ) = (token.value.clone(), post.tokens.front())
-                {
-                    ident.push_str(&sub.to_string());
-                    let sub_span = post.tokens.pop_front().unwrap().span;
-                    token.span.merge(sub_span).sp(Ident(ident))
-                } else {
-                    token
-                },
-            );
+                }
+                token.span.sp(Token::Ident(ident))
+            } else {
+                token
+            };
+            processed.push(token);
         }
 
         (processed, self.errors)

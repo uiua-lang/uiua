@@ -58,6 +58,26 @@ The lexical ordering symbol `↓` can also be used on stack array notation to ma
   3 4]
 ```
 
+## [derivative](/docs/derivative) and [integral](/docs/integral)
+
+These modifiers transform a mathematical expression.
+
+Currently, only polynomials are supported.
+
+```uiua
+# Experimental!
+∂(×.) 5                 # x² → 2x
+∂√ 1/9                  # √x → 1/(2√x)
+∂(-4+⊃(ⁿ2|×¯2)) [0 1 2] # x² - 2x - 4  →  2x² - 2x
+```
+
+```uiua
+# Experimental!
+∫(×.) 3   # x² → x³/3
+∫√ 1      # √x → (2x^1.5)/3
+∫(+5×2) 2 # 2x + 5  →  x² + 5x
+```
+
 ## Data Definitions
 
 [Data definitions](/tutorial/datadefs) have a few experimental features.

@@ -527,8 +527,7 @@
     "modifier_args": 1,
     "class": "Algorithm",
     "description": "Calculate the derivative of a mathematical expression",
-    "experimental": true,
-    "deprecated": true
+    "experimental": true
   },
   "deshape": {
     "glyph": "♭",
@@ -789,8 +788,7 @@
     "modifier_args": 1,
     "class": "Algorithm",
     "description": "Calculate an antiderivative of a mathematical expression",
-    "experimental": true,
-    "deprecated": true
+    "experimental": true
   },
   "inventory": {
     "glyph": "⍚",

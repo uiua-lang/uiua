@@ -7,8 +7,6 @@
   - `each`
 - Streaming gif and audio encoding
 - Bottom subscripts
-- Stabilize inline macros
-- Prevent `&gifs` from exceding execution time
 - See if pad mem limit can be increased
 - Optional arguments
 - Line number signatures in pad

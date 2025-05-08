@@ -1567,8 +1567,10 @@ impl SysOp {
                 {
                     let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
                     let value = env.pop(2)?;
+                    let start = env.rt.backend.now();
                     let bytes = crate::media::value_to_gif_bytes(&value, delay)
                         .map_err(|e| env.error(e))?;
+                    env.rt.execution_start += env.rt.backend.now() - start;
                     (env.rt.backend)
                         .show_gif(bytes, value.meta.label.as_deref())
                         .map_err(|e| env.error(e))?;

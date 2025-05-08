@@ -1352,74 +1352,29 @@ fn TutorialPatternMatching() -> impl IntoView {
 
 #[component]
 fn TutorialMoreArray() -> impl IntoView {
-    use Primitive::*;
-    view! {
-        <Title text=format!("More Array Manipulation - {} Docs", lang())/>
-        <h1>"More Array Manipulation"</h1>
-        <p>"Sometimes the operation you need to perform on an array is more complicated than modifiers like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allow."</p>
+    title_markdown(
+        "More Array Manipulation",
+        "/text/more_array.md",
+        view! {
+            <Hd id="challenges">"Challenges"</Hd>
 
+            <Challenge
+                number=1
+                prompt="adds the first argument list to each row of the second argument matrix"
+                example="1_2_3 [4_5_6 7_8_9]"
+                answer="+¤"
+                tests={&["10_20 ↯4_2⇡8", "\"Wow\" ¯[10_0_10 19_14_19]"]}
+                hidden="1_2 [3_4]"/>
 
-        <Hd id="fix"><Prim prim=Fix/></Hd>
-        <p><Prim prim=Rows/>" can be used to iterate over multiple arrays. The nth row of each array will be passed to the function, and the result will be put in a new array."</p>
-        <Editor example="≡⊂ 1_2_3 4_5_6"/>
-        <p>"This works because both arrays have the same shape (in this case, "<code>[3]</code>"). If they didn't, we would get an error."</p>
-        <Editor example="≡⊂ 1_2_3 4_5"/> // Should fail
-        <p>"However, there is an exception to this rule. If one of the arrays has exactly one row, that array will be repeated for each row of the other array. This includes scalars."</p>
-        <Editor example="≡⊂ 1 2_3_4"/>
-        <Editor example="≡⊂ 1_2_3 4"/>
-        <Editor example="≡⊂ [1_2] 3_4_5"/>
-        <Editor example="≡⊂ 1_2_3 [4_5]"/>
-        <p>"Notice how in this last example, the array "<code>"[4_5]"</code>" is an array of a single row, so that row is repeated across all iterations. It would be equivalent to:"</p>
-        <Editor example="[\n  ⊂ 1 4_5\n  ⊂ 2 4_5\n  ⊂ 3 4_5\n]"/>
-        <p>"The "<Prim prim=Fix/>" function turns an array into an array of a single row by prepending a "<code>"1"</code>" to the array's shape. This is equivalent to wrapping in "<code>"[]"</code>" as above, but it is shorter and better communicates the intention of \"fixing\" an array during iteration."</p>
-        <Editor example="¤1_2_3  # Fixing is equivalent to...\n[1_2_3] # ...surrounding with brackets"/>
-        <p>"With "<Prim prim=Fix/>", we can rewrite the previous examples."</p>
-        <Editor example="≡⊂ ¤1_2 3_4_5"/>
-        <Editor example="≡⊂ 1_2_3 ¤4_5"/>
-        <p>"If we have a several arrays and want to choose which ones are fixed and which are not, we can use planet notation."</p>
-        <Editor example="≡⊂ ⊙¤ 1_2_3 4_5_6"/>
-        <Editor example="≡(⊂⊂⊂) ⊙∩¤ 1_2_3 4_5_6 7_8_9 10_11_12"/>
-        <p><Prim prim=Fix/>" also works with pervasive dyadic functions without "<Prim prim=Rows/>"."</p>
-        <Editor example="+  [1 2 3]  [10 20 30]\n+ ¤[1 2 3]  [10 20 30]\n+  [1 2 3] ¤[10 20 30]"/>
-        <Editor example="- 1_2 [3_4 5_6 7_8]"/> // Should fail
-        <Editor example="-¤1_2 [3_4 5_6 7_8]"/>
-
-        <Hd id="operating-at-different-ranks">"Operating at Different Ranks"</Hd>
-        <p><Prim prim=Rows/>" is the bread and butter of traversing an array's structure. It calls its function on each row of an array, but what if you want to go deeper?"</p>
-        <p>"One option is to simply chain "<Prim prim=Rows/>" multiple times."</p>
-        <Editor example="≡□ °△ 2_3_4\n≡≡□ °△ 2_3_4\n≡≡≡□ °△ 2_3_4"/>
-        <p>"This can get a bit unwieldy if an array has a lot of dimensions. You can instead use "<A href="/tutorial/morestack#Subscripts">"subscripted"</A>" "<Prim prim=Rows/>" to specify the depth of the operation."</p>
-        <Editor example="≡□ °△ 2_3_4\n≡₂□ °△ 2_3_4\n≡₃□ °△ 2_3_4"/>
-        <p>"This is useful when you are approaching the array's structure from the top down, but what if you want to start at the bottom?"</p>
-        <p>"Subscripted "<Prim prim=Each/>" allows you to specify the rank of the arrays you want to apply the function to, regardless of the outer array's rank. Notice how the rank of the "<Prim prim=Box/>"ed arrays is this example corresponds to the subscript."</p>
-        <Editor example="∵□ °△2_3_4\n∵₁□ °△2_3_4\n∵₂□ °△2_3_4"/>
-        <p>"Sometimes you simply want to collapse the dimensions of an array to make it a certain rank. This can be done with subscripted "<Prim prim=Deshape/>"."</p>
-        <Editor example="△ ♭ °△2_3_4_5\n△ ♭₂ °△2_3_4_5\n△ ♭₃ °△2_3_4_5\n△ ♭₄ °△2_3_4_5"/>
-        <p>"Combined with "<Prim prim=Range/>", this is a nice way to generate all combinations of indices given a list of maximums."</p>
-        <Editor example="⍉ ♭₂ ⇡2_2_3"/>
-        <p>"Subscripting these works in the vast majority of cases. However, subscripts are static. The rank to use cannot be taken from the stack."</p>
-        <p>"In the rare event that you need a dynamic rank, you can use the "<Prims prims=[Un, By]/><code>"("</code><Prims prims=[Len, Shape]/><code>")"</code>" idiom introduced in the "<A href="/tutorial/inverses#un-by">"Inverses"</A>" tutorial."</p>
-        <Editor example="⍉ °⊸(⧻△) 2 ⇡2_2_2"/>
-        <Editor example="°⊸(⧻△) 1 °△2_3_3"/>
-
-        <Hd id="challenges">"Challenges"</Hd>
-
-        <Challenge
-            number=1
-            prompt="adds the first argument list to each row of the second argument matrix"
-            example="1_2_3 [4_5_6 7_8_9]"
-            answer="+¤"
-            tests={&["10_20 ↯4_2⇡8", "\"Wow\" ¯[10_0_10 19_14_19]"]}
-            hidden="1_2 [3_4]"/>
-
-        <Challenge
-            number=2
-            prompt="joins the first argument to each list in the second argument"
-            example="0 +1°△3_4"
-            answer="∵₁⊂"
-            tests={&["0 [1 2 3]", r#"@| ⬚@ [["Hey""there""buddy"] [@a "bc" "def"]]"#, "η_π_τ ⇡2_2_2"]}
-            hidden="3 5"/>
-    }
+            <Challenge
+                number=2
+                prompt="joins the first argument to each list in the second argument"
+                example="0 +1°△3_4"
+                answer="∵₁⊂"
+                tests={&["0 [1 2 3]", r#"@| ⬚@ [["Hey""there""buddy"] [@a "bc" "def"]]"#, "η_π_τ ⇡2_2_2"]}
+                hidden="3 5"/>
+        },
+    )
 }
 
 #[component]

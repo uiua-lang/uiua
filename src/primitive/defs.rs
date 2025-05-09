@@ -2969,6 +2969,8 @@ primitive!(
     ///   : ▽⟜≡▽0.5
     ///   : ⌵⍜°⍉≡fft .
     (1, Fft, Algorithm, "fft"),
+    /// Call a function recursively
+    ([3], Recur, Algorithm, "recur"),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.
@@ -3657,13 +3659,13 @@ impl_primitive!(
     (1, ReplaceRand, Impure),
     (2, ReplaceRand2, Impure),
     (1, CountUnique),
+    ((2)[2], PathFirst),
+    ((1)[2], PathPop),
+    ((1)[2], PathTake),
     ((2)[3], Astar),
     ((2)[3], AstarFirst),
     ((1)[3], AstarPop),
     ((1)[3], AstarTake),
-    ((2)[2], PathFirst),
-    ((1)[2], PathPop),
-    ((1)[2], PathTake),
     (2[1], SplitByScalar),
     (2[1], SplitBy),
     (2[1], SplitByKeepEmpty),

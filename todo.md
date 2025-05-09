@@ -6,7 +6,6 @@
   - `each`
 - Streaming gif and audio encoding
 - Bottom subscripts
-- See if pad mem limit can be increased
 - Optional arguments
 - Line number signatures in pad
 - Rewrite parts of tutorial to use `backward` instead of `flip`

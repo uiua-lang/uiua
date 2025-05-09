@@ -649,6 +649,7 @@ impl<T: ArrayValue> Array<T> {
         }
         if count < 0.0 {
             new_data.make_mut().reverse();
+            self.meta.flags.reverse_sorted();
         }
         if self.shape.is_empty() {
             self.shape.push(new_row_count);

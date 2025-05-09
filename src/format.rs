@@ -666,10 +666,10 @@ impl Formatter<'_> {
             Item::Words(words) => {
                 self.prev_import_function = None;
                 let lines = flip_unsplit_lines(split_words(words.to_vec()));
-                let did_split = lines.len() > 1;
+                let extra_newlines = lines.len() > 1 && self.output.ends_with('(') && depth > 0;
                 for (i, line) in lines.into_iter().enumerate() {
                     let line = trim_spaces(&line, true);
-                    if i > 0 || did_split && depth > 0 {
+                    if i > 0 || extra_newlines {
                         self.newline(depth);
                     }
                     for (j, word) in line.iter().enumerate() {
@@ -693,6 +693,9 @@ impl Formatter<'_> {
                             }
                         }
                     }
+                }
+                if extra_newlines {
+                    self.newline(depth.saturating_sub(1));
                 }
             }
             Item::Binding(binding) => {

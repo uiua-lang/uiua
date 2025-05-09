@@ -24,55 +24,64 @@ pub fn recur(children: SigNode, branch: SigNode, leaf: SigNode, env: &mut Uiua) 
         if let Some(results) = child_results {
             // Branch
             for results in results.into_iter().rev() {
+                // for results in results.into_iter().rev() {
+                //     let mut rows = results.into_iter();
+                //     let child_results = if let Some(mut joined) = rows.next() {
+                //         for result in rows {
+                //             joined = joined.join(result, false, env)?;
+                //         }
+                //         joined
+                //     } else {
+                //         Value::default()
+                //     };
+                //     env.push(child_results);
+                // }
                 let child_results = Value::from_row_values(results, env)?;
                 env.push(child_results);
             }
             if branch_takes_val {
-                env.push(val.unboxed());
+                env.push(val);
             }
             env.exec(branch.clone())?;
             if let Some(parent_index) = parent {
                 for i in 0..outputs {
-                    let mut result = env.pop("accumulated")?;
-                    result.box_if_not();
+                    let result = env.pop("accumulated")?;
                     stack[parent_index].2.as_mut().unwrap()[i].push(result);
                 }
             }
         } else {
             // Get children
             let extra = env.copy_n(children_extra)?;
-            env.push(val.clone().unboxed());
+            env.push(val.clone());
             env.exec(children.clone())?;
             let children = env.pop("children")?;
             env.push_all(extra);
-            if children.row_count() == 0 {
+
+            let is_branch = children.row_count() > 0 && !(val.rank() == 0 && val == children);
+
+            if is_branch {
+                // Push self and children
+                let parent_index = stack.len();
+
+                stack.push((
+                    val,
+                    parent,
+                    Some(vec![Vec::with_capacity(children.row_count()); outputs]),
+                ));
+                for child in children.into_rows().rev() {
+                    stack.push((child, Some(parent_index), None));
+                }
+            } else {
                 // Leaf
                 if leaf_takes_val {
-                    env.push(val.unboxed());
+                    env.push(val);
                 }
                 env.exec(leaf.clone())?;
                 if let Some(parent_index) = parent {
                     for i in 0..outputs {
-                        let mut result = env.pop("accumulated")?;
-                        result.box_if_not();
+                        let result = env.pop("accumulated")?;
                         stack[parent_index].2.as_mut().unwrap()[i].push(result);
                     }
-                }
-            } else {
-                // Push self and children
-                let parent_index = stack.len();
-                let add_children = !(val.rank() == 0 && val == children);
-                if add_children {
-                    stack.push((
-                        val,
-                        parent,
-                        Some(vec![Vec::with_capacity(children.row_count()); outputs]),
-                    ));
-                    for child in children.into_rows().rev() {
-                        stack.push((child, Some(parent_index), None));
-                    }
-                } else {
-                    stack.push((val, parent, Some(Vec::new())));
                 }
             }
         }

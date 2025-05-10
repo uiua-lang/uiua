@@ -544,7 +544,7 @@ impl Optimization for RowsFlipOpt {
     }
 }
 
-trait Optimization: Debug + Sync {
+trait Optimization: fmt::Debug + Sync {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool;
     fn level(&self) -> OptLevel {
         OptLevel::Full
@@ -566,7 +566,7 @@ where
     }
 }
 
-trait OptPattern: Debug + Sync {
+trait OptPattern: fmt::Debug + Sync {
     fn match_nodes(&self, nodes: &[Node]) -> Option<(usize, Option<usize>)>;
 }
 impl OptPattern for Primitive {
@@ -607,7 +607,7 @@ where
     }
 }
 
-trait OptReplace: Debug + Sync {
+trait OptReplace: fmt::Debug + Sync {
     fn replacement_node(&self, span: usize) -> Node;
 }
 impl OptReplace for Primitive {
@@ -677,7 +677,6 @@ macro_rules! opt {
         }
     };
 }
-use fmt::Debug;
 use opt;
 
 macro_rules! opt_pattern {
@@ -695,9 +694,7 @@ macro_rules! opt_pattern {
                     let (n, sp) = $T.match_nodes(nodes)?;
                     i += n;
                     nodes = &nodes[n..];
-                    if sp.is_some() && span.is_none() {
-                        span = sp;
-                    }
+                    span = sp.or(span);
                 )*
                 Some((i, span))
             }

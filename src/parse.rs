@@ -1203,7 +1203,12 @@ impl Parser<'_> {
         } else if let Some(op) = self.next_token_map(Token::as_placeholder) {
             op.map(Word::Placeholder)
         } else if let Some(label) = self.next_token_map(Token::as_label) {
-            label.map(Into::into).map(Word::Label)
+            if let Some(sub) = self.next_token_map(Token::as_subscript) {
+                (label.span.merge(sub.span))
+                    .sp(Word::Label(format!("{}{}", label.value, sub.value)))
+            } else {
+                label.map(Into::into).map(Word::Label)
+            }
         } else if let Some(frags) = self.next_token_map(Token::as_format_string) {
             frags.map(Word::FormatString)
         } else if let Some(line) = self.next_token_map(Token::as_multiline_string) {

@@ -6,9 +6,8 @@
   - `each`
 - Streaming gif and audio encoding
 - Bottom subscripts
-- See if pad mem limit can be increased
 - Optional arguments
-- Line number signatures in pad
+- Rework number literals
 - Rewrite parts of tutorial to use `backward` instead of `flip`
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

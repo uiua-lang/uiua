@@ -657,9 +657,9 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_label(&self) -> Option<&str> {
+    pub(crate) fn as_label(&self) -> Option<EcoString> {
         match self {
-            Token::Label(label) => Some(label),
+            Token::Label(label) => Some(label.clone()),
             _ => None,
         }
     }

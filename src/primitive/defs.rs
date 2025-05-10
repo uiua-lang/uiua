@@ -1376,7 +1376,7 @@ primitive!(
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
     /// Get sequential indices of each row of an array in another
     ///
-    /// Unlike [indexof], [progressive indexof] will never return the same index twice.
+    /// Unlike [indexof], [progressive indexof] will never return the same index twice unless the item is not found.
     /// ex: # Experimental!
     ///   : ⊗ "hello dog" "lego helmet"
     ///   : ⊘ "hello dog" "lego helmet"

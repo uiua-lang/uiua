@@ -889,7 +889,7 @@ F 2 9
 F 10 11"/>
 
         <Hd id="local-bindings">"A Note on Local Bindings"</Hd>
-        <p>"Bindings in "{lang}" can "<em>"only"</em>" be global. There is no way to give a name to a value within an inline function. A "<code>"←"</code>" inside "<code>"()"</code>"s is a syntax error."</p>
+        <p>"Bindings in "{lang}" can "<em>"only"</em>" be global. There is no way to give a name to a value within an inline function."</p>
         <p>"This is a deliberate design decision. It forces you to write tacit code, a.k.a. code with functions that do not mention their arguments. "{lang}" is designed to make writing tacit code as workable as possible. "<em>"How"</em>" it does this will be discussed in "<A href="/tutorial/morestack">"later"</A>" "<A href="/tutorial/advancedarray">"sections"</A>"."</p>
 
         <Hd id="format-strings">"Format Strings"</Hd>

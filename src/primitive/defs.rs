@@ -3401,7 +3401,7 @@ primitive!(
     ///   : voxels {2 [0.5 2 2]}
     ///
     /// You can show rotation of a voxel array by turning it into a gif.
-    /// In this example, we create a list of angles and apply each one to the camera position using [un][atan].
+    /// In this example, we create a list of angles and apply each one to the camera position using [un][atangent].
     /// ex: # Experimental!
     ///   : # Experimental!
     ///   : -⊸¬ ÷⟜(°⍉⇡)↯3 50    # Cube from ¯1 to 1
@@ -3409,7 +3409,6 @@ primitive!(
     ///   : ×τ÷⟜⇡30             # Rotation angles
     ///   : ≡(voxels {2 [1 °∠] ⊙[0 0.5 1]})⊙¤
     (2, Voxels, Encoding, "voxels", { experimental: true }),
-    /// Get the current
     /// Render text into an image array
     ///
     /// In the most basic usage, the first argument is a font size and the second argument is the text to render.

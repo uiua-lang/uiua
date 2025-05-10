@@ -1206,8 +1206,8 @@ impl Primitive {
             }
             Primitive::Dump => dump(ops, env, false)?,
             Primitive::Recur => {
-                let [children, branch, leaf] = get_ops(ops, env)?;
-                recur::recur(children, branch, leaf, env)?;
+                let [children, branch] = get_ops(ops, env)?;
+                recur::recur(children, branch, env)?;
             }
             Primitive::Path => {
                 let [neighbors, is_goal] = get_ops(ops, env)?;

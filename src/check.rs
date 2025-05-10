@@ -418,9 +418,9 @@ impl VirtualEnv {
                     self.handle_args_outputs(f.args(), f.outputs() + 1);
                 }
                 Recur => {
-                    let [children, branch, leaf] = get_args(args)?;
-                    let args = children.args().max(branch.args()).max(leaf.args()) + 1;
-                    let outputs = branch.outputs().max(leaf.outputs());
+                    let [children, branch] = get_args(args)?;
+                    let args = children.args().max(branch.args().max(1));
+                    let outputs = branch.outputs();
                     self.handle_args_outputs(args, outputs);
                 }
                 Sys(SysOp::ReadLines) => {

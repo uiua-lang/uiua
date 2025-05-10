@@ -2970,7 +2970,7 @@ primitive!(
     ///   : ⌵⍜°⍉≡fft .
     (1, Fft, Algorithm, "fft"),
     /// Call a function recursively
-    ([3], Recur, Algorithm, "recur"),
+    ([2], Recur, Algorithm, "recur"),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.

@@ -328,7 +328,7 @@ pub struct InlineMacro {
 #[allow(missing_docs)]
 #[serde(tag = "type", content = "value")]
 pub enum Word {
-    Number(Result<f64, String>),
+    Number(Result<f64, String>, String),
     Char(String),
     String(String),
     MultilineString(Vec<Sp<String>>),
@@ -363,7 +363,7 @@ pub enum Word {
 impl PartialEq for Word {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Number(a), Self::Number(b)) => a == b,
+            (Self::Number(a_n, a_s), Self::Number(b_n, b_s)) => a_n == b_n && a_s == b_s,
             (Self::Char(a), Self::Char(b)) => a == b,
             (Self::String(a), Self::String(b)) => a == b,
             (Self::Label(a), Self::Label(b)) => a == b,

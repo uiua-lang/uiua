@@ -494,7 +494,7 @@ primitive!(
     /// ex: °∠ 0
     /// ex: °∠ η
     /// ex: °∠ π
-    /// ex: °∠ ÷3π
+    /// ex: °∠ π/3
     (2, Atan, DyadicPervasive, ("atangent", '∠')),
     /// Make a complex number
     ///
@@ -2681,17 +2681,17 @@ primitive!(
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`
-    /// ex: [η ÷2π ÷4τ]
+    /// ex: [η π/2 τ/4]
     (0, Eta, Constant, ("eta", 'η')),
     /// The ratio of a circle's circumference to its diameter
     ///
     /// Equivalent to `multiply``2``eta` or `divide``2``tau`
-    /// ex: [×2η π ÷2τ]
+    /// ex: [2η π τ/2]
     (0, Pi, Constant, ("pi", 'π')),
     /// The ratio of a circle's circumference to its radius
     ///
     /// Equivalent to `multiply``4``eta` or `multiply``2``pi`
-    /// ex: [×4η ×2π τ]
+    /// ex: [4η 2π τ]
     (0, Tau, Constant, ("tau", 'τ')),
     /// The biggest number
     ///

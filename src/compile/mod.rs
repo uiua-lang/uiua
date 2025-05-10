@@ -1223,8 +1223,8 @@ impl Compiler {
     fn word(&mut self, word: Sp<Word>) -> UiuaResult<Node> {
         self.check_depth(&word.span)?;
         Ok(match word.value {
-            Word::Number(Ok(n)) => Node::new_push(n),
-            Word::Number(Err(s)) => {
+            Word::Number(Ok(n), _) => Node::new_push(n),
+            Word::Number(Err(s), _) => {
                 self.add_error(word.span.clone(), format!("Invalid number `{s}`"));
                 Node::new_push(0.0)
             }
@@ -2118,10 +2118,9 @@ impl Compiler {
                     return self.word(sub.word);
                 };
                 match nos {
-                    SubNOrSide::N(n) => Node::from_iter([
-                        self.word(scr.span.sp(Word::Number(Ok(n as f64))))?,
-                        self.primitive(prim, span),
-                    ]),
+                    SubNOrSide::N(n) => {
+                        Node::from_iter([Node::new_push(n), self.primitive(prim, span)])
+                    }
                     SubNOrSide::Side(side) => {
                         self.experimental_error_it(&scr.span, || {
                             format!("Sided {}", prim.format())
@@ -2151,17 +2150,13 @@ impl Compiler {
                 let Some(n) = self.subscript_n_only(&scr, prim.format()) else {
                     return self.word(sub.word);
                 };
-                let n_span = scr.span;
                 match prim {
                     prim if prim.sig().is_some_and(|sig| sig == (2, 1))
                         && prim
                             .subscript_sig(Some(Subscript::numeric(2)))
                             .is_some_and(|sig| sig == (1, 1)) =>
                     {
-                        Node::from_iter([
-                            self.word(n_span.sp(Word::Number(Ok(n as f64))))?,
-                            self.primitive(prim, span),
-                        ])
+                        Node::from_iter([Node::new_push(n), self.primitive(prim, span)])
                     }
                     Deshape => Node::ImplPrim(ImplPrimitive::DeshapeSub(n), self.add_span(span)),
                     Transpose => {

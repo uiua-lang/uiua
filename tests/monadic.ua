@@ -187,7 +187,7 @@ repr[{[[1 2][2 3]][3 4]}{[[1 2][2 3]]□{[[1 2][2 3]]□□[3 4]}}]
 # HSV
 ⍤⤙≍ [0 5/9 0.9] hsv [0.9 0.4 0.4]
 ⍤⤙≍ [τ/3 5/9 0.9] hsv [0.4 0.9 0.4]
-⍤⤙≍ [×2τ/3 5/9 0.9] hsv [0.4 0.4 0.9]
+⍤⤙≍ [2τ/3 5/9 0.9] hsv [0.4 0.4 0.9]
 ⍤⤙≍ [0 0.5 1 0.5] hsv [1 0.5 0.5 0.5]
 ⍤⤙≍ ⟜⍜hsv∘ [Red Orange Yellow Green Cyan Blue Purple Magenta]
 ⍤⤙≍ ⟜⍜hsv∘ [Red Orange Yellow Green Cyan Blue Purple Magenta]

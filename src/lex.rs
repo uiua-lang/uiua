@@ -1,7 +1,6 @@
 //! The Uiua lexer
 
 use std::{
-    collections::VecDeque,
     error::Error,
     fmt,
     hash::Hash,
@@ -534,6 +533,12 @@ impl<T> Sp<T> {
     }
 }
 
+impl<T, S> From<Sp<T, S>> for (T, S) {
+    fn from(sp: Sp<T, S>) -> Self {
+        (sp.value, sp.span)
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct SpRep<T, S>(T, S);
 
@@ -847,7 +852,7 @@ struct Lexer<'a> {
     input_segments: Vec<&'a str>,
     loc: Loc,
     src: InputSrc,
-    tokens: VecDeque<Sp<Token>>,
+    tokens: Vec<Sp<Token>>,
     errors: Vec<Sp<LexError>>,
 }
 
@@ -881,7 +886,7 @@ impl<'a> Lexer<'a> {
                 col: 1,
             },
             src,
-            tokens: VecDeque::new(),
+            tokens: Vec::new(),
             errors: Vec::new(),
         }
     }
@@ -949,7 +954,7 @@ impl<'a> Lexer<'a> {
     }
     #[track_caller]
     fn end(&mut self, token: impl Into<Token>, start: Loc) {
-        self.tokens.push_back(Sp {
+        self.tokens.push(Sp {
             value: token.into(),
             span: self.end_span(start),
         })
@@ -1287,7 +1292,7 @@ impl<'a> Lexer<'a> {
                                     ..first_start
                                 }
                             };
-                            self.tokens.push_back(Sp {
+                            self.tokens.push(Sp {
                                 value: Glyph(prim),
                                 span: self.make_span(start, end),
                             });
@@ -1331,65 +1336,7 @@ impl<'a> Lexer<'a> {
             };
         }
 
-        // Combine some tokens
-
-        struct PostLexer<'a> {
-            tokens: VecDeque<Sp<Token>>,
-            input: &'a str,
-        }
-
-        impl PostLexer<'_> {
-            fn nth_is(&self, n: usize, f: impl Fn(&str) -> bool) -> bool {
-                self.tokens
-                    .get(n)
-                    .is_some_and(|t| f(&self.input[t.span.byte_range()]))
-            }
-            fn next_if(&mut self, f: impl Fn(&str) -> bool) -> Option<Sp<Token>> {
-                if self.nth_is(0, f) {
-                    self.next()
-                } else {
-                    None
-                }
-            }
-            fn next(&mut self) -> Option<Sp<Token>> {
-                self.tokens.pop_front()
-            }
-        }
-
-        let mut post = PostLexer {
-            tokens: self.tokens,
-            input: self.input,
-        };
-
-        let mut processed: Vec<Sp<Token>> = Vec::new();
-        while let Some(token) = post.next() {
-            let s = &self.input[token.span.byte_range()];
-            let token = if is_signed_numbery(s)
-                || (["`", "¯"].contains(&s) && post.nth_is(0, is_numbery))
-            {
-                let mut span = token.span;
-                if ["`", "¯"].contains(&s) {
-                    let n_tok = post.next().unwrap();
-                    span = span.merge(n_tok.span);
-                }
-                if post.nth_is(0, |s| s == "/")
-                    && post.nth_is(1, |s| {
-                        is_signed_numbery(s)
-                            || (["`", "¯"].contains(&s) && post.nth_is(2, is_numbery))
-                    })
-                {
-                    let _slash = post.next().unwrap();
-                    let _neg = post.next_if(|s| ["`", "¯"].contains(&s));
-                    span = span.merge(post.next().unwrap().span);
-                }
-                span.sp(Number)
-            } else {
-                token
-            };
-            processed.push(token);
-        }
-
-        (processed, self.errors)
+        (self.tokens, self.errors)
     }
     fn ident(&mut self, start: Loc, c: &str) -> String {
         let mut s = c.to_string();
@@ -1674,29 +1621,6 @@ enum EscapeMode {
     All,
     None,
     UnderscoreOnly,
-}
-
-fn is_signed_numbery(mut s: &str) -> bool {
-    if s.starts_with(['`', '¯']) {
-        let c_len = s.chars().next().unwrap().len_utf8();
-        s = &s[c_len..];
-    }
-    if s.is_empty() {
-        return false;
-    }
-    is_numbery(s)
-}
-
-fn is_numbery(s: &str) -> bool {
-    s.chars().all(|c| c.is_ascii_digit())
-        || s == "∞"
-        || (3..="infinity".len()).rev().any(|n| s == &"infinity"[..n])
-        || [Primitive::Eta, Primitive::Pi, Primitive::Tau]
-            .iter()
-            .any(|p| {
-                p.name() == s
-                    || s.chars().count() == 1 && p.glyph().unwrap() == s.chars().next().unwrap()
-            })
 }
 
 fn parse_format_fragments(s: &str) -> Vec<String> {

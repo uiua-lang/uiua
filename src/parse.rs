@@ -3,7 +3,7 @@
 use std::{
     collections::HashMap,
     error::Error,
-    f64::consts::PI,
+    f64::consts::{PI, TAU},
     fmt,
     mem::{replace, take},
     slice,
@@ -920,7 +920,7 @@ impl Parser<'_> {
         Some(span.sp(Signature::new(args, outs)))
     }
     fn sig_inner(&mut self) -> Option<(usize, usize)> {
-        let range = self.num()?.span.byte_range();
+        let range = self.real()?.span.byte_range();
         let s = &self.input[range];
         Some(if let Some((a, o)) = s.split_once('.') {
             let a = match a.parse() {
@@ -1202,12 +1202,14 @@ impl Parser<'_> {
         if self.too_deep() {
             return None;
         }
-        let mut word = if let Some(prim) = self.prim() {
+        let mut word = if let Some(n) = self.num() {
+            n.map(|(n, s)| Word::Number(n, s))
+        } else if let Some(prim) = self.prim() {
             prim.map(Word::Primitive)
         } else if let Some(refer) = self.ref_() {
             refer
         } else if let Some(n) = self.num() {
-            n.map(Word::Number)
+            n.map(|(n, s)| Word::Number(n, s))
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
@@ -1317,43 +1319,106 @@ impl Parser<'_> {
         }
         Some(span.sp(arr))
     }
-    fn num(&mut self) -> Option<Sp<Result<f64, String>>> {
-        let span = self.exact(Token::Number)?;
-        let s = &self.input[span.byte_range()];
-        fn parse(s: &str) -> Option<f64> {
-            let mut s = s.replace(['`', '¯'], "-");
-            // Replace pi multiples
-            for (name, glyph, mul) in [("eta", 'η', 0.5), ("pi", 'π', 1.0), ("tau", 'τ', 2.0)] {
-                if s.contains(glyph) {
-                    s = s.replace(glyph, &(PI * mul).to_string());
-                } else if s.contains(name) {
-                    s = s.replace(name, &(PI * mul).to_string());
-                }
-            }
-            // Replace infinity
-            if s.contains('∞') {
-                s = s.replace('∞', "inf");
+    fn num(&mut self) -> Option<Sp<(Result<f64, String>, String)>> {
+        let reset = self.index;
+        if let Some(span_a) = self.neg() {
+            if let Some(span_b) = self.exact(Primitive::Infinity.into()) {
+                return Some((span_a.merge(span_b)).sp((Ok(f64::NEG_INFINITY), "¯∞".into())));
             } else {
-                for i in (3..="infinity".len()).rev() {
-                    if s.contains(&"infinity"[..i]) {
-                        s = s.replace(&"infinity"[..i], "inf");
-                        break;
-                    }
-                }
+                self.index = reset;
             }
-            s.parse().ok()
         }
-        let n: Result<f64, String> = match parse(s) {
-            Some(n) => Ok(n),
-            None => {
-                if let Some((n, d)) = s.split_once('/').and_then(|(n, d)| parse(n).zip(parse(d))) {
-                    Ok(n / d)
+        let ((numer, mut s), mut span) = self.numer_or_denom()?.into();
+        if !s.contains(['.', 'e', 'E']) {
+            let reset = self.index;
+            if self.exact(Primitive::Reduce.into()).is_some() {
+                if let Some(((denom, ds), dspan)) = self.numer_or_denom().map(Into::into) {
+                    if ds.contains(['.', 'e', 'E']) {
+                        self.index = reset;
+                    } else {
+                        let n = numer.and_then(|n| denom.map(|d| n / d));
+                        s.push('/');
+                        s.push_str(&ds);
+                        if s.contains('¯') {
+                            let neg_count = s.chars().filter(|&c| c == '¯').count();
+                            if neg_count == 2 {
+                                s = s.replace('¯', "");
+                            } else if neg_count == 1 && !s.starts_with('¯') {
+                                s = s.replace('¯', "");
+                                s.insert(0, '¯');
+                            }
+                        }
+                        span.merge_with(dspan);
+                        return Some(span.sp((n, s)));
+                    }
                 } else {
-                    Err(s.into())
+                    self.index = reset;
                 }
             }
+        }
+        Some(span.sp((numer, s)))
+    }
+    fn numer_or_denom(&mut self) -> Option<Sp<(Result<f64, String>, String)>> {
+        let reset = self.index;
+        let (coef, s, span) = if let Some((r, span)) = self.real().map(Into::into) {
+            let s = match &r {
+                Ok(n) => n.to_string().replace('-', "¯"),
+                Err(_) => span.as_str(self.inputs, |s| s.into()),
+            };
+            (r, s, Some(span))
+        } else if let Some(span) = self.neg() {
+            (Ok(-1.0), "¯".into(), Some(span))
+        } else {
+            (Ok(1.0), String::new(), None)
         };
-        Some(span.sp(n))
+
+        let (n, s, span) = if coef == Ok(0.0) {
+            (coef, s, span.unwrap())
+        } else if let Some(((n, sym_s), sym_span)) = self.symbolic_num().map(Into::into) {
+            let span = match span {
+                Some(span) => span.merge(sym_span),
+                None => sym_span,
+            };
+            (coef.map(|c| c * n), s + &sym_s, span)
+        } else if let Some(span) = span {
+            if s == "¯" {
+                self.index = reset;
+                return None;
+            } else {
+                (coef, s, span)
+            }
+        } else {
+            self.index = reset;
+            return None;
+        };
+        Some(span.sp((n, s)))
+    }
+    fn neg(&mut self) -> Option<CodeSpan> {
+        self.exact(Primitive::Neg.into())
+            .or_else(|| self.exact(Backtick.into()))
+    }
+    fn symbolic_num(&mut self) -> Option<Sp<(f64, String)>> {
+        [
+            (Primitive::Eta, PI / 2.0),
+            (Primitive::Pi, PI),
+            (Primitive::Tau, TAU),
+        ]
+        .into_iter()
+        .find_map(|(prim, n)| Some(self.exact(prim.into())?.sp((n, prim.to_string()))))
+    }
+    fn real(&mut self) -> Option<Sp<Result<f64, String>>> {
+        let span = self.exact(Token::Number)?;
+        let mut s = &self.input[span.byte_range()];
+        let mut replaced;
+        if s.contains('`') {
+            replaced = s.replace('`', "-");
+            s = &replaced;
+        }
+        if s.contains('¯') {
+            replaced = s.replace('¯', "-");
+            s = &replaced;
+        }
+        Some(span.sp(s.parse::<f64>().map_err(|e| e.to_string())))
     }
     fn prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::all() {

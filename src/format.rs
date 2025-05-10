@@ -2,7 +2,6 @@
 
 use std::{
     any::Any,
-    borrow::Cow,
     collections::HashMap,
     env,
     fmt::Display,
@@ -18,7 +17,6 @@ use InlineMacro;
 
 use crate::{
     ast::*,
-    grid_fmt::GridFmt,
     is_ident_char, is_ident_start,
     lex::{CodeSpan, Loc, Sp},
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
@@ -973,59 +971,7 @@ impl Formatter<'_> {
     }
     fn format_word(&mut self, word: &Sp<Word>, depth: usize) {
         match &word.value {
-            Word::Number(Ok(n)) => {
-                let grid_str = n.grid_string(false);
-                let formatted = word.span.as_str(self.inputs, |s| {
-                    if !s.contains('/')
-                        && !grid_str.contains('…')
-                        && grid_str.chars().count() < s.trim_end_matches('i').chars().count()
-                        && !["tau", "pi", "eta"].iter().any(|name| s.contains(name))
-                        && !grid_str.contains("τ/")
-                    {
-                        grid_str
-                    } else {
-                        fn format_frag(s: &str) -> Cow<str> {
-                            let mut s = Cow::Borrowed(s);
-                            if s.contains('`') {
-                                s = Cow::Owned(s.replace('`', "¯"));
-                            }
-                            for (name, glyph) in [("eta", "η"), ("pi", "π"), ("tau", "τ")] {
-                                if s.contains(name) {
-                                    s = Cow::Owned(s.replace(name, glyph));
-                                }
-                            }
-                            for i in (3..="infinity".len()).rev() {
-                                if s.contains(&"infinity"[..i]) {
-                                    s = Cow::Owned(s.replace(&"infinity"[..i], "∞"));
-                                }
-                            }
-                            s
-                        }
-                        if let Some((num, denom)) = s.split_once('/') {
-                            let num = format_frag(num);
-                            let denom = format_frag(denom);
-                            format!("{num}/{denom}")
-                        } else {
-                            format_frag(s).into_owned()
-                        }
-                    }
-                });
-                let curr = &mut self.output;
-                let new_starts_ascii = formatted.starts_with(|c: char| c.is_ascii_digit());
-                let new_starts_glyph = formatted.starts_with(['∞', 'η', 'π', 'τ']);
-                let curr_ends_neg = curr.ends_with('¯');
-                let curr_ends_ascii_or_neg =
-                    curr_ends_neg || curr.ends_with(|c: char| c.is_ascii_digit());
-                let curr_ends_num_dup = curr.ends_with('.')
-                    && (curr.chars().nth_back(1)).is_some_and(|c| c.is_ascii_digit());
-                if new_starts_ascii && (curr_ends_ascii_or_neg || curr_ends_num_dup)
-                    || new_starts_glyph && curr_ends_neg
-                {
-                    curr.push(' ');
-                }
-                self.push(&word.span, &formatted);
-            }
-            Word::Number(Err(s)) => self.push(&word.span, s),
+            Word::Number(_, s) => self.push(&word.span, s),
             Word::Label(label) => self.push(&word.span, &format!("${label}")),
             Word::Char(_) | Word::String(_) | Word::FormatString(_) => self
                 .output

@@ -1383,30 +1383,6 @@ impl<'a> Lexer<'a> {
                     span = span.merge(post.next().unwrap().span);
                 }
                 span.sp(Number)
-            } else if let Token::Subscr(sub) = token.value {
-                // Subscript ident
-                if let Some(prev) = processed.last_mut() {
-                    if let Token::Ident(ident) = &mut prev.value {
-                        if !ident.ends_with(['!', '‼']) {
-                            ident.push_str(&sub.to_string());
-                            prev.span.merge_with(token.span);
-                            continue;
-                        }
-                    }
-                }
-                token.span.sp(Token::Subscr(sub))
-            } else if let Token::Ident(ident) = token.value {
-                // Exlams that didn't get combined earlier
-                if ident.chars().all(|c| "!‼".contains(c)) {
-                    if let Some(prev) = processed.last_mut() {
-                        if let Token::Ident(prev_ident) = &mut prev.value {
-                            prev_ident.push_str(&ident);
-                            prev.span.merge_with(token.span);
-                            continue;
-                        }
-                    }
-                }
-                token.span.sp(Token::Ident(ident))
             } else {
                 token
             };

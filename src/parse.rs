@@ -849,7 +849,19 @@ impl Parser<'_> {
         })
     }
     fn ident(&mut self) -> Option<Sp<Ident>> {
-        self.next_token_map(Token::as_ident)
+        let mut ident = self.next_token_map(Token::as_ident)?;
+        while let Some(sub) = self.next_token_map(Token::as_subscript) {
+            ident.span.merge_with(sub.span);
+            ident.value.push_str(&sub.value.to_string());
+        }
+        while let Some(exclams) = self.next_token_map(|tok| {
+            tok.as_ident()
+                .filter(|ident| ident.chars().all(|c| "!‼".contains(c)))
+        }) {
+            ident.span.merge_with(exclams.span);
+            ident.value.push_str(&exclams.value);
+        }
+        Some(ident)
     }
     fn ref_(&mut self) -> Option<Sp<Word>> {
         let mut checkpoint = self.index;

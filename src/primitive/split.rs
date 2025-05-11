@@ -335,7 +335,7 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                 for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
                     if sub_name.chars().next() == prim.glyph() {
                         prims.push((prim.into(), sub_name));
-                        start += len;
+                        end -= len;
                         continue 'outer;
                     }
                 }

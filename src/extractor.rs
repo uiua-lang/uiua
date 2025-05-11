@@ -1,6 +1,6 @@
 use std::{fmt, sync::Arc};
 
-use ecow::{eco_vec, EcoVec};
+use ecow::EcoVec;
 use serde::*;
 use tinyvec::TinyVec;
 
@@ -10,20 +10,34 @@ pub fn extractor(ex: Extractor, op: Option<Arc<SigNode>>, env: &mut Uiua) -> Uiu
     let target = env.pop("extractor target")?;
     match extract(&ex, target) {
         Ok((extracted, target)) => {
-            if let Some(target) = target {
-                if target.row_count() != 0 {
-                    return Err(env.error("Extractor left array with items left over"));
+            if let Some(op) = op {
+                if op.sig.args() > 1 {
+                    let n = op.sig.args() - 1;
+                    _ = env.remove_n(n, n)?;
                 }
             }
             env.push(extracted);
+            if let Some(target) = target {
+                if ex.preserve {
+                    env.push(target);
+                } else if target.row_count() != 0 {
+                    return Err(env.error("▷ extractor left array with items left over"));
+                }
+            } else if ex.preserve {
+                return Err(env.error("◁ extractor was called on non box list"));
+            }
             Ok(())
         }
         Err((e, target)) => {
             if let Some(op) = op {
                 if op.sig.args() > 0 {
+                    env.push(target.clone());
+                }
+                env.exec(op)?;
+                if ex.preserve {
                     env.push(target);
                 }
-                env.exec(op)
+                Ok(())
             } else {
                 Err(env.error(match e {
                     ExtractionError::NoListMatch => "Extractor found no match in the list".into(),
@@ -112,7 +126,7 @@ fn extract(
 ) -> Result<(Value, Option<Value>), (ExtractionError, Value)> {
     match target {
         Value::Box(mut arr) if arr.rank() == 1 => {
-            for (i, Boxed(val)) in arr.data.iter().enumerate() {
+            for (i, Boxed(val)) in arr.data.iter().enumerate().rev() {
                 if extract_frags(ex, val).is_ok() {
                     let val = val.clone();
                     arr.remove_row(i);
@@ -205,6 +219,8 @@ enum ExtractionError {
 pub struct Extractor {
     /// The fragments
     pub frags: EcoVec<ExtractorFrag>,
+    /// Whether to preserve the extracted-from array on the stack
+    pub preserve: bool,
 }
 impl fmt::Debug for Extractor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -213,7 +229,11 @@ impl fmt::Debug for Extractor {
 }
 impl fmt::Display for Extractor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "⌁")?;
+        if self.preserve {
+            write!(f, "◁")
+        } else {
+            write!(f, "▷")
+        }?;
         for (i, frag) in self.frags.iter().enumerate() {
             if i > 0 {
                 write!(f, ".")?;
@@ -223,21 +243,14 @@ impl fmt::Display for Extractor {
         Ok(())
     }
 }
-impl From<ExtractorFrag> for Extractor {
-    fn from(frag: ExtractorFrag) -> Self {
-        Extractor {
-            frags: eco_vec![frag],
-        }
-    }
-}
-impl FromIterator<ExtractorFrag> for Extractor {
-    fn from_iter<T: IntoIterator<Item = ExtractorFrag>>(frags: T) -> Self {
+impl Extractor {
+    /// Create a new extractor
+    pub fn new(frags: impl IntoIterator<Item = ExtractorFrag>, preserve: bool) -> Self {
         Extractor {
             frags: frags.into_iter().collect(),
+            preserve,
         }
     }
-}
-impl Extractor {
     fn type_is_homogeneous(&self) -> bool {
         let mut iter = self.frags.iter().map(|f| f.ty);
         let Some(first) = iter.next() else {

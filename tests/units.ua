@@ -13,7 +13,7 @@ Z ← comptime(+1Y)
   3r4i 3r4iη 3r4iπ 3r4iτ
 ]
 ⍤⤙≍ 20 ⧻[
-  ee
+  e e
   ηη ηπ ητ
   πη ππ πτ
   τη τπ ττ
@@ -715,3 +715,8 @@ path(
 # Grid format empty arrays
 ◌pretty °△0_0_0
 ◌pretty °△0_0_0_0
+
+# Extractors
+F ← ▷3ℝ?⋅∘
+⍤⤙≍ 1_2_3 F {1_2_3} @h
+⍤⤙≍ @h F {5} @h

@@ -608,6 +608,7 @@ pub enum Token {
     Glyph(Primitive),
     Placeholder(usize),
     Subscr(Subscript),
+    ExtractorBegin(bool),
     ExtractorFrag(ExtractorFrag, ExtractorEnd),
     LeftArrow,
     LeftStrokeArrow,
@@ -688,6 +689,12 @@ impl Token {
             _ => None,
         }
     }
+    pub(crate) fn as_extractor_begin(&self) -> Option<bool> {
+        match self {
+            Token::ExtractorBegin(preserve) => Some(*preserve),
+            _ => None,
+        }
+    }
     pub(crate) fn as_extractor_frag(&self) -> Option<(ExtractorFrag, ExtractorEnd)> {
         match self {
             Token::ExtractorFrag(ex, end) => Some((ex.clone(), *end)),
@@ -742,6 +749,8 @@ impl fmt::Display for Token {
             Token::OpenModule => write!(f, "┌─╴"),
             Token::CloseModule => write!(f, "└─╴"),
             Token::Placeholder(i) => write!(f, "^{i}"),
+            Token::ExtractorBegin(false) => write!(f, "▷"),
+            Token::ExtractorBegin(true) => write!(f, "◁"),
             Token::ExtractorFrag(ex, end) => write!(f, "{ex}{end}"),
         }
     }
@@ -772,7 +781,6 @@ pub enum AsciiToken {
     GreaterEqual,
     Backtick,
     Tilde,
-    Quote,
 }
 
 impl fmt::Display for AsciiToken {
@@ -799,7 +807,6 @@ impl fmt::Display for AsciiToken {
             AsciiToken::GreaterEqual => write!(f, ">="),
             AsciiToken::Backtick => write!(f, "`"),
             AsciiToken::Tilde => write!(f, "~"),
-            AsciiToken::Quote => write!(f, "'"),
         }
     }
 }
@@ -1056,7 +1063,6 @@ impl<'a> Lexer<'a> {
                 ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),
                 "~" => self.end(Tilde, start),
-                "'" => self.end(Quote, start),
                 "`" => {
                     if self.number("-") {
                         self.end(Number, start)
@@ -1173,8 +1179,10 @@ impl<'a> Lexer<'a> {
                     self.end(Char(char), start)
                 }
                 // Extractors
-                "&" if self.next_char_exact("&") => self.extractors(start),
-                "⌁" => self.extractors(start),
+                "'" if self.next_char_exact(">") => self.extractors(false, start),
+                "'" if self.next_char_exact("<") => self.extractors(true, start),
+                "▷" => self.extractors(false, start),
+                "◁" => self.extractors(true, start),
                 // Strings
                 "\"" | "$" => {
                     let first_dollar = c == "$";
@@ -1615,7 +1623,9 @@ impl<'a> Lexer<'a> {
         }
         string
     }
-    fn extractors(&mut self, mut start: Loc) {
+    fn extractors(&mut self, preserve: bool, mut start: Loc) {
+        self.end(Token::ExtractorBegin(preserve), start);
+        start = self.loc;
         let (ex, end) = self.extractor().unwrap_or_default();
         self.end(Token::ExtractorFrag(ex, end), start);
         if end != ExtractorEnd::Or {

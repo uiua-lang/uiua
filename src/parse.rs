@@ -1758,36 +1758,29 @@ impl Parser<'_> {
         Some(Comments { lines, semantic })
     }
     fn extractor(&mut self) -> Option<Sp<Word>> {
-        let frag_end = self.next_token_map(Token::as_extractor_frag)?;
-        Some(match frag_end.value.1 {
-            ExtractorEnd::Error => frag_end.map(|(frag, _)| Word::Extractor(frag.into())),
-            ExtractorEnd::OrElse => frag_end.map(|(frag, _)| Word::ExtractorOrElse(frag.into())),
-            ExtractorEnd::Or => {
-                let mut span = frag_end.span;
-                let mut frags = vec![frag_end.value.0];
-                let mut is_or_val = false;
-                while let Some(((frag, end), sp)) = self
-                    .next_token_map(Token::as_extractor_frag)
-                    .map(Into::into)
-                {
-                    span.merge_with(sp);
-                    frags.push(frag);
-                    match end {
-                        ExtractorEnd::Error => break,
-                        ExtractorEnd::OrElse => {
-                            is_or_val = true;
-                            break;
-                        }
-                        ExtractorEnd::Or => {}
-                    }
+        let (preserve, mut span) = self.next_token_map(Token::as_extractor_begin)?.into();
+        let mut frags = Vec::new();
+        let mut is_or_val = false;
+        while let Some(((frag, end), sp)) = self
+            .next_token_map(Token::as_extractor_frag)
+            .map(Into::into)
+        {
+            span.merge_with(sp);
+            frags.push(frag);
+            match end {
+                ExtractorEnd::Error => break,
+                ExtractorEnd::OrElse => {
+                    is_or_val = true;
+                    break;
                 }
-                span.sp(if is_or_val {
-                    Word::ExtractorOrElse
-                } else {
-                    Word::Extractor
-                }(Extractor::from_iter(frags)))
+                ExtractorEnd::Or => {}
             }
-        })
+        }
+        Some(span.sp(if is_or_val {
+            Word::ExtractorOrElse
+        } else {
+            Word::Extractor
+        }(Extractor::new(frags, preserve))))
     }
 }
 

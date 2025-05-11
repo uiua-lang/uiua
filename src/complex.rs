@@ -196,6 +196,22 @@ impl Complex {
             None
         }
     }
+    /// Multiply by another complex number, with 0 × ∞ = 0
+    pub fn safe_mul(self, rhs: impl Into<Self>) -> Self {
+        let rhs = rhs.into();
+        Self {
+            re: safe_mul(self.re, rhs.re) - safe_mul(self.im, rhs.im),
+            im: safe_mul(self.re, rhs.im) + safe_mul(self.im, rhs.re),
+        }
+    }
+}
+
+fn safe_mul(a: f64, b: f64) -> f64 {
+    if a.is_infinite() && b == 0.0 || a == 0.0 && b.is_infinite() {
+        0.0
+    } else {
+        a * b
+    }
 }
 
 impl From<f64> for Complex {

@@ -16,7 +16,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     ast::{NumericSubscript, SidedSubscript, SubSide, Subscript},
-    Ident, Inputs, Primitive, WILDCARD_CHAR,
+    split_name, Ident, Inputs, PrimComponent, Primitive, WILDCARD_CHAR,
 };
 
 /// Subscript digit characters
@@ -1271,7 +1271,7 @@ impl<'a> Lexer<'a> {
                         .find(|(_, c)| !c.is_ascii_lowercase() && *c != '&')
                         .map_or(ident.len(), |(i, _)| i);
                     let lowercase = &ident[..lowercase_end];
-                    if let Some(prims) = Primitive::from_format_name_multi(lowercase) {
+                    if let Some(prims) = split_name(lowercase) {
                         let first_start = start;
                         let mut start = start;
                         let prim_count = prims.len();
@@ -1292,10 +1292,11 @@ impl<'a> Lexer<'a> {
                                     ..first_start
                                 }
                             };
-                            self.tokens.push(Sp {
-                                value: Glyph(prim),
-                                span: self.make_span(start, end),
-                            });
+                            let tok = match prim {
+                                PrimComponent::Prim(prim) => Glyph(prim),
+                                PrimComponent::Num(num) => Ident(num.name().into()),
+                            };
+                            self.tokens.push(self.make_span(start, end).sp(tok));
                             start = end;
                         }
                         let rest = &ident[lowercase_end..];

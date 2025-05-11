@@ -12,8 +12,13 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) no longer uses the fill value as the first row
 - **Breaking Change** - [`fft`](https://uiua.org/docs/fft) now works along every axis of an array rather than only its last
   - This is more consistent with other functions
-- **Breaking Change** - Number literals involving [`eta η`](https://uiua.org/docs/eta), [`pi π`](https://uiua.org/docs/pi), and [`tau τ`](https://uiua.org/docs/tau) may now have a leading coefficient in addition to a denominator, and the symbol may be *in* the denominator
-  - Examples: `2π`, `3π/4`, `1/τ`, `1.5η`
+- **Breaking Change** - Overhaul number literals
+  - Literals involving [`eta η`](https://uiua.org/docs/eta), [`pi π`](https://uiua.org/docs/pi), [`tau τ`](https://uiua.org/docs/tau), and `e` may now have a leading coefficient in addition to a denominator, and the symbol may be *in* the denominator
+    - Examples: `2π`, `3π/4`, `1/τ`, `1.5η`, `3e`
+  - Add complex literals
+    - The real and imaginary parts are suffixed with `r` and `i` respectively. Both can be used alone.
+    - Work with fractions and other constants above
+    - Examples: `3r4i`, `5i`, `πi/2`
 - There are no longer signature restrictions on [`try ⍣`](https://uiua.org/docs/try)'s functions
 - Allow for [mixed](https://uiua.org/docs/subscripts#mixed) numeric and sided subscripts
   - Implemented for [`both ∩`](https://uiua.org/docs/both), [`rows ≡`](https://uiua.org/docs/rows), and [`inventory ⍚`](https://uiua.org/docs/inventory)

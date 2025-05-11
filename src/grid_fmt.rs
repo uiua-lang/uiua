@@ -2,7 +2,7 @@
 
 use std::{
     collections::HashMap,
-    f64::consts::{PI, TAU},
+    f64::consts::{E, PI, TAU},
     iter::{once, repeat_n},
     mem::take,
 };
@@ -62,6 +62,8 @@ impl GridFmt for f64 {
             format!("{minus}τ")
         } else if (positive - PI / 2.0).abs() <= f64::EPSILON {
             format!("{minus}η")
+        } else if (positive - E).abs() <= f64::EPSILON {
+            format!("{minus}e")
         } else if positive == f64::INFINITY {
             format!("{minus}∞")
         } else if f.to_bits() == EMPTY_NAN.to_bits() {
@@ -86,6 +88,18 @@ impl GridFmt for f64 {
             let prefix = if approx { "~" } else { "" };
             if denom == 1 {
                 format!("{prefix}{minus}{num}τ")
+            } else if denom == 2 {
+                if num == 1.0 {
+                    format!("{prefix}{minus}π")
+                } else {
+                    format!("{prefix}{minus}{num}π")
+                }
+            } else if denom == 4 {
+                if num == 1.0 {
+                    format!("{prefix}{minus}η")
+                } else {
+                    format!("{prefix}{minus}{num}η")
+                }
             } else if num == 1.0 {
                 format!("{prefix}{minus}τ/{denom}")
             } else {

@@ -1223,8 +1223,9 @@ impl Compiler {
     fn word(&mut self, word: Sp<Word>) -> UiuaResult<Node> {
         self.check_depth(&word.span)?;
         Ok(match word.value {
-            Word::Number(Ok(n), _) => Node::new_push(n),
-            Word::Number(Err(s), _) => {
+            Word::Number(NumWord::Real(n), _) => Node::new_push(n),
+            Word::Number(NumWord::Complex(c), _) => Node::new_push(c),
+            Word::Number(NumWord::Err(s), _) => {
                 self.add_error(word.span.clone(), format!("Invalid number `{s}`"));
                 Node::new_push(0.0)
             }

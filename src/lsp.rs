@@ -848,8 +848,8 @@ mod server {
         is_ident_char,
         lex::{lex, Loc},
         primitive::{PrimClass, PrimDocFragment},
-        subscript, AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token,
-        UiuaErrorKind,
+        split_name, subscript, AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span,
+        Token, UiuaErrorKind,
     };
 
     pub struct LspDoc {
@@ -1535,7 +1535,7 @@ mod server {
                         break;
                     }
                 }
-            } else if let Some(prims) = Primitive::from_format_name_multi(&ident) {
+            } else if let Some(prims) = split_name(&ident) {
                 for (p, _) in prims {
                     formatted.push_str(&p.to_string());
                 }

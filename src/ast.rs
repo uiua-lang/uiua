@@ -9,7 +9,7 @@ use crate::{
     function::Signature,
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
-    BindingCounts, Ident, Primitive, SemanticComment, SUBSCRIPT_DIGITS,
+    BindingCounts, Complex, Ident, Primitive, SemanticComment, SUBSCRIPT_DIGITS,
 };
 
 /// A top-level item
@@ -328,7 +328,7 @@ pub struct InlineMacro {
 #[allow(missing_docs)]
 #[serde(tag = "type", content = "value")]
 pub enum Word {
-    Number(Result<f64, String>, String),
+    Number(NumWord, String),
     Char(String),
     String(String),
     MultilineString(Vec<Sp<String>>),
@@ -929,5 +929,94 @@ impl fmt::Debug for Subscripted {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.word.value.fmt(f)?;
         write!(f, "{}", self.script.value)
+    }
+}
+
+/// A number word
+#[derive(Clone, PartialEq, Serialize)]
+#[allow(missing_docs)]
+pub enum NumWord {
+    Real(f64),
+    Complex(Complex),
+    Err(String),
+}
+
+impl From<f64> for NumWord {
+    fn from(value: f64) -> Self {
+        Self::Real(value)
+    }
+}
+
+impl From<Complex> for NumWord {
+    fn from(value: Complex) -> Self {
+        Self::Complex(value)
+    }
+}
+
+impl From<Result<f64, String>> for NumWord {
+    fn from(value: Result<f64, String>) -> Self {
+        match value {
+            Ok(v) => Self::Real(v),
+            Err(e) => Self::Err(e),
+        }
+    }
+}
+
+impl From<Result<Complex, String>> for NumWord {
+    fn from(value: Result<Complex, String>) -> Self {
+        match value {
+            Ok(v) => Self::Complex(v),
+            Err(e) => Self::Err(e),
+        }
+    }
+}
+
+impl NumWord {
+    /// Map the number
+    pub fn map<R, C>(self, real: impl FnOnce(f64) -> R, complex: impl FnOnce(Complex) -> C) -> Self
+    where
+        C: Into<Self>,
+        R: Into<Self>,
+    {
+        match self {
+            Self::Real(r) => real(r).into(),
+            Self::Complex(c) => complex(c).into(),
+            Self::Err(e) => Self::Err(e),
+        }
+    }
+    /// Map the number with another
+    pub fn map_with<R, C>(
+        self,
+        other: Self,
+        real: impl FnOnce(f64, f64) -> R,
+        complex: impl FnOnce(Complex, Complex) -> C,
+    ) -> Self
+    where
+        C: Into<Self>,
+        R: Into<Self>,
+    {
+        match (self, other) {
+            (Self::Real(a), Self::Real(b)) => real(a, b).into(),
+            (Self::Complex(a), Self::Complex(b)) => complex(a, b).into(),
+            (Self::Real(a), Self::Complex(b)) => complex(a.into(), b).into(),
+            (Self::Complex(a), Self::Real(b)) => complex(a, b.into()).into(),
+            (Self::Err(e), _) | (_, Self::Err(e)) => Self::Err(e),
+        }
+    }
+}
+
+impl fmt::Debug for NumWord {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl fmt::Display for NumWord {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NumWord::Real(r) => write!(f, "{r}"),
+            NumWord::Complex(c) => write!(f, "{c}"),
+            NumWord::Err(e) => write!(f, "error({e})"),
+        }
     }
 }

@@ -170,6 +170,8 @@ pub enum ConstClass {
 constant!(
     /// Euler's constant
     ("e", Math, std::f64::consts::E),
+    /// The real complex unit
+    ("r", Math, crate::Complex::ONE),
     /// The imaginary unit
     ("i", Math, crate::Complex::I),
     /// IEEE 754-2008's `NaN`

@@ -685,7 +685,8 @@ fn TutorialTypes() -> impl IntoView {
 
         <Hd id="numbers">"Numbers"</Hd>
         <p>"Numbers are decimal numbers with floating precision. They use the IEEE-754 double-precision floating-point format."</p>
-        <Editor example="[5 6e3 0 3.2 3/4 ¯1.1 π ∞]"/>
+        <Editor example="[5 6e3 e 0 3.2 3/4 ¯1.1 π ∞ 3π/2]"/>
+        <p>"As you can see, numbers can be written as integers, with decimals, and as fractions. They can also contain numeric constants like "<code>"π"</code>", "<code>"e"</code>", and "<code>"∞"</code>"."</p>
         <p>"Most math operations can only be applied to numbers."</p>
         <p>"In cases where a number with a fractional part has repeating decimals, or when floating-point errors create tiny differences, the number will be shown with repeated decimal digits replaced by a "<code>"…"</code>"."</p>
         <Editor example="1/3\n1/12\n1/24\n+ 0.1 0.2"/>
@@ -713,6 +714,8 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="< i ℂ¯1 1\n≥ i ℂ1 1"/>
         <p>"In cases where a complex array has no elements with an imaginary part, it will be displayed in output with a "<code>"ℂ"</code>" marker."</p>
         <Editor example="ℂ0 5\nℂ0 [1 2 3]\nℂ0 [1_2 3_4]"/>
+        <p>"Complex numbers can be written as literals by suffixing the real part with "<code>"r"</code>" and/or the imaginary part with "<code>"i"</code>"."</p>
+        <Editor example="[3r4i 5r2i 2ri i/5 rπi]"/>
 
         <Hd id="characters">"Characters"</Hd>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>

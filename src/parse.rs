@@ -15,7 +15,7 @@ use crate::{
     ast::*,
     function::Signature,
     lex::{AsciiToken::*, Token::*, *},
-    BindingCounts, Diagnostic, DiagnosticKind, Ident, Inputs, Primitive,
+    BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent, Primitive,
 };
 
 /// An error that occurred while parsing
@@ -1319,92 +1319,233 @@ impl Parser<'_> {
         }
         Some(span.sp(arr))
     }
-    fn num(&mut self) -> Option<Sp<(Result<f64, String>, String)>> {
+    fn num(&mut self) -> Option<Sp<(NumWord, String)>> {
         let reset = self.index;
-        if let Some(span_a) = self.neg() {
-            if let Some(span_b) = self.exact(Primitive::Infinity.into()) {
-                return Some((span_a.merge(span_b)).sp((Ok(f64::NEG_INFINITY), "¯∞".into())));
-            } else {
-                self.index = reset;
-            }
-        }
+        // Numerator
         let ((numer, mut s), mut span) = self.numer_or_denom()?.into();
-        if !s.contains(['.', 'e', 'E']) {
+        // Denominator
+        if !s.contains(['.', 'e', 'E', '∞']) {
             let reset = self.index;
             if self.exact(Primitive::Reduce.into()).is_some() {
-                if let Some(((denom, ds), dspan)) = self.numer_or_denom().map(Into::into) {
-                    if ds.contains(['.', 'e', 'E']) {
-                        self.index = reset;
-                    } else {
-                        let n = numer.and_then(|n| denom.map(|d| n / d));
-                        s.push('/');
-                        s.push_str(&ds);
-                        if s.contains('¯') {
-                            let neg_count = s.chars().filter(|&c| c == '¯').count();
-                            if neg_count == 2 {
-                                s = s.replace('¯', "");
-                            } else if neg_count == 1 && !s.starts_with('¯') {
-                                s = s.replace('¯', "");
-                                s.insert(0, '¯');
-                            }
+                if let Some(((denom, ds), dspan)) = self
+                    .numer_or_denom()
+                    .filter(|n| !n.value.1.contains(['.', 'e', 'E']))
+                    .map(Into::into)
+                {
+                    let n = numer.map_with(denom, |n, d| n / d, |n, d| n / d);
+                    s.push('/');
+                    s.push_str(&ds);
+                    if s.contains('¯') {
+                        let neg_count = s.chars().filter(|&c| c == '¯').count();
+                        if neg_count == 2 {
+                            s = s.replace('¯', "");
+                        } else if neg_count == 1 && !s.starts_with('¯') {
+                            s = s.replace('¯', "");
+                            s.insert(0, '¯');
                         }
-                        span.merge_with(dspan);
-                        return Some(span.sp((n, s)));
                     }
+                    span.merge_with(dspan);
+                    return Some(span.sp((n, s)));
                 } else {
                     self.index = reset;
                 }
             }
         }
-        Some(span.sp((numer, s)))
-    }
-    fn numer_or_denom(&mut self) -> Option<Sp<(Result<f64, String>, String)>> {
-        let reset = self.index;
-        let (coef, s, span) = if let Some((r, span)) = self.real().map(Into::into) {
-            let s = match &r {
-                Ok(n) => n.to_string().replace('-', "¯"),
-                Err(_) => span.as_str(self.inputs, |s| s.into()),
-            };
-            (r, s, Some(span))
-        } else if let Some(span) = self.neg() {
-            (Ok(-1.0), "¯".into(), Some(span))
-        } else {
-            (Ok(1.0), String::new(), None)
-        };
-
-        let (n, s, span) = if coef == Ok(0.0) {
-            (coef, s, span.unwrap())
-        } else if let Some(((n, sym_s), sym_span)) = self.symbolic_num().map(Into::into) {
-            let span = match span {
-                Some(span) => span.merge(sym_span),
-                None => sym_span,
-            };
-            (coef.map(|c| c * n), s + &sym_s, span)
-        } else if let Some(span) = span {
-            if s == "¯" {
-                self.index = reset;
-                return None;
-            } else {
-                (coef, s, span)
-            }
-        } else {
+        // Let 1-letter string be identifiers
+        if ["r", "i", "e"].contains(&s.as_str()) {
             self.index = reset;
             return None;
+        }
+        Some(span.sp((numer, s)))
+    }
+    fn numer_or_denom(&mut self) -> Option<Sp<(NumWord, String)>> {
+        fn suffix(s: &str) -> Option<char> {
+            s.chars().next_back().filter(|c| "ri".contains(*c))
+        }
+        let first = self.num_frag(false)?;
+        let Some(first_suffix) = suffix(&first.value.1) else {
+            return Some(first);
         };
+        let mut suffixes = vec![first_suffix];
+        let mut frags = vec![first];
+        let mut reset = self.index;
+        while let Some(frag) = self.num_frag(false) {
+            let Some(suffix) = suffix(&frag.value.1) else {
+                self.index = reset;
+                break;
+            };
+            if suffixes.contains(&suffix) {
+                self.index = reset;
+                break;
+            }
+            frags.push(frag);
+            suffixes.push(suffix);
+            reset = self.index;
+        }
+        // Sort fragments
+        frags.sort_by_key(|frag| match suffix(&frag.value.1).unwrap() {
+            'r' => 0,
+            'i' => 1,
+            _ => unreachable!(),
+        });
+        // Merge fragments
+        let mut frags = frags.into_iter().map(Into::into);
+        let ((mut n, mut s), mut span) = frags.next().unwrap();
+        for ((n2, s2), span2) in frags {
+            n = n.map_with(n2, |n, n2| n + n2, |n, n2| n + n2);
+            s.push_str(&s2);
+            span.merge_with(span2);
+        }
+        // Final suffix
+        if !s.contains(['η', 'π', 'τ', 'e']) {
+            if let Some(((n2, s2), span2)) = self.num_frag(true).map(Into::into) {
+                n = n.map_with(n2, |n, n2| n * n2, Complex::safe_mul);
+                s.push_str(&s2);
+                span.merge_with(span2);
+            }
+        }
         Some(span.sp((n, s)))
     }
     fn neg(&mut self) -> Option<CodeSpan> {
         self.exact(Primitive::Neg.into())
             .or_else(|| self.exact(Backtick.into()))
     }
-    fn symbolic_num(&mut self) -> Option<Sp<(f64, String)>> {
-        [
-            (Primitive::Eta, PI / 2.0),
-            (Primitive::Pi, PI),
-            (Primitive::Tau, TAU),
-        ]
-        .into_iter()
-        .find_map(|(prim, n)| Some(self.exact(prim.into())?.sp((n, prim.to_string()))))
+    fn num_frag(&mut self, suffix_mode: bool) -> Option<Sp<(NumWord, String)>> {
+        let reset = self.index;
+        let mut is_inf = false;
+        let (coef, mut s, span) = if suffix_mode {
+            (Ok(1.0), String::new(), None)
+        } else if let Some((r, span)) = self.real().map(Into::into) {
+            let s = match &r {
+                Ok(n) => n.to_string().replace('-', "¯"),
+                Err(_) => span.as_str(self.inputs, |s| s.into()),
+            };
+            (r, s, Some(span))
+        } else if let Some(((n, s), span)) = self.infinity().map(Into::into) {
+            is_inf = true;
+            (Ok(n), s, Some(span))
+        } else if let Some(span) = self.neg() {
+            (Ok(-1.0), "¯".into(), Some(span))
+        } else {
+            (Ok(1.0), String::new(), None)
+        };
+
+        let (mut n, mut s, mut span) = if coef == Ok(0.0) {
+            // Can't group other stuff with 0
+            (coef.into(), s, span.unwrap())
+        } else if let Some((sym, mut is_circle)) =
+            (!is_inf).then(|| self.symbolic_num(true, &[])).flatten()
+        {
+            // Real constants
+            let ((mut n, sym_s), sym_span) = sym.into();
+            let mut used = vec![n.clone()];
+            let mut span = match span {
+                Some(span) => span.merge(sym_span),
+                None => sym_span,
+            };
+            s.push_str(&sym_s);
+            if !suffix_mode {
+                while let Some((sym, new_is_circle)) = self.symbolic_num(!is_circle, &used) {
+                    let ((new_n, new_s), new_span) = sym.into();
+                    is_circle |= new_is_circle;
+                    used.push(new_n.clone());
+                    s.push_str(&new_s);
+                    n = n.map_with(new_n, |n, new| n * new, Complex::safe_mul);
+                    span.merge_with(new_span);
+                }
+            }
+            let n = n.map_with(coef.into(), |n, c| c * n, Complex::safe_mul);
+            (n, s, span)
+        } else if let Some(((n2, s2), span2)) = (!suffix_mode)
+            .then(|| self.complex_comp())
+            .flatten()
+            .map(Into::into)
+        {
+            // Negative complex
+            let n = n2.map_with(coef.into(), |n, c| c * n, Complex::safe_mul);
+            s.push_str(&s2);
+            let span = match span {
+                Some(span) => span.merge(span2),
+                None => span2,
+            };
+            return Some(span.sp((n, s)));
+        } else if let Some(span) = span {
+            if s == "¯" {
+                self.index = reset;
+                return None;
+            } else {
+                // Just the number
+                (coef.into(), s, span)
+            }
+        } else {
+            self.index = reset;
+            return None;
+        };
+
+        // Complex component
+        if !suffix_mode {
+            if let Some(((n2, s2), span2)) = self.complex_comp().map(Into::into) {
+                n = n.map_with(n2, |n, c| n * c, Complex::safe_mul);
+                s.push_str(&s2);
+                span.merge_with(span2);
+            }
+        }
+
+        Some(span.sp((n, s)))
+    }
+    fn symbolic_num(
+        &mut self,
+        allow_circle: bool,
+        used: &[NumWord],
+    ) -> Option<(Sp<(NumWord, String)>, bool)> {
+        if allow_circle {
+            if let Some(n_span) = [
+                (Primitive::Eta, PI / 2.0),
+                (Primitive::Pi, PI),
+                (Primitive::Tau, TAU),
+            ]
+            .into_iter()
+            .find_map(|(prim, n)| Some(self.exact(prim.into())?.sp((n.into(), prim.to_string()))))
+            {
+                return Some((n_span, true));
+            }
+        }
+        let reset = self.index;
+        let ident = self.ident()?;
+        if let Some(num) = NumComponent::from_format_name(&ident.value).filter(|num| {
+            !matches!(num.value(), NumWord::Complex(_)) && !used.contains(&num.value())
+        }) {
+            Some((ident.map(|s| (num.value(), s.into())), false))
+        } else {
+            self.index = reset;
+            None
+        }
+    }
+    fn complex_comp(&mut self) -> Option<Sp<(NumWord, String)>> {
+        let reset = self.index;
+        let ident = self.ident()?;
+        if let Some(comp) = NumComponent::from_format_name(&ident.value)
+            .filter(|num| matches!(num.value(), NumWord::Complex(_)))
+        {
+            Some(ident.span.sp((comp.value(), comp.name().into())))
+        } else {
+            self.index = reset;
+            None
+        }
+    }
+    fn infinity(&mut self) -> Option<Sp<(f64, String)>> {
+        let reset = self.index;
+        if let Some(span_a) = self.neg() {
+            if let Some(span_b) = self.exact(Primitive::Infinity.into()) {
+                Some((span_a.merge(span_b)).sp((f64::NEG_INFINITY, "¯∞".into())))
+            } else {
+                self.index = reset;
+                None
+            }
+        } else {
+            self.exact(Primitive::Infinity.into())
+                .map(|span| span.sp((f64::INFINITY, "∞".into())))
+        }
     }
     fn real(&mut self) -> Option<Sp<Result<f64, String>>> {
         let span = self.exact(Token::Number)?;

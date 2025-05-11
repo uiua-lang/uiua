@@ -1324,12 +1324,12 @@ impl Parser<'_> {
         // Numerator
         let ((numer, mut s), mut span) = self.numer_or_denom()?.into();
         // Denominator
-        if !s.contains(['.', 'e', 'E', '∞']) {
+        if !s.contains(['.', '∞']) {
             let reset = self.index;
             if self.exact(Primitive::Reduce.into()).is_some() {
                 if let Some(((denom, ds), dspan)) = self
                     .numer_or_denom()
-                    .filter(|n| !n.value.1.contains(['.', 'e', 'E']))
+                    .filter(|n| !n.value.1.contains(['.', '∞']))
                     .map(Into::into)
                 {
                     let n = numer.map_with(denom, |n, d| n / d, |n, d| n / d);
@@ -1416,9 +1416,11 @@ impl Parser<'_> {
         let (coef, mut s, span) = if suffix_mode {
             (Ok(1.0), String::new(), None)
         } else if let Some((r, span)) = self.real().map(Into::into) {
+            let s = &self.input[span.byte_range()];
             let s = match &r {
+                Ok(_) if s.contains(['e', 'E']) => s.into(),
                 Ok(n) => n.to_string().replace('-', "¯"),
-                Err(_) => span.as_str(self.inputs, |s| s.into()),
+                Err(_) => s.into(),
             };
             (r, s, Some(span))
         } else if let Some(((n, s), span)) = self.infinity().map(Into::into) {

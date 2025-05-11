@@ -99,7 +99,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Delete old release
-      run: gh release delete latest --yes || true
+      run: gh release delete latest --yes --cleanup-tag || true
     - name: Prepare release notes
       run: echo "This release contains binaries for the latest \`main\` branch." >> release_notes.md
     - name: Create release

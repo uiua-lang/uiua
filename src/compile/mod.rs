@@ -1517,11 +1517,19 @@ impl Compiler {
                 self.add_error(
                     word.span.clone(),
                     "Inline macro was not parsed as a modifier. \
-                    This is a bug in the interpreter",
+                    This is a bug in the interpreter.",
                 );
                 Node::empty()
             }
-            Word::Extractor(ex, _) => Node::Extractor(ex, None, self.add_span(word.span)),
+            Word::Extractor(ex) => Node::Extractor(ex, None, self.add_span(word.span)),
+            Word::ExtractorOrElse(_) => {
+                self.add_error(
+                    word.span.clone(),
+                    "? extractor was not parsed as a modifier. \
+                    This is a bug in the interpreter.",
+                );
+                Node::empty()
+            }
         })
     }
     fn force_sig(&mut self, mut node: Node, new_sig: Signature, span: &CodeSpan) -> Node {

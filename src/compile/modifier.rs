@@ -392,8 +392,17 @@ impl Compiler {
                 return self.inline_macro(mac, modified.modifier.span, modified.operands);
             }
             Modifier::Extractor(ex) => {
-                let op = modified.operands.into_iter().next().unwrap();
-                let op = self.word_sig(op)?;
+                let (op, op_span) = self.monadic_modifier_op(&modified.operands)?;
+                if op.sig.outputs() != 1 {
+                    self.add_error(
+                        op_span,
+                        format!(
+                            "Extractor default must have 1 output, \
+                            but its signature is {}",
+                            op.sig
+                        ),
+                    )
+                }
                 let span = self.add_span(modified.modifier.span);
                 return Ok(Node::Extractor(ex, Some(op.into()), span));
             }
@@ -416,8 +425,8 @@ impl Compiler {
         self.print_diagnostics = print_diagnostics;
         res
     }
-    fn monadic_modifier_op(&mut self, m: &Modified) -> UiuaResult<(SigNode, CodeSpan)> {
-        let operand = m.code_operands().next().unwrap().clone();
+    fn monadic_modifier_op(&mut self, operands: &[Sp<Word>]) -> UiuaResult<(SigNode, CodeSpan)> {
+        let operand = operands.iter().find(|w| w.value.is_code()).unwrap().clone();
         let span = operand.span.clone();
         self.word_sig(operand).map(|sn| (sn, span))
     }
@@ -451,13 +460,13 @@ impl Compiler {
 
         Ok(Some(match prim {
             Gap => {
-                let (SigNode { mut node, .. }, _) = self.monadic_modifier_op(modified)?;
+                let (SigNode { mut node, .. }, _) = self.monadic_modifier_op(&modified.operands)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 node.prepend(Node::Prim(Pop, span));
                 node
             }
             On => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 if let Some(n) = subscript
                     .and_then(|sub| {
@@ -473,7 +482,7 @@ impl Compiler {
                 }
             }
             By => {
-                let (mut sn, _) = self.monadic_modifier_op(modified)?;
+                let (mut sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 if let Some(n) = subscript
                     .and_then(|sub| {
@@ -502,7 +511,7 @@ impl Compiler {
                 }
             }
             Reach => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let mut node = sn.node;
                 if let Some(side) = subscript.and_then(|sub| self.subscript_side_only(&sub, On)) {
@@ -553,7 +562,7 @@ impl Compiler {
                     .value
                     .map_num(|n| self.positive_subscript(n, Both, &sub_span) as u32);
                 let span = self.add_span(modified.modifier.span.clone());
-                let op = self.monadic_modifier_op(modified)?.0;
+                let op = self.monadic_modifier_op(&modified.operands)?.0;
                 if let Some(side) = &mut sub.side {
                     if let Some(side_n) = side.n {
                         if side_n > op.sig.args() {
@@ -613,7 +622,7 @@ impl Compiler {
                 }
             }
             prim @ (With | Off) => {
-                let (mut sn, _) = self.monadic_modifier_op(modified)?;
+                let (mut sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let sig = sn.sig;
                 let sub_n = subscript
@@ -681,7 +690,7 @@ impl Compiler {
                 ])
             }
             prim @ (Above | Below) => {
-                let (mut sn, _) = self.monadic_modifier_op(modified)?;
+                let (mut sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 if sn.sig.args() < 2 {
                     self.emit_diagnostic(
                         format!(
@@ -699,7 +708,8 @@ impl Compiler {
                 Node::Mod(prim, eco_vec![sn], span)
             }
             Slf => {
-                let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
+                let (SigNode { mut node, sig }, _) =
+                    self.monadic_modifier_op(&modified.operands)?;
                 match sig.args() {
                     0 | 1 => {
                         self.add_error(
@@ -722,7 +732,8 @@ impl Compiler {
                 }
             }
             Backward => {
-                let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
+                let (SigNode { mut node, sig }, _) =
+                    self.monadic_modifier_op(&modified.operands)?;
                 match sig.args() {
                     2 => {
                         let span = self.add_span(modified.modifier.span.clone());
@@ -752,7 +763,7 @@ impl Compiler {
                 }
             }
             Content => {
-                let mut sn = self.monadic_modifier_op(modified)?.0;
+                let mut sn = self.monadic_modifier_op(&modified.operands)?.0;
                 let span = self.add_span(modified.modifier.span.clone());
                 sn.node.prepend(
                     Node::ImplPrim(ImplPrimitive::UnBox, span)
@@ -764,7 +775,7 @@ impl Compiler {
                 sn.node
             }
             Repeat => {
-                let (sn, span) = self.monadic_modifier_op(modified)?;
+                let (sn, span) = self.monadic_modifier_op(&modified.operands)?;
                 let spandex = self.add_span(modified.modifier.span.clone());
                 let mut node = if let Some((inv, inv_sig)) = sn
                     .node
@@ -802,7 +813,7 @@ impl Compiler {
                 node
             }
             Tuples => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let inner_sig = sn.sig;
                 let mut node = Node::Mod(Primitive::Tuples, eco_vec![sn], span);
@@ -824,7 +835,7 @@ impl Compiler {
                 node
             }
             Stencil => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let inner_sig = sn.sig;
                 let mut node = Node::Mod(Primitive::Stencil, eco_vec![sn], span);
@@ -846,7 +857,7 @@ impl Compiler {
                 node
             }
             Un => {
-                let (sn, span) = self.monadic_modifier_op(modified)?;
+                let (sn, span) = self.monadic_modifier_op(&modified.operands)?;
                 invert::dbgln!("\n//////////////\n// begin UN //\n//////////////");
                 self.add_span(span.clone());
                 let mut normal = sn.un_inverse(&self.asm);
@@ -869,7 +880,7 @@ impl Compiler {
                 }
             }
             Anti => {
-                let (sn, span) = self.monadic_modifier_op(modified)?;
+                let (sn, span) = self.monadic_modifier_op(&modified.operands)?;
                 invert::dbgln!("\n////////////////\n// begin ANTI //\n////////////////");
                 self.add_span(span.clone());
                 let normal = sn.anti_inverse(&self.asm);
@@ -936,7 +947,7 @@ impl Compiler {
             }
             Obverse => {
                 // Empty inverse case, where only one function is supplied
-                let (sn, span) = self.monadic_modifier_op(modified)?;
+                let (sn, span) = self.monadic_modifier_op(&modified.operands)?;
                 let spandex = self.add_span(span.clone());
                 let un = if sn.sig.args() == sn.sig.outputs() {
                     Some(SigNode::new(sn.sig, Node::empty()))
@@ -1182,7 +1193,7 @@ impl Compiler {
                 }
             }
             prim @ (Rows | Inventory) => {
-                let (mut sn, _) = self.monadic_modifier_op(modified)?;
+                let (mut sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let sub = subscript
                     .map(|sub| {
@@ -1260,7 +1271,7 @@ impl Compiler {
             }
             Table => {
                 // Normal table compilation, but get some diagnostics
-                let (sn, span) = self.monadic_modifier_op(modified)?;
+                let (sn, span) = self.monadic_modifier_op(&modified.operands)?;
                 match sn.sig.args() {
                     0 => self.emit_diagnostic(
                         format!("{} of 0 arguments is redundant", Table.format()),
@@ -1299,7 +1310,7 @@ impl Compiler {
                 table_fork(sn, table_span, &self.asm)
             }
             Fold => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 if sn.sig.args() < sn.sig.outputs() {
                     self.experimental_error(&modified.modifier.span, || {
                         format!(
@@ -1318,7 +1329,7 @@ impl Compiler {
                     .last()
                     .map(|curr| curr.recurses)
                     .unwrap_or(0);
-                let (sn, span) = self.monadic_modifier_op(modified)?;
+                let (sn, span) = self.monadic_modifier_op(&modified.operands)?;
                 if let Some(curr) = self.current_bindings.last() {
                     if curr.recurses > recurses_before {
                         self.add_error(span, format!("Cannot {prim} recursive function"))
@@ -1369,14 +1380,14 @@ impl Compiler {
                 self.quote(&code, Some("quote".into()), &modified.modifier.span)?
             }
             Sig => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 Node::from_iter([
                     Node::new_push(sn.sig.outputs()),
                     Node::new_push(sn.sig.args()),
                 ])
             }
             Derivative => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 self.add_span(modified.modifier.span.clone());
                 match derivative(&sn.node, &self.asm) {
                     Ok(node) => node,
@@ -1390,7 +1401,7 @@ impl Compiler {
                 }
             }
             Integral => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(&modified.operands)?;
                 self.add_span(modified.modifier.span.clone());
                 match integral(&sn.node, &self.asm) {
                     Ok(node) => node,

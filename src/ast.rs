@@ -6,7 +6,7 @@ use ecow::EcoString;
 use serde::*;
 
 use crate::{
-    extractor::{Extractor, ExtractorEnd},
+    extractor::Extractor,
     function::Signature,
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
@@ -359,7 +359,8 @@ pub enum Word {
     },
     Subscripted(Box<Subscripted>),
     InlineMacro(InlineMacro),
-    Extractor(Extractor, ExtractorEnd),
+    Extractor(Extractor),
+    ExtractorOrElse(Extractor),
 }
 
 impl PartialEq for Word {
@@ -386,7 +387,8 @@ impl PartialEq for Word {
             }
             (Self::Placeholder(_), Self::Placeholder(_)) => false,
             (Self::Comment(a), Self::Comment(b)) => a == b,
-            (Self::Extractor(a, ae), Self::Extractor(b, be)) => a == b && ae == be,
+            (Self::Extractor(a), Self::Extractor(b)) => a == b,
+            (Self::ExtractorOrElse(a), Self::ExtractorOrElse(b)) => a == b,
             _ => discriminant(self) == discriminant(other),
         }
     }
@@ -478,7 +480,8 @@ impl fmt::Debug for Word {
             Word::InlineMacro(InlineMacro { ident, func, .. }) => {
                 write!(f, "inline_macro({:?}{}))", func.value, ident.value)
             }
-            Word::Extractor(ex, end) => write!(f, "{ex}{end}"),
+            Word::Extractor(ex) => write!(f, "{ex}"),
+            Word::ExtractorOrElse(ex) => write!(f, "{ex}?"),
         }
     }
 }

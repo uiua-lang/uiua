@@ -1223,7 +1223,8 @@ impl Formatter<'_> {
                 }
                 self.push(&ident.span, &ident.value);
             }
-            Word::Extractor(extractor, end) => self.push(&word.span, &format!("{extractor}{end}")),
+            Word::Extractor(ex) => self.push(&word.span, &ex.to_string()),
+            Word::ExtractorOrElse(ex) => self.push(&word.span, &format!("{ex}?")),
         }
     }
     fn format_primitive(&mut self, prim: Primitive, span: &CodeSpan) {
@@ -1329,7 +1330,7 @@ impl Formatter<'_> {
                 }
                 self.push(&mac.ident.span, &mac.ident.value);
             }
-            Modifier::Extractor(ex) => self.push(&modifier.span, &format!("{ex}.")),
+            Modifier::Extractor(ex) => self.push(&modifier.span, &format!("{ex}?")),
         }
     }
     fn push(&mut self, span: &CodeSpan, formatted: &str) {
@@ -1592,7 +1593,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::FlipLine => false,
         Word::SemanticComment(_) => true,
         Word::OutputComment { .. } => true,
-        Word::Extractor(..) => false,
+        Word::Extractor(..) | Word::ExtractorOrElse(..) => false,
     }
 }
 

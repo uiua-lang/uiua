@@ -608,7 +608,7 @@ pub enum Token {
     Glyph(Primitive),
     Placeholder(usize),
     Subscr(Subscript),
-    Extractor(Extractor, ExtractorEnd),
+    ExtractorFrag(ExtractorFrag, ExtractorEnd),
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
@@ -688,9 +688,9 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_extractor(&self) -> Option<(Extractor, ExtractorEnd)> {
+    pub(crate) fn as_extractor_frag(&self) -> Option<(ExtractorFrag, ExtractorEnd)> {
         match self {
-            Token::Extractor(ex, end) => Some((ex.clone(), *end)),
+            Token::ExtractorFrag(ex, end) => Some((ex.clone(), *end)),
             _ => None,
         }
     }
@@ -742,7 +742,7 @@ impl fmt::Display for Token {
             Token::OpenModule => write!(f, "┌─╴"),
             Token::CloseModule => write!(f, "└─╴"),
             Token::Placeholder(i) => write!(f, "^{i}"),
-            Token::Extractor(ex, end) => write!(f, "{ex}{end}"),
+            Token::ExtractorFrag(ex, end) => write!(f, "{ex}{end}"),
         }
     }
 }
@@ -1173,14 +1173,8 @@ impl<'a> Lexer<'a> {
                     self.end(Char(char), start)
                 }
                 // Extractors
-                "&" if self.next_char_exact("&") => {
-                    let (ex, end) = self.extractor().unwrap_or_default();
-                    self.end(Extractor(ex, end), start);
-                }
-                "⌁" => {
-                    let (ex, end) = self.extractor().unwrap_or_default();
-                    self.end(Extractor(ex, end), start);
-                }
+                "&" if self.next_char_exact("&") => self.extractors(start),
+                "⌁" => self.extractors(start),
                 // Strings
                 "\"" | "$" => {
                     let first_dollar = c == "$";
@@ -1621,9 +1615,24 @@ impl<'a> Lexer<'a> {
         }
         string
     }
-    fn extractor(&mut self) -> Option<(Extractor, ExtractorEnd)> {
+    fn extractors(&mut self, mut start: Loc) {
+        let (ex, end) = self.extractor().unwrap_or_default();
+        self.end(Token::ExtractorFrag(ex, end), start);
+        if end != ExtractorEnd::Or {
+            return;
+        }
+        start = self.loc;
+        while let Some((ex, end)) = self.extractor() {
+            self.end(Token::ExtractorFrag(ex, end), start);
+            if end != ExtractorEnd::Or {
+                break;
+            }
+            start = self.loc;
+        }
+    }
+    fn extractor(&mut self) -> Option<(ExtractorFrag, ExtractorEnd)> {
         let mut shape: Option<EcoVec<ExtractorDim>> = None;
-        if self.next_char_exact("s") || self.next_char_exact("∙") {
+        if self.next_char_exact("s") {
             shape = Some(EcoVec::new());
         } else {
             loop {
@@ -1674,10 +1683,12 @@ impl<'a> Lexer<'a> {
         if shape.is_some() || ty.is_some() {
             let end = if self.next_char_exact(".") {
                 ExtractorEnd::Or
+            } else if self.next_char_exact("?") {
+                ExtractorEnd::OrElse
             } else {
                 ExtractorEnd::Error
             };
-            Some((Extractor { shape, ty }, end))
+            Some((ExtractorFrag { shape, ty }, end))
         } else {
             None
         }

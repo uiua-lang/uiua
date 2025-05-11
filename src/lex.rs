@@ -1239,7 +1239,7 @@ impl<'a> Lexer<'a> {
                     self.end(Subscr(sub), start)
                 }
                 // Identifiers and unformatted glyphs
-                c if is_custom_glyph(c) || c.chars().all(is_ident_start) || "&!‼".contains(c) => {
+                c if is_custom_glyph(c) || c.chars().all(is_ident_char) || "&!‼".contains(c) => {
                     // Get ident start
                     let mut ident = self.ident(start, c).to_string();
                     let mut exclam_count = match c {
@@ -1268,7 +1268,7 @@ impl<'a> Lexer<'a> {
                     // Try to parse as primitives
                     let lowercase_end = ident
                         .char_indices()
-                        .find(|(_, c)| !c.is_ascii_lowercase() && *c != '&')
+                        .find(|(_, c)| !c.is_lowercase() && *c != '&')
                         .map_or(ident.len(), |(i, _)| i);
                     let lowercase = &ident[..lowercase_end];
                     if let Some(prims) = split_name(lowercase) {
@@ -1346,7 +1346,7 @@ impl<'a> Lexer<'a> {
         if raw.contains('\\') || is_custom_glyph(c) || !c.is_empty() && "!‼".contains(c) {
             return s;
         }
-        while let Some(c) = self.next_char_if_all(is_ident_start) {
+        while let Some(c) = self.next_char_if_all(is_ident_char) {
             s.push_str(c);
         }
         s
@@ -1641,14 +1641,9 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
     frags
 }
 
-/// Whether a character can be part of a Uiua identifier
-pub fn is_ident_char(c: char) -> bool {
-    is_ident_start(c) || SUBSCRIPT_DIGITS.contains(&c)
-}
-
 /// Whether a character can be among the first characters of a Uiua identifier
-pub fn is_ident_start(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙπτηℂ".contains(c)
+pub fn is_ident_char(c: char) -> bool {
+    c.is_alphabetic() && !"ⁿₙℂ".contains(c)
 }
 
 /// Whether a string is a custom glyph

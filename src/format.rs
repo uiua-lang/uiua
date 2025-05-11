@@ -17,7 +17,7 @@ use InlineMacro;
 
 use crate::{
     ast::*,
-    is_ident_char, is_ident_start,
+    is_ident_char,
     lex::{CodeSpan, Loc, Sp},
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
     Compiler, Handle, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys, Signature,
@@ -918,7 +918,7 @@ impl Formatter<'_> {
     }
     fn pre_space(&mut self, next: &str) {
         if next.starts_with(|c: char| c.is_lowercase())
-            && (self.output.chars().last()).is_some_and(|c| c.is_lowercase() && is_ident_start(c))
+            && (self.output.chars().last()).is_some_and(|c| c.is_lowercase() && is_ident_char(c))
         {
             self.output.push(' ');
         }

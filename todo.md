@@ -6,7 +6,7 @@
   - `each`
 - Streaming gif and audio encoding
 - Bottom subscripts
-- Optional arguments
+- Extractors
 - Rewrite parts of tutorial to use `backward` instead of `flip`
 - Compile-time code string evaluation?
 - Reserved modifier glyphs?

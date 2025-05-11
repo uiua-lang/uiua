@@ -45,6 +45,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add numeric subscripts for [`shape △`](https://uiua.org/docs/shape) to get the shape of the first few axes
 - Add numeric subscripts for [`range ⇡`](https://uiua.org/docs/range) to offset the range
 - Add support for mixed numeric and sided subscripts
+- Greeks rejoice! `η`, `π`, and `τ` can now be used in names (just not as the first letter)
 - Deprecate [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off) on noadic and monadic functions
   - There was a lot of disagreement about what the behavior should be
   - They made the movement of data on the stack harder to follow

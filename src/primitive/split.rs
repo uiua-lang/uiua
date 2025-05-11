@@ -246,6 +246,16 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                     continue 'outer;
                 }
             }
+            // Greek
+            if sub_name.chars().count() == 1 {
+                for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
+                    if sub_name.chars().next() == prim.glyph() {
+                        prims.push((prim.into(), sub_name));
+                        start += len;
+                        continue 'outer;
+                    }
+                }
+            }
             if sub_name.len() == 1 {
                 continue;
             }
@@ -320,6 +330,16 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                     continue 'outer;
                 }
             }
+            // Greek
+            if sub_name.chars().count() == 1 {
+                for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
+                    if sub_name.chars().next() == prim.glyph() {
+                        prims.push((prim.into(), sub_name));
+                        start += len;
+                        continue 'outer;
+                    }
+                }
+            }
             if sub_name.len() == 1 {
                 continue;
             }
@@ -370,6 +390,16 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                 prims.extend(ps.iter().rev().map(|(p, s)| ((*p).into(), *s)));
                 end -= len;
                 continue 'outer;
+            }
+            // Greek
+            if sub_name.chars().count() == 1 {
+                for prim in [Primitive::Eta, Primitive::Pi, Primitive::Tau] {
+                    if sub_name.chars().next() == prim.glyph() {
+                        prims.push((prim.into(), sub_name));
+                        end -= len;
+                        continue 'outer;
+                    }
+                }
             }
         }
         break;

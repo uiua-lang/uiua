@@ -1332,7 +1332,7 @@ impl Parser<'_> {
                     .filter(|n| !n.value.1.contains(['.', '∞']))
                     .map(Into::into)
                 {
-                    let n = numer.map_with(denom, |n, d| n / d, |n, d| n / d);
+                    let mut n = numer.map_with(denom, |n, d| n / d, |n, d| n / d);
                     s.push('/');
                     s.push_str(&ds);
                     if s.contains('¯') {
@@ -1345,6 +1345,10 @@ impl Parser<'_> {
                         }
                     }
                     span.merge_with(dspan);
+                    if s == "22/7" {
+                        // Hehe
+                        n = PI.into();
+                    }
                     return Some(span.sp((n, s)));
                 } else {
                     self.index = reset;

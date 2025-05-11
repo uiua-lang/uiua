@@ -16,6 +16,7 @@ use serde::*;
 use crate::{
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
+    extractor::Extractor,
     Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive, Signature, Value,
 };
 
@@ -95,6 +96,9 @@ node!(
     /// Call a function
     (#[serde(untagged)] rep),
     Call(func(Function), span(usize)),
+    /// Execute an extractor
+    (#[serde(untagged)] rep),
+    Extractor(ex(Extractor), arg(Option<Arc<SigNode>>), span(usize)),
     /// Run some nodes in sequence.
     ///
     /// Do not edit the list directly. Use functions like [`Node::push`] and [`Node::prepend`] instead.
@@ -743,6 +747,13 @@ impl fmt::Debug for Node {
             }
             Node::GetLocal { def, .. } => write!(f, "get-local {def}"),
             Node::SetLocal { def, .. } => write!(f, "set-local {def}"),
+            Node::Extractor(ex, arg, _) => {
+                if let Some(sn) = arg {
+                    f.debug_tuple(&ex.to_string()).field(&sn.node).finish()
+                } else {
+                    ex.fmt(f)
+                }
+            }
         }
     }
 }

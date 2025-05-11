@@ -22,6 +22,7 @@ use threadpool::ThreadPool;
 use crate::{
     algorithm::{self, validate_size_impl},
     ast::SubSide,
+    extractor::extractor,
     fill::{Fill, FillValue},
     invert::match_format_pattern,
     lex::Span,
@@ -778,6 +779,7 @@ impl Uiua {
                     None => "Not currently in a scope for data def".into(),
                 }))
             }),
+            Node::Extractor(ex, op, span) => self.with_span(span, |env| extractor(ex, op, env)),
         };
         if self.rt.time_instrs {
             let end_time = self.rt.backend.now();

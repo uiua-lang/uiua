@@ -6,6 +6,7 @@ use ecow::EcoString;
 use serde::*;
 
 use crate::{
+    extractor::{Extractor, ExtractorEnd},
     function::Signature,
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
@@ -358,6 +359,7 @@ pub enum Word {
     },
     Subscripted(Box<Subscripted>),
     InlineMacro(InlineMacro),
+    Extractor(Extractor, ExtractorEnd),
 }
 
 impl PartialEq for Word {
@@ -384,6 +386,7 @@ impl PartialEq for Word {
             }
             (Self::Placeholder(_), Self::Placeholder(_)) => false,
             (Self::Comment(a), Self::Comment(b)) => a == b,
+            (Self::Extractor(a, ae), Self::Extractor(b, be)) => a == b && ae == be,
             _ => discriminant(self) == discriminant(other),
         }
     }
@@ -475,6 +478,7 @@ impl fmt::Debug for Word {
             Word::InlineMacro(InlineMacro { ident, func, .. }) => {
                 write!(f, "inline_macro({:?}{}))", func.value, ident.value)
             }
+            Word::Extractor(ex, end) => write!(f, "{ex}{end}"),
         }
     }
 }
@@ -740,6 +744,8 @@ pub enum Modifier {
     Ref(Ref),
     /// An inline macro
     Macro(InlineMacro),
+    /// An extractor
+    Extractor(Extractor),
 }
 
 impl fmt::Debug for Modifier {
@@ -748,6 +754,7 @@ impl fmt::Debug for Modifier {
             Modifier::Primitive(prim) => prim.fmt(f),
             Modifier::Ref(refer) => write!(f, "ref({refer:?})"),
             Modifier::Macro(mac) => write!(f, "macro({:?}{})", mac.func, mac.ident),
+            Modifier::Extractor(ex) => ex.fmt(f),
         }
     }
 }
@@ -764,6 +771,7 @@ impl fmt::Display for Modifier {
                 4 => write!(f, "tetradic inline macro"),
                 _ => write!(f, "inline macro"),
             },
+            Modifier::Extractor(ex) => ex.fmt(f),
         }
     }
 }
@@ -775,6 +783,7 @@ impl Modifier {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
             Modifier::Ref(r) => r.modifier_args(),
             Modifier::Macro(mac) => ident_modifier_args(&mac.ident.value),
+            Modifier::Extractor(_) => 1,
         }
     }
 }

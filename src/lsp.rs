@@ -46,6 +46,8 @@ pub enum SpanKind {
     ImportSrc(ImportSrc),
     Subscript(Option<Primitive>, Option<Subscript>),
     Obverse(SetInverses),
+    ExtractorError,
+    ExtractorOr,
 }
 
 /// Documentation information for a binding
@@ -696,6 +698,9 @@ impl Spanner {
                             let ident_span = (mac.ident.span.clone()).sp(mac_delim_kind);
                             spans.push(ident_span);
                         }
+                        Modifier::Extractor(_) => {
+                            spans.push(word.span.clone().sp(SpanKind::ExtractorOr))
+                        }
                     }
                     spans.extend(self.words_spans(&m.operands));
                 }
@@ -747,6 +752,12 @@ impl Spanner {
                                         sub.script.span.clone().sp(SpanKind::Subscript(None, n)),
                                     );
                                 }
+                                Modifier::Extractor(_) => {
+                                    spans.push(m.modifier.span.clone().sp(SpanKind::ExtractorOr));
+                                    spans.push(
+                                        sub.script.span.clone().sp(SpanKind::Subscript(None, n)),
+                                    );
+                                }
                             }
                             spans.extend(self.words_spans(&m.operands));
                         }
@@ -773,6 +784,7 @@ impl Spanner {
                     }
                     spans.push(ident.span.clone().sp(mac_delim_kind));
                 }
+                Word::Extractor(..) => spans.push(word.span.clone().sp(SpanKind::ExtractorError)),
             }
         }
         spans.retain(|sp| !sp.span.as_str(self.inputs(), str::is_empty));

@@ -1521,6 +1521,7 @@ impl Compiler {
                 );
                 Node::empty()
             }
+            Word::Extractor(ex, _) => Node::Extractor(ex, None, self.add_span(word.span)),
         })
     }
     fn force_sig(&mut self, mut node: Node, new_sig: Signature, span: &CodeSpan) -> Node {
@@ -2092,6 +2093,13 @@ impl Compiler {
                     self.add_error(
                         m.modifier.span.clone().merge(scr.span.clone()),
                         "Subscripts are not implemented for macros",
+                    );
+                    self.modified(*m, Some(scr.map(Into::into)))?
+                }
+                Modifier::Extractor(_) => {
+                    self.add_error(
+                        m.modifier.span.clone().merge(scr.span.clone()),
+                        "Subscripts are not implemented for extractors",
                     );
                     self.modified(*m, Some(scr.map(Into::into)))?
                 }

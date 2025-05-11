@@ -9,13 +9,14 @@ use std::{
     sync::Arc,
 };
 
-use ecow::EcoString;
+use ecow::{EcoString, EcoVec};
 use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     ast::{NumericSubscript, SidedSubscript, SubSide, Subscript},
+    extractor::*,
     split_name, Ident, Inputs, PrimComponent, Primitive, WILDCARD_CHAR,
 };
 
@@ -607,6 +608,7 @@ pub enum Token {
     Glyph(Primitive),
     Placeholder(usize),
     Subscr(Subscript),
+    Extractor(Extractor, ExtractorEnd),
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
@@ -686,6 +688,12 @@ impl Token {
             _ => None,
         }
     }
+    pub(crate) fn as_extractor(&self) -> Option<(Extractor, ExtractorEnd)> {
+        match self {
+            Token::Extractor(ex, end) => Some((ex.clone(), *end)),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -734,6 +742,7 @@ impl fmt::Display for Token {
             Token::OpenModule => write!(f, "┌─╴"),
             Token::CloseModule => write!(f, "└─╴"),
             Token::Placeholder(i) => write!(f, "^{i}"),
+            Token::Extractor(ex, end) => write!(f, "{ex}{end}"),
         }
     }
 }
@@ -1162,6 +1171,15 @@ impl<'a> Lexer<'a> {
                         }
                     };
                     self.end(Char(char), start)
+                }
+                // Extractors
+                "&" if self.next_char_exact("&") => {
+                    let (ex, end) = self.extractor().unwrap_or_default();
+                    self.end(Extractor(ex, end), start);
+                }
+                "⌁" => {
+                    let (ex, end) = self.extractor().unwrap_or_default();
+                    self.end(Extractor(ex, end), start);
                 }
                 // Strings
                 "\"" | "$" => {
@@ -1602,6 +1620,67 @@ impl<'a> Lexer<'a> {
             }
         }
         string
+    }
+    fn extractor(&mut self) -> Option<(Extractor, ExtractorEnd)> {
+        let mut shape: Option<EcoVec<ExtractorDim>> = None;
+        if self.next_char_exact("s") || self.next_char_exact("∙") {
+            shape = Some(EcoVec::new());
+        } else {
+            loop {
+                let mut got_digit = false;
+                let mut dim = 0usize;
+                while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                    for c in c.chars() {
+                        dim = dim.saturating_mul(10) + c.to_digit(10).unwrap() as usize;
+                    }
+                    got_digit = true;
+                }
+                if got_digit {
+                    (shape.get_or_insert_with(EcoVec::new)).push(ExtractorDim::Dim(dim));
+                    continue;
+                }
+                if self.next_char_exact("*") {
+                    (shape.get_or_insert_with(EcoVec::new)).push(if self.next_char_exact("*") {
+                        ExtractorDim::MultiWildcard
+                    } else {
+                        ExtractorDim::Wildcard
+                    });
+                    continue;
+                }
+                if self.next_char_exact("⁑") {
+                    (shape.get_or_insert_with(EcoVec::new)).push(ExtractorDim::MultiWildcard);
+                    continue;
+                }
+                if self.next_char_exact("x") | self.next_char_exact("×") {
+                    continue;
+                }
+                break;
+            }
+        }
+        let shape = shape.map(ExtractorShape);
+
+        let ty = if self.next_char_exact("r") | self.next_char_exact("ℝ") {
+            Some(ExtractorType::Real)
+        } else if self.next_char_exact("a") | self.next_char_exact("@") {
+            Some(ExtractorType::Char)
+        } else if self.next_char_exact("b") | self.next_char_exact("□") {
+            Some(ExtractorType::Box)
+        } else if self.next_char_exact("c") | self.next_char_exact("ℂ") {
+            Some(ExtractorType::Complex)
+        } else {
+            None
+        };
+
+        if shape.is_some() || ty.is_some() {
+            let end = if self.next_char_exact(".") {
+                ExtractorEnd::Or
+            } else {
+                ExtractorEnd::Error
+            };
+            Some((Extractor { shape, ty }, end))
+        } else {
+            None
+        }
     }
 }
 

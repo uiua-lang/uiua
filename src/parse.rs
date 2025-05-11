@@ -13,6 +13,7 @@ use ecow::EcoString;
 
 use crate::{
     ast::*,
+    extractor::ExtractorEnd,
     function::Signature,
     lex::{AsciiToken::*, Token::*, *},
     BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent, Primitive,
@@ -1075,6 +1076,7 @@ impl Parser<'_> {
                     (Modifier::Ref(item), term.span)
                 }
                 Word::InlineMacro(mac) => (Modifier::Macro(mac), term.span),
+                Word::Extractor(ex, ExtractorEnd::Or) => (Modifier::Extractor(ex), term.span),
                 _ => return Some(term),
             }
         };
@@ -1255,6 +1257,8 @@ impl Parser<'_> {
             span.sp(Word::BreakLine)
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
+        } else if let Some(ex_end) = self.next_token_map(Token::as_extractor) {
+            ex_end.map(|(ex, end)| Word::Extractor(ex, end))
         } else {
             return None;
         };

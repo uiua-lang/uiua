@@ -1309,6 +1309,8 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
                 Some(Color::BrightBlack)
             }
             SpanKind::MacroDelim(margs) => Some(color_mod(margs)),
+            SpanKind::ExtractorOr => Some(MONADIC_MOD),
+            SpanKind::ExtractorError => Some(MONADIC),
             SpanKind::Ident { .. }
             | SpanKind::Label
             | SpanKind::Signature

@@ -154,6 +154,7 @@ mod complex;
 mod constant;
 mod cowslice;
 mod error;
+mod extractor;
 mod ffi;
 mod fill;
 pub mod format;

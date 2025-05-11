@@ -552,6 +552,15 @@ impl VirtualEnv {
             }
             Node::GetLocal { .. } => self.handle_args_outputs(0, 1),
             Node::SetLocal { .. } => self.handle_args_outputs(1, 0),
+            Node::Extractor(_, op, _) => {
+                if let Some(or) = op {
+                    let args = or.sig.args().max(1);
+                    let outputs = or.sig.outputs();
+                    self.handle_args_outputs(args, outputs);
+                } else {
+                    self.handle_args_outputs(1, 1);
+                }
+            }
         }
         self.node_depth -= 1;
         // println!("{node:?} -> {} ({})", self.stack.sig(), self.under.sig());

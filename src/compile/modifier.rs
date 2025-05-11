@@ -360,6 +360,7 @@ impl Compiler {
                 Modifier::Ref(name) => self
                     .ref_local(name)?
                     .is_some_and(|(_, local)| self.index_macros.contains_key(&local.index)),
+                Modifier::Extractor(_) => true,
             };
             if strict_args {
                 // Validate operand count
@@ -389,6 +390,12 @@ impl Compiler {
             }
             Modifier::Macro(mac) => {
                 return self.inline_macro(mac, modified.modifier.span, modified.operands);
+            }
+            Modifier::Extractor(ex) => {
+                let op = modified.operands.into_iter().next().unwrap();
+                let op = self.word_sig(op)?;
+                let span = self.add_span(modified.modifier.span);
+                return Ok(Node::Extractor(ex, Some(op.into()), span));
             }
         };
 

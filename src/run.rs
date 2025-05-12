@@ -377,42 +377,47 @@ impl Uiua {
     }
     /// Run a Uiua assembly
     pub fn run_asm(&mut self, asm: Assembly) -> UiuaResult {
-        fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {
-            env.asm = asm;
-            env.rt.execution_start = env.rt.backend.now();
-            let mut res = env
-                .catching_crash(|env| env.exec(env.asm.root.clone()))
-                .unwrap_or_else(Err);
-            let mut push_error = |te: UiuaError| match &mut res {
-                Ok(()) => res = Err(te),
-                Err(e) => e.multi.push(te),
-            };
-            if env.asm.test_assert_count > 0 {
-                let total_run = env.rt.test_results.len();
-                let not_run = env.asm.test_assert_count.saturating_sub(total_run);
-                let mut successes = 0;
-                for res in env.rt.test_results.drain(..) {
-                    match res {
-                        Ok(()) => successes += 1,
-                        Err(e) => push_error(e),
-                    }
+        self.asm = asm;
+        self.rt.execution_start = self.rt.backend.now();
+        let mut res = self
+            .catching_crash(|env| env.exec(env.asm.root.clone()))
+            .unwrap_or_else(Err);
+        let mut push_error = |te: UiuaError| match &mut res {
+            Ok(()) => res = Err(te),
+            Err(e) => e.multi.push(te),
+        };
+        if self.asm.test_assert_count > 0 {
+            let total_run = self.rt.test_results.len();
+            let not_run = self.asm.test_assert_count.saturating_sub(total_run);
+            let mut successes = 0;
+            for res in self.rt.test_results.drain(..) {
+                match res {
+                    Ok(()) => successes += 1,
+                    Err(e) => push_error(e),
                 }
-                (env.rt.reports).push(Report::tests(successes, total_run - successes, not_run));
             }
-            if res.is_err() {
-                env.rt = Runtime {
-                    backend: env.rt.backend.clone(),
-                    execution_limit: env.rt.execution_limit,
-                    time_instrs: env.rt.time_instrs,
-                    output_comments: take(&mut env.rt.output_comments),
-                    reports: take(&mut env.rt.reports),
-                    stack: take(&mut env.rt.stack),
-                    ..Runtime::default()
-                };
-            }
-            res
+            (self.rt.reports).push(Report::tests(successes, total_run - successes, not_run));
         }
-        run_asm(self, asm)
+        #[cfg(debug_assertions)]
+        if res.is_ok() && !self.rt.under_stack.is_empty() {
+            res = Err(self.error(format!(
+                "Execution ended with {} values left on the under stack. \
+                This is a bug in the interpreter.",
+                self.rt.under_stack.len()
+            )))
+        }
+        if res.is_err() {
+            self.rt = Runtime {
+                backend: self.rt.backend.clone(),
+                execution_limit: self.rt.execution_limit,
+                time_instrs: self.rt.time_instrs,
+                output_comments: take(&mut self.rt.output_comments),
+                reports: take(&mut self.rt.reports),
+                stack: take(&mut self.rt.stack),
+                ..Runtime::default()
+            };
+        }
+        res
     }
     fn catching_crash<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> UiuaResult<T> {
         match catch_unwind(AssertUnwindSafe(|| f(self))) {

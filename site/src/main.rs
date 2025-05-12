@@ -55,7 +55,7 @@ pub fn Site() -> impl IntoView {
 
     // Choose a subtitle
     let subtitles_common = [
-        "A stack-based array programming language",
+        "A tacit array programming language",
         "An array-oriented tacit programming language",
         "A programming language for point-free enjoyers",
         "A programming language for variable dislikers",
@@ -73,7 +73,6 @@ pub fn Site() -> impl IntoView {
             </div>
         }
         .into_view(),
-        view!("Check out "<a href="https://tacittalk.com/">"Tacit Talk"</a>"!").into_view(),
         "Abandon nominativity. Embrace relativity.".into_view(),
         view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_view(),
         "It's got um...I um...arrays".into_view(),
@@ -307,14 +306,14 @@ pub fn MainPage() -> impl IntoView {
                 "You can run with ctrl/shift + enter.",
             ]}/>
         <br/>
-        <p class="main-text">{lang}" "<span class="wee-wuh-span">"("<i>"wee-wuh "</i><button on:click=|_| weewuh() class="sound-button">"🔉"</button>")"</span>" is a general purpose, stack-based, array-oriented programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
+        <p class="main-text">{lang}" "<span class="wee-wuh-span">"("<i>"wee-wuh "</i><button on:click=|_| weewuh() class="sound-button">"🔉"</button>")"</span>" is a general purpose array-oriented programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
         <p class="main-text">{lang}" lets you write code that is as short as possible while remaining readable, so you can focus on problems rather than ceremony."</p>
         <p class="main-text">"The language is not yet stable, as its design space is still being explored. However, it is already quite powerful and fun to use!"</p>
         <div class="features">
             <div>
                 <div>
-                    <Hd id="a-loving-union">"A Loving Union"</Hd>
-                    <p>{lang}" combines the stack-based and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
+                    <Hd id="saying less">"Saying Less"</Hd>
+                    <p>{lang}" combines the array-oriented programming paradigm with a stack-based execution model. Combining these already terse systems results in code with a very high information density and little syntactic noise."</p>
                     <Editor example="⍥◡+9 .1"/>
                     <p>"If this code seems weird and unreadable, that's okay! It's important to remember that "<a href="https://vector-of-bool.github.io/2018/10/31/become-perl.html">"foreign ≠ confusing"</a>"."</p>
                 </div>

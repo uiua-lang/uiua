@@ -1,8 +1,8 @@
 # Uiua Language Tour
 
-## The Union of Two Paradigms
+## Arrays on a Stack
 
-Uiua is a programming language that incorporates two of the less-common programming paradigms: **array-oriented** and **stack-based**.
+Uiua is an **array-oriented** programming language with a stack-based execution model.
 
 An **array-oriented** language is one where the primary data structure is the array. In array languages, many operations that can apply to a single value can also apply to every value in an array. This is known as *rank-polymorphism*.
 

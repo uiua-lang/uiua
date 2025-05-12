@@ -1,8 +1,6 @@
 //! Compiler code for modifiers
 #![allow(clippy::redundant_closure_call)]
 
-use std::iter::repeat_n;
-
 use super::*;
 use algebra::{derivative, integral};
 use invert::InversionError;
@@ -1173,81 +1171,43 @@ impl Compiler {
                 }
             }
             prim @ (Rows | Inventory) => {
-                let (mut sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
-                let sub = subscript
-                    .map(|sub| {
-                        let sub = self.validate_subscript(sub);
-                        let val = sub
-                            .value
-                            .map_num(|n| self.positive_subscript(n, prim, &sub.span));
-                        sub.span.sp(val)
-                    })
-                    .unwrap_or_else(|| modified.modifier.span.clone().sp(Default::default()));
+                let Some(sub) = subscript else {
+                    return Ok(None);
+                };
+                let sub = self.validate_subscript(sub);
                 let sub_span = sub.span;
-                let sub_spandex = self.add_span(sub_span.clone());
-                let sub = sub.value;
-                // Nest rows
-                let mut depth = sub.num.unwrap_or(1);
-                if depth > 10 {
-                    self.add_error(
-                        sub_span.clone(),
-                        format!("{} max subscript is 10", prim.format()),
-                    );
-                    depth = 10;
-                }
-                for i in 0..depth {
-                    sn.node = Node::Mod(prim, eco_vec![sn.clone()], span);
-                    if i > 0 {
-                        sn.node =
-                            Node::ImplMod(ImplPrimitive::FortifyFill, eco_vec![sn.clone()], span);
-                    }
-                }
-                let mut node = sn.node;
-                let sig = sn.sig;
-                // Handle side
-                if let Some(sided) = sub.side {
-                    let mut fix_count = sided.n.unwrap_or(1);
-                    if fix_count > 10 {
+                let mut sub = sub.value;
+                if let Some(n) = &mut sub.num {
+                    if n.abs() > 10 {
                         self.add_error(
                             sub_span.clone(),
-                            format!("{} max subscript is 10", prim.format()),
+                            format!("{} max subscript magnitude is 10", prim.format()),
                         );
-                        fix_count = 10;
+                        *n = n.signum() * 10;
                     }
-                    if fix_count == 0 {
-                        self.emit_diagnostic(
-                            "Fixing 0 arrays is redundant",
-                            DiagnosticKind::Advice,
-                            sub_span.clone(),
-                        );
-                        fix_count = 1;
-                    }
-                    if fix_count >= sig.args() {
-                        self.emit_diagnostic(
-                            format!(
-                                "Specifying {fix_count} fixed arrays for a function \
-                                with signature {sig} is probably not what you want",
-                            ),
-                            DiagnosticKind::Advice,
-                            sub_span.clone(),
-                        );
-                    }
-                    let prefix = Node::from_iter(repeat_n(Node::Prim(Fix, sub_spandex), depth));
-                    let mut prefix = SigNode::new((1, 1), prefix);
-                    prefix = prefix.on_all(fix_count, sub_spandex);
-                    let iter_count = sig.args().saturating_sub(fix_count);
-                    if let SubSide::Right = sided.side {
-                        for _ in 0..iter_count {
-                            let mut sig = prefix.sig;
-                            sig.update_args_outputs(|a, o| (a + 1, o + 1));
-                            let inner = Node::Mod(Dip, eco_vec![prefix], sub_spandex);
-                            prefix = SigNode::new(sig, inner);
+                }
+                if let Some(side) = sub.side {
+                    if let Some(n) = side.n {
+                        if n >= sn.sig.args() {
+                            self.emit_diagnostic(
+                                format!(
+                                    "Specifying {n} fixed arrays for a function \
+                                    with signature {} is probably not what you want",
+                                    sn.sig,
+                                ),
+                                DiagnosticKind::Advice,
+                                sub_span.clone(),
+                            );
                         }
                     }
-                    node.prepend(prefix.node);
                 }
-                node
+                Node::ImplMod(
+                    ImplPrimitive::RowsSub(sub, prim == Inventory),
+                    eco_vec![sn],
+                    span,
+                )
             }
             Table => {
                 // Normal table compilation, but get some diagnostics

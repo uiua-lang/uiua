@@ -5,6 +5,8 @@ Uiua is not yet stable.
 ## 0.16.0 - 2025-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- **Breaking Change** - [`rows ≡`](https://uiua.org/docs/rows) numeric subscripts now function identically to [`each ∵`](https://uiua.org/docs/repeat)'s specifying the rank to operate at
+  - Deprecate [`each ∵`](https://uiua.org/docs/repeat), as it is almost never used except for this subscript behavior
 - **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) and [`do ⍢`](https://uiua.org/docs/do) now accumulate excess values into arrays if their function has more outputs than arguments
   - This makes a lot of accumulation patterns much shorter and simpler
   - These loops now always have well-defined signatures

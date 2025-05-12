@@ -23,7 +23,7 @@ pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     match f.sig.args() {
         0 => env.exec(f),
-        1 => rows1(f, env.pop(1)?, false, env),
+        1 => rows1(f, env.pop(1)?, 0, false, env),
         n => {
             let xs = env.pop(1)?;
             let ys = env.pop(2)?;

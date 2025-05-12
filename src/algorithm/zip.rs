@@ -631,18 +631,18 @@ fn eachn(f: SigNode, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn rows(f: SigNode, inv: bool, env: &mut Uiua) -> UiuaResult {
+pub fn rows(f: SigNode, depth: usize, inv: bool, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     match f.sig.args() {
         0 => env.without_fill(|env| env.exec(f)),
-        1 => rows1(f, env.pop(1)?, inv, env),
-        2 => rows2(f, env.pop(1)?, env.pop(2)?, inv, env),
+        1 => rows1(f, env.pop(1)?, depth, inv, env),
+        2 => rows2(f, env.pop(1)?, env.pop(2)?, depth, inv, env),
         n => {
             let mut args = Vec::with_capacity(n);
             for i in 0..n {
                 args.push(env.pop(i + 1)?);
             }
-            rowsn(f, args, inv, env)
+            rowsn(f, args, depth, inv, env)
         }
     }
 }
@@ -667,16 +667,18 @@ fn collect_outputs(
     Ok(())
 }
 
-pub fn rows1(f: SigNode, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
+pub fn rows1(f: SigNode, mut xs: Value, depth: usize, inv: bool, env: &mut Uiua) -> UiuaResult {
     if !inv {
-        if let Some((f, d)) = f_mon_fast_fn(&f.node, env) {
+        if let Some((f, mut d)) = f_mon_fast_fn(&f.node, env) {
+            d += depth;
             let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
             if !maybe_through_boxes {
                 let val = f(xs, d + 1, env)?;
                 env.push(val);
                 return Ok(());
             }
-        } else if let Some((f, d)) = f_mon2_fast_fn(&f.node, env) {
+        } else if let Some((f, mut d)) = f_mon2_fast_fn(&f.node, env) {
+            d += depth;
             let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
             if !maybe_through_boxes {
                 let (xs, ys) = f(xs, d + 1, env)?;
@@ -694,32 +696,48 @@ pub fn rows1(f: SigNode, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult
         Vec::with_capacity(xs.row_count() + is_empty as usize),
     );
     let mut per_meta = xs.meta.take_per_meta();
-    env.without_fill(|env| -> UiuaResult {
-        if is_empty {
-            if push_empty_rows_value(&f, [&xs], inv, &mut per_meta, env) {
-                new_rows.clear();
+    if depth == 0 {
+        env.without_fill(|env| -> UiuaResult {
+            if is_empty && depth == 0 {
+                if push_empty_rows_value(&f, [&xs], inv, &mut per_meta, env) {
+                    new_rows.clear();
+                } else {
+                    env.push(xs.proxy_row(env));
+                    _ = env.exec_maintain_sig(f);
+                    for i in 0..outputs {
+                        new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
+                    }
+                }
             } else {
-                env.push(xs.proxy_row(env));
-                _ = env.exec_maintain_sig(f);
-                for i in 0..outputs {
-                    new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
+                for row in xs.into_rows() {
+                    env.push(row.unboxed_if(inv));
+                    env.exec(f.clone())?;
+                    for i in 0..outputs {
+                        new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
+                    }
                 }
             }
-        } else {
-            for row in xs.into_rows() {
-                env.push(row.unboxed_if(inv));
-                env.exec(f.clone())?;
-                for i in 0..outputs {
-                    new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
-                }
+            Ok(())
+        })?
+    } else {
+        for row in xs.into_rows() {
+            rows1(f.clone(), row.unboxed_if(inv), depth - 1, inv, env)?;
+            for i in 0..outputs {
+                new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
             }
         }
-        Ok(())
-    })?;
+    };
     collect_outputs(new_rows, is_scalar, is_empty, per_meta, env)
 }
 
-fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
+fn rows2(
+    f: SigNode,
+    mut xs: Value,
+    mut ys: Value,
+    depth: usize,
+    inv: bool,
+    env: &mut Uiua,
+) -> UiuaResult {
     let outputs = f.sig.outputs();
     let both_scalar = xs.rank() == 0 && ys.rank() == 0;
     if both_scalar {
@@ -742,32 +760,42 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
             let is_empty = outputs > 0 && xs.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
             let mut per_meta = xs.meta.take_per_meta();
-            env.without_fill(|env| -> UiuaResult {
-                if is_empty {
-                    ys.fix();
-                    if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
-                        new_rows.clear();
+            if depth == 0 {
+                env.without_fill(|env| -> UiuaResult {
+                    if is_empty && depth == 0 {
+                        ys.fix();
+                        if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
+                            new_rows.clear();
+                        } else {
+                            ys.undo_fix();
+                            env.push(ys);
+                            env.push(xs.proxy_row(env));
+                            _ = env.exec_maintain_sig(f);
+                            for i in 0..outputs {
+                                new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                            }
+                        }
                     } else {
-                        ys.undo_fix();
-                        env.push(ys);
-                        env.push(xs.proxy_row(env));
-                        _ = env.exec_maintain_sig(f);
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                        for x in xs.into_rows() {
+                            env.push(ys.clone());
+                            env.push(x.unboxed_if(inv));
+                            env.exec(f.clone())?;
+                            for i in 0..outputs {
+                                new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                            }
                         }
                     }
-                } else {
-                    for x in xs.into_rows() {
-                        env.push(ys.clone());
-                        env.push(x.unboxed_if(inv));
-                        env.exec(f.clone())?;
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
-                        }
+                    Ok(())
+                })?
+            } else {
+                for x in xs.into_rows() {
+                    let x = x.unboxed_if(inv);
+                    rows2(f.clone(), x, ys.clone(), depth - 1, inv, env)?;
+                    for i in 0..outputs {
+                        new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                     }
                 }
-                Ok(())
-            })?;
+            };
             collect_outputs(new_rows, false, is_empty, per_meta, env)
         }
         (1, _) => {
@@ -776,32 +804,42 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
             let is_empty = outputs > 0 && ys.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
             let mut per_meta = ys.meta.take_per_meta();
-            env.without_fill(|env| -> UiuaResult {
-                if is_empty {
-                    xs.fix();
-                    if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
-                        new_rows.clear();
+            if depth == 0 {
+                env.without_fill(|env| -> UiuaResult {
+                    if is_empty && depth == 0 {
+                        xs.fix();
+                        if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
+                            new_rows.clear();
+                        } else {
+                            xs.undo_fix();
+                            env.push(ys.proxy_row(env));
+                            env.push(xs);
+                            _ = env.exec_maintain_sig(f);
+                            for i in 0..outputs {
+                                new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                            }
+                        }
                     } else {
-                        xs.undo_fix();
-                        env.push(ys.proxy_row(env));
-                        env.push(xs);
-                        _ = env.exec_maintain_sig(f);
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                        for y in ys.into_rows() {
+                            env.push(y.unboxed_if(inv));
+                            env.push(xs.clone());
+                            env.exec(f.clone())?;
+                            for i in 0..outputs {
+                                new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                            }
                         }
                     }
-                } else {
-                    for y in ys.into_rows() {
-                        env.push(y.unboxed_if(inv));
-                        env.push(xs.clone());
-                        env.exec(f.clone())?;
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
-                        }
+                    Ok(())
+                })?
+            } else {
+                for y in ys.into_rows() {
+                    let y = y.unboxed_if(inv);
+                    rows2(f.clone(), xs.clone(), y, depth - 1, inv, env)?;
+                    for i in 0..outputs {
+                        new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                     }
                 }
-                Ok(())
-            })?;
+            };
             collect_outputs(new_rows, false, is_empty, per_meta, env)
         }
         (a, b) => {
@@ -822,7 +860,7 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
                     env.fill().value_for(&xs).is_some(),
                     env.fill().value_for(&ys).is_some(),
                 ) {
-                    let val = f(xs, ys, a + 1, b + 1, env)?;
+                    let val = f(xs, ys, a + depth + 1, b + depth + 1, env)?;
                     env.push(val);
                     return Ok(());
                 }
@@ -833,44 +871,55 @@ fn rows2(f: SigNode, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) ->
                 Vec::with_capacity(xs.row_count() + is_empty as usize),
             );
             let mut per_meta = xs.meta.take_per_meta().xor(ys.meta.take_per_meta());
-            env.without_fill(|env| -> UiuaResult {
-                if is_empty {
-                    if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
-                        new_rows.clear();
+            if depth == 0 {
+                env.without_fill(|env| -> UiuaResult {
+                    if is_empty && depth == 0 {
+                        if push_empty_rows_value(&f, [&xs, &ys], inv, &mut per_meta, env) {
+                            new_rows.clear();
+                        } else {
+                            env.push(if ys.row_count() == 0 {
+                                ys.proxy_row(env)
+                            } else {
+                                ys
+                            });
+                            env.push(if xs.row_count() == 0 {
+                                xs.proxy_row(env)
+                            } else {
+                                xs
+                            });
+                            _ = env.exec_maintain_sig(f);
+                            for i in 0..outputs {
+                                new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                            }
+                        }
                     } else {
-                        env.push(if ys.row_count() == 0 {
-                            ys.proxy_row(env)
-                        } else {
-                            ys
-                        });
-                        env.push(if xs.row_count() == 0 {
-                            xs.proxy_row(env)
-                        } else {
-                            xs
-                        });
-                        _ = env.exec_maintain_sig(f);
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                        for (x, y) in xs.into_rows().zip(ys.into_rows()) {
+                            env.push(y.unboxed_if(inv));
+                            env.push(x.unboxed_if(inv));
+                            env.exec(f.clone())?;
+                            for i in 0..outputs {
+                                new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                            }
                         }
                     }
-                } else {
-                    for (x, y) in xs.into_rows().zip(ys.into_rows()) {
-                        env.push(y.unboxed_if(inv));
-                        env.push(x.unboxed_if(inv));
-                        env.exec(f.clone())?;
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
-                        }
+                    Ok(())
+                })?
+            } else {
+                for (x, y) in xs.into_rows().zip(ys.into_rows()) {
+                    let x = x.unboxed_if(inv);
+                    let y = y.unboxed_if(inv);
+                    rows2(f.clone(), x, y, depth - 1, inv, env)?;
+                    for i in 0..outputs {
+                        new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                     }
                 }
-                Ok(())
-            })?;
+            };
             collect_outputs(new_rows, false, is_empty, per_meta, env)
         }
     }
 }
 
-fn rowsn(f: SigNode, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult {
+fn rowsn(f: SigNode, args: Vec<Value>, depth: usize, inv: bool, env: &mut Uiua) -> UiuaResult {
     let outputs = f.sig.outputs();
     let prim = if inv {
         Primitive::Inventory
@@ -886,21 +935,37 @@ fn rowsn(f: SigNode, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult 
         ..
     } = fixed_rows(prim.format(), outputs, args, env)?;
     let mut new_values = multi_output(outputs, Vec::new());
-    env.without_fill(|env| -> UiuaResult {
-        for _ in 0..row_count {
-            for arg in rows.iter_mut().rev() {
-                match arg {
-                    Ok(rows) => env.push(rows.next().unwrap().unboxed_if(inv)),
-                    Err(row) => env.push(row.clone().unboxed_if(inv)),
+    if depth == 0 {
+        env.without_fill(|env| -> UiuaResult {
+            for _ in 0..row_count {
+                for arg in rows.iter_mut().rev() {
+                    match arg {
+                        Ok(rows) => env.push(rows.next().unwrap().unboxed_if(inv)),
+                        Err(row) => env.push(row.clone().unboxed_if(inv)),
+                    }
+                }
+                env.exec(f.clone())?;
+                for i in 0..outputs {
+                    new_values[i].push(env.pop("rows's function result")?.boxed_if(inv));
                 }
             }
-            env.exec(f.clone())?;
+            Ok(())
+        })?
+    } else {
+        for _ in 0..row_count {
+            let args: Vec<_> = rows
+                .iter_mut()
+                .map(|arg| match arg {
+                    Ok(rows) => rows.next().unwrap().unboxed_if(inv),
+                    Err(row) => row.clone().unboxed_if(inv),
+                })
+                .collect();
+            rowsn(f.clone(), args, depth - 1, inv, env)?;
             for i in 0..outputs {
                 new_values[i].push(env.pop("rows's function result")?.boxed_if(inv));
             }
         }
-        Ok(())
-    })?;
+    };
     for new_values in new_values.into_iter().rev() {
         let mut rowsed = Value::from_row_values(new_values, env)?;
         if all_scalar {

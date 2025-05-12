@@ -1346,6 +1346,11 @@ impl Uiua {
         let height = self.require_height(n)?;
         Ok(self.rt.stack.split_off(height))
     }
+    /// Get a mutable slice of the top `n` stack values
+    pub fn top_n_mut(&mut self, n: usize) -> UiuaResult<&mut [Value]> {
+        let height = self.require_height(n)?;
+        Ok(&mut self.rt.stack[height..])
+    }
     pub(crate) fn value_fill(&self) -> Option<&FillValue> {
         if (self.rt.fill_boundary_stack.last()).is_some_and(|&(i, _)| i >= self.rt.fill_stack.len())
         {

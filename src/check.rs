@@ -495,7 +495,7 @@ impl VirtualEnv {
                         .with_under(n * f.under_args(), n * f.under_outputs());
                     self.handle_sig(sig);
                 }
-                EachSub(_) => {
+                EachSub(_) | RowsSub(..) => {
                     let [f] = get_args_nodes(args)?;
                     self.sig_node(f)?;
                 }

@@ -191,6 +191,14 @@ impl fmt::Display for ImplPrimitive {
                 write!(f, "{Each}")?;
                 fmt_subscript(f, i)
             }
+            &RowsSub(sub, inv) => {
+                if inv {
+                    write!(f, "{Inventory}")?;
+                } else {
+                    write!(f, "{Rows}")?;
+                }
+                sub.fmt(f)
+            }
             OnSub(i) => {
                 write!(f, "{On}")?;
                 fmt_subscript(f, *i as i32)
@@ -833,11 +841,11 @@ impl Primitive {
             Primitive::Each => zip::each(ops, env)?,
             Primitive::Rows => {
                 let [f] = get_ops(ops, env)?;
-                zip::rows(f, false, env)?
+                zip::rows(f, 0, false, env)?
             }
             Primitive::Inventory => {
                 let [f] = get_ops(ops, env)?;
-                zip::rows(f, true, env)?
+                zip::rows(f, 0, true, env)?
             }
             Primitive::Table => table::table(ops, env)?,
             Primitive::Repeat => loops::repeat(ops, false, false, env)?,
@@ -1748,13 +1756,43 @@ impl ImplPrimitive {
                     val.deshape_sub(n + 1, 0, val.rank() == max_rank, env)?;
                     env.push(val);
                 }
-                zip::rows(f, false, env)?;
+                zip::rows(f, 0, false, env)?;
                 for mut value in env.pop_n(sig.outputs())? {
                     if let Some(max_shape) = &max_shape {
                         value.undo_deshape(Some(n + 1), max_shape, env)?;
                     }
                     env.push(value);
                 }
+            }
+            &ImplPrimitive::RowsSub(sub, inv) => {
+                let [f] = get_ops(ops, env)?;
+                let vals = env.top_n_mut(f.sig.args())?;
+                let max_rank = vals.iter().map(Value::rank).max().unwrap_or(0);
+                let depth = match sub.num {
+                    None => 0,
+                    Some(n) if n < 0 => n.unsigned_abs() as usize - 1,
+                    Some(n) => max_rank.saturating_sub(n as usize + 1),
+                };
+                if let Some(side) = sub.side {
+                    let n = side.n.unwrap_or(1);
+                    match side.side {
+                        SubSide::Left => {
+                            for val in vals.iter_mut().rev().take(n) {
+                                for _ in 0..depth + 1 {
+                                    val.fix()
+                                }
+                            }
+                        }
+                        SubSide::Right => {
+                            for val in vals.iter_mut().take(n) {
+                                for _ in 0..depth + 1 {
+                                    val.fix()
+                                }
+                            }
+                        }
+                    }
+                }
+                zip::rows(f, depth, inv, env)?;
             }
             ImplPrimitive::UndoRows | ImplPrimitive::UndoInventory => {
                 let [f] = get_ops(ops, env)?;
@@ -1781,7 +1819,7 @@ impl ImplPrimitive {
                     env.stack_mut()[start + i].reverse();
                 }
                 let outputs = f.sig.outputs();
-                zip::rows(f, inventory, env)?;
+                zip::rows(f, 0, inventory, env)?;
                 let start = env.require_height(outputs)?;
                 for val in &mut env.stack_mut()[start..] {
                     val.reverse();

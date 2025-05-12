@@ -3447,6 +3447,7 @@ macro_rules! impl_primitive {
             DeshapeSub(i32),
             UndoDeshape(Option<i32>),
             EachSub(i32),
+            RowsSub(Subscript<i32>, bool),
             TransposeN(i32),
             UndoTransposeN(usize, i32),
             UndoReverse { n: usize, all: bool },
@@ -3502,7 +3503,9 @@ macro_rules! impl_primitive {
             pub fn modifier_args(&self) -> Option<usize> {
                 match self {
                     $($(ImplPrimitive::$variant => Some($margs),)?)*
-                    ImplPrimitive::ReduceDepth(_) | ImplPrimitive::EachSub(_) => Some(1),
+                    ImplPrimitive::ReduceDepth(_)
+                    | ImplPrimitive::EachSub(_)
+                    | ImplPrimitive::RowsSub(..) => Some(1),
                     ImplPrimitive::OnSub(_)
                     | ImplPrimitive::BySub(_)
                     | ImplPrimitive::WithSub(_)

@@ -214,6 +214,8 @@ enum ScopeKind {
     AllInModule,
     /// A temporary scope, probably for a macro
     Temp(Option<MacroLocal>),
+    /// A binding scope
+    Binding,
     /// A function scope
     Function,
     /// A test scope between `---`s
@@ -1637,6 +1639,14 @@ impl Compiler {
         }
     }
     fn find_name(&self, name: &str, skip_local: bool) -> Option<LocalName> {
+        self.find_name_impl(name, skip_local, false)
+    }
+    fn find_name_impl(
+        &self,
+        name: &str,
+        skip_local: bool,
+        stop_at_binding: bool,
+    ) -> Option<LocalName> {
         if !skip_local {
             if let Some(local) = self.scope.names.get(name).copied() {
                 return Some(local);
@@ -1644,7 +1654,9 @@ impl Compiler {
         }
         let mut hit_file = false;
         for scope in self.higher_scopes.iter().rev() {
-            if matches!(scope.kind, ScopeKind::File(_)) {
+            if matches!(scope.kind, ScopeKind::File(_))
+                || stop_at_binding && matches!(scope.kind, ScopeKind::Binding)
+            {
                 if hit_file {
                     break;
                 }
@@ -1655,7 +1667,8 @@ impl Compiler {
             }
         }
         // Attempt to look up the identifier as a non-macro
-        let as_non_macro = self.find_name(name.strip_suffix('!')?, skip_local)?;
+        let as_non_macro =
+            self.find_name_impl(name.strip_suffix('!')?, skip_local, stop_at_binding)?;
         if let BindingKind::Module(_) | BindingKind::Import(_) =
             self.asm.bindings[as_non_macro.index].kind
         {
@@ -1807,7 +1820,14 @@ impl Compiler {
             self.code_meta.completions.insert(span.clone(), completions);
         }
 
-        if let Some(curr) = (self.current_bindings.last_mut()).filter(|curr| curr.name == ident) {
+        if let Some(local) = self.find_name_impl(&ident, skip_local, true) {
+            // Name exists in binding scope
+            self.validate_local(&ident, local, &span);
+            (self.code_meta.global_references).insert(span.clone(), local.index);
+            Ok(self.global_index(local.index, true, span))
+        } else if let Some(curr) =
+            (self.current_bindings.last_mut()).filter(|curr| curr.name == ident)
+        {
             // Name is a recursive call
             let Some(sig) = curr.signature else {
                 return Err(self.error(

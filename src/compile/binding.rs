@@ -362,7 +362,7 @@ impl Compiler {
         let mut node = if let Some((def, _)) = &data_def {
             self.in_method(def, compile)?
         } else {
-            compile(self)?
+            self.in_scope(ScopeKind::Binding, compile)?.1
         };
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
         let is_obverse = node

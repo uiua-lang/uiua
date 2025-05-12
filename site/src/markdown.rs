@@ -1,10 +1,12 @@
+use std::borrow::Cow;
+
 use comrak::{
     nodes::{AstNode, ListType, NodeValue},
     *,
 };
 use leptos::*;
 use uiua::{Inputs, Primitive, Token};
-use uiua_editor::{backend::fetch, Editor};
+use uiua_editor::{backend::fetch, lang, replace_lang_name, Editor};
 
 use crate::{examples::LOGO, Hd, NotFound, Prim, ScrollToHash};
 
@@ -72,7 +74,14 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
                     return view!(<Prim prim=prim/>).into_view();
                 }
             }
-            text.into_view()
+            let mut text = Cow::Borrowed(text.as_str());
+            if replace_lang_name() && text.contains("Uiua") {
+                text = Cow::Owned(text.replace("Uiua", lang()))
+            }
+            if text.contains("UIUA_VERSION") {
+                text = Cow::Owned(text.replace("UIUA_VERSION", uiua::VERSION));
+            }
+            text.into_owned().into_view()
         }
         NodeValue::Heading(heading) => {
             let id = all_text(node).to_lowercase().replace(' ', "-");

@@ -850,10 +850,12 @@ impl Parser<'_> {
     }
     fn ident(&mut self) -> Option<Sp<Ident>> {
         let mut ident = self.next_token_map(Token::as_ident)?;
+        // Add subscript
         while let Some(sub) = self.next_token_map(Token::as_subscript) {
             ident.span.merge_with(sub.span);
             ident.value.push_str(&sub.value.to_string());
         }
+        // Add exclams
         while let Some(exclams) = self.next_token_map(|tok| {
             tok.as_ident()
                 .filter(|ident| ident.chars().all(|c| "!‼".contains(c)))

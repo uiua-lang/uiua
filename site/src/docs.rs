@@ -78,7 +78,9 @@ pub fn Docs() -> impl IntoView {
         let page_view = match page {
             DocsPage::Search(search) => return view!( <DocsHome search=search/>).into_view(),
             DocsPage::Tour => Tour().into_view(),
-            DocsPage::Design => title_markdown("Design", "/text/design.md", ()).into_view(),
+            DocsPage::Design => {
+                title_markdown("Design", "/text/design.md", View::default()).into_view()
+            }
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
             DocsPage::AllFunctions => AllFunctions().into_view(),
@@ -89,9 +91,12 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Subscripts => Subscripts().into_view(),
             DocsPage::Combinators => Combinators().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
-            DocsPage::FormatConfig => {
-                title_markdown("Formatter Configuration", "/text/format_config.md", ()).into_view()
-            }
+            DocsPage::FormatConfig => title_markdown(
+                "Formatter Configuration",
+                "/text/format_config.md",
+                View::default(),
+            )
+            .into_view(),
             DocsPage::Experimental => Experimental().into_view(),
             DocsPage::Idioms => Idioms().into_view(),
         };
@@ -109,7 +114,7 @@ pub fn Docs() -> impl IntoView {
     }
 }
 
-pub fn title_markdown(title: &str, src: &str, end: impl IntoView) -> impl IntoView {
+pub fn title_markdown(title: &str, src: &str, end: View) -> impl IntoView {
     view! {
         <Title text={format!("{} - {} Docs", lang(), title)}/>
         <Markdown src=src/>

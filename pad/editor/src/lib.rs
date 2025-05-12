@@ -2332,6 +2332,10 @@ ctrl/⌘ Z       - Undo
 ctrl/⌘ Y       - Redo
 ctrl/⌘ E       - Insert # Experimental! comment";
 
+pub fn replace_lang_name() -> bool {
+    cfg!(target_arch = "wasm32") && its_called_weewuh()
+}
+
 pub fn lang() -> &'static str {
     #[cfg(target_arch = "wasm32")]
     if its_called_weewuh() {

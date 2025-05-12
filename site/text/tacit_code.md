@@ -47,40 +47,40 @@ Disc ← # Code goes here
 Disc 1 ¯3 2
 ```
 
-To show how you might build up a solution with only stack reordering, we'll only use [`duplicate`](), [`flip`](), [`dip`](), and [`below`]() to attempt to get all the arguments in the right order.
+To show how you might build up a solution with only stack reordering, we'll only use [`duplicate`](), [`backward`](), [`dip`](), and [`below`]() to attempt to get all the arguments in the right order.
 
 First, we'll might try to get `a` and `c` next to each other above `b` on the stack.
 
 ```uiua
-Disc ← ⊙:
+Disc ← ⊙˜⊙∘
 Disc 1 ¯3 2
 ```
 
 Because `a` and `c` are on top of the stack, making the `4ac` term is easy.
 
 ```uiua
-Disc ← ××4 ⊙:
+Disc ← ××4 ⊙˜⊙∘
 Disc 1 ¯3 2
 ```
 
 We can get down to `b` with [dip](), create the `b²` term, and [subtract]().
 
 ```uiua
-Disc ← -⊙(ⁿ2)××4 ⊙:
+Disc ← -⊙(ⁿ2)××4 ⊙˜⊙∘
 Disc 1 ¯3 2
 ```
 
 That finishes the discriminant. Next, we'll account for [complex]() roots and take the [sqrt]().
 
 ```uiua
-Disc ← √ℂ0 -⊙(ⁿ2)××4 ⊙:
+Disc ← √ℂ0 -⊙(ⁿ2)××4 ⊙˜⊙∘
 Disc 1 ¯3 2
 ```
 
 We can implement `±` by [couple]()ing the value with itself [negate]()d.
 
 ```uiua
-Quad ← ⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:
+Quad ← ⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙˜⊙∘
 Quad 1 ¯3 2
 ```
 
@@ -88,36 +88,34 @@ And now we have a problem. We still need to use `a` and `b` one more time, but t
 `a` and `b` start at the top of the stack, so we can copy them with [below]() [dip]() [identity]() and put the rest of our code in two [dip]()s.
 
 ```uiua
-Quad ← ⊙⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:) ◡⊙∘
+Quad ← ⊙⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙˜⊙∘) ◡⊙∘
 Quad 1 ¯3 2
 ```
 
 Then we'll [subtract]() `b`... 
 
 ```uiua
-Quad ← ⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)) ◡⊙∘
+Quad ← ⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙˜⊙∘)) ◡⊙∘
 Quad 1 ¯3 2
 ```
 
 ...and [divide]() by `2a`.
 
 ```uiua
-Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)) ◡⊙∘
+Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙˜⊙∘)) ◡⊙∘
 Quad 1 ¯3 2
 ```
 
 And there we have it, the quadratic formula.
 
 ```uiua
-Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)) ◡⊙∘
+Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙˜⊙∘)) ◡⊙∘
 Quad 1 ¯3 2
 Quad 1 2 5
 Quad 2 3 1
 ```
 
-On close inspection, the astute reader may notice that the above code sucks. What's worse, it's not even as bad as it could be. If you hadn't thought to use [below]() and [dip]() in that way, you may have instead used `:⊙:` to rotate 3 values on the stack, making it even more convoluted.
-
-The problem with reordering stack values this often is that the state of the stack at any point in the code gets harder and harder for the writer to keep in their head. It also makes it much harder for the reader to deduce the state of the stack at a glance.
+On close inspection, the astute reader may notice that the above code sucks. The problem with reordering stack values this often is that the state of the stack at any point in the code gets harder and harder for the writer to keep in their head. It also makes it much harder for the reader to deduce the state of the stack at a glance.
 
 ## Stack-Source Locality
 

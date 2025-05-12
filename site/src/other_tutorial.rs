@@ -120,10 +120,10 @@ pub fn Audio() -> impl IntoView {
         <p>"My favorite way to make multiple notes is to "<Prim prim=Table/>" different frequencies with the time array."</p>
         <p>"Then, if you want a chord, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Add glyph_only=true/>" to add them together."</p>
         <p>"If you want sequence instead, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Join glyph_only=true/>"."</p>
-        <p>"You can calculate freqencies "<code>"f"</code>" that are a certain number of half-steps "<code>"n"</code>" from another with the formula "<code>"f×2^(n/12)"</code>" which can be written in "{lang}" as"<Prims prims=[Mul]/><code>"f"</code><Prims prims=[Pow]/><Prims prims=[Flip]/><code>"2"</code><Prims prims=[Div]/><code>"12 n"</code>"."</p>
+        <p>"You can calculate freqencies "<code>"f"</code>" that are a certain number of half-steps "<code>"n"</code>" from another with the formula "<code>"f×2^(n/12)"</code>" which can be written in "{lang}" as"<Prims prims=[Mul]/><code>"f"</code><Prims prims=[Backward]/><Prims prims=[Pow]/><code>"2"</code><Prims prims=[Div]/><code>"12 n"</code>"."</p>
         <p>"In this example, we make both a chord and a sequence from the same notes. We use "<Prim prim=Sin glyph_only=true/><Prim prim=Mul glyph_only=true/><Prim prim=Tau glyph_only=true/>" to make a sine wave instead of a saw wave."</p>
         <Editor example="\
-f ← ×220ⁿ:2÷12 [0 4 7]
+f ← ×220˜ⁿ2÷12 [0 4 7]
 s ← ∿×τ⊞×f ÷⟜⇡&asr
 ÷⧻f/+s
 ÷⧻f/⊂s"/>
@@ -164,7 +164,7 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <p>"In the examples above, the image array is constructed in such a way that the color channels are already the last axis. To create an image by combining color channels, it may be necessary to use "<Prim prim=Transpose/>"."</p>
         <Editor example="< ⊞⊙∘ -0.4 : ×0.2∿×τ . ÷⟜⇡100\n[⍉.⇌.]\n△. # Not a valid image shape\n⍉:\n△. # Valid image shape"/>
         <p>"Of course, images need not be sqaure."</p>
-        <Editor example="⊞< :+1/2÷3∿×τ: ∩(÷100⇡) 100 300"/>
+        <Editor example="˜⊞< +1/2÷3∿×τ: ∩(÷100⇡) 100 300"/>
         <p>"The "<code>"Logo"</code>" constant is a quick way to get the "{lang}" logo as an image."</p>
         <Editor example="Logo"/>
         <p>"The "<Prim prim=Keep/>" function can be used to scale an image vertically. "<Prims prims=[Rows, Keep]/>" scales it horizontally. Non-integer scales are allowed."</p>
@@ -346,8 +346,8 @@ fn EvenMoreStack() -> impl IntoView {
         <hr/>
 
         <p>"Mastering these stack manipulation modifiers takes time and practice. When you end up with a convoluted bit of stack manipulation code, try to see if you can simplify it by using one of these modifiers."</p>
-        <p>"Often, even simple patterns can be simplified further. For example, "<Prim prim=Flip/><Prim prim=On/>" is usually just "<Prim prim=Off/>"."</p>
-        <Editor example="▽<2:⟜⊡ [1_2 0_1] [0_1_2 3_4_5]\n▽<2 ⤚⊡ [1_2 0_1] [0_1_2 3_4_5]"/>
+        <p>"Often, even simple patterns can be simplified further. For example, "<Prim prim=Backward/>"near"<Prim prim=On/>" is often just "<Prim prim=Off/>"."</p>
+        <Editor example="˜(▽<2)⟜⊡ [1_2 0_1] [0_1_2 3_4_5]\n  ▽<2 ⤚⊡ [1_2 0_1] [0_1_2 3_4_5]"/>
         <p>"When you reduce a pattern to its simplest form, you can often gain a better view of the flow of data through the program."</p>
 
         <Hd id="sided-subscripts">"Sided Subscripts"</Hd>

@@ -132,7 +132,7 @@ primitive!(
     /// ex: [: 1 2 3 4 5]
     ///
     /// [flip] is generally recommend against. It is largely a relic of when Uiua was a different language.
-    /// Many cases can be replaced with [backward]. Others can be replaced with [fork], [both], [on], [by], [with], or [off].
+    /// Many cases can be replaced with [backward]. Others can be replaced with [dip], [fork], [both], [on], [by], [with], or [off].
     (2(2), Flip, Stack, ("flip", AsciiToken::Colon, ':')),
     /// Discard the top stack value
     ///
@@ -156,7 +156,7 @@ primitive!(
     /// ex: ¬[0 1 1 0]
     /// ex: ¬[0 1 2 3]
     ///
-    /// This is equivalent to `subtract``flip``1`
+    /// This is equivalent to `subtract``dip``1`
     /// ex: ¬7
     /// ex: ¬[1 2 3 4]
     (1, Not, MonadicPervasive, ("not", '¬')),
@@ -2037,11 +2037,10 @@ primitive!(
     ([1], Slf, Stack, ("self", '˙'), { experimental: true }),
     /// Call a function with its arguments reversed
     ///
-    /// This is a modifier version of [flip].
-    /// ex: ˜⊂ 1 [2 3]
-    /// ex: °˜⊂ [1 2 3]
     /// ex:  - 2 5
     ///   : ˜- 2 5
+    /// ex: ˜⊂ 1 [2 3]
+    /// ex: °˜⊂ [1 2 3]
     /// If the function takes 4 arguments, the second two arguments are reversed.
     /// ex: ˜⊟₄ 1 2 3 4
     /// ex: [˜∩⊟] 1 2 3 4

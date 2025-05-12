@@ -78,11 +78,11 @@ If you like, you can put values on the stack first, then operate on them.
 
 For math functions where the order matters, like [subtract](/docs/sub) and [divide](/docs/div), what would normally be the second argument is instead the first. This is so you can think of fragments like `-``2` as a single unit.
 
-If you want them to work the other way, you can use [flip](/docs/flip), which swaps the top two values on the stack.
+If you want them to work the other way, you can use [backward](/docs/backward), which swaps the top two values on the stack.
 
 ```uiua
 -3 10
--:3 10
+˜-3 10
 ```
 
 By the way, since `-` is for [subtract](/docs/subtract), use `` ` `` for negative numbers. The formatter will turn it into a nice `¯`.
@@ -445,9 +445,10 @@ Audio data is just an array of numbers between -1 and 1. The numbers are interpr
 This example plays a series of notes.
 
 ```uiua
-↯4[0 2 4 7 12 9 7 4]
-×220 ⁿ:2÷12
-÷2 ∿×τ ♭⍉⊞× ÷:⇡⁅÷8. &asr
+♭↯4[0 2 4 7 12 9 7 4] # Notes
+×220 ˜ⁿ2÷12           # Frequencies
+÷⟜(⇡⁅÷8) &asr         # Time
+÷2 ∿×τ ♭⍉⊞×           # Modulate
 ```
 
 ### GIFs

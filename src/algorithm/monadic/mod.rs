@@ -481,8 +481,13 @@ impl Value {
         self.range_start_impl(0, env)
     }
     pub(crate) fn range_start(&self, shape: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let start = self.as_int(env, "Range start should be an integer")?;
-        shape.range_start_impl(start, env)
+        let start = self.as_num(env, "Range start should be a scalar number")?;
+        if start.fract() == 0.0 && (isize::MIN as f64..=isize::MAX as f64).contains(&start) {
+            shape.range_start_impl(start as isize, env)
+        } else {
+            let range = shape.range(env)?;
+            self.clone().add(range, env)
+        }
     }
     fn range_start_impl(&self, start: isize, env: &Uiua) -> UiuaResult<Self> {
         let ishape = self.as_ints(

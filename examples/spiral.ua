@@ -1,4 +1,4 @@
-# Creates a number spiral that is common is code golf problems
+# Creates a number spiral that is common in code golf problems
 F ← ⌝⊡⊃(
   ⟜(↘¯1 ▽⊃(▽2+1⇡|◿4⇡+⊸-1) # Orientations
     ⊏⊙A₂                  # Directions

@@ -5,8 +5,8 @@ Steps ← 120
 Step ← (
   ⊞≠.°⊏         # Make comparison matrix
   ⊃(≡▽⊙¤)⋅∘     # Make others
-  ⊃≡(-¤)∘:      # Get diffs
-  ÷⍜♭₂(≡/+×.).  # Inverse square
+  ⊃≡(-¤)∘˜⊙∘    # Get diffs
+  ÷⊸⍜♭₂(≡/+×.)  # Inverse square
   ≡/+×G         # Get accs
   ⊃(+⊙⋅∘|⋅∘)×Dt # apply accs
   ⊃(+×Dt)∘      # Apply vels
@@ -16,9 +16,9 @@ Step ← (
 ⟜(↯⊙0⊂⊙2⧻) # Init vels
 
 ⁅×0.5 ⍥⤚Step Steps # Run
-⍜⊙♭₂-¤/↧♭₂.        # Normalize
-⬚0≡(°⊚)            # Plot
-≡(⧈(/↥♭)3_3)       # Upscale
+⍜⊙♭₂-¤/↧⊸♭₂        # Normalize
+⬚0≡°⊚              # Plot
+≡⌞⧈(/↥♭)3_3        # Upscale
 
 &fwa "n-body.gif" gif 16
 &p "Wrote gif to n-body.gif"

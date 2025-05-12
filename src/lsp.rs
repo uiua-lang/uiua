@@ -11,6 +11,7 @@ use std::{
 
 use crate::{
     ast::{Func, InlineMacro, Item, Modifier, ModuleKind, Ref, RefComponent, Subscript, Word},
+    extractor::Extractor,
     ident_modifier_args, is_custom_glyph,
     lex::{CodeSpan, Sp},
     parse::parse,
@@ -48,6 +49,8 @@ pub enum SpanKind {
     Obverse(SetInverses),
     ExtractorFunc,
     ExtractorMod,
+    ExtractorFuncLabel,
+    ExtractorModLabel,
 }
 
 /// Documentation information for a binding
@@ -698,8 +701,8 @@ impl Spanner {
                             let ident_span = (mac.ident.span.clone()).sp(mac_delim_kind);
                             spans.push(ident_span);
                         }
-                        Modifier::Extractor(_) => {
-                            spans.push(word.span.clone().sp(SpanKind::ExtractorMod))
+                        Modifier::Extractor(ex) => {
+                            spans.extend(self.extractor_spans(ex, true, &m.modifier.span))
                         }
                     }
                     spans.extend(self.words_spans(&m.operands));
@@ -752,8 +755,8 @@ impl Spanner {
                                         sub.script.span.clone().sp(SpanKind::Subscript(None, n)),
                                     );
                                 }
-                                Modifier::Extractor(_) => {
-                                    spans.push(m.modifier.span.clone().sp(SpanKind::ExtractorMod));
+                                Modifier::Extractor(ex) => {
+                                    spans.extend(self.extractor_spans(ex, true, &m.modifier.span));
                                     spans.push(
                                         sub.script.span.clone().sp(SpanKind::Subscript(None, n)),
                                     );
@@ -784,9 +787,9 @@ impl Spanner {
                     }
                     spans.push(ident.span.clone().sp(mac_delim_kind));
                 }
-                Word::Extractor(..) => spans.push(word.span.clone().sp(SpanKind::ExtractorFunc)),
-                Word::ExtractorOrElse(..) => {
-                    spans.push(word.span.clone().sp(SpanKind::ExtractorMod))
+                Word::Extractor(ex) => spans.extend(self.extractor_spans(ex, false, &word.span)),
+                Word::ExtractorOrElse(ex) => {
+                    spans.extend(self.extractor_spans(ex, true, &word.span))
                 }
             }
         }
@@ -835,6 +838,30 @@ impl Spanner {
             }
         }
         spans
+    }
+    fn extractor_spans(
+        &self,
+        ex: &Extractor,
+        modifier: bool,
+        span: &CodeSpan,
+    ) -> Vec<Sp<SpanKind>> {
+        let kind = if modifier {
+            SpanKind::ExtractorMod
+        } else {
+            SpanKind::ExtractorFunc
+        };
+        if let Some(label) = &ex.label {
+            let mid = 1 + label.chars().count();
+            let (label_span, rest_span) = span.split_at_char(mid, self.inputs());
+            let label_kind = if modifier {
+                SpanKind::ExtractorModLabel
+            } else {
+                SpanKind::ExtractorFuncLabel
+            };
+            vec![label_span.sp(label_kind), rest_span.sp(kind)]
+        } else {
+            vec![span.clone().sp(kind)]
+        }
     }
 }
 

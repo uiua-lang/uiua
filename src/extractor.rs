@@ -4,12 +4,14 @@ use ecow::EcoVec;
 use serde::*;
 use tinyvec::TinyVec;
 
-use crate::{Boxed, SigNode, Uiua, UiuaResult, Value};
+use crate::{Boxed, Ident, SigNode, Uiua, UiuaResult, Value};
 
 pub fn extractor(ex: Extractor, op: Option<Arc<SigNode>>, env: &mut Uiua) -> UiuaResult {
     let target = env.pop("extractor target")?;
+    println!("target: {target:?}");
     match extract(&ex, target) {
         Ok((extracted, target)) => {
+            println!("extracted: {extracted:?}");
             if let Some(op) = op {
                 if op.sig.args() > 1 {
                     let n = op.sig.args() - 1;
@@ -29,7 +31,7 @@ pub fn extractor(ex: Extractor, op: Option<Arc<SigNode>>, env: &mut Uiua) -> Uiu
             Ok(())
         }
         Err((e, target)) => {
-            if let Some(op) = op {
+            if let Some(op) = op.filter(|_| !e.hard) {
                 if op.sig.args() > 0 {
                     env.push(target.clone());
                 }
@@ -39,10 +41,10 @@ pub fn extractor(ex: Extractor, op: Option<Arc<SigNode>>, env: &mut Uiua) -> Uiu
                 }
                 Ok(())
             } else {
-                Err(env.error(match e {
-                    ExtractionError::NoListMatch => "Extractor found no match in the list".into(),
-                    ExtractionError::NoFragMatch => "No extractor fragment matches".into(),
-                    ExtractionError::Type(found) => {
+                Err(env.error(match e.kind {
+                    ExErrorKind::NoListMatch => "Extractor found no match in the list".into(),
+                    ExErrorKind::NoFragMatch => "No extractor fragment matches".into(),
+                    ExErrorKind::Type(found) => {
                         let mut s = format!("Extractor {ex} expects ");
                         let types = unique_list(ex.frags.iter().filter_map(|f| f.ty));
                         format_list(&mut s, &types, |ty| ty.name());
@@ -50,7 +52,7 @@ pub fn extractor(ex: Extractor, op: Option<Arc<SigNode>>, env: &mut Uiua) -> Uiu
                         s.push_str(found.name());
                         s
                     }
-                    ExtractionError::WrongRank(found) => {
+                    ExErrorKind::WrongRank(found) => {
                         let mut s = format!("Extractor {ex} expects rank ");
                         let ranks = unique_list(
                             (ex.frags.iter())
@@ -62,7 +64,7 @@ pub fn extractor(ex: Extractor, op: Option<Arc<SigNode>>, env: &mut Uiua) -> Uiu
                         s.push_str(&found.to_string());
                         s
                     }
-                    ExtractionError::WrongDim(i, found) => {
+                    ExErrorKind::WrongDim(i, found) => {
                         let mut s = format!("Extractor {ex} expects axis {i} to have length ");
                         let lengths = unique_list(
                             (ex.frags.iter())
@@ -120,13 +122,34 @@ where
     }
 }
 
-fn extract(
-    ex: &Extractor,
-    target: Value,
-) -> Result<(Value, Option<Value>), (ExtractionError, Value)> {
+fn extract(ex: &Extractor, target: Value) -> Result<(Value, Option<Value>), (ExError, Value)> {
+    println!("extractor: {ex}");
     match target {
         Value::Box(mut arr) if arr.rank() == 1 => {
+            // Extract by label
+            if let Some(label) = &ex.label {
+                for (i, Boxed(val)) in arr.data.iter().enumerate().rev() {
+                    let label_matches = match &val.meta.label {
+                        Some(vl) => label == vl,
+                        None => label.is_empty(),
+                    };
+                    if label_matches {
+                        return match extract_frags(ex, val) {
+                            Err(e) if !label.is_empty() => Err((e.hard(true), arr.into())),
+                            _ => {
+                                let val = val.clone();
+                                arr.remove_row(i);
+                                Ok((val, Some(arr.into())))
+                            }
+                        };
+                    }
+                }
+            }
+            // Extract by fragment
             for (i, Boxed(val)) in arr.data.iter().enumerate().rev() {
+                if val.meta.label.is_some() && ex.label.is_some() {
+                    continue;
+                }
                 if extract_frags(ex, val).is_ok() {
                     let val = val.clone();
                     arr.remove_row(i);
@@ -134,26 +157,30 @@ fn extract(
                 }
             }
             let val = arr.into();
-            match extract_frags(ex, &val) {
-                Ok(()) => Ok((val, None)),
-                Err(_) => Err((ExtractionError::NoListMatch, val)),
+            if ex.label.is_some() {
+                Err((ExErrorKind::NoListMatch.hard(false), val))
+            } else {
+                match extract_frags(ex, &val) {
+                    Ok(()) => Ok((val, None)),
+                    Err(_) => Err((ExErrorKind::NoListMatch.hard(false), val)),
+                }
             }
         }
         val => match extract_frags(ex, &val) {
             Ok(()) => Ok((val, None)),
-            Err(e) => Err((e, val)),
+            Err(e) => Err((e.hard(false), val)),
         },
     }
 }
 
-fn extract_frags(ex: &Extractor, val: &Value) -> Result<(), ExtractionError> {
+fn extract_frags(ex: &Extractor, val: &Value) -> Result<(), ExErrorKind> {
     let mut type_error = None;
     let mut shape_error = None;
     for frag in &ex.frags {
         match extract_frag(frag, val) {
             Ok(()) => return Ok(()),
-            Err(e @ ExtractionError::Type(_)) => type_error.get_or_insert(e),
-            Err(e @ (ExtractionError::WrongRank(_) | ExtractionError::WrongDim(..))) => {
+            Err(e @ ExErrorKind::Type(_)) => type_error.get_or_insert(e),
+            Err(e @ (ExErrorKind::WrongRank(_) | ExErrorKind::WrongDim(..))) => {
                 shape_error.get_or_insert(e)
             }
             _ => continue,
@@ -164,9 +191,7 @@ fn extract_frags(ex: &Extractor, val: &Value) -> Result<(), ExtractionError> {
     } else if ex.type_is_homogeneous() {
         type_error.or(shape_error)
     } else {
-        type_error
-            .or(shape_error)
-            .map(|_| ExtractionError::NoFragMatch)
+        type_error.or(shape_error).map(|_| ExErrorKind::NoFragMatch)
     };
     match error {
         Some(e) => Err(e),
@@ -174,7 +199,7 @@ fn extract_frags(ex: &Extractor, val: &Value) -> Result<(), ExtractionError> {
     }
 }
 
-fn extract_frag(frag: &ExtractorFrag, val: &Value) -> Result<(), ExtractionError> {
+fn extract_frag(frag: &ExtractorFrag, val: &Value) -> Result<(), ExErrorKind> {
     if let Some(expected) = frag.ty {
         let found = match val {
             Value::Byte(_) | Value::Num(_) => ExtractorType::Real,
@@ -183,20 +208,20 @@ fn extract_frag(frag: &ExtractorFrag, val: &Value) -> Result<(), ExtractionError
             Value::Box(_) => ExtractorType::Box,
         };
         if expected != found {
-            return Err(ExtractionError::Type(found));
+            return Err(ExErrorKind::Type(found));
         }
     }
     if let Some(ExtractorShape(dims)) = &frag.shape {
         if dims.iter().all(|dim| matches!(dim, ExtractorDim::Dim(_))) {
             if dims.len() != val.shape.len() {
-                return Err(ExtractionError::WrongRank(val.shape.len()));
+                return Err(ExErrorKind::WrongRank(val.shape.len()));
             }
             for (i, dim) in dims.iter().enumerate() {
                 let &ExtractorDim::Dim(dim) = dim else {
                     unreachable!()
                 };
                 if dim != val.shape[i] {
-                    return Err(ExtractionError::WrongDim(i, val.shape[i]));
+                    return Err(ExErrorKind::WrongDim(i, val.shape[i]));
                 }
             }
         }
@@ -205,18 +230,31 @@ fn extract_frag(frag: &ExtractorFrag, val: &Value) -> Result<(), ExtractionError
 }
 
 #[derive(Debug)]
-enum ExtractionError {
+struct ExError {
+    kind: ExErrorKind,
+    hard: bool,
+}
+
+#[derive(Debug)]
+enum ExErrorKind {
     NoListMatch,
     NoFragMatch,
     Type(ExtractorType),
     WrongRank(usize),
     WrongDim(usize, usize),
 }
+impl ExErrorKind {
+    fn hard(self, hard: bool) -> ExError {
+        ExError { kind: self, hard }
+    }
+}
 
 /// A value extractor
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Extractor {
+    /// The label
+    pub label: Option<Ident>,
     /// The fragments
     pub frags: EcoVec<ExtractorFrag>,
     /// Whether to preserve the extracted-from array on the stack
@@ -234,6 +272,15 @@ impl fmt::Display for Extractor {
         } else {
             write!(f, "▷")
         }?;
+        if let Some(label) = &self.label {
+            write!(f, "{label}")?;
+            if self.frags.first().is_some_and(|frag| {
+                frag.shape.as_ref().is_some_and(|s| s.0.is_empty())
+                    || frag.shape.is_none() && frag.ty.is_some()
+            }) {
+                write!(f, ".")?;
+            }
+        }
         for (i, frag) in self.frags.iter().enumerate() {
             if i > 0 {
                 write!(f, ".")?;
@@ -245,10 +292,15 @@ impl fmt::Display for Extractor {
 }
 impl Extractor {
     /// Create a new extractor
-    pub fn new(frags: impl IntoIterator<Item = ExtractorFrag>, preserve: bool) -> Self {
+    pub fn new(
+        frags: impl IntoIterator<Item = ExtractorFrag>,
+        preserve: bool,
+        label: impl Into<Option<Ident>>,
+    ) -> Self {
         Extractor {
             frags: frags.into_iter().collect(),
             preserve,
+            label: label.into(),
         }
     }
     fn type_is_homogeneous(&self) -> bool {

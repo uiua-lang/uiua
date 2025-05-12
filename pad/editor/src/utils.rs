@@ -26,6 +26,7 @@ use web_sys::{
     KeyboardEvent, MouseEvent,
 };
 
+use crate::sig_class;
 use crate::{
     backend::{OutputItem, WebBackend},
     binding_class, code_font, modifier_class, prim_sig_class,
@@ -678,6 +679,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         SpanKind::Subscript(None, _) => "number-literal",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, *n),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),
+                        SpanKind::ExtractorFunc => sig_class((1, 1).into()),
+                        SpanKind::ExtractorMod => modifier_class(1),
                         _ => "",
                     };
                     match kind {
@@ -857,7 +860,9 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                 .into_view(),
                             )
                         }
-                        SpanKind::Label => {
+                        SpanKind::Label
+                        | SpanKind::ExtractorFuncLabel
+                        | SpanKind::ExtractorModLabel => {
                             let label = text.trim_start_matches('$');
                             let mut components = [0f32; 3];
                             const MIN: f32 = 0.2;

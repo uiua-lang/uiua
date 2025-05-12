@@ -1758,7 +1758,7 @@ impl Parser<'_> {
         Some(Comments { lines, semantic })
     }
     fn extractor(&mut self) -> Option<Sp<Word>> {
-        let (preserve, mut span) = self.next_token_map(Token::as_extractor_begin)?.into();
+        let ((preserve, label), mut span) = self.next_token_map(Token::as_extractor_begin)?.into();
         let mut frags = Vec::new();
         let mut is_or_val = false;
         while let Some(((frag, end), sp)) = self
@@ -1780,7 +1780,7 @@ impl Parser<'_> {
             Word::ExtractorOrElse
         } else {
             Word::Extractor
-        }(Extractor::new(frags, preserve))))
+        }(Extractor::new(frags, preserve, label))))
     }
 }
 

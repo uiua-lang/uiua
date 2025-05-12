@@ -874,6 +874,10 @@ impl Subscript {
 }
 
 impl<N> Subscript<N> {
+    /// Check if the subscript has no items
+    pub fn is_empty(&self) -> bool {
+        self.num.is_none() && self.side.is_none()
+    }
     /// Map the numeric part of the subscript
     pub fn map_num<M>(self, f: impl FnOnce(N) -> M) -> Subscript<M> {
         Subscript {

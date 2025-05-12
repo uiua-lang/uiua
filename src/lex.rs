@@ -484,6 +484,40 @@ impl CodeSpan {
             ..self.clone()
         }
     }
+    /// Split the span at a relative character offset
+    ///
+    /// # Panics
+    /// Panics if the span is multiline or the offset is out of bounds
+    #[track_caller]
+    pub fn split_at_char(&self, offset: usize, inputs: &Inputs) -> (Self, Self) {
+        assert_eq!(self.start.line, self.end.line);
+        let mid_char = self.start.char_pos + offset as u32;
+        let mid_col = self.start.col + offset as u16;
+        assert!(mid_char <= self.end.char_pos, "offset is out of bounds");
+        let mid_byte = self.as_str(inputs, |s| {
+            self.start.byte_pos
+                + s.char_indices()
+                    .nth(offset)
+                    .map(|(idx, _)| idx)
+                    .unwrap_or_else(|| s.chars().map(|c| c.len_utf8()).sum::<usize>())
+                    as u32
+        });
+        let mid_loc = Loc {
+            line: self.start.line,
+            col: mid_col,
+            byte_pos: mid_byte,
+            char_pos: mid_char,
+        };
+        let left = Self {
+            end: mid_loc,
+            ..self.clone()
+        };
+        let right = Self {
+            start: mid_loc,
+            ..self.clone()
+        };
+        (left, right)
+    }
 }
 
 /// A span wrapping a value
@@ -608,7 +642,7 @@ pub enum Token {
     Glyph(Primitive),
     Placeholder(usize),
     Subscr(Subscript),
-    ExtractorBegin(bool),
+    ExtractorBegin(bool, Option<Ident>),
     ExtractorFrag(ExtractorFrag, ExtractorEnd),
     LeftArrow,
     LeftStrokeArrow,
@@ -689,9 +723,9 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_extractor_begin(&self) -> Option<bool> {
+    pub(crate) fn as_extractor_begin(&self) -> Option<(bool, Option<Ident>)> {
         match self {
-            Token::ExtractorBegin(preserve) => Some(*preserve),
+            Token::ExtractorBegin(preserve, label) => Some((*preserve, label.clone())),
             _ => None,
         }
     }
@@ -749,8 +783,10 @@ impl fmt::Display for Token {
             Token::OpenModule => write!(f, "┌─╴"),
             Token::CloseModule => write!(f, "└─╴"),
             Token::Placeholder(i) => write!(f, "^{i}"),
-            Token::ExtractorBegin(false) => write!(f, "▷"),
-            Token::ExtractorBegin(true) => write!(f, "◁"),
+            Token::ExtractorBegin(false, None) => write!(f, "▷"),
+            Token::ExtractorBegin(false, Some(label)) => write!(f, "▷{label}"),
+            Token::ExtractorBegin(true, None) => write!(f, "◁"),
+            Token::ExtractorBegin(true, Some(label)) => write!(f, "◁{label}"),
             Token::ExtractorFrag(ex, end) => write!(f, "{ex}{end}"),
         }
     }
@@ -1179,10 +1215,10 @@ impl<'a> Lexer<'a> {
                     self.end(Char(char), start)
                 }
                 // Extractors
-                "'" if self.next_char_exact(">") => self.extractors(false, start),
-                "'" if self.next_char_exact("<") => self.extractors(true, start),
-                "▷" => self.extractors(false, start),
-                "◁" => self.extractors(true, start),
+                "'" if self.next_char_exact(">") => self.extractor(false, start),
+                "'" if self.next_char_exact("<") => self.extractor(true, start),
+                "▷" => self.extractor(false, start),
+                "◁" => self.extractor(true, start),
                 // Strings
                 "\"" | "$" => {
                     let first_dollar = c == "$";
@@ -1357,6 +1393,10 @@ impl<'a> Lexer<'a> {
             };
         }
 
+        // for tok in &self.tokens {
+        //     println!("tok: {tok:?}");
+        // }
+
         (self.tokens, self.errors)
     }
     fn ident(&mut self, start: Loc, c: &str) -> String {
@@ -1469,6 +1509,7 @@ impl<'a> Lexer<'a> {
             "⌟" => side = Some(SubSide::Right),
             "₋" => got_neg = true,
             "__" => can_parse_ascii = true,
+            "" => {}
             c if c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
                 num = SUBSCRIPT_DIGITS
                     .iter()
@@ -1623,16 +1664,33 @@ impl<'a> Lexer<'a> {
         }
         string
     }
-    fn extractors(&mut self, preserve: bool, mut start: Loc) {
-        self.end(Token::ExtractorBegin(preserve), start);
+    fn extractor(&mut self, preserve: bool, mut start: Loc) {
+        // Label
+        let mut label = None;
+        if let Some(c) = self.next_char_if_all(|c| is_ident_char(c) && !c.is_lowercase()) {
+            let mut s = Ident::from(c);
+            while let Some(c) = self.next_char_if_all(is_ident_char) {
+                s.push_str(c);
+            }
+            let sub = self.subscript("");
+            if !sub.is_empty() {
+                s.push_str(&sub.to_string())
+            }
+            label = Some(s);
+            self.next_char_exact(".");
+        };
+        // Begin
+        let has_label = label.is_some();
+        self.end(Token::ExtractorBegin(preserve, label), start);
         start = self.loc;
-        let (ex, end) = self.extractor().unwrap_or_default();
+        // Fragments
+        let (ex, end) = self.extractor_frag(has_label).unwrap_or_default();
         self.end(Token::ExtractorFrag(ex, end), start);
         if end != ExtractorEnd::Or {
             return;
         }
         start = self.loc;
-        while let Some((ex, end)) = self.extractor() {
+        while let Some((ex, end)) = self.extractor_frag(false) {
             self.end(Token::ExtractorFrag(ex, end), start);
             if end != ExtractorEnd::Or {
                 break;
@@ -1640,7 +1698,8 @@ impl<'a> Lexer<'a> {
             start = self.loc;
         }
     }
-    fn extractor(&mut self) -> Option<(ExtractorFrag, ExtractorEnd)> {
+    fn extractor_frag(&mut self, allow_empty: bool) -> Option<(ExtractorFrag, ExtractorEnd)> {
+        // Shape
         let mut shape: Option<EcoVec<ExtractorDim>> = None;
         if self.next_char_exact("s") {
             shape = Some(EcoVec::new());
@@ -1678,6 +1737,7 @@ impl<'a> Lexer<'a> {
         }
         let shape = shape.map(ExtractorShape);
 
+        // Type
         let ty = if self.next_char_exact("r") | self.next_char_exact("ℝ") {
             Some(ExtractorType::Real)
         } else if self.next_char_exact("a") | self.next_char_exact("@") {
@@ -1690,7 +1750,8 @@ impl<'a> Lexer<'a> {
             None
         };
 
-        if shape.is_some() || ty.is_some() {
+        // End
+        if allow_empty || shape.is_some() || ty.is_some() {
             let end = if self.next_char_exact(".") {
                 ExtractorEnd::Or
             } else if self.next_char_exact("?") {

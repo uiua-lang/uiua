@@ -743,7 +743,9 @@ impl Compiler {
                     if let Some((node, errs)) = self.pre_eval(&node) {
                         self.errors.extend(errs);
                         // Track top-level values
-                        if node.iter().all(|node| matches!(node, Node::Push(_))) {
+                        if !matches!(line_node.last().unwrap(), Node::SetOutputComment { .. })
+                            && node.iter().all(|node| matches!(node, Node::Push(_)))
+                        {
                             let vals: Vec<_> = node
                                 .iter()
                                 .map(|node| match node {

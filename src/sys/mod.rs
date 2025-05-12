@@ -406,7 +406,7 @@ sys_op! {
     ///
     /// ex: &fras "example.txt"
     /// You can use [under][&fras] to write back to the file after modifying the string.
-    /// ex: ⍜&fras(⊂:"\n# Wow!") "example.txt"
+    /// ex: ⍜&fras(⊂⊙"\n# Wow!") "example.txt"
     ///   : &p&fras "example.txt"
     ///
     /// See [&frab] for reading into a byte array.
@@ -417,7 +417,7 @@ sys_op! {
     ///
     /// ex: &frab "example.txt"
     /// You can use [under][&frab] to write back to the file after modifying the array.
-    /// ex: ⍜&frab(⊂:-@\0"\n# Wow!") "example.txt"
+    /// ex: ⍜&frab(⊂⊙-@\0"\n# Wow!") "example.txt"
     ///   : &p&fras "example.txt"
     ///
     /// See [&fras] for reading into a rank-`1` character array.

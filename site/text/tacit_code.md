@@ -193,7 +193,7 @@ Quad 1 ¯3 2
 Let's compare this solution to the previous one. To improve the comparison, we'll make the discriminant its own function here as well.
 
 ```uiua
-Disc ← -⊙(ⁿ2)××4 ⊙:
+Disc ← -⊙(ⁿ2)××4 ⊙˜⊙∘
 Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 Disc)) ◡⊙∘
 Quad 1 ¯3 2
 ```
@@ -218,8 +218,6 @@ Quad ← (
 )
 Quad 0 2 1
 ```
-
-Even though the reordering step could be written shorter as `⊃⋅⋅∘:` it is written in a long form here for the benefit of the reader. But you may decide that `⊃⋅⋅∘:` is perfectly clear, and that's fine!
 
 ## Three Rules
 

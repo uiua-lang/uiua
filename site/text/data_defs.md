@@ -124,7 +124,7 @@ If we omit a data definition's name, it becomes a data definition for the surrou
 ┌─╴Person
   ~{Name Age}
   PassYear ← ⍜Age(+1)
-  Format   ← $"_ is _ year_ old" ⊃(Name|Age|▽:@s≠1Age)
+  Format   ← $"_ is _ year_ old" ⊃(Name|Age|▽⊙@s≠1Age)
 └─╴
 Person!(Format PassYear New "Sophie" 41)
 Person!(Format PassYear New "Rom" 0)

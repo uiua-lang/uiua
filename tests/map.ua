@@ -1,6 +1,6 @@
 {1 3 "hi" [1 2 3]}
 {2 4 "there" [4 5 6]}
-map:
+˜map
 MapA  ←
 MapB  ← insert 5 6 MapA
 MapsI ← MapA MapB

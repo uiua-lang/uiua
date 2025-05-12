@@ -244,7 +244,6 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Min], Required, "Pattern match", "°(↧5) 3") }
             { inverse_row([Max], Required, "Pattern match", "°(↥3) 5") }
             { inverse_row([Identity], No, "Self inverse", "°∘ 5") }
-            { inverse_row([Flip], No, "Self inverse", "°: 2 5") }
             { inverse_row([Neg], No, "Self inverse", "°¯ 5") }
             { inverse_row([Not], No, "Self inverse", "°¬ 5") }
             { inverse_row([Sqrt], No, "", "°√ 5") }
@@ -273,7 +272,7 @@ fn all_uns() -> impl IntoView {
                 "°{⊙⊙∘} {1 2_3 4}"
             ) }
             { inverse_row_impl(view!(<code>"[…]"</code>), No, "", "°[⇌] [[1 2 3]]") }
-            { inverse_row_impl(view!(<code>"{…}"</code>), No, "", "°{:} {1 2_3}") }
+            { inverse_row_impl(view!(<code>"{…}"</code>), No, "", "°{⊙∘} {1 2_3}") }
             { inverse_row([Box], No, "No-op on non-scalars and non-boxes", "°□ □[1 2 3]") }
             { inverse_row([Reverse], No, "Self inverse", "°⇌ [1 2 3 4]") }
             { inverse_row([Shape], No, "", "°△ [2 2 4]") }
@@ -337,14 +336,14 @@ fn all_unders() -> impl IntoView {
                 <th style="width: 18%">"Notes"</th>
                 <th>"Example"</th>
             </tr>
-            { inverse_row([Un], Optional, "Inner function must be invertible", "⍜°⊟: [1 2]") }
-            { inverse_row([Add], Optional, view!("Optional "<Prim prim=Flip/>), "⍜+(×2) 1 5") }
-            { inverse_row([Sub], Optional, view!("Optional "<Prim prim=Flip/>), "⍜-(×2) 1 5") }
-            { inverse_row([Mul], Optional, view!("Optional "<Prim prim=Flip/>), "⍜×(+1) 2 5") }
-            { inverse_row([Div], Optional, view!("Optional "<Prim prim=Flip/>), "⍜÷(+1) 2 5") }
-            { inverse_row([Modulus], Optional, view!("Optional "<Prim prim=Flip/>), "⍜◿(×10) 4 9") }
-            { inverse_row([Pow], Optional, view!("Optional "<Prim prim=Flip/>), "⍜ⁿ(-9) 2 5") }
-            { inverse_row([Log], Optional, view!("Optional "<Prim prim=Flip/>), "⍜ₙ(+1) 3 8") }
+            { inverse_row([Un], Optional, "Inner function must be invertible", "⍜°⊟(+5) [1 2]") }
+            { inverse_row([Add], Optional, view!("Optional "<Prim prim=Backward/>), "⍜+(×2) 1 5") }
+            { inverse_row([Sub], Optional, view!("Optional "<Prim prim=Backward/>), "⍜-(×2) 1 5") }
+            { inverse_row([Mul], Optional, view!("Optional "<Prim prim=Backward/>), "⍜×(+1) 2 5") }
+            { inverse_row([Div], Optional, view!("Optional "<Prim prim=Backward/>), "⍜÷(+1) 2 5") }
+            { inverse_row([Modulus], Optional, view!("Optional "<Prim prim=Backward/>), "⍜◿(×10) 4 9") }
+            { inverse_row([Pow], Optional, view!("Optional "<Prim prim=Backward/>), "⍜ⁿ(-9) 2 5") }
+            { inverse_row([Log], Optional, view!("Optional "<Prim prim=Backward/>), "⍜ₙ(+1) 3 8") }
             { inverse_row([Get], Optional, "", "⍜get(×10) @b map \"abc\" 1_2_3") }
             { inverse_row([Floor], No, "", "⍜⌊(×10) 1.5") }
             { inverse_row([Ceil], No, "", "⍜⌈(×10) 1.5") }
@@ -374,7 +373,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Base], Optional, "", "⍜⊥(⊂1) 10 123") }
             { inverse_row([Stencil, Identity], Optional, "Chunking only", "⍜⧈∘≡⇌ ¤¤3 ⇡9") }
             { inverse_row([Dip], No, "Inner function must be invertible", "⍜⊙⊂× 10 2 3") }
-            { inverse_row([Both], No, "Inner function must be invertible", "⍜∩⊡: 1 [1 2 3] 2 [4 5 6]") }
+            { inverse_row([Both], No, "Inner function must be invertible", "⍜∩⊡∩(×10) 1 [1 2 3] 2 [4 5 6]") }
             { inverse_row([Pop], No, "", "⍜◌(×2) 1 2") }
             { inverse_row([Rows], No, "Inner function must be invertible", "⍜≡⊢(×10) [1_2_3 4_5_6]") }
             { inverse_row([Inventory], No, "Inner function must be invertible", "⍜⍚△⇌ {1 2_3 4_5_6}") }

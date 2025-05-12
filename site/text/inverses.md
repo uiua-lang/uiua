@@ -183,7 +183,7 @@ It's not just [pick](/docs/pick)! Many functions work with [under](/docs/under)!
 You can even use [under](/docs/under) on a function that has already been [un](/docs/un)ed. This is a nice way to work with [box](/docs/box)ed data.
 
 ```uiua
-≡⍜°□(⊂:@!) {"wow" "cool" "omg"}
+≡⍜°□(⊂⊙@!) {"wow" "cool" "omg"}
 ```
 
 You can find more uses of [under](/docs/under) in its documentation, including a list of all [under](/docs/under)-compatible functions and modifiers.

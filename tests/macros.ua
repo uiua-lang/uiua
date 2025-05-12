@@ -69,7 +69,7 @@ F! ←^ {"+" "1"}◌
 ⍤⤙≍ [2 3 4] ≡F!∘ [1 2 3]
 
 Struct‼ ←^ $"---_\n_\n---" ⊙(
-  /$"_\n_"⊂□$"New ← {_}"≡⋅@⊙⟜⍚$"_ ← °□⊡_":°⊏⊜□⊸≠@ °$"[_]"
+  /$"_\n_"⊂□$"New ← {_}"≡⋅@⊙⟜⍚$"_ ← °□⊡_"°˜⊏⊜□⊸≠@ °$"[_]"
 )°{⊙∘}
 
 Struct‼Person[Name Age][] # Ensure that a word on the same line as binding generation works
@@ -82,7 +82,7 @@ M! ←^ ⋅"∘"
 @a @b
 ⍤⤙≍ "b" [⋅M!∘]
 
-Join! ←^ ↯:@⊂↥0-1⋕
+Join! ←^ ↯⊙@⊂↥0-1⋕
 {Join!0 "a" "bc" "def"}
 {Join!1 "a" "bc" "def"}
 {Join!2 "a" "bc" "def"}
@@ -149,5 +149,5 @@ F! ←^ (
 ⍤⤙≍ 5 F!+
 
 # These just need to parse
-A₇₂₇! = ^0
-A⌞! = ^0
+A₇₂₇! ← ^0
+A⌞!   ← ^0

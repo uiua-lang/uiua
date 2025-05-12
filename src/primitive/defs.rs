@@ -262,7 +262,7 @@ primitive!(
     ///   : ⁅₃ τ
     /// If you need a dynamic number of decimal places, you can use [under][multiply].
     /// ex: ⍜×⁅ 3 π
-    /// ex: ⍜×⁅ ⁿ:10⇡6 π
+    /// ex: ⍜×⁅ ˜ⁿ10⇡6 π
     (1, Round, MonadicPervasive, ("round", '⁅')),
     /// Compare for equality
     ///
@@ -469,7 +469,7 @@ primitive!(
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [maximum] can be used as a logical OR.
-    /// ex: ◡↥≤5:≥8. [6 2 5 9 6 5 0 4]
+    /// ex: ◡↥⊓⌟≤≥5 8 . [6 2 5 9 6 5 0 4]
     ///
     /// See also: [minimum]
     (2, Max, DyadicPervasive, ("maximum", '↥')),
@@ -2240,7 +2240,7 @@ primitive!(
     /// Return values from the condition function that are under the condition itself will be passed to the loop function.
     /// Here is an example that evaluates a [Collatz sequence](https://en.wikipedia.org/wiki/Collatz_conjecture).
     /// The next number in the sequence is calculated in the condition function but [join]ed to the sequence in the loop function.
-    /// ex: C ← ⨬(+1×3|÷2)=0◿2.
+    /// ex: C ← ⨬(+1×3|÷2)=0⊸◿2
     ///   : ◌⍢⊂⊸(¬⊸∊⟜(C⊢)) [7]
     /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitly copied.
     /// Consider this equivalence:
@@ -2819,8 +2819,7 @@ primitive!(
     ///   : ⨬⋅⋅0get ◡has 5 .
     /// You can provide a default value with [fill].
     /// ex: map 1_2 3_4
-    ///   : ⬚0get 1 .
-    ///   : ⬚0get 5 :
+    ///   : ⊃(⬚0get 1|⬚0get 5)
     /// You can use [under][get] to modify the value at the key.
     /// ex: /map⍉ [1_2 3_4 5_6]
     ///   : ⍜(get3|×10)

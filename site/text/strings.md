@@ -108,7 +108,7 @@ This can even be used to replace the matches with different strings.
 ```
 Here is how you might replace with a variable number of strings.
 ```uiua
-F ← ⍜⊜□(↙⧻) ⊸⦷ "ab" :°⋕⇡10
+F ← ⍜⊜□(↙⧻) ⊸⦷ "ab" ⊙(°⋕⇡10)
 F "abracadabra"
 F "abcdefg"
 F "ababab|abababab"

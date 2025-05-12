@@ -22,7 +22,7 @@ VecII ← "{double; double}"
 
 Person ← "{const char*; int}"
 ⍤⟜≍: {"Dave" 31} Lib {Person "person_new" "const char*" "int"} {"Dave" 31}
-⍤⟜≍: {"Dave" 31} Lib {⊂:@*Person "person_new_ptr" "const char*" "int"} {"Dave" 31}
+⍤⟜≍: {"Dave" 31} Lib {⊂⊙@*Person "person_new_ptr" "const char*" "int"} {"Dave" 31}
 ⍤⟜≍: 31 Lib {"int" "person_val_age" Person} {{"Dave" 31}}
 ⍤⟜≍: 31 Lib {"int" "person_ptr_age" $"const _*"Person} {{"Dave" 31}}
 TwoPeople ← $"{_; _}" .Person

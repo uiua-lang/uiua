@@ -660,7 +660,8 @@
     "args": 2,
     "outputs": 2,
     "class": "Stack",
-    "description": "Swap the top two values on the stack"
+    "description": "Swap the top two values on the stack",
+    "deprecated": true
   },
   "floor": {
     "glyph": "⌊",

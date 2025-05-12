@@ -1085,7 +1085,7 @@ pub fn Editor<'a>(
     let glyph_buttons_container = move || {
         show_glyphs.get().then(|| {
             let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
-                .filter(|prim| !prim.is_experimental())
+                .filter(|prim| !prim.is_experimental() && *prim != Primitive::Flip)
                 .filter_map(make_glyph_button)
                 .collect();
 

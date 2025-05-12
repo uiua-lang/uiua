@@ -869,7 +869,6 @@ impl Compiler {
                 let cust = CustomInverse {
                     normal,
                     anti: Some(sn),
-                    prefer_under_normal: true,
                     ..Default::default()
                 };
                 let span = self.add_span(modified.modifier.span.clone());
@@ -942,7 +941,6 @@ impl Compiler {
                     anti: None,
                     under: Some((sn.clone(), SigNode::default())),
                     is_obverse: true,
-                    prefer_under_normal: false,
                 };
                 if sn.sig.anti() == Some(sn.sig) {
                     cust.anti = Some(sn.clone());

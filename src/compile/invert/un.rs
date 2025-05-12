@@ -340,6 +340,16 @@ pub trait InvertPattern: fmt::Debug + Sync {
     fn allowed_in_under(&self) -> bool {
         true
     }
+    fn try_invert_extract<'a>(
+        &self,
+        input: &'a [Node],
+        asm: &Assembly,
+    ) -> (&'a [Node], InversionResult<Node>) {
+        match self.invert_extract(input, asm) {
+            Ok((input, node)) => (input, Ok(node)),
+            Err(e) => (input, Err(e)),
+        }
+    }
 }
 
 macro_rules! inverse {

@@ -208,8 +208,6 @@ pub struct CustomInverse {
     ///
     /// Inverses that are not set by obverse may be overridden
     pub is_obverse: bool,
-    /// Whether to prefer undering the normal function over using the anti inverse
-    pub prefer_under_normal: bool,
 }
 
 impl Default for CustomInverse {
@@ -220,7 +218,6 @@ impl Default for CustomInverse {
             under: None,
             anti: None,
             is_obverse: false,
-            prefer_under_normal: false,
         }
     }
 }
@@ -241,7 +238,11 @@ impl fmt::Debug for CustomInverse {
         } else {
             f.debug_struct("custom inverse")
         };
-        s.field("normal", &self.normal.as_ref().map(|sn| &sn.node));
+        if let Ok(normal) = &self.normal {
+            s.field("normal", &normal.node);
+        } else {
+            s.field("normal", &self.normal.as_ref().map(|sn| &sn.node));
+        }
         if let Some(un) = &self.un {
             s.field("un", &un.node);
         }
@@ -251,9 +252,6 @@ impl fmt::Debug for CustomInverse {
         if let Some(under) = &self.under {
             s.field("do", &under.0.node);
             s.field("undo", &under.1.node);
-        }
-        if self.prefer_under_normal {
-            s.field("prefer_under_normal", &self.prefer_under_normal);
         }
         s.finish()
     }

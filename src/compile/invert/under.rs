@@ -600,54 +600,62 @@ under!(FoldPat, input, g_sig, inverse, asm, Fold, span, [f], {
     Ok((input, before, after))
 });
 
-under!(
-    (CustomPat, input, g_sig, inverse, asm),
-    ref,
-    CustomInverse(cust, span),
-    {
-        let normal = cust.normal.clone()?;
-        let (mut before, mut after, to_save) = if let Some((before, after)) = cust.under.clone() {
-            // An under inverse is explicitly defined
-            if before.sig.outputs() < normal.sig.outputs() {
-                return generic();
-            }
-            let to_save = before.sig.outputs() - normal.sig.outputs();
-            (before.node, after.node, to_save)
-        } else if !cust.is_obverse {
-            // The custom inverses were not created with obverse
-            // This means that a supplied un inverse can be overridden
-            match normal.node.under_inverse(g_sig, inverse, asm) {
-                Ok((before, after)) => (before, after, 0),
-                Err(e) => {
-                    if let Some(un) = cust.un.as_ref().filter(|un| un.sig == normal.sig) {
-                        (normal.node.clone(), un.node.clone(), 0)
-                    } else {
-                        return Err(e);
-                    }
+under!(CustomPat, input, g_sig, inverse, asm, {
+    let (input, val) = Val.try_invert_extract(input, asm);
+    let [CustomInverse(cust, span), input @ ..] = input else {
+        return generic();
+    };
+    let normal = cust.normal.clone()?;
+    let (mut before, mut after, to_save) = if let Some((before, after)) = cust.under.clone() {
+        // An under inverse is explicitly defined
+        if before.sig.outputs() < normal.sig.outputs() {
+            return generic();
+        }
+        let to_save = before.sig.outputs() - normal.sig.outputs();
+        (before.node, after.node, to_save)
+    } else if !cust.is_obverse {
+        // The custom inverses were not created with obverse
+        // This means that a supplied un inverse can be overridden
+        match normal.node.under_inverse(g_sig, inverse, asm) {
+            Ok((before, after)) => (before, after, 0),
+            Err(e) => {
+                if let Some(un) = cust.un.as_ref().filter(|un| un.sig == normal.sig) {
+                    (normal.node.clone(), un.node.clone(), 0)
+                } else {
+                    return Err(e);
                 }
             }
-        } else if let Some(un) = cust.un.as_ref().filter(|un| un.sig == normal.sig.inverse()) {
-            // A compatible un inverse is defined
-            (normal.node.clone(), un.node.clone(), 0)
-        } else if let Ok((before, after)) = normal.node.under_inverse(g_sig, inverse, asm) {
-            // An under inverse exists for the normal
-            (before, after, 0)
-        } else if let Some(anti) = cust.anti.as_ref() {
-            // An anti inverse is defined
-            let to_save = anti.sig.args() - normal.sig.outputs();
-            let before = Mod(On, eco_vec![normal.clone()], *span);
-            let after = anti.node.clone();
-            (before, after, to_save)
-        } else {
-            return generic();
-        };
-        if to_save > 0 {
-            before.push(PushUnder(to_save, *span));
-            after.prepend(PopUnder(to_save, *span));
         }
-        Ok((input, before, after))
+    } else if let Some(un) = cust.un.as_ref().filter(|un| un.sig == normal.sig.inverse()) {
+        // A compatible un inverse is defined
+        (normal.node.clone(), un.node.clone(), 0)
+    } else if let Ok((before, after)) = normal.node.under_inverse(g_sig, inverse, asm) {
+        // An under inverse exists for the normal
+        (before, after, 0)
+    } else if let Some(anti) = cust.anti.as_ref() {
+        // An anti inverse is defined
+        let to_save = anti.sig.args() - normal.sig.outputs();
+        let before = Mod(On, eco_vec![normal.clone()], *span);
+        let after = anti.node.clone();
+        (before, after, to_save)
+    } else {
+        return generic();
+    };
+    // Handle preceding value
+    if before.sig()?.args() == 2 {
+        if let Ok(val) = val {
+            before.prepend(val);
+        }
+    } else if val.is_ok() {
+        return generic();
     }
-);
+    // Add context save and recall
+    if to_save > 0 {
+        before.push(PushUnder(to_save, *span));
+        after.prepend(PopUnder(to_save, *span));
+    }
+    Ok((input, before, after))
+});
 
 under!(DupPat, input, g_sig, inverse, asm, Prim(Dup, dup_span), {
     let dyadic_i = (0..=input.len())

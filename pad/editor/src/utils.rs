@@ -863,7 +863,10 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         SpanKind::Label
                         | SpanKind::ExtractorFuncLabel
                         | SpanKind::ExtractorModLabel => {
-                            let label = text.trim_start_matches('$');
+                            let label = text
+                                .trim_start_matches('$')
+                                .trim_start_matches('◁')
+                                .trim_start_matches('▷');
                             let mut components = [0f32; 3];
                             const MIN: f32 = 0.2;
                             const MAX: f32 = 0.8;

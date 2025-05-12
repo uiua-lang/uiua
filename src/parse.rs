@@ -1766,14 +1766,19 @@ impl Parser<'_> {
             .map(Into::into)
         {
             span.merge_with(sp);
-            frags.push(frag);
-            match end {
-                ExtractorEnd::Error => break,
-                ExtractorEnd::OrElse => {
-                    is_or_val = true;
-                    break;
+            if frags.is_empty() && frag.shape.is_none() && frag.ty.is_none() {
+                is_or_val = end == ExtractorEnd::OrElse;
+                break;
+            } else {
+                frags.push(frag);
+                match end {
+                    ExtractorEnd::Error => break,
+                    ExtractorEnd::OrElse => {
+                        is_or_val = true;
+                        break;
+                    }
+                    ExtractorEnd::Or => {}
                 }
-                ExtractorEnd::Or => {}
             }
         }
         Some(span.sp(if is_or_val {

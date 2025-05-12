@@ -392,6 +392,7 @@ impl Compiler {
                 return self.inline_macro(mac, modified.modifier.span, modified.operands);
             }
             Modifier::Extractor(ex) => {
+                self.validate_extractor(&ex, &modified.modifier.span);
                 let (op, op_span) = self.monadic_modifier_op(&modified.operands)?;
                 if op.sig.outputs() != 1 {
                     self.add_error(

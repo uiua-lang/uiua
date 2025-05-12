@@ -1667,7 +1667,7 @@ impl<'a> Lexer<'a> {
     fn extractor(&mut self, preserve: bool, mut start: Loc) {
         // Label
         let mut label = None;
-        if let Some(c) = self.next_char_if_all(|c| is_ident_char(c) && !c.is_lowercase()) {
+        if let Some(c) = self.next_char_if_all(|c| is_ident_char(c) && !"srℝabcℂ".contains(c)) {
             let mut s = Ident::from(c);
             while let Some(c) = self.next_char_if_all(is_ident_char) {
                 s.push_str(c);

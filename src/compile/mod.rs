@@ -27,6 +27,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ast::*,
     check::nodes_sig,
+    extractor::{Extractor, ExtractorDim},
     format::{format_word, format_words},
     function::DynamicFunction,
     ident_modifier_args,
@@ -1521,7 +1522,10 @@ impl Compiler {
                 );
                 Node::empty()
             }
-            Word::Extractor(ex) => Node::Extractor(ex, None, self.add_span(word.span)),
+            Word::Extractor(ex) => {
+                self.validate_extractor(&ex, &word.span);
+                Node::Extractor(ex, None, self.add_span(word.span))
+            }
             Word::ExtractorOrElse(_) => {
                 self.add_error(
                     word.span.clone(),
@@ -1597,6 +1601,22 @@ impl Compiler {
             }
         }
         node
+    }
+    fn validate_extractor(&mut self, ex: &Extractor, span: &CodeSpan) {
+        for frag in &ex.frags {
+            if let Some(sh) = &frag.shape {
+                for (i, &dim) in sh.0.iter().enumerate() {
+                    if dim == ExtractorDim::MultiWildcard && i != 0 && i != sh.0.len() - 1 {
+                        self.add_error(
+                            span.clone(),
+                            "Extractor shape multi-wildcards may only \
+                            be at the start or beginning of the shape",
+                        );
+                        return;
+                    }
+                }
+            }
+        }
     }
     #[must_use]
     fn semantic_comment(&mut self, comment: SemanticComment, span: CodeSpan, inner: Node) -> Node {

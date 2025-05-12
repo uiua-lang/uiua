@@ -8,10 +8,8 @@ use crate::{Boxed, Ident, SigNode, Uiua, UiuaResult, Value};
 
 pub fn extractor(ex: Extractor, op: Option<Arc<SigNode>>, env: &mut Uiua) -> UiuaResult {
     let target = env.pop("extractor target")?;
-    println!("target: {target:?}");
     match extract(&ex, target) {
         Ok((extracted, target)) => {
-            println!("extracted: {extracted:?}");
             if let Some(op) = op {
                 if op.sig.args() > 1 {
                     let n = op.sig.args() - 1;
@@ -36,6 +34,11 @@ pub fn extractor(ex: Extractor, op: Option<Arc<SigNode>>, env: &mut Uiua) -> Uiu
                     env.push(target.clone());
                 }
                 env.exec(op)?;
+                if let Some(label) = &ex.label {
+                    let mut default = env.pop("default value")?;
+                    default.meta.set_label(label.clone().into());
+                    env.push(default);
+                }
                 if ex.preserve {
                     env.push(target);
                 }
@@ -123,7 +126,6 @@ where
 }
 
 fn extract(ex: &Extractor, target: Value) -> Result<(Value, Option<Value>), (ExError, Value)> {
-    println!("extractor: {ex}");
     match target {
         Value::Box(mut arr) if arr.rank() == 1 => {
             // Extract by label
@@ -143,6 +145,9 @@ fn extract(ex: &Extractor, target: Value) -> Result<(Value, Option<Value>), (ExE
                             }
                         };
                     }
+                }
+                if ex.frags.is_empty() {
+                    return Err((ExErrorKind::NoListMatch.hard(false), arr.into()));
                 }
             }
             // Extract by fragment
@@ -212,16 +217,22 @@ fn extract_frag(frag: &ExtractorFrag, val: &Value) -> Result<(), ExErrorKind> {
         }
     }
     if let Some(ExtractorShape(dims)) = &frag.shape {
-        if dims.iter().all(|dim| matches!(dim, ExtractorDim::Dim(_))) {
-            if dims.len() != val.shape.len() {
-                return Err(ExErrorKind::WrongRank(val.shape.len()));
+        if let Some(ExtractorDim::MultiWildcard) = dims.first() {
+            for ((i, dim), s) in dims.iter().enumerate().rev().zip(val.shape.iter().rev()) {
+                if let ExtractorDim::Dim(dim) = dim {
+                    if dim != s {
+                        return Err(ExErrorKind::WrongDim(i, *s));
+                    }
+                }
             }
-            for (i, dim) in dims.iter().enumerate() {
-                let &ExtractorDim::Dim(dim) = dim else {
-                    unreachable!()
-                };
-                if dim != val.shape[i] {
-                    return Err(ExErrorKind::WrongDim(i, val.shape[i]));
+        } else if dims.len() != val.shape.len() {
+            return Err(ExErrorKind::WrongRank(val.shape.len()));
+        } else {
+            for ((i, dim), s) in dims.iter().enumerate().zip(&val.shape) {
+                if let ExtractorDim::Dim(dim) = dim {
+                    if dim != s {
+                        return Err(ExErrorKind::WrongDim(i, *s));
+                    }
                 }
             }
         }

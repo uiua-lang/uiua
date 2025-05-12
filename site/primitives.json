@@ -1370,14 +1370,6 @@
     "class": "Time",
     "description": "Get the local timezone offset"
   },
-  "trace": {
-    "glyph": "⸮",
-    "args": 1,
-    "outputs": 1,
-    "class": "Debug",
-    "description": "Debug print the top value on the stack without popping it",
-    "deprecated": true
-  },
   "transpose": {
     "glyph": "⍉",
     "args": 1,

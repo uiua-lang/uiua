@@ -536,7 +536,6 @@ impl Primitive {
                 "use subscripted {} or {Un}{By}({Len}{Shape}) instead",
                 Deshape.format()
             ),
-            Trace => format!("use subscripted {} instead", Stack.format()),
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
             Over => format!("use {} or {} instead", Below.format(), Fork.format()),
             _ => return None,
@@ -769,7 +768,6 @@ impl Primitive {
                 vals.map(keys, env)?;
                 env.push(vals);
             }
-            Primitive::Trace => trace(env, false)?,
             Primitive::Stack => stack(env, false)?,
             Primitive::Regex => regex(env)?,
             Primitive::Hsv => env.monadic_env(Value::rgb_to_hsv)?,
@@ -1947,29 +1945,6 @@ pub fn seed_random(seed: u64) {
     random_with(|rng| *rng = SmallRng::seed_from_u64(seed));
 }
 
-fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
-    let val = env.pop(1)?;
-    let span: String = if inverse {
-        format!("{}{} {}", Primitive::Un, Primitive::Trace, env.span())
-    } else {
-        format!("{} {}", Primitive::Trace, env.span())
-    };
-    let max_line_len = span.chars().count() + 2;
-    let item_lines =
-        format_trace_item_lines(val.show().lines().map(Into::into).collect(), max_line_len);
-    env.push(val);
-    env.rt.backend.print_str_trace(&format!("┌╴{span}\n"));
-    for line in item_lines {
-        env.rt.backend.print_str_trace(&line);
-    }
-    env.rt.backend.print_str_trace("└");
-    for _ in 0..max_line_len - 1 {
-        env.rt.backend.print_str_trace("╴");
-    }
-    env.rt.backend.print_str_trace("\n");
-    Ok(())
-}
-
 fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
     env.require_height(n)?;
     let boundaries = stack_boundaries(env);
@@ -2493,10 +2468,7 @@ mod tests {
                 assert_eq!(test(&short), Some(prim.into()));
             }
             for prim in Primitive::non_deprecated() {
-                if matches!(
-                    prim,
-                    Primitive::Rand | Primitive::Trace | Primitive::Parse | Primitive::Slf
-                ) {
+                if matches!(prim, Primitive::Rand | Primitive::Parse | Primitive::Slf) {
                     continue;
                 }
                 let char_test = match prim.glyph() {

@@ -108,21 +108,17 @@ primitive!(
     ///
     /// ex: [. 1 2 3 4]
     ///
+    /// There is usually a better alternative to [duplicate]. Consider whether [by] or [fork] solves your stack manipulation needs instead.
+    ///
     /// [duplicate] is often used in examples to show both the input and output of a function.
     /// ex: √.144
     /// ex: .[1 2 3 4]
     ///   : +1⇌
     ///
-    /// [duplicate] is often combined with [flip] to process a single value two different ways.
-    /// For example, maybe you want to find all the numbers in an array that lie within a certain range.
-    /// Here, we use [multiply] as a logical AND function.
-    /// ex: ×≥5:≤8. [6 2 5 9 6 5 0 4]
-    ///
-    /// [duplicate] can be used to make a monadic left-hook, such as in this palindrome checker:
-    /// ex: ≍⇌. "friend"
-    /// ex: ≍⇌. "racecar"
-    /// Another commonly hooked function is [keep].
-    /// ex: ▽=0◿3. [1 4 2 3 9 1 0 6 2 6 3]
+    /// [duplicate] works well with [table]:
+    /// ex: ⊞=.⇡4
+    /// Sometimes it is also good with [group] or [partition]
+    /// ex: ⊜⧻.[1 1 0 0 2 2 2 2 0 1 0 3 3]
     (1(2), Dup, Stack, ("duplicate", '.')),
     /// Duplicate the second-to-top value to the top of the stack
     ///
@@ -135,12 +131,8 @@ primitive!(
     ///
     /// ex: [: 1 2 3 4 5]
     ///
-    /// When combined with [duplicate], you can apply two different functions to the same value.
-    /// If you have two functions `f` and `g`, the pattern `f``flip``g``duplicate` will call both functions on the top value.
-    /// This is a very common pattern.
-    /// For example, maybe you want to find all the uppercase letters in a string.
-    /// ex: $ Characters On uppercase OnLy
-    ///   : ▽ ×≥@A:≤@Z. .
+    /// [flip] is generally recommend against. It is largely a relic of when Uiua was a different language.
+    /// Many cases can be replaced with [backward]. Others can be replaced with [fork], [both], [on], [by], [with], or [off].
     (2(2), Flip, Stack, ("flip", AsciiToken::Colon, ':')),
     /// Discard the top stack value
     ///
@@ -243,9 +235,7 @@ primitive!(
     /// You can get an arcsine function with [un].
     /// ex: °∿ 1
     /// You can get an arccosine function by [subtract]ing the arcsine from [eta].
-    /// ex: -:η°∿ 0
-    /// You can get a tangent function by [divide]ing the [sine] by the cosine.
-    /// ex: ÷∩∿+η. 0
+    /// ex: ˜-η°∿ 0
     (1, Sin, MonadicPervasive, ("sine", '∿')),
     /// Round to the nearest integer towards `¯∞`
     ///
@@ -495,6 +485,8 @@ primitive!(
     /// ex: °∠ η
     /// ex: °∠ π
     /// ex: °∠ π/3
+    /// This means it can be combined with [divide] to get the tangent.
+    /// ex: ÷°∠ η/2
     (2, Atan, DyadicPervasive, ("atangent", '∠')),
     /// Make a complex number
     ///
@@ -685,8 +677,7 @@ primitive!(
     ///
     /// `shape``transpose` is always equivalent to `rotate``1``shape`.
     /// ex: [1_2 3_4 5_6]
-    ///   : ↻1△ .
-    ///   : △⍉  :
+    ///   : ⊃(△⍉|↻1△)
     ///
     /// Multiple [transpose]s, as well as [rows][transpose], are optimized in the interpreter to only do a single operation.
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
@@ -745,9 +736,9 @@ primitive!(
     /// It also works for counts `greater than` 1.
     /// ex: ⊚ 1_2_3
     /// ex: ⊚ 1_4_2
-    /// [where] on a list is equivalent to `keep``flip``range``length``duplicate`
-    /// ex:     ⊚ [0 1 0 0 2 0 1]
-    /// ex: ▽:⇡⧻. [0 1 0 0 2 0 1]
+    /// [where] on a list is equivalent to `backward``keep``un``select`
+    /// ex:    ⊚ [0 1 0 0 2 0 1]
+    /// ex: ˜▽°⊏ [0 1 0 0 2 0 1]
     ///
     /// [un][where] will convert the indices back into a a list of counts
     /// ex: °⊚ [0 0 0 1 1 2 2 2 2 2 3]
@@ -859,7 +850,7 @@ primitive!(
     ///   : ≡◇/+
     /// This is the main way to [join] a list of [box]ed strings.
     /// ex: /◇⊂       {"Join" "these" "strings"}
-    /// ex: /◇(⊂⊂:@ ) {"Join" "these" "strings"}
+    /// ex: /◇(⊂⊂⊙@ ) {"Join" "these" "strings"}
     ///
     /// Subscripted [box] combines that many values into a list of boxes.
     /// ex: □₂ 5 "abc"
@@ -1102,8 +1093,7 @@ primitive!(
     /// ex: ↙ ¯2 ↯3_3⇡9
     /// The amount to take can also be a list to take along multiple axes.
     /// ex: .↯3_4⇡12
-    ///   : ↙2_3   .
-    ///   : ↙¯2_¯2 :
+    ///   : ⊃(↙¯2_¯2|↙2_3)
     ///
     /// By default, taking more than the length of the array will throw an error.
     /// ex! ↙7 [8 3 9 2 0]
@@ -1131,8 +1121,7 @@ primitive!(
     /// ex: ↘ ¯2 ↯3_3⇡9
     /// The amount to drop can also be a list to drop along multiple axes.
     /// ex: .↯3_4⇡12
-    ///   : ↘1_2   .
-    ///   : ↘¯2_¯1 :
+    ///   : ⊃(↘¯2_¯1|↘1_2)
     ///
     /// Dropping more than the length of the array will leave an empty array.
     /// ex: ↘ 7 [8 3 9 2 0]
@@ -1163,7 +1152,7 @@ primitive!(
     /// ex: ⌝↘ ¯1_1_2 +1°△2_2_4
     /// ex: ⌝↘ ¯1_0_2 +1°△2_2_4
     /// This can be good for padding images.
-    /// ex: ⬚(⊂:1Purple|⌝↘¯⟜⌝↘) 20_20 Logo
+    /// ex: ⬚(⊂⊙1Purple|⌝↘¯⟜⌝↘) 20_20 Logo
     (2, Drop, DyadicArray, ("drop", '↘')),
     /// Rotate the elements of an array by n
     ///
@@ -1509,13 +1498,13 @@ primitive!(
     /// ex: # Experimental!
     ///   : ∧(.+) [1 2 3 4 5] 0
     /// ex: # Experimental!
-    ///   : ∧(◡⊙∘⊓+×⟜:) [1 2 3 4 5] 0 1
+    ///   : ∧(◡⊙∘⊓⌞+×) [1 2 3 4 5] 0 1
     ([1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
-    /// ex: \(-:) 1_2_3_4
+    /// ex: \˜- 1_2_3_4
     /// [scan] is often used to do something with masks.
     /// [scan]ning with [minimum] or [maximum] will propogate `0`s or `1`s.
     /// ex: ▽\↧≠@ . "Hello World!"
@@ -1593,8 +1582,8 @@ primitive!(
     /// Apply a function to each unboxed row of an array and re-box the results
     ///
     /// For box arrays, this is equivalent to `rows``under``un``box`.
-    /// ex: ≡⍜°□(⊂:@!) {"a" "bc" "def"}
-    ///   :    ⍚(⊂:@!) {"a" "bc" "def"}
+    /// ex: ≡⍜°□(⊂⊙@!) {"a" "bc" "def"}
+    ///   :    ⍚(⊂⊙@!) {"a" "bc" "def"}
     /// For non-box arrays, [inventory] works identically to [rows], except it [box]es each result row.
     /// ex: ≡⇌ [1_2_3 4_5_6]
     ///   : ⍚⇌ [1_2_3 4_5_6]
@@ -1857,7 +1846,7 @@ primitive!(
     /// Each group will be flattened before being passed to the function.
     /// ex: ⊜□.. ↯4_4 [0 1 1 2 2]
     /// If we wanted to group the indices that are adjacent, we could use the array to [partition] its own indices.
-    /// ex: ⊜□:⇡△.. ↯4_4 [0 1 1 2 2]
+    /// ex: ⊜□⟜°⊡ ↯4_4 [0 1 1 2 2]
     ///
     /// [un][partition] works if [partition]'s function is monadic and [un]-invertible.
     /// A list of markers and a list of unpartitioned values will be returned.
@@ -2112,11 +2101,11 @@ primitive!(
     ///   : [°F 25]
     /// If the functions have signatures `|a.b` and `|(b+1).(a-1)`, then an [anti]-compatible inverse is set.
     /// The most commonly used signatures for which this holds is when both signatures are `|2.1`.
-    /// ex: F ← ⌅(+×10:|÷10-)
+    /// ex: F ← ⌅(+⊙(×10)|÷10-)
     ///   : F 2 3
     ///   : ⌝F 2 32
     /// This sort of inverse also works with [under].
-    /// ex: F ← ⌅(+×10:|÷10-)
+    /// ex: F ← ⌅(+⊙(×10)|÷10-)
     ///   : ⍜F? 2 5
     /// Otherwise, an [under]-compatible inverse is set.
     /// ex: F ← ⌅(+|¯)
@@ -2125,7 +2114,7 @@ primitive!(
     /// The first function is the normal case.
     /// The second function is the "do" part of the [under].
     /// The third function is the "undo" part of the [under].
-    /// ex: F ← ⌅(⊂10|⊂:1|⊂:2)
+    /// ex: F ← ⌅(⊂10|⊂⊙1|⊂⊙2)
     ///   : F 3
     ///   : ⍜F⇌ 0_0
     /// If the second function returns more values than the first function, the excess values will be saved as "context". These context values will be passed to the "undo" part of the [under].
@@ -2253,7 +2242,7 @@ primitive!(
     /// Here is an example that evaluates a [Collatz sequence](https://en.wikipedia.org/wiki/Collatz_conjecture).
     /// The next number in the sequence is calculated in the condition function but [join]ed to the sequence in the loop function.
     /// ex: C ← ⨬(+1×3|÷2)=0◿2.
-    ///   : ◌⍢⊂(¬∊◡:C⊢.) [7]
+    ///   : ◌⍢⊂⊸(¬⊸∊⟜(C⊢)) [7]
     /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitly copied.
     /// Consider this equivalence:
     /// ex: ⍢(×3|<100)  1
@@ -2754,10 +2743,11 @@ primitive!(
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.
     /// ex: Times ← (
     ///   :   map.⇡
-    ///   :   [⊙◌⍜now(get 5):
-    ///   :    ⊙◌⍜now(insert 1 2).]
+    ///   :   ⊟⊃(
+    ///   :     ⊙◌⍜now(get 5)
+    ///   :   | ⊙◌⍜now(insert 1 2))
     ///   : )
-    ///   : ⁿ:10+1⇡5
+    ///   : ˜ⁿ10+1⇡5
     ///   : ≡Times.
     (2, Map, Map, "map"),
     /// Insert a key-value pair into a map array
@@ -2862,7 +2852,7 @@ primitive!(
     /// This is useful when you want to inspect the current ordering of the stack.
     /// For example, if you are juggling some values on the stack, you can use [stack] to inspect the stack afterwards:
     /// ex: 1 2 3
-    ///   : ◡⊙∘⊙.:
+    ///   : ◡⊙∘˜⊙.
     ///   : ?
     ///   : +×-×+
     /// ex: 2_3_10 ? 17 ↯3_4⇡12
@@ -2872,18 +2862,6 @@ primitive!(
     /// If you type `N+1` `?`s, it will format to [stack] subscripted with `N`.
     /// ex: ??? 1 2 3 4 # Try formatting!
     (0(0), Stack, Debug, ("stack", '?'), Mutating),
-    /// Debug print the top value on the stack without popping it
-    ///
-    /// ex: ⸮[1 2 3]
-    /// This is useful when you want to inspect an intermediate value.
-    /// For example, let's say you are trying to find all the numbers in some range:
-    /// ex: [1 5 2 9 11 0 7 12 8 3]
-    ///   : ▽×≥5:≤10..
-    /// `greater or equal` and `less or equal` each create a partial mask.
-    /// To see them, use [trace].
-    /// ex: [1 5 2 9 11 0 7 12 8 3]
-    ///   : ▽×⸮≥5:⸮≤10..
-    (1, Trace, Debug, ("trace", '⸮'), Mutating),
     /// Preprocess and print all stack values without popping them
     ///
     /// [dump][identity] is equivalent to [stack].
@@ -2891,7 +2869,7 @@ primitive!(
     /// This is useful when you want to inspect the current ordering of the stack.
     /// For example, if you are juggling some values on the stack, you can use [dump] to inspect the stack afterwards:
     /// ex: 1 2 3
-    ///   : ◡⊙∘⊙.:
+    ///   : ◡⊙∘˜⊙.
     ///   : dump∘
     ///   : +×-×+
     /// [dump][shape] is useful if your raw array data isn't worth looking at, but the shapes are.
@@ -2956,7 +2934,7 @@ primitive!(
     ///   : /+∿⊞×[100 200 400] # Add some frequencies
     ///   : ⌵ fft              # Run the FFT
     ///   : ↘⌊÷2⧻.             # Drop the top half
-    ///   : ⬚0≡▽:1 ×15         # Render
+    ///   : ⬚0≡▽⊙1 ×15         # Render
     ///
     /// You can use [un][fft] to calculate the inverse FFT.
     /// In this example, we generate a list of `1`s representing frequency bins and run `un``fft` on it to get time-domain data. We can listen to the result as audio.
@@ -3064,7 +3042,7 @@ primitive!(
     /// You can compute the integral over a range with [subtract][both].
     /// ex: # Experimental!
     ///   : # 1/x → ln(x)
-    ///   : -∩∫(÷:1) 1 e
+    ///   : -∩∫(÷⊙1) 1 e
     /// Most integrals that would require u-substitution or integration by parts are not supported.
     /// ex! # Experimental!
     ///   : # xsin(x)  →  sin(x) - xcos(x)
@@ -3416,7 +3394,7 @@ primitive!(
     /// In this example, we map the pixel values to ASCII characters to visualize the result.
     /// ex: # Experimental!
     ///   : layout 12 "Hello!"
-    ///   : ⊏:" @" ⁅ +0.1
+    ///   : ⊏⊙" @" ⁅ +0.1
     /// Multi-line text is supported.
     /// ex: # Experimental!
     ///   : layout 30 "Hello,\nWorld!"

@@ -18,10 +18,10 @@ pub enum TutorialPage {
     Basic,
     Math,
     Arrays,
-    Types,
     Bindings,
     Functions,
     MoreStack,
+    Types,
     Inverses,
     ControlFlow,
     PatternMatching,
@@ -266,13 +266,13 @@ fn TutorialBasic() -> impl IntoView {
         <p><Prim prim=Dup/>" is often used in the examples on this site to show both the input and output of a function."</p>
         <Editor example="√.144"/>
         <br/>
-        <Hd id="flip"><Prim prim=Flip/></Hd>
-        <p><Prim prim=Flip/>" swaps the top two items on the stack."</p>
-        <p>"This is useful when you want to call a function that takes two arguments, but the arguments are on the stack in the wrong order."</p>
-        <p>"For example, if you wanted to get the reciprocal of a number, you would "<Prim prim=Div/>" "<code>"1"</code>" by it. But, if the number is already on the stack, you would need to use "<Prim prim=Flip/>"."</p>
-        <Editor example="÷1 5"/>
-        <Editor example="÷:1 5"/>
-        <Editor example=":1 2 3 4 5"/>
+        <Hd id="backward"><Prim prim=Backward/></Hd>
+        <p><Prim prim=Backward/>" swaps the arguments to a function that takes two values."</p>
+        <blockquote>"Note that "<Prim prim=Backward/>" is not actually a function itself. It is something called a "<em>"modifier"</em>". We'll talk about modifiers in more depth in a "<A href="/tutorial/functions#modifiers">"later section"</A>"."</blockquote>
+        <p><Prim prim=Backward/>" is useful when you want to call a function that takes two arguments, but the arguments are on the stack in the wrong order."</p>
+        <p>"For example, if you wanted to get the reciprocal of a number, you would "<Prim prim=Div/>" "<code>"1"</code>" by it. But, if the number is already on the stack, you would need to use "<Prim prim=Backward/>"."</p>
+        <Editor example=" ÷1 5\n˜÷1 5"/>
+        <Editor example="    -2 5\nback-2 5"/>
         <br/>
         <Hd id="pop"><Prim prim=Pop/></Hd>
         <p><Prim prim=Pop/>" removes the top item from the stack."</p>
@@ -308,7 +308,7 @@ fn TutorialBasic() -> impl IntoView {
             number=2
             prompt="divides the first number by the second"
             example="5 10"
-            answer="÷:"
+            answer="˜÷"
             tests={&["6 24", "2 100", "17 51"]}
             hidden="8 32"/>
 
@@ -316,7 +316,7 @@ fn TutorialBasic() -> impl IntoView {
             number=3
             prompt="subtracts the second number from the first then squares the result"
             example="10 1"
-            answer="×.-:"
+            answer="×.˜-"
             tests={&["5 3", "9 2", "5 6"]}
             hidden="6 7"/>
     }
@@ -420,11 +420,11 @@ fn TutorialMath() -> impl IntoView {
 
         <Challenge
             number=2
-            prompt="calculates the hypotenuse of a right triangle with sides A and B (√(A² + B²))"
-            example="3 4"
-            answer="√+×.:×."
-            best_answer="⌵ℂ"
-            tests={&["12 9", "5 12", "6 8"]}
+            prompt="calculates the equation √(A² + B), where A is the first argument and B is the second"
+            example="3 16"
+            answer="√+×."
+            best_answer="⍜°√+"
+            tests={&["12 81", "12 25", "6 64"]}
             hidden="5 3"/>
     }
 }
@@ -532,6 +532,8 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="♭ . [1_2 3_4 5_6]"/>
         <p><Prim prim=Take/>" and "<Prim prim=Drop/>" isolate part of an array."</p>
         <Editor example="↙3 [1 2 3 4 5]\n↘3 [1 2 3 4 5]"/>
+        <p>"Negative values work from the end."</p>
+        <Editor example="↙¯3 [1 2 3 4 5]\n↘¯3 [1 2 3 4 5]"/>
         <p><Prim prim=Pick/>" indexes an array. Longer indices index deeper into the array."</p>
         <p>{lang}" is 0-indexed."</p>
         <Editor example="⊡2 [3 8 4 1]"/>
@@ -601,7 +603,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             number=2
             prompt="creates a matrix of 0's with as many rows as the first argument and as many columns as the second argument"
             example="3 4"
-            answer="↯:0⊟"
+            answer="˜↯0⊟"
             tests={&["2 7", "3 3", "1 8"]}
             hidden="1 1"/>
 
@@ -624,158 +626,20 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 
         <Challenge
             number=5
-            prompt="splits an array into its first row and the rest of its rows"
+            prompt="removes the first and last rows from an array"
             example="1_2_3_4"
-            answer="⊢:↘1."
-            best_answer="°⊂"
+            answer="↘¯1↘1"
             tests={&["[27 9 3 1]", "↯4_3⇡12"]}
             hidden="[5]"/>
 
         <Challenge
             number=6
-            prompt="boxes two strings and puts them in an array"
-            example="\"Hello\" \"World\""
-            answer="⊟□:□:"
+            prompt="prepends an array as an item to a list of boxed arrays"
+            example="\"Hi\" {\"how\" \"are\" \"ya\"}"
+            answer="⊂□"
             best_answer="□₂"
-            tests={&["\"ui\" \"ua\"", "\"dog\" \"cat\""]}
-            hidden="\"a\" \"b\""/>
-    }
-}
-
-#[component]
-fn TutorialTypes() -> impl IntoView {
-    use Primitive::*;
-    view! {
-        <Title text=format!("Types - {} Docs", lang())/>
-        <h1>"Types"</h1>
-        <p>"Every value in "{lang}" is an array. However, different arrays on the stack can have different "<em>"types"</em>" of items. Every element of an array is always the same type. Unlike some other array programming languages, "{lang}" arrays cannot have elements of different types."</p>
-        <p>"There are four types of arrays:"</p>
-        <ul>
-            <li><strong>"Number"</strong></li>
-            <li><strong>"Complex"</strong></li>
-            <li><strong>"Character"</strong></li>
-            <li><strong>"Box"</strong></li>
-        </ul>
-
-        <Hd id="numbers">"Numbers"</Hd>
-        <p>"Numbers are decimal numbers with floating precision. They use the IEEE-754 double-precision floating-point format."</p>
-        <Editor example="[5 6e3 e 0 3.2 3/4 ¯1.1 π ∞ 3π/2]"/>
-        <p>"As you can see, numbers can be written as integers, with decimals, and as fractions. They can also contain numeric constants like "<code>"π"</code>", "<code>"e"</code>", and "<code>"∞"</code>"."</p>
-        <p>"Most math operations can only be applied to numbers."</p>
-        <p>"In cases where a number with a fractional part has repeating decimals, or when floating-point errors create tiny differences, the number will be shown with repeated decimal digits replaced by a "<code>"…"</code>"."</p>
-        <Editor example="1/3\n1/12\n1/24\n+ 0.1 0.2"/>
-        <p>"Even though numbers can have a fractional part, many built-in functions require whole numbers. These functions will return an error if given a non-whole number."</p>
-        <p>"One such example is "<Prim prim=Pick/>"."</p>
-        <Editor example="⊡ 2 [4 7 9 1 0]"/>
-        <Editor example="⊡ 3.1 [4 7 9 1 0]"/> // Should fail
-        <p>"If you want to convert a number to a whole number, you can use "<Prim prim=Floor/>", "<Prim prim=Ceil/>", or "<Prim prim=Round/>"."</p>
-
-        <Hd id="complex-numbers">"Complex Numbers"</Hd>
-        <p>"Complex numbers can be created with the "<Prim prim=Complex/>" function."</p>
-        <Editor example="ℂ 3 5"/>
-        <Editor example="ℂ [1 2 3] [4 5 6]"/>
-        <p>"While complex numbers support all the same math operations as normal numbers, they are a distinct type and cannot be used in place of normal numbers."</p>
-        <p>"You can convert a complex number to a normal number with "<Prim prim=Abs/>"."</p>
-        <Editor example="⌵ ℂ3 4"/>
-        <p>"You can normalize a complex number to a unit vector with "<Prim prim=Sign/>"."</p>
-        <Editor example="± ℂ3 4"/>
-        <p><Prim prim=Sqrt/>" only returns a complex number if it is called on a complex number. Beware of floating-point errors."</p>
-        <Editor example="√  ¯4\n√ℂ0¯4"/>
-        <p>"See "<Prim prim=Complex/>"'s docs for more details."</p>
-        <p>"Comparing complex numbers for equality returns a normal number."</p>
-        <Editor example="= i ℂ0 1\n= i ℂ1 1"/>
-        <p>"Comparing complex numbers for order returns a component-wise comparison."</p>
-        <Editor example="< i ℂ¯1 1\n≥ i ℂ1 1"/>
-        <p>"In cases where a complex array has no elements with an imaginary part, it will be displayed in output with a "<code>"ℂ"</code>" marker."</p>
-        <Editor example="ℂ0 5\nℂ0 [1 2 3]\nℂ0 [1_2 3_4]"/>
-        <p>"Complex numbers can be written as literals by suffixing the real part with "<code>"r"</code>" and/or the imaginary part with "<code>"i"</code>"."</p>
-        <Editor example="[3r4i 5r2i 2ri i/5 rπi]"/>
-
-        <Hd id="characters">"Characters"</Hd>
-        <p>"Characters are represented as 32-bit Unicode codepoints."</p>
-        <p>"Character literals, denoted with a preceding "<code>"@"</code>", create rank 0 (scalar) character arrays."</p>
-        <Editor example="@a @b"/>
-        <Editor example="[@u @i @u @a]"/> // Should fail
-        <p>"Characters like newline or null need to be escaped with "<code>"\\"</code>", but spaces do not."</p>
-        <Editor example="@\\r @\\0 @ "/>
-        <p>"If you don't like the significant whitespace of "<code>"@ "</code>", "<code>"@\\s"</code>" is also space."</p>
-        <p>"As noted in the advice diagnostic above, string literals, delimited by "<code>"\""</code>"s, create rank-1 character arrays."</p>
-        <Editor example="△.\"Hello, World!\""/>
-        <p>"You can make raw strings, which do not require escaping, with a "<code>"$"</code>" followed by a space."</p>
-        <p><Prim prim=Sys(SysOp::Print)/>" pretty-prints a value."</p>
-        <Editor example="&p $ \"How are you?\" she asked."/>
-        <p>"Raw strings that follow each other form multi-line strings."</p>
-        <Editor example="$ Hello\n$ World!"/>
-        <p>"This style of string is useful when your string contains a lot of quotes that you don't want to escape."</p>
-        <Editor example="$ And then she was like, \"No way!\"\n$ And I was like, \"Way...\""/>
-        <p>"Characters in character or string literals can also be specified with 2 or 4 hex digits by using escape codes "<code>"\\x"</code>" and "<code>"\\u"</code>" respectively."</p>
-        <Editor example="\"\\x41\\x42\\x43\""/>
-        <Editor example="@\\u2665"/>
-        <p>"Longer (or shorter) sequences can be specified between "<code>"{}"</code>"s after a "<code>"\\u"</code>"."</p>
-        <Editor example="@\\u{1f600}"/>
-        <p>"Note that these escape sequences do not work in raw strings."</p>
-        <br/>
-
-        <Hd id="character-arithmetic">"Character Arithmetic"</Hd>
-        <p>"Characters and numbers exist in an "<a href="https://en.wikipedia.org/wiki/Affine_space">"affine space"</a>", the same as in "<a href="https://mlochbaum.github.io/BQN/doc/arithmetic.html#character-arithmetic">"BQN"</a>"."</p>
-        {
-            let number = || view!(<span class="number-literal">"number"</span>);
-            let character = || view!(<span class="string-literal-span">"character"</span>);
-            view! {
-                <p>"You can "<Prim prim=Add/>" "{number}"s and "{character}"s to get another "{character}"."</p>
-                <p>"You can "<Prim prim=Sub/>" a "{number}" from a "{character}" to get another "{character}"."</p>
-                <p>"You can "<Prim prim=Sub/>" two "{character}"s to get a "{number}"."</p>
-                <p>"You can "<Prim prim=Mul/>" or "<Prim prim=Div/>" a "{character}" by a "{number}" to possibly toggle its case."</p>
-                <p><em>"No"</em>" other dyadic arithmetic operations can be done on "{character}"s."</p>
-            }
-        }
-        <Editor example="+1 @a"/>
-        <Editor example="-8 \"Uiua\""/>
-        <Editor example="-@a @z"/>
-        <Editor example="× [1 ¯5 0 ¯2] \"uiua\""/>
-        <Editor example="+@a @b"/> // Should fail
-        <p><Prim prim=Sign/>" gives the case of a character. It gives "<code>"1"</code>" for uppercase, "<code>"¯1"</code>" for lowercase, and "<code>"0"</code>" for caseless characters."</p>
-        <Editor example="± \"Hello, World!\""/>
-        <p><Prim prim=Abs/>" uppercases a character."</p>
-        <Editor example="⌵ \"Hello, World!\""/>
-        <p><Prim prim=Neg/>" toggles the case of a character."</p>
-        <Editor example="¯ \"Hello, World!\""/>
-        <p>"Use "<Prim prim=Neg/>" and "<Prim prim=Abs/>" together to lowercase a character."</p>
-        <Editor example="¯⌵ \"Hello, World!\""/>
-
-        <Hd id="boxes">"Boxes"</Hd>
-        <p>"Boxes are containers that can wrap an array of any type or shape. Multiple boxes can be put in the same array, no matter their contents."</p>
-        <p>"Boxes can be created either by using the "<Prim prim=Box/>" function or with boxing array notation between "<code>"{}"</code>"s."</p>
-        <Editor example="□5"/>
-        <Editor example="□[1 2 3]"/>
-        <Editor example="□\"Hello!\""/>
-        <Editor example="{\"cat\" 5}"/>
-
-        <Hd id="type-agreement">"Type agreement"</Hd>
-        <p id="type-agreement">"For functions that work on the structure of arrays rather than their values, the types of the arrays must match."</p>
-        <Editor example="⊂ 1_2 3"/>
-        <Editor example="⊟ \"Hello\" \"World\""/>
-        <Editor example="⊟ 1_2_3 \"dog\""/> // Should fail
-        <p>"There is an exception for boxes. Any box can be put in an array with a non-box. In this case, the non-box will be "<Prim prim=Box/>"ed first."</p>
-        <Editor example="⊟ 5 □[1 2 3]"/>
-
-        <Hd id="empty-arrays">"Empty Arrays"</Hd>
-        <p>"The type of an array that is constructed with no elements depends on the syntax used to construct it. Its shape is always "<code>"[0]"</code>"."</p>
-        <p>"We can use the "<Prim prim=Type/>" function to get the type of an array. "<code>"0"</code>" corresponds to real numbers, "<code>"1"</code>" to characters, "<code>"2"</code>" to boxes, and "<code>"3"</code>" to complex numbers."</p>
-        <Editor example="type []"/>
-        <Editor example="type \"\""/>
-        <Editor example="type {}"/>
-
-        <Hd id="challenges">"Challenges"</Hd>
-
-        <Challenge
-            number=1
-            prompt="increments the first character of a string"
-            example="\"`rray\""
-            answer="⊂:↘1:+1⊢."
-            best_answer="⍜⊢+₁"
-            tests={&["\"Xou're\"", "\"coing\"", "\"freat!\""]}
-            hidden="\"abc\""/>
+            tests={&["1_2_3 {4_5 [6]}", "[] {[] []}"]}
+            hidden="1 {2 3}"/>
     }
 }
 
@@ -939,7 +803,7 @@ fn TutorialMoreStack() -> impl IntoView {
     view! {
         <Title text=format!("More Stack Manipulation - {} Docs", lang())/>
         <h1>"More Stack Manipulation"</h1>
-        <p>{lang}" does not have local variables. With only "<Prim prim=Dup/>" and "<Prim prim=Flip/>", how do you work with more than 2 values at a time?"</p>
+        <p>{lang}" does not have local variables. With only "<Prim prim=Dup/>" and "<Prim prim=Backward/>", how do you work with more than 2 values at a time?"</p>
 
         <Hd id="fork"><Prim prim=Fork/></Hd>
         <p><Prim prim=Fork/>" is a dyadic modifier that takes 2 functions and calls them both on the same set of arguments. The number of arguments used is the maximum of the two functions."</p>
@@ -1029,8 +893,8 @@ fn TutorialMoreStack() -> impl IntoView {
 
         <Hd id="on-and-by"><Prim prim=On/>" and "<Prim prim=By/></Hd>
         <p>"As you write more "{lang}" code, you'll find that there is a kind of pattern you'll encounter over and over again. It involves calling a function, then calling another function that re-uses an argument to the first function."</p>
-        <p>"One simple example is getting "<code>"n"</code>" numbers between "<code>"0"</code>" and "<code>"1"</code>". One way you may think to solve this is with "<Prim prim=Dup/>" and "<Prim prim=Flip/>"."</p>
-        <Editor example="÷:⇡. 5"/> // Should fail
+        <p>"One simple example is getting "<code>"n"</code>" numbers between "<code>"0"</code>" and "<code>"1"</code>". One way you may think to solve this is with "<Prim prim=Dup/>" and "<Prim prim=Backward/>"."</p>
+        <Editor example="˜÷⇡. 5"/>
         <p>"This solution works, but as the style diagnostic suggests, it is not quite idiomatic."</p>
         <p>"When the first function you call is dyadic, it can get a little trickier. For example, if you wanted to get all the integers between two numbers, you may try the following:"</p>
         <Editor example="+⊃∘(⇡-) 3 8"/> // Should fail
@@ -1087,9 +951,146 @@ fn TutorialMoreStack() -> impl IntoView {
             prompt="for numbers A, B, C, and D calculates (A+C)×(B+D)"
             example="1 2 3 4"
             answer="×⊃(+⊙⋅∘|+⋅⊙⋅∘)"
-            best_answer="×∩+⊙:"
+            best_answer="×˜∩+"
             tests={&["10 ¯3 1 0", "3 ¯7 2 2"]}
             hidden="1_2 3_4 5_6 7"/>
+    }
+}
+
+#[component]
+fn TutorialTypes() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <Title text=format!("Types - {} Docs", lang())/>
+        <h1>"Types"</h1>
+        <p>"Every value in "{lang}" is an array. However, different arrays on the stack can have different "<em>"types"</em>" of items. Every element of an array is always the same type. Unlike some other array programming languages, "{lang}" arrays cannot have elements of different types."</p>
+        <p>"There are four types of arrays:"</p>
+        <ul>
+            <li><strong>"Number"</strong></li>
+            <li><strong>"Complex"</strong></li>
+            <li><strong>"Character"</strong></li>
+            <li><strong>"Box"</strong></li>
+        </ul>
+
+        <Hd id="numbers">"Numbers"</Hd>
+        <p>"Numbers are decimal numbers with floating precision. They use the IEEE-754 double-precision floating-point format."</p>
+        <Editor example="[5 6e3 e 0 3.2 3/4 ¯1.1 π ∞ 3π/2]"/>
+        <p>"As you can see, numbers can be written as integers, with decimals, and as fractions. They can also contain numeric constants like "<code>"π"</code>", "<code>"e"</code>", and "<code>"∞"</code>"."</p>
+        <p>"Most math operations can only be applied to numbers."</p>
+        <p>"In cases where a number with a fractional part has repeating decimals, or when floating-point errors create tiny differences, the number will be shown with repeated decimal digits replaced by a "<code>"…"</code>"."</p>
+        <Editor example="1/3\n1/12\n1/24\n+ 0.1 0.2"/>
+        <p>"Even though numbers can have a fractional part, many built-in functions require whole numbers. These functions will return an error if given a non-whole number."</p>
+        <p>"One such example is "<Prim prim=Pick/>"."</p>
+        <Editor example="⊡ 2 [4 7 9 1 0]"/>
+        <Editor example="⊡ 3.1 [4 7 9 1 0]"/> // Should fail
+        <p>"If you want to convert a number to a whole number, you can use "<Prim prim=Floor/>", "<Prim prim=Ceil/>", or "<Prim prim=Round/>"."</p>
+
+        <Hd id="complex-numbers">"Complex Numbers"</Hd>
+        <p>"Complex numbers can be created with the "<Prim prim=Complex/>" function."</p>
+        <Editor example="ℂ 3 5"/>
+        <Editor example="ℂ [1 2 3] [4 5 6]"/>
+        <p>"While complex numbers support all the same math operations as normal numbers, they are a distinct type and cannot be used in place of normal numbers."</p>
+        <p>"You can convert a complex number to a normal number with "<Prim prim=Abs/>"."</p>
+        <Editor example="⌵ ℂ3 4"/>
+        <p>"You can normalize a complex number to a unit vector with "<Prim prim=Sign/>"."</p>
+        <Editor example="± ℂ3 4"/>
+        <p><Prim prim=Sqrt/>" only returns a complex number if it is called on a complex number. Beware of floating-point errors."</p>
+        <Editor example="√  ¯4\n√ℂ0¯4"/>
+        <p>"See "<Prim prim=Complex/>"'s docs for more details."</p>
+        <p>"Comparing complex numbers for equality returns a normal number."</p>
+        <Editor example="= i ℂ0 1\n= i ℂ1 1"/>
+        <p>"Comparing complex numbers for order returns a component-wise comparison."</p>
+        <Editor example="< i ℂ¯1 1\n≥ i ℂ1 1"/>
+        <p>"In cases where a complex array has no elements with an imaginary part, it will be displayed in output with a "<code>"ℂ"</code>" marker."</p>
+        <Editor example="ℂ0 5\nℂ0 [1 2 3]\nℂ0 [1_2 3_4]"/>
+        <p>"Complex numbers can be written as literals by suffixing the real part with "<code>"r"</code>" and/or the imaginary part with "<code>"i"</code>"."</p>
+        <Editor example="[3r4i 5r2i 2ri i/5 rπi]"/>
+
+        <Hd id="characters">"Characters"</Hd>
+        <p>"Characters are represented as 32-bit Unicode codepoints."</p>
+        <p>"Character literals, denoted with a preceding "<code>"@"</code>", create rank 0 (scalar) character arrays."</p>
+        <Editor example="@a @b"/>
+        <Editor example="[@u @i @u @a]"/> // Should fail
+        <p>"Characters like newline or null need to be escaped with "<code>"\\"</code>", but spaces do not."</p>
+        <Editor example="@\\r @\\0 @ "/>
+        <p>"If you don't like the significant whitespace of "<code>"@ "</code>", "<code>"@\\s"</code>" is also space."</p>
+        <p>"As noted in the advice diagnostic above, string literals, delimited by "<code>"\""</code>"s, create rank-1 character arrays."</p>
+        <Editor example="△.\"Hello, World!\""/>
+        <p>"You can make raw strings, which do not require escaping, with a "<code>"$"</code>" followed by a space."</p>
+        <p><Prim prim=Sys(SysOp::Print)/>" pretty-prints a value."</p>
+        <Editor example="&p $ \"How are you?\" she asked."/>
+        <p>"Raw strings that follow each other form multi-line strings."</p>
+        <Editor example="$ Hello\n$ World!"/>
+        <p>"This style of string is useful when your string contains a lot of quotes that you don't want to escape."</p>
+        <Editor example="$ And then she was like, \"No way!\"\n$ And I was like, \"Way...\""/>
+        <p>"Characters in character or string literals can also be specified with 2 or 4 hex digits by using escape codes "<code>"\\x"</code>" and "<code>"\\u"</code>" respectively."</p>
+        <Editor example="\"\\x41\\x42\\x43\""/>
+        <Editor example="@\\u2665"/>
+        <p>"Longer (or shorter) sequences can be specified between "<code>"{}"</code>"s after a "<code>"\\u"</code>"."</p>
+        <Editor example="@\\u{1f600}"/>
+        <p>"Note that these escape sequences do not work in raw strings."</p>
+        <br/>
+
+        <Hd id="character-arithmetic">"Character Arithmetic"</Hd>
+        <p>"Characters and numbers exist in an "<a href="https://en.wikipedia.org/wiki/Affine_space">"affine space"</a>", the same as in "<a href="https://mlochbaum.github.io/BQN/doc/arithmetic.html#character-arithmetic">"BQN"</a>"."</p>
+        {
+            let number = || view!(<span class="number-literal">"number"</span>);
+            let character = || view!(<span class="string-literal-span">"character"</span>);
+            view! {
+                <p>"You can "<Prim prim=Add/>" "{number}"s and "{character}"s to get another "{character}"."</p>
+                <p>"You can "<Prim prim=Sub/>" a "{number}" from a "{character}" to get another "{character}"."</p>
+                <p>"You can "<Prim prim=Sub/>" two "{character}"s to get a "{number}"."</p>
+                <p>"You can "<Prim prim=Mul/>" or "<Prim prim=Div/>" a "{character}" by a "{number}" to possibly toggle its case."</p>
+                <p><em>"No"</em>" other dyadic arithmetic operations can be done on "{character}"s."</p>
+            }
+        }
+        <Editor example="+1 @a"/>
+        <Editor example="-8 \"Uiua\""/>
+        <Editor example="-@a @z"/>
+        <Editor example="× [1 ¯5 0 ¯2] \"uiua\""/>
+        <Editor example="+@a @b"/> // Should fail
+        <p><Prim prim=Sign/>" gives the case of a character. It gives "<code>"1"</code>" for uppercase, "<code>"¯1"</code>" for lowercase, and "<code>"0"</code>" for caseless characters."</p>
+        <Editor example="± \"Hello, World!\""/>
+        <p><Prim prim=Abs/>" uppercases a character."</p>
+        <Editor example="⌵ \"Hello, World!\""/>
+        <p><Prim prim=Neg/>" toggles the case of a character."</p>
+        <Editor example="¯ \"Hello, World!\""/>
+        <p>"Use "<Prim prim=Neg/>" and "<Prim prim=Abs/>" together to lowercase a character."</p>
+        <Editor example="¯⌵ \"Hello, World!\""/>
+
+        <Hd id="boxes">"Boxes"</Hd>
+        <p>"Boxes are containers that can wrap an array of any type or shape. Multiple boxes can be put in the same array, no matter their contents."</p>
+        <p>"Boxes can be created either by using the "<Prim prim=Box/>" function or with boxing array notation between "<code>"{}"</code>"s."</p>
+        <Editor example="□5"/>
+        <Editor example="□[1 2 3]"/>
+        <Editor example="□\"Hello!\""/>
+        <Editor example="{\"cat\" 5}"/>
+
+        <Hd id="type-agreement">"Type agreement"</Hd>
+        <p id="type-agreement">"For functions that work on the structure of arrays rather than their values, the types of the arrays must match."</p>
+        <Editor example="⊂ 1_2 3"/>
+        <Editor example="⊟ \"Hello\" \"World\""/>
+        <Editor example="⊟ 1_2_3 \"dog\""/> // Should fail
+        <p>"There is an exception for boxes. Any box can be put in an array with a non-box. In this case, the non-box will be "<Prim prim=Box/>"ed first."</p>
+        <Editor example="⊟ 5 □[1 2 3]"/>
+
+        <Hd id="empty-arrays">"Empty Arrays"</Hd>
+        <p>"The type of an array that is constructed with no elements depends on the syntax used to construct it. Its shape is always "<code>"[0]"</code>"."</p>
+        <p>"We can use the "<Prim prim=Type/>" function to get the type of an array. "<code>"0"</code>" corresponds to real numbers, "<code>"1"</code>" to characters, "<code>"2"</code>" to boxes, and "<code>"3"</code>" to complex numbers."</p>
+        <Editor example="type []"/>
+        <Editor example="type \"\""/>
+        <Editor example="type {}"/>
+
+        <Hd id="challenges">"Challenges"</Hd>
+
+        <Challenge
+            number=1
+            prompt="increments the first character of a string"
+            example="\"`rray\""
+            answer="⊂⊃(+1⊢|↘1)"
+            best_answer="⍜⊢+₁"
+            tests={&["\"Xou're\"", "\"coing\"", "\"freat!\""]}
+            hidden="\"abc\""/>
     }
 }
 
@@ -1195,12 +1196,12 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="⨬(+|-|×|÷) [1 2 0 3] [...2] [...5]"/>
         <Editor example="⨬(×10|+1|⨬¯∘ =2.) ◿3. [2 9 4 0 8 3]"/>
         <p>"With "<Prim prim=IndexOf/>", "<Prim prim=Switch/>" can be used to implement behavior similar to "<code>"switch"</code>" statements in other languages."</p>
-        <Editor example="F ← (\n  ⊗□:{\"foo\" \"bar\" \"baz\"}\n  ⨬(+1|×10|÷2|¯)\n)\nF \"foo\" 5\nF \"bar\" 5\nF \"baz\" 5\nF \"wow\" 5"/>
+        <Editor example="F ← (\n  ⊗□⊙{\"foo\" \"bar\" \"baz\"}\n  ⨬(+1|×10|÷2|¯)\n)\nF \"foo\" 5\nF \"bar\" 5\nF \"baz\" 5\nF \"wow\" 5"/>
         <p>"Each branch can have a signature specified. For the overall "<Prim prim=Switch/>" to have a valid signature, all branches must either change the height of the stack by the same amount "<em>"or"</em>" return the same number of outputs."</p>
         <Editor example="F ← ⨬(|2 ×||3.2 ⊃(++)×)\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
         <p>"Signatures in "<Prim prim=Switch/>" functions are a bit messy, so try to avoid them when possible."</p>
         <p>"Because a second "<code>"|"</code>" immediately after another indicates a signature, branches that do nothing must contain "<Prim prim=Identity/>"."</p>
-        <Editor example="F ← ⨬(+5|∘|÷10)+∩>5:10..\n[F2 F6 F200]\nF[2 6 200]"/>
+        <Editor example="F ← ⨬(+5|∘|÷10)/+⊸⊞>5_10\n[F2 F6 F200]\nF[2 6 200]"/>
 
         <Hd id="recursion">"Recursion"</Hd>
         <p>"A bound function that refers to its own name is a "<a href="https://en.wikipedia.org/wiki/Recursion_(computer_science)">"recursive function"</a>". A function that calls itself can easily recurse infinitely, so it is important to have a "<em>"base case"</em>" that stops the recursion when a condition is met. Switch functions are great for this."</p>
@@ -1266,8 +1267,8 @@ fn TutorialPatternMatching() -> impl IntoView {
         <Editor example="°(⊂1) [1 2 3]"/>
         <Editor example="°(⊂1) [4 5 6]"/> // Should fail
         <Editor example="°(⊂1_2) [1 2 3]"/>
-        <p>"To match a suffix, you can use "<Prim prim=Flip/>"."</p>
-        <Editor example="°(⊂:3) [1 2 3]"/>
+        <p>"To match a suffix, you can use "<Prim prim=Backward/>"."</p>
+        <Editor example="°(˜⊂3) [1 2 3]"/>
 
         <Hd id="with-try">"Matching multiple patterns with "<Prim prim=Try/></Hd>
         <p>"Single patterns are of limited usefulness on their own. Because they throw errors when matching fails, you can attempt to match additional patterns using "<Prim prim=Try/>"."</p>
@@ -1291,13 +1292,13 @@ fn TutorialPatternMatching() -> impl IntoView {
         <Hd id="case">"Propagating errors with "<Prim prim=Case/></Hd>
         <p>"Consider a function which attempts to match multiple patterns. After a pattern matches, each branch has some code to run."</p>
         <p>"For example, this function attempts to parse a couple different expected string formats, then "<Prim prim=Parse/>"s and "<Prim prim=Select/>"s the result in some way."</p>
-        <Editor example="F ← ⍣(  ⊏⋕ °$\"_: _\"| ⊏⋕: °$\"_ - _\"| ∘)\nF \"1: abc\"\nF \"def - 2\""/>
+        <Editor example="F ← ⍣(  ⊏⋕ °$\"_: _\"| ˜⊏⊙⋕ °$\"_ - _\"| ∘)\nF \"1: abc\"\nF \"def - 2\""/>
         <p>"But what happens if we give an input that matches the pattern but fails elsewhere in the branch?"</p>
-        <Editor example="F ← ⍣(⊏⋕ °$\"_: _\"|⊏⋕: °$\"_ - _\"|∘)\nF \"r: xyz\"  # Can't parse\nF \"ghi - 3\" # Out of bounds"/>
+        <Editor example="F ← ⍣(⊏⋕ °$\"_: _\"|˜⊏⊙⋕ °$\"_ - _\"|∘)\nF \"r: xyz\"  # Can't parse\nF \"ghi - 3\" # Out of bounds"/>
         <p>"In both those cases, a pattern match succeeds, but either the "<Prim prim=Parse/>" or "<Prim prim=Select/>" fails. This causes the "<Prim prim=Try/>" to move on to the next branch silently, causing what may be unexpected behavior!"</p>
         <p>"The "<Prim prim=Case/>" modifier can be used to make the branch fail properly. "<Prim prim=Case/>" simply calls its function. However, in the event that the function errors, the error can escape a single "<Prim prim=Try/>"."</p>
         <p>"Wrapping the code after a pattern match in "<Prim prim=Case/>" will make the error propagate properly."</p>
-        <Editor example="F ← ⍣(\n  ⍩(⊏⋕) °$\"_: _\"\n| ⍩(⊏⋕): °$\"_ - _\"\n| ∘)\nF \"ghi - 3\""/> // Should fail
+        <Editor example="F ← ⍣(\n  ⍩(⊏⋕) °$\"_: _\"\n| ⍩(˜⊏⊙⋕) °$\"_ - _\"\n| ∘)\nF \"ghi - 3\""/> // Should fail
 
         <Hd id="challenges">"Challenges"</Hd>
 

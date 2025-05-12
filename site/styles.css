@@ -78,6 +78,11 @@ code {
     white-space: nowrap;
 }
 
+blockquote {
+    padding: 1em;
+    border-radius: 0.5em;
+}
+
 th,
 td {
     padding: 0.3em;
@@ -164,6 +169,7 @@ li {
     }
 
     code,
+    blockquote,
     .code-background {
         background-color: #0004;
     }
@@ -249,6 +255,7 @@ li {
     }
 
     code,
+    blockquote,
     .code-background {
         background-color: #fff8;
     }

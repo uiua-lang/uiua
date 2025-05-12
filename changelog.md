@@ -64,6 +64,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`bytes`](https://uiua.org/docs/bytes) function for encoding and decoding byte arrays
 - Remove previously deprecated `around ’`
 - Remove previously deprecated `astar`
+- Remove previously deprecated `trace ⸮`
 ### Interpreter
 - Improve pretty-printed array layout
   - High-rank arrays take up less vertical space and more horizontal space

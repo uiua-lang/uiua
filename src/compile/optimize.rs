@@ -139,7 +139,6 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &AllSameOpt,
     &RangeStartOpt,
     &PopConst,
-    &TraceOpt,
     &ValidateTypeOpt,
 ];
 
@@ -441,30 +440,6 @@ opt!(
         [Prim(Range, span), Push(n), Prim(Add, _)](n.rank() == 0 && n.type_id() == f64::TYPE_ID),
         Node::from_iter([Push(n.clone()), ImplPrim(RangeStart, *span),])
     )
-);
-
-opt!(
-    TraceOpt,
-    (
-        [Prim(Trace, span), Prim(Trace, _)],
-        ImplPrim(
-            StackN {
-                n: 2,
-                inverse: false,
-            },
-            *span
-        )
-    ),
-    (
-        [ImplPrim(StackN { n, inverse: false }, span), Prim(Trace, _)],
-        ImplPrim(
-            StackN {
-                n: n + 1,
-                inverse: false,
-            },
-            *span
-        )
-    ),
 );
 
 #[derive(Debug)]

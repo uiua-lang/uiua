@@ -1283,13 +1283,6 @@ inverse!(PrimPat, input, _, Prim(prim, span), {
         Xlsx => ImplPrim(UnXlsx, span),
         Fft => ImplPrim(UnFft, span),
         DateTime => ImplPrim(UnDatetime, span),
-        Trace => ImplPrim(
-            StackN {
-                n: 1,
-                inverse: true,
-            },
-            span,
-        ),
         _ => return generic(),
     };
     Ok((input, inv))

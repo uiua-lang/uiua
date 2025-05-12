@@ -501,12 +501,13 @@ struct Formatter<'a> {
     inputs: &'a Inputs,
     output: String,
     glyph_map: GlyphMap,
-    end_of_line_comments: Vec<(usize, String)>,
+    end_of_line_comments: Vec<EoLComment>,
     prev_import_function: Option<Ident>,
     output_comments: Option<HashMap<usize, Vec<Vec<Value>>>>,
     eval_output_comments: bool,
 }
 
+type EoLComment = (usize, usize, String);
 type GlyphMap = Vec<(CodeSpan, (Loc, Loc))>;
 
 impl Formatter<'_> {
@@ -558,7 +559,7 @@ impl Formatter<'_> {
         // Align end-of-line comments
         if self.config.align_comments && !self.end_of_line_comments.is_empty() {
             // Group comments by consecutive lines
-            let mut groups: Vec<(usize, Vec<(usize, String)>)> = Vec::new();
+            let mut groups: Vec<(usize, Vec<EoLComment>)> = Vec::new();
             let mut lines: Vec<String> = (self.output.split('\n'))
                 .map(|s| {
                     if s.ends_with(' ') {
@@ -572,32 +573,34 @@ impl Formatter<'_> {
                     }
                 })
                 .collect();
-            for (line_number, comment) in self.end_of_line_comments.drain(..) {
+            for (line_number, octos, comment) in self.end_of_line_comments.drain(..) {
                 let line = &lines[line_number - 1];
                 let line_len = line.chars().count();
                 if let Some((max, group)) = groups.last_mut() {
                     if line_number - group.last().unwrap().0 == 1 {
                         *max = (*max).max(line_len);
-                        group.push((line_number, comment));
+                        group.push((line_number, octos, comment));
                     } else {
-                        groups.push((line_len, vec![(line_number, comment)]));
+                        groups.push((line_len, vec![(line_number, octos, comment)]));
                     }
                 } else {
-                    groups.push((line_len, vec![(line_number, comment)]));
+                    groups.push((line_len, vec![(line_number, octos, comment)]));
                 }
             }
             // Append comments to lines
             for (max, group) in groups {
-                for (line_number, comment) in group {
+                for (line_number, octos, comment) in group {
                     // Add comment back to line
                     let line = &mut lines[line_number - 1];
                     let start_byte_len = line.len();
                     let start_char_len = line.chars().count();
                     let spaces = (max + 1).saturating_sub(line.chars().count());
-                    line.push_str(&" ".repeat(spaces));
-                    line.push('#');
-                    if !comment.starts_with(' ')
+                    // line.push_str(&" ".repeat(spaces));
+                    line.extend(repeat_n(' ', spaces));
+                    line.extend(repeat_n('#', octos));
+                    if (!comment.starts_with(' ') || octos > 1)
                         && self.config.comment_space_after_hash
+                        // Shebang
                         && !comment.starts_with('!')
                     {
                         line.push(' ');
@@ -1103,7 +1106,7 @@ impl Formatter<'_> {
                 } else {
                     let line_number = self.output.split('\n').count();
                     self.end_of_line_comments
-                        .push((line_number, comment.to_string()));
+                        .push((line_number, 1, comment.to_string()));
                 }
             }
             Word::BreakLine => self.output.push_str(";;"),
@@ -1115,7 +1118,7 @@ impl Formatter<'_> {
                 self.push(&word.span, &sc.to_string());
             }
             Word::OutputComment { i, n } => {
-                let stacks = self.output_comment(*i);
+                let stacks = self.eval_output_comment(*i);
                 let mut s = String::new();
                 if stacks.is_empty() {
                     for _ in 0..=*n {
@@ -1199,18 +1202,39 @@ impl Formatter<'_> {
                         }
                     }
                 }
-                for (i, line) in lines.into_iter().enumerate() {
-                    if i > 0 {
-                        s.push('\n');
-                        for _ in 0..start_line_pos {
-                            s.push(' ');
+                let beginning_of_line = self
+                    .output
+                    .split('\n')
+                    .next_back()
+                    .unwrap_or_default()
+                    .trim()
+                    .is_empty();
+                if beginning_of_line || !self.config.align_comments {
+                    for (i, line) in lines.into_iter().enumerate() {
+                        if i > 0 {
+                            s.push('\n');
+                            for _ in 0..start_line_pos {
+                                s.push(' ');
+                            }
                         }
+                        s.extend(repeat_n('#', *n + 1));
+                        s.push(' ');
+                        s.push_str(&line);
                     }
-                    s.extend(repeat_n('#', *n + 1));
-                    s.push(' ');
-                    s.push_str(&line);
+                    self.push(&word.span, &s);
+                } else {
+                    let start_line = self.output.split('\n').count();
+                    for (i, line) in lines.into_iter().enumerate() {
+                        if i > 0 {
+                            self.output.push('\n');
+                            for _ in 0..start_line_pos {
+                                self.output.push(' ');
+                            }
+                        }
+                        self.end_of_line_comments
+                            .push((start_line + i, *n + 1, line));
+                    }
                 }
-                self.push(&word.span, &s);
             }
             Word::InlineMacro(InlineMacro {
                 func,
@@ -1346,7 +1370,7 @@ impl Formatter<'_> {
             self.newline(depth);
         }
     }
-    fn output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
+    fn eval_output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {
             if !self.eval_output_comments {
                 return HashMap::new();

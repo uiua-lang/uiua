@@ -727,11 +727,11 @@ impl Compiler {
                 // - there are at least as many push nodes preceding the current line as there are arguments to the line
                 // - the words create no bindings
                 if mode != ItemCompMode::Function
-                    && error_count_after == error_count_before
                     && self.pre_eval_mode > PreEvalMode::Line
-                    && !line_node.is_empty()
+                    && error_count_after == error_count_before
                     && binding_count_before == binding_count_after
                     && root_len_before == self.asm.root.len()
+                    && !line_node.is_empty()
                     && self.asm.root.len() >= sig.args()
                     && (self.asm.root.iter().rev().take(sig.args()))
                         .all(|node| matches!(node, Node::Push(_)))

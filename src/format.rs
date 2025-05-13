@@ -1069,7 +1069,15 @@ impl Formatter<'_> {
             Word::Placeholder(i) => self.push(&word.span, &format!("^{i}")),
             Word::Subscripted(sub) => match &sub.word.value {
                 Word::Modified(m) => {
-                    self.format_modifier(&m.modifier, depth);
+                    if sub.script.value.num.is_some()
+                        && matches!(m.modifier.value, Modifier::Primitive(Primitive::Each))
+                    {
+                        let modifier =
+                            (m.modifier.span.clone()).sp(Modifier::Primitive(Primitive::Rows));
+                        self.format_modifier(&modifier, depth);
+                    } else {
+                        self.format_modifier(&m.modifier, depth);
+                    }
                     self.subscript(&sub.script);
                     self.format_words(&m.operands, true, depth);
                 }

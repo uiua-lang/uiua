@@ -113,6 +113,12 @@ A number can be specified after the side to [fix]() multiple arguments.
 
 While [fix]() is still necessary for certain complex cases, sided subscripts should work about 95% of the time.
 
+[rows]() can accept both numeric and sided subscripts at the same time. The number to select the rank comes before the side indicator.
+
+```uiua
+≡₂⌟₁□₃ °△2_2_3 "hi" "there"
+```
+
 ## Operating at Different Ranks
 
 [rows]() is the bread and butter of traversing an array's structure. It calls its function on each row of an array, but what if you want to go deeper?
@@ -125,7 +131,7 @@ One option is to simply chain [rows]() multiple times.
 ≡≡≡□ °△ 2_3_4
 ```
 
-This can get a bit unwieldy if an array has a lot of dimensions. You can instead use [numeric subscripts](/tutorial/morestack#subscripts) [rows]() to specify the rank of the arrays you want to work on.
+This can get a bit unwieldy if an array has a lot of dimensions. You can instead use [numeric subscripts](/tutorial/morestack#subscripts) with [rows]() to specify the rank of the arrays you want to work on.
 
 ```uiua
 ≡₀□ °△ 2_3_4 # Scalars
@@ -135,7 +141,7 @@ This can get a bit unwieldy if an array has a lot of dimensions. You can instead
 ```
 
 This is useful when you are approaching the array's structure from the bottom up, but what if you want to start at the top, like [rows]() normally does?
-This is what *negative* subscripts do. [rows]()`₋₁` is equivalent to normal [rows](), [rows]()`₋₂` is equivalent to `rows` `rows`, etc.
+This is what *negative* subscripts do. [rows]()`₋₁` is equivalent to normal [rows](), [rows]()`₋₂` is equivalent to `rowsrows`, etc.
 
 ```uiua
 ≡₋₁□ °△2_3_4

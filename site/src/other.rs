@@ -575,8 +575,8 @@ pub fn Subscripts() -> impl IntoView {
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),
         subscript(Off, "First N values", "{⤚₂[⊙⊙∘] 1 2 3}"),
         subscript(Both, "Apply to N argument sets", "[∩₃+ 1 2 3 4 5 6]"),
-        subscript(Rows, "Apply to subarrays N deep", "≡₂□ °△2_3_4"),
-        subscript(Inventory, "Apply to subarrays N deep", "⍚₂⇡ °△2_3"),
+        subscript(Rows, "Apply to rank-N subarrays", "≡₁□ °△2_3_4"),
+        subscript(Inventory, "Apply to rank-N subarrays", "⍚₁⇡ °△2_3"),
         subscript(Repeat, "Repetition count", "⍥₅(⊂⟜/+) [1 2]"),
         subscript(Tuples, "Tuple size", "⧅₂< ⇡4"),
         subscript(Stencil, "Window size", "⧈₃∘ ⇡6"),
@@ -629,13 +629,13 @@ pub fn Subscripts() -> impl IntoView {
         ),
         subscript(
             Rows,
-            "Apply to subarrays N deep and fix left-most or right-most argument(s)",
-            "≡₂⌞₂(⊂⊂) 1_2 3_4 [5_6 7_8]\n≡₂⌟₂(⊂⊂) [1_2 3_4] 5_6 7_8",
+            "Apply to rank-N subarrays and fix left-most or right-most argument(s)",
+            "≡₁⌞₂(⊂⊂) 1_2 3_4 [5_6 7_8]\n≡₁⌟₂(⊂⊂) [1_2 3_4] 5_6 7_8",
         ),
         subscript(
             Inventory,
             "Apply to subarrays N deep and fix left-most or right-most argument(s)",
-            "⍚₂⌞₂(⊂⊂) 1_2 3_4 [5_6 7_8]\n⍚₂⌟₂(⊂⊂) [1_2 3_4] 5_6 7_8",
+            "⍚₁⌞₂(⊂⊂) 1_2 3_4 [5_6 7_8]\n⍚₁⌟₂(⊂⊂) [1_2 3_4] 5_6 7_8",
         ),
     ];
 

@@ -1348,8 +1348,8 @@ fn TutorialMoreArray() -> impl IntoView {
                 number=2
                 prompt="joins the first argument to each list in the second argument"
                 example="0 +1°△3_4"
-                answer="≡₁⊂"
-                tests={&["0 [1 2 3]", r#"@| ⬚@ [["Hey""there""buddy"] [@a "bc" "def"]]"#, "η_π_τ ⇡2_2_2"]}
+                answer="≡₁⌞⊂"
+                tests={&["0 [1 2 3]", r#"@| ⬚@\s[["Hey""there""buddy"] [@a "bc" "def"]]"#, "η_π_τ ⇡2_2_2"]}
                 hidden="3 5"/>
         }.into_view(),
     )

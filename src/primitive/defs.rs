@@ -1566,11 +1566,15 @@ primitive!(
     /// ex: ≡⊂ ⊙¤ 1_2_3 4_5_6
     /// [fold] also has this behavior.
     ///
-    /// Numeric subscripted [rows] operates N subarrays deep.
+    /// Numeric subscripted [rows] operates on rank-N subarrays.
     /// ex: ≡₀□ °△2_3_4
     ///   : ≡₁□ °△2_3_4
     ///   : ≡₂□ °△2_3_4
     ///   : ≡₃□ °△2_3_4
+    /// Making the subscript negative instead operates N ranks deep.
+    /// ex: ≡₋₁□ °△2_3_4
+    ///   : ≡₋₂□ °△2_3_4
+    ///   : ≡₋₃□ °△2_3_4
     /// Sided [rows] [fix]es either the first or last argument so that it can be reused in multiple iterations.
     /// ex: ≡⌞⊂ 1_2 3_4
     ///   : ≡⌟⊂ 1_2 3_4

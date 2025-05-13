@@ -7,6 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - **Breaking Change** - [`rows ≡`](https://uiua.org/docs/rows) numeric subscripts now function identically to [`each ∵`](https://uiua.org/docs/repeat)'s specifying the rank to operate at
   - Deprecate [`each ∵`](https://uiua.org/docs/repeat), as it is almost never used except for this subscript behavior
+  - The formatter will turn existing uses of subscripted [`each ∵`](https://uiua.org/docs/repeat) into subscripted [`rows ≡`](https://uiua.org/docs/rows)
 - **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) and [`do ⍢`](https://uiua.org/docs/do) now accumulate excess values into arrays if their function has more outputs than arguments
   - This makes a lot of accumulation patterns much shorter and simpler
   - These loops now always have well-defined signatures

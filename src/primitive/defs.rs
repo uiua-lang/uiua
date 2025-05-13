@@ -1545,8 +1545,6 @@ primitive!(
     ([1], Each, IteratingModifier, ("each", '∵')),
     /// Apply a function to each row of an array or arrays
     ///
-    /// This is the row-wise version of [each].
-    ///
     /// ex:  /+ [1_2_3 4_5_6 7_8_9]  # Sum each row with the next
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum the elements of each row
     ///
@@ -2274,7 +2272,7 @@ primitive!(
     /// ex: ⬚∘+ ∞ [1 2] [3 4 5 6]
     ///
     /// Fill values are temporarily removed for the body of looping modifiers that can use them to fix their row shapes.
-    /// These include [reduce], [scan], [rows], [each], [partition], and [group].
+    /// These include [reduce], [scan], [rows], [partition], and [group].
     /// ex! ⬚0≡(↙3) [3 4]
     /// [un][pop] can be used to retrieve the fill value. This ignores loop nesting and so can be used to "pull" the fill into the loop.
     /// ex: ⬚0≡(⬚°◌↙3) [3 4]
@@ -2432,7 +2430,7 @@ primitive!(
     /// The range can be given with a subscript.
     /// ex: ⍥⚂₁₀5
     ///
-    /// `each``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
+    /// `rows``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
     /// ex: ⌊×10 ≡⋅⚂ ⇡10
     /// ex: ⌊×10 ⊞⋅⋅⚂ .⇡10
     (0, Rand, Rng, ("random", '⚂'), Impure),
@@ -2472,7 +2470,7 @@ primitive!(
     /// You can use [rows] to spawn a thread for each row of an array.
     /// ex: ≡spawn(/+⇡×.) ⇡10
     ///
-    /// [wait] will call [each] implicitly.
+    /// [wait] is pervasive.
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
     ///
@@ -2495,7 +2493,7 @@ primitive!(
     ///   : wait h
     ///   : wait h
     ///
-    /// [wait] is pervasive and will call [each] implicitly.
+    /// [wait] is pervasive.
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
     ///
@@ -2729,7 +2727,6 @@ primitive!(
     /// - [drop]
     /// - [join]
     /// - [select] (if every index is covered exactly once)
-    /// - [each]
     /// - [rows]
     /// Operations that do not specifically work on maps will remove the keys and turn the map into a normal array.
     ///
@@ -3094,7 +3091,7 @@ primitive!(
     /// [fill] outside the [un] pads rows of different lengths. [fill] inside the [un] chooses the delimiter.
     /// ex: ⬚"x"°⬚@;csv "1;2;3\n4\n5,6;7"
     /// The decoding result will always be a rank-`2` array of boxed strings.
-    /// You can use `each``try``parse``gap``identity` to convert the strings that represent numbers.
+    /// You can use `rows``try``parse``gap``identity` to convert the strings that represent numbers.
     /// ex: ≡₀⍣⋕∘ °csv "#,Count\n1,5\n2,21\n3,8\n"
     /// If you know there are headers, you can use [un][join] to separate them.
     /// ex: ⊙⋕°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"

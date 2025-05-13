@@ -382,6 +382,7 @@ impl fmt::Display for ImplPrimitive {
             TagVariant => write!(f, "<tag variant>"),
             BothImpl(sub) => write!(f, "{Both}{sub}"),
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
+            Retropose => write!(f, "<{Evert}>"),
         }
     }
 }
@@ -1536,6 +1537,7 @@ impl ImplPrimitive {
                 };
                 return Err(env.error(env.error(format!("Pattern match failed: {message}"))));
             }
+            ImplPrimitive::Retropose => env.monadic_mut(|val| val.retropose_depth(0))?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
             // Implementation details
             ImplPrimitive::ValidateType | ImplPrimitive::ValidateTypeConsume => {

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.16
-- Bottom modifier
 - Fix hang in error tests lsp
 
 # 0.17

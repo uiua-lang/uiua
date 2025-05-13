@@ -1865,6 +1865,10 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
+    /// Call a function with its arguments axes reversed
+    ///
+    ///
+    ([1], Evert, OtherModifier, ("evert", '⟓'), { experimental: true }),
     /// Unbox the arguments to a function before calling it
     ///
     /// ex:  ⊂ □[1 2 3] □[4 5 6]
@@ -3659,6 +3663,7 @@ impl_primitive!(
     (2, RangeStart),
     // Implementation details
     (1, Utf16),
+    (1, Retropose),
     ([2], RepeatWithInverse),
     ([1], RepeatCountConvergence),
     (2(1), ValidateType),

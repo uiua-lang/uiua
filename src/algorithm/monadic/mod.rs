@@ -945,6 +945,24 @@ impl Value {
             }
         }
     }
+    /// Like transpose, but the axes are reversed instead of rotated
+    pub(crate) fn retropose_depth(&mut self, depth: usize) {
+        match self {
+            Value::Num(n) => n.retropose_depth(depth),
+            Value::Byte(b) => b.retropose_depth(depth),
+            Value::Complex(c) => c.retropose_depth(depth),
+            Value::Char(c) => c.retropose_depth(depth),
+            Value::Box(b) => {
+                if depth == b.rank() {
+                    for b in b.data.as_mut_slice() {
+                        b.0.retropose_depth(0);
+                    }
+                } else {
+                    b.retropose_depth(depth);
+                }
+            }
+        }
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -1036,6 +1054,45 @@ impl<T: ArrayValue> Array<T> {
         } else {
             self.shape[depth..].rotate_right(trans_count);
         }
+    }
+    /// Like transpose, but the axes are reversed instead of rotated
+    pub(crate) fn retropose_depth(&mut self, mut depth: usize) {
+        crate::profile_function!();
+        if depth == 0 && self.is_map() {
+            self.meta.take_map_keys();
+        }
+        if self.rank() == 0 {
+            return;
+        }
+        depth = depth.min(self.rank());
+        let trans_rank = self.rank() - depth;
+        // Early return if nothing would actually happen
+        if trans_rank < 2 {
+            return;
+        }
+        self.meta.take_sorted_flags();
+        // Early return if any dimension is 0, because there are no elements
+        if self.shape[depth..].iter().any(|&d| d == 0) || depth > 0 && self.shape[depth - 1] == 0 {
+            self.shape[depth..].reverse();
+            return;
+        }
+        let subshape = Shape::from(&self.shape[depth..]);
+        let newshape = Shape::from_iter(subshape.iter().rev().copied());
+        let chunk_size = subshape.elements();
+        let data_slice = self.data.as_mut_slice();
+        let mut temp = data_slice[..chunk_size].to_vec();
+        let mut dims = vec![0; subshape.len()];
+        // Divide the array into chunks at the given depth
+        for data in data_slice.chunks_exact_mut(chunk_size) {
+            for i in 0..chunk_size {
+                subshape.flat_to_dims(i, &mut dims);
+                dims.reverse();
+                let j = newshape.dims_to_flat(&dims).unwrap();
+                temp[j] = data[i].clone();
+            }
+            data.swap_with_slice(&mut temp);
+        }
+        self.shape[depth..].reverse();
     }
 }
 

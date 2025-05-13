@@ -754,6 +754,17 @@ impl Compiler {
                 );
                 sn.node
             }
+            Evert => {
+                let mut sn = self.monadic_modifier_op(modified)?.0;
+                let span = self.add_span(modified.modifier.span.clone());
+                let retropose = Node::ImplPrim(ImplPrimitive::Retropose, span)
+                    .sig_node()
+                    .unwrap();
+                sn.node
+                    .prepend(retropose.clone().on_all(sn.sig.args(), span).node);
+                sn.node.push(retropose.on_all(sn.sig.outputs(), span).node);
+                sn.node
+            }
             Repeat => {
                 let (sn, span) = self.monadic_modifier_op(modified)?;
                 let spandex = self.add_span(modified.modifier.span.clone());

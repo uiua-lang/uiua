@@ -37,6 +37,10 @@ impl Shape {
     pub fn drain(&mut self, range: impl RangeBounds<usize>) {
         self.dims.drain(range);
     }
+    /// Add a leading dimension
+    pub fn prepend(&mut self, dim: usize) {
+        self.dims.insert(0, dim);
+    }
     /// Add a trailing dimension
     pub fn push(&mut self, dim: usize) {
         self.dims.push(dim);

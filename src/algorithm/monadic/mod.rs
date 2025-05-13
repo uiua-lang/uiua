@@ -191,7 +191,7 @@ impl Value {
                 new_shape.remove(0);
             }
             for &d in orig_shape.iter().rev() {
-                new_shape.insert(0, d);
+                new_shape.prepend(d);
             }
             if new_shape.elements() == self.shape.elements() {
                 self.shape = new_shape;
@@ -1907,7 +1907,7 @@ impl Array<f64> {
                 primes.push(n as f64);
             }
             let mut shape = self.shape.clone();
-            shape.insert(0, primes.len());
+            shape.prepend(primes.len());
             return Ok(Array::new(shape, primes));
         }
 
@@ -1961,7 +1961,7 @@ impl Array<f64> {
             }
         }
         let mut shape = self.shape.clone();
-        shape.insert(0, longest);
+        shape.prepend(longest);
         Ok(Array::new(shape, data))
     }
 }

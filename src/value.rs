@@ -332,12 +332,21 @@ impl Value {
 /// inner [`Array`]'s shape and metadata, regardless of element type
 #[repr(C)]
 pub struct ValueRepr {
-    _discriminant: u8,
+    /// Safety: Do not access this field!
+    __discriminant: u8,
     /// The value's shape
     pub shape: Shape,
-    _data: CowSlice<f64>,
+    /// Safety: Do not access this field!
+    __data: CowSlice<f64>,
     /// The value's metadata
     pub meta: ArrayMeta,
+}
+
+#[cfg(test)]
+#[test]
+fn value_repr_correctness() {
+    assert_eq!(size_of::<Value>(), size_of::<ValueRepr>());
+    assert_eq!(align_of::<Value>(), align_of::<ValueRepr>());
 }
 
 impl Deref for Value {
@@ -2435,7 +2444,7 @@ impl ValueBuilder {
             value.append(row, false, ctx)?;
         } else {
             row.reserve_min(self.capacity);
-            row.shape.insert(0, 1);
+            row.shape.prepend(1);
             self.value = Some(row);
         }
         self.rows += 1;

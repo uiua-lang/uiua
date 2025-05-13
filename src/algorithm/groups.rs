@@ -253,7 +253,7 @@ where
     }
     fn partition_firsts(mut self, markers: &[i64]) -> Self {
         if self.shape.is_empty() {
-            self.shape.insert(0, 0);
+            self.shape.prepend(0);
         } else {
             self.shape[0] = 0;
         }
@@ -284,7 +284,7 @@ where
     fn partition_lasts(mut self, markers: &[i64]) -> Self {
         let row_count = self.row_count();
         if self.shape.is_empty() {
-            self.shape.insert(0, 0);
+            self.shape.prepend(0);
         } else {
             self.shape[0] = 0;
         }
@@ -611,7 +611,7 @@ impl<T: ArrayValue> Array<T> {
         let data_slice = data.as_mut_slice();
         let mut shape = self.shape.clone();
         if shape.is_empty() {
-            shape.insert(0, buckets);
+            shape.prepend(buckets);
         } else {
             shape[0] = buckets;
         }
@@ -639,7 +639,7 @@ impl<T: ArrayValue> Array<T> {
         let data_slice = data.as_mut_slice();
         let mut shape = self.shape.clone();
         if shape.is_empty() {
-            shape.insert(0, buckets);
+            shape.prepend(buckets);
         } else {
             shape[0] = buckets;
         }
@@ -727,7 +727,7 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
     let mut val = Value::from_row_values(ungrouped, env)?;
     val.shape.remove(0);
     for &dim in indices.shape.iter().rev() {
-        val.shape.insert(0, dim);
+        val.shape.prepend(dim);
     }
     val.validate();
     env.push(val);

@@ -1366,7 +1366,7 @@ impl<T: ArrayValue> Array<T> {
             Ordering::Equal => {
                 if !from.shape.iter().skip(1).eq(into.shape.iter().skip(1)) {
                     let mut original_shape = into.shape.row();
-                    original_shape.insert(0, indices_row_count);
+                    original_shape.prepend(indices_row_count);
                     return Err(env.error(format!(
                         "Attempted to undo selection, but \
                         the shape of the selected array changed \
@@ -1568,7 +1568,7 @@ impl<T: ArrayValue> Array<T> {
             next = i + 1;
         }
         let mut shape = row_shape;
-        shape.insert(0, row_count);
+        shape.prepend(row_count);
         Ok(Array::new(shape, data))
     }
     fn anti_pick(self, indices_shape: &[usize], indices: &[isize], env: &Uiua) -> UiuaResult<Self> {

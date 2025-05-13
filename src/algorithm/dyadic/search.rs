@@ -457,7 +457,7 @@ impl<T: ArrayValue> Array<T> {
         // Pad the shape of the searched-for array
         let mut searched_for_shape = needle.shape.clone();
         while searched_for_shape.len() < haystack.shape.len() {
-            searched_for_shape.insert(0, 1);
+            searched_for_shape.prepend(1);
         }
 
         // Calculate the pre-padded output shape
@@ -621,7 +621,7 @@ impl<T: ArrayValue> Array<T> {
             let needle_data = needle.data.as_slice();
             let mut needle_shape = needle.shape.clone();
             while needle_shape.len() < haystack.shape.len() {
-                needle_shape.insert(0, 1);
+                needle_shape.prepend(1);
             }
             let needle_elems = needle.element_count();
             let mut curr = Vec::new();

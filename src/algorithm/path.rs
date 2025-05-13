@@ -206,7 +206,7 @@ fn path_impl(
     let mut if_empty = start.clone();
     if_empty.fix();
     if_empty = if_empty.first_dim_zero();
-    if_empty.shape.insert(0, 0);
+    if_empty.shape.prepend(0);
 
     // Initialize state
     let mut to_see = BinaryHeap::new();

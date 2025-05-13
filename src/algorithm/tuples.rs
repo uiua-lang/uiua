@@ -51,7 +51,7 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
     let mut results = Vec::new();
     let mut per_meta = xs.meta.take_per_meta();
     if xs.row_count() == 0 {
-        xs.shape.insert(0, 0);
+        xs.shape.prepend(0);
         if push_empty_rows_value(&f, [&xs], false, &mut per_meta, env) {
             return Ok(());
         } else {

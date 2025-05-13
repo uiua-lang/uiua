@@ -136,7 +136,7 @@ where
             // Simple chunking
             let chunk_count = arr.shape[0] / dim.size;
             arr.shape[0] = dim.size;
-            arr.shape.insert(0, chunk_count);
+            arr.shape.prepend(chunk_count);
             arr.data.truncate(arr.shape.elements());
             arr.meta.take_map_keys();
             let mut val: Value = arr.into();
@@ -161,7 +161,7 @@ where
                     }
                     let mut new_shape = arr.shape;
                     new_shape[0] = dim.size;
-                    new_shape.insert(0, win_count);
+                    new_shape.prepend(win_count);
                     let mut val: Value = Array::new(new_shape, data).into();
                     if let Some((f, d)) = f {
                         val = f(val, dims.len() + d, env)?;

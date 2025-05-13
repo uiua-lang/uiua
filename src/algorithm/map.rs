@@ -178,7 +178,7 @@ impl Value {
             self.map(Value::default(), env)?;
         }
         if self.rank() == 0 {
-            self.shape.insert(0, 1);
+            self.shape.prepend(1);
         }
         let row_count = self.row_count();
         let mut keys = self
@@ -695,10 +695,10 @@ impl MapKeys {
             *index += self.len;
         }
         if self.keys.rank() == 0 {
-            self.keys.shape.insert(0, 1);
+            self.keys.shape.prepend(1);
         }
         if other.keys.rank() == 0 {
-            other.keys.shape.insert(0, 1);
+            other.keys.shape.prepend(1);
         }
         let mut to_remove = Vec::new();
         let mut to_insert: Vec<_> = (other.keys.into_rows())
@@ -807,7 +807,7 @@ fn coerce_values(
     }
     if a.shape == [0] {
         let mut b_clone = b.clone();
-        b_clone.shape.insert(0, 1);
+        b_clone.shape.prepend(1);
         *a = b_clone.first_dim_zero();
         return Ok(b);
     }

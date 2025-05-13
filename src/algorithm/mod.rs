@@ -411,7 +411,7 @@ where
         Ordering::Less => match ctx.scalar_fill() {
             Ok(fill) => {
                 let mut target_shape = arr.shape.clone();
-                target_shape.insert(0, target_row_count);
+                target_shape.prepend(target_row_count);
                 arr.fill_to_shape(&target_shape, fill);
                 res = Ok(());
             }

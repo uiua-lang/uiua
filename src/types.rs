@@ -92,7 +92,7 @@ enum TypeError {
 }
 
 fn make_val(mut ty: Ty) -> Value {
-    ty.shape.insert(0, 0);
+    ty.shape.prepend(0);
     match ty.scalar {
         ScalarType::Real => Array::<u8>::new(ty.shape, CowSlice::default()).into(),
         ScalarType::Complex => Array::<Complex>::new(ty.shape, CowSlice::default()).into(),
@@ -213,7 +213,7 @@ impl TypeRt<'_> {
                     } else {
                         b.shape
                     };
-                    shape.insert(0, 2);
+                    shape.prepend(2);
                     self.stack.push(Ty::new(scalar, shape));
                 }
                 Join => {

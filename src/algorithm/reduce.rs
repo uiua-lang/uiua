@@ -553,7 +553,7 @@ pub fn reduce_content(ops: Ops, env: &mut Uiua) -> UiuaResult {
             (rows.next().unwrap(), rows)
         };
         if acc.rank() == 0 {
-            acc.shape.insert(0, 1);
+            acc.shape.prepend(1);
         }
         for row in rows {
             acc = acc.join(row, true, env)?;
@@ -611,7 +611,7 @@ fn generic_reduce_inner(
                 Some(xs.shape.remove(0))
             };
             if let Some(row_count) = row_count {
-                xs.shape.insert(0, row_count);
+                xs.shape.prepend(row_count);
             }
             return Ok(reduce_singleton(&f.node, xs, process));
         }
@@ -642,7 +642,7 @@ fn generic_reduce_inner(
             if xs.row_count() == 0 {
                 if let Some(mut xs) = reduce_identity(&f.node, xs.clone()) {
                     if xs.shape.elements() == 0 {
-                        xs.shape.insert(0, 0);
+                        xs.shape.prepend(0);
                         return Ok(xs);
                     }
                 }

@@ -145,7 +145,7 @@ impl<T: Clone + std::fmt::Debug + Send + Sync> Array<T> {
                         }
                     }
                     a.data = new_a_data.into();
-                    a.shape.insert(0, b_dim);
+                    a.shape.prepend(b_dim);
                     a_depth += 1;
                 }
             }
@@ -159,7 +159,7 @@ impl<T: Clone + std::fmt::Debug + Send + Sync> Array<T> {
                     }
                     local_b = b.clone();
                     local_b.data = new_b_data.into();
-                    local_b.shape.insert(0, a_dim);
+                    local_b.shape.prepend(a_dim);
                     b = &local_b;
                     b_depth += 1;
                 }
@@ -239,7 +239,7 @@ impl<T: ArrayValue> Array<T> {
     ) -> Result<(), SizeError> {
         if count == 0 {
             self.data.clear();
-            self.shape.insert(0, 0);
+            self.shape.prepend(0);
             return Ok(());
         }
         let elem_count = validate_size_of::<T>([count - 1, self.data.len()])?;
@@ -253,7 +253,7 @@ impl<T: ArrayValue> Array<T> {
                 self.data.extend_from_slice(&row);
             }
         }
-        self.shape.insert(0, count);
+        self.shape.prepend(count);
         if has_fill {
             self.meta.take_sorted_flags();
         } else {
@@ -436,7 +436,7 @@ impl Value {
             // Positive rank
             if rank >= shape.len() {
                 for _ in 0..rank - shape.len() + 1 {
-                    shape.insert(0, 1);
+                    shape.prepend(1);
                 }
             } else {
                 let mid = shape.len() - rank;
@@ -836,7 +836,7 @@ impl<T: ArrayValue> Array<T> {
                 }
                 if !from.shape.iter().skip(1).eq(into.shape.iter().skip(1)) {
                     let mut original_shape = into.shape.row();
-                    original_shape.insert(0, from.row_count());
+                    original_shape.prepend(from.row_count());
                     return Err(env.error(format!(
                         "Attempted to undo keep, but the shape of \
                         the kept array changed from {} to {}",

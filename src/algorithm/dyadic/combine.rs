@@ -70,7 +70,7 @@ impl<T: ArrayValue> Array<T> {
     /// Fill the array with the given value so it matches the given shape
     pub fn fill_to_shape(&mut self, shape: &[usize], fill: FillValue<T>) {
         while self.rank() < shape.len() {
-            self.shape.insert(0, 1);
+            self.shape.prepend(1);
         }
         if self.shape == shape {
             return;
@@ -363,7 +363,7 @@ impl<T: ArrayValue> Array<T> {
                                 for (array, fill) in [(&mut self, fill.clone()), (&mut other, fill)]
                                 {
                                     let mut new_shape = new_row_shape.clone();
-                                    new_shape.insert(0, array.shape[0]);
+                                    new_shape.prepend(array.shape[0]);
                                     array.fill_to_shape(&new_shape, fill);
                                 }
                             }
@@ -890,7 +890,7 @@ impl<T: ArrayValue> Array<T> {
             Ordering::Greater => (false, true),
         };
         self.data.extend_from_cowslice(other.data);
-        self.shape.insert(0, 2);
+        self.shape.prepend(2);
         self.meta.mark_sorted_up(sorted_up);
         self.meta.mark_sorted_down(sorted_down);
         self.validate();
@@ -1201,7 +1201,7 @@ impl Value {
                 value.reshape_scalar(Ok(*d as isize), true, ctx)?;
             }
         }
-        value.shape.insert(0, 1);
+        value.shape.prepend(1);
         value.meta.take_label();
         Ok(match value {
             Value::Num(mut a) => {
@@ -1298,7 +1298,7 @@ impl<T: ArrayValue> Array<T> {
                 arr.append(row, false, ctx)?;
             }
         } else {
-            arr.shape.insert(0, 1);
+            arr.shape.prepend(1);
         }
         Ok(arr)
     }

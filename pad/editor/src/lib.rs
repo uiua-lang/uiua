@@ -314,6 +314,16 @@ pub fn Editor<'a>(
                 }
                 .into_view()
             }
+            OutputItem::Apng(bytes, label) => {
+                let encoded = STANDARD.encode(bytes);
+                view! {
+                    <div class="output-media-wrapper">
+                        <div class="output-image-label">{label}</div>
+                        <img class="output-image" src=format!("data:image/png;base64,{encoded}") />
+                    </div>
+                }
+                .into_view()
+            }
             OutputItem::Audio(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
                 let src = format!("data:audio/wav;base64,{}", encoded);

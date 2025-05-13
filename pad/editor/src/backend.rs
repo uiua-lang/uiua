@@ -119,6 +119,7 @@ pub enum OutputItem {
     Svg(String, Option<String>),
     Image(Vec<u8>, Option<String>),
     Gif(Vec<u8>, Option<String>),
+    Apng(Vec<u8>, Option<String>),
     Audio(Vec<u8>, Option<String>),
     Report(Report),
     Faint(String),
@@ -225,6 +226,10 @@ impl SysBackend for WebBackend {
     }
     fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
         (self.stdout.lock().unwrap()).push(OutputItem::Gif(gif_bytes, label.map(Into::into)));
+        Ok(())
+    }
+    fn show_apng(&self, apng_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+        (self.stdout.lock().unwrap()).push(OutputItem::Apng(apng_bytes, label.map(Into::into)));
         Ok(())
     }
     fn list_dir(&self, mut path: &str) -> Result<Vec<String>, String> {

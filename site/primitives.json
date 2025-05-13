@@ -5,6 +5,12 @@
     "class": "Media",
     "description": "Play some audio"
   },
+  "&apngs": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Media",
+    "description": "Show an APNG"
+  },
   "&args": {
     "args": 0,
     "outputs": 1,
@@ -358,6 +364,12 @@
     "class": "InversionModifier",
     "description": "Invert the behavior of a function, treating its first argument as a constant"
   },
+  "apng": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Encoding",
+    "description": "Encode an array of image frames in an APNG-encoded byte array"
+  },
   "arch": {
     "args": 0,
     "outputs": 1,
@@ -707,7 +719,7 @@
     "args": 2,
     "outputs": 1,
     "class": "Encoding",
-    "description": "Encode a gif into a byte array"
+    "description": "Encode an array of image frames in a GIF-encoded byte array"
   },
   "graphemes": {
     "args": 1,

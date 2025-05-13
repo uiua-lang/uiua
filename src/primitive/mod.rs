@@ -786,6 +786,7 @@ impl Primitive {
             }
             Primitive::ImageEncode => media::image_encode(env)?,
             Primitive::GifEncode => media::gif_encode(env)?,
+            Primitive::ApngEncode => media::apng_encode(env)?,
             Primitive::AudioEncode => media::audio_encode(env)?,
             Primitive::Voxels => env.dyadic_rr_env(media::voxels)?,
             Primitive::Layout => env.dyadic_oo_env(media::layout_text)?,

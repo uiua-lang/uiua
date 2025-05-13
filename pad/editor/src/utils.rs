@@ -1165,6 +1165,10 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
                 stack.push(OutputItem::Gif(bytes, label));
                 continue;
             }
+            SmartOutput::Apng(bytes, label) => {
+                stack.push(OutputItem::Apng(bytes, label));
+                continue;
+            }
             SmartOutput::Wav(bytes, label) => {
                 stack.push(OutputItem::Audio(bytes, label));
                 continue;

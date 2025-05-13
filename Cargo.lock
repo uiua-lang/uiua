@@ -6552,6 +6552,7 @@ dependencies = [
  "paste",
  "pathdiff",
  "plist",
+ "png",
  "rand",
  "rawrrr",
  "rayon",

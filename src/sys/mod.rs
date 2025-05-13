@@ -460,6 +460,14 @@ sys_op! {
     ///
     /// See also: [gif]
     (2(0), GifShow, Media, "&gifs", "gif - show", Mutating),
+    /// Show an APNG
+    ///
+    /// The first argument is a framerate in seconds.
+    /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
+    /// The rows of the array are the frames of the gif, and their format must conform to that of [img].
+    ///
+    /// See also: [apng]
+    (2(0), ApngShow, Media, "&apngs", "apng - show", Mutating),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.
@@ -954,15 +962,19 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Show an image
     #[cfg(feature = "image")]
     fn show_image(&self, image: DynamicImage, label: Option<&str>) -> Result<(), String> {
-        Err("Showing images not supported in this environment".into())
+        Err("Showing images is not supported in this environment".into())
     }
     /// Show a GIF
     fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
-        Err("Showing gifs not supported in this environment".into())
+        Err("Showing gifs is not supported in this environment".into())
+    }
+    /// Show an APNG
+    fn show_apng(&self, apng_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+        Err("Showing APNGs is not supported in this environment".into())
     }
     /// Play audio from WAV bytes
     fn play_audio(&self, wave_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
-        Err("Playing audio not supported in this environment".into())
+        Err("Playing audio is not supported in this environment".into())
     }
     /// Get the audio sample rate
     fn audio_sample_rate(&self) -> u32 {
@@ -970,7 +982,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     /// Stream audio
     fn stream_audio(&self, f: AudioStreamFn) -> Result<(), String> {
-        Err("Streaming audio not supported in this environment".into())
+        Err("Streaming audio is not supported in this environment".into())
     }
     /// The result of the `now` function
     ///
@@ -1565,7 +1577,7 @@ impl SysOp {
             SysOp::GifShow => {
                 #[cfg(feature = "gif")]
                 {
-                    let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+                    let delay = env.pop(1)?.as_num(env, "Framerate must be a number")?;
                     let value = env.pop(2)?;
                     let start = env.rt.backend.now();
                     let bytes = crate::media::value_to_gif_bytes(&value, delay)
@@ -1577,6 +1589,22 @@ impl SysOp {
                 }
                 #[cfg(not(feature = "gif"))]
                 return Err(env.error("GIF showing is not supported in this environment"));
+            }
+            SysOp::ApngShow => {
+                #[cfg(feature = "apng")]
+                {
+                    let delay = env.pop(1)?.as_num(env, "Framerate must be a number")?;
+                    let value = env.pop(2)?;
+                    let start = env.rt.backend.now();
+                    let bytes = crate::media::value_to_apng_bytes(&value, delay)
+                        .map_err(|e| env.error(e))?;
+                    env.rt.execution_start += env.rt.backend.now() - start;
+                    (env.rt.backend)
+                        .show_apng(bytes.into_iter().collect(), value.meta.label.as_deref())
+                        .map_err(|e| env.error(e))?;
+                }
+                #[cfg(not(feature = "apng"))]
+                return Err(env.error("APNG showing is not supported in this environment"));
             }
             SysOp::AudioPlay => {
                 #[cfg(feature = "audio_encode")]

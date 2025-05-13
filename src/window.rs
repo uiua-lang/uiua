@@ -818,6 +818,9 @@ impl App {
                     bytes,
                 }
             }
+            SmartOutput::Apng(..) => {
+                OutputItem::Error("APNGs are not supported in this environment".into())
+            }
             #[cfg(not(feature = "gif"))]
             SmartOutput::Gif(..) => {
                 OutputItem::Error("Gifs are not supported in this environment".into())

@@ -3250,7 +3250,7 @@ primitive!(
     ///
     /// See also: [&ims]
     (2, ImageEncode, Encoding, "img"),
-    /// Encode a gif into a byte array
+    /// Encode an array of image frames in a GIF-encoded byte array
     ///
     /// The first argument is a framerate in seconds.
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
@@ -3260,6 +3260,14 @@ primitive!(
     ///
     /// See also: [&gifs]
     (2, GifEncode, Encoding, "gif"),
+    /// Encode an array of image frames in an APNG-encoded byte array
+    ///
+    /// The first argument is a framerate in seconds.
+    /// The second argument is the APNG data and must be a rank 3 or 4 numeric array.
+    /// The rows of the array are the frames of the APNG, and their format must conform to that of [img].
+    ///
+    /// See also: [&apngs]
+    (2, ApngEncode, Encoding, "apng"),
     /// Encode audio into a byte array
     ///
     /// The first argument is the format, the second is the audio sample rate, and the third is the audio samples.

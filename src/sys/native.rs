@@ -717,6 +717,33 @@ impl SysBackend for NativeSys {
         })()
         .map_err(|e| e.to_string())
     }
+    #[cfg(all(feature = "apng", feature = "invoke"))]
+    fn show_apng(&self, apng_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
+        // #[cfg(feature = "window")]
+        // if crate::window::use_window() {
+        //     return crate::window::Request::Show(crate::media::SmartOutput::Apng(
+        //         apng_bytes,
+        //         _label.map(Into::into),
+        //     ))
+        //     .send();
+        // }
+        (move || -> std::io::Result<()> {
+            let temp_path = std::env::temp_dir().join("show.apng");
+            fs::write(&temp_path, apng_bytes)?;
+            let commands = open::commands(&temp_path);
+            if let Some(mut command) = commands.into_iter().next() {
+                if let Some(mut child) = NATIVE_SYS
+                    .gifs_child
+                    .lock()
+                    .replace(command.arg(&temp_path).spawn()?)
+                {
+                    child.kill()?;
+                }
+            }
+            Ok(())
+        })()
+        .map_err(|e| e.to_string())
+    }
     #[cfg(feature = "audio")]
     fn play_audio(&self, wav_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
         use hodaun::*;

@@ -5,6 +5,7 @@
 - Fix hang in error tests lsp
 
 # 0.17
+- `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`
 - Reserved modifier glyphs?

@@ -22,6 +22,7 @@ pub enum SmartOutput {
     Normal(String),
     Png(Vec<u8>, Option<String>),
     Gif(Vec<u8>, Option<String>),
+    Apng(Vec<u8>, Option<String>),
     Wav(Vec<u8>, Option<String>),
     Svg { svg: String, original: Value },
 }
@@ -151,9 +152,10 @@ pub(crate) fn image_decode(env: &mut Uiua) -> UiuaResult {
 pub(crate) fn gif_encode(env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "gif")]
     {
-        let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+        let framerate = env.pop(1)?.as_num(env, "Framerate must be a number")?;
         let value = env.pop(2)?;
-        let bytes = crate::media::value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
+        let bytes =
+            crate::media::value_to_gif_bytes(&value, framerate).map_err(|e| env.error(e))?;
         env.push(Array::<u8>::from(bytes.as_slice()));
         Ok(())
     }
@@ -175,6 +177,20 @@ pub(crate) fn gif_decode(env: &mut Uiua) -> UiuaResult {
     }
     #[cfg(not(feature = "gif"))]
     Err(env.error("GIF encoding is not supported in this environment"))
+}
+
+pub(crate) fn apng_encode(env: &mut Uiua) -> UiuaResult {
+    #[cfg(feature = "apng")]
+    {
+        let framerate = env.pop(1)?.as_num(env, "Framerate must be a number")?;
+        let value = env.pop(2)?;
+        let bytes =
+            crate::media::value_to_apng_bytes(&value, framerate).map_err(|e| env.error(e))?;
+        env.push(Array::<u8>::from(bytes));
+        Ok(())
+    }
+    #[cfg(not(feature = "apng"))]
+    Err(env.error("APNG encoding is not supported in this environment"))
 }
 
 pub(crate) fn audio_encode(env: &mut Uiua) -> UiuaResult {
@@ -715,6 +731,38 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     let mut num = Value::Num(Array::new(shape, data));
     num.compress();
     Ok((frame_rate, num))
+}
+
+#[doc(hidden)]
+#[cfg(feature = "apng")]
+pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoVec<u8>, String> {
+    use png::{ColorType, Encoder};
+    fn err(s: &'static str) -> impl Fn(png::EncodingError) -> String {
+        move |e| format!("Error {s}: {e}")
+    }
+
+    if value.row_count() == 0 {
+        return Err("Cannot convert empty array into APNG".into());
+    }
+    if value.rank() < 3 {
+        return Err("APNG array must be at least rank 3".into());
+    }
+    let frame_count = value.shape[0] as u32;
+    let height = value.shape[1] as u32;
+    let width = value.shape[2] as u32;
+    let mut buffer = EcoVec::new();
+    let mut encoder = Encoder::new(&mut buffer, width, height);
+    (encoder.set_animated(frame_count, 0)).map_err(err("marking as animated"))?;
+    (encoder.set_frame_delay(1, (frame_rate.round() as u16).max(1)))
+        .map_err(err("setting frame delay"))?;
+    encoder.set_color(ColorType::Rgba);
+    let mut writer = encoder.write_header().map_err(err("writing header"))?;
+    for row in value.rows() {
+        let image = value_to_image(&row)?.into_rgba8();
+        (writer.write_image_data(&image.into_raw())).map_err(err("writing frame"))?;
+    }
+    writer.finish().map_err(err("finishing encoding"))?;
+    Ok(buffer)
 }
 
 pub(crate) fn voxels(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Value> {

@@ -1868,10 +1868,10 @@ pub fn Editor<'a>(
                         </div>
                         <div title="Default format for displaying animation arrays">
                             "Animation:" <select on:change=on_select_animation_format>
-                                <option value="GIF" selected=get_animation_format()>
+                                <option value="GIF" selected={get_animation_format() == "GIF"}>
                                     "GIF"
                                 </option>
-                                <option value="APNG" selected=get_animation_format()>
+                                <option value="APNG" selected={get_animation_format() == "APNG"}>
                                     "APNG"
                                 </option>
                             </select>

@@ -33,16 +33,21 @@ impl SmartOutput {
     /// Convert a value to a SmartOutput
     ///
     /// Animations default to GIF
-    pub fn from_value(value: Value, backend: &dyn SysBackend) -> Self {
-        Self::from_value_impl(value, false, backend)
+    pub fn from_value(value: Value, frame_rate: f64, backend: &dyn SysBackend) -> Self {
+        Self::from_value_impl(value, frame_rate, false, backend)
     }
     /// Convert a value to a SmartOutput
     ///
     /// Animations default to APNG
-    pub fn from_value_prefer_apng(value: Value, backend: &dyn SysBackend) -> Self {
-        Self::from_value_impl(value, true, backend)
+    pub fn from_value_prefer_apng(value: Value, frame_rate: f64, backend: &dyn SysBackend) -> Self {
+        Self::from_value_impl(value, frame_rate, true, backend)
     }
-    fn from_value_impl(value: Value, prefer_apng: bool, backend: &dyn SysBackend) -> Self {
+    fn from_value_impl(
+        value: Value,
+        frame_rate: f64,
+        prefer_apng: bool,
+        backend: &dyn SysBackend,
+    ) -> Self {
         // Try to convert the value to audio
         #[cfg(feature = "audio_encode")]
         if value.row_count() >= 44100 / 4
@@ -67,9 +72,9 @@ impl SmartOutput {
         }
         // Try to convert the value to a gif or apng
         let animation = if prefer_apng {
-            Self::try_apng(&value).or_else(|| Self::try_gif(&value))
+            Self::try_apng(&value, frame_rate).or_else(|| Self::try_gif(&value, frame_rate))
         } else {
-            Self::try_gif(&value).or_else(|| Self::try_apng(&value))
+            Self::try_gif(&value, frame_rate).or_else(|| Self::try_apng(&value, frame_rate))
         };
         if let Some(anim) = animation {
             return anim;
@@ -91,12 +96,12 @@ impl SmartOutput {
         Self::Normal(value.show())
     }
     #[cfg(not(feature = "gif"))]
-    fn try_gif(value: &Value) -> Option<Self> {
+    fn try_gif(value: &Value, frame_rate: f64) -> Option<Self> {
         None
     }
     #[cfg(feature = "gif")]
-    fn try_gif(value: &Value) -> Option<Self> {
-        let bytes = value_to_gif_bytes(value, 16.0).ok()?;
+    fn try_gif(value: &Value, frame_rate: f64) -> Option<Self> {
+        let bytes = value_to_gif_bytes(value, frame_rate).ok()?;
         match value.shape.dims() {
             &[f, h, w] | &[f, h, w, _]
                 if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
@@ -108,12 +113,12 @@ impl SmartOutput {
         }
     }
     #[cfg(not(feature = "apng"))]
-    fn try_apng(value: &Value) -> Option<Self> {
+    fn try_apng(value: &Value, frame_rate: f64) -> Option<Self> {
         None
     }
     #[cfg(feature = "apng")]
-    fn try_apng(value: &Value) -> Option<Self> {
-        let bytes = value_to_apng_bytes(value, 16.0).ok()?;
+    fn try_apng(value: &Value, frame_rate: f64) -> Option<Self> {
+        let bytes = value_to_apng_bytes(value, frame_rate).ok()?;
         match value.shape.dims() {
             &[f, h, w] | &[f, h, w, _]
                 if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
@@ -194,10 +199,10 @@ pub(crate) fn image_decode(env: &mut Uiua) -> UiuaResult {
 pub(crate) fn gif_encode(env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "gif")]
     {
-        let framerate = env.pop(1)?.as_num(env, "Framerate must be a number")?;
+        let frame_rate = env.pop(1)?.as_num(env, "Framerate must be a number")?;
         let value = env.pop(2)?;
         let bytes =
-            crate::media::value_to_gif_bytes(&value, framerate).map_err(|e| env.error(e))?;
+            crate::media::value_to_gif_bytes(&value, frame_rate).map_err(|e| env.error(e))?;
         env.push(Array::<u8>::from(bytes.as_slice()));
         Ok(())
     }
@@ -224,10 +229,10 @@ pub(crate) fn gif_decode(env: &mut Uiua) -> UiuaResult {
 pub(crate) fn apng_encode(env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "apng")]
     {
-        let framerate = env.pop(1)?.as_num(env, "Framerate must be a number")?;
+        let frame_rate = env.pop(1)?.as_num(env, "Framerate must be a number")?;
         let value = env.pop(2)?;
         let bytes =
-            crate::media::value_to_apng_bytes(&value, framerate).map_err(|e| env.error(e))?;
+            crate::media::value_to_apng_bytes(&value, frame_rate).map_err(|e| env.error(e))?;
         env.push(Array::<u8>::from(bytes));
         Ok(())
     }

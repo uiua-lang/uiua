@@ -1161,7 +1161,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
         SmartOutput::from_value
     };
     for (i, value) in values.into_iter().enumerate() {
-        let value = match make_smart_output(value, io) {
+        let value = match make_smart_output(value, 24.0, io) {
             SmartOutput::Png(bytes, label) => {
                 stack.push(OutputItem::Image(bytes, label));
                 continue;

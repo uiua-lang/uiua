@@ -1227,7 +1227,7 @@ pub fn print_stack(stack: &[Value], color: bool) {
         _ = Request::Separator.send();
         _ = Request::ShowAll(
             (stack.iter())
-                .map(|v| SmartOutput::from_value(v.clone(), &NativeSys))
+                .map(|v| SmartOutput::from_value(v.clone(), 24.0, &NativeSys))
                 .collect(),
         )
         .send();

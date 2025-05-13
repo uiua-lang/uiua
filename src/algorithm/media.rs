@@ -27,9 +27,22 @@ pub enum SmartOutput {
     Svg { svg: String, original: Value },
 }
 
+const MIN_AUTO_IMAGE_DIM: usize = 30;
+
 impl SmartOutput {
     /// Convert a value to a SmartOutput
+    ///
+    /// Animations default to GIF
     pub fn from_value(value: Value, backend: &dyn SysBackend) -> Self {
+        Self::from_value_impl(value, false, backend)
+    }
+    /// Convert a value to a SmartOutput
+    ///
+    /// Animations default to APNG
+    pub fn from_value_prefer_apng(value: Value, backend: &dyn SysBackend) -> Self {
+        Self::from_value_impl(value, true, backend)
+    }
+    fn from_value_impl(value: Value, prefer_apng: bool, backend: &dyn SysBackend) -> Self {
         // Try to convert the value to audio
         #[cfg(feature = "audio_encode")]
         if value.row_count() >= 44100 / 4
@@ -41,7 +54,6 @@ impl SmartOutput {
             }
         }
         // Try to convert the value to an image
-        const MIN_AUTO_IMAGE_DIM: usize = 30;
         #[cfg(feature = "image")]
         if let Ok(image) = value_to_image(&value) {
             if image.width() >= MIN_AUTO_IMAGE_DIM as u32
@@ -53,18 +65,14 @@ impl SmartOutput {
                 }
             }
         }
-        // Try to convert the value to a gif
-        #[cfg(feature = "gif")]
-        if let Ok(bytes) = value_to_gif_bytes(&value, 16.0) {
-            match value.shape.dims() {
-                &[f, h, w] | &[f, h, w, _]
-                    if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
-                {
-                    let label = value.meta.label.as_ref().map(Into::into);
-                    return Self::Gif(bytes, label);
-                }
-                _ => {}
-            }
+        // Try to convert the value to a gif or apng
+        let animation = if prefer_apng {
+            Self::try_apng(&value).or_else(|| Self::try_gif(&value))
+        } else {
+            Self::try_gif(&value).or_else(|| Self::try_apng(&value))
+        };
+        if let Some(anim) = animation {
+            return anim;
         }
         // Try to convert the value to an svg
         if let Some(str) = value.as_string_opt() {
@@ -81,6 +89,40 @@ impl SmartOutput {
         }
         // Otherwise, just show the value
         Self::Normal(value.show())
+    }
+    #[cfg(not(feature = "gif"))]
+    fn try_gif(value: &Value) -> Option<Self> {
+        None
+    }
+    #[cfg(feature = "gif")]
+    fn try_gif(value: &Value) -> Option<Self> {
+        let bytes = value_to_gif_bytes(value, 16.0).ok()?;
+        match value.shape.dims() {
+            &[f, h, w] | &[f, h, w, _]
+                if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
+            {
+                let label = value.meta.label.as_ref().map(Into::into);
+                Some(Self::Gif(bytes, label))
+            }
+            _ => None,
+        }
+    }
+    #[cfg(not(feature = "apng"))]
+    fn try_apng(value: &Value) -> Option<Self> {
+        None
+    }
+    #[cfg(feature = "apng")]
+    fn try_apng(value: &Value) -> Option<Self> {
+        let bytes = value_to_apng_bytes(value, 16.0).ok()?;
+        match value.shape.dims() {
+            &[f, h, w] | &[f, h, w, _]
+                if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
+            {
+                let label = value.meta.label.as_ref().map(Into::into);
+                Some(Self::Apng(bytes.into_iter().collect(), label))
+            }
+            _ => None,
+        }
     }
 }
 

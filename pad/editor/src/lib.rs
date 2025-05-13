@@ -1632,6 +1632,11 @@ pub fn Editor<'a>(
         set_top_at_top(orientation);
         run(false, false);
     };
+    let on_select_animation_format = move |event: Event| {
+        let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
+        set_animation_format(&input.value());
+        run(false, false);
+    };
     let on_select_gayness = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         set_gayness(input.value().as_str().into());
@@ -1860,6 +1865,16 @@ pub fn Editor<'a>(
                         <div title="Automatically play audio">
                             "Autoplay audio:"
                             <input type="checkbox" checked=get_autoplay on:change=toggle_autoplay />
+                        </div>
+                        <div title="Default format for displaying animation arrays">
+                            "Animation:" <select on:change=on_select_animation_format>
+                                <option value="GIF" selected=get_animation_format()>
+                                    "GIF"
+                                </option>
+                                <option value="APNG" selected=get_animation_format()>
+                                    "APNG"
+                                </option>
+                            </select>
                         </div>
                         <div title="Show experimental primitive glyphs">
                             "Show experimental:"

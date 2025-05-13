@@ -1155,8 +1155,13 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
     let stdout = take(&mut *io.stdout.lock().unwrap());
     let mut stack = Vec::new();
     let value_count = values.len();
+    let make_smart_output = if get_animation_format() == "APNG" {
+        SmartOutput::from_value_prefer_apng
+    } else {
+        SmartOutput::from_value
+    };
     for (i, value) in values.into_iter().enumerate() {
-        let value = match SmartOutput::from_value(value, io) {
+        let value = match make_smart_output(value, io) {
             SmartOutput::Png(bytes, label) => {
                 stack.push(OutputItem::Image(bytes, label));
                 continue;
@@ -1508,6 +1513,13 @@ pub fn get_inlay_values() -> bool {
 }
 pub fn set_inlay_values(inlay_values: bool) {
     set_local_var("inlay-values", inlay_values);
+}
+
+pub fn get_animation_format() -> String {
+    get_local_var("animation-format", || "GIF".into())
+}
+pub fn set_animation_format(animation_format: &str) {
+    set_local_var("animation-format", animation_format);
 }
 
 pub fn get_april_fools_setting() -> bool {

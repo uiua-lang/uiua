@@ -3250,6 +3250,15 @@ primitive!(
     ///
     /// See also: [&ims]
     (2, ImageEncode, Encoding, "img"),
+    /// Encode an array of animation frames into a list of bytes
+    ///
+    /// The first argument is a string representing the format.
+    /// The second argument is a framerate in seconds.
+    /// The thied argument is the animation data and must be a rank 3 or 4 numeric array.
+    /// The rows of the array are the frames of the animation, and their format must conform to that of [img].
+    ///
+    /// See also: [&anims]
+    (3, AnimEncode, Encoding, "anim"),
     /// Encode an array of image frames in a GIF-encoded byte array
     ///
     /// The first argument is a framerate in seconds.

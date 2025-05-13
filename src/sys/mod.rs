@@ -452,6 +452,15 @@ sys_op! {
     ///
     /// See also: [img]
     (1(0), ImShow, Media, "&ims", "image - show", Mutating),
+    /// Show an animation
+    ///
+    /// The first argument is a string representing the format.
+    /// The second argument is a framerate in seconds.
+    /// The third argument is the animation data and must be a rank 3 or 4 numeric array.
+    /// The rows of the array are the frames of the animation, and their format must conform to that of [img].
+    ///
+    /// See also: [anim]
+    (3(0), AnimShow, Media, "&anims", "animation - show", Mutating),
     /// Show a gif
     ///
     /// The first argument is a framerate in seconds.
@@ -967,6 +976,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Show a GIF
     fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
         Err("Showing gifs is not supported in this environment".into())
+    }
+    /// Show an WebP
+    fn show_webp(&self, webp_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+        Err("Showing WebPs is not supported in this environment".into())
     }
     /// Show an APNG
     fn show_apng(&self, apng_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
@@ -1573,6 +1586,54 @@ impl SysOp {
                 }
                 #[cfg(not(feature = "image"))]
                 return Err(env.error("Image encoding is not supported in this environment"));
+            }
+            SysOp::AnimShow => {
+                let format = env.pop(1)?.as_string(env, "Format must be a string")?;
+                let frame_rate = env.pop(2)?.as_num(env, "Framerate must be a number")?;
+                let value = env.pop(3)?;
+                let start = env.rt.backend.now();
+                match format.as_str() {
+                    #[cfg(feature = "gif")]
+                    "gif" => {
+                        let bytes = crate::media::value_to_gif_bytes(&value, frame_rate)
+                            .map_err(|e| env.error(e))?;
+                        env.rt.execution_start += env.rt.backend.now() - start;
+                        (env.rt.backend)
+                            .show_gif(bytes, value.meta.label.as_deref())
+                            .map_err(|e| env.error(e))?;
+                    }
+                    #[cfg(not(feature = "gif"))]
+                    "gif" => {
+                        return Err(env.error("GIF showing is not supported in this environment"))
+                    }
+                    #[cfg(feature = "apng")]
+                    "apng" => {
+                        let bytes = crate::media::value_to_apng_bytes(&value, frame_rate)
+                            .map_err(|e| env.error(e))?;
+                        env.rt.execution_start += env.rt.backend.now() - start;
+                        (env.rt.backend)
+                            .show_apng(bytes.into_iter().collect(), value.meta.label.as_deref())
+                            .map_err(|e| env.error(e))?;
+                    }
+                    #[cfg(not(feature = "apng"))]
+                    "apng" => {
+                        return Err(env.error("APNG showing is not supported in this environment"))
+                    }
+                    #[cfg(feature = "webp")]
+                    "webp" => {
+                        let bytes = crate::media::value_to_webp_bytes(&value, frame_rate)
+                            .map_err(|e| env.error(e))?;
+                        env.rt.execution_start += env.rt.backend.now() - start;
+                        (env.rt.backend)
+                            .show_webp(bytes.into_iter().collect(), value.meta.label.as_deref())
+                            .map_err(|e| env.error(e))?;
+                    }
+                    #[cfg(not(feature = "webp"))]
+                    "webp" => {
+                        return Err(env.error("WebP showing is not supported in this environment"))
+                    }
+                    format => return Err(env.error(format!("Invalid format `{format}`"))),
+                }
             }
             SysOp::GifShow => {
                 #[cfg(feature = "gif")]

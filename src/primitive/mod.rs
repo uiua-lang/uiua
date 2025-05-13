@@ -785,6 +785,7 @@ impl Primitive {
                 env.monadic_ref_env(|value, env| value.to_xlsx(env).map(EcoVec::from))?
             }
             Primitive::ImageEncode => media::image_encode(env)?,
+            Primitive::AnimEncode => media::anim_encode(env)?,
             Primitive::GifEncode => media::gif_encode(env)?,
             Primitive::ApngEncode => media::apng_encode(env)?,
             Primitive::AudioEncode => media::audio_encode(env)?,

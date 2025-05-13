@@ -111,6 +111,7 @@ audio_encode = ["hound"]
 batteries = [
   "gif",
   "apng",
+  "webp",
   "image",
   "audio_encode",
   "csv",
@@ -164,6 +165,7 @@ terminal_image = ["viuer", "image", "icy_sixel"]
 tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
 web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "nokhwa"]
+webp = ["image"]
 window = ["eframe", "rmp-serde", "image", "native-dialog"]
 xlsx = ["calamine", "simple_excel_writer", "zip", "plist"]
 # Use system static libraries instead of building them

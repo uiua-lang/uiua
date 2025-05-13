@@ -196,6 +196,35 @@ pub(crate) fn image_decode(env: &mut Uiua) -> UiuaResult {
     Err(env.error("Image decoding is not supported in this environment"))
 }
 
+pub(crate) fn anim_encode(env: &mut Uiua) -> UiuaResult {
+    let format = env.pop(1)?.as_string(env, "Format must be a string")?;
+    let frame_rate = env.pop(2)?.as_num(env, "Framerate must be a number")?;
+    let value = env.pop(3)?;
+    let arr = match format.as_str() {
+        #[cfg(feature = "gif")]
+        "gif" => Array::<u8>::from_iter(
+            crate::media::value_to_gif_bytes(&value, frame_rate).map_err(|e| env.error(e))?,
+        ),
+        #[cfg(not(feature = "gif"))]
+        "gif" => return Err(env.error("GIF showing is not supported in this environment")),
+        #[cfg(feature = "apng")]
+        "apng" => Array::<u8>::from(
+            crate::media::value_to_apng_bytes(&value, frame_rate).map_err(|e| env.error(e))?,
+        ),
+        #[cfg(not(feature = "apng"))]
+        "apng" => return Err(env.error("APNG showing is not supported in this environment")),
+        #[cfg(feature = "webp")]
+        "webp" => Array::<u8>::from(
+            crate::media::value_to_webp_bytes(&value, frame_rate).map_err(|e| env.error(e))?,
+        ),
+        #[cfg(not(feature = "webp"))]
+        "webp" => return Err(env.error("WebP showing is not supported in this environment")),
+        format => return Err(env.error(format!("Invalid format `{format}`"))),
+    };
+    env.push(arr);
+    Ok(())
+}
+
 pub(crate) fn gif_encode(env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "gif")]
     {
@@ -809,6 +838,34 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
         (writer.write_image_data(&image.into_raw())).map_err(err("writing frame"))?;
     }
     writer.finish().map_err(err("finishing encoding"))?;
+    Ok(buffer)
+}
+
+#[doc(hidden)]
+#[cfg(feature = "webp")]
+pub(crate) fn value_to_webp_bytes(value: &Value, frame_rate: f64) -> Result<EcoVec<u8>, String> {
+    use image::{codecs::webp::WebPEncoder, ExtendedColorType, ImageError};
+    fn err(s: &'static str) -> impl Fn(ImageError) -> String {
+        move |e| format!("Error {s}: {e}")
+    }
+
+    if value.row_count() == 0 {
+        return Err("Cannot convert empty array into WebP".into());
+    }
+    if value.rank() < 3 {
+        return Err("WebP array must be at least rank 3".into());
+    }
+    let frame_count = value.shape[0] as u32;
+    let height = value.shape[1] as u32;
+    let width = value.shape[2] as u32;
+    let mut buffer = EcoVec::new();
+    let encoder = WebPEncoder::new_lossless(&mut buffer);
+    for row in value.rows() {
+        let image = value_to_image(&row)?.into_rgba8();
+        encoder
+            .encode(image.as_raw(), width, height, ExtendedColorType::Rgba8)
+            .map_err(err("encoding frame"))?;
+    }
     Ok(buffer)
 }
 

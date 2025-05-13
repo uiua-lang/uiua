@@ -31,7 +31,6 @@ pub enum ParseError {
     ModifierImportName,
     SplitInModifier,
     FlipInModifier,
-    LineTooLong(usize),
     RecursionLimit,
 }
 
@@ -102,20 +101,14 @@ impl fmt::Display for ParseError {
             ParseError::FlipInModifier => {
                 write!(f, "Line flipping is not allowed between modifier arguments")
             }
-            ParseError::LineTooLong(width) => write!(
-                f,
-                "Split line into multiple lines (heuristic: {}/{}) 😏",
-                width, ERROR_MAX_WIDTH
-            ),
             ParseError::RecursionLimit => write!(f, "Parsing recursion limit reached"),
         }
     }
 }
 
 const STYLE_MAX_WIDTH: usize = 40;
-const ADVICE_MAX_WIDTH: usize = 53;
-const WARNING_MAX_WIDTH: usize = 67;
-const ERROR_MAX_WIDTH: usize = 80;
+const ADVICE_MAX_WIDTH: usize = 60;
+const WARNING_MAX_WIDTH: usize = 80;
 
 impl Error for ParseError {}
 
@@ -133,7 +126,7 @@ pub fn parse(
         lex_errors: Vec<Sp<LexError>>,
         src: InputSrc,
     ) -> (Vec<Item>, Vec<Sp<ParseError>>, Vec<Diagnostic>) {
-        let mut errors: Vec<_> = lex_errors
+        let errors: Vec<_> = lex_errors
             .into_iter()
             .map(|e| e.map(ParseError::Lex))
             .collect();
@@ -187,10 +180,7 @@ pub fn parse(
                 let first = first.unwrap().clone();
                 let last = line.last().unwrap().span.clone();
                 let span = first.merge(last);
-                let (kind, face) = if heuristic > ERROR_MAX_WIDTH {
-                    errors.push(span.sp(ParseError::LineTooLong(heuristic)));
-                    continue;
-                } else if heuristic > WARNING_MAX_WIDTH {
+                let (kind, face) = if heuristic > WARNING_MAX_WIDTH {
                     (DiagnosticKind::Warning, '😤')
                 } else if heuristic > ADVICE_MAX_WIDTH {
                     (DiagnosticKind::Advice, '😠')

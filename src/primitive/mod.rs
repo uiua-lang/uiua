@@ -1784,6 +1784,9 @@ impl ImplPrimitive {
                 }
                 if depth == 0 {
                     env.exec(f)?;
+                } else if depth == max_rank && f.sig.args() == 1 {
+                    let xs = env.pop(1)?;
+                    zip::each1(f, xs, env)?;
                 } else {
                     zip::rows(f, depth - 1, inv, env)?;
                 }

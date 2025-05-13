@@ -456,7 +456,7 @@ pub fn each(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
+pub(crate) fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, ..)) = f_mon_fast_fn(&f.node, env) {
         let maybe_through_boxes = matches!(&xs, Value::Box(..));
         if !maybe_through_boxes {

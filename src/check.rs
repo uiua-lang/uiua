@@ -478,10 +478,6 @@ impl VirtualEnv {
                     self.push();
                 }
                 UnFill | SidedFill(_) => self.fill(args)?,
-                FortifyFill | FortifyUnfill => {
-                    let [f] = get_args(args)?;
-                    self.handle_sig(f);
-                }
                 UnBracket => {
                     let [f, g] = get_args(args)?;
                     self.handle_args_outputs(f.args() + g.args(), f.outputs() + g.outputs());
@@ -495,9 +491,18 @@ impl VirtualEnv {
                         .with_under(n * f.under_args(), n * f.under_outputs());
                     self.handle_sig(sig);
                 }
-                EachSub(_) | RowsSub(..) => {
+                EachSub(_) => {
                     let [f] = get_args_nodes(args)?;
                     self.sig_node(f)?;
+                }
+                RowsSub(sub, _) => {
+                    let [mut f] = get_args(args)?;
+                    f.update_args_outputs(|a, o| {
+                        let new_a = a.max(sub.side.and_then(|side| side.n).unwrap_or(0));
+                        let new_o = o + new_a - a;
+                        (new_a, new_o)
+                    });
+                    self.handle_sig(f);
                 }
                 UndoRows | UndoInventory => {
                     let [f] = get_args_nodes(args)?;

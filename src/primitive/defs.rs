@@ -2429,7 +2429,7 @@ primitive!(
     /// ex: ⍥⚂₁₀5
     ///
     /// `each``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
-    /// ex: ⌊×10 ∵⋅⚂ ⇡10
+    /// ex: ⌊×10 ≡⋅⚂ ⇡10
     /// ex: ⌊×10 ⊞⋅⋅⚂ .⇡10
     (0, Rand, Rng, ("random", '⚂'), Impure),
     /// Memoize a function
@@ -2437,9 +2437,9 @@ primitive!(
     /// If a function is [memo]ized, then its results are cached.
     /// Calling the function with the same arguments will return the cached result instead of recalculating it.
     /// ex: F ← +⌊×10⚂
-    ///   : ∵F [1 1 2 2 3 3]
+    ///   : ≡F [1 1 2 2 3 3]
     /// ex: F ← memo(+⌊×10⚂)
-    ///   : ∵F [1 1 2 2 3 3]
+    ///   : ≡F [1 1 2 2 3 3]
     /// In general, this should only be used with functions that perform a potentially expensive calculation.
     ([1], Memo, OtherModifier, "memo"),
     /// Run a function at compile time
@@ -2622,8 +2622,8 @@ primitive!(
     /// ex: type i
     /// ex: type "hello"
     /// ex: type □[5 6]
-    /// ex: ∵ type    {10 "dog" [1 2 3]}
-    ///   : ∵(type°□) {10 "dog" [1 2 3]}
+    /// ex: ≡type  {10 "dog" [1 2 3]}
+    ///   : ≡◇type {10 "dog" [1 2 3]}
     (1, Type, Misc, "type"),
     /// Get the current time in seconds
     ///
@@ -3091,7 +3091,7 @@ primitive!(
     /// ex: ⬚"x"°⬚@;csv "1;2;3\n4\n5,6;7"
     /// The decoding result will always be a rank-`2` array of boxed strings.
     /// You can use `each``try``parse``gap``identity` to convert the strings that represent numbers.
-    /// ex: ∵⍣⋕∘ °csv "#,Count\n1,5\n2,21\n3,8\n"
+    /// ex: ≡₀⍣⋕∘ °csv "#,Count\n1,5\n2,21\n3,8\n"
     /// If you know there are headers, you can use [un][join] to separate them.
     /// ex: ⊙⋕°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"
     /// You can easily create a [map] with the headers as keys.
@@ -3164,8 +3164,8 @@ primitive!(
     ///
     /// Append commas to whitespace for a more traditional notation:
     /// ex: -5↯2_2_3⇡12
-    ///   : ⍜⊜□⍚(⊂@,)∊" \n". repr # add commas
-    ///   : &p ⍜▽∵⋅@-=@¯.        # replace negate glyphs with minus signs
+    ///   : ⍜⊜□⍚(⊂@,)⊸∊" \n" repr # add commas
+    ///   : &p ⍜▽≡⋅@-⊸=@¯        # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
     /// Convert a value to its pretty-printed output representation
     ///
@@ -3655,8 +3655,6 @@ impl_primitive!(
     (2(1), ValidateType),
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
-    ([1], FortifyFill),
-    ([1], FortifyUnfill),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),

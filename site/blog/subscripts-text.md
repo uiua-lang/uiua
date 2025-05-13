@@ -55,11 +55,11 @@ Want to collapse an array to a certain rank? That's subscripted [`♭ deshape`](
 ⍉ ♭₂ ⇡2_2_3
 ```
 
-Want to call a function on all rank-N subarrays of an array? That's subscripted [`∵ each`](https://uiua.org/docs/each).
+Want to call a function on all rank-N subarrays of an array? That's subscripted [`≡ rows`](https://uiua.org/docs/rows).
 
 ```uiua
-∵₁□ °△2_3_4
-∵₂□ °△2_3_4
+≡₁□ °△2_3_4
+≡₂□ °△2_3_4
 ```
 
 But there's more than just messing with rank!

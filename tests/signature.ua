@@ -9,7 +9,6 @@ F ← |1 +1
 F ← |1 /+
 F ← |1 \+
 # Iteration
-F ← |1 ∵⇌
 F ← |1 ≡⇌
 # Table
 F ← |2 ⊞+

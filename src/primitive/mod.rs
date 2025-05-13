@@ -382,8 +382,6 @@ impl fmt::Display for ImplPrimitive {
             TagVariant => write!(f, "<tag variant>"),
             BothImpl(sub) => write!(f, "{Both}{sub}"),
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
-            FortifyFill => write!(f, "<fortify fill>"),
-            FortifyUnfill => write!(f, "<fortify unfill>"),
         }
     }
 }
@@ -546,6 +544,7 @@ impl Primitive {
             ),
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
             Over => format!("use {} or {} instead", Below.format(), Fork.format()),
+            Each => format!("use {} instead", Rows.format()),
             _ => return None,
         })
     }
@@ -1704,16 +1703,6 @@ impl ImplPrimitive {
             ImplPrimitive::UnDump => dump(ops, env, true)?,
             ImplPrimitive::UnFill => fill!(ops, None, env, with_unfill, without_unfill_but),
             &ImplPrimitive::SidedFill(side) => fill!(ops, side, env, with_fill, without_fill_but),
-            ImplPrimitive::FortifyFill => {
-                let [f] = get_ops(ops, env)?;
-                env.fortify_fill();
-                env.exec(f)?;
-            }
-            ImplPrimitive::FortifyUnfill => {
-                let [f] = get_ops(ops, env)?;
-                env.fortify_unfill();
-                env.exec(f)?;
-            }
             ImplPrimitive::ReduceTable => table::reduce_table(ops, env)?,
             ImplPrimitive::UnBracket => {
                 let [f, g] = get_ops(ops, env)?;
@@ -1766,33 +1755,38 @@ impl ImplPrimitive {
             }
             &ImplPrimitive::RowsSub(sub, inv) => {
                 let [f] = get_ops(ops, env)?;
-                let vals = env.top_n_mut(f.sig.args())?;
+                let arg_count = (f.sig.args()).max(sub.side.and_then(|side| side.n).unwrap_or(0));
+                let vals = env.top_n_mut(arg_count)?;
                 let max_rank = vals.iter().map(Value::rank).max().unwrap_or(0);
                 let depth = match sub.num {
-                    None => 0,
-                    Some(n) if n < 0 => n.unsigned_abs() as usize - 1,
-                    Some(n) => max_rank.saturating_sub(n as usize + 1),
+                    None => 1,
+                    Some(n) if n < 0 => n.unsigned_abs() as usize,
+                    Some(n) => max_rank.saturating_sub(n as usize),
                 };
                 if let Some(side) = sub.side {
                     let n = side.n.unwrap_or(1);
                     match side.side {
                         SubSide::Left => {
                             for val in vals.iter_mut().rev().take(n) {
-                                for _ in 0..depth + 1 {
+                                for _ in 0..depth {
                                     val.fix()
                                 }
                             }
                         }
                         SubSide::Right => {
                             for val in vals.iter_mut().take(n) {
-                                for _ in 0..depth + 1 {
+                                for _ in 0..depth {
                                     val.fix()
                                 }
                             }
                         }
                     }
                 }
-                zip::rows(f, depth, inv, env)?;
+                if depth == 0 {
+                    env.exec(f)?;
+                } else {
+                    zip::rows(f, depth - 1, inv, env)?;
+                }
             }
             ImplPrimitive::UndoRows | ImplPrimitive::UndoInventory => {
                 let [f] = get_ops(ops, env)?;

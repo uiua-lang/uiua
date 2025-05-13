@@ -590,7 +590,8 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "IteratingModifier",
-    "description": "Apply a function to each element of an array or arrays"
+    "description": "Apply a function to each element of an array or arrays",
+    "deprecated": true
   },
   "equals": {
     "ascii": "=",
@@ -660,8 +661,7 @@
     "args": 2,
     "outputs": 2,
     "class": "Stack",
-    "description": "Swap the top two values on the stack",
-    "deprecated": true
+    "description": "Swap the top two values on the stack"
   },
   "floor": {
     "glyph": "⌊",

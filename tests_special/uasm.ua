@@ -5,9 +5,9 @@
 {[] "" {} ×i[]}
 ⍤⤙≍ ⊙(⍚↘1) # No inline!
 
-⍤⤙≍ ↘1"S " @  # No inline!
+⍤⤙≍ ⊣"S " @  # No inline!
 
-F ← ∵⍣⋕()
+F ← ≡⍣⋕()
 ⍤⤙≍ {1 "bn"} F {"1" "bn"} # No inline!
 
 C ← ℂ3 4

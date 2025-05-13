@@ -104,7 +104,7 @@ You can put as many of these splitters in your code as you like, and the formatt
 If used in a binding, the code will be wrapped in `()`s.
 
 ```uiua
-F ← ⁅∵⋅⚂;;↯⟜⊚ # Format it!
+F ← ⁅≡₀⋅⚂;;↯⟜⊚ # Format it!
 F 5
 ```
 

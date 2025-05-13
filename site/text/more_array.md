@@ -125,22 +125,22 @@ One option is to simply chain [rows]() multiple times.
 ≡≡≡□ °△ 2_3_4
 ```
 
-This can get a bit unwieldy if an array has a lot of dimensions. You can instead use [numeric subscripts](/tutorial/morestack#subscripts) [rows]() to specify the depth of the operation.
+This can get a bit unwieldy if an array has a lot of dimensions. You can instead use [numeric subscripts](/tutorial/morestack#subscripts) [rows]() to specify the rank of the arrays you want to work on.
 
 ```uiua
-≡□ °△ 2_3_4
-≡₂□ °△ 2_3_4
-≡₃□ °△ 2_3_4
+≡₀□ °△ 2_3_4 # Scalars
+≡₁□ °△ 2_3_4 # Vectors
+≡₂□ °△ 2_3_4 # Matrices
+≡₃□ °△ 2_3_4 
 ```
 
-This is useful when you are approaching the array's structure from the top down, but what if you want to start at the bottom?
-
-Subscripted [each]() allows you to specify the rank of the arrays you want to apply the function to, regardless of the outer array's rank. Notice how the rank of the [box]()ed arrays in this example corresponds to the subscript.
+This is useful when you are approaching the array's structure from the bottom up, but what if you want to start at the top, like [rows]() normally does?
+This is what *negative* subscripts do. [rows]()`₋₁` is equivalent to normal [rows](), [rows]()`₋₂` is equivalent to `rows` `rows`, etc.
 
 ```uiua
-∵□ °△2_3_4
-∵₁□ °△2_3_4
-∵₂□ °△2_3_4
+≡₋₁□ °△2_3_4
+≡₋₂□ °△2_3_4
+≡₋₃□ °△2_3_4
 ```
 
 Sometimes you simply want to collapse the dimensions of an array to make it a certain rank. This can be done with subscripted [deshape]().

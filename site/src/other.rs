@@ -259,7 +259,7 @@ pub fn Optimizations() -> impl IntoView {
                 <tr><td><Prim prim=Reduce/></td></tr>
             </table>
         </div>
-        <p>"This optimization applies not just to "<Prim prim=Rows/>", but also "<Prim prim=Stencil/>", "<Prim prim=Each/>", "<Prims prims=[Rows, Rows]/>", "<Prims prims=[Rows, Rows, Rows]/>", etc."</p>
+        <p>"This optimization applies not just to "<Prim prim=Rows/>", but also "<Prim prim=Stencil/>", "<Prims prims=[Rows, Rows]/>", "<Prims prims=[Rows, Rows, Rows]/>", etc."</p>
 
         <Hd id="complexity">"Complexity"</Hd>
         <p>"Some combinations of functions are special-cased in the interpreter to run in less time complexity or in fewer operations than is implied by each function individually."</p>
@@ -575,7 +575,6 @@ pub fn Subscripts() -> impl IntoView {
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),
         subscript(Off, "First N values", "{⤚₂[⊙⊙∘] 1 2 3}"),
         subscript(Both, "Apply to N argument sets", "[∩₃+ 1 2 3 4 5 6]"),
-        subscript(Each, "Apply to rank N subarrays", "∵₁□ °△2_3_4"),
         subscript(Rows, "Apply to subarrays N deep", "≡₂□ °△2_3_4"),
         subscript(Inventory, "Apply to subarrays N deep", "⍚₂⇡ °△2_3"),
         subscript(Repeat, "Repetition count", "⍥₅(⊂⟜/+) [1 2]"),
@@ -604,11 +603,6 @@ pub fn Subscripts() -> impl IntoView {
             Inventory,
             "Fix left-most or right-most argument",
             "⍚⌞⊂ 1_2_3 4_5_6\n⍚⌟⊂ 1_2_3 4_5_6",
-        ),
-        subscript(
-            Each,
-            "Fix left-most or right-most argument",
-            "# Experimental!\n∵⌞⊂ 1_2 3_4\n∵⌟⊂ 1_2 3_4",
         ),
         subscript(
             Reach,

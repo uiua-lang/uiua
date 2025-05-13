@@ -1348,7 +1348,7 @@ fn TutorialMoreArray() -> impl IntoView {
                 number=2
                 prompt="joins the first argument to each list in the second argument"
                 example="0 +1°△3_4"
-                answer="∵₁⊂"
+                answer="≡₁⊂"
                 tests={&["0 [1 2 3]", r#"@| ⬚@ [["Hey""there""buddy"] [@a "bc" "def"]]"#, "η_π_τ ⇡2_2_2"]}
                 hidden="3 5"/>
         }.into_view(),
@@ -1424,7 +1424,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=1
             prompt="negates each number in a list that is not a multiple of 3"
             example="[1 2 3 4 5 6 7 8 9]"
-            answer="⍜▽¯ ≠0◿3."
+            answer="⍜▽¯ ≠0⊸◿3"
             tests={&["[3 0 1 8]", "[3 6 9 12 15 18 21 25 27]"]}
             hidden="[3 6 9 4]"/>
 
@@ -1432,7 +1432,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=2
             prompt="returns the last word of a string"
             example=r#""What's the last word?""#
-            answer=r#"▽ ⍜⇌\× ≠@ ."#
+            answer=r#"▽ ⍜⇌\× ⊸≠@ "#
             tests={&[r#""Um, I um, arrays""#, r#""I like trains""#]}
             hidden=r#"Wow"#/>
 
@@ -1440,7 +1440,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=3
             prompt="for every multiple of 3 in a list, multiplies the following number by 10"
             example="[1 2 3 4 5 6 7]"
-            answer="⍜▽(×10) ⬚0↻¯1 =0◿3."
+            answer="⍜▽(×10) ⬚0↻¯1 =0⊸◿3"
             tests={&["[2 9 3 8 7 1]", "[3 3 3 3]"]}
             hidden="[]"/>
 
@@ -1456,7 +1456,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=5
             prompt="reverses each word in a string but keeps the words in the same order"
             example=r#""get in the racecar""#
-            answer="⍜⊜□≡⇌ ≠@ ."
+            answer="⍜⊜□≡⇌ ⊸≠@ "
             tests={&[r#""arrays are neat""#, r#""wow mom""#]}
             hidden=r#""Wow, mom!""#/>
     }

@@ -25,7 +25,7 @@ use super::{fill_value_shapes, fixed_rows, multi_output, FixedRowsData, MultiOut
 
 pub(crate) type ValueMonFn = Rc<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 type ValueMon2Fn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<(Value, Value)>>;
-type ValueDyFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
+type ValueDyFn = Box<dyn Fn(Value, Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 
 fn mon_fn(f: impl Fn(Value, usize, &mut Uiua) -> UiuaResult<Value> + 'static) -> ValueMonFn {
     Rc::new(move |v, d, env| f(v, d, env))
@@ -335,7 +335,7 @@ fn spanned_dy_fn(
     span: usize,
     f: impl Fn(Value, Value, &Uiua) -> UiuaResult<Value> + 'static,
 ) -> ValueDyFn {
-    Box::new(move |a, b, _, _, env| env.with_span(span, |env| f(a, b, env)))
+    Box::new(move |a, b, _, env| env.with_span(span, |env| f(a, b, env)))
 }
 
 fn prim_dy_fast_fn(
@@ -364,9 +364,9 @@ fn prim_dy_fast_fn(
         Max => spanned_dy_fn(span, Value::max),
         Min => spanned_dy_fn(span, Value::min),
         Atan => spanned_dy_fn(span, Value::atan2),
-        Rotate if !b_filled => Box::new(move |a, mut b, ad, bd, env| {
+        Rotate if !b_filled => Box::new(move |a, mut b, depth, env| {
             env.with_span(span, |env| {
-                a.rotate_depth(&mut b, ad, bd, true, env)?;
+                a.rotate_depth(&mut b, depth, true, env)?;
                 Ok(b)
             })
         }),
@@ -383,9 +383,9 @@ fn impl_prim_dy_fast_fn(
     use std::boxed::Box;
     use ImplPrimitive::*;
     Some(match prim {
-        AntiRotate if !b_filled => Box::new(move |a, mut b, ad, bd, env| {
+        AntiRotate if !b_filled => Box::new(move |a, mut b, depth, env| {
             env.with_span(span, |env| {
-                a.rotate_depth(&mut b, ad, bd, false, env)?;
+                a.rotate_depth(&mut b, depth, false, env)?;
                 Ok(b)
             })
         }),
@@ -397,45 +397,25 @@ pub(crate) fn f_dy_fast_fn(
     nodes: &[Node],
     a_filled: bool,
     b_filled: bool,
-) -> Option<(ValueDyFn, usize, usize)> {
+) -> Option<(ValueDyFn, usize)> {
     use std::boxed::Box;
     use Primitive::*;
 
-    fn nest_dy_fast<F>(
-        (f, ad1, bd1): (F, usize, usize),
-        ad2: usize,
-        bd2: usize,
-    ) -> Option<(F, usize, usize)> {
-        if (ad1 as isize - ad2 as isize).signum() != (bd1 as isize - bd2 as isize).signum() {
-            return None;
-        }
-        Some((f, ad1 + ad2, bd1 + bd2))
-    }
-
     match nodes {
-        &[Node::Prim(prim, span)] => {
-            let f = prim_dy_fast_fn(prim, span, a_filled, b_filled)?;
-            return Some((f, 0, 0));
-        }
+        &[Node::Prim(prim, span)] => Some((prim_dy_fast_fn(prim, span, a_filled, b_filled)?, 0)),
         &[Node::ImplPrim(prim, span)] => {
-            let f = impl_prim_dy_fast_fn(prim, span, a_filled, b_filled)?;
-            return Some((f, 0, 0));
+            Some((impl_prim_dy_fast_fn(prim, span, a_filled, b_filled)?, 0))
         }
         [Node::Mod(Rows, args, _)] => {
-            return nest_dy_fast(
-                f_dy_fast_fn(args[0].node.as_slice(), a_filled, b_filled)?,
-                1,
-                1,
-            )
+            f_dy_fast_fn(args[0].node.as_slice(), a_filled, b_filled).map(|(f, d)| (f, d + 1))
         }
         [Node::Prim(Flip, _), rest @ ..] => {
-            let (f, a, b) = f_dy_fast_fn(rest, a_filled, b_filled)?;
-            let f = Box::new(move |a, b, ad, bd, env: &mut Uiua| f(b, a, bd, ad, env));
-            return Some((f, a, b));
+            let (f, depth) = f_dy_fast_fn(rest, a_filled, b_filled)?;
+            let f = Box::new(move |a, b, depth, env: &mut Uiua| f(b, a, depth, env));
+            Some((f, depth))
         }
-        _ => (),
+        _ => None,
     }
-    None
 }
 
 pub fn each(ops: Ops, env: &mut Uiua) -> UiuaResult {
@@ -512,7 +492,7 @@ fn each2(f: SigNode, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult
     ) {
         let xrank = xs.rank();
         let yrank = ys.rank();
-        let val = f(xs, ys, xrank, yrank, env)?;
+        let val = f(xs, ys, xrank.min(yrank), env)?;
         env.push(val);
     } else {
         let outputs = f.sig.outputs();
@@ -753,6 +733,17 @@ fn rows2(
         }
         return Ok(());
     }
+    if !inv {
+        if let Some((f, f_depth)) = f_dy_fast_fn(
+            f.node.as_slice(),
+            env.fill().value_for(&xs).is_some(),
+            env.fill().value_for(&ys).is_some(),
+        ) {
+            let val = f(xs, ys, f_depth + depth + 1, env)?;
+            env.push(val);
+            return Ok(());
+        }
+    }
     match (xs.row_count(), ys.row_count()) {
         (_, 1) => {
             ys.undo_fix();
@@ -853,17 +844,6 @@ fn rows2(
                     }
                     .format(),
                 )));
-            }
-            if !inv {
-                if let Some((f, a, b)) = f_dy_fast_fn(
-                    f.node.as_slice(),
-                    env.fill().value_for(&xs).is_some(),
-                    env.fill().value_for(&ys).is_some(),
-                ) {
-                    let val = f(xs, ys, a + depth + 1, b + depth + 1, env)?;
-                    env.push(val);
-                    return Ok(());
-                }
             }
             let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
             let mut new_rows = multi_output(

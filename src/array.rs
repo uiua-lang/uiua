@@ -774,6 +774,21 @@ impl<T: Clone> Array<T> {
             meta: self.meta.clone(),
         }
     }
+    #[track_caller]
+    #[allow(dead_code)]
+    pub(crate) fn depth_slices(&self, depth: usize) -> impl ExactDoubleIterator<Item = &[T]> {
+        let row_len: usize = self.shape[depth..].iter().product();
+        self.data.chunks_exact(row_len)
+    }
+    #[track_caller]
+    #[allow(dead_code)]
+    pub(crate) fn depth_slices_mut(
+        &mut self,
+        depth: usize,
+    ) -> impl ExactDoubleIterator<Item = &mut [T]> {
+        let row_len: usize = self.shape[depth..].iter().product();
+        self.data.as_mut_slice().chunks_exact_mut(row_len)
+    }
 }
 
 impl Array<u8> {

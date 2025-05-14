@@ -2,7 +2,7 @@ use std::{
     borrow::Cow,
     fmt,
     hash::Hash,
-    ops::{Deref, DerefMut, RangeBounds},
+    ops::{Deref, DerefMut, Index, RangeBounds},
 };
 
 use serde::*;
@@ -82,6 +82,20 @@ impl Shape {
     /// Get the row shape slice
     pub fn row_slice(&self) -> &[usize] {
         &self.dims[self.len().min(1)..]
+    }
+    /// Split into two shapes
+    #[track_caller]
+    pub fn split(mut self, at: usize) -> (Shape, Shape) {
+        let dims = self.dims.split_off(at);
+        (self, Shape { dims })
+    }
+    /// Construct a subshape
+    pub fn subshape<R>(&self, range: R) -> Shape
+    where
+        [usize]: Index<R>,
+        Self: for<'a> From<&'a <[usize] as Index<R>>::Output>,
+    {
+        Shape::from(&self.dims.as_slice()[range])
     }
     /// Get the number of elements
     pub fn elements(&self) -> usize {

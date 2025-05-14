@@ -9,7 +9,7 @@ use std::{
     borrow::Cow,
     cmp::Ordering,
     hash::{DefaultHasher, Hash, Hasher},
-    iter::{once, repeat_n},
+    iter::{once, repeat_n, repeat_with},
     mem::{replace, swap, take},
 };
 
@@ -82,104 +82,6 @@ impl Value {
             }
             (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
         }
-    }
-}
-
-impl<T: Clone + std::fmt::Debug + Send + Sync> Array<T> {
-    pub(crate) fn depth_slices<U: Clone + std::fmt::Debug + Send + Sync, C: FillContext>(
-        &mut self,
-        other: &Array<U>,
-        mut a_depth: usize,
-        mut b_depth: usize,
-        ctx: &C,
-        mut f: impl FnMut(&[usize], &mut [T], &[usize], &[U], &C) -> Result<(), C::Error>,
-    ) -> Result<(), C::Error> {
-        let a = self;
-        let mut b = other;
-        let mut local_b;
-        a_depth = a_depth.min(a.rank());
-        b_depth = b_depth.min(b.rank());
-        let a_prefix = &a.shape[..a_depth];
-        let b_prefix = &b.shape[..b_depth];
-        if !a_prefix.iter().zip(b_prefix).all(|(a, b)| a == b) {
-            while a.shape.starts_with(&[1]) {
-                if a_depth == 0 {
-                    break;
-                }
-                a.shape.remove(0);
-                a_depth -= 1;
-            }
-            if b.shape.starts_with(&[1]) {
-                local_b = b.clone();
-                while local_b.shape.starts_with(&[1]) {
-                    if b_depth == 0 {
-                        break;
-                    }
-                    local_b.shape.remove(0);
-                    b_depth -= 1;
-                }
-                b = &local_b;
-            }
-            let a_prefix = &a.shape[..a_depth];
-            let b_prefix = &b.shape[..b_depth];
-            if !a_prefix.iter().zip(b_prefix).all(|(a, b)| a == b) {
-                return Err(ctx.error(format!(
-                    "Cannot combine arrays with shapes {} and {} \
-                    because shape prefixes {} and {} are not compatible",
-                    a.shape,
-                    b.shape,
-                    FormatShape(a_prefix),
-                    FormatShape(b_prefix)
-                )));
-            }
-        }
-
-        match a_depth.cmp(&b_depth) {
-            Ordering::Equal => {}
-            Ordering::Less => {
-                for &b_dim in b.shape[a_depth..b_depth].iter().rev() {
-                    let mut new_a_data = EcoVec::with_capacity(a.element_count() * b_dim);
-                    for row in a.row_slices() {
-                        for _ in 0..b_dim {
-                            new_a_data.extend_from_slice(row);
-                        }
-                    }
-                    a.data = new_a_data.into();
-                    a.shape.prepend(b_dim);
-                    a_depth += 1;
-                }
-            }
-            Ordering::Greater => {
-                for &a_dim in a.shape[b_depth..a_depth].iter().rev() {
-                    let mut new_b_data = EcoVec::with_capacity(b.element_count() * a_dim);
-                    for row in b.row_slices() {
-                        for _ in 0..a_dim {
-                            new_b_data.extend_from_slice(row);
-                        }
-                    }
-                    local_b = b.clone();
-                    local_b.data = new_b_data.into();
-                    local_b.shape.prepend(a_dim);
-                    b = &local_b;
-                    b_depth += 1;
-                }
-            }
-        }
-
-        let a_row_shape = &a.shape[a_depth..];
-        let b_row_shape = &b.shape[b_depth..];
-        let a_row_len: usize = a_row_shape.iter().product();
-        let b_row_len: usize = b_row_shape.iter().product();
-        if a_row_len == 0 || b_row_len == 0 {
-            return Ok(());
-        }
-        for (a, b) in (a.data.as_mut_slice())
-            .chunks_exact_mut(a_row_len)
-            .zip(b.data.as_slice().chunks_exact(b_row_len))
-        {
-            f(a_row_shape, a, b_row_shape, b, ctx)?;
-        }
-        Ok(())
     }
 }
 
@@ -1001,16 +903,15 @@ pub(super) fn pad_keep_counts<'a>(
 impl Value {
     /// Use this value to `rotate` another
     pub fn rotate(&self, rotated: &mut Self, env: &Uiua) -> UiuaResult {
-        self.rotate_depth(rotated, 0, 0, true, env)
+        self.rotate_depth(rotated, 0, true, env)
     }
     pub(crate) fn anti_rotate(&self, rotated: &mut Self, env: &Uiua) -> UiuaResult {
-        self.rotate_depth(rotated, 0, 0, false, env)
+        self.rotate_depth(rotated, 0, false, env)
     }
     pub(crate) fn rotate_depth(
         &self,
         rotated: &mut Self,
-        mut a_depth: usize,
-        mut b_depth: usize,
+        depth: usize,
         forward: bool,
         env: &Uiua,
     ) -> UiuaResult {
@@ -1028,29 +929,21 @@ impl Value {
             Ok(ints)
         };
         rotated.match_fill(env);
-        a_depth = a_depth.min(self.rank());
-        b_depth = b_depth.min(rotated.rank());
-        if self.rank() - a_depth > 1 {
-            a_depth = self.rank() - 1;
-            b_depth = self.rank() - 1;
-            for dim in self.shape.iter().take(self.rank() - 1).rev() {
-                rotated.reshape_scalar(Ok(*dim as isize), false, env)?;
-            }
-        }
         match rotated {
-            Value::Num(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, forward, env)?,
-            Value::Byte(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, forward, env)?,
-            Value::Complex(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, forward, env)?,
-            Value::Char(b) => b.rotate_depth(by_ints()?, b_depth, a_depth, forward, env)?,
-            Value::Box(b) if b.rank() == b_depth => {
-                let row_shape: Shape = self.shape.iter().skip(a_depth).copied().collect();
-                for (rot, Boxed(val)) in
-                    self.row_shaped_slices(row_shape).zip(b.data.as_mut_slice())
+            Value::Num(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
+            Value::Byte(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
+            Value::Complex(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
+            Value::Char(b) => b.rotate_depth(by_ints()?, depth, forward, env)?,
+            Value::Box(b) if b.rank() == depth => {
+                let row_shape: Shape = self.shape.iter().skip(depth).copied().collect();
+                for (rot, Boxed(val)) in repeat_with(|| self.row_shaped_slices(row_shape.clone()))
+                    .flatten()
+                    .zip(b.data.as_mut_slice())
                 {
-                    rot.rotate_depth(val, 0, 0, forward, env)?;
+                    rot.rotate_depth(val, 0, forward, env)?;
                 }
             }
-            Value::Box(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, forward, env)?,
+            Value::Box(a) => a.rotate_depth(by_ints()?, depth, forward, env)?,
         }
         rotated.meta.take_sorted_flags();
         Ok(())
@@ -1060,43 +953,106 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// `rotate` this array by the given amount
     pub fn rotate(&mut self, by: Array<isize>, forward: bool, env: &Uiua) -> UiuaResult {
-        self.rotate_depth(by, 0, 0, forward, env)
+        self.rotate_depth(by, 0, forward, env)
     }
     pub(crate) fn rotate_depth(
         &mut self,
         by: Array<isize>,
         depth: usize,
-        by_depth: usize,
         forward: bool,
         env: &Uiua,
     ) -> UiuaResult {
-        let mut filled = false;
+        // println!("rotate_depth: {depth}");
         if !forward && env.scalar_unfill::<T>().is_ok() {
             return Err(env.error("Cannot invert filled rotation"));
         }
-        let fill = env.scalar_fill::<T>();
-        self.depth_slices(&by, depth, by_depth, env, |ash, a, bsh, b, env| {
-            if bsh.len() > 1 {
-                return Err(env.error(format!("Cannot rotate by rank {} array", bsh.len())));
+        let fill = env.scalar_fill::<T>().ok();
+
+        // Expand the array if doing multiple rotations
+        if by.rank().saturating_sub(depth) > 1 {
+            for &bd in by.shape.iter().rev().skip(1) {
+                self.reshape_scalar(Ok(bd as isize), false, env)?;
             }
-            if b.len() > ash.len() {
-                return Err(env.error(format!(
-                    "Cannot rotate rank {} array with index of length {}",
-                    ash.len(),
-                    b.len()
-                )));
+        }
+
+        // Handles depth and fixed axes
+        fn recur<T: Clone>(
+            bysh: &[usize],
+            by: &[isize],
+            shape: &[usize],
+            rotated: &mut [T],
+            depth: usize,
+            fill: Option<&T>,
+            env: &Uiua,
+        ) -> UiuaResult {
+            if by.is_empty() || rotated.is_empty() {
+                return Ok(());
             }
-            rotate(b, ash, a);
-            if let Ok(fill) = &fill {
-                fill_shift(b, ash, a, fill.value.clone());
-                filled = true;
+            // println!("depth: {depth}, bysh: {bysh:?}, shape: {shape:?}");
+            match bysh {
+                [] if depth == 0 => rotate_maybe_fill(by, shape, rotated, fill),
+                [_] if depth == 0 => {
+                    if by.len() > shape.len() {
+                        return Err(env.error(format!(
+                            "Cannot rotate rank {} array with index of length {}",
+                            shape.len(),
+                            by.len()
+                        )));
+                    }
+                    rotate_maybe_fill(by, shape, rotated, fill);
+                }
+                [] => {
+                    let shape = &shape[1..];
+                    let row_len = shape.iter().product::<usize>();
+                    for chunk in rotated.chunks_exact_mut(row_len) {
+                        recur(&[], by, shape, chunk, depth.saturating_sub(1), fill, env)?;
+                    }
+                }
+                [1, rest @ ..] => {
+                    let shape = &shape[1..];
+                    let row_len = shape.iter().product::<usize>();
+                    for chunk in rotated.chunks_exact_mut(row_len) {
+                        recur(rest, by, shape, chunk, depth.saturating_sub(1), fill, env)?;
+                    }
+                }
+                [b, rest @ ..] => {
+                    if *b != shape[0] {
+                        return Err(env.error(format!(
+                            "Shapes {} and {} are not compatible for rotation",
+                            FormatShape(bysh),
+                            FormatShape(shape)
+                        )));
+                    }
+                    let by_row_len = rest.iter().product::<usize>();
+                    let shape = &shape[1..];
+                    let row_len = shape.iter().product::<usize>();
+                    for (by, rot) in by
+                        .chunks_exact(by_row_len)
+                        .zip(rotated.chunks_exact_mut(row_len))
+                    {
+                        recur(rest, by, shape, rot, depth.saturating_sub(1), fill, env)?;
+                    }
+                }
             }
             Ok(())
-        })?;
-        if filled {
+        }
+
+        recur(
+            &by.shape,
+            &by.data,
+            &self.shape,
+            self.data.as_mut_slice(),
+            depth,
+            fill.as_ref().map(|fv| &fv.value),
+            env,
+        )?;
+
+        if fill.is_some() {
             self.meta.reset_flags();
         }
-        if depth == 0 {
+        if by.rank().saturating_sub(depth) > 1 {
+            self.meta.take_map_keys();
+        } else if depth == 0 {
             if let Some(keys) = self.meta.map_keys_mut() {
                 let by = by.data[0];
                 keys.rotate(by);
@@ -1104,6 +1060,13 @@ impl<T: ArrayValue> Array<T> {
         }
         self.meta.take_sorted_flags();
         Ok(())
+    }
+}
+
+fn rotate_maybe_fill<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: Option<&T>) {
+    rotate(by, shape, data);
+    if let Some(fill) = fill {
+        fill_shift(by, shape, data, fill.clone());
     }
 }
 

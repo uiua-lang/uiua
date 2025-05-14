@@ -1244,7 +1244,7 @@ impl ImplPrimitive {
                     if amount.rank() > 0 && amount.row_count() > val.rank() {
                         amount.drop_n(amount.row_count() - val.rank());
                     }
-                    amount.rotate_depth(&mut val, depth, depth, false, env)?;
+                    amount.rotate_depth(&mut val, depth, false, env)?;
                     env.push(val);
                 } else {
                     let end = env.stack_height() - n;
@@ -1259,9 +1259,9 @@ impl ImplPrimitive {
                             if amount.rank() > 0 && amount.row_count() > val.rank() {
                                 amount.drop_n(amount.row_count() - val.rank());
                             }
-                            amount.rotate_depth(val, depth, depth, false, env)?;
+                            amount.rotate_depth(val, depth, false, env)?;
                         } else if val.rank() == max_rank {
-                            amount.rotate_depth(val, depth, depth, false, env)?;
+                            amount.rotate_depth(val, depth, false, env)?;
                         }
                     }
                     for val in vals {

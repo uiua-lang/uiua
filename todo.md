@@ -4,6 +4,7 @@
 - Fix hang in error tests lsp
 
 # 0.17
+- Array pack sugar
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

@@ -1865,10 +1865,52 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// Call a function with its arguments axes reversed
+    /// Call a function with its arguments' axes reversed
     ///
+    /// Uiua primitives tend to treat axes near the front of the shape as spanning items in a collection. Axes near the end of the shape are often treated as the items or components of the items.
+    /// Consider a matrix of shape `N×2`. We can think of this as a list of `N` 2D vectors.
+    /// ex: [1_2 2_0 3_4]
+    /// Because the "list" part of the shape is the first axis, we can easily append or remove items from the list.
+    /// ex: ⊂ 0_3 [1_2 2_0 3_4]
+    /// However, if we wanted to shift all of the vectors by the same amount, naive [add]ing doesn't work.
+    /// ex! + 2_4 [1_2 2_0 3_4]
+    /// This is because [add] expects one of the shapes to be a prefix of the other, and `[2]` is not a prefix of `[3 2]`.
+    /// One option is to use [fix]. This adds a length-1 axis to the first argument, and [add] knows to extend it.
+    /// ex: + ¤2_4 [1_2 2_0 3_4]
+    /// But what if our list of vectors is actually a table? [fix] works, but look closely. The result is actually not what we want!
+    /// ex: + ¤2_4 [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
+    /// To make it work again, we need to [fix] a second time.
+    /// ex: + ¤¤2_4 [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
+    /// But if we actually had a list of matrices, adding a matrix to each list item correctly would require going back to a single [fix].
+    /// ex: + ¤[0_1 1_0] [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
+    /// The problem here is that the number of times we need to [fix] is highly dependent on the rank and interpretation of the arguments.
+    /// This is because because dyadic pervasive functions in Uiua operate on the leading axes of their arguments rather than the trailing ones.
+    /// [evert] reverses a function's arguments' axes so that the leading axes are the trailing ones. It reverses them back when the function is done.
+    /// With this, we can use a single function for all of our shift operations!
+    /// ex: # Experimental!
+    ///   : ⧋+ 2_4 [1_2 2_0 3_4]
+    ///   : ⧋+ 2_4 [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
+    ///   : ⧋+ [0_1 1_0] [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
+    /// And it's not just pervasives. Suppose we wanted to elevate our table of 2D vectors to 3D. We could [evert][join].
+    /// ex: # Experimental!
+    ///   : ⧋⊂⊙0 [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
+    /// The classic [divide][on][range] idiom generates `N` numbers between `0` and `1`.
+    /// ex: ÷⟜⇡4
+    /// But it doesn't work for multidimensional ranges.
+    /// ex! ÷⟜⇡4_4
+    /// [evert] makes it work with any rank!
+    /// ex: # Experimental!
+    ///   : ⧋÷⟜⇡4
+    ///   : ⧋÷⟜⇡4_4
+    ///   : ⧋÷⟜⇡2_4_4
     ///
-    ([1], Evert, OtherModifier, ("evert", '⟓'), { experimental: true }),
+    /// While [evert] can technically be achieved with [under] and [orient], the spelling can be a bit long and is different for different numbers of arguments.
+    /// ex: # Experimental!
+    ///   : ⍜∩⍜°⤸⇌+ 2_4 [1_2 2_0 3_4]
+    ///   :      ⧋+ 2_4 [1_2 2_0 3_4]
+    ///
+    /// The word "evert" means to turn something inside out.
+    ([1], Evert, OtherModifier, ("evert", '⧋'), { experimental: true }),
     /// Unbox the arguments to a function before calling it
     ///
     /// ex:  ⊂ □[1 2 3] □[4 5 6]

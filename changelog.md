@@ -59,6 +59,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This prevents the details of the compiling environment being used instead of the details from the actual running environment
   - Deprecrated: `Os`, `Family`, `Arch`, `ExeExt`, `DllExt`, `Sep`, `NumProcs`
   - Replacements: `os`, `osfamily`, `arch`, `exeext`, `dllext`, `pathsep`, `numprocs`
+- Add experimental [`evert ⧋`](https://uiua.org/docs/evert) modifier for operating on the last axes of arrays.
 - Add experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) for finding sequential indices of each row of an array in another
 - Add experimental [lexical ordering](https://uiua.org/docs/experimental#lexical-ordering) syntax
   - This enables some function packs and array notation to execute in the order they are normally read

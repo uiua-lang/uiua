@@ -620,6 +620,14 @@
     "class": "Constant",
     "description": "The number of radians in a quarter circle"
   },
+  "evert": {
+    "glyph": "⧋",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Call a function with its arguments' axes reversed",
+    "experimental": true
+  },
   "exeext": {
     "args": 0,
     "outputs": 1,

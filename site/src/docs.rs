@@ -25,7 +25,6 @@ pub enum DocsPage {
     Design,
     Technical,
     Install,
-    AllFunctions,
     Uiuisms,
     Changelog,
     RightToLeft,
@@ -47,7 +46,6 @@ impl IntoParam for DocsPage {
             "design" => Ok(Self::Design),
             "technical" => Ok(Self::Technical),
             "install" => Ok(Self::Install),
-            "all-functions" => Ok(Self::AllFunctions),
             "isms" => Ok(Self::Uiuisms),
             "changelog" => Ok(Self::Changelog),
             "rtl" => Ok(Self::RightToLeft),
@@ -83,7 +81,6 @@ pub fn Docs() -> impl IntoView {
             }
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
-            DocsPage::AllFunctions => AllFunctions().into_view(),
             DocsPage::Uiuisms => Uiuisms().into_view(),
             DocsPage::Changelog => Changelog().into_view(),
             DocsPage::RightToLeft => RightToLeft().into_view(),
@@ -288,7 +285,6 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
                     placeholder="Search by name, glyph, or category..."/>
                 { move || clear_button.get() }
             </div>
-            <A href="/docs/all-functions">"Scrollable List"</A>
         </div>
         { move || results.get() }
         <div style="height: 85vh;"></div>

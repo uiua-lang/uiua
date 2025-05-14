@@ -1,8 +1,7 @@
 use leptos::*;
-use leptos_meta::*;
 use leptos_router::*;
 use uiua::{PrimClass, PrimDocFragment, PrimDocLine, Primitive, SysOp};
-use uiua_editor::{lang, Editor};
+use uiua_editor::Editor;
 
 use crate::{Hd, Prim, Prims};
 
@@ -129,36 +128,6 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
                 _ => View::default(),
             } }
         </div>
-    }
-}
-
-#[component]
-pub fn AllFunctions() -> impl IntoView {
-    let (list, set_list) =
-        create_signal(view!(<h3 class="running-text">"Generating list..."</h3>).into_view());
-    set_timeout(
-        move || {
-            set_list.set(
-                Primitive::non_deprecated()
-                    .map(|p| {
-                        view! {
-                            <br/>
-                            <hr/>
-                            <PrimDocs prim=p/>
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .into_view(),
-            )
-        },
-        Default::default(),
-    );
-    view! {
-        <Title text=format!("All Functions - {} Docs", lang())/>
-        <h1>"All Functions"</h1>
-        <p>"This is a list of every built-in function in "{lang}", provided for your scrolling pleasure."</p>
-        <p>"For a searchable list, see the "<A href="/docs#functions">"main docs page"</A>"."</p>
-        { move || list.get() }
     }
 }
 

@@ -801,19 +801,16 @@ pub fn unfft(env: &mut Uiua) -> UiuaResult {
 
 #[cfg(feature = "fft")]
 pub fn fft(env: &mut Uiua) -> UiuaResult {
-    fft_impl(env, rustfft::FftPlanner::plan_fft_forward)
+    fft_impl(env, false)
 }
 
 #[cfg(feature = "fft")]
 pub fn unfft(env: &mut Uiua) -> UiuaResult {
-    fft_impl(env, rustfft::FftPlanner::plan_fft_inverse)
+    fft_impl(env, true)
 }
 
 #[cfg(feature = "fft")]
-fn fft_impl(
-    env: &mut Uiua,
-    plan: fn(&mut rustfft::FftPlanner<f64>, usize) -> std::sync::Arc<dyn rustfft::Fft<f64>>,
-) -> UiuaResult {
+fn fft_impl(env: &mut Uiua, reverse: bool) -> UiuaResult {
     use bytemuck::must_cast_slice_mut;
 
     use rustfft::{num_complex::Complex64, FftPlanner};
@@ -832,6 +829,12 @@ fn fft_impl(
         env.push(arr);
         return Ok(());
     }
+
+    let plan = if reverse {
+        FftPlanner::plan_fft_inverse
+    } else {
+        FftPlanner::plan_fft_forward
+    };
 
     for _ in 0..arr.rank() {
         arr.transpose();
@@ -855,6 +858,9 @@ fn fft_impl(
             }
         }
     }
+    arr.meta.take_sorted_flags();
+    arr.meta.take_value_flags();
+    arr.validate();
     env.push(arr);
     Ok(())
 }

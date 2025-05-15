@@ -28,8 +28,8 @@ use crate::fill::FillValue;
 /// This allows them to be split into chunks without copying the data.
 pub struct CowSlice<T> {
     data: EcoVec<T>,
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
 }
 
 impl<T> CowSlice<T> {
@@ -50,11 +50,11 @@ impl<T> CowSlice<T> {
     }
     #[inline]
     pub fn as_slice(&self) -> &[T] {
-        &self.data[self.start..self.end]
+        &self.data[self.start as usize..self.end as usize]
     }
     #[inline]
     pub fn len(&self) -> usize {
-        self.end - self.start
+        self.end as usize - self.start as usize
     }
     #[inline]
     pub fn is_unique(&mut self) -> bool {
@@ -72,14 +72,14 @@ impl<T: Clone> CowSlice<T> {
         Self {
             data: EcoVec::from_elem(elem, len),
             start: 0,
-            end: len,
+            end: len as u32,
         }
     }
     pub fn truncate(&mut self, len: usize) {
         if self.is_unique() {
-            self.data.truncate(self.start + len);
+            self.data.truncate(self.start as usize + len);
         }
-        self.end = (self.start + len).min(self.end);
+        self.end = (self.start + len as u32).min(self.end);
     }
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         if !self.data.is_unique() {
@@ -87,9 +87,9 @@ impl<T: Clone> CowSlice<T> {
             new_data.extend_from_slice(&*self);
             self.data = new_data;
             self.start = 0;
-            self.end = self.data.len();
+            self.end = self.data.len() as u32;
         }
-        &mut self.data.make_mut()[self.start..self.end]
+        &mut self.data.make_mut()[self.start as usize..self.end as usize]
     }
     pub fn extend_from_slice(&mut self, other: &[T]) {
         self.modify(|vec| vec.extend_from_slice(other))
@@ -100,13 +100,13 @@ impl<T: Clone> CowSlice<T> {
         R: RangeBounds<usize>,
     {
         let start = match range.start_bound() {
-            Bound::Included(&start) => self.start + start,
-            Bound::Excluded(&start) => self.start + start + 1,
+            Bound::Included(&start) => self.start + start as u32,
+            Bound::Excluded(&start) => self.start + start as u32 + 1,
             Bound::Unbounded => self.start,
         };
         let end = match range.end_bound() {
-            Bound::Included(&end) => self.start + end + 1,
-            Bound::Excluded(&end) => self.start + end,
+            Bound::Included(&end) => self.start + end as u32 + 1,
+            Bound::Excluded(&end) => self.start + end as u32,
             Bound::Unbounded => self.end,
         };
         assert!(start <= end);
@@ -129,11 +129,11 @@ impl<T: Clone> CowSlice<T> {
             self.len() / size
         };
         (0..count).map(move |i| {
-            let start = self.start + (i * size);
+            let start = self.start + (i * size) as u32;
             Self {
                 data: self.data.clone(),
                 start,
-                end: start + size,
+                end: start + size as u32,
             }
         })
     }
@@ -142,9 +142,9 @@ impl<T: Clone> CowSlice<T> {
     where
         F: FnOnce(&mut EcoVec<T>) -> R,
     {
-        if self.data.is_unique() && self.start == 0 && self.end == self.data.len() {
+        if self.data.is_unique() && self.start == 0 && self.end == self.data.len() as u32 {
             let res = f(&mut self.data);
-            self.end = self.data.len();
+            self.end = self.data.len() as u32;
             res
         } else {
             let mut vec = EcoVec::from(&**self);
@@ -158,9 +158,9 @@ impl<T: Clone> CowSlice<T> {
     where
         F: FnOnce(&mut EcoVec<T>) -> R,
     {
-        if self.data.is_unique() && self.end == self.data.len() {
+        if self.data.is_unique() && self.end == self.data.len() as u32 {
             let res = f(&mut self.data);
-            self.end = self.data.len();
+            self.end = self.data.len() as u32;
             res
         } else {
             let mut vec = EcoVec::from(&**self);
@@ -357,7 +357,7 @@ fn cow_slice_deref_mut() {
 
 impl<T: Clone> From<CowSlice<T>> for Vec<T> {
     fn from(mut slice: CowSlice<T>) -> Self {
-        if slice.data.is_unique() && slice.start == 0 && slice.end == slice.data.len() {
+        if slice.data.is_unique() && slice.start == 0 && slice.end == slice.data.len() as u32 {
             slice.data.into_iter().collect()
         } else {
             slice.to_vec()
@@ -369,7 +369,7 @@ impl<T: Clone> From<EcoVec<T>> for CowSlice<T> {
     fn from(data: EcoVec<T>) -> Self {
         Self {
             start: 0,
-            end: data.len(),
+            end: data.len() as u32,
             data,
         }
     }
@@ -377,7 +377,7 @@ impl<T: Clone> From<EcoVec<T>> for CowSlice<T> {
 
 impl<T: Clone> From<CowSlice<T>> for EcoVec<T> {
     fn from(mut slice: CowSlice<T>) -> Self {
-        if slice.data.is_unique() && slice.start == 0 && slice.end == slice.data.len() {
+        if slice.data.is_unique() && slice.start == 0 && slice.end == slice.data.len() as u32 {
             slice.data
         } else {
             slice.as_slice().into()
@@ -389,7 +389,7 @@ impl<'a, T: Clone> From<&'a [T]> for CowSlice<T> {
     fn from(slice: &'a [T]) -> Self {
         Self {
             start: 0,
-            end: slice.len(),
+            end: slice.len() as u32,
             data: slice.into(),
         }
     }
@@ -399,7 +399,7 @@ impl<T: Clone, const N: usize> From<[T; N]> for CowSlice<T> {
     fn from(array: [T; N]) -> Self {
         Self {
             start: 0,
-            end: N,
+            end: N as u32,
             data: array.into(),
         }
     }
@@ -473,8 +473,8 @@ impl<T: Clone> IntoIterator for CowSlice<T> {
     fn into_iter(self) -> Self::IntoIter {
         CowSliceIntoIter {
             data: self.data,
-            start: self.start,
-            end: self.end,
+            start: self.start as usize,
+            end: self.end as usize,
         }
     }
 }

@@ -212,6 +212,10 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// A Uiua identifier
 pub type Ident = EcoString;
 
+fn is_default<T: Default + PartialEq>(v: &T) -> bool {
+    v == &T::default()
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::*;

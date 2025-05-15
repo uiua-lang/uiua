@@ -3486,7 +3486,7 @@ macro_rules! impl_primitive {
             $($args:literal)?
             $(($outputs:expr))?
             $([$margs:expr])?,
-            $variant:ident
+            $variant:ident $(($($inner:ident),* $(,)?))?
             $(, $purity:ident)?
         )
     ),* $(,)?) => {
@@ -3497,13 +3497,11 @@ macro_rules! impl_primitive {
         pub enum ImplPrimitive {
             $(
                 $(#[$attr])*
-                $variant,
+                $variant $(($($inner),*))?,
             )*
-            DeshapeSub(i32),
             UndoDeshape(Option<i32>),
             EachSub(i32),
             RowsSub(Subscript<i32>, bool),
-            TransposeN(i32),
             UndoTransposeN(usize, i32),
             UndoReverse { n: usize, all: bool },
             UndoRotate(usize),
@@ -3513,7 +3511,6 @@ macro_rules! impl_primitive {
             BySub(usize),
             WithSub(usize),
             OffSub(usize),
-            NBits(usize),
             SidedFill(SubSide),
             SidedEncodeBytes(SubSide),
             DecodeBytes(Option<SubSide>),
@@ -3526,30 +3523,26 @@ macro_rules! impl_primitive {
         impl ImplPrimitive {
             pub fn args(&self) -> Option<usize> {
                 Some(match self {
-                    $($(ImplPrimitive::$variant => $args,)?)*
-                    ImplPrimitive::DeshapeSub(_) => 1,
+                    $($(ImplPrimitive::$variant {..}  => $args,)?)*
                     ImplPrimitive::UndoDeshape(_) => 2,
-                    ImplPrimitive::TransposeN(_) => 1,
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n + 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n,
-                    ImplPrimitive::NBits(_) => 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
                     _ => return None
                 })
             }
             pub fn outputs(&self) -> Option<usize> {
                 Some(match self {
-                    $($(ImplPrimitive::$variant => $outputs,)?)*
+                    $($(ImplPrimitive::$variant {..} => $outputs,)?)*
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n,
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n + 1,
-                    ImplPrimitive::NBits(_) => 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
@@ -3704,6 +3697,9 @@ impl_primitive!(
     (2, MatrixDiv),
     (2, RangeStart),
     // Implementation details
+    (1, NBits(usize)),
+    (1, DeshapeSub(i32)),
+    (1, TransposeN(i32)),
     (1, Utf16),
     (1, Retropose),
     ([2], RepeatWithInverse),

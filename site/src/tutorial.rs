@@ -637,7 +637,6 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             prompt="prepends an array as an item to a list of boxed arrays"
             example="\"Hi\" {\"how\" \"are\" \"ya\"}"
             answer="⊂□"
-            best_answer="□₂"
             tests={&["1_2_3 {4_5 [6]}", "[] {[] []}"]}
             hidden="1 {2 3}"/>
     }

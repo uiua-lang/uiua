@@ -25,6 +25,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    algorithm::ga::GeoSpace,
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},
@@ -221,7 +222,7 @@ enum ScopeKind {
     /// A test scope between `---`s
     Test,
     /// A `geo` scope
-    Geo,
+    Geo(GeoSpace),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2107,7 +2108,7 @@ impl Compiler {
         span: &CodeSpan,
     ) -> Result<Primitive, ImplPrimitive> {
         use Primitive::*;
-        if self.in_geo() {
+        if let Some(_space) = self.geo_space() {
             match prim {
                 Dup | Flip => {}
                 Fork | Bracket | Both => {}
@@ -2749,15 +2750,15 @@ impl Compiler {
             )
         })
     }
-    fn in_geo(&self) -> bool {
+    fn geo_space(&self) -> Option<GeoSpace> {
         for scope in self.scopes() {
             match scope.kind {
-                ScopeKind::Geo => return true,
+                ScopeKind::Geo(dims) => return Some(dims),
                 ScopeKind::Function => {}
                 _ => break,
             }
         }
-        false
+        None
     }
 }
 

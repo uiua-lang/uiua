@@ -1,6 +1,8 @@
 //! Compiler code for modifiers
 #![allow(clippy::redundant_closure_call)]
 
+use crate::algorithm::ga::GaFlavor;
+
 use super::*;
 use algebra::{derivative, integral};
 use invert::InversionError;
@@ -1370,8 +1372,47 @@ impl Compiler {
                 }
             }
             Geometric => {
-                let (_, (sn, _)) =
-                    self.in_scope(ScopeKind::Geo, |comp| comp.monadic_modifier_op(modified))?;
+                let space = if let Some(sub) = subscript {
+                    let sub = self.validate_subscript(sub);
+                    let dims = sub.value.num.map(|n| {
+                        let mut n = self.positive_subscript(n, Geometric, &sub.span);
+                        const MAX_DIMS: usize = 4;
+                        if n > MAX_DIMS {
+                            self.add_error(
+                                sub.span.clone(),
+                                format!("Max geometric algebra dimensions is currently {MAX_DIMS}"),
+                            );
+                            n = MAX_DIMS;
+                        }
+                        n as u8
+                    });
+                    let flavor = if let Some(side) = sub.value.side {
+                        if side.n.is_some() {
+                            self.add_error(
+                                sub.span.clone(),
+                                format!("{} does not support side quantifiers", Geometric.format()),
+                            );
+                        }
+                        match side.side {
+                            SubSide::Right => GaFlavor::Projective,
+                            SubSide::Left => {
+                                self.add_error(
+                                    sub.span,
+                                    format!("{} does not support left side", Geometric.format()),
+                                );
+                                GaFlavor::Vanilla
+                            }
+                        }
+                    } else {
+                        GaFlavor::Vanilla
+                    };
+                    GeoSpace { dims, flavor }
+                } else {
+                    GeoSpace::default()
+                };
+                let (_, (sn, _)) = self.in_scope(ScopeKind::Geo(space), |comp| {
+                    comp.monadic_modifier_op(modified)
+                })?;
                 sn.node
             }
             _ => return Ok(None),

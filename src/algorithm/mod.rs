@@ -23,7 +23,7 @@ use crate::{
 
 mod dyadic;
 pub mod encode;
-mod ga;
+pub mod ga;
 pub mod groups;
 pub mod loops;
 pub mod map;

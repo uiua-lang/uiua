@@ -216,10 +216,12 @@ enum ScopeKind {
     Temp(Option<MacroLocal>),
     /// A binding scope
     Binding,
-    /// A function scope
+    /// A function scope between some delimiters
     Function,
     /// A test scope between `---`s
     Test,
+    /// A `geo` scope
+    Geo,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2099,10 +2101,37 @@ impl Compiler {
         self.handle_primitive_experimental(prim, span);
         self.handle_primitive_deprecation(prim, span);
     }
+    fn translate_primitive(
+        &mut self,
+        prim: Primitive,
+        span: &CodeSpan,
+    ) -> Result<Primitive, ImplPrimitive> {
+        use Primitive::*;
+        if self.in_geo() {
+            match prim {
+                Dup | Flip => {}
+                Fork | Bracket | Both => {}
+                On | By | With | Off => {}
+                Above | Below => {}
+                Slf | Backward => {}
+                Stack => {}
+                Sys(_) => {}
+                prim => self.add_error(
+                    span.clone(),
+                    format!("{} is not valid in {}", prim.format(), Geometric.format()),
+                ),
+            }
+        }
+        Ok(prim)
+    }
     fn primitive(&mut self, prim: Primitive, span: CodeSpan) -> Node {
         self.validate_primitive(prim, &span);
+        let prim = self.translate_primitive(prim, &span);
         let span = self.add_span(span);
-        Node::Prim(prim, span)
+        match prim {
+            Ok(prim) => Node::Prim(prim, span),
+            Err(impl_prim) => Node::ImplPrim(impl_prim, span),
+        }
     }
     #[allow(clippy::match_single_binding, unused_parens)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
@@ -2117,15 +2146,16 @@ impl Compiler {
                     );
                     self.modified(*m, Some(scr.map(Into::into)))?
                 }
-                Modifier::Primitive(prim) => match prim {
-                    _ => {
+                Modifier::Primitive(prim) => match self.translate_primitive(prim, &m.modifier.span)
+                {
+                    Ok(prim) => {
                         if !matches!(
                             prim,
                             (Both | Bracket)
                                 | (Reach | On | By | With | Off)
                                 | (Rows | Each | Inventory)
                                 | (Repeat | Tuples | Stencil)
-                                | (Fill)
+                                | (Fill | Geometric)
                         ) {
                             self.add_error(
                                 m.modifier.span.clone().merge(scr.span.clone()),
@@ -2134,11 +2164,40 @@ impl Compiler {
                         }
                         self.modified(*m, Some(scr.map(Into::into)))?
                     }
+                    Err(prim) => {
+                        self.add_error(
+                            m.modifier.span.clone().merge(scr.span.clone()),
+                            format!("Subscripts are not implemented for {prim}"),
+                        );
+                        self.modified(*m, Some(scr.map(Into::into)))?
+                    }
                 },
             },
-            Word::Primitive(prim) if prim.class() == PrimClass::DyadicPervasive => {
+            Word::Primitive(prim) => match self.translate_primitive(prim, &span) {
+                Ok(prim) => self.subscript_prim(prim, sub.word.span, scr)?,
+                Err(prim) => {
+                    self.add_error(span.clone(), "Subscripts are not allowed in this context");
+                    let span = self.add_span(span);
+                    Node::ImplPrim(prim, span)
+                }
+            },
+            _ => {
+                self.add_error(span.clone(), "Subscripts are not allowed in this context");
+                self.word(sub.word)?
+            }
+        })
+    }
+    fn subscript_prim(
+        &mut self,
+        prim: Primitive,
+        span: CodeSpan,
+        scr: Sp<Subscript>,
+    ) -> UiuaResult<Node> {
+        use Primitive::*;
+        Ok(match prim {
+            prim if prim.class() == PrimClass::DyadicPervasive => {
                 let Some(nos) = self.subscript_n_or_side(&scr, prim.format()) else {
-                    return self.word(sub.word);
+                    return Ok(self.primitive(prim, span));
                 };
                 match nos {
                     SubNOrSide::N(n) => {
@@ -2162,16 +2221,16 @@ impl Compiler {
                     }
                 }
             }
-            Word::Primitive(EncodeBytes) => {
+            EncodeBytes => {
                 let Some(side) = self.subscript_side_only(&scr, EncodeBytes.format()) else {
-                    return self.word(sub.word);
+                    return Ok(self.primitive(EncodeBytes, span));
                 };
-                let span = self.add_span(sub.word.span);
+                let span = self.add_span(span);
                 Node::ImplPrim(ImplPrimitive::SidedEncodeBytes(side), span)
             }
-            Word::Primitive(prim) => {
+            prim => {
                 let Some(n) = self.subscript_n_only(&scr, prim.format()) else {
-                    return self.word(sub.word);
+                    return Ok(self.primitive(prim, span));
                 };
                 match prim {
                     prim if prim.sig().is_some_and(|sig| sig == (2, 1))
@@ -2352,10 +2411,6 @@ impl Compiler {
                         self.primitive(prim, span)
                     }
                 }
-            }
-            _ => {
-                self.add_error(span.clone(), "Subscripts are not allowed in this context");
-                self.word(sub.word)?
             }
         })
     }
@@ -2693,6 +2748,16 @@ impl Compiler {
                 format!("Cannot infer function signature: {e}"),
             )
         })
+    }
+    fn in_geo(&self) -> bool {
+        for scope in self.scopes() {
+            match scope.kind {
+                ScopeKind::Geo => return true,
+                ScopeKind::Function => {}
+                _ => break,
+            }
+        }
+        false
     }
 }
 

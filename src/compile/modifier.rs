@@ -1369,6 +1369,11 @@ impl Compiler {
                     }
                 }
             }
+            Geometric => {
+                let (_, (sn, _)) =
+                    self.in_scope(ScopeKind::Geo, |comp| comp.monadic_modifier_op(modified))?;
+                sn.node
+            }
             _ => return Ok(None),
         }))
     }

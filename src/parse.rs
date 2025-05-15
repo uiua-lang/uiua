@@ -1235,11 +1235,9 @@ impl Parser<'_> {
             }
             let span = start.merge(end);
             span.sp(Word::MultilineFormatString(lines))
-        } else if let Some(arr) = self.array() {
-            arr.map(Word::Array)
         } else if let Some(spaces) = self.spaces() {
             spaces
-        } else if let Some(word) = self.func() {
+        } else if let Some(word) = self.func_or_array() {
             word
         } else if let Some(span) = self.exact(Semicolon.into()) {
             span.sp(Word::FlipLine)
@@ -1268,48 +1266,6 @@ impl Parser<'_> {
             }
         }
         Some(word)
-    }
-    fn array(&mut self) -> Option<Sp<Arr>> {
-        let mut boxes = false;
-        let reset = self.index;
-        let down_span = self.exact(DownArrow);
-        let start = if let Some(start) = self.exact(OpenBracket.into()) {
-            start
-        } else if let Some(start) = self.exact(OpenCurly.into()) {
-            boxes = true;
-            start
-        } else {
-            self.index = reset;
-            return None;
-        };
-        let has_newline = self.ignore_whitespace();
-        let mut lines = self.items(ItemsKind::Function);
-        if has_newline {
-            lines.insert(0, Item::Words(Vec::new()));
-        }
-        let end = self.expect_close(if boxes { CloseCurly } else { CloseBracket }.into());
-        let span = start.merge(end.span);
-        let arr = Arr {
-            down_span,
-            lines,
-            boxes,
-            closed: end.value,
-        };
-        if !boxes && arr_is_normal_di(&arr) {
-            self.diagnostics.push(Diagnostic::new(
-                format!(
-                    "Prefer `{}` ({}) over `[{}{}]`",
-                    Primitive::Couple,
-                    Primitive::Couple.name(),
-                    Primitive::Dip,
-                    Primitive::Identity
-                ),
-                span.clone(),
-                DiagnosticKind::Style,
-                self.inputs.clone(),
-            ));
-        }
-        Some(span.sp(arr))
     }
     fn num(&mut self) -> Option<Sp<(NumWord, String)>> {
         let reset = self.index;
@@ -1570,84 +1526,118 @@ impl Parser<'_> {
         }
         None
     }
-    fn func(&mut self) -> Option<Sp<Word>> {
+    fn func_or_array(&mut self) -> Option<Sp<Word>> {
         let reset = self.index;
         let down_span = self.exact(DownArrow);
-        Some(if let Some(mut start) = self.exact(OpenParen.into()) {
-            // Match initial function contents
-            let first = self.func_contents();
-            // Try to match pack branches
-            let mut branches = Vec::new();
-            while let Some(start) = self.exact(Bar.into()) {
-                let (signature, lines, span) = self.func_contents();
-                let span = if let Some(span) = span {
-                    start.merge(span)
-                } else {
-                    start
-                };
-                branches.push(span.sp(Func {
-                    signature,
-                    lines,
-                    closed: true,
-                }))
-            }
-            let end = self.expect_close(CloseParen.into());
-            if let Some(last) = branches.last_mut() {
-                last.span.merge_with(end.span.clone());
-            }
-            let (first_sig, first_lines, first_func_span) = first;
-            let mut outer_span = start.clone().merge(end.span);
-            if branches.is_empty() {
-                // Normal func
-                let func = Func {
-                    signature: first_sig,
-                    lines: first_lines,
-                    closed: end.value,
-                };
-                let reset = self.index;
-                let caret_span = self.exact(Caret.into());
-                if let Some(ident) = self
-                    .ident()
-                    .filter(|ident| ident.value.chars().all(|c| "!‼".contains(c)))
-                {
-                    let func = outer_span.clone().sp(func);
-                    outer_span = outer_span.merge(ident.span.clone());
-                    outer_span.sp(Word::InlineMacro(InlineMacro {
-                        func,
-                        caret_span,
-                        ident,
-                    }))
-                } else {
-                    self.index = reset;
-                    outer_span.sp(Word::Func(func))
-                }
-            } else {
-                // Function pack
-                let first_span = if first_lines.len() > 1 {
-                    if let Some(first_span) = first_lines.iter().find_map(Item::span) {
-                        let last_span = first_lines.iter().rev().find_map(Item::span).unwrap();
-                        start.start = first_span.start;
-                        start.end = last_span.end;
-                    }
-                    start
-                } else {
-                    first_func_span.unwrap_or(start)
-                };
-                let first = first_span.sp(Func {
-                    signature: first_sig,
-                    lines: first_lines,
-                    closed: true,
-                });
-                branches.insert(0, first);
-                outer_span.sp(Word::Pack(FunctionPack {
-                    down_span,
-                    branches,
-                    closed: end.value,
-                }))
-            }
+        let mut is_array = false;
+        let mut boxes = false;
+        let mut start = if let Some(start) = self.exact(OpenParen.into()) {
+            start
+        } else if let Some(start) = self.exact(OpenBracket.into()) {
+            is_array = true;
+            start
+        } else if let Some(start) = self.exact(OpenCurly.into()) {
+            is_array = true;
+            boxes = true;
+            start
         } else {
             self.index = reset;
             return None;
+        };
+        // Match initial function contents
+        let first = self.func_contents();
+        // Try to match pack branches
+        let mut branches = Vec::new();
+        while let Some(start) = self.exact(Bar.into()) {
+            let (signature, lines, span) = self.func_contents();
+            let span = if let Some(span) = span {
+                start.merge(span)
+            } else {
+                start
+            };
+            branches.push(span.sp(Func {
+                signature,
+                lines,
+                closed: true,
+            }))
+        }
+        let end = self.expect_close(
+            if is_array {
+                if boxes {
+                    CloseCurly
+                } else {
+                    CloseBracket
+                }
+            } else {
+                CloseParen
+            }
+            .into(),
+        );
+        if let Some(last) = branches.last_mut() {
+            last.span.merge_with(end.span.clone());
+        }
+        let (first_sig, first_lines, first_func_span) = first;
+        let mut outer_span = start.clone().merge(end.span);
+        Some(if branches.is_empty() {
+            // Normal func
+            let reset = self.index;
+            let caret_span = self.exact(Caret.into());
+            if let Some(ident) = self
+                .ident()
+                .filter(|ident| !is_array && ident.value.chars().all(|c| "!‼".contains(c)))
+            {
+                let func = outer_span.clone().sp(Func {
+                    signature: first_sig,
+                    lines: first_lines,
+                    closed: end.value,
+                });
+                outer_span = outer_span.merge(ident.span.clone());
+                outer_span.sp(Word::InlineMacro(InlineMacro {
+                    func,
+                    caret_span,
+                    ident,
+                }))
+            } else {
+                self.index = reset;
+                outer_span.sp(if is_array {
+                    Word::Array(Arr {
+                        down_span,
+                        lines: first_lines,
+                        boxes,
+                        closed: end.value,
+                    })
+                } else {
+                    Word::Func(Func {
+                        signature: first_sig,
+                        lines: first_lines,
+                        closed: end.value,
+                    })
+                })
+            }
+        } else {
+            // Function pack
+            let first_span = if first_lines.len() > 1 {
+                if let Some(first_span) = first_lines.iter().find_map(Item::span) {
+                    let last_span = first_lines.iter().rev().find_map(Item::span).unwrap();
+                    start.start = first_span.start;
+                    start.end = last_span.end;
+                }
+                start
+            } else {
+                first_func_span.unwrap_or(start)
+            };
+            let first = first_span.sp(Func {
+                signature: first_sig,
+                lines: first_lines,
+                closed: true,
+            });
+            branches.insert(0, first);
+            outer_span.sp(Word::Pack(FunctionPack {
+                down_span,
+                is_array: is_array.then_some(boxes),
+                branches,
+                closed: end.value,
+            }))
         })
     }
     fn func_contents(&mut self) -> FunctionContents {

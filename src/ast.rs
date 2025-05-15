@@ -671,6 +671,8 @@ impl fmt::Debug for Func {
 pub struct FunctionPack {
     /// The span of preceding `↓`
     pub down_span: Option<CodeSpan>,
+    /// Whether this is an array pack (and whether it boxes)
+    pub is_array: Option<bool>,
     /// The branches of the pack
     pub branches: Vec<Sp<Func>>,
     /// Whether a closing parenthesis was found

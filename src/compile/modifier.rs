@@ -28,7 +28,7 @@ impl Compiler {
                 add `# Experimental!` to the top of the file."
             });
         }
-        match &modifier.value {
+        let mut node = match &modifier.value {
             Modifier::Macro(..) => {
                 let new = Modified {
                     modifier: modifier.clone(),
@@ -313,8 +313,24 @@ impl Compiler {
                     format!("{m} cannot use a function pack"),
                 ));
             }
+        }?;
+        if let Some(boxes) = pack.is_array {
+            let sig = self.sig_of(&node, span)?;
+            let span = self.add_span(span.clone());
+            if sig.outputs() == 2 && !boxes {
+                node.push(Node::Prim(Primitive::Couple, span));
+            } else if sig.outputs() != 0 {
+                node = Node::Array {
+                    len: sig.outputs(),
+                    boxed: boxes,
+                    inner: node.into(),
+                    allow_ext: false,
+                    prim: None,
+                    span,
+                }
+            }
         }
-        .map(Some)
+        Ok(Some(node))
     }
     #[allow(clippy::collapsible_match)]
     pub(crate) fn modified(

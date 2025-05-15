@@ -1443,7 +1443,11 @@ impl Formatter<'_> {
         let start_indent = (self.output.lines().last()).map_or(0, |line| line.chars().count());
         let indent = self.config.multiline_indent * depth;
 
-        self.output.push('(');
+        self.output.push(match pack.is_array {
+            None => '(',
+            Some(false) => '[',
+            Some(true) => '{',
+        });
 
         if pack.branches.iter().all(|br| !br.value.is_multiline()) {
             // If all branches are single-line, we can put multiple branches on the same line
@@ -1550,7 +1554,11 @@ impl Formatter<'_> {
                 }
             }
         }
-        self.output.push(')');
+        self.output.push(match pack.is_array {
+            None => ')',
+            Some(false) => ']',
+            Some(true) => '}',
+        });
     }
 }
 

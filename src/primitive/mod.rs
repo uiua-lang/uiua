@@ -248,7 +248,7 @@ impl fmt::Display for ImplPrimitive {
             AntiKeep => write!(f, "{Anti}{Keep}"),
             AntiRotate => write!(f, "{Anti}{Rotate}"),
             UnJoin | UnJoinShape | UnJoinShape2 => write!(f, "{Un}{Join}"),
-            UnJoinEnd | UnJoinShapeEnd | UnJoinShape2End => write!(f, "{Un}({Join}{Flip})"),
+            UnJoinEnd | UnJoinShapeEnd | UnJoinShape2End => write!(f, "{Un}{Backward}{Join}"),
             UnKeep => write!(f, "{Un}{Keep}"),
             UnTake => write!(f, "{Un}{Take}"),
             UnScan => write!(f, "{Un}{Scan}"),

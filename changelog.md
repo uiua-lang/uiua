@@ -22,6 +22,7 @@ This version is not yet released. If you are reading this on the website, then t
     - The real and imaginary parts are suffixed with `r` and `i` respectively. Both can be used alone.
     - Work with fractions and other constants above
     - Examples: `3r4i`, `5i`, `πi/2`
+- **Breaking Change** - Special casing for [`un °`](https://uiua.org/docs/un) [`backward ˜`](https://uiua.org/docs/backward) [`join ⊂`](https://uiua.org/docs/join) has been removed
 - There are no longer signature restrictions on [`try ⍣`](https://uiua.org/docs/try)'s functions
 - Allow for [mixed](https://uiua.org/docs/subscripts#mixed) numeric and sided subscripts
   - Implemented for [`both ∩`](https://uiua.org/docs/both), [`rows ≡`](https://uiua.org/docs/rows), and [`inventory ⍚`](https://uiua.org/docs/inventory)

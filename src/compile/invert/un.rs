@@ -811,28 +811,17 @@ inverse!(JoinPat, input, asm, {
             }
             Ok(node)
         }
-        let flip_after = join_index > 0 && matches!(input[join_index - 1].inner(), Prim(Flip, _));
-        let flip_before = join_index > 1 && matches!(input[0].inner(), Prim(Flip, _));
-        let flip = flip_before ^ flip_after;
-        let before = &input[flip_before as usize..join_index - flip_after as usize];
+        let before = &input[..join_index];
         input = &input[join_index + 1..];
         let before_inv = invert_inner(before, asm)?;
         let before_sig = nodes_clean_sig(&before_inv).ok_or(Generic)?;
         let mut node = Node::empty();
         let count = before_sig.outputs().saturating_sub(before_sig.args()) + 1;
         let prim = if count <= 1 {
-            if flip {
-                UnJoinEnd
-            } else {
-                UnJoin
-            }
+            UnJoin
         } else {
             node.push(Push(count.into()));
-            if flip {
-                UnJoinShapeEnd
-            } else {
-                UnJoinShape
-            }
+            UnJoinShape
         };
         node.push(ImplPrim(prim, join_span));
         node.push(before_inv);

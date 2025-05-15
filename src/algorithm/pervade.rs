@@ -134,11 +134,12 @@ where
 {
     let a_fill = env.scalar_fill::<A>();
     let b_fill = env.scalar_fill::<B>();
+    let empty = Shape::SCALAR;
     let new_shape = derive_new_shape(
         &a.shape,
         &b.shape,
-        a_fill.as_ref().map(|_| &Shape::SCALAR).map_err(|&e| e),
-        b_fill.as_ref().map(|_| &Shape::SCALAR).map_err(|&e| e),
+        a_fill.as_ref().map(|_| &empty).map_err(|&e| e),
+        b_fill.as_ref().map(|_| &empty).map_err(|&e| e),
         env,
     )?;
 

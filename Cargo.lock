@@ -5831,6 +5831,9 @@ name = "smallvec"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8917285742e9f3e1683f0a9c4e6b57960b7314d0b08d30d1ecd426713ee2eee9"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "smithay-client-toolkit"
@@ -6249,7 +6252,6 @@ version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09b3661f17e86524eccd4371ab0429194e0d7c008abb45f7a7495b1719463c71"
 dependencies = [
- "serde",
  "tinyvec_macros",
 ]
 
@@ -6568,13 +6570,13 @@ dependencies = [
  "serde_yaml",
  "simple_excel_writer",
  "skrifa 0.20.0",
+ "smallvec",
  "sys-locale",
  "terminal-light",
  "terminal_size 0.3.0",
  "thread_local",
  "threadpool",
  "time",
- "tinyvec",
  "tokio",
  "tower-lsp",
  "trash",

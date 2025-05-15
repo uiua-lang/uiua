@@ -13,7 +13,7 @@ use std::{
 };
 
 use ecow::{EcoString, EcoVec};
-use tinyvec::TinyVec;
+use smallvec::SmallVec;
 
 use crate::{
     cowslice::ecovec_extend_cowslice, fill::FillValue, grid_fmt::GridFmt, Array, ArrayValue, Boxed,
@@ -56,9 +56,9 @@ pub trait Indexable: IntoIterator + Deref<Target = [Self::Item]> {}
 
 impl<T> Indexable for T where T: IntoIterator + Deref<Target = [T::Item]> {}
 
-type MultiOutput<T> = TinyVec<[T; 1]>;
+type MultiOutput<T> = SmallVec<[T; 1]>;
 pub(crate) fn multi_output<T: Clone + Default>(n: usize, val: T) -> MultiOutput<T> {
-    let mut vec = TinyVec::with_capacity(n);
+    let mut vec = SmallVec::with_capacity(n);
     if n == 0 {
         return vec;
     }

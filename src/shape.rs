@@ -6,32 +6,29 @@ use std::{
 };
 
 use serde::*;
-use tinyvec::{ArrayVec, TinyVec};
+use smallvec::SmallVec;
 
 /// Uiua's array shape type
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Shape {
-    dims: TinyVec<[usize; INLINE_DIMS]>,
+    dims: SmallVec<[usize; INLINE_DIMS]>,
 }
-const INLINE_DIMS: usize = 1;
+const INLINE_DIMS: usize = 2;
 
 impl Shape {
     /// A shape with no dimensions
     pub const SCALAR: Self = Shape {
-        dims: TinyVec::Inline(ArrayVec::from_array_empty([0; INLINE_DIMS])),
+        dims: SmallVec::new_const(),
     };
     /// An empty list shape
     pub const EMPTY_LIST: Self = Shape {
-        dims: TinyVec::Inline(match ArrayVec::try_from_array_len([0; INLINE_DIMS], 1) {
-            Ok(v) => v,
-            Err(_) => unreachable!(),
-        }),
+        dims: unsafe { SmallVec::from_const_with_len_unchecked([0; INLINE_DIMS], 1) },
     };
     /// Create a new scalar shape with the given capacity
     pub fn with_capacity(capacity: usize) -> Self {
         Shape {
-            dims: TinyVec::with_capacity(capacity),
+            dims: SmallVec::with_capacity(capacity),
         }
     }
     /// Remove dimensions in the given range
@@ -83,12 +80,6 @@ impl Shape {
     /// Get the row shape slice
     pub fn row_slice(&self) -> &[usize] {
         &self.dims[self.len().min(1)..]
-    }
-    /// Split into two shapes
-    #[track_caller]
-    pub fn split(mut self, at: usize) -> (Shape, Shape) {
-        let dims = self.dims.split_off(at);
-        (self, Shape { dims })
     }
     /// Construct a subshape
     pub fn subshape<R>(&self, range: R) -> Shape
@@ -159,9 +150,10 @@ impl Shape {
     }
     /// Split the shape at the given index
     pub fn split_off(&mut self, at: usize) -> Self {
-        Shape {
-            dims: self.dims.split_off(at),
-        }
+        let (_, b) = self.dims.split_at(at);
+        let second = Shape::from(b);
+        self.dims.truncate(at);
+        second
     }
     /// Get a reference to the dimensions
     pub fn dims(&self) -> &[usize] {
@@ -243,7 +235,7 @@ impl From<&[usize]> for Shape {
 impl From<Vec<usize>> for Shape {
     fn from(dims: Vec<usize>) -> Self {
         Self {
-            dims: TinyVec::Heap(dims),
+            dims: SmallVec::from_vec(dims),
         }
     }
 }
@@ -269,7 +261,7 @@ impl DerefMut for Shape {
 
 impl IntoIterator for Shape {
     type Item = usize;
-    type IntoIter = <TinyVec<[usize; INLINE_DIMS]> as IntoIterator>::IntoIter;
+    type IntoIter = <SmallVec<[usize; INLINE_DIMS]> as IntoIterator>::IntoIter;
     fn into_iter(self) -> Self::IntoIter {
         self.dims.into_iter()
     }
@@ -323,7 +315,7 @@ impl<const N: usize> PartialEq<[usize; N]> for &Shape {
 
 impl PartialEq<[usize]> for Shape {
     fn eq(&self, other: &[usize]) -> bool {
-        self.dims == other
+        self.dims.as_slice() == other
     }
 }
 
@@ -335,7 +327,7 @@ impl PartialEq<[usize]> for &Shape {
 
 impl PartialEq<&[usize]> for Shape {
     fn eq(&self, other: &&[usize]) -> bool {
-        self.dims == *other
+        self.dims.as_slice() == *other
     }
 }
 

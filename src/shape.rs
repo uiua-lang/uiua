@@ -12,17 +12,18 @@ use tinyvec::{ArrayVec, TinyVec};
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Shape {
-    dims: TinyVec<[usize; 3]>,
+    dims: TinyVec<[usize; INLINE_DIMS]>,
 }
+const INLINE_DIMS: usize = 1;
 
 impl Shape {
     /// A shape with no dimensions
     pub const SCALAR: Self = Shape {
-        dims: TinyVec::Inline(ArrayVec::from_array_empty([0; 3])),
+        dims: TinyVec::Inline(ArrayVec::from_array_empty([0; INLINE_DIMS])),
     };
     /// An empty list shape
     pub const EMPTY_LIST: Self = Shape {
-        dims: TinyVec::Inline(match ArrayVec::try_from_array_len([0, 0, 0], 1) {
+        dims: TinyVec::Inline(match ArrayVec::try_from_array_len([0; INLINE_DIMS], 1) {
             Ok(v) => v,
             Err(_) => unreachable!(),
         }),
@@ -268,7 +269,7 @@ impl DerefMut for Shape {
 
 impl IntoIterator for Shape {
     type Item = usize;
-    type IntoIter = <TinyVec<[usize; 3]> as IntoIterator>::IntoIter;
+    type IntoIter = <TinyVec<[usize; INLINE_DIMS]> as IntoIterator>::IntoIter;
     fn into_iter(self) -> Self::IntoIter {
         self.dims.into_iter()
     }

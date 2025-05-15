@@ -2508,7 +2508,7 @@ impl Compiler {
     where
         S: fmt::Display,
     {
-        if !self.allow_experimental() {
+        if !cfg!(debug_assertions) && !self.allow_experimental() {
             self.scope.experimental_error = true;
             self.add_error(span.clone(), message().to_string());
         }

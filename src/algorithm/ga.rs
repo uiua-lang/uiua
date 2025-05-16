@@ -253,6 +253,10 @@ pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     Ok(arr)
 }
 
+pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    Err(env.error("Geometric square root is not implemented"))
+}
+
 fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: Metrics) -> (i32, f64) {
     let mut sign = 1;
     let mut metric = 1.0;

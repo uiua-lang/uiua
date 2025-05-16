@@ -2102,42 +2102,39 @@ impl Compiler {
         self.handle_primitive_experimental(prim, span);
         self.handle_primitive_deprecation(prim, span);
     }
+    #[allow(unused_parens)]
     fn translate_primitive(&mut self, prim: Primitive, span: &CodeSpan) -> Result<Primitive, Node> {
         use {ImplPrimitive::*, Node::*, Primitive::*};
-        if let Some(space) = self.ga_spec() {
-            match prim {
-                Dup | Flip => {}
-                Fork | Bracket | Both => {}
-                Dip | Gap | Reach => {}
-                On | By | With | Off => {}
-                Above | Below => {}
-                Slf | Backward => {}
-                Stack => {}
-                Sys(_) => {}
-                Transpose => {
-                    let span = self.add_span(span.clone());
-                    let inner = eco_vec![SigNode::new((1, 1), ImplPrim(TransposeN(-1), span))];
-                    return Err(Node::from_iter([
-                        ImplPrim(Retropose, span),
-                        Mod(Rows, inner, span),
-                        ImplPrim(Retropose, span),
-                    ]));
-                }
-                Mul => {
-                    let span = self.add_span(span.clone());
-                    return Err(ImplPrim(GeometricProduct(space), span));
-                }
-                Abs => {
-                    let span = self.add_span(span.clone());
-                    return Err(ImplPrim(GeometricMagnitude(space), span));
-                }
-                prim => self.add_error(
+        let Some(spec) = self.ga_spec() else {
+            return Ok(prim);
+        };
+        Err(match prim {
+            (Dup | Flip)
+            | (Fork | Bracket | Both)
+            | (Dip | Gap | Reach)
+            | (On | By | With | Off)
+            | (Above | Below)
+            | (Slf | Backward)
+            | (Stack | Sys(_)) => return Ok(prim),
+            Transpose => {
+                let span = self.add_span(span.clone());
+                let inner = eco_vec![SigNode::new((1, 1), ImplPrim(TransposeN(-1), span))];
+                Node::from_iter([
+                    ImplPrim(Retropose, span),
+                    Mod(Rows, inner, span),
+                    ImplPrim(Retropose, span),
+                ])
+            }
+            Mul => ImplPrim(GeometricProduct(spec), self.add_span(span.clone())),
+            Abs => ImplPrim(GeometricMagnitude(spec), self.add_span(span.clone())),
+            prim => {
+                self.add_error(
                     span.clone(),
                     format!("{} is not valid in {}", prim.format(), Geometric.format()),
-                ),
+                );
+                return Ok(prim);
             }
-        }
-        Ok(prim)
+        })
     }
     fn primitive(&mut self, prim: Primitive, span: CodeSpan) -> Node {
         self.validate_primitive(prim, &span);

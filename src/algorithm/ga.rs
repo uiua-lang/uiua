@@ -1,5 +1,7 @@
 //! Geometric Algebra
 
+use std::iter::repeat_n;
+
 use ecow::eco_vec;
 use serde::*;
 
@@ -33,8 +35,7 @@ fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
     if value.shape.is_empty() {
         return Err(env.error("Geometric algebra arguments must be at least rank 1"));
     }
-    let elem_size = *value.shape.last().unwrap();
-    let arr = match value {
+    let mut arr = match value {
         Value::Byte(arr) => arr.convert(),
         Value::Num(arr) => arr,
         val => {
@@ -45,19 +46,13 @@ fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
         }
     };
     let mut semishape = arr.shape.clone();
-    semishape.pop();
-    Ok((arr, semishape, elem_size))
+    let blade_count = semishape.pop().unwrap();
+    arr.transpose_depth(0, -1);
+    Ok((arr, semishape, blade_count))
 }
 
 /// Mapping from coefficient index to array index
-type Sel = &'static [Option<usize>];
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GaDims {
-    D2 = 2,
-    D3 = 3,
-}
-use GaDims::*;
+type Sel = Vec<Option<usize>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GaMode {
@@ -66,183 +61,206 @@ enum GaMode {
 }
 use GaMode::*;
 
-fn get_dim(selector: Sel, dim: usize, data: &[f64]) -> f64 {
-    selector[dim].map_or(0.0, |i| data[i])
-}
+use super::{
+    pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
+    tuples::combinations,
+};
 
-fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(GaDims, GaMode)> {
-    Ok(match (dims, size) {
-        (Some(2), 2) => (D2, Even),
-        (Some(2), 4) => (D2, Full),
-        (Some(3), 4) => (D3, Even),
-        (Some(3), 8) => (D3, Full),
-        (None, 2) => (D2, Even),
-        (None, 4) => (D3, Even),
-        (None, n) => {
+const MAX_DIMS: u8 = 11;
+const MAX_SIZE: usize = 1usize << (MAX_DIMS - 1);
+
+fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8, GaMode)> {
+    Ok(if let Some(dims) = dims {
+        if dims > MAX_DIMS {
             return Err(env.error(format!(
-                "{n} is not a valid number of multivector components"
-            )))
+                "{dims} is too many dimensions. Why would you need that many?"
+            )));
         }
-        (Some(d @ (2 | 3)), n) => {
+        let full_size = 1usize << dims;
+        let even_size = 1usize << dims.saturating_sub(1);
+        if size == full_size {
+            (dims, Full)
+        } else if size == even_size {
+            (dims, Even)
+        } else {
             return Err(env.error(format!(
-                "{n} is not a valid number of multivector components in {d} dimensions"
-            )))
+                "{size} is not a valid array size \
+                for geometric algebra in {dims} dimensions"
+            )));
         }
-        (Some(d), _) => {
+    } else {
+        if !size.is_power_of_two() {
             return Err(env.error(format!(
-                "{d} dimensions for geometric algebra is not supported"
-            )))
+                "{size} is not a valid array size for geometric algebra"
+            )));
         }
+        if size > MAX_SIZE {
+            return Err(env.error(format!("{size} is too large for geometric algebra")));
+        }
+        let dims = (size as f64).log(2.0).round() as u8 + 1;
+        (dims, Even)
     })
 }
 
-fn dim_selector(dims: GaDims, mode: GaMode, elem_size: usize, env: &Uiua) -> UiuaResult<Sel> {
-    const fn s(n: usize) -> Option<usize> {
-        Some(n)
+fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<Sel> {
+    let (_, this_mode) = derive_dims_mode(Some(dims), elem_size, env)?;
+    if this_mode == Full {
+        return Ok((0..(1usize << dims)).map(Some).collect());
     }
-    const N: Option<usize> = None;
-    let (_, this_mode) = derive_dims_mode(Some(dims as u8), elem_size, env)?;
-    Ok(match (dims, mode, this_mode) {
-        (D2, Even, Even) => &const { [s(0), s(0)] },
-        (D2, Full, Even) => &const { [s(0), N, N, s(1)] },
-        (D2, Full, Full) => &const { [s(0), s(1), s(2), s(3)] },
-        (D2, Even, Full) => unreachable!(),
-        (D3, Even, Even) => &const { [s(0), s(1), s(2), s(3)] },
-        (D3, Full, Even) => &const { [s(0), N, N, N, s(1), s(2), s(3), N] },
-        (D3, Full, Full) => &const { [s(0), s(1), s(2), s(3), s(4), s(5), s(6), s(7)] },
-        (D3, Even, Full) => unreachable!(),
-    })
+    let mut results = Vec::with_capacity(1usize << dims);
+    let mut i = 0;
+    for d in 0..=dims {
+        let n = combinations(dims as usize, d as usize, false) as usize;
+        if d % 2 == 0 {
+            for _ in 0..n {
+                results.push(Some(i));
+                i += 1;
+            }
+        } else {
+            results.extend(repeat_n(None, n));
+        }
+    }
+    Ok(results)
 }
 
-fn translate_index(from: &Shape, to: &Shape, index: usize) -> usize {
-    let mut result = 0;
-    let mut from_stride = 1;
-    let mut to_stride = 1;
-    for (&f, &t) in from.iter().zip(to).rev() {
-        let in_from = index / from_stride % f;
-        let in_to = in_from % t;
-        result += in_to * to_stride;
-        from_stride *= f;
-        to_stride *= t;
+fn metrics(flavor: GaFlavor, dims: u8) -> Vec<f64> {
+    match flavor {
+        GaFlavor::Vanilla => vec![1.0; dims as usize],
+        GaFlavor::Projective => {
+            let mut metrics = vec![1.0; dims as usize];
+            if let Some(m) = metrics.first_mut() {
+                *m = 0.0;
+            }
+            metrics
+        }
     }
-    result
 }
 
 pub fn product(space: GaSpace, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    fn e2(a: &[f64], b: &[f64], out: &mut [f64]) {
-        let [a0, a1] = [0, 1].map(|i| a[i]);
-        let [b0, b1] = [0, 1].map(|i| b[i]);
-        out[0] = a0 * b0 - a1 * b1; // scalar
-        out[1] = a0 * b1 + a1 * b0; // e12
-    }
-    fn f2(asel: Sel, a: &[f64], bsel: Sel, b: &[f64], out: &mut [f64]) {
-        let [a0, a1, a2, a3] = [0, 1, 2, 3].map(|i| get_dim(asel, i, a));
-        let [b0, b1, b2, b3] = [0, 1, 2, 3].map(|i| get_dim(bsel, i, b));
-        out[0] = a0 * b0 + a1 * b1 + a2 * b2 - a3 * b3; // scalar
-        out[1] = a0 * b1 + a1 * b0 - a2 * b3 + a3 * b2; // e1
-        out[2] = a0 * b2 + a2 * b0 + a1 * b3 - a3 * b1; // e2
-        out[3] = a0 * b3 + a3 * b0 + a1 * b2 - a2 * b1; // e12
-    }
-    fn e3(a: &[f64], b: &[f64], out: &mut [f64]) {
-        let [a0, a1, a2, a3] = [0, 1, 2, 3].map(|i| a[i]);
-        let [b0, b1, b2, b3] = [0, 1, 2, 3].map(|i| b[i]);
-        out[0] = a0 * b0 - a1 * b1 - a2 * b2 - a3 * b3; // scalar
-        out[1] = a0 * b1 + a1 * b0 - a2 * b3 + a3 * b2; // e12
-        out[2] = a0 * b2 + a2 * b0 - a3 * b1 + a1 * b3; // e23
-        out[3] = a0 * b3 + a3 * b0 - a1 * b2 + a2 * b1; // e31
-    }
-    fn f3(asel: Sel, a: &[f64], bsel: Sel, b: &[f64], out: &mut [f64]) {
-        let [a0, a1, a2, a3, a4, a5, a6, a7] =
-            [0, 1, 2, 3, 4, 5, 6, 7].map(|i| get_dim(asel, i, a));
-        let [b0, b1, b2, b3, b4, b5, b6, b7] =
-            [0, 1, 2, 3, 4, 5, 6, 7].map(|i| get_dim(bsel, i, b));
-
-        out[0] = a0 * b0 + a1 * b1 + a2 * b2 + a3 * b3 - a4 * b4 - a5 * b5 - a6 * b6 - a7 * b7; // scalar
-        out[1] = a0 * b1 + a1 * b0 - a2 * b6 + a3 * b5 + a4 * b3 - a5 * b7 + a6 * b2 + a7 * b5; // e1
-        out[2] = a0 * b2 + a2 * b0 + a1 * b6 - a3 * b4 - a4 * b7 + a5 * b1 - a6 * b1 + a7 * b4; // e2
-        out[3] = a0 * b3 + a3 * b0 - a1 * b5 + a2 * b4 + a4 * b2 - a5 * b1 + a6 * b7 + a7 * b6; // e3
-        out[4] = a0 * b4 + a4 * b0 + a1 * b3 - a2 * b7 - a3 * b1 + a5 * b6 - a6 * b5 + a7 * b2; // e23
-        out[5] = a0 * b5 + a5 * b0 + a2 * b1 - a3 * b7 - a1 * b2 + a6 * b4 - a4 * b6 + a7 * b3; // e31
-        out[6] = a0 * b6 + a6 * b0 + a3 * b2 - a1 * b7 - a2 * b3 + a4 * b5 - a5 * b4 + a7 * b1; // e12
-        out[7] = a0 * b7 + a7 * b0 + a1 * b4 + a2 * b5 + a3 * b6 + a4 * b1 + a5 * b2 + a6 * b3;
-        // e123
-    }
-    dyadic(space, a, b, env, e2, f2, e3, f3)
-}
-
-#[allow(clippy::too_many_arguments)]
-fn dyadic(
-    space: GaSpace,
-    a: Value,
-    b: Value,
-    env: &Uiua,
-    e2: impl DyFnEven,
-    f2: impl DyFnFull,
-    e3: impl DyFnEven,
-    f3: impl DyFnFull,
-) -> UiuaResult<Array<f64>> {
+    let flavor = space.flavor;
     let (a, asemi, a_size) = ga_arg(a, env)?;
     let (b, bsemi, b_size) = ga_arg(b, env)?;
     let size = a_size.max(b_size);
-    let (dims, mode) = derive_dims_mode(space.dims, size, env)?;
-    let a_sel = dim_selector(dims, mode, a_size, env)?;
-    let b_sel = dim_selector(dims, mode, b_size, env)?;
+    let (dims, _) = derive_dims_mode(space.dims, size, env)?;
+    let metrics = metrics(flavor, dims);
+    let a_sel = dim_selector(dims, a_size, env)?;
+    let b_sel = dim_selector(dims, b_size, env)?;
+    let c_sel = dim_selector(dims, size, env)?;
 
-    let mut new_shape = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
-    let mut new_data = eco_vec![0.0; new_shape.elements() * size];
-    if new_shape.contains(&0) {
-        new_shape.push(size);
-        return Ok(Array::new(new_shape, new_data));
+    let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
+    let mut c_data = eco_vec![0.0; size * csemi.elements() ];
+
+    // println!("flavor: {flavor:?}, dims: {dims}");
+    // println!("mode: {mode:?}, size: {size}, metrics: {metrics:?}");
+    // println!("a_sel: {a_sel:?}");
+    // println!("b_sel: {b_sel:?}");
+    // println!("c_sel: {c_sel:?}");
+
+    if csemi.contains(&0) {
+        csemi.push(size);
+        return Ok(Array::new(csemi, c_data));
     }
 
+    let a_row_len = asemi.elements();
+    let b_row_len = bsemi.elements();
+    let c_row_len = csemi.elements();
     let a = a.data.as_slice();
     let b = b.data.as_slice();
+    let c_slice = c_data.make_mut();
+    let mut temp = vec![0.0; c_row_len];
 
-    macro_rules! go {
-        ($f:expr $(, $a_sel:ident, $b_sel:ident)?) => {
-            for (i, chunk) in new_data.make_mut().chunks_exact_mut(size).enumerate() {
-                let ai = translate_index(&new_shape, &asemi, i);
-                let bi = translate_index(&new_shape, &bsemi, i);
-                let a = &a[ai * a_size..][..a_size];
-                let b = &b[bi * b_size..][..b_size];
-                $f.call($($a_sel,)? a, $($b_sel,)? b, chunk);
+    let mut mask_table: Vec<usize> = (0..1usize << dims).collect();
+    mask_table.sort_by(|a, b| a.count_ones().cmp(&b.count_ones()).then_with(|| a.cmp(b)));
+    let mut rev_mask_table = vec![0; 1usize << dims];
+    for (i, &v) in mask_table.iter().enumerate() {
+        rev_mask_table[v] = i;
+    }
+
+    for i in 0..1usize << dims {
+        let i_mask = mask_table[i];
+        for j in 0..1usize << dims {
+            let j_mask = mask_table[j];
+            let (sign, metric) = blade_sign_and_metric(i_mask, j_mask, dims, &metrics);
+            if metric == 0.0 {
+                continue;
             }
-        };
+            let k_mask = i_mask ^ j_mask;
+            let k = rev_mask_table[k_mask];
+            let (Some(ai), Some(aj), Some(ci)) = (a_sel[i], b_sel[j], c_sel[k]) else {
+                continue;
+            };
+            // println!(
+            //     "i: {:<4}, j: {:<4}, k: {:<4}, sign: {sign}, metric: {metric}",
+            //     blade_name(dims, i_mask),
+            //     blade_name(dims, j_mask),
+            //     blade_name(dims, k_mask),
+            // );
+            let a = &a[ai * a_row_len..][..a_row_len];
+            let b = &b[aj * b_row_len..][..b_row_len];
+            bin_pervade_recursive(
+                (a, &asemi),
+                (b, &bsemi),
+                &mut temp,
+                None,
+                None,
+                InfalliblePervasiveFn::new(pervade::mul::num_num),
+                env,
+            )?;
+            if sign == -1 {
+                for v in &mut temp {
+                    *v = -*v;
+                }
+            }
+            if metric != 1.0 {
+                for v in &mut temp {
+                    *v *= metric;
+                }
+            }
+            for (c, t) in c_slice[ci * c_row_len..][..c_row_len].iter_mut().zip(&temp) {
+                *c += *t;
+            }
+        }
     }
 
-    match (dims, mode) {
-        (D2, Even) => go!(e2),
-        (D2, Full) => go!(f2, a_sel, b_sel),
-        (D3, Even) => go!(e3),
-        (D3, Full) => go!(f3, a_sel, b_sel),
+    csemi.prepend(size);
+    let mut result = Array::new(csemi, c_data);
+    result.transpose();
+    Ok(result)
+}
+
+fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: &[f64]) -> (i32, f64) {
+    let mut sign = 1;
+    let mut metric = 1.0;
+    for i in 0..dims {
+        let bit_i = 1 << i;
+        if a & bit_i != 0 {
+            // Count how many set bits in b are below bit_i
+            let lower_bits = b & (bit_i - 1);
+            if lower_bits.count_ones() % 2 == 1 {
+                sign = -sign;
+            }
+        }
+        if (a & bit_i != 0) && (b & bit_i != 0) {
+            metric *= metrics[i as usize];
+        }
     }
-
-    new_shape.push(size);
-    Ok(Array::new(new_shape, new_data))
+    (sign, metric)
 }
 
-trait DyFnEven {
-    fn call(&self, a: &[f64], b: &[f64], out: &mut [f64]);
-}
-
-impl<F> DyFnEven for F
-where
-    F: Fn(&[f64], &[f64], &mut [f64]),
-{
-    fn call(&self, a: &[f64], b: &[f64], out: &mut [f64]) {
-        self(a, b, out)
+#[allow(dead_code)]
+fn blade_name(dims: u8, mask: usize) -> String {
+    let mut s = String::new();
+    for i in 0..dims {
+        if mask & (1 << i) != 0 {
+            if s.is_empty() {
+                s.push('e');
+            }
+            s.push(crate::SUBSCRIPT_DIGITS[i as usize]);
+        }
     }
-}
-
-trait DyFnFull {
-    fn call(&self, asel: Sel, a: &[f64], bsel: Sel, b: &[f64], out: &mut [f64]);
-}
-
-impl<F> DyFnFull for F
-where
-    F: Fn(Sel, &[f64], Sel, &[f64], &mut [f64]),
-{
-    fn call(&self, asel: Sel, a: &[f64], bsel: Sel, b: &[f64], out: &mut [f64]) {
-        self(asel, a, bsel, b, out)
+    if s.is_empty() {
+        1.to_string()
+    } else {
+        s
     }
 }

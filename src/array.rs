@@ -466,7 +466,7 @@ impl<T> Array<T> {
         T: Send + Sync,
     {
         let row_len = self.row_len();
-        self.data.chunks_exact(row_len)
+        self.data.chunks_exact(row_len.max(1))
     }
     /// Get a slice of a row
     #[track_caller]
@@ -485,7 +485,7 @@ impl<T: Clone> Array<T> {
         T: Send + Sync,
     {
         let row_len = self.row_len();
-        self.data.as_mut_slice().chunks_exact_mut(row_len)
+        self.data.as_mut_slice().chunks_exact_mut(row_len.max(1))
     }
     /// Get a row array
     #[track_caller]

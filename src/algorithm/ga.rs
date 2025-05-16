@@ -143,11 +143,22 @@ fn init<const N: usize>(spec: Spec, vals: [Value; N], env: &Uiua) -> UiuaResult<
 }
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([a, b], [asemi, bsemi], [a_sel, b_sel], dims, size) = init(spec, [a, b], env)?;
-    let metrics = spec.metrics;
+    let (ab, semi, sel, dims, size) = init(spec, [a, b], env)?;
+    product_impl(spec.metrics, &ab, &semi, &sel, dims, size, env)
+}
+fn product_impl(
+    metrics: Metrics,
+    ab: &[Array<f64>; 2],
+    semi: &[Shape; 2],
+    sel: &[Sel; 2],
+    dims: u8,
+    size: usize,
+    env: &Uiua,
+) -> UiuaResult<Array<f64>> {
+    let ([a, b], [asemi, bsemi], [a_sel, b_sel]) = (ab, semi, sel);
     let c_sel = dim_selector(dims, size, env)?;
 
-    let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
+    let mut csemi = derive_new_shape(asemi, bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements() ];
 
     // println!("dims: {dims}, metrics: {metrics:?}, size: {size}");
@@ -196,15 +207,8 @@ pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f
             // );
             let a = &a[ai * a_row_len..][..a_row_len];
             let b = &b[aj * b_row_len..][..b_row_len];
-            bin_pervade_recursive(
-                (a, &asemi),
-                (b, &bsemi),
-                &mut temp,
-                None,
-                None,
-                InfalliblePervasiveFn::new(pervade::mul::num_num),
-                env,
-            )?;
+            let f = InfalliblePervasiveFn::new(pervade::mul::num_num);
+            bin_pervade_recursive((a, asemi), (b, bsemi), &mut temp, None, None, f, env)?;
             if sign == -1 {
                 for v in &mut temp {
                     *v = -*v;
@@ -229,6 +233,12 @@ pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f
 
 pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let ([mut arr], [_], [sel], dims, _) = init(spec, [val], env)?;
+    arr = reverse_impl(dims, arr, &sel);
+    arr.transpose();
+    Ok(arr)
+}
+
+fn reverse_impl(dims: u8, mut arr: Array<f64>, sel: &Sel) -> Array<f64> {
     for (i, g) in blade_grades(dims).enumerate() {
         if let Some(i) = sel[i] {
             if g / 2 % 2 == 1 {
@@ -238,13 +248,16 @@ pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
             }
         }
     }
-    arr.transpose();
-    Ok(arr)
+    arr
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let rev = reverse(spec, val.clone(), env)?;
-    let prod = product(spec, val, rev.into(), env)?;
+    let ([arr], [semi], [sel], dims, size) = init(spec, [val], env)?;
+    let rev = reverse_impl(dims, arr.clone(), &sel);
+    let ab = [arr, rev];
+    let semi = [semi.clone(), semi];
+    let sel = [sel.clone(), sel];
+    let prod = product_impl(spec.metrics, &ab, &semi, &sel, dims, size, env)?;
     let depth = prod.rank() - 1;
     let mut arr = prod.first_depth(depth, env)?;
     for v in arr.data.as_mut_slice() {

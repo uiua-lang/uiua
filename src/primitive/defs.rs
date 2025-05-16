@@ -1,6 +1,6 @@
 //! All primitive definitions
 
-use crate::{algorithm::ga::GaSpec, Purity};
+use crate::{algorithm::ga, Purity};
 
 use super::*;
 
@@ -3488,7 +3488,7 @@ macro_rules! impl_primitive {
             $($args:literal)?
             $(($outputs:expr))?
             $([$margs:expr])?,
-            $variant:ident $(($($inner:ident),* $(,)?))?
+            $variant:ident $(($($inner:ty),* $(,)?))?
             $(, $purity:ident)?
         )
     ),* $(,)?) => {
@@ -3714,5 +3714,6 @@ impl_primitive!(
     (2(1), ValidateVariant),
     (2(1), TagVariant),
     // Geometric Algebra
-    (2, GeometricProduct(GaSpec)),
+    (2, GeometricProduct(ga::Spec)),
+    (1, GeometricMagnitude(ga::Spec)),
 );

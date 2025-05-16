@@ -465,7 +465,8 @@ impl<T> Array<T> {
     where
         T: Send + Sync,
     {
-        (0..self.row_count()).map(move |row| self.row_slice(row))
+        let row_len = self.row_len();
+        self.data.chunks_exact(row_len)
     }
     /// Get a slice of a row
     #[track_caller]
@@ -476,6 +477,16 @@ impl<T> Array<T> {
 }
 
 impl<T: Clone> Array<T> {
+    /// Get an iterator over the mutable row slices of the array
+    pub fn row_slices_mut(
+        &mut self,
+    ) -> impl ExactSizeIterator<Item = &mut [T]> + DoubleEndedIterator + Send + Sync
+    where
+        T: Send + Sync,
+    {
+        let row_len = self.row_len();
+        self.data.as_mut_slice().chunks_exact_mut(row_len)
+    }
     /// Get a row array
     #[track_caller]
     pub fn row(&self, row: usize) -> Self {

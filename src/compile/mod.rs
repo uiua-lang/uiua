@@ -25,7 +25,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    algorithm::ga::GaSpace,
+    algorithm::ga::GaSpec,
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},
@@ -222,7 +222,7 @@ enum ScopeKind {
     /// A test scope between `---`s
     Test,
     /// A `geo` scope
-    Geo(GaSpace),
+    Geo(GaSpec),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2104,7 +2104,7 @@ impl Compiler {
     }
     fn translate_primitive(&mut self, prim: Primitive, span: &CodeSpan) -> Result<Primitive, Node> {
         use {ImplPrimitive::*, Node::*, Primitive::*};
-        if let Some(space) = self.geo_space() {
+        if let Some(space) = self.ga_spec() {
             match prim {
                 Dup | Flip => {}
                 Fork | Bracket | Both => {}
@@ -2756,7 +2756,7 @@ impl Compiler {
             )
         })
     }
-    fn geo_space(&self) -> Option<GaSpace> {
+    fn ga_spec(&self) -> Option<GaSpec> {
         for scope in self.scopes() {
             match scope.kind {
                 ScopeKind::Geo(dims) => return Some(dims),

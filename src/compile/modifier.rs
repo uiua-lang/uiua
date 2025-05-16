@@ -1,7 +1,7 @@
 //! Compiler code for modifiers
 #![allow(clippy::redundant_closure_call)]
 
-use crate::algorithm::ga::GaFlavor;
+use crate::algorithm::ga::{metrics_from_val, GaMetrics};
 
 use super::*;
 use algebra::{derivative, integral};
@@ -289,6 +289,12 @@ impl Compiler {
                 args.make_mut().swap(1, 2);
                 let span = self.add_span(modifier.span.clone());
                 Ok(Node::ImplMod(ImplPrimitive::Astar, args, span))
+            }
+            Modifier::Primitive(Primitive::Geometric) if pack.branches.len() == 2 => {
+                let mut args = pack.lexical_order().cloned().map(|w| w.map(Word::Func));
+                let main = args.next().unwrap();
+                let metrics = args.next().unwrap();
+                self.geometric(main, subscript, Some(metrics))
             }
             m if m.args() >= 2 => {
                 let new = Modified {
@@ -1117,7 +1123,7 @@ impl Compiler {
             }
             Comptime => {
                 let word = modified.code_operands().next().unwrap().clone();
-                self.do_comptime(prim, word, &modified.modifier.span)?
+                self.do_comptime("comptime's", word, &modified.modifier.span)?
             }
             Each => {
                 // Each pervasive
@@ -1309,7 +1315,7 @@ impl Compiler {
             }
             Quote => {
                 let operand = modified.code_operands().next().unwrap().clone();
-                let node = self.do_comptime(prim, operand, &modified.modifier.span)?;
+                let node = self.do_comptime("quote's", operand, &modified.modifier.span)?;
                 let code: String = match node {
                     Node::Push(Value::Char(chars)) if chars.rank() == 1 => {
                         chars.data.iter().collect()
@@ -1372,48 +1378,8 @@ impl Compiler {
                 }
             }
             Geometric => {
-                let space = if let Some(sub) = subscript {
-                    let sub = self.validate_subscript(sub);
-                    let dims = sub.value.num.map(|n| {
-                        let mut n = self.positive_subscript(n, Geometric, &sub.span);
-                        const MAX_DIMS: usize = 4;
-                        if n > MAX_DIMS {
-                            self.add_error(
-                                sub.span.clone(),
-                                format!("Max geometric algebra dimensions is currently {MAX_DIMS}"),
-                            );
-                            n = MAX_DIMS;
-                        }
-                        n as u8
-                    });
-                    let flavor = if let Some(side) = sub.value.side {
-                        if side.n.is_some() {
-                            self.add_error(
-                                sub.span.clone(),
-                                format!("{} does not support side quantifiers", Geometric.format()),
-                            );
-                        }
-                        match side.side {
-                            SubSide::Right => GaFlavor::Projective,
-                            SubSide::Left => {
-                                self.add_error(
-                                    sub.span,
-                                    format!("{} does not support left side", Geometric.format()),
-                                );
-                                GaFlavor::Vanilla
-                            }
-                        }
-                    } else {
-                        GaFlavor::Vanilla
-                    };
-                    GaSpace { dims, flavor }
-                } else {
-                    GaSpace::default()
-                };
-                let (_, (sn, _)) = self.in_scope(ScopeKind::Geo(space), |comp| {
-                    comp.monadic_modifier_op(modified)
-                })?;
-                sn.node
+                let op = modified.code_operands().next().unwrap().clone();
+                self.geometric(op, subscript, None)?
             }
             _ => return Ok(None),
         }))
@@ -1837,19 +1803,28 @@ impl Compiler {
     }
     fn do_comptime(
         &mut self,
-        prim: Primitive,
+        possesive: &str,
         operand: Sp<Word>,
         span: &CodeSpan,
     ) -> UiuaResult<Node> {
+        self.do_comptime_vals(possesive, operand, span)
+            .map(|(values, _)| values.into_iter().map(Node::new_push).collect())
+    }
+    fn do_comptime_vals(
+        &mut self,
+        possesive: &str,
+        operand: Sp<Word>,
+        span: &CodeSpan,
+    ) -> UiuaResult<(Vec<Value>, Signature)> {
         let orig_spans_len = self.asm.spans.len();
         let sn = self.word_sig(operand)?;
         if sn.sig.args() > 0 {
             return Err(self.error(
                 span.clone(),
                 format!(
-                    "{}'s function must have no arguments, but it has {}",
-                    prim.format(),
-                    sn.sig.args()
+                    "{possesive} function must have no arguments, \
+                    but its signature is {}",
+                    sn.sig
                 ),
             ));
         }
@@ -1875,7 +1850,7 @@ impl Compiler {
         }
         let root = replace(&mut self.asm.root, sn.node);
         let res = self.macro_env.run_asm(self.asm.clone());
-        let stack = self.macro_env.take_stack();
+        let mut stack = self.macro_env.take_stack();
         let values = if let Err(e) = res {
             if self.errors.is_empty() {
                 self.errors.push(e.with_info([(
@@ -1885,16 +1860,14 @@ impl Compiler {
             }
             vec![Value::default(); sn.sig.outputs()]
         } else {
+            stack.reverse();
+            stack.truncate(sn.sig.outputs());
+            stack.reverse();
             stack
         };
         self.asm.spans.truncate(orig_spans_len);
         self.asm.root = root;
-        let val_count = sn.sig.outputs();
-        let mut node = Node::empty();
-        for value in values.into_iter().rev().take(val_count).rev() {
-            node.push(Node::new_push(value));
-        }
-        Ok(node)
+        Ok((values, sn.sig))
     }
     /// Run a function in a temporary scope with the given names.
     /// Newly created bindings will be added to the current scope after the function is run.
@@ -1927,5 +1900,72 @@ impl Compiler {
         }
         self.scope = replaced_scope;
         res
+    }
+    fn geometric(
+        &mut self,
+        word: Sp<Word>,
+        subscript: Option<Sp<Subscript>>,
+        metrics: Option<Sp<Word>>,
+    ) -> UiuaResult<Node> {
+        let mut met = GaMetrics::VANILLA;
+        if let Some(metrics) = metrics {
+            let metrics_span = metrics.span.clone();
+            let (vals, sig) = self.do_comptime_vals(
+                &format!("{}'s second ", Primitive::Geometric.format()),
+                metrics,
+                &metrics_span,
+            )?;
+            if vals.len() == 1 {
+                match metrics_from_val(&vals[0]) {
+                    Ok(metrics) => met = metrics,
+                    Err(e) => self.add_error(metrics_span, e),
+                }
+            } else {
+                self.add_error(
+                    metrics_span,
+                    format!(
+                        "{}'s second function must have exactly one output, \
+                        but its signature is {sig}",
+                        Primitive::Geometric.format()
+                    ),
+                );
+            }
+        }
+        let spec = if let Some(sub) = subscript {
+            let sub = self.validate_subscript(sub);
+            let dims = sub.value.num.map(|n| {
+                let mut n = self.positive_subscript(n, Primitive::Geometric, &sub.span);
+                const MAX_DIMS: usize = 4;
+                if n > MAX_DIMS {
+                    self.add_error(
+                        sub.span.clone(),
+                        format!("Max geometric algebra dimensions is currently {MAX_DIMS}"),
+                    );
+                    n = MAX_DIMS;
+                }
+                n as u8
+            });
+            let side = sub.value.side.map(|side| {
+                if side.n.is_some() {
+                    self.add_error(
+                        sub.span.clone(),
+                        format!(
+                            "{} does not support side quantifiers",
+                            Primitive::Geometric.format()
+                        ),
+                    );
+                }
+                side.side
+            });
+            GaSpec {
+                dims,
+                side,
+                metrics: met,
+            }
+        } else {
+            GaSpec::default()
+        };
+        let (_, node) = self.in_scope(ScopeKind::Geo(spec), |comp| comp.word(word))?;
+        Ok(node)
     }
 }

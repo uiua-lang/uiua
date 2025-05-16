@@ -55,7 +55,7 @@ enum Mode {
 use Mode::*;
 
 use super::{
-    pervade::{self, bin_pervade_mut, bin_pervade_recursive, InfalliblePervasiveFn},
+    pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
     tuples::combinations,
 };
 
@@ -142,39 +142,102 @@ fn init<const N: usize>(spec: Spec, vals: [Value; N], env: &Uiua) -> UiuaResult<
     Ok((arrs, semis, sels, dims, max_size))
 }
 
-fn fast_complex<const N: usize>(
-    dims: u8,
-    arrs: [Array<f64>; N],
-    env: &Uiua,
-    f: impl Fn([Array<f64>; N], [Array<f64>; N], &Uiua) -> UiuaResult<Array<f64>>,
-) -> UiuaResult<Result<Array<f64>, [Array<f64>; N]>> {
-    if dims != 2 || !arrs.iter().all(|a| a.row_count() == 2) {
-        return Ok(Err(arrs));
+fn to_complex(dims: Option<u8>, a: Value) -> Result<Array<f64>, Value> {
+    if a.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
+        Err(a)
+    } else {
+        match a {
+            Value::Num(arr) => Ok(arr),
+            Value::Byte(arr) => Ok(arr.convert()),
+            val => Err(val),
+        }
     }
-    let mut real = array::from_fn(|_| Array::default());
-    let mut imag = array::from_fn(|_| Array::default());
-    for (i, arr) in arrs.into_iter().enumerate() {
-        let (re, im) = arr.uncouple(env)?;
-        real[i] = re;
-        imag[i] = im;
+}
+
+fn fast_dyadic_complex(
+    dims: Option<u8>,
+    a: Value,
+    b: Value,
+    re: impl Fn(f64, f64, f64, f64) -> f64,
+    im: impl Fn(f64, f64, f64, f64) -> f64,
+) -> UiuaResult<Result<Array<f64>, [Value; 2]>> {
+    if a.shape.last() != Some(&2) || b.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
+        return Ok(Err([a, b]));
     }
-    f(real, imag, env).map(Ok)
+    let mut a = match to_complex(dims, a) {
+        Ok(arr) => arr,
+        Err(val) => return Ok(Err([val, b])),
+    };
+    let mut b = match to_complex(dims, b) {
+        Ok(arr) => arr,
+        Err(val) => return Ok(Err([a.into(), val])),
+    };
+    Ok(if a.data.is_copy_of(&b.data) {
+        drop(b);
+        for chunk in a.data.as_mut_slice().chunks_exact_mut(2) {
+            let [ar, ai] = [chunk[0], chunk[1]];
+            let r = re(ar, ai, ar, ai);
+            let i = im(ar, ai, ar, ai);
+            chunk[0] = r;
+            chunk[1] = i;
+        }
+        Ok(a)
+    } else {
+        match (&*a.shape, &*b.shape) {
+            (ash, bsh) if ash == bsh => {
+                for (a, b) in a
+                    .data
+                    .chunks_exact(2)
+                    .zip(b.data.as_mut_slice().chunks_exact_mut(2))
+                {
+                    let [ar, ai, br, bi] = [a[0], a[1], b[0], b[1]];
+                    let r = re(ar, ai, br, bi);
+                    let i = im(ar, ai, br, bi);
+                    b[0] = r;
+                    b[1] = i;
+                }
+                Ok(b)
+            }
+            (_, [2]) => {
+                let [br, bi] = [b.data[0], b.data[1]];
+                for a in a.data.as_mut_slice().chunks_exact_mut(2) {
+                    let [ar, ai] = [a[0], a[1]];
+                    let r = re(ar, ai, br, bi);
+                    let i = im(ar, ai, br, bi);
+                    a[0] = r;
+                    a[1] = i;
+                }
+                Ok(a)
+            }
+            ([2], _) => {
+                let [ar, ai] = [a.data[0], a.data[1]];
+                for b in b.data.as_mut_slice().chunks_exact_mut(2) {
+                    let [br, bi] = [b[0], b[1]];
+                    let r = re(ar, ai, br, bi);
+                    let i = im(ar, ai, br, bi);
+                    b[0] = r;
+                    b[1] = i;
+                }
+                Ok(b)
+            }
+            _ => Err([a.into(), b.into()]),
+        }
+    })
 }
 
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (ab, [asemi, bsemi], [a_sel, b_sel], dims, size) = init(spec, [a, b], env)?;
-
-    let [a, b] = match fast_complex(dims, ab, env, |[ar, mut r], [ai, mut i], env| {
-        bin_pervade_mut(ar, &mut r, env, pervade::add::num_num)?;
-        bin_pervade_mut(ai, &mut i, env, pervade::add::num_num)?;
-        Ok(r.couple_infallible(i, false))
-    })? {
-        Ok(mut res) => {
-            res.transpose();
-            return Ok(res);
-        }
+    let ab = match fast_dyadic_complex(
+        spec.dims,
+        a,
+        b,
+        |ar, _, br, _| ar + br,
+        |_, ai, _, bi| ai + bi,
+    )? {
+        Ok(res) => return Ok(res),
         Err(ab) => ab,
     };
+
+    let ([a, b], [asemi, bsemi], [a_sel, b_sel], _, size) = init(spec, ab, env)?;
 
     let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
@@ -223,6 +286,17 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
 }
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let [a, b] = match fast_dyadic_complex(
+        spec.dims,
+        a,
+        b,
+        |ar, ai, br, bi| ar * br - ai * bi,
+        |ar, ai, br, bi| ar * bi + ai * br,
+    )? {
+        Ok(res) => return Ok(res),
+        Err(ab) => ab,
+    };
+
     let (ab, semi, sel, dims, size) = init(spec, [a, b], env)?;
     let mut res = product_impl(spec.metrics, ab, &semi, &sel, dims, size, env)?;
     res.transpose();
@@ -237,21 +311,7 @@ fn product_impl(
     size: usize,
     env: &Uiua,
 ) -> UiuaResult<Array<f64>> {
-    let ([asemi, bsemi], [a_sel, b_sel]) = (semi, sel);
-
-    let [a, b] = match fast_complex(dims, ab, env, |[ar, br], [ai, bi], env| {
-        let (mut r1, mut r2, mut i1, mut i2) = (br.clone(), bi.clone(), br, bi);
-        bin_pervade_mut(ar.clone(), &mut r1, env, pervade::mul::num_num)?; // ar * br
-        bin_pervade_mut(ai.clone(), &mut r2, env, pervade::mul::num_num)?; // ai * bi
-        bin_pervade_mut(ai, &mut i1, env, pervade::mul::num_num)?; // ai * br
-        bin_pervade_mut(ar, &mut i2, env, pervade::mul::num_num)?; // ar * bi
-        bin_pervade_mut(r2, &mut r1, env, pervade::sub::num_num)?; // ar * br - ai * bi
-        bin_pervade_mut(i2, &mut i1, env, pervade::add::num_num)?; // ai * br + ar * bi
-        Ok(r1.couple_infallible(i1, false))
-    })? {
-        Ok(res) => return Ok(res),
-        Err(ab) => ab,
-    };
+    let ([a, b], [asemi, bsemi], [a_sel, b_sel]) = (ab, semi, sel);
 
     let c_sel = dim_selector(dims, size, env)?;
     let mut csemi = derive_new_shape(asemi, bsemi, Err(""), Err(""), env)?;
@@ -346,6 +406,24 @@ fn reverse_impl(dims: u8, mut arr: Array<f64>, sel: &Sel) -> Array<f64> {
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let val = match to_complex(spec.dims, val) {
+        Ok(mut arr) => {
+            let slice = arr.data.as_mut_slice();
+            for i in 0..slice.len() / 2 {
+                let [re, im] = [slice[i * 2], slice[i * 2 + 1]];
+                slice[i] = (re * re + im * im).sqrt();
+            }
+            let new_len = slice.len() / 2;
+            arr.data.truncate(new_len);
+            arr.shape.pop();
+            arr.meta.take_sorted_flags();
+            arr.meta.take_value_flags();
+            arr.validate();
+            return Ok(arr);
+        }
+        Err(val) => val,
+    };
+
     let ([arr], [semi], [sel], dims, size) = init(spec, [val], env)?;
     let rev = reverse_impl(dims, arr.clone(), &sel);
     let ab = [arr, rev];

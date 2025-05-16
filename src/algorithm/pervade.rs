@@ -71,7 +71,7 @@ pub(crate) fn pervade_dim(a: usize, b: usize) -> usize {
     }
 }
 
-fn derive_new_shape(
+pub fn derive_new_shape(
     ash: &Shape,
     bsh: &Shape,
     a_fill_sh: Result<&Shape, &'static str>,

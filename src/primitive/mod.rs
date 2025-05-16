@@ -1621,15 +1621,15 @@ impl ImplPrimitive {
                 let res = tag.join(val, false, env)?;
                 env.push(res);
             }
-            &ImplPrimitive::GeometricProduct(space) => {
+            &ImplPrimitive::GeometricProduct(spec) => {
                 let a = env.pop(1)?;
                 let b = env.pop(2)?;
-                let res = ga::product(space, a, b, env)?;
+                let res = ga::product(spec, a, b, env)?;
                 env.push(res);
             }
-            &ImplPrimitive::GeometricMagnitude(space) => {
+            &ImplPrimitive::GeometricMagnitude(spec) => {
                 let a = env.pop(1)?;
-                let res = ga::magnitude(space, a, env)?;
+                let res = ga::magnitude(spec, a, env)?;
                 env.push(res);
             }
             prim => {

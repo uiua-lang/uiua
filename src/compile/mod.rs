@@ -221,8 +221,6 @@ enum ScopeKind {
     Function,
     /// A test scope between `---`s
     Test,
-    /// A `geo` scope
-    Geo(Spec),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2102,48 +2100,10 @@ impl Compiler {
         self.handle_primitive_experimental(prim, span);
         self.handle_primitive_deprecation(prim, span);
     }
-    #[allow(unused_parens)]
-    fn translate_primitive(&mut self, prim: Primitive, span: &CodeSpan) -> Result<Primitive, Node> {
-        use {ImplPrimitive::*, Node::*, Primitive::*};
-        let Some(spec) = self.ga_spec() else {
-            return Ok(prim);
-        };
-        Err(match prim {
-            (Dup | Flip)
-            | (Fork | Bracket | Both)
-            | (Dip | Gap | Reach)
-            | (On | By | With | Off)
-            | (Above | Below)
-            | (Slf | Backward)
-            | (Stack | Sys(_)) => return Ok(prim),
-            Transpose => {
-                let span = self.add_span(span.clone());
-                let inner = eco_vec![SigNode::new((1, 1), ImplPrim(TransposeN(-1), span))];
-                Node::from_iter([
-                    ImplPrim(Retropose, span),
-                    Mod(Rows, inner, span),
-                    ImplPrim(Retropose, span),
-                ])
-            }
-            Mul => ImplPrim(GeometricProduct(spec), self.add_span(span.clone())),
-            Abs => ImplPrim(GeometricMagnitude(spec), self.add_span(span.clone())),
-            prim => {
-                self.add_error(
-                    span.clone(),
-                    format!("{} is not valid in {}", prim.format(), Geometric.format()),
-                );
-                return Ok(prim);
-            }
-        })
-    }
     fn primitive(&mut self, prim: Primitive, span: CodeSpan) -> Node {
         self.validate_primitive(prim, &span);
-        let prim = self.translate_primitive(prim, &span);
         let span = self.add_span(span);
-        match prim {
-            Ok(prim) => Node::Prim(prim, span),
-            Err(node) => node,
-        }
+        Node::Prim(prim, span)
     }
     #[allow(clippy::match_single_binding, unused_parens)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
@@ -2158,37 +2118,24 @@ impl Compiler {
                     );
                     self.modified(*m, Some(scr.map(Into::into)))?
                 }
-                Modifier::Primitive(prim) => match self.translate_primitive(prim, &m.modifier.span)
-                {
-                    Ok(prim) => {
-                        if !matches!(
-                            prim,
-                            (Both | Bracket)
-                                | (Reach | On | By | With | Off)
-                                | (Rows | Each | Inventory)
-                                | (Repeat | Tuples | Stencil)
-                                | (Fill | Geometric)
-                        ) {
-                            self.add_error(
-                                m.modifier.span.clone().merge(scr.span.clone()),
-                                format!("Subscripts are not implemented for {}", prim.format()),
-                            );
-                        }
-                        self.modified(*m, Some(scr.map(Into::into)))?
+                Modifier::Primitive(prim) => {
+                    if !matches!(
+                        prim,
+                        (Both | Bracket)
+                            | (Reach | On | By | With | Off)
+                            | (Rows | Each | Inventory)
+                            | (Repeat | Tuples | Stencil)
+                            | (Fill | Geometric)
+                    ) {
+                        self.add_error(
+                            m.modifier.span.clone().merge(scr.span.clone()),
+                            format!("Subscripts are not implemented for {}", prim.format()),
+                        );
                     }
-                    Err(node) => {
-                        self.add_error(span.clone(), "Subscripts are not allowed in this context");
-                        node
-                    }
-                },
-            },
-            Word::Primitive(prim) => match self.translate_primitive(prim, &span) {
-                Ok(prim) => self.subscript_prim(prim, sub.word.span, scr)?,
-                Err(node) => {
-                    self.add_error(span.clone(), "Subscripts are not allowed in this context");
-                    node
+                    self.modified(*m, Some(scr.map(Into::into)))?
                 }
             },
+            Word::Primitive(prim) => self.subscript_prim(prim, sub.word.span, scr)?,
             _ => {
                 self.add_error(span.clone(), "Subscripts are not allowed in this context");
                 self.word(sub.word)?
@@ -2756,16 +2703,6 @@ impl Compiler {
                 format!("Cannot infer function signature: {e}"),
             )
         })
-    }
-    fn ga_spec(&self) -> Option<Spec> {
-        for scope in self.scopes() {
-            match scope.kind {
-                ScopeKind::Geo(dims) => return Some(dims),
-                ScopeKind::Function => {}
-                _ => break,
-            }
-        }
-        None
     }
 }
 

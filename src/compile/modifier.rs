@@ -1965,7 +1965,59 @@ impl Compiler {
         } else {
             Spec::default()
         };
-        let (_, node) = self.in_scope(ScopeKind::Geo(spec), |comp| comp.word(word))?;
+        let span = word.span.clone();
+        let mut node = self.word(word)?;
+        self.translate_geo(&mut node, spec, &span);
         Ok(node)
+    }
+    #[allow(unused_parens)]
+    fn translate_geo(&mut self, node: &mut Node, spec: ga::Spec, span: &CodeSpan) -> bool {
+        use {ImplPrimitive::*, Node::*, Primitive::*};
+        match *node {
+            Prim(Mul, span) => *node = ImplPrim(GeometricProduct(spec), span),
+            Prim(Abs, span) => *node = ImplPrim(GeometricMagnitude(spec), span),
+            Prim(Dup | Flip | Over | Pop | Stack | Sys(_), _) => {}
+            ImplPrim(StackN { .. }, _) => {}
+            Mod(
+                (Fork | Bracket | Both)
+                | (Dip | Gap | Reach)
+                | (On | By | With | Off)
+                | (Above | Below)
+                | (Slf | Backward),
+                ..,
+            ) => {}
+            ImplMod(BothImpl(_), ..) => {}
+            Run(_) | CustomInverse(..) | PushUnder(..) | PopUnder(..) | CopyToUnder(..) => {}
+            Prim(prim, span) => {
+                let span = self.get_span(span);
+                let message = format!("{} does not support {}", Geometric.format(), prim.format());
+                self.add_error(span, message);
+                return false;
+            }
+            ImplPrim(prim, span) => {
+                let span = self.get_span(span);
+                let message = format!("{} does not support {prim}", Geometric.format());
+                self.add_error(span, message);
+                return false;
+            }
+            ref mut node => {
+                let span = if let Some(spandex) = node.span() {
+                    self.get_span(spandex)
+                        .code()
+                        .unwrap_or_else(|| span.clone())
+                } else {
+                    span.clone()
+                };
+                let message = format!("{} does not support {node:?}", Geometric.format());
+                self.add_error(span, message);
+                return false;
+            }
+        }
+        for node in node.sub_nodes_mut() {
+            if !self.translate_geo(node, spec, span) {
+                return false;
+            }
+        }
+        true
     }
 }

@@ -55,7 +55,7 @@ enum Mode {
 use Mode::*;
 
 use super::{
-    pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
+    pervade::{self, bin_pervade_mut, bin_pervade_recursive, InfalliblePervasiveFn},
     tuples::combinations,
 };
 
@@ -142,8 +142,40 @@ fn init<const N: usize>(spec: Spec, vals: [Value; N], env: &Uiua) -> UiuaResult<
     Ok((arrs, semis, sels, dims, max_size))
 }
 
+fn fast_complex<const N: usize>(
+    dims: u8,
+    arrs: [Array<f64>; N],
+    env: &Uiua,
+    f: impl Fn([Array<f64>; N], [Array<f64>; N], &Uiua) -> UiuaResult<Array<f64>>,
+) -> UiuaResult<Result<Array<f64>, [Array<f64>; N]>> {
+    if dims != 2 || !arrs.iter().all(|a| a.row_count() == 2) {
+        return Ok(Err(arrs));
+    }
+    let mut real = array::from_fn(|_| Array::default());
+    let mut imag = array::from_fn(|_| Array::default());
+    for (i, arr) in arrs.into_iter().enumerate() {
+        let (re, im) = arr.uncouple(env)?;
+        real[i] = re;
+        imag[i] = im;
+    }
+    f(real, imag, env).map(Ok)
+}
+
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([a, b], [asemi, bsemi], [a_sel, b_sel], _, size) = init(spec, [a, b], env)?;
+    let (ab, [asemi, bsemi], [a_sel, b_sel], dims, size) = init(spec, [a, b], env)?;
+
+    let [a, b] = match fast_complex(dims, ab, env, |[ar, mut r], [ai, mut i], env| {
+        bin_pervade_mut(ar, &mut r, env, pervade::add::num_num)?;
+        bin_pervade_mut(ai, &mut i, env, pervade::add::num_num)?;
+        Ok(r.couple_infallible(i, false))
+    })? {
+        Ok(mut res) => {
+            res.transpose();
+            return Ok(res);
+        }
+        Err(ab) => ab,
+    };
+
     let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
 
@@ -159,14 +191,14 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     let b = b.data.as_slice();
     let c_slice = c_data.make_mut();
 
-    let f = InfalliblePervasiveFn::new(pervade::add::num_num);
+    let add = InfalliblePervasiveFn::new(pervade::add::num_num);
     for i in 0..size {
         match (a_sel[i], b_sel[i]) {
             (Some(ai), Some(bi)) => {
                 let a = &a[ai * a_row_len..][..a_row_len];
                 let b = &b[bi * b_row_len..][..b_row_len];
                 let c = &mut c_slice[i * c_row_len..][..c_row_len];
-                bin_pervade_recursive((a, &asemi), (b, &bsemi), c, None, None, f, env)?;
+                bin_pervade_recursive((a, &asemi), (b, &bsemi), c, None, None, add, env)?;
             }
             (Some(ai), None) => {
                 let a = &a[ai * a_row_len..][..a_row_len];
@@ -192,20 +224,35 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (ab, semi, sel, dims, size) = init(spec, [a, b], env)?;
-    let mut res = product_impl(spec.metrics, &ab, &semi, &sel, dims, size, env)?;
+    let mut res = product_impl(spec.metrics, ab, &semi, &sel, dims, size, env)?;
     res.transpose();
     Ok(res)
 }
 fn product_impl(
     metrics: Metrics,
-    ab: &[Array<f64>; 2],
+    ab: [Array<f64>; 2],
     semi: &[Shape; 2],
     sel: &[Sel; 2],
     dims: u8,
     size: usize,
     env: &Uiua,
 ) -> UiuaResult<Array<f64>> {
-    let ([a, b], [asemi, bsemi], [a_sel, b_sel]) = (ab, semi, sel);
+    let ([asemi, bsemi], [a_sel, b_sel]) = (semi, sel);
+
+    let [a, b] = match fast_complex(dims, ab, env, |[ar, br], [ai, bi], env| {
+        let (mut r1, mut r2, mut i1, mut i2) = (br.clone(), bi.clone(), br, bi);
+        bin_pervade_mut(ar.clone(), &mut r1, env, pervade::mul::num_num)?; // ar * br
+        bin_pervade_mut(ai.clone(), &mut r2, env, pervade::mul::num_num)?; // ai * bi
+        bin_pervade_mut(ai, &mut i1, env, pervade::mul::num_num)?; // ai * br
+        bin_pervade_mut(ar, &mut i2, env, pervade::mul::num_num)?; // ar * bi
+        bin_pervade_mut(r2, &mut r1, env, pervade::sub::num_num)?; // ar * br - ai * bi
+        bin_pervade_mut(i2, &mut i1, env, pervade::add::num_num)?; // ai * br + ar * bi
+        Ok(r1.couple_infallible(i1, false))
+    })? {
+        Ok(res) => return Ok(res),
+        Err(ab) => ab,
+    };
+
     let c_sel = dim_selector(dims, size, env)?;
     let mut csemi = derive_new_shape(asemi, bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
@@ -235,7 +282,7 @@ fn product_impl(
         rev_mask_table[v] = i;
     }
 
-    let f = InfalliblePervasiveFn::new(pervade::mul::num_num);
+    let mul = InfalliblePervasiveFn::new(pervade::mul::num_num);
     for i in 0..1usize << dims {
         let i_mask = mask_table[i];
         for j in 0..1usize << dims {
@@ -257,7 +304,7 @@ fn product_impl(
             // );
             let a = &a[ai * a_row_len..][..a_row_len];
             let b = &b[aj * b_row_len..][..b_row_len];
-            bin_pervade_recursive((a, asemi), (b, bsemi), &mut temp, None, None, f, env)?;
+            bin_pervade_recursive((a, asemi), (b, bsemi), &mut temp, None, None, mul, env)?;
             if sign == -1 {
                 for v in &mut temp {
                     *v = -*v;
@@ -304,9 +351,8 @@ pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let ab = [arr, rev];
     let semi = [semi.clone(), semi];
     let sel = [sel.clone(), sel];
-    let prod = product_impl(spec.metrics, &ab, &semi, &sel, dims, size, env)?;
-    let depth = prod.rank() - 1;
-    let mut arr = prod.first_depth(depth, env)?;
+    let prod = product_impl(spec.metrics, ab, &semi, &sel, dims, size, env)?;
+    let mut arr = prod.first(env)?;
     for v in arr.data.as_mut_slice() {
         *v = v.abs().sqrt();
     }

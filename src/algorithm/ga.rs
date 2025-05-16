@@ -143,10 +143,14 @@ fn init<const N: usize>(spec: Spec, vals: [Value; N], env: &Uiua) -> UiuaResult<
 }
 
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([a, b], [asemi, bsemi], [a_sel, b_sel], dims, size) = init(spec, [a, b], env)?;
-    let c_sel = dim_selector(dims, size, env)?;
+    let ([a, b], [asemi, bsemi], [a_sel, b_sel], _, size) = init(spec, [a, b], env)?;
     let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
+
+    if csemi.contains(&0) {
+        csemi.push(size);
+        return Ok(Array::new(csemi, c_data));
+    }
 
     let a_row_len = asemi.elements();
     let b_row_len = bsemi.elements();
@@ -155,14 +159,26 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     let b = b.data.as_slice();
     let c_slice = c_data.make_mut();
 
-    let f = InfalliblePervasiveFn::new(pervade::mul::num_num);
+    let f = InfalliblePervasiveFn::new(pervade::add::num_num);
     for i in 0..size {
-        match (a_sel[i], b_sel[i], c_sel[i]) {
-            (Some(ai), Some(bi), Some(ci)) => {
+        match (a_sel[i], b_sel[i]) {
+            (Some(ai), Some(bi)) => {
                 let a = &a[ai * a_row_len..][..a_row_len];
                 let b = &b[bi * b_row_len..][..b_row_len];
-                let c = &mut c_slice[ci * c_row_len..][..c_row_len];
+                let c = &mut c_slice[i * c_row_len..][..c_row_len];
                 bin_pervade_recursive((a, &asemi), (b, &bsemi), c, None, None, f, env)?;
+            }
+            (Some(ai), None) => {
+                let a = &a[ai * a_row_len..][..a_row_len];
+                for c in c_slice[i * c_row_len..][..c_row_len].chunks_exact_mut(a_row_len) {
+                    c.copy_from_slice(a);
+                }
+            }
+            (None, Some(bi)) => {
+                let b = &b[bi * b_row_len..][..b_row_len];
+                for c in c_slice[i * c_row_len..][..c_row_len].chunks_exact_mut(b_row_len) {
+                    c.copy_from_slice(b);
+                }
             }
             _ => {}
         }

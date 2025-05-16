@@ -387,6 +387,8 @@ impl fmt::Display for ImplPrimitive {
             GeometricMagnitude(_) => write!(f, "{Geometric}{Abs}"),
             GeometricSqrt(_) => write!(f, "{Geometric}{Sqrt}"),
             GeometricReverse(_) => write!(f, "{Geometric}{Neg}"),
+            GeometricAdd(_) => write!(f, "{Geometric}{Add}"),
+            GeometricSub(_) => write!(f, "{Geometric}{Sub}"),
         }
     }
 }
@@ -1642,6 +1644,18 @@ impl ImplPrimitive {
             &ImplPrimitive::GeometricReverse(spec) => {
                 let a = env.pop(1)?;
                 let res = ga::reverse(spec, a, env)?;
+                env.push(res);
+            }
+            &ImplPrimitive::GeometricAdd(spec) => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                let res = ga::add(spec, a, b, env)?;
+                env.push(res);
+            }
+            &ImplPrimitive::GeometricSub(spec) => {
+                let a = env.pop(1)?.neg(env)?;
+                let b = env.pop(2)?;
+                let res = ga::add(spec, a, b, env)?;
                 env.push(res);
             }
             prim => {

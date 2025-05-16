@@ -142,9 +142,43 @@ fn init<const N: usize>(spec: Spec, vals: [Value; N], env: &Uiua) -> UiuaResult<
     Ok((arrs, semis, sels, dims, max_size))
 }
 
+pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let ([a, b], [asemi, bsemi], [a_sel, b_sel], dims, size) = init(spec, [a, b], env)?;
+    let c_sel = dim_selector(dims, size, env)?;
+    let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
+    let mut c_data = eco_vec![0.0; size * csemi.elements()];
+
+    let a_row_len = asemi.elements();
+    let b_row_len = bsemi.elements();
+    let c_row_len = csemi.elements();
+    let a = a.data.as_slice();
+    let b = b.data.as_slice();
+    let c_slice = c_data.make_mut();
+
+    let f = InfalliblePervasiveFn::new(pervade::mul::num_num);
+    for i in 0..size {
+        match (a_sel[i], b_sel[i], c_sel[i]) {
+            (Some(ai), Some(bi), Some(ci)) => {
+                let a = &a[ai * a_row_len..][..a_row_len];
+                let b = &b[bi * b_row_len..][..b_row_len];
+                let c = &mut c_slice[ci * c_row_len..][..c_row_len];
+                bin_pervade_recursive((a, &asemi), (b, &bsemi), c, None, None, f, env)?;
+            }
+            _ => {}
+        }
+    }
+
+    csemi.prepend(size);
+    let mut result = Array::new(csemi, c_data);
+    result.transpose();
+    Ok(result)
+}
+
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (ab, semi, sel, dims, size) = init(spec, [a, b], env)?;
-    product_impl(spec.metrics, &ab, &semi, &sel, dims, size, env)
+    let mut res = product_impl(spec.metrics, &ab, &semi, &sel, dims, size, env)?;
+    res.transpose();
+    Ok(res)
 }
 fn product_impl(
     metrics: Metrics,
@@ -157,9 +191,8 @@ fn product_impl(
 ) -> UiuaResult<Array<f64>> {
     let ([a, b], [asemi, bsemi], [a_sel, b_sel]) = (ab, semi, sel);
     let c_sel = dim_selector(dims, size, env)?;
-
     let mut csemi = derive_new_shape(asemi, bsemi, Err(""), Err(""), env)?;
-    let mut c_data = eco_vec![0.0; size * csemi.elements() ];
+    let mut c_data = eco_vec![0.0; size * csemi.elements()];
 
     // println!("dims: {dims}, metrics: {metrics:?}, size: {size}");
     // println!("a_sel: {a_sel:?}");
@@ -186,6 +219,7 @@ fn product_impl(
         rev_mask_table[v] = i;
     }
 
+    let f = InfalliblePervasiveFn::new(pervade::mul::num_num);
     for i in 0..1usize << dims {
         let i_mask = mask_table[i];
         for j in 0..1usize << dims {
@@ -207,7 +241,6 @@ fn product_impl(
             // );
             let a = &a[ai * a_row_len..][..a_row_len];
             let b = &b[aj * b_row_len..][..b_row_len];
-            let f = InfalliblePervasiveFn::new(pervade::mul::num_num);
             bin_pervade_recursive((a, asemi), (b, bsemi), &mut temp, None, None, f, env)?;
             if sign == -1 {
                 for v in &mut temp {
@@ -226,9 +259,7 @@ fn product_impl(
     }
 
     csemi.prepend(size);
-    let mut result = Array::new(csemi, c_data);
-    result.transpose();
-    Ok(result)
+    Ok(Array::new(csemi, c_data))
 }
 
 pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {

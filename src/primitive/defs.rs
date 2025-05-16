@@ -3692,4 +3692,5 @@ impl_primitive!(
     (2, GeometricProduct(ga::Spec)),
     (1, GeometricMagnitude(ga::Spec)),
     (1, GeometricSqrt(ga::Spec)),
+    (1, GeometricReverse(ga::Spec)),
 );

@@ -1407,27 +1407,27 @@ a.clean {
 
 .aro {
     background-image: linear-gradient(180deg,
-            #000000 36%,
-            #A9A9A9 36%,
-            #A9A9A9 47%,
+            #3DA542 36%,
+            #A7D379 36%,
+            #A7D379 47%,
             #FFFFFF 47%,
             #FFFFFF 58%,
-            #A7D379 58%,
-            #A7D379 69%,
-            #3DA542 69%);
+            #A9A9A9 58%,
+            #A9A9A9 69%,
+            #000000 69%);
 
 }
 
 .monadic-aro {
     background-image: linear-gradient(180deg,
-            #000000 25%,
-            #A9A9A9 25%,
-            #A9A9A9 37%,
+            #3DA542 25%,
+            #A7D379 25%,
+            #A7D379 37%,
             #FFFFFF 37%,
             #FFFFFF 44%,
-            #A7D379 44%,
-            #A7D379 65%,
-            #3DA542 65%);
+            #A9A9A9 44%,
+            #A9A9A9 65%,
+            #000000 65%);
 
 }
 

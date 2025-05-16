@@ -384,6 +384,7 @@ impl fmt::Display for ImplPrimitive {
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
             Retropose => write!(f, "<{Evert}>"),
             GeometricProduct(_) => write!(f, "{Geometric}{Mul}"),
+            GeometricMagnitude(_) => write!(f, "{Geometric}{Abs}"),
         }
     }
 }
@@ -1624,6 +1625,11 @@ impl ImplPrimitive {
                 let a = env.pop(1)?;
                 let b = env.pop(2)?;
                 let res = ga::product(space, a, b, env)?;
+                env.push(res);
+            }
+            &ImplPrimitive::GeometricMagnitude(space) => {
+                let a = env.pop(1)?;
+                let res = ga::magnitude(space, a, env)?;
                 env.push(res);
             }
             prim => {

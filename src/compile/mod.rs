@@ -25,7 +25,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    algorithm::ga::GaSpec,
+    algorithm::ga::Spec,
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},
@@ -222,7 +222,7 @@ enum ScopeKind {
     /// A test scope between `---`s
     Test,
     /// A `geo` scope
-    Geo(GaSpec),
+    Geo(Spec),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2127,6 +2127,10 @@ impl Compiler {
                     let span = self.add_span(span.clone());
                     return Err(ImplPrim(GeometricProduct(space), span));
                 }
+                Abs => {
+                    let span = self.add_span(span.clone());
+                    return Err(ImplPrim(GeometricMagnitude(space), span));
+                }
                 prim => self.add_error(
                     span.clone(),
                     format!("{} is not valid in {}", prim.format(), Geometric.format()),
@@ -2756,7 +2760,7 @@ impl Compiler {
             )
         })
     }
-    fn ga_spec(&self) -> Option<GaSpec> {
+    fn ga_spec(&self) -> Option<Spec> {
         for scope in self.scopes() {
             match scope.kind {
                 ScopeKind::Geo(dims) => return Some(dims),

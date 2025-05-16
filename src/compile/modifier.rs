@@ -1,7 +1,7 @@
 //! Compiler code for modifiers
 #![allow(clippy::redundant_closure_call)]
 
-use crate::algorithm::ga::{metrics_from_val, GaMetrics};
+use crate::algorithm::ga;
 
 use super::*;
 use algebra::{derivative, integral};
@@ -1907,7 +1907,7 @@ impl Compiler {
         subscript: Option<Sp<Subscript>>,
         metrics: Option<Sp<Word>>,
     ) -> UiuaResult<Node> {
-        let mut met = GaMetrics::VANILLA;
+        let mut met = ga::Metrics::VANILLA;
         if let Some(metrics) = metrics {
             let metrics_span = metrics.span.clone();
             let (vals, sig) = self.do_comptime_vals(
@@ -1916,7 +1916,7 @@ impl Compiler {
                 &metrics_span,
             )?;
             if vals.len() == 1 {
-                match metrics_from_val(&vals[0]) {
+                match ga::metrics_from_val(&vals[0]) {
                     Ok(metrics) => met = metrics,
                     Err(e) => self.add_error(metrics_span, e),
                 }
@@ -1935,7 +1935,7 @@ impl Compiler {
             let sub = self.validate_subscript(sub);
             let dims = sub.value.num.map(|n| {
                 let mut n = self.positive_subscript(n, Primitive::Geometric, &sub.span);
-                const MAX_DIMS: usize = 4;
+                const MAX_DIMS: usize = ga::MAX_DIMS as usize;
                 if n > MAX_DIMS {
                     self.add_error(
                         sub.span.clone(),
@@ -1957,13 +1957,13 @@ impl Compiler {
                 }
                 side.side
             });
-            GaSpec {
+            Spec {
                 dims,
                 side,
                 metrics: met,
             }
         } else {
-            GaSpec::default()
+            Spec::default()
         };
         let (_, node) = self.in_scope(ScopeKind::Geo(spec), |comp| comp.word(word))?;
         Ok(node)

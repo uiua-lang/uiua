@@ -1,6 +1,6 @@
 //! Geometric Algebra
 
-use std::{fmt, iter::repeat_n};
+use std::{array, fmt, iter::repeat_n};
 
 use ecow::eco_vec;
 use serde::*;
@@ -15,11 +15,11 @@ use crate::{
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
 )]
 #[serde(default)]
-pub struct GaSpec {
+pub struct Spec {
     #[serde(skip_serializing_if = "Option::is_none", rename = "d")]
     pub dims: Option<u8>,
     #[serde(skip_serializing_if = "is_default", rename = "m")]
-    pub metrics: GaMetrics,
+    pub metrics: Metrics,
     #[serde(skip_serializing_if = "Option::is_none", rename = "s")]
     pub side: Option<SubSide>,
 }
@@ -48,21 +48,21 @@ fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
 type Sel = Vec<Option<usize>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GaMode {
+enum Mode {
     Even,
     Full,
 }
-use GaMode::*;
+use Mode::*;
 
 use super::{
     pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
     tuples::combinations,
 };
 
-const MAX_DIMS: u8 = 11;
+pub const MAX_DIMS: u8 = Metrics::COUNT as u8;
 const MAX_SIZE: usize = 1usize << (MAX_DIMS - 1);
 
-fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8, GaMode)> {
+fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8, Mode)> {
     Ok(if let Some(dims) = dims {
         if dims > MAX_DIMS {
             return Err(env.error(format!(
@@ -97,33 +97,54 @@ fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8
 
 fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<Sel> {
     let (_, this_mode) = derive_dims_mode(Some(dims), elem_size, env)?;
-    if this_mode == Full {
-        return Ok((0..(1usize << dims)).map(Some).collect());
-    }
-    let mut results = Vec::with_capacity(1usize << dims);
-    let mut i = 0;
-    for d in 0..=dims {
-        let n = combinations(dims as usize, d as usize, false) as usize;
-        if d % 2 == 0 {
-            for _ in 0..n {
-                results.push(Some(i));
-                i += 1;
-            }
-        } else {
-            results.extend(repeat_n(None, n));
+    Ok(match this_mode {
+        Even => {
+            let mut i = 0;
+            blade_grades(dims)
+                .map(|g| {
+                    (g % 2 == 0).then(|| {
+                        i += 1;
+                        i - 1
+                    })
+                })
+                .collect()
         }
-    }
-    Ok(results)
+        Full => (0..(1usize << dims)).map(Some).collect(),
+    })
 }
 
-pub fn product(spec: GaSpec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (a, asemi, a_size) = ga_arg(a, env)?;
-    let (b, bsemi, b_size) = ga_arg(b, env)?;
-    let size = a_size.max(b_size);
-    let (dims, _) = derive_dims_mode(spec.dims, size, env)?;
+fn grade_size(dims: u8, grade: u8) -> usize {
+    combinations(dims as usize, grade as usize, false) as usize
+}
+
+fn blade_grades(dims: u8) -> impl Iterator<Item = u8> {
+    (0..=dims).flat_map(move |i| repeat_n(i, grade_size(dims, i)))
+}
+
+type Init<const N: usize> = ([Array<f64>; N], [Shape; N], [Sel; N], u8, usize);
+fn init<const N: usize>(spec: Spec, vals: [Value; N], env: &Uiua) -> UiuaResult<Init<N>> {
+    let mut arrs = array::from_fn(|_| Array::default());
+    let mut sizes = [0; N];
+    let mut semis = array::from_fn(|_| Shape::default());
+    let mut sels = array::from_fn(|_| Vec::new());
+    let mut max_size = 0;
+    for (i, val) in vals.into_iter().enumerate() {
+        let (arr, semi, size) = ga_arg(val, env)?;
+        max_size = max_size.max(size);
+        arrs[i] = arr;
+        semis[i] = semi;
+        sizes[i] = size;
+    }
+    let (dims, _) = derive_dims_mode(spec.dims, max_size, env)?;
+    for i in 0..N {
+        sels[i] = dim_selector(dims, sizes[i], env)?;
+    }
+    Ok((arrs, semis, sels, dims, max_size))
+}
+
+pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let ([a, b], [asemi, bsemi], [a_sel, b_sel], dims, size) = init(spec, [a, b], env)?;
     let metrics = spec.metrics;
-    let a_sel = dim_selector(dims, a_size, env)?;
-    let b_sel = dim_selector(dims, b_size, env)?;
     let c_sel = dim_selector(dims, size, env)?;
 
     let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
@@ -206,7 +227,33 @@ pub fn product(spec: GaSpec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array
     Ok(result)
 }
 
-fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: GaMetrics) -> (i32, f64) {
+pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let ([mut arr], [_], [sel], dims, _) = init(spec, [val], env)?;
+    for (i, g) in blade_grades(dims).enumerate() {
+        if let Some(i) = sel[i] {
+            if g / 2 % 2 == 1 {
+                for v in arr.row_slice_mut(i) {
+                    *v = -*v;
+                }
+            }
+        }
+    }
+    arr.transpose();
+    Ok(arr)
+}
+
+pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let rev = reverse(spec, val.clone(), env)?;
+    let prod = product(spec, val, rev.into(), env)?;
+    let depth = prod.rank() - 1;
+    let mut arr = prod.first_depth(depth, env)?;
+    for v in arr.data.as_mut_slice() {
+        *v = v.abs().sqrt();
+    }
+    Ok(arr)
+}
+
+fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: Metrics) -> (i32, f64) {
     let mut sign = 1;
     let mut metric = 1.0;
     for i in 0..dims {
@@ -244,8 +291,8 @@ fn blade_name(dims: u8, mask: usize) -> String {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
-pub struct GaMetrics(u32);
-impl GaMetrics {
+pub struct Metrics(u32);
+impl Metrics {
     pub const COUNT: usize = 16;
     pub const VANILLA: Self = Self(0);
     pub fn all(val: i8) -> Self {
@@ -274,7 +321,7 @@ impl GaMetrics {
         self.0 |= bits << (2 * index);
     }
 }
-impl fmt::Debug for GaMetrics {
+impl fmt::Debug for Metrics {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for i in 0..Self::COUNT {
             let val = self.get(i);
@@ -284,17 +331,17 @@ impl fmt::Debug for GaMetrics {
     }
 }
 
-pub fn metrics_from_val(val: &Value) -> Result<GaMetrics, String> {
+pub fn metrics_from_val(val: &Value) -> Result<Metrics, String> {
     if val.rank() > 2 {
         return Err(format!(
             "Metrics array must be rank 0 or 1, but its rank is {}",
             val.rank()
         ));
     }
-    if val.row_count() > GaMetrics::COUNT {
+    if val.row_count() > Metrics::COUNT {
         return Err(format!(
             "Metrics array must have at most {} elements, but it has {}",
-            GaMetrics::COUNT,
+            Metrics::COUNT,
             val.row_count()
         ));
     }
@@ -307,9 +354,9 @@ pub fn metrics_from_val(val: &Value) -> Result<GaMetrics, String> {
                 ));
             }
             if arr.rank() == 0 {
-                GaMetrics::all(arr.data[0] as i8)
+                Metrics::all(arr.data[0] as i8)
             } else {
-                let mut metrics = GaMetrics::default();
+                let mut metrics = Metrics::default();
                 for (i, v) in arr.data.iter().enumerate() {
                     metrics.set(i, *v as i8);
                 }
@@ -323,9 +370,9 @@ pub fn metrics_from_val(val: &Value) -> Result<GaMetrics, String> {
                 ));
             }
             if arr.rank() == 0 {
-                GaMetrics::all(arr.data[0] as i8)
+                Metrics::all(arr.data[0] as i8)
             } else {
-                let mut metrics = GaMetrics::default();
+                let mut metrics = Metrics::default();
                 for (i, v) in arr.data.iter().enumerate() {
                     metrics.set(i, *v as i8);
                 }

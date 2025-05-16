@@ -242,7 +242,6 @@ pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
                 atan2::num_num,
                 env,
             )?),
-            #[cfg(feature = "opt")]
             Primitive::Complex if flipped => {
                 env.push(fast_table_list(xs, ys, flip(complex::byte_byte), env)?)
             }

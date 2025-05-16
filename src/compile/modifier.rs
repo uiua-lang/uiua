@@ -1406,9 +1406,9 @@ impl Compiler {
                     } else {
                         GaFlavor::Vanilla
                     };
-                    GeoSpace { dims, flavor }
+                    GaSpace { dims, flavor }
                 } else {
-                    GeoSpace::default()
+                    GaSpace::default()
                 };
                 let (_, (sn, _)) = self.in_scope(ScopeKind::Geo(space), |comp| {
                     comp.monadic_modifier_op(modified)

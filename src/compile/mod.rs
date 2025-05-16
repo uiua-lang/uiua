@@ -25,7 +25,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    algorithm::ga::GeoSpace,
+    algorithm::ga::GaSpace,
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},
@@ -222,7 +222,7 @@ enum ScopeKind {
     /// A test scope between `---`s
     Test,
     /// A `geo` scope
-    Geo(GeoSpace),
+    Geo(GaSpace),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2102,21 +2102,31 @@ impl Compiler {
         self.handle_primitive_experimental(prim, span);
         self.handle_primitive_deprecation(prim, span);
     }
-    fn translate_primitive(
-        &mut self,
-        prim: Primitive,
-        span: &CodeSpan,
-    ) -> Result<Primitive, ImplPrimitive> {
-        use Primitive::*;
-        if let Some(_space) = self.geo_space() {
+    fn translate_primitive(&mut self, prim: Primitive, span: &CodeSpan) -> Result<Primitive, Node> {
+        use {ImplPrimitive::*, Node::*, Primitive::*};
+        if let Some(space) = self.geo_space() {
             match prim {
                 Dup | Flip => {}
                 Fork | Bracket | Both => {}
+                Dip | Gap | Reach => {}
                 On | By | With | Off => {}
                 Above | Below => {}
                 Slf | Backward => {}
                 Stack => {}
                 Sys(_) => {}
+                Transpose => {
+                    let span = self.add_span(span.clone());
+                    let inner = eco_vec![SigNode::new((1, 1), ImplPrim(TransposeN(-1), span))];
+                    return Err(Node::from_iter([
+                        ImplPrim(Retropose, span),
+                        Mod(Rows, inner, span),
+                        ImplPrim(Retropose, span),
+                    ]));
+                }
+                Mul => {
+                    let span = self.add_span(span.clone());
+                    return Err(ImplPrim(GeometricProduct(space), span));
+                }
                 prim => self.add_error(
                     span.clone(),
                     format!("{} is not valid in {}", prim.format(), Geometric.format()),
@@ -2131,7 +2141,7 @@ impl Compiler {
         let span = self.add_span(span);
         match prim {
             Ok(prim) => Node::Prim(prim, span),
-            Err(impl_prim) => Node::ImplPrim(impl_prim, span),
+            Err(node) => node,
         }
     }
     #[allow(clippy::match_single_binding, unused_parens)]
@@ -2165,21 +2175,17 @@ impl Compiler {
                         }
                         self.modified(*m, Some(scr.map(Into::into)))?
                     }
-                    Err(prim) => {
-                        self.add_error(
-                            m.modifier.span.clone().merge(scr.span.clone()),
-                            format!("Subscripts are not implemented for {prim}"),
-                        );
-                        self.modified(*m, Some(scr.map(Into::into)))?
+                    Err(node) => {
+                        self.add_error(span.clone(), "Subscripts are not allowed in this context");
+                        node
                     }
                 },
             },
             Word::Primitive(prim) => match self.translate_primitive(prim, &span) {
                 Ok(prim) => self.subscript_prim(prim, sub.word.span, scr)?,
-                Err(prim) => {
+                Err(node) => {
                     self.add_error(span.clone(), "Subscripts are not allowed in this context");
-                    let span = self.add_span(span);
-                    Node::ImplPrim(prim, span)
+                    node
                 }
             },
             _ => {
@@ -2750,7 +2756,7 @@ impl Compiler {
             )
         })
     }
-    fn geo_space(&self) -> Option<GeoSpace> {
+    fn geo_space(&self) -> Option<GaSpace> {
         for scope in self.scopes() {
             match scope.kind {
                 ScopeKind::Geo(dims) => return Some(dims),

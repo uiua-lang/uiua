@@ -1,6 +1,6 @@
 //! All primitive definitions
 
-use crate::Purity;
+use crate::{algorithm::ga::GaSpace, Purity};
 
 use super::*;
 
@@ -3688,4 +3688,6 @@ impl_primitive!(
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),
     (2(1), TagVariant),
+    // Geometric Algebra
+    (2, GeometricProduct(GaSpace)),
 );

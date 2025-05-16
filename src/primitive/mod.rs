@@ -383,6 +383,7 @@ impl fmt::Display for ImplPrimitive {
             BothImpl(sub) => write!(f, "{Both}{sub}"),
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
             Retropose => write!(f, "<{Evert}>"),
+            GeometricProduct(_) => write!(f, "{Geometric}{Mul}"),
         }
     }
 }
@@ -1617,6 +1618,12 @@ impl ImplPrimitive {
                     tag.box_if_not();
                 }
                 let res = tag.join(val, false, env)?;
+                env.push(res);
+            }
+            &ImplPrimitive::GeometricProduct(space) => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                let res = ga::product(space, a, b, env)?;
                 env.push(res);
             }
             prim => {

@@ -327,7 +327,7 @@ impl Value {
     }
 }
 
-fn combinations(n: usize, k: usize, same: bool) -> f64 {
+pub fn combinations(n: usize, k: usize, same: bool) -> f64 {
     if k > n {
         return 0.0;
     }

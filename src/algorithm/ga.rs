@@ -1,34 +1,27 @@
 //! Geometric Algebra
 
-use std::iter::repeat_n;
+use std::{fmt, iter::repeat_n};
 
 use ecow::eco_vec;
 use serde::*;
 
 use crate::{
-    algorithm::pervade::derive_new_shape, is_default, Array, Shape, Uiua, UiuaResult, Value,
+    algorithm::pervade::derive_new_shape, ast::SubSide, grid_fmt::GridFmt, is_default, Array,
+    Shape, Uiua, UiuaResult, Value,
 };
 
+/// Specification for the kind of geometric algebra to perform
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
 )]
 #[serde(default)]
-pub struct GaSpace {
+pub struct GaSpec {
     #[serde(skip_serializing_if = "Option::is_none", rename = "d")]
     pub dims: Option<u8>,
-    #[serde(skip_serializing_if = "is_default", rename = "f")]
-    pub flavor: GaFlavor,
-}
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
-)]
-pub enum GaFlavor {
-    #[default]
-    #[serde(rename = "v")]
-    Vanilla,
-    #[serde(rename = "p")]
-    Projective,
+    #[serde(skip_serializing_if = "is_default", rename = "m")]
+    pub metrics: GaMetrics,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "s")]
+    pub side: Option<SubSide>,
 }
 
 fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
@@ -123,26 +116,12 @@ fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<Sel> {
     Ok(results)
 }
 
-fn metrics(flavor: GaFlavor, dims: u8) -> Vec<f64> {
-    match flavor {
-        GaFlavor::Vanilla => vec![1.0; dims as usize],
-        GaFlavor::Projective => {
-            let mut metrics = vec![1.0; dims as usize];
-            if let Some(m) = metrics.first_mut() {
-                *m = 0.0;
-            }
-            metrics
-        }
-    }
-}
-
-pub fn product(space: GaSpace, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let flavor = space.flavor;
+pub fn product(spec: GaSpec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (a, asemi, a_size) = ga_arg(a, env)?;
     let (b, bsemi, b_size) = ga_arg(b, env)?;
     let size = a_size.max(b_size);
-    let (dims, _) = derive_dims_mode(space.dims, size, env)?;
-    let metrics = metrics(flavor, dims);
+    let (dims, _) = derive_dims_mode(spec.dims, size, env)?;
+    let metrics = spec.metrics;
     let a_sel = dim_selector(dims, a_size, env)?;
     let b_sel = dim_selector(dims, b_size, env)?;
     let c_sel = dim_selector(dims, size, env)?;
@@ -150,8 +129,7 @@ pub fn product(space: GaSpace, a: Value, b: Value, env: &Uiua) -> UiuaResult<Arr
     let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements() ];
 
-    // println!("flavor: {flavor:?}, dims: {dims}");
-    // println!("mode: {mode:?}, size: {size}, metrics: {metrics:?}");
+    // println!("dims: {dims}, metrics: {metrics:?}, size: {size}");
     // println!("a_sel: {a_sel:?}");
     // println!("b_sel: {b_sel:?}");
     // println!("c_sel: {c_sel:?}");
@@ -180,7 +158,7 @@ pub fn product(space: GaSpace, a: Value, b: Value, env: &Uiua) -> UiuaResult<Arr
         let i_mask = mask_table[i];
         for j in 0..1usize << dims {
             let j_mask = mask_table[j];
-            let (sign, metric) = blade_sign_and_metric(i_mask, j_mask, dims, &metrics);
+            let (sign, metric) = blade_sign_and_metric(i_mask, j_mask, dims, metrics);
             if metric == 0.0 {
                 continue;
             }
@@ -228,7 +206,7 @@ pub fn product(space: GaSpace, a: Value, b: Value, env: &Uiua) -> UiuaResult<Arr
     Ok(result)
 }
 
-fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: &[f64]) -> (i32, f64) {
+fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: GaMetrics) -> (i32, f64) {
     let mut sign = 1;
     let mut metric = 1.0;
     for i in 0..dims {
@@ -241,7 +219,7 @@ fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: &[f64]) -> (i32,
             }
         }
         if (a & bit_i != 0) && (b & bit_i != 0) {
-            metric *= metrics[i as usize];
+            metric *= metrics.get(i as usize) as f64;
         }
     }
     (sign, metric)
@@ -263,4 +241,102 @@ fn blade_name(dims: u8, mask: usize) -> String {
     } else {
         s
     }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+pub struct GaMetrics(u32);
+impl GaMetrics {
+    pub const COUNT: usize = 16;
+    pub const VANILLA: Self = Self(0);
+    pub fn all(val: i8) -> Self {
+        let mut metrics = Self(0);
+        for i in 0..Self::COUNT {
+            metrics.set(i, val);
+        }
+        metrics
+    }
+    pub fn get(&self, index: usize) -> i8 {
+        let bits = (self.0 >> (2 * index)) & 0b11;
+        match bits {
+            0b00 => 1,
+            0b01 => 0,
+            0b10 => -1,
+            _ => unreachable!(),
+        }
+    }
+    pub fn set(&mut self, index: usize, val: i8) {
+        let bits = match val {
+            0 => 0b01,
+            -1 => 0b10,
+            _ => 0b00,
+        };
+        self.0 &= !(0b11 << (2 * index));
+        self.0 |= bits << (2 * index);
+    }
+}
+impl fmt::Debug for GaMetrics {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in 0..Self::COUNT {
+            let val = self.get(i);
+            write!(f, "{val}")?;
+        }
+        Ok(())
+    }
+}
+
+pub fn metrics_from_val(val: &Value) -> Result<GaMetrics, String> {
+    if val.rank() > 2 {
+        return Err(format!(
+            "Metrics array must be rank 0 or 1, but its rank is {}",
+            val.rank()
+        ));
+    }
+    if val.row_count() > GaMetrics::COUNT {
+        return Err(format!(
+            "Metrics array must have at most {} elements, but it has {}",
+            GaMetrics::COUNT,
+            val.row_count()
+        ));
+    }
+    Ok(match val {
+        Value::Num(arr) => {
+            if let Some(m) = arr.data.iter().find(|&v| ![1.0, 0.0, -1.0].contains(v)) {
+                return Err(format!(
+                    "Metrics may only be 1, 0, or ¯1, but the array contains {}",
+                    m.grid_string(false)
+                ));
+            }
+            if arr.rank() == 0 {
+                GaMetrics::all(arr.data[0] as i8)
+            } else {
+                let mut metrics = GaMetrics::default();
+                for (i, v) in arr.data.iter().enumerate() {
+                    metrics.set(i, *v as i8);
+                }
+                metrics
+            }
+        }
+        Value::Byte(arr) => {
+            if let Some(m) = arr.data.iter().find(|&v| ![1, 0].contains(v)) {
+                return Err(format!(
+                    "Metrics may only be 1, 0, or ¯1, but the array contains {m}"
+                ));
+            }
+            if arr.rank() == 0 {
+                GaMetrics::all(arr.data[0] as i8)
+            } else {
+                let mut metrics = GaMetrics::default();
+                for (i, v) in arr.data.iter().enumerate() {
+                    metrics.set(i, *v as i8);
+                }
+                metrics
+            }
+        }
+        val => {
+            return Err(format!(
+                "Metrics array must be numbers, but it is {}",
+                val.type_name_plural()
+            ))
+        }
+    })
 }

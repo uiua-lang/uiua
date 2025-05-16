@@ -19,7 +19,7 @@ pub trait PervasiveFn<A, B> {
     fn call(&self, a: A, b: B, env: &Uiua) -> Result<Self::Output, Self::Error>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct InfalliblePervasiveFn<A, B, C, F>(F, PhantomData<(A, B, C)>);
 
 impl<A, B, C, F> InfalliblePervasiveFn<A, B, C, F> {

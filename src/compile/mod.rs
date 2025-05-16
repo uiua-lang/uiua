@@ -1213,8 +1213,8 @@ impl Compiler {
             match (cfg!(target_arch = "wasm32"), cfg!(debug_assertions)) {
                 (false, false) => (512 + 256 + 64) * 1024 * 2,
                 (false, true) => (512 + 256 + 64) * 1024,
-                (true, false) => 512 * 1024,
-                (true, true) => 512 * 1024,
+                (true, false) => 640 * 1024,
+                (true, true) => 640 * 1024,
             };
         let start_addr = *self.start_addrs.first().unwrap();
         let curr = 0u8;

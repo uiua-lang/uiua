@@ -2993,7 +2993,7 @@ primitive!(
     ///   : ⌵⍜°⍉≡fft .
     (1, Fft, Algorithm, "fft"),
     /// Convert an operation to be in geometric algebra
-    ([1], Geometric, Algorithm, "geo", { experimental: true }),
+    ([1], Geometric, Algorithm, ("geo", '⩜'), { experimental: true }),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.

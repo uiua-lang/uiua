@@ -3,6 +3,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     fmt,
     hash::{Hash, Hasher},
+    iter::once,
     mem::{discriminant, swap, take},
     ops::Deref,
     slice::{self, SliceIndex},
@@ -284,6 +285,13 @@ impl CustomInverse {
             .chain(self.un.as_ref())
             .chain(self.anti.as_ref())
             .chain(self.under.as_ref().into_iter().flat_map(|(b, a)| [a, b]))
+    }
+    /// Iterate mutably over all nodes
+    pub fn nodes_mut(&mut self) -> impl Iterator<Item = &mut SigNode> {
+        (self.normal.as_mut().into_iter())
+            .chain(self.un.as_mut())
+            .chain(self.anti.as_mut())
+            .chain(self.under.as_mut().into_iter().flat_map(|(b, a)| [a, b]))
     }
 }
 
@@ -574,6 +582,38 @@ impl Node {
                 let second = Self::bracket(nodes, span).sig_node().unwrap();
                 Node::Mod(Primitive::Bracket, eco_vec![first, second], span)
             }
+        }
+    }
+    /// Get the child [`Node`]s of this node
+    pub fn sub_nodes(&self) -> Box<dyn Iterator<Item = &Node> + '_> {
+        match self {
+            Node::Run(nodes) => Box::new(nodes.iter()),
+            Node::Array { inner, .. } | Node::TrackCaller(inner) | Node::NoInline(inner) => {
+                Box::new(once(&**inner))
+            }
+            Node::Mod(_, args, _) | Node::ImplMod(_, args, _) => {
+                Box::new(args.iter().map(|sn| &sn.node))
+            }
+            Node::WithLocal { inner, .. } => Box::new(once(&inner.node)),
+            Node::CustomInverse(cust, _) => Box::new(cust.nodes().map(|sn| &sn.node)),
+            _ => Box::new([].into_iter()),
+        }
+    }
+    /// Get the child [`Node`]s of this node
+    pub fn sub_nodes_mut(&mut self) -> Box<dyn Iterator<Item = &mut Node> + '_> {
+        match self {
+            Node::Run(nodes) => Box::new(nodes.make_mut().iter_mut()),
+            Node::Array { inner, .. } | Node::TrackCaller(inner) | Node::NoInline(inner) => {
+                Box::new(once(Arc::make_mut(inner)))
+            }
+            Node::Mod(_, args, _) | Node::ImplMod(_, args, _) => {
+                Box::new(args.make_mut().iter_mut().map(|sn| &mut sn.node))
+            }
+            Node::WithLocal { inner, .. } => Box::new(once(&mut Arc::make_mut(inner).node)),
+            Node::CustomInverse(cust, _) => {
+                Box::new(Arc::make_mut(cust).nodes_mut().map(|sn| &mut sn.node))
+            }
+            _ => Box::new([].into_iter()),
         }
     }
 }

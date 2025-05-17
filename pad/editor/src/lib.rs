@@ -2291,7 +2291,8 @@ fn prim_sig_class(prim: Primitive, subscript: Option<Subscript>) -> &'static str
             }
             1 if at_least_a_little_gay() => code_font!("monadic-function aro text-gradient"),
             2 => sig_class((2, 1).into()),
-            _ if very_gay() => code_font!("dyadic-function poly text-gradient"),
+            3 if very_gay() => code_font!("dyadic-function poly text-gradient"),
+            _ if at_least_a_little_gay() => code_font!("dyadic-function poly text-gradient"),
             n => sig_class((n.unsigned_abs() as usize, 1).into()),
         },
         Primitive::Rand if very_gay() => code_font!("text-gradient random"),

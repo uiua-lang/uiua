@@ -1687,7 +1687,6 @@ a.clean {
     .aro,
     .aroace,
     .agender,
-    .poly,
     .fluid,
     .gay,
     .lesbian,
@@ -1697,6 +1696,10 @@ a.clean {
     .number-lesbian,
     .caution {
         -webkit-text-stroke: 0.01em #fff8;
+    }
+
+    .poly {
+        -webkit-text-stroke: 0.01em #fff;
     }
 }
 

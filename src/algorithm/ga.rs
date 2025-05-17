@@ -42,6 +42,25 @@ fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
     Ok((arr, semishape, blade_count))
 }
 
+fn ga_arg_no_transpose(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
+    if value.shape.is_empty() {
+        return Err(env.error("Geometric algebra arguments must be at least rank 1"));
+    }
+    let arr = match value {
+        Value::Byte(arr) => arr.convert(),
+        Value::Num(arr) => arr,
+        val => {
+            return Err(env.error(format!(
+                "Cannot do geometric algebra on {}",
+                val.type_name_plural()
+            )))
+        }
+    };
+    let mut semishape = arr.shape.clone();
+    let blade_count = semishape.pop().unwrap();
+    Ok((arr, semishape, blade_count))
+}
+
 /// Mapping from coefficient index to array index
 type Sel = Vec<Option<usize>>;
 
@@ -223,6 +242,105 @@ fn fast_dyadic_complex(
     })
 }
 
+pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let ([mut arr], [_], [sel], dims, _) = init(spec, [val], env)?;
+    arr = reverse_impl(dims, arr, &sel);
+    arr.transpose();
+    Ok(arr)
+}
+
+fn reverse_impl(dims: u8, mut arr: Array<f64>, sel: &Sel) -> Array<f64> {
+    for (i, g) in blade_grades(dims).enumerate() {
+        if let Some(i) = sel[i] {
+            if g / 2 % 2 == 1 {
+                for v in arr.row_slice_mut(i) {
+                    *v = -*v;
+                }
+            }
+        }
+    }
+    arr.meta.take_sorted_flags();
+    arr
+}
+
+pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let val = match to_complex(spec.dims, val) {
+        Ok(mut arr) => {
+            let slice = arr.data.as_mut_slice();
+            for i in 0..slice.len() / 2 {
+                let [re, im] = [slice[i * 2], slice[i * 2 + 1]];
+                slice[i] = (re * re + im * im).sqrt();
+            }
+            let new_len = slice.len() / 2;
+            arr.data.truncate(new_len);
+            arr.shape.pop();
+            arr.meta.take_sorted_flags();
+            arr.validate();
+            return Ok(arr);
+        }
+        Err(val) => val,
+    };
+
+    let ([arr], [semi], [sel], dims, size) = init(spec, [val], env)?;
+    let rev = reverse_impl(dims, arr.clone(), &sel);
+    let ab = [arr, rev];
+    let semi = [semi.clone(), semi];
+    let sel = [sel.clone(), sel];
+    let prod = product_impl(spec.metrics, ab, &semi, &sel, dims, size, env)?;
+    let mut arr = prod.first(env)?;
+    for v in arr.data.as_mut_slice() {
+        *v = v.abs().sqrt();
+    }
+    Ok(arr)
+}
+
+pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    Err(env.error("Geometric square root is not implemented"))
+}
+
+pub fn pad_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let Some(dims) = spec.dims else {
+        return Err(env.error("Blade padding requires a specified number of dimensions"));
+    };
+    if grade > dims {
+        return Err(env.error(format!(
+            "Cannot pad grade {grade} blades in {dims} dimensions"
+        )));
+    }
+    let (arr, semi, size) = ga_arg_no_transpose(val, env)?;
+    let correct_size = grade_size(dims, grade);
+    if size != correct_size {
+        return Err(env.error(format!(
+            "{dims}D multivector should have {correct_size} \
+            grade-{grade} blades, but the array has {size}"
+        )));
+    }
+    let left_size = (0..grade).map(|g| grade_size(dims, g)).sum::<usize>();
+    let full_size = 1usize << dims;
+    let mut new_shape = semi;
+    new_shape.push(full_size);
+    let mut new_data = eco_vec![0.0; new_shape.elements()];
+    let slice = new_data.make_mut();
+
+    for (src, dst) in (arr.data.chunks_exact(size)).zip(slice.chunks_exact_mut(full_size)) {
+        dst[left_size..][..size].copy_from_slice(src);
+    }
+
+    Ok(Array::new(new_shape, new_data))
+}
+
+pub fn extract_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let Some(dims) = spec.dims else {
+        return Err(env.error("Blade padding requires a specified number of dimensions"));
+    };
+    if grade > dims {
+        return Err(env.error(format!(
+            "Cannot extract grade {grade} blades in {dims} dimensions"
+        )));
+    }
+    todo!()
+}
+
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let ab = match fast_dyadic_complex(
         spec.dims,
@@ -381,62 +499,6 @@ fn product_impl(
 
     csemi.prepend(size);
     Ok(Array::new(csemi, c_data))
-}
-
-pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([mut arr], [_], [sel], dims, _) = init(spec, [val], env)?;
-    arr = reverse_impl(dims, arr, &sel);
-    arr.transpose();
-    Ok(arr)
-}
-
-fn reverse_impl(dims: u8, mut arr: Array<f64>, sel: &Sel) -> Array<f64> {
-    for (i, g) in blade_grades(dims).enumerate() {
-        if let Some(i) = sel[i] {
-            if g / 2 % 2 == 1 {
-                for v in arr.row_slice_mut(i) {
-                    *v = -*v;
-                }
-            }
-        }
-    }
-    arr.meta.take_sorted_flags();
-    arr
-}
-
-pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let val = match to_complex(spec.dims, val) {
-        Ok(mut arr) => {
-            let slice = arr.data.as_mut_slice();
-            for i in 0..slice.len() / 2 {
-                let [re, im] = [slice[i * 2], slice[i * 2 + 1]];
-                slice[i] = (re * re + im * im).sqrt();
-            }
-            let new_len = slice.len() / 2;
-            arr.data.truncate(new_len);
-            arr.shape.pop();
-            arr.meta.take_sorted_flags();
-            arr.validate();
-            return Ok(arr);
-        }
-        Err(val) => val,
-    };
-
-    let ([arr], [semi], [sel], dims, size) = init(spec, [val], env)?;
-    let rev = reverse_impl(dims, arr.clone(), &sel);
-    let ab = [arr, rev];
-    let semi = [semi.clone(), semi];
-    let sel = [sel.clone(), sel];
-    let prod = product_impl(spec.metrics, ab, &semi, &sel, dims, size, env)?;
-    let mut arr = prod.first(env)?;
-    for v in arr.data.as_mut_slice() {
-        *v = v.abs().sqrt();
-    }
-    Ok(arr)
-}
-
-pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    Err(env.error("Geometric square root is not implemented"))
 }
 
 fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: Metrics) -> (i32, f64) {

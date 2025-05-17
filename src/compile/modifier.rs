@@ -2011,8 +2011,13 @@ impl Compiler {
             Prim(Neg, span) => *node = ImplPrim(GeometricReverse(spec), span),
             Prim(Add, span) => *node = ImplPrim(GeometricAdd(spec), span),
             Prim(Sub, span) => *node = ImplPrim(GeometricSub(spec), span),
+            ImplPrim(PadBlades(ref mut s, _) | ExtractBlades(ref mut s, _), _)
+                if s.dims.is_none() =>
+            {
+                s.dims = spec.dims;
+            }
             ImplPrim(prim, _) if prim.is_ga() => {}
-            Prim(Dup | Flip | Over | Pop | Stack | Sys(_), _) => {}
+            Prim(Identity | Dup | Flip | Over | Pop | Stack | Sys(_), _) => {}
             ImplPrim(StackN { .. }, _) => {}
             Mod(
                 (Fork | Bracket | Both)

@@ -1641,39 +1641,27 @@ impl ImplPrimitive {
                 let res = tag.join(val, false, env)?;
                 env.push(res);
             }
-            &ImplPrimitive::GeometricProduct(spec) => {
-                let a = env.pop(1)?;
-                let b = env.pop(2)?;
-                let res = ga::product(spec, a, b, env)?;
-                env.push(res);
-            }
+            &ImplPrimitive::GeometricProduct(spec) => env.dyadic_oo_env_with(spec, ga::product)?,
             &ImplPrimitive::GeometricMagnitude(spec) => {
-                let a = env.pop(1)?;
-                let res = ga::magnitude(spec, a, env)?;
-                env.push(res);
+                env.monadic_env_with(spec, ga::magnitude)?
             }
-            &ImplPrimitive::GeometricSqrt(spec) => {
-                let a = env.pop(1)?;
-                let res = ga::sqrt(spec, a, env)?;
-                env.push(res);
-            }
-            &ImplPrimitive::GeometricReverse(spec) => {
-                let a = env.pop(1)?;
-                let res = ga::reverse(spec, a, env)?;
-                env.push(res);
-            }
-            &ImplPrimitive::GeometricAdd(spec) => {
-                let a = env.pop(1)?;
-                let b = env.pop(2)?;
-                let res = ga::add(spec, a, b, env)?;
-                env.push(res);
-            }
+            &ImplPrimitive::GeometricSqrt(spec) => env.monadic_env_with(spec, ga::sqrt)?,
+            &ImplPrimitive::GeometricReverse(spec) => env.monadic_env_with(spec, ga::reverse)?,
+            &ImplPrimitive::GeometricAdd(spec) => env.dyadic_oo_env_with(spec, ga::add)?,
             &ImplPrimitive::GeometricSub(spec) => {
-                let a = env.pop(1)?.neg(env)?;
-                let b = env.pop(2)?;
-                let res = ga::add(spec, a, b, env)?;
-                env.push(res);
+                env.dyadic_oo_env_with(spec, |spec, a, b, env| {
+                    let a = a.neg(env)?;
+                    ga::add(spec, a, b, env)
+                })?
             }
+            &ImplPrimitive::PadBlades(spec, grade) => env
+                .monadic_env_with((spec, grade), |(spec, grade), a, env| {
+                    ga::pad_blades(spec, grade, a, env)
+                })?,
+            &ImplPrimitive::ExtractBlades(spec, grade) => env
+                .monadic_env_with((spec, grade), |(spec, grade), a, env| {
+                    ga::extract_blades(spec, grade, a, env)
+                })?,
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(

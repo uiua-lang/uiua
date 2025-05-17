@@ -389,6 +389,22 @@ impl fmt::Display for ImplPrimitive {
             GeometricReverse(_) => write!(f, "{Geometric}{Neg}"),
             GeometricAdd(_) => write!(f, "{Geometric}{Add}"),
             GeometricSub(_) => write!(f, "{Geometric}{Sub}"),
+            PadBlades(spec, n) => {
+                write!(f, "{Geometric}")?;
+                if let Some(dims) = spec.dims {
+                    fmt_subscript(f, dims as i32)?;
+                }
+                write!(f, "⌟")?;
+                fmt_subscript(f, *n as i32)
+            }
+            ExtractBlades(spec, n) => {
+                write!(f, "{Geometric}")?;
+                if let Some(dims) = spec.dims {
+                    fmt_subscript(f, dims as i32)?;
+                }
+                write!(f, "⌞")?;
+                fmt_subscript(f, *n as i32)
+            }
         }
     }
 }

@@ -3698,6 +3698,7 @@ impl_primitive!(
     (2(1), TagVariant),
     // Geometric Algebra
     (1, GeometricMagnitude(ga::Spec), {ga: true}),
+    (1, GeometricNormalize(ga::Spec), {ga: true}),
     (1, GeometricSqrt(ga::Spec), {ga: true}),
     (1, GeometricReverse(ga::Spec), {ga: true}),
     (1, GeometricAdd(ga::Spec), {ga: true}),

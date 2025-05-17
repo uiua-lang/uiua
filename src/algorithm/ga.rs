@@ -139,8 +139,8 @@ fn init<const N: usize>(spec: Spec, vals: [Value; N], env: &Uiua) -> UiuaResult<
     Ok((arrs, semis, sels, dims, max_size))
 }
 
-fn is_complex(dims: Option<u8>, a: &Array<f64>) -> bool {
-    a.shape.last() == Some(&2) && dims.unwrap_or(2) == 2
+fn is_complex(dims: u8, a: &Array<f64>) -> bool {
+    a.shape.last() == Some(&2) && dims == 2
 }
 
 fn fast_dyadic_complex(
@@ -229,9 +229,13 @@ fn reverse_impl(dims: u8, mut arr: Array<f64>, sel: &Sel) -> Array<f64> {
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([mut arr], [semi], [sel], dims, size) = init(spec, [val], env)?;
+    let init = init(spec, [val], env)?;
+    magnitude_impl(spec.metrics, init, env)
+}
 
-    if is_complex(spec.dims, &arr) {
+fn magnitude_impl(metrics: Metrics, init: Init<1>, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let ([mut arr], [semi], [sel], dims, size) = init;
+    if is_complex(dims, &arr) {
         let slice = arr.data.as_mut_slice();
         for i in 0..slice.len() / 2 {
             let [re, im] = [slice[i * 2], slice[i * 2 + 1]];
@@ -250,12 +254,20 @@ pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let ab = [arr, rev];
     let semi = [semi.clone(), semi];
     let sel = [sel.clone(), sel];
-    let prod = product_impl(spec.metrics, ab, &semi, &sel, dims, size, env)?;
+    let prod = product_impl(metrics, ab, &semi, &sel, dims, size, env)?;
     let mut arr = prod.first(env)?;
     for v in arr.data.as_mut_slice() {
         *v = v.abs().sqrt();
     }
     Ok(arr)
+}
+
+pub fn normalize(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let init = init(spec, [val], env)?;
+    let mut val = init.0[0].clone();
+    let mag = magnitude_impl(spec.metrics, init, env)?;
+    bin_pervade_mut(mag, &mut val, false, env, pervade::div::num_num)?;
+    Ok(val)
 }
 
 pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {

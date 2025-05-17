@@ -1970,6 +1970,7 @@ impl Compiler {
         match *node {
             Prim(Mul, span) => *node = ImplPrim(GeometricProduct(spec), span),
             Prim(Abs, span) => *node = ImplPrim(GeometricMagnitude(spec), span),
+            Prim(Sign, span) => *node = ImplPrim(GeometricNormalize(spec), span),
             Prim(Sqrt, span) => *node = ImplPrim(GeometricSqrt(spec), span),
             Prim(Neg, span) => *node = ImplPrim(GeometricReverse(spec), span),
             Prim(Add, span) => *node = ImplPrim(GeometricAdd(spec), span),

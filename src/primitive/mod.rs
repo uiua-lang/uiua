@@ -384,6 +384,7 @@ impl fmt::Display for ImplPrimitive {
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
             Retropose => write!(f, "<{Evert}>"),
             GeometricMagnitude(_) => write!(f, "{Geometric}{Abs}"),
+            GeometricNormalize(_) => write!(f, "{Geometric}{Sign}"),
             GeometricSqrt(_) => write!(f, "{Geometric}{Sqrt}"),
             GeometricReverse(_) => write!(f, "{Geometric}{Neg}"),
             GeometricAdd(_) => write!(f, "{Geometric}{Add}"),
@@ -1632,6 +1633,9 @@ impl ImplPrimitive {
             &ImplPrimitive::GeometricDivide => env.dyadic_oo_env(ga::divide)?,
             &ImplPrimitive::GeometricMagnitude(spec) => {
                 env.monadic_env_with(spec, ga::magnitude)?
+            }
+            &ImplPrimitive::GeometricNormalize(spec) => {
+                env.monadic_env_with(spec, ga::normalize)?
             }
             &ImplPrimitive::GeometricSqrt(spec) => env.monadic_env_with(spec, ga::sqrt)?,
             &ImplPrimitive::GeometricReverse(spec) => env.monadic_env_with(spec, ga::reverse)?,

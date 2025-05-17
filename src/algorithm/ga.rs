@@ -26,26 +26,6 @@ fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
     if value.shape.is_empty() {
         return Err(env.error("Geometric algebra arguments must be at least rank 1"));
     }
-    let mut arr = match value {
-        Value::Byte(arr) => arr.convert(),
-        Value::Num(arr) => arr,
-        val => {
-            return Err(env.error(format!(
-                "Cannot do geometric algebra on {}",
-                val.type_name_plural()
-            )))
-        }
-    };
-    let mut semishape = arr.shape.clone();
-    let blade_count = semishape.pop().unwrap();
-    arr.transpose_depth(0, -1);
-    Ok((arr, semishape, blade_count))
-}
-
-fn ga_arg_no_transpose(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
-    if value.shape.is_empty() {
-        return Err(env.error("Geometric algebra arguments must be at least rank 1"));
-    }
     let arr = match value {
         Value::Byte(arr) => arr.convert(),
         Value::Num(arr) => arr,
@@ -72,7 +52,7 @@ enum Mode {
 use Mode::*;
 
 use super::{
-    pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
+    pervade::{self, bin_pervade_mut, bin_pervade_recursive, InfalliblePervasiveFn},
     tuples::combinations,
 };
 
@@ -159,36 +139,20 @@ fn init<const N: usize>(spec: Spec, vals: [Value; N], env: &Uiua) -> UiuaResult<
     Ok((arrs, semis, sels, dims, max_size))
 }
 
-fn to_complex(dims: Option<u8>, a: Value) -> Result<Array<f64>, Value> {
-    if a.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
-        Err(a)
-    } else {
-        match a {
-            Value::Num(arr) => Ok(arr),
-            Value::Byte(arr) => Ok(arr.convert()),
-            val => Err(val),
-        }
-    }
+fn is_complex(dims: Option<u8>, a: &Array<f64>) -> bool {
+    a.shape.last() == Some(&2) && dims.unwrap_or(2) == 2
 }
 
 fn fast_dyadic_complex(
     dims: Option<u8>,
-    a: Value,
-    b: Value,
+    mut a: Array<f64>,
+    mut b: Array<f64>,
     re: impl Fn(f64, f64, f64, f64) -> f64,
     im: impl Fn(f64, f64, f64, f64) -> f64,
-) -> UiuaResult<Result<Array<f64>, [Value; 2]>> {
+) -> UiuaResult<Result<Array<f64>, [Array<f64>; 2]>> {
     if a.shape.last() != Some(&2) || b.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
         return Ok(Err([a, b]));
     }
-    let mut a = match to_complex(dims, a) {
-        Ok(arr) => arr,
-        Err(val) => return Ok(Err([val, b])),
-    };
-    let mut b = match to_complex(dims, b) {
-        Ok(arr) => arr,
-        Err(val) => return Ok(Err([a.into(), val])),
-    };
     Ok(if a.data.is_copy_of(&b.data) {
         drop(b);
         for chunk in a.data.as_mut_slice().chunks_exact_mut(2) {
@@ -237,13 +201,14 @@ fn fast_dyadic_complex(
                 }
                 Ok(b)
             }
-            _ => Err([a.into(), b.into()]),
+            _ => Err([a, b]),
         }
     })
 }
 
 pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let ([mut arr], [_], [sel], dims, _) = init(spec, [val], env)?;
+    arr.untranspose();
     arr = reverse_impl(dims, arr, &sel);
     arr.transpose();
     Ok(arr)
@@ -264,24 +229,23 @@ fn reverse_impl(dims: u8, mut arr: Array<f64>, sel: &Sel) -> Array<f64> {
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let val = match to_complex(spec.dims, val) {
-        Ok(mut arr) => {
-            let slice = arr.data.as_mut_slice();
-            for i in 0..slice.len() / 2 {
-                let [re, im] = [slice[i * 2], slice[i * 2 + 1]];
-                slice[i] = (re * re + im * im).sqrt();
-            }
-            let new_len = slice.len() / 2;
-            arr.data.truncate(new_len);
-            arr.shape.pop();
-            arr.meta.take_sorted_flags();
-            arr.validate();
-            return Ok(arr);
-        }
-        Err(val) => val,
-    };
+    let ([mut arr], [semi], [sel], dims, size) = init(spec, [val], env)?;
 
-    let ([arr], [semi], [sel], dims, size) = init(spec, [val], env)?;
+    if is_complex(spec.dims, &arr) {
+        let slice = arr.data.as_mut_slice();
+        for i in 0..slice.len() / 2 {
+            let [re, im] = [slice[i * 2], slice[i * 2 + 1]];
+            slice[i] = (re * re + im * im).sqrt();
+        }
+        let new_len = slice.len() / 2;
+        arr.data.truncate(new_len);
+        arr.shape.pop();
+        arr.meta.take_sorted_flags();
+        arr.validate();
+        return Ok(arr);
+    }
+
+    arr.untranspose();
     let rev = reverse_impl(dims, arr.clone(), &sel);
     let ab = [arr, rev];
     let semi = [semi.clone(), semi];
@@ -299,7 +263,9 @@ pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
 }
 
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ab = match fast_dyadic_complex(
+    let ([a, b], [asemi, bsemi], [a_sel, b_sel], _, size) = init(spec, [a, b], env)?;
+
+    let [mut a, mut b] = match fast_dyadic_complex(
         spec.dims,
         a,
         b,
@@ -310,7 +276,8 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
         Err(ab) => ab,
     };
 
-    let ([a, b], [asemi, bsemi], [a_sel, b_sel], _, size) = init(spec, ab, env)?;
+    a.untranspose();
+    b.untranspose();
 
     let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
@@ -358,8 +325,32 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     Ok(result)
 }
 
+pub fn divide(a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    if a.rank() >= b.rank() {
+        return Err(env.error(format!(
+            "Only scalar division on multivectors is supported \
+            but the arrays are rank {} and {}",
+            a.rank(),
+            b.rank()
+        )));
+    }
+    let (a, ..) = ga_arg(a, env)?;
+    let (mut b, ..) = ga_arg(b, env)?;
+    bin_pervade_mut(a, &mut b, false, env, pervade::div::num_num)?;
+    Ok(b)
+}
+
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let [a, b] = match fast_dyadic_complex(
+    let ([a, mut b], semi, sel, dims, size) = init(spec, [a, b], env)?;
+
+    // Scalar case
+    if a.rank() == 0 || b.rank() == 0 {
+        bin_pervade_mut(a, &mut b, false, env, pervade::mul::num_num)?;
+        return Ok(b);
+    }
+
+    // Fast case for complex numbers
+    let mut ab = match fast_dyadic_complex(
         spec.dims,
         a,
         b,
@@ -370,7 +361,8 @@ pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f
         Err(ab) => ab,
     };
 
-    let (ab, semi, sel, dims, size) = init(spec, [a, b], env)?;
+    ab[0].untranspose();
+    ab[1].untranspose();
     let mut res = product_impl(spec.metrics, ab, &semi, &sel, dims, size, env)?;
     res.transpose();
     Ok(res)
@@ -607,7 +599,7 @@ pub fn pad_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> UiuaResu
         }
     }
     // Process arg
-    let (arr, semi, size) = ga_arg_no_transpose(val, env)?;
+    let (arr, semi, size) = ga_arg(val, env)?;
     // Validate size
     let correct_size: usize = grades.iter().map(|&grade| grade_size(dims, grade)).sum();
     if size != correct_size {
@@ -670,7 +662,7 @@ pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> Uiua
         }
     }
     // Process arg
-    let (mut arr, semi, size) = ga_arg_no_transpose(val, env)?;
+    let (mut arr, semi, size) = ga_arg(val, env)?;
     if grades.is_empty() {
         let mut shape = semi;
         shape.push(0);

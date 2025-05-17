@@ -383,12 +383,13 @@ impl fmt::Display for ImplPrimitive {
             BothImpl(sub) => write!(f, "{Both}{sub}"),
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
             Retropose => write!(f, "<{Evert}>"),
-            GeometricProduct(_) => write!(f, "{Geometric}{Mul}"),
             GeometricMagnitude(_) => write!(f, "{Geometric}{Abs}"),
             GeometricSqrt(_) => write!(f, "{Geometric}{Sqrt}"),
             GeometricReverse(_) => write!(f, "{Geometric}{Neg}"),
             GeometricAdd(_) => write!(f, "{Geometric}{Add}"),
             GeometricSub(_) => write!(f, "{Geometric}{Sub}"),
+            GeometricProduct(_) => write!(f, "{Geometric}{Mul}"),
+            GeometricDivide => write!(f, "{Geometric}{Div}"),
             PadBlades(_) => write!(f, "{Geometric}{Anti}{Select}"),
             ExtractBlades(_) => write!(f, "{Geometric}{Select}"),
         }
@@ -1628,6 +1629,7 @@ impl ImplPrimitive {
                 env.push(res);
             }
             &ImplPrimitive::GeometricProduct(spec) => env.dyadic_oo_env_with(spec, ga::product)?,
+            &ImplPrimitive::GeometricDivide => env.dyadic_oo_env(ga::divide)?,
             &ImplPrimitive::GeometricMagnitude(spec) => {
                 env.monadic_env_with(spec, ga::magnitude)?
             }

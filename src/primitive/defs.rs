@@ -3697,12 +3697,13 @@ impl_primitive!(
     (2(1), ValidateVariant),
     (2(1), TagVariant),
     // Geometric Algebra
-    (2, GeometricProduct(ga::Spec), {ga: true}),
     (1, GeometricMagnitude(ga::Spec), {ga: true}),
     (1, GeometricSqrt(ga::Spec), {ga: true}),
     (1, GeometricReverse(ga::Spec), {ga: true}),
     (1, GeometricAdd(ga::Spec), {ga: true}),
     (1, GeometricSub(ga::Spec), {ga: true}),
+    (2, GeometricProduct(ga::Spec), {ga: true}),
+    (2, GeometricDivide, {ga: true}),
     (2, PadBlades(ga::Spec), {ga: true}),
     (2, ExtractBlades(ga::Spec), {ga: true}),
 );

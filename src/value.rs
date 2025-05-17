@@ -1972,7 +1972,7 @@ macro_rules! value_dy_impl {
                         let f = |$meta: &ArrayMeta| $pred;
                         f(&a.meta) && f(&b.meta)
                     })* => {
-                        bin_pervade_mut(a, &mut b, env, $name::$f2)?;
+                        bin_pervade_mut(a, &mut b, true, env, $name::$f2)?;
                         let mut val: Value = b.into();
                         $(if $reset_value_flags {
                             val.meta.take_value_flags();

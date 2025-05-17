@@ -315,7 +315,7 @@ pub fn pad_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResult<A
             grade-{grade} blades, but the array has {size}"
         )));
     }
-    let left_size = (0..grade).map(|g| grade_size(dims, g)).sum::<usize>();
+    let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
     let full_size = 1usize << dims;
     let mut new_shape = semi;
     new_shape.push(full_size);
@@ -338,7 +338,44 @@ pub fn extract_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResu
             "Cannot extract grade {grade} blades in {dims} dimensions"
         )));
     }
-    todo!()
+    let (mut arr, semi, size) = ga_arg_no_transpose(val, env)?;
+    let full_size = 1usize << dims;
+    let half_size = full_size / 2;
+    if size != full_size {
+        if size == half_size {
+            if grade % 2 == 1 {
+                return Err(env.error(format!(
+                    "Cannot extract odd grade {grade} blades from \
+                    even multivector of size {half_size} in {dims} dimensions"
+                )));
+            }
+        } else {
+            return Err(env.error(format!(
+                "{dims}D multivector should have {full_size} \
+                or {half_size} blades, but the array has {size}"
+            )));
+        }
+    }
+    let left_size: usize = if size == full_size {
+        (0..grade).map(|g| grade_size(dims, g)).sum()
+    } else {
+        (0..grade)
+            .filter(|&g| g % 2 == 0)
+            .map(|g| grade_size(dims, g))
+            .sum()
+    };
+    let new_size = grade_size(dims, grade);
+    let slice = arr.data.as_mut_slice();
+    for i in 0..semi.elements() {
+        let src_start = i * size + left_size;
+        let dst_start = i * new_size;
+        let src_end = src_start + new_size;
+        slice.copy_within(src_start..src_end, dst_start);
+    }
+    *arr.shape.last_mut().unwrap() = new_size;
+    arr.data.truncate(arr.shape.elements());
+    arr.validate();
+    Ok(arr)
 }
 
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {

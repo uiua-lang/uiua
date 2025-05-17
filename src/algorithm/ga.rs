@@ -2,7 +2,7 @@
 
 use std::{array, fmt, iter::repeat_n};
 
-use ecow::eco_vec;
+use ecow::{eco_vec, EcoVec};
 use serde::*;
 
 use crate::{
@@ -298,86 +298,6 @@ pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     Err(env.error("Geometric square root is not implemented"))
 }
 
-pub fn pad_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let Some(dims) = spec.dims else {
-        return Err(env.error("Blade padding requires a specified number of dimensions"));
-    };
-    if grade > dims {
-        return Err(env.error(format!(
-            "Cannot pad grade {grade} blades in {dims} dimensions"
-        )));
-    }
-    let (arr, semi, size) = ga_arg_no_transpose(val, env)?;
-    let correct_size = grade_size(dims, grade);
-    if size != correct_size {
-        return Err(env.error(format!(
-            "{dims}D multivector should have {correct_size} \
-            grade-{grade} blades, but the array has {size}"
-        )));
-    }
-    let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
-    let full_size = 1usize << dims;
-    let mut new_shape = semi;
-    new_shape.push(full_size);
-    let mut new_data = eco_vec![0.0; new_shape.elements()];
-    let slice = new_data.make_mut();
-
-    for (src, dst) in (arr.data.chunks_exact(size)).zip(slice.chunks_exact_mut(full_size)) {
-        dst[left_size..][..size].copy_from_slice(src);
-    }
-
-    Ok(Array::new(new_shape, new_data))
-}
-
-pub fn extract_blades(spec: Spec, grade: u8, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let Some(dims) = spec.dims else {
-        return Err(env.error("Blade padding requires a specified number of dimensions"));
-    };
-    if grade > dims {
-        return Err(env.error(format!(
-            "Cannot extract grade {grade} blades in {dims} dimensions"
-        )));
-    }
-    let (mut arr, semi, size) = ga_arg_no_transpose(val, env)?;
-    let full_size = 1usize << dims;
-    let half_size = full_size / 2;
-    if size != full_size {
-        if size == half_size {
-            if grade % 2 == 1 {
-                return Err(env.error(format!(
-                    "Cannot extract odd grade {grade} blades from \
-                    even multivector of size {half_size} in {dims} dimensions"
-                )));
-            }
-        } else {
-            return Err(env.error(format!(
-                "{dims}D multivector should have {full_size} \
-                or {half_size} blades, but the array has {size}"
-            )));
-        }
-    }
-    let left_size: usize = if size == full_size {
-        (0..grade).map(|g| grade_size(dims, g)).sum()
-    } else {
-        (0..grade)
-            .filter(|&g| g % 2 == 0)
-            .map(|g| grade_size(dims, g))
-            .sum()
-    };
-    let new_size = grade_size(dims, grade);
-    let slice = arr.data.as_mut_slice();
-    for i in 0..semi.elements() {
-        let src_start = i * size + left_size;
-        let dst_start = i * new_size;
-        let src_end = src_start + new_size;
-        slice.copy_within(src_start..src_end, dst_start);
-    }
-    *arr.shape.last_mut().unwrap() = new_size;
-    arr.data.truncate(arr.shape.elements());
-    arr.validate();
-    Ok(arr)
-}
-
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let ab = match fast_dyadic_complex(
         spec.dims,
@@ -671,4 +591,158 @@ pub fn metrics_from_val(val: &Value) -> Result<Metrics, String> {
             ))
         }
     })
+}
+
+pub fn pad_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let Some(dims) = spec.dims else {
+        return Err(env.error("Blade padding requires a specified number of dimensions"));
+    };
+    // Process grades
+    let grades = grades.as_bytes(env, "Grades must be a list of natural numbers")?;
+    for &grade in &grades {
+        if grade > dims {
+            return Err(env.error(format!(
+                "Cannot pad grade {grade} blades in {dims} dimensions"
+            )));
+        }
+    }
+    // Process arg
+    let (arr, semi, size) = ga_arg_no_transpose(val, env)?;
+    // Validate size
+    let correct_size: usize = grades.iter().map(|&grade| grade_size(dims, grade)).sum();
+    if size != correct_size {
+        return Err(env.error(if let [grade] = *grades {
+            format!(
+                "{dims}D multivector should have {correct_size} \
+                grade-{grade} blades, but the array has {size}"
+            )
+        } else {
+            format!(
+                "{dims}D multivector should have {correct_size} \
+                blades for the given selector, but the array has {size}"
+            )
+        }));
+    }
+    if (grades.iter().enumerate()).any(|(i, grade)| grades[i + 1..].contains(grade)) {
+        return Err(env.error("Selected grades must be unique"));
+    }
+
+    let full_size = 1usize << dims;
+    let mut new_shape = semi;
+    new_shape.push(full_size);
+    let mut new_data = eco_vec![0.0; new_shape.elements()];
+    let slice = new_data.make_mut();
+
+    if let [grade] = *grades {
+        let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
+        for (src, dst) in (arr.data.chunks_exact(size)).zip(slice.chunks_exact_mut(full_size)) {
+            dst[left_size..][..size].copy_from_slice(src);
+        }
+    } else {
+        let mut left_sizes = Vec::with_capacity(grades.len());
+        for grade in grades {
+            let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
+            let size = grade_size(dims, grade);
+            left_sizes.push((left_size, size));
+        }
+        for (src, dst) in (arr.data.chunks_exact(size)).zip(slice.chunks_exact_mut(full_size)) {
+            let mut offset = 0;
+            for &(left_size, size) in &left_sizes {
+                dst[left_size..][..size].copy_from_slice(&src[offset..][..size]);
+                offset += size;
+            }
+        }
+    }
+    Ok(Array::new(new_shape, new_data))
+}
+
+pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let Some(dims) = spec.dims else {
+        return Err(env.error("Blade padding requires a specified number of dimensions"));
+    };
+    // Process grades
+    let grades = grades.as_bytes(env, "Grades must be a list of natural numbers")?;
+    for &grade in &grades {
+        if grade > dims {
+            return Err(env.error(format!(
+                "Cannot extract grade {grade} blades in {dims} dimensions"
+            )));
+        }
+    }
+    // Process arg
+    let (mut arr, semi, size) = ga_arg_no_transpose(val, env)?;
+    if grades.is_empty() {
+        let mut shape = semi;
+        shape.push(0);
+        return Ok(Array::new(shape, EcoVec::new()));
+    }
+    // Validate size
+    let full_size = 1usize << dims;
+    let half_size = full_size / 2;
+    if size != full_size {
+        if size == half_size {
+            for &grade in &grades {
+                if grade % 2 == 1 {
+                    return Err(env.error(format!(
+                        "Cannot extract odd grade {grade} blades from \
+                        even multivector of size {half_size} in {dims} dimensions"
+                    )));
+                }
+            }
+        } else {
+            return Err(env.error(format!(
+                "{dims}D multivector should have {full_size} \
+                or {half_size} blades, but the array has {size}"
+            )));
+        }
+    }
+    if (grades.iter().enumerate()).any(|(i, grade)| grades[i + 1..].contains(grade)) {
+        return Err(env.error("Selected grades must be unique"));
+    }
+
+    let slice = arr.data.as_mut_slice();
+    let new_size: usize = grades.iter().map(|&grade| grade_size(dims, grade)).sum();
+    let left_size = |grade| {
+        if size == full_size {
+            (0..grade).map(|g| grade_size(dims, g)).sum::<usize>()
+        } else {
+            (0..grade)
+                .filter(|&g| g % 2 == 0)
+                .map(|g| grade_size(dims, g))
+                .sum()
+        }
+    };
+    if let [grade] = *grades {
+        let left_size = left_size(grade);
+        for i in 0..semi.elements() {
+            let src_start = i * size + left_size;
+            let dst_start = i * new_size;
+            let src_end = src_start + new_size;
+            slice.copy_within(src_start..src_end, dst_start);
+        }
+    } else if grades.is_sorted() {
+        let mut left_sizes = Vec::with_capacity(grades.len());
+        for grade in grades {
+            let left_size = left_size(grade);
+            let size = grade_size(dims, grade);
+            left_sizes.push((left_size, size));
+        }
+        let arr_size = size;
+        for i in 0..semi.elements() {
+            let mut offset = 0;
+            for &(left_size, size) in &left_sizes {
+                let src_start = i * arr_size + left_size;
+                let dst_start = i * new_size + offset;
+                let src_end = src_start + size;
+                slice.copy_within(src_start..src_end, dst_start);
+                offset += size;
+            }
+        }
+    } else {
+        return Err(env.error("Grades must be sorted"));
+    }
+    *arr.shape.last_mut().unwrap() = new_size;
+    arr.data.truncate(arr.shape.elements());
+    arr.validate();
+    Ok(arr)
 }

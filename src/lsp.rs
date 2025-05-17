@@ -848,8 +848,8 @@ mod server {
         is_ident_char,
         lex::{lex, Loc},
         primitive::{PrimClass, PrimDocFragment},
-        split_name, subscript, AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span,
-        Token, UiuaErrorKind,
+        split_name, AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token,
+        UiuaErrorKind,
     };
 
     pub struct LspDoc {
@@ -1494,23 +1494,9 @@ mod server {
                     col
                 }
             };
-            let mut before = String::from_utf16(&line16[..col as usize]).unwrap();
+            let before = String::from_utf16(&line16[..col as usize]).unwrap();
             let mut formatted = String::new();
             let mut start = col;
-            if let Some(pos) = before.rfind("__") {
-                // Subscript
-                let digit_ends = params.ch.parse::<u8>().is_ok();
-                if !digit_ends {
-                    let s = &before[pos + 2..];
-                    if let Some((sub, rest)) = subscript(s) {
-                        if sub.is_useable() {
-                            start = col.saturating_sub(before[pos..].encode_utf16().count() as u32);
-                            before = rest.to_string();
-                            formatted = sub.to_string();
-                        }
-                    }
-                }
-            }
 
             // Primitive ident
             let mut ident = (before.chars().rev())

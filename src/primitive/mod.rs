@@ -389,22 +389,8 @@ impl fmt::Display for ImplPrimitive {
             GeometricReverse(_) => write!(f, "{Geometric}{Neg}"),
             GeometricAdd(_) => write!(f, "{Geometric}{Add}"),
             GeometricSub(_) => write!(f, "{Geometric}{Sub}"),
-            PadBlades(spec, n) => {
-                write!(f, "{Geometric}")?;
-                if let Some(dims) = spec.dims {
-                    fmt_subscript(f, dims as i32)?;
-                }
-                write!(f, "⌟")?;
-                fmt_subscript(f, *n as i32)
-            }
-            ExtractBlades(spec, n) => {
-                write!(f, "{Geometric}")?;
-                if let Some(dims) = spec.dims {
-                    fmt_subscript(f, dims as i32)?;
-                }
-                write!(f, "⌞")?;
-                fmt_subscript(f, *n as i32)
-            }
+            PadBlades(_) => write!(f, "{Geometric}{Anti}{Select}"),
+            ExtractBlades(_) => write!(f, "{Geometric}{Select}"),
         }
     }
 }
@@ -1654,14 +1640,10 @@ impl ImplPrimitive {
                     ga::add(spec, a, b, env)
                 })?
             }
-            &ImplPrimitive::PadBlades(spec, grade) => env
-                .monadic_env_with((spec, grade), |(spec, grade), a, env| {
-                    ga::pad_blades(spec, grade, a, env)
-                })?,
-            &ImplPrimitive::ExtractBlades(spec, grade) => env
-                .monadic_env_with((spec, grade), |(spec, grade), a, env| {
-                    ga::extract_blades(spec, grade, a, env)
-                })?,
+            &ImplPrimitive::PadBlades(spec) => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
+            &ImplPrimitive::ExtractBlades(spec) => {
+                env.dyadic_oo_env_with(spec, ga::extract_blades)?
+            }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(

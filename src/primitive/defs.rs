@@ -3703,6 +3703,6 @@ impl_primitive!(
     (1, GeometricReverse(ga::Spec), {ga: true}),
     (1, GeometricAdd(ga::Spec), {ga: true}),
     (1, GeometricSub(ga::Spec), {ga: true}),
-    (1, PadBlades(ga::Spec, u8), {ga: true}),
-    (1, ExtractBlades(ga::Spec, u8), {ga: true}),
+    (2, PadBlades(ga::Spec), {ga: true}),
+    (2, ExtractBlades(ga::Spec), {ga: true}),
 );

@@ -717,6 +717,14 @@
     "class": "RNG",
     "description": "Generate an array of random numbers with a seed"
   },
+  "geo": {
+    "glyph": "⩜",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Algorithm",
+    "description": "Convert an operation to be in geometric algebra",
+    "experimental": true
+  },
   "get": {
     "args": 2,
     "outputs": 1,

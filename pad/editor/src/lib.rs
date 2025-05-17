@@ -1951,12 +1951,6 @@ pub fn Editor<'a>(
                                 <option value="Pixua" selected=get_font_name() == "Pixua">
                                     "Pixua"
                                 </option>
-                                <option
-                                    value="DejaVuSansMono"
-                                    selected=get_font_name() == "DejaVuSansMono"
-                                >
-                                    "DejaVu"
-                                </option>
                             </select>
                         </div>
                         <button on:click=download_code>"Download Code"</button>

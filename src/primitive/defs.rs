@@ -3465,6 +3465,7 @@ macro_rules! impl_primitive {
             $([$margs:expr])?,
             $variant:ident $(($($inner:ty),* $(,)?))?
             $(, $purity:ident)?
+            $(,{ga: $ga:literal})?
         )
     ),* $(,)?) => {
         /// Primitives that exist as an implementation detail
@@ -3546,6 +3547,13 @@ macro_rules! impl_primitive {
                     $($(ImplPrimitive::$variant => {Purity::$purity},)*)*
                     ImplPrimitive::StackN { .. } => Purity::Mutating,
                     _ => Purity::Pure
+                }
+            }
+            #[allow(unused_parens)]
+            pub fn is_ga(&self) -> bool {
+                match self {
+                    $($(ImplPrimitive::$variant {..} => $ga,)*)*
+                    _ => false
                 }
             }
         }
@@ -3689,10 +3697,12 @@ impl_primitive!(
     (2(1), ValidateVariant),
     (2(1), TagVariant),
     // Geometric Algebra
-    (2, GeometricProduct(ga::Spec)),
-    (1, GeometricMagnitude(ga::Spec)),
-    (1, GeometricSqrt(ga::Spec)),
-    (1, GeometricReverse(ga::Spec)),
-    (1, GeometricAdd(ga::Spec)),
-    (1, GeometricSub(ga::Spec)),
+    (2, GeometricProduct(ga::Spec), {ga: true}),
+    (1, GeometricMagnitude(ga::Spec), {ga: true}),
+    (1, GeometricSqrt(ga::Spec), {ga: true}),
+    (1, GeometricReverse(ga::Spec), {ga: true}),
+    (1, GeometricAdd(ga::Spec), {ga: true}),
+    (1, GeometricSub(ga::Spec), {ga: true}),
+    (1, PadBlades(ga::Spec, u8), {ga: true}),
+    (1, ExtractBlades(ga::Spec, u8), {ga: true}),
 );

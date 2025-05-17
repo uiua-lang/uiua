@@ -6,8 +6,8 @@ use ecow::eco_vec;
 use serde::*;
 
 use crate::{
-    algorithm::pervade::derive_new_shape, ast::SubSide, grid_fmt::GridFmt, is_default, Array,
-    Shape, Uiua, UiuaResult, Value,
+    algorithm::pervade::derive_new_shape, grid_fmt::GridFmt, is_default, Array, Shape, Uiua,
+    UiuaResult, Value,
 };
 
 /// Specification for the kind of geometric algebra to perform
@@ -20,8 +20,6 @@ pub struct Spec {
     pub dims: Option<u8>,
     #[serde(skip_serializing_if = "is_default", rename = "m")]
     pub metrics: Metrics,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "s")]
-    pub side: Option<SubSide>,
 }
 
 fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
@@ -402,6 +400,7 @@ fn reverse_impl(dims: u8, mut arr: Array<f64>, sel: &Sel) -> Array<f64> {
             }
         }
     }
+    arr.meta.take_sorted_flags();
     arr
 }
 
@@ -417,7 +416,6 @@ pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
             arr.data.truncate(new_len);
             arr.shape.pop();
             arr.meta.take_sorted_flags();
-            arr.meta.take_value_flags();
             arr.validate();
             return Ok(arr);
         }

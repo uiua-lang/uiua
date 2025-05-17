@@ -1907,6 +1907,9 @@ impl Compiler {
         subscript: Option<Sp<Subscript>>,
         metrics: Option<Sp<Word>>,
     ) -> UiuaResult<Node> {
+        let span = word.span.clone();
+        let (mut node, sig) = self.word_sig(word)?.into();
+
         let mut met = ga::Metrics::VANILLA;
         if let Some(metrics) = metrics {
             let metrics_span = metrics.span.clone();
@@ -1931,6 +1934,7 @@ impl Compiler {
                 );
             }
         }
+        let mut side_data = None;
         let spec = if let Some(sub) = subscript {
             let sub = self.validate_subscript(sub);
             let dims = sub.value.num.map(|n| {
@@ -1945,29 +1949,56 @@ impl Compiler {
                 }
                 n as u8
             });
-            let side = sub.value.side.map(|side| {
-                if side.n.is_some() {
+            if let Some(side) = sub.value.side {
+                if let Some(mut n) = side.n {
+                    if n > ga::MAX_DIMS as usize + 1 {
+                        self.add_error(
+                            sub.span.clone(),
+                            format!(
+                                "Up to {} geometric algebra dimensions are supported, \
+                                so you cannot specify grade-{n} blades",
+                                ga::MAX_DIMS
+                            ),
+                        );
+                        n = ga::MAX_DIMS as usize + 1;
+                    }
+                    let span = self.add_span(sub.span);
+                    side_data = Some((side.side, n as u8, span));
+                } else {
                     self.add_error(
                         sub.span.clone(),
                         format!(
-                            "{} does not support side quantifiers",
+                            "Sided {} requires a quantifier",
                             Primitive::Geometric.format()
                         ),
                     );
                 }
-                side.side
-            });
-            Spec {
-                dims,
-                side,
-                metrics: met,
             }
+            Spec { dims, metrics: met }
         } else {
             Spec::default()
         };
-        let span = word.span.clone();
-        let mut node = self.word(word)?;
         self.translate_geo(&mut node, spec, &span);
+        if let Some((side, n, span)) = side_data {
+            match side {
+                SubSide::Right => node.prepend(
+                    SigNode::new(
+                        (1, 1),
+                        Node::ImplPrim(ImplPrimitive::PadBlades(spec, n), span),
+                    )
+                    .on_all(sig.args(), span)
+                    .node,
+                ),
+                SubSide::Left => node.push(
+                    SigNode::new(
+                        (1, 1),
+                        Node::ImplPrim(ImplPrimitive::ExtractBlades(spec, n), span),
+                    )
+                    .on_all(sig.outputs(), span)
+                    .node,
+                ),
+            }
+        }
         Ok(node)
     }
     #[allow(unused_parens)]
@@ -1980,6 +2011,7 @@ impl Compiler {
             Prim(Neg, span) => *node = ImplPrim(GeometricReverse(spec), span),
             Prim(Add, span) => *node = ImplPrim(GeometricAdd(spec), span),
             Prim(Sub, span) => *node = ImplPrim(GeometricSub(spec), span),
+            ImplPrim(prim, _) if prim.is_ga() => {}
             Prim(Dup | Flip | Over | Pop | Stack | Sys(_), _) => {}
             ImplPrim(StackN { .. }, _) => {}
             Mod(

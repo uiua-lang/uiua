@@ -175,6 +175,12 @@ impl From<Arc<Node>> for Node {
     }
 }
 
+impl From<SigNode> for (Node, Signature) {
+    fn from(sn: SigNode) -> Self {
+        (sn.node, sn.sig)
+    }
+}
+
 impl Serialize for SigNode {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         (self.sig.args(), self.sig.outputs(), &self.node).serialize(serializer)

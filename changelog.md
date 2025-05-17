@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.16.0 - 2025-??-??
+## 0.16.0 - 2025-05-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change** - [`rows ≡`](https://uiua.org/docs/rows) numeric subscripts now function identically to [`each ∵`](https://uiua.org/docs/repeat)'s specifying the rank to operate at

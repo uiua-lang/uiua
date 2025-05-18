@@ -2,8 +2,10 @@
 
 Uiua is not yet stable.
 
-## 0.16.0 - 2025-05-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
+<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+
+## 0.16.0 - 2025-05-18
+You can find the release announcement [here](https://uiua.org/blog/uiua-0.16.0).
 ### Language
 - **Breaking Change** - [`rows ≡`](https://uiua.org/docs/rows) numeric subscripts now function identically to [`each ∵`](https://uiua.org/docs/repeat)'s specifying the rank to operate at
   - Deprecate [`each ∵`](https://uiua.org/docs/repeat), as it is almost never used except for this subscript behavior
@@ -61,6 +63,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Deprecrated: `Os`, `Family`, `Arch`, `ExeExt`, `DllExt`, `Sep`, `NumProcs`
   - Replacements: `os`, `osfamily`, `arch`, `exeext`, `dllext`, `pathsep`, `numprocs`
 - Add experimental [`evert ⧋`](https://uiua.org/docs/evert) modifier for operating on the last axes of arrays.
+- Add experimental [`occurrences ⧆`](https://uiua.org/docs/occurrences) for marking each row in an array with its occurent count
 - Add experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) for finding sequential indices of each row of an array in another
 - Add experimental [lexical ordering](https://uiua.org/docs/experimental#lexical-ordering) syntax
   - This enables some function packs and array notation to execute in the order they are normally read

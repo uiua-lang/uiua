@@ -1,8 +1,5 @@
 # Uiua Todo
 
-# 0.16
-- Fix hang in error tests lsp
-
 # 0.17
 - Array pack sugar
 - `table` subscripts for rank selection

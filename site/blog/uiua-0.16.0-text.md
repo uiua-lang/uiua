@@ -1,12 +1,12 @@
 # Announcing Uiua 0.16.0
 
-2025-05-??
+2025-05-18
 
 ---
 
 Uiua 0.16.0 is now available!
 
-You can find the full changelog [here](https://uiua.org/docs/changelog#0.15.0---2025-05-??).
+You can find the full changelog [here](https://uiua.org/docs/changelog#0.16.0---2025-05-18).
 
 You can download pre-built binaries [here](https://github.com/uiua-lang/uiua/releases).
 
@@ -125,7 +125,7 @@ You can read more about inline macros [here](https://www.uiua.org/tutorial/macro
 
 As always, thank you to everyone in the Uiua community, and to Uiua's lovely [GitHub sponsors](https://github.com/sponsors/uiua-lang).
 
-Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.15.0---2025-05-??).
+Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.16.0---2025-05-18).
 
 You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!
 

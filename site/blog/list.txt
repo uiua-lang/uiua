@@ -1,4 +1,4 @@
-# uiua-0.16.0(087f5d27-675c-47e6-85b2-e5f2a991e745): 2025-05-?? - Announcing Uiua 0.16.0
+uiua-0.16.0(087f5d27-675c-47e6-85b2-e5f2a991e745): 2025-05-18 - Announcing Uiua 0.16.0
 uiua-0.15.0(52a5f6f8-6898-44f3-a193-2125945276b6): 2025-04-03 - Announcing Uiua 0.15.0
 its-so-over(a3e86902-43f2-4fb5-bdd1-62b15bcc8fd0): 2025-02-15 - It's So Over
 uiua-0.14.0(a516e01b-732f-4e30-aba2-9599fedfffab): 2024-12-20 - Announcing Uiua 0.14.0

@@ -2,7 +2,10 @@
 
 Uiua is not yet stable.
 
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+## 0.17.0 - 2025-??-??
+This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 
 ## 0.16.0 - 2025-05-18
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.16.0).

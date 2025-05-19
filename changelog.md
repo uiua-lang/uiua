@@ -12,6 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Fix a bug in [`rows ≡`](https://uiua.org/docs/rows) [`rotate ↻`](https://uiua.org/docs/rotate)
 - Fix a bug in [`base ⊥`](https://uiua.org/docs/base)
+- Fix a bug in [`indexof ⊗`](https://uiua.org/docs/indexof)
 
 ## 0.16.0 - 2025-05-18
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.16.0).

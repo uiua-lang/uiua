@@ -233,7 +233,7 @@ impl<T: ArrayValue> Array<T> {
                     if haystack.meta.is_sorted_up() {
                         // Binary search
                         if haystack.row_count() == 0 {
-                            return Ok((haystack.row_count() as f64).into());
+                            return Ok(default.into());
                         }
                         let needle_slice = ArrayCmpSlice(needle.data.as_slice());
                         let mut l = 0;
@@ -251,7 +251,7 @@ impl<T: ArrayValue> Array<T> {
                                 Ordering::Greater => r = mid - 1,
                             }
                         }
-                        (res.unwrap_or(haystack.row_count()) as f64).into()
+                        (res.map(|i| i as f64).unwrap_or(default)).into()
                     } else {
                         // Linear search
                         (haystack

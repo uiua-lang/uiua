@@ -1,6 +1,9 @@
 //! Geometric Algebra
 
-use std::{array, fmt, iter::repeat_n};
+use std::{
+    array, fmt,
+    iter::{once, repeat_n},
+};
 
 use ecow::{eco_vec, EcoVec};
 use serde::*;
@@ -23,9 +26,6 @@ pub struct Spec {
 }
 
 fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
-    if value.shape.is_empty() {
-        return Err(env.error("Geometric algebra arguments must be at least rank 1"));
-    }
     let arr = match value {
         Value::Byte(arr) => arr.convert(),
         Value::Num(arr) => arr,
@@ -37,7 +37,7 @@ fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
         }
     };
     let mut semishape = arr.shape.clone();
-    let blade_count = semishape.pop().unwrap();
+    let blade_count = semishape.pop().unwrap_or(1);
     Ok((arr, semishape, blade_count))
 }
 
@@ -48,6 +48,7 @@ type Sel = Vec<Option<usize>>;
 enum Mode {
     Even,
     Full,
+    Scalar,
 }
 use Mode::*;
 
@@ -72,10 +73,13 @@ fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8
             (dims, Full)
         } else if size == even_size {
             (dims, Even)
+        } else if size == 1 {
+            (dims, Scalar)
         } else {
             return Err(env.error(format!(
                 "{size} is not a valid array size \
-                for geometric algebra in {dims} dimensions"
+                for geometric algebra in {dims} dimension{}",
+                if dims == 1 { "" } else { "s" }
             )));
         }
     } else {
@@ -106,7 +110,10 @@ fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<Sel> {
                 })
                 .collect()
         }
-        Full => (0..(1usize << dims)).map(Some).collect(),
+        Full => (0..1usize << dims).map(Some).collect(),
+        Scalar => once(Some(0))
+            .chain(repeat_n(None, (1usize << dims) - 1))
+            .collect(),
     })
 }
 
@@ -275,7 +282,11 @@ pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
 }
 
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([a, b], [asemi, bsemi], [a_sel, b_sel], _, size) = init(spec, [a, b], env)?;
+    let ([a, b], [asemi, bsemi], [a_sel, b_sel], dims, size) = init(spec, [a, b], env)?;
+
+    // println!("a: {a}, semi: {asemi}, sel: {a_sel:?}");
+    // println!("b: {b}, semi: {bsemi}, sel: {b_sel:?}");
+    // println!("size: {size}");
 
     let [mut a, mut b] = match fast_dyadic_complex(
         spec.dims,
@@ -291,6 +302,7 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     a.untranspose();
     b.untranspose();
 
+    let c_sel = dim_selector(dims, size, env)?;
     let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
 
@@ -307,23 +319,26 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     let c_slice = c_data.make_mut();
 
     let add = InfalliblePervasiveFn::new(pervade::add::num_num);
-    for i in 0..size {
+    for i in 0..1usize << dims {
+        let Some(ci) = c_sel[i] else {
+            continue;
+        };
         match (a_sel[i], b_sel[i]) {
             (Some(ai), Some(bi)) => {
                 let a = &a[ai * a_row_len..][..a_row_len];
                 let b = &b[bi * b_row_len..][..b_row_len];
-                let c = &mut c_slice[i * c_row_len..][..c_row_len];
+                let c = &mut c_slice[ci * c_row_len..][..c_row_len];
                 bin_pervade_recursive((a, &asemi), (b, &bsemi), c, None, None, add, env)?;
             }
             (Some(ai), None) => {
                 let a = &a[ai * a_row_len..][..a_row_len];
-                for c in c_slice[i * c_row_len..][..c_row_len].chunks_exact_mut(a_row_len) {
+                for c in c_slice[ci * c_row_len..][..c_row_len].chunks_exact_mut(a_row_len) {
                     c.copy_from_slice(a);
                 }
             }
             (None, Some(bi)) => {
                 let b = &b[bi * b_row_len..][..b_row_len];
-                for c in c_slice[i * c_row_len..][..c_row_len].chunks_exact_mut(b_row_len) {
+                for c in c_slice[ci * c_row_len..][..c_row_len].chunks_exact_mut(b_row_len) {
                     c.copy_from_slice(b);
                 }
             }

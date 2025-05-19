@@ -387,6 +387,7 @@ impl fmt::Display for ImplPrimitive {
             GeometricNormalize(_) => write!(f, "{Geometric}{Sign}"),
             GeometricSqrt(_) => write!(f, "{Geometric}{Sqrt}"),
             GeometricReverse(_) => write!(f, "{Geometric}{Neg}"),
+            GeometricDual(_) => write!(f, "{Geometric}{Not}"),
             GeometricAdd(_) => write!(f, "{Geometric}{Add}"),
             GeometricSub(_) => write!(f, "{Geometric}{Sub}"),
             GeometricProduct(_) => write!(f, "{Geometric}{Mul}"),
@@ -1640,6 +1641,7 @@ impl ImplPrimitive {
             }
             &ImplPrimitive::GeometricSqrt(spec) => env.monadic_env_with(spec, ga::sqrt)?,
             &ImplPrimitive::GeometricReverse(spec) => env.monadic_env_with(spec, ga::reverse)?,
+            &ImplPrimitive::GeometricDual(spec) => env.monadic_env_with(spec, ga::dual)?,
             &ImplPrimitive::GeometricAdd(spec) => env.dyadic_oo_env_with(spec, ga::add)?,
             &ImplPrimitive::GeometricSub(spec) => {
                 env.dyadic_oo_env_with(spec, |spec, a, b, env| {

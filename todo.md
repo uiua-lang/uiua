@@ -2,8 +2,6 @@
 
 # 0.17
 - `geo`
-  - Auto dimension for length 3
-  - `not` for dual
   - Figure out a way to fix signs
 - `table` subscripts for rank selection
 - Mixed subscripts

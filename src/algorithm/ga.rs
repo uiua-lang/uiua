@@ -313,6 +313,14 @@ fn reverse_impl_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
     arg.arr
 }
 
+pub fn dual(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let (dims, _, arg) = init(spec, val, ExpandFull, env)?;
+    let mut pseudoscalar = eco_vec![0.0; 1 << dims];
+    *pseudoscalar.make_mut().last_mut().unwrap() = 1.0;
+    let pseudoscalar = Arg::from_not_transposed(dims, pseudoscalar.into(), env)?;
+    product_impl_not_transposed(dims, spec.metrics, 1 << dims, pseudoscalar, arg, env)
+}
+
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (dims, size, arg) = init(spec, val, ExpandFull, env)?;
     magnitude_impl(dims, spec.metrics, size, arg, env)

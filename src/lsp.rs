@@ -661,7 +661,7 @@ impl Spanner {
                     }
                     if pack.closed {
                         let end = word.span.just_end(self.inputs());
-                        if end.as_str(self.inputs(), |s| s == ")") {
+                        if end.as_str(self.inputs(), |s| ")]".contains(s)) {
                             spans.push(end.sp(kind));
                         }
                     }

@@ -2,6 +2,7 @@
 
 # 0.17
 - `geo`
+  - Sandwich product
   - Figure out a way to fix signs
 - `table` subscripts for rank selection
 - Mixed subscripts

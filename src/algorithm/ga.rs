@@ -179,6 +179,7 @@ struct Arg {
     arr: Array<f64>,
     semi: Shape,
     sel: Sel,
+    mode: Mode,
 }
 fn init_arr<const N: usize>(
     spec: Spec,
@@ -188,7 +189,6 @@ fn init_arr<const N: usize>(
 ) -> UiuaResult<(u8, usize, [Arg; N])> {
     let mut args = array::from_fn(|_| Arg::default());
     let mut sizes = [0; N];
-    let mut modes = [Full; N];
     let mut max_size = 0;
     for (i, val) in vals.into_iter().enumerate() {
         let (arr, semi, size) = ga_arg(val, env)?;
@@ -201,11 +201,11 @@ fn init_arr<const N: usize>(
     for i in 0..N {
         let (sel, mode) = dim_selector(dims, sizes[i], env)?;
         args[i].sel = sel;
-        modes[i] = mode;
+        args[i].mode = mode;
     }
-    let size = modes
+    let size = args
         .iter()
-        .copied()
+        .map(|a| a.mode)
         .reduce(|a, b| a.combine(b, vector_hint))
         .unwrap_or_default()
         .size(dims);
@@ -222,20 +222,35 @@ fn init(
 }
 impl Arg {
     fn map(self, f: impl FnOnce(Self) -> Array<f64>) -> Self {
-        let (semi, sel) = (self.semi.clone(), self.sel.clone());
+        let (semi, sel, mode) = (self.semi.clone(), self.sel.clone(), self.mode);
         let arr = f(self);
-        Self { arr, semi, sel }
+        Self {
+            arr,
+            semi,
+            sel,
+            mode,
+        }
     }
     fn try_map(self, f: impl FnOnce(Self) -> UiuaResult<Array<f64>>) -> UiuaResult<Self> {
-        let (semi, sel) = (self.semi.clone(), self.sel.clone());
+        let (semi, sel, mode) = (self.semi.clone(), self.sel.clone(), self.mode);
         let arr = f(self)?;
-        Ok(Self { arr, semi, sel })
+        Ok(Self {
+            arr,
+            semi,
+            sel,
+            mode,
+        })
     }
     fn from_not_transposed(dims: u8, arr: Array<f64>, env: &Uiua) -> UiuaResult<Self> {
         let mut semi = arr.shape.clone();
         let size = semi.pop().unwrap_or(1);
-        let (sel, _) = dim_selector(dims, size, env)?;
-        Ok(Arg { arr, semi, sel })
+        let (sel, mode) = dim_selector(dims, size, env)?;
+        Ok(Arg {
+            arr,
+            semi,
+            sel,
+            mode,
+        })
     }
 }
 impl fmt::Debug for Arg {
@@ -265,6 +280,8 @@ fn fast_dyadic_complex(
     if a.shape.last() != Some(&2) || b.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
         return Ok(Err([a, b]));
     }
+    a.meta.take_sorted_flags();
+    b.meta.take_sorted_flags();
     Ok(if a.data.is_copy_of(&b.data) {
         drop(b);
         for chunk in a.data.as_mut_slice().chunks_exact_mut(2) {
@@ -525,6 +542,7 @@ fn product_impl_not_transposed(
     // Scalar case
     if a.arr.rank() == 0 || b.arr.rank() == 0 {
         bin_pervade_mut(a.arr, &mut b.arr, false, env, pervade::mul::num_num)?;
+        b.arr.meta.take_sorted_flags();
         return Ok(b.arr);
     }
 
@@ -546,6 +564,7 @@ fn product_impl_not_transposed(
     b.arr.untranspose();
     let mut res = product_impl_transposed(dims, metrics, size, a, b, env)?;
     res.transpose();
+    res.meta.take_sorted_flags();
     Ok(res)
 }
 fn product_impl_transposed(
@@ -560,11 +579,13 @@ fn product_impl_transposed(
         arr: a,
         semi: asemi,
         sel: asel,
+        ..
     } = a;
     let Arg {
         arr: b,
         semi: bsemi,
         sel: bsel,
+        ..
     } = b;
 
     let (csel, _) = dim_selector(dims, size, env)?;

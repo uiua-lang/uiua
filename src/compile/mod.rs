@@ -12,7 +12,7 @@ use std::{
     collections::{BTreeSet, HashMap, HashSet, VecDeque},
     env::current_dir,
     fmt, fs,
-    iter::once,
+    iter::{once, repeat_n},
     mem::{replace, swap, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
@@ -2261,6 +2261,12 @@ impl Compiler {
                             prim: Some(Couple),
                             span: self.add_span(span),
                         },
+                    },
+                    Join => match self.positive_subscript(n, Join, &span) {
+                        0 | 1 => Node::empty(),
+                        n => {
+                            Node::from_iter(repeat_n(Node::Prim(Join, self.add_span(span)), n - 1))
+                        }
                     },
                     Box => Node::Array {
                         len: self.positive_subscript(n, Box, &span),

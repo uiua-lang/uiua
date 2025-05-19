@@ -518,13 +518,12 @@ impl Primitive {
         };
         Some(match (self, n) {
             (prim, Some(_)) if prim.class() == PrimClass::DyadicPervasive => Signature::new(1, 1),
-            (
-                Select | Pick | Take | Drop | Join | Rerank | Rotate | Orient | Windows | Base,
-                Some(_),
-            ) => Signature::new(1, 1),
+            (Select | Pick | Take | Drop | Rerank | Rotate | Orient | Windows | Base, Some(_)) => {
+                Signature::new(1, 1)
+            }
             (First | Last, Some(n)) if n >= 0 => Signature::new(1, n as usize),
-            (Couple | Box, Some(n)) if n >= 0 => Signature::new(n as usize, 1),
-            (Couple, None) => Signature::new(2, 1),
+            (Couple | Join | Box, Some(n)) if n >= 0 => Signature::new(n as usize, 1),
+            (Couple | Join, None) => Signature::new(2, 1),
             (Box, None) => Signature::new(1, 1),
             (
                 Transpose | Sqrt | Ln | Round | Floor | Ceil | Rand | Utf8 | Len | Shape | Range,

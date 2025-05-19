@@ -553,6 +553,7 @@ pub fn Subscripts() -> impl IntoView {
 
     let numeric = vec![
         subscript(Couple, "Group N arrays as rows", "{⊟₃ 1 2 3 4 5}"),
+        subscript(Join, "Join N arrays", "⊂₃ 1 2_3 4"),
         subscript(Box, "Group N arrays as boxed rows", "□₃ 1_2_3 5 \"wow\""),
         subscript(Deshape, "Change rank", "♭₂ ⇡ 2_2"),
         subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
@@ -656,7 +657,7 @@ pub fn Subscripts() -> impl IntoView {
                 <td><Editor example="⊃+₁×₂ [1 2 3]" nonprogressive=true/></td>
             </tr>
             <tr>
-                <td><Prims prims=[Select, Pick, Take, Drop, Join, Rotate, Orient]/></td>
+                <td><Prims prims=[Select, Pick, Take, Drop, Rotate, Orient]/></td>
                 <td>"Constant first argument"</td>
                 <td><Editor example="⊃↙₂↻₃ [1 2 3 4 5]" nonprogressive=true/></td>
             </tr>

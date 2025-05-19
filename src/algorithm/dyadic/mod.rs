@@ -1622,7 +1622,11 @@ fn digits_needed_for_base(n: f64, base: f64) -> usize {
     if n == 0.0 {
         0
     } else {
-        n.abs().log(base).floor() as usize + 1
+        let mut log = n.abs().log(base);
+        if (log.fract() - 1.0).abs() <= 2.0 * f64::EPSILON {
+            log = log.ceil();
+        }
+        log.floor() as usize + 1
     }
 }
 

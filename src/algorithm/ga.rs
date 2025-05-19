@@ -44,14 +44,42 @@ fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
 /// Mapping from coefficient index to array index
 type Sel = Vec<Option<usize>>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 enum Mode {
     Scalar,
     Vector,
     Even,
+    #[default]
     Full,
 }
 use Mode::*;
+impl Mode {
+    fn size(self, dims: u8) -> usize {
+        match self {
+            Scalar => 1,
+            Vector => dims as usize,
+            Even => 1 << dims.saturating_sub(1),
+            Full => 1 << dims,
+        }
+    }
+    fn combine(self, other: Self, vector_hint: VectorHint) -> Self {
+        match (self, other) {
+            (Scalar, Scalar) => Scalar,
+            (Scalar, m) | (m, Scalar) => match (vector_hint, m) {
+                (SameSize, Vector) => Full,
+                _ => m,
+            },
+            (Full, _) | (_, Full) => Full,
+            (Vector, Vector) => match vector_hint {
+                SameSize => Vector,
+                Rotor => Even,
+                ExpandFull => Full,
+            },
+            (Even, Vector) | (Vector, Even) => Full,
+            (Even, Even) => Even,
+        }
+    }
+}
 
 /// What to do with the size of a vector input
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -109,9 +137,9 @@ fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8
     })
 }
 
-fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<Sel> {
+fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<(Sel, Mode)> {
     let (_, this_mode) = derive_dims_mode(Some(dims), elem_size, env)?;
-    Ok(match this_mode {
+    let sel = match this_mode {
         Full => (0..1 << dims).map(Some).collect(),
         Even => {
             let mut i = 0;
@@ -134,7 +162,8 @@ fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<Sel> {
         Scalar => once(Some(0))
             .chain(repeat_n(None, (1 << dims) - 1))
             .collect(),
-    })
+    };
+    Ok((sel, this_mode))
 }
 
 fn grade_size(dims: u8, grade: u8) -> usize {
@@ -159,6 +188,7 @@ fn init_arr<const N: usize>(
 ) -> UiuaResult<(u8, usize, [Arg; N])> {
     let mut args = array::from_fn(|_| Arg::default());
     let mut sizes = [0; N];
+    let mut modes = [Full; N];
     let mut max_size = 0;
     for (i, val) in vals.into_iter().enumerate() {
         let (arr, semi, size) = ga_arg(val, env)?;
@@ -167,21 +197,18 @@ fn init_arr<const N: usize>(
         args[i].semi = semi;
         sizes[i] = size;
     }
-    let (dims, mode) = derive_dims_mode(spec.dims, max_size, env)?;
-    let mut has_vector = false;
+    let (dims, _) = derive_dims_mode(spec.dims, max_size, env)?;
     for i in 0..N {
-        has_vector |= dims > 2 && sizes[i] == dims as usize;
-        args[i].sel = dim_selector(dims, sizes[i], env)?;
+        let (sel, mode) = dim_selector(dims, sizes[i], env)?;
+        args[i].sel = sel;
+        modes[i] = mode;
     }
-    let size = match mode {
-        Vector => match vector_hint {
-            SameSize => dims as usize,
-            Rotor => 1 << dims.saturating_sub(1),
-            ExpandFull => 1 << dims,
-        },
-        Even if has_vector => 1 << dims,
-        _ => max_size,
-    };
+    let size = modes
+        .iter()
+        .copied()
+        .reduce(|a, b| a.combine(b, vector_hint))
+        .unwrap_or_default()
+        .size(dims);
     Ok((dims, size, args))
 }
 fn init(
@@ -207,7 +234,7 @@ impl Arg {
     fn from_not_transposed(dims: u8, arr: Array<f64>, env: &Uiua) -> UiuaResult<Self> {
         let mut semi = arr.shape.clone();
         let size = semi.pop().unwrap_or(1);
-        let sel = dim_selector(dims, size, env)?;
+        let (sel, _) = dim_selector(dims, size, env)?;
         Ok(Arg { arr, semi, sel })
     }
 }
@@ -402,7 +429,7 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     a.arr.untranspose();
     b.arr.untranspose();
 
-    let c_sel = dim_selector(dims, size, env)?;
+    let (csel, _) = dim_selector(dims, size, env)?;
     let mut csemi = derive_new_shape(&a.semi, &b.semi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
 
@@ -420,7 +447,7 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
 
     let add = InfalliblePervasiveFn::new(pervade::add::num_num);
     for i in 0..1usize << dims {
-        let Some(ci) = c_sel[i] else {
+        let Some(ci) = csel[i] else {
             continue;
         };
         match (a.sel[i], b.sel[i]) {
@@ -540,14 +567,14 @@ fn product_impl_transposed(
         sel: bsel,
     } = b;
 
-    let csel = dim_selector(dims, size, env)?;
+    let (csel, _) = dim_selector(dims, size, env)?;
     let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
 
     // println!("dims: {dims}, metrics: {metrics:?}, size: {size}");
-    // println!("a_sel: {a_sel:?}");
-    // println!("b_sel: {b_sel:?}");
-    // println!("c_sel: {c_sel:?}");
+    // println!("a_sel: {asel:?}");
+    // println!("b_sel: {bsel:?}");
+    // println!("c_sel: {csel:?}");
 
     if csemi.contains(&0) {
         csemi.prepend(size);

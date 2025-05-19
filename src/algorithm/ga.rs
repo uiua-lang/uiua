@@ -98,16 +98,14 @@ fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8
             )));
         }
     } else {
-        if !size.is_power_of_two() {
-            return Err(env.error(format!(
-                "{size} is not a valid array size for geometric algebra"
-            )));
-        }
         if size > MAX_SIZE {
             return Err(env.error(format!("{size} is too large for geometric algebra")));
         }
-        let dims = (size as f64).log(2.0).round() as u8 + 1;
-        (dims, Even)
+        if size.is_power_of_two() {
+            ((size as f64).log2().round() as u8 + 1, Even)
+        } else {
+            (size as u8, Vector)
+        }
     })
 }
 
@@ -447,7 +445,7 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
 }
 
 pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    // |1+b̂â|
+    // |1-b̂â|
     let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
     let a = a.try_map(|a| normalize_impl_not_transposed(dims, spec.metrics, size, a, env))?;
     let b = b.try_map(|b| normalize_impl_not_transposed(dims, spec.metrics, size, b, env))?;

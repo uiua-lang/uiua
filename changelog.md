@@ -7,6 +7,7 @@ Uiua is not yet stable.
 ## 0.16.1 - 2025-05-??
 ### Interpreter
 - Fix a bug in [`rows ≡`](https://uiua.org/docs/rows) [`rotate ↻`](https://uiua.org/docs/rotate)
+- Fix a bug in [`base ⊥`](https://uiua.org/docs/base)
 
 ## 0.16.0 - 2025-05-18
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.16.0).

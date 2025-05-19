@@ -72,7 +72,7 @@ serde_yaml = {version = "0.9.33", optional = true}
 
 # Feature dependencies
 arboard = {version = "3", optional = true}
-calamine = {version = "0.27.0", optional = true}
+calamine = {version = "0.26.1", optional = true}
 color_quant = {version = "1.1", optional = true}
 cosmic-text = {version = "0.12.1", optional = true}
 csv = {version = "1", optional = true}
@@ -176,6 +176,3 @@ members = ["site", "tests_ffi", "pad/editor"]
 
 [profile.dev]
 incremental = true
-
-[patch.crates-io]
-calamine = {git = "https://github.com/prophittcorey/calamine", branch = "fix/zip-3.0"}

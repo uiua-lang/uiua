@@ -221,7 +221,7 @@ primitive!(
     /// ex: √  ¯4
     ///   : √ℂ0¯4
     ///
-    /// Subscripted [sqrt] gives the nth root
+    /// Subscripted [sqrt] gives the nth root.
     /// ex: √₄81
     ///
     (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
@@ -913,7 +913,7 @@ primitive!(
     /// ex: ⊟ [1_2 3_4] 5
     /// ex: ⊟ [1_2 3_4] 5_6
     ///
-    /// Subscripted [couple] combines that many arrays
+    /// Subscripted [couple] combines that many arrays.
     /// ex: ⊟₃ 1_2 3_4 5_6
     /// ex: ⊟₄ @a @b @c @d
     /// ex: ⊟₁ 5

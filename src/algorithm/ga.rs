@@ -46,9 +46,10 @@ type Sel = Vec<Option<usize>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
+    Scalar,
+    Vector,
     Even,
     Full,
-    Scalar,
 }
 use Mode::*;
 
@@ -73,6 +74,8 @@ fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8
             (dims, Full)
         } else if size == even_size {
             (dims, Even)
+        } else if size == dims as usize {
+            (dims, Vector)
         } else if size == 1 {
             (dims, Scalar)
         } else {
@@ -99,6 +102,7 @@ fn derive_dims_mode(dims: Option<u8>, size: usize, env: &Uiua) -> UiuaResult<(u8
 fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<Sel> {
     let (_, this_mode) = derive_dims_mode(Some(dims), elem_size, env)?;
     Ok(match this_mode {
+        Full => (0..1 << dims).map(Some).collect(),
         Even => {
             let mut i = 0;
             blade_grades(dims)
@@ -110,9 +114,15 @@ fn dim_selector(dims: u8, elem_size: usize, env: &Uiua) -> UiuaResult<Sel> {
                 })
                 .collect()
         }
-        Full => (0..1usize << dims).map(Some).collect(),
+        Vector => {
+            let mut sel = vec![None; 1 << dims];
+            for i in 0..dims as usize {
+                sel[i + 1] = Some(i);
+            }
+            sel
+        }
         Scalar => once(Some(0))
-            .chain(repeat_n(None, (1usize << dims) - 1))
+            .chain(repeat_n(None, (1 << dims) - 1))
             .collect(),
     })
 }
@@ -146,11 +156,15 @@ fn init_arr<const N: usize>(
         args[i].semi = semi;
         sizes[i] = size;
     }
-    let (dims, _) = derive_dims_mode(spec.dims, max_size, env)?;
+    let (dims, mode) = derive_dims_mode(spec.dims, max_size, env)?;
     for i in 0..N {
         args[i].sel = dim_selector(dims, sizes[i], env)?;
     }
-    Ok((dims, max_size, args))
+    let size = match mode {
+        Vector => 1 << dims,
+        _ => max_size,
+    };
+    Ok((dims, size, args))
 }
 fn init(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<(u8, usize, Arg)> {
     let (dims, size, [arg]) = init_arr(spec, [val], env)?;
@@ -172,6 +186,18 @@ impl Arg {
         let size = semi.pop().unwrap_or(1);
         let sel = dim_selector(dims, size, env)?;
         Ok(Arg { arr, semi, sel })
+    }
+}
+impl fmt::Debug for Arg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Arg({:?}, {:?}, ", self.arr, self.semi)?;
+        for i in &self.sel {
+            match i {
+                Some(i) => write!(f, "{i}"),
+                None => write!(f, "_"),
+            }?
+        }
+        write!(f, ")")
     }
 }
 

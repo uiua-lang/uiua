@@ -53,6 +53,18 @@ enum Mode {
 }
 use Mode::*;
 
+/// What to do with the size of a vector input
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum VectorHint {
+    /// Keep the size of the vector
+    SameSize,
+    /// Form a rotor
+    Rotor,
+    /// Expand to the full multivector
+    ExpandFull,
+}
+use VectorHint::*;
+
 use super::{
     pervade::{self, bin_pervade_mut, bin_pervade_recursive, InfalliblePervasiveFn},
     tuples::combinations,
@@ -144,6 +156,7 @@ struct Arg {
 fn init_arr<const N: usize>(
     spec: Spec,
     vals: [Value; N],
+    vector_hint: VectorHint,
     env: &Uiua,
 ) -> UiuaResult<(u8, usize, [Arg; N])> {
     let mut args = array::from_fn(|_| Arg::default());
@@ -157,17 +170,29 @@ fn init_arr<const N: usize>(
         sizes[i] = size;
     }
     let (dims, mode) = derive_dims_mode(spec.dims, max_size, env)?;
+    let mut has_vector = false;
     for i in 0..N {
+        has_vector |= dims > 2 && sizes[i] == dims as usize;
         args[i].sel = dim_selector(dims, sizes[i], env)?;
     }
     let size = match mode {
-        Vector => 1 << dims,
+        Vector => match vector_hint {
+            SameSize => dims as usize,
+            Rotor => 1 << dims.saturating_sub(1),
+            ExpandFull => 1 << dims,
+        },
+        Even if has_vector => 1 << dims,
         _ => max_size,
     };
     Ok((dims, size, args))
 }
-fn init(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<(u8, usize, Arg)> {
-    let (dims, size, [arg]) = init_arr(spec, [val], env)?;
+fn init(
+    spec: Spec,
+    val: Value,
+    vector_hint: VectorHint,
+    env: &Uiua,
+) -> UiuaResult<(u8, usize, Arg)> {
+    let (dims, size, [arg]) = init_arr(spec, [val], vector_hint, env)?;
     Ok((dims, size, arg))
 }
 impl Arg {
@@ -269,7 +294,7 @@ fn fast_dyadic_complex(
 }
 
 pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, _, mut arg) = init(spec, val, env)?;
+    let (dims, _, mut arg) = init(spec, val, SameSize, env)?;
     arg.arr.untranspose();
     let mut arr = reverse_impl_transposed(dims, arg);
     arr.transpose();
@@ -291,7 +316,7 @@ fn reverse_impl_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, arg) = init(spec, val, env)?;
+    let (dims, size, arg) = init(spec, val, ExpandFull, env)?;
     magnitude_impl(dims, spec.metrics, size, arg, env)
 }
 
@@ -327,7 +352,7 @@ fn magnitude_impl(
 }
 
 pub fn normalize(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, arg) = init(spec, val, env)?;
+    let (dims, size, arg) = init(spec, val, Rotor, env)?;
     normalize_impl_not_transposed(dims, spec.metrics, size, arg, env)
 }
 
@@ -349,7 +374,7 @@ pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
 }
 
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, [mut a, mut b]) = init_arr(spec, [a, b], env)?;
+    let (dims, size, [mut a, mut b]) = init_arr(spec, [a, b], SameSize, env)?;
 
     // println!("a: {a}, semi: {asemi}, sel: {a_sel:?}");
     // println!("b: {b}, semi: {bsemi}, sel: {b_sel:?}");
@@ -423,7 +448,7 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
 
 pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     // |1+âb̂|
-    let (dims, size, [a, b]) = init_arr(spec, [a, b], env)?;
+    let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
     let a = a.try_map(|a| normalize_impl_not_transposed(dims, spec.metrics, size, a, env))?;
     let b = b.try_map(|b| normalize_impl_not_transposed(dims, spec.metrics, size, b, env))?;
     let mut arr = product_impl_not_transposed(dims, spec.metrics, size, a, b, env)?;
@@ -450,7 +475,7 @@ pub fn divide(a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
 }
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, [a, b]) = init_arr(spec, [a, b], env)?;
+    let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
     product_impl_not_transposed(dims, spec.metrics, size, a, b, env)
 }
 fn product_impl_not_transposed(

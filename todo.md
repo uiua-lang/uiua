@@ -2,7 +2,6 @@
 
 # 0.17
 - `geo`
-  - Make product go the other way
   - Auto dimension for length 3
   - `not` for dual
   - Figure out a way to fix signs

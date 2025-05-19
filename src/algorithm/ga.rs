@@ -447,12 +447,15 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
 }
 
 pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    // |1+âb̂|
+    // |1+b̂â|
     let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
     let a = a.try_map(|a| normalize_impl_not_transposed(dims, spec.metrics, size, a, env))?;
     let b = b.try_map(|b| normalize_impl_not_transposed(dims, spec.metrics, size, b, env))?;
     let mut arr = product_impl_not_transposed(dims, spec.metrics, size, a, b, env)?;
     for chunk in arr.data.as_mut_slice().chunks_exact_mut(size) {
+        for v in &mut *chunk {
+            *v = -*v;
+        }
         chunk[0] += 1.0;
     }
     let arg = Arg::from_not_transposed(dims, arr, env)?;
@@ -561,11 +564,11 @@ fn product_impl_transposed(
     }
 
     let mul = InfalliblePervasiveFn::new(pervade::mul::num_num);
-    for i in 0..1usize << dims {
-        let i_mask = mask_table[i];
-        for j in 0..1usize << dims {
-            let j_mask = mask_table[j];
-            let (sign, metric) = blade_sign_and_metric(i_mask, j_mask, dims, metrics);
+    for j in 0..1usize << dims {
+        let j_mask = mask_table[j];
+        for i in 0..1usize << dims {
+            let i_mask = mask_table[i];
+            let (sign, metric) = blade_sign_and_metric(j_mask, i_mask, dims, metrics);
             if metric == 0.0 {
                 continue;
             }

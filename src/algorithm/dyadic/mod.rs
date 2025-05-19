@@ -969,6 +969,21 @@ impl<T: ArrayValue> Array<T> {
         let fill = env.scalar_fill::<T>().ok();
 
         // Expand the array if doing multiple rotations
+        if self.rank() > by.rank() && self.shape.contains(&1) {
+            let fixed_dims = self
+                .shape
+                .iter()
+                .take(by.rank())
+                .take_while(|&&d| d == 1)
+                .count();
+            let expansion: usize = by.shape[..fixed_dims].iter().product();
+            let new_shape: Shape = (by.shape.iter().take(fixed_dims))
+                .chain(&self.shape[fixed_dims..])
+                .copied()
+                .collect();
+            self.reshape_scalar(Ok(expansion as isize), false, env)?;
+            self.shape = new_shape;
+        }
         if by.rank().saturating_sub(depth) > 1 {
             for &bd in by.shape.iter().rev().skip(1) {
                 self.reshape_scalar(Ok(bd as isize), false, env)?;

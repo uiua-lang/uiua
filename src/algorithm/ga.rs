@@ -156,6 +156,24 @@ fn init(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<(u8, usize, Arg)> {
     let (dims, size, [arg]) = init_arr(spec, [val], env)?;
     Ok((dims, size, arg))
 }
+impl Arg {
+    fn map(self, f: impl FnOnce(Self) -> Array<f64>) -> Self {
+        let (semi, sel) = (self.semi.clone(), self.sel.clone());
+        let arr = f(self);
+        Self { arr, semi, sel }
+    }
+    fn try_map(self, f: impl FnOnce(Self) -> UiuaResult<Array<f64>>) -> UiuaResult<Self> {
+        let (semi, sel) = (self.semi.clone(), self.sel.clone());
+        let arr = f(self)?;
+        Ok(Self { arr, semi, sel })
+    }
+    fn from_not_transposed(dims: u8, arr: Array<f64>, env: &Uiua) -> UiuaResult<Self> {
+        let mut semi = arr.shape.clone();
+        let size = semi.pop().unwrap_or(1);
+        let sel = dim_selector(dims, size, env)?;
+        Ok(Arg { arr, semi, sel })
+    }
+}
 
 fn is_complex(dims: u8, a: &Array<f64>) -> bool {
     a.shape.last() == Some(&2) && dims == 2
@@ -227,12 +245,12 @@ fn fast_dyadic_complex(
 pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (dims, _, mut arg) = init(spec, val, env)?;
     arg.arr.untranspose();
-    let mut arr = reverse_impl(dims, arg);
+    let mut arr = reverse_impl_transposed(dims, arg);
     arr.transpose();
     Ok(arr)
 }
 
-fn reverse_impl(dims: u8, mut arg: Arg) -> Array<f64> {
+fn reverse_impl_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
     for (i, g) in blade_grades(dims).enumerate() {
         if let Some(i) = arg.sel[i] {
             if g / 2 % 2 == 1 {
@@ -273,12 +291,8 @@ fn magnitude_impl(
     }
 
     arg.arr.untranspose();
-    let rev = Arg {
-        arr: reverse_impl(dims, arg.clone()),
-        semi: arg.semi.clone(),
-        sel: arg.sel.clone(),
-    };
-    let prod = product_impl(dims, metrics, size, rev, arg, env)?;
+    let rev = arg.clone().map(|arg| reverse_impl_transposed(dims, arg));
+    let prod = product_impl_transposed(dims, metrics, size, rev, arg, env)?;
     let mut arr = prod.first(env)?;
     for v in arr.data.as_mut_slice() {
         *v = v.abs().sqrt();
@@ -288,10 +302,10 @@ fn magnitude_impl(
 
 pub fn normalize(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (dims, size, arg) = init(spec, val, env)?;
-    normalize_impl(dims, spec.metrics, size, arg, env)
+    normalize_impl_not_transposed(dims, spec.metrics, size, arg, env)
 }
 
-fn normalize_impl(
+fn normalize_impl_not_transposed(
     dims: u8,
     metrics: Metrics,
     size: usize,
@@ -381,13 +395,18 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     Ok(result)
 }
 
-// pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-//     let ([a, b], [asemi, bsemi], [asel, bsel], dims, size) = init(spec, [a, b], env)?;
-//     let a = normalize_impl(spec.metrics, a, &asemi, &asel, dims, size, env)?;
-//     let b = normalize_impl(spec.metrics, b, &bsemi, &bsel, dims, size, env)?;
-//     let (semi, sel) = ([&asemi, &bsemi], [&asel, &bsel]);
-//     let prod = product_impl(spec.metrics, [a, b], semi, sel, dims, size, env)?;
-// }
+pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    // |1+âb̂|
+    let (dims, size, [a, b]) = init_arr(spec, [a, b], env)?;
+    let a = a.try_map(|a| normalize_impl_not_transposed(dims, spec.metrics, size, a, env))?;
+    let b = b.try_map(|b| normalize_impl_not_transposed(dims, spec.metrics, size, b, env))?;
+    let mut arr = product_impl_not_transposed(dims, spec.metrics, size, a, b, env)?;
+    for chunk in arr.data.as_mut_slice().chunks_exact_mut(size) {
+        chunk[0] += 1.0;
+    }
+    let arg = Arg::from_not_transposed(dims, arr, env)?;
+    normalize_impl_not_transposed(dims, spec.metrics, size, arg, env)
+}
 
 pub fn divide(a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     if a.rank() >= b.rank() {
@@ -405,8 +424,17 @@ pub fn divide(a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
 }
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, [mut a, mut b]) = init_arr(spec, [a, b], env)?;
-
+    let (dims, size, [a, b]) = init_arr(spec, [a, b], env)?;
+    product_impl_not_transposed(dims, spec.metrics, size, a, b, env)
+}
+fn product_impl_not_transposed(
+    dims: u8,
+    metrics: Metrics,
+    size: usize,
+    mut a: Arg,
+    mut b: Arg,
+    env: &Uiua,
+) -> UiuaResult<Array<f64>> {
     // Scalar case
     if a.arr.rank() == 0 || b.arr.rank() == 0 {
         bin_pervade_mut(a.arr, &mut b.arr, false, env, pervade::mul::num_num)?;
@@ -415,7 +443,7 @@ pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f
 
     // Fast case for complex numbers
     let [a_arr, b_arr] = match fast_dyadic_complex(
-        spec.dims,
+        Some(dims),
         a.arr,
         b.arr,
         |ar, ai, br, bi| ar * br - ai * bi,
@@ -429,11 +457,11 @@ pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f
 
     a.arr.untranspose();
     b.arr.untranspose();
-    let mut res = product_impl(dims, spec.metrics, size, a, b, env)?;
+    let mut res = product_impl_transposed(dims, metrics, size, a, b, env)?;
     res.transpose();
     Ok(res)
 }
-fn product_impl(
+fn product_impl_transposed(
     dims: u8,
     metrics: Metrics,
     size: usize,
@@ -462,7 +490,7 @@ fn product_impl(
     // println!("c_sel: {c_sel:?}");
 
     if csemi.contains(&0) {
-        csemi.push(size);
+        csemi.prepend(size);
         return Ok(Array::new(csemi, c_data));
     }
 

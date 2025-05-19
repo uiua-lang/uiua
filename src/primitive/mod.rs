@@ -391,6 +391,7 @@ impl fmt::Display for ImplPrimitive {
             GeometricSub(_) => write!(f, "{Geometric}{Sub}"),
             GeometricProduct(_) => write!(f, "{Geometric}{Mul}"),
             GeometricDivide => write!(f, "{Geometric}{Div}"),
+            GeometricRotor(_) => write!(f, "{Geometric}{Atan}"),
             PadBlades(_) => write!(f, "{Geometric}{Anti}{Select}"),
             ExtractBlades(_) => write!(f, "{Geometric}{Select}"),
         }
@@ -1646,6 +1647,7 @@ impl ImplPrimitive {
                     ga::add(spec, a, b, env)
                 })?
             }
+            &ImplPrimitive::GeometricRotor(spec) => env.dyadic_oo_env_with(spec, ga::rotor)?,
             &ImplPrimitive::PadBlades(spec) => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
             &ImplPrimitive::ExtractBlades(spec) => {
                 env.dyadic_oo_env_with(spec, ga::extract_blades)?

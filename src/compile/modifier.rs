@@ -1981,6 +1981,7 @@ impl Compiler {
             ImplPrim(prim, _) if prim.is_ga() => {}
             Prim(Identity | Dup | Flip | Over | Pop | Stack | Sys(_), _) => {}
             ImplPrim(StackN { .. }, _) => {}
+            Push(_) => {}
             Mod(
                 (Fork | Bracket | Both)
                 | (Dip | Gap | Reach)

@@ -125,25 +125,36 @@ fn blade_grades(dims: u8) -> impl Iterator<Item = u8> {
     (0..=dims).flat_map(move |i| repeat_n(i, grade_size(dims, i)))
 }
 
-type Init<const N: usize> = ([Array<f64>; N], [Shape; N], [Sel; N], u8, usize);
-fn init<const N: usize>(spec: Spec, vals: [Value; N], env: &Uiua) -> UiuaResult<Init<N>> {
-    let mut arrs = array::from_fn(|_| Array::default());
+#[derive(Clone, Default)]
+struct Arg {
+    arr: Array<f64>,
+    semi: Shape,
+    sel: Sel,
+}
+fn init_arr<const N: usize>(
+    spec: Spec,
+    vals: [Value; N],
+    env: &Uiua,
+) -> UiuaResult<(u8, usize, [Arg; N])> {
+    let mut args = array::from_fn(|_| Arg::default());
     let mut sizes = [0; N];
-    let mut semis = array::from_fn(|_| Shape::default());
-    let mut sels = array::from_fn(|_| Vec::new());
     let mut max_size = 0;
     for (i, val) in vals.into_iter().enumerate() {
         let (arr, semi, size) = ga_arg(val, env)?;
         max_size = max_size.max(size);
-        arrs[i] = arr;
-        semis[i] = semi;
+        args[i].arr = arr;
+        args[i].semi = semi;
         sizes[i] = size;
     }
     let (dims, _) = derive_dims_mode(spec.dims, max_size, env)?;
     for i in 0..N {
-        sels[i] = dim_selector(dims, sizes[i], env)?;
+        args[i].sel = dim_selector(dims, sizes[i], env)?;
     }
-    Ok((arrs, semis, sels, dims, max_size))
+    Ok((dims, max_size, args))
+}
+fn init(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<(u8, usize, Arg)> {
+    let (dims, size, [arg]) = init_arr(spec, [val], env)?;
+    Ok((dims, size, arg))
 }
 
 fn is_complex(dims: u8, a: &Array<f64>) -> bool {
@@ -214,54 +225,60 @@ fn fast_dyadic_complex(
 }
 
 pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([mut arr], [_], [sel], dims, _) = init(spec, [val], env)?;
-    arr.untranspose();
-    arr = reverse_impl(dims, arr, &sel);
+    let (dims, _, mut arg) = init(spec, val, env)?;
+    arg.arr.untranspose();
+    let mut arr = reverse_impl(dims, arg);
     arr.transpose();
     Ok(arr)
 }
 
-fn reverse_impl(dims: u8, mut arr: Array<f64>, sel: &Sel) -> Array<f64> {
+fn reverse_impl(dims: u8, mut arg: Arg) -> Array<f64> {
     for (i, g) in blade_grades(dims).enumerate() {
-        if let Some(i) = sel[i] {
+        if let Some(i) = arg.sel[i] {
             if g / 2 % 2 == 1 {
-                for v in arr.row_slice_mut(i) {
+                for v in arg.arr.row_slice_mut(i) {
                     *v = -*v;
                 }
             }
         }
     }
-    arr.meta.take_sorted_flags();
-    arr
+    arg.arr.meta.take_sorted_flags();
+    arg.arr
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let init = init(spec, [val], env)?;
-    magnitude_impl(spec.metrics, init, env)
+    let (dims, size, arg) = init(spec, val, env)?;
+    magnitude_impl(dims, spec.metrics, size, arg, env)
 }
 
-fn magnitude_impl(metrics: Metrics, init: Init<1>, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([mut arr], [semi], [sel], dims, size) = init;
-    if is_complex(dims, &arr) {
-        let slice = arr.data.as_mut_slice();
+fn magnitude_impl(
+    dims: u8,
+    metrics: Metrics,
+    size: usize,
+    mut arg: Arg,
+    env: &Uiua,
+) -> UiuaResult<Array<f64>> {
+    if is_complex(dims, &arg.arr) {
+        let slice = arg.arr.data.as_mut_slice();
         for i in 0..slice.len() / 2 {
             let [re, im] = [slice[i * 2], slice[i * 2 + 1]];
             slice[i] = (re * re + im * im).sqrt();
         }
         let new_len = slice.len() / 2;
-        arr.data.truncate(new_len);
-        arr.shape.pop();
-        arr.meta.take_sorted_flags();
-        arr.validate();
-        return Ok(arr);
+        arg.arr.data.truncate(new_len);
+        arg.arr.shape.pop();
+        arg.arr.meta.take_sorted_flags();
+        arg.arr.validate();
+        return Ok(arg.arr);
     }
 
-    arr.untranspose();
-    let rev = reverse_impl(dims, arr.clone(), &sel);
-    let ab = [arr, rev];
-    let semi = [semi.clone(), semi];
-    let sel = [sel.clone(), sel];
-    let prod = product_impl(metrics, ab, &semi, &sel, dims, size, env)?;
+    arg.arr.untranspose();
+    let rev = Arg {
+        arr: reverse_impl(dims, arg.clone()),
+        semi: arg.semi.clone(),
+        sel: arg.sel.clone(),
+    };
+    let prod = product_impl(dims, metrics, size, rev, arg, env)?;
     let mut arr = prod.first(env)?;
     for v in arr.data.as_mut_slice() {
         *v = v.abs().sqrt();
@@ -270,11 +287,21 @@ fn magnitude_impl(metrics: Metrics, init: Init<1>, env: &Uiua) -> UiuaResult<Arr
 }
 
 pub fn normalize(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let init = init(spec, [val], env)?;
-    let mut val = init.0[0].clone();
-    let mag = magnitude_impl(spec.metrics, init, env)?;
-    bin_pervade_mut(mag, &mut val, false, env, pervade::div::num_num)?;
-    Ok(val)
+    let (dims, size, arg) = init(spec, val, env)?;
+    normalize_impl(dims, spec.metrics, size, arg, env)
+}
+
+fn normalize_impl(
+    dims: u8,
+    metrics: Metrics,
+    size: usize,
+    arg: Arg,
+    env: &Uiua,
+) -> UiuaResult<Array<f64>> {
+    let mut arr = arg.arr.clone();
+    let mag = magnitude_impl(dims, metrics, size, arg, env)?;
+    bin_pervade_mut(mag, &mut arr, false, env, pervade::div::num_num)?;
+    Ok(arr)
 }
 
 pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -282,28 +309,30 @@ pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
 }
 
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([a, b], [asemi, bsemi], [a_sel, b_sel], dims, size) = init(spec, [a, b], env)?;
+    let (dims, size, [mut a, mut b]) = init_arr(spec, [a, b], env)?;
 
     // println!("a: {a}, semi: {asemi}, sel: {a_sel:?}");
     // println!("b: {b}, semi: {bsemi}, sel: {b_sel:?}");
     // println!("size: {size}");
 
-    let [mut a, mut b] = match fast_dyadic_complex(
+    let [a_arr, b_arr] = match fast_dyadic_complex(
         spec.dims,
-        a,
-        b,
+        a.arr,
+        b.arr,
         |ar, _, br, _| ar + br,
         |_, ai, _, bi| ai + bi,
     )? {
         Ok(res) => return Ok(res),
         Err(ab) => ab,
     };
+    a.arr = a_arr;
+    b.arr = b_arr;
 
-    a.untranspose();
-    b.untranspose();
+    a.arr.untranspose();
+    b.arr.untranspose();
 
     let c_sel = dim_selector(dims, size, env)?;
-    let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
+    let mut csemi = derive_new_shape(&a.semi, &b.semi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
 
     if csemi.contains(&0) {
@@ -311,11 +340,11 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
         return Ok(Array::new(csemi, c_data));
     }
 
-    let a_row_len = asemi.elements();
-    let b_row_len = bsemi.elements();
+    let a_row_len = a.semi.elements();
+    let b_row_len = b.semi.elements();
     let c_row_len = csemi.elements();
-    let a = a.data.as_slice();
-    let b = b.data.as_slice();
+    let a_slice = a.arr.data.as_slice();
+    let b_slice = b.arr.data.as_slice();
     let c_slice = c_data.make_mut();
 
     let add = InfalliblePervasiveFn::new(pervade::add::num_num);
@@ -323,23 +352,23 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
         let Some(ci) = c_sel[i] else {
             continue;
         };
-        match (a_sel[i], b_sel[i]) {
+        match (a.sel[i], b.sel[i]) {
             (Some(ai), Some(bi)) => {
-                let a = &a[ai * a_row_len..][..a_row_len];
-                let b = &b[bi * b_row_len..][..b_row_len];
+                let asl = &a_slice[ai * a_row_len..][..a_row_len];
+                let bsl = &b_slice[bi * b_row_len..][..b_row_len];
                 let c = &mut c_slice[ci * c_row_len..][..c_row_len];
-                bin_pervade_recursive((a, &asemi), (b, &bsemi), c, None, None, add, env)?;
+                bin_pervade_recursive((asl, &a.semi), (bsl, &b.semi), c, None, None, add, env)?;
             }
             (Some(ai), None) => {
-                let a = &a[ai * a_row_len..][..a_row_len];
+                let asl = &a_slice[ai * a_row_len..][..a_row_len];
                 for c in c_slice[ci * c_row_len..][..c_row_len].chunks_exact_mut(a_row_len) {
-                    c.copy_from_slice(a);
+                    c.copy_from_slice(asl);
                 }
             }
             (None, Some(bi)) => {
-                let b = &b[bi * b_row_len..][..b_row_len];
+                let bsl = &b_slice[bi * b_row_len..][..b_row_len];
                 for c in c_slice[ci * c_row_len..][..c_row_len].chunks_exact_mut(b_row_len) {
-                    c.copy_from_slice(b);
+                    c.copy_from_slice(bsl);
                 }
             }
             _ => {}
@@ -351,6 +380,14 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     result.transpose();
     Ok(result)
 }
+
+// pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+//     let ([a, b], [asemi, bsemi], [asel, bsel], dims, size) = init(spec, [a, b], env)?;
+//     let a = normalize_impl(spec.metrics, a, &asemi, &asel, dims, size, env)?;
+//     let b = normalize_impl(spec.metrics, b, &bsemi, &bsel, dims, size, env)?;
+//     let (semi, sel) = ([&asemi, &bsemi], [&asel, &bsel]);
+//     let prod = product_impl(spec.metrics, [a, b], semi, sel, dims, size, env)?;
+// }
 
 pub fn divide(a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     if a.rank() >= b.rank() {
@@ -368,45 +405,55 @@ pub fn divide(a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
 }
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let ([a, mut b], semi, sel, dims, size) = init(spec, [a, b], env)?;
+    let (dims, size, [mut a, mut b]) = init_arr(spec, [a, b], env)?;
 
     // Scalar case
-    if a.rank() == 0 || b.rank() == 0 {
-        bin_pervade_mut(a, &mut b, false, env, pervade::mul::num_num)?;
-        return Ok(b);
+    if a.arr.rank() == 0 || b.arr.rank() == 0 {
+        bin_pervade_mut(a.arr, &mut b.arr, false, env, pervade::mul::num_num)?;
+        return Ok(b.arr);
     }
 
     // Fast case for complex numbers
-    let mut ab = match fast_dyadic_complex(
+    let [a_arr, b_arr] = match fast_dyadic_complex(
         spec.dims,
-        a,
-        b,
+        a.arr,
+        b.arr,
         |ar, ai, br, bi| ar * br - ai * bi,
         |ar, ai, br, bi| ar * bi + ai * br,
     )? {
         Ok(res) => return Ok(res),
         Err(ab) => ab,
     };
+    a.arr = a_arr;
+    b.arr = b_arr;
 
-    ab[0].untranspose();
-    ab[1].untranspose();
-    let mut res = product_impl(spec.metrics, ab, &semi, &sel, dims, size, env)?;
+    a.arr.untranspose();
+    b.arr.untranspose();
+    let mut res = product_impl(dims, spec.metrics, size, a, b, env)?;
     res.transpose();
     Ok(res)
 }
 fn product_impl(
-    metrics: Metrics,
-    ab: [Array<f64>; 2],
-    semi: &[Shape; 2],
-    sel: &[Sel; 2],
     dims: u8,
+    metrics: Metrics,
     size: usize,
+    a: Arg,
+    b: Arg,
     env: &Uiua,
 ) -> UiuaResult<Array<f64>> {
-    let ([a, b], [asemi, bsemi], [a_sel, b_sel]) = (ab, semi, sel);
+    let Arg {
+        arr: a,
+        semi: asemi,
+        sel: asel,
+    } = a;
+    let Arg {
+        arr: b,
+        semi: bsemi,
+        sel: bsel,
+    } = b;
 
-    let c_sel = dim_selector(dims, size, env)?;
-    let mut csemi = derive_new_shape(asemi, bsemi, Err(""), Err(""), env)?;
+    let csel = dim_selector(dims, size, env)?;
+    let mut csemi = derive_new_shape(&asemi, &bsemi, Err(""), Err(""), env)?;
     let mut c_data = eco_vec![0.0; size * csemi.elements()];
 
     // println!("dims: {dims}, metrics: {metrics:?}, size: {size}");
@@ -445,7 +492,7 @@ fn product_impl(
             }
             let k_mask = i_mask ^ j_mask;
             let k = rev_mask_table[k_mask];
-            let (Some(ai), Some(aj), Some(ci)) = (a_sel[i], b_sel[j], c_sel[k]) else {
+            let (Some(ai), Some(aj), Some(ci)) = (asel[i], bsel[j], csel[k]) else {
                 continue;
             };
             // println!(
@@ -456,7 +503,7 @@ fn product_impl(
             // );
             let a = &a[ai * a_row_len..][..a_row_len];
             let b = &b[aj * b_row_len..][..b_row_len];
-            bin_pervade_recursive((a, asemi), (b, bsemi), &mut temp, None, None, mul, env)?;
+            bin_pervade_recursive((a, &asemi), (b, &bsemi), &mut temp, None, None, mul, env)?;
             if sign == -1 {
                 for v in &mut temp {
                     *v = -*v;

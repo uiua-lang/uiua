@@ -1011,15 +1011,15 @@ impl Value {
     /// Attempt to convert the array to a list of numbers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_nums(
+    pub fn as_nums<C: ErrorContext>(
         &self,
-        env: &Uiua,
+        ctx: &C,
         requirement: impl Into<Option<&'static str>>,
-    ) -> UiuaResult<Vec<f64>> {
+    ) -> Result<Vec<f64>, C::Error> {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of numbers");
-        self.as_number_list(env, requirement)
+        self.as_number_list(ctx, requirement)
     }
     /// Attempt to convert the array to a list of natural numbers
     ///

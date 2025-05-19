@@ -26,6 +26,7 @@ use web_sys::{
     KeyboardEvent, MouseEvent,
 };
 
+use crate::binding_style;
 use crate::{
     backend::{OutputItem, WebBackend},
     binding_class, code_font, modifier_class, prim_sig_class,
@@ -981,9 +982,10 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             }
                             let class =
                                 format!("code-span {} {}", binding_class(&text, &docs), private);
+                            let style = binding_style(&docs);
                             frag_views.push(
                                 view! {
-                                    <span class=class data-title=title>
+                                    <span class=class style=style data-title=title>
                                         {text}
                                     </span>
                                 }

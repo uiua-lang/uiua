@@ -214,6 +214,7 @@ impl ErrorContext for () {
     }
 }
 
+/// Ignore an error when converting a value
 pub struct IgnoreError;
 impl ErrorContext for IgnoreError {
     type Error = ();

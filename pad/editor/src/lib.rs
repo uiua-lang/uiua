@@ -25,7 +25,7 @@ use uiua::{
     format::{format_str, FormatConfig},
     is_ident_char, lex,
     lsp::{BindingDocs, BindingDocsKind},
-    now, seed_random, PrimClass, Primitive, Signature, SysOp, Token,
+    now, seed_random, IgnoreError, PrimClass, Primitive, Signature, SysOp, Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
@@ -2342,6 +2342,22 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
         BindingDocsKind::Module { .. } => code_font!("module"),
         BindingDocsKind::Error => code_font!("output-error"),
     })
+}
+
+fn binding_style(docs: &BindingDocs) -> String {
+    if let BindingDocsKind::Constant(Some(val)) = &docs.kind {
+        if let Ok(nums) = val.as_nums(&IgnoreError, "") {
+            if let [r, g, b] = *nums {
+                return format!(
+                    "color: rgb({}, {}, {})",
+                    (r * 255.0).round(),
+                    (g * 255.0).round(),
+                    (b * 255.0).round(),
+                );
+            }
+        }
+    }
+    String::new()
 }
 
 pub const EDITOR_SHORTCUTS: &str = " shift Enter   - Run + Format

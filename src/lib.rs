@@ -180,7 +180,7 @@ pub mod window;
 
 #[allow(unused_imports)]
 pub use self::{
-    algorithm::media,
+    algorithm::{media, IgnoreError},
     array::*,
     assembly::*,
     boxed::*,

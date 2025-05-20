@@ -1910,7 +1910,7 @@ impl Compiler {
         let span = word.span.clone();
         let mut node = self.word(word)?;
 
-        let mut met = ga::Metrics::VANILLA;
+        let mut met = ga::Metrics::EUCLIDEAN;
         if let Some(metrics) = metrics {
             let metrics_span = metrics.span.clone();
             let (vals, sig) = self.do_comptime_vals(
@@ -1985,6 +1985,8 @@ impl Compiler {
                     ImplPrim(GeometricSandwich(spec), span),
                 ])
             }
+            Prim(Min, span) => *node = ImplPrim(GeometricWedge(spec), span),
+            Prim(Max, span) => *node = ImplPrim(GeometricRegressive(spec), span),
             Prim(Select, span) => *node = ImplPrim(ExtractBlades(spec), span),
             ImplPrim(AntiSelect, span) => *node = ImplPrim(PadBlades(spec), span),
             ImplPrim(prim, _) if prim.is_ga() => {}

@@ -370,12 +370,20 @@ fn reverse_impl_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
     arg.arr
 }
 
-pub fn dual(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, _, arg) = init(spec, val, ExpandFull, env)?;
+fn pseudo(dims: u8, env: &Uiua) -> UiuaResult<Arg> {
     let mut pseudoscalar = eco_vec![0.0; 1 << dims];
     *pseudoscalar.make_mut().last_mut().unwrap() = 1.0;
-    let pseudoscalar = Arg::from_not_transposed(dims, pseudoscalar.into(), env)?;
-    product_impl_not_transposed(dims, spec.metrics, 1 << dims, pseudoscalar, arg, env)
+    Arg::from_not_transposed(dims, pseudoscalar.into(), env)
+}
+
+pub fn dual(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let (dims, _, arg) = init(spec, val, ExpandFull, env)?;
+    let pseudoscalar = pseudo(dims, env)?;
+    dual_impl(dims, pseudoscalar, arg, env)
+}
+
+fn dual_impl(dims: u8, pseu: Arg, arg: Arg, env: &Uiua) -> UiuaResult<Array<f64>> {
+    product_impl_not_transposed(dims, Metrics::EUCLIDEAN, 1 << dims, pseu, arg, env)
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -553,18 +561,19 @@ pub fn sandwich(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<
     Ok(res)
 }
 
-fn extract_single_impl(arr: &mut Array<f64>, left_size: usize, new_size: usize) {
-    let elems: usize = arr.shape.iter().rev().skip(1).product();
-    let size = *arr.shape.last().unwrap();
-    let slice = arr.data.as_mut_slice();
-    for i in 0..elems {
-        let src_start = i * size + left_size;
-        let dst_start = i * new_size;
-        let src_end = src_start + new_size;
-        slice.copy_within(src_start..src_end, dst_start);
-    }
-    *arr.shape.last_mut().unwrap() = new_size;
-    arr.data.truncate(arr.shape.elements());
+pub fn wedge_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
+    product_impl_not_transposed(dims, Metrics::NULL, size, a, b, env)
+}
+
+pub fn regressive_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let (dims, size, [a, b]) = init_arr(spec, [a, b], ExpandFull, env)?;
+    let pseudoscalar = pseudo(dims, env)?;
+    let adual = a.try_map(|a| dual_impl(dims, pseudoscalar.clone(), a, env))?;
+    let bdual = b.try_map(|b| dual_impl(dims, pseudoscalar.clone(), b, env))?;
+    let wedge = product_impl_not_transposed(dims, Metrics::NULL, size, adual, bdual, env)?;
+    let arg = Arg::from_not_transposed(dims, wedge, env)?;
+    dual_impl(dims, pseudoscalar, arg, env)
 }
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -741,15 +750,18 @@ fn blade_name(dims: u8, mask: usize) -> String {
 pub struct Metrics(u32);
 impl Metrics {
     pub const COUNT: usize = 16;
-    pub const VANILLA: Self = Self(0);
-    pub fn all(val: i8) -> Self {
+    pub const EUCLIDEAN: Self = Self::all(1);
+    pub const NULL: Self = Self::all(0);
+    pub const fn all(val: i8) -> Self {
         let mut metrics = Self(0);
-        for i in 0..Self::COUNT {
+        let mut i = 0;
+        while i < Self::COUNT {
             metrics.set(i, val);
+            i += 1;
         }
         metrics
     }
-    pub fn get(&self, index: usize) -> i8 {
+    pub const fn get(&self, index: usize) -> i8 {
         let bits = (self.0 >> (2 * index)) & 0b11;
         match bits {
             0b00 => 1,
@@ -758,7 +770,7 @@ impl Metrics {
             _ => unreachable!(),
         }
     }
-    pub fn set(&mut self, index: usize, val: i8) {
+    pub const fn set(&mut self, index: usize, val: i8) {
         let bits = match val {
             0 => 0b01,
             -1 => 0b10,
@@ -982,4 +994,18 @@ pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> Uiua
     arr.data.truncate(arr.shape.elements());
     arr.validate();
     Ok(arr)
+}
+
+fn extract_single_impl(arr: &mut Array<f64>, left_size: usize, new_size: usize) {
+    let elems: usize = arr.shape.iter().rev().skip(1).product();
+    let size = *arr.shape.last().unwrap();
+    let slice = arr.data.as_mut_slice();
+    for i in 0..elems {
+        let src_start = i * size + left_size;
+        let dst_start = i * new_size;
+        let src_end = src_start + new_size;
+        slice.copy_within(src_start..src_end, dst_start);
+    }
+    *arr.shape.last_mut().unwrap() = new_size;
+    arr.data.truncate(arr.shape.elements());
 }

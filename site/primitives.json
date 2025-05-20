@@ -717,7 +717,7 @@
     "class": "RNG",
     "description": "Generate an array of random numbers with a seed"
   },
-  "geo": {
+  "geometric": {
     "glyph": "⩜",
     "outputs": 1,
     "modifier_args": 1,

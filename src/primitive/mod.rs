@@ -1758,7 +1758,10 @@ impl ImplPrimitive {
             }
             &ImplPrimitive::RowsSub(sub, inv) => {
                 let [f] = get_ops(ops, env)?;
-                let arg_count = (f.sig.args()).max(sub.side.and_then(|side| side.n).unwrap_or(0));
+                let sig = f.sig;
+                let arg_count = sig
+                    .args()
+                    .max(sub.side.and_then(|side| side.n).unwrap_or(0));
                 let vals = env.top_n_mut(arg_count)?;
                 let max_rank = vals.iter().map(Value::rank).max().unwrap_or(0);
                 let depth = match sub.num {
@@ -1786,8 +1789,16 @@ impl ImplPrimitive {
                     }
                 }
                 if depth == 0 {
+                    for val in vals {
+                        val.unbox();
+                    }
                     env.exec(f)?;
-                } else if depth == max_rank && f.sig.args() == 1 {
+                    if inv {
+                        for val in env.top_n_mut(sig.outputs())? {
+                            val.box_it();
+                        }
+                    }
+                } else if depth == max_rank && sig.args() == 1 && !inv {
                     let xs = env.pop(1)?;
                     zip::each1(f, xs, env)?;
                 } else {

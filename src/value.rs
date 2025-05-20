@@ -1401,6 +1401,10 @@ impl Value {
             val => *self = Value::Box(Array::from(Boxed(take(val)))),
         }
     }
+    /// Turn the value into a scalar box
+    pub fn box_it(&mut self) {
+        *self = Value::Box(Array::from(Boxed(take(self))))
+    }
     /// Turn the value into a scalar box if it is not one already
     pub fn boxed_if_not(self) -> Boxed {
         match self {

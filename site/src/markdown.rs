@@ -49,7 +49,6 @@ pub fn markdown_view(text: &str) -> View {
         .replace("<code block delim>", "```")
         .replace("<code backtick>", "`` ` ``");
     let root = parse_document(&arena, &text, &options());
-    logging::log!("{:#?}", root);
     node_view(root)
 }
 

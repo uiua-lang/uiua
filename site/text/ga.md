@@ -48,3 +48,21 @@ But a 2D multivector has 4 components, not just 2. It has a scalar part, 2 vecto
 So the parts of a 2D multivector that make up a complex number are grades 0 and 2, the even numbers. In 3D, there is also a single grade 0 blade, but there are 3 grade 2 blades. Those 4 numbers are actually a quaternion, which can be used to rotate objects in 3D space.
 
 In general, the *even subalgebra* - the even-graded blades of a multivector - in any number of dimensions allows to express rotations of objects in that space. This kind of rotator multivector is called a *rotor*. By default, [geometric]() interprets arrays with a last axis of 2, 4, 8, 16, etc. as being rotors. So length 2 is complexes, length 4 is quaternions, length 8 is 4D rotors, etc.
+
+But let's say we want to rotate a 3D vector using a quaternion. How do we even construct the quaternion in the first place?
+
+[geometric]() [atangent]() takes 2 vectors and returns a rotor that rotates the second vector to the first.
+
+As an example, let's create a rotor that rotates the X axis 90° into the Y axis. Here, we pass vectors of length 3. Because 3 is not a power of 2, they will be interpreted as vectors rather than rotors themselves.
+
+```uiua
+⩜∠ [0 1 0] [1 0 0]
+```
+
+Appying the rotor requires something called the *sandwich product*. We won't get into how it works here, but it can be written simply with [geometric]() [rotate]().
+
+```uiua
+⁅₉ ⊸⩜(↻∠) [0 1 0] [1 0 0] [1_0_0 1_2_3 0_1_¯5]
+```
+
+There are a few things to notice from this example. First, both operations can be placed in [geometric]() together. Second, the Z component of each vector remains unchanged. This is because rotation in the XY plane does not affect the Z dimension. Third, we have to [round]() at the end; [geometric]() operations involve a lot of floating-point math and can accumulate errors relatively quickly.

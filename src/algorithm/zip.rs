@@ -701,9 +701,9 @@ pub fn rows1(f: SigNode, mut xs: Value, depth: usize, inv: bool, env: &mut Uiua)
         })?
     } else {
         for row in xs.into_rows() {
-            rows1(f.clone(), row.unboxed_if(inv), depth - 1, inv, env)?;
+            rows1(f.clone(), row, depth - 1, inv, env)?;
             for i in 0..outputs {
-                new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
+                new_rows[i].push(env.pop("rows' function result")?);
             }
         }
     };
@@ -780,10 +780,9 @@ fn rows2(
                 })?
             } else {
                 for x in xs.into_rows() {
-                    let x = x.unboxed_if(inv);
                     rows2(f.clone(), x, ys.clone(), depth - 1, inv, env)?;
                     for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                        new_rows[i].push(env.pop("rows's function result")?);
                     }
                 }
             };
@@ -824,10 +823,9 @@ fn rows2(
                 })?
             } else {
                 for y in ys.into_rows() {
-                    let y = y.unboxed_if(inv);
                     rows2(f.clone(), xs.clone(), y, depth - 1, inv, env)?;
                     for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                        new_rows[i].push(env.pop("rows's function result")?);
                     }
                 }
             };
@@ -886,11 +884,9 @@ fn rows2(
                 })?
             } else {
                 for (x, y) in xs.into_rows().zip(ys.into_rows()) {
-                    let x = x.unboxed_if(inv);
-                    let y = y.unboxed_if(inv);
                     rows2(f.clone(), x, y, depth - 1, inv, env)?;
                     for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                        new_rows[i].push(env.pop("rows's function result")?);
                     }
                 }
             };

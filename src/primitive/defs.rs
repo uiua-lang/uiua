@@ -2968,6 +2968,8 @@ primitive!(
     ///   : ⌵⍜°⍉≡fft .
     (1, Fft, Algorithm, "fft"),
     /// Convert an operation to be in geometric algebra
+    ///
+    /// You can read more about [geometric] and its uses [here](/docs/experimental#geometric-algebra).
     ([1], Geometric, Algorithm, ("geometric", '⩜'), { experimental: true }),
     /// Find the shortest path between two things
     ///

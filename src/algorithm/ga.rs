@@ -749,7 +749,7 @@ fn blade_name(dims: u8, mask: usize) -> String {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
 pub struct Metrics(u32);
 impl Metrics {
-    pub const COUNT: usize = 16;
+    pub const COUNT: usize = 11;
     pub const EUCLIDEAN: Self = Self::all(1);
     pub const NULL: Self = Self::all(0);
     pub const fn all(val: i8) -> Self {

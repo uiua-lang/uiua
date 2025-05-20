@@ -24,6 +24,8 @@ Here is a quick reference table of each transformed operation. They will be expl
 | [select]()         | Select blades            |
 | `anti` [select]()  | Pad blades               |
 
+### Complex Numbers
+
 [geometric]() operations treat their arguments as arrays of multivector coefficients. The last axis of the array is the coefficients, and the rest of the axes are treated similarly to normal Uiua pervasive functions.
 
 One of the most basic uses of [geometric]() is working with complex numbers. If the last axis of the input(s) is 2, each pair will be treated as the real and imaginary components of a complex number.
@@ -42,6 +44,8 @@ Uiua is an array language, so all these operations are pervasive.
 ```
 
 That example hints at something greater though. Notice how multiplying each of those numbers by `i` *rotates* the vector by `eta` (90°). This is because complex numbers are actually a subset of 2D multivectors, which generalize rotation, reflection, and skewing in 2 dimensions.
+
+### Blades, Grades, and Rotormobiles
 
 But a 2D multivector has 4 components, not just 2. It has a scalar part, 2 vector parts, and a *bivector* part. We call each of these parts a *blade*. Each blade has a *grade* - the number of basis vectors it is the product of. In a 2D multivector, the scalar blade is grade 0, the vector blades are grade 1, and the bivector blade is grade 2.
 
@@ -66,3 +70,33 @@ Appying the rotor requires something called the *sandwich product*. We won't get
 ```
 
 There are a few things to notice from this example. First, both operations can be placed in [geometric]() together. Second, the Z component of each vector remains unchanged. This is because rotation in the XY plane does not affect the Z dimension. Third, we have to [round]() at the end; [geometric]() operations involve a lot of floating-point math and can accumulate errors relatively quickly.
+
+### Arbitrary Multivectors and Dimensions
+
+The way coefficients are interpreted depends on how many dimensions we are working in. For all the cases above, the number of dimensions is inferred from the shape of the inputs.
+
+But what if the default inferrence is not what we want? For example, what if we want to multiply a 3D vector by a bivector? In 3D, both vectors and bivectors have 3 components. By default, [geometric]() will interpret two length 3 arrays as vectors and return a rotor.
+
+```uiua
+⩜× [1 2 3] [4 5 6]
+```
+
+We can make the bivector be interpreted correctly via *blade padding*. This is done with [geometric]() [anti]() [select](). It takes the given grade and pads the array so that all other blades of the multivector are 0. This operations requires us to specify the number of dimensions via a subscript.
+
+```uiua
+⩜₃⌝⊏2 [1 2 3]
+```
+
+Then we can multiply.
+
+```uiua
+⩜₃(× ⌝⊏2) [1 2 3] [4 5 6]
+```
+
+If we only care about certain grades of the result, we can use *blade exaction* via [geometric]() [select](). Here, we extract just the vectors: the grade-1 blades.
+
+```uiua
+⩜₃(⊏1 × ⌝⊏2) [1 2 3] [4 5 6]
+```
+
+[geometric]() currently supports multivectors of up to 11 dimensions.

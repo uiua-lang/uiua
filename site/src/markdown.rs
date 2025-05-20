@@ -111,6 +111,9 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
             if lit.contains("<backtick>") {
                 lit = lit.replace("<backtick>", "`");
             }
+            if lit.contains("UIUA_VERSION") {
+                lit = lit.replace("UIUA_VERSION", uiua::VERSION);
+            }
             let mut inputs = Inputs::default();
             let (tokens, errors, _) = uiua::lex(&lit, (), &mut inputs);
             if errors.is_empty() && lit != "---" {

@@ -33,6 +33,13 @@ pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> im
     }}
 }
 
+fn options() -> ComrakOptions<'static> {
+    ComrakOptions {
+        extension: ExtensionOptions::builder().table(true).build(),
+        ..Default::default()
+    }
+}
+
 pub fn markdown_view(text: &str) -> View {
     let arena = Arena::new();
     let text = text
@@ -41,7 +48,8 @@ pub fn markdown_view(text: &str) -> View {
         .replace("``", "` `")
         .replace("<code block delim>", "```")
         .replace("<code backtick>", "`` ` ``");
-    let root = parse_document(&arena, &text, &ComrakOptions::default());
+    let root = parse_document(&arena, &text, &options());
+    logging::log!("{:#?}", root);
     node_view(root)
 }
 
@@ -52,7 +60,7 @@ pub fn markdown_html(text: &str) -> String {
         .replace("```", "<code block delim>")
         .replace("``", "` `")
         .replace("<code block delim>", "```");
-    let root = parse_document(&arena, &text, &ComrakOptions::default());
+    let root = parse_document(&arena, &text, &options());
     let body = format!(r#"<body><div id=top>{}</div></body>"#, node_html(root));
     let head = r#"
         <meta charset="utf-8">
@@ -188,6 +196,16 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
             }
             view!(<img src={&image.url} alt={alt.clone()} title=alt class=class/>).into_view()
         }
+        NodeValue::Table(_) => view!(<table class="bordered-table">{children}</table>).into_view(),
+        &NodeValue::TableRow(is_header) => {
+            let items = children.into_iter();
+            let cells: Vec<_> = if is_header {
+                items.map(|c| view!(<th>{c}</th>).into_view()).collect()
+            } else {
+                items.map(|c| view!(<td>{c}</td>).into_view()).collect()
+            };
+            view!(<tr>{cells}</tr>).into_view()
+        }
         _ => children.into_view(),
     }
 }
@@ -199,7 +217,8 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
 
     use crate::prim_html;
 
-    let children: String = node.children().map(node_html).collect();
+    let mut children_iter = node.children().map(node_html);
+    let mut children = || children_iter.by_ref().collect::<String>();
     match &node.data.borrow().value {
         NodeValue::Text(text) => {
             if let Some(text) = text
@@ -216,15 +235,18 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
             let id = all_text(node).to_lowercase().replace(' ', "-");
             format!(
                 "<h{} id={:?}>{}</h{}>",
-                heading.level, id, children, heading.level
+                heading.level,
+                id,
+                children(),
+                heading.level
             )
         }
         NodeValue::List(list) => match list.list_type {
-            ListType::Bullet => format!("<ul>{}</ul>", children),
-            ListType::Ordered => format!("<ol>{}</ol>", children),
+            ListType::Bullet => format!("<ul>{}</ul>", children()),
+            ListType::Ordered => format!("<ol>{}</ol>", children()),
         },
-        NodeValue::Item(_) => format!("<li>{}</li>", children),
-        NodeValue::Paragraph => format!("<p>{}</p>", children),
+        NodeValue::Item(_) => format!("<li>{}</li>", children()),
+        NodeValue::Paragraph => format!("<p>{}</p>", children()),
         NodeValue::Code(code) => {
             let mut inputs = Inputs::default();
             let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut inputs);
@@ -286,9 +308,9 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                 )
             }
         }
-        NodeValue::Emph => format!("<em>{}</em>", children),
-        NodeValue::Strong => format!("<strong>{}</strong>", children),
-        NodeValue::Strikethrough => format!("<del>{}</del>", children),
+        NodeValue::Emph => format!("<em>{}</em>", children()),
+        NodeValue::Strong => format!("<strong>{}</strong>", children()),
+        NodeValue::Strikethrough => format!("<del>{}</del>", children()),
         NodeValue::LineBreak => "<br/>".into(),
         NodeValue::CodeBlock(block) => {
             let mut lines: Vec<String> = if block.literal.trim() == "LOGO" {
@@ -363,7 +385,14 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                 image.url
             )
         }
-        _ => children,
+        NodeValue::Table(_) => format!(r#"<table class="bordered-table">{}</table>"#, children()),
+        &NodeValue::TableRow(is_header) => {
+            let tag = if is_header { "th" } else { "td" };
+            children_iter
+                .map(|s| format!("<{tag}>{s}</{tag}>"))
+                .collect()
+        }
+        _ => children(),
     }
 }
 

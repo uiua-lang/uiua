@@ -710,5 +710,7 @@ pub fn Experimental() -> impl IntoView {
         }</ul>
 
         <Markdown src="/text/experimental.md"/>
+
+        <Markdown src="/text/ga.md"/>
     }
 }

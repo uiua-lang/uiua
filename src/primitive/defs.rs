@@ -3707,6 +3707,7 @@ impl_primitive!(
     (2, GeometricProduct(ga::Spec), {ga: true}),
     (2, GeometricDivide, {ga: true}),
     (2, GeometricRotor(ga::Spec), {ga: true}),
+    (2, GeometricSandwich(ga::Spec), {ga: true}),
     (2, PadBlades(ga::Spec), {ga: true}),
     (2, ExtractBlades(ga::Spec), {ga: true}),
 );

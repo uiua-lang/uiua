@@ -1978,6 +1978,13 @@ impl Compiler {
             Prim(Add, span) => *node = ImplPrim(GeometricAdd(spec), span),
             Prim(Sub, span) => *node = ImplPrim(GeometricSub(spec), span),
             Prim(Atan, span) => *node = ImplPrim(GeometricRotor(spec), span),
+            Prim(Rotate, span) => *node = ImplPrim(GeometricSandwich(spec), span),
+            ImplPrim(AntiRotate, span) => {
+                *node = Node::from([
+                    ImplPrim(GeometricReverse(spec), span),
+                    ImplPrim(GeometricSandwich(spec), span),
+                ])
+            }
             Prim(Select, span) => *node = ImplPrim(ExtractBlades(spec), span),
             ImplPrim(AntiSelect, span) => *node = ImplPrim(PadBlades(spec), span),
             ImplPrim(prim, _) if prim.is_ga() => {}

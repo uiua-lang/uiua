@@ -336,11 +336,24 @@ fn fast_dyadic_complex(
 }
 
 pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, _, mut arg) = init(spec, val, SameSize, env)?;
-    arg.arr.untranspose();
-    let mut arr = reverse_impl_transposed(dims, arg);
-    arr.transpose();
-    Ok(arr)
+    let (dims, _, arg) = init(spec, val, SameSize, env)?;
+    Ok(reverse_impl_not_transposed(dims, arg))
+}
+
+fn reverse_impl_not_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
+    let size = arg.arr.shape.last().copied().unwrap_or(1);
+    let slice = arg.arr.data.as_mut_slice();
+    for (i, g) in blade_grades(dims).enumerate() {
+        if let Some(i) = arg.sel[i] {
+            if g / 2 % 2 == 1 {
+                for v in slice.chunks_exact_mut(size) {
+                    v[i] = -v[i];
+                }
+            }
+        }
+    }
+    arg.arr.meta.take_sorted_flags();
+    arg.arr
 }
 
 fn reverse_impl_transposed(dims: u8, mut arg: Arg) -> Array<f64> {
@@ -525,6 +538,33 @@ pub fn divide(a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (mut b, ..) = ga_arg(b, env)?;
     bin_pervade_mut(a, &mut b, false, env, pervade::div::num_num)?;
     Ok(b)
+}
+
+pub fn sandwich(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
+    let (amode, bmode) = (a.mode, b.mode);
+    let rev_a = a.clone().map(|a| reverse_impl_not_transposed(dims, a));
+    let ab = product_impl_not_transposed(dims, spec.metrics, size, b, a, env)?;
+    let ab = Arg::from_not_transposed(dims, ab, env)?;
+    let mut res = product_impl_not_transposed(dims, spec.metrics, size, rev_a, ab, env)?;
+    if let (Vector, Even) | (Even, Vector) = (amode, bmode) {
+        extract_single_impl(&mut res, 1, dims as usize);
+    }
+    Ok(res)
+}
+
+fn extract_single_impl(arr: &mut Array<f64>, left_size: usize, new_size: usize) {
+    let elems: usize = arr.shape.iter().rev().skip(1).product();
+    let size = *arr.shape.last().unwrap();
+    let slice = arr.data.as_mut_slice();
+    for i in 0..elems {
+        let src_start = i * size + left_size;
+        let dst_start = i * new_size;
+        let src_end = src_start + new_size;
+        slice.copy_within(src_start..src_end, dst_start);
+    }
+    *arr.shape.last_mut().unwrap() = new_size;
+    arr.data.truncate(arr.shape.elements());
 }
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -916,12 +956,7 @@ pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> Uiua
     };
     if let [grade] = *grades {
         let left_size = left_size(grade);
-        for i in 0..semi.elements() {
-            let src_start = i * size + left_size;
-            let dst_start = i * new_size;
-            let src_end = src_start + new_size;
-            slice.copy_within(src_start..src_end, dst_start);
-        }
+        extract_single_impl(&mut arr, left_size, new_size);
     } else if grades.is_sorted() {
         let mut left_sizes = Vec::with_capacity(grades.len());
         for grade in grades {

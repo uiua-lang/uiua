@@ -892,10 +892,10 @@ fn TutorialMoreStack() -> impl IntoView {
         <p>"As you write more "{lang}" code, you'll find that there is a kind of pattern you'll encounter over and over again. It involves calling a function, then calling another function that re-uses an argument to the first function."</p>
         <p>"One simple example is getting "<code>"n"</code>" numbers between "<code>"0"</code>" and "<code>"1"</code>". One way you may think to solve this is with "<Prim prim=Dup/>" and "<Prim prim=Backward/>"."</p>
         <Editor example="˜÷⇡. 5"/>
-        <p>"This solution works, but as the style diagnostic suggests, it is not quite idiomatic."</p>
+        <p>"This solution works, but it's not quite idiomatic."</p>
         <p>"When the first function you call is dyadic, it can get a little trickier. For example, if you wanted to get all the integers between two numbers, you may try the following:"</p>
         <Editor example="+⊃∘(⇡-) 3 8"/> // Should fail
-        <p>"Again, as the style diagnostic tells you, there is a better way."</p>
+        <p>"As the style diagnostic tells you, there is a better way."</p>
         <p>"The "<Prim prim=On/>" modifier calls a function but keeps its first argument on top of the stack. This can be used in both of the above examples."</p>
         <Editor example="÷⟜⇡ 5"/>
         <Editor example="+⟜(⇡-) 3 8"/>

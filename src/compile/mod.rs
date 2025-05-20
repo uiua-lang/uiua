@@ -2263,7 +2263,8 @@ impl Compiler {
                         },
                     },
                     Join => match self.positive_subscript(n, Join, &span) {
-                        0 | 1 => Node::empty(),
+                        0 => Node::empty(),
+                        1 => Node::Prim(Identity, self.add_span(span)),
                         n => {
                             Node::from_iter(repeat_n(Node::Prim(Join, self.add_span(span)), n - 1))
                         }

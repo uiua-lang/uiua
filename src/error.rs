@@ -324,13 +324,13 @@ impl UiuaError {
             _ => &default_inputs,
         };
         for (info, span) in &self.infos {
+            report.fragments.push(ReportFragment::Newline);
             if let Some(span) = span {
                 report.fragments.extend(
                     Report::new_multi(DiagnosticKind::Info.into(), inputs, [(info, span.clone())])
                         .fragments,
                 );
             } else {
-                report.fragments.push(ReportFragment::Newline);
                 report.fragments.push(ReportFragment::Colored(
                     "Info".into(),
                     DiagnosticKind::Info.into(),

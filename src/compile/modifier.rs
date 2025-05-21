@@ -1803,36 +1803,42 @@ impl Compiler {
                 ),
             ));
         }
-        let mut comp = self.clone();
-        if let Some(index) = comp.node_unbound_index(&sn.node) {
-            let name = comp.scope.names.iter().find_map(|(ident, local)| {
-                if local.index == index {
-                    Some(ident)
-                } else {
-                    None
-                }
-            });
-            let message = if let Some(name) = name {
-                format!("Compile-time evaluation references runtime binding `{name}`")
+        if let Some(index) = self.node_unbound_index(&sn.node) {
+            let name = (self.scope.names.iter())
+                .find_map(|(ident, local)| (local.index == index).then_some(ident));
+            return Err(if let Some(name) = name {
+                let name_span = self.asm.bindings[index].span.clone();
+                self.error(
+                    span.clone(),
+                    format!("Compile-time evaluation references runtime binding `{name}`"),
+                )
+                .with_info([(
+                    format!("`{name}` is bound at runtime"),
+                    Some(name_span.into()),
+                )])
             } else {
-                "Compile-time evaluation references runtime binding".into()
-            };
-            return Err(self.error(span.clone(), message));
+                self.error(
+                    span.clone(),
+                    "Compile-time evaluation references runtime binding",
+                )
+            });
         }
-        let asm_root_len = comp.asm.root.len();
-        comp.asm.root.push(sn.node);
-        let res = comp.macro_env.run_asm(comp.asm.clone());
-        let stack = comp.macro_env.take_stack();
+        let root = replace(&mut self.asm.root, sn.node);
+        let res = self.macro_env.run_asm(self.asm.clone());
+        let stack = self.macro_env.take_stack();
         let values = if let Err(e) = res {
             if self.errors.is_empty() {
-                self.add_error(span.clone(), format!("Compile-time evaluation failed: {e}"));
+                self.errors.push(e.with_info([(
+                    "Compile-time evaluation failed".into(),
+                    Some(span.clone().into()),
+                )]));
             }
             vec![Value::default(); sn.sig.outputs()]
         } else {
             stack
         };
         self.asm.spans.truncate(orig_spans_len);
-        comp.asm.root.truncate(asm_root_len);
+        self.asm.root = root;
         let val_count = sn.sig.outputs();
         let mut node = Node::empty();
         for value in values.into_iter().rev().take(val_count).rev() {

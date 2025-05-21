@@ -39,11 +39,12 @@ ga_op!(
     (1, GeometricAdd),
     (1, GeometricSub),
     (2, GeometricProduct),
+    (2, GeometricInner),
+    (2, GeometricWedge),
+    (2, GeometricRegressive),
     (2, GeometricDivide),
     (2, GeometricRotor),
     (2, GeometricSandwich),
-    (2, GeometricWedge),
-    (2, GeometricRegressive),
     (2, PadBlades),
     (2, ExtractBlades),
 );
@@ -60,11 +61,12 @@ impl fmt::Display for GaOp {
             GeometricAdd => write!(f, "{Geometric}{Add}"),
             GeometricSub => write!(f, "{Geometric}{Sub}"),
             GeometricProduct => write!(f, "{Geometric}{Mul}"),
+            GeometricInner => write!(f, "{Geometric}{Modulus}"),
+            GeometricWedge => write!(f, "{Geometric}{Min}"),
+            GeometricRegressive => write!(f, "{Geometric}{Max}"),
             GeometricDivide => write!(f, "{Geometric}{Div}"),
             GeometricRotor => write!(f, "{Geometric}{Atan}"),
             GeometricSandwich => write!(f, "{Geometric}{Rotate}"),
-            GeometricWedge => write!(f, "{Geometric}{Min}"),
-            GeometricRegressive => write!(f, "{Geometric}{Max}"),
             PadBlades => write!(f, "{Geometric}{Anti}{Select}"),
             ExtractBlades => write!(f, "{Geometric}{Select}"),
         }
@@ -441,7 +443,7 @@ pub fn dual(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
 }
 
 fn dual_impl(dims: u8, pseu: Arg, arg: Arg, env: &Uiua) -> UiuaResult<Array<f64>> {
-    product_impl_not_transposed(dims, Metrics::EUCLIDEAN, 1 << dims, pseu, arg, env)
+    product_impl_not_transposed(dims, Metrics::EUCLIDEAN, 1 << dims, false, pseu, arg, env)
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -472,7 +474,7 @@ fn magnitude_impl(
 
     arg.arr.untranspose();
     let rev = arg.clone().map(|arg| reverse_impl_transposed(dims, arg));
-    let prod = product_impl_transposed(dims, metrics, size, rev, arg, env)?;
+    let prod = product_impl_transposed(dims, metrics, size, false, rev, arg, env)?;
     let mut arr = prod.first(env)?;
     for v in arr.data.as_mut_slice() {
         *v = v.abs().sqrt();
@@ -580,7 +582,7 @@ pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64
     let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
     let a = a.try_map(|a| normalize_impl_not_transposed(dims, spec.metrics, size, a, env))?;
     let b = b.try_map(|b| normalize_impl_not_transposed(dims, spec.metrics, size, b, env))?;
-    let mut arr = product_impl_not_transposed(dims, spec.metrics, size, a, b, env)?;
+    let mut arr = product_impl_not_transposed(dims, spec.metrics, size, false, a, b, env)?;
     for chunk in arr.data.as_mut_slice().chunks_exact_mut(size) {
         for v in &mut *chunk {
             *v = -*v;
@@ -610,18 +612,23 @@ pub fn sandwich(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<
     let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
     let (amode, bmode) = (a.mode, b.mode);
     let rev_a = a.clone().map(|a| reverse_impl_not_transposed(dims, a));
-    let ab = product_impl_not_transposed(dims, spec.metrics, size, b, a, env)?;
+    let ab = product_impl_not_transposed(dims, spec.metrics, size, false, b, a, env)?;
     let ab = Arg::from_not_transposed(dims, ab, env)?;
-    let mut res = product_impl_not_transposed(dims, spec.metrics, size, rev_a, ab, env)?;
+    let mut res = product_impl_not_transposed(dims, spec.metrics, size, false, rev_a, ab, env)?;
     if let (Vector, Even) | (Even, Vector) = (amode, bmode) {
         extract_single_impl(&mut res, 1, dims as usize);
     }
     Ok(res)
 }
 
+pub fn inner_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let (dims, size, [a, b]) = init_arr(spec, [a, b], ExpandFull, env)?;
+    product_impl_not_transposed(dims, spec.metrics, size, true, a, b, env)
+}
+
 pub fn wedge_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
-    product_impl_not_transposed(dims, Metrics::NULL, size, a, b, env)
+    product_impl_not_transposed(dims, Metrics::NULL, size, false, a, b, env)
 }
 
 pub fn regressive_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -629,19 +636,20 @@ pub fn regressive_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaRes
     let pseudoscalar = pseudo(dims, env)?;
     let adual = a.try_map(|a| dual_impl(dims, pseudoscalar.clone(), a, env))?;
     let bdual = b.try_map(|b| dual_impl(dims, pseudoscalar.clone(), b, env))?;
-    let wedge = product_impl_not_transposed(dims, Metrics::NULL, size, adual, bdual, env)?;
+    let wedge = product_impl_not_transposed(dims, Metrics::NULL, size, false, adual, bdual, env)?;
     let arg = Arg::from_not_transposed(dims, wedge, env)?;
     dual_impl(dims, pseudoscalar, arg, env)
 }
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
-    product_impl_not_transposed(dims, spec.metrics, size, a, b, env)
+    product_impl_not_transposed(dims, spec.metrics, size, false, a, b, env)
 }
 fn product_impl_not_transposed(
     dims: u8,
     metrics: Metrics,
     size: usize,
+    dot: bool,
     mut a: Arg,
     mut b: Arg,
     env: &Uiua,
@@ -669,7 +677,7 @@ fn product_impl_not_transposed(
 
     a.arr.untranspose();
     b.arr.untranspose();
-    let mut res = product_impl_transposed(dims, metrics, size, a, b, env)?;
+    let mut res = product_impl_transposed(dims, metrics, size, dot, a, b, env)?;
     res.transpose();
     res.meta.take_sorted_flags();
     Ok(res)
@@ -678,6 +686,7 @@ fn product_impl_transposed(
     dims: u8,
     metrics: Metrics,
     size: usize,
+    dot: bool,
     a: Arg,
     b: Arg,
     env: &Uiua,
@@ -732,17 +741,17 @@ fn product_impl_transposed(
     // );
 
     let mul = InfalliblePervasiveFn::new(pervade::mul::num_num);
-    for j in 0..1usize << dims {
-        let j_mask = mask_table[j];
-        for i in 0..1usize << dims {
-            let i_mask = mask_table[i];
-            let (sign, metric) = blade_sign_and_metric(j_mask, i_mask, dims, metrics);
+    for i in 0..1usize << dims {
+        let i_mask = mask_table[i];
+        for j in 0..1usize << dims {
+            let j_mask = mask_table[j];
+            let (sign, metric) = blade_sign_and_metric(dims, metrics, dot, i_mask, j_mask);
             if metric == 0.0 {
                 continue;
             }
-            let k_mask = i_mask ^ j_mask;
+            let k_mask = j_mask ^ i_mask;
             let k = rev_mask_table[k_mask];
-            let (Some(ai), Some(aj), Some(ci)) = (asel[i], bsel[j], csel[k]) else {
+            let (Some(ai), Some(aj), Some(ci)) = (asel[j], bsel[i], csel[k]) else {
                 continue;
             };
             // println!(
@@ -774,13 +783,13 @@ fn product_impl_transposed(
     Ok(Array::new(csemi, c_data))
 }
 
-fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: Metrics) -> (i32, f64) {
+fn blade_sign_and_metric(dims: u8, metrics: Metrics, dot: bool, a: usize, b: usize) -> (i32, f64) {
     let mut sign = 1;
     let ab = a ^ b;
-    if (ab ^ (ab >> 1)).count_ones() == dims as u32 {
+    if dims >= 3 && (ab ^ (ab >> 1)).count_ones() == dims as u32 {
         sign = -sign;
     }
-    let mut metric = 1.0;
+    let mut metric = (!dot || a == 0 || b == 0 || a & b != 0) as u8 as f64;
     for i in 0..dims {
         let bit_i = 1 << i;
         if a & bit_i != 0 {
@@ -893,6 +902,11 @@ pub fn metrics_from_val(val: &Value) -> Result<Metrics, String> {
                 for (i, v) in arr.data.iter().enumerate() {
                     metrics.set(i, *v as i8);
                 }
+                if let Some(last) = arr.data.last() {
+                    for i in arr.data.len()..Metrics::COUNT {
+                        metrics.set(i, *last as i8);
+                    }
+                }
                 metrics
             }
         }
@@ -908,6 +922,11 @@ pub fn metrics_from_val(val: &Value) -> Result<Metrics, String> {
                 let mut metrics = Metrics::default();
                 for (i, v) in arr.data.iter().enumerate() {
                     metrics.set(i, *v as i8);
+                }
+                if let Some(last) = arr.data.last() {
+                    for i in arr.data.len()..Metrics::COUNT {
+                        metrics.set(i, *last as i8);
+                    }
                 }
                 metrics
             }

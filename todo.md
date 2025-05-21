@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.17
-- `geo`
-  - More flexible and better metrics
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

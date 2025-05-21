@@ -1622,6 +1622,11 @@ impl ImplPrimitive {
             }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
+                GaOp::GeometricInner => env.dyadic_oo_env_with(spec, ga::inner_product)?,
+                GaOp::GeometricWedge => env.dyadic_oo_env_with(spec, ga::wedge_product)?,
+                GaOp::GeometricRegressive => {
+                    env.dyadic_oo_env_with(spec, ga::regressive_product)?
+                }
                 GaOp::GeometricDivide => env.dyadic_oo_env(ga::divide)?,
                 GaOp::GeometricMagnitude => env.monadic_env_with(spec, ga::magnitude)?,
                 GaOp::GeometricNormalize => env.monadic_env_with(spec, ga::normalize)?,
@@ -1635,10 +1640,6 @@ impl ImplPrimitive {
                 })?,
                 GaOp::GeometricRotor => env.dyadic_oo_env_with(spec, ga::rotor)?,
                 GaOp::GeometricSandwich => env.dyadic_oo_env_with(spec, ga::sandwich)?,
-                GaOp::GeometricWedge => env.dyadic_oo_env_with(spec, ga::wedge_product)?,
-                GaOp::GeometricRegressive => {
-                    env.dyadic_oo_env_with(spec, ga::regressive_product)?
-                }
                 GaOp::PadBlades => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
                 GaOp::ExtractBlades => env.dyadic_oo_env_with(spec, ga::extract_blades)?,
             },

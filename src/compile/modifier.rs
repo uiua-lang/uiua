@@ -1984,6 +1984,9 @@ impl Compiler {
         };
         match *node {
             Prim(Mul, span) => *node = op(GeometricProduct, span),
+            Prim(Max, span) => *node = op(GeometricInner, span),
+            Prim(Min, span) => *node = op(GeometricWedge, span),
+            Prim(Or, span) => *node = op(GeometricRegressive, span),
             Prim(Div, span) => *node = op(GeometricDivide, span),
             Prim(Abs, span) => *node = op(GeometricMagnitude, span),
             Prim(Sign, span) => *node = op(GeometricNormalize, span),
@@ -1997,8 +2000,6 @@ impl Compiler {
             ImplPrim(AntiRotate, span) => {
                 *node = Node::from([op(GeometricReverse, span), op(GeometricSandwich, span)])
             }
-            Prim(Min, span) => *node = op(GeometricWedge, span),
-            Prim(Max, span) => *node = op(GeometricRegressive, span),
             Prim(Select, span) => *node = op(ExtractBlades, span),
             ImplPrim(AntiSelect, span) => *node = op(PadBlades, span),
             ImplPrim(Ga(_, ref mut spec), _) => {
@@ -2009,7 +2010,7 @@ impl Compiler {
             }
             Prim(Identity | Dup | Flip | Over | Pop | Stack | Sys(_), _) => {}
             ImplPrim(StackN { .. }, _) => {}
-            Push(_) => {}
+            Push(_) | Array { .. } => {}
             Mod(
                 (Fork | Bracket | Both)
                 | (Dip | Gap | Reach)

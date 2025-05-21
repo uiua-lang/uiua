@@ -660,11 +660,18 @@ fn product_impl_transposed(
     let mut temp = vec![0.0; c_row_len];
 
     let mut mask_table: Vec<usize> = (0..1usize << dims).collect();
-    mask_table.sort_by(|a, b| a.count_ones().cmp(&b.count_ones()).then_with(|| a.cmp(b)));
+    mask_table.sort_by_key(|&a| a.count_ones());
     let mut rev_mask_table = vec![0; 1usize << dims];
     for (i, &v) in mask_table.iter().enumerate() {
         rev_mask_table[v] = i;
     }
+
+    // println!(
+    //     "mask table: {:?}",
+    //     (mask_table.iter())
+    //         .map(|&v| blade_name(dims, v))
+    //         .collect::<Vec<_>>()
+    // );
 
     let mul = InfalliblePervasiveFn::new(pervade::mul::num_num);
     for j in 0..1usize << dims {
@@ -711,6 +718,10 @@ fn product_impl_transposed(
 
 fn blade_sign_and_metric(a: usize, b: usize, dims: u8, metrics: Metrics) -> (i32, f64) {
     let mut sign = 1;
+    let ab = a ^ b;
+    if (ab ^ (ab >> 1)).count_ones() == dims as u32 {
+        sign = -sign;
+    }
     let mut metric = 1.0;
     for i in 0..dims {
         let bit_i = 1 << i;

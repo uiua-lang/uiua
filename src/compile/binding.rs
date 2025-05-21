@@ -277,10 +277,9 @@ impl Compiler {
 
         // A non-macro binding
 
-        let is_func = binding
-            .words
-            .iter()
-            .any(|w| matches!(w.value, Word::Func(_)));
+        let mut word_iter = binding.words.iter().filter(|w| w.value.is_code());
+        let is_func = word_iter.clone().count() == 1
+            && matches!(word_iter.next().unwrap().value, Word::Func(_));
 
         let make_fn = {
             let name = name.clone();

@@ -9,9 +9,67 @@ use ecow::{eco_vec, EcoVec};
 use serde::*;
 
 use crate::{
-    algorithm::pervade::derive_new_shape, grid_fmt::GridFmt, is_default, Array, Shape, Uiua,
-    UiuaResult, Value,
+    algorithm::pervade::derive_new_shape, grid_fmt::GridFmt, is_default, Array, Primitive, Shape,
+    Uiua, UiuaResult, Value,
 };
+
+macro_rules! ga_op {
+    ($(($args:literal, $name:ident)),* $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+        pub enum GaOp {
+            $($name,)*
+        }
+
+        impl GaOp {
+            pub fn args(&self) -> usize {
+                match self {
+                    $(GaOp::$name => $args,)*
+                }
+            }
+        }
+    };
+}
+
+ga_op!(
+    (1, GeometricMagnitude),
+    (1, GeometricNormalize),
+    (1, GeometricSqrt),
+    (1, GeometricReverse),
+    (1, GeometricDual),
+    (1, GeometricAdd),
+    (1, GeometricSub),
+    (2, GeometricProduct),
+    (2, GeometricDivide),
+    (2, GeometricRotor),
+    (2, GeometricSandwich),
+    (2, GeometricWedge),
+    (2, GeometricRegressive),
+    (2, PadBlades),
+    (2, ExtractBlades),
+);
+
+impl fmt::Display for GaOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use {GaOp::*, Primitive::*};
+        match self {
+            GeometricMagnitude => write!(f, "{Geometric}{Abs}"),
+            GeometricNormalize => write!(f, "{Geometric}{Sign}"),
+            GeometricSqrt => write!(f, "{Geometric}{Sqrt}"),
+            GeometricReverse => write!(f, "{Geometric}{Neg}"),
+            GeometricDual => write!(f, "{Geometric}{Not}"),
+            GeometricAdd => write!(f, "{Geometric}{Add}"),
+            GeometricSub => write!(f, "{Geometric}{Sub}"),
+            GeometricProduct => write!(f, "{Geometric}{Mul}"),
+            GeometricDivide => write!(f, "{Geometric}{Div}"),
+            GeometricRotor => write!(f, "{Geometric}{Atan}"),
+            GeometricSandwich => write!(f, "{Geometric}{Rotate}"),
+            GeometricWedge => write!(f, "{Geometric}{Min}"),
+            GeometricRegressive => write!(f, "{Geometric}{Max}"),
+            PadBlades => write!(f, "{Geometric}{Anti}{Select}"),
+            ExtractBlades => write!(f, "{Geometric}{Select}"),
+        }
+    }
+}
 
 /// Specification for the kind of geometric algebra to perform
 #[derive(
@@ -757,8 +815,13 @@ fn blade_name(dims: u8, mask: usize) -> String {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Metrics(u32);
+impl Default for Metrics {
+    fn default() -> Self {
+        Metrics::EUCLIDEAN
+    }
+}
 impl Metrics {
     pub const COUNT: usize = 11;
     pub const EUCLIDEAN: Self = Self::all(1);

@@ -292,8 +292,8 @@ impl Compiler {
             }
             Modifier::Primitive(Primitive::Geometric) if pack.branches.len() == 2 => {
                 let mut args = pack.lexical_order().cloned().map(|w| w.map(Word::Func));
-                let main = args.next().unwrap();
                 let metrics = args.next().unwrap();
+                let main = args.next().unwrap();
                 self.geometric(main, subscript, Some(metrics))
             }
             m if m.args() >= 2 => {
@@ -1910,7 +1910,7 @@ impl Compiler {
         let span = word.span.clone();
         let mut node = self.word(word)?;
 
-        let mut met = ga::Metrics::EUCLIDEAN;
+        let mut met = None;
         if let Some(metrics) = metrics {
             let metrics_span = metrics.span.clone();
             let (vals, sig) = self.do_comptime_vals(
@@ -1920,7 +1920,7 @@ impl Compiler {
             )?;
             if vals.len() == 1 {
                 match ga::metrics_from_val(&vals[0]) {
-                    Ok(metrics) => met = metrics,
+                    Ok(metrics) => met = Some(metrics),
                     Err(e) => self.add_error(metrics_span, e),
                 }
             } else {
@@ -1934,7 +1934,7 @@ impl Compiler {
                 );
             }
         }
-        let spec = if let Some(sub) = subscript {
+        let dims = if let Some(sub) = subscript {
             let sub = self.validate_subscript(sub);
             let dims = sub.value.num.map(|n| {
                 let mut n = self.positive_subscript(n, Primitive::Geometric, &sub.span);
@@ -1957,39 +1957,56 @@ impl Compiler {
                     ),
                 );
             }
-            Spec { dims, metrics: met }
+            dims
         } else {
-            Spec::default()
+            None
         };
-        self.translate_geo(&mut node, spec, &span);
+        self.translate_geo(&mut node, dims, met, &span);
         Ok(node)
     }
     #[allow(unused_parens)]
-    fn translate_geo(&mut self, node: &mut Node, spec: ga::Spec, span: &CodeSpan) -> bool {
-        use {ImplPrimitive::*, Node::*, Primitive::*};
+    fn translate_geo(
+        &mut self,
+        node: &mut Node,
+        dims: Option<u8>,
+        metrics: Option<ga::Metrics>,
+        span: &CodeSpan,
+    ) -> bool {
+        use {
+            ga::GaOp::{self, *},
+            ImplPrimitive::*,
+            Node::*,
+            Primitive::*,
+        };
+        let op = |op: GaOp, span: usize| {
+            let metrics = metrics.unwrap_or_default();
+            ImplPrim(Ga(op, Spec { dims, metrics }), span)
+        };
         match *node {
-            Prim(Mul, span) => *node = ImplPrim(GeometricProduct(spec), span),
-            Prim(Div, span) => *node = ImplPrim(GeometricDivide, span),
-            Prim(Abs, span) => *node = ImplPrim(GeometricMagnitude(spec), span),
-            Prim(Sign, span) => *node = ImplPrim(GeometricNormalize(spec), span),
-            Prim(Sqrt, span) => *node = ImplPrim(GeometricSqrt(spec), span),
-            Prim(Neg, span) => *node = ImplPrim(GeometricReverse(spec), span),
-            Prim(Not, span) => *node = ImplPrim(GeometricDual(spec), span),
-            Prim(Add, span) => *node = ImplPrim(GeometricAdd(spec), span),
-            Prim(Sub, span) => *node = ImplPrim(GeometricSub(spec), span),
-            Prim(Atan, span) => *node = ImplPrim(GeometricRotor(spec), span),
-            Prim(Rotate, span) => *node = ImplPrim(GeometricSandwich(spec), span),
+            Prim(Mul, span) => *node = op(GeometricProduct, span),
+            Prim(Div, span) => *node = op(GeometricDivide, span),
+            Prim(Abs, span) => *node = op(GeometricMagnitude, span),
+            Prim(Sign, span) => *node = op(GeometricNormalize, span),
+            Prim(Sqrt, span) => *node = op(GeometricSqrt, span),
+            Prim(Neg, span) => *node = op(GeometricReverse, span),
+            Prim(Not, span) => *node = op(GeometricDual, span),
+            Prim(Add, span) => *node = op(GeometricAdd, span),
+            Prim(Sub, span) => *node = op(GeometricSub, span),
+            Prim(Atan, span) => *node = op(GeometricRotor, span),
+            Prim(Rotate, span) => *node = op(GeometricSandwich, span),
             ImplPrim(AntiRotate, span) => {
-                *node = Node::from([
-                    ImplPrim(GeometricReverse(spec), span),
-                    ImplPrim(GeometricSandwich(spec), span),
-                ])
+                *node = Node::from([op(GeometricReverse, span), op(GeometricSandwich, span)])
             }
-            Prim(Min, span) => *node = ImplPrim(GeometricWedge(spec), span),
-            Prim(Max, span) => *node = ImplPrim(GeometricRegressive(spec), span),
-            Prim(Select, span) => *node = ImplPrim(ExtractBlades(spec), span),
-            ImplPrim(AntiSelect, span) => *node = ImplPrim(PadBlades(spec), span),
-            ImplPrim(prim, _) if prim.is_ga() => {}
+            Prim(Min, span) => *node = op(GeometricWedge, span),
+            Prim(Max, span) => *node = op(GeometricRegressive, span),
+            Prim(Select, span) => *node = op(ExtractBlades, span),
+            ImplPrim(AntiSelect, span) => *node = op(PadBlades, span),
+            ImplPrim(Ga(_, ref mut spec), _) => {
+                spec.dims = spec.dims.or(dims);
+                if let Some(metrics) = metrics {
+                    spec.metrics = metrics;
+                }
+            }
             Prim(Identity | Dup | Flip | Over | Pop | Stack | Sys(_), _) => {}
             ImplPrim(StackN { .. }, _) => {}
             Push(_) => {}
@@ -2029,7 +2046,7 @@ impl Compiler {
             }
         }
         for node in node.sub_nodes_mut() {
-            if !self.translate_geo(node, spec, span) {
+            if !self.translate_geo(node, dims, metrics, span) {
                 return false;
             }
         }

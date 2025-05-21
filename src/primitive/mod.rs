@@ -27,7 +27,7 @@ use rand::prelude::*;
 use serde::*;
 
 use crate::{
-    algorithm::{self, loops, reduce, table, zip, *},
+    algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
     array::Array,
     ast::{NumericSubscript, SubSide, Subscript},
     boxed::Boxed,
@@ -36,7 +36,7 @@ use crate::{
     media,
     sys::*,
     value::*,
-    FunctionId, Ops, Shape, Signature, Uiua, UiuaErrorKind, UiuaResult,
+    FunctionId, Ops, Purity, Shape, Signature, Uiua, UiuaErrorKind, UiuaResult,
 };
 
 /// Categories of primitives
@@ -383,21 +383,7 @@ impl fmt::Display for ImplPrimitive {
             BothImpl(sub) => write!(f, "{Both}{sub}"),
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
             Retropose => write!(f, "<{Evert}>"),
-            GeometricMagnitude(_) => write!(f, "{Geometric}{Abs}"),
-            GeometricNormalize(_) => write!(f, "{Geometric}{Sign}"),
-            GeometricSqrt(_) => write!(f, "{Geometric}{Sqrt}"),
-            GeometricReverse(_) => write!(f, "{Geometric}{Neg}"),
-            GeometricDual(_) => write!(f, "{Geometric}{Not}"),
-            GeometricAdd(_) => write!(f, "{Geometric}{Add}"),
-            GeometricSub(_) => write!(f, "{Geometric}{Sub}"),
-            GeometricProduct(_) => write!(f, "{Geometric}{Mul}"),
-            GeometricDivide => write!(f, "{Geometric}{Div}"),
-            GeometricRotor(_) => write!(f, "{Geometric}{Atan}"),
-            GeometricSandwich(_) => write!(f, "{Geometric}{Rotate}"),
-            GeometricWedge(_) => write!(f, "{Geometric}{Min}"),
-            GeometricRegressive(_) => write!(f, "{Geometric}{Max}"),
-            PadBlades(_) => write!(f, "{Geometric}{Anti}{Select}"),
-            ExtractBlades(_) => write!(f, "{Geometric}{Select}"),
+            Ga(op, _) => op.fmt(f),
         }
     }
 }
@@ -1634,38 +1620,28 @@ impl ImplPrimitive {
                 let res = tag.join(val, false, env)?;
                 env.push(res);
             }
-            &ImplPrimitive::GeometricProduct(spec) => env.dyadic_oo_env_with(spec, ga::product)?,
-            &ImplPrimitive::GeometricDivide => env.dyadic_oo_env(ga::divide)?,
-            &ImplPrimitive::GeometricMagnitude(spec) => {
-                env.monadic_env_with(spec, ga::magnitude)?
-            }
-            &ImplPrimitive::GeometricNormalize(spec) => {
-                env.monadic_env_with(spec, ga::normalize)?
-            }
-            &ImplPrimitive::GeometricSqrt(spec) => env.monadic_env_with(spec, ga::sqrt)?,
-            &ImplPrimitive::GeometricReverse(spec) => env.monadic_env_with(spec, ga::reverse)?,
-            &ImplPrimitive::GeometricDual(spec) => env.monadic_env_with(spec, ga::dual)?,
-            &ImplPrimitive::GeometricAdd(spec) => env.dyadic_oo_env_with(spec, ga::add)?,
-            &ImplPrimitive::GeometricSub(spec) => {
-                env.dyadic_oo_env_with(spec, |spec, a, b, env| {
+            &ImplPrimitive::Ga(op, spec) => match op {
+                GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
+                GaOp::GeometricDivide => env.dyadic_oo_env(ga::divide)?,
+                GaOp::GeometricMagnitude => env.monadic_env_with(spec, ga::magnitude)?,
+                GaOp::GeometricNormalize => env.monadic_env_with(spec, ga::normalize)?,
+                GaOp::GeometricSqrt => env.monadic_env_with(spec, ga::sqrt)?,
+                GaOp::GeometricReverse => env.monadic_env_with(spec, ga::reverse)?,
+                GaOp::GeometricDual => env.monadic_env_with(spec, ga::dual)?,
+                GaOp::GeometricAdd => env.dyadic_oo_env_with(spec, ga::add)?,
+                GaOp::GeometricSub => env.dyadic_oo_env_with(spec, |spec, a, b, env| {
                     let a = a.neg(env)?;
                     ga::add(spec, a, b, env)
-                })?
-            }
-            &ImplPrimitive::GeometricRotor(spec) => env.dyadic_oo_env_with(spec, ga::rotor)?,
-            &ImplPrimitive::GeometricSandwich(spec) => {
-                env.dyadic_oo_env_with(spec, ga::sandwich)?
-            }
-            &ImplPrimitive::GeometricWedge(spec) => {
-                env.dyadic_oo_env_with(spec, ga::wedge_product)?
-            }
-            &ImplPrimitive::GeometricRegressive(spec) => {
-                env.dyadic_oo_env_with(spec, ga::regressive_product)?
-            }
-            &ImplPrimitive::PadBlades(spec) => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
-            &ImplPrimitive::ExtractBlades(spec) => {
-                env.dyadic_oo_env_with(spec, ga::extract_blades)?
-            }
+                })?,
+                GaOp::GeometricRotor => env.dyadic_oo_env_with(spec, ga::rotor)?,
+                GaOp::GeometricSandwich => env.dyadic_oo_env_with(spec, ga::sandwich)?,
+                GaOp::GeometricWedge => env.dyadic_oo_env_with(spec, ga::wedge_product)?,
+                GaOp::GeometricRegressive => {
+                    env.dyadic_oo_env_with(spec, ga::regressive_product)?
+                }
+                GaOp::PadBlades => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
+                GaOp::ExtractBlades => env.dyadic_oo_env_with(spec, ga::extract_blades)?,
+            },
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(

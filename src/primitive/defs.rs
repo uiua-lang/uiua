@@ -1,7 +1,5 @@
 //! All primitive definitions
 
-use crate::{algorithm::ga, Purity};
-
 use super::*;
 
 macro_rules! primitive {
@@ -3498,6 +3496,7 @@ macro_rules! impl_primitive {
             MaxRowCount(usize),
             BothImpl(Subscript<u32>),
             UnBothImpl(Subscript<u32>),
+            Ga(ga::GaOp, ga::Spec),
         }
 
         impl ImplPrimitive {
@@ -3512,6 +3511,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
+                    ImplPrimitive::Ga(op, _) => op.args(),
                     _ => return None
                 })
             }
@@ -3549,13 +3549,6 @@ macro_rules! impl_primitive {
                     $($(ImplPrimitive::$variant => {Purity::$purity},)*)*
                     ImplPrimitive::StackN { .. } => Purity::Mutating,
                     _ => Purity::Pure
-                }
-            }
-            #[allow(unused_parens)]
-            pub fn is_ga(&self) -> bool {
-                match self {
-                    $($(ImplPrimitive::$variant {..} => $ga,)*)*
-                    _ => false
                 }
             }
         }
@@ -3698,20 +3691,4 @@ impl_primitive!(
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),
     (2(1), TagVariant),
-    // Geometric Algebra
-    (1, GeometricMagnitude(ga::Spec), {ga: true}),
-    (1, GeometricNormalize(ga::Spec), {ga: true}),
-    (1, GeometricSqrt(ga::Spec), {ga: true}),
-    (1, GeometricReverse(ga::Spec), {ga: true}),
-    (1, GeometricDual(ga::Spec), {ga: true}),
-    (1, GeometricAdd(ga::Spec), {ga: true}),
-    (1, GeometricSub(ga::Spec), {ga: true}),
-    (2, GeometricProduct(ga::Spec), {ga: true}),
-    (2, GeometricDivide, {ga: true}),
-    (2, GeometricRotor(ga::Spec), {ga: true}),
-    (2, GeometricSandwich(ga::Spec), {ga: true}),
-    (2, GeometricWedge(ga::Spec), {ga: true}),
-    (2, GeometricRegressive(ga::Spec), {ga: true}),
-    (2, PadBlades(ga::Spec), {ga: true}),
-    (2, ExtractBlades(ga::Spec), {ga: true}),
 );

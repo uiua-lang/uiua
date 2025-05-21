@@ -1474,22 +1474,14 @@ impl SysOp {
                     Value::Box(_) => return Err(env.error("Cannot write box array")),
                 };
                 match handle {
-                    Handle::STDOUT => env
-                        .rt
-                        .backend
+                    Handle::STDOUT => (env.rt.backend)
                         .print_str_stdout(&String::from_utf8_lossy(&bytes))
                         .map_err(|e| env.error(e))?,
-                    Handle::STDERR => env
-                        .rt
-                        .backend
+                    Handle::STDERR => (env.rt.backend)
                         .print_str_stderr(&String::from_utf8_lossy(&bytes))
                         .map_err(|e| env.error(e))?,
                     Handle::STDIN => return Err(env.error("Cannot write to stdin")),
-                    _ => env
-                        .rt
-                        .backend
-                        .write(handle, &bytes)
-                        .map_err(|e| env.error(e))?,
+                    _ => (env.rt.backend.write(handle, &bytes)).map_err(|e| env.error(e))?,
                 }
             }
             SysOp::FReadAllStr => {

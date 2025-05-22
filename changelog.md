@@ -4,7 +4,7 @@ Uiua is not yet stable.
 
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.16.1 - 2025-05-??
+## 0.16.1 - 2025-05-21
 ### Interpreter
 - Fix a bug in [`rows ≡`](https://uiua.org/docs/rows) [`rotate ↻`](https://uiua.org/docs/rotate)
 - Fix a bug in [`base ⊥`](https://uiua.org/docs/base)

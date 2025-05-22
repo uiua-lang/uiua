@@ -6,6 +6,10 @@ Uiua is not yet stable.
 
 ## 0.16.1 - 2025-05-21
 ### Interpreter
+- Fix a formatter bug
+
+## 0.16.1 - 2025-05-21
+### Interpreter
 - Fix a bug in [`rows ≡`](https://uiua.org/docs/rows) [`rotate ↻`](https://uiua.org/docs/rotate)
 - Fix a bug in [`base ⊥`](https://uiua.org/docs/base)
 - Fix a bug in [`indexof ⊗`](https://uiua.org/docs/indexof)

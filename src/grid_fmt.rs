@@ -796,10 +796,13 @@ fn fmt_array<T: GridFmt + ArrayValue>(
             }
         }
         if i > 0 && (rank > 2 || T::box_lines()) && rank % 2 == 1 {
+            let elem_rows = metagrid.iter().flatten().flatten();
+            let max_width = elem_rows.map(|r| r.len()).max().unwrap_or(0);
+            let div = if max_width > 10 { 1 } else { 2 };
             let rows = metagrid.split_off(len_before);
             for (mrow, row) in metagrid.iter_mut().skip(start_len).zip(rows) {
                 if !T::box_lines() {
-                    mrow.push(vec![vec![' '; rank.div_ceil(2)]]);
+                    mrow.push(vec![vec![' '; rank.div_ceil(div)]]);
                 }
                 mrow.extend(row);
             }

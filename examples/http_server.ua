@@ -41,7 +41,8 @@ NotFound    ← Response "404 Not Found" "text/plain" utf₈"Not Found"
 ServerError ← Response "500 Internal Server Error" "text/plain"
 PageLoadError ← ⋅(
   /↥⌕"The system cannot find the file specified".
-  ⨬(NotFound◌|ServerError))
+  ⨬(NotFound◌|ServerError)
+)
 Page ← ⍣(
   ExtMime GetExt ⟜&frab
   Response "200 OK"

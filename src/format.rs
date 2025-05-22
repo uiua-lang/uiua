@@ -1421,6 +1421,12 @@ impl Formatter<'_> {
             }
         }
 
+        let extra_newline = start_indent > self.config.multiline_indent * (depth + 1)
+            && !func.lines.first().is_some_and(|item| item.is_empty_line());
+        if extra_newline {
+            self.newline(depth + 1);
+        }
+
         let depth = depth + 1
             - ((double_nest && func.word_lines().next().is_some_and(|line| line.is_empty()))
                 as usize);
@@ -1429,6 +1435,9 @@ impl Formatter<'_> {
             while self.output.chars().rev().take_while(|&c| c == ' ').count() >= start_indent {
                 self.output.pop();
             }
+        }
+        if extra_newline && !func.lines.last().is_some_and(|item| item.is_empty_line()) {
+            self.newline(depth.saturating_sub(1));
         }
         self.output.push(')');
     }
@@ -1776,9 +1785,6 @@ fn formatter_idempotence() {
     let input = "\
 ⊃(|)
 ⊃(+|-|×|÷)
-F ← (⊃(
-    +
-  | -))
 F ← (
   ⊃(+
   | -)
@@ -1926,6 +1932,14 @@ F ← 5
   ∘ | ¯ | ±
 | ⌵ | ∿ | √
 | ⁅ | ⌊ | ⌈
+)
+
+F ← (
+  (
+    1
+    ⊃(2
+    | 3)
+  )
 )
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;

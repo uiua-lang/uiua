@@ -1421,7 +1421,8 @@ impl Formatter<'_> {
             }
         }
 
-        let extra_newline = start_indent > self.config.multiline_indent * (depth + 1)
+        let extra_newline = func.lines.len() > 1
+            && start_indent > self.config.multiline_indent * (depth + 1)
             && !func.lines.first().is_some_and(|item| item.is_empty_line());
         if extra_newline {
             self.newline(depth + 1);
@@ -1864,6 +1865,9 @@ x ← 2
 ∘∘(
   (∘
   )
+)
+(
+  ∘∘∘(+)
 )
 1/10
 x ← [1_2

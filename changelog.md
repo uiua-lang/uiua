@@ -8,7 +8,7 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - Numeric subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 
-## 0.16.1 - 2025-05-??
+## 0.16.1 - 2025-05-21
 ### Interpreter
 - Fix a bug in [`rows ≡`](https://uiua.org/docs/rows) [`rotate ↻`](https://uiua.org/docs/rotate)
 - Fix a bug in [`base ⊥`](https://uiua.org/docs/base)

@@ -578,18 +578,16 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
 }
 
 pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    // |1-b̂â|
+    // |1+|ab̃||
     let (dims, size, [a, b]) = init_arr(spec, [a, b], Rotor, env)?;
-    let a = a.try_map(|a| normalize_impl_not_transposed(dims, spec.metrics, size, a, env))?;
-    let b = b.try_map(|b| normalize_impl_not_transposed(dims, spec.metrics, size, b, env))?;
-    let mut arr = product_impl_not_transposed(dims, spec.metrics, size, false, a, b, env)?;
-    for chunk in arr.data.as_mut_slice().chunks_exact_mut(size) {
-        for v in &mut *chunk {
-            *v = -*v;
-        }
+    let revb = b.map(|b| reverse_impl_not_transposed(dims, b));
+    let prod = product_impl_not_transposed(dims, spec.metrics, size, false, revb, a, env)?;
+    let prod = Arg::from_not_transposed(dims, prod, env)?;
+    let mut norm = normalize_impl_not_transposed(dims, spec.metrics, size, prod, env)?;
+    for chunk in norm.data.as_mut_slice().chunks_exact_mut(size) {
         chunk[0] += 1.0;
     }
-    let arg = Arg::from_not_transposed(dims, arr, env)?;
+    let arg = Arg::from_not_transposed(dims, norm, env)?;
     normalize_impl_not_transposed(dims, spec.metrics, size, arg, env)
 }
 
@@ -785,9 +783,13 @@ fn product_impl_transposed(
 
 fn blade_sign_and_metric(dims: u8, metrics: Metrics, dot: bool, a: usize, b: usize) -> (i32, f64) {
     let mut sign = 1;
-    let ab = a ^ b;
-    if dims >= 3 && (ab ^ (ab >> 1)).count_ones() == dims as u32 {
-        sign = -sign;
+    if dims >= 3 {
+        let ab = a ^ b;
+        for i in [a, b, ab] {
+            if (i ^ (i >> 1)).count_ones() == dims as u32 {
+                sign = -sign;
+            }
+        }
     }
     let mut metric = (!dot || a == 0 || b == 0 || a & b != 0) as u8 as f64;
     for i in 0..dims {

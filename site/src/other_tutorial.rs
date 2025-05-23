@@ -352,7 +352,7 @@ fn EvenMoreStack() -> impl IntoView {
 
         <Hd id="sided-subscripts">"Sided Subscripts"</Hd>
         <p>"Normal "<A href="/docs/subscripts">"numeric subscripts"</A>" change the behavior of a function or modifier based on a number. There is another kind of subscripts that captures the idea of an operation having a certain \"orientation\" to the left or right."</p>
-        <p>"These "<em>"sided"</em>" subscripts use "<code>"⌞"</code>" to denote \"leftness\" or "<code>"⌟"</code>" to denote \"rightness\". They are formatted from the normal subscript "<code>"__"</code>" followed by a "<code>"<"</code>" or "<code>">"</code>"."</p>
+        <p>"These "<em>"sided"</em>" subscripts use "<code>"⌞"</code>" to denote \"leftness\" or "<code>"⌟"</code>" to denote \"rightness\". They are formatted from the normal subscript "<code>"'"</code>" followed by a "<code>"<"</code>" or "<code>">"</code>"."</p>
         <p>"Currently, the only modifiers that support sided subscripts are "<Prim prim=Both/>" and "<Prim prim=Bracket/>". Instead of passing two separate sets of arguments to the modifier's function(s), one of the arguments will be passed to both function calls. Let's see some examples to get a better idea of how this works."</p>
         <p>"Normal "<Prim prim=Both/>" calls its function on two sets of arguments."</p>
         <Editor example="{∩⊟ 1 2 3 4}"/>

@@ -141,11 +141,11 @@ Experimental features can be enabled by putting an `# Experimental!` comment at 
 
 [**Subscripts**](https://uiua.org/docs/experimental#subscripts) are an interesting way to augment the behavior of a function or modifier.
 
-Subscript numbers may immediately follow a glyph. These can be typed with `__` followed by some digits.
+Subscript numbers may immediately follow a glyph. These can be typed with `'` followed by some digits.
 
 ```uiua
 # Experimental!
-[∩__3+ 1 2 3 4 5 6] # Try formatting!
+[∩'3+ 1 2 3 4 5 6] # Try formatting!
 ```
 
 ```uiua

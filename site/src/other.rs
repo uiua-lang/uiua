@@ -643,7 +643,7 @@ pub fn Subscripts() -> impl IntoView {
         <Title text=format!("Subscripts - {} Docs", lang())/>
         <h1>"Subscripts"</h1>
         <p>"By suffixing some functions or modifiers with a subscript number, their behavior can be modified."</p>
-        <p>"Subscript numbers are typed with a "<code>"__"</code>" followed by some digits. The formatter will turn them into subscript digit characters."</p>
+        <p>"Subscript numbers are typed with a "<code>"'"</code>" followed by some digits. The formatter will turn them into subscript digit characters."</p>
         <p>"The following functions and modifiers are supported. Not all are stable."</p>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
@@ -666,7 +666,7 @@ pub fn Subscripts() -> impl IntoView {
 
         <Hd id="sided">"Sided Subscripts"</Hd>
         <p>"Sided subscripts augment a modifier or function in a way that can be thought of as having a \"side\"."</p>
-        <p>"Sided subscripts are typed like normal subscripts with "<code>"__"</code>", but followed by "<code>"<"</code>" for left or "<code>">"</code>" for right. The formatter will turn them into "<code>"⌞"</code>" and "<code>"⌟"</code>" respectively."</p>
+        <p>"Sided subscripts are typed like normal subscripts with "<code>"'"</code>", but followed by "<code>"<"</code>" for left or "<code>">"</code>" for right. The formatter will turn them into "<code>"⌞"</code>" and "<code>"⌟"</code>" respectively."</p>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
                 <th>"Primitive"</th>

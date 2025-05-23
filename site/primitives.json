@@ -1284,15 +1284,6 @@
     "class": "MonadicPervasive",
     "description": "Numerical sign (1, ¯1, or 0)"
   },
-  "signature": {
-    "args": 0,
-    "outputs": 2,
-    "modifier_args": 1,
-    "class": "Comptime",
-    "description": "Get the signature of a function",
-    "experimental": true,
-    "deprecated": true
-  },
   "sine": {
     "glyph": "∿",
     "args": 1,
@@ -1334,15 +1325,6 @@
     "modifier_args": 1,
     "class": "IteratingModifier",
     "description": "Call a function on windows of an array"
-  },
-  "stringify": {
-    "args": 0,
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "Comptime",
-    "description": "Convert code into a string instead of compiling it",
-    "experimental": true,
-    "deprecated": true
   },
   "subtract": {
     "glyph": "-",

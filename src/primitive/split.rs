@@ -29,7 +29,7 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
         (Primitive::Le, &["le", "leq"]),
         (Primitive::Gt, &["gt"]),
         (Primitive::Ge, &["ge", "geq"]),
-        (Primitive::Utf8, &["utf", "utf__8"]),
+        (Primitive::Utf8, &["utf"]),
         (Primitive::First, &["fst"]),
         (Primitive::Last, &["lst"]),
         (Primitive::Slf, &["slf"]),

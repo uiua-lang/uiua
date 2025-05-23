@@ -73,10 +73,10 @@ Unlike most programming languages, Uiua identifiers cannot contain digits.
 
 But sometimes you want digits in your names! You can now use *subscript* digits in identifiers.
 
-These format from a double underscore `__` followed by some digits.
+These format from a single quote `'` followed by some digits.
 
 ```uiua
-Sha__256 ← "todo" # This
+Sha'256 ← "todo" # This
 Sha₂₅₆ ← "todo"   # Formats to this
 ```
 

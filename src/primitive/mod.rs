@@ -536,8 +536,6 @@ impl Primitive {
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
         Some(match self {
-            Sig => "use (⋅⊢)^! instead".into(),
-            Stringify => "use (◇repr⊢)^! instead".into(),
             Rerank => format!(
                 "use subscripted {} or {Un}{By}({Len}{Shape}) instead",
                 Deshape.format()
@@ -792,9 +790,7 @@ impl Primitive {
             Primitive::Voxels => env.dyadic_rr_env(media::voxels)?,
             Primitive::Layout => env.dyadic_oo_env(media::layout_text)?,
             Primitive::Fft => algorithm::fft(env)?,
-            Primitive::Stringify
-            | Primitive::Quote
-            | Primitive::Sig
+            Primitive::Quote
             | Primitive::Comptime
             | Primitive::Un
             | Primitive::Anti

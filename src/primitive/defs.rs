@@ -2933,17 +2933,6 @@ primitive!(
     /// ex: 1_2_3 [] 5_6_7
     ///   : dump⊢
     (0(0)[1], Dump, Debug, "dump", Mutating),
-    /// Convert code into a string instead of compiling it
-    ///
-    /// ex: # Experimental!
-    ///   : stringify(/+ran+1)
-    /// This is mostly useful when used in a macro.
-    /// ex: # Experimental!
-    ///   : F! ← ^0 &p$"Running code: _" stringify^0
-    ///   : F!(+ 1 2)
-    ///
-    /// The opposite of [stringify] is [quote].
-    (0[1], Stringify, Comptime, "stringify", { experimental: true }),
     /// Convert a string into code at compile time
     ///
     /// ex: # Experimental!
@@ -2951,24 +2940,6 @@ primitive!(
     ///
     /// The opposite of [quote] is [stringify].
     (0[1], Quote, Comptime, "quote", { experimental: true }),
-    /// Get the signature of a function
-    ///
-    /// ex: # Experimental!
-    ///   : [signature+]
-    /// ex: # Experimental!
-    ///   : [signature°⊟]
-    /// ex: # Experimental!
-    ///   : [signature(+++++++)]
-    /// ex: # Experimental!
-    ///   : [signature⊙⊙⊙∘]
-    /// ex: # Experimental!
-    ///   : [signature[⊙⊙⊙∘]]
-    /// ex: # Experimental!
-    ///   : [signature°[⊙⊙⊙∘]]
-    ///
-    /// At the moment, this is only useful for debugging.
-    /// While theoretically, it could be used in a macro to choose a branch of a [switch] appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
-    (0(2)[1], Sig, Comptime, "signature", { experimental: true }),
     /// Run the Fast Fourier Transform on an array
     ///
     /// The Fast Fourier Transform (FFT) is an optimized algorithm for computing the Discrete Fourier Transform (DFT). The DFT is a transformation that converts a signal from the time domain to the frequency domain.

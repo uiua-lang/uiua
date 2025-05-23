@@ -1305,11 +1305,6 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 Node::Mod(prim, eco_vec![sn], span)
             }
-            Stringify => {
-                let operand = modified.code_operands().next().unwrap();
-                let s = format_word(operand, &self.asm.inputs);
-                Node::new_push(s)
-            }
             Quote => {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let node = self.do_comptime(prim, operand, &modified.modifier.span)?;
@@ -1345,13 +1340,6 @@ impl Compiler {
                     }
                 };
                 self.quote(&code, Some("quote".into()), &modified.modifier.span)?
-            }
-            Sig => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
-                Node::from_iter([
-                    Node::new_push(sn.sig.outputs()),
-                    Node::new_push(sn.sig.args()),
-                ])
             }
             Derivative => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;

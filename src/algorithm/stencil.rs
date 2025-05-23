@@ -472,10 +472,10 @@ fn fast_adjacent<T>(
 where
     T: ArrayValue + Copy,
 {
+    pad_adjacent_fill(&mut arr, n, env);
     match arr.rank() {
         0 => Err(env.error("Cannot get adjacency of scalar")),
         1 => {
-            pad_adjacent_fill(&mut arr, n, env);
             if arr.row_count() < n {
                 return Ok(Array::new([0], EcoVec::new()));
             }
@@ -493,7 +493,6 @@ where
             Ok(arr)
         }
         _ => {
-            pad_adjacent_fill(&mut arr, n, env);
             let row_len = arr.row_len();
             let row_count = arr.row_count();
             if row_count < n {
@@ -525,7 +524,7 @@ fn pad_adjacent_fill<T: ArrayValue>(arr: &mut Array<T>, n: usize, env: &Uiua) {
         let row_len = arr.row_len();
         arr.data.extend_repeat_fill(&fv, (n - 1) * row_len * 2);
         arr.data.as_mut_slice().rotate_right((n - 1) * row_len);
-        arr.shape[0] += (n - 1) * 2;
+        *arr.shape.row_count_mut() += (n - 1) * 2;
     }
 }
 

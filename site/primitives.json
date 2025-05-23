@@ -1369,7 +1369,8 @@
     "args": 0,
     "outputs": 1,
     "class": "Misc",
-    "description": "Generate a unique tag"
+    "description": "Generate a unique tag",
+    "deprecated": true
   },
   "take": {
     "glyph": "↙",

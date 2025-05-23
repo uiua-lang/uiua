@@ -545,6 +545,7 @@ impl Primitive {
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
             Over => format!("use {} or {} instead", Below.format(), Fork.format()),
             Each => format!("use {} instead", Rows.format()),
+            Tag => "use data variants instead".into(),
             _ => return None,
         })
     }

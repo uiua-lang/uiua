@@ -7,6 +7,8 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - **Breaking Change** - Numeric subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
+### Interpreter
+- Add filled adjacent stencil
 
 ## 0.16.2 - 2025-05-21
 ### Interpreter

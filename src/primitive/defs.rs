@@ -2967,7 +2967,27 @@ primitive!(
     (1, Fft, Algorithm, "fft"),
     /// Convert an operation to be in geometric algebra
     ///
-    /// You can read more about [geometric] and its uses [here](/docs/experimental#geometric-algebra).
+    /// You can read more about [geometric] and its uses [here](/docs/experimental#geometric-algebra). This page only covers its use for complex numbers.
+    ///
+    /// [geometric] treats numeric arrays with a shape ending in `2` as an array of complex numbers. This is different than existing [complex] arrays, and this system would potentially replace that one.
+    /// We can see the basic complex identity by multiplying two arrays that represent `i`. [geometric] [multiply] forms the geometric product, which is equivalent to the complex product in this case.
+    /// ex: # Experimental!
+    ///   : ⩜× [0 1] [0 1]
+    /// [geometric] treats most operations as pervasive down to that last axis.
+    /// ex: # Experimental!
+    ///   : ⩜× [0 1] [1_2 3_4 5_6]
+    ///   : ⩜+ [0 1] [1_2 3_4 5_6]
+    /// [geometric] [sign] normalizes a complex number.
+    /// ex: # Experimental!
+    ///   : ⩜± [3_4 ¯2_0]
+    /// [geometric] [absolute value] gives the magnitude of a complex number.
+    /// ex: # Experimental!
+    ///   : ⩜⌵ [3_4 5_12]
+    /// [geometric] [atangent] produces a complex number that, when [multiply]d, rotates the second complex number to the first.
+    /// ex: # Experimental!
+    ///   : ⩜∠ [0 1] [1 0]
+    /// ex: # Experimental!
+    ///   : ⩜(×∠) [0 1] [1 0] [2_3 4_5 6_7]
     ([1], Geometric, Algorithm, ("geometric", '⩜'), { experimental: true }),
     /// Find the shortest path between two things
     ///

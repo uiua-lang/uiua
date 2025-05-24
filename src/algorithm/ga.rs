@@ -1115,8 +1115,29 @@ fn extract_single_impl(arr: &mut Array<f64>, left_size: usize, new_size: usize) 
     arr.data.truncate(arr.shape.elements());
 }
 
-pub fn couple(a: Value, b: Value, env: &Uiua) -> UiuaResult<Value> {
-    todo!()
+pub fn couple(mut a: Value, mut b: Value, env: &Uiua) -> UiuaResult<Value> {
+    match (&a, &b) {
+        (Value::Num(_) | Value::Byte(_), Value::Num(_) | Value::Byte(_)) => {}
+        (a, b) => {
+            return Err(env.error(format!(
+                "Cannot geometric couple {} and {} arrays",
+                a.type_name(),
+                b.type_name()
+            )))
+        }
+    }
+    if a.shape.ends_with(&b.shape) || b.shape.ends_with(&a.shape) {
+        a.retropose_depth(0);
+        b.retropose_depth(0);
+        let mut coupled = a.couple_infallible(b, true);
+        coupled.retropose_depth(0);
+        Ok(coupled)
+    } else {
+        Err(env.error(format!(
+            "Arrays with shapes {} and {} cannot be geometric coupled",
+            a.shape, b.shape
+        )))
+    }
 }
 
 pub fn uncouple(mut val: Value, env: &Uiua) -> UiuaResult<(Value, Value)> {

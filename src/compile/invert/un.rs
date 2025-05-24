@@ -545,6 +545,12 @@ inverse!(
             // Starts with a value
             for end in 1..=inp.len() {
                 if let Ok(mut inv) = anti_inverse(&inp[..end], asm, true) {
+                    // Try to give pattern matches a decent span
+                    if let Some(span) = val.iter().find_map(Node::span) {
+                        if let [.., ImplPrim(MatchPattern, sp)] = inv.as_mut_slice() {
+                            *sp = span;
+                        }
+                    }
                     inv.prepend(val);
                     dbgln!("matched inner anti pattern for un\n  on {input:?}\n  to {inv:?}");
                     return Ok((&inp[end..], inv));

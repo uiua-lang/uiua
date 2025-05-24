@@ -301,16 +301,6 @@ impl Arg {
             mode,
         }
     }
-    fn try_map(self, f: impl FnOnce(Self) -> UiuaResult<Array<f64>>) -> UiuaResult<Self> {
-        let (semi, sel, mode) = (self.semi.clone(), self.sel.clone(), self.mode);
-        let arr = f(self)?;
-        Ok(Self {
-            arr,
-            semi,
-            sel,
-            mode,
-        })
-    }
     fn from_not_transposed(dims: u8, arr: Array<f64>, env: &Uiua) -> UiuaResult<Self> {
         let mut semi = arr.shape.clone();
         let size = semi.pop().unwrap_or(1);
@@ -448,8 +438,15 @@ fn pseudo(dims: u8, env: &Uiua) -> UiuaResult<Arg> {
 
 pub fn dual(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (dims, _, arg) = init(spec, val, ExpandFull, env)?;
+    let mode = arg.mode;
     let pseudoscalar = pseudo(dims, env)?;
-    dual_impl(dims, pseudoscalar, arg, env)
+    let semi = arg.semi.clone();
+    let mut arr = dual_impl(dims, pseudoscalar, arg, env)?;
+    if mode == Vector && dims % 2 == 1 {
+        let grades: Vec<u8> = (0..=dims).filter(|&d| d % 2 == 0).collect();
+        arr = extract_blades_impl(dims, 1 << dims, arr, semi, &grades, env)?;
+    }
+    Ok(arr)
 }
 
 fn dual_impl(dims: u8, pseu: Arg, arg: Arg, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -624,7 +621,7 @@ pub fn sandwich(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<
     let ab = Arg::from_not_transposed(dims, ab, env)?;
     let mut res = product_impl_not_transposed(dims, spec.metrics, size, false, rev_a, ab, env)?;
     if let (Vector, Even) | (Even, Vector) = (amode, bmode) {
-        extract_single_impl(&mut res, 1, dims as usize);
+        extract_single(&mut res, 1, dims as usize);
     }
     Ok(res)
 }
@@ -640,13 +637,21 @@ pub fn wedge_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<A
 }
 
 pub fn regressive_product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, [a, b]) = init_arr(spec, [a, b], ExpandFull, env)?;
+    let (dims, _, [a, b]) = init_arr(spec, [a, b], ExpandFull, env)?;
     let pseudoscalar = pseudo(dims, env)?;
-    let adual = a.try_map(|a| dual_impl(dims, pseudoscalar.clone(), a, env))?;
-    let bdual = b.try_map(|b| dual_impl(dims, pseudoscalar.clone(), b, env))?;
-    let wedge = product_impl_not_transposed(dims, Metrics::NULL, size, false, adual, bdual, env)?;
+    let modes = (a.mode, b.mode);
+    let adual =
+        Arg::from_not_transposed(dims, dual_impl(dims, pseudoscalar.clone(), a, env)?, env)?;
+    let bdual =
+        Arg::from_not_transposed(dims, dual_impl(dims, pseudoscalar.clone(), b, env)?, env)?;
+    let wedge =
+        product_impl_not_transposed(dims, Metrics::NULL, 1 << dims, false, adual, bdual, env)?;
     let arg = Arg::from_not_transposed(dims, wedge, env)?;
-    dual_impl(dims, pseudoscalar, arg, env)
+    let mut arr = dual_impl(dims, pseudoscalar, arg, env)?;
+    if modes == (Even, Even) {
+        extract_vectors(dims, &mut arr);
+    }
+    Ok(arr)
 }
 
 pub fn product(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -1029,7 +1034,7 @@ pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> Uiua
         }
     }
     // Process arg
-    let (mut arr, semi, size) = ga_arg(val, env)?;
+    let (arr, semi, size) = ga_arg(val, env)?;
     if grades.is_empty() {
         let mut shape = semi;
         shape.push(0);
@@ -1058,9 +1063,20 @@ pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> Uiua
     if (grades.iter().enumerate()).any(|(i, grade)| grades[i + 1..].contains(grade)) {
         return Err(env.error("Selected grades must be unique"));
     }
+    extract_blades_impl(dims, size, arr, semi, &grades, env)
+}
 
+fn extract_blades_impl(
+    dims: u8,
+    size: usize,
+    mut arr: Array<f64>,
+    semi: Shape,
+    grades: &[u8],
+    env: &Uiua,
+) -> UiuaResult<Array<f64>> {
     let slice = arr.data.as_mut_slice();
     let new_size: usize = grades.iter().map(|&grade| grade_size(dims, grade)).sum();
+    let full_size = 1usize << dims;
     let left_size = |grade| {
         if size == full_size {
             (0..grade).map(|g| grade_size(dims, g)).sum::<usize>()
@@ -1073,10 +1089,10 @@ pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> Uiua
     };
     if let [grade] = *grades {
         let left_size = left_size(grade);
-        extract_single_impl(&mut arr, left_size, new_size);
+        extract_single(&mut arr, left_size, new_size);
     } else if grades.is_sorted() {
         let mut left_sizes = Vec::with_capacity(grades.len());
-        for grade in grades {
+        for &grade in grades {
             let left_size = left_size(grade);
             let size = grade_size(dims, grade);
             left_sizes.push((left_size, size));
@@ -1101,7 +1117,11 @@ pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> Uiua
     Ok(arr)
 }
 
-fn extract_single_impl(arr: &mut Array<f64>, left_size: usize, new_size: usize) {
+fn extract_vectors(dims: u8, arr: &mut Array<f64>) {
+    extract_single(arr, 1, dims as usize)
+}
+
+fn extract_single(arr: &mut Array<f64>, left_size: usize, new_size: usize) {
     let elems: usize = arr.shape.iter().rev().skip(1).product();
     let size = *arr.shape.last().unwrap();
     let slice = arr.data.as_mut_slice();

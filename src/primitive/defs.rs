@@ -2988,6 +2988,9 @@ primitive!(
     ///   : ⩜∠ [0 1] [1 0]
     /// ex: # Experimental!
     ///   : ⩜(×∠) [0 1] [1 0] [2_3 4_5 6_7]
+    /// [geometric] [couple] creates a complex number array from real and imaginary parts.
+    /// ex: # Experimental!
+    ///   : ⩜⊟ 1_2 [3_4 5_6]
     ([1], Geometric, Algorithm, ("geometric", '⩜'), { experimental: true }),
     /// Find the shortest path between two things
     ///

@@ -932,13 +932,13 @@ fn rowsn(f: SigNode, args: Vec<Value>, depth: usize, inv: bool, env: &mut Uiua) 
             let args: Vec<_> = rows
                 .iter_mut()
                 .map(|arg| match arg {
-                    Ok(rows) => rows.next().unwrap().unboxed_if(inv),
-                    Err(row) => row.clone().unboxed_if(inv),
+                    Ok(rows) => rows.next().unwrap(),
+                    Err(row) => row.clone(),
                 })
                 .collect();
             rowsn(f.clone(), args, depth - 1, inv, env)?;
             for i in 0..outputs {
-                new_values[i].push(env.pop("rows's function result")?.boxed_if(inv));
+                new_values[i].push(env.pop("rows's function result")?);
             }
         }
     };

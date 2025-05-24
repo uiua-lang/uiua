@@ -2000,6 +2000,8 @@ impl Compiler {
             ImplPrim(AntiRotate, span) => {
                 *node = Node::from([op(GeometricReverse, span), op(GeometricSandwich, span)])
             }
+            Prim(Couple, span) => *node = op(GeometricCouple, span),
+            ImplPrim(UnCouple, span) => *node = op(GeometricUnCouple, span),
             Prim(Select, span) => *node = op(ExtractBlades, span),
             ImplPrim(AntiSelect, span) => *node = op(PadBlades, span),
             ImplPrim(Ga(_, ref mut spec), _) => {

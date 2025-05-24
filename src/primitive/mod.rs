@@ -1642,6 +1642,13 @@ impl ImplPrimitive {
                 GaOp::GeometricSandwich => env.dyadic_oo_env_with(spec, ga::sandwich)?,
                 GaOp::PadBlades => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
                 GaOp::ExtractBlades => env.dyadic_oo_env_with(spec, ga::extract_blades)?,
+                GaOp::GeometricCouple => env.dyadic_oo_env(ga::couple)?,
+                GaOp::GeometricUnCouple => {
+                    let val = env.pop(1)?;
+                    let (a, b) = ga::uncouple(val, env)?;
+                    env.push(b);
+                    env.push(a);
+                }
             },
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

@@ -14,7 +14,7 @@ use crate::{
 };
 
 macro_rules! ga_op {
-    ($(($args:literal, $name:ident)),* $(,)?) => {
+    ($(($args:literal $(($outputs:literal))?, $name:ident)),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
         pub enum GaOp {
             $($name,)*
@@ -24,6 +24,12 @@ macro_rules! ga_op {
             pub fn args(&self) -> usize {
                 match self {
                     $(GaOp::$name => $args,)*
+                }
+            }
+            pub fn outputs(&self) -> usize {
+                match self {
+                    $($(GaOp::$name => $outputs,)?)*
+                    _ => 1
                 }
             }
         }
@@ -47,6 +53,8 @@ ga_op!(
     (2, GeometricSandwich),
     (2, PadBlades),
     (2, ExtractBlades),
+    (2, GeometricCouple),
+    (1(2), GeometricUnCouple),
 );
 
 impl fmt::Display for GaOp {
@@ -69,6 +77,8 @@ impl fmt::Display for GaOp {
             GeometricSandwich => write!(f, "{Geometric}{Rotate}"),
             PadBlades => write!(f, "{Geometric}{Anti}{Select}"),
             ExtractBlades => write!(f, "{Geometric}{Select}"),
+            GeometricCouple => write!(f, "{Geometric}{Couple}"),
+            GeometricUnCouple => write!(f, "{Geometric}{Un}{Couple}"),
         }
     }
 }
@@ -1103,4 +1113,27 @@ fn extract_single_impl(arr: &mut Array<f64>, left_size: usize, new_size: usize) 
     }
     *arr.shape.last_mut().unwrap() = new_size;
     arr.data.truncate(arr.shape.elements());
+}
+
+pub fn couple(a: Value, b: Value, env: &Uiua) -> UiuaResult<Value> {
+    todo!()
+}
+
+pub fn uncouple(mut val: Value, env: &Uiua) -> UiuaResult<(Value, Value)> {
+    match val {
+        Value::Num(_) | Value::Byte(_) => {}
+        val => {
+            return Err(env.error(format!(
+                "Cannot geometric uncouple {}",
+                val.type_name_plural()
+            )))
+        }
+    }
+    if val.shape.last().is_none_or(|&d| d == 1) {
+        val.shape.pop();
+        let imag = Array::<u8>::new(val.shape.clone(), eco_vec![0; val.shape.elements()]);
+        return Ok((val, imag.into()));
+    }
+    let depth = val.rank().saturating_sub(1);
+    val.uncouple_depth(depth, env)
 }

@@ -3544,6 +3544,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n + 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
+                    ImplPrimitive::Ga(op, _) => op.outputs(),
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })

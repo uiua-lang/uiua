@@ -66,6 +66,7 @@ impl PreEvalMode {
                 Node::NoInline(_) => false,
                 Node::Array { inner, .. } => recurse(mode, inner, asm, visited),
                 Node::Call(func, _) => recurse(mode, &asm[func], asm, visited),
+                Node::CustomInverse(cust, _) if cust.normal.is_err() => false,
                 node => {
                     node.is_limit_bounded(asm)
                         && match mode {

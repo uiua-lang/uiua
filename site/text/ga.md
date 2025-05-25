@@ -24,6 +24,8 @@ Here is a quick reference table of each transformed operation. They will be expl
 | [atangent]()       | Vectors to rotor         |
 | [select]()         | Select blades            |
 | `anti` [select]()  | Pad blades               |
+| [couple]()         | Make complex             |
+| `un` [couple]()    | Separate complex         |
 
 ### Complex Numbers
 
@@ -104,7 +106,21 @@ If we only care about certain grades of the result, we can use *blade exaction* 
 
 ### Metrics
 
-Different flavors of Geometric Algebra are defined mathematically by their *metrics* - definitions of which basis vectors square to `1`, `¯1`, or `0`.
+Different flavors of Geometric Algebra are defined mathematically by their *metrics* - definitions of which basis vectors square to `1`, `¯1`, or `0`. By default, [geometric]() uses metrics of all `1`s. This system is often referred to as *Vanilla* Geometric Algebra (VGA), which operates in Euclidean space.
 
 Non-euclidean metrics can be defined in the first function in a [geometric]() function pack. For example, in Projective Geometric Algebra (PGA), one dimension has the metric `0` while the rest of the dimensions have the metric `1`. We can define this with the array `0_1`. The last element is repeated for all the rest of the dimensions, so this will work for PGA in any number of dimenions.
 
+Note that while we are doing operations on 3-dimenional multivectors, we generally think of this as 2-dimensional PGA, as one of the dimensions does not refer to normal linear space.
+
+Because translations are just rotations in PGA, we can create a rotor that translates a point in a similar way as above.
+
+This rotor translates a point by the vector `[2 5]`:
+
+```uiua
+⩜(0_1|∠) [0 2 5 1] [0 0 0 1]
+```
+And then we can apply it with [rotate]() for the sandwich product:
+
+```uiua
+⩜(0_1|↻∠) [0 2 5 1] [0 0 0 1] [0 10 20 1]
+```

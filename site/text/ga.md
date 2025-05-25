@@ -71,7 +71,7 @@ As an example, let's create a rotor that rotates the X axis 90° into the Y axis
 ⩜∠ [0 1 0] [1 0 0]
 ```
 
-Appying the rotor requires something called the *sandwich product*. We won't get into how it works here, but it can be written simply with [geometric]() [rotate]().
+Applying the rotor requires something called the *sandwich product*. We won't get into how it works here, but it can be written simply with [geometric]() [rotate]().
 
 ```uiua
 # Experimental!

@@ -5,7 +5,7 @@ const AVG: &str = "\
 ÷   # Divide";
 const X_MATRIX: &str = "\
 ⇡5  # 0 through 4
-⊞=. # Identity matrix
+˙⊞= # Identity matrix
 ⊸⇌  # Reverse
 ↥   # Max";
 pub const UIUA: &str = "\
@@ -32,7 +32,7 @@ Wee ← /=⊞<¯0.5_¯0.1 /+⍜⊣(+⊃(×4ⁿ4|×¯3ⁿ2))
 w   ← <⊙(⌵/ℂ) # Circle
 u   ← +0.1↧¤ ⊃(w0.95|⊂⊙0.5⇌°√)
 h   ← ×⊃Wee(w1) # Alpha
-⍜°⍉(⊂⊃u h) ⊞⊟.-1×2÷⟜⇡200";
+⍜°⍉(⊂⊃u h) ˙⊞⊟-1×2÷⟜⇡200";
 const CHORD: &str = "\
 [0 4 7 10]     # Notes
 ×220 ˜ⁿ2÷12    # Freqs
@@ -47,7 +47,7 @@ Disc ← -⊃(××4⊙⋅∘)⋅°√
 Quad ← ÷⊃(×2|-⊃⋅∘(⊟⊸¯ √ℂ0 Disc))
 Quad 1 ¯3 2";
 const STRIPES: &str = "\
-⍉ [⊞⊃⊃+↥-].⇡300
+⍉ ˙[⊞⊃⊃+↥-] ⇡300
 ÷2 +1.2 ∿ ÷10";
 pub const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ≡⊂ ˜⊏"❌✅" ⬚@ ⊜⊸(≍⊸⇌)⊸≠@ "#;
@@ -68,7 +68,7 @@ const MANDELBROT: &str = "\
 ÷⧻⟜/+                 # Normalize";
 const LIFE: &str = "\
 Life ← ↥∩=₃⟜+⊸(/+↻⊂A₂C₂)
-⁅×0.6 gen⊙⚂ ⊟.30 # Init
+⁅×0.6 gen⊙⚂ ˙⊟30 # Init
 ⍥⊸Life100        # Run
 ≡(▽⟜≡▽) 4        # Upscale";
 

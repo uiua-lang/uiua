@@ -2078,13 +2078,10 @@ primitive!(
     ([1], Below, Stack, ("below", '◡')),
     /// Call a function with the same array as all arguments
     ///
-    /// ex: # Experimental!
-    ///   : ˙+ 5
-    /// ex: # Experimental!
-    ///   : ˙⊞+ 1_2_3
-    /// ex: # Experimental!
-    ///   : ˙(⊂⊂) π
-    ([1], Slf, Stack, ("self", '˙'), { experimental: true }),
+    /// ex: ˙+ 5
+    /// ex: ˙⊞+ 1_2_3
+    /// ex: ˙(⊂⊂) π
+    ([1], Slf, Stack, ("self", '˙')),
     /// Call a function with its arguments reversed
     ///
     /// ex:  - 2 5

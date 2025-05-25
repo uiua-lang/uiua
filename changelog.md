@@ -8,6 +8,8 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - Numeric subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 - Subscripts can now be typed with `'`s instead of `__`s
+- Stabilize [`self ˙`](https://uiua.org/docs/self)
+  - Add experimental sided subscripts for [`self ˙`](https://uiua.org/docs/self)
 - Remove previously deprecated `signature` and `stringify` modifiers
 ### Interpreter
 - Add filled adjacent stencil

@@ -2122,7 +2122,7 @@ impl Compiler {
                     if !matches!(
                         prim,
                         (Both | Bracket)
-                            | (Reach | On | By | With | Off)
+                            | (Slf | Reach | On | By | With | Off)
                             | (Rows | Each | Inventory)
                             | (Repeat | Tuples | Stencil)
                             | (Fill | Geometric)
@@ -2528,7 +2528,7 @@ impl Compiler {
     where
         S: fmt::Display,
     {
-        if !cfg!(debug_assertions) && !self.allow_experimental() {
+        if !self.allow_experimental() {
             self.scope.experimental_error = true;
             self.add_error(span.clone(), message().to_string());
         }

@@ -715,26 +715,67 @@ impl Compiler {
             }
             Slf => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;
-                match sig.args() {
-                    0 | 1 => {
-                        self.add_error(
-                            modified.modifier.span.clone(),
-                            format!(
-                                "{}'s function must take at least 2 arguments, \
-                                but its signature is {sig}",
-                                Slf.format()
-                            ),
-                        );
-                        node
+                if sig.args() < 2 {
+                    self.add_error(
+                        modified.modifier.span.clone(),
+                        format!(
+                            "{}'s function must take at least 2 arguments, \
+                            but its signature is {sig}",
+                            Slf.format()
+                        ),
+                    );
+                    return Ok(Some(node));
+                }
+                let span = self.add_span(modified.modifier.span.clone());
+                if let Some(sub) = subscript.map(|sub| self.validate_subscript(sub)) {
+                    let (sub, sub_span) = sub.into();
+                    self.subscript_experimental(Slf, &sub_span);
+                    if sub.num.is_some() {
+                        let message =
+                            format!("{} does not accept numeric subscripts", Slf.format());
+                        self.add_error(sub_span.clone(), message)
                     }
-                    n => {
-                        let span = self.add_span(modified.modifier.span.clone());
-                        for _ in 0..n - 1 {
-                            node.prepend(Node::Prim(Dup, span))
+                    if let Some(side) = sub.side {
+                        let n = if let Some(n) = side.n {
+                            match n.cmp(&sig.args()) {
+                                Ordering::Greater => {
+                                    let message = format!(
+                                        "{} side quantifier {n} exceeds outputs of signature {sig}",
+                                        Slf.format()
+                                    );
+                                    self.add_error(sub_span, message);
+                                }
+                                Ordering::Equal => {
+                                    let message = format!(
+                                        "{} side quantifier {n} with signature {sig} is redundant",
+                                        Slf.format()
+                                    );
+                                    self.emit_diagnostic(message, DiagnosticKind::Advice, sub_span);
+                                }
+                                Ordering::Less => {}
+                            }
+                            n
+                        } else {
+                            2
+                        };
+                        let mut dups = if n == 0 {
+                            Node::Prim(Pop, span)
+                        } else {
+                            Node::from_iter(repeat_n(Node::Prim(Dup, span), n - 1))
+                        };
+                        if side.side == SubSide::Right && n < sig.args() {
+                            for _ in 0..sig.args() - n {
+                                dups = Node::Mod(Dip, eco_vec![dups.sig_node().unwrap()], span);
+                            }
                         }
-                        node
+                        node.prepend(dups);
+                        return Ok(Some(node));
                     }
                 }
+                for _ in 0..sig.args() - 1 {
+                    node.prepend(Node::Prim(Dup, span));
+                }
+                node
             }
             Backward => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;

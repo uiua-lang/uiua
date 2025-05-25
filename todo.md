@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.17
-- Stabilize `self`
-  - Sided subscripts
 - Sided `backward`
 - `table` subscripts for rank selection
 - Mixed subscripts

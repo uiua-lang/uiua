@@ -605,6 +605,11 @@ pub fn Subscripts() -> impl IntoView {
             "⍚⌞⊂ 1_2_3 4_5_6\n⍚⌟⊂ 1_2_3 4_5_6",
         ),
         subscript(
+            Slf,
+            "Duplicate only the first or last argument",
+            "# Experimental!\n˙⌞⊟₃ 1 2\n˙⌟⊟₃ 1 2",
+        ),
+        subscript(
             Reach,
             "Put the second argument above or below the outputs",
             "# Experimental!\n{𝄐⌞⊟ 1 2 3}\n{𝄐⌟⊟ 1 2 3}",

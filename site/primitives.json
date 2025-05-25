@@ -1269,8 +1269,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Call a function with the same array as all arguments",
-    "experimental": true
+    "description": "Call a function with the same array as all arguments"
   },
   "send": {
     "args": 2,

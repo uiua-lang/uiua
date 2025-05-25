@@ -1,10 +1,9 @@
 # Uiua Todo
 
 # 0.17
-- `geometric`
-  - Finish docs
-  - Domain coloring for image functions
-  - Another way to display?
+- Stabilize `self`
+  - Sided subscripts
+- Sided `backward`
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

@@ -36,13 +36,16 @@ One of the most basic uses of [geometric]() is working with complex numbers. If 
 We can use [geometric]() [multiply]() to do the *Geometric Product*. For complex numbers, this is equivalent to normal multiplication.
 
 ```uiua
+# Experimental!
 ⩜× [0 1] [0 1] # i × i = ¯1
 ```
 ```uiua
+# Experimental!
 ⩜× [1 2] [3 4]
 ```
 Uiua is an array language, so all these operations are pervasive.
 ```uiua
+# Experimental!
 ⩜× [0 1] [1_2 ¯3_4 5_6]
 ```
 
@@ -63,12 +66,14 @@ But let's say we want to rotate a 3D vector using a quaternion. How do we even c
 As an example, let's create a rotor that rotates the X axis 90° into the Y axis. Here, we pass vectors of length 3. Because 3 is not a power of 2, they will be interpreted as vectors rather than rotors themselves.
 
 ```uiua
+# Experimental!
 ⩜∠ [0 1 0] [1 0 0]
 ```
 
 Appying the rotor requires something called the *sandwich product*. We won't get into how it works here, but it can be written simply with [geometric]() [rotate]().
 
 ```uiua
+# Experimental!
 ⁅₉ ⊸⩜(↻∠) [0 1 0] [1 0 0] [1_0_0 1_2_3 0_1_¯5]
 ```
 
@@ -81,24 +86,28 @@ The way coefficients are interpreted depends on how many dimensions we are worki
 But what if the default inferrence is not what we want? For example, what if we want to multiply a 3D vector by a bivector? In 3D, both vectors and bivectors have 3 components. By default, [geometric]() will interpret two length 3 arrays as vectors and return a rotor.
 
 ```uiua
+# Experimental!
 ⩜× [1 2 3] [4 5 6]
 ```
 
 We can make the bivector be interpreted correctly via *blade padding*. This is done with [geometric]() [anti]() [select](). It takes the given grade and pads the array so that all other blades of the multivector are 0. This operations requires us to specify the number of dimensions via a subscript.
 
 ```uiua
+# Experimental!
 ⩜₃⌝⊏2 [1 2 3]
 ```
 
 Then we can multiply.
 
 ```uiua
+# Experimental!
 ⩜₃(× ⌝⊏2) [1 2 3] [4 5 6]
 ```
 
 If we only care about certain grades of the result, we can use *blade exaction* via [geometric]() [select](). Here, we extract just the vectors: the grade-1 blades.
 
 ```uiua
+# Experimental!
 ⩜₃(⊏1 × ⌝⊏2) [1 2 3] [4 5 6]
 ```
 
@@ -117,16 +126,19 @@ Because translations are just rotations in PGA, we can create a rotor that trans
 This rotor translates a point by the vector `[2 5]`:
 
 ```uiua
+# Experimental!
 ⩜(0_1|∠) [0 2 5 1] [0 0 0 1]
 ```
 And then we can apply it with [rotate]() for the sandwich product:
 
 ```uiua
+# Experimental!
 ⩜(0_1|↻∠) [0 2 5 1] [0 0 0 1] [0 10 20 1]
 ```
 
 You can use [geometric]() [un]() [parse]() to format a multivector array to show the bases.
 
 ```uiua
+# Experimental!
 ⩜₃(0_1|°⋕) [1 0 3 ¯2 5 0 0 1]
 ```

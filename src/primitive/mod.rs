@@ -1627,7 +1627,7 @@ impl ImplPrimitive {
                 GaOp::GeometricRegressive => {
                     env.dyadic_oo_env_with(spec, ga::regressive_product)?
                 }
-                GaOp::GeometricDivide => env.dyadic_oo_env(ga::divide)?,
+                GaOp::GeometricDivide => env.dyadic_oo_env_with(spec, ga::divide)?,
                 GaOp::GeometricMagnitude => env.monadic_env_with(spec, ga::magnitude)?,
                 GaOp::GeometricNormalize => env.monadic_env_with(spec, ga::normalize)?,
                 GaOp::GeometricSqrt => env.monadic_env_with(spec, ga::sqrt)?,

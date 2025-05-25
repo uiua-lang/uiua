@@ -2980,11 +2980,11 @@ primitive!(
     /// [geometric] [absolute value] gives the magnitude of a complex number.
     /// ex: # Experimental!
     ///   : ⩜⌵ [3_4 5_12]
-    /// [geometric] [atangent] produces a complex number that, when [multiply]d, rotates the second complex number to the first.
+    /// [geometric] [divide] produces a complex number that, when [multiply]d, rotates the first complex number to the second.
     /// ex: # Experimental!
-    ///   : ⩜∠ [0 1] [1 0]
+    ///   : ⩜÷ [0 1] [1 0]
     /// ex: # Experimental!
-    ///   : ⩜(×∠) [0 1] [1 0] [2_3 4_5 6_7]
+    ///   : ⩜(×÷) [0 1] [1 0] [2_3 4_5 6_7]
     /// [geometric] [couple] creates a complex number array from real and imaginary parts.
     /// ex: # Experimental!
     ///   : ⩜⊟ 1_2 [3_4 5_6]

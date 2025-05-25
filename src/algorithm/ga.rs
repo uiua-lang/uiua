@@ -340,13 +340,13 @@ fn fast_dyadic_complex(
     mut b: Array<f64>,
     re: impl Fn(f64, f64, f64, f64) -> f64,
     im: impl Fn(f64, f64, f64, f64) -> f64,
-) -> UiuaResult<Result<Array<f64>, [Array<f64>; 2]>> {
+) -> Result<Array<f64>, [Array<f64>; 2]> {
     if a.shape.last() != Some(&2) || b.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
-        return Ok(Err([a, b]));
+        return Err([a, b]);
     }
     a.meta.take_sorted_flags();
     b.meta.take_sorted_flags();
-    Ok(if a.data.is_copy_of(&b.data) {
+    if a.data.is_copy_of(&b.data) {
         drop(b);
         for chunk in a.data.as_mut_slice().chunks_exact_mut(2) {
             let [ar, ai] = [chunk[0], chunk[1]];
@@ -396,7 +396,7 @@ fn fast_dyadic_complex(
             }
             _ => Err([a, b]),
         }
-    })
+    }
 }
 
 pub fn reverse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -527,7 +527,7 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
         b.arr,
         |ar, _, br, _| ar + br,
         |_, ai, _, bi| ai + bi,
-    )? {
+    ) {
         Ok(res) => return Ok(res),
         Err(ab) => ab,
     };
@@ -601,19 +601,31 @@ pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64
     normalize_impl_not_transposed(dims, spec.metrics, arg, env)
 }
 
-pub fn divide(a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    if a.rank() >= b.rank() {
-        return Err(env.error(format!(
-            "Only scalar division on multivectors is supported \
-            but the arrays are rank {} and {}",
-            a.rank(),
-            b.rank()
-        )));
-    }
+pub fn divide(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
     let (a, ..) = ga_arg(a, env)?;
-    let (mut b, ..) = ga_arg(b, env)?;
-    bin_pervade_mut(a, &mut b, false, env, pervade::div::num_num)?;
-    Ok(b)
+    let (b, ..) = ga_arg(b, env)?;
+    Ok(
+        match fast_dyadic_complex(
+            spec.dims,
+            a,
+            b,
+            |ar, ai, br, bi| (ar * br + ai * bi) / (ar * ar + ai * ai),
+            |ar, ai, br, bi| (ar * bi - ai * br) / (ar * ar + ai * ai),
+        ) {
+            Ok(res) => res,
+            Err([a, mut b]) => {
+                if a.rank() >= b.rank() {
+                    return Err(env.error(format!(
+                        "Only scalar division on multivectors and complex division \
+                        are supported, but the arrays are shape {} and {}",
+                        a.shape, b.shape
+                    )));
+                }
+                bin_pervade_mut(a, &mut b, false, env, pervade::div::num_num)?;
+                b
+            }
+        },
+    )
 }
 
 pub fn sandwich(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -684,7 +696,7 @@ fn product_impl_not_transposed(
         b.arr,
         |ar, ai, br, bi| ar * br - ai * bi,
         |ar, ai, br, bi| ar * bi + ai * br,
-    )? {
+    ) {
         Ok(res) => return Ok(res),
         Err(ab) => ab,
     };

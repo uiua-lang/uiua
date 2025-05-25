@@ -857,7 +857,7 @@ impl Default for Metrics {
     }
 }
 impl Metrics {
-    pub const COUNT: usize = 11;
+    pub const COUNT: usize = size_of::<u32>() << 3 >> 1;
     pub const EUCLIDEAN: Self = Self::all(1);
     pub const NULL: Self = Self::all(0);
     pub const fn all(val: i8) -> Self {

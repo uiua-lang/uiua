@@ -124,3 +124,9 @@ And then we can apply it with [rotate]() for the sandwich product:
 ```uiua
 ⩜(0_1|↻∠) [0 2 5 1] [0 0 0 1] [0 10 20 1]
 ```
+
+You can use [geometric]() [un]() [parse]() to format a multivector array to show the bases.
+
+```uiua
+⩜₃(0_1|°⋕) [1 0 3 ¯2 5 0 0 1]
+```

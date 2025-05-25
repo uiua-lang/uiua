@@ -2122,7 +2122,7 @@ impl Compiler {
                     if !matches!(
                         prim,
                         (Both | Bracket)
-                            | (Slf | Reach | On | By | With | Off)
+                            | (Slf | Backward | Reach | On | By | With | Off)
                             | (Rows | Each | Inventory)
                             | (Repeat | Tuples | Stencil)
                             | (Fill | Geometric)

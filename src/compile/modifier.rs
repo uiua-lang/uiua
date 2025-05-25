@@ -2002,6 +2002,8 @@ impl Compiler {
             }
             Prim(Couple, span) => *node = op(GeometricCouple, span),
             ImplPrim(UnCouple, span) => *node = op(GeometricUnCouple, span),
+            Prim(Parse, span) => *node = op(GeometricParse, span),
+            ImplPrim(UnParse, span) => *node = op(GeometricUnParse, span),
             Prim(Select, span) => *node = op(ExtractBlades, span),
             ImplPrim(AntiSelect, span) => *node = op(PadBlades, span),
             ImplPrim(Ga(_, ref mut spec), _) => {

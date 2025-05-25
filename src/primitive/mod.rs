@@ -1649,6 +1649,8 @@ impl ImplPrimitive {
                     env.push(b);
                     env.push(a);
                 }
+                GaOp::GeometricParse => env.monadic_env_with(spec, ga::parse)?,
+                GaOp::GeometricUnParse => env.monadic_env_with(spec, ga::unparse)?,
             },
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

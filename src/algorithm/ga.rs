@@ -9,8 +9,8 @@ use ecow::{eco_vec, EcoVec};
 use serde::*;
 
 use crate::{
-    algorithm::pervade::derive_new_shape, grid_fmt::GridFmt, is_default, Array, Primitive, Shape,
-    Uiua, UiuaResult, Value,
+    algorithm::pervade::derive_new_shape, grid_fmt::GridFmt, is_default, Array, Boxed, Primitive,
+    Shape, Uiua, UiuaResult, Value,
 };
 
 macro_rules! ga_op {
@@ -55,6 +55,8 @@ ga_op!(
     (2, ExtractBlades),
     (2, GeometricCouple),
     (1(2), GeometricUnCouple),
+    (1, GeometricParse),
+    (1, GeometricUnParse),
 );
 
 impl fmt::Display for GaOp {
@@ -79,6 +81,8 @@ impl fmt::Display for GaOp {
             ExtractBlades => write!(f, "{Geometric}{Select}"),
             GeometricCouple => write!(f, "{Geometric}{Couple}"),
             GeometricUnCouple => write!(f, "{Geometric}{Un}{Couple}"),
+            GeometricParse => write!(f, "{Geometric}{Parse}"),
+            GeometricUnParse => write!(f, "{Geometric}{Un}{Parse}"),
         }
     }
 }
@@ -739,8 +743,7 @@ fn product_impl_transposed(
     let c_slice = c_data.make_mut();
     let mut temp = vec![0.0; c_row_len];
 
-    let mut mask_table: Vec<usize> = (0..1usize << dims).collect();
-    mask_table.sort_by_key(|&a| a.count_ones());
+    let mask_table = mask_table(dims);
     let mut rev_mask_table = vec![0; 1usize << dims];
     for (i, &v) in mask_table.iter().enumerate() {
         rev_mask_table[v] = i;
@@ -794,6 +797,12 @@ fn product_impl_transposed(
 
     csemi.prepend(size);
     Ok(Array::new(csemi, c_data))
+}
+
+fn mask_table(dims: u8) -> Vec<usize> {
+    let mut mask_table: Vec<usize> = (0..1usize << dims).collect();
+    mask_table.sort_by_key(|&a| a.count_ones());
+    mask_table
 }
 
 fn blade_sign_and_metric(dims: u8, metrics: Metrics, dot: bool, a: usize, b: usize) -> (i32, f64) {
@@ -1177,4 +1186,77 @@ pub fn uncouple(mut val: Value, env: &Uiua) -> UiuaResult<(Value, Value)> {
     }
     let depth = val.rank().saturating_sub(1);
     val.uncouple_depth(depth, env)
+}
+
+pub fn parse(_: Spec, _: Value, env: &Uiua) -> UiuaResult<Value> {
+    Err(env.error("Geometric parse is not implemented"))
+}
+
+pub fn unparse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Value> {
+    let (dims, size, arg) = init(spec, val, ExpandFull, env)?;
+    let dim_offset = (spec.metrics.get(0) != 0) as usize;
+    if dims as usize + dim_offset > 9 {
+        return Err(env.error(format!(
+            "Cannot format {dims} dimensional multivector \
+            starting at {dim_offset}"
+        )));
+    }
+    let mut formatted = EcoVec::with_capacity(arg.semi.elements());
+    let mask_table = mask_table(dims);
+    let is_complex = dims == 2 && size == 2;
+    for chunk in arg.arr.data.chunks_exact(size) {
+        let mut s = EcoVec::new();
+        for (i, &sel) in arg.sel.iter().enumerate() {
+            let Some(sel) = sel else {
+                continue;
+            };
+            let n = chunk[sel];
+            if n == 0.0 {
+                continue;
+            }
+            if s.is_empty() {
+                if n < 0.0 {
+                    s.push('-');
+                }
+            } else {
+                s.extend(
+                    match (n > 0.0, is_complex) {
+                        (true, false) => " + ",
+                        (true, true) => "+",
+                        (false, false) => " - ",
+                        (false, true) => "-",
+                    }
+                    .chars(),
+                );
+            }
+            let mask = mask_table[i];
+            if n.abs() != 1.0 || mask == 0 {
+                let n_grid = n.abs().fmt_grid(Default::default());
+                s.extend(n_grid.into_iter().next().unwrap());
+            }
+            if mask == 0 {
+                continue;
+            }
+            if is_complex {
+                s.push('i');
+                continue;
+            }
+            s.push('e');
+            for j in 0..dims {
+                if mask & (1 << j) != 0 {
+                    s.push(crate::SUBSCRIPT_DIGITS[j as usize + dim_offset]);
+                }
+            }
+            if (mask ^ (mask >> 1)).count_ones() == dims as u32 {
+                let (a, b) = (s.len() - 1, s.len() - 2);
+                s.make_mut().swap(a, b);
+            }
+        }
+        formatted.push(Boxed(Value::from(s)))
+    }
+    Ok(if arg.semi.is_empty() {
+        formatted.into_iter().next().unwrap().0
+    } else {
+        Array::new(arg.semi, formatted).into()
+    })
 }

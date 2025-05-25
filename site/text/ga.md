@@ -26,6 +26,7 @@ Here is a quick reference table of each transformed operation. They will be expl
 | `anti` [select]()  | Pad blades               |
 | [couple]()         | Make complex             |
 | `un` [couple]()    | Separate complex         |
+| `un` [parse]()     | Format multivector       |
 
 ### Complex Numbers
 

@@ -458,17 +458,11 @@ fn dual_impl(dims: u8, pseu: Arg, arg: Arg, env: &Uiua) -> UiuaResult<Array<f64>
 }
 
 pub fn magnitude(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, arg) = init(spec, val, ExpandFull, env)?;
-    magnitude_impl(dims, spec.metrics, size, arg, env)
+    let (dims, _, arg) = init(spec, val, ExpandFull, env)?;
+    magnitude_impl(dims, spec.metrics, arg, env)
 }
 
-fn magnitude_impl(
-    dims: u8,
-    metrics: Metrics,
-    size: usize,
-    mut arg: Arg,
-    env: &Uiua,
-) -> UiuaResult<Array<f64>> {
+fn magnitude_impl(dims: u8, metrics: Metrics, mut arg: Arg, env: &Uiua) -> UiuaResult<Array<f64>> {
     if is_complex(dims, &arg.arr) {
         let slice = arg.arr.data.as_mut_slice();
         for i in 0..slice.len() / 2 {
@@ -485,7 +479,7 @@ fn magnitude_impl(
 
     arg.arr.untranspose();
     let rev = arg.clone().map(|arg| reverse_impl_transposed(dims, arg));
-    let prod = product_impl_transposed(dims, metrics, size, false, rev, arg, env)?;
+    let prod = product_impl_transposed(dims, metrics, 1 << dims, false, rev, arg, env)?;
     let mut arr = prod.first(env)?;
     for v in arr.data.as_mut_slice() {
         *v = v.abs().sqrt();
@@ -494,20 +488,25 @@ fn magnitude_impl(
 }
 
 pub fn normalize(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    let (dims, size, arg) = init(spec, val, Rotor, env)?;
-    normalize_impl_not_transposed(dims, spec.metrics, size, arg, env)
+    let (dims, _, arg) = init(spec, val, Rotor, env)?;
+    normalize_impl_not_transposed(dims, spec.metrics, arg, env)
 }
 
 fn normalize_impl_not_transposed(
     dims: u8,
     metrics: Metrics,
-    size: usize,
     arg: Arg,
     env: &Uiua,
 ) -> UiuaResult<Array<f64>> {
     let mut arr = arg.arr.clone();
-    let mag = magnitude_impl(dims, metrics, size, arg, env)?;
-    bin_pervade_mut(mag, &mut arr, false, env, pervade::div::num_num)?;
+    let mag = magnitude_impl(dims, metrics, arg, env)?;
+    bin_pervade_mut(mag, &mut arr, false, env, |a, b| {
+        if a == 0.0 {
+            0.0
+        } else {
+            b / a
+        }
+    })?;
     Ok(arr)
 }
 
@@ -594,12 +593,12 @@ pub fn rotor(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64
     let revb = b.map(|b| reverse_impl_not_transposed(dims, b));
     let prod = product_impl_not_transposed(dims, spec.metrics, size, false, revb, a, env)?;
     let prod = Arg::from_not_transposed(dims, prod, env)?;
-    let mut norm = normalize_impl_not_transposed(dims, spec.metrics, size, prod, env)?;
+    let mut norm = normalize_impl_not_transposed(dims, spec.metrics, prod, env)?;
     for chunk in norm.data.as_mut_slice().chunks_exact_mut(size) {
         chunk[0] += 1.0;
     }
     let arg = Arg::from_not_transposed(dims, norm, env)?;
-    normalize_impl_not_transposed(dims, spec.metrics, size, arg, env)
+    normalize_impl_not_transposed(dims, spec.metrics, arg, env)
 }
 
 pub fn divide(a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {

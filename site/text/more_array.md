@@ -93,7 +93,7 @@ Needing [fix]() or `dipfix` with [rows]() is extremely common. However, it can b
 
 For this reason, [rows]() supports *sided* subscripts. This syntax allows you to specify a "side" for a modifier or function.
 
-Sided subscripts are typed with `'` followed by a `<` for left or a `>` for right. The formatter will turn them into subscript bottom corner characters.
+Sided subscripts are typed with `__` followed by a `<` for left or a `>` for right. The formatter will turn them into subscript bottom corner characters.
 
 Left [rows]() [fix]()es the first argument and right [rows]() [fix]()es the last argument.
 
@@ -108,7 +108,7 @@ A number can be specified after the side to [fix]() multiple arguments.
 
 ```uiua
 # Try formatting!
-≡'<2(⊂⊂) "ui" "ua" "ns"
+≡__<2(⊂⊂) "ui" "ua" "ns"
 ```
 
 While [fix]() is still necessary for certain complex cases, sided subscripts should work about 95% of the time.

@@ -915,7 +915,7 @@ impl fmt::Display for SidedSubscript {
 impl<N: fmt::Display> fmt::Display for Subscript<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.num.is_none() && self.side.is_none() {
-            return write!(f, "'");
+            return write!(f, ",");
         };
         if let Some(num) = &self.num {
             num.fmt(f)?;

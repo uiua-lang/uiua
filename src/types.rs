@@ -182,13 +182,6 @@ impl TypeRt<'_> {
                     self.stack.push(a);
                     self.stack.push(b);
                 }
-                Over => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(b.clone());
-                    self.stack.push(a);
-                    self.stack.push(b);
-                }
                 Not | Sign | Neg | Abs | Sqrt | Floor | Ceil | Round => {
                     let x = self.pop()?;
                     self.stack.push(x);
@@ -320,6 +313,13 @@ impl TypeRt<'_> {
                 ImplPrimitive::UnBox => {
                     let x = self.pop()?;
                     self.stack.push(x.unboxed());
+                }
+                ImplPrimitive::Over => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.stack.push(b.clone());
+                    self.stack.push(a);
+                    self.stack.push(b);
                 }
                 _ => return Err(TypeError::NotSupported),
             },

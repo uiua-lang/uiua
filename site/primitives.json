@@ -1048,14 +1048,6 @@
     "class": "Environment",
     "description": "Get the current operating system family"
   },
-  "over": {
-    "glyph": ",",
-    "args": 2,
-    "outputs": 3,
-    "class": "Stack",
-    "description": "Duplicate the second-to-top value to the top of the stack",
-    "deprecated": true
-  },
   "parse": {
     "glyph": "⋕",
     "args": 1,

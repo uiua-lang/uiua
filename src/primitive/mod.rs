@@ -386,6 +386,7 @@ impl fmt::Display for ImplPrimitive {
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
             Retropose => write!(f, "<{Evert}>"),
             Ga(op, _) => op.fmt(f),
+            Over => write!(f, "over"),
         }
     }
 }
@@ -544,7 +545,6 @@ impl Primitive {
                 Deshape.format()
             ),
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
-            Over => format!("use {} or {} instead", Below.format(), Fork.format()),
             Each => format!("use {} instead", Rows.format()),
             Tag => "use data variants instead".into(),
             _ => return None,
@@ -688,13 +688,6 @@ impl Primitive {
             Primitive::Flip => {
                 let a = env.pop(1)?;
                 let b = env.pop(2)?;
-                env.push(a);
-                env.push(b);
-            }
-            Primitive::Over => {
-                let a = env.pop(1)?;
-                let b = env.pop(2)?;
-                env.push(b.clone());
                 env.push(a);
                 env.push(b);
             }
@@ -1621,6 +1614,13 @@ impl ImplPrimitive {
                 }
                 let res = tag.join(val, false, env)?;
                 env.push(res);
+            }
+            ImplPrimitive::Over => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                env.push(b.clone());
+                env.push(a);
+                env.push(b);
             }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
@@ -2763,7 +2763,7 @@ mod tests {
 	"repository": {{
         "idents": {{
             "name": "variable.parameter.uiua",
-            "match": "\\b[a-zA-Z]+(₋?[₀₁₂₃₄₅₆₇₈₉]|__'`?\\d+)*[!‼]*\\b"
+            "match": "\\b[a-zA-Z]+(₋?[₀₁₂₃₄₅₆₇₈₉]|,`?\\d+)*[!‼]*\\b"
         }},
 		"comments": {{
 			"name": "comment.line.uiua",

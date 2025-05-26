@@ -18,10 +18,10 @@ Here are some highlights of this release:
 
 *Subscripts* are a newly-stabilized syntactic feature that allow for shorter code as well as some new behavior.
 
-You type subscripts with a `'` followed by some digits. The formatter will turn them into subscript characters.
+You type subscripts with a `,` followed by some digits. The formatter will turn them into subscript characters.
 
 ```uiua
-undertake'3*'10 [1 2 3 4 5] # Try formatting!
+undertake,3*,10 [1 2 3 4 5] # Try formatting!
 ⍜↙₃×₁₀            [1 2 3 4 5]
 ```
 

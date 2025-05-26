@@ -404,13 +404,6 @@ impl<'a> AlgebraEnv<'a> {
                     self.stack.push(a);
                     self.stack.push(b);
                 }
-                Over => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.stack.push(b.clone());
-                    self.stack.push(a);
-                    self.stack.push(b);
-                }
                 Neg => {
                     let a = self.pop()?;
                     self.stack.push(-a);
@@ -502,6 +495,13 @@ impl<'a> AlgebraEnv<'a> {
                     let res = Expr::from(E).pow(a).ok_or(AlgebraError::TooComplex)?;
                     self.stack.push(res);
                     self.handled += 1;
+                }
+                Over => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.stack.push(b.clone());
+                    self.stack.push(a);
+                    self.stack.push(b);
                 }
                 _ => return Err(AlgebraError::NotSupported(prim.to_string())),
             },

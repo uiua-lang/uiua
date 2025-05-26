@@ -105,7 +105,7 @@ The [`backward ˜`](https://www.uiua.org/docs/backward) modifier has been stabil
 
 Sided subscripts are [subscripts](https://www.uiua.org/docs/subscripts) that instead of changing how a function works based on a number, do it based on a "side", either left or right.
 
-Sided subscripts are formatted from `'<` and `'>`. They are currently only stabilized for [`both ∩`](https://www.uiua.org/docs/both) and [`bracket ⊓`](https://www.uiua.org/docs/bracket). These cases simplify some common stack manipulation patterns.
+Sided subscripts are formatted from `,<` and `,>`. They are currently only stabilized for [`both ∩`](https://www.uiua.org/docs/both) and [`bracket ⊓`](https://www.uiua.org/docs/bracket). These cases simplify some common stack manipulation patterns.
 
 There is a [short tutorial section](https://www.uiua.org/tutorial/evenmorestack#sided-subscripts) about them, but here are some simple examples:
 

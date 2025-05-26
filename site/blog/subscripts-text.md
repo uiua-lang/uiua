@@ -23,11 +23,11 @@ Sha₂₅₆ ← ∘ # TODO
 
 Subscripts for use beyond identifiers were originally proposed in the [Uiua discord](https://discord.gg/3r9nrfYhCc) as almost a joke. A whimsical syntax for modifying the behavior of certain functions and modifiers. But people got to talking about what could be possible, and I implemented subscripts as an experimental feature. At time of writing, subscripts have just been stabilized.
 
-Uiua subscripts are written with a sing quote `'` followed by some digits. They can also be negative. The formatter will convert this into nice unicode subscript digits.
+Uiua subscripts are written with a comma `,` followed by some digits. They can also be negative. The formatter will convert this into nice unicode subscript digits.
 
 ```uiua
 # Try formatting!
-+'1 5
++,1 5
 ×₂ 12
 ```
 

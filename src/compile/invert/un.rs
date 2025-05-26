@@ -491,9 +491,9 @@ inverse!(ByPat, input, asm, By, span, [f], {
             let before = Node::from_iter([
                 Node::new_push(1),
                 Prim(Sub, *span),
-                Prim(Over, *span),
+                ImplPrim(Over, *span),
                 Prim(Shape, *span),
-                Prim(Over, *span),
+                ImplPrim(Over, *span),
                 PushUnder(2, *span),
                 Prim(Rerank, *span),
             ])
@@ -929,13 +929,13 @@ inverse!(InsertPat, input, asm, {
     };
     let mut node = Node::from_iter([
         key,
-        Prim(Over, span),
-        Prim(Over, span),
+        ImplPrim(Over, span),
+        ImplPrim(Over, span),
         Prim(Has, span),
         Node::new_push(1),
         ImplPrim(MatchPattern, span),
-        Prim(Over, span),
-        Prim(Over, span),
+        ImplPrim(Over, span),
+        ImplPrim(Over, span),
         Prim(Get, span),
         PushUnder(1, span),
         Prim(Remove, span),
@@ -1032,7 +1032,7 @@ inverse!(DupPat, input, asm, Prim(Dup, dup_span), {
         // Pattern matching
         let sig = nodes_sig(input)?;
         return if sig.args() == sig.outputs() {
-            let inv = Node::from_iter([Prim(Over, dup_span), ImplPrim(MatchPattern, dup_span)]);
+            let inv = Node::from_iter([ImplPrim(Over, dup_span), ImplPrim(MatchPattern, dup_span)]);
             Ok((input, inv))
         } else {
             generic()
@@ -1055,25 +1055,19 @@ inverse!(DupPat, input, asm, Prim(Dup, dup_span), {
     dbgln!("inverse dyadic part: {dyadic_part:?}");
     let monadic_inv = un_inverse(monadic_part, asm)?;
     let inverse = match *dyadic_part {
-        [Prim(Primitive::Add, span)] => {
-            Node::from_iter([monadic_inv, Node::new_push(2), Prim(Primitive::Div, span)])
-        }
-        [Prim(Primitive::Mul, span)] => {
-            let mut inv = Prim(Primitive::Sqrt, span);
+        [Prim(Add, span)] => Node::from_iter([monadic_inv, Node::new_push(2), Prim(Div, span)]),
+        [Prim(Mul, span)] => {
+            let mut inv = Prim(Sqrt, span);
             if !monadic_inv.is_empty() {
-                inv.extend([
-                    Prim(Primitive::Dup, dup_span),
-                    monadic_inv,
-                    Prim(Primitive::Pop, span),
-                ]);
+                inv.extend([Prim(Dup, dup_span), monadic_inv, Prim(Pop, span)]);
             }
             inv
         }
         _ => {
             let mut inv = monadic_inv;
             inv.extend(un_inverse(dyadic_part, asm)?);
-            inv.push(Prim(Primitive::Over, dup_span));
-            inv.push(ImplPrim(ImplPrimitive::MatchPattern, dup_span));
+            inv.push(ImplPrim(Over, dup_span));
+            inv.push(ImplPrim(MatchPattern, dup_span));
             inv
         }
     };

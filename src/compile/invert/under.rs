@@ -506,7 +506,7 @@ under!(
                     .or_else(|| inv.span())
                     .unwrap_or(0);
                 let before =
-                    Node::from_iter([Prim(Over, span), PushUnder(1, span), Node::from(nodes)]);
+                    Node::from_iter([ImplPrim(Over, span), PushUnder(1, span), Node::from(nodes)]);
                 let after = Node::from_iter([PopUnder(1, span), Prim(Flip, span), inv]);
                 dbgln!("matched contra pattern for under {pat:?}\n  on {input:?}\n  to {before:?}\n  and {after:?}");
                 return Ok((new, before, after));
@@ -779,7 +779,7 @@ under!(JoinPat, input, g_sig, inverse, asm, {
                     Prim(Dup, span),
                     Prim(Shape, span),
                     PushUnder(1, span),
-                    Prim(Over, span),
+                    ImplPrim(Over, span),
                     Prim(Shape, span),
                     PushUnder(1, span),
                     Prim(Flip, flip_span),
@@ -800,7 +800,7 @@ under!(JoinPat, input, g_sig, inverse, asm, {
                 Prim(Dup, span),
                 Prim(Shape, span),
                 PushUnder(1, span),
-                Prim(Over, span),
+                ImplPrim(Over, span),
                 Prim(Shape, span),
                 PushUnder(1, span),
                 Prim(Join, span),
@@ -998,7 +998,7 @@ under!(AtanPat, input, _, _, _, Prim(Atan, span), {
         ImplPrim(UnAtan, span),
         PopUnder(1, span),
         Prim(Flip, span),
-        Prim(Over, span),
+        ImplPrim(Over, span),
         Mod(Both, eco_vec![Prim(Mul, span).sig_node()?], span),
     ]);
     Ok((input, before, after))

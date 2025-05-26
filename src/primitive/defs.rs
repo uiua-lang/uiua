@@ -118,13 +118,6 @@ primitive!(
     /// Sometimes it is also good with [group] or [partition]
     /// ex: ⊜⧻.[1 1 0 0 2 2 2 2 0 1 0 3 3]
     (1(2), Dup, Stack, ("duplicate", '.')),
-    /// Duplicate the second-to-top value to the top of the stack
-    ///
-    /// ex: [, 1 2 3 4 5]
-    ///
-    /// [over] is often used in examples of functions with two inputs to show both inputs and the output.
-    /// ex: [+,, +3 4 5]
-    (2(3), Over, Stack, ("over", ',')),
     /// Swap the top two values on the stack
     ///
     /// ex: [: 1 2 3 4 5]
@@ -3704,6 +3697,7 @@ impl_primitive!(
     (2, MatrixDiv),
     (2, RangeStart),
     // Implementation details
+    (2(3), Over),
     (1, NBits(usize)),
     (1, DeshapeSub(i32)),
     (1, TransposeN(i32)),

@@ -284,6 +284,10 @@ opt!(
         ImplMod(PathFirst, args.clone(), *span)
     ),
     (
+        [Mod(Path, args, span), Prim(Len, _), Prim(Sign, _)],
+        ImplMod(PathSignLen, args.clone(), *span)
+    ),
+    (
         [Mod(Path, args, span), Push(n), Prim(Take, _)],
         [Push(n.clone()), ImplMod(PathTake, args.clone(), *span)]
     ),
@@ -294,6 +298,10 @@ opt!(
     (
         [ImplMod(Astar, args, span), Prim(First, _)],
         ImplMod(AstarFirst, args.clone(), *span)
+    ),
+    (
+        [ImplMod(Astar, args, span), Prim(Len, _), Prim(Sign, _)],
+        ImplMod(AstarSignLen, args.clone(), *span)
     ),
     (
         [ImplMod(Astar, args, span), Push(n), Prim(Take, _)],

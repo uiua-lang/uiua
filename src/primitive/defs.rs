@@ -3023,7 +3023,7 @@ primitive!(
     ///   : ⊓$Path$Cost
     /// As stated before, the costs can be omitted. Notice [un][box]ing is not necessary in this case, and a cost is not returned.
     /// ex: ⊢ path(+A₂¤)≍ 0_0 3_5
-    /// In the examples above, we use [first] to get only the first path. [first][path] and [pop][path] are optimized to not do extra work.
+    /// In the examples above, we use [first] to get only the first path. [first][path], [pop][path] and [sign][length][path] are optimized to not do extra work.
     /// If we want *all* shortest paths, we can omit [first].
     /// ex: path(+A₂¤)≍ 0_0 1_2
     /// If pathing on a grid like the examples above, we can use [un][where] to visualize the path that was taken!
@@ -3690,9 +3690,11 @@ impl_primitive!(
     (1, CountUnique),
     ((2)[3], Astar),
     ((2)[3], AstarFirst),
+    ((2)[3], AstarSignLen),
     ((1)[3], AstarPop),
     ((1)[3], AstarTake),
     ((2)[2], PathFirst),
+    ((2)[3], PathSignLen),
     ((1)[2], PathPop),
     ((1)[2], PathTake),
     (2[1], SplitByScalar),

@@ -20,6 +20,15 @@ pub fn path_first(
     path_impl(neighbors, is_goal, heuristic, PathMode::First, env)
 }
 
+pub fn path_sign_len(
+    neighbors: SigNode,
+    is_goal: SigNode,
+    heuristic: Option<SigNode>,
+    env: &mut Uiua,
+) -> UiuaResult {
+    path_impl(neighbors, is_goal, heuristic, PathMode::Exists, env)
+}
+
 pub fn path_take(
     neighbors: SigNode,
     is_goal: SigNode,
@@ -61,6 +70,7 @@ pub fn path_pop(
 enum PathMode {
     All,
     First,
+    Exists,
     CostOnly,
     Take(usize),
 }
@@ -407,6 +417,9 @@ fn path_impl(
             } else {
                 return Err(env.error("No path found"));
             }
+        }
+        PathMode::Exists => {
+            env.push(!ends.is_empty());
         }
         PathMode::CostOnly => {}
     }

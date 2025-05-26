@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.17
-- Sided `backward`
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

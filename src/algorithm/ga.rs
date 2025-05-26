@@ -334,12 +334,29 @@ fn is_complex(dims: u8, a: &Array<f64>) -> bool {
     a.shape.last() == Some(&2) && dims == 2
 }
 
+fn fast_monadic_complex(
+    dims: Option<u8>,
+    mut arr: Array<f64>,
+    f: impl Fn(f64, f64) -> [f64; 2],
+) -> Result<Array<f64>, Array<f64>> {
+    if arr.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
+        return Err(arr);
+    }
+    arr.meta.take_sorted_flags();
+    for chunk in arr.data.as_mut_slice().chunks_exact_mut(2) {
+        let [r, i] = [chunk[0], chunk[1]];
+        let [r, i] = f(r, i);
+        chunk[0] = r;
+        chunk[1] = i;
+    }
+    Ok(arr)
+}
+
 fn fast_dyadic_complex(
     dims: Option<u8>,
     mut a: Array<f64>,
     mut b: Array<f64>,
-    re: impl Fn(f64, f64, f64, f64) -> f64,
-    im: impl Fn(f64, f64, f64, f64) -> f64,
+    f: impl Fn(f64, f64, f64, f64) -> [f64; 2],
 ) -> Result<Array<f64>, [Array<f64>; 2]> {
     if a.shape.last() != Some(&2) || b.shape.last() != Some(&2) || dims.unwrap_or(2) != 2 {
         return Err([a, b]);
@@ -350,8 +367,7 @@ fn fast_dyadic_complex(
         drop(b);
         for chunk in a.data.as_mut_slice().chunks_exact_mut(2) {
             let [ar, ai] = [chunk[0], chunk[1]];
-            let r = re(ar, ai, ar, ai);
-            let i = im(ar, ai, ar, ai);
+            let [r, i] = f(ar, ai, ar, ai);
             chunk[0] = r;
             chunk[1] = i;
         }
@@ -365,8 +381,7 @@ fn fast_dyadic_complex(
                     .zip(b.data.as_mut_slice().chunks_exact_mut(2))
                 {
                     let [ar, ai, br, bi] = [a[0], a[1], b[0], b[1]];
-                    let r = re(ar, ai, br, bi);
-                    let i = im(ar, ai, br, bi);
+                    let [r, i] = f(ar, ai, br, bi);
                     b[0] = r;
                     b[1] = i;
                 }
@@ -376,8 +391,7 @@ fn fast_dyadic_complex(
                 let [br, bi] = [b.data[0], b.data[1]];
                 for a in a.data.as_mut_slice().chunks_exact_mut(2) {
                     let [ar, ai] = [a[0], a[1]];
-                    let r = re(ar, ai, br, bi);
-                    let i = im(ar, ai, br, bi);
+                    let [r, i] = f(ar, ai, br, bi);
                     a[0] = r;
                     a[1] = i;
                 }
@@ -387,8 +401,7 @@ fn fast_dyadic_complex(
                 let [ar, ai] = [a.data[0], a.data[1]];
                 for b in b.data.as_mut_slice().chunks_exact_mut(2) {
                     let [br, bi] = [b[0], b[1]];
-                    let r = re(ar, ai, br, bi);
-                    let i = im(ar, ai, br, bi);
+                    let [r, i] = f(ar, ai, br, bi);
                     b[0] = r;
                     b[1] = i;
                 }
@@ -500,18 +513,34 @@ fn normalize_impl_not_transposed(
 ) -> UiuaResult<Array<f64>> {
     let mut arr = arg.arr.clone();
     let mag = magnitude_impl(dims, metrics, arg, env)?;
-    bin_pervade_mut(mag, &mut arr, false, env, |a, b| {
-        if a == 0.0 {
-            0.0
-        } else {
-            b / a
-        }
-    })?;
+    bin_pervade_mut(mag, &mut arr, false, env, |a, b| div(b, a))?;
     Ok(arr)
 }
 
-pub fn sqrt(_spec: Spec, _val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-    Err(env.error("Geometric square root is not implemented"))
+fn div(num: f64, denom: f64) -> f64 {
+    if denom == 0.0 {
+        0.0
+    } else {
+        num / denom
+    }
+}
+
+pub fn sqrt(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    let (arr, ..) = ga_arg(val, env)?;
+    fast_monadic_complex(spec.dims, arr, |re, im| {
+        if im == 0.0 {
+            if re >= 0.0 {
+                [re.sqrt(), 0.0]
+            } else {
+                [0.0, re.abs().sqrt()]
+            }
+        } else {
+            let r = (re * re + im * im).sqrt().sqrt();
+            let theta = im.atan2(re) / 2.0;
+            [r * theta.cos(), r * theta.sin()]
+        }
+    })
+    .map_err(|_| env.error("Geometric square root is only implemented for complexes"))
 }
 
 pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -521,16 +550,11 @@ pub fn add(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f64>>
     // println!("b: {b}, semi: {bsemi}, sel: {b_sel:?}");
     // println!("size: {size}");
 
-    let [a_arr, b_arr] = match fast_dyadic_complex(
-        spec.dims,
-        a.arr,
-        b.arr,
-        |ar, _, br, _| ar + br,
-        |_, ai, _, bi| ai + bi,
-    ) {
-        Ok(res) => return Ok(res),
-        Err(ab) => ab,
-    };
+    let [a_arr, b_arr] =
+        match fast_dyadic_complex(spec.dims, a.arr, b.arr, |ar, ai, br, bi| [ar + br, ai + bi]) {
+            Ok(res) => return Ok(res),
+            Err(ab) => ab,
+        };
     a.arr = a_arr;
     b.arr = b_arr;
 
@@ -605,13 +629,10 @@ pub fn divide(spec: Spec, a: Value, b: Value, env: &Uiua) -> UiuaResult<Array<f6
     let (a, ..) = ga_arg(a, env)?;
     let (b, ..) = ga_arg(b, env)?;
     Ok(
-        match fast_dyadic_complex(
-            spec.dims,
-            a,
-            b,
-            |ar, ai, br, bi| (ar * br + ai * bi) / (ar * ar + ai * ai),
-            |ar, ai, br, bi| (ar * bi - ai * br) / (ar * ar + ai * ai),
-        ) {
+        match fast_dyadic_complex(spec.dims, a, b, |ar, ai, br, bi| {
+            let denom = ar * ar + ai * ai;
+            [(ar * br + ai * bi) / denom, (ar * bi - ai * br) / denom]
+        }) {
             Ok(res) => res,
             Err([a, mut b]) => {
                 if a.rank() >= b.rank() {
@@ -690,13 +711,9 @@ fn product_impl_not_transposed(
     }
 
     // Fast case for complex numbers
-    let [a_arr, b_arr] = match fast_dyadic_complex(
-        Some(dims),
-        a.arr,
-        b.arr,
-        |ar, ai, br, bi| ar * br - ai * bi,
-        |ar, ai, br, bi| ar * bi + ai * br,
-    ) {
+    let [a_arr, b_arr] = match fast_dyadic_complex(Some(dims), a.arr, b.arr, |ar, ai, br, bi| {
+        [ar * br - ai * bi, ar * bi + ai * br]
+    }) {
         Ok(res) => return Ok(res),
         Err(ab) => ab,
     };

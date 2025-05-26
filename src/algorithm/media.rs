@@ -102,7 +102,7 @@ impl SmartOutput {
     #[cfg(feature = "gif")]
     fn try_gif(value: &Value, frame_rate: f64) -> Option<Self> {
         let bytes = value_to_gif_bytes(value, frame_rate).ok()?;
-        match value.shape.dims() {
+        match &*value.shape {
             &[f, h, w] | &[f, h, w, _]
                 if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
             {
@@ -119,7 +119,7 @@ impl SmartOutput {
     #[cfg(feature = "apng")]
     fn try_apng(value: &Value, frame_rate: f64) -> Option<Self> {
         let bytes = value_to_apng_bytes(value, frame_rate).ok()?;
-        match value.shape.dims() {
+        match &*value.shape {
             &[f, h, w] | &[f, h, w, _]
                 if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
             {
@@ -405,7 +405,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
         _ => return Err("Image must be a numeric or complex array".into()),
     };
     #[allow(clippy::match_ref_pats)]
-    let [height, width, px_size] = match value.shape.dims() {
+    let [height, width, px_size] = match &*value.shape {
         &[a, b] if is_complex => [a, b, 3],
         &[a, b] if !is_complex => [a, b, 1],
         &[a, b, c] => [a, b, c],

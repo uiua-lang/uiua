@@ -1666,7 +1666,7 @@ impl Value {
     }
     fn unwhere_impl(&self, min_size: &[usize], env: &Uiua) -> UiuaResult<Self> {
         const INDICES_ERROR: &str = "Argument to ° un ⊚ where must be an array of naturals";
-        Ok(match self.shape.dims() {
+        Ok(match &*self.shape {
             [] | [_] => {
                 let indices = self.as_nats(env, INDICES_ERROR)?;
                 let is_sorted = indices

@@ -155,10 +155,6 @@ impl Shape {
         self.dims.truncate(at);
         second
     }
-    /// Get a reference to the dimensions
-    pub fn dims(&self) -> &[usize] {
-        &self.dims
-    }
     /// Get a mutable reference to the dimensions
     pub fn dims_mut(&mut self) -> &mut [usize] {
         &mut self.dims

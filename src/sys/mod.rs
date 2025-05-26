@@ -1933,7 +1933,7 @@ impl SysOp {
                     let samples = samples.as_num_array().ok_or_else(|| {
                         stream_env.error("Audio stream function must return a numeric array")
                     })?;
-                    match samples.shape.dims() {
+                    match &*samples.shape {
                         [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
                         &[n, 2] => {
                             let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);

@@ -1469,9 +1469,8 @@ impl SysOp {
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     Value::Byte(arr) => arr.data.into(),
-                    Value::Complex(_) => return Err(env.error("Cannot write complex array")),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
-                    Value::Box(_) => return Err(env.error("Cannot write box array")),
+                    val => return Err(env.error(format!("Cannot write {} array", val.type_name()))),
                 };
                 match handle {
                     Handle::STDOUT => (env.rt.backend)
@@ -1515,12 +1514,12 @@ impl SysOp {
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     Value::Byte(arr) => arr.data.into(),
-
-                    Value::Complex(_) => {
-                        return Err(env.error("Cannot write complex array to file"))
-                    }
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
-                    Value::Box(_) => return Err(env.error("Cannot write box array to file")),
+                    val => {
+                        return Err(
+                            env.error(format!("Cannot write {} array to file", val.type_name()))
+                        )
+                    }
                 };
                 (env.rt.backend)
                     .file_write_all(path.as_ref(), &bytes)
@@ -2021,23 +2020,10 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                 )))
             }
         },
-        Value::Num(_) => {
+        val => {
             return Err(env.error(format!(
                 "Command must be a string or box array, but it is {}",
-                value.type_name_plural()
-            )))
-        }
-        Value::Byte(_) => {
-            return Err(env.error(format!(
-                "Command must be a string or box array, but it is {}",
-                value.type_name_plural()
-            )))
-        }
-
-        Value::Complex(_) => {
-            return Err(env.error(format!(
-                "Command must be a string or box array, but it is {}",
-                value.type_name_plural()
+                val.type_name_plural()
             )))
         }
     }

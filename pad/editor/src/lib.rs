@@ -2348,12 +2348,14 @@ fn binding_style(docs: &BindingDocs) -> String {
     if let BindingDocsKind::Constant(Some(val)) = &docs.kind {
         if let Ok(nums) = val.as_nums(&IgnoreError, "") {
             if let [r, g, b] = *nums {
-                return format!(
-                    "color: rgb({}, {}, {})",
-                    (r * 255.0).round(),
-                    (g * 255.0).round(),
-                    (b * 255.0).round(),
-                );
+                if [r, g, b].iter().all(|c| (0.0..=1.0).contains(c)) {
+                    return format!(
+                        "color: rgb({}, {}, {})",
+                        (r * 255.0).round(),
+                        (g * 255.0).round(),
+                        (b * 255.0).round(),
+                    );
+                }
             }
         }
     }

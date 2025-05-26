@@ -449,12 +449,13 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .count()
                         .saturating_sub(1);
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
+                        let row_start = cell_row.first().copied().unwrap_or_default();
                         subrow.extend(cell_row);
                         // Add column dividers
                         if T::box_lines()
                             && !self.is_map()
                             && (j + 1 < metagrid_width
-                                || self.shape[self.rank() - 1 - horiz * 2] == 1)
+                                || self.shape[self.rank() - 1 - horiz * 2] == 1 && row_start != '∙')
                         {
                             for mut line in Line::set(horiz) {
                                 if j + 1 == metagrid_width {

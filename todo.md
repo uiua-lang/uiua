@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.17
+- Fix crash in large `unwhere`
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

@@ -419,9 +419,7 @@ fn path_impl(
             }
         }
         PathMode::Exists => {
-            env.push(Array::scalar(
-                ends.into_iter().next().into_iter().count() as u8
-            ));
+            env.push(!ends.is_empty());
         }
         PathMode::CostOnly => {}
     }

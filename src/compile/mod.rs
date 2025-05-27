@@ -417,14 +417,8 @@ impl Compiler {
         kind: ScopeKind,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<(Module, T)> {
-        let setter_names = match &kind {
-            ScopeKind::Function => take(&mut self.scope.setter_names),
-            _ => Default::default(),
-        };
-
         self.higher_scopes.push(take(&mut self.scope));
         self.scope.kind = kind;
-        self.scope.setter_names = setter_names;
 
         let res = f(self);
 
@@ -1562,7 +1556,7 @@ impl Compiler {
                     self.errors.push(error);
                     0
                 } else {
-                    let index = self.scope.setter_names.len();
+                    let index = self.scopes().map(|sc| sc.setter_names.len()).sum();
                     (self.scope.setter_names).insert(set.ident.value.clone(), set.ident.span);
                     index
                 };

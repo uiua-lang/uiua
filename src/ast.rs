@@ -358,6 +358,7 @@ pub enum Word {
     },
     Subscripted(Box<Subscripted>),
     InlineMacro(InlineMacro),
+    ArgSetter(ArgSetter),
 }
 
 impl PartialEq for Word {
@@ -475,6 +476,7 @@ impl fmt::Debug for Word {
             Word::InlineMacro(InlineMacro { ident, func, .. }) => {
                 write!(f, "inline_macro({:?}{}))", func.value, ident.value)
             }
+            Word::ArgSetter(setter) => setter.fmt(f),
         }
     }
 }
@@ -778,6 +780,28 @@ impl Modifier {
             Modifier::Ref(r) => r.modifier_args(),
             Modifier::Macro(mac) => ident_modifier_args(&mac.ident.value),
         }
+    }
+}
+
+/// An argument setter
+#[derive(Clone, Serialize)]
+pub struct ArgSetter {
+    /// The name of the field
+    pub ident: Sp<Ident>,
+    /// The span of the colon
+    pub colon_span: CodeSpan,
+}
+
+impl fmt::Debug for ArgSetter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:", self.ident.value)
+    }
+}
+
+impl ArgSetter {
+    /// Get the full span
+    pub fn span(&self) -> CodeSpan {
+        self.ident.span.clone().merge(self.colon_span.clone())
     }
 }
 

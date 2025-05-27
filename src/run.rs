@@ -49,6 +49,8 @@ pub(crate) struct Runtime {
     pub(crate) call_stack: Vec<StackFrame>,
     /// The local stack
     pub(crate) local_stack: EcoVec<(usize, Value)>,
+    /// Set args
+    set_args: Vec<Option<Value>>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -197,6 +199,7 @@ impl Default for Runtime {
                 ..Default::default()
             }],
             local_stack: EcoVec::new(),
+            set_args: Vec::new(),
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
@@ -782,6 +785,30 @@ impl Uiua {
                     Some(name) => format!("Not currently in a scope for def `{name}`"),
                     None => "Not currently in a scope for data def".into(),
                 }))
+            }),
+            Node::SetArg { index, span } => self.with_span(span, |env| {
+                let val = env.pop(1)?;
+                if env.rt.set_args.len() <= index {
+                    env.rt.set_args.resize(index + 1, None);
+                }
+                env.rt.set_args[index] = Some(val);
+                Ok(())
+            }),
+            Node::UseArg {
+                set_index,
+                field_index,
+                span,
+            } => self.with_span(span, |env| {
+                if let Some(Some(mut row)) = (env.rt.set_args).get_mut(set_index).map(Option::take)
+                {
+                    let mut target = env.pop(1)?;
+                    if let Value::Box(_) = target {
+                        row.box_if_not();
+                    }
+                    target.set_row(field_index, row, env)?;
+                    env.push(target);
+                }
+                Ok(())
             }),
         };
         if self.rt.time_instrs {
@@ -1518,6 +1545,7 @@ impl Uiua {
                     .collect(),
                 under_stack: Vec::new(),
                 local_stack: self.rt.local_stack.clone(),
+                set_args: Vec::new(),
                 fill_stack: Vec::new(),
                 fill_boundary_stack: Vec::new(),
                 unfill_stack: Vec::new(),

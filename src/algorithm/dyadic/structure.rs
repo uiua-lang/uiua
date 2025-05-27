@@ -16,6 +16,27 @@ use crate::{
     val_as_arr, Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
+impl Value {
+    #[allow(clippy::unit_arg)]
+    pub(crate) fn set_row(&mut self, index: usize, row: Self, env: &Uiua) -> UiuaResult {
+        self.generic_bin_mut(
+            row,
+            |arr, row| Ok(arr.set_row(index, row)),
+            |arr, row| Ok(arr.set_row(index, row)),
+            |arr, row| Ok(arr.set_row(index, row)),
+            |arr, row| Ok(arr.set_row(index, row)),
+            |arr, row| Ok(arr.set_row(index, row)),
+            |a, b| {
+                env.error(format!(
+                    "Cannot insert {} row into {} array",
+                    b.type_name(),
+                    a.type_name()
+                ))
+            },
+        )
+    }
+}
+
 impl<T: Clone> Array<T> {
     #[track_caller]
     pub(crate) fn remove_row(&mut self, index: usize) {
@@ -34,6 +55,7 @@ impl<T: Clone> Array<T> {
         self.data.truncate(new_len);
         self.shape[0] -= 1;
     }
+    #[track_caller]
     pub(crate) fn set_row(&mut self, index: usize, row: Self) {
         let row_len = self.row_len();
         let start = index * row_len;

@@ -887,11 +887,22 @@ impl Parser<'_> {
             name = next;
         }
         let span = start_span.merge(name.span.clone());
-        Some(span.sp(Word::Ref(Ref {
-            name,
-            path,
-            in_macro_arg: false,
-        })))
+        let colon_span = path
+            .is_empty()
+            .then(|| self.exact(AsciiToken::Colon.into()))
+            .flatten();
+        Some(span.sp(if let Some(colon_span) = colon_span {
+            Word::ArgSetter(ArgSetter {
+                ident: name,
+                colon_span,
+            })
+        } else {
+            Word::Ref(Ref {
+                name,
+                path,
+                in_macro_arg: false,
+            })
+        }))
     }
     fn signature(&mut self, error_on_invalid: bool) -> Option<Sp<Signature>> {
         let reset = self.index;

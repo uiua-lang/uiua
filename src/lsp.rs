@@ -773,6 +773,13 @@ impl Spanner {
                     }
                     spans.push(ident.span.clone().sp(mac_delim_kind));
                 }
+                Word::ArgSetter(setter) => {
+                    spans.push(setter.ident.span.clone().sp(SpanKind::Ident {
+                        docs: None,
+                        original: false,
+                    }));
+                    spans.push(setter.colon_span.clone().sp(SpanKind::Delimiter));
+                }
             }
         }
         spans.retain(|sp| !sp.span.as_str(self.inputs(), str::is_empty));

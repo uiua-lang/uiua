@@ -78,6 +78,10 @@ node!(
     GetLocal { def: usize, span: usize },
     /// Set a local value
     SetLocal { def: usize, span: usize },
+    /// Set an optional argument
+    SetArg { index: usize, span: usize },
+    /// Use an optional argument
+    UseArg { set_index: usize, field_index: usize, span: usize },
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),
@@ -787,6 +791,12 @@ impl fmt::Debug for Node {
             }
             Node::GetLocal { def, .. } => write!(f, "get-local {def}"),
             Node::SetLocal { def, .. } => write!(f, "set-local {def}"),
+            Node::SetArg { index, .. } => write!(f, "set-arg {index}"),
+            Node::UseArg {
+                set_index,
+                field_index,
+                ..
+            } => write!(f, "set-arg {set_index}->{field_index}"),
         }
     }
 }

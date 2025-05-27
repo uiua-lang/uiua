@@ -1255,6 +1255,10 @@ impl Formatter<'_> {
                 }
                 self.push(&ident.span, &ident.value);
             }
+            Word::ArgSetter(setter) => {
+                self.push(&setter.ident.span, &setter.ident.value);
+                self.push(&setter.colon_span, ":");
+            }
         }
     }
     fn format_primitive(&mut self, prim: Primitive, span: &CodeSpan) {
@@ -1640,6 +1644,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::FlipLine => false,
         Word::SemanticComment(_) => true,
         Word::OutputComment { .. } => true,
+        Word::ArgSetter(_) => true,
     }
 }
 

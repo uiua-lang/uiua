@@ -499,39 +499,59 @@ impl Compiler {
                 "Data functions are experimental. To use them, add \
                 `# Experimental!` to the top of the file."
             });
-            self.in_method(&scope_data_def, |comp| {
+            self.in_scope(ScopeKind::Binding, |comp| {
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
                 if data.variant {
                     comp.add_error(word_span.clone(), "Variants may not have functions");
                 }
-                let inner = comp.words_sig(words)?;
-                let span = comp.add_span(word_span.clone());
-                let mut construct = Node::Call(constructor_func.clone(), span);
-                for _ in 0..inner.sig.args() {
-                    construct = Node::Mod(
-                        Primitive::Dip,
-                        eco_vec![construct.sig_node().unwrap()],
-                        span,
-                    );
+                // Compile function
+                let names = fields.iter().map(|field| {
+                    let local = LocalName {
+                        index: field.global_index,
+                        public: false,
+                    };
+                    (field.name.clone(), local)
+                });
+                let (_, sn) = comp.in_scope(ScopeKind::AllInModule, move |comp| {
+                    comp.scope.names.extend(names);
+                    comp.words_sig(words)
+                })?;
+                // Ensure all fields have defaults
+                for field in &fields {
+                    if field.init.is_none() {
+                        comp.errors.push(
+                            comp.error(
+                                data.init_span.clone(),
+                                "Data functions require all fields to have defaults",
+                            )
+                            .with_info([(
+                                format!("{} has no default", field.name),
+                                Some(field.name_span.clone().into()),
+                            )]),
+                        );
+                    }
                 }
-                let node = Node::from_iter([
-                    construct,
-                    Node::WithLocal {
-                        def: def_index,
-                        inner: inner.into(),
-                        span,
-                    },
-                ]);
-                let sig = comp.sig_of(&node, &word_span)?;
                 let local = LocalName {
                     index: comp.next_global,
                     public: true,
                 };
                 comp.next_global += 1;
-                let func =
-                    comp.asm
-                        .add_function(FunctionId::Named(constructor_name.clone()), sig, node);
+                let func = comp.asm.add_function(
+                    FunctionId::Named(constructor_name.clone()),
+                    sn.sig,
+                    sn.node,
+                );
+                comp.data_function_constructors.insert(
+                    local.index,
+                    (
+                        contructor_local.index,
+                        (fields.iter().enumerate())
+                            .map(|(i, field)| (field.name.clone(), i))
+                            .collect(),
+                    ),
+                );
+                let span = comp.add_span(word_span.clone());
                 function_stuff = Some((local, func, span));
                 Ok(())
             })?;

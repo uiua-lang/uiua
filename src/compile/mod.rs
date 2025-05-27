@@ -91,6 +91,8 @@ pub struct Compiler {
     macro_env: Uiua,
     /// Start addresses
     start_addrs: Vec<usize>,
+    /// Data function constructors
+    data_function_constructors: HashMap<usize, (usize, Vec<(EcoString, usize)>)>,
 }
 
 impl Default for Compiler {
@@ -119,6 +121,7 @@ impl Default for Compiler {
             pre_eval_mode: PreEvalMode::default(),
             macro_env: Uiua::default(),
             start_addrs: Vec::new(),
+            data_function_constructors: HashMap::new(),
         }
     }
 }
@@ -201,6 +204,8 @@ pub(crate) struct Scope {
     experimental_error: bool,
     /// Whether an error has been emitted for fill function signatures
     fill_sig_error: bool,
+    /// Names of argument setters
+    setter_names: IndexMap<Ident, CodeSpan>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -254,6 +259,7 @@ impl Default for Scope {
             experimental: false,
             experimental_error: false,
             fill_sig_error: false,
+            setter_names: IndexMap::new(),
         }
     }
 }
@@ -1526,6 +1532,23 @@ impl Compiler {
                 );
                 Node::empty()
             }
+            Word::ArgSetter(set) => {
+                let span = self.add_span(word.span);
+                let index = if let Some(existing) = self.scope.setter_names.get(&set.ident.value) {
+                    let message =
+                        format!("{} has already been set in this scope.", set.ident.value);
+                    let error = self
+                        .error(set.ident.span, message)
+                        .with_info([("Set here".into(), Some(existing.clone().into()))]);
+                    self.errors.push(error);
+                    0
+                } else {
+                    let index = self.scope.setter_names.len();
+                    (self.scope.setter_names).insert(set.ident.value, set.ident.span);
+                    index
+                };
+                Node::SetArg { index, span }
+            }
         })
     }
     fn force_sig(&mut self, mut node: Node, new_sig: Signature, span: &CodeSpan) -> Node {
@@ -1915,9 +1938,7 @@ impl Compiler {
             BindingKind::Import(path) => {
                 if let Some(local) = self.imports.get(&path).and_then(|m| m.names.get("Call")) {
                     self.code_meta.global_references.remove(&span);
-                    self.code_meta
-                        .global_references
-                        .insert(span.clone(), local.index);
+                    (self.code_meta.global_references).insert(span.clone(), local.index);
                     self.global_index(local.index, single_ident, span)
                 } else {
                     self.add_error(
@@ -1929,6 +1950,7 @@ impl Compiler {
                 }
             }
             global @ (BindingKind::Module(_) | BindingKind::Scope(_)) => {
+                // Handle called modules
                 let names = match &global {
                     BindingKind::Module(m) => &m.names,
                     BindingKind::Scope(i) => {
@@ -1936,12 +1958,31 @@ impl Compiler {
                     }
                     _ => unreachable!(),
                 };
-                if let Some(local) = names.get("Call").or_else(|| names.get("New")) {
+                if let Some(&local) = names.get("Call").or_else(|| names.get("New")) {
                     self.code_meta.global_references.remove(&span);
-                    self.code_meta
-                        .global_references
-                        .insert(span.clone(), local.index);
-                    self.global_index(local.index, single_ident, span)
+                    (self.code_meta.global_references).insert(span.clone(), local.index);
+                    let mut node = self.global_index(local.index, single_ident, span.clone());
+                    let spandex = node.span().unwrap();
+                    // Handle data functions
+                    if let Some(&(index, ref fields)) =
+                        self.data_function_constructors.get(&local.index)
+                    {
+                        let setter_names = take(&mut self.scope.setter_names);
+                        for &(ref field_name, field_index) in fields {
+                            if let Some(set_index) =
+                                setter_names.keys().position(|name| name == field_name)
+                            {
+                                node.prepend(Node::UseArg {
+                                    set_index,
+                                    field_index,
+                                    span: spandex,
+                                });
+                            }
+                        }
+                        let construct = self.global_index(index, single_ident, span);
+                        node.prepend(construct);
+                    }
+                    node
                 } else {
                     self.add_error(
                         span,

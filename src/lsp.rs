@@ -1656,6 +1656,7 @@ mod server {
                         stt
                     }
                     SpanKind::Placeholder(_) => SemanticTokenType::PARAMETER,
+                    SpanKind::ArgSetter(_) => MONADIC_FUNCTION_STT,
                     _ => continue,
                 };
                 let mut token_type = UIUA_SEMANTIC_TOKEN_TYPES

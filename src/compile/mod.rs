@@ -94,7 +94,7 @@ pub struct Compiler {
     /// Start addresses
     start_addrs: Vec<usize>,
     /// Data function constructors
-    data_function_constructors: HashMap<usize, (usize, BTreeMap<EcoString, usize>)>,
+    data_function_fields: HashMap<usize, BTreeMap<EcoString, usize>>,
 }
 
 impl Default for Compiler {
@@ -123,7 +123,7 @@ impl Default for Compiler {
             pre_eval_mode: PreEvalMode::default(),
             macro_env: Uiua::default(),
             start_addrs: Vec::new(),
-            data_function_constructors: HashMap::new(),
+            data_function_fields: HashMap::new(),
         }
     }
 }
@@ -2004,35 +2004,9 @@ impl Compiler {
                     if !self.scope.setter_names.is_empty() {
                         node.push(Node::ClearArgs);
                     }
-                    let spandex = node.span().unwrap();
                     // Handle data functions
-                    if let Some((index, mut fields)) =
-                        self.data_function_constructors.get(&local.index).cloned()
-                    {
-                        let setter_names = take(&mut self.scope.setter_names);
-                        let mut unused = None;
-                        for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate()
-                        {
-                            if let Some(field_index) = fields.remove(&name) {
-                                node.prepend(Node::UseArg {
-                                    set_index,
-                                    field_index,
-                                    reorg: false,
-                                    span: spandex,
-                                });
-                            } else {
-                                unused = Some((name, setter_span));
-                            }
-                        }
-                        if let Some((name, setter_span)) = unused {
-                            self.unused_setter_error(
-                                &name,
-                                setter_span,
-                                (span.clone(), fields.into_keys().collect()),
-                            );
-                        }
-                        let construct = self.global_index_impl(index, false, single_ident, span);
-                        node.prepend(construct);
+                    if let Some(fields) = self.data_function_fields.get(&local.index).cloned() {
+                        node.prepend(self.sort_args(fields, &span))
                     }
                     node
                 } else {
@@ -2200,31 +2174,11 @@ impl Compiler {
 
         match prim {
             Primitive::Voxels => {
-                let setter_names = take(&mut self.scope.setter_names);
-                let mut unused = None;
-                let mut used: BTreeMap<_, _> = all::<VoxelsParam>()
+                let used = all::<VoxelsParam>()
                     .enumerate()
-                    .map(|(i, p)| (p.str(), i))
+                    .map(|(i, p)| (p.str().into(), i))
                     .collect();
-                for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate() {
-                    if let Some(field_index) = used.remove(name.as_str()) {
-                        node.prepend(Node::UseArg {
-                            set_index,
-                            field_index,
-                            reorg: true,
-                            span: spandex,
-                        });
-                    } else {
-                        unused.get_or_insert((name, setter_span));
-                    }
-                }
-                if let Some((name, setter_span)) = unused {
-                    self.unused_setter_error(
-                        &name,
-                        setter_span,
-                        (span, used.into_keys().map(Into::into).collect()),
-                    );
-                }
+                node.prepend(self.sort_args(used, &span))
             }
             Primitive::Sys(_) => self.forbid_arg_setters(&span),
             prim if [PrimClass::Encoding].contains(&prim.class()) => self.forbid_arg_setters(&span),
@@ -2865,6 +2819,27 @@ impl Compiler {
                 span.into().cloned().map(|span| (span, Vec::new())),
             );
         }
+    }
+    fn sort_args(&mut self, mut used: BTreeMap<EcoString, usize>, span: &CodeSpan) -> Node {
+        let setter_names = take(&mut self.scope.setter_names);
+        let mut unused = None;
+        let mut indices = EcoVec::new();
+        for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate().rev() {
+            if let Some(field_index) = used.remove(name.as_str()) {
+                indices.push((set_index, field_index))
+            } else {
+                unused.get_or_insert((name, setter_span));
+            }
+        }
+        if let Some((name, setter_span)) = unused {
+            self.unused_setter_error(
+                &name,
+                setter_span,
+                (span.clone(), used.into_keys().collect()),
+            );
+        }
+
+        Node::SortArgs { indices }
     }
 }
 

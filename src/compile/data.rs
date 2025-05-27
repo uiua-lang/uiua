@@ -372,14 +372,18 @@ impl Compiler {
                 sig.update_outputs(|o| o + arg.sig.outputs());
                 inner.push(arg.node);
             }
-            Node::Array {
+            let mut node = Node::Array {
                 len: fields.len(),
                 inner: inner.into(),
                 boxed,
                 allow_ext: true,
                 prim: None,
                 span,
+            };
+            if data.func.is_some() {
+                node.push(Node::UseArgs { span });
             }
+            node
         } else {
             Node::empty()
         };
@@ -502,9 +506,25 @@ impl Compiler {
             self.in_scope(ScopeKind::Binding, |comp| {
                 let word_span =
                     (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
+                // Forbid variant
                 if data.variant {
                     comp.add_error(word_span.clone(), "Variants may not have functions");
                 }
+                // Ensure all fields have defaults
+                // for field in &fields {
+                //     if field.init.is_none() {
+                //         comp.errors.push(
+                //             comp.error(
+                //                 data.init_span.clone(),
+                //                 "Data functions require all fields to have defaults",
+                //             )
+                //             .with_info([(
+                //                 format!("{} has no default", field.name),
+                //                 Some(field.name_span.clone().into()),
+                //             )]),
+                //         );
+                //     }
+                // }
                 // Compile function
                 let names = fields.iter().map(|field| {
                     let local = LocalName {
@@ -513,25 +533,14 @@ impl Compiler {
                     };
                     (field.name.clone(), local)
                 });
-                let (_, sn) = comp.in_scope(ScopeKind::AllInModule, move |comp| {
+                let (_, mut sn) = comp.in_scope(ScopeKind::AllInModule, move |comp| {
                     comp.scope.names.extend(names);
                     comp.words_sig(words)
                 })?;
-                // Ensure all fields have defaults
-                for field in &fields {
-                    if field.init.is_none() {
-                        comp.errors.push(
-                            comp.error(
-                                data.init_span.clone(),
-                                "Data functions require all fields to have defaults",
-                            )
-                            .with_info([(
-                                format!("{} has no default", field.name),
-                                Some(field.name_span.clone().into()),
-                            )]),
-                        );
-                    }
-                }
+                // Add constructor
+                sn.node.prepend(Node::Call(constructor_func.clone(), span));
+                sn.sig = sn.sig.compose(Signature::new(constructor_args, 1));
+                // Make function
                 let local = LocalName {
                     index: comp.next_global,
                     public: true,
@@ -542,14 +551,12 @@ impl Compiler {
                     sn.sig,
                     sn.node,
                 );
-                comp.data_function_constructors.insert(
+                comp.data_function_fields.insert(
                     local.index,
-                    (
-                        contructor_local.index,
-                        (fields.iter().enumerate())
-                            .map(|(i, field)| (field.name.clone(), i))
-                            .collect(),
-                    ),
+                    (fields.iter().enumerate())
+                        .filter(|(_, field)| field.init.as_ref().is_some_and(|sn| sn.sig == (0, 1)))
+                        .map(|(i, field)| (field.name.clone(), i))
+                        .collect(),
                 );
                 let span = comp.add_span(word_span.clone());
                 function_stuff = Some((local, func, span));

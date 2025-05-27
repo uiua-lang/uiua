@@ -886,34 +886,31 @@ pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
     let mut scale = None;
     let mut fog = None;
 
-    let args = take(&mut env.rt.set_args);
-    for (param, arg) in all::<VoxelsParam>().zip(args) {
-        if let Some(arg) = arg {
-            match param {
-                VoxelsParam::Fog => {
-                    let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
-                    match *nums {
-                        [gray] if arg.shape.is_empty() => fog = Some([gray; 3]),
-                        [r, g, b] => fog = Some([r, g, b]),
-                        _ => {
-                            return Err(env.error(format!(
-                                "Fog must be a scalar or list of 3 numbers, but it's shape is {}",
-                                arg.shape
-                            )))
-                        }
+    for (arg, index) in take(&mut env.rt.set_args).into_iter().flatten() {
+        match all::<VoxelsParam>().nth(index).unwrap() {
+            VoxelsParam::Fog => {
+                let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
+                match *nums {
+                    [gray] if arg.shape.is_empty() => fog = Some([gray; 3]),
+                    [r, g, b] => fog = Some([r, g, b]),
+                    _ => {
+                        return Err(env.error(format!(
+                            "Fog must be a scalar or list of 3 numbers, but it's shape is {}",
+                            arg.shape
+                        )))
                     }
                 }
-                VoxelsParam::Scale => scale = Some(arg.as_num(env, "Scale must be a number")?),
-                VoxelsParam::Camera => {
-                    let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
-                    if let [x, y, z] = *nums {
-                        pos = Some([x, y, z]);
-                    } else {
-                        return Err(env.error(format!(
-                            "Camera position must be 3 numbers, but it's shape is {}",
-                            arg.shape
-                        )));
-                    }
+            }
+            VoxelsParam::Scale => scale = Some(arg.as_num(env, "Scale must be a number")?),
+            VoxelsParam::Camera => {
+                let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
+                if let [x, y, z] = *nums {
+                    pos = Some([x, y, z]);
+                } else {
+                    return Err(env.error(format!(
+                        "Camera position must be 3 numbers, but it's shape is {}",
+                        arg.shape
+                    )));
                 }
             }
         }

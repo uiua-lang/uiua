@@ -80,8 +80,10 @@ node!(
     SetLocal { def: usize, span: usize },
     /// Set an optional argument
     SetArg { index: usize, span: usize },
-    /// Use an optional argument
-    UseArg { set_index: usize, field_index: usize, reorg: bool, span: usize },
+    /// Sort optional arguments
+    SortArgs { indices: EcoVec<(usize, usize)> },
+    /// Use optional arguments
+    UseArgs { span: usize },
     /// Clear optional arguments
     ClearArgs,
     /// Push a value onto the stack
@@ -794,11 +796,8 @@ impl fmt::Debug for Node {
             Node::GetLocal { def, .. } => write!(f, "get-local {def}"),
             Node::SetLocal { def, .. } => write!(f, "set-local {def}"),
             Node::SetArg { index, .. } => write!(f, "set-arg {index}"),
-            Node::UseArg {
-                set_index,
-                field_index,
-                ..
-            } => write!(f, "use-arg {set_index}->{field_index}"),
+            Node::SortArgs { indices: rise, .. } => write!(f, "sort-args {rise:?}"),
+            Node::UseArgs { .. } => write!(f, "use-args"),
             Node::ClearArgs => write!(f, "clear-args"),
         }
     }
@@ -866,7 +865,10 @@ impl Node {
                     .is_some_and(|sn| recurse(&sn.node, purity, asm, visited)),
                 Node::WithLocal { inner, .. } => recurse(&inner.node, purity, asm, visited),
                 Node::Dynamic(_) => false,
-                Node::SetArg { .. } | Node::UseArg { .. } | Node::ClearArgs => false,
+                Node::SetArg { .. }
+                | Node::SortArgs { .. }
+                | Node::UseArgs { .. }
+                | Node::ClearArgs => false,
                 _ => true,
             };
             visited.truncate(len);

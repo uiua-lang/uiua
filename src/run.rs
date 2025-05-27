@@ -50,7 +50,7 @@ pub(crate) struct Runtime {
     /// The local stack
     pub(crate) local_stack: EcoVec<(usize, Value)>,
     /// Set args
-    pub(crate) set_args: Vec<Option<Value>>,
+    pub(crate) set_args: Vec<Option<(Value, usize)>>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -791,31 +791,29 @@ impl Uiua {
                 if env.rt.set_args.len() <= index {
                     env.rt.set_args.resize(index + 1, None);
                 }
-                env.rt.set_args[index] = Some(val);
+                env.rt.set_args[index] = Some((val, index));
                 Ok(())
             }),
-            Node::UseArg {
-                set_index,
-                field_index,
-                reorg,
-                span,
-            } => self.with_span(span, |env| {
-                if reorg {
-                    let max = set_index.max(field_index);
-                    if env.rt.set_args.len() <= max {
-                        env.rt.set_args.resize(max + 1, None);
+            Node::SortArgs { indices } => {
+                for (i, index) in indices {
+                    if let Some((_, idx)) = &mut self.rt.set_args[i] {
+                        *idx = index
                     }
-                    env.rt.set_args.swap(set_index, field_index);
-                } else if let Some(Some(mut row)) =
-                    (env.rt.set_args).get_mut(set_index).map(Option::take)
-                {
-                    let mut target = env.pop(1)?;
+                }
+                Ok(())
+            }
+            Node::UseArgs { span } => self.with_span(span, |env| {
+                let mut target = env.pop(1)?;
+                for arg in take(&mut env.rt.set_args) {
+                    let Some((mut row, index)) = arg else {
+                        continue;
+                    };
                     if let Value::Box(_) = target {
                         row.box_if_not();
                     }
-                    target.set_row(field_index, row, env)?;
-                    env.push(target);
+                    target.set_row(index, row, env)?;
                 }
+                env.push(target);
                 Ok(())
             }),
             Node::ClearArgs => {

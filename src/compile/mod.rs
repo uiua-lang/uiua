@@ -21,7 +21,6 @@ use std::{
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
-use enum_iterator::all;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
@@ -38,12 +37,13 @@ use crate::{
     parse::{
         flip_unsplit_items, flip_unsplit_lines, max_placeholder, parse, split_items, split_words,
     },
-    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
-    DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
+    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, DefInfo,
+    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
     RunMode, SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind,
     UiuaResult, Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
+pub(crate) use data::*;
 pub use pre_eval::PreEvalMode;
 
 /// The Uiua compiler
@@ -93,8 +93,8 @@ pub struct Compiler {
     macro_env: Uiua,
     /// Start addresses
     start_addrs: Vec<usize>,
-    /// Data function constructors
-    data_function_fields: HashMap<usize, BTreeMap<EcoString, usize>>,
+    /// Data function info, maps Call index to info
+    data_function_info: HashMap<usize, DataFuncInfo>,
 }
 
 impl Default for Compiler {
@@ -123,7 +123,7 @@ impl Default for Compiler {
             pre_eval_mode: PreEvalMode::default(),
             macro_env: Uiua::default(),
             start_addrs: Vec::new(),
-            data_function_fields: HashMap::new(),
+            data_function_info: HashMap::new(),
         }
     }
 }
@@ -2005,8 +2005,8 @@ impl Compiler {
                         node.push(Node::ClearArgs);
                     }
                     // Handle data functions
-                    if let Some(fields) = self.data_function_fields.get(&local.index).cloned() {
-                        node.prepend(self.sort_args(fields, &span))
+                    if let Some(info) = self.data_function_info.get(&local.index).cloned() {
+                        node.prepend(self.sort_args(&info.name, info.fields, &span))
                     }
                     node
                 } else {
@@ -2174,11 +2174,7 @@ impl Compiler {
 
         match prim {
             Primitive::Voxels => {
-                let used = all::<VoxelsParam>()
-                    .enumerate()
-                    .map(|(i, p)| (p.str().into(), i))
-                    .collect();
-                node.prepend(self.sort_args(used, &span))
+                node.prepend(self.sort_args("voxels", VoxelsParam::field_info(), &span))
             }
             Primitive::Sys(_) => self.forbid_arg_setters(&span),
             prim if [PrimClass::Encoding].contains(&prim.class()) => self.forbid_arg_setters(&span),
@@ -2786,6 +2782,58 @@ impl Compiler {
             )
         })
     }
+    fn sort_args(
+        &mut self,
+        def_name: &str,
+        mut used: BTreeMap<EcoString, FieldInfo>,
+        span: &CodeSpan,
+    ) -> Node {
+        let setter_names = take(&mut self.scope.setter_names);
+        let mut unused = None;
+        let mut indices = EcoVec::new();
+        for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate().rev() {
+            if let Some(info) = used.remove(name.as_str()) {
+                if let Some(sig) = info.init_sig {
+                    if sig != (0, 1) {
+                        self.add_error(
+                            setter_span,
+                            format!(
+                                "Optional args must have an initializer with signature {}, \
+                                but {def_name}~{name} has signature {}",
+                                Signature::new(0, 1),
+                                sig
+                            ),
+                        );
+                        continue;
+                    }
+                } else {
+                    self.add_error(
+                        setter_span,
+                        format!(
+                            "Optional args must have an initializer, \
+                            but {def_name}~{name} does not have one"
+                        ),
+                    );
+                    continue;
+                }
+                indices.push((set_index, info.index));
+                self.code_meta
+                    .arg_setter_docs
+                    .insert(setter_span, info.comment);
+            } else {
+                unused.get_or_insert((name, setter_span));
+            }
+        }
+        if let Some((name, setter_span)) = unused {
+            self.unused_setter_error(
+                &name,
+                setter_span,
+                (span.clone(), used.into_keys().collect()),
+            );
+        }
+
+        Node::SortArgs { indices }
+    }
     fn unused_setter_error(
         &mut self,
         name: &str,
@@ -2819,27 +2867,6 @@ impl Compiler {
                 span.into().cloned().map(|span| (span, Vec::new())),
             );
         }
-    }
-    fn sort_args(&mut self, mut used: BTreeMap<EcoString, usize>, span: &CodeSpan) -> Node {
-        let setter_names = take(&mut self.scope.setter_names);
-        let mut unused = None;
-        let mut indices = EcoVec::new();
-        for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate().rev() {
-            if let Some(field_index) = used.remove(name.as_str()) {
-                indices.push((set_index, field_index))
-            } else {
-                unused.get_or_insert((name, setter_span));
-            }
-        }
-        if let Some((name, setter_span)) = unused {
-            self.unused_setter_error(
-                &name,
-                setter_span,
-                (span.clone(), used.into_keys().collect()),
-            );
-        }
-
-        Node::SortArgs { indices }
     }
 }
 

@@ -26,11 +26,11 @@ use web_sys::{
     KeyboardEvent, MouseEvent,
 };
 
-use crate::binding_style;
 use crate::{
     backend::{OutputItem, WebBackend},
     binding_class, code_font, modifier_class, prim_sig_class,
 };
+use crate::{binding_style, sig_class};
 
 #[derive(Clone)]
 pub struct ChallengeDef {
@@ -679,6 +679,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         SpanKind::Subscript(None, _) => "number-literal",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, *n),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),
+                        SpanKind::ArgSetter(_) => sig_class((1, 0).into()),
                         _ => "",
                     };
                     match kind {
@@ -1002,6 +1003,21 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     </span>
                                 }
                                 .into_view(),
+                            )
+                        }
+                        SpanKind::ArgSetter(comment) => {
+                            let class = format!("code-span {color_class}");
+                            frag_views.push(
+                                if let Some(comment) = comment.map(|com| com.to_string()) {
+                                    view! {
+                                        <span class=class data-title=comment>
+                                            {text}
+                                        </span>
+                                    }
+                                    .into_view()
+                                } else {
+                                    view!(<span class=class>{text}</span>).into_view()
+                                },
                             )
                         }
                         _ => {

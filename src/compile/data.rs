@@ -1,6 +1,17 @@
-use crate::DefInfo;
-
 use super::*;
+
+#[derive(Clone)]
+pub(crate) struct DataFuncInfo {
+    pub name: EcoString,
+    pub fields: BTreeMap<EcoString, FieldInfo>,
+}
+
+#[derive(Clone)]
+pub(crate) struct FieldInfo {
+    pub index: usize,
+    pub init_sig: Option<Signature>,
+    pub comment: EcoString,
+}
 
 impl Compiler {
     pub(super) fn data_def(
@@ -300,11 +311,11 @@ impl Compiler {
             self.next_global += 1;
             let comment = match (&def_name, &field.comment) {
                 (Some(def_name), Some(comment)) => {
-                    format!("Get `{def_name}`'s `{field_name}`\n{comment}")
+                    format!("Get {def_name}'s {field_name}\n{comment}")
                 }
-                (Some(def_name), None) => format!("Get `{def_name}`'s `{field_name}`"),
-                (None, Some(comment)) => format!("Get `{field_name}`\n{comment}"),
-                (None, None) => format!("Get `{field_name}`"),
+                (Some(def_name), None) => format!("Get {def_name}'s {field_name}"),
+                (None, Some(comment)) => format!("Get {field_name}\n{comment}"),
+                (None, None) => format!("Get {field_name}"),
             };
             let meta = BindingMeta {
                 comment: Some(DocComment::from(comment.as_str())),
@@ -324,7 +335,7 @@ impl Compiler {
         };
         self.next_global += 1;
         let comment = match &def_name {
-            Some(def_name) => format!("Names of `{def_name}`'s fields"),
+            Some(def_name) => format!("Names of {def_name}'s fields"),
             None => "Names of fields".into(),
         };
         let name = Ident::from("Fields");
@@ -411,7 +422,7 @@ impl Compiler {
         };
         self.next_global += 1;
         let mut comment = match &def_name {
-            Some(def_name) => format!("Create a new `{def_name}`\n{def_name} ?"),
+            Some(def_name) => format!("Create a new {def_name}\n{def_name} ?"),
             None => "Create a new data instance\nInstance ?".into(),
         };
         for field in &fields {
@@ -455,8 +466,8 @@ impl Compiler {
                 };
                 comp.next_global += 1;
                 let comment = match &def_name {
-                    Some(def_name) => format!("`{def_name}`'s `{field_name}` argument"),
-                    None => format!("`{field_name}` argument"),
+                    Some(def_name) => format!("{def_name}'s {field_name} argument"),
+                    None => format!("{field_name} argument"),
                 };
                 let meta = BindingMeta {
                     comment: Some(DocComment::from(comment.as_str())),
@@ -478,7 +489,7 @@ impl Compiler {
                 };
                 comp.next_global += 1;
                 let comment = match &def_name {
-                    Some(def_name) => format!("Get bound `{def_name}`"),
+                    Some(def_name) => format!("Get bound {def_name}"),
                     None => "Get bound data instance".into(),
                 };
                 let meta = BindingMeta {
@@ -510,21 +521,6 @@ impl Compiler {
                 if data.variant {
                     comp.add_error(word_span.clone(), "Variants may not have functions");
                 }
-                // Ensure all fields have defaults
-                // for field in &fields {
-                //     if field.init.is_none() {
-                //         comp.errors.push(
-                //             comp.error(
-                //                 data.init_span.clone(),
-                //                 "Data functions require all fields to have defaults",
-                //             )
-                //             .with_info([(
-                //                 format!("{} has no default", field.name),
-                //                 Some(field.name_span.clone().into()),
-                //             )]),
-                //         );
-                //     }
-                // }
                 // Compile function
                 let names = fields.iter().map(|field| {
                     let local = LocalName {
@@ -551,13 +547,32 @@ impl Compiler {
                     sn.sig,
                     sn.node,
                 );
-                comp.data_function_fields.insert(
-                    local.index,
-                    (fields.iter().enumerate())
-                        .filter(|(_, field)| field.init.as_ref().is_some_and(|sn| sn.sig == (0, 1)))
-                        .map(|(i, field)| (field.name.clone(), i))
-                        .collect(),
-                );
+                let fields = (fields.iter().enumerate())
+                    .map(|(index, field)| {
+                        let init_sig = field.init.as_ref().map(|sn| sn.sig);
+                        let field_name = &field.name;
+                        let comment = match (&def_name, &field.comment) {
+                            (Some(def_name), Some(comment)) => {
+                                format!("Set {def_name}'s {field_name}\n{comment}")
+                            }
+                            (Some(def_name), None) => format!("Set {def_name}'s {field_name}"),
+                            (None, Some(comment)) => format!("Set {field_name}\n{comment}"),
+                            (None, None) => format!("Set {field_name}"),
+                        }
+                        .into();
+                        let info = FieldInfo {
+                            index,
+                            init_sig,
+                            comment,
+                        };
+                        (field.name.clone(), info)
+                    })
+                    .collect();
+                let info = DataFuncInfo {
+                    name: def_name.unwrap_or_default(),
+                    fields,
+                };
+                comp.data_function_info.insert(local.index, info);
                 let span = comp.add_span(word_span.clone());
                 function_stuff = Some((local, func, span));
                 Ok(())

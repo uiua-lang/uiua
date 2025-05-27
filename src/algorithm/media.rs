@@ -1,8 +1,8 @@
 //! En/decode Uiua arrays to/from media formats
 
-use std::{f64::consts::E, mem::take};
+use std::{collections::BTreeMap, f64::consts::E, mem::take};
 
-use ecow::{eco_vec, EcoVec};
+use ecow::{eco_vec, EcoString, EcoVec};
 use enum_iterator::{all, Sequence};
 #[cfg(feature = "audio_encode")]
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
@@ -12,7 +12,7 @@ use serde::*;
 
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
-use crate::{Complex, Shape, SysBackend};
+use crate::{Complex, FieldInfo, Shape, Signature, SysBackend};
 
 use super::monadic::hsv_to_rgb;
 
@@ -820,12 +820,29 @@ pub(crate) enum VoxelsParam {
     Camera,
 }
 impl VoxelsParam {
-    pub fn str(&self) -> &'static str {
-        match self {
-            VoxelsParam::Fog => "Fog",
-            VoxelsParam::Scale => "Scale",
-            VoxelsParam::Camera => "Camera",
-        }
+    pub fn field_info() -> BTreeMap<EcoString, FieldInfo> {
+        (all::<Self>().enumerate())
+            .map(|(index, param)| {
+                let name = match param {
+                    VoxelsParam::Fog => "Fog",
+                    VoxelsParam::Scale => "Scale",
+                    VoxelsParam::Camera => "Camera",
+                };
+                let comment = match param {
+                    VoxelsParam::Fog => "Color for depth fog",
+                    VoxelsParam::Scale => "Number of pixels per voxel",
+                    VoxelsParam::Camera => "The position of the camera",
+                }
+                .into();
+                let init_sig = Some(Signature::new(0, 1));
+                let info = FieldInfo {
+                    index,
+                    init_sig,
+                    comment,
+                };
+                (name.into(), info)
+            })
+            .collect()
     }
 }
 

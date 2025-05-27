@@ -46,6 +46,7 @@ pub enum SpanKind {
     ImportSrc(ImportSrc),
     Subscript(Option<Primitive>, Option<Subscript>),
     Obverse(SetInverses),
+    ArgSetter(Option<EcoString>),
 }
 
 /// Documentation information for a binding
@@ -183,6 +184,8 @@ pub struct CodeMeta {
     pub import_srcs: HashMap<CodeSpan, ImportSrc>,
     /// A map of obverse spans to their set inverses
     pub obverses: HashMap<CodeSpan, SetInverses>,
+    /// A map of arg setter spans to their doc comments
+    pub arg_setter_docs: HashMap<CodeSpan, EcoString>,
 }
 
 /// A completion suggestion
@@ -774,11 +777,11 @@ impl Spanner {
                     spans.push(ident.span.clone().sp(mac_delim_kind));
                 }
                 Word::ArgSetter(setter) => {
-                    spans.push(setter.ident.span.clone().sp(SpanKind::Ident {
-                        docs: None,
-                        original: false,
-                    }));
-                    spans.push(setter.colon_span.clone().sp(SpanKind::Delimiter));
+                    let comment = (self.code_meta.arg_setter_docs)
+                        .get(&setter.ident.span)
+                        .cloned();
+                    let kind = SpanKind::ArgSetter(comment);
+                    spans.push(word.span.clone().sp(kind));
                 }
             }
         }
@@ -830,6 +833,7 @@ impl Spanner {
     }
 }
 
+use ecow::EcoString;
 #[cfg(feature = "lsp")]
 #[doc(hidden)]
 pub use server::run_language_server;
@@ -1113,9 +1117,7 @@ mod server {
                     continue;
                 };
                 if span_kind.span.contains_line_col(line, col) && span_kind.span.src == path {
-                    let docs = span_kind.span.clone().sp(docs);
-                    let span = docs.span;
-                    let docs = docs.value;
+                    let span = span_kind.span.clone();
                     let mut value = String::new();
                     value.push_str("```uiua\n");
                     span.as_str(&doc.asm.inputs, |s| value.push_str(s));
@@ -1243,6 +1245,18 @@ mod server {
                         }
                         ImportSrc::File(_) => {}
                     };
+                }
+            }
+            // Hovering an arg setter
+            for (span, comment) in &doc.code_meta.arg_setter_docs {
+                if span.contains_line_col(line, col) && span.src == path {
+                    return Ok(Some(Hover {
+                        contents: HoverContents::Markup(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value: comment.into(),
+                        }),
+                        range: Some(uiua_span_to_lsp(span, &doc.asm.inputs)),
+                    }));
                 }
             }
 

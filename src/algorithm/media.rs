@@ -12,7 +12,7 @@ use serde::*;
 
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
-use crate::{Complex, FieldInfo, Shape, Signature, SysBackend};
+use crate::{Boxed, Complex, FieldInfo, Shape, Signature, SysBackend};
 
 use super::monadic::hsv_to_rgb;
 
@@ -846,7 +846,7 @@ impl VoxelsParam {
     }
 }
 
-pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
+pub(crate) fn voxels(params: Option<&Value>, val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
     let converted: Array<f64>;
     if ![3, 4].contains(&val.rank()) {
         return Err(env.error(format!(
@@ -903,31 +903,83 @@ pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
     let mut scale = None;
     let mut fog = None;
 
-    for (arg, index) in take(&mut env.rt.set_args).into_iter().flatten() {
-        match all::<VoxelsParam>().nth(index).unwrap() {
-            VoxelsParam::Fog => {
-                let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
-                match *nums {
-                    [gray] if arg.shape.is_empty() => fog = Some([gray; 3]),
-                    [r, g, b] => fog = Some([r, g, b]),
-                    _ => {
-                        return Err(env.error(format!(
-                            "Fog must be a scalar or list of 3 numbers, but it's shape is {}",
-                            arg.shape
-                        )))
+    if let Some(params) = params {
+        fn decode(
+            val: &Value,
+            pos: &mut Option<[f64; 3]>,
+            scale: &mut Option<f64>,
+            fog: &mut Option<[f64; 3]>,
+            recurse: bool,
+            env: &Uiua,
+        ) -> UiuaResult {
+            match val {
+                Value::Num(arr) if scale.is_none() && arr.rank() == 0 => *scale = Some(arr.data[0]),
+                Value::Byte(arr) if scale.is_none() && arr.rank() == 0 => {
+                    *scale = Some(arr.data[0] as f64)
+                }
+                Value::Num(arr) if pos.is_none() && arr.shape == [3] => {
+                    *pos = Some(arr.data.as_slice().try_into().unwrap())
+                }
+                Value::Byte(arr) if pos.is_none() && arr.shape == [3] => {
+                    *pos = Some(
+                        <[_; 3]>::try_from(arr.data.as_slice())
+                            .unwrap()
+                            .map(|x| x as f64),
+                    )
+                }
+                Value::Num(arr) if fog.is_none() && arr.shape == [3] => {
+                    *fog = Some(arr.data.as_slice().try_into().unwrap())
+                }
+                Value::Byte(arr) if fog.is_none() && arr.shape == [3] => {
+                    *fog = Some(
+                        <[_; 3]>::try_from(arr.data.as_slice())
+                            .unwrap()
+                            .map(|x| x as f64),
+                    )
+                }
+                Value::Box(arr) if recurse => {
+                    for Boxed(val) in arr.data.iter() {
+                        decode(val, pos, scale, fog, false, env)?;
                     }
                 }
-            }
-            VoxelsParam::Scale => scale = Some(arg.as_num(env, "Scale must be a number")?),
-            VoxelsParam::Camera => {
-                let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
-                if let [x, y, z] = *nums {
-                    pos = Some([x, y, z]);
-                } else {
+                val => {
                     return Err(env.error(format!(
-                        "Camera position must be 3 numbers, but it's shape is {}",
-                        arg.shape
-                    )));
+                        "Invalid projection parameter {} {}",
+                        val.shape,
+                        val.type_name_plural(),
+                    )))
+                }
+            }
+            Ok(())
+        }
+        decode(params, &mut pos, &mut scale, &mut fog, true, env)?;
+    } else {
+        for (arg, index) in take(&mut env.rt.set_args).into_iter().flatten() {
+            match all::<VoxelsParam>().nth(index).unwrap() {
+                VoxelsParam::Fog => {
+                    let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
+                    match *nums {
+                        [gray] if arg.shape.is_empty() => fog = Some([gray; 3]),
+                        [r, g, b] => fog = Some([r, g, b]),
+                        _ => {
+                            return Err(env.error(format!(
+                                "Fog must be a scalar or list of 3 numbers, but it's shape is {}",
+                                arg.shape
+                            )))
+                        }
+                    }
+                }
+                VoxelsParam::Scale => scale = Some(arg.as_num(env, "Scale must be a number")?),
+                VoxelsParam::Camera => {
+                    let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
+                    if let [x, y, z] = *nums {
+                        pos = Some([x, y, z]);
+                    } else {
+                        return Err(env.error(format!(
+                            "Camera position must be 3 numbers, but it's shape is {}",
+                            arg.shape
+                        )));
+                    }
                 }
             }
         }

@@ -2174,7 +2174,17 @@ impl Compiler {
 
         match prim {
             Primitive::Voxels => {
-                node.prepend(self.sort_args("voxels", VoxelsParam::field_info(), &span))
+                if self.scope.setter_names.is_empty() {
+                    node = Node::ImplPrim(ImplPrimitive::OldVoxels, spandex);
+                    self.emit_diagnostic(
+                        "Dyadic voxels is deprecated and will be removed in the future. \
+                        Use monadic voxels with argument setters instead.",
+                        DiagnosticKind::Warning,
+                        span,
+                    );
+                } else {
+                    node.prepend(self.sort_args("voxels", VoxelsParam::field_info(), &span))
+                }
             }
             Primitive::Sys(_) => self.forbid_arg_setters(&span),
             prim if [PrimClass::Encoding].contains(&prim.class()) => self.forbid_arg_setters(&span),

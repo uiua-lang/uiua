@@ -387,6 +387,7 @@ impl fmt::Display for ImplPrimitive {
             Retropose => write!(f, "<{Evert}>"),
             Ga(op, _) => op.fmt(f),
             Over => write!(f, "over"),
+            OldVoxels => write!(f, "voxels"),
         }
     }
 }
@@ -785,7 +786,7 @@ impl Primitive {
             Primitive::AudioEncode => media::audio_encode(env)?,
             Primitive::Voxels => {
                 let val = env.pop(1)?;
-                let res = media::voxels(&val, env)?;
+                let res = media::voxels(None, &val, env)?;
                 env.push(res);
             }
             Primitive::Layout => env.dyadic_oo_env(media::layout_text)?,
@@ -1625,6 +1626,12 @@ impl ImplPrimitive {
                 env.push(b.clone());
                 env.push(a);
                 env.push(b);
+            }
+            ImplPrimitive::OldVoxels => {
+                let params = env.pop(1)?;
+                let val = env.pop(2)?;
+                let res = media::voxels(Some(&params), &val, env)?;
+                env.push(res);
             }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,

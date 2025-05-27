@@ -3708,6 +3708,7 @@ impl_primitive!(
     (2(1), ValidateType),
     (2(0), ValidateTypeConsume),
     (2(0), TestAssert, Impure),
+    (2, OldVoxels),
     /// Validate that a non-boxed variant field has a valid type and rank
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),

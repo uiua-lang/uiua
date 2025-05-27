@@ -13,7 +13,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)
 - Remove previously deprecated `signature` and `stringify` modifiers
 ### Interpreter
-- Add filled adjacent stencil
+- The fomatter no longer truncates trailing decimal `0`s from number literals
+- Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
 
 ## 0.16.2 - 2025-05-21
 ### Interpreter

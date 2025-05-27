@@ -1365,6 +1365,7 @@ impl Parser<'_> {
             let s = &self.input[span.byte_range()];
             let s = match &r {
                 Ok(_) if s.contains(['e', 'E']) => s.into(),
+                Ok(_) if s.contains('.') && s.ends_with('0') => s.into(),
                 Ok(n) => n.to_string().replace('-', "¯"),
                 Err(_) => s.into(),
             };

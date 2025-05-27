@@ -785,10 +785,15 @@ impl Primitive {
             Primitive::AudioEncode => media::audio_encode(env)?,
             Primitive::Voxels => {
                 let val = env.pop(1)?;
-                let res = media::voxels(None, &val, env)?;
+                let res = media::voxels(&val, env)?;
                 env.push(res);
             }
-            Primitive::Layout => env.dyadic_oo_env(media::layout_text)?,
+            Primitive::Layout => {
+                let size = env.pop(1)?;
+                let text = env.pop(2)?;
+                let res = media::layout_text(size, text, env)?;
+                env.push(res);
+            }
             Primitive::Fft => algorithm::fft(env)?,
             Primitive::Quote
             | Primitive::Comptime

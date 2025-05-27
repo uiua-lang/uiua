@@ -3433,7 +3433,7 @@ primitive!(
     (1, Voxels, Encoding, "voxels", { experimental: true }),
     /// Render text into an image array
     ///
-    /// In the most basic usage, the first argument is a font size and the second argument is the text to render.
+    /// The first argument is a font size and the second argument is the text to render.
     /// The result is a rank-2 array of pixel values.
     /// In this example, we map the pixel values to ASCII characters to visualize the result.
     /// ex: # Experimental!
@@ -3452,21 +3452,19 @@ primitive!(
     /// ex: # Experimental!
     ///   : layout 15 ⬚""↯∞_12 ⊜□⊸≠@  Lorem
     ///
-    /// Additionally, the first argument can be a list of options.
-    /// The first scalar option is the font size (default 30)
-    /// The second scalar option is the line height (default 1)
-    /// The first array of 2 numbers is the canvas size. Use `∞` to use the smallest possible size.
-    /// The first array of 3 or 4 numbers is the color. If set, the background defaults to transparent.
+    /// 4 optionals arguments are accepted:
+    /// - `LineHeight` - The height of a line relative to the font size (default 1)
+    /// - `Size` - The size of the rendering area. Use `∞` to use the smallest possible size.
+    /// - `Color` - The text color. If set, the background defaults to transparent.
+    /// - `Bg` - The background color.
     /// ex: # Experimental!
-    ///   : $ Uiua is a
-    ///   : $ stack-based
+    ///   : $ Uiua is an
     ///   : $ array-oriented
     ///   : $ programming
     ///   : $ language
-    ///   : layout {30 1.5 300_350 0.5_0.5_1}
-    /// [fill] sets the background color.
+    ///   : layout 30 LineHeight:1.5 Size:300_350 Color:0.5_0.5_1
     /// ex: # Experimental!
-    ///   : ⬚[1 0 0] layout {100 0_1_0} "Green on Red!"
+    ///   : layout 100 Color:Green Bg:Red "Green on Red!"
     (2, Layout, Encoding, "layout", Impure, { experimental: true }),
 );
 

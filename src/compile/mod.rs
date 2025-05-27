@@ -33,7 +33,7 @@ use crate::{
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
-    media::VoxelsParam,
+    media::{LayoutParam, VoxelsParam},
     parse::{
         flip_unsplit_items, flip_unsplit_lines, max_placeholder, parse, split_items, split_words,
     },
@@ -2175,6 +2175,9 @@ impl Compiler {
         match prim {
             Primitive::Voxels => {
                 node.prepend(self.sort_args("voxels", VoxelsParam::field_info(), &span))
+            }
+            Primitive::Layout => {
+                node.prepend(self.sort_args("layout", LayoutParam::field_info(), &span))
             }
             Primitive::Sys(_) => self.forbid_arg_setters(&span),
             prim if [PrimClass::Encoding].contains(&prim.class()) => self.forbid_arg_setters(&span),

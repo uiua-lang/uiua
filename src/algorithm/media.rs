@@ -12,7 +12,7 @@ use serde::*;
 
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
-use crate::{Boxed, Complex, FieldInfo, Shape, Signature, SysBackend};
+use crate::{Complex, FieldInfo, Shape, Signature, SysBackend};
 
 use super::monadic::hsv_to_rgb;
 
@@ -813,40 +813,46 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
     Ok(buffer)
 }
 
-#[derive(Sequence)]
-pub(crate) enum VoxelsParam {
-    Fog,
-    Scale,
-    Camera,
-}
-impl VoxelsParam {
-    pub fn field_info() -> BTreeMap<EcoString, FieldInfo> {
-        (all::<Self>().enumerate())
-            .map(|(index, param)| {
-                let name = match param {
-                    VoxelsParam::Fog => "Fog",
-                    VoxelsParam::Scale => "Scale",
-                    VoxelsParam::Camera => "Camera",
-                };
-                let comment = match param {
-                    VoxelsParam::Fog => "Color for depth fog",
-                    VoxelsParam::Scale => "Number of pixels per voxel",
-                    VoxelsParam::Camera => "The position of the camera",
-                }
-                .into();
-                let init_sig = Some(Signature::new(0, 1));
-                let info = FieldInfo {
-                    index,
-                    init_sig,
-                    comment,
-                };
-                (name.into(), info)
-            })
-            .collect()
+macro_rules! builtin_params {
+    ($name:ident, $(($param:ident, $comment:literal)),* $(,)?) => {
+        #[derive(Sequence)]
+        pub(crate) enum $name {
+            $($param,)*
+        }
+        impl $name {
+            pub fn field_info() -> BTreeMap<EcoString, FieldInfo> {
+                (all::<Self>().enumerate())
+                    .map(|(index, param)| {
+                        let name = match param {
+                            $($name::$param => stringify!($param),)*
+                        };
+                        let comment = match param {
+                            $($name::$param => $comment,)*
+                        }
+                        .into();
+                        let init_sig = Some(Signature::new(0, 1));
+                        let info = FieldInfo {
+                            index,
+                            init_sig,
+                            comment,
+                        };
+                        (name.into(), info)
+                    })
+                    .collect()
+            }
+        }
     }
 }
 
-pub(crate) fn voxels(params: Option<&Value>, val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
+builtin_params!(
+    VoxelsParam,
+    (Fog, "Color for depth fog"),
+    (Scale, "Number of pixels per voxel"),
+    (Camera, "The position of the camera"),
+);
+
+pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
+    let args = take(&mut env.rt.set_args);
     let converted: Array<f64>;
     if ![3, 4].contains(&val.rank()) {
         return Err(env.error(format!(
@@ -902,84 +908,31 @@ pub(crate) fn voxels(params: Option<&Value>, val: &Value, env: &mut Uiua) -> Uiu
     let mut pos: Option<[f64; 3]> = None;
     let mut scale = None;
     let mut fog = None;
-
-    if let Some(params) = params {
-        fn decode(
-            val: &Value,
-            pos: &mut Option<[f64; 3]>,
-            scale: &mut Option<f64>,
-            fog: &mut Option<[f64; 3]>,
-            recurse: bool,
-            env: &Uiua,
-        ) -> UiuaResult {
-            match val {
-                Value::Num(arr) if scale.is_none() && arr.rank() == 0 => *scale = Some(arr.data[0]),
-                Value::Byte(arr) if scale.is_none() && arr.rank() == 0 => {
-                    *scale = Some(arr.data[0] as f64)
-                }
-                Value::Num(arr) if pos.is_none() && arr.shape == [3] => {
-                    *pos = Some(arr.data.as_slice().try_into().unwrap())
-                }
-                Value::Byte(arr) if pos.is_none() && arr.shape == [3] => {
-                    *pos = Some(
-                        <[_; 3]>::try_from(arr.data.as_slice())
-                            .unwrap()
-                            .map(|x| x as f64),
-                    )
-                }
-                Value::Num(arr) if fog.is_none() && arr.shape == [3] => {
-                    *fog = Some(arr.data.as_slice().try_into().unwrap())
-                }
-                Value::Byte(arr) if fog.is_none() && arr.shape == [3] => {
-                    *fog = Some(
-                        <[_; 3]>::try_from(arr.data.as_slice())
-                            .unwrap()
-                            .map(|x| x as f64),
-                    )
-                }
-                Value::Box(arr) if recurse => {
-                    for Boxed(val) in arr.data.iter() {
-                        decode(val, pos, scale, fog, false, env)?;
+    for (arg, index) in args.into_iter().flatten() {
+        match all::<VoxelsParam>().nth(index).unwrap() {
+            VoxelsParam::Fog => {
+                let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
+                match *nums {
+                    [gray] if arg.shape.is_empty() => fog = Some([gray; 3]),
+                    [r, g, b] => fog = Some([r, g, b]),
+                    _ => {
+                        return Err(env.error(format!(
+                            "Fog must be a scalar or list of 3 numbers, but it's shape is {}",
+                            arg.shape
+                        )))
                     }
-                }
-                val => {
-                    return Err(env.error(format!(
-                        "Invalid projection parameter {} {}",
-                        val.shape,
-                        val.type_name_plural(),
-                    )))
                 }
             }
-            Ok(())
-        }
-        decode(params, &mut pos, &mut scale, &mut fog, true, env)?;
-    } else {
-        for (arg, index) in take(&mut env.rt.set_args).into_iter().flatten() {
-            match all::<VoxelsParam>().nth(index).unwrap() {
-                VoxelsParam::Fog => {
-                    let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
-                    match *nums {
-                        [gray] if arg.shape.is_empty() => fog = Some([gray; 3]),
-                        [r, g, b] => fog = Some([r, g, b]),
-                        _ => {
-                            return Err(env.error(format!(
-                                "Fog must be a scalar or list of 3 numbers, but it's shape is {}",
-                                arg.shape
-                            )))
-                        }
-                    }
-                }
-                VoxelsParam::Scale => scale = Some(arg.as_num(env, "Scale must be a number")?),
-                VoxelsParam::Camera => {
-                    let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
-                    if let [x, y, z] = *nums {
-                        pos = Some([x, y, z]);
-                    } else {
-                        return Err(env.error(format!(
-                            "Camera position must be 3 numbers, but it's shape is {}",
-                            arg.shape
-                        )));
-                    }
+            VoxelsParam::Scale => scale = Some(arg.as_num(env, "Scale must be a number")?),
+            VoxelsParam::Camera => {
+                let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
+                if let [x, y, z] = *nums {
+                    pos = Some([x, y, z]);
+                } else {
+                    return Err(env.error(format!(
+                        "Camera position must be 3 numbers, but it's shape is {}",
+                        arg.shape
+                    )));
                 }
             }
         }
@@ -1309,27 +1262,31 @@ pub(crate) fn voxels(params: Option<&Value>, val: &Value, env: &mut Uiua) -> Uiu
     Ok(Array::new(res_shape, res_data).into())
 }
 
-pub(crate) fn layout_text(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {
+builtin_params!(
+    LayoutParam,
+    (LineHeight, "The height of a line"),
+    (Size, "Size of the rendering area"),
+    (Color, "Text color"),
+    (Bg, "Background color"),
+);
+
+pub(crate) fn layout_text(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Value> {
     #[cfg(feature = "font_shaping")]
     {
-        layout_text_impl(options, text, env)
+        layout_text_impl(size, text, env)
     }
     #[cfg(not(feature = "font_shaping"))]
     Err(env.error("Text layout is not supported in this environment"))
 }
 
 #[cfg(feature = "font_shaping")]
-fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {
+fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Value> {
     use std::{cell::RefCell, iter::repeat_n};
 
     use cosmic_text::*;
     use ecow::eco_vec;
 
-    use crate::{
-        algorithm::{validate_size, FillContext},
-        grid_fmt::GridFmt,
-        Boxed, Shape,
-    };
+    use crate::{algorithm::validate_size, grid_fmt::GridFmt, Boxed, Shape};
     struct FontStuff {
         system: FontSystem,
         swash_cache: SwashCache,
@@ -1337,6 +1294,8 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
     thread_local! {
         static FONT_STUFF: RefCell<Option<FontStuff>> = const { RefCell::new(None) };
     }
+
+    let args = take(&mut env.rt.set_args);
 
     let mut string = String::new();
     match text {
@@ -1395,47 +1354,34 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
     }
 
     // Default options
-    let mut size = 30.0;
+    let size = size.as_num(env, "Size must be a number")? as f32;
+    if size <= 0.0 {
+        return Err(env.error("Text size must be positive"));
+    }
     let mut line_height = 1.0;
     let mut width = None;
     let mut height = None;
     let mut color: Option<Color> = None;
+    let mut bg = None;
 
     // Parse options
-    let mut scalar_index = 0;
-    let mut set_size = false;
-    for (i, row) in options.into_rows().map(Value::unboxed).enumerate() {
-        let nums = row.as_nums(env, "Options must be numbers")?;
-        match &*row.shape {
-            [] => {
-                match scalar_index {
-                    0 => {
-                        size = nums[0] as f32;
-                        if size <= 0.0 {
-                            return Err(env.error("Text size must be positive"));
-                        }
-                    }
-                    1 => {
-                        line_height = nums[0] as f32;
-                        if line_height <= 0.0 {
-                            return Err(env.error("Line height must be positive"));
-                        }
-                    }
-                    n => {
+    for (arg, index) in args.into_iter().flatten() {
+        match all::<LayoutParam>().nth(index).unwrap() {
+            LayoutParam::LineHeight => {
+                line_height = arg.as_num(env, "Line height must be a scalar number")? as f32
+            }
+            LayoutParam::Size => {
+                let nums = arg.as_nums(env, "Size must be a scalar number or 2 numbers")?;
+                let [h, w] = match *nums {
+                    [s] if arg.shape.is_empty() => [s; 2],
+                    [h, w] => [h, w],
+                    _ => {
                         return Err(env.error(format!(
-                            "{} is too many scalar options to layout text",
-                            n + 1
+                            "Size must be a scalar or list of 2 numbers, but it's shape is {}",
+                            arg.shape
                         )))
                     }
-                }
-                scalar_index += 1;
-            }
-            [2] => {
-                if set_size {
-                    return Err(env.error("Cannot set text layout size twice"));
-                }
-                let h = nums[0];
-                let w = nums[1];
+                };
                 if w < 0.0 || w.is_nan() {
                     return Err(env.error(format!(
                         "Canvas width must be a non-negative number, but it is {}",
@@ -1454,35 +1400,36 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
                 if !h.is_infinite() {
                     height = Some(h as f32);
                 }
-                set_size = true;
             }
-            [3] => {
-                if color.is_some() {
-                    return Err(env.error("Cannot set text layout color twice"));
-                }
-                color = Some(Color::rgb(
-                    (nums[0] * 255.0) as u8,
-                    (nums[1] * 255.0) as u8,
-                    (nums[2] * 255.0) as u8,
-                ));
+            LayoutParam::Color => {
+                let nums = arg.as_nums(
+                    env,
+                    "Color must be a scalar number or list of 3 or 4 numbers",
+                )?;
+                let ([r, g, b], a) = match *nums {
+                    [gray] if arg.shape.is_empty() => ([gray; 3], None),
+                    [r, g, b] => ([r, g, b], None),
+                    [r, g, b, a] => ([r, g, b], Some(a)),
+                    _ => {
+                        return Err(env.error(format!(
+                        "Color must be a scalar or list of 3 or 4 numbers, but it's shape is {}",
+                        arg.shape
+                    )))
+                    }
+                };
+                color = Some(if let Some(a) = a {
+                    Color::rgba(
+                        (r * 255.0) as u8,
+                        (g * 255.0) as u8,
+                        (b * 255.0) as u8,
+                        (a * 255.0) as u8,
+                    )
+                } else {
+                    Color::rgb((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
+                });
             }
-            [4] => {
-                if color.is_some() {
-                    return Err(env.error("Cannot set text layout color twice"));
-                }
-                color = Some(Color::rgba(
-                    (nums[0] * 255.0) as u8,
-                    (nums[1] * 255.0) as u8,
-                    (nums[2] * 255.0) as u8,
-                    (nums[3] * 255.0) as u8,
-                ))
-            }
-            _ => {
-                return Err(env.error(format!(
-                    "Layout options must have [], [2], [3], or [4]\
-                    but option {i} has shape {}",
-                    row.shape
-                )))
+            LayoutParam::Bg => {
+                bg = Some(arg.as_number_array::<f64>(env, "Background color must be numbers")?)
             }
         }
     }
@@ -1529,22 +1476,19 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
             height.unwrap_or_else(|| buffer.layout_runs().map(|run| run.line_height).sum::<f32>());
 
         // Init array shape/data
-        let fill = env.array_fill::<f64>().map(|fv| fv.value);
-        let colored = color.is_some() || fill.is_ok();
+        let colored = color.is_some() || bg.is_some();
         let pixel_shape: &[usize] = if colored { &[4] } else { &[] };
         let mut canvas_shape = Shape::from_iter([canvas_height as usize, canvas_width as usize]);
         canvas_shape.extend(pixel_shape.iter().copied());
         let elem_count = validate_size::<f64>(canvas_shape.iter().copied(), env)?;
-        let mut canvas_data = if let Ok(fill) = fill {
-            let color = match &*fill.shape {
-                [] | [1] => [fill.data[0], fill.data[0], fill.data[0], 1.0],
-                [3] | [4] => [
-                    fill.data[0],
-                    fill.data[1],
-                    fill.data[2],
-                    fill.data.get(3).copied().unwrap_or(1.0),
-                ],
-                _ => return Err(env.error("Fill color must be a list of 3 or 4 numbers")),
+        let mut canvas_data = if let Some(bg) = bg {
+            let color = match &*bg.shape {
+                [] | [1] => [bg.data[0], bg.data[0], bg.data[0], 1.0],
+                [3] | [4] => {
+                    let alpha = bg.data.get(3).copied().unwrap_or(1.0);
+                    [bg.data[0], bg.data[1], bg.data[2], alpha]
+                }
+                _ => return Err(env.error("Background color must be a list of 3 or 4 numbers")),
             };
             repeat_n(color, elem_count / 4).flatten().collect()
         } else {

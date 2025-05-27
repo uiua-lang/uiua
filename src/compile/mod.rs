@@ -9,7 +9,7 @@ mod pre_eval;
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    collections::{BTreeSet, HashMap, HashSet, VecDeque},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     env::current_dir,
     fmt, fs,
     iter::{once, repeat_n},
@@ -94,7 +94,7 @@ pub struct Compiler {
     /// Start addresses
     start_addrs: Vec<usize>,
     /// Data function constructors
-    data_function_constructors: HashMap<usize, (usize, HashMap<EcoString, usize>)>,
+    data_function_constructors: HashMap<usize, (usize, BTreeMap<EcoString, usize>)>,
 }
 
 impl Default for Compiler {
@@ -2003,14 +2003,14 @@ impl Compiler {
                     }
                     let spandex = node.span().unwrap();
                     // Handle data functions
-                    if let Some(&(index, ref fields)) =
-                        self.data_function_constructors.get(&local.index)
+                    if let Some((index, mut fields)) =
+                        self.data_function_constructors.get(&local.index).cloned()
                     {
                         let setter_names = take(&mut self.scope.setter_names);
                         let mut unused = None;
                         for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate()
                         {
-                            if let Some(field_index) = fields.get(&name).copied() {
+                            if let Some(field_index) = fields.remove(&name) {
                                 node.prepend(Node::UseArg {
                                     set_index,
                                     field_index,
@@ -2019,11 +2019,14 @@ impl Compiler {
                                 });
                             } else {
                                 unused = Some((name, setter_span));
-                                break;
                             }
                         }
                         if let Some((name, setter_span)) = unused {
-                            self.unused_setter_error(&name, setter_span, span.clone());
+                            self.unused_setter_error(
+                                &name,
+                                setter_span,
+                                (span.clone(), fields.into_keys().collect()),
+                            );
                         }
                         let construct = self.global_index_impl(index, false, single_ident, span);
                         node.prepend(construct);
@@ -2043,25 +2046,6 @@ impl Compiler {
                 Node::empty()
             }
             BindingKind::Error => Node::empty(),
-        }
-    }
-    fn unused_setter_error(
-        &mut self,
-        name: &str,
-        setter_span: CodeSpan,
-        func_span: impl Into<Option<CodeSpan>>,
-    ) {
-        self.errors.push(
-            self.error(setter_span, format!("Optional argument {name} is not used"))
-                .with_info(
-                    (func_span.into()).map(|span| ("Not used here".into(), Some(span.into()))),
-                ),
-        )
-    }
-    fn forbid_arg_setters<'a>(&mut self, span: impl Into<Option<&'a CodeSpan>>) {
-        let setter_name = self.scope.setter_names.drain(..).next();
-        if let Some((name, setter_span)) = setter_name {
-            self.unused_setter_error(&name, setter_span, span.into().cloned());
         }
     }
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Node> {
@@ -2214,8 +2198,13 @@ impl Compiler {
         match prim {
             Primitive::Voxels => {
                 let setter_names = take(&mut self.scope.setter_names);
+                let mut unused = None;
+                let mut used: BTreeMap<_, _> = all::<VoxelsParam>()
+                    .enumerate()
+                    .map(|(i, p)| (p.str(), i))
+                    .collect();
                 for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate() {
-                    if let Some(field_index) = all::<VoxelsParam>().position(|p| p.str() == name) {
+                    if let Some(field_index) = used.remove(name.as_str()) {
                         node.prepend(Node::UseArg {
                             set_index,
                             field_index,
@@ -2223,9 +2212,15 @@ impl Compiler {
                             span: spandex,
                         });
                     } else {
-                        self.unused_setter_error(&name, setter_span, span);
-                        break;
+                        unused.get_or_insert((name, setter_span));
                     }
+                }
+                if let Some((name, setter_span)) = unused {
+                    self.unused_setter_error(
+                        &name,
+                        setter_span,
+                        (span, used.into_keys().map(Into::into).collect()),
+                    );
                 }
             }
             Primitive::Sys(_) => self.forbid_arg_setters(&span),
@@ -2833,6 +2828,40 @@ impl Compiler {
                 format!("Cannot infer function signature: {e}"),
             )
         })
+    }
+    fn unused_setter_error(
+        &mut self,
+        name: &str,
+        setter_span: CodeSpan,
+        func_info: impl Into<Option<(CodeSpan, Vec<EcoString>)>>,
+    ) {
+        let info = (func_info.into()).map(|(span, options)| {
+            let mut message = "Not used here".to_string();
+            if !options.is_empty() {
+                message.push_str(". Available fields: ");
+                for (i, option) in options.into_iter().enumerate() {
+                    if i > 0 {
+                        message.push_str(", ");
+                    }
+                    message.push_str(&option);
+                }
+            }
+            (message, Some(span.into()))
+        });
+        let error = self
+            .error(setter_span, format!("Optional argument {name} is not used"))
+            .with_info(info);
+        self.errors.push(error)
+    }
+    fn forbid_arg_setters<'a>(&mut self, span: impl Into<Option<&'a CodeSpan>>) {
+        let setter_name = self.scope.setter_names.drain(..).next();
+        if let Some((name, setter_span)) = setter_name {
+            self.unused_setter_error(
+                &name,
+                setter_span,
+                span.into().cloned().map(|span| (span, Vec::new())),
+            );
+        }
     }
 }
 

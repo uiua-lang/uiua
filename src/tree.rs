@@ -866,6 +866,7 @@ impl Node {
                     .is_some_and(|sn| recurse(&sn.node, purity, asm, visited)),
                 Node::WithLocal { inner, .. } => recurse(&inner.node, purity, asm, visited),
                 Node::Dynamic(_) => false,
+                Node::SetArg { .. } | Node::UseArg { .. } | Node::ClearArgs => false,
                 _ => true,
             };
             visited.truncate(len);

@@ -1644,7 +1644,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::FlipLine => false,
         Word::SemanticComment(_) => true,
         Word::OutputComment { .. } => true,
-        Word::ArgSetter(_) => true,
+        Word::ArgSetter(_) => false,
     }
 }
 

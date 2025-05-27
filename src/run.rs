@@ -50,7 +50,7 @@ pub(crate) struct Runtime {
     /// The local stack
     pub(crate) local_stack: EcoVec<(usize, Value)>,
     /// Set args
-    set_args: Vec<Option<Value>>,
+    pub(crate) set_args: Vec<Option<Value>>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -797,9 +797,17 @@ impl Uiua {
             Node::UseArg {
                 set_index,
                 field_index,
+                reorg,
                 span,
             } => self.with_span(span, |env| {
-                if let Some(Some(mut row)) = (env.rt.set_args).get_mut(set_index).map(Option::take)
+                if reorg {
+                    let max = set_index.max(field_index);
+                    if env.rt.set_args.len() <= max {
+                        env.rt.set_args.resize(max + 1, None);
+                    }
+                    env.rt.set_args.swap(set_index, field_index);
+                } else if let Some(Some(mut row)) =
+                    (env.rt.set_args).get_mut(set_index).map(Option::take)
                 {
                     let mut target = env.pop(1)?;
                     if let Value::Box(_) = target {

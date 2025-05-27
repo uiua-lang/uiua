@@ -1,8 +1,9 @@
 //! En/decode Uiua arrays to/from media formats
 
-use std::f64::consts::E;
+use std::{f64::consts::E, mem::take};
 
 use ecow::{eco_vec, EcoVec};
+use enum_iterator::{all, Sequence};
 #[cfg(feature = "audio_encode")]
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 #[cfg(feature = "image")]
@@ -11,7 +12,7 @@ use serde::*;
 
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
-use crate::{Boxed, Complex, Shape, SysBackend};
+use crate::{Complex, Shape, SysBackend};
 
 use super::monadic::hsv_to_rgb;
 
@@ -812,7 +813,23 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
     Ok(buffer)
 }
 
-pub(crate) fn voxels(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Value> {
+#[derive(Sequence)]
+pub(crate) enum VoxelsParam {
+    Fog,
+    Scale,
+    Camera,
+}
+impl VoxelsParam {
+    pub fn str(&self) -> &'static str {
+        match self {
+            VoxelsParam::Fog => "Fog",
+            VoxelsParam::Scale => "Scale",
+            VoxelsParam::Camera => "Camera",
+        }
+    }
+}
+
+pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
     let converted: Array<f64>;
     if ![3, 4].contains(&val.rank()) {
         return Err(env.error(format!(
@@ -868,55 +885,40 @@ pub(crate) fn voxels(params: &Value, val: &Value, env: &Uiua) -> UiuaResult<Valu
     let mut pos: Option<[f64; 3]> = None;
     let mut scale = None;
     let mut fog = None;
-    fn decode(
-        val: &Value,
-        pos: &mut Option<[f64; 3]>,
-        scale: &mut Option<f64>,
-        fog: &mut Option<[f64; 3]>,
-        recurse: bool,
-        env: &Uiua,
-    ) -> UiuaResult {
-        match val {
-            Value::Num(arr) if scale.is_none() && arr.rank() == 0 => *scale = Some(arr.data[0]),
-            Value::Byte(arr) if scale.is_none() && arr.rank() == 0 => {
-                *scale = Some(arr.data[0] as f64)
-            }
-            Value::Num(arr) if pos.is_none() && arr.shape == [3] => {
-                *pos = Some(arr.data.as_slice().try_into().unwrap())
-            }
-            Value::Byte(arr) if pos.is_none() && arr.shape == [3] => {
-                *pos = Some(
-                    <[_; 3]>::try_from(arr.data.as_slice())
-                        .unwrap()
-                        .map(|x| x as f64),
-                )
-            }
-            Value::Num(arr) if fog.is_none() && arr.shape == [3] => {
-                *fog = Some(arr.data.as_slice().try_into().unwrap())
-            }
-            Value::Byte(arr) if fog.is_none() && arr.shape == [3] => {
-                *fog = Some(
-                    <[_; 3]>::try_from(arr.data.as_slice())
-                        .unwrap()
-                        .map(|x| x as f64),
-                )
-            }
-            Value::Box(arr) if recurse => {
-                for Boxed(val) in arr.data.iter() {
-                    decode(val, pos, scale, fog, false, env)?;
+
+    let args = take(&mut env.rt.set_args);
+    for (param, arg) in all::<VoxelsParam>().zip(args) {
+        if let Some(arg) = arg {
+            match param {
+                VoxelsParam::Fog => {
+                    let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
+                    match *nums {
+                        [gray] if arg.shape.is_empty() => fog = Some([gray; 3]),
+                        [r, g, b] => fog = Some([r, g, b]),
+                        _ => {
+                            return Err(env.error(format!(
+                                "Fog must be a scalar or list of 3 numbers, but it's shape is {}",
+                                arg.shape
+                            )))
+                        }
+                    }
+                }
+                VoxelsParam::Scale => scale = Some(arg.as_num(env, "Scale must be a number")?),
+                VoxelsParam::Camera => {
+                    let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
+                    if let [x, y, z] = *nums {
+                        pos = Some([x, y, z]);
+                    } else {
+                        return Err(env.error(format!(
+                            "Camera position must be 3 numbers, but it's shape is {}",
+                            arg.shape
+                        )));
+                    }
                 }
             }
-            val => {
-                return Err(env.error(format!(
-                    "Invalid projection parameter {} {}",
-                    val.shape,
-                    val.type_name_plural(),
-                )))
-            }
         }
-        Ok(())
     }
-    decode(params, &mut pos, &mut scale, &mut fog, true, env)?;
+
     let mut pos_arg = pos.unwrap_or([1.0, 1.0, 1.0]);
     let scale = scale.unwrap_or(1.0);
 

@@ -21,6 +21,7 @@ use std::{
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
+use enum_iterator::all;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
@@ -33,6 +34,7 @@ use crate::{
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
+    media::VoxelsParam,
     parse::{
         flip_unsplit_items, flip_unsplit_lines, max_placeholder, parse, split_items, split_words,
     },
@@ -1975,6 +1977,7 @@ impl Compiler {
                                 node.prepend(Node::UseArg {
                                     set_index,
                                     field_index,
+                                    reorg: false,
                                     span: spandex,
                                 });
                             }
@@ -2144,7 +2147,26 @@ impl Compiler {
     fn primitive(&mut self, prim: Primitive, span: CodeSpan) -> Node {
         self.validate_primitive(prim, &span);
         let span = self.add_span(span);
-        Node::Prim(prim, span)
+        let mut node = Node::Prim(prim, span);
+        match prim {
+            Primitive::Voxels => {
+                let setter_names = take(&mut self.scope.setter_names);
+                for (field_index, param) in all::<VoxelsParam>().enumerate() {
+                    if let Some(set_index) =
+                        setter_names.keys().position(|name| name == param.str())
+                    {
+                        node.prepend(Node::UseArg {
+                            set_index,
+                            field_index,
+                            reorg: true,
+                            span,
+                        })
+                    }
+                }
+            }
+            _ => {}
+        }
+        node
     }
     #[allow(clippy::match_single_binding, unused_parens)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {

@@ -16,5 +16,11 @@
     "cSpell.enabled": true,
     "cSpell.words": [
         "Uiua"
+    ],
+    "spellright.language": [
+        "en"
+    ],
+    "spellright.documentTypes": [
+        "latex"
     ]
 }

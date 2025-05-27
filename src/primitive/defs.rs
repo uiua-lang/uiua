@@ -3433,7 +3433,7 @@ primitive!(
     ///   : <0.4⌵-⊙(+∩∿) °⊟₃ ×τ # z = (sin(τx) + sin(τy))/τ
     ///   : ×τ÷⟜⇡30             # Rotation angles
     ///   : ≡(voxels {2 [1 °∠] ⊙[0 0.5 1]})⊙¤
-    (2, Voxels, Encoding, "voxels", { experimental: true }),
+    (1, Voxels, Encoding, "voxels", { experimental: true }),
     /// Render text into an image array
     ///
     /// In the most basic usage, the first argument is a font size and the second argument is the text to render.

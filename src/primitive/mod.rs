@@ -783,7 +783,11 @@ impl Primitive {
             Primitive::GifEncode => media::gif_encode(env)?,
             Primitive::ApngEncode => media::apng_encode(env)?,
             Primitive::AudioEncode => media::audio_encode(env)?,
-            Primitive::Voxels => env.dyadic_rr_env(media::voxels)?,
+            Primitive::Voxels => {
+                let val = env.pop(1)?;
+                let res = media::voxels(&val, env)?;
+                env.push(res);
+            }
             Primitive::Layout => env.dyadic_oo_env(media::layout_text)?,
             Primitive::Fft => algorithm::fft(env)?,
             Primitive::Quote

@@ -81,7 +81,7 @@ node!(
     /// Set an optional argument
     SetArg { index: usize, span: usize },
     /// Use an optional argument
-    UseArg { set_index: usize, field_index: usize, span: usize },
+    UseArg { set_index: usize, field_index: usize, reorg: bool, span: usize },
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),

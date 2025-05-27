@@ -136,8 +136,8 @@ You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the
   ×9/200 /×ⁿ0_2_3
 | /×ⁿ2_0_3
 | ⁿ3 -1 /+×[1 9/4 1] °√
-)                           # Heart
-⍉⊞× [1 0.3 0.3] ⤸2 ≤0       # Threshold/color
-×τ ÷⟜⇡24                    # Rotation angles
-≡⌟(voxels{1[0.2 °∠]⊙Black}) # Render
+)                     # Heart
+⍉⊞× [1 0.3 0.3] ⤸2 ≤0 # Threshold/color
+×τ ÷⟜⇡24              # Rotation angles
+≡⌟(voxels Camera:[0.2 °∠] Fog:Black)
 ```

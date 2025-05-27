@@ -417,14 +417,23 @@ impl Compiler {
         kind: ScopeKind,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<(Module, T)> {
+        let setter_names = match &kind {
+            ScopeKind::Function => take(&mut self.scope.setter_names),
+            _ => Default::default(),
+        };
+
         self.higher_scopes.push(take(&mut self.scope));
         self.scope.kind = kind;
+        self.scope.setter_names = setter_names;
+
         let res = f(self);
+
         let mut setter_names = Default::default();
         match &self.scope.kind {
             ScopeKind::Function => setter_names = take(&mut self.scope.setter_names),
             _ => self.forbid_arg_setters(None),
         }
+
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
         self.scope.setter_names.extend(setter_names);
         let res = res?;

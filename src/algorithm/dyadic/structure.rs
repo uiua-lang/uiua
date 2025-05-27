@@ -19,6 +19,12 @@ use crate::{
 impl Value {
     #[allow(clippy::unit_arg)]
     pub(crate) fn set_row(&mut self, index: usize, row: Self, env: &Uiua) -> UiuaResult {
+        if self.shape.row() != row.shape {
+            return Err(env.error(format!(
+                "Cannot insert row with shape {} into array with shape {}",
+                row.shape, self.shape
+            )));
+        }
         self.generic_bin_mut(
             row,
             |arr, row| Ok(arr.set_row(index, row)),

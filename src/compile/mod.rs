@@ -94,7 +94,7 @@ pub struct Compiler {
     /// Start addresses
     start_addrs: Vec<usize>,
     /// Data function constructors
-    data_function_constructors: HashMap<usize, (usize, Vec<(EcoString, usize)>)>,
+    data_function_constructors: HashMap<usize, (usize, HashMap<EcoString, usize>)>,
 }
 
 impl Default for Compiler {
@@ -420,7 +420,13 @@ impl Compiler {
         self.higher_scopes.push(take(&mut self.scope));
         self.scope.kind = kind;
         let res = f(self);
+        let mut setter_names = Default::default();
+        match &self.scope.kind {
+            ScopeKind::Function => setter_names = take(&mut self.scope.setter_names),
+            _ => self.forbid_arg_setters(None),
+        }
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
+        self.scope.setter_names.extend(setter_names);
         let res = res?;
         let module = Module {
             comment: scope.comment,
@@ -470,6 +476,8 @@ impl Compiler {
         self.start_addrs.push(&base as *const u8 as usize);
         let res = self.catching_crash(input, |env| env.items(items, ItemCompMode::TopLevel));
         self.start_addrs.pop();
+
+        self.forbid_arg_setters(None);
 
         // Optimize root
         // We only optimize if this is not an import
@@ -1546,10 +1554,13 @@ impl Compiler {
                     0
                 } else {
                     let index = self.scope.setter_names.len();
-                    (self.scope.setter_names).insert(set.ident.value, set.ident.span);
+                    (self.scope.setter_names).insert(set.ident.value.clone(), set.ident.span);
                     index
                 };
-                Node::SetArg { index, span }
+                Node::from([
+                    Node::Label(set.ident.value, span),
+                    Node::SetArg { index, span },
+                ])
             }
         })
     }
@@ -1911,13 +1922,35 @@ impl Compiler {
         None
     }
     fn global_index(&mut self, index: usize, single_ident: bool, span: CodeSpan) -> Node {
+        self.global_index_impl(index, true, single_ident, span)
+    }
+    fn global_index_impl(
+        &mut self,
+        index: usize,
+        top_level: bool,
+        single_ident: bool,
+        span: CodeSpan,
+    ) -> Node {
         let binfo = &mut self.asm.bindings.make_mut()[index];
         binfo.used = true;
         let bkind = binfo.kind.clone();
         match bkind {
-            BindingKind::Const(Some(val)) => Node::new_push(val),
-            BindingKind::Const(None) => Node::CallGlobal(index, Signature::new(0, 1)),
+            BindingKind::Const(Some(val)) => {
+                if top_level {
+                    self.forbid_arg_setters(&span);
+                }
+                Node::new_push(val)
+            }
+            BindingKind::Const(None) => {
+                if top_level {
+                    self.forbid_arg_setters(&span);
+                }
+                Node::CallGlobal(index, Signature::new(0, 1))
+            }
             BindingKind::Func(f) => {
+                if top_level {
+                    self.forbid_arg_setters(&span);
+                }
                 let span = self.add_span(span);
                 let root = &self.asm[&f];
                 let sig = f.sig;
@@ -1963,26 +1996,36 @@ impl Compiler {
                 if let Some(&local) = names.get("Call").or_else(|| names.get("New")) {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
-                    let mut node = self.global_index(local.index, single_ident, span.clone());
+                    let mut node =
+                        self.global_index_impl(local.index, false, single_ident, span.clone());
+                    if !self.scope.setter_names.is_empty() {
+                        node.push(Node::ClearArgs);
+                    }
                     let spandex = node.span().unwrap();
                     // Handle data functions
                     if let Some(&(index, ref fields)) =
                         self.data_function_constructors.get(&local.index)
                     {
                         let setter_names = take(&mut self.scope.setter_names);
-                        for &(ref field_name, field_index) in fields {
-                            if let Some(set_index) =
-                                setter_names.keys().position(|name| name == field_name)
-                            {
+                        let mut unused = None;
+                        for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate()
+                        {
+                            if let Some(field_index) = fields.get(&name).copied() {
                                 node.prepend(Node::UseArg {
                                     set_index,
                                     field_index,
                                     reorg: false,
                                     span: spandex,
                                 });
+                            } else {
+                                unused = Some((name, setter_span));
+                                break;
                             }
                         }
-                        let construct = self.global_index(index, single_ident, span);
+                        if let Some((name, setter_span)) = unused {
+                            self.unused_setter_error(&name, setter_span, span.clone());
+                        }
+                        let construct = self.global_index_impl(index, false, single_ident, span);
                         node.prepend(construct);
                     }
                     node
@@ -2000,6 +2043,25 @@ impl Compiler {
                 Node::empty()
             }
             BindingKind::Error => Node::empty(),
+        }
+    }
+    fn unused_setter_error(
+        &mut self,
+        name: &str,
+        setter_span: CodeSpan,
+        func_span: impl Into<Option<CodeSpan>>,
+    ) {
+        self.errors.push(
+            self.error(setter_span, format!("Optional argument {name} is not used"))
+                .with_info(
+                    (func_span.into()).map(|span| ("Not used here".into(), Some(span.into()))),
+                ),
+        )
+    }
+    fn forbid_arg_setters<'a>(&mut self, span: impl Into<Option<&'a CodeSpan>>) {
+        let setter_name = self.scope.setter_names.drain(..).next();
+        if let Some((name, setter_span)) = setter_name {
+            self.unused_setter_error(&name, setter_span, span.into().cloned());
         }
     }
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Node> {
@@ -2146,26 +2208,31 @@ impl Compiler {
     }
     fn primitive(&mut self, prim: Primitive, span: CodeSpan) -> Node {
         self.validate_primitive(prim, &span);
-        let span = self.add_span(span);
-        let mut node = Node::Prim(prim, span);
+        let spandex = self.add_span(span.clone());
+        let mut node = Node::Prim(prim, spandex);
+
         match prim {
             Primitive::Voxels => {
                 let setter_names = take(&mut self.scope.setter_names);
-                for (field_index, param) in all::<VoxelsParam>().enumerate() {
-                    if let Some(set_index) =
-                        setter_names.keys().position(|name| name == param.str())
-                    {
+                for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate() {
+                    if let Some(field_index) = all::<VoxelsParam>().position(|p| p.str() == name) {
                         node.prepend(Node::UseArg {
                             set_index,
                             field_index,
                             reorg: true,
-                            span,
-                        })
+                            span: spandex,
+                        });
+                    } else {
+                        self.unused_setter_error(&name, setter_span, span);
+                        break;
                     }
                 }
             }
+            Primitive::Sys(_) => self.forbid_arg_setters(&span),
+            prim if [PrimClass::Encoding].contains(&prim.class()) => self.forbid_arg_setters(&span),
             _ => {}
         }
+
         node
     }
     #[allow(clippy::match_single_binding, unused_parens)]

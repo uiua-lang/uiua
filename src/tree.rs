@@ -82,6 +82,8 @@ node!(
     SetArg { index: usize, span: usize },
     /// Use an optional argument
     UseArg { set_index: usize, field_index: usize, reorg: bool, span: usize },
+    /// Clear optional arguments
+    ClearArgs,
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),
@@ -796,7 +798,8 @@ impl fmt::Debug for Node {
                 set_index,
                 field_index,
                 ..
-            } => write!(f, "set-arg {set_index}->{field_index}"),
+            } => write!(f, "use-arg {set_index}->{field_index}"),
+            Node::ClearArgs => write!(f, "clear-args"),
         }
     }
 }

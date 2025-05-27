@@ -818,6 +818,10 @@ impl Uiua {
                 }
                 Ok(())
             }),
+            Node::ClearArgs => {
+                self.rt.set_args.clear();
+                Ok(())
+            }
         };
         if self.rt.time_instrs {
             let end_time = self.rt.backend.now();

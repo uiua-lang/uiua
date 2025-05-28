@@ -2127,8 +2127,7 @@ impl Compiler {
             Primitive::Layout => {
                 node.prepend(self.sort_args("layout", LayoutParam::field_info(), &span))
             }
-            Primitive::Sys(_) => self.forbid_arg_setters(&span),
-            prim if [PrimClass::Encoding].contains(&prim.class()) => self.forbid_arg_setters(&span),
+            prim if prim.glyph().is_none() => self.forbid_arg_setters(&span),
             _ => {}
         }
 

@@ -845,7 +845,7 @@ impl Formatter<'_> {
                     }
                     if let Some(words) = &data.func {
                         self.output.push(' ');
-                        self.format_words(words, true, depth + 1);
+                        self.format_words(words, true, depth);
                     }
                 }
             }

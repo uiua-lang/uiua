@@ -754,38 +754,6 @@ impl Uiua {
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
                 self.exec(inner)
             }
-            Node::WithLocal { def, inner, span } => self.with_span(span, |env| {
-                let val = env.remove_nth_back(inner.sig.args())?;
-                env.rt.local_stack.push((def, val));
-                let res = env.exec(inner);
-                env.rt.local_stack.pop();
-                res
-            }),
-            Node::GetLocal { def, span } => self.with_span(span, |env| {
-                for (i, val) in env.rt.local_stack.iter().rev() {
-                    if *i == def {
-                        env.push(val.clone());
-                        return Ok(());
-                    }
-                }
-                Err(env.error(match &env.asm.def(def).name {
-                    Some(name) => format!("Not currently in a scope for def `{name}`"),
-                    None => "Not currently in a scope for data def".into(),
-                }))
-            }),
-            Node::SetLocal { def, span } => self.with_span(span, |env| {
-                let new = env.pop(1)?;
-                for (i, val) in env.rt.local_stack.make_mut().iter_mut().rev() {
-                    if *i == def {
-                        *val = new.clone();
-                        return Ok(());
-                    }
-                }
-                Err(env.error(match &env.asm.def(def).name {
-                    Some(name) => format!("Not currently in a scope for def `{name}`"),
-                    None => "Not currently in a scope for data def".into(),
-                }))
-            }),
             Node::SetArg { index, span } => self.with_span(span, |env| {
                 let val = env.pop(1)?;
                 if env.rt.set_args.len() <= index {
@@ -1389,13 +1357,6 @@ impl Uiua {
     #[inline]
     pub(crate) fn truncate_under_stack(&mut self, size: usize) {
         self.rt.under_stack.truncate(size);
-    }
-    pub(crate) fn remove_nth_back(&mut self, n: usize) -> UiuaResult<Value> {
-        let len = self.rt.stack.len();
-        if n >= len {
-            return Err(self.error(format!("Stack was empty getting argument {}", n + 1)));
-        }
-        Ok(self.rt.stack.remove(len - n - 1))
     }
     /// Pop `n` values from the stack
     pub fn pop_n(&mut self, n: usize) -> UiuaResult<Vec<Value>> {

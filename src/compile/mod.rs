@@ -37,8 +37,8 @@ use crate::{
     parse::{
         flip_unsplit_items, flip_unsplit_lines, max_placeholder, parse, split_items, split_words,
     },
-    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, DefInfo,
-    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
+    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
+    DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
     RunMode, SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind,
     UiuaResult, Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
@@ -196,8 +196,8 @@ pub(crate) struct Scope {
     comment: Option<EcoString>,
     /// Map local names to global indices
     names: LocalNames,
-    /// Scope's data def index
-    data_def: Option<ScopeDataDef>,
+    /// Whether the scope has a data def defined
+    has_data_def: bool,
     /// Number of named data variants
     data_variants: usize,
     /// Whether to allow experimental features
@@ -216,8 +216,6 @@ enum ScopeKind {
     File(FileScopeKind),
     /// A scope in a named module
     Module(Ident),
-    /// A scope in a data definition method
-    Method(usize),
     /// A scope that includes all bindings in a module
     AllInModule,
     /// A temporary scope, probably for a macro
@@ -236,13 +234,6 @@ enum FileScopeKind {
     Git,
 }
 
-#[derive(Debug, Clone)]
-struct ScopeDataDef {
-    def_index: usize,
-    /// Module for local getters
-    module: Module,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct MacroLocal {
     macro_index: usize,
@@ -256,7 +247,7 @@ impl Default for Scope {
             file_path: None,
             comment: None,
             names: IndexMap::new(),
-            data_def: None,
+            has_data_def: false,
             data_variants: 0,
             experimental: false,
             experimental_error: false,
@@ -437,22 +428,6 @@ impl Compiler {
             experimental: scope.experimental,
         };
         Ok((module, res))
-    }
-    fn in_method<T>(
-        &mut self,
-        def: &ScopeDataDef,
-        f: impl FnOnce(&mut Self) -> UiuaResult<T>,
-    ) -> UiuaResult<T> {
-        self.higher_scopes.push(take(&mut self.scope));
-        self.scope.kind = ScopeKind::Method(def.def_index);
-        self.scope.names.extend(
-            (def.module.names)
-                .iter()
-                .map(|(name, local)| (name.clone(), *local)),
-        );
-        let res = f(self);
-        self.scope = self.higher_scopes.pop().unwrap();
-        res
     }
     fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
         let node_start = self.asm.root.len();
@@ -1013,10 +988,7 @@ impl Compiler {
     ) {
         let mut spandex: Option<usize> = None;
         // Validate comment signature
-        if let Ok(mut sig) = node.sig() {
-            if let ScopeKind::Method(_) = self.scope.kind {
-                sig.update_args(|a| a + 1);
-            }
+        if let Ok(sig) = node.sig() {
             if !comment_sig.matches_sig(sig) {
                 let span = *spandex.get_or_insert_with(|| self.add_span(span.clone()));
                 self.emit_diagnostic(
@@ -1824,7 +1796,7 @@ impl Compiler {
             self.code_meta
                 .global_references
                 .insert(r.name.span.clone(), local.index);
-            Ok(self.global_index(local.index, false, r.name.span))
+            Ok(self.global_index(local.index, r.name.span))
         } else {
             self.ident(r.name.value, r.name.span, r.in_macro_arg)
         }
@@ -1866,7 +1838,7 @@ impl Compiler {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
-            Ok(self.global_index(local.index, true, span))
+            Ok(self.global_index(local.index, span))
         } else if let Some(curr) =
             (self.current_bindings.last_mut()).filter(|curr| curr.name == ident)
         {
@@ -1887,7 +1859,7 @@ impl Compiler {
             // Name exists in scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
-            Ok(self.global_index(local.index, true, span))
+            Ok(self.global_index(local.index, span))
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
             if let Some(suggestion) = constant.deprecation {
@@ -1924,16 +1896,10 @@ impl Compiler {
         }
         None
     }
-    fn global_index(&mut self, index: usize, single_ident: bool, span: CodeSpan) -> Node {
-        self.global_index_impl(index, true, single_ident, span)
+    fn global_index(&mut self, index: usize, span: CodeSpan) -> Node {
+        self.global_index_impl(index, true, span)
     }
-    fn global_index_impl(
-        &mut self,
-        index: usize,
-        top_level: bool,
-        single_ident: bool,
-        span: CodeSpan,
-    ) -> Node {
+    fn global_index_impl(&mut self, index: usize, top_level: bool, span: CodeSpan) -> Node {
         let binfo = &mut self.asm.bindings.make_mut()[index];
         binfo.used = true;
         let bkind = binfo.kind.clone();
@@ -1954,30 +1920,13 @@ impl Compiler {
                 if top_level {
                     self.forbid_arg_setters(&span);
                 }
-                let span = self.add_span(span);
-                let root = &self.asm[&f];
-                let sig = f.sig;
-                let mut node = Node::Call(f, span);
-                if let (true, &Node::WithLocal { def, .. }) = (single_ident, root) {
-                    if self.scopes().any(|sc| sc.kind == ScopeKind::Method(def)) {
-                        let mut inner = Node::GetLocal { def, span };
-                        for _ in 0..sig.args().saturating_sub(1) {
-                            inner = Node::Mod(
-                                Primitive::Dip,
-                                eco_vec![inner.sig_node().unwrap()],
-                                span,
-                            );
-                        }
-                        node.prepend(inner);
-                    }
-                }
-                node
+                Node::Call(f, self.add_span(span))
             }
             BindingKind::Import(path) => {
                 if let Some(local) = self.imports.get(&path).and_then(|m| m.names.get("Call")) {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
-                    self.global_index(local.index, single_ident, span)
+                    self.global_index(local.index, span)
                 } else {
                     self.add_error(
                         span,
@@ -1999,8 +1948,7 @@ impl Compiler {
                 if let Some(&local) = names.get("Call").or_else(|| names.get("New")) {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
-                    let mut node =
-                        self.global_index_impl(local.index, false, single_ident, span.clone());
+                    let mut node = self.global_index_impl(local.index, false, span.clone());
                     if !self.scope.setter_names.is_empty() {
                         node.push(Node::ClearArgs);
                     }

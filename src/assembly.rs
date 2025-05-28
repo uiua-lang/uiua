@@ -26,8 +26,6 @@ pub struct Assembly {
     pub(crate) functions: EcoVec<Node>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
-    /// A list of data definitions
-    pub defs: EcoVec<DefInfo>,
     pub(crate) spans: EcoVec<Span>,
     /// Inputs used to build the assembly
     pub inputs: Inputs,
@@ -96,13 +94,6 @@ impl<'de> Deserialize<'de> for Function {
     }
 }
 
-/// Information for a data definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DefInfo {
-    /// The name of the definition
-    pub name: Option<EcoString>,
-}
-
 impl Assembly {
     /// Get the [`SigNode`] for a function
     pub fn sig_node(&self, f: &Function) -> SigNode {
@@ -162,22 +153,12 @@ impl Assembly {
         let span = self.spans[span].clone();
         self.add_binding_at(local, BindingKind::Const(value), span.code(), meta);
     }
-    pub(crate) fn bind_def(&mut self, info: DefInfo) -> usize {
-        let index = self.defs.len();
-        self.defs.push(info);
-        index
-    }
-    #[track_caller]
-    pub(crate) fn def(&self, index: usize) -> &DefInfo {
-        &self.defs[index]
-    }
     /// Parse a `.uasm` file into an assembly
     pub fn from_uasm(src: &str) -> Result<Self, String> {
         let rest = src;
         let (root_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
         let (bindings_src, rest) = rest.trim().split_once("FUNCTIONS").ok_or("No functions")?;
-        let (functions_src, rest) = rest.trim().split_once("DATA DEFS").ok_or("No spans")?;
-        let (defs_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
+        let (functions_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
         let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
         let (files_src, rest) = rest
             .trim()
@@ -221,12 +202,6 @@ impl Assembly {
             functions.push(func);
         }
 
-        let mut defs = EcoVec::new();
-        for line in defs_src.lines().filter(|line| !line.trim().is_empty()) {
-            let def: DefInfo = serde_json::from_str(line).unwrap();
-            defs.push(def);
-        }
-
         let mut spans = EcoVec::new();
         spans.push(Span::Builtin);
         for line in spans_src.lines().filter(|line| !line.trim().is_empty()) {
@@ -260,7 +235,6 @@ impl Assembly {
             root,
             bindings,
             functions,
-            defs,
             spans,
             inputs: Inputs {
                 files,
@@ -299,12 +273,6 @@ impl Assembly {
         uasm.push_str("\nFUNCTIONS\n");
         for func in &self.functions {
             uasm.push_str(&serde_json::to_string(&func).unwrap());
-            uasm.push('\n');
-        }
-
-        uasm.push_str("\nDATA DEFS\n");
-        for def in &self.defs {
-            uasm.push_str(&serde_json::to_string(&def).unwrap());
             uasm.push('\n');
         }
 
@@ -370,7 +338,6 @@ impl Default for Assembly {
         Self {
             root: Node::default(),
             functions: EcoVec::new(),
-            defs: EcoVec::new(),
             spans: eco_vec![Span::Builtin],
             bindings: EcoVec::new(),
             dynamic_functions: EcoVec::new(),

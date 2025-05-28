@@ -25,27 +25,6 @@ impl Compiler {
             return Ok(());
         }
 
-        // Get data def if this is a method
-        let mut data_def = None;
-        let is_method = if let Some(tilde_span) = binding.tilde_span {
-            self.experimental_error(&tilde_span, || {
-                "Methods are experimental. To use them, add \
-                `# Experimental!` to the top of the file."
-            });
-            if let Some(def) = self.scope.data_def.clone() {
-                let span = self.add_span(tilde_span);
-                data_def = Some((def, span));
-            } else {
-                self.add_error(
-                    tilde_span,
-                    "Method has no data definition defined before it",
-                );
-            }
-            true
-        } else {
-            false
-        };
-
         // Create meta
         let comment = prelude
             .comment
@@ -121,9 +100,6 @@ impl Compiler {
         if binding.code_macro {
             if is_external {
                 self.add_error(span.clone(), "Macros cannot be external");
-            }
-            if is_method {
-                self.add_error(span.clone(), "Methods cannot be macros");
             }
             if max_placeholder.is_some() {
                 return Err(self.error(span.clone(), "Code macros may not contain placeholders"));
@@ -237,9 +213,6 @@ impl Compiler {
         if max_placeholder.is_some() || ident_margs > 0 {
             if is_external {
                 self.add_error(span.clone(), "Macros cannot be external");
-            }
-            if is_method {
-                self.add_error(span.clone(), "Methods cannot be macros");
             }
 
             self.scope.names.insert(name.clone(), local);
@@ -357,12 +330,9 @@ impl Compiler {
             }
             Ok(node)
         };
-        // We may need to compile the words in the context of a data definition method
-        let mut node = if let Some((def, _)) = &data_def {
-            self.in_method(def, compile)?
-        } else {
-            self.in_scope(ScopeKind::Binding, compile)?.1
-        };
+
+        // Compile the words
+        let mut node = self.in_scope(ScopeKind::Binding, compile)?.1;
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
         let is_obverse = node
             .iter()
@@ -399,7 +369,7 @@ impl Compiler {
         // Resolve signature
         match node.sig() {
             Ok(mut sig) => {
-                let binds_above = !in_function && node.is_empty() && no_code_words && !is_method;
+                let binds_above = !in_function && node.is_empty() && no_code_words;
                 if !binds_above {
                     // Validate signature
                     if let Some(declared_sig) = &binding.signature {
@@ -408,23 +378,7 @@ impl Compiler {
                     }
                 }
 
-                // Add data def local wrapper
-                if let Some((def, span)) = data_def {
-                    node = Node::WithLocal {
-                        def: def.def_index,
-                        inner: SigNode::new(sig, node).into(),
-                        span,
-                    };
-                    sig.update_args(|a| a + 1);
-                }
-
-                if sig == (0, 1)
-                    && !self_referenced
-                    && !is_func
-                    && !is_obverse
-                    && !is_method
-                    && !is_external
-                {
+                if sig == (0, 1) && !self_referenced && !is_func && !is_obverse && !is_external {
                     // Binding is a constant
                     let val = if let [Node::Push(v)] = node.as_slice() {
                         Some(v.clone())

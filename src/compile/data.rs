@@ -72,7 +72,7 @@ impl Compiler {
                 self.scope.add_module_name(name.value.clone(), local);
                 (self.code_meta.global_references).insert(name.span.clone(), local.index);
                 return Ok(());
-            } else if self.scope.data_def.is_some() {
+            } else if self.scope.has_data_def {
                 return Err(self.error(
                     data.span(),
                     "A module cannot have multiple unnamed data definitions",
@@ -86,9 +86,6 @@ impl Compiler {
         } else {
             None
         };
-        let def_index = self.asm.bind_def(DefInfo {
-            name: def_name.clone(),
-        });
 
         struct Field {
             name: EcoString,
@@ -446,66 +443,7 @@ impl Compiler {
             }
         }
 
-        // Scope for data function and/or methods
-        let (method_module, _) = self.in_scope(ScopeKind::Method(def_index), |comp| {
-            // Local getters
-            for field in &fields {
-                let field_name = &field.name;
-                let id = FunctionId::Named(field_name.clone());
-                let node = Node::from_iter([
-                    Node::GetLocal {
-                        def: def_index,
-                        span: field.span,
-                    },
-                    comp.global_index(field.global_index, true, field.name_span.clone()),
-                ]);
-                let func = comp.asm.add_function(id, Signature::new(0, 1), node);
-                let local = LocalName {
-                    index: comp.next_global,
-                    public: true,
-                };
-                comp.next_global += 1;
-                let comment = match &def_name {
-                    Some(def_name) => format!("{def_name}'s {field_name} argument"),
-                    None => format!("{field_name} argument"),
-                };
-                let meta = BindingMeta {
-                    comment: Some(DocComment::from(comment.as_str())),
-                    ..Default::default()
-                };
-                comp.compile_bind_function(field.name.clone(), local, func, field.span, meta)?;
-            }
-            // Self getter
-            {
-                let node = Node::GetLocal {
-                    def: def_index,
-                    span,
-                };
-                let id = FunctionId::Named("Self".into());
-                let func = comp.asm.add_function(id, Signature::new(0, 1), node);
-                let local = LocalName {
-                    index: comp.next_global,
-                    public: true,
-                };
-                comp.next_global += 1;
-                let comment = match &def_name {
-                    Some(def_name) => format!("Get bound {def_name}"),
-                    None => "Get bound data instance".into(),
-                };
-                let meta = BindingMeta {
-                    comment: Some(DocComment::from(comment.as_str())),
-                    ..Default::default()
-                };
-                comp.compile_bind_function("Self".into(), local, func, span, meta)?;
-            }
-            Ok(())
-        })?;
-
-        let scope_data_def = ScopeDataDef {
-            def_index,
-            module: method_module,
-        };
-        self.scope.data_def = Some(scope_data_def.clone());
+        self.scope.has_data_def = true;
 
         let mut function_stuff = None;
         // Data functions

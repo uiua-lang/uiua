@@ -87,8 +87,6 @@ impl Item {
 /// A binding
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Binding {
-    /// Span of a ~ for a method
-    pub tilde_span: Option<CodeSpan>,
     /// The name of the binding
     pub name: Sp<Ident>,
     /// The span of the arrow

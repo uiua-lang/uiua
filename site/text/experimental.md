@@ -1,6 +1,5 @@
 ## Lexical Ordering
 
-
 Consider this example:
 
 ```uiua

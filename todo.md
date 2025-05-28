@@ -1,6 +1,11 @@
 # Uiua Todo
 
 # 0.17
+- Data functions
+  - `Args:`
+  - Update experimental page
+- Sided `join`
+- `Hd3` tag
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

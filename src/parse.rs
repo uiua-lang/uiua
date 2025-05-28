@@ -435,7 +435,6 @@ impl Parser<'_> {
 }
 
 struct BindingInit {
-    tilde_span: Option<CodeSpan>,
     name: Sp<Ident>,
     arrow_span: CodeSpan,
     public: bool,
@@ -445,14 +444,7 @@ struct BindingInit {
 impl Parser<'_> {
     fn binding_init(&mut self) -> Option<BindingInit> {
         let start = self.index;
-        let tilde_span = self.exact(Tilde.into());
-        self.spaces();
-        let name = if let Some(name) = self.ident() {
-            name
-        } else {
-            self.index = start;
-            return None;
-        };
+        let name = self.ident()?;
         // Left arrow
         let arrow_span = self.spaces().map(|w| w.span);
         let (glyph_span, public) =
@@ -483,7 +475,6 @@ impl Parser<'_> {
             arrow_span = arrow_span.merge(span);
         }
         Some(BindingInit {
-            tilde_span,
             name,
             arrow_span,
             public,
@@ -512,7 +503,6 @@ impl Parser<'_> {
     }
     fn binding(&mut self) -> Option<Binding> {
         let BindingInit {
-            tilde_span,
             name,
             arrow_span,
             public,
@@ -610,7 +600,6 @@ impl Parser<'_> {
 
         self.validate_binding_name(&name);
         Some(Binding {
-            tilde_span,
             name,
             arrow_span,
             public,

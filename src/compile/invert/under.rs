@@ -116,8 +116,6 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &RotatePat,
     &AtanPat,
     &FillPat,
-    &GetLocalPat,
-    &SetLocalPat,
     &DupPat,
     // Sign ops
     &(Abs, (CopyUnd(1), Abs), (PopUnd(1), Sign, Mul)),
@@ -1016,14 +1014,6 @@ under!(
         Ok((input, before, after))
     }
 );
-
-under!(GetLocalPat, input, _, _, _, GetLocal { def, span }, {
-    Ok((input, GetLocal { def, span }, SetLocal { def, span }))
-});
-
-under!(SetLocalPat, input, _, _, _, SetLocal { def, span }, {
-    Ok((input, SetLocal { def, span }, GetLocal { def, span }))
-});
 
 under!(FlipPat, input, g_sig, inverse, asm, Prim(Flip, span), {
     let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;

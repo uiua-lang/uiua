@@ -44,6 +44,10 @@ impl Default for Value {
     }
 }
 
+const _: () = {
+    assert!(size_of::<Value> <= 64, "Value is bigger than 64 bytes. This is really really bad for performance!");
+};
+
 /// A combination of [`ExactSizeIterator`] and [`DoubleEndedIterator`]
 pub trait ExactDoubleIterator: ExactSizeIterator + DoubleEndedIterator {}
 impl<T: ExactSizeIterator + DoubleEndedIterator> ExactDoubleIterator for T {}

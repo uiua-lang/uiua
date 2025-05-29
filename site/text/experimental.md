@@ -81,8 +81,16 @@ F (A:5)
 
 ```uiua should fail
 # Experimental!
-~F {A ← 0|B ← 0} ∘
-(F) A:5
+~F {A ← 0|B} ≡°□
+≡F A:5 ⇡3
+```
+
+To set an optional argument for a function inside a modifier, set the argument inside the modifier itself.
+
+```uiua
+# Experimental!
+~F {A ← 0|B} ≡°□
+≡(F A:) 5 ⇡3
 ```
 
 ---

@@ -133,3 +133,15 @@ F! ← (
 )
 
 aπ
+
+# Experimental!
+~F {A B ← 0} ≡°□
+≡F B:5 ⇡3
+
+# Experimental!
+~F {A B ← 0} ≡°□
+F ≡F B:5 ⇡3
+
+# Experimental!
+~F {A ← 0|B C ← 0} ∘
+F (F) A:5 ⇡3

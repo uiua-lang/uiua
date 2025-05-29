@@ -95,6 +95,10 @@ pub struct Compiler {
     start_addrs: Vec<usize>,
     /// Data function info, maps Call index to info
     data_function_info: HashMap<usize, Arc<DataFuncInfo>>,
+    /// Names of argument setters
+    setter_names: IndexMap<Ident, CodeSpan>,
+    /// Temporarily stashed argument setters
+    setter_stash: Vec<(SetterStashKind, IndexMap<Ident, CodeSpan>)>,
 }
 
 impl Default for Compiler {
@@ -124,6 +128,8 @@ impl Default for Compiler {
             macro_env: Uiua::default(),
             start_addrs: Vec::new(),
             data_function_info: HashMap::new(),
+            setter_names: IndexMap::new(),
+            setter_stash: Vec::new(),
         }
     }
 }
@@ -135,6 +141,12 @@ struct BindingPrelude {
     no_inline: bool,
     external: bool,
     deprecation: Option<EcoString>,
+}
+
+#[derive(Debug, Clone)]
+enum SetterStashKind {
+    Scope(ScopeKind),
+    Modifier(Option<Primitive>),
 }
 
 type LocalNames = IndexMap<Ident, LocalName>;
@@ -206,8 +218,6 @@ pub(crate) struct Scope {
     experimental_error: bool,
     /// Whether an error has been emitted for fill function signatures
     fill_sig_error: bool,
-    /// Names of argument setters
-    setter_names: IndexMap<Ident, CodeSpan>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -252,7 +262,6 @@ impl Default for Scope {
             experimental: false,
             experimental_error: false,
             fill_sig_error: false,
-            setter_names: IndexMap::new(),
         }
     }
 }
@@ -381,6 +390,10 @@ impl Compiler {
     fn scopes(&self) -> impl Iterator<Item = &Scope> {
         once(&self.scope).chain(self.higher_scopes.iter().rev())
     }
+    #[allow(dead_code)]
+    fn scopes_mut(&mut self) -> impl Iterator<Item = &mut Scope> {
+        once(&mut self.scope).chain(self.higher_scopes.iter_mut().rev())
+    }
     fn scopes_to_file(&self) -> impl Iterator<Item = &Scope> {
         let already_file = matches!(self.scope.kind, ScopeKind::File(_));
         once(&self.scope).chain(
@@ -409,18 +422,17 @@ impl Compiler {
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<(Module, T)> {
         self.higher_scopes.push(take(&mut self.scope));
+        self.setter_stash.push((
+            SetterStashKind::Scope(kind.clone()),
+            take(&mut self.setter_names),
+        ));
         self.scope.kind = kind;
 
         let res = f(self);
 
-        let mut setter_names = Default::default();
-        match &self.scope.kind {
-            ScopeKind::Function => setter_names = take(&mut self.scope.setter_names),
-            _ => self.forbid_arg_setters(None),
-        }
-
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
-        self.scope.setter_names.extend(setter_names);
+        self.setter_stash.pop().unwrap();
+
         let res = res?;
         let module = Module {
             comment: scope.comment,
@@ -1519,7 +1531,7 @@ impl Compiler {
             }
             Word::ArgSetter(set) => {
                 let span = self.add_span(word.span);
-                let index = if let Some(existing) = self.scope.setter_names.get(&set.ident.value) {
+                let index = if let Some(existing) = self.setter_names.get(&set.ident.value) {
                     let message =
                         format!("{} has already been set in this scope.", set.ident.value);
                     let error = self
@@ -1528,8 +1540,8 @@ impl Compiler {
                     self.errors.push(error);
                     0
                 } else {
-                    let index = self.scopes().map(|sc| sc.setter_names.len()).sum();
-                    (self.scope.setter_names).insert(set.ident.value.clone(), set.ident.span);
+                    let index = self.setter_names.len();
+                    (self.setter_names).insert(set.ident.value.clone(), set.ident.span);
                     index
                 };
                 Node::from([
@@ -1796,7 +1808,7 @@ impl Compiler {
             self.code_meta
                 .global_references
                 .insert(r.name.span.clone(), local.index);
-            Ok(self.global_index(local.index, r.name.span))
+            Ok(self.global_index(&r.name.value, local.index, r.name.span))
         } else {
             self.ident(r.name.value, r.name.span, r.in_macro_arg)
         }
@@ -1838,7 +1850,7 @@ impl Compiler {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
-            Ok(self.global_index(local.index, span))
+            Ok(self.global_index(&ident, local.index, span))
         } else if let Some(curr) =
             (self.current_bindings.last_mut()).filter(|curr| curr.name == ident)
         {
@@ -1859,7 +1871,7 @@ impl Compiler {
             // Name exists in scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
-            Ok(self.global_index(local.index, span))
+            Ok(self.global_index(&ident, local.index, span))
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
             if let Some(suggestion) = constant.deprecation {
@@ -1896,37 +1908,43 @@ impl Compiler {
         }
         None
     }
-    fn global_index(&mut self, index: usize, span: CodeSpan) -> Node {
-        self.global_index_impl(index, true, span)
+    fn global_index(&mut self, name: &str, index: usize, span: CodeSpan) -> Node {
+        self.global_index_impl(name, index, true, span)
     }
-    fn global_index_impl(&mut self, index: usize, top_level: bool, span: CodeSpan) -> Node {
+    fn global_index_impl(
+        &mut self,
+        name: &str,
+        index: usize,
+        top_level: bool,
+        span: CodeSpan,
+    ) -> Node {
         let binfo = &mut self.asm.bindings.make_mut()[index];
         binfo.used = true;
         let bkind = binfo.kind.clone();
         match bkind {
             BindingKind::Const(Some(val)) => {
                 if top_level {
-                    self.forbid_arg_setters(&span);
+                    self.forbid_arg_setters((name, &span));
                 }
                 Node::new_push(val)
             }
             BindingKind::Const(None) => {
                 if top_level {
-                    self.forbid_arg_setters(&span);
+                    self.forbid_arg_setters((name, &span));
                 }
                 Node::CallGlobal(index, Signature::new(0, 1))
             }
             BindingKind::Func(f) => {
                 let spandex = self.add_span(span.clone());
                 let mut node = Node::Call(f, spandex);
-                if !self.scope.setter_names.is_empty() {
+                if !self.setter_names.is_empty() {
                     node.push(Node::ClearArgs);
                 }
                 // Handle data functions
                 if let Some(info) = self.data_function_info.get(&index).cloned() {
                     node.prepend(self.sort_args(&info.name, info.fields.clone(), &span))
                 } else {
-                    self.forbid_arg_setters(&span);
+                    self.forbid_arg_setters((name, &span));
                 }
                 node
             }
@@ -1934,7 +1952,7 @@ impl Compiler {
                 if let Some(local) = self.imports.get(&path).and_then(|m| m.names.get("Call")) {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
-                    self.global_index(local.index, span)
+                    self.global_index(name, local.index, span)
                 } else {
                     self.add_error(
                         span,
@@ -1956,7 +1974,7 @@ impl Compiler {
                 if let Some(&local) = names.get("Call").or_else(|| names.get("New")) {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
-                    self.global_index_impl(local.index, false, span.clone())
+                    self.global_index_impl(name, local.index, false, span.clone())
                 } else {
                     self.add_error(
                         span,
@@ -2127,7 +2145,7 @@ impl Compiler {
             Primitive::Layout => {
                 node.prepend(self.sort_args("layout", LayoutParam::field_info(), &span))
             }
-            prim if prim.glyph().is_none() => self.forbid_arg_setters(&span),
+            prim if prim.glyph().is_none() => self.forbid_arg_setters((prim.name(), &span)),
             _ => {}
         }
 
@@ -2738,10 +2756,51 @@ impl Compiler {
         mut used: BTreeMap<EcoString, FieldInfo>,
         span: &CodeSpan,
     ) -> Node {
-        let setter_names = take(&mut self.scope.setter_names);
+        let setter_names = take(&mut self.setter_names);
+
+        // Forbid accessing arguments from outside a modifier
+        let stashed: Vec<_> = self
+            .setter_stash
+            .iter_mut()
+            .flat_map(|(kind, list)| take(list).into_iter().map(|pair| (kind.clone(), pair)))
+            .collect();
+        'outer: for require_known in [true, false] {
+            for (kind, (name, setter_span)) in &stashed {
+                if !require_known || setter_names.contains_key(name) {
+                    let owned;
+                    let kind = match kind {
+                        SetterStashKind::Scope(ScopeKind::Function) => "function",
+                        SetterStashKind::Modifier(None)
+                        | SetterStashKind::Scope(ScopeKind::AllInModule) => "modifier",
+                        SetterStashKind::Modifier(Some(prim)) => {
+                            owned = prim.format().to_string();
+                            &owned
+                        }
+                        SetterStashKind::Scope(ScopeKind::Binding) => "binding",
+                        SetterStashKind::Scope(ScopeKind::File(_)) => "file",
+                        SetterStashKind::Scope(ScopeKind::Temp(_)) => "macro",
+                        SetterStashKind::Scope(ScopeKind::Module(_)) => "module",
+                        SetterStashKind::Scope(ScopeKind::Test) => "test scope",
+                    };
+                    let error = self.error(
+                        span.clone(),
+                        format!("{def_name} cannot access args from inside a {kind}"),
+                    );
+                    let info = [(
+                        format!("{name} is outside the {kind}"),
+                        Some(setter_span.clone().into()),
+                    )];
+                    self.errors.push(error.with_info(info));
+                    break 'outer;
+                }
+            }
+        }
+
         if setter_names.is_empty() {
             return Node::empty();
         }
+
+        // Collect arguments
         let mut unused = None;
         let mut indices = EcoVec::new();
         for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate().rev() {
@@ -2781,21 +2840,24 @@ impl Compiler {
             self.unused_setter_error(
                 &name,
                 setter_span,
-                (span.clone(), used.into_keys().collect()),
+                (def_name, span.clone(), used.into_keys().collect()),
             );
         }
 
         Node::SortArgs { indices }
     }
-    fn unused_setter_error(
+    fn unused_setter_error<'a>(
         &mut self,
-        name: &str,
+        setter_name: &str,
         setter_span: CodeSpan,
-        func_info: impl Into<Option<(CodeSpan, Vec<EcoString>)>>,
+        func_info: impl Into<Option<(&'a str, CodeSpan, Vec<EcoString>)>>,
     ) {
-        let error = self.error(setter_span, format!("Optional argument {name} is not used"));
-        let info = (func_info.into()).map(|(span, options)| {
-            let mut message = "Not used here".to_string();
+        let error = self.error(
+            setter_span,
+            format!("Optional argument {setter_name} is not used"),
+        );
+        let info = (func_info.into()).map(|(function_name, span, options)| {
+            let mut message = format!("Not used in {function_name}");
             if !options.is_empty() {
                 message.push_str(". Available fields: ");
                 for (i, option) in options.into_iter().enumerate() {
@@ -2809,13 +2871,14 @@ impl Compiler {
         });
         self.errors.push(error.with_info(info))
     }
-    fn forbid_arg_setters<'a>(&mut self, span: impl Into<Option<&'a CodeSpan>>) {
-        let setter_name = self.scope.setter_names.drain(..).next();
+    fn forbid_arg_setters<'a>(&mut self, span: impl Into<Option<(&'a str, &'a CodeSpan)>>) {
+        let setter_name = self.setter_names.drain(..).next();
         if let Some((name, setter_span)) = setter_name {
             self.unused_setter_error(
                 &name,
                 setter_span,
-                span.into().cloned().map(|span| (span, Vec::new())),
+                span.into()
+                    .map(|(function_name, span)| (function_name, span.clone(), Vec::new())),
             );
         }
     }

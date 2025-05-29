@@ -39,7 +39,7 @@ impl Compiler {
                         .collect(),
                     pack_expansion: true,
                 };
-                self.modified(new, subscript)
+                self.modified_impl(new, subscript)
             }
             Modifier::Primitive(Primitive::Dip) => {
                 let mut nodes = Vec::with_capacity(pack.branches.len());
@@ -92,7 +92,7 @@ impl Compiler {
                         pack_expansion: true,
                     };
                 }
-                self.modified(new, subscript)
+                self.modified_impl(new, subscript)
             }
             Modifier::Primitive(
                 Primitive::Fork | Primitive::Bracket | Primitive::Try | Primitive::Fill,
@@ -121,7 +121,7 @@ impl Compiler {
                         pack_expansion: true,
                     };
                 }
-                self.modified(new, subscript)
+                self.modified_impl(new, subscript)
             }
             Modifier::Primitive(Primitive::On) => {
                 let mut words = Vec::new();
@@ -306,7 +306,7 @@ impl Compiler {
                         .collect(),
                     pack_expansion: true,
                 };
-                self.modified(new, subscript)
+                self.modified_impl(new, subscript)
             }
             m => {
                 if let Modifier::Ref(name) = m {
@@ -340,8 +340,26 @@ impl Compiler {
         }
         Ok(Some(node))
     }
-    #[allow(clippy::collapsible_match)]
     pub(crate) fn modified(
+        &mut self,
+        modified: Modified,
+        subscript: Option<Sp<Subscript>>,
+    ) -> UiuaResult<Node> {
+        let prim = if let Modifier::Primitive(prim) = modified.modifier.value {
+            Some(prim)
+        } else {
+            None
+        };
+        self.setter_stash.push((
+            SetterStashKind::Modifier(prim),
+            take(&mut self.setter_names),
+        ));
+        let res = self.modified_impl(modified, subscript);
+        self.setter_names = self.setter_stash.pop().unwrap().1;
+        res
+    }
+    #[allow(clippy::collapsible_match)]
+    fn modified_impl(
         &mut self,
         mut modified: Modified,
         subscript: Option<Sp<Subscript>>,

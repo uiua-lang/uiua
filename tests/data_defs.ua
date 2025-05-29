@@ -84,3 +84,22 @@ F! ← ^0 Foo
 ~F {A ← +|B C ← 0} ∘
 ⍤⤙≍ {3 4 0} F 1 2 4
 ⍤⤙≍ {3 4 5} F 1 C:5 2 4
+
+~F {A ← 0|B C ← 0} ∘
+M! ← F^0
+⍤⤙≍ F A:2 3 M!A:2 3
+
+┌─╴Range
+  ~ {Min ← 0|Max Inclusive ← 0} ⍜-⇡ ⊃Min(+⊃Max Inclusive)
+  ~Incl {Min ← 0} Call Inclusive:1 Min:Min
+  APL ← Call Inclusive:1 Min:1
+└─╴
+⍤⤙≍ ⇡5 Range 5
+⍤⤙≍ ⇡₁5 Range~APL 5
+⍤⤙≍ ⇡₄6 Range Min:4 10
+⍤⤙≍ ⇡₄7 Range~Incl Min:4 10
+
+~Run {A ← 0|B ← 1|C} ≡°□
+⍤⤙≍ [0 1 2] Run 2
+⍤⤙≍ {2 1 5} Run~New A:2 5
+⍤⤙≍ [2 8 5] Run~Args B:8 Run~New A:2 5

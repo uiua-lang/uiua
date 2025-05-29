@@ -94,7 +94,7 @@ pub struct Compiler {
     /// Start addresses
     start_addrs: Vec<usize>,
     /// Data function info, maps Call index to info
-    data_function_info: HashMap<usize, DataFuncInfo>,
+    data_function_info: HashMap<usize, Arc<DataFuncInfo>>,
 }
 
 impl Default for Compiler {
@@ -1917,10 +1917,18 @@ impl Compiler {
                 Node::CallGlobal(index, Signature::new(0, 1))
             }
             BindingKind::Func(f) => {
-                if top_level {
+                let spandex = self.add_span(span.clone());
+                let mut node = Node::Call(f, spandex);
+                if !self.scope.setter_names.is_empty() {
+                    node.push(Node::ClearArgs);
+                }
+                // Handle data functions
+                if let Some(info) = self.data_function_info.get(&index).cloned() {
+                    node.prepend(self.sort_args(&info.name, info.fields.clone(), &span))
+                } else {
                     self.forbid_arg_setters(&span);
                 }
-                Node::Call(f, self.add_span(span))
+                node
             }
             BindingKind::Import(path) => {
                 if let Some(local) = self.imports.get(&path).and_then(|m| m.names.get("Call")) {
@@ -1948,15 +1956,7 @@ impl Compiler {
                 if let Some(&local) = names.get("Call").or_else(|| names.get("New")) {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
-                    let mut node = self.global_index_impl(local.index, false, span.clone());
-                    if !self.scope.setter_names.is_empty() {
-                        node.push(Node::ClearArgs);
-                    }
-                    // Handle data functions
-                    if let Some(info) = self.data_function_info.get(&local.index).cloned() {
-                        node.prepend(self.sort_args(&info.name, info.fields, &span))
-                    }
-                    node
+                    self.global_index_impl(local.index, false, span.clone())
                 } else {
                     self.add_error(
                         span,
@@ -2739,6 +2739,9 @@ impl Compiler {
         span: &CodeSpan,
     ) -> Node {
         let setter_names = take(&mut self.scope.setter_names);
+        if setter_names.is_empty() {
+            return Node::empty();
+        }
         let mut unused = None;
         let mut indices = EcoVec::new();
         for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate().rev() {
@@ -2790,6 +2793,7 @@ impl Compiler {
         setter_span: CodeSpan,
         func_info: impl Into<Option<(CodeSpan, Vec<EcoString>)>>,
     ) {
+        let error = self.error(setter_span, format!("Optional argument {name} is not used"));
         let info = (func_info.into()).map(|(span, options)| {
             let mut message = "Not used here".to_string();
             if !options.is_empty() {
@@ -2803,10 +2807,7 @@ impl Compiler {
             }
             (message, Some(span.into()))
         });
-        let error = self
-            .error(setter_span, format!("Optional argument {name} is not used"))
-            .with_info(info);
-        self.errors.push(error)
+        self.errors.push(error.with_info(info))
     }
     fn forbid_arg_setters<'a>(&mut self, span: impl Into<Option<&'a CodeSpan>>) {
         let setter_name = self.scope.setter_names.drain(..).next();

@@ -413,14 +413,16 @@ impl Compiler {
             Signature::new(constructor_args, 1),
             node,
         );
-        let contructor_local = LocalName {
+        let constr_local = LocalName {
             index: self.next_global,
             public: true,
         };
         self.next_global += 1;
-        let mut comment = match &def_name {
-            Some(def_name) => format!("Create a new {def_name}\n{def_name} ?"),
-            None => "Create a new data instance\nInstance ?".into(),
+        let mut comment = match (&def_name, data.func.is_some()) {
+            (Some(name), false) => format!("Create a new {name}\n{name} ?"),
+            (Some(name), true) => format!("Create a new array of {name}'s args\n{name}Args ?"),
+            (None, false) => "Create a new data instance\nInstance ?".into(),
+            (None, true) => "Create a new args instance\nArgs ?".into(),
         };
         for field in &fields {
             match field.init.as_ref().map(|sn| sn.sig.args()) {
@@ -446,6 +448,7 @@ impl Compiler {
         self.scope.has_data_def = true;
 
         let mut function_stuff = None;
+        let mut args_function_stuff = None;
         // Data functions
         if let Some(words) = data.func {
             self.experimental_error(&data.init_span, || {
@@ -459,6 +462,7 @@ impl Compiler {
                 if data.variant {
                     comp.add_error(word_span.clone(), "Variants may not have functions");
                 }
+                let span = comp.add_span(word_span.clone());
                 // Compile function
                 let names = fields.iter().map(|field| {
                     let local = LocalName {
@@ -471,6 +475,22 @@ impl Compiler {
                     comp.scope.names.extend(names);
                     comp.words_sig(words)
                 })?;
+
+                // Make with args function
+                if !fields.iter().any(|field| field.name == "Args") {
+                    let mut sn = sn.clone();
+                    sn.node.prepend(Node::UseArgs { span });
+                    let local = LocalName {
+                        index: comp.next_global,
+                        public: true,
+                    };
+                    comp.next_global += 1;
+                    let func =
+                        comp.asm
+                            .add_function(FunctionId::Named("Args".into()), sn.sig, sn.node);
+                    args_function_stuff = Some((local, func, span));
+                }
+
                 // Add constructor
                 sn.node.prepend(Node::Call(constructor_func.clone(), span));
                 sn.sig = sn.sig.compose(Signature::new(constructor_args, 1));
@@ -506,12 +526,18 @@ impl Compiler {
                         (field.name.clone(), info)
                     })
                     .collect();
-                let info = DataFuncInfo {
-                    name: def_name.unwrap_or_default(),
+
+                // Register data function info
+                let info = Arc::new(DataFuncInfo {
+                    name: def_name.clone().unwrap_or_default(),
                     fields,
-                };
-                comp.data_function_info.insert(local.index, info);
-                let span = comp.add_span(word_span.clone());
+                });
+                comp.data_function_info.insert(local.index, info.clone());
+                comp.data_function_info
+                    .insert(constr_local.index, info.clone());
+                if let Some((local, ..)) = &args_function_stuff {
+                    comp.data_function_info.insert(local.index, info);
+                }
                 function_stuff = Some((local, func, span));
                 Ok(())
             })?;
@@ -521,19 +547,24 @@ impl Compiler {
         if let Some((local, func, span)) = function_stuff {
             self.compile_bind_function("Call".into(), local, func, span, BindingMeta::default())?;
         }
+        if let Some((local, func, span)) = args_function_stuff {
+            let meta = BindingMeta {
+                comment: Some(DocComment::from(if let Some(name) = &def_name {
+                    format!("Call {name}'s function from its constructed array")
+                } else {
+                    "Call the function from its constructed array".into()
+                })),
+                ..Default::default()
+            };
+            self.compile_bind_function("Args".into(), local, func, span, meta)?;
+        }
 
         // Bind the constructor
         let meta = BindingMeta {
             comment: Some(DocComment::from(comment.as_str())),
             ..Default::default()
         };
-        self.compile_bind_function(
-            constructor_name,
-            contructor_local,
-            constructor_func,
-            span,
-            meta,
-        )?;
+        self.compile_bind_function(constructor_name, constr_local, constructor_func, span, meta)?;
 
         Ok(())
     }

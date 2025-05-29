@@ -32,6 +32,61 @@ The argument setter is just a `|1.0` function. Setters for multiple optional arg
 F D:1 ⊓A:C: 2 B:3 4
 ```
 
+We can bundle the function's arguments before calling it with the data definition's normal `New` constructor. The bundled arguments can then be used with the `Args` function. Both of these functions also accept optional arguments.
+
+```uiua
+# Experimental!
+~Run {A ← 0|B ← 1|C} $"A:_ B:_ C:_"⊃(A|B|C)
+Run 2
+Run~New A:2 5
+Run~Args B:8 .
+```
+
+If some argument patterns are common, we can give them names by putting the data function in a module and adding more functions (or even more data functions) to it.
+
+```uiua
+# Experimental!
+┌─╴Range
+  ~ {Min ← 0|Max Inclusive ← 0} ⍜-⇡ ⊃Min(+⊃Max Inclusive)
+  ~Incl {Min ← 0} Call Inclusive:1 Min:Min
+  APL ← Call Inclusive:1 Min:1
+└─╴
+Range 5
+Range~APL 5
+Range Min:4 10
+Range~Incl Min:4 10
+```
+
+Optional arguments *must* be used by the first named call (including primitives without glyphs).
+
+```uiua should fail
+# Experimental!
+~F {A ← 0|B ← 0} ∘
+A:5
+```
+
+```uiua should fail
+# Experimental!
+~F {A ← 0|B ← 2} ∘
+F C:6
+```
+
+Optional arguments can be set from scopes lower than the function that uses them, but the opposite is not true.
+
+```uiua
+# Experimental!
+~F {A ← 0|B ← 0} ∘
+F (A:5)
+```
+
+```uiua should fail
+# Experimental!
+~F {A ← 0|B ← 0} ∘
+(F) A:5
+```
+
+---
+
 ### Validators
 
 You can add validation functions to a field. This function will be called both upon construction (after the initializer) and upon mutation.

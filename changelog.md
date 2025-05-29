@@ -5,6 +5,9 @@ Uiua is not yet stable.
 ## 0.17.0 - 2025-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- **Breaking Change** - Add experimental [data functions](https://www.uiua.org/docs/experimental#data-functions) with optional arguments
+  - Remove existing experimental non-tacit data functions and methods
+  - This breaks uses of [`flip :`](https://uiua.org/docs/flip) immediately after an identifier
 - **Breaking Change** - Numeric subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 - Subscripts can now be typed with `,` instead of `__`s

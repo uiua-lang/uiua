@@ -96,10 +96,12 @@ pub struct Compiler {
     /// Data function info, maps Call index to info
     data_function_info: HashMap<usize, Arc<DataFuncInfo>>,
     /// Names of argument setters
-    setter_names: IndexMap<Ident, CodeSpan>,
+    set_args: SetArgs,
     /// Temporarily stashed argument setters
-    setter_stash: Vec<(SetterStashKind, IndexMap<Ident, CodeSpan>)>,
+    setter_stash: Vec<(SetterStashKind, SetArgs)>,
 }
+
+type SetArgs = IndexMap<Ident, (usize, CodeSpan)>;
 
 impl Default for Compiler {
     fn default() -> Self {
@@ -128,7 +130,7 @@ impl Default for Compiler {
             macro_env: Uiua::default(),
             start_addrs: Vec::new(),
             data_function_info: HashMap::new(),
-            setter_names: IndexMap::new(),
+            set_args: IndexMap::new(),
             setter_stash: Vec::new(),
         }
     }
@@ -424,7 +426,7 @@ impl Compiler {
         self.higher_scopes.push(take(&mut self.scope));
         self.setter_stash.push((
             SetterStashKind::Scope(kind.clone()),
-            take(&mut self.setter_names),
+            take(&mut self.set_args),
         ));
         self.scope.kind = kind;
 
@@ -1039,8 +1041,7 @@ impl Compiler {
         }
     }
     fn args(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<EcoVec<SigNode>> {
-        words
-            .into_iter()
+        (words.into_iter())
             .filter(|w| w.value.is_code())
             .map(|w| self.word_sig(w))
             .collect()
@@ -1531,7 +1532,7 @@ impl Compiler {
             }
             Word::ArgSetter(set) => {
                 let span = self.add_span(word.span);
-                let index = if let Some(existing) = self.setter_names.get(&set.ident.value) {
+                let index = if let Some((_, existing)) = self.set_args.get(&set.ident.value) {
                     let message =
                         format!("{} has already been set in this scope.", set.ident.value);
                     let error = self
@@ -1540,8 +1541,9 @@ impl Compiler {
                     self.errors.push(error);
                     0
                 } else {
-                    let index = self.setter_names.len();
-                    (self.setter_names).insert(set.ident.value.clone(), set.ident.span);
+                    let index = self.set_args.len()
+                        + self.setter_stash.iter().map(|s| s.1.len()).sum::<usize>();
+                    (self.set_args).insert(set.ident.value.clone(), (index, set.ident.span));
                     index
                 };
                 Node::from([
@@ -1937,7 +1939,7 @@ impl Compiler {
             BindingKind::Func(f) => {
                 let spandex = self.add_span(span.clone());
                 let mut node = Node::Call(f, spandex);
-                if !self.setter_names.is_empty() {
+                if !self.set_args.is_empty() {
                     node.push(Node::ClearArgs);
                 }
                 // Handle data functions
@@ -2756,7 +2758,7 @@ impl Compiler {
         mut used: BTreeMap<EcoString, FieldInfo>,
         span: &CodeSpan,
     ) -> Node {
-        let setter_names = take(&mut self.setter_names);
+        let set_args = take(&mut self.set_args);
 
         // Forbid accessing arguments from outside a modifier
         let stashed: Vec<_> = self
@@ -2765,8 +2767,8 @@ impl Compiler {
             .flat_map(|(kind, list)| take(list).into_iter().map(|pair| (kind.clone(), pair)))
             .collect();
         'outer: for require_known in [true, false] {
-            for (kind, (name, setter_span)) in &stashed {
-                if !require_known || setter_names.contains_key(name) {
+            for (kind, (name, (_, setter_span))) in &stashed {
+                if !require_known || set_args.contains_key(name) {
                     let owned;
                     let kind = match kind {
                         SetterStashKind::Scope(ScopeKind::Function) => "function",
@@ -2796,14 +2798,14 @@ impl Compiler {
             }
         }
 
-        if setter_names.is_empty() {
+        if set_args.is_empty() {
             return Node::empty();
         }
 
         // Collect arguments
         let mut unused = None;
         let mut indices = EcoVec::new();
-        for (set_index, (name, setter_span)) in setter_names.into_iter().enumerate().rev() {
+        for (name, (set_index, setter_span)) in set_args {
             if let Some(info) = used.remove(name.as_str()) {
                 if let Some(sig) = info.init_sig {
                     if sig != (0, 1) {
@@ -2872,8 +2874,8 @@ impl Compiler {
         self.errors.push(error.with_info(info))
     }
     fn forbid_arg_setters<'a>(&mut self, span: impl Into<Option<(&'a str, &'a CodeSpan)>>) {
-        let setter_name = self.setter_names.drain(..).next();
-        if let Some((name, setter_span)) = setter_name {
+        let set_arg = self.set_args.drain(..).next();
+        if let Some((name, (_, setter_span))) = set_arg {
             self.unused_setter_error(
                 &name,
                 setter_span,

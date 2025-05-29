@@ -350,12 +350,10 @@ impl Compiler {
         } else {
             None
         };
-        self.setter_stash.push((
-            SetterStashKind::Modifier(prim),
-            take(&mut self.setter_names),
-        ));
+        self.setter_stash
+            .push((SetterStashKind::Modifier(prim), take(&mut self.set_args)));
         let res = self.modified_impl(modified, subscript);
-        self.setter_names = self.setter_stash.pop().unwrap().1;
+        self.set_args.extend(self.setter_stash.pop().unwrap().1);
         res
     }
     #[allow(clippy::collapsible_match)]

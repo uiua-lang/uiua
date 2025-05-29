@@ -908,7 +908,7 @@ pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
     let mut pos: Option<[f64; 3]> = None;
     let mut scale = None;
     let mut fog = None;
-    for (arg, index) in args.into_iter().flatten() {
+    for (arg, index) in args {
         match all::<VoxelsParam>().nth(index).unwrap() {
             VoxelsParam::Fog => {
                 let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
@@ -1365,7 +1365,7 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
     let mut bg = None;
 
     // Parse options
-    for (arg, index) in args.into_iter().flatten() {
+    for (arg, index) in args {
         match all::<LayoutParam>().nth(index).unwrap() {
             LayoutParam::LineHeight => {
                 line_height = arg.as_num(env, "Line height must be a scalar number")? as f32

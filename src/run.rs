@@ -50,7 +50,7 @@ pub(crate) struct Runtime {
     /// The local stack
     pub(crate) local_stack: EcoVec<(usize, Value)>,
     /// Set args
-    pub(crate) set_args: Vec<Option<(Value, usize)>>,
+    pub(crate) set_args: Vec<(Value, usize)>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -756,26 +756,20 @@ impl Uiua {
             }
             Node::SetArg { index, span } => self.with_span(span, |env| {
                 let val = env.pop(1)?;
-                if env.rt.set_args.len() <= index {
-                    env.rt.set_args.resize(index + 1, None);
-                }
-                env.rt.set_args[index] = Some((val, index));
+                env.rt.set_args.push((val, index));
                 Ok(())
             }),
             Node::SortArgs { indices } => {
-                for (i, index) in indices {
-                    if let Some((_, idx)) = &mut self.rt.set_args[i] {
-                        *idx = index
+                for (_, idx) in &mut self.rt.set_args {
+                    if let Some((_, index)) = indices.iter().find(|(i, _)| i == idx) {
+                        *idx = *index;
                     }
                 }
                 Ok(())
             }
             Node::UseArgs { span } => self.with_span(span, |env| {
                 let mut target = env.pop(1)?;
-                for arg in take(&mut env.rt.set_args) {
-                    let Some((mut row, index)) = arg else {
-                        continue;
-                    };
+                for (mut row, index) in take(&mut env.rt.set_args) {
                     if let Value::Box(_) = target {
                         row.box_if_not();
                     }

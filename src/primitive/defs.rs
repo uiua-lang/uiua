@@ -1277,6 +1277,8 @@ primitive!(
     /// A non-integer scalar count will either remove or duplicate rows at regular intervals.
     /// ex: ▽ 0.5 ⇡10
     /// ex: ▽ 1.5 ⇡10
+    /// A numeric subscripts [keep]s along that many leading axes
+    /// ex: ▽₂ 3 [1_2 3_4]
     ///
     /// [under][keep] allows you to modify part of an array according to a mask.
     /// ex: ⍜▽(+1) ⊸=@s "mississippi"
@@ -3696,6 +3698,7 @@ impl_primitive!(
     (1, NBits(usize)),
     (1, DeshapeSub(i32)),
     (1, TransposeN(i32)),
+    (2, MultiKeep(usize)),
     (1, Utf16),
     (1, Retropose),
     ([2], RepeatWithInverse),

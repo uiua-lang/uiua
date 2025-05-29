@@ -1,10 +1,8 @@
 # Uiua Todo
 
 # 0.17
-- `soa` alias
 - Sided `join`
 - Subscript `occurences`
-- Subscript `keep`
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

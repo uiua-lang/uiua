@@ -98,7 +98,7 @@ pub fn Idioms() -> impl IntoView {
             <div>
                 <Hd id="multi-aliases">"Multi-aliases"</Hd>
                 <p>"Some words serve as an alias for a sequence of primitives. Each primitive is typically represented by a single character in the word."</p>
-                <Editor example="kork 2 [1_2 3_4] # Try formatting!"/>
+                <Editor example="dor 10 # Try formatting!"/>
                 <p>"These words are listed in the table below."</p>
                 <table class="bordered-table" style="width: 100%">
                     <tr><th>"Word"</th><th>"Primitives"</th></tr>

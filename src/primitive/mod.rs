@@ -387,6 +387,10 @@ impl fmt::Display for ImplPrimitive {
             Retropose => write!(f, "<{Evert}>"),
             Ga(op, _) => op.fmt(f),
             Over => write!(f, "over"),
+            &MultiKeep(n) => {
+                write!(f, "{Keep}")?;
+                fmt_subscript(f, n as i32)
+            }
         }
     }
 }
@@ -1630,6 +1634,12 @@ impl ImplPrimitive {
                 env.push(b.clone());
                 env.push(a);
                 env.push(b);
+            }
+            &ImplPrimitive::MultiKeep(dims) => {
+                let count = env.pop(1)?;
+                let val = env.pop(2)?;
+                let res = count.multikeep(val, dims, env)?;
+                env.push(res);
             }
             &ImplPrimitive::Ga(op, spec) => match op {
                 GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,

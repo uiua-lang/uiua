@@ -11,6 +11,7 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - Numeric subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 - Subscripts can now be typed with `,` instead of `__`s
+- Add numeric subscripts for [`keep ▽`](https://uiua.org/docs/keep) to keep along a number of dimensions
 - Stabilize [`self ˙`](https://uiua.org/docs/self)
   - Add experimental sided subscripts for [`self ˙`](https://uiua.org/docs/self)
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)
@@ -18,6 +19,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
+- Remove `kork` and `rkok` aliases
 
 ## 0.16.2 - 2025-05-21
 ### Interpreter

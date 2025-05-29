@@ -2406,6 +2406,11 @@ impl Compiler {
                             Node::Prim(Add, span),
                         ])
                     }
+                    Keep => {
+                        let n = self.positive_subscript(n, Keep, &span);
+                        let span = self.add_span(span);
+                        Node::ImplPrim(ImplPrimitive::MultiKeep(n), span)
+                    }
                     _ => {
                         self.add_error(
                             span.clone(),

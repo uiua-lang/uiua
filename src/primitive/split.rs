@@ -177,8 +177,6 @@ impl Primitive {
     pub fn multi_aliases() -> &'static [(&'static str, &'static [(Primitive, &'static str)])] {
         use Primitive::*;
         &[
-            ("kork", &[(Keep, "k"), (On, "o"), (Rows, "r"), (Keep, "k")]),
-            ("rkok", &[(Rows, "r"), (Keep, "k"), (On, "o"), (Keep, "k")]),
             ("awm", &[(Assert, "a"), (With, "w"), (Match, "m")]),
             ("dor", &[(Div, "d"), (On, "o"), (Range, "r")]),
             (

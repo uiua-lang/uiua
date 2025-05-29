@@ -25,6 +25,7 @@ use crate::{
     boxed::Boxed,
     cowslice::{cowslice, extend_repeat, CowSlice},
     fill::FillValue,
+    grid_fmt::GridFmt,
     val_as_arr,
     value::Value,
     Complex, Shape, Uiua, UiuaResult, RNG,
@@ -481,6 +482,18 @@ impl Value {
             )
         }
     }
+    pub(crate) fn multikeep(&self, target: Self, dims: usize, env: &Uiua) -> UiuaResult<Self> {
+        let count = self.as_num(env, "Count must be a scalar number")?;
+        if count < 0.0 {
+            return Err(env.error(format!(
+                "Count must be non-negative, but it is {}",
+                count.grid_string(false)
+            )));
+        }
+        val_as_arr!(target, |arr| arr
+            .multikeep(dims, count, env)
+            .map(Into::into))
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -523,9 +536,6 @@ impl<T: ArrayValue> Array<T> {
             }
         })
     }
-}
-
-impl<T: ArrayValue> Array<T> {
     /// `keep` this array with a real-valued scalar
     pub fn keep_scalar_real(mut self, count: f64, env: &Uiua) -> UiuaResult<Self> {
         let abs_count = count.abs();
@@ -559,6 +569,21 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data = new_data.into();
         self.validate();
+        Ok(self)
+    }
+    pub(crate) fn multikeep(mut self, dims: usize, count: f64, env: &Uiua) -> UiuaResult<Self> {
+        let dims = dims.min(self.rank());
+        for d in (0..dims).rev() {
+            let mut rows = Vec::new();
+            for row in self.depth_rows(d) {
+                rows.push(row.keep_scalar_real(count, env)?);
+            }
+            let mut new_shape = Shape::from(&self.shape[..d]);
+            self = Array::from_row_arrays(rows, env)?;
+            new_shape.extend(self.shape.iter().copied().skip(1));
+            self.shape = new_shape;
+            self.validate();
+        }
         Ok(self)
     }
     /// `keep` this array with some counts

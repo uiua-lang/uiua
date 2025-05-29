@@ -42,6 +42,10 @@ impl Compiler {
             data.func = None;
         }
         // Handle top-level named defs as modules
+        let def_comment = prelude
+            .comment
+            .clone()
+            .map(|text| DocComment::from(text.as_str()));
         if top_level {
             if let Some(name) = data.name.clone() {
                 let global_index = self.next_global;
@@ -51,20 +55,18 @@ impl Compiler {
                     public: true,
                 };
 
-                let comment = prelude.comment.clone();
                 let (module, ()) = self
                     .in_scope(ScopeKind::Module(name.value.clone()), |comp| {
                         comp.data_def(data, false, prelude)
                     })?;
 
                 // Add global
-                let comment = comment.map(|text| DocComment::from(text.as_str()));
                 self.asm.add_binding_at(
                     local,
                     BindingKind::Module(module),
                     Some(name.span.clone()),
                     BindingMeta {
-                        comment,
+                        comment: def_comment,
                         ..Default::default()
                     },
                 );
@@ -418,7 +420,7 @@ impl Compiler {
             public: true,
         };
         self.next_global += 1;
-        let mut comment = match (&def_name, data.func.is_some()) {
+        let mut constr_comment = match (&def_name, data.func.is_some()) {
             (Some(name), false) => format!("Create a new {name}\n{name} ?"),
             (Some(name), true) => format!("Create a new array of {name}'s args\n{name}Args ?"),
             (None, false) => "Create a new data instance\nInstance ?".into(),
@@ -428,16 +430,16 @@ impl Compiler {
             match field.init.as_ref().map(|sn| sn.sig.args()) {
                 Some(0) => continue,
                 Some(1) | None => {
-                    comment.push(' ');
-                    comment.push_str(&field.name);
+                    constr_comment.push(' ');
+                    constr_comment.push_str(&field.name);
                 }
                 Some(n) => {
                     for i in 0..n {
-                        comment.push(' ');
-                        comment.push_str(&field.name);
+                        constr_comment.push(' ');
+                        constr_comment.push_str(&field.name);
                         let mut i = i + 1;
                         while i > 0 {
-                            comment.push(SUBSCRIPT_DIGITS[i % 10]);
+                            constr_comment.push(SUBSCRIPT_DIGITS[i % 10]);
                             i /= 10;
                         }
                     }
@@ -545,7 +547,11 @@ impl Compiler {
 
         // Bind the call function
         if let Some((local, func, span)) = function_stuff {
-            self.compile_bind_function("Call".into(), local, func, span, BindingMeta::default())?;
+            let meta = BindingMeta {
+                comment: def_comment,
+                ..Default::default()
+            };
+            self.compile_bind_function("Call".into(), local, func, span, meta)?;
         }
         if let Some((local, func, span)) = args_function_stuff {
             let meta = BindingMeta {
@@ -561,7 +567,7 @@ impl Compiler {
 
         // Bind the constructor
         let meta = BindingMeta {
-            comment: Some(DocComment::from(comment.as_str())),
+            comment: Some(DocComment::from(constr_comment.as_str())),
             ..Default::default()
         };
         self.compile_bind_function(constructor_name, constr_local, constructor_func, span, meta)?;

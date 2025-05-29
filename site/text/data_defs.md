@@ -232,7 +232,9 @@ Both of those arrays are created as an "array of structs". But because Uiua is a
 Person {"Alice" "Bob" "Carol"} [21 54 49] [5 0 12]
 ```
 
-This creates only 5 boxes total, and it scales much better. It also allows us to more easily work with the data in aggregate.
+As you can see, the array output formatter has a special rule for this kind of array that makes it display as a table.
+
+This construction method creates only 5 boxes total, and it scales much better. It also allows us to more easily work with the data in aggregate.
 
 For example, we could find the average age.
 

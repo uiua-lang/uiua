@@ -7,6 +7,8 @@ use std::{
     mem::take,
 };
 
+use ecow::EcoString;
+
 use crate::{
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
@@ -26,9 +28,10 @@ pub struct GridFmtParams {
     parent_rank: usize,
     max_boxed_rank: usize,
     max_boxed_len: usize,
+    soa_row: bool,
 }
 
-pub trait GridFmt {
+pub trait GridFmt: Sized {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid;
     fn grid_string(&self, label: bool) -> String {
         let mut s: String = self
@@ -42,11 +45,83 @@ pub trait GridFmt {
         s.pop();
         s
     }
+    /// Delimiters for formatting
+    fn format_delims() -> (&'static str, &'static str) {
+        ("[", "]")
+    }
+    /// Marker for empty lists in grid formatting
+    fn empty_list_inner() -> &'static str {
+        ""
+    }
+    /// Separator for formatting
+    fn format_sep() -> &'static str {
+        " "
+    }
+    /// Delimiters for grid formatting
+    fn grid_fmt_delims() -> (char, char) {
+        ('[', ']')
+    }
+    /// Whether to compress all items of a list when grid formatting
+    fn compress_list_grid() -> bool {
+        false
+    }
+    /// Whether to divide cells with box drawing lines when grid formatting
+    fn box_lines() -> bool {
+        false
+    }
+    /// Summarize the elements of an array of this type
+    fn summarize(_: &[Self]) -> String {
+        String::new()
+    }
+    /// The minimum number of elements that require a summary
+    fn summary_min_elems() -> usize {
+        3600
+    }
+    /// How to align elements when formatting
+    fn alignment() -> ElemAlign {
+        ElemAlign::Left
+    }
+    /// How to determine the maximum width of a formatted column
+    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]> + Clone) -> usize {
+        rows.map(|row| row.len()).max().unwrap_or(0)
+    }
+    /// Get SoA rows
+    fn soa_rows(_arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
+        None
+    }
 }
 
 impl GridFmt for u8 {
     fn fmt_grid(&self, _params: GridFmtParams) -> Grid {
         vec![self.to_string().chars().collect()]
+    }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        let mut min = u8::MAX;
+        let mut max = 0;
+        for &elem in elems {
+            min = min.min(elem);
+            max = max.max(elem);
+        }
+        let mut mean = elems[0] as f64;
+        for (i, &elem) in elems.iter().enumerate().skip(1) {
+            mean += (elem as f64 - mean) / (i + 1) as f64;
+        }
+        if min == max {
+            format!("all {}", min.grid_string(false))
+        } else {
+            format!(
+                "{}-{} μ{}",
+                min.grid_string(false),
+                max.grid_string(false),
+                round_sig_dec(mean, 4).grid_string(false)
+            )
+        }
+    }
+    fn alignment() -> ElemAlign {
+        ElemAlign::Right
     }
 }
 
@@ -146,6 +221,83 @@ impl GridFmt for f64 {
         };
         vec![s.chars().collect()]
     }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        if elems.iter().all(|&n| n.is_nan()) {
+            return "all NaN".into();
+        }
+        let mut min = f64::NAN;
+        let mut max = f64::NAN;
+        let mut nan_count = elems.iter().take_while(|n| n.is_nan()).count();
+        let mut mean = 0.0;
+        let mut i = 0;
+        let mut inf_balance = 0i64;
+        for &elem in &elems[nan_count..] {
+            if elem.is_nan() {
+                nan_count += 1;
+            } else if elem.is_infinite() {
+                inf_balance += elem.is_sign_positive() as i64;
+                min = min.min(elem);
+                max = max.max(elem);
+            } else {
+                min = min.min(elem);
+                max = max.max(elem);
+                mean += (elem - mean) / (i + 1) as f64;
+                i += 1;
+            }
+        }
+        if inf_balance != 0 {
+            mean = inf_balance.signum() as f64 * f64::INFINITY;
+        }
+        if min == max {
+            if nan_count == 0 {
+                format!("all {}", min.grid_string(false))
+            } else {
+                format!(
+                    "{} {}s and {} NaNs",
+                    elems.len() - nan_count,
+                    min.grid_string(false),
+                    nan_count
+                )
+            }
+        } else {
+            let mut s = format!(
+                "{}-{} μ{}",
+                round_sig_dec(min, 4).grid_string(false),
+                round_sig_dec(max, 4).grid_string(false),
+                round_sig_dec(mean, 4).grid_string(false)
+            );
+            if nan_count > 0 {
+                s.push_str(&format!(
+                    " ({nan_count} NaN{})",
+                    if nan_count > 1 { "s" } else { "" }
+                ));
+            }
+            s
+        }
+    }
+    fn alignment() -> ElemAlign {
+        ElemAlign::DelimOrRight(".")
+    }
+    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
+        let mut max_whole_len = 0;
+        let mut max_dec_len: Option<usize> = None;
+        for row in rows {
+            if let Some(dot_pos) = row.iter().position(|&c| c == '.') {
+                max_whole_len = max_whole_len.max(dot_pos);
+                max_dec_len = max_dec_len.max(Some(row.len() - dot_pos - 1));
+            } else {
+                max_whole_len = max_whole_len.max(row.len());
+            }
+        }
+        if let Some(dec_len) = max_dec_len {
+            max_whole_len + dec_len + 1
+        } else {
+            max_whole_len
+        }
+    }
 }
 
 impl GridFmt for Complex {
@@ -174,6 +326,68 @@ impl GridFmt for Complex {
             re[0].extend(im.chars());
             re[0].push('i');
             re
+        }
+    }
+    fn empty_list_inner() -> &'static str {
+        "ℂ"
+    }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        let (mut re_min, mut im_min) = (f64::INFINITY, f64::INFINITY);
+        let (mut re_max, mut im_max) = (f64::NEG_INFINITY, f64::NEG_INFINITY);
+        let (mut re_mean, mut im_mean) = (0.0, 0.0);
+        let (mut re_nan_count, mut im_nan_count) = (0, 0);
+        let (mut re_inf_balance, mut im_inf_balance) = (0i64, 0i64);
+        let (mut re_i, mut im_i) = (0, 0);
+        for &elem in elems {
+            for ((elem, i), (min, max, mean), (nan_count, inf_balance)) in [
+                (
+                    (elem.re, &mut re_i),
+                    (&mut re_min, &mut re_max, &mut re_mean),
+                    (&mut re_nan_count, &mut re_inf_balance),
+                ),
+                (
+                    (elem.im, &mut im_i),
+                    (&mut im_min, &mut im_max, &mut im_mean),
+                    (&mut im_nan_count, &mut im_inf_balance),
+                ),
+            ] {
+                if elem.is_nan() {
+                    *nan_count += 1;
+                } else if elem.is_infinite() {
+                    *inf_balance += elem.is_sign_positive() as i64;
+                    *min = min.min(elem);
+                    *max = max.max(elem);
+                } else {
+                    *min = min.min(elem);
+                    *max = max.max(elem);
+                    *mean += (elem - *mean) / (*i + 1) as f64;
+                    *i += 1;
+                }
+            }
+        }
+        for (inf_balance, mean) in [
+            (re_inf_balance, &mut re_mean),
+            (im_inf_balance, &mut im_mean),
+        ] {
+            if inf_balance != 0 {
+                *mean = inf_balance.signum() as f64 * f64::INFINITY;
+            }
+        }
+        if re_min == re_max && im_min == im_max {
+            format!("all {}", Complex::new(re_min, im_min).grid_string(false))
+        } else {
+            let min = Complex::new(round_sig_dec(re_min, 3), round_sig_dec(im_min, 3));
+            let max = Complex::new(round_sig_dec(re_max, 3), round_sig_dec(im_max, 3));
+            let mean = Complex::new(round_sig_dec(re_mean, 3), round_sig_dec(im_mean, 3));
+            format!(
+                "{} - {} μ{}",
+                min.grid_string(false),
+                max.grid_string(false),
+                mean.grid_string(false)
+            )
         }
     }
 }
@@ -234,6 +448,85 @@ impl GridFmt for char {
     fn fmt_grid(&self, _params: GridFmtParams) -> Grid {
         vec![once('@').chain(format_char_inner(*self).chars()).collect()]
     }
+    fn format_delims() -> (&'static str, &'static str) {
+        ("", "")
+    }
+    fn format_sep() -> &'static str {
+        ""
+    }
+    fn grid_fmt_delims() -> (char, char) {
+        ('"', '"')
+    }
+    fn compress_list_grid() -> bool {
+        true
+    }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        let mut parts = Vec::new();
+        let lowercase = elems.iter().any(|c| c.is_lowercase());
+        let uppercase = elems.iter().any(|c| c.is_uppercase());
+        let writing = elems
+            .iter()
+            .any(|c| c.is_alphabetic() && !(c.is_lowercase() || c.is_uppercase()));
+        let numeric = elems.iter().any(|c| c.is_numeric() && !c.is_ascii_digit());
+        let digit = elems.iter().any(|c| c.is_ascii_digit());
+        let punct = elems.iter().any(|c| c.is_ascii_punctuation());
+        let whitespace = elems.iter().any(|c| c.is_whitespace());
+        let control = elems.iter().any(|c| c.is_control());
+        let other = (elems.iter()).any(|c| {
+            !(c.is_lowercase()
+                || c.is_uppercase()
+                || c.is_alphabetic()
+                || c.is_numeric()
+                || c.is_ascii_punctuation()
+                || c.is_whitespace()
+                || c.is_control())
+        });
+        if writing {
+            parts.push("writing");
+        } else if lowercase && uppercase {
+            parts.push("letters");
+        } else if lowercase {
+            parts.push("lower");
+        } else if uppercase {
+            parts.push("upper");
+        }
+        if numeric {
+            parts.push("nums");
+        }
+        if digit {
+            parts.push("digits");
+        }
+        if punct {
+            parts.push("punct");
+        }
+        if whitespace {
+            parts.push("whitespace");
+        }
+        if control {
+            parts.push("control");
+        }
+        if other {
+            parts.push("other");
+        }
+        match parts.len() {
+            0 => String::new(),
+            1 => parts[0].to_string(),
+            2 => format!("{} and {}", parts[0], parts[1]),
+            _ => {
+                let mut s = String::new();
+                for (i, &part) in parts.iter().enumerate() {
+                    if i > 0 {
+                        s.push_str(", ");
+                    }
+                    s.push_str(part);
+                }
+                s
+            }
+        }
+    }
 }
 
 impl GridFmt for Boxed {
@@ -266,6 +559,80 @@ impl GridFmt for Boxed {
             }
         }
         grid
+    }
+    fn empty_list_inner() -> &'static str {
+        "□"
+    }
+    fn box_lines() -> bool {
+        true
+    }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        let smallest_rank = elems.iter().map(|e| e.0.rank()).min().unwrap();
+        let largest_rank = elems.iter().map(|e| e.0.rank()).max().unwrap();
+        let smallest_shape = (elems.iter().map(|e| &e.0.shape))
+            .min_by_key(|s| s.elements())
+            .unwrap();
+        let largest_shape = (elems.iter().map(|e| &e.0.shape))
+            .max_by_key(|s| s.elements())
+            .unwrap();
+        let rank_summary = if smallest_rank == largest_rank {
+            format!("all rank {smallest_rank}")
+        } else {
+            format!("ranks {smallest_rank}-{largest_rank}")
+        };
+        let shape_summary = if smallest_shape == largest_shape {
+            format!("all shape {smallest_shape}")
+        } else {
+            format!("shapes {smallest_shape}-{largest_shape}")
+        };
+        format!("{rank_summary}, {shape_summary}")
+    }
+    fn summary_min_elems() -> usize {
+        1000
+    }
+    fn alignment() -> ElemAlign {
+        ElemAlign::DelimOrLeft(": ")
+    }
+    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
+        let mut max_labelled_len = 0;
+        let mut max_unlabelled_len = 0;
+        let mut max_label_len: Option<usize> = None;
+        for row in rows {
+            if let Some(delim_pos) = (0..row.len()).find(|&i| row[i..].starts_with(&[':', ' '])) {
+                max_labelled_len = max_labelled_len.max(row.len() - delim_pos - 2);
+                max_label_len = max_label_len.max(Some(delim_pos));
+            }
+            max_unlabelled_len = max_unlabelled_len.max(row.len());
+        }
+        if let Some(label_len) = max_label_len {
+            (max_labelled_len + label_len + 2).max(max_unlabelled_len)
+        } else {
+            max_unlabelled_len
+        }
+    }
+    fn soa_rows(arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
+        if arr.rank() != 1 {
+            return None;
+        }
+        let mut rows = Vec::new();
+        let mut len = None;
+        for Boxed(val) in &arr.data {
+            if val.rank() == 0 {
+                return None;
+            }
+            let label = val.meta.label.as_ref()?;
+            if *len.get_or_insert(val.row_count()) != val.row_count() {
+                return None;
+            }
+            rows.push((label, val))
+        }
+        if rows.is_empty() {
+            return None;
+        }
+        Some(rows)
     }
 }
 
@@ -330,6 +697,30 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     value_row_shape.make_row();
                     row.extend(shape_row::<T>(&value_row_shape));
                     metagrid.push(vec![vec![row]]);
+                }
+            }
+
+            // SoA
+            let mut is_soa = false;
+            if let Some(rows) = T::soa_rows(self) {
+                is_soa = true;
+                let metagrid = metagrid.get_or_insert_with(Metagrid::new);
+                let mut labels_row = Vec::with_capacity(rows.len());
+                for (label, _) in &rows {
+                    labels_row.push(vec![label.chars().collect()]);
+                }
+                metagrid.push(labels_row);
+                let row_params = GridFmtParams {
+                    label: false,
+                    soa_row: true,
+                    ..Default::default()
+                };
+                for i in 0..rows[0].1.row_count() {
+                    let mut metarow = Vec::with_capacity(rows.len());
+                    for (_, val) in &rows {
+                        metarow.push(val.row(i).fmt_grid(row_params));
+                    }
+                    metagrid.push(metarow);
                 }
             }
 
@@ -471,7 +862,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 grid.extend(subrows);
                 // Add row dividers
                 let vert_offset = 2 + vert * 2;
-                if T::box_lines()
+                if (i == 0 || !is_soa)
+                    && T::box_lines()
                     && !self.is_map()
                     && (i + 1 < metagrid_height
                         || self.rank() >= vert_offset && self.shape[self.rank() - vert_offset] == 1)
@@ -497,10 +889,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             // Outline the grid
             let grid_row_count = grid.len();
             if self.rank() == 0 && self.is_map() {
-                // Don't surrond maplings
-            } else if params.parent_rank == 0
-                || T::box_lines() && self.rank() <= 1 && params.parent_rank <= 1
-                || !T::box_lines() && self.rank() < params.max_boxed_rank
+                // Don't surround maplings
+            } else if !params.soa_row
+                && (params.parent_rank == 0
+                    || T::box_lines() && self.rank() <= 1 && params.parent_rank <= 1
+                    || !T::box_lines() && self.rank() < params.max_boxed_rank)
                 || T::compress_list_grid() && self.rank() <= 1
             {
                 // Normal surrounding
@@ -543,10 +936,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 // Don't surround if going to draw box separators later
                 if !T::box_lines()
                     && self.row_count() == 1
-                    && (params.max_boxed_len == 1
-                        || T::compress_list_grid()
-                        || self.row_count() == 1 && self.rank() < params.max_boxed_rank)
-                    && params.max_boxed_rank != 1
+                    && (params.soa_row
+                        || ((params.max_boxed_len == 1
+                            || T::compress_list_grid()
+                            || self.row_count() == 1 && self.rank() < params.max_boxed_rank)
+                            && params.max_boxed_rank != 1))
                 {
                     // Disambiguate fixed arrays
                     let fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();
@@ -995,4 +1389,13 @@ impl Line {
             (_, ForceDouble) => '║',
         }
     }
+}
+
+/// Round to a number of significant decimal places
+fn round_sig_dec(f: f64, n: i32) -> f64 {
+    if f.fract() == 0.0 || f.is_infinite() || [PI / 2.0, PI, TAU].contains(&f) {
+        return f;
+    }
+    let mul = 10f64.powf(n as f64 - f.fract().abs().log10().ceil());
+    (f * mul).round() / mul
 }

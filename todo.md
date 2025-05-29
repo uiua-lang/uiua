@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.17
-- Table layout for SoA
 - `soa` alias
 - Sided `join`
 - Subscript `occurences`

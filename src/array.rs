@@ -1,7 +1,6 @@
 use std::{
     any::TypeId,
     cmp::Ordering,
-    f64::consts::{PI, TAU},
     fmt,
     hash::{Hash, Hasher},
     ops::{Deref, DerefMut},
@@ -21,7 +20,7 @@ use crate::{
     },
     cowslice::{cowslice, CowSlice},
     fill::{Fill, FillValue},
-    grid_fmt::{ElemAlign, GridFmt},
+    grid_fmt::GridFmt,
     Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Value,
 };
 
@@ -994,30 +993,6 @@ pub trait ArrayValue:
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
     /// Get the proxy value
     fn proxy() -> Self;
-    /// Delimiters for formatting
-    fn format_delims() -> (&'static str, &'static str) {
-        ("[", "]")
-    }
-    /// Marker for empty lists in grid formatting
-    fn empty_list_inner() -> &'static str {
-        ""
-    }
-    /// Separator for formatting
-    fn format_sep() -> &'static str {
-        " "
-    }
-    /// Delimiters for grid formatting
-    fn grid_fmt_delims() -> (char, char) {
-        ('[', ']')
-    }
-    /// Whether to compress all items of a list when grid formatting
-    fn compress_list_grid() -> bool {
-        false
-    }
-    /// Whether to divide cells with box drawing lines when grid formatting
-    fn box_lines() -> bool {
-        false
-    }
     /// Get a nested value
     fn nested_value(&self) -> Option<&Value> {
         None
@@ -1025,22 +1000,6 @@ pub trait ArrayValue:
     /// Check if this element has the wildcard value
     fn has_wildcard(&self) -> bool {
         false
-    }
-    /// Summarize the elements of an array of this type
-    fn summarize(elems: &[Self]) -> String {
-        String::new()
-    }
-    /// The minimum number of elements that require a summary
-    fn summary_min_elems() -> usize {
-        3600
-    }
-    /// How to align elements when formatting
-    fn alignment() -> ElemAlign {
-        ElemAlign::Left
-    }
-    /// How to determine the maximum width of a formatted column
-    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]> + Clone) -> usize {
-        rows.map(|row| row.len()).max().unwrap_or(0)
     }
     /// Sort a list of this type
     fn sort_list(list: &mut [Self], up: bool) {
@@ -1064,15 +1023,6 @@ fn default_sort_list<T: ArrayCmp + Send>(list: &mut [T], up: bool) {
 pub const WILDCARD_NAN: f64 = must_cast(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0003);
 /// A character value used as a wildcard that will equal any character
 pub const WILDCARD_CHAR: char = '\u{100000}';
-
-/// Round to a number of significant decimal places
-fn round_sig_dec(f: f64, n: i32) -> f64 {
-    if f.fract() == 0.0 || f.is_infinite() || [PI / 2.0, PI, TAU].contains(&f) {
-        return f;
-    }
-    let mul = 10f64.powf(n as f64 - f.fract().abs().log10().ceil());
-    (f * mul).round() / mul
-}
 
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
@@ -1106,83 +1056,6 @@ impl ArrayValue for f64 {
     fn has_wildcard(&self) -> bool {
         self.to_bits() == WILDCARD_NAN.to_bits()
     }
-    fn summarize(elems: &[Self]) -> String {
-        if elems.is_empty() {
-            return String::new();
-        }
-        if elems.iter().all(|&n| n.is_nan()) {
-            return "all NaN".into();
-        }
-        let mut min = f64::NAN;
-        let mut max = f64::NAN;
-        let mut nan_count = elems.iter().take_while(|n| n.is_nan()).count();
-        let mut mean = 0.0;
-        let mut i = 0;
-        let mut inf_balance = 0i64;
-        for &elem in &elems[nan_count..] {
-            if elem.is_nan() {
-                nan_count += 1;
-            } else if elem.is_infinite() {
-                inf_balance += elem.is_sign_positive() as i64;
-                min = min.min(elem);
-                max = max.max(elem);
-            } else {
-                min = min.min(elem);
-                max = max.max(elem);
-                mean += (elem - mean) / (i + 1) as f64;
-                i += 1;
-            }
-        }
-        if inf_balance != 0 {
-            mean = inf_balance.signum() as f64 * f64::INFINITY;
-        }
-        if min == max {
-            if nan_count == 0 {
-                format!("all {}", min.grid_string(false))
-            } else {
-                format!(
-                    "{} {}s and {} NaNs",
-                    elems.len() - nan_count,
-                    min.grid_string(false),
-                    nan_count
-                )
-            }
-        } else {
-            let mut s = format!(
-                "{}-{} μ{}",
-                round_sig_dec(min, 4).grid_string(false),
-                round_sig_dec(max, 4).grid_string(false),
-                round_sig_dec(mean, 4).grid_string(false)
-            );
-            if nan_count > 0 {
-                s.push_str(&format!(
-                    " ({nan_count} NaN{})",
-                    if nan_count > 1 { "s" } else { "" }
-                ));
-            }
-            s
-        }
-    }
-    fn alignment() -> ElemAlign {
-        ElemAlign::DelimOrRight(".")
-    }
-    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
-        let mut max_whole_len = 0;
-        let mut max_dec_len: Option<usize> = None;
-        for row in rows {
-            if let Some(dot_pos) = row.iter().position(|&c| c == '.') {
-                max_whole_len = max_whole_len.max(dot_pos);
-                max_dec_len = max_dec_len.max(Some(row.len() - dot_pos - 1));
-            } else {
-                max_whole_len = max_whole_len.max(row.len());
-            }
-        }
-        if let Some(dec_len) = max_dec_len {
-            max_whole_len + dec_len + 1
-        } else {
-            max_whole_len
-        }
-    }
 }
 
 #[cfg(test)]
@@ -1206,34 +1079,6 @@ impl ArrayValue for u8 {
     }
     fn proxy() -> Self {
         0
-    }
-    fn summarize(elems: &[Self]) -> String {
-        if elems.is_empty() {
-            return String::new();
-        }
-        let mut min = u8::MAX;
-        let mut max = 0;
-        for &elem in elems {
-            min = min.min(elem);
-            max = max.max(elem);
-        }
-        let mut mean = elems[0] as f64;
-        for (i, &elem) in elems.iter().enumerate().skip(1) {
-            mean += (elem as f64 - mean) / (i + 1) as f64;
-        }
-        if min == max {
-            format!("all {}", min.grid_string(false))
-        } else {
-            format!(
-                "{}-{} μ{}",
-                min.grid_string(false),
-                max.grid_string(false),
-                round_sig_dec(mean, 4).grid_string(false)
-            )
-        }
-    }
-    fn alignment() -> ElemAlign {
-        ElemAlign::Right
     }
     fn sort_list(list: &mut [Self], up: bool) {
         let mut counts: [usize; 256] = [0; 256];
@@ -1272,93 +1117,14 @@ impl ArrayValue for char {
     fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
         fill.char_array()
     }
-    fn format_delims() -> (&'static str, &'static str) {
-        ("", "")
-    }
-    fn format_sep() -> &'static str {
-        ""
-    }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
     }
     fn proxy() -> Self {
         ' '
     }
-    fn grid_fmt_delims() -> (char, char) {
-        ('"', '"')
-    }
-    fn compress_list_grid() -> bool {
-        true
-    }
     fn has_wildcard(&self) -> bool {
         *self == WILDCARD_CHAR
-    }
-    fn summarize(elems: &[Self]) -> String {
-        if elems.is_empty() {
-            return String::new();
-        }
-        let mut parts = Vec::new();
-        let lowercase = elems.iter().any(|c| c.is_lowercase());
-        let uppercase = elems.iter().any(|c| c.is_uppercase());
-        let writing = elems
-            .iter()
-            .any(|c| c.is_alphabetic() && !(c.is_lowercase() || c.is_uppercase()));
-        let numeric = elems.iter().any(|c| c.is_numeric() && !c.is_ascii_digit());
-        let digit = elems.iter().any(|c| c.is_ascii_digit());
-        let punct = elems.iter().any(|c| c.is_ascii_punctuation());
-        let whitespace = elems.iter().any(|c| c.is_whitespace());
-        let control = elems.iter().any(|c| c.is_control());
-        let other = (elems.iter()).any(|c| {
-            !(c.is_lowercase()
-                || c.is_uppercase()
-                || c.is_alphabetic()
-                || c.is_numeric()
-                || c.is_ascii_punctuation()
-                || c.is_whitespace()
-                || c.is_control())
-        });
-        if writing {
-            parts.push("writing");
-        } else if lowercase && uppercase {
-            parts.push("letters");
-        } else if lowercase {
-            parts.push("lower");
-        } else if uppercase {
-            parts.push("upper");
-        }
-        if numeric {
-            parts.push("nums");
-        }
-        if digit {
-            parts.push("digits");
-        }
-        if punct {
-            parts.push("punct");
-        }
-        if whitespace {
-            parts.push("whitespace");
-        }
-        if control {
-            parts.push("control");
-        }
-        if other {
-            parts.push("other");
-        }
-        match parts.len() {
-            0 => String::new(),
-            1 => parts[0].to_string(),
-            2 => format!("{} and {}", parts[0], parts[1]),
-            _ => {
-                let mut s = String::new();
-                for (i, &part) in parts.iter().enumerate() {
-                    if i > 0 {
-                        s.push_str(", ");
-                    }
-                    s.push_str(part);
-                }
-                s
-            }
-        }
     }
 }
 
@@ -1378,64 +1144,11 @@ impl ArrayValue for Boxed {
     fn proxy() -> Self {
         Boxed(Array::<f64>::new(0, []).into())
     }
-    fn empty_list_inner() -> &'static str {
-        "□"
-    }
     fn nested_value(&self) -> Option<&Value> {
         Some(&self.0)
     }
     fn has_wildcard(&self) -> bool {
         self.0.has_wildcard()
-    }
-    fn box_lines() -> bool {
-        true
-    }
-    fn summarize(elems: &[Self]) -> String {
-        if elems.is_empty() {
-            return String::new();
-        }
-        let smallest_rank = elems.iter().map(|e| e.0.rank()).min().unwrap();
-        let largest_rank = elems.iter().map(|e| e.0.rank()).max().unwrap();
-        let smallest_shape = (elems.iter().map(|e| &e.0.shape))
-            .min_by_key(|s| s.elements())
-            .unwrap();
-        let largest_shape = (elems.iter().map(|e| &e.0.shape))
-            .max_by_key(|s| s.elements())
-            .unwrap();
-        let rank_summary = if smallest_rank == largest_rank {
-            format!("all rank {smallest_rank}")
-        } else {
-            format!("ranks {smallest_rank}-{largest_rank}")
-        };
-        let shape_summary = if smallest_shape == largest_shape {
-            format!("all shape {smallest_shape}")
-        } else {
-            format!("shapes {smallest_shape}-{largest_shape}")
-        };
-        format!("{rank_summary}, {shape_summary}")
-    }
-    fn summary_min_elems() -> usize {
-        1000
-    }
-    fn alignment() -> ElemAlign {
-        ElemAlign::DelimOrLeft(": ")
-    }
-    fn max_col_width<'a>(rows: impl Iterator<Item = &'a [char]>) -> usize {
-        let mut max_labelled_len = 0;
-        let mut max_unlabelled_len = 0;
-        let mut max_label_len: Option<usize> = None;
-        for row in rows {
-            if let Some(delim_pos) = (0..row.len()).find(|&i| row[i..].starts_with(&[':', ' '])) {
-                max_labelled_len = max_labelled_len.max(row.len() - delim_pos - 2);
-                max_label_len = max_label_len.max(Some(delim_pos));
-            }
-            max_unlabelled_len = max_unlabelled_len.max(row.len());
-        }
-        if let Some(label_len) = max_label_len {
-            (max_labelled_len + label_len + 2).max(max_unlabelled_len)
-        } else {
-            max_unlabelled_len
-        }
     }
 }
 
@@ -1456,68 +1169,6 @@ impl ArrayValue for Complex {
     }
     fn proxy() -> Self {
         Complex::new(0.0, 0.0)
-    }
-    fn empty_list_inner() -> &'static str {
-        "ℂ"
-    }
-    fn summarize(elems: &[Self]) -> String {
-        if elems.is_empty() {
-            return String::new();
-        }
-        let (mut re_min, mut im_min) = (f64::INFINITY, f64::INFINITY);
-        let (mut re_max, mut im_max) = (f64::NEG_INFINITY, f64::NEG_INFINITY);
-        let (mut re_mean, mut im_mean) = (0.0, 0.0);
-        let (mut re_nan_count, mut im_nan_count) = (0, 0);
-        let (mut re_inf_balance, mut im_inf_balance) = (0i64, 0i64);
-        let (mut re_i, mut im_i) = (0, 0);
-        for &elem in elems {
-            for ((elem, i), (min, max, mean), (nan_count, inf_balance)) in [
-                (
-                    (elem.re, &mut re_i),
-                    (&mut re_min, &mut re_max, &mut re_mean),
-                    (&mut re_nan_count, &mut re_inf_balance),
-                ),
-                (
-                    (elem.im, &mut im_i),
-                    (&mut im_min, &mut im_max, &mut im_mean),
-                    (&mut im_nan_count, &mut im_inf_balance),
-                ),
-            ] {
-                if elem.is_nan() {
-                    *nan_count += 1;
-                } else if elem.is_infinite() {
-                    *inf_balance += elem.is_sign_positive() as i64;
-                    *min = min.min(elem);
-                    *max = max.max(elem);
-                } else {
-                    *min = min.min(elem);
-                    *max = max.max(elem);
-                    *mean += (elem - *mean) / (*i + 1) as f64;
-                    *i += 1;
-                }
-            }
-        }
-        for (inf_balance, mean) in [
-            (re_inf_balance, &mut re_mean),
-            (im_inf_balance, &mut im_mean),
-        ] {
-            if inf_balance != 0 {
-                *mean = inf_balance.signum() as f64 * f64::INFINITY;
-            }
-        }
-        if re_min == re_max && im_min == im_max {
-            format!("all {}", Complex::new(re_min, im_min).grid_string(false))
-        } else {
-            let min = Complex::new(round_sig_dec(re_min, 3), round_sig_dec(im_min, 3));
-            let max = Complex::new(round_sig_dec(re_max, 3), round_sig_dec(im_max, 3));
-            let mean = Complex::new(round_sig_dec(re_mean, 3), round_sig_dec(im_mean, 3));
-            format!(
-                "{} - {} μ{}",
-                min.grid_string(false),
-                max.grid_string(false),
-                mean.grid_string(false)
-            )
-        }
     }
 }
 

@@ -692,6 +692,17 @@ fn Hd<'a>(id: &'a str, #[prop(optional)] class: &'a str, children: Children) -> 
     }
 }
 
+#[component]
+#[allow(clippy::needless_lifetimes)]
+fn Hd3<'a>(id: &'a str, #[prop(optional)] class: &'a str, children: Children) -> impl IntoView {
+    let id = id.to_string();
+    view! {
+        <h3 id={id.clone()}>
+            <a class={format!("header {class}")} href={ format!("#{id}") }>{children()}</a>
+        </h3>
+    }
+}
+
 #[cfg(test)]
 #[test]
 fn gen_primitives_json() {

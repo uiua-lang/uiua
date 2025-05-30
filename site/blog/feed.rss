@@ -1,67 +1,53 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"
-    xmlns:atom="http://www.w3.org/2005/Atom">
-    <channel>
-        <title>Uiua Blog</title>
-        <description>Blog of the Uiua Programming Language</description>
-        <link>https://uiua.org/blog</link>
-        <atom:link href="https://uiua.org/blog/feed.rss" rel="self" type="application/rss+xml"></atom:link>
-        <lastBuildDate>Fri, 20 Dec 2024 23:42:02 +0000</lastBuildDate>
-        <item>
-            <link>https://uiua.org/blog/uiua-0.14.0</link>
-            <guid isPermaLink="false">a516e01b-732f-4e30-aba2-9599fedfffab</guid>
-            <pubDate>Fri, 20 Dec 2024 00:00:00 +0000</pubDate>
-            <title>Announcing Uiua 0.14.0
-            </title>
-        </item>
-        <item>
-            <link>https://uiua.org/blog/subscripts</link>
-            <guid isPermaLink="false">820eeae1-7c05-4c3c-877c-0675dd7517aa</guid>
-            <pubDate>Mon, 25 Nov 2024 00:00:00 +0000</pubDate>
-            <title>Subscripts
-            </title>
-        </item>
-        <item>
-            <link>https://uiua.org/blog/uiua-0.13.0</link>
-            <guid isPermaLink="false">666c3590-e42d-4e75-a7bf-1552a098ccd2</guid>
-            <pubDate>Mon, 21 Oct 2024 00:00:00 +0000</pubDate>
-            <title>Announcing Uiua 0.13.0
-            </title>
-        </item>
-        <item>
-            <link>https://uiua.org/blog/uiua-0.12.0</link>
-            <guid isPermaLink="false">95d63645-10e4-4312-bbe3-f0a6254c0144</guid>
-            <pubDate>Fri, 16 Aug 2024 00:00:00 +0000</pubDate>
-            <title>Announcing Uiua 0.12.0
-            </title>
-        </item>
-        <item>
-            <link>https://uiua.org/blog/uiua-0.11.0</link>
-            <guid isPermaLink="false">32cba0cb-2378-4cf9-894c-ea65e2a3ffda</guid>
-            <pubDate>Sun, 2 Jun 2024 00:00:00 +0000</pubDate>
-            <title>Announcing Uiua 0.11.0
-            </title>
-        </item>
-        <item>
-            <link>https://uiua.org/blog/uiua-0.10.0</link>
-            <guid isPermaLink="false">6841da9d-9b35-4992-92b3-0c6820606733</guid>
-            <pubDate>Thu, 4 Apr 2024 00:00:00 +0000</pubDate>
-            <title>Announcing Uiua 0.10.0
-            </title>
-        </item>
-        <item>
-            <link>https://uiua.org/blog/what-will-1-look-like</link>
-            <guid isPermaLink="false">113ee6ab-1d29-4115-9a1e-4bb2701d23f0</guid>
-            <pubDate>Fri, 19 Jan 2024 00:00:00 +0000</pubDate>
-            <title>What will Uiua 1.0 look like?
-            </title>
-        </item>
-        <item>
-            <link>https://uiua.org/blog/second-class-functions</link>
-            <guid isPermaLink="false">c6a7b400-5d2b-413a-888b-4cd675c8c1db</guid>
-            <pubDate>Fri, 15 Dec 2023 00:00:00 +0000</pubDate>
-            <title>Why doesn't Uiua have first-class functions?
-            </title>
-        </item>
-    </channel>
-</rss>
+<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Uiua Blog</title>
+<description>Blog of the Uiua Programming Language</description>
+<link>https://uiua.org/blog</link>
+<atom:link href="https://uiua.org/blog/feed.rss" rel="self" type="application/rss+xml"></atom:link>
+<lastBuildDate>Fri, 30 May 2025 06:08:44 +0000</lastBuildDate>
+<item><link>https://uiua.org/blog/how-the-uiua-logo-works</link>
+<guid isPermaLink="false">f7077c7c-3968-4f10-8e7d-140ebcaebc77</guid>
+<pubDate>Thu, 29 May 2025 00:00:00 +0000</pubDate>
+<title>How the Uiua Logo Works</title></item>
+<item><link>https://uiua.org/blog/uiua-0.16.0</link>
+<guid isPermaLink="false">087f5d27-675c-47e6-85b2-e5f2a991e745</guid>
+<pubDate>Sun, 18 May 2025 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.16.0</title></item>
+<item><link>https://uiua.org/blog/uiua-0.15.0</link>
+<guid isPermaLink="false">52a5f6f8-6898-44f3-a193-2125945276b6</guid>
+<pubDate>Thu, 3 Apr 2025 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.15.0</title></item>
+<item><link>https://uiua.org/blog/its-so-over</link>
+<guid isPermaLink="false">a3e86902-43f2-4fb5-bdd1-62b15bcc8fd0</guid>
+<pubDate>Sat, 15 Feb 2025 00:00:00 +0000</pubDate>
+<title>It's So Over</title></item>
+<item><link>https://uiua.org/blog/uiua-0.14.0</link>
+<guid isPermaLink="false">a516e01b-732f-4e30-aba2-9599fedfffab</guid>
+<pubDate>Fri, 20 Dec 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.14.0</title></item>
+<item><link>https://uiua.org/blog/subscripts</link>
+<guid isPermaLink="false">820eeae1-7c05-4c3c-877c-0675dd7517aa</guid>
+<pubDate>Mon, 25 Nov 2024 00:00:00 +0000</pubDate>
+<title>Subscripts</title></item>
+<item><link>https://uiua.org/blog/uiua-0.13.0</link>
+<guid isPermaLink="false">666c3590-e42d-4e75-a7bf-1552a098ccd2</guid>
+<pubDate>Mon, 21 Oct 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.13.0</title></item>
+<item><link>https://uiua.org/blog/uiua-0.12.0</link>
+<guid isPermaLink="false">95d63645-10e4-4312-bbe3-f0a6254c0144</guid>
+<pubDate>Fri, 16 Aug 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.12.0</title></item>
+<item><link>https://uiua.org/blog/uiua-0.11.0</link>
+<guid isPermaLink="false">32cba0cb-2378-4cf9-894c-ea65e2a3ffda</guid>
+<pubDate>Sun, 2 Jun 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.11.0</title></item>
+<item><link>https://uiua.org/blog/uiua-0.10.0</link>
+<guid isPermaLink="false">6841da9d-9b35-4992-92b3-0c6820606733</guid>
+<pubDate>Thu, 4 Apr 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.10.0</title></item>
+<item><link>https://uiua.org/blog/what-will-1-look-like</link>
+<guid isPermaLink="false">113ee6ab-1d29-4115-9a1e-4bb2701d23f0</guid>
+<pubDate>Fri, 19 Jan 2024 00:00:00 +0000</pubDate>
+<title>What will Uiua 1.0 look like?</title></item>
+<item><link>https://uiua.org/blog/second-class-functions</link>
+<guid isPermaLink="false">c6a7b400-5d2b-413a-888b-4cd675c8c1db</guid>
+<pubDate>Fri, 15 Dec 2023 00:00:00 +0000</pubDate>
+<title>Why doesn't Uiua have first-class functions?</title></item></channel></rss>

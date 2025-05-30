@@ -89,6 +89,13 @@ macro_rules! primitive {
                     _ => false
                 }
             }
+            /// Get the primitive's documentation string
+            pub fn doc(&self) -> &'static str {
+                match self {
+                    $(Primitive::$variant => concat!($doc_rust, $($doc, "\n"),*),)*
+                    Primitive::Sys(op) => op.doc(),
+                }
+            }
         }
     };
 }
@@ -3540,6 +3547,12 @@ macro_rules! sys_op {
                 match self {
                     $($(SysOp::$variant => $experimental,)*)*
                     _ => false
+                }
+            }
+            /// Get the system function's documentation string
+            pub fn doc(&self) -> &'static str {
+                match self {
+                    $(SysOp::$variant => concat!($doc_rust, $($doc, "\n"),*),)*
                 }
             }
         }

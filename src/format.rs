@@ -18,10 +18,10 @@ use InlineMacro;
 use crate::{
     ast::*,
     is_ident_char,
-    lex::{CodeSpan, Loc, Sp},
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
-    Compiler, Handle, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys, Signature,
-    SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_DIGITS,
+    CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
+    SafeSys, Signature, Sp, Subscript, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value,
+    SUBSCRIPT_DIGITS,
 };
 
 trait ConfigValue: Sized {

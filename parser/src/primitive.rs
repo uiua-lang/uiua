@@ -253,7 +253,8 @@ impl Primitive {
             _ => return None,
         })
     }
-    pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
+    /// A suggested replacement if the primitive is deprecated
+    pub fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
         Some(match self {
             Rerank => format!(

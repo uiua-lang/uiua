@@ -24,13 +24,12 @@ use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use terminal_size::terminal_size;
 use uiua::{
-    ast::Subscript,
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lex,
     lsp::BindingDocsKind,
-    parse, print_stack, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass,
-    PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Token, Uiua,
-    UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
+    parse, print_stack, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDoc,
+    PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Subscript, Token,
+    Uiua, UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -1599,12 +1598,13 @@ fn doc(name: &str) {
             println!("{}", prim.format());
         }
         println!();
-        for frag in &prim.doc().short {
+        let doc = PrimDoc::from(prim);
+        for frag in &doc.short {
             print_doc_frag(frag);
         }
         println!();
         let comp = Compiler::with_backend(SafeSys::default());
-        for line in &prim.doc().lines {
+        for line in &doc.lines {
             print_doc_line(line, &comp);
         }
     } else if let Some(def) = CONSTANTS.iter().find(|def| def.name == name) {

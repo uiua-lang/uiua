@@ -1757,7 +1757,10 @@ pub fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
     lines
 }
 
-pub(crate) fn flip_unsplit_items(items: Vec<Item>) -> Vec<Item> {
+/// Flip and/or unsplit a list of items
+///
+/// This processes `;` tokens, removing them and normalizing the items
+pub fn flip_unsplit_items(items: Vec<Item>) -> Vec<Item> {
     flip_unsplit_items_impl(items, false)
 }
 fn flip_unsplit_items_impl(items: Vec<Item>, in_array: bool) -> Vec<Item> {
@@ -1988,7 +1991,8 @@ pub fn max_placeholder(words: &[Sp<Word>]) -> Option<usize> {
     max
 }
 
-pub(crate) fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
+/// Trim space words
+pub fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
     let mut start = 0;
     for word in words {
         if let Word::Spaces = word.value {

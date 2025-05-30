@@ -21,13 +21,12 @@ use threadpool::ThreadPool;
 
 use crate::{
     algorithm::{self, validate_size_impl},
-    ast::SubSide,
     fill::{Fill, FillValue},
     invert::match_format_pattern,
-    lex::Span,
-    Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function, FunctionId,
-    Ident, Inputs, IntoSysBackend, LocalName, Node, Primitive, Report, SafeSys, SigNode, Signature,
-    SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, Value, VERSION,
+    run_prim_func, run_prim_mod, Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan,
+    Compiler, Function, FunctionId, Ident, Inputs, IntoSysBackend, LocalName, Node, Primitive,
+    Report, SafeSys, SigNode, Signature, Span, SubSide, SysBackend, TraceFrame, UiuaError,
+    UiuaErrorKind, UiuaResult, Value, VERSION,
 };
 
 /// The Uiua interpreter
@@ -496,10 +495,12 @@ impl Uiua {
         }
         let res = match node {
             Node::Run(nodes) => nodes.into_iter().try_for_each(|node| self.exec(node)),
-            Node::Prim(prim, span) => self.with_prim_span(span, Some(prim), |env| prim.run(env)),
+            Node::Prim(prim, span) => {
+                self.with_prim_span(span, Some(prim), |env| run_prim_func(&prim, env))
+            }
             Node::ImplPrim(prim, span) => self.with_span(span, |env| prim.run(env)),
             Node::Mod(prim, args, span) => {
-                self.with_prim_span(span, Some(prim), |env| prim.run_mod(args, env))
+                self.with_prim_span(span, Some(prim), |env| run_prim_mod(&prim, args, env))
             }
             Node::ImplMod(prim, args, span) => self.with_span(span, |env| prim.run_mod(args, env)),
             Node::Push(val) => {

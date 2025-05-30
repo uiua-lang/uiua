@@ -358,7 +358,8 @@ impl fmt::Display for Span {
 }
 
 impl CodeSpan {
-    pub(crate) const fn sp<T>(self, value: T) -> Sp<T> {
+    /// Span a value
+    pub const fn sp<T>(self, value: T) -> Sp<T> {
         Sp { value, span: self }
     }
     #[doc(hidden)]

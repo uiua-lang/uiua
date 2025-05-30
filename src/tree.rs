@@ -17,7 +17,8 @@ use serde::*;
 use crate::{
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
-    Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive, Signature, Value,
+    Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive, Purity, Signature,
+    Value,
 };
 
 node!(
@@ -786,17 +787,6 @@ impl fmt::Debug for Node {
             Node::ClearArgs => write!(f, "clear-args"),
         }
     }
-}
-
-/// Levels of purity for an operation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Purity {
-    /// The operation visibly affects the environment
-    Mutating,
-    /// The operation reads from the environment but does not visibly affect it
-    Impure,
-    /// The operation is completely pure
-    Pure,
 }
 
 impl Node {

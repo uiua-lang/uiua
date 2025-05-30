@@ -10,13 +10,9 @@ use std::{
 };
 
 use crate::{
-    ast::{Func, InlineMacro, Item, Modifier, ModuleKind, Ref, RefComponent, Subscript, Word},
-    ident_modifier_args, is_custom_glyph,
-    lex::{CodeSpan, Sp},
-    parse::parse,
-    Assembly, BindingInfo, BindingKind, BindingMeta, Compiler, Ident, InputSrc, Inputs, LocalName,
-    PreEvalMode, Primitive, Purity, SafeSys, Shape, Signature, SysBackend, UiuaError, Value,
-    CONSTANTS,
+    ast::*, is_custom_glyph, parse, parse::ident_modifier_args, Assembly, BindingInfo, BindingKind,
+    BindingMeta, CodeSpan, Compiler, Ident, InputSrc, Inputs, LocalName, PreEvalMode, Primitive,
+    Purity, SafeSys, Shape, Signature, Sp, Subscript, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -853,11 +849,8 @@ mod server {
 
     use crate::{
         format::{format_str, FormatConfig},
-        is_ident_char,
-        lex::{lex, Loc},
-        primitive::{PrimClass, PrimDocFragment},
-        split_name, AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token,
-        UiuaErrorKind,
+        is_ident_char, lex, split_name, AsciiToken, Assembly, BindingInfo, Loc, NativeSys,
+        PrimClass, PrimDoc, PrimDocFragment, PrimDocLine, Span, Token, UiuaErrorKind,
     };
 
     pub struct LspDoc {
@@ -1371,7 +1364,7 @@ mod server {
                         } else {
                             CompletionItemKind::FUNCTION
                         }),
-                        detail: Some(prim.doc().short_text().to_string()),
+                        detail: Some(PrimDoc::from(prim).short_text().to_string()),
                         documentation: Some(Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
                             value: full_prim_doc_markdown(prim),
@@ -2458,7 +2451,7 @@ mod server {
             .map(|sig| format!(" {}", sig))
             .unwrap_or_default();
         let mut value = format!("```uiua\n{}{}\n```", prim.format(), sig);
-        let doc = prim.doc();
+        let doc = PrimDoc::from(prim);
         value.push_str("\n\n");
         for frag in &doc.short {
             doc_frag_markdown(&mut value, frag);

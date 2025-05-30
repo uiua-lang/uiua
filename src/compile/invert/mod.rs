@@ -15,13 +15,14 @@ use serde::*;
 
 use crate::{
     assembly::{Assembly, Function},
-    check::{nodes_clean_sig, nodes_sig, SigCheckError},
+    check::nodes_sig,
+    check::{nodes_clean_sig, SigCheckError},
     compile::algebra::algebraic_inverse,
     CustomInverse, FunctionId,
     ImplPrimitive::{self, *},
     Node::{self, *},
     Primitive::{self, *},
-    Purity, SigNode, Signature, SysOp, Uiua, UiuaResult,
+    Purity, SigNode, Signature, SubSide, Subscript, SysOp, Uiua, UiuaResult,
 };
 
 use un::*;

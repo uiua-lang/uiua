@@ -1,5 +1,3 @@
-use crate::{ast::Subscript, check::nodes_sig, SigNode};
-
 use super::*;
 
 impl Node {

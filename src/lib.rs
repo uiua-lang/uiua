@@ -146,11 +146,9 @@ The `uiua` crate has the following noteable feature flags:
 mod algorithm;
 mod array;
 mod assembly;
-pub mod ast;
 mod boxed;
 mod check;
 mod compile;
-mod complex;
 mod constant;
 mod cowslice;
 mod error;
@@ -159,9 +157,7 @@ mod fill;
 pub mod format;
 mod function;
 mod grid_fmt;
-mod lex;
 pub mod lsp;
-mod parse;
 mod primitive;
 #[doc(hidden)]
 pub mod profile;
@@ -185,15 +181,11 @@ pub use self::{
     assembly::*,
     boxed::*,
     compile::*,
-    complex::*,
     constant::*,
     error::*,
     ffi::*,
     function::*,
-    lex::is_ident_char,
-    lex::*,
     lsp::{SpanKind, Spans},
-    parse::{ident_modifier_args, parse, ParseError},
     primitive::*,
     run::*,
     shape::*,
@@ -201,16 +193,16 @@ pub use self::{
     tree::*,
     value::*,
 };
+#[doc(inline)]
+pub use uiua_parser::*;
 
 use self::algorithm::get_ops;
-
-use ecow::EcoString;
 
 /// The Uiua version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// A Uiua identifier
-pub type Ident = EcoString;
+pub type Ident = ecow::EcoString;
 
 fn is_default<T: Default + PartialEq>(v: &T) -> bool {
     v == &T::default()

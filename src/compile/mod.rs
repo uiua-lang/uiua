@@ -30,18 +30,18 @@ use crate::{
     check::nodes_sig,
     format::{format_word, format_words},
     function::DynamicFunction,
-    ident_modifier_args,
-    lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
     media::{LayoutParam, VoxelsParam},
+    parse::ident_modifier_args,
     parse::{
         flip_unsplit_items, flip_unsplit_lines, max_placeholder, parse, split_items, split_words,
     },
-    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CustomInverse, Diagnostic,
-    DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
-    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, PrimClass, Primitive, Purity,
-    RunMode, SemanticComment, SigNode, Signature, SysBackend, Uiua, UiuaError, UiuaErrorKind,
-    UiuaResult, Value, CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
+    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, CustomInverse,
+    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
+    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass,
+    Primitive, Purity, RunMode, SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript,
+    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA,
+    SUBSCRIPT_DIGITS, VERSION,
 };
 pub(crate) use data::*;
 pub use pre_eval::PreEvalMode;

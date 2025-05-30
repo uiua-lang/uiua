@@ -22,11 +22,8 @@ pub struct Inputs {
 }
 
 impl Inputs {
-    pub(crate) fn add_src(
-        &mut self,
-        src: impl IntoInputSrc,
-        input: impl Into<EcoString>,
-    ) -> InputSrc {
+    /// Add an input source
+    pub fn add_src(&mut self, src: impl IntoInputSrc, input: impl Into<EcoString>) -> InputSrc {
         let src = src.into_input_src(self.strings.len());
         match &src {
             InputSrc::File(path) => {

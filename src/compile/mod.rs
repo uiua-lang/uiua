@@ -433,7 +433,7 @@ impl Compiler {
         let res = f(self);
 
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
-        self.setter_stash.pop().unwrap();
+        self.set_args.extend(self.setter_stash.pop().unwrap().1);
 
         let res = res?;
         let module = Module {

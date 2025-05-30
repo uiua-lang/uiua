@@ -10,7 +10,7 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-use uiua::UiuaErrorKind;
+use uiua::{PrimDoc, UiuaErrorKind};
 
 use uiua::{
     ast::Item,
@@ -765,7 +765,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         }
                         SpanKind::Primitive(prim, _) => {
                             let name = prim.name();
-                            let mut title = format!("{}: {}", name, prim.doc().short_text());
+                            let mut title =
+                                format!("{}: {}", name, PrimDoc::from(prim).short_text());
                             if let Some(ascii) = prim.ascii() {
                                 title = format!("({}) {}", ascii, title);
                             }
@@ -774,7 +775,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         SpanKind::Obverse(set_inverses) => {
                             let prim = Primitive::Obverse;
                             let name = prim.name();
-                            let mut title = format!("{}: {}", name, prim.doc().short_text());
+                            let mut title =
+                                format!("{}: {}", name, PrimDoc::from(prim).short_text());
                             if !set_inverses.is_empty() {
                                 title.push('\n');
                                 title.push_str(&set_inverses.to_string());

@@ -21,11 +21,11 @@ use leptos::{
 
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
-    ast::Subscript,
     format::{format_str, FormatConfig},
     is_ident_char, lex,
     lsp::{BindingDocs, BindingDocsKind},
-    now, seed_random, IgnoreError, PrimClass, Primitive, Signature, SysOp, Token,
+    now, seed_random, IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SysOp,
+    Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
@@ -1048,6 +1048,7 @@ pub fn Editor<'a>(
             }
         };
         // Show the glyph doc on mouseover
+        let doc = PrimDoc::from(prim);
         let onmouseover = move |_| {
             set_glyph_doc.set(
                 view! {
@@ -1062,7 +1063,7 @@ pub fn Editor<'a>(
                             }
                         })}
                     <br />
-                    {prim.doc().short_text().into_owned()}
+                    {doc.short_text().into_owned()}
                 }
                 .into_view(),
             );
@@ -1264,7 +1265,8 @@ pub fn Editor<'a>(
                 .unwrap();
             for prim in named_prims {
                 let class = format!("{} named-function-button", prim_class(prim));
-                let mut desc = prim.doc().short_text().to_string();
+                let doc = PrimDoc::from(prim);
+                let mut desc = doc.short_text().to_string();
                 if desc.chars().count() > 30 {
                     desc = desc.chars().take(29).chain(['…']).collect();
                 }
@@ -2202,7 +2204,7 @@ pub fn Prim(
         title.push('\n');
     }
     if !hide_docs {
-        let doc = prim.doc();
+        let doc = PrimDoc::from(prim);
         if glyph_only && !title.is_empty() && !matches!(prim, Primitive::Sys(_)) {
             title.push_str(": ");
         }

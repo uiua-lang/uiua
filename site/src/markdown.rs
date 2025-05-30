@@ -217,7 +217,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
 
 #[cfg(test)]
 fn node_html<'a>(node: &'a AstNode<'a>) -> String {
-    use uiua::{Compiler, SafeSys, Uiua, UiuaErrorKind, Value};
+    use uiua::{Compiler, PrimDoc, SafeSys, Uiua, UiuaErrorKind, Value};
     use uiua_editor::prim_class;
 
     use crate::prim_html;
@@ -304,7 +304,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                         <code><span class={symbol_class:?}>{symbol}</span>{name}</code>
                     </a>"#,
                     prim.name(),
-                    prim.doc().short_text()
+                    PrimDoc::from(prim).short_text()
                 )
             } else {
                 format!(

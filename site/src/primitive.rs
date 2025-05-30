@@ -1,6 +1,6 @@
 use leptos::*;
 use leptos_router::*;
-use uiua::{PrimClass, PrimDocFragment, PrimDocLine, Primitive, SysOp};
+use uiua::{PrimClass, PrimDoc, PrimDocFragment, PrimDocLine, Primitive, SysOp};
 use uiua_editor::Editor;
 
 use crate::{Hd, Prim, Prims};
@@ -86,7 +86,7 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
     } else {
         None
     };
-    let doc = prim.doc();
+    let doc = PrimDoc::from(prim);
     let body = view! {
         <p style="white-space: pre-wrap">{doc_line_fragments_to_view(&doc.short)}</p>
         { doc_lines_to_view(&doc.lines) }
@@ -413,7 +413,8 @@ fn prim_docs() {
     use uiua_editor::backend::WebBackend;
 
     for prim in Primitive::non_deprecated() {
-        for line in &prim.doc().lines {
+        let doc = PrimDoc::from(prim);
+        for line in &doc.lines {
             if let PrimDocLine::Example(ex) = line {
                 if [
                     "&sl", "&tcpc", "&tlsc", "&ast", "&clip", "&frab", "&fmd", "&b",

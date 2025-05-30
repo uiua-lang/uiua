@@ -6609,7 +6609,7 @@ dependencies = [
 
 [[package]]
 name = "uiua_parser"
-version = "0.1.0"
+version = "0.17.0-dev.1"
 dependencies = [
  "bytemuck",
  "colored",

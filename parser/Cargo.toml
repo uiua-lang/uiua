@@ -1,7 +1,14 @@
 [package]
-edition = "2024"
+categories = ["parser-implementations"]
+description = "Uiua parser implementation"
+documentation = "https://docs.rs/uiua_parser"
+edition = "2021"
+keywords = ["uiua", "array", "stack", "language", "apl"]
+license = "MIT"
 name = "uiua_parser"
-version = "0.1.0"
+repository = "https://github.com/uiua-lang/uiua"
+rust-version = "1.82.0"
+version = "0.17.0-dev.1"
 
 [dependencies]
 bytemuck = {version = "1.17", features = ["must_cast", "derive", "extern_crate_alloc"]}

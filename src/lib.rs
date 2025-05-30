@@ -157,11 +157,12 @@ mod fill;
 pub mod format;
 mod function;
 mod grid_fmt;
+mod impl_prim;
 pub mod lsp;
-mod primitive;
 #[doc(hidden)]
 pub mod profile;
 mod run;
+mod run_prim;
 mod shape;
 #[cfg(feature = "stand")]
 #[doc(hidden)]
@@ -185,9 +186,10 @@ pub use self::{
     error::*,
     ffi::*,
     function::*,
+    impl_prim::*,
     lsp::{SpanKind, Spans},
-    primitive::*,
     run::*,
+    run_prim::*,
     shape::*,
     sys::*,
     tree::*,

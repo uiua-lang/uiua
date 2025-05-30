@@ -2,8 +2,6 @@
 //!
 //! For the meat of the actual array algorithms, see [`crate::algorithm`].
 
-mod defs;
-pub use defs::*;
 use ecow::EcoVec;
 use regex::Regex;
 
@@ -13,7 +11,6 @@ use std::{
     cell::RefCell,
     collections::HashMap,
     f64::consts::{PI, TAU},
-    fmt,
     iter::repeat_n,
     sync::{
         atomic::{self, AtomicUsize},
@@ -22,7 +19,6 @@ use std::{
 };
 
 use rand::prelude::*;
-use serde::*;
 
 use crate::{
     algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
@@ -31,238 +27,9 @@ use crate::{
     grid_fmt::GridFmt,
     media, run_sys_op, run_sys_op_mod,
     value::*,
-    FunctionId, Ops, Primitive, Purity, Shape, SubSide, Subscript, SysOp, Uiua, UiuaErrorKind,
-    UiuaResult, SUBSCRIPT_DIGITS,
+    FunctionId, ImplPrimitive, Ops, Primitive, Shape, SubSide, SysOp, Uiua, UiuaErrorKind,
+    UiuaResult,
 };
-
-fn fmt_subscript(f: &mut fmt::Formatter<'_>, mut i: i32) -> fmt::Result {
-    if i < 0 {
-        write!(f, "₋")?;
-        i = -i;
-    }
-    while i > 0 {
-        write!(f, "{}", SUBSCRIPT_DIGITS[i as usize % 10])?;
-        i /= 10;
-    }
-    Ok(())
-}
-
-impl fmt::Display for ImplPrimitive {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use ImplPrimitive::*;
-        use Primitive::*;
-        match self {
-            &DeshapeSub(i) => {
-                write!(f, "{Deshape}")?;
-                fmt_subscript(f, i)
-            }
-            &EachSub(i) => {
-                write!(f, "{Each}")?;
-                fmt_subscript(f, i)
-            }
-            &RowsSub(sub, inv) => {
-                if inv {
-                    write!(f, "{Inventory}")?;
-                } else {
-                    write!(f, "{Rows}")?;
-                }
-                sub.fmt(f)
-            }
-            OnSub(i) => {
-                write!(f, "{On}")?;
-                fmt_subscript(f, *i as i32)
-            }
-            BySub(i) => {
-                write!(f, "{By}")?;
-                fmt_subscript(f, *i as i32)
-            }
-            WithSub(i) => {
-                write!(f, "{With}")?;
-                fmt_subscript(f, *i as i32)
-            }
-            OffSub(i) => {
-                write!(f, "{Off}")?;
-                fmt_subscript(f, *i as i32)
-            }
-            NBits(n) => {
-                write!(f, "{Bits}")?;
-                fmt_subscript(f, *n as i32)
-            }
-            SidedEncodeBytes(side) => write!(f, "{EncodeBytes}{side}"),
-            Root => write!(f, "{Anti}{Pow}"),
-            Cos => write!(f, "cos"),
-            Asin => write!(f, "{Un}{Sin}"),
-            Acos => write!(f, "{Un}{Cos}"),
-            Exp => write!(f, "{Un}{Ln}"),
-            UnPop => write!(f, "{Un}{Pop}"),
-            UnBits => write!(f, "{Un}{Bits}"),
-            UnWhere => write!(f, "{Un}{Where}"),
-            UnCouple => write!(f, "{Un}{Couple}"),
-            UnMap => write!(f, "{Un}{Map}"),
-            UnAtan => write!(f, "{Un}{Atan}"),
-            UnComplex => write!(f, "{Un}{Complex}"),
-            UnAdd => write!(f, "{Un}{Add}"),
-            UnMul => write!(f, "{Un}{Mul}"),
-            UnDiv => write!(f, "{Un}{Div}"),
-            UnUtf8 => write!(f, "{Un}{Utf8}"),
-            UnUtf16 => write!(f, "{Un}{Utf16}"),
-            Utf16 => write!(f, "utf₁₆"),
-            UnGraphemes => write!(f, "{Un}{Graphemes}"),
-            UnParse => write!(f, "{Un}{Parse}"),
-            UnFix => write!(f, "{Un}{Fix}"),
-            UnShape => write!(f, "{Un}{Shape}"),
-            AntiDrop => write!(f, "{Anti}{Drop}"),
-            AntiSelect => write!(f, "{Anti}{Select}"),
-            AntiPick => write!(f, "{Anti}{Pick}"),
-            AntiKeep => write!(f, "{Anti}{Keep}"),
-            AntiRotate => write!(f, "{Anti}{Rotate}"),
-            UnJoin | UnJoinShape | UnJoinShape2 => write!(f, "{Un}{Join}"),
-            UnJoinEnd | UnJoinShapeEnd | UnJoinShape2End => write!(f, "{Un}{Backward}{Join}"),
-            UnKeep => write!(f, "{Un}{Keep}"),
-            UnTake => write!(f, "{Un}{Take}"),
-            UnScan => write!(f, "{Un}{Scan}"),
-            UnGroup => write!(f, "{Un}{Group}"),
-            UnPartition => write!(f, "{Un}{Partition}"),
-            UnStack => write!(f, "{Un}{Stack}"),
-            UnDump => write!(f, "{Un}{Dump}"),
-            UnFill => write!(f, "{Un}{Fill}"),
-            UnBox => write!(f, "{Un}{Box}"),
-            UnSort => write!(f, "{Un}{Sort}"),
-            UnHsv => write!(f, "{Un}{Hsv}"),
-            UnJson => write!(f, "{Un}{Json}"),
-            UnBinary => write!(f, "{Un}{Binary}"),
-            UnCsv => write!(f, "{Un}{Csv}"),
-            UnXlsx => write!(f, "{Un}{Xlsx}"),
-            UnFft => write!(f, "{Un}{Fft}"),
-            UnDatetime => write!(f, "{Un}{DateTime}"),
-            UnBracket => write!(f, "{Un}{Bracket}"),
-            DecodeBytes(Some(side)) => write!(f, "{Un}{EncodeBytes}{side}"),
-            DecodeBytes(None) => write!(f, "{Un}{EncodeBytes}"),
-            ImageDecode => write!(f, "{Un}{ImageEncode}"),
-            GifDecode => write!(f, "{Un}{GifEncode}"),
-            AudioDecode => write!(f, "{Un}{AudioEncode}"),
-            UnRawMode => write!(f, "{Un}{}", Sys(SysOp::RawMode)),
-            UnClip => write!(f, "{Un}{}", Sys(SysOp::Clip)),
-            UndoUnBits => write!(f, "{Under}{Un}{Bits}"),
-            AntiBase => write!(f, "{Anti}{Base}"),
-            UndoReverse { n, .. } => write!(f, "{Under}{Reverse}({n})"),
-            UndoTransposeN(n, _) => write!(f, "{Under}{Transpose}({n})"),
-            UndoRotate(n) => write!(f, "{Under}{Rotate}({n})"),
-            UndoTake => write!(f, "{Under}{Take}"),
-            UndoDrop => write!(f, "{Under}{Drop}"),
-            UndoSelect => write!(f, "{Under}{Select}"),
-            UndoPick => write!(f, "{Under}{Pick}"),
-            UndoWhere => write!(f, "{Under}{Where}"),
-            AntiOrient => write!(f, "{Anti}{Orient}"),
-            UndoAntiOrient => write!(f, "{Under}{Orient}"),
-            UndoInsert => write!(f, "{Under}{Insert}"),
-            UndoRemove => write!(f, "{Under}{Remove}"),
-            UndoPartition1 | UndoPartition2 => write!(f, "{Under}{Partition}"),
-            UndoGroup1 | UndoGroup2 => write!(f, "{Under}{Group}"),
-            TryClose => write!(f, "{}", Sys(SysOp::Close)),
-            UndoFix => write!(f, "{Under}{Fix}"),
-            UndoDeshape(_) => write!(f, "{Under}{Deshape}"),
-            UndoFirst => write!(f, "{Under}{First}"),
-            UndoLast => write!(f, "{Under}{Last}"),
-            UndoKeep => write!(f, "{Under}{Keep}"),
-            UndoRerank => write!(f, "{Under}{Rerank}"),
-            UndoReshape => write!(f, "{Un}{Reshape}"),
-            UndoWindows => write!(f, "{Un}{Stencil}{Identity}"),
-            UndoJoin => write!(f, "{Under}{Join}"),
-            UndoRows => write!(f, "{Under}{Rows}"),
-            UndoInventory => write!(f, "{Under}{Inventory}"),
-            MaxRowCount(n) => write!(f, "MaxRowCount({n})"),
-            SetSign => write!(f, "{Under}{Sign}"),
-            // Optimizations
-            FirstMinIndex => write!(f, "{First}{Rise}"),
-            FirstMaxIndex => write!(f, "{First}{Fall}"),
-            LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
-            LastMaxIndex => write!(f, "{First}{Reverse}{Fall}"),
-            FirstWhere => write!(f, "{First}{Where}"),
-            LastWhere => write!(f, "{First}{Reverse}{Where}"),
-            LenWhere => write!(f, "{Len}{Where}"),
-            MemberOfRange => write!(f, "{MemberOf}{Range}"),
-            MultidimMemberOfRange => write!(f, "{MemberOf}{Rerank}1{Range}"),
-            RandomRow => write!(f, "{First}{Un}{Sort}"),
-            SortDown => write!(f, "{Select}{Fall}{Dup}"),
-            AllSame => write!(f, "all same"),
-            Primes => write!(f, "{Un}{Reduce}{Mul}"),
-            ReplaceRand => write!(f, "{Gap}{Rand}"),
-            ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
-            ReduceContent => write!(f, "{Reduce}{Content}"),
-            ReduceConjoinInventory => write!(f, "{Reduce}{Content}{Join}{Inventory}"),
-            ReduceTable => write!(f, "{Reduce}(…){Table}"),
-            CountUnique => write!(f, "{Len}{Deduplicate}"),
-            MatchPattern => write!(f, "pattern match"),
-            MatchLe => write!(f, "match ≤"),
-            MatchGe => write!(f, "match ≥"),
-            Astar => write!(f, "{Path}"),
-            AstarFirst => write!(f, "{First}{Astar}"),
-            AstarSignLen => write!(f, "{Sign}{Len}{Astar}"),
-            AstarTake => write!(f, "{Take}…{Astar}"),
-            AstarPop => write!(f, "{Pop}{Astar}"),
-            PathFirst => write!(f, "{First}{Path}"),
-            PathSignLen => write!(f, "{Sign}{Len}{Path}"),
-            PathTake => write!(f, "{Take}…{Path}"),
-            PathPop => write!(f, "{Pop}{Path}"),
-            SplitByScalar => write!(f, "{Partition}{Box}{By}{Ne}"),
-            SplitBy => write!(f, "{Partition}{Box}{Not}{By}{Mask}"),
-            SplitByKeepEmpty => write!(f, "{Un}{Reduce}$\"_…_\""),
-            AbsComplex => write!(f, "{Abs}{Complex}"),
-            MatrixDiv => write!(f, "{Anti}{Under}{Transpose}({Reduce}{Add}{Mul})"),
-            RangeStart => write!(f, "{Add}{Dip}{Range}"),
-            &ReduceDepth(n) => {
-                for _ in 0..n {
-                    write!(f, "{Rows}")?;
-                }
-                write!(f, "{Reduce}(…)")?;
-                Ok(())
-            }
-            &TransposeN(n) => {
-                if n < 0 {
-                    write!(f, "{Un}")?;
-                    if n < -1 {
-                        write!(f, "(")?;
-                    }
-                }
-                for _ in 0..n.unsigned_abs() {
-                    write!(f, "{Transpose}")?;
-                }
-                if n < -1 {
-                    write!(f, ")")?;
-                }
-                Ok(())
-            }
-            &StackN { n, inverse } => {
-                if inverse {
-                    write!(f, "{Un}")?;
-                }
-                let n_str: String = (n.to_string().chars())
-                    .map(|c| SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])
-                    .collect();
-                write!(f, "{Stack}{n_str}")
-            }
-            SidedFill(side) => write!(f, "{Fill}{side}"),
-            RepeatWithInverse => write!(f, "{Repeat}"),
-            RepeatCountConvergence => write!(f, "{Un}{Repeat}"),
-            ValidateType => write!(f, "{Un}…{Type}{Dup}"),
-            ValidateTypeConsume => write!(f, "{Un}…{Type}"),
-            TestAssert => write!(f, "{Assert}"),
-            ValidateNonBoxedVariant => write!(f, "|…[…]"),
-            ValidateVariant => write!(f, "|…°[…]"),
-            TagVariant => write!(f, "<tag variant>"),
-            BothImpl(sub) => write!(f, "{Both}{sub}"),
-            UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
-            Retropose => write!(f, "<{Evert}>"),
-            Ga(op, _) => op.fmt(f),
-            Over => write!(f, "over"),
-            &MultiKeep(n) => {
-                write!(f, "{Keep}")?;
-                fmt_subscript(f, n as i32)
-            }
-        }
-    }
-}
 
 macro_rules! constant {
     ($name:ident, $value:expr) => {

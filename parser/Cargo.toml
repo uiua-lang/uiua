@@ -1,0 +1,15 @@
+[package]
+edition = "2024"
+name = "uiua_parser"
+version = "0.1.0"
+
+[dependencies]
+bytemuck = {version = "1.17", features = ["must_cast", "derive", "extern_crate_alloc"]}
+colored = "2"
+dashmap = {version = "5", features = ["serde"]}
+ecow = {version = "0.2.3", features = ["serde"]}
+enum-iterator = "2.1.0"
+once_cell = "1"
+serde = {version = "1", features = ["derive", "rc"]}
+serde_tuple = "0.5.0"
+unicode-segmentation = "1.10"

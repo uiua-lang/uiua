@@ -6576,6 +6576,7 @@ dependencies = [
  "tokio",
  "tower-lsp",
  "trash",
+ "uiua_parser",
  "unicode-segmentation",
  "viuer",
  "wasm-bindgen",
@@ -6604,6 +6605,21 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-logger",
  "web-sys",
+]
+
+[[package]]
+name = "uiua_parser"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "colored",
+ "dashmap",
+ "ecow",
+ "enum-iterator",
+ "once_cell",
+ "serde",
+ "serde_tuple",
+ "unicode-segmentation",
 ]
 
 [[package]]

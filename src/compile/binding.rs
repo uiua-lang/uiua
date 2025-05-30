@@ -5,7 +5,7 @@ use crate::BindingMeta;
 use super::*;
 
 impl Compiler {
-    pub(super) fn binding(&mut self, binding: Binding, prelude: BindingPrelude) -> UiuaResult {
+    pub(super) fn binding(&mut self, mut binding: Binding, prelude: BindingPrelude) -> UiuaResult {
         let public = binding.public;
 
         let last_word = binding.words.iter().last();
@@ -26,21 +26,28 @@ impl Compiler {
         }
 
         // Create meta
-        let comment = prelude
-            .comment
-            .map(|text| DocComment::from(text.as_str()))
-            .or_else(|| {
-                last_word.and_then(|w| match &w.value {
-                    Word::Comment(c) => Some(DocComment::from(c.as_str())),
-                    _ => None,
-                })
-            });
         let deprecation = prelude.deprecation.or_else(|| {
             last_word.and_then(|w| match &w.value {
                 Word::SemanticComment(SemanticComment::Deprecated(s)) => Some(s.clone()),
                 _ => None,
             })
         });
+        let mut last_word_comment = false;
+        let comment = prelude
+            .comment
+            .map(|text| DocComment::from(text.as_str()))
+            .or_else(|| {
+                last_word.and_then(|w| match &w.value {
+                    Word::Comment(c) => {
+                        last_word_comment = true;
+                        Some(DocComment::from(c.as_str()))
+                    }
+                    _ => None,
+                })
+            });
+        if last_word_comment {
+            binding.words.pop();
+        }
         let meta = BindingMeta {
             comment,
             deprecation,
@@ -303,36 +310,14 @@ impl Compiler {
             global_index: local.index,
         });
         let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
-        let compile = |comp: &mut Compiler| -> UiuaResult<Node> {
-            // Compile the words
-            let node = comp.line(binding.words, false);
-            // Add an error binding if there was an error
-            let mut node = match node {
-                Ok(node) => node,
-                Err(e) => {
-                    comp.asm.add_binding_at(
-                        local,
-                        BindingKind::Error,
-                        Some(span.clone()),
-                        meta.clone(),
-                    );
-                    return Err(e);
-                }
-            };
-            // Apply the signature comment
-            if let Some(comment_sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
-                comp.apply_node_comment(
-                    &mut node,
-                    comment_sig,
-                    &format!("{name}'s"),
-                    &binding.name.span,
-                );
-            }
-            Ok(node)
-        };
 
         // Compile the words
-        let mut node = self.in_scope(ScopeKind::Binding, compile)?.1;
+        let (_, mut node) = self.in_scope(ScopeKind::Binding, |comp| {
+            comp.line(binding.words, false).inspect_err(|_| {
+                comp.asm
+                    .add_binding_at(local, BindingKind::Error, Some(span.clone()), meta.clone())
+            })
+        })?;
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
         let is_obverse = node
             .iter()

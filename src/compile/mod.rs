@@ -678,11 +678,12 @@ impl Compiler {
             anyway
         }
         let in_test = self.scopes().any(|sc| sc.kind == ScopeKind::Test);
-        let can_run = match self.mode {
-            RunMode::Normal => !in_test,
-            RunMode::Test => in_test,
-            RunMode::All => true,
-        };
+        let can_run = mode != ItemCompMode::TopLevel
+            || match self.mode {
+                RunMode::Normal => !in_test,
+                RunMode::Test => in_test,
+                RunMode::All => true,
+            };
         if line.is_empty() || !(can_run || must_run || words_should_run_anyway(&line)) {
             return Ok(());
         }

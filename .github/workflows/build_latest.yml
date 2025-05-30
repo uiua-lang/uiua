@@ -84,6 +84,7 @@ jobs:
         git reset --hard origin/site
         git rebase main || { echo "Rebase failed, aborting."; git rebase --abort; exit 1; }
         cd site
+        cargo test -p site gen_blog_html
         ../target/bin/trunk build --release -d ../docs
         git add --all
         git commit --amend --no-edit

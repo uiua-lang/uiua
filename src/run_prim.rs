@@ -455,7 +455,7 @@ pub fn run_prim_mod(prim: &Primitive, ops: Ops, env: &mut Uiua) -> UiuaResult {
         Primitive::Case => {
             let [f] = get_ops(ops, env)?;
             env.exec(f).map_err(|mut e| {
-                e.is_case = true;
+                e.meta.is_case = true;
                 e
             })?;
         }

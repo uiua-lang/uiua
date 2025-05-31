@@ -117,7 +117,7 @@ impl Compiler {
                             success = true;
                         }
                         Ok(None) => {}
-                        Err(e) if !allow_error || e.is_fill || self.in_try => {}
+                        Err(e) if !allow_error || e.meta.is_fill || self.in_try => {}
                         Err(e) => {
                             // println!("error: {e:?}");
                             errors.push(e)
@@ -186,7 +186,7 @@ impl Compiler {
                     cache.borrow_mut().insert(env.asm.root, res.clone());
                     Ok(res)
                 }
-                Err(e) if matches!(e.kind, UiuaErrorKind::Timeout(..)) => {
+                Err(e) if matches!(*e.kind, UiuaErrorKind::Timeout(..)) => {
                     cache.borrow_mut().insert(env.asm.root, None);
                     Ok(None)
                 }

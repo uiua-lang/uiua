@@ -1368,7 +1368,7 @@ impl Compiler {
                         .collect();
                     match Value::from_row_values(values, &(&word.span, &self.asm.inputs)) {
                         Ok(val) => return Ok(Node::new_push(val)),
-                        Err(e) if e.is_fill => {}
+                        Err(e) if e.meta.is_fill => {}
                         Err(e) => return Err(e),
                     }
                 }
@@ -1484,7 +1484,7 @@ impl Compiler {
                                 .insert(word.span.clone(), val.shape.clone());
                             return Ok(Node::new_push(val));
                         }
-                        Err(e) if e.is_fill => {}
+                        Err(e) if e.meta.is_fill => {}
                         Err(e) => return Err(e),
                     }
                 }

@@ -1182,7 +1182,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub(crate) fn undo_chunks(mut self, isize_spec: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        if isize_spec.iter().any(|&s| s == 0) {
+        if isize_spec.contains(&0) {
             return Err(env.error("Chunk size cannot be zero"));
         }
         let n = isize_spec.len();

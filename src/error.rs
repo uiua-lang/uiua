@@ -10,7 +10,14 @@ use crate::{
 #[must_use]
 pub struct UiuaError {
     /// The kind of error
-    pub kind: UiuaErrorKind,
+    pub kind: Box<UiuaErrorKind>,
+    /// Additional error data
+    pub meta: Box<ErrorMeta>,
+}
+
+/// Additional data attached to a Uiua error
+#[derive(Debug, Clone)]
+pub struct ErrorMeta {
     /// A stack trace of the error
     pub trace: Vec<TraceFrame>,
     /// Whether the error is fill-related
@@ -18,7 +25,7 @@ pub struct UiuaError {
     /// Whether the error can escape a single `try`
     pub is_case: bool,
     /// Bundled errors
-    pub multi: Vec<Self>,
+    pub multi: Vec<UiuaError>,
     /// Additional info about the error
     pub infos: Vec<(String, Option<Span>)>,
 }
@@ -61,12 +68,15 @@ impl UiuaErrorKind {
 impl From<UiuaErrorKind> for UiuaError {
     fn from(kind: UiuaErrorKind) -> Self {
         Self {
-            kind,
-            trace: Vec::new(),
-            is_fill: false,
-            is_case: false,
-            multi: Vec::new(),
-            infos: Vec::new(),
+            kind: kind.into(),
+            meta: ErrorMeta {
+                trace: Vec::new(),
+                is_fill: false,
+                is_case: false,
+                multi: Vec::new(),
+                infos: Vec::new(),
+            }
+            .into(),
         }
     }
 }
@@ -85,7 +95,7 @@ pub struct TraceFrame {
 
 impl fmt::Display for UiuaError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.kind {
+        match &*self.kind {
             UiuaErrorKind::Load(path, e) => {
                 write!(f, "failed to load {}: {e}", path.to_string_lossy())
             }
@@ -110,19 +120,19 @@ impl fmt::Display for UiuaError {
 impl UiuaError {
     /// Attach some info to the error
     pub fn with_info(mut self, info: impl IntoIterator<Item = (String, Option<Span>)>) -> Self {
-        self.infos.extend(info);
+        self.meta.infos.extend(info);
         self
     }
     /// Get the value of the error if it was thrown by `assert`
     pub fn value(self) -> Value {
-        match self.kind {
+        match *self.kind {
             UiuaErrorKind::Throw(value, ..) => *value,
             _ => self.to_string().into(),
         }
     }
     /// Turn the error into a multi-error
     pub fn into_multi(mut self) -> Vec<Self> {
-        let mut multi = take(&mut self.multi);
+        let mut multi = take(&mut self.meta.multi);
         multi.insert(0, self);
         multi
     }
@@ -132,12 +142,12 @@ impl UiuaError {
         let mut error = iter
             .next()
             .unwrap_or_else(|| UiuaErrorKind::CompilerPanic("Unknown error".into()).error());
-        error.multi.extend(iter);
+        error.meta.multi.extend(iter);
         error
     }
     /// Mark the error as fill-related
     pub(crate) fn fill(mut self) -> Self {
-        self.is_fill = true;
+        self.meta.is_fill = true;
         self
     }
     /// Add a span to the trace of the error
@@ -146,7 +156,7 @@ impl UiuaError {
             id: None,
             span: Span::Code(span),
         };
-        self.trace.push(frame);
+        self.meta.trace.push(frame);
         self
     }
     pub(crate) fn trace_macro(mut self, name: Option<Ident>, span: CodeSpan) -> Self {
@@ -154,12 +164,12 @@ impl UiuaError {
             id: Some(FunctionId::Macro(name, span.clone())),
             span: Span::Code(span),
         };
-        self.trace.push(frame);
+        self.meta.trace.push(frame);
         self
     }
     pub(crate) fn track_caller(&mut self, new_span: impl Into<Span>) {
-        self.trace.clear();
-        match &mut self.kind {
+        self.meta.trace.clear();
+        match &mut *self.kind {
             UiuaErrorKind::Run { message, .. } => message.span = new_span.into(),
             UiuaErrorKind::Throw(_, span, _) => *span = new_span.into(),
             _ => {}
@@ -262,7 +272,7 @@ impl UiuaError {
     /// Get a rich-text report for the error
     pub fn report(&self) -> Report {
         let kind = ReportKind::Error;
-        let mut report = match &self.kind {
+        let mut report = match &*self.kind {
             UiuaErrorKind::Parse(errors, inputs) => Report::new_multi(
                 kind,
                 inputs,
@@ -309,16 +319,16 @@ impl UiuaError {
                 }
             }
         };
-        report = report_trace(report, &self.trace);
+        report = report_trace(report, &self.meta.trace);
         let default_inputs = Inputs::default();
-        let inputs = match &self.kind {
+        let inputs = match &*self.kind {
             UiuaErrorKind::Parse(_, inputs)
             | UiuaErrorKind::Run { inputs, .. }
             | UiuaErrorKind::Throw(_, _, inputs)
             | UiuaErrorKind::Timeout(_, inputs) => inputs,
             _ => &default_inputs,
         };
-        for (info, span) in &self.infos {
+        for (info, span) in &self.meta.infos {
             report.fragments.push(ReportFragment::Newline);
             if let Some(span) = span {
                 report.fragments.extend(
@@ -334,7 +344,7 @@ impl UiuaError {
                 report.fragments.push(ReportFragment::Plain(info.into()));
             }
         }
-        for error in &self.multi {
+        for error in &self.meta.multi {
             report.fragments.push(ReportFragment::Newline);
             report.fragments.extend(error.report().fragments);
         }

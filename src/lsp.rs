@@ -27,7 +27,7 @@ pub enum SpanKind {
     Strand,
     Ident {
         /// The documentation of the identifier
-        docs: Option<BindingDocs>,
+        docs: Option<Box<BindingDocs>>,
         /// Whether the identifier is the original binding name
         original: bool,
     },
@@ -436,17 +436,17 @@ impl Spanner {
         spans
     }
 
-    fn binding_docs(&self, span: &CodeSpan) -> Option<BindingDocs> {
+    fn binding_docs(&self, span: &CodeSpan) -> Option<Box<BindingDocs>> {
         for binding in &self.asm.bindings {
             if binding.span != *span {
                 continue;
             }
-            return Some(self.make_binding_docs(binding));
+            return Some(self.make_binding_docs(binding).into());
         }
         None
     }
 
-    fn reference_docs(&self, span: &CodeSpan) -> Option<BindingDocs> {
+    fn reference_docs(&self, span: &CodeSpan) -> Option<Box<BindingDocs>> {
         // Look in global references
         if let Some(binding) = self
             .code_meta
@@ -454,7 +454,7 @@ impl Spanner {
             .get(span)
             .and_then(|i| self.asm.bindings.get(*i))
         {
-            return Some(self.make_binding_docs(binding));
+            return Some(self.make_binding_docs(binding).into());
         }
         // Look in constant references
         for name in &self.code_meta.constant_references {
@@ -478,13 +478,16 @@ impl Spanner {
                 comment: Some(constant.doc().into()),
                 ..Default::default()
             };
-            return Some(BindingDocs {
-                src_span: span.clone(),
-                is_public: true,
-                kind: BindingDocsKind::Constant(Some(val)),
-                escape: None,
-                meta,
-            });
+            return Some(
+                BindingDocs {
+                    src_span: span.clone(),
+                    is_public: true,
+                    kind: BindingDocsKind::Constant(Some(val)),
+                    escape: None,
+                    meta,
+                }
+                .into(),
+            );
         }
         None
     }
@@ -1856,7 +1859,7 @@ mod server {
             // Add experimental
             if !doc.input.contains("# Experimental!") {
                 for error in &doc.errors {
-                    let UiuaErrorKind::Run { message, .. } = &error.kind else {
+                    let UiuaErrorKind::Run { message, .. } = &*error.kind else {
                         continue;
                     };
                     let Span::Code(span) = &message.span else {
@@ -2067,7 +2070,7 @@ mod server {
             let range = |err: &UiuaError, span: &Span| -> Option<Range> {
                 let span = match span {
                     Span::Code(span) => path_locs(span, &path)?,
-                    Span::Builtin => err.trace.iter().find_map(|frame| match &frame.span {
+                    Span::Builtin => err.meta.trace.iter().find_map(|frame| match &frame.span {
                         Span::Code(span) => Some(span),
                         _ => None,
                     })?,
@@ -2077,7 +2080,7 @@ mod server {
 
             // Errors
             for err in &doc.errors {
-                match &err.kind {
+                match &*err.kind {
                     UiuaErrorKind::Run { message, .. } => {
                         let Some(range) = range(err, &message.span) else {
                             continue;

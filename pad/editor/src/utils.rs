@@ -1150,7 +1150,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
             backend.finish();
             (stack, backend)
         }
-        Ok(Err(e)) if matches!(e.kind, UiuaErrorKind::Interrupted) => (
+        Ok(Err(e)) if matches!(*e.kind, UiuaErrorKind::Interrupted) => (
             rt.take_stack(),
             rt.downcast_backend::<WebBackend>().unwrap(),
         ),

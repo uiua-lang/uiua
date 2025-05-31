@@ -386,7 +386,7 @@ impl Uiua {
             .unwrap_or_else(Err);
         let mut push_error = |te: UiuaError| match &mut res {
             Ok(()) => res = Err(te),
-            Err(e) => e.multi.push(te),
+            Err(e) => e.meta.multi.push(te),
         };
         if self.asm.test_assert_count > 0 {
             let total_run = self.rt.test_results.len();
@@ -943,7 +943,7 @@ impl Uiua {
             if frame.track_caller {
                 err.track_caller(span);
             } else {
-                err.trace.push(TraceFrame { id: frame.id, span });
+                err.meta.trace.push(TraceFrame { id: frame.id, span });
             }
             return Err(err);
         }

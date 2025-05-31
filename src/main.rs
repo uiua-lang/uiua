@@ -705,7 +705,7 @@ impl WatchArgs {
                         return Ok(());
                     }
                     Err(e) => {
-                        if let UiuaErrorKind::Format(..) = e.kind {
+                        if let UiuaErrorKind::Format(..) = *e.kind {
                             sleep(Duration::from_millis((i as u64 + 1) * 10))
                         } else {
                             clear_watching();

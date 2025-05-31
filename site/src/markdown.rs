@@ -365,7 +365,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                         }
                     }
                     Err(e)
-                        if matches!(e.kind, UiuaErrorKind::Parse(..))
+                        if matches!(*e.kind, UiuaErrorKind::Parse(..))
                             || e.to_string().contains("git modules")
                             || e.to_string().contains("was empty") =>
                     {

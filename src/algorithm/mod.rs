@@ -234,7 +234,7 @@ impl FillError for () {
 
 impl FillError for UiuaError {
     fn is_fill(&self) -> bool {
-        self.is_fill
+        self.meta.is_fill
     }
 }
 
@@ -328,7 +328,7 @@ impl FillContext for (&CodeSpan, &Inputs) {
         error.fill()
     }
     fn is_fill_error(error: &Self::Error) -> bool {
-        error.is_fill
+        error.meta.is_fill
     }
 }
 
@@ -638,8 +638,8 @@ pub fn try_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     }
     let backup = env.clone_stack_top(f_sig.args().min(handler_sig.args()))?;
     if let Err(mut err) = env.exec_clean_stack(f) {
-        if err.is_case {
-            err.is_case = false;
+        if err.meta.is_case {
+            err.meta.is_case = false;
             return Err(err);
         }
         if handler_sig.args() > f_sig.args() {

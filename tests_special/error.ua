@@ -149,3 +149,7 @@ F (F) A:5 ⇡3
 # Experimental!
 ~F {A ← 5} ∘
 F A:[1] B:2
+
+# Experimental!
+~F {A ← 1|B ← 1} ∘
+F~Args [] A:5 B:2

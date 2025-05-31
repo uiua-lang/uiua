@@ -391,7 +391,8 @@ impl Compiler {
                 span,
             };
             if data.func.is_some() {
-                node.push(Node::UseArgs { span });
+                let size = fields.len();
+                node.push(Node::UseArgs { size, span });
             }
             node
         } else {
@@ -481,7 +482,8 @@ impl Compiler {
                 // Make with args function
                 if !fields.iter().any(|field| field.name == "Args") {
                     let mut sn = sn.clone();
-                    sn.node.prepend(Node::UseArgs { span });
+                    let size = fields.len();
+                    sn.node.prepend(Node::UseArgs { size, span });
                     let local = LocalName {
                         index: comp.next_global,
                         public: true,

@@ -767,8 +767,14 @@ impl Uiua {
                 }
                 Ok(())
             }
-            Node::UseArgs { span } => self.with_span(span, |env| {
+            Node::UseArgs { size, span } => self.with_span(span, |env| {
                 let mut target = env.pop(1)?;
+                if target.row_count() != size {
+                    return Err(env.error(format!(
+                        "Args array should be length {size}, but its shape is {}",
+                        target.shape
+                    )));
+                }
                 for (mut row, index) in take(&mut env.rt.set_args) {
                     if let Value::Box(_) = target {
                         row.box_if_not();

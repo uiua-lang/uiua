@@ -77,7 +77,7 @@ node!(
     /// Sort optional arguments
     SortArgs { indices: EcoVec<(usize, usize)> },
     /// Use optional arguments
-    UseArgs { span: usize },
+    UseArgs { size: usize, span: usize },
     /// Clear optional arguments
     ClearArgs,
     /// Push a value onto the stack

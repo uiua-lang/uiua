@@ -6,8 +6,8 @@ use ecow::EcoString;
 use serde::*;
 
 use crate::{
-    BindingCounts, CodeSpan, Complex, Ident, Primitive, SemanticComment, Signature, Sp, Subscript,
-    parse::ident_modifier_args,
+    parse::ident_modifier_args, BindingCounts, CodeSpan, Complex, Ident, Primitive,
+    SemanticComment, Signature, Sp, Subscript,
 };
 
 /// A top-level item

@@ -3,7 +3,7 @@ use std::{
     fmt,
 };
 
-use enum_iterator::{Sequence, all};
+use enum_iterator::{all, Sequence};
 
 use crate::{AsciiToken, NumericSubscript, Primitive, Signature, Subscript};
 

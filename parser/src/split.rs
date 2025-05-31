@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt};
 use enum_iterator::Sequence;
 use once_cell::sync::Lazy;
 
-use crate::{Complex, SysOp, ast::NumWord};
+use crate::{ast::NumWord, Complex, SysOp};
 
 use super::Primitive;
 

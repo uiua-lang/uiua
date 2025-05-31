@@ -15,8 +15,8 @@ use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    Ident, Inputs, NumericSubscript, PrimComponent, Primitive, SidedSubscript, SubSide, Subscript,
-    WILDCARD_CHAR, split_name,
+    split_name, Ident, Inputs, NumericSubscript, PrimComponent, Primitive, SidedSubscript, SubSide,
+    Subscript, WILDCARD_CHAR,
 };
 
 /// Subscript digit characters

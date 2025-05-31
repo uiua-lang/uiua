@@ -1275,7 +1275,7 @@ pub fn unparse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Value> {
                     s.push(crate::SUBSCRIPT_DIGITS[j as usize + dim_offset]);
                 }
             }
-            if (mask ^ (mask >> 1)).count_ones() == dims as u32 {
+            if dims > 2 && (mask ^ (mask >> 1)).count_ones() == dims as u32 {
                 let (a, b) = (s.len() - 1, s.len() - 2);
                 s.make_mut().swap(a, b);
             }

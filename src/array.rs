@@ -673,6 +673,9 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Set the sortedness flags according to the array's data
     pub fn derive_sortedness(&mut self) {
+        if !self.data.iter().all(|x| x.is_sortable()) {
+            return;
+        }
         let mut sorted_up = true;
         let mut sorted_down = true;
         let mut rows = self.row_slices().map(ArrayCmpSlice);
@@ -1004,6 +1007,10 @@ pub trait ArrayValue:
     fn sort_list(list: &mut [Self], up: bool) {
         default_sort_list(list, up)
     }
+    /// Whether this value can be sorted
+    fn is_sortable(&self) -> bool {
+        true
+    }
 }
 
 fn default_sort_list<T: ArrayCmp + Send>(list: &mut [T], up: bool) {
@@ -1045,6 +1052,9 @@ impl ArrayValue for f64 {
     }
     fn has_wildcard(&self) -> bool {
         self.to_bits() == WILDCARD_NAN.to_bits()
+    }
+    fn is_sortable(&self) -> bool {
+        !self.is_nan()
     }
 }
 

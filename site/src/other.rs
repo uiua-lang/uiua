@@ -571,6 +571,11 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Len, "Length of the Nth axis", "⧻₁ °△2_3_4_5"),
         subscript(Shape, "Shape of the first N axes", "△₂ °△2_3_4_5"),
         subscript(Range, "Start offset", "⇡₁ 5"),
+        subscript(
+            Occurrences,
+            "Within first N occurrences",
+            "⧆₁ \"lego helmet\"",
+        ),
         subscript(On, "First N values", "{⟜₂[⊙⊙∘] 1 2 3}"),
         subscript(By, "Last N values", "{⊸₂[⊙⊙∘] 1 2 3}"),
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),

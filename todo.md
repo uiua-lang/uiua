@@ -2,7 +2,6 @@
 
 # 0.17
 - Sided `join`
-- Subscript `occurences`
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

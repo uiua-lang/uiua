@@ -2412,6 +2412,15 @@ impl Compiler {
                         let span = self.add_span(span);
                         Node::ImplPrim(ImplPrimitive::MultiKeep(n), span)
                     }
+                    Occurrences => {
+                        let n = self.positive_subscript(n, Occurrences, &span);
+                        let span = self.add_span(span);
+                        Node::from([
+                            Node::Prim(Occurrences, span),
+                            Node::new_push(n),
+                            Node::Prim(Lt, span),
+                        ])
+                    }
                     _ => {
                         self.add_error(
                             span.clone(),

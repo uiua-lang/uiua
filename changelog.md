@@ -15,6 +15,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`self ˙`](https://uiua.org/docs/self)
   - Add experimental sided subscripts for [`self ˙`](https://uiua.org/docs/self)
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)
+- Add numeric subscripts for [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Remove previously deprecated `signature` and `stringify` modifiers
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals

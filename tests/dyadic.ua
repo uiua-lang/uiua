@@ -302,10 +302,6 @@ F ← ⊂0 [⊙⊙∘]
 
 # Experimental!
 
-# Progressive index of
-⍤⤙≍ [5 1 0 7 3 4 11 11 2] ⊘ "hello dog" "lego helmet"
-⍤⤙≍ [0_1_2 2_4_5] ⊘ [1_1_2 2_3_3] [1 1 2 2 3]
-
 # Bytes
 ⍤⤙≍ ⊃⋅¤⍜bytes∘ "u32" 6
 ⍤⤙≍ ⊃⋅¤⍜bytes∘ "f64" 6

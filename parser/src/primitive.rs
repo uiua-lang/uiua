@@ -264,6 +264,7 @@ impl Primitive {
             Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
             Each => format!("use {} instead", Rows.format()),
             Tag => "use data variants instead".into(),
+            ProgressiveIndexOf => format!("use {} instead", Occurrences.format()),
             _ => return None,
         })
     }

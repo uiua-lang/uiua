@@ -16,6 +16,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Add experimental sided subscripts for [`self ˙`](https://uiua.org/docs/self)
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)
 - Add numeric subscripts for [`occurrences ⧆`](https://uiua.org/docs/occurrences)
+- Deprecate experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) in favor of [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Remove previously deprecated `signature` and `stringify` modifiers
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals

@@ -781,7 +781,17 @@ impl Parser<'_> {
         let mut lines: Vec<Option<ImportLine>> = Vec::new();
         let mut line: Option<ImportLine> = None;
         let mut last_tilde_index = self.index;
-        while let Some(token) = self.tokens.get(self.index).cloned() {
+        loop {
+            if let Some((line, ident)) = line
+                .as_mut()
+                .and_then(|line| self.ident().map(|ident| (line, ident)))
+            {
+                line.items.push(ident);
+                continue;
+            }
+            let Some(token) = self.tokens.get(self.index).cloned() else {
+                break;
+            };
             let span = token.span;
             let token = token.value;
             match token {

@@ -2203,6 +2203,7 @@ impl Compiler {
                 let Some(nos) = self.subscript_n_or_side(&scr, prim.format()) else {
                     return Ok(self.primitive(prim, span));
                 };
+                self.validate_primitive(prim, &span);
                 match nos {
                     SubNOrSide::N(n) => {
                         Node::from_iter([Node::new_push(n), self.primitive(prim, span)])
@@ -2229,6 +2230,7 @@ impl Compiler {
                 let Some(side) = self.subscript_side_only(&scr, EncodeBytes.format()) else {
                     return Ok(self.primitive(EncodeBytes, span));
                 };
+                self.validate_primitive(prim, &span);
                 let span = self.add_span(span);
                 Node::ImplPrim(ImplPrimitive::SidedEncodeBytes(side), span)
             }
@@ -2236,6 +2238,7 @@ impl Compiler {
                 let Some(n) = self.subscript_n_only(&scr, prim.format()) else {
                     return Ok(self.primitive(prim, span));
                 };
+                self.validate_primitive(prim, &span);
                 match prim {
                     prim if prim.sig().is_some_and(|sig| sig == (2, 1))
                         && prim

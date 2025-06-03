@@ -238,6 +238,7 @@ A ← ↯2_3_4⇡24
 
 # Rows numeric subscript
 ⍤⤙≍ ⊃□≡₃□ °△2_3_4
+⍤⤙≍ □[1 2 3] ≡₀∘ □[1 2 3]
 
 # Rows subscript fill correctness
 ⍤⤙≍ ⬚0≡⬚0≡⇡ ⟜⬚0≡₀⇡ +1°△2_2

@@ -1357,8 +1357,10 @@ impl ImplPrimitive {
                     }
                 }
                 if depth == 0 {
-                    for val in vals {
-                        val.unbox();
+                    if inv {
+                        for val in vals {
+                            val.unbox();
+                        }
                     }
                     env.exec(f)?;
                     if inv {

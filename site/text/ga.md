@@ -105,7 +105,7 @@ Then we can multiply.
 ⩜₃(× ⌝⊏2) [1 2 3] [4 5 6]
 ```
 
-If we only care about certain grades of the result, we can use *blade exaction* via [geometric]() [select](). Here, we extract just the vectors: the grade-1 blades.
+If we only care about certain grades of the result, we can use *blade extraction* via [geometric]() [select](). Here, we extract just the vectors: the grade-1 blades.
 
 ```uiua
 # Experimental!

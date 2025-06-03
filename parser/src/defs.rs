@@ -1645,6 +1645,8 @@ primitive!(
     /// ex: ⍉ ⧅≠ 2 ⇡5
     /// ex: ⍉ ⧅≠ 3 ⇡5
     /// ex: ⍉ ⧅≠ 4 ⇡5
+    /// `gap``gap``1` will give *all* ways of arranging the rows.
+    /// ex: ⍉ ⧅⋅⋅1 2 ⇡4
     /// If the size is `2`, the function is allowed to return non-booleans. Tuples will be copied as many times as the value.
     /// ex: ⍉ ⧅(+1<) 2 ⇡4
     /// If the second argument is a scalar, the number of tuples that would be returned for the [range] of that number is returned.
@@ -2953,7 +2955,7 @@ primitive!(
     ///
     /// Because [fft] runs on every axis of an array, we can get the frequency domain of each color channel of an image using [under][un][transpose][fft].
     /// ex: Lena
-    ///   : ▽⟜≡▽0.5
+    ///   : ▽₂ 0.5
     ///   : ⌵⍜°⍉≡fft .
     (1, Fft, Algorithm, "fft"),
     /// Convert an operation to be in geometric algebra

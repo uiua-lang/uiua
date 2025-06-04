@@ -49,3 +49,5 @@ VoidStruct ← "{void*; void*}"
 ⍤⤙≍ 1 Lib {"unsigned char" "first_byte" "const unsigned char*"} {[1 2 3]}
 Bytes ← "{unsigned char*}"
 ⍤⤙≍ 1 Lib {"unsigned char" "bytes_first_byte" Bytes} {{[1 2 3]}}
+
+⍤⤙≍ "0x" ↙2⊢pretty Lib {"int*" "pointerify" "int"} {5}

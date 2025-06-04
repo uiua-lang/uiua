@@ -261,6 +261,11 @@ pub unsafe extern "C" fn bytes_first_byte(bytes: Bytes) -> c_uchar {
     first_byte(bytes.bytes)
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn pointerify(i: c_int) -> *const c_int {
+    Box::leak(Box::new(i))
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

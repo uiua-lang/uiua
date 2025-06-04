@@ -1282,7 +1282,7 @@ impl Compiler {
                 parts.push(curr_part);
                 Node::Format(parts, span)
             }
-            Word::Ref(r) => self.reference(r)?,
+            Word::Ref(r) => self.reference(r),
             Word::IncompleteRef { path, in_macro_arg } => 'blk: {
                 if let Some((_, locals)) = self.ref_path(&path, in_macro_arg)? {
                     self.add_error(
@@ -1799,21 +1799,29 @@ impl Compiler {
 
         Ok(Some((names, path_locals)))
     }
-    fn reference(&mut self, r: Ref) -> UiuaResult<Node> {
+    fn reference(&mut self, r: Ref) -> Node {
         if r.path.is_empty() {
             self.ident(r.name.value, r.name.span, r.in_macro_arg)
-        } else if let Some((path_locals, local)) = self.ref_local(&r)? {
-            self.validate_local(&r.name.value, local, &r.name.span);
-            for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                self.validate_local(&comp.module.value, local, &comp.module.span);
-                (self.code_meta.global_references).insert(comp.module.span.clone(), local.index);
-            }
-            self.code_meta
-                .global_references
-                .insert(r.name.span.clone(), local.index);
-            Ok(self.global_index(&r.name.value, local.index, r.name.span))
         } else {
-            self.ident(r.name.value, r.name.span, r.in_macro_arg)
+            match self.ref_local(&r) {
+                Ok(Some((path_locals, local))) => {
+                    self.validate_local(&r.name.value, local, &r.name.span);
+                    for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                        self.validate_local(&comp.module.value, local, &comp.module.span);
+                        (self.code_meta.global_references)
+                            .insert(comp.module.span.clone(), local.index);
+                    }
+                    self.code_meta
+                        .global_references
+                        .insert(r.name.span.clone(), local.index);
+                    self.global_index(&r.name.value, local.index, r.name.span)
+                }
+                Ok(None) => self.ident(r.name.value, r.name.span, r.in_macro_arg),
+                Err(e) => {
+                    self.errors.push(e);
+                    Node::new_push(Value::default())
+                }
+            }
         }
     }
     fn completions(&self, prefix: &str, names: &LocalNames, public_only: bool) -> Vec<Completion> {
@@ -1842,7 +1850,7 @@ impl Compiler {
         }
         completions
     }
-    fn ident(&mut self, ident: Ident, span: CodeSpan, skip_local: bool) -> UiuaResult<Node> {
+    fn ident(&mut self, ident: Ident, span: CodeSpan, skip_local: bool) -> Node {
         // Add completions
         let completions = self.completions(&ident, &self.scope.names, false);
         if !completions.is_empty() {
@@ -1853,28 +1861,30 @@ impl Compiler {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
-            Ok(self.global_index(&ident, local.index, span))
+            self.global_index(&ident, local.index, span)
         } else if let Some(curr) =
             (self.current_bindings.last_mut()).filter(|curr| curr.name == ident)
         {
             // Name is a recursive call
-            let Some(sig) = curr.signature else {
-                return Err(self.error(
-                    span,
+            curr.recurses += 1;
+            let global_index = curr.global_index;
+            (self.code_meta.global_references).insert(span.clone(), global_index);
+            let sig = curr.signature.unwrap_or_else(|| {
+                self.add_error(
+                    span.clone(),
                     format!(
                         "Recursive function `{ident}` must have a \
                         signature declared after the ←."
                     ),
-                ));
-            };
-            curr.recurses += 1;
-            (self.code_meta.global_references).insert(span.clone(), curr.global_index);
-            Ok(Node::CallGlobal(curr.global_index, sig))
+                );
+                Signature::new(1, 1)
+            });
+            Node::CallGlobal(global_index, sig)
         } else if let Some(local) = self.find_name(&ident, skip_local) {
             // Name exists in scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
-            Ok(self.global_index(&ident, local.index, span))
+            self.global_index(&ident, local.index, span)
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
             if let Some(suggestion) = constant.deprecation {
@@ -1894,13 +1904,14 @@ impl Compiler {
             self.code_meta
                 .constant_references
                 .insert(span.clone().sp(ident));
-            Ok(Node::Push(
+            Node::Push(
                 constant
                     .value
                     .resolve(self.scope_file_path(), &*self.backend()),
-            ))
+            )
         } else {
-            Err(self.error(span, format!("Unknown identifier `{ident}`")))
+            self.add_error(span, format!("Unknown identifier `{ident}`"));
+            Node::new_push(Value::default())
         }
     }
     fn scope_file_path(&self) -> Option<&Path> {

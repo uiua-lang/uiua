@@ -251,6 +251,16 @@ pub extern "C" fn make_void_struct_a(a: c_int) -> VoidStruct {
     }
 }
 
+#[repr(C)]
+pub struct Bytes {
+    pub bytes: *const c_uchar,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn bytes_first_byte(bytes: Bytes) -> c_uchar {
+    first_byte(bytes.bytes)
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

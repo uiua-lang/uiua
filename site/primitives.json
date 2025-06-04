@@ -312,7 +312,7 @@
     "description": "Create a TCP socket with TLS support"
   },
   "&tlsl": {
-    "args": 1,
+    "args": 3,
     "outputs": 1,
     "class": "Tcp",
     "description": "Create a TLS listener and bind it to an address"

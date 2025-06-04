@@ -3903,10 +3903,16 @@ sys_op! {
     (1, TcpListen, Tcp, "&tcpl", "tcp - listen", Mutating),
     /// Create a TLS listener and bind it to an address
     ///
+    /// This function is currently untested.
+    ///
     /// Use [&tcpa] on the returned handle to accept connections.
     ///
+    /// The first argument is an IP address and port to bind.
+    /// The second argument is a cert string.
+    /// The third argument is a key string.
+    ///
     /// See also: [&tcpl]
-    (1, TlsListen, Tcp, "&tlsl", "tls - listen", Mutating),
+    (3, TlsListen, Tcp, "&tlsl", "tls - listen", Mutating),
     /// Accept a connection with a TCP or TLS listener
     ///
     /// Returns a stream handle

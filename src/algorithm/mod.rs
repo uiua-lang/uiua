@@ -89,14 +89,20 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
 }
 
 #[derive(Debug)]
-pub struct SizeError(f64);
+pub struct SizeError {
+    elements: f64,
+    elem_size: usize,
+}
 
 impl fmt::Display for SizeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Array of {} elements would be too large",
-            self.0.grid_string(false)
+            "Array of {} {}-byte elements would be too large ({} MB)",
+            self.elements.grid_string(false),
+            self.elem_size,
+            ((self.elements * self.elem_size as f64 * 1e-6 * 1e3).round() * 1e-3)
+                .grid_string(false)
         )
     }
 }
@@ -144,7 +150,10 @@ pub(crate) fn validate_size_impl(
         elements *= size as f64;
     }
     if elements > u32::MAX as f64 {
-        return Err(SizeError(elements));
+        return Err(SizeError {
+            elements,
+            elem_size,
+        });
     }
     let size = elements * elem_size as f64;
 
@@ -179,7 +188,10 @@ pub(crate) fn validate_size_impl(
         })
     });
     if size > max_mb * 1024f64.powi(2) {
-        return Err(SizeError(elements));
+        return Err(SizeError {
+            elements,
+            elem_size,
+        });
     }
     Ok(elements as usize)
 }

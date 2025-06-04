@@ -22,6 +22,7 @@ This version is not yet released. If you are reading this on the website, then t
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Remove `kork` and `rkok` aliases
+- Improve "Array would be too large" error messages
 
 ## 0.16.2 - 2025-05-21
 ### Interpreter

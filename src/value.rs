@@ -46,7 +46,7 @@ impl Default for Value {
 
 const _: () = {
     assert!(
-        size_of::<Value> <= 64,
+        size_of::<Value>() <= 64,
         "Value is bigger than 64 bytes. This is really really bad for performance!"
     );
 };

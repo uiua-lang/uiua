@@ -985,7 +985,7 @@ mod enabled {
                 (ty, arg) => {
                     return Err(format!(
                         "Array of {} with shape {} is not a valid \
-                            argument {i} for FFI type {ty}",
+                        argument {i} for FFI type {ty}",
                         arg.type_name_plural(),
                         arg.shape
                     ))

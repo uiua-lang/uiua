@@ -45,3 +45,5 @@ VoidStruct ← "{void*; void*}"
 °□₂ Lib {VoidStruct "make_void_struct_a" "int"} {5}
 ⍤⤙≍ [5] ⊃&memfree(&memcpy "int"⊙1)
 ⍤⤙≍ NULL
+
+⍤⤙≍ 1 Lib {"unsigned char" "first_byte" "const unsigned char*"} {[1 2 3]}

@@ -201,6 +201,11 @@ pub unsafe extern "C" fn array_ptr(arr: *const c_int, len: c_int) -> *const c_in
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn first_byte(arr: *const c_uchar) -> c_uchar {
+    *arr
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn dummy_md5(
     m: *const c_uchar,
     len: c_int,

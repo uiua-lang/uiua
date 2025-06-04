@@ -216,6 +216,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &WithPat,
     &OffPat,
     &RowsPat,
+    &RowsSubPat,
     &Trivial,
     &ScanPat,
     &ReduceMulPat,
@@ -615,6 +616,23 @@ inverse!(
 inverse!(RowsPat, input, asm, Rows, span, [f], {
     Ok((input, Mod(Rows, eco_vec![f.un_inverse(asm)?], span)))
 });
+
+inverse!(
+    (RowsSubPat, input, asm),
+    ref,
+    ImplMod(RowsSub(sub, inventory), args, span),
+    {
+        let [f] = args.as_slice() else {
+            return generic();
+        };
+        let inv = ImplMod(
+            RowsSub(*sub, *inventory),
+            eco_vec![f.un_inverse(asm)?],
+            *span,
+        );
+        Ok((input, inv))
+    }
+);
 
 inverse!(ScanPat, input, asm, {
     let un = matches!(input, [ImplMod(UnScan, ..), ..]);

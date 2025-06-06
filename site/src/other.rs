@@ -241,7 +241,7 @@ pub fn Optimizations() -> impl IntoView {
                 <tr><td><Prim prim=Fix/></td></tr>
                 <tr><td><Prim prim=Box/></td></tr>
                 <tr><td><Prim prim=First/></td></tr>
-                <tr><td><Prims prims=[First, Reverse] show_names=true/></td></tr>
+                <tr><td><Prim prim=Last/></td></tr>
                 <tr><td><Prims prims=[Sort]/>" / "<Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></td></tr>
                 <tr><td><Prims prims=[Reverse, Sort]/>" / "<Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></td></tr>
             </table>
@@ -265,13 +265,12 @@ pub fn Optimizations() -> impl IntoView {
         <p>"This table shows how various combinations of functions are optimized:"</p>
         <table class="bordered-table cell-centered-table">
             <tr><th>"Functions"</th><th style="text-align: center">"Naive Implementation"</th><th>"Optimized Implementation"</th></tr>
-            <tr><th><Prims prims=[First, Reverse]/></th><td>"O(n)"</td><td>"O(1)"</td></tr>
             <tr><th><Prims prims=[First, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
-            <tr><th><Prims prims=[First, Reverse, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><Prims prims=[Last, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[First, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
-            <tr><th><Prims prims=[First, Reverse, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><Prims prims=[Last, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[First, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from front"</td></tr>
-            <tr><th><Prims prims=[First, Reverse, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from back"</td></tr>
+            <tr><th><Prims prims=[Last, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from back"</td></tr>
             <tr><th><Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></th><td>"Create intermediate "<Prim prim=Rise/>" array"</td><td>"Just sort"</td></tr>
             <tr><th><Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></th><td>"Create intermediate "<Prim prim=Fall/>" array"</td><td>"Just sort"</td></tr>
             <tr><th><Prims prims=[Reverse, Sort]/></th><td>"Sort then reverse"</td><td>"Sort backwards"</td></tr>

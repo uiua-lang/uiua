@@ -536,7 +536,8 @@ impl Compiler {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let mut node = sn.node;
-                if let Some(side) = subscript.and_then(|sub| self.subscript_side_only(&sub, On)) {
+                if let Some(side) = subscript.and_then(|sub| self.subscript_side_only(&sub, Reach))
+                {
                     match side {
                         SubSide::Left => {
                             node = Node::Mod(Dip, eco_vec![SigNode::new(sn.sig, node)], span);

@@ -3916,7 +3916,7 @@ sys_op! {
     /// Accept a connection with a TCP or TLS listener
     ///
     /// Returns a stream handle
-    /// [under][&tcpl] calls [&cl] automatically.
+    /// [under][&tcpa] calls [&cl] automatically.
     (1, TcpAccept, Tcp, "&tcpa", "tcp - accept", Mutating),
     /// Create a TCP socket and connect it to an address
     ///

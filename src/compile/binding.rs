@@ -351,6 +351,13 @@ impl Compiler {
                 .insert(name.clone(), self.asm.functions.len());
         }
 
+        // Apply doc comment
+        if let Some(comment) = &meta.comment {
+            if let Some(sig) = &comment.sig {
+                self.apply_node_comment(&mut node, sig, &name, span);
+            }
+        }
+
         // Resolve signature
         match node.sig() {
             Ok(mut sig) => {

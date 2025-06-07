@@ -785,20 +785,6 @@ impl Compiler {
         span: usize,
         meta: BindingMeta,
     ) -> UiuaResult {
-        if let Some(sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
-            if !sig.matches_sig(function.sig) {
-                self.emit_diagnostic(
-                    format!(
-                        "{name}'s comment describes {}, \
-                        but its code has signature {}",
-                        sig.sig_string(),
-                        function.sig,
-                    ),
-                    DiagnosticKind::Warning,
-                    self.get_span(span).clone().code().unwrap(),
-                );
-            }
-        }
         self.scope.names.insert(name.clone(), local);
         let span = if span == 0 {
             Some(CodeSpan::literal(name))
@@ -818,16 +804,6 @@ impl Compiler {
         meta: BindingMeta,
     ) {
         let span = self.get_span(span).clone().code().unwrap();
-        if let Some(sig) = meta.comment.as_ref().and_then(|c| c.sig.as_ref()) {
-            self.emit_diagnostic(
-                format!(
-                    "{name}'s comment describes {}, but it is a constant",
-                    sig.sig_string(),
-                ),
-                DiagnosticKind::Warning,
-                span.clone(),
-            );
-        }
         self.asm
             .add_binding_at(local, BindingKind::Const(value), Some(span), meta);
         self.scope.names.insert(name, local);

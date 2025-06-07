@@ -970,7 +970,15 @@ impl Formatter<'_> {
     }
     fn format_word(&mut self, word: &Sp<Word>, depth: usize) {
         match &word.value {
-            Word::Number(_, s) => self.push(&word.span, s),
+            Word::Number(_, s) => {
+                if s.starts_with('¯') && self.output.ends_with(',')
+                    || !s.starts_with('¯') && self.output.ends_with(|c: char| c.is_ascii_digit())
+                    || s.starts_with(|c: char| c.is_ascii_digit()) && self.output.ends_with('¯')
+                {
+                    self.output.push(' ');
+                }
+                self.push(&word.span, s)
+            }
             Word::Label(label) => self.push(&word.span, &format!("${label}")),
             Word::Char(_) | Word::String(_) | Word::FormatString(_) => self
                 .output
@@ -1272,6 +1280,12 @@ impl Formatter<'_> {
         }
         match prim {
             Primitive::Utf8 => self.push(span, "utf₈"),
+            Primitive::Neg => {
+                if self.output.ends_with(',') {
+                    self.output.push(' ');
+                }
+                self.push(span, &as_str);
+            }
             Primitive::Eq => {
                 if self.output.ends_with('!') {
                     self.output.push(' ');

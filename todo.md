@@ -1,6 +1,8 @@
 # Uiua Todo
 
 # 0.17
+- `Variants` field for module
+- Private modules
 - Sided `join`
 - `table` subscripts for rank selection
 - Mixed subscripts

@@ -624,14 +624,21 @@ impl Parser<'_> {
     fn data_def(&mut self, allow_variants: bool) -> Option<DataDef> {
         let reset = self.index;
         let mut variant = false;
-        let init_span = self.exact(Tilde.into()).or_else(|| {
-            if allow_variants {
-                variant = true;
-                self.exact(Bar.into())
-            } else {
-                None
-            }
-        })?;
+        let (init_span, public) = (self.exact(Tilde.into()).map(|span| (span, true)))
+            .or_else(|| {
+                self.exact(DoubleTilde.into())
+                    .or_else(|| self.exact(TildeStroke))
+                    .map(|span| (span, false))
+            })
+            .or_else(|| {
+                if allow_variants {
+                    variant = true;
+                    let span = self.exact(Bar.into())?;
+                    Some((span, true))
+                } else {
+                    None
+                }
+            })?;
         self.spaces();
         let name = self.ident();
         self.spaces();
@@ -740,6 +747,7 @@ impl Parser<'_> {
         let func = self.words();
         Some(DataDef {
             init_span,
+            public,
             variant,
             name,
             fields,

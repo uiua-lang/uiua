@@ -614,6 +614,7 @@ pub enum Token {
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
+    TildeStroke,
     DownArrow,
     OpenAngle,
     CloseAngle,
@@ -729,6 +730,7 @@ impl fmt::Display for Token {
             Token::LeftArrow => write!(f, "←"),
             Token::LeftStrokeArrow => write!(f, "↚"),
             Token::LeftArrowTilde => write!(f, "←~"),
+            Token::TildeStroke => write!(f, "≁"),
             Token::DownArrow => write!(f, "↓"),
             Token::OpenAngle => write!(f, "⟨"),
             Token::CloseAngle => write!(f, "⟩"),
@@ -767,6 +769,7 @@ pub enum AsciiToken {
     GreaterEqual,
     Backtick,
     Tilde,
+    DoubleTilde,
     Quote,
 }
 
@@ -794,6 +797,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::GreaterEqual => write!(f, ">="),
             AsciiToken::Backtick => write!(f, "`"),
             AsciiToken::Tilde => write!(f, "~"),
+            AsciiToken::DoubleTilde => write!(f, "~~"),
             AsciiToken::Quote => write!(f, "'"),
         }
     }
@@ -1054,7 +1058,9 @@ impl<'a> Lexer<'a> {
                 ":" => self.end(Colon, start),
                 ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),
+                "~" if self.next_char_exact("~") => self.end(DoubleTilde, start),
                 "~" => self.end(Tilde, start),
+                "≁" => self.end(TildeStroke, start),
                 "'" => self.end(Quote, start),
                 "`" => {
                     if self.number("-") {

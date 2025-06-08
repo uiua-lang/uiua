@@ -501,7 +501,7 @@ impl Compiler {
         })?;
         if let Some((name, local)) = name_and_local {
             // Named module
-            // Add imports
+            // Add local imports
             if let Some(line) = m.imports {
                 for item in line.items {
                     if let Some(mut local) = module.names.get(&item.value).copied() {

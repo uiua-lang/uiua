@@ -765,7 +765,16 @@ impl Formatter<'_> {
                             '\n'
                         });
                     }
-                    self.push(&data.init_span, if data.variant { "|" } else { "~" });
+                    self.push(
+                        &data.init_span,
+                        if data.variant {
+                            "|"
+                        } else if data.public {
+                            "~"
+                        } else {
+                            "≁"
+                        },
+                    );
                     if let Some(name) = &data.name {
                         self.push(&name.span, &name.value);
                     }

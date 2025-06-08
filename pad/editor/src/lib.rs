@@ -1177,13 +1177,6 @@ pub fn Editor<'a>(
                 ("!", "macro", "", None, "tutorial/macros"),
                 ("^", "placeholder", "", None, "tutorial/custommodifiers"),
                 ("←", "(=) binding", "", None, "tutorial/bindings"),
-                (
-                    "↚",
-                    "(=~) private binding",
-                    "",
-                    None,
-                    "tutorial/modules#visibility",
-                ),
                 ("~", "module", "", None, "tutorial/modules"),
                 (
                     "|",

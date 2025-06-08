@@ -1625,7 +1625,14 @@ impl Compiler {
                     })
                 })
             }) {
-                Ok(Some((path_locals, local)))
+                if local.public {
+                    Ok(Some((path_locals, local)))
+                } else {
+                    Err(self.error(
+                        r.name.span.clone(),
+                        format!("`{}` is private", r.name.value),
+                    ))
+                }
             } else {
                 Err(self.error(
                     r.name.span.clone(),

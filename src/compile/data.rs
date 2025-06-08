@@ -52,7 +52,7 @@ impl Compiler {
                 self.next_global += 1;
                 let local = LocalName {
                     index: global_index,
-                    public: true,
+                    public: data.public,
                 };
 
                 let (module, ()) = self

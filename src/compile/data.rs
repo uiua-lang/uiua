@@ -79,6 +79,11 @@ impl Compiler {
                     data.span(),
                     "A module cannot have multiple unnamed data definitions",
                 ));
+            } else if !data.public {
+                self.add_error(
+                    data.init_span.clone(),
+                    "Unnamed data definitions cannot be marked private",
+                );
             }
         }
 

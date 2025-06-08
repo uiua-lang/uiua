@@ -619,6 +619,7 @@ pub enum Token {
     OpenAngle,
     CloseAngle,
     OpenModule,
+    OpenPrivateModule,
     CloseModule,
     Newline,
     Spaces,
@@ -738,6 +739,7 @@ impl fmt::Display for Token {
             Token::Spaces => write!(f, "space(s)"),
             Token::Subscr(sub) => sub.fmt(f),
             Token::OpenModule => write!(f, "┌─╴"),
+            Token::OpenPrivateModule => write!(f, "┌╶╶"),
             Token::CloseModule => write!(f, "└─╴"),
             Token::Placeholder(i) => write!(f, "^{i}"),
         }
@@ -1094,10 +1096,23 @@ impl<'a> Lexer<'a> {
                 "←" if self.next_char_exact("~") => self.end(LeftArrowTilde, start),
                 "←" => self.end(LeftArrow, start),
                 "↚" => self.end(LeftStrokeArrow, start),
-                "┌" if self.next_char_exact("─") && self.next_char_exact("╴") => {
-                    self.end(OpenModule, start)
+                "┌" if self.next_char_exact("─") && self.next_char_exact("╴")
+                    || self.next_char_exact("-") && self.next_char_exact("-") =>
+                {
+                    let tok = if self.next_char_exact("~") {
+                        OpenPrivateModule
+                    } else {
+                        OpenModule
+                    };
+                    self.end(tok, start)
                 }
-                "└" if self.next_char_exact("─") && self.next_char_exact("╴") => {
+                "┌" if self.next_char_exact("╶") && self.next_char_exact("╶") => {
+                    self.end(OpenPrivateModule, start)
+                }
+                "└" if self.next_char_exact("─") && self.next_char_exact("╴")
+                    || self.next_char_exact("╶") && self.next_char_exact("╶") =>
+                {
+                    self.next_char_exact("~");
                     self.end(CloseModule, start)
                 }
                 // Stack

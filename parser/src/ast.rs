@@ -117,6 +117,8 @@ impl Binding {
 pub struct ScopedModule {
     /// The span of the opening delimiter
     pub open_span: CodeSpan,
+    /// Whether the module is public
+    pub public: bool,
     /// The module kind
     pub kind: ModuleKind,
     /// The items

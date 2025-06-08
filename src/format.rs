@@ -642,7 +642,11 @@ impl Formatter<'_> {
         match item {
             Item::Module(m) => {
                 self.prev_import_function = None;
-                self.output.push_str("┌─╴");
+                self.output.push_str(if m.value.public {
+                    "┌─╴"
+                } else {
+                    "┌╶╶"
+                });
                 match &m.value.kind {
                     ModuleKind::Named(name) => self.push(&name.span, &name.value),
                     ModuleKind::Test => self.output.push_str("test"),
@@ -662,7 +666,11 @@ impl Formatter<'_> {
                     self.output.pop();
                 }
                 self.newline(depth);
-                self.output.push_str("└─╴");
+                self.output.push_str(if m.value.public {
+                    "└─╴"
+                } else {
+                    "└╶╶"
+                });
             }
             Item::Words(words) => {
                 self.prev_import_function = None;

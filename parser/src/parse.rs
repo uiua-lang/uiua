@@ -368,7 +368,7 @@ impl Parser<'_> {
     }
     fn module(&mut self, in_module: bool) -> Option<Sp<ScopedModule>> {
         let backup = self.index;
-        let open_span = self.module_open()?;
+        let (public, open_span) = self.module_open()?.into();
         self.spaces();
         // Name
         let name = self.ident();
@@ -413,6 +413,7 @@ impl Parser<'_> {
         };
         let module = ScopedModule {
             open_span,
+            public,
             kind,
             items,
             imports,
@@ -1700,15 +1701,16 @@ impl Parser<'_> {
     fn spaces(&mut self) -> Option<Sp<Word>> {
         self.exact(Spaces).map(|span| span.sp(Word::Spaces))
     }
-    fn module_open(&mut self) -> Option<CodeSpan> {
-        self.exact(OpenModule)
+    fn module_open(&mut self) -> Option<Sp<bool>> {
+        (self.exact(OpenModule).map(|span| span.sp(true)))
+            .or_else(|| self.exact(OpenPrivateModule).map(|span| span.sp(false)))
             .or_else(|| self.module_delim_hyphens())
     }
     fn module_close(&mut self) -> Option<CodeSpan> {
         self.exact(CloseModule)
-            .or_else(|| self.module_delim_hyphens())
+            .or_else(|| self.module_delim_hyphens().map(|sp| sp.span))
     }
-    fn module_delim_hyphens(&mut self) -> Option<CodeSpan> {
+    fn module_delim_hyphens(&mut self) -> Option<Sp<bool>> {
         let reset = self.index;
         let start = self.exact(Primitive::Sub.into())?;
         if self.exact(Primitive::Sub.into()).is_none() {
@@ -1719,7 +1721,9 @@ impl Parser<'_> {
             self.index = reset;
             return None;
         };
-        Some(start.merge(end))
+        let public = self.exact(Tilde.into()).is_none();
+        let span = start.merge(end);
+        Some(span.sp(public))
     }
     fn expect_close(&mut self, token: Token) -> Sp<bool> {
         if let Some(span) = self.exact(token.clone()) {

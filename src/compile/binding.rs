@@ -474,7 +474,7 @@ impl Compiler {
                 self.next_global += 1;
                 let local = LocalName {
                     index: global_index,
-                    public: true,
+                    public: m.public,
                 };
                 let meta = BindingMeta {
                     comment: prelude.comment.as_deref().map(DocComment::from),

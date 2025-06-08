@@ -157,7 +157,7 @@ If we begin a data definition with `|` instead of `~`, it becomes a *variant*. V
 
 The constructor for a variant adds a tag to the array to disambiguate which variant it is. This tag is an incrementing integer starting from `0`. Each module has its own tag counter.
 
-Variants can have any number of fields, including none.
+Variants can have any number of fields, including none. Unlike normal data definitions, variants cannot be declared as private.
 
 ```uiua
 ┌─╴Shape

@@ -43,8 +43,6 @@ static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
 /// A numeric syntax component that can be parsed along with primitive names
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 pub enum NumComponent {
-    /// Euler's number
-    E,
     /// The real complex unit
     R,
     /// The imaginary complex unit
@@ -92,7 +90,6 @@ impl NumComponent {
     pub fn name(&self) -> &'static str {
         use NumComponent::*;
         match self {
-            E => "e",
             R => "r",
             I => "i",
         }
@@ -101,7 +98,6 @@ impl NumComponent {
     pub fn value(&self) -> NumWord {
         use NumComponent::*;
         match self {
-            E => std::f64::consts::E.into(),
             R => Complex::ONE.into(),
             I => Complex::I.into(),
         }
@@ -110,7 +106,6 @@ impl NumComponent {
     pub fn from_format_name(name: &str) -> Option<Self> {
         use NumComponent::*;
         Some(match name {
-            "e" => E,
             "r" => R,
             "i" => I,
             _ => return None,

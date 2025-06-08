@@ -117,7 +117,7 @@ You can read more about inline macros [here](https://www.uiua.org/tutorial/macro
   ```
 - Number literals have been overhauled, including adding complex literals.
   ```uiua
-  ≡¤ [2π/3 3r5i 2ei 22/η]
+  ≡¤ [2π/3 3r5i 4.1i 22/η]
   ```
 - [`fft`](https://uiua.org/docs/fft) now works along every axis of an array rather than only the last. It is now stabilized!
 

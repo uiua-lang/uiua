@@ -9,6 +9,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Remove existing experimental non-tacit data functions and methods
   - This breaks uses of [`flip :`](https://uiua.org/docs/flip) immediately after an identifier
 - **Breaking Change** - Numeric subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays
+- **Breaking Change** - Remove combining `e` number literals
+  - It was confusing when combined with `e` scientific number notation
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 - Subscripts can now be typed with `,` instead of `__`s
 - Add numeric subscripts for [`keep ▽`](https://uiua.org/docs/keep) to keep along a number of dimensions

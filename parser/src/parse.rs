@@ -1310,7 +1310,7 @@ impl Parser<'_> {
             }
         }
         // Let 1-letter string be identifiers
-        if ["r", "i", "e"].contains(&s.as_str()) {
+        if ["r", "i"].contains(&s.as_str()) {
             self.index = reset;
             return None;
         }
@@ -1355,7 +1355,7 @@ impl Parser<'_> {
             span.merge_with(span2);
         }
         // Final suffix
-        if !s.contains(['η', 'π', 'τ', 'e']) {
+        if !s.contains(['η', 'π', 'τ']) {
             if let Some(((n2, s2), span2)) = self.num_frag(true).map(Into::into) {
                 n = n.map_with(n2, |n, n2| n * n2, Complex::safe_mul);
                 s.push_str(&s2);

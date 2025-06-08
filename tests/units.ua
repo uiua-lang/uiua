@@ -6,14 +6,13 @@ Z ← comptime(+1Y)
 ⍤⤙≍ Z +1 X
 
 # Number literals
-⍤⤙≍ 13 ⧻[
+⍤⤙≍ 11 ⧻[
   ri
-  ei ηi πi τi
-  er ηr πr τr
+  ηi πi τi
+  ηr πr τr
   3r4i 3r4iη 3r4iπ 3r4iτ
 ]
-⍤⤙≍ 20 ⧻[
-  e e
+⍤⤙≍ 18 ⧻[
   ηη ηπ ητ
   πη ππ πτ
   τη τπ ττ

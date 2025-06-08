@@ -873,7 +873,8 @@ impl Formatter<'_> {
                     self.output.push(' ');
                     self.prev_import_function = Some(name.value.clone());
                 }
-                self.output.push_str("~ ");
+                self.output
+                    .push_str(if import.public { "~ " } else { "≁ " });
                 self.push(&import.path.span, &format!("{:?}", import.path.value));
 
                 let mut import = import.clone();

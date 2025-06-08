@@ -1591,6 +1591,9 @@ fn TutorialModules() -> impl IntoView {
         <p>"To enter this arrow, you can put a "<code>"~"</code>" after a binding's normal "<code>"←"</code>" or "<code>"="</code>"."</p>
         <p>"Try formatting the following example to see how this works."</p>
         <Editor example="A = +1\nB ← +2\nC =~ +3\nD ←~ +4"/>
+        <Hd3 id="private-imports">"Private Imports"</Hd3>
+        <p>"Imports can be made private by using a "<code>"≁"</code>" instead of the first "<code>"~"</code>". "<code>"≁"</code>" formats from "<code>"~~"</code>"."</p>
+        <Editor example="# Try formatting!\n┌─╴M\n  Ex ~~ \"example\"\n└─╴\nM~Ex~Foo"/> // Should fail
         <Hd3 id="private-scoped-modules">"Private Scoped Modules"</Hd3>
         <p>"Scoped modules can be made private with special delimiters "<code>"┌╶╶"</code>" and "<code>"└╶╶"</code>". These format from the normal delimiters or "<code>"---"</code>"s followed by a "<code>"~"</code>"."</p>
         <Editor example="┌─╴A\n  ┌╶╶B\n    C ← 5\n  └╶╶\n└─╴\nA~B~C"/> // Should fail

@@ -145,6 +145,8 @@ pub struct Import {
     pub name: Option<Sp<Ident>>,
     /// The span of the ~
     pub tilde_span: CodeSpan,
+    /// Whether the import is public
+    pub public: bool,
     /// The import path
     pub path: Sp<String>,
     /// The import lines

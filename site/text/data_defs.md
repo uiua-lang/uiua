@@ -118,7 +118,7 @@ Abilities!(°⊸Con 12 °⊸Dex 16 New)
 
 ### Visibility
 
-Like bindings, data definitions can be made private with a special glyph. `≁` formats from `~~` and makes a data definition private.
+Like imports, data definitions can be made private by using `≁` instead of `~`. `≁` formats from `~~`.
 
 ```uiua should fail
 ┌─╴M

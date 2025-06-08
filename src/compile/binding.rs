@@ -543,7 +543,7 @@ impl Compiler {
             self.next_global += 1;
             let local = LocalName {
                 index: global_index,
-                public: true,
+                public: import.public,
             };
             self.asm.add_binding_at(
                 local,

@@ -482,26 +482,6 @@ impl Parser<'_> {
             array_macro,
         })
     }
-    fn import_init(&mut self) -> Option<(Option<Sp<Ident>>, CodeSpan, Sp<String>)> {
-        let start = self.index;
-        // Name
-        let name = self.ident();
-        self.spaces();
-        // Tilde
-        let Some(tilde_span) = self.exact(Tilde.into()) else {
-            self.index = start;
-            return None;
-        };
-        self.spaces();
-        // Path
-        let Some(path) = self.next_token_map(Token::as_string) else {
-            self.index = start;
-            return None;
-        };
-        let path = path.map(Into::into);
-        self.spaces();
-        Some((name, tilde_span, path))
-    }
     fn binding(&mut self) -> Option<Binding> {
         let BindingInit {
             name,
@@ -785,7 +765,29 @@ impl Parser<'_> {
         }
     }
     fn import(&mut self) -> Option<Import> {
-        let (name, tilde_span, path) = self.import_init()?;
+        let start = self.index;
+        // Name
+        let name = self.ident();
+        self.spaces();
+        // Tilde
+        let Some((tilde_span, public)) =
+            (self.exact(Tilde.into()).map(|s| (s, true))).or_else(|| {
+                self.exact(TildeStroke)
+                    .or_else(|| self.exact(DoubleTilde.into()))
+                    .map(|s| (s, false))
+            })
+        else {
+            self.index = start;
+            return None;
+        };
+        self.spaces();
+        // Path
+        let Some(path) = self.next_token_map(Token::as_string) else {
+            self.index = start;
+            return None;
+        };
+        let path = path.map(Into::into);
+        self.spaces();
         // Items
         let mut lines: Vec<Option<ImportLine>> = Vec::new();
         let mut line: Option<ImportLine> = None;
@@ -842,6 +844,7 @@ impl Parser<'_> {
         Some(Import {
             name,
             tilde_span,
+            public,
             path,
             lines,
         })

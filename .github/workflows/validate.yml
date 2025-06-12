@@ -41,7 +41,7 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all --check
     - name: Install deps
-      run: sudo apt-get install libasound2-dev libudev-dev pkg-config libx11-dev libjpeg-dev
+      run: sudo apt-get install libasound2-dev pkg-config libx11-dev libjpeg-dev
     - name: Install WASM target
       run: rustup target add wasm32-unknown-unknown
     - name: Check feature combinations

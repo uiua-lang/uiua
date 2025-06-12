@@ -1852,17 +1852,11 @@ impl Compiler {
             curr.recurses += 1;
             let global_index = curr.global_index;
             (self.code_meta.global_references).insert(span.clone(), global_index);
-            let sig = curr.signature.unwrap_or_else(|| {
-                self.add_error(
-                    span.clone(),
-                    format!(
-                        "Recursive function `{ident}` must have a \
-                        signature declared after the ←."
-                    ),
-                );
-                Signature::new(1, 1)
-            });
-            Node::CallGlobal(global_index, sig)
+            if let Some(sig) = curr.signature.filter(|sig| sig.outputs() <= 10) {
+                Node::CallGlobal(global_index, sig)
+            } else {
+                Node::empty()
+            }
         } else if let Some(local) = self.find_name(&ident, skip_local) {
             // Name exists in scope
             self.validate_local(&ident, local, &span);

@@ -319,6 +319,15 @@ impl Compiler {
             })
         })?;
         let self_referenced = self.current_bindings.pop().unwrap().recurses > 0;
+        if self_referenced && binding.signature.is_none() {
+            self.add_error(
+                span.clone(),
+                format!(
+                    "Recursive function `{name}` must have a \
+                    signature declared after the ←."
+                ),
+            );
+        }
         let is_obverse = node
             .iter()
             .any(|n| matches!(n, Node::CustomInverse(cust, _) if cust.is_obverse));
@@ -365,8 +374,19 @@ impl Compiler {
                 if !binds_above {
                     // Validate signature
                     if let Some(declared_sig) = &binding.signature {
-                        node = self.force_sig(node, declared_sig.value, &declared_sig.span);
-                        sig = declared_sig.value;
+                        if self_referenced && declared_sig.value.outputs() > 10 {
+                            return Err(self.error(
+                                span.clone(),
+                                format!(
+                                    "Recursive functions may have at most 10 outputs, \
+                                    but {name} has signature {}",
+                                    declared_sig.value
+                                ),
+                            ));
+                        } else {
+                            node = self.force_sig(node, declared_sig.value, &declared_sig.span);
+                            sig = declared_sig.value;
+                        }
                     }
                 }
 

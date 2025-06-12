@@ -2,7 +2,7 @@
 
 # 0.17
 - `Variants` field for module
-- Private modules
+- Sided `fork`
 - Sided `join`
 - `table` subscripts for rank selection
 - Mixed subscripts

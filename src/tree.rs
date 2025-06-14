@@ -822,7 +822,7 @@ impl Node {
                 Node::CallGlobal(index, _) => {
                     if let Some(binding) = asm.bindings.get(*index) {
                         match &binding.kind {
-                            BindingKind::Const(Some(_)) => true,
+                            BindingKind::Const(_) => true,
                             BindingKind::Func(f) => {
                                 visited.insert(f) && recurse(&asm[f], purity, asm, visited)
                             }

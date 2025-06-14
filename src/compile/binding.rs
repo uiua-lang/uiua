@@ -384,7 +384,7 @@ impl Compiler {
                                 ),
                             ));
                         } else {
-                            node = self.force_sig(node, declared_sig.value, &declared_sig.span);
+                            node = self.force_sig(node, declared_sig.value, &declared_sig.span)?;
                             sig = declared_sig.value;
                         }
                     }
@@ -450,7 +450,7 @@ impl Compiler {
                         let mut node = Node::empty();
                         // Validate signature
                         if let Some(declared_sig) = &binding.signature {
-                            node = self.force_sig(node, declared_sig.value, &declared_sig.span);
+                            node = self.force_sig(node, declared_sig.value, &declared_sig.span)?;
                             sig = declared_sig.value;
                         }
                         let func = make_fn(node, sig, self);

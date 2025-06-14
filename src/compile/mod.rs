@@ -1530,12 +1530,17 @@ impl Compiler {
             }
         })
     }
-    fn force_sig(&mut self, mut node: Node, new_sig: Signature, span: &CodeSpan) -> Node {
+    fn force_sig(
+        &mut self,
+        mut node: Node,
+        new_sig: Signature,
+        span: &CodeSpan,
+    ) -> UiuaResult<Node> {
         let Ok(sig) = node.sig() else {
-            return node;
+            return Ok(node);
         };
         if new_sig == sig {
-            return node;
+            return Ok(node);
         }
         let delta = sig.outputs() as isize - sig.args() as isize;
         let new_delta = new_sig.outputs() as isize - new_sig.args() as isize;
@@ -1556,6 +1561,15 @@ impl Compiler {
                 );
             }
             Ordering::Less => {
+                if new_sig.outputs() > 10 {
+                    return Err(self.error(
+                        span.clone(),
+                        format!(
+                            "Signature mismatch: declared {new_sig} but inferred {sig}. \
+                            Signatures with more than 10 outputs cannot be forced."
+                        ),
+                    ));
+                }
                 let diff = (new_delta - delta).unsigned_abs();
                 let spandex = self.add_span(span.clone());
                 let mut extra = Node::from_iter(
@@ -1576,6 +1590,15 @@ impl Compiler {
                 );
             }
             Ordering::Greater => {
+                if new_sig.args() > 10 {
+                    return Err(self.error(
+                        span.clone(),
+                        format!(
+                            "Signature mismatch: declared {new_sig} but inferred {sig}. \
+                            Signatures with more than 10 arguments cannot be forced."
+                        ),
+                    ));
+                }
                 let diff = (delta - new_delta).unsigned_abs();
                 let spandex = self.add_span(span.clone());
                 let mut pops =
@@ -1594,7 +1617,7 @@ impl Compiler {
                 );
             }
         }
-        node
+        Ok(node)
     }
     #[must_use]
     fn semantic_comment(&mut self, comment: SemanticComment, span: CodeSpan, inner: Node) -> Node {
@@ -1993,7 +2016,7 @@ impl Compiler {
         let sig = match root.sig() {
             Ok(mut sig) => {
                 if let Some(declared_sig) = &func.signature {
-                    root = self.force_sig(root, declared_sig.value, &declared_sig.span);
+                    root = self.force_sig(root, declared_sig.value, &declared_sig.span)?;
                     sig = declared_sig.value;
                 }
                 Some(sig)

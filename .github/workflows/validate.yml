@@ -44,7 +44,7 @@ jobs:
       run: cargo fmt --all --check
     - name: Install depsAdd commentMore actions
       run: |
-        sudo apt-get --fix-missing install
+        sudo apt-get --fix-missing install -y
         sudo apt-get install libasound2-dev libudev-dev pkg-config libx11-dev libjpeg-dev
     - name: Install WASM target
       run: rustup target add wasm32-unknown-unknown

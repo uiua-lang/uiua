@@ -136,7 +136,7 @@ jobs:
         run: sudo apt-get install -y musl-tools
       - if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get --fix-missing install
+          sudo apt-get --fix-missing install -y
           sudo apt-get install -y libasound2-dev libudev-dev libx11-dev libjpeg-dev libclang-dev
 
       # Build

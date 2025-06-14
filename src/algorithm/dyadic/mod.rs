@@ -987,7 +987,6 @@ impl<T: ArrayValue> Array<T> {
         forward: bool,
         env: &Uiua,
     ) -> UiuaResult {
-        // println!("rotate_depth: {depth}");
         if !forward && env.scalar_unfill::<T>().is_ok() {
             return Err(env.error("Cannot invert filled rotation"));
         }
@@ -1013,6 +1012,12 @@ impl<T: ArrayValue> Array<T> {
             for &bd in by.shape.iter().rev().skip(1) {
                 self.reshape_scalar(Ok(bd as isize), false, env)?;
             }
+        }
+        if self.rank() < depth {
+            for &bd in by.shape.iter().skip(depth.saturating_sub(1)) {
+                self.reshape_scalar(Ok(bd as isize), false, env)?;
+            }
+            self.transpose();
         }
 
         // Handles depth and fixed axes

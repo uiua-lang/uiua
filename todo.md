@@ -2,6 +2,7 @@
 
 # 0.17
 - `Variants` field for module
+- Fix pre-eval caching with labels
 - Sided `fork`
 - Sided `join`
 - `table` subscripts for rank selection

@@ -898,8 +898,7 @@ impl Parser<'_> {
             name = next;
         }
         let span = start_span.merge(name.span.clone());
-        let colon_span = path
-            .is_empty()
+        let colon_span = (path.is_empty() && !name.value.contains(['&', '!']))
             .then(|| self.exact(AsciiToken::Colon.into()))
             .flatten();
         Some(if let Some(colon_span) = colon_span {

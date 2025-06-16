@@ -406,6 +406,7 @@ G ← ⍜(⊙⊙⊢) ⋅⊙∘
 
 # Under/unby fork
 ⍤⤙≍ "wham" ⍜⊃⊢⊣⊓(+3|-7) "that"
+⍤⤙≍ "wham" ⍜⊃⊢⊣⋅◌ "that" @w @m
 ⍤⤙≍ "wham" °⊸⊃⊢⊣ @w @m "that"
 ⍤⤙≍ "THESE THOSE" °⊸⊃±◴ 1 "thes o" "abcdceabfdc"
 

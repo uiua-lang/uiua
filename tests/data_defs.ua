@@ -53,6 +53,11 @@ S~PushB
 F! ← ^0 Foo
 ⍤⤙≍ 5 F!Foo!Bar
 
+~Foo {A B C}
+Foo 1 2 3
+⍤⤙⊸≍ Foo 3 2 1 ⍜Foo!⊃A C :
+⍤⤙≍ Foo 4 5 6 °⊸Foo!⊃(C|B|A) 6 5 4
+
 # Unnamed top-level def
 ~ {Foo Bar}
 ⍤⤙≍ [3 5] [⊃Foo Bar] New 3 5

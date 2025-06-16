@@ -100,6 +100,7 @@ fn under_inverse_impl(
 static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &CustomPat,
     &OnPat,
+    &ForkPat,
     &BothPat,
     &Trivial,
     &SwitchPat,
@@ -449,6 +450,34 @@ under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {
         f_after.node
     };
     after.push(after_inner);
+    Ok((&[], before, after))
+});
+
+under!(ForkPat, input, g_sig, inverse, asm, Fork, span, [f1, f2], {
+    if f1.sig.args() != 1 || f2.sig.args() != 1 {
+        return Err(InversionError::Signature(SigCheckError {
+            message: "Cannot invert fork of non monadic functions".into(),
+            kind: crate::check::SigCheckErrorKind::NoInverse,
+        }));
+    }
+
+    let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;
+
+    let mut before = Node::Prim(Dup, span);
+    before.push(Mod(Fork, eco_vec![f1.clone(), f2.clone()], span));
+    before.push(rest_before);
+
+    let mut f2_after = Mod(By, eco_vec![f2.clone()], span)
+        .un_inverse(asm)?
+        .sig_node()?;
+    for _ in 0..f1.sig.outputs() {
+        f2_after = Mod(Dip, eco_vec![f2_after], span).sig_node()?;
+    }
+
+    let mut after = rest_after;
+    after.push(f2_after.node);
+    after.push(Mod(By, eco_vec![f1.clone()], span).un_inverse(asm)?);
+
     Ok((&[], before, after))
 });
 

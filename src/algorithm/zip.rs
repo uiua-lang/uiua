@@ -199,7 +199,7 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
         ),
         nodes if !deep => {
             let mut start = 0;
-            let mut depth = 0;
+            let mut depth = None;
             let mut func: Option<ValueMonFn> = None;
             'outer: loop {
                 for len in [1, 2] {
@@ -211,7 +211,9 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
                     let Some((f, d)) = f_mon_fast_fn_impl(nodes, true, env) else {
                         continue;
                     };
-                    depth += d;
+                    if *depth.get_or_insert(d) != d {
+                        return None;
+                    }
                     func = Some(if let Some(func) = func {
                         mon_fn(
                             move |val: Value, depth: usize, env: &mut Uiua| -> UiuaResult<Value> {
@@ -230,7 +232,7 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
                     return None;
                 }
             }
-            (func?, depth)
+            (func?, depth.unwrap_or(0))
         }
         _ => return None,
     })

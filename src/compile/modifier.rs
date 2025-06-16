@@ -1353,7 +1353,7 @@ impl Compiler {
                 fn table_fork(sn: SigNode, table_span: usize, asm: &Assembly) -> Node {
                     match sn.node {
                         Node::Mod(Fork, args, fork_span)
-                            if (args.iter()).all(|arg| arg.node.is_pure(Purity::Pure, asm))
+                            if (args.iter()).all(|arg| arg.node.is_pure(asm))
                                 && args.windows(2).all(|w| w[0].sig.args() == w[1].sig.args()) =>
                         {
                             let args: EcoVec<SigNode> = args

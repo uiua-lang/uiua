@@ -394,7 +394,7 @@ impl Compiler {
                     // Binding is a constant
                     let val = if let [Node::Push(v)] = node.as_slice() {
                         Some(v.clone())
-                    } else if node.is_pure(Purity::Pure, &self.asm) {
+                    } else if node.is_pure(&self.asm) {
                         match self.comptime_node(&node) {
                             Ok(Some(vals)) => vals.into_iter().next(),
                             Ok(None) => None,
@@ -411,7 +411,7 @@ impl Compiler {
                     self.compile_bind_const(name, local, val, spandex, meta);
                     if !is_const {
                         // Add binding instrs to unevaluated constants
-                        if node.is_pure(Purity::Pure, &self.asm) {
+                        if node.is_pure(&self.asm) {
                             self.macro_env
                                 .rt
                                 .unevaluated_constants

@@ -1,6 +1,7 @@
 use std::{
     borrow::Borrow,
-    collections::hash_map::DefaultHasher,
+    cell::RefCell,
+    collections::{hash_map::DefaultHasher, HashMap},
     fmt,
     hash::{Hash, Hasher},
     iter::once,
@@ -790,8 +791,12 @@ impl fmt::Debug for Node {
 }
 
 impl Node {
+    /// Check if the node is totally pure
+    pub fn is_pure<'a>(&'a self, asm: &'a Assembly) -> bool {
+        self.is_min_purity(Purity::Pure, asm)
+    }
     /// Check if the node is pure
-    pub fn is_pure<'a>(&'a self, min_purity: Purity, asm: &'a Assembly) -> bool {
+    pub fn is_min_purity<'a>(&'a self, min_purity: Purity, asm: &'a Assembly) -> bool {
         fn recurse<'a>(
             node: &'a Node,
             purity: Purity,
@@ -848,7 +853,18 @@ impl Node {
             visited.truncate(len);
             is
         }
-        recurse(self, min_purity, asm, &mut IndexSet::new())
+
+        thread_local! {
+            static CACHE: RefCell<HashMap<(u64, Purity), bool>> = RefCell::default();
+        }
+
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        let hash = hasher.finish();
+        CACHE.with(|cache| {
+            *(cache.borrow_mut().entry((hash, min_purity)))
+                .or_insert_with(|| recurse(self, min_purity, asm, &mut IndexSet::new()))
+        })
     }
     /// Check if the node has a bound runtime
     pub fn is_limit_bounded<'a>(&'a self, asm: &'a Assembly) -> bool {

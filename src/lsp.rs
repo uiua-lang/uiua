@@ -12,7 +12,7 @@ use std::{
 use crate::{
     ast::*, is_custom_glyph, parse, parse::ident_modifier_args, Assembly, BindingInfo, BindingKind,
     BindingMeta, CodeSpan, Compiler, Ident, InputSrc, Inputs, LocalName, PreEvalMode, Primitive,
-    Purity, SafeSys, Shape, Signature, Sp, Subscript, SysBackend, UiuaError, Value, CONSTANTS,
+    SafeSys, Shape, Signature, Sp, Subscript, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -533,7 +533,7 @@ impl Spanner {
                 underable: self.asm[f]
                     .under_inverse(Signature::new(1, 1), false, &self.asm)
                     .is_ok(),
-                pure: self.asm[f].is_pure(Purity::Pure, &self.asm),
+                pure: self.asm[f].is_pure(&self.asm),
             },
             BindingKind::IndexMacro(args) => BindingDocsKind::Modifier(*args),
             BindingKind::CodeMacro(_) => {

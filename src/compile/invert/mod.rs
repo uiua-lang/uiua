@@ -22,7 +22,7 @@ use crate::{
     ImplPrimitive::{self, *},
     Node::{self, *},
     Primitive::{self, *},
-    Purity, SigNode, Signature, SubSide, Subscript, SysOp, Uiua, UiuaResult,
+    SigNode, Signature, SubSide, Subscript, SysOp, Uiua, UiuaResult,
 };
 
 use un::*;

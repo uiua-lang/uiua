@@ -70,8 +70,8 @@ impl PreEvalMode {
                 node => {
                     node.is_limit_bounded(asm)
                         && match mode {
-                            PreEvalMode::Lsp => node.is_pure(Purity::Impure, asm),
-                            _ => node.is_pure(Purity::Pure, asm),
+                            PreEvalMode::Lsp => node.is_min_purity(Purity::Impure, asm),
+                            _ => node.is_pure(asm),
                         }
                 }
             });
@@ -96,7 +96,7 @@ impl Compiler {
         // println!("pre eval {:?}", node);
         let mut start = 0;
         let mut new: Option<Node> = None;
-        let allow_error = node.is_pure(Purity::Pure, &self.asm);
+        let allow_error = node.is_pure(&self.asm);
         'start: while start < node.len() {
             for end in (start + 1..=node.len()).rev() {
                 let section = &node[start..end];

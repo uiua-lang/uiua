@@ -155,7 +155,7 @@ impl fmt::Display for FormatPrimitive {
 }
 
 /// Levels of purity for an operation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Purity {
     /// The operation visibly affects the environment
     Mutating,

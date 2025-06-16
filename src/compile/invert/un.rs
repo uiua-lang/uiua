@@ -1336,7 +1336,7 @@ inverse!(Val, input, asm, {
     for end in (1..=input.len()).rev() {
         let chunk = &input[..end];
         if let Some(sig) = nodes_clean_sig(chunk) {
-            if sig == (0, 1) && chunk.iter().all(|n| n.is_pure(Purity::Pure, asm)) {
+            if sig == (0, 1) && chunk.iter().all(|n| n.is_pure(asm)) {
                 return Ok((&input[end..], Node::from(chunk)));
             }
         }

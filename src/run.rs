@@ -869,6 +869,16 @@ impl Uiua {
     }
     /// Call and maintain the stack delta if the call fails
     pub(crate) fn exec_maintain_sig(&mut self, sn: SigNode) -> UiuaResult {
+        if !sn.node.is_pure(&self.asm) {
+            for i in 0..sn.sig.args() {
+                self.pop(i + 1)?;
+            }
+            for _ in 0..sn.sig.outputs() {
+                self.push(Value::default());
+            }
+            return Ok(());
+        }
+
         let mut args = self.stack()[self.stack().len().saturating_sub(sn.sig.args())..].to_vec();
         args.reverse();
         let target_height = (self.stack_height() + sn.sig.outputs()).saturating_sub(sn.sig.args());

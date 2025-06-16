@@ -2,7 +2,9 @@
 
 # 0.17
 - `Variants` field for module
-- Fix pre-eval caching with labels
+- Fix caching with labels
+- Don't serialize sortedness flags
+- Fix `under fork`
 - Sided `fork`
 - Sided `join`
 - `table` subscripts for rank selection

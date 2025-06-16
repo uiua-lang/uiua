@@ -13,7 +13,7 @@ version = "0.17.0-dev.1"
 
 [dependencies]
 # Uiua dependencies
-uiua_parser = {path = "parser"}
+uiua_parser = {path = "parser", version = "0.17.0-dev.1"}
 
 # Core dependencies
 bitflags = {version = "2", features = ["serde"]}

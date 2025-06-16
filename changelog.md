@@ -15,6 +15,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 - Subscripts can now be typed with `,` instead of `__`s
 - Add numeric subscripts for [`keep ▽`](https://uiua.org/docs/keep) to keep along a number of dimensions
+- Add [`under ⍜`](https://uiua.org/docs/under) capability to [`fork ⊃`](https://uiua.org/docs/fork)s of monadic functions
+  - This allows using [`un °`](https://uiua.org/docs/un)[`by ⊸`](https://uiua.org/docs/by)[`fork ⊃`](https://uiua.org/docs/fork) to set multiple properties at once
 - Stabilize [`self ˙`](https://uiua.org/docs/self)
   - Add experimental sided subscripts for [`self ˙`](https://uiua.org/docs/self)
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)

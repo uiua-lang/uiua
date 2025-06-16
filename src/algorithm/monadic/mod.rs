@@ -1838,12 +1838,12 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub(crate) fn first_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
-        if self.rank() == 0 || self.meta.is_sorted_up() {
+        let fill = env.scalar_fill::<f64>();
+        if self.rank() == 0 || self.meta.is_sorted_up() && fill.is_err() {
             return Ok(0.0);
         }
         if self.row_count() == 0 {
-            return env
-                .scalar_fill::<f64>()
+            return fill
                 .map(|fv| fv.value)
                 .map_err(|e| env.error(format!("Cannot get min index of an empty array{e}")));
         }
@@ -1895,12 +1895,12 @@ impl<T: ArrayValue> Array<T> {
         Ok(index as f64)
     }
     pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
-        if self.rank() == 0 || self.meta.is_sorted_up() {
+        let fill = env.scalar_fill::<f64>();
+        if self.rank() == 0 || self.meta.is_sorted_up() && fill.is_err() {
             return Ok(0.0);
         }
         if self.row_count() == 0 {
-            return env
-                .scalar_fill::<f64>()
+            return fill
                 .map(|fv| fv.value)
                 .map_err(|e| env.error(format!("Cannot get max index of an empty array{e}")));
         }

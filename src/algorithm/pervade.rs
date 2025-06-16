@@ -1494,6 +1494,18 @@ pub mod modulus {
 pub mod or {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
+        if a.is_nan() {
+            return b;
+        }
+        if b.is_nan() {
+            return a;
+        }
+        if a == 0.0 {
+            return b;
+        }
+        if b == 0.0 {
+            return a;
+        }
         if (1.0..=u128::MAX as f64).contains(&a)
             && (1.0..=u128::MAX as f64).contains(&b)
             && a.fract() == 0.0
@@ -1522,12 +1534,6 @@ pub mod or {
                 return a;
             }
             recurse(b, a.rem_euclid(b))
-        }
-        if a.is_nan() {
-            return b;
-        }
-        if b.is_nan() {
-            return a;
         }
         a.signum() * b.signum() * recurse(a.abs(), b.abs())
     }

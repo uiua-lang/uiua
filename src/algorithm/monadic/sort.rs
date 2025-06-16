@@ -50,10 +50,6 @@ impl<T: ArrayValue> Array<T> {
         if self.meta.is_sorted_up() {
             return indices.into();
         }
-        if self.meta.is_sorted_down() {
-            indices.make_mut().reverse();
-            return indices.into();
-        }
         indices.make_mut().par_sort_by(|&a, &b| {
             self.row_slice(a as usize)
                 .iter()
@@ -73,10 +69,6 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut indices: Vec<usize> = (0..self.row_count()).collect();
         if self.meta.is_sorted_up() {
-            return indices;
-        }
-        if self.meta.is_sorted_down() {
-            indices.reverse();
             return indices;
         }
         indices.par_sort_by(|&a, &b| {
@@ -103,10 +95,6 @@ impl<T: ArrayValue> Array<T> {
         if self.meta.is_sorted_down() {
             return indices.into();
         }
-        if self.meta.is_sorted_up() {
-            indices.make_mut().reverse();
-            return indices.into();
-        }
         indices.make_mut().par_sort_by(|&a, &b| {
             self.row_slice(a as usize)
                 .iter()
@@ -126,10 +114,6 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut indices: Vec<usize> = (0..self.row_count()).collect();
         if self.meta.is_sorted_down() {
-            return indices;
-        }
-        if self.meta.is_sorted_up() {
-            indices.reverse();
             return indices;
         }
         indices.par_sort_by(|&a, &b| {

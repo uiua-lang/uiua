@@ -10,6 +10,7 @@ use std::{
 use dashmap::DashMap;
 use ecow::{eco_vec, EcoString, EcoVec};
 use serde::*;
+use uiua_parser::SUBSCRIPT_DIGITS;
 
 use crate::{
     compile::{LocalName, Module},
@@ -518,7 +519,12 @@ fn is_sig_line(s: &str) -> bool {
     }
     let s = s.trim_end();
     (!s.ends_with(['?', '$']) || s.ends_with(" ?") || s.ends_with(" $"))
-        && (s.chars()).all(|c| c.is_whitespace() || "?$:".contains(c) || is_ident_char(c))
+        && (s.chars()).all(|c| {
+            c.is_whitespace()
+                || "?$:".contains(c)
+                || is_ident_char(c)
+                || SUBSCRIPT_DIGITS.contains(&c)
+        })
 }
 
 impl FromStr for DocCommentSig {

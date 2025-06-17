@@ -558,6 +558,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
         subscript(Sqrt, "Nth root", "√₃ [8 27 125]"),
         subscript(Neg, "Turn one Nth in the complex plane", "⁅₃ ⍥₄⊸¯₄ 1"),
+        subscript(Exp, "Base N exponential", "# Experimental!\nₑ₂ 8"),
         subscript(Round, "To N decimal places", "⁅₃ π"),
         subscript(Floor, "To N decimal places", "# Experimental!\n⌊₄ π\n⌊₄ τ"),
         subscript(Ceil, "To N decimal places", "# Experimental!\n⌈₄ π\n⌈₄ τ"),
@@ -573,7 +574,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Occurrences,
             "Within first N occurrences",
-            "⧆₁ \"lego helmet\"",
+            "# Experimental!\n⧆₁ \"lego helmet\"",
         ),
         subscript(On, "First N values", "{⟜₂[⊙⊙∘] 1 2 3}"),
         subscript(By, "Last N values", "{⊸₂[⊙⊙∘] 1 2 3}"),

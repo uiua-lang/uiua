@@ -22,6 +22,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)
 - Add numeric subscripts for [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Deprecate experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) in favor of [`occurrences ⧆`](https://uiua.org/docs/occurrences)
+- Add the [`exponential ₑ`](https://uiua.org/docs/exponential) function, which computes the exponential function
+- Remove experimental `ln` in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
 - Remove previously deprecated `signature` and `stringify` modifiers
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals

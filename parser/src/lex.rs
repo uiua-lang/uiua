@@ -1672,7 +1672,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 
 /// Whether a character can be among the first characters of a Uiua identifier
 pub fn is_ident_char(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙℂ".contains(c)
+    c.is_alphabetic() && !"ⁿₙₑℂ".contains(c)
 }
 
 /// Whether a string is a custom glyph

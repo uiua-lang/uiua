@@ -964,10 +964,10 @@ pub mod exp {
 
     use super::*;
     pub fn num(a: f64) -> f64 {
-        a.exp()
+        E.powf(a)
     }
     pub fn byte(a: u8) -> f64 {
-        f64::from(a).exp()
+        num(a.into())
     }
     pub fn com(a: Complex) -> Complex {
         Complex::new(E, 0.0).powc(a)

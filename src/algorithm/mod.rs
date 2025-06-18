@@ -542,6 +542,7 @@ pub fn switch(
             args.push(arg);
         }
         args[1..].reverse();
+        let arg_shapes: Vec<Shape> = args[1..].iter().map(|v| v.shape.clone()).collect();
         let FixedRowsData {
             mut rows,
             row_count,
@@ -578,13 +579,17 @@ pub fn switch(
             }
             // println!("selector: {} {:?}", selector.shape, selector.data);
             rows_to_sel.clear();
-            for row in rows[1..].iter_mut() {
+            for (i, row) in rows[1..].iter_mut().enumerate() {
                 let row = match row {
                     Ok(row) => row.next().unwrap(),
                     Err(row) => row.clone(),
                 };
                 // println!("row: {:?}", row);
-                if selector.rank() > row.rank() || selector.rank() == 0 || is_empty {
+                if selector.rank() > row.rank()
+                    || selector.rank() == 0
+                    || is_empty
+                    || arg_shapes[i].row_count() == 1
+                {
                     // println!(" (repeated)");
                     rows_to_sel.push(Err(row));
                 } else {

@@ -608,14 +608,11 @@ impl SysBackend for NativeSys {
             }
         }
     }
-    fn seek(&self, handle: Handle, offset: u64) -> Result<(), String> {
-        use std::io::{Seek, SeekFrom};
+    fn seek(&self, handle: Handle, offset: std::io::SeekFrom) -> Result<(), String> {
+        use std::io::Seek;
 
         match NATIVE_SYS.get_stream(handle)? {
-            SysStream::File(mut file) => file
-                .seek(SeekFrom::Start(offset))
-                .map_err(|e| e.to_string())
-                .map(|_| ()),
+            SysStream::File(mut file) => file.seek(offset).map_err(|e| e.to_string()).map(|_| ()),
             _ => Err("Cannot seek this stream".into()),
         }
     }

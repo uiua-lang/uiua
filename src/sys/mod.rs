@@ -299,7 +299,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Writing to streams is not supported in this environment".into())
     }
     /// Go to an absolute file position
-    fn seek(&self, handle: Handle, offset: u64) -> Result<(), String> {
+    fn seek(&self, handle: Handle, offset: std::io::SeekFrom) -> Result<(), String> {
         Err("Seeking streams is not supported in this environment".into())
     }
     /// Create a file
@@ -865,8 +865,14 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             }
         }
         SysOp::Seek => {
+            use std::io::SeekFrom;
+
             let pos = env.pop(1)?.as_int(env, None)?;
-            let pos = u64::try_from(pos).map_err(|_| env.error("Position cannot be negative."))?;
+            let pos = match pos {
+                ..0 => SeekFrom::End(pos as i64),
+                0 => SeekFrom::Current(0),
+                0.. => SeekFrom::Start(pos as u64),
+            };
             let handle = env.pop(2)?.as_handle(env, None)?;
             env.rt.backend.seek(handle, pos).map_err(|e| env.error(e))?;
         }

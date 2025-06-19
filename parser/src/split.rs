@@ -202,6 +202,7 @@ impl Primitive {
                 ],
             ),
             ("perf", &[(Dip, "p"), (Pop, "e"), (Under, "r"), (Now, "f")]),
+            ("set", &[(Un, "se"), (By, "t")]),
             ("wrench", &[(Sub, "wr"), (By, "en"), (Not, "ch")]),
             ("selfirst", &[(Select, "sel"), (First, "first")]),
         ]

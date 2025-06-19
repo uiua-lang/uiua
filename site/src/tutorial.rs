@@ -498,7 +498,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="+1 1_2_3"/>
         <Editor example="√[4 9 16]"/>
         <Editor example="+1_2_3 4_5_6"/>
-        <p>"When doing a pervasive operation on two arrays, the shape of one array must be the "<em>"prefix"</em>" of the shape of the other. This means that all the numers in one shape must be at the beginning of the other shape."</p>
+        <p>"When doing a pervasive operation on two arrays, the shape of one array must be the "<em>"prefix"</em>" of the shape of the other. This means that all the numbers in one shape must be at the beginning of the other shape."</p>
         <p>"Here, neither of the shapes "<code>"[2]"</code>" or "<code>"[3]"</code>" are prefixes of the other."</p>
         <Editor example="+[1 2] [3 4 5]"/> // Should fail
         <p>"But here, the shape of the first array ("<code>"[2]"</code>") is a prefix of the shape of the second array ("<code>"[2 3]"</code>")."</p>

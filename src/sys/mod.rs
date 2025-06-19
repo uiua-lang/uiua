@@ -868,8 +868,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             let pos = env.pop(1)?.as_int(env, None)?;
             let pos = u64::try_from(pos).map_err(|_| env.error("Position cannot be negative."))?;
             let handle = env.pop(2)?.as_handle(env, None)?;
-            env.rt.backend.seek(handle, pos)
-                .map_err(|e| env.error(e))?;
+            env.rt.backend.seek(handle, pos).map_err(|e| env.error(e))?;
         }
         SysOp::FReadAllStr => {
             let path = env.pop(1)?.as_string(env, "Path must be a string")?;

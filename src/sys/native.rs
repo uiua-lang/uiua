@@ -612,10 +612,11 @@ impl SysBackend for NativeSys {
         use std::io::{Seek, SeekFrom};
 
         match NATIVE_SYS.get_stream(handle)? {
-            SysStream::File(mut file) => file.seek(SeekFrom::Start(offset))
+            SysStream::File(mut file) => file
+                .seek(SeekFrom::Start(offset))
                 .map_err(|e| e.to_string())
                 .map(|_| ()),
-            _ => Err("Cannot seek this stream".into())
+            _ => Err("Cannot seek this stream".into()),
         }
     }
     #[cfg(feature = "clipboard")]

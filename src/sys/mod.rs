@@ -870,7 +870,6 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             let pos = env.pop(1)?.as_int(env, None)?;
             let pos = match pos {
                 ..0 => SeekFrom::End(pos as i64),
-                0 => SeekFrom::Current(0),
                 0.. => SeekFrom::Start(pos as u64),
             };
             let handle = env.pop(2)?.as_handle(env, None)?;

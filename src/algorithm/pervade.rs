@@ -1494,17 +1494,20 @@ pub mod modulus {
 pub mod or {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
-        if a.is_nan() {
-            return b;
-        }
-        if b.is_nan() {
-            return a;
-        }
         if a == 0.0 {
             return b;
         }
         if b == 0.0 {
             return a;
+        }
+        if a.is_nan() || b.is_nan() {
+            return f64::NAN;
+        }
+        if a.is_infinite() {
+            return a.signum() * b;
+        }
+        if b.is_infinite() {
+            return b.signum() * a;
         }
         if (1.0..=u128::MAX as f64).contains(&a)
             && (1.0..=u128::MAX as f64).contains(&b)

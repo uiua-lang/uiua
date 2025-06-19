@@ -3742,6 +3742,8 @@ sys_op! {
     /// ex: &cl &w "Hello, world!" . &fc "file.txt"
     ///   : &fras "file.txt"
     (2(0), Write, Stream, "&w", "write", Mutating),
+    /// Moves to a absolute position in the file under the stream.
+    (2(0), Seek, Stream, "&sb", "seek", Mutating),
     /// Invoke a path with the system's default program
     (1(1), Invoke, Command, "&invk", "invoke", Mutating),
     /// Close a stream by its handle

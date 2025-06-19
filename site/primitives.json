@@ -335,6 +335,12 @@
     "class": "Stream",
     "description": "Write an array to a stream"
   },
+  "&sb": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Stream",
+    "description": "Goes to the position in a stream"
+  },
   "above": {
     "glyph": "◠",
     "outputs": 1,

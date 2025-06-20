@@ -257,6 +257,7 @@ impl Primitive {
     pub fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
         Some(match self {
+            Log => format!("use subscripted {} or {Anti}{Backward}{Pow}", Exp.format()),
             Rerank => format!(
                 "use subscripted {} or {Un}{By}({Len}{Shape}) instead",
                 Deshape.format()

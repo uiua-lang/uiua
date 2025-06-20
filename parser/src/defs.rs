@@ -217,16 +217,13 @@ primitive!(
     (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
     /// Get the exponential of a number
     ///
-    /// ex: # Experimental!
-    ///   : ₑ 1
+    /// ex: ₑ 1
     /// You can get the natural logarithm with [un].
-    /// ex: # Experimental!
-    ///   : °ₑ e
+    /// ex: °ₑ e
     /// You can give a subscript to set the base.
-    /// ex: # Experimental!
-    ///   : ₑ₂ 8
+    /// ex: ₑ₂ 8
     ///   : ₑ₁₀ 6
-    (1, Exp, MonadicPervasive, ("exponential", 'ₑ'), { experimental: true }),
+    (1, Exp, MonadicPervasive, ("exponential", 'ₑ')),
     /// Get the sine of a number
     ///
     /// ex: ∿ 1

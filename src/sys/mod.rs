@@ -298,6 +298,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         Err("Writing to streams is not supported in this environment".into())
     }
+    /// Go to an absolute file position
+    fn seek(&self, handle: Handle, offset: std::io::SeekFrom) -> Result<(), String> {
+        Err("Seeking streams is not supported in this environment".into())
+    }
     /// Create a file
     fn create_file(&self, path: &Path) -> Result<Handle, String> {
         Err("Creating files is not supported in this environment".into())
@@ -859,6 +863,17 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 Handle::STDIN => return Err(env.error("Cannot write to stdin")),
                 _ => (env.rt.backend.write(handle, &bytes)).map_err(|e| env.error(e))?,
             }
+        }
+        SysOp::Seek => {
+            use std::io::SeekFrom;
+
+            let pos = env.pop(1)?.as_int(env, None)?;
+            let pos = match pos {
+                ..0 => SeekFrom::End(pos as i64),
+                0.. => SeekFrom::Start(pos as u64),
+            };
+            let handle = env.pop(2)?.as_handle(env, None)?;
+            env.rt.backend.seek(handle, pos).map_err(|e| env.error(e))?;
         }
         SysOp::FReadAllStr => {
             let path = env.pop(1)?.as_string(env, "Path must be a string")?;

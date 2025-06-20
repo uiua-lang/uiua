@@ -257,6 +257,12 @@
     "class": "StdIO",
     "description": "Read a line from stdin"
   },
+  "&seek": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Stream",
+    "description": "Moves to a absolute position in the file under the stream."
+  },
   "&sl": {
     "args": 1,
     "outputs": 0,
@@ -334,12 +340,6 @@
     "outputs": 0,
     "class": "Stream",
     "description": "Write an array to a stream"
-  },
-  "&sb": {
-    "args": 2,
-    "outputs": 0,
-    "class": "Stream",
-    "description": "Goes to the position in a stream"
   },
   "above": {
     "glyph": "◠",

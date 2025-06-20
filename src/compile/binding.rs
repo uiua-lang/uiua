@@ -72,11 +72,12 @@ impl Compiler {
                 _ => None,
             }) {
                 if let Ok(Some((path_locals, local))) = self.ref_local(r) {
-                    let is_noadic_function = match &self.asm.bindings[local.index].kind {
-                        BindingKind::Func(f) if f.sig.args() == 0 => true,
-                        _ => false,
+                    let allow_alias = match &self.asm.bindings[local.index].kind {
+                        BindingKind::Func(f) if f.sig.args() == 0 => false,
+                        BindingKind::Scope(_) => false,
+                        _ => true,
                     };
-                    if !is_noadic_function {
+                    if allow_alias {
                         self.validate_local(&r.name.value, local, &r.name.span);
                         (self.code_meta.global_references)
                             .insert(binding.name.span.clone(), local.index);
@@ -303,13 +304,13 @@ impl Compiler {
         let in_function = self
             .scopes()
             .any(|sc| matches!(sc.kind, ScopeKind::Function));
+        let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
         self.current_bindings.push(CurrentBinding {
             name: name.clone(),
             signature: binding.signature.as_ref().map(|s| s.value),
             recurses: 0,
             global_index: local.index,
         });
-        let no_code_words = binding.words.iter().all(|w| !w.value.is_code());
 
         // Compile the words
         let (_, mut node) = self.in_scope(ScopeKind::Binding, |comp| {
@@ -514,6 +515,7 @@ impl Compiler {
             }
             ModuleKind::Test => (ScopeKind::Test, None),
         };
+        // Compile items
         let (module, ()) = self.in_scope(scope_kind, |comp| {
             comp.items(m.items, ItemCompMode::TopLevel)?;
             comp.end_enum()?;

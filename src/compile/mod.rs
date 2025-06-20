@@ -192,7 +192,7 @@ impl AsMut<Assembly> for Compiler {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct CurrentBinding {
     name: Ident,
     signature: Option<Signature>,

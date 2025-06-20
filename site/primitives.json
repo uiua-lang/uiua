@@ -640,6 +640,13 @@
     "class": "Environment",
     "description": "Get the executable extension for the current platform"
   },
+  "exponential": {
+    "glyph": "ₑ",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Get the exponential of a number"
+  },
   "fall": {
     "glyph": "⍖",
     "args": 1,
@@ -888,18 +895,13 @@
     "class": "DyadicPervasive",
     "description": "Compare for less than"
   },
-  "ln": {
-    "args": 1,
-    "outputs": 1,
-    "class": "MonadicPervasive",
-    "description": "Get the natural logarithm of a number"
-  },
   "logarithm": {
     "glyph": "ₙ",
     "args": 2,
     "outputs": 1,
     "class": "DyadicPervasive",
-    "description": "Get the based logarithm of a number"
+    "description": "Get the based logarithm of a number",
+    "deprecated": true
   },
   "map": {
     "args": 2,

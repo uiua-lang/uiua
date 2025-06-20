@@ -1745,6 +1745,7 @@ impl Parser<'_> {
                 let s = span.as_str(self.inputs, |s| s.trim_start_matches("#").trim().into());
                 lines.push(span.sp(s));
             } else if let Some(sem) = self.next_token_map(Token::as_semantic_comment) {
+                lines.push(sem.span.clone().sp(sem.value.to_string().into()));
                 semantic.insert(sem.value, sem.span);
             } else {
                 break;

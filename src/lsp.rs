@@ -377,6 +377,11 @@ impl Spanner {
                                         spans.push(prev.end_to(&curr).sp(SpanKind::Whitespace))
                                     }
                                 }
+                                if let Some(comments) = &field.comments {
+                                    for line in &comments.lines {
+                                        spans.push(line.span.clone().sp(SpanKind::Comment));
+                                    }
+                                }
                                 spans.push(field.name.span.clone().sp(SpanKind::Ident {
                                     docs: self.binding_docs(&field.name.span),
                                     original: true,

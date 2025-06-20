@@ -1442,8 +1442,8 @@ impl<T: ArrayValue> Array<T> {
         }
         if undices
             .iter()
-            .zip(undices.iter().skip(1))
-            .any(|(a, b)| a == b)
+            .enumerate()
+            .any(|(i, a)| undices[..i].contains(a))
         {
             return match env.scalar_fill() {
                 Ok(fill) => self.filled_orient(undices, fill.value, env),

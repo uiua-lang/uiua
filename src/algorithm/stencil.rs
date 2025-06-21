@@ -206,7 +206,7 @@ where
                     *c = corner[i] + offset[i] as isize;
                 }
                 // Add cell
-                if let Some(i) = arr.shape.i_dims_to_flat(&curr) {
+                if let Some(i) = arr.shape.i_dims_to_flat(curr.iter()) {
                     match &mut action {
                         WindowAction::Id(data, _)
                         | WindowAction::Box(_, data)

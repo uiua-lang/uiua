@@ -1474,7 +1474,7 @@ impl<T: ArrayValue> Array<T> {
             for (j, ii) in into_index.iter_mut().enumerate() {
                 *ii = orig_index[undices[j]];
             }
-            if let Some(j) = into.shape.dims_to_flat(&into_index) {
+            if let Some(j) = into.shape.dims_to_flat(into_index.iter()) {
                 slice[j] = elem;
             }
         }
@@ -1567,7 +1567,9 @@ impl<T: ArrayValue> Array<T> {
             for (j, oi) in orig_index.iter_mut().enumerate() {
                 *oi = new_index[undices[j]];
             }
-            let j = considered_orig_shape.dims_to_flat(&orig_index).unwrap();
+            let j = considered_orig_shape
+                .dims_to_flat(orig_index.iter())
+                .unwrap();
             row.clone_from_slice(&self.data[j * trailing_row_len..][..trailing_row_len]);
         }
 

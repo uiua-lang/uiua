@@ -637,7 +637,7 @@ impl<T: ArrayValue> Array<T> {
                     for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
                         *s = *c + *o;
                     }
-                    if (haystack.shape.dims_to_flat(&sum))
+                    if (haystack.shape.dims_to_flat(sum.iter()))
                         .is_none_or(|k| res[k] > 0.0 || !needle_data[j].array_eq(&haystack.data[k]))
                     {
                         matches = false;
@@ -652,7 +652,7 @@ impl<T: ArrayValue> Array<T> {
                         for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
                             *s = *c + *o;
                         }
-                        let k = haystack.shape.dims_to_flat(&sum).unwrap();
+                        let k = haystack.shape.dims_to_flat(sum.iter()).unwrap();
                         res[k] = match_num as f64;
                     }
                 }

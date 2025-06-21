@@ -238,7 +238,7 @@ impl GridFmt for f64 {
             if elem.is_nan() {
                 nan_count += 1;
             } else if elem.is_infinite() {
-                inf_balance += elem.is_sign_positive() as i64;
+                inf_balance += elem.signum() as i64;
                 min = min.min(elem);
                 max = max.max(elem);
             } else {
@@ -357,7 +357,7 @@ impl GridFmt for Complex {
                 if elem.is_nan() {
                     *nan_count += 1;
                 } else if elem.is_infinite() {
-                    *inf_balance += elem.is_sign_positive() as i64;
+                    *inf_balance += elem.signum() as i64;
                     *min = min.min(elem);
                     *max = max.max(elem);
                 } else {

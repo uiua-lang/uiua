@@ -332,7 +332,7 @@ impl Value {
     /// Apply the given shape to the array by either tiling or filling
     pub fn undo_shape(&mut self, shape: &Value, env: &Uiua) -> UiuaResult {
         let axes_input = shape.as_ints_or_infs(env, "Shape should be integers or infinity")?;
-        let mut reversed_axes = EcoVec::with_capacity(axes_input.len());
+        let mut reversed_axes = smallvec::SmallVec::<[_; 32]>::new();
         let rank_shift = axes_input.len().saturating_sub(self.shape.len());
         let shape: Shape = axes_input
             .into_iter()
@@ -394,16 +394,16 @@ impl<T: ArrayValue> Array<T> {
             self.reverse_depth(ax);
         }
 
-        let ishape: EcoVec<_> = shape.iter().map(|v| *v as isize).collect();
-        let range_data: EcoVec<_> = match super::monadic::range(&ishape, 0, env)? {
-            Ok(a) => a.iter().map(|v| *v as isize).collect(),
-            Err(a) => a.iter().map(|v| *v as isize).collect(),
-        };
-
         if env.scalar_fill::<T>().is_ok() {
             let dims: EcoVec<_> = shape.iter().map(|v| Ok(*v as isize)).collect();
             *self = self.clone().take(&dims, env)?;
         } else {
+            let ishape: EcoVec<_> = shape.iter().map(|v| *v as isize).collect();
+            let range_data: EcoVec<_> = match super::monadic::range(&ishape, 0, env)? {
+                Ok(a) => a.iter().map(|v| *v as isize).collect(),
+                Err(a) => a.iter().map(|v| *v as isize).collect(),
+            };
+
             let data: EcoVec<_> = range_data
                 .chunks(shape.len())
                 .map(|idx| {

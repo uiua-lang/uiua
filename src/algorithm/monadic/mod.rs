@@ -1087,7 +1087,7 @@ impl<T: ArrayValue> Array<T> {
             for i in 0..chunk_size {
                 subshape.flat_to_dims(i, &mut dims);
                 dims.reverse();
-                let j = newshape.dims_to_flat(dims.iter()).unwrap();
+                let j = newshape.dims_to_flat(&dims).unwrap();
                 temp[j] = data[i].clone();
             }
             data.swap_with_slice(&mut temp);

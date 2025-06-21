@@ -331,15 +331,42 @@ fn derive_shape(
 impl Value {
     /// Apply the given shape to the array by either tiling or filling
     pub fn undo_shape(&mut self, shape: &Value, env: &Uiua) -> UiuaResult {
-        // TODO: Handle negatives and infinities
-        let shape = Shape::from(shape.as_nats(env, "Shape must be natural numbers")?);
-        val_as_arr!(self, |a| a.undo_shape(shape, env))
+        let axes_input = shape.as_ints_or_infs(env, "Shape should be integers or infinity")?;
+        let mut reversed_axes = EcoVec::with_capacity(axes_input.len());
+        let rank_shift = axes_input.len().saturating_sub(self.shape.len());
+        let shape: Shape = axes_input
+            .into_iter()
+            .enumerate()
+            .map(|(i, ax)| match ax {
+                Ok(val) => {
+                    if val.is_negative() {
+                        reversed_axes.push(i);
+                    }
+                    val.unsigned_abs()
+                }
+                Err(rev) => {
+                    if rev {
+                        reversed_axes.push(i);
+                    }
+                    self.shape
+                        .get(i.wrapping_sub(rank_shift))
+                        .copied()
+                        .unwrap_or(1)
+                }
+            })
+            .collect();
+        val_as_arr!(self, |a| a.undo_shape(shape, reversed_axes, env))
     }
 }
 
 impl<T: ArrayValue> Array<T> {
     /// Apply the given shape to the array by either tiling or filling
-    pub fn undo_shape(&mut self, shape: Shape, env: &Uiua) -> UiuaResult {
+    pub fn undo_shape(
+        &mut self,
+        shape: Shape,
+        reversed_axes: impl IntoIterator<Item = usize> + Clone,
+        env: &Uiua,
+    ) -> UiuaResult {
         if self.shape == shape {
             return Ok(());
         }
@@ -361,6 +388,10 @@ impl<T: ArrayValue> Array<T> {
                 self.shape = new_shape.into();
             }
             _ => {}
+        }
+
+        for ax in reversed_axes.clone() {
+            self.reverse_depth(ax);
         }
 
         let ishape: EcoVec<_> = shape.iter().map(|v| *v as isize).collect();
@@ -389,6 +420,10 @@ impl<T: ArrayValue> Array<T> {
                 })
                 .collect();
             *self = Array::new(shape, data);
+        }
+
+        for ax in reversed_axes {
+            self.reverse_depth(ax);
         }
 
         Ok(())

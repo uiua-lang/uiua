@@ -334,7 +334,7 @@ impl Value {
     pub fn undo_shape(&mut self, shape: &Value, env: &Uiua) -> UiuaResult {
         let axes_input = shape.as_ints_or_infs(env, "Shape should be integers or infinity")?;
         let mut reversed_axes = SmallVec::<[_; 32]>::new();
-        let rank_shift = axes_input.len().saturating_sub(self.shape.len());
+        let rank_shift = self.shape.len() as isize - axes_input.len() as isize;
         let shape: Shape = axes_input
             .into_iter()
             .enumerate()
@@ -350,7 +350,7 @@ impl Value {
                         reversed_axes.push(i);
                     }
                     self.shape
-                        .get(i.wrapping_sub(rank_shift))
+                        .get(i.wrapping_add_signed(rank_shift))
                         .copied()
                         .unwrap_or(1)
                 }

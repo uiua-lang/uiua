@@ -18,6 +18,7 @@ use ecow::{eco_vec, EcoVec};
 use rand::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
+use smallvec::SmallVec;
 
 use crate::{
     algorithm::pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
@@ -326,6 +327,107 @@ fn derive_shape(
         }
         n => return Err(env.error(format!("Cannot reshape array with {n} infinite dimensions"))),
     })
+}
+
+impl Value {
+    /// Apply the given shape to the array by either tiling or filling
+    pub fn undo_shape(&mut self, shape: &Value, env: &Uiua) -> UiuaResult {
+        let axes_input = shape.as_ints_or_infs(env, "Shape should be integers or infinity")?;
+        let mut reversed_axes = SmallVec::<[_; 32]>::new();
+        let rank_shift = axes_input.len().saturating_sub(self.shape.len());
+        let shape: Shape = axes_input
+            .into_iter()
+            .enumerate()
+            .map(|(i, ax)| match ax {
+                Ok(val) => {
+                    if val.is_negative() {
+                        reversed_axes.push(i);
+                    }
+                    val.unsigned_abs()
+                }
+                Err(rev) => {
+                    if rev {
+                        reversed_axes.push(i);
+                    }
+                    self.shape
+                        .get(i.wrapping_sub(rank_shift))
+                        .copied()
+                        .unwrap_or(1)
+                }
+            })
+            .collect();
+        val_as_arr!(self, |a| a.undo_shape(shape, reversed_axes, env))
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    /// Apply the given shape to the array by either tiling or filling
+    pub fn undo_shape(
+        &mut self,
+        shape: Shape,
+        reversed_axes: impl IntoIterator<Item = usize> + Clone,
+        env: &Uiua,
+    ) -> UiuaResult {
+        if self.shape == shape {
+            return Ok(());
+        }
+
+        let rank_surplus = self.rank() as isize - shape.len() as isize;
+        match rank_surplus.cmp(&0) {
+            // Rank is too high, take the first row repeatedly
+            Ordering::Greater => {
+                let mut new = self.clone();
+                for _ in 0..rank_surplus {
+                    new = new.first(env)?;
+                }
+                *self = new;
+            }
+            // Rank is too low, add 1-length axes
+            Ordering::Less => {
+                let mut new_shape = vec![1; rank_surplus.unsigned_abs()];
+                new_shape.extend_from_slice(&self.shape);
+                self.shape = new_shape.into();
+            }
+            _ => {}
+        }
+
+        for ax in reversed_axes.clone() {
+            self.reverse_depth(ax);
+        }
+
+        if env.scalar_fill::<T>().is_ok() {
+            let dims: EcoVec<_> = shape.iter().map(|v| Ok(*v as isize)).collect();
+            *self = self.clone().take(&dims, env)?;
+        } else {
+            let ishape: EcoVec<_> = shape.iter().map(|v| *v as isize).collect();
+            let range_data: EcoVec<_> = match super::monadic::range(&ishape, 0, env)? {
+                Ok(a) => a.iter().map(|v| *v as isize).collect(),
+                Err(a) => a.iter().map(|v| *v as isize).collect(),
+            };
+
+            let data: EcoVec<_> = range_data
+                .chunks(shape.len())
+                .map(|idx| {
+                    let idx = idx
+                        .iter()
+                        .zip(&self.shape)
+                        .map(|(a, b)| a.rem_euclid(*b as isize));
+                    let i = self
+                        .shape
+                        .i_dims_to_flat(idx)
+                        .expect("Tiling index was out of bounds");
+                    self.data[i].clone()
+                })
+                .collect();
+            *self = Array::new(shape, data);
+        }
+
+        for ax in reversed_axes {
+            self.reverse_depth(ax);
+        }
+
+        Ok(())
+    }
 }
 
 impl Value {

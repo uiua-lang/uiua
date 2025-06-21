@@ -11,6 +11,7 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - Numeric subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays
 - **Breaking Change** - Remove combining `e` number literals
   - It was confusing when combined with `e` scientific number notation
+- **Breaking Change** - [`under ⍜`](https://uiua.org/docs/under)[`shape △`](https://uiua.org/docs/shape) now tiles the original array to match the new shape instead of [`reshape ↯`](https://uiua.org/docs/reshape)ing
 - Allow for private [modules](https://uiua.org/tutorial/modules#private-scoped-modules), [imports](https://uiua.org/tutorial/modules#private-imports), and [data definitions](https://uiua.org/tutorial/datadefs#visibility)
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 - Subscripts can now be typed with `,` instead of `__`s

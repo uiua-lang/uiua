@@ -320,7 +320,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Sign], No, "", "⍜±(×2) ¯5") }
             { inverse_row([First], No, "", "⍜⊢(×10) [1 2 3 4 5]") }
             { inverse_row([Last], No, "", "⍜⊣(×10) [1 2 3 4 5]") }
-            { inverse_row([Shape], No, view!(<Prim prim=Reshape/>), "⍜△⇌ [1_2_3 4_5_6]") }
+            { inverse_row([Shape], No, "Tiles", "⍜△(×2) [1_2_3 4_5_6]") }
             { inverse_row([Len], No, view!(<Prim prim=Reshape/>), "⍜⧻(+1) [1_2_3 4_5_6]") }
             { inverse_row([Deshape], No, "", "⍜♭⇌ ↯3_3⇡9") }
             { inverse_row([Rise], No, "", "⍜⍏(↻¯1). [1 4 2 3 5]") }

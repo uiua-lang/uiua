@@ -168,6 +168,7 @@ impl_primitive!(
     (1(0), UnClip, Mutating),
     // Unders
     (1, UndoFix),
+    (2, UndoShape),
     (2, UndoUnBits),
     (2, AntiBase),
     (3, UndoSelect),
@@ -374,6 +375,7 @@ impl fmt::Display for ImplPrimitive {
             UndoGroup1 | UndoGroup2 => write!(f, "{Under}{Group}"),
             TryClose => write!(f, "{}", Sys(SysOp::Close)),
             UndoFix => write!(f, "{Under}{Fix}"),
+            UndoShape => write!(f, "{Under}{Shape}"),
             UndoDeshape(_) => write!(f, "{Under}{Deshape}"),
             UndoFirst => write!(f, "{Under}{First}"),
             UndoLast => write!(f, "{Under}{Last}"),

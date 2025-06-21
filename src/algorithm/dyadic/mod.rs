@@ -391,6 +391,12 @@ impl<T: ArrayValue> Array<T> {
             _ => {}
         }
 
+        // If converting to rank 0, the rank-matching process
+        // is sufficient to produce the correct result
+        if shape.is_empty() {
+            return Ok(());
+        }
+
         for ax in reversed_axes.clone() {
             self.reverse_depth(ax);
         }

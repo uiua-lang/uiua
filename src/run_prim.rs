@@ -858,7 +858,7 @@ impl ImplPrimitive {
                 let mut val = env.pop(1)?;
                 let shape = env.pop(2)?;
                 val.undo_shape(&shape, env)?;
-                env.push(val)
+                env.push(val);
             }
             ImplPrimitive::UndoDeshape(sub) => {
                 let shape = Shape::from(

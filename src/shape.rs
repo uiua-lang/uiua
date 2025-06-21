@@ -1,5 +1,5 @@
 use std::{
-    borrow::Cow,
+    borrow::{Borrow, Cow},
     fmt,
     hash::Hash,
     ops::{Deref, DerefMut, Index, RangeBounds},
@@ -173,9 +173,13 @@ impl Shape {
         }
         index.reverse();
     }
-    pub(crate) fn dims_to_flat(&self, index: &[usize]) -> Option<usize> {
+    pub(crate) fn dims_to_flat(
+        &self,
+        index: impl IntoIterator<Item = impl Borrow<usize>>,
+    ) -> Option<usize> {
         let mut flat = 0;
-        for (&dim, &i) in self.dims.iter().zip(index) {
+        for (&dim, i) in self.dims.iter().zip(index) {
+            let i = *i.borrow();
             if i >= dim {
                 return None;
             }
@@ -183,9 +187,13 @@ impl Shape {
         }
         Some(flat)
     }
-    pub(crate) fn i_dims_to_flat(&self, index: &[isize]) -> Option<usize> {
+    pub(crate) fn i_dims_to_flat(
+        &self,
+        index: impl IntoIterator<Item = impl Borrow<isize>>,
+    ) -> Option<usize> {
         let mut flat = 0;
-        for (&dim, &i) in self.dims.iter().zip(index) {
+        for (&dim, i) in self.dims.iter().zip(index) {
+            let i = *i.borrow();
             if i < 0 || i >= dim as isize {
                 return None;
             }

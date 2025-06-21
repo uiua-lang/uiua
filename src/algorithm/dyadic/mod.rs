@@ -408,14 +408,13 @@ impl<T: ArrayValue> Array<T> {
             let data: EcoVec<_> = range_data
                 .chunks(shape.len())
                 .map(|idx| {
-                    let idx: SmallVec<[_; 32]> = idx
+                    let idx = idx
                         .iter()
                         .zip(&self.shape)
-                        .map(|(a, b)| a.rem_euclid(*b as isize) as usize)
-                        .collect();
+                        .map(|(a, b)| a.rem_euclid(*b as isize));
                     let i = self
                         .shape
-                        .dims_to_flat(&idx)
+                        .i_dims_to_flat(idx)
                         .expect("Tiling index was out of bounds");
                     self.data[i].clone()
                 })

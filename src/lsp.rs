@@ -925,6 +925,7 @@ mod server {
 
     const UIUA_NUMBER_STT: SemanticTokenType = SemanticTokenType::new("uiua_number");
     const UIUA_STRING_STT: SemanticTokenType = SemanticTokenType::new("uiua_string");
+    const UIUA_CONSTANT_STT: SemanticTokenType = SemanticTokenType::new("uiua_constant");
     const STACK_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("stack_function");
     const NOADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("noadic_function");
     const MONADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("monadic_function");
@@ -936,11 +937,12 @@ mod server {
     const TRIADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("triadic_modifier");
     const MODULE_STT: SemanticTokenType = SemanticTokenType::new("uiua_module");
 
-    const UIUA_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 14] = [
+    const UIUA_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 15] = [
         SemanticTokenType::COMMENT,
         SemanticTokenType::PARAMETER,
         UIUA_NUMBER_STT,
         UIUA_STRING_STT,
+        UIUA_CONSTANT_STT,
         STACK_FUNCTION_STT,
         NOADIC_FUNCTION_STT,
         MONADIC_FUNCTION_STT,
@@ -1629,7 +1631,7 @@ mod server {
                     SpanKind::Ident {
                         docs: Some(docs), ..
                     } => match docs.kind {
-                        BindingDocsKind::Constant(_) => continue,
+                        BindingDocsKind::Constant(_) => UIUA_CONSTANT_STT,
                         BindingDocsKind::Function { sig, .. } => match sig.args() {
                             0 => NOADIC_FUNCTION_STT,
                             1 => MONADIC_FUNCTION_STT,

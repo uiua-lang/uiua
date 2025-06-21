@@ -234,8 +234,10 @@ fn ffi_test() {
 
     #[cfg(windows)]
     let dll_path = "../target/debug/ffi_lib.dll";
-    #[cfg(unix)]
+    #[cfg(all(unix, not(target_os = "macos")))]
     let dll_path = "../target/debug/libffi_lib.so";
+    #[cfg(target_os = "macos")]
+    let dll_path = "../target/debug/libffi_lib.dylib";
     let lib_path = Path::new(dll_path);
 
     let mut uiua = Uiua::with_native_sys().with_args(vec![lib_path.to_string_lossy().into_owned()]);

@@ -348,6 +348,13 @@ impl<T: ArrayValue> Array<T> {
                     self.shape = 2.into();
                     self
                 } else {
+                    if self.data.len().saturating_add(other.data.len()) >= u32::MAX as usize {
+                        Err(ctx.error(super::SizeError {
+                            elements: self.data.len() as f64 + other.data.len() as f64,
+                            elem_size: size_of::<T>(),
+                        }))?
+                    }
+
                     if self.shape[1..] != other.shape[1..] {
                         // Fill
                         match ctx.scalar_fill::<T>() {

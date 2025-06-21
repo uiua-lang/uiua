@@ -173,9 +173,9 @@ impl Shape {
         }
         index.reverse();
     }
-    pub(crate) fn dims_to_flat<I: Iterator<Item = IV>, IV: Borrow<usize>>(
+    pub(crate) fn dims_to_flat(
         &self,
-        index: I,
+        index: impl Iterator<Item = impl Borrow<usize>>,
     ) -> Option<usize> {
         let mut flat = 0;
         for (&dim, i) in self.dims.iter().zip(index) {
@@ -187,9 +187,9 @@ impl Shape {
         }
         Some(flat)
     }
-    pub(crate) fn i_dims_to_flat<I: Iterator<Item = IV>, IV: Borrow<isize>>(
+    pub(crate) fn i_dims_to_flat(
         &self,
-        index: I,
+        index: impl Iterator<Item = impl Borrow<isize>>,
     ) -> Option<usize> {
         let mut flat = 0;
         for (&dim, i) in self.dims.iter().zip(index) {

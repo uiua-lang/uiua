@@ -340,21 +340,27 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// Apply the given shape to the array by either tiling or filling
     pub fn undo_shape(&mut self, shape: Shape, env: &Uiua) -> UiuaResult {
-        // Rank is too high, take the first row repeatedly
-        let rank_surplus = self.rank() as isize - shape.len() as isize;
-        if rank_surplus > 0 {
-            let mut new = self.clone();
-            for _ in 0..rank_surplus {
-                new = new.first(env)?;
-            }
-            *self = new;
+        if self.shape == shape {
+            return Ok(());
         }
 
-        // Rank is too low, add 1-length axes
-        if rank_surplus < 0 {
-            let mut new_shape = vec![1; rank_surplus.unsigned_abs()];
-            new_shape.extend_from_slice(&self.shape);
-            self.shape = new_shape.into();
+        let rank_surplus = self.rank() as isize - shape.len() as isize;
+        match rank_surplus.cmp(&0) {
+            // Rank is too high, take the first row repeatedly
+            Ordering::Greater => {
+                let mut new = self.clone();
+                for _ in 0..rank_surplus {
+                    new = new.first(env)?;
+                }
+                *self = new;
+            }
+            // Rank is too low, add 1-length axes
+            Ordering::Less => {
+                let mut new_shape = vec![1; rank_surplus.unsigned_abs()];
+                new_shape.extend_from_slice(&self.shape);
+                self.shape = new_shape.into();
+            }
+            _ => {}
         }
 
         let ishape: EcoVec<_> = shape.iter().map(|v| *v as isize).collect();

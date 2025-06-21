@@ -171,7 +171,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &(Fix, (Fix), (UndoFix)),
     &(UndoFix, (UndoFix), (Fix)),
     &Stash(1, (Shape, Len), (Flip, 1, Sub, Rerank)),
-    &Stash(1, Shape, (Flip, Reshape)),
+    &Stash(1, Shape, UndoShape),
     &(
         Len,
         (CopyUnd(1), Shape, CopyUnd(1), First),
@@ -1098,7 +1098,7 @@ under!(ConstPat, input, _, _, asm, {
 /// Copy some values to the under stack at the beginning of the "do" step
 /// and pop them at the beginning of the "undo" step
 ///
-/// Allows a leading value if staching at least 2 values
+/// Allows a leading value if stashing at least 2 values
 #[derive(Debug)]
 struct Stash<A, B>(usize, A, B);
 impl<A, B> UnderPattern for Stash<A, B>

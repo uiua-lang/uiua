@@ -329,6 +329,67 @@ fn derive_shape(
 }
 
 impl Value {
+    /// Apply the given shape to the array by either tiling or filling
+    pub fn undo_shape(&mut self, shape: &Value, env: &Uiua) -> UiuaResult {
+        // TODO: Handle negatives and infinities
+        let shape = Shape::from(shape.as_nats(env, "Shape must be natural numbers")?);
+        val_as_arr!(self, |a| a.undo_shape(shape, env))
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    /// Apply the given shape to the array by either tiling or filling
+    pub fn undo_shape(&mut self, shape: Shape, env: &Uiua) -> UiuaResult {
+        // Rank is too high, take the first row repeatedly
+        let rank_surplus = self.rank() as isize - shape.len() as isize;
+        if rank_surplus > 0 {
+            let mut new = self.clone();
+            for _ in 0..rank_surplus {
+                new = new.first(env)?;
+            }
+            *self = new;
+        }
+
+        // Rank is too low, add 1-length axes
+        if rank_surplus < 0 {
+            let mut new_shape = vec![1; rank_surplus.unsigned_abs()];
+            new_shape.extend_from_slice(&self.shape);
+            self.shape = new_shape.into();
+        }
+
+        let ishape: EcoVec<_> = shape.iter().map(|v| *v as isize).collect();
+        let range_data: EcoVec<_> = match super::monadic::range(&ishape, 0, env)? {
+            Ok(a) => a.iter().map(|v| *v as isize).collect(),
+            Err(a) => a.iter().map(|v| *v as isize).collect(),
+        };
+
+        if env.scalar_fill::<T>().is_ok() {
+            let dims: EcoVec<_> = shape.iter().map(|v| Ok(*v as isize)).collect();
+            *self = self.clone().take(&dims, env)?;
+        } else {
+            let data: EcoVec<_> = range_data
+                .chunks(shape.len())
+                .map(|idx| {
+                    let idx: EcoVec<_> = idx
+                        .iter()
+                        .zip(&self.shape)
+                        .map(|(a, b)| a.rem_euclid(*b as isize) as usize)
+                        .collect();
+                    let i = self
+                        .shape
+                        .dims_to_flat(&idx)
+                        .expect("Tiling index was out of bounds");
+                    self.data[i].clone()
+                })
+                .collect();
+            *self = Array::new(shape, data);
+        }
+
+        Ok(())
+    }
+}
+
+impl Value {
     /// `rerank` this value with another
     pub fn rerank(&mut self, rank: &Self, env: &Uiua) -> UiuaResult {
         self.meta.take_map_keys();

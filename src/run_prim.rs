@@ -854,6 +854,12 @@ impl ImplPrimitive {
                 env.push(from.undo_drop(index, into, env)?);
             }
             ImplPrimitive::UndoFix => env.monadic_mut(Value::undo_fix)?,
+            ImplPrimitive::UndoShape => {
+                let mut val = env.pop(1)?;
+                let shape = env.pop(2)?;
+                val.undo_shape(&shape, env)?;
+                env.push(val)
+            }
             ImplPrimitive::UndoDeshape(sub) => {
                 let shape = Shape::from(
                     env.pop(1)?

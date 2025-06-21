@@ -18,6 +18,7 @@ use ecow::{eco_vec, EcoVec};
 use rand::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
+use smallvec::SmallVec;
 
 use crate::{
     algorithm::pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
@@ -332,7 +333,7 @@ impl Value {
     /// Apply the given shape to the array by either tiling or filling
     pub fn undo_shape(&mut self, shape: &Value, env: &Uiua) -> UiuaResult {
         let axes_input = shape.as_ints_or_infs(env, "Shape should be integers or infinity")?;
-        let mut reversed_axes = smallvec::SmallVec::<[_; 32]>::new();
+        let mut reversed_axes = SmallVec::<[_; 32]>::new();
         let rank_shift = axes_input.len().saturating_sub(self.shape.len());
         let shape: Shape = axes_input
             .into_iter()
@@ -407,7 +408,7 @@ impl<T: ArrayValue> Array<T> {
             let data: EcoVec<_> = range_data
                 .chunks(shape.len())
                 .map(|idx| {
-                    let idx: EcoVec<_> = idx
+                    let idx: SmallVec<[_; 32]> = idx
                         .iter()
                         .zip(&self.shape)
                         .map(|(a, b)| a.rem_euclid(*b as isize) as usize)

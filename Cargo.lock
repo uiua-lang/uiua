@@ -2217,15 +2217,6 @@ checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
 name = "font-types"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f0189ccb084f77c5523e08288d418cbaa09c451a08515678a0aa265df9a8b60"
-dependencies = [
- "bytemuck",
-]
-
-[[package]]
-name = "font-types"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3971f9a5ca983419cdc386941ba3b9e1feba01a0ab888adf78739feb2798492"
@@ -3548,15 +3539,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lockfree"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74ee94b5ad113c7cb98c5a040f783d0952ee4fe100993881d1673c2cb002dd23"
-dependencies = [
- "owned-alloc",
-]
-
-[[package]]
 name = "lockfree-object-pool"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4536,12 +4518,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "owned-alloc"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30fceb411f9a12ff9222c5f824026be368ff15dc2f13468d850c7d3f502205d6"
-
-[[package]]
 name = "owned_ttf_parser"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5130,22 +5106,12 @@ dependencies = [
 
 [[package]]
 name = "read-fonts"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c141b9980e1150201b2a3a32879001c8f975fe313ec3df5471a9b5c79a880cd"
-dependencies = [
- "bytemuck",
- "font-types 0.6.0",
-]
-
-[[package]]
-name = "read-fonts"
 version = "0.22.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69aacb76b5c29acfb7f90155d39759a29496aebb49395830e928a9703d2eec2f"
 dependencies = [
  "bytemuck",
- "font-types 0.7.3",
+ "font-types",
 ]
 
 [[package]]
@@ -5759,34 +5725,18 @@ dependencies = [
  "comrak",
  "console_error_panic_hook",
  "enum-iterator",
- "getrandom 0.2.15",
- "hound",
- "image",
  "js-sys",
  "leptos",
  "leptos_meta",
  "leptos_router",
- "pathdiff",
  "rand",
  "serde",
  "serde_json",
  "uiua",
  "uiua-editor",
- "unicode-segmentation",
  "urlencoding",
  "wasm-bindgen",
- "wasm-bindgen-futures",
  "web-sys",
-]
-
-[[package]]
-name = "skrifa"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abea4738067b1e628c6ce28b2c216c19e9ea95715cdb332680e821c3bec2ef23"
-dependencies = [
- "bytemuck",
- "read-fonts 0.20.0",
 ]
 
 [[package]]
@@ -5796,7 +5746,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e1c44ad1f6c5bdd4eefed8326711b7dbda9ea45dfd36068c427d332aa382cbe"
 dependencies = [
  "bytemuck",
- "read-fonts 0.22.7",
+ "read-fonts",
 ]
 
 [[package]]
@@ -5942,7 +5892,7 @@ version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbd59f3f359ddd2c95af4758c18270eddd9c730dde98598023cdabff472c2ca2"
 dependencies = [
- "skrifa 0.22.3",
+ "skrifa",
  "yazi",
  "zeno",
 ]
@@ -6530,7 +6480,6 @@ dependencies = [
  "gif",
  "hodaun",
  "hound",
- "httparse",
  "icy_sixel",
  "image",
  "indexmap",
@@ -6538,7 +6487,6 @@ dependencies = [
  "json5",
  "libffi",
  "libloading",
- "lockfree",
  "native-dialog",
  "nokhwa",
  "notify",
@@ -6549,7 +6497,6 @@ dependencies = [
  "parking_lot",
  "paste",
  "pathdiff",
- "plist",
  "png",
  "rand",
  "rawrrr",
@@ -6562,10 +6509,8 @@ dependencies = [
  "rustyline",
  "serde",
  "serde_json",
- "serde_tuple",
  "serde_yaml",
  "simple_excel_writer",
- "skrifa 0.20.0",
  "smallvec",
  "sys-locale",
  "terminal-light",
@@ -6589,21 +6534,18 @@ name = "uiua-editor"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
- "console_error_panic_hook",
  "futures",
  "hound",
  "image",
  "js-sys",
  "leptos",
  "leptos_router",
- "log",
  "serde_json",
  "uiua",
  "unicode-segmentation",
  "urlencoding",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm-logger",
  "web-sys",
 ]
 
@@ -6923,17 +6865,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a05d73b933a847d6cccdda8f838a22ff101ad9bf93e33684f39c1f5f0eece3d"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "wasm-logger"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "074649a66bb306c8f2068c9016395fa65d8e08d2affcbf95acf3c24c3ab19718"
-dependencies = [
- "log",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]

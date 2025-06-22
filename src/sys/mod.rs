@@ -161,6 +161,7 @@ impl fmt::Display for HandleKind {
 }
 
 /// Reference point and offset to seek a position in a stream with
+/// This is used instead of `std::io::SeekFrom` because the latter is more general than what Uiua uses, so using a more specific enum reduces checks elsewhere in the code.
 pub enum StreamSeek {
     /// Seek a position forward from the start of the stream
     Start(usize),

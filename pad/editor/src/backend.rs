@@ -349,6 +349,30 @@ impl SysBackend for WebBackend {
         stream.pos = (end + delim.len()).min(stream.contents.len());
         Ok(data)
     }
+    fn seek(&self, handle: Handle, offset: uiua::StreamSeek) -> Result<(), String> {
+        let mut streams = self.streams.lock().unwrap();
+        let stream = streams.get_mut(&handle).ok_or("Invalid stream handle")?;
+        let size = stream.contents.len();
+        stream.pos = match offset {
+            uiua::StreamSeek::Start(off) => {
+                if off >= size {
+                    Err(format!(
+                        "Tried to seek to {}, but the file is only {} bytes!",
+                        off, size
+                    ))?
+                }
+                off
+            }
+
+            uiua::StreamSeek::End(off) => size.checked_sub(off).ok_or_else(|| {
+                format!(
+                    "Tried to seek {} bytes from file end, but the file is only {} bytes!",
+                    off, size
+                )
+            })?,
+        };
+        Ok(())
+    }
     fn delete(&self, path: &str) -> Result<(), String> {
         FILES.with(|files| files.borrow_mut().remove(Path::new(path)));
         Ok(())

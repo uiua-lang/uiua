@@ -160,6 +160,21 @@ impl fmt::Display for HandleKind {
     }
 }
 
+#[allow(missing_docs)]
+pub enum StreamSeek {
+    Start(usize),
+    End(usize),
+}
+
+impl Into<std::io::SeekFrom> for StreamSeek {
+    fn into(self) -> std::io::SeekFrom {
+        match self {
+            StreamSeek::Start(off) => std::io::SeekFrom::Start(off as u64),
+            StreamSeek::End(off) => std::io::SeekFrom::End(-(off as i64)),
+        }
+    }
+}
+
 #[cfg(feature = "image")]
 pub(crate) type WebcamImage = image::RgbImage;
 #[cfg(not(feature = "image"))]
@@ -299,7 +314,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Writing to streams is not supported in this environment".into())
     }
     /// Go to an absolute file position
-    fn seek(&self, handle: Handle, offset: std::io::SeekFrom) -> Result<(), String> {
+    fn seek(&self, handle: Handle, offset: StreamSeek) -> Result<(), String> {
         Err("Seeking streams is not supported in this environment".into())
     }
     /// Create a file
@@ -865,12 +880,10 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             }
         }
         SysOp::Seek => {
-            use std::io::SeekFrom;
-
             let pos = env.pop(1)?.as_int(env, None)?;
             let pos = match pos {
-                ..0 => SeekFrom::End(pos as i64),
-                0.. => SeekFrom::Start(pos as u64),
+                ..0 => StreamSeek::End((-pos) as usize),
+                0.. => StreamSeek::Start(pos as usize),
             };
             let handle = env.pop(2)?.as_handle(env, None)?;
             env.rt.backend.seek(handle, pos).map_err(|e| env.error(e))?;

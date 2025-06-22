@@ -160,9 +160,11 @@ impl fmt::Display for HandleKind {
     }
 }
 
-#[allow(missing_docs)]
+/// Reference point and offset to seek a position in a stream with
 pub enum StreamSeek {
+    /// Seek a position forward from the start of the stream
     Start(usize),
+    /// Seek a position backward from the end of the stream
     End(usize),
 }
 

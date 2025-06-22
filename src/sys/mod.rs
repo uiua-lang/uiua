@@ -168,9 +168,9 @@ pub enum StreamSeek {
     End(usize),
 }
 
-impl Into<std::io::SeekFrom> for StreamSeek {
-    fn into(self) -> std::io::SeekFrom {
-        match self {
+impl From<StreamSeek> for std::io::SeekFrom {
+    fn from(value: StreamSeek) -> Self {
+        match value {
             StreamSeek::Start(off) => std::io::SeekFrom::Start(off as u64),
             StreamSeek::End(off) => std::io::SeekFrom::End(-(off as i64)),
         }

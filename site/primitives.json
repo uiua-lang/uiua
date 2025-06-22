@@ -261,7 +261,7 @@
     "args": 2,
     "outputs": 0,
     "class": "Stream",
-    "description": "Moves to a absolute position in the file under the stream."
+    "description": "Move to an absolute position in a file stream"
   },
   "&sl": {
     "args": 1,

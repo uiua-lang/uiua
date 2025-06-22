@@ -3743,7 +3743,7 @@ sys_op! {
     ///
     /// If the position is negative, it is an offset from the file end.
     ///
-    /// ex: &rs 5 ⊸&seek 10 &fo "example.txt"
+    /// ex: &rs 4 ⊸&seek 47 &fo "example.txt"
     (2(0), Seek, Stream, "&seek", "seek", Mutating),
     /// Invoke a path with the system's default program
     (1(1), Invoke, Command, "&invk", "invoke", Mutating),

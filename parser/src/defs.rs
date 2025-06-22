@@ -3739,7 +3739,7 @@ sys_op! {
     /// ex: &cl &w "Hello, world!" . &fc "file.txt"
     ///   : &fras "file.txt"
     (2(0), Write, Stream, "&w", "write", Mutating),
-    /// Moves to an absolute position in a file stream
+    /// Move to an absolute position in a file stream
     ///
     /// If the position is negative, it is an offset from the file end.
     ///

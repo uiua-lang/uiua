@@ -2297,7 +2297,7 @@ primitive!(
     /// ex: ⍢(×3|<100)  1
     ///   : ⍢(×3|<100.) 1
     /// The net stack change of the two functions, minus the condition, is called the *composed signature*.
-    /// A composed signature with a positive net stack change is only allowed inside an array.
+    /// A composed signature with a positive net stack change will collect the outputs into an array.
     /// ex: ⍢(⊸×2|≤1000) 10
     /// ex: ⍢(.×2|≤1000) 10
     /// A composed signature with a negative net stack change will reuse values lower on the stack.

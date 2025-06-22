@@ -1,20 +1,13 @@
 name: Build Latest
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "src/**"
-      - "parser/**"
-      - "site/**"
-      - "pad/**"
-      - "tests*/**"
-      - "changelog.md"
-      - "readme.md"
-      - ".github/workflows/build_latest.yml"
-
+  workflow_run:
+    workflows:
+      - Validate
+    types:
+      - completed
+    branches:
+      - main
 env:
   CARGO_TERM_COLOR: always
 
@@ -26,35 +19,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Test the interpreter
-  test_bin:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: target
-        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-        restore-keys: |
-          build-${{ runner.os }}-
-    - name: Run interpreter tests
-      run: cargo test --lib
-  # Test the site
-  test_site:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: target
-        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-        restore-keys: |
-          build-${{ runner.os }}-
-    - name: Run site tests
-      run: cargo test -p site
   # Build the site
   build_site:
-    needs: test_site
+    if: ${{ github.event.workflow_run.conclusion == "success" }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -94,7 +61,7 @@ jobs:
   # Create the release without assets
   create_release:
     name: Create release
-    needs: [test_bin, build_site]
+    needs: [build_site]
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,7 +81,7 @@ jobs:
   # Create the binaries and upload them as release assets
   create_binaries:
     name: Create binary
-    needs: [test_bin, create_release]
+    needs: [create_release]
     runs-on: ${{ matrix.os }}
     env:
       BINARY_EXT: ${{ matrix.os == 'windows-latest' && '.exe' || '' }}

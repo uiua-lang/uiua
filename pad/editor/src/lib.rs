@@ -751,12 +751,13 @@ pub fn Editor<'a>(
                     let (start, end) = get_code_cursor().unwrap();
                     let (start, end) = (start.min(end), start.max(end));
                     // If the selection spans multiple lines, but reaches its final line through only the selection of the newline character, exclude that final line
-                    let offset_end =
-                        if start != end && code.chars().nth(end as usize - 1) == Some('\n') {
-                            end - 1
-                        } else {
-                            end
-                        };
+                    let offset_end = if start != end
+                        && code.chars().nth((end as usize).saturating_sub(1)) == Some('\n')
+                    {
+                        end - 1
+                    } else {
+                        end
+                    };
                     let (start_line, start_col) = line_col(&code, start as usize);
                     let (end_line, end_col) = line_col(&code, offset_end as usize);
 

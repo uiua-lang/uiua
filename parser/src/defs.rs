@@ -3739,7 +3739,11 @@ sys_op! {
     /// ex: &cl &w "Hello, world!" . &fc "file.txt"
     ///   : &fras "file.txt"
     (2(0), Write, Stream, "&w", "write", Mutating),
-    /// Moves to a absolute position in the file under the stream.
+    /// Move to an absolute position in a file stream
+    ///
+    /// If the position is negative, it is an offset from the file end.
+    ///
+    /// ex: &rs 4 ⊸&seek 47 &fo "example.txt"
     (2(0), Seek, Stream, "&seek", "seek", Mutating),
     /// Invoke a path with the system's default program
     (1(1), Invoke, Command, "&invk", "invoke", Mutating),

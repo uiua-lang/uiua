@@ -477,6 +477,24 @@ pub fn Editor<'a>(
         });
     };
 
+    // Remove an # Experimental! comment from the top of the code
+    let remove_experimental = move || {
+        state.update(|state| {
+            let code = get_code();
+            if let Some(new_code) = code.strip_prefix("# Experimental!\n") {
+                let cursor = if let Some((start, end)) = get_code_cursor() {
+                    Cursor::Set(start.saturating_sub(16), end.saturating_sub(16))
+                } else {
+                    Cursor::Ignore
+                };
+                state.set_code(new_code, cursor);
+            }
+            else if code == "# Experimental!" {
+                state.set_code("", Cursor::Set(0, 0));
+            }
+        });
+    };
+
     // Handle key events
     window_event_listener(mousemove, move |event| {
         if let Some(overlay_element) = get_element::<HtmlDivElement>(&overlay_id()) {
@@ -744,6 +762,8 @@ pub fn Editor<'a>(
             "z" if os_ctrl(event) => state.update(|state| state.undo()),
             // Insert # Experimental! comment
             "e" if os_ctrl(event) => insert_experimental(),
+            // Remove # Experimental! comment
+            "E" if os_ctrl(event) => remove_experimental(),
             // Toggle line comment
             "/" | "4" if os_ctrl(event) => {
                 state.update(|state| {

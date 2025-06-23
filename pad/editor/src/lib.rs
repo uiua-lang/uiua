@@ -484,8 +484,7 @@ pub fn Editor<'a>(
                     Cursor::Ignore
                 };
                 state.set_code(new_code, cursor);
-            }
-            else if code == "# Experimental!" {
+            } else if code == "# Experimental!" {
                 state.set_code("", Cursor::Set(0, 0));
             }
         });
@@ -1021,8 +1020,7 @@ pub fn Editor<'a>(
         let code = get_code();
         if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
             remove_experimental();
-        }
-        else {
+        } else {
             insert_experimental();
         }
     };

@@ -460,16 +460,12 @@ pub fn Editor<'a>(
     let insert_experimental = move || {
         state.update(|state| {
             let code = get_code();
-            if code.starts_with("# Experimental!") {
+            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
                 return;
             }
             let new_code = format!("# Experimental!\n{}", code);
             let cursor = if let Some((start, end)) = get_code_cursor() {
-                if start == 0 {
-                    Cursor::Set(16, 16)
-                } else {
-                    Cursor::Set(start + 16, end + 16)
-                }
+                Cursor::Set(start + 16, end + 16)
             } else {
                 Cursor::Ignore
             };
@@ -2385,7 +2381,8 @@ ctrl/⌘ 4       - Toggle multiline string
  shift Delete  - Delete lines
 ctrl/⌘ Z       - Undo
 ctrl/⌘ Y       - Redo
-ctrl/⌘ E       - Insert # Experimental! comment";
+ctrl/⌘ E       - Insert # Experimental! comment
+ctrl/⌘ shift E - Remove # Experimental! comment";
 
 pub fn replace_lang_name() -> bool {
     cfg!(target_arch = "wasm32") && its_called_weewuh()

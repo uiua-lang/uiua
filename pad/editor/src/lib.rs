@@ -1017,12 +1017,20 @@ pub fn Editor<'a>(
         }
     };
 
-    let on_insert_experimental = move |_| insert_experimental();
-    let add_experimental_button = view! {
+    let on_toggle_experimental = move |_| {
+        let code = get_code();
+        if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
+            remove_experimental();
+        }
+        else {
+            insert_experimental();
+        }
+    };
+    let toggle_experimental_button = view! {
         <button
             class="info-button"
-            data-title="Add # Experimental"
-            on:click=on_insert_experimental
+            data-title="Toggle # Experimental"
+            on:click=on_toggle_experimental
         >
             "🧪"
         </button>
@@ -1107,7 +1115,7 @@ pub fn Editor<'a>(
         EditorMode::Showcase | EditorMode::Pad => true,
     });
 
-    let glyph_add_experimental_button = add_experimental_button.clone();
+    let glyph_toggle_experimental_button = toggle_experimental_button.clone();
 
     let glyph_buttons_container = move || {
         show_glyphs.get().then(|| {
@@ -1308,7 +1316,7 @@ pub fn Editor<'a>(
                 .into_view(),
             );
 
-            let experimental_glyph_buttons: Vec<_> = once(glyph_add_experimental_button.clone())
+            let experimental_glyph_buttons: Vec<_> = once(glyph_toggle_experimental_button.clone())
                 .chain(
                     Primitive::non_deprecated()
                         .filter(|prim| prim.is_experimental())
@@ -1969,7 +1977,7 @@ pub fn Editor<'a>(
                     </div>
                     <div id="settings-right">
                         <div style="display: flex; gap: 0.2em;">
-                            {add_experimental_button}
+                            {toggle_experimental_button}
                             <button class="info-button" data-title=EDITOR_SHORTCUTS disabled>
                                 "🛈"
                             </button>

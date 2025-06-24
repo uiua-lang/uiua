@@ -1027,7 +1027,7 @@ pub fn Editor<'a>(
     let toggle_experimental_button = view! {
         <button
             class="info-button"
-            data-title="Toggle # Experimental"
+            data-title="Toggle # Experimental!"
             on:click=on_toggle_experimental
         >
             "🧪"

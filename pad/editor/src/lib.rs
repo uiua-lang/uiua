@@ -755,10 +755,10 @@ pub fn Editor<'a>(
             "z" | "Z" if os_ctrl(event) && event.shift_key() => state.update(|state| state.redo()),
             // Undo
             "z" if os_ctrl(event) => state.update(|state| state.undo()),
+            // Remove # Experimental! comment
+            "e" | "E" if os_ctrl(event) && event.shift_key() => remove_experimental(),
             // Insert # Experimental! comment
             "e" if os_ctrl(event) => insert_experimental(),
-            // Remove # Experimental! comment
-            "E" if os_ctrl(event) => remove_experimental(),
             // Toggle line comment
             "/" | "4" if os_ctrl(event) => {
                 state.update(|state| {

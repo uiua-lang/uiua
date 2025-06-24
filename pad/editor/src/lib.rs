@@ -460,20 +460,33 @@ pub fn Editor<'a>(
     let insert_experimental = move || {
         state.update(|state| {
             let code = get_code();
-            if code.starts_with("# Experimental!") {
+            if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
                 return;
             }
             let new_code = format!("# Experimental!\n{}", code);
             let cursor = if let Some((start, end)) = get_code_cursor() {
-                if start == 0 {
-                    Cursor::Set(16, 16)
-                } else {
-                    Cursor::Set(start + 16, end + 16)
-                }
+                Cursor::Set(start + 16, end + 16)
             } else {
                 Cursor::Ignore
             };
             state.set_code(&new_code, cursor);
+        });
+    };
+
+    // Remove an # Experimental! comment from the top of the code
+    let remove_experimental = move || {
+        state.update(|state| {
+            let code = get_code();
+            if let Some(new_code) = code.strip_prefix("# Experimental!\n") {
+                let cursor = if let Some((start, end)) = get_code_cursor() {
+                    Cursor::Set(start.saturating_sub(16), end.saturating_sub(16))
+                } else {
+                    Cursor::Ignore
+                };
+                state.set_code(new_code, cursor);
+            } else if code == "# Experimental!" {
+                state.set_code("", Cursor::Set(0, 0));
+            }
         });
     };
 
@@ -742,6 +755,8 @@ pub fn Editor<'a>(
             "z" | "Z" if os_ctrl(event) && event.shift_key() => state.update(|state| state.redo()),
             // Undo
             "z" if os_ctrl(event) => state.update(|state| state.undo()),
+            // Remove # Experimental! comment
+            "e" | "E" if os_ctrl(event) && event.shift_key() => remove_experimental(),
             // Insert # Experimental! comment
             "e" if os_ctrl(event) => insert_experimental(),
             // Toggle line comment
@@ -1001,12 +1016,19 @@ pub fn Editor<'a>(
         }
     };
 
-    let on_insert_experimental = move |_| insert_experimental();
-    let add_experimental_button = view! {
+    let on_toggle_experimental = move |_| {
+        let code = get_code();
+        if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
+            remove_experimental();
+        } else {
+            insert_experimental();
+        }
+    };
+    let toggle_experimental_button = view! {
         <button
             class="info-button"
-            data-title="Add # Experimental"
-            on:click=on_insert_experimental
+            data-title="Toggle # Experimental!"
+            on:click=on_toggle_experimental
         >
             "🧪"
         </button>
@@ -1091,7 +1113,7 @@ pub fn Editor<'a>(
         EditorMode::Showcase | EditorMode::Pad => true,
     });
 
-    let glyph_add_experimental_button = add_experimental_button.clone();
+    let glyph_toggle_experimental_button = toggle_experimental_button.clone();
 
     let glyph_buttons_container = move || {
         show_glyphs.get().then(|| {
@@ -1292,7 +1314,7 @@ pub fn Editor<'a>(
                 .into_view(),
             );
 
-            let experimental_glyph_buttons: Vec<_> = once(glyph_add_experimental_button.clone())
+            let experimental_glyph_buttons: Vec<_> = once(glyph_toggle_experimental_button.clone())
                 .chain(
                     Primitive::non_deprecated()
                         .filter(|prim| prim.is_experimental())
@@ -1953,7 +1975,7 @@ pub fn Editor<'a>(
                     </div>
                     <div id="settings-right">
                         <div style="display: flex; gap: 0.2em;">
-                            {add_experimental_button}
+                            {toggle_experimental_button}
                             <button class="info-button" data-title=EDITOR_SHORTCUTS disabled>
                                 "🛈"
                             </button>
@@ -2365,7 +2387,8 @@ ctrl/⌘ 4       - Toggle multiline string
  shift Delete  - Delete lines
 ctrl/⌘ Z       - Undo
 ctrl/⌘ Y       - Redo
-ctrl/⌘ E       - Insert # Experimental! comment";
+ctrl/⌘ E       - Insert # Experimental! comment
+ctrl/⌘ shift E - Remove # Experimental! comment";
 
 pub fn replace_lang_name() -> bool {
     cfg!(target_arch = "wasm32") && its_called_weewuh()

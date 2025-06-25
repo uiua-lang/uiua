@@ -759,40 +759,95 @@ pub fn Editor<'a>(
             "e" | "E" if os_ctrl(event) && event.shift_key() => remove_experimental(),
             // Insert # Experimental! comment
             "e" if os_ctrl(event) => insert_experimental(),
-            // Toggle line comment
+            // Toggle line comment or multiline string
             "/" | "4" if os_ctrl(event) => {
                 state.update(|state| {
                     let code = get_code();
                     let (start, end) = get_code_cursor().unwrap();
                     let (start, end) = (start.min(end), start.max(end));
-                    let (start_line, _) = line_col(&code, start as usize);
-                    let (end_line, _) = line_col(&code, end as usize);
+                    // If the selection spans multiple lines, but reaches its final line through only the selection of the newline character, exclude that final line
+                    let offset_end = if start != end
+                        && code.chars().nth((end as usize).saturating_sub(1)) == Some('\n')
+                    {
+                        end - 1
+                    } else {
+                        end
+                    };
+                    let (start_line, start_col) = line_col(&code, start as usize);
+                    let (end_line, end_col) = line_col(&code, offset_end as usize);
+
                     let mut lines: Vec<String> = code.split('\n').map(Into::into).collect();
                     let range = &mut lines[start_line - 1..end_line];
-                    let prefix = if key == "/" { '#' } else { '$' };
-                    if range.iter().all(|line| line.trim().starts_with(prefix)) {
+                    let comment = key == "/";
+                    let prefix = if comment { '#' } else { '$' };
+
+                    // How much to offset the ends of the selection by to account for the change in the number of characters
+                    let mut start_diff = 0;
+                    let mut end_diff = 0;
+
+                    let last_index = range.len() - 1;
+                    if range
+                        .iter()
+                        .map(|line| line.trim())
+                        .all(|line| (comment && line.is_empty()) || line.starts_with(prefix))
+                    {
                         // Toggle comments off
-                        for line in range {
+                        for (i, line) in range.iter_mut().enumerate() {
+                            let old_len = line.len() as i32;
                             let space_count = line.chars().take_while(|c| *c == ' ').count();
                             *line = repeat_n(' ', space_count)
-                                .chain(
-                                    line.trim()
-                                        .trim_start_matches(prefix)
-                                        .trim_start_matches(' ')
-                                        .chars(),
-                                )
+                                .chain({
+                                    let line_ = line.trim().trim_start_matches(prefix);
+                                    line_.strip_prefix(' ').unwrap_or(line_).chars()
+                                })
                                 .collect();
+
+                            if i == 0 {
+                                start_diff -= (old_len - line.len() as i32)
+                                    .min(start_col.saturating_sub(space_count + 1) as i32);
+                            }
+
+                            let mut this_end_diff = old_len - line.len() as i32;
+                            if i == last_index {
+                                this_end_diff = this_end_diff
+                                    .min(end_col.saturating_sub(space_count + 1) as i32);
+                            }
+                            end_diff -= this_end_diff;
                         }
                     } else {
                         // Toggle comments on
-                        for line in range {
-                            let spot = line.chars().take_while(|c| " \t".contains(*c)).count();
+                        let spot = range
+                            .iter()
+                            // Skip blank lines when commenting
+                            .filter(|line| !comment || !line.trim().is_empty())
+                            .map(|line| line.chars().take_while(|c| " \t".contains(*c)).count())
+                            .min()
+                            .unwrap_or(0);
+                        for (i, line) in range
+                            .iter_mut()
+                            .enumerate()
+                            .filter(|(_, line)| !comment || !line.trim().is_empty())
+                        {
                             line.insert(spot, ' ');
                             line.insert(spot, prefix);
+
+                            if i == 0 && start_col > spot {
+                                start_diff += 2
+                            }
+
+                            if i != last_index || end_col > spot {
+                                end_diff += 2;
+                            }
                         }
                     }
                     let new_code = lines.join("\n");
-                    state.set_code(&new_code, Cursor::Set(start, end));
+                    state.set_code(
+                        &new_code,
+                        Cursor::Set(
+                            (start as i32 + start_diff) as u32,
+                            (end as i32 + end_diff) as u32,
+                        ),
+                    );
                 });
             }
             // Handle double quote delimiters

@@ -1531,6 +1531,8 @@ impl Compiler {
         for (local, comp) in path_locals.into_iter().zip(&r.path) {
             (self.code_meta.global_references).insert(comp.module.span.clone(), local.index);
         }
+        let binfo = &mut self.asm.bindings.make_mut()[local.index];
+        binfo.used = true;
         // Handle recursion depth
         self.comptime_depth += 1;
         if self.comptime_depth > MAX_COMPTIME_DEPTH {

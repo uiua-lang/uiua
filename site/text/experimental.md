@@ -4,7 +4,7 @@
 
 ### Data Functions
 
-If the fields of a data definition are immediately follwed by some code, the data definition becomes a *data function*. Data functions have a `Call` function defined which is invoked instead of the normal `New` constructor when the data definition's name is used as a function.
+If the fields of a data definition are immediately followed by some code, the data definition becomes a *data function*. Data functions have a `Call` function defined which is invoked instead of the normal `New` constructor when the data definition's name is used as a function.
 
 The normal constructor is called, then the constructed data is passed to the function.
 

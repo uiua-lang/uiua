@@ -67,7 +67,7 @@ Shape!(⊃(Area|Format) Circle 4)
 Shape!(⊃(Area|Format) Rectangle 3 5)
 ```
 
-## [`backward ˜`] Stabilization
+## [`backward ˜`](https://www.uiua.org/docs/backward) Stabilization
 
 The [`backward ˜`](https://www.uiua.org/docs/backward) modifier has been stabilized. [`backward ˜`](https://www.uiua.org/docs/backward) [`flip :`](https://www.uiua.org/docs/flip)s the arguments of its function.
 

@@ -688,6 +688,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     Value::Byte(_) => u8::alignment(),
                     Value::Complex(_) => Complex::alignment(),
                     Value::Char(_) => char::alignment(),
+                    Value::Rational(_) => todo!(),
                     Value::Box(_) => Boxed::alignment(),
                 });
                 let metagrid = metagrid.get_or_insert_with(Metagrid::new);
@@ -704,6 +705,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         Value::Byte(_) => shape_row::<u8>(&keys_row_shape),
                         Value::Complex(_) => shape_row::<Complex>(&keys_row_shape),
                         Value::Char(_) => shape_row::<char>(&keys_row_shape),
+                        Value::Rational(_) => todo!(),
                         Value::Box(_) => shape_row::<Boxed>(&keys_row_shape),
                     };
                     row.extend([' ', '→', ' ']);
@@ -1073,6 +1075,7 @@ impl<T: ArrayValue> Array<T> {
                 Value::Byte(_) => shape_row::<u8>(&keys_shape),
                 Value::Complex(_) => shape_row::<Complex>(&keys_shape),
                 Value::Char(_) => shape_row::<char>(&keys_shape),
+                Value::Rational(_) => todo!(),
                 Value::Box(_) => shape_row::<Boxed>(&keys_shape),
             }
             .into_iter()

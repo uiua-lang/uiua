@@ -206,6 +206,7 @@ impl Value {
             Self::Byte(_) => "number",
             Self::Complex(_) => "complex",
             Self::Char(_) => "character",
+            Value::Rational(_) => todo!(),
             Self::Box(_) => "box",
         }
     }
@@ -216,6 +217,7 @@ impl Value {
             Self::Byte(_) => "numbers",
             Self::Complex(_) => "complexes",
             Self::Char(_) => "characters",
+            Value::Rational(_) => todo!(),
             Self::Box(_) => "boxes",
         }
     }
@@ -243,6 +245,7 @@ impl Value {
             Self::Char(_) => (env.scalar_fill().map(|fv| fv.value))
                 .unwrap_or_else(|_| char::proxy())
                 .into(),
+            Value::Rational(_) => todo!(),
             Self::Box(_) => (env.scalar_fill().map(|fv| fv.value))
                 .unwrap_or_else(|_| Boxed::proxy())
                 .into(),
@@ -295,6 +298,7 @@ impl Value {
                 ),
             )
             .into(),
+            Value::Rational(_) => todo!(),
             Self::Box(_) => Array::new(
                 shape,
                 CowSlice::from_elem(
@@ -317,6 +321,7 @@ impl Value {
                 .map(|fv| fv.value)
                 .map(Into::into),
             Value::Char(_) => env.array_fill::<char>().map(|fv| fv.value).map(Into::into),
+            Value::Rational(_) => todo!(),
             Value::Box(_) => env.array_fill::<Boxed>().map(|fv| fv.value).map(Into::into),
         }
     }
@@ -337,6 +342,7 @@ impl Value {
             Self::Byte(_) => size_of::<u8>(),
             Self::Complex(_) => size_of::<Complex>(),
             Self::Char(_) => size_of::<char>(),
+            Value::Rational(_) => todo!(),
             Self::Box(_) => size_of::<Boxed>(),
         }
     }
@@ -463,6 +469,7 @@ impl Value {
             Self::Byte(array) => b(array),
             Self::Complex(array) => co(array),
             Self::Char(array) => ch(array),
+            Value::Rational(_) => todo!(),
             Self::Box(array) => {
                 if let Some(Boxed(value)) = array.as_scalar_mut() {
                     value.generic_mut_deep(n, b, co, ch, f)
@@ -1483,6 +1490,7 @@ impl Value {
             Value::Byte(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Complex(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Char(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
+            Value::Rational(_) => todo!(),
             Value::Box(arr) => arr,
         }
     }
@@ -1499,6 +1507,7 @@ impl Value {
             Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Complex(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
+            Value::Rational(_) => todo!(),
             Value::Box(arr) => Cow::Borrowed(arr),
         }
     }
@@ -2368,6 +2377,8 @@ impl Ord for Value {
             (_, Value::Complex(_)) => Ordering::Greater,
             (Value::Char(_), _) => Ordering::Less,
             (_, Value::Char(_)) => Ordering::Greater,
+            (Value::Rational(_), _) => todo!(),
+            (_, Value::Rational(_)) => todo!(),
         }
     }
 }

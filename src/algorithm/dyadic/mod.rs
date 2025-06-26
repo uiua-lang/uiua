@@ -530,6 +530,7 @@ impl Value {
                 Value::Byte(a) => a.convert::<f64>().keep_scalar_real(counts[0], env)?.into(),
                 Value::Complex(a) => a.keep_scalar_real(counts[0], env)?.into(),
                 Value::Char(a) => a.keep_scalar_real(counts[0], env)?.into(),
+                Value::Rational(_) => todo!(),
                 Value::Box(a) => a.keep_scalar_real(counts[0], env)?.into(),
             }
         } else {
@@ -551,6 +552,7 @@ impl Value {
                 Value::Byte(a) => a.convert::<f64>().keep_scalar_real(count, env)?.into(),
                 Value::Complex(a) => a.keep_scalar_real(count, env)?.into(),
                 Value::Char(a) => a.keep_scalar_real(count, env)?.into(),
+                Value::Rational(_) => todo!(),
                 Value::Box(a) => a.keep_scalar_real(count, env)?.into(),
             }
         } else {
@@ -1076,6 +1078,7 @@ impl Value {
                     rot.rotate_depth(val, 0, forward, env)?;
                 }
             }
+            Value::Rational(_) => todo!(),
             Value::Box(a) => a.rotate_depth(by_ints()?, depth, forward, env)?,
         }
         rotated.meta.take_sorted_flags();
@@ -2155,6 +2158,7 @@ impl Value {
                 let whole = Array::new(arr.shape.clone(), arr.data);
                 (frac.into(), whole.into())
             }
+            Value::Rational(_) => todo!(),
             Value::Box(arr) => {
                 let mut whole_data = EcoVec::with_capacity(arr.element_count());
                 let mut frac_data = EcoVec::with_capacity(arr.element_count());
@@ -2215,6 +2219,8 @@ impl Value {
                 let abs = Array::new(arr.shape.clone(), abs_data);
                 (arr.into(), abs.into())
             }
+
+            Value::Rational(_) => todo!(),
             Value::Box(arr) => {
                 let mut sign_data = EcoVec::with_capacity(arr.element_count());
                 let mut mag_data = EcoVec::with_capacity(arr.element_count());

@@ -220,6 +220,7 @@ impl Value {
                                     Value::Byte(b) => sheet_row.add_cell(b.data[0] as f64),
                                     Value::Char(c) => sheet_row.add_cell(c.data[0].to_string()),
                                     Value::Complex(c) => sheet_row.add_cell(c.data[0].to_string()),
+                                    Value::Rational(_) => todo!(),
                                     Value::Box(b) => {
                                         let Boxed(b) = &b.data[0];
                                         if b.row_count() == 0 {
@@ -688,6 +689,7 @@ impl Value {
                     bytes.extend(im.to_le_bytes());
                 }
             }
+            Value::Rational(_) => todo!(),
         }
         Ok(())
     }

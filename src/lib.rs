@@ -161,6 +161,7 @@ mod impl_prim;
 pub mod lsp;
 #[doc(hidden)]
 pub mod profile;
+mod rational;
 mod run;
 mod run_prim;
 mod shape;

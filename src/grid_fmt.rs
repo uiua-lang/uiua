@@ -8,6 +8,7 @@ use std::{
 };
 
 use ecow::EcoString;
+use num::BigRational;
 
 use crate::{
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
@@ -392,6 +393,18 @@ impl GridFmt for Complex {
     }
 }
 
+impl GridFmt for BigRational {
+    fn fmt_grid(&self, params: GridFmtParams) -> Grid {
+        todo!()
+    }
+    fn empty_list_inner() -> &'static str {
+        todo!()
+    }
+    fn summarize(elems: &[Self]) -> String {
+        todo!()
+    }
+}
+
 impl GridFmt for Value {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         if params.depth > 100 {
@@ -402,6 +415,7 @@ impl GridFmt for Value {
             Value::Byte(b) => b.fmt_grid(params),
             Value::Complex(c) => c.fmt_grid(params),
             Value::Char(c) => c.fmt_grid(params),
+            Value::Rational(r) => r.fmt_grid(params),
             Value::Box(v) => {
                 let max_boxed_rank = v.data.iter().map(|Boxed(v)| v.rank()).max().unwrap_or(0);
                 v.fmt_grid(GridFmtParams {

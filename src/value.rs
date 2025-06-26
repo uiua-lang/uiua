@@ -34,6 +34,8 @@ pub enum Value {
     Complex(Array<Complex>),
     /// Common character array
     Char(Array<char>),
+    /// Common big rational array
+    Rational(Array<num::BigRational>),
     /// Common box array
     Box(Array<Boxed>),
 }

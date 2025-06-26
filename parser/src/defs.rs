@@ -483,7 +483,7 @@ primitive!(
     /// ex: °∠ π
     /// ex: °∠ π/3
     /// This means it can be combined with [divide] to get the tangent.
-    /// ex: ÷°∠ η/2
+    /// ex: ˜÷°∠ π/3
     (2, Atan, DyadicPervasive, ("atangent", '∠')),
     /// Make a complex number
     ///
@@ -2522,7 +2522,7 @@ primitive!(
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
     ///
-    /// For spawn threads in a thread pool, use [pool].
+    /// To spawn threads in a thread pool, use [pool].
     ([1], Spawn, Thread, "spawn", Impure),
     /// Spawn a thread in a thread pool
     ///

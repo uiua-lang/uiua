@@ -89,7 +89,7 @@ If we have several arrays and want to choose which ones are fixed and which are 
 
 ## Sided [rows]()
 
-Needing [fix]() or `dipfix` with [rows]() is extremely common. However, it can be a bit odd to read when you [fix]()ing is detatched from the [rows]() itself.
+Needing [fix]() or `dipfix` with [rows]() is extremely common. However, it can be a bit odd to read when your [fix]()ing is detatched from the [rows]() itself.
 
 For this reason, [rows]() supports *sided* subscripts. This syntax allows you to specify a "side" for a modifier or function.
 

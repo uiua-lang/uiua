@@ -9,7 +9,6 @@ use std::{
 
 use bitflags::bitflags;
 use ecow::{EcoString, EcoVec};
-use num::BigRational;
 use rayon::prelude::*;
 use serde::{de::DeserializeOwned, *};
 
@@ -21,6 +20,7 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     fill::{Fill, FillValue},
     grid_fmt::GridFmt,
+    rational::Rational,
     Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Value, WILDCARD_CHAR, WILDCARD_NAN,
 };
 
@@ -1173,23 +1173,21 @@ impl ArrayValue for Complex {
     }
 }
 
-impl ArrayValue for BigRational {
+impl ArrayValue for Rational {
     const NAME: &'static str = "rational";
     const SYMBOL: char = 'ℚ';
     const TYPE_ID: u8 = 4;
     fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
-        fill.complex_scalar()
+        todo!()
     }
     fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
-        fill.complex_array()
+        todo!()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
-        for n in [self.re, self.im] {
-            n.array_hash(hasher);
-        }
+        todo!()
     }
     fn proxy() -> Self {
-        Complex::new(0.0, 0.0)
+        todo!()
     }
 }
 
@@ -1216,28 +1214,6 @@ impl RealArrayValue for u8 {
     }
     fn to_f64(&self) -> f64 {
         *self as f64
-    }
-}
-
-impl RealArrayValue for BigRational {
-    fn is_int(&self) -> bool {
-        self.denom.len() == 1 && self.denom[0] == 1
-    }
-
-    fn to_f64(&self) -> f64 {
-        let num = self
-            .numer
-            .iter()
-            .enumerate()
-            .map(|(i, n)| n as f64 * u8::MAX.pow(i) as f64)
-            .sum();
-        let den = self
-            .denom
-            .iter()
-            .enumerate()
-            .map(|(i, n)| n as f64 * u8::MAX.pow(i) as f64)
-            .sum();
-        num / den
     }
 }
 
@@ -1297,7 +1273,7 @@ impl ArrayCmp for Boxed {
     }
 }
 
-impl ArrayCmp for BigRational {
+impl ArrayCmp for Rational {
     fn array_cmp(&self, other: &Self) -> Ordering {
         todo!()
     }
@@ -1499,20 +1475,20 @@ impl ArrayValueSer for f64 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum BigRatCollection {
     #[serde(rename = "empty_rat")]
-    Empty([BigRational; 0]),
+    Empty([Rational; 0]),
     #[serde(untagged)]
-    List(CowSlice<BigRational>),
+    List(CowSlice<Rational>),
 }
 
-impl ArrayValueSer for BigRational {
-    type Scalar = BigRational;
+impl ArrayValueSer for Rational {
+    type Scalar = Rational;
     type Collection = BigRatCollection;
     fn make_collection(data: CowSlice<Self>) -> Self::Collection {
-        data.iter().map(|&n| n.into()).collect()
+        todo!()
     }
 
     fn make_data(collection: Self::Collection) -> CowSlice<Self> {
-        collection.into_iter().map(f64::from).collect()
+        todo!()
     }
 }
 

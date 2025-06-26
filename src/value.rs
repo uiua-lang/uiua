@@ -16,6 +16,7 @@ use crate::{
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
+    rational::Rational,
     Boxed, Complex, Shape, Uiua, UiuaResult,
 };
 
@@ -35,7 +36,7 @@ pub enum Value {
     /// Common character array
     Char(Array<char>),
     /// Common big rational array
-    Rational(Array<num::BigRational>),
+    Rational(Array<Rational>),
     /// Common box array
     Box(Array<Boxed>),
 }
@@ -66,6 +67,7 @@ macro_rules! val_as_arr {
             Value::Byte($arr) => $body,
             Value::Complex($arr) => $body,
             Value::Char($arr) => $body,
+            Value::Rational($arr) => $body,
             Value::Box($arr) => $body,
         }
     };
@@ -75,6 +77,7 @@ macro_rules! val_as_arr {
             Value::Byte(arr) => $f(arr),
             Value::Complex(arr) => $f(arr),
             Value::Char(arr) => $f(arr),
+            Value::Rational(arr) => $f(arr),
             Value::Box(arr) => $f(arr),
         }
     };
@@ -84,6 +87,7 @@ macro_rules! val_as_arr {
             Value::Byte(arr) => $f(arr, $env),
             Value::Complex(arr) => $f(arr, $env),
             Value::Char(arr) => $f(arr, $env),
+            Value::Rational(arr) => $f(arr, $env),
             Value::Box(arr) => $f(arr, $env),
         }
     };
@@ -105,6 +109,7 @@ impl Value {
             Self::Byte(_) => u8::TYPE_ID,
             Self::Complex(_) => Complex::TYPE_ID,
             Self::Char(_) => char::TYPE_ID,
+            Self::Rational(_) => Rational::TYPE_ID,
             Self::Box(_) => Boxed::TYPE_ID,
         }
     }
@@ -1647,6 +1652,7 @@ value_from!(u8, Byte);
 value_from!(char, Char);
 value_from!(Boxed, Box);
 value_from!(Complex, Complex);
+value_from!(Rational, Rational);
 
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {

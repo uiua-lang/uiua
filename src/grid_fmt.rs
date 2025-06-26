@@ -8,12 +8,12 @@ use std::{
 };
 
 use ecow::EcoString;
-use num::BigRational;
 
 use crate::{
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
+    rational::Rational,
     terminal_size, val_as_arr,
     value::Value,
     Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
@@ -393,7 +393,7 @@ impl GridFmt for Complex {
     }
 }
 
-impl GridFmt for BigRational {
+impl GridFmt for Rational {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         todo!()
     }

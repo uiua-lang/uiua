@@ -332,6 +332,8 @@ fn derive_shape(
 impl Value {
     /// Apply the given shape to the array by either tiling or filling
     pub fn undo_shape(&mut self, shape: &Value, env: &Uiua) -> UiuaResult {
+        self.match_fill(env);
+
         let axes_input = shape.as_ints_or_infs(env, "Shape should be integers or infinity")?;
         let mut reversed_axes = SmallVec::<[_; 32]>::new();
         let rank_shift = self.shape.len() as isize - axes_input.len() as isize;
@@ -372,6 +374,11 @@ impl<T: ArrayValue> Array<T> {
             return Ok(());
         }
 
+        if shape.elements() == 0 {
+            *self = Array::new(shape, []);
+            return Ok(());
+        }
+
         let rank_surplus = self.rank() as isize - shape.len() as isize;
         match rank_surplus.cmp(&0) {
             // Rank is too high, take the first row repeatedly
@@ -401,10 +408,13 @@ impl<T: ArrayValue> Array<T> {
             self.reverse_depth(ax);
         }
 
-        if env.scalar_fill::<T>().is_ok() {
-            let dims: EcoVec<_> = shape.iter().map(|v| Ok(*v as isize)).collect();
-            *self = self.clone().take(&dims, env)?;
-        } else {
+        if let Err(e) = env.array_fill::<T>() {
+            // The case where the target shape is empty is handled at the start of the function
+            if self.shape.elements() == 0 {
+                return Err(env.error(format!(
+                    "Cannot set non-empty shape of empty array without a fill value{e}"
+                )));
+            }
             let ishape: EcoVec<_> = shape.iter().map(|v| *v as isize).collect();
             let range_data: EcoVec<_> = match super::monadic::range(&ishape, 0, env)? {
                 Ok(a) => a.iter().map(|v| *v as isize).collect(),
@@ -426,6 +436,9 @@ impl<T: ArrayValue> Array<T> {
                 })
                 .collect();
             *self = Array::new(shape, data);
+        } else {
+            let dims: EcoVec<_> = shape.iter().map(|v| Ok(*v as isize)).collect();
+            *self = self.clone().take(&dims, env)?;
         }
 
         for ax in reversed_axes {

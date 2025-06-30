@@ -20,6 +20,7 @@ impl Value {
             Value::Byte(_) => ScalarType::Real,
             Value::Complex(_) => ScalarType::Complex,
             Value::Char(_) => ScalarType::Char,
+            Value::Rational(_) => todo!(),
             Value::Box(arr) => ScalarType::Box(if arr.data.is_empty() {
                 None
             } else if (arr.data.windows(2)).all(|w| w[0].0.row_ty() == w[1].0.row_ty()) {

@@ -20,6 +20,7 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     fill::{Fill, FillValue},
     grid_fmt::GridFmt,
+    rational::Rational,
     Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Value, WILDCARD_CHAR, WILDCARD_NAN,
 };
 
@@ -1172,6 +1173,24 @@ impl ArrayValue for Complex {
     }
 }
 
+impl ArrayValue for Rational {
+    const NAME: &'static str = "rational";
+    const SYMBOL: char = 'ℚ';
+    const TYPE_ID: u8 = 4;
+    fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
+        todo!()
+    }
+    fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
+        todo!()
+    }
+    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
+        todo!()
+    }
+    fn proxy() -> Self {
+        todo!()
+    }
+}
+
 /// Trait for [`ArrayValue`]s that are real numbers
 pub trait RealArrayValue: ArrayValue + Copy {
     /// Whether the value is an integer
@@ -1251,6 +1270,12 @@ impl ArrayCmp for char {
 impl ArrayCmp for Boxed {
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.cmp(other)
+    }
+}
+
+impl ArrayCmp for Rational {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        todo!()
     }
 }
 
@@ -1444,6 +1469,26 @@ impl ArrayValueSer for f64 {
     }
     fn make_data(collection: Self::Collection) -> CowSlice<Self> {
         collection.into_iter().map(f64::from).collect()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum BigRatCollection {
+    #[serde(rename = "empty_rat")]
+    Empty([Rational; 0]),
+    #[serde(untagged)]
+    List(CowSlice<Rational>),
+}
+
+impl ArrayValueSer for Rational {
+    type Scalar = Rational;
+    type Collection = BigRatCollection;
+    fn make_collection(data: CowSlice<Self>) -> Self::Collection {
+        todo!()
+    }
+
+    fn make_data(collection: Self::Collection) -> CowSlice<Self> {
+        todo!()
     }
 }
 

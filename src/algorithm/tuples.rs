@@ -296,6 +296,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                 Value::Byte(a) => inner(a, k, f, is_scalar, scalar, env)?,
                 Value::Complex(a) => inner(a, k, f, is_scalar, scalar, env)?,
                 Value::Char(a) => inner(a, k, f, is_scalar, scalar, env)?,
+                Value::Rational(_) => todo!(),
                 Value::Box(a) => inner(a, k, f, is_scalar, scalar, env)?,
             };
         }

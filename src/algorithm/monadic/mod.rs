@@ -934,6 +934,7 @@ impl Value {
             Value::Byte(b) => b.transpose_depth(depth, amnt),
             Value::Complex(c) => c.transpose_depth(depth, amnt),
             Value::Char(c) => c.transpose_depth(depth, amnt),
+            Value::Rational(_) => todo!(),
             Value::Box(b) => {
                 if depth == b.rank() {
                     for b in b.data.as_mut_slice() {
@@ -952,6 +953,7 @@ impl Value {
             Value::Byte(b) => b.retropose_depth(depth),
             Value::Complex(c) => c.retropose_depth(depth),
             Value::Char(c) => c.retropose_depth(depth),
+            Value::Rational(_) => todo!(),
             Value::Box(b) => {
                 if depth == b.rank() {
                     for b in b.data.as_mut_slice() {
@@ -1139,6 +1141,7 @@ impl Value {
             Value::Byte(arr) => arr.data.iter().all(|&b| b == 1),
             Value::Char(_) => false,
             Value::Box(arr) => arr.data.iter().all(|Boxed(val)| val.all_true()),
+            Value::Rational(_) => todo!(),
             Value::Complex(arr) => arr.data.iter().all(|&c| c.re == 1.0 && c.im == 1.0),
         }
     }
@@ -2189,6 +2192,7 @@ impl Value {
                         c => c.grid_string(false),
                     }
                 }
+                Value::Rational(_) => todo!(),
                 Value::Box(arr) => format!("□{}", arr.data[0].0.representation()),
             },
             1 => match self {

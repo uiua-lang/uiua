@@ -1297,7 +1297,7 @@ impl Parser<'_> {
                     .filter(|n| !n.value.1.contains(['.', '∞']))
                     .map(Into::into)
                 {
-                    let mut n = numer.map_with(denom, |n, d| n / d, |n, d| n / d);
+                    let n = numer.map_with(denom, |n, d| n / d, |n, d| n / d);
                     s.push('/');
                     s.push_str(&ds);
                     if s.contains('¯') {
@@ -1383,9 +1383,16 @@ impl Parser<'_> {
         } else if let Some((r, span)) = self.real().map(Into::into) {
             let s = &self.input[span.byte_range()];
             let s = match &r {
-                Ok(_) if s.contains(['e', 'E']) => s.into(),
+                Ok(_) if s.contains(['e', 'E']) => {
+                    if s.contains('`') {
+                        s.replace('`', "¯")
+                    } else {
+                        s.into()
+                    }
+                }
                 Ok(_) if s.contains('.') && s.ends_with('0') => s.into(),
                 Ok(n) => n.to_string().replace('-', "¯"),
+                Err(_) if s.contains('`') => s.replace('`', "¯"),
                 Err(_) => s.into(),
             };
             (r, s, Some(span))

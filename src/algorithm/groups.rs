@@ -421,7 +421,7 @@ pub fn undo_partition_part1(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let [f] = get_ops(ops, env)?;
     let sig = f.sig;
-    if sig != (1, 1) {
+    if sig != (1, 1) && sig != (0, 0) {
         return Err(env.error(format!(
             "Cannot undo {} on function with signature {sig}",
             Primitive::Partition.format()
@@ -661,7 +661,7 @@ pub fn undo_group_part1(ops: Ops, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let [f] = get_ops(ops, env)?;
     let sig = f.sig;
-    if sig != (1, 1) {
+    if sig != (1, 1) && sig != (0, 0) {
         return Err(env.error(format!(
             "Cannot undo {} on function with signature {sig}",
             Primitive::Group.format()

@@ -34,15 +34,11 @@ rayon = "1.9.0"
 regex = "1.10.3"
 serde = {version = "1", features = ["derive", "rc"]}
 serde_json = "1"
-serde_tuple = "0.5.0"
 smallvec = {version = "1.9", features = ["serde", "union", "const_new"]}
 thread_local = "1"
 threadpool = "1.8.1"
 time = {version = "0.3.36", features = ["local-offset"]}
 unicode-segmentation = "1.10"
-
-# Native dependencies
-httparse = {version = "1.8.0", optional = true}
 open = {version = "5", optional = true}
 rawrrr = {version = "0.2.1", optional = true}
 rustls = {version = "0.23.2", optional = true, default-features = false, features = [
@@ -51,13 +47,12 @@ rustls = {version = "0.23.2", optional = true, default-features = false, feature
   "ring",
 ]}
 terminal_size = {version = "0.3.0", optional = true}
-trash = {version = "4.0.0", optional = true}
+trash = {version = "5.2.2", optional = true}
 viuer = {version = "0.9", optional = true}
 webpki-roots = {version = "0.26.0", optional = true}
 
 # Native audio dependencies
 hodaun = {version = "0.4.1", optional = true, features = ["output", "wav"]}
-lockfree = {version = "0.5.1", optional = true}
 
 # Binary dependencies
 clap = {version = "4", optional = true, features = ["derive"]}
@@ -75,7 +70,7 @@ serde_yaml = {version = "0.9.33", optional = true}
 
 # Feature dependencies
 arboard = {version = "3", optional = true}
-calamine = {version = "0.26.1", optional = true}
+calamine = {version = "0.28.0", optional = true}
 color_quant = {version = "1.1", optional = true}
 cosmic-text = {version = "0.12.1", optional = true}
 csv = {version = "1", optional = true}
@@ -87,12 +82,10 @@ libffi = {version = "4", optional = true}
 libloading = {version = "0.8.3", optional = true}
 nokhwa = {version = "0.10.7", optional = true, features = ["input-native"]}
 num-complex = {version = ">=0.4.1", optional = true, default-features = false, features = ["bytemuck"]}
-plist = {version = "1.7.1", optional = true}
 png = {version = "0.17.16", optional = true}
 rustfft = {version = "6.2.0", optional = true}
 rustls-pemfile = {version = "2.1.2", optional = true}
 simple_excel_writer = {version = "0.2.0", optional = true}
-skrifa = {version = "0.20.0", optional = true}
 sys-locale = {version = "0.3.1", optional = true}
 
 # Web-only dependencies
@@ -107,7 +100,7 @@ rmp-serde = {version = "1.3.0", optional = true}
 
 [features]
 apng = ["dep:png"]
-audio = ["hodaun", "lockfree", "audio_encode"]
+audio = ["hodaun", "audio_encode"]
 audio_encode = ["hound"]
 batteries = [
   "gif",
@@ -151,7 +144,7 @@ default = [
 ]
 ffi = ["libffi", "libloading"]
 fft = ["rustfft", "num-complex"]
-font_shaping = ["cosmic-text", "sys-locale", "skrifa"]
+font_shaping = ["cosmic-text", "sys-locale"]
 full = ["audio", "webcam", "window"] # Enables all optional features
 gif = ["dep:gif", "image", "color_quant"]
 invoke = ["open"]
@@ -162,11 +155,11 @@ profile = ["serde_yaml"]
 raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]
 terminal_image = ["viuer", "image", "icy_sixel"]
-tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
+tls = [ "rustls", "webpki-roots", "rustls-pemfile"]
 web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "nokhwa"]
 window = ["eframe", "rmp-serde", "image", "native-dialog"]
-xlsx = ["calamine", "simple_excel_writer", "plist"]
+xlsx = ["calamine", "simple_excel_writer"]
 # Use system static libraries instead of building them
 system = ["libffi?/system"]
 

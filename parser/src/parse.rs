@@ -1310,10 +1310,6 @@ impl Parser<'_> {
                         }
                     }
                     span.merge_with(dspan);
-                    if s == "22/7" {
-                        // Hehe
-                        n = PI.into();
-                    }
                     return Some(span.sp((n, s)));
                 } else {
                     self.index = reset;

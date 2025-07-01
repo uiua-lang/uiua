@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-leptos = { version = "0.6.10", features = ["csr"] }
+leptos = { version = "0.8.2", features = ["csr"] }
 js-sys = "0.3.69"
 web-sys = { version = "0.3.70", features = [
     "Window",

@@ -12,7 +12,7 @@ getrandom = {version = "0.2", features = ["js"]}
 hound = "3.5.1"
 image = "0.25"
 js-sys = "0.3"
-leptos = "0.6.11"
+leptos = "0.8.2"
 leptos_meta = {version = "0.6.11", features = ["csr"]}
 leptos_router = {version = "0.6.11", features = ["csr"]}
 pathdiff = "0.2.1"

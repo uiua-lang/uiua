@@ -324,6 +324,7 @@ X ← ⚂
 ⍤⤙≍ {"Hello" "World!"} {⍜∩⊜□∘ ∩(≠@l.) "Hello" "World!"}
 ⍤⤙≍ ⤙⍜⊜□∘ [1] "a"
 ⍤⤙≍ ⤙⍜⊜□∘ [] ""
+⍤⤙≍ {"Hey" @  "buddy"} ⍜⊜⌅□∘⊸≠@ "Hey buddy"
 
 # Group
 ⍤⤙≍ "sdrow emo sera esehT" ⍜⊕□≡⍜°□⇌ ≠@ . $ These are some words

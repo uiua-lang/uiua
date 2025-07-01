@@ -1998,12 +1998,6 @@ macro_rules! value_dy_impl {
                         val
                     },)*)*
                     (Value::Box(a), Value::Box(b)) => {
-                        let (a, b) = match (a.into_unboxed(), b.into_unboxed()) {
-                            (Ok(a), Ok(b)) => return Ok(Boxed(Value::$name(a, b, env)?).into()),
-                            (Ok(a), Err(b)) => (a.coerce_as_boxes().into_owned(), b),
-                            (Err(a), Ok(b)) => (a, b.coerce_as_boxes().into_owned()),
-                            (Err(a), Err(b)) => (a, b),
-                        };
                         let mut val: Value = bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
                             Ok(Boxed(Value::$name(a.0, b.0, env)?))
                         }))?.into();

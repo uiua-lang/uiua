@@ -517,8 +517,12 @@ impl<T: ArrayValue> Array<T> {
         }
         Ok(Array::new(shape, data))
     }
-    fn permute_all(self, k: usize, reps: usize, env: &Uiua) -> UiuaResult<Self> {
+    fn permute_all(mut self, k: usize, reps: usize, env: &Uiua) -> UiuaResult<Self> {
         let n = self.row_count();
+        if n == 0 {
+            self.shape.insert(1, k);
+            return Ok(self);
+        }
         let permutations = (n as f64).powi(k as i32) * reps as f64;
         if permutations.is_nan() {
             return Err(env.error("Combinatorial explosion"));

@@ -1802,6 +1802,7 @@ value_mon_impl!(
         val.meta.or_sorted_flags(flags)
     }
 );
+value_mon_impl!(recip, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(
     sqrt,
     [Num, num],

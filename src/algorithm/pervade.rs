@@ -941,6 +941,21 @@ pub mod sign {
         env.error(format!("Cannot get the sign of {a}"))
     }
 }
+pub mod recip {
+    use super::*;
+    pub fn num(a: f64) -> f64 {
+        a.recip()
+    }
+    pub fn byte(a: u8) -> f64 {
+        f64::from(a).recip()
+    }
+    pub fn com(a: Complex) -> Complex {
+        a.recip()
+    }
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the reciprocal of {a}"))
+    }
+}
 pub mod sqrt {
     use super::*;
     pub fn num(a: f64) -> f64 {

@@ -204,6 +204,9 @@ impl Complex {
             im: safe_mul(self.re, rhs.im) + safe_mul(self.im, rhs.re),
         }
     }
+    pub fn recip(self) -> Self {
+        Self::ONE / self
+    }
 }
 
 fn safe_mul(a: f64, b: f64) -> f64 {

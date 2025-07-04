@@ -137,7 +137,7 @@ Notice that even though [divide](/docs/divide) is on the last line of the pack, 
 
 Those need to do the same thing for consistency reasons, but the first example seems backwards! The function that is further down in the actual source runs first, so to read in execution order, we have to read from the bottom up.
 
-To solve this, we can prefix function pack with a `↓` symbol, which formats from `|,`. See how it changes the flow of the pack:
+To solve this, we can prefix the function pack with a `↓` symbol, which formats from `|,`. See how it changes the flow of the pack:
 
 ```uiua
 # Experimental!

@@ -58,13 +58,12 @@ impl Compiler {
                 }
                 let mut nodes = nodes.into_iter().rev();
                 let dip_span = self.add_span(modifier.span.clone());
-                let mut res = Node::Mod(Primitive::Dip, eco_vec![nodes.next().unwrap()], dip_span);
+                let mut res = nodes.next().unwrap().node;
                 for node in nodes {
-                    res = Node::Mod(
-                        Primitive::Dip,
-                        eco_vec![Node::from_iter([res, node.node]).sig_node().unwrap()],
-                        dip_span,
-                    );
+                    res = Node::from_iter([
+                        Node::Mod(Primitive::Dip, eco_vec![res.sig_node().unwrap()], dip_span),
+                        node.node,
+                    ]);
                 }
                 Ok(res)
             }
@@ -125,7 +124,11 @@ impl Compiler {
             }
             Modifier::Primitive(Primitive::On) => {
                 let mut words = Vec::new();
-                for branch in pack.lexical_order().cloned() {
+                let mut branches = pack.lexical_order().cloned();
+                if let Some(func) = branches.next() {
+                    words.push(func.map(Word::Func));
+                }
+                for branch in branches {
                     let mut word = Word::Modified(Box::new(Modified {
                         modifier: modifier.clone(),
                         operands: vec![branch.clone().map(Word::Func)],

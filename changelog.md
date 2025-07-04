@@ -12,6 +12,8 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - Remove combining `e` number literals
   - It was confusing when combined with `e` scientific number notation
 - **Breaking Change** - [`under ⍜`](https://uiua.org/docs/under)[`shape △`](https://uiua.org/docs/shape) now tiles the original array to match the new shape instead of [`reshape ↯`](https://uiua.org/docs/reshape)ing
+- **Breaking Change** - [`dip ⊙`](https://uiua.org/docs/dip) and [`on ⟜`](https://uiua.org/docs/on) function packs no longer apply their modifier to the leftmost function
+  - This change makes most usecases of these function packs cleaner, as `A⊙(B|C)` changes to `⊙(A|B|C)` and likewise for [`on ⟜`](https://uiua.org/docs/on)
 - Allow for private [modules](https://uiua.org/tutorial/modules#private-scoped-modules), [imports](https://uiua.org/tutorial/modules#private-imports), and [data definitions](https://uiua.org/tutorial/datadefs#visibility)
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 - Subscripts can now be typed with `,` instead of `__`s

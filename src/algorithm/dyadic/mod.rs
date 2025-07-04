@@ -1774,7 +1774,7 @@ fn digits_needed_for_base(n: f64, base: f64) -> usize {
         0
     } else {
         let mut log = n.abs().log(base);
-        if (log.fract() - 1.0).abs() <= 2.0 * f64::EPSILON {
+        if (log.fract() - 1.0).abs() <= 4.0 * f64::EPSILON {
             log = log.ceil();
         }
         log.floor() as usize + 1
@@ -1793,9 +1793,7 @@ impl<T: RealArrayValue> Array<T> {
             return Err(env.error("Base cannot be NaN"));
         }
         Ok(if base >= 0.0 {
-            let max_row_len = self
-                .data
-                .iter()
+            let max_row_len = (self.data.iter())
                 .map(|&n| digits_needed_for_base(n.to_f64(), base))
                 .max()
                 .unwrap_or(0);

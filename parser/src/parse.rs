@@ -763,7 +763,7 @@ impl Parser<'_> {
         }
     }
     fn import(&mut self) -> Option<Import> {
-        let start = self.index;
+        let reset = self.index;
         // Name
         let name = self.ident();
         self.spaces();
@@ -775,13 +775,13 @@ impl Parser<'_> {
                     .map(|s| (s, false))
             })
         else {
-            self.index = start;
+            self.index = reset;
             return None;
         };
         self.spaces();
         // Path
         let Some(path) = self.next_token_map(Token::as_string) else {
-            self.index = start;
+            self.index = reset;
             return None;
         };
         let path = path.map(Into::into);
@@ -790,6 +790,7 @@ impl Parser<'_> {
         let mut lines: Vec<Option<ImportLine>> = Vec::new();
         let mut line: Option<ImportLine> = None;
         let mut last_tilde_index = self.index;
+        let mut line_reset = self.index;
         loop {
             if let Some((line, ident)) = line
                 .as_mut()
@@ -816,11 +817,17 @@ impl Parser<'_> {
                         items: Vec::new(),
                     })
                 }
-                Simple(Tilde) => self
-                    .errors
-                    .push(span.sp(ParseError::Unexpected(Simple(Tilde)))),
-                Newline => lines.push(line.take()),
+                Simple(Tilde) => (self.errors).push(span.sp(ParseError::Unexpected(Simple(Tilde)))),
+                Newline => {
+                    lines.push(line.take());
+                    line_reset = self.index;
+                }
                 Spaces => {}
+                Simple(OpenBracket | OpenCurly) => {
+                    self.index = line_reset;
+                    line = None;
+                    break;
+                }
                 _ => break,
             }
             self.index += 1;

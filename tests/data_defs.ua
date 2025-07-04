@@ -62,6 +62,12 @@ Foo 1 2 3
 ~ {Foo Bar}
 ⍤⤙≍ [3 5] [⊃Foo Bar] New 3 5
 
+# Import followed by def
+~ "example" ~ Bar
+~Foo {A B C}
+⍤⤙≍ {1 2 3} Foo 1 2 3
+⍤⤙≍ "bar" Bar
+
 # Experimental!
 
 # Field validators

@@ -141,6 +141,7 @@ pub fn parse(
                 let mut array_depth = 0i32;
                 let mut underscore = false;
                 while let Some(tok) = toks.next() {
+                    first = first.or(Some(&tok.span));
                     let start = heuristic;
                     heuristic += match &tok.value {
                         Spaces | Comment => 0,
@@ -164,10 +165,7 @@ pub fn parse(
                             1
                         }
                         Number | Str(_) | Char(_) if array_depth > 0 => 0,
-                        _ => {
-                            first = first.or(Some(&tok.span));
-                            1
-                        }
+                        _ => 1,
                     };
                     if heuristic > start && underscore {
                         underscore = false;

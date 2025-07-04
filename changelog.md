@@ -25,8 +25,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Deprecate experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) in favor of [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Add the [`exponential ₑ`](https://uiua.org/docs/exponential) function, which computes the exponential function
 - Deprecate [`logarithm ₙ`](https://uiua.org/docs/logarithm) in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
-- Add [`&seek`](https://uiua.org/docs/&seek) function for working with large files
 - Remove experimental `ln` in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
+- Add [`&seek`](https://uiua.org/docs/&seek) function for working with large files
 - Remove previously deprecated `signature` and `stringify` modifiers
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals

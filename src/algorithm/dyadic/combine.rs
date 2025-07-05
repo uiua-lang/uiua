@@ -1135,6 +1135,9 @@ impl Value {
                     Value::Char(arr)
                 }
             }
+            Value::Rational(_) => {
+                todo!()
+            }
             Value::Box(_) => {
                 row_values = values.into_iter();
                 row_values.next().unwrap()
@@ -1182,6 +1185,7 @@ impl Value {
                         ))))
                     }
                 },
+                Value::Rational(_) => todo!(),
                 Value::Box(arr) => match ctx.scalar_fill::<Boxed>() {
                     Ok(fill) => arr.fill_to_shape(&max_shape, fill),
                     Err(e) => {
@@ -1249,6 +1253,9 @@ impl Value {
                     }
                 }
                 a.into()
+            }
+            Value::Rational(_) => {
+                todo!()
             }
             Value::Box(mut a) => {
                 for val in row_values {

@@ -1738,7 +1738,7 @@ pub fn Editor<'a>(
         // Plus it handles cases where files are created/deleted after the code runs.
         let _ = output.get();
 
-        let excluded_files = ["example.txt", "example.ua"];
+        let excluded_files = ["example.txt", "example.ua", "primitives.json"];
         backend::FILES.with(|files| {
             files
                 .borrow()

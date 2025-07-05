@@ -35,6 +35,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Remove `kork` and `rkok` aliases
 - Improve "Array would be too large" error messages
+### Pad
+- Add `primitives.json` to the pre-included files in the pad
 
 ## 0.16.2 - 2025-05-21
 ### Interpreter

@@ -41,7 +41,8 @@ thread_local! {
     pub static FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new(
         [
             ("example.ua", EXAMPLE_UA),
-            ("example.txt", EXAMPLE_TXT)
+            ("example.txt", EXAMPLE_TXT),
+            ("primitives.json", include_str!("../../../site/primitives.json"))
         ]
         .map(|(path, content)| (PathBuf::from(path), content.as_bytes().to_vec()))
         .into(),

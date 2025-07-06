@@ -1673,22 +1673,22 @@ impl Compiler {
             ))
         }
     }
-    fn find_name(&self, name: &str, skip_local: bool) -> Option<LocalName> {
-        self.find_name_impl(name, skip_local, false)
+    fn find_name(&self, name: &str, skip_temp: bool) -> Option<LocalName> {
+        self.find_name_impl(name, skip_temp, false)
     }
     fn find_name_impl(
         &self,
         name: &str,
-        skip_local: bool,
+        skip_temp: bool,
         stop_at_binding: bool,
     ) -> Option<LocalName> {
-        if !skip_local {
-            if let Some(local) = self.scope.names.get(name).copied() {
-                return Some(local);
-            }
-        }
+        // println!("name: {name:?}, skip_temp: {skip_temp}");
+        // for scope in self.scopes() {
+        //     println!("  {:?} {:?}", scope.kind, scope.names);
+        // }
         let mut hit_file = false;
-        for scope in self.higher_scopes.iter().rev() {
+        let mut hit_temp = false;
+        for scope in self.scopes() {
             if matches!(scope.kind, ScopeKind::File(_))
                 || stop_at_binding && matches!(scope.kind, ScopeKind::Binding)
             {
@@ -1696,6 +1696,13 @@ impl Compiler {
                     break;
                 }
                 hit_file = true;
+            } else if matches!(scope.kind, ScopeKind::Temp(_)) {
+                if skip_temp && !hit_temp {
+                    hit_temp = true;
+                    continue;
+                }
+            } else if skip_temp && !hit_temp {
+                continue;
             }
             if let Some(local) = scope.names.get(name).copied() {
                 return Some(local);
@@ -1703,7 +1710,7 @@ impl Compiler {
         }
         // Attempt to look up the identifier as a non-macro
         let as_non_macro =
-            self.find_name_impl(name.strip_suffix('!')?, skip_local, stop_at_binding)?;
+            self.find_name_impl(name.strip_suffix('!')?, skip_temp, stop_at_binding)?;
         if let BindingKind::Module(_) | BindingKind::Import(_) =
             self.asm.bindings[as_non_macro.index].kind
         {

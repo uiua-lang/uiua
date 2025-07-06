@@ -28,6 +28,15 @@ F! ← ⨬(
 F! ← -^0 i
 ⍤⤙≍ i F!0
 
+┌─╴M
+  X  ← "Inner"
+  A! ← ^0
+  B! ← (^0)
+└─╴
+X ← "Outer"
+⍤⤙≍ "Outer" M~A!X
+⍤⤙≍ "Outer" M~B!X
+
 # Code macros
 F! ←^
 G! ←^ ⇌

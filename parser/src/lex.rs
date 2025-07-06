@@ -1324,6 +1324,7 @@ impl<'a> Lexer<'a> {
                             let tok = match prim {
                                 PrimComponent::Prim(prim) => Glyph(prim),
                                 PrimComponent::Num(num) => Ident(num.name().into()),
+                                PrimComponent::Sub2 => Subscr(2.into()),
                             };
                             self.tokens.push(self.make_span(start, end).sp(tok));
                             start = end;

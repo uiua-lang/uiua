@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::A;
-use uiua::Primitive;
+use uiua::{PrimComponent, Primitive};
 use uiua_editor::{lang, Editor};
 
 use crate::{Hd, Prim};
@@ -61,7 +61,10 @@ fn multi_aliases() -> impl IntoView {
                 <td>{
                     prims
                         .iter()
-                        .map(|(p, _)| view!(<Prim prim=*p/>" "))
+                        .map(|(p, _)| match p {
+                            PrimComponent::Prim(p) => view!(<Prim prim=*p/>" ").into_view(),
+                            p => view!(<code>{p.name()}</code>).into_view(),
+                        })
                         .collect::<Vec<_>>()
                 }</td>
             </tr>)

@@ -25,6 +25,15 @@ impl<N> Default for Subscript<N> {
     }
 }
 
+impl From<i32> for Subscript {
+    fn from(i: i32) -> Self {
+        Subscript {
+            num: Some(i.into()),
+            side: None,
+        }
+    }
+}
+
 /// The numeric part of a subscript
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
@@ -36,6 +45,12 @@ pub enum NumericSubscript {
     /// A valid number
     #[serde(untagged)]
     N(i32),
+}
+
+impl From<i32> for NumericSubscript {
+    fn from(i: i32) -> Self {
+        NumericSubscript::N(i)
+    }
 }
 
 /// The sided part of a subscript

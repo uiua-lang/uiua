@@ -35,6 +35,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Remove `kork` and `rkok` aliases
 - Improve "Array would be too large" error messages
+- Change short form of the `--experimental` flag for `uiua eval` to use `-x` instead of `-e`
+  - This is consistent with the corresponding flag for `uiua repl`
 ### Pad
 - Add `primitives.json` to the pre-included files in the pad
 

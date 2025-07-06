@@ -33,7 +33,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
-- Remove `kork` and `rkok` aliases
+- Remove `rkok` alias and change `kork` to format to `▽₂`
 - Improve "Array would be too large" error messages
 - Change short form of the `--experimental` flag for `uiua eval` to use `-x` instead of `-e`
   - This is consistent with the corresponding flag for `uiua repl`

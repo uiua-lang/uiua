@@ -1,6 +1,6 @@
 //! Uiua's abstract syntax tree
 
-use std::{collections::HashMap, fmt, mem::discriminant};
+use std::{collections::BTreeMap, fmt, mem::discriminant};
 
 use ecow::EcoString;
 use serde::*;
@@ -311,7 +311,7 @@ pub struct Comments {
     /// The normal comment lines
     pub lines: Vec<Sp<EcoString>>,
     /// The semantic comments
-    pub semantic: HashMap<SemanticComment, CodeSpan>,
+    pub semantic: BTreeMap<SemanticComment, CodeSpan>,
 }
 
 /// An inline macro

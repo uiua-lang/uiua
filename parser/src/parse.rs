@@ -1,7 +1,7 @@
 //! The Uiua parser
 
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     error::Error,
     f64::consts::{PI, TAU},
     fmt,
@@ -1746,14 +1746,13 @@ impl Parser<'_> {
     }
     fn comments(&mut self) -> Option<Comments> {
         let mut lines = Vec::new();
-        let mut semantic = HashMap::new();
+        let mut semantic = BTreeMap::new();
         loop {
             self.ignore_whitespace();
             if let Some(span) = self.exact(Comment) {
                 let s = span.as_str(self.inputs, |s| s.trim_start_matches("#").trim().into());
                 lines.push(span.sp(s));
             } else if let Some(sem) = self.next_token_map(Token::as_semantic_comment) {
-                lines.push(sem.span.clone().sp(sem.value.to_string().into()));
                 semantic.insert(sem.value, sem.span);
             } else {
                 break;

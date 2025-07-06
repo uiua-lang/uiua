@@ -829,10 +829,10 @@ impl From<SemanticComment> for Token {
 pub enum SemanticComment {
     /// Allow experimental features
     Experimental,
-    /// Prevent the containing function from being inlined
-    NoInline,
     /// Prevent stack traces from going deeper
     TrackCaller,
+    /// Prevent the containing function from being inlined
+    NoInline,
     /// Mark that a function should be bound externally
     External,
     /// Mark a function as deprecated

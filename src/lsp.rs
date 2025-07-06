@@ -381,6 +381,9 @@ impl Spanner {
                                     for line in &comments.lines {
                                         spans.push(line.span.clone().sp(SpanKind::Comment));
                                     }
+                                    for span in comments.semantic.values() {
+                                        spans.push(span.clone().sp(SpanKind::Comment));
+                                    }
                                 }
                                 spans.push(field.name.span.clone().sp(SpanKind::Ident {
                                     docs: self.binding_docs(&field.name.span),

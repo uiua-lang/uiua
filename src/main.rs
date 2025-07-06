@@ -830,7 +830,7 @@ enum Comm {
         code: String,
         #[clap(long, help = "Don't colorize stack output")]
         no_color: bool,
-        #[clap(short, long, help = "Enable experimental features")]
+        #[clap(short = 'x', long, help = "Enable experimental features")]
         experimental: bool,
         #[cfg(feature = "audio")]
         #[clap(flatten)]
@@ -905,7 +905,7 @@ enum Comm {
         audio_options: AudioOptions,
         #[clap(short = 's', long, help = "Don't clear the stack after each line")]
         stack: bool,
-        #[clap(short = 'x', long, help = "Enabled experimental language features")]
+        #[clap(short = 'x', long, help = "Enable experimental features")]
         experimental: bool,
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,

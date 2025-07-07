@@ -885,7 +885,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - The behavior of [`content ◇`](https://uiua.org/docs/content) is less implicit and is not prone to some of the potential unexpected behavior of [`unpack ⊐`](https://uiua.org/docs/unpack)
 - Add the [`unique ◰`](https://uiua.org/docs/unique) function, which creates a mask of the first occurrence of each unique value in an array
   - Change [`deduplicate ◴`](https://uiua.org/docs/deduplicate)'s glyph to reflect its relationship with [`unique ◰`](https://uiua.org/docs/unique). Code using `⊖` will continue to work and will be formatted as `◴`.
-- [`table ⊞`](https://uiua.org/docs/table) now works on rows of arrays but keeps it's optimizations for lists
+- [`table ⊞`](https://uiua.org/docs/table) now works on rows of arrays but keeps its optimizations for lists
   - You never wanted element-wise combinations of multi-dimensional arrays anyway
   - Deprecate [`cross ⊠`](https://uiua.org/docs/cross), as it is now redundant
   - This is technically a breaking change, but it is unlikely to break much code

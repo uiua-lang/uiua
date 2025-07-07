@@ -1412,9 +1412,9 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
                     [r, g, b, a] => ([r, g, b], Some(a)),
                     _ => {
                         return Err(env.error(format!(
-                        "Color must be a scalar or list of 3 or 4 numbers, but its shape is {}",
-                        arg.shape
-                    )))
+                            "Color must be a scalar or list of 3 or 4 numbers, but its shape is {}",
+                            arg.shape
+                        )))
                     }
                 };
                 color = Some(if let Some(a) = a {

@@ -917,7 +917,7 @@ pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
                     [r, g, b] => fog = Some([r, g, b]),
                     _ => {
                         return Err(env.error(format!(
-                            "Fog must be a scalar or list of 3 numbers, but it's shape is {}",
+                            "Fog must be a scalar or list of 3 numbers, but its shape is {}",
                             arg.shape
                         )))
                     }
@@ -930,7 +930,7 @@ pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
                     pos = Some([x, y, z]);
                 } else {
                     return Err(env.error(format!(
-                        "Camera position must be 3 numbers, but it's shape is {}",
+                        "Camera position must be 3 numbers, but its shape is {}",
                         arg.shape
                     )));
                 }
@@ -1377,7 +1377,7 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
                     [h, w] => [h, w],
                     _ => {
                         return Err(env.error(format!(
-                            "Size must be a scalar or list of 2 numbers, but it's shape is {}",
+                            "Size must be a scalar or list of 2 numbers, but its shape is {}",
                             arg.shape
                         )))
                     }
@@ -1412,7 +1412,7 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
                     [r, g, b, a] => ([r, g, b], Some(a)),
                     _ => {
                         return Err(env.error(format!(
-                        "Color must be a scalar or list of 3 or 4 numbers, but it's shape is {}",
+                        "Color must be a scalar or list of 3 or 4 numbers, but its shape is {}",
                         arg.shape
                     )))
                     }

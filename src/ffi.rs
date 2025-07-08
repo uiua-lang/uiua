@@ -222,7 +222,7 @@ pub(crate) use enabled::*;
 mod enabled {
     use std::{
         any::{type_name, Any},
-        mem::{forget, take, transmute},
+        mem::{forget, take, transmute, ManuallyDrop},
         ptr, slice,
     };
 
@@ -641,10 +641,10 @@ mod enabled {
 
     type ListStorage<T> = (*mut T, Box<[T]>);
 
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     struct FfiBindings {
-        arg_data: Vec<Box<dyn Any>>,
-        other_data: Vec<Box<dyn Any>>,
+        arg_data: Vec<ManuallyDrop<Box<dyn Any>>>,
+        other_data: Vec<ManuallyDrop<Box<dyn Any>>>,
         args: Vec<Arg>,
     }
 
@@ -654,118 +654,79 @@ mod enabled {
             self.args.pop().unwrap();
             self.other_data.push(self.arg_data.pop().unwrap());
         }
-        fn alloc_and_push_ptr_to<T: Any + Copy + std::fmt::Debug>(&mut self, arg: T) -> *mut () {
-            let mut bx = Box::<T>::new(arg);
-            let ptr: *mut T = &mut *bx;
+        fn alloc_and_push_ptr_to<T: Any>(&mut self, arg: T) -> *mut () {
+            let mut arg = Box::new(arg);
+            let ptr: *mut T = arg.as_mut();
             dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
-            self.arg_data.push(Box::new((ptr, bx)));
-            self.args.push(Arg::new(
-                &(self.arg_data.last().unwrap())
-                    .downcast_ref::<(*mut T, Box<T>)>()
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "Value wasn't expected type {}",
-                            type_name::<(*mut T, Box<T>)>()
-                        )
-                    })
-                    .0,
-            ));
+            let pair = Box::new((ptr, arg));
+            self.args.push(Arg::new(&pair.0));
+            self.arg_data.push(ManuallyDrop::new(pair));
             ptr as *mut ()
         }
-        fn push_raw_ptr<T: 'static>(&mut self, ptr: *mut T) {
-            self.arg_data.push(Box::new(ptr));
-            self.args.push(Arg::new(
-                (self.arg_data.last().unwrap().downcast_ref::<*mut T>()).unwrap_or_else(|| {
-                    panic!("Value wasn't expected type {}", type_name::<*mut T>())
-                }),
-            ));
+        fn push_raw_ptr<T: Any>(&mut self, ptr: *mut T) {
+            let value = Box::new(ptr);
+            self.args.push(Arg::new(value.as_ref()));
+            self.arg_data.push(ManuallyDrop::new(value));
         }
         fn push_value<T: Any>(&mut self, arg: T) -> *mut () {
-            self.arg_data.push(Box::new(arg));
-            self.args.push(Arg::new(
-                (self.arg_data.last().unwrap().downcast_ref::<T>())
-                    .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>())),
-            ));
-            (self.arg_data.last().unwrap().downcast_ref::<T>())
-                .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>()))
-                as *const T as *mut ()
+            let value = Box::new(arg);
+            let ptr = value.as_ref() as *const T as *mut ();
+            self.args.push(Arg::new(value.as_ref()));
+            self.arg_data.push(ManuallyDrop::new(value));
+            ptr as *const T as *mut ()
         }
         fn push_repr(&mut self, arg: Vec<u8>) -> *mut () {
-            self.arg_data.push(Box::new(arg));
-            self.args.push(Arg::new(
-                &(self.arg_data.last().unwrap())
-                    .downcast_ref::<Vec<u8>>()
-                    .unwrap()[0],
-            ));
-            (self.arg_data.last().unwrap().downcast_ref::<Vec<u8>>())
-                .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<Vec<u8>>()))
-                .as_ptr() as *mut ()
+            let value = Box::new(arg);
+            self.args.push(Arg::new(&value[0]));
+            let ptr = value.as_ref().as_ptr();
+            self.arg_data.push(ManuallyDrop::new(value));
+            ptr as *mut ()
         }
         fn push_repr_ptr(&mut self, mut arg: Vec<u8>) -> *mut () {
             let ptr = arg.as_mut_ptr();
-            self.arg_data.push(Box::new((ptr, arg)));
-            self.args.push(Arg::new(
-                &(self.arg_data.last().unwrap())
-                    .downcast_ref::<(*mut u8, Vec<u8>)>()
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "Value wasn't expected type {}",
-                            type_name::<(*mut u8, Vec<u8>)>()
-                        )
-                    })
-                    .0,
-            ));
+            let pair = Box::new((ptr, arg));
+            self.args.push(Arg::new(&pair.0));
+            self.arg_data.push(ManuallyDrop::new(pair));
             ptr as *mut ()
         }
         fn push_string(&mut self, arg: String) -> *mut c_char {
-            let list: Box<[c_char]> = arg
-                .chars()
-                .map(|c| c as c_char)
-                .chain(['\0' as c_char])
-                .collect();
-            self.push_list::<c_char>(list)
+            let arg = CString::new(arg).expect("string should not contain NUL");
+            let ptr = Box::into_raw(arg.into_bytes_with_nul().into_boxed_slice());
+            // SAFETY: the pointer was created using `Box::into_raw`
+            // and `[i8]` is compatible with `[u8]`
+            let arg = unsafe { Box::from_raw(ptr as *mut [c_char]) };
+            self.push_list(arg)
         }
-        fn push_list<T: Any + 'static>(&mut self, mut arg: Box<[T]>) -> *mut T {
+        fn push_list<T: Any>(&mut self, mut arg: Box<[T]>) -> *mut T {
             let ptr = if arg.is_empty() {
+                // TODO: is this special case necessary?
                 ptr::null_mut()
             } else {
-                &mut arg[0] as *mut T
+                arg.as_mut_ptr()
             };
             dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
-            let storage = (ptr, arg);
-            self.arg_data.push(Box::new(storage));
-            self.args.push(Arg::new(
-                &(self.arg_data.last_mut().unwrap())
-                    .downcast_mut::<ListStorage<T>>()
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "Value wasn't expected type {}",
-                            type_name::<ListStorage<T>>()
-                        )
-                    })
-                    .0,
-            ));
+            let storage: ListStorage<_> = (ptr, arg);
+            let value = Box::new(storage);
+            self.args.push(Arg::new(&value.0));
+            self.arg_data.push(ManuallyDrop::new(value));
             ptr
         }
         fn get<T: Any>(&self, index: usize) -> &T {
-            self.try_get(index).map(|(t, _)| t).unwrap_or_else(|| {
-                panic!(
-                    "Value wasn't expected type {}, {}, or {}",
-                    type_name::<T>(),
-                    type_name::<(*mut T, Box<T>)>(),
-                    type_name::<ListStorage<T>>()
-                )
-            })
+            self.try_get(index)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Value wasn't expected type {}, {}, or {}",
+                        type_name::<T>(),
+                        type_name::<(*mut T, Box<T>)>(),
+                        type_name::<ListStorage<T>>()
+                    )
+                })
+                .0
         }
         fn get_maybe_null<T: Any>(&self, index: usize) -> Option<(&T, Option<*mut T>)> {
             self.try_get(index)
                 .map(Some)
-                .or_else(|| {
-                    self.arg_data[index]
-                        .downcast_ref::<*mut ()>()
-                        .is_some()
-                        .then_some(None)
-                })
+                .or_else(|| self.arg_data[index].is::<*mut ()>().then_some(None))
                 .unwrap_or_else(|| {
                     panic!(
                         "Value wasn't expected type {}, {}, {}, or {}",
@@ -777,47 +738,45 @@ mod enabled {
                 })
         }
         fn try_get<T: Any>(&self, index: usize) -> Option<(&T, Option<*mut T>)> {
-            let any = &self.arg_data[index];
-            any.downcast_ref::<T>()
+            self.try_get_as::<T>(index)
                 .map(|t| {
                     dbgln!("  exact type");
                     (t, None)
                 })
                 .or_else(|| {
-                    any.downcast_ref::<(*mut T, Box<T>)>().map(|(p, _)| {
+                    self.try_get_as::<(*mut T, Box<T>)>(index).map(|(p, _)| {
                         dbgln!("  ptr type");
-                        (unsafe { &**p }, Some(*p))
+                        // SAFETY: TODO
+                        (unsafe { p.as_ref().unwrap_unchecked() }, Some(*p))
                     })
                 })
                 .or_else(|| {
-                    any.downcast_ref::<ListStorage<T>>().map(|(_, b)| {
+                    self.try_get_as::<ListStorage<T>>(index).map(|(_, b)| {
                         dbgln!("  list type");
-                        (&b[0], Some(&b[0] as *const T as *mut T))
+                        (&b[0], Some(b.as_ref().as_ptr() as *mut T))
                     })
                 })
         }
-        fn get_list_mut<T: 'static>(&mut self, index: usize) -> (*mut T, &mut Box<[T]>) {
-            let (ptr, vec) = self.arg_data[index]
-                .downcast_mut::<ListStorage<T>>()
-                .unwrap_or_else(|| {
-                    panic!(
-                        "Value wasn't expected type {}",
-                        type_name::<ListStorage<T>>()
-                    )
-                });
+        fn get_as_mut<T: Any>(&mut self, index: usize) -> &mut T {
+            self.try_get_as_mut(index)
+                .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>()))
+        }
+        fn get_as<T: Any>(&self, index: usize) -> &T {
+            self.try_get_as(index)
+                .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>()))
+        }
+        fn try_get_as_mut<T: Any>(&mut self, index: usize) -> Option<&mut T> {
+            self.arg_data[index].downcast_mut()
+        }
+        fn try_get_as<T: Any>(&self, index: usize) -> Option<&T> {
+            self.arg_data[index].downcast_ref()
+        }
+        fn get_list_mut<T: Any>(&mut self, index: usize) -> (*mut T, &mut Box<[T]>) {
+            let (ptr, vec) = self.get_as_mut::<ListStorage<T>>(index);
             (*ptr, vec)
         }
         fn get_repr(&self, index: usize) -> &[u8] {
-            self.arg_data[index]
-                .downcast_ref::<(*mut u8, Vec<u8>)>()
-                .unwrap_or_else(|| {
-                    panic!(
-                        "Value wasn't expected type {}",
-                        type_name::<(*mut u8, Vec<u8>)>()
-                    )
-                })
-                .1
-                .as_slice()
+            self.get_as::<(*mut u8, Vec<u8>)>(index).1.as_slice()
         }
 
         fn bind_arg(&mut self, i: usize, ty: &FfiType, val: &Value) -> Result<*mut (), String> {

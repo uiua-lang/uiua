@@ -435,7 +435,7 @@ impl fmt::Debug for Word {
             Word::Number(s, ..) => write!(f, "{s:?}"),
             Word::Char(char) => write!(f, "{char:?}"),
             Word::String(string) => write!(f, "{string:?}"),
-            Word::MultilineString(string) => write!(f, "{string:?}"),
+            Word::MultilineString(string) => write!(f, "$ {string:?}"),
             Word::FormatString(parts) => {
                 write!(f, "$\"")?;
                 for part in parts {

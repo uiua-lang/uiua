@@ -683,7 +683,15 @@ impl Formatter<'_> {
                     }
                     for (j, word) in line.iter().enumerate() {
                         self.format_word(word, depth);
-                        if word_is_multiline(&word.value) && j < words.len() - 1 {
+                        if word_is_multiline(&word.value)
+                            && j < words.len() - 1
+                            && !line.first().is_some_and(|first| {
+                                matches!(
+                                    first.value,
+                                    Word::MultilineString(_) | Word::MultilineFormatString(_)
+                                )
+                            })
+                        {
                             for (end, empty) in [(')', "()"), (']', "[]"), ('}', "{}")] {
                                 if self.output.ends_with(end) && !self.output.ends_with(empty) {
                                     self.output.pop();

@@ -451,15 +451,10 @@ mod enabled {
                     }
 
                     use seq_macro::seq;
-                    let val = seq!(N in 2..128 {
+                    let val = seq!(N in 1..128 {
                         match size {
-                            1 => call_ret_struct!(1)?,
+                            0 => Value::default(),
                             2 => call_ret_struct!(2)?,
-                            3 => call_ret_struct!(3)?,
-                            4 => call_ret_struct!(4)?,
-                            5 => call_ret_struct!(5)?,
-                            6 => call_ret_struct!(6)?,
-                            7 => call_ret_struct!(7)?,
                             #(n if n == N*4 => call_ret_struct!(N*4)?,)*
                             n => return Err(format!("Unsupported return struct size: {n}")),
                         }

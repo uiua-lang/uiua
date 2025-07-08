@@ -442,17 +442,25 @@ mod enabled {
                     let (size, _) = return_ty.size_align();
                     let args = &bindings.args;
                     macro_rules! call_ret_struct {
-                        ($n:literal) => {
+                        ($n:expr) => {
                             bindings.struct_repr_to_value(
                                 &unsafe { cif.call::<[u8; $n]>(fptr, args) },
                                 fields,
                             )
                         };
                     }
+
                     use seq_macro::seq;
-                    let val = seq!(N in 1..=512 {
+                    let val = seq!(N in 2..128 {
                         match size {
-                            #(N => call_ret_struct!(N)?,)*
+                            1 => call_ret_struct!(1)?,
+                            2 => call_ret_struct!(2)?,
+                            3 => call_ret_struct!(3)?,
+                            4 => call_ret_struct!(4)?,
+                            5 => call_ret_struct!(5)?,
+                            6 => call_ret_struct!(6)?,
+                            7 => call_ret_struct!(7)?,
+                            #(n if n == N*4 => call_ret_struct!(N*4)?,)*
                             n => return Err(format!("Unsupported return struct size: {n}")),
                         }
                     });

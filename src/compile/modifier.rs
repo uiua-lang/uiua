@@ -1580,7 +1580,7 @@ impl Compiler {
     ) -> UiuaResult<Node> {
         let span = self.add_span(ref_span.clone());
         Ok(match self.scope.kind {
-            ScopeKind::Temp(Some(mac_local)) if mac_local.macro_index == local.index => {
+            ScopeKind::Macro(Some(mac_local)) if mac_local.macro_index == local.index => {
                 // Recursive
                 if let Some(sig) = mac.sig {
                     Node::CallMacro {
@@ -1968,7 +1968,7 @@ impl Compiler {
         let orig_names = names.clone();
         // Create temp scope
         let temp_scope = Scope {
-            kind: ScopeKind::Temp(macro_local),
+            kind: ScopeKind::Macro(macro_local),
             names,
             experimental: self.scope.experimental,
             experimental_error: self.scope.experimental_error,

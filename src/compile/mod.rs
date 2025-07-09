@@ -32,16 +32,16 @@ use crate::{
     function::DynamicFunction,
     lsp::{CodeMeta, Completion, ImportSrc, SetInverses, SigDecl},
     media::{LayoutParam, VoxelsParam},
-    parse::ident_modifier_args,
     parse::{
-        flip_unsplit_items, flip_unsplit_lines, max_placeholder, parse, split_items, split_words,
+        flip_unsplit_items, flip_unsplit_lines, ident_modifier_args, max_placeholder, parse,
+        split_items, split_words,
     },
     Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, CustomInverse,
-    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, Function, FunctionId, GitTarget, Ident,
-    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass,
-    Primitive, Purity, RunMode, SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript,
-    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA,
-    SUBSCRIPT_DIGITS, VERSION,
+    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, ExactDoubleIterator, Function,
+    FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node,
+    NumericSubscript, PrimClass, Primitive, Purity, RunMode, SemanticComment, SigNode, Signature,
+    Sp, Span, SubSide, Subscript, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
+    CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
 pub(crate) use data::*;
 pub use pre_eval::PreEvalMode;
@@ -231,7 +231,7 @@ enum ScopeKind {
     /// A scope that includes all bindings in a module
     AllInModule,
     /// A temporary scope, probably for a macro
-    Temp(Option<MacroLocal>),
+    Macro(Option<MacroLocal>),
     /// A binding scope
     Binding,
     /// A function scope between some delimiters
@@ -389,8 +389,11 @@ impl Compiler {
         let src = self.asm.inputs.add_src(src, input);
         self.load_impl(input, src)
     }
-    fn scopes(&self) -> impl Iterator<Item = &Scope> {
-        once(&self.scope).chain(self.higher_scopes.iter().rev())
+    fn scopes(&self) -> impl ExactDoubleIterator<Item = &Scope> {
+        once(&self.scope)
+            .chain(self.higher_scopes.iter().rev())
+            .collect::<Vec<_>>()
+            .into_iter()
     }
     #[allow(dead_code)]
     fn scopes_mut(&mut self) -> impl Iterator<Item = &mut Scope> {
@@ -1686,9 +1689,16 @@ impl Compiler {
         // for scope in self.scopes() {
         //     println!("  {:?} {:?}", scope.kind, scope.names);
         // }
+        let skip = if skip_temp {
+            self.scopes()
+                .rposition(|sc| matches!(sc.kind, ScopeKind::Macro(_)))
+                .map(|s| s + 1)
+                .unwrap_or(0)
+        } else {
+            0
+        };
         let mut hit_file = false;
-        let mut hit_temp = false;
-        for scope in self.scopes() {
+        for scope in self.scopes().skip(skip) {
             if matches!(scope.kind, ScopeKind::File(_))
                 || stop_at_binding && matches!(scope.kind, ScopeKind::Binding)
             {
@@ -1696,13 +1706,6 @@ impl Compiler {
                     break;
                 }
                 hit_file = true;
-            } else if matches!(scope.kind, ScopeKind::Temp(_)) {
-                if skip_temp && !hit_temp {
-                    hit_temp = true;
-                    continue;
-                }
-            } else if skip_temp && !hit_temp {
-                continue;
             }
             if let Some(local) = scope.names.get(name).copied() {
                 return Some(local);
@@ -2814,7 +2817,7 @@ impl Compiler {
                         }
                         SetterStashKind::Scope(ScopeKind::Binding) => "binding",
                         SetterStashKind::Scope(ScopeKind::File(_)) => "file",
-                        SetterStashKind::Scope(ScopeKind::Temp(_)) => "macro",
+                        SetterStashKind::Scope(ScopeKind::Macro(_)) => "macro",
                         SetterStashKind::Scope(ScopeKind::Module(_)) => "module",
                         SetterStashKind::Scope(ScopeKind::Test) => "test scope",
                     };

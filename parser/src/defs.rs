@@ -2087,13 +2087,13 @@ primitive!(
     /// ex: ˙⊞+ 1_2_3
     /// ex: ˙(⊂⊂) π
     ([1], Slf, Stack, ("self", '˙')),
-    /// Call a function with its arguments reversed
+    /// Call a function with its arguments swapped
     ///
     /// ex:  - 2 5
     ///   : ˜- 2 5
     /// ex: ˜⊂ 1 [2 3]
     /// ex: °˜⊂ [1 2 3]
-    /// If the function takes 4 arguments, the second two arguments are reversed.
+    /// If the function takes 4 arguments, the second two arguments are swapped.
     /// ex: ˜⊟₄ 1 2 3 4
     /// ex: [˜∩⊟] 1 2 3 4
     /// [backward] is currently only allowed with dyadic and tetradic functions.

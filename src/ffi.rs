@@ -442,36 +442,23 @@ mod enabled {
                     let (size, _) = return_ty.size_align();
                     let args = &bindings.args;
                     macro_rules! call_ret_struct {
-                        ($n:literal) => {
+                        ($n:expr) => {
                             bindings.struct_repr_to_value(
                                 &unsafe { cif.call::<[u8; $n]>(fptr, args) },
                                 fields,
                             )
                         };
                     }
-                    let val = match size {
-                        0 => Value::default(),
-                        1 => call_ret_struct!(1)?,
-                        2 => call_ret_struct!(2)?,
-                        4 => call_ret_struct!(4)?,
-                        8 => call_ret_struct!(8)?,
-                        12 => call_ret_struct!(12)?,
-                        16 => call_ret_struct!(16)?,
-                        20 => call_ret_struct!(20)?,
-                        24 => call_ret_struct!(24)?,
-                        32 => call_ret_struct!(32)?,
-                        36 => call_ret_struct!(36)?,
-                        40 => call_ret_struct!(40)?,
-                        48 => call_ret_struct!(48)?,
-                        64 => call_ret_struct!(64)?,
-                        120 => call_ret_struct!(120)?,
-                        128 => call_ret_struct!(128)?,
-                        192 => call_ret_struct!(192)?,
-                        256 => call_ret_struct!(256)?,
-                        384 => call_ret_struct!(384)?,
-                        512 => call_ret_struct!(512)?,
-                        n => return Err(format!("Unsupported return struct size: {n}")),
-                    };
+
+                    use seq_macro::seq;
+                    let val = seq!(N in 1..128 {
+                        match size {
+                            0 => Value::default(),
+                            2 => call_ret_struct!(2)?,
+                            #(n if n == N*4 => call_ret_struct!(N*4)?,)*
+                            n => return Err(format!("Unsupported return struct size: {n}")),
+                        }
+                    });
                     results.push(val);
                 }
             }

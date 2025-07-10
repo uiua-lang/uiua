@@ -28,6 +28,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`exponential ₑ`](https://uiua.org/docs/exponential) function, which computes the exponential function
 - Deprecate [`logarithm ₙ`](https://uiua.org/docs/logarithm) in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
 - Remove experimental `ln` in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
+- Remove the `ⁿ%:1` ("root" pattern) optimization, it undered incorrectly, and should be replaced with [`anti ⌝`](https://uiua.org/docs/anti)[`pow ⁿ`](https://uiua.org/docs/power)
 - Add [`&seek`](https://uiua.org/docs/&seek) function for working with large files
 - Remove previously deprecated `signature` and `stringify` modifiers
 ### Interpreter

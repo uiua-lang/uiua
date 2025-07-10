@@ -1627,7 +1627,7 @@ impl Compiler {
                 });
                 // Compile
                 let node = self.suppress_diagnostics(|comp| {
-                    comp.temp_scope(mac.names, macro_local, |comp| comp.words(mac.words))
+                    comp.macro_scope(mac.names, macro_local, |comp| comp.words(mac.words))
                 })?;
                 // Add
                 let sig = self.sig_of(&node, &ref_span)?;
@@ -1775,7 +1775,7 @@ impl Compiler {
                 .macro_expansions
                 .insert(full_span, (mac_name.clone(), code.clone()));
             self.suppress_diagnostics(|comp| {
-                comp.temp_scope(mac.names, None, |comp| {
+                comp.macro_scope(mac.names, None, |comp| {
                     comp.quote(&code, mac_name, &modifier_span)
                 })
             })
@@ -1959,7 +1959,7 @@ impl Compiler {
     }
     /// Run a function in a temporary scope with the given names.
     /// Newly created bindings will be added to the current scope after the function is run.
-    fn temp_scope<T>(
+    fn macro_scope<T>(
         &mut self,
         names: IndexMap<Ident, LocalName>,
         macro_local: Option<MacroLocal>,

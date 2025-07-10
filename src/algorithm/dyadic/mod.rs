@@ -552,7 +552,8 @@ impl Value {
     pub(crate) fn unkeep(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         val_as_arr!(self, |a| a.unkeep(env).map(|(a, b)| (a, b.into())))
     }
-    pub(crate) fn anti_keep(self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn anti_keep(self, mut kept: Self, env: &Uiua) -> UiuaResult<Self> {
+        kept.match_fill(env);
         let counts = self.as_nums(env, "Keep amount must be a list of natural numbers")?;
         Ok(if self.rank() == 0 {
             if counts[0] == 0.0 {
@@ -814,6 +815,9 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Anti keep amount must be a list of booleans"));
         }
         let trues = counts.iter().filter(|&&n| n == 1.0).count();
+        if trues == 0 {
+            return Err(env.error("Cannot anti keep with all 0 counts"));
+        }
         let falses = counts.iter().filter(|&&n| n == 0.0).count();
         let target_len = self.row_count().max(
             (self.row_count() as f64 * (trues + falses) as f64 / trues as f64).floor() as usize,

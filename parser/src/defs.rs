@@ -3333,7 +3333,7 @@ primitive!(
     /// Currently, only the `wav` format is supported.
     ///
     /// This simple example will load an audio file, halve its sample rate, and re-encode it.
-    /// ex: ⍜(°audio &frab "test.wav")⊙⊓(⌊÷2|▽0.5)
+    /// ex! ⍜(°audio &frab "test.wav")⊙⊓(⌊÷2|▽0.5)
     ///
     /// See also: [&ap]
     (3, AudioEncode, Encoding, "audio"),

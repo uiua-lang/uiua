@@ -888,8 +888,8 @@ impl SysBackend for NativeSys {
                             conn: parking_lot::Mutex::new(TslConnection::Server(conn)),
                         },
                     );
+                    return Ok(handle);
                 }
-                return Ok(handle);
             }
             #[allow(unreachable_code)]
             Err("Invalid tcp listener handle".to_string())

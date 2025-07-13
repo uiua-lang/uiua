@@ -31,6 +31,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Remove the `ⁿ%:1` ("root" pattern) optimization, it undered incorrectly, and should be replaced with [`anti ⌝`](https://uiua.org/docs/anti)[`pow ⁿ`](https://uiua.org/docs/power)
 - Add [`&seek`](https://uiua.org/docs/&seek) function for working with large files
 - Remove previously deprecated `signature` and `stringify` modifiers
+- Calling [`&tcpa`](https://uius.org/docs/&tcpa) on a TLS listener created with [`&tlsl`](https://uiua.org/docs/&tlsl) now automatically tries conducting a TSL handshake
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)

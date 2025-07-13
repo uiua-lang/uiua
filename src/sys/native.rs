@@ -876,9 +876,10 @@ impl SysBackend for NativeSys {
             #[cfg(feature = "tls")]
             {
                 if let Some(listener) = NATIVE_SYS.tls_listeners.get_mut(&handle) {
-                    let (stream, _) = listener.listener.accept().map_err(|e| e.to_string())?;
-                    let conn = rustls::ServerConnection::new(listener.config.clone())
+                    let (mut stream, _) = listener.listener.accept().map_err(|e| e.to_string())?;
+                    let mut conn = rustls::ServerConnection::new(listener.config.clone())
                         .map_err(|e| e.to_string())?;
+                    let _ = conn.complete_io(&mut stream).map_err(|e| e.to_string())?;
                     let handle = NATIVE_SYS.new_handle();
                     NATIVE_SYS.tls_sockets.insert(
                         handle,

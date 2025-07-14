@@ -13,6 +13,7 @@ use crate::{
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
+    rational::Rational,
     terminal_size, val_as_arr,
     value::Value,
     Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
@@ -392,6 +393,18 @@ impl GridFmt for Complex {
     }
 }
 
+impl GridFmt for Rational {
+    fn fmt_grid(&self, params: GridFmtParams) -> Grid {
+        todo!()
+    }
+    fn empty_list_inner() -> &'static str {
+        todo!()
+    }
+    fn summarize(elems: &[Self]) -> String {
+        todo!()
+    }
+}
+
 impl GridFmt for Value {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         if params.depth > 100 {
@@ -402,6 +415,7 @@ impl GridFmt for Value {
             Value::Byte(b) => b.fmt_grid(params),
             Value::Complex(c) => c.fmt_grid(params),
             Value::Char(c) => c.fmt_grid(params),
+            Value::Rational(r) => r.fmt_grid(params),
             Value::Box(v) => {
                 let max_boxed_rank = v.data.iter().map(|Boxed(v)| v.rank()).max().unwrap_or(0);
                 v.fmt_grid(GridFmtParams {
@@ -674,6 +688,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     Value::Byte(_) => u8::alignment(),
                     Value::Complex(_) => Complex::alignment(),
                     Value::Char(_) => char::alignment(),
+                    Value::Rational(_) => todo!(),
                     Value::Box(_) => Boxed::alignment(),
                 });
                 let metagrid = metagrid.get_or_insert_with(Metagrid::new);
@@ -690,6 +705,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         Value::Byte(_) => shape_row::<u8>(&keys_row_shape),
                         Value::Complex(_) => shape_row::<Complex>(&keys_row_shape),
                         Value::Char(_) => shape_row::<char>(&keys_row_shape),
+                        Value::Rational(_) => todo!(),
                         Value::Box(_) => shape_row::<Boxed>(&keys_row_shape),
                     };
                     row.extend([' ', '→', ' ']);
@@ -1059,6 +1075,7 @@ impl<T: ArrayValue> Array<T> {
                 Value::Byte(_) => shape_row::<u8>(&keys_shape),
                 Value::Complex(_) => shape_row::<Complex>(&keys_shape),
                 Value::Char(_) => shape_row::<char>(&keys_shape),
+                Value::Rational(_) => todo!(),
                 Value::Box(_) => shape_row::<Boxed>(&keys_shape),
             }
             .into_iter()

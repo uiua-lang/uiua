@@ -175,6 +175,7 @@ impl<'a> Fill<'a> {
                 Some(Value::Num(_)) => ". A number fill is set, but it is not a scalar.",
                 Some(Value::Byte(_)) => ". A number fill is set, but it is not a scalar.",
                 Some(Value::Char(_)) => ". A character fill is set, but it is not a scalar.",
+                Some(Value::Rational(_)) => todo!(),
                 Some(Value::Complex(_)) => ". A complex fill is set, but it is not a scalar.",
                 Some(Value::Box(_)) => ". A box fill is set, but it is not a scalar.",
                 None => {
@@ -195,6 +196,7 @@ impl<'a> Fill<'a> {
                 Some(Value::Complex(_)) => {
                     ". A complex fill is set, but the array is not complex numbers."
                 }
+                Some(Value::Rational(_)) => todo!(),
                 Some(Value::Box(_)) => ". A box fill is set, but the array is not boxed values.",
                 None => {
                     if (self.other_value_fill)(self.env).is_some() {

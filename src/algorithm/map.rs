@@ -371,6 +371,7 @@ impl MapKeys {
             Value::Num(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
             Value::Complex(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
             Value::Char(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
+            Value::Rational(_) => todo!(),
             Value::Box(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
             Value::Byte(_) => unreachable!(),
         }
@@ -659,6 +660,7 @@ impl MapKeys {
             Value::Complex(keys) => set_tombstones(keys, dropped),
             Value::Char(keys) => set_tombstones(keys, dropped),
             Value::Box(keys) => set_tombstones(keys, dropped),
+            Value::Rational(_) => todo!(),
             Value::Byte(keys) => {
                 let mut nums = keys.convert_ref();
                 set_tombstones(&mut nums, dropped);
@@ -678,6 +680,7 @@ impl MapKeys {
             Value::Num(keys) => set_tombstones(keys, not_taken),
             Value::Complex(keys) => set_tombstones(keys, not_taken),
             Value::Char(keys) => set_tombstones(keys, not_taken),
+            Value::Rational(_) => todo!(),
             Value::Box(keys) => set_tombstones(keys, not_taken),
             Value::Byte(keys) => {
                 let mut nums = keys.convert_ref();
@@ -959,6 +962,7 @@ impl MapItem for Value {
             Value::Byte(_) => false,
             Value::Complex(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
             Value::Char(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
+            Value::Rational(_) => todo!(),
             Value::Box(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
         }
     }
@@ -968,6 +972,7 @@ impl MapItem for Value {
             Value::Byte(_) => false,
             Value::Complex(num) => num.data.iter().any(|v| v.is_any_tombstone()),
             Value::Char(num) => num.data.iter().any(|v| v.is_any_tombstone()),
+            Value::Rational(_) => todo!(),
             Value::Box(num) => num.data.iter().any(|v| v.is_any_tombstone()),
         }
     }
@@ -977,6 +982,7 @@ impl MapItem for Value {
             Value::Byte(_) => false,
             Value::Complex(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
             Value::Char(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
+            Value::Rational(_) => todo!(),
             Value::Box(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
         }
     }
@@ -986,6 +992,7 @@ impl MapItem for Value {
             Value::Byte(_) => false,
             Value::Complex(num) => num.data.iter().all(|v| v.is_any_tombstone()),
             Value::Char(num) => num.data.iter().all(|v| v.is_any_tombstone()),
+            Value::Rational(_) => todo!(),
             Value::Box(num) => num.data.iter().all(|v| v.is_any_tombstone()),
         }
     }

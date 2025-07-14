@@ -276,6 +276,7 @@ pub trait FillContext: ErrorContext {
             Value::Byte(_) => self.scalar_fill::<u8>().is_ok(),
             Value::Complex(_) => self.scalar_fill::<Complex>().is_ok(),
             Value::Char(_) => self.scalar_fill::<char>().is_ok(),
+            Value::Rational(_) => todo!(),
             Value::Box(_) => self.scalar_fill::<Boxed>().is_ok(),
         }
     }
@@ -363,6 +364,7 @@ where
         Value::Byte(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
         Value::Complex(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
         Value::Char(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
+        Value::Rational(_) => todo!(),
         Value::Box(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
     }
 }

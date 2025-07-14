@@ -69,7 +69,6 @@ macro_rules! requirement {
     };
 }
 
-#[cfg(test)]
 macro_rules! param_type {
     (bool) => {
         "boolean"
@@ -82,7 +81,6 @@ macro_rules! param_type {
     };
 }
 
-#[cfg(test)]
 macro_rules! default_to_uiua {
     ($default:expr) => {{
         let default = format!("{:?}", $default);
@@ -111,8 +109,9 @@ macro_rules! create_config {
             )*
         }
 
-        #[test]
-        fn generate_format_cfg_docs() {
+        #[doc(hidden)]
+        #[cfg(feature = "internal_fmt_doc")]
+        pub fn format_cfg_docs() -> String {
             paste! {
                 let mut s: String = r#"
 # Uiua Formatter Configuration
@@ -140,7 +139,7 @@ The following configuration options are available:
                     s.push_str("\n---\n\n");
                 )*
 
-                fs::write("site/text/format_config.md", s).unwrap();
+                s
             }
         }
 

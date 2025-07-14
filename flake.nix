@@ -61,8 +61,15 @@
           };
           packages = {
             default = pkgs.callPackage ./nix/package.nix { inherit craneLib libPath rustPlatform; };
+            generator = pkgs.callPackage ./nix/generator.nix { inherit craneLib; };
             fonts = pkgs.callPackage ./nix/fonts.nix { };
-            site = pkgs.callPackage ./nix/site.nix { inherit craneLib; };
+            site = pkgs.callPackage ./nix/site.nix {
+              inherit craneLib;
+              inherit (self'.packages) generator;
+            };
+            sublime-grammar = pkgs.callPackage ./nix/sublime-grammar.nix {
+              inherit (self'.packages) generator;
+            };
             toolchain = toolchainFor pkgs;
           };
           apps.site.program = pkgs.writeShellApplication {

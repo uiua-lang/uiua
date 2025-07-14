@@ -1,17 +1,8 @@
-use std::{
-    ffi::*,
-    fmt,
-    mem::{align_of, size_of},
-    str::FromStr,
-};
-
-#[allow(dead_code)]
-pub(crate) const DEBUG: bool = false;
-
 /// Types for FFI
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[allow(missing_docs)]
 pub enum FfiType {
+    #[default]
     Void,
     Char,
     Short,
@@ -39,7 +30,7 @@ pub enum FfiType {
     },
 }
 
-impl FromStr for FfiType {
+impl std::str::FromStr for FfiType {
     type Err = String;
     fn from_str(mut s: &str) -> Result<Self, String> {
         s = s.trim();
@@ -124,114 +115,28 @@ impl FromStr for FfiType {
     }
 }
 
-impl fmt::Display for FfiType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FfiType::Void => write!(f, "void"),
-            FfiType::Char => write!(f, "char"),
-            FfiType::Short => write!(f, "short"),
-            FfiType::Int => write!(f, "int"),
-            FfiType::Long => write!(f, "long"),
-            FfiType::LongLong => write!(f, "long long"),
-            FfiType::Float => write!(f, "float"),
-            FfiType::Double => write!(f, "double"),
-            FfiType::UChar => write!(f, "unsigned char"),
-            FfiType::UShort => write!(f, "unsigned short"),
-            FfiType::UInt => write!(f, "unsigned int"),
-            FfiType::ULong => write!(f, "unsigned long"),
-            FfiType::ULongLong => write!(f, "unsigned long long"),
-            FfiType::Ptr { mutable, inner } => {
-                write!(f, "{}{inner}*", if *mutable { "" } else { "const " })
-            }
-            FfiType::List {
-                mutable,
-                len_index,
-                inner,
-            } => write!(
-                f,
-                "{}{}:{}",
-                if *mutable { "" } else { "const " },
-                inner,
-                len_index,
-            ),
-            FfiType::Struct { fields } => {
-                write!(f, "{{")?;
-                for (i, field) in fields.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "; ")?;
-                    }
-                    write!(f, "{}", field)?;
-                }
-                write!(f, "}}")
-            }
-        }
-    }
-}
-
-impl FfiType {
-    /// Get the C-ABI-compatible size and alignment of a type
-    pub fn size_align(&self) -> (usize, usize) {
-        match self {
-            FfiType::Void => (0, 1),
-            FfiType::Char => (size_of::<c_char>(), align_of::<c_char>()),
-            FfiType::Short => (size_of::<c_short>(), align_of::<c_short>()),
-            FfiType::Int => (size_of::<c_int>(), align_of::<c_int>()),
-            FfiType::Long => (size_of::<c_long>(), align_of::<c_long>()),
-            FfiType::LongLong => (size_of::<c_longlong>(), align_of::<c_longlong>()),
-            FfiType::Float => (size_of::<c_float>(), align_of::<c_float>()),
-            FfiType::Double => (size_of::<c_double>(), align_of::<c_double>()),
-            FfiType::UChar => (size_of::<c_uchar>(), align_of::<c_uchar>()),
-            FfiType::UShort => (size_of::<c_ushort>(), align_of::<c_ushort>()),
-            FfiType::UInt => (size_of::<c_uint>(), align_of::<c_uint>()),
-            FfiType::ULong => (size_of::<c_ulong>(), align_of::<c_ulong>()),
-            FfiType::ULongLong => (size_of::<c_ulonglong>(), align_of::<c_ulonglong>()),
-            FfiType::Ptr { .. } | FfiType::List { .. } => (size_of::<usize>(), align_of::<usize>()),
-            FfiType::Struct { fields } => struct_fields_size_align(fields),
-        }
-    }
-    /// Check if a type is a scalar type
-    pub fn is_scalar(&self) -> bool {
-        match self {
-            FfiType::Void | FfiType::Ptr { .. } | FfiType::List { .. } => false,
-            FfiType::Struct { fields } => fields.iter().all(|f| f.is_scalar() && *f == fields[0]),
-            _ => true,
-        }
-    }
-}
-
-fn struct_fields_size_align(fields: &[FfiType]) -> (usize, usize) {
-    let mut size = 0;
-    let mut align = 1;
-    for field in fields {
-        let (field_size, field_align) = field.size_align();
-        // println!("size_align of field {field}: {field_size}, {field_align}");
-        align = align.max(field_align);
-        if size % field_align != 0 {
-            size += field_align - (size % field_align);
-        }
-        size += field_size;
-    }
-    size = size.div_ceil(align) * align;
-    // println!("size_align of struct {fields:?}: {size}, {align}");
-    (size, align)
-}
-
 #[cfg(feature = "ffi")]
 pub(crate) use enabled::*;
 #[cfg(feature = "ffi")]
 mod enabled {
+    use super::*;
+
     use std::{
         any::{type_name, Any},
-        mem::{forget, take, transmute},
+        ffi::*,
+        fmt,
+        mem::{align_of, forget, size_of, take, transmute},
         ptr, slice,
     };
 
     use dashmap::DashMap;
     use ecow::EcoVec;
-    use libffi::middle::*;
+    use libffi::middle::{Arg, Cif, CodePtr, Type};
 
-    use super::*;
     use crate::{Array, Boxed, MetaPtr, Value};
+
+    #[allow(dead_code)]
+    pub(crate) const DEBUG: bool = false;
 
     macro_rules! dbgln {
         ($($arg:tt)*) => {
@@ -239,6 +144,113 @@ mod enabled {
                 println!($($arg)*); // Allow println
             }
         }
+    }
+
+    impl fmt::Display for FfiType {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                FfiType::Void => write!(f, "void"),
+                FfiType::Char => write!(f, "char"),
+                FfiType::Short => write!(f, "short"),
+                FfiType::Int => write!(f, "int"),
+                FfiType::Long => write!(f, "long"),
+                FfiType::LongLong => write!(f, "long long"),
+                FfiType::Float => write!(f, "float"),
+                FfiType::Double => write!(f, "double"),
+                FfiType::UChar => write!(f, "unsigned char"),
+                FfiType::UShort => write!(f, "unsigned short"),
+                FfiType::UInt => write!(f, "unsigned int"),
+                FfiType::ULong => write!(f, "unsigned long"),
+                FfiType::ULongLong => write!(f, "unsigned long long"),
+                FfiType::Ptr { mutable, inner } => {
+                    write!(f, "{}{inner}*", if *mutable { "" } else { "const " })
+                }
+                FfiType::List {
+                    mutable,
+                    len_index,
+                    inner,
+                } => write!(
+                    f,
+                    "{}{}:{}",
+                    if *mutable { "" } else { "const " },
+                    inner,
+                    len_index,
+                ),
+                FfiType::Struct { fields } => {
+                    write!(f, "{{")?;
+                    for (i, field) in fields.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, "; ")?;
+                        }
+                        write!(f, "{}", field)?;
+                    }
+                    write!(f, "}}")
+                }
+            }
+        }
+    }
+
+    impl FfiType {
+        /// Get the C-ABI-compatible size and alignment of a type
+        pub fn size_align(&self) -> (usize, usize) {
+            match self {
+                FfiType::Void => (0, 1),
+                FfiType::Char => (size_of::<c_char>(), align_of::<c_char>()),
+                FfiType::Short => (size_of::<c_short>(), align_of::<c_short>()),
+                FfiType::Int => (size_of::<c_int>(), align_of::<c_int>()),
+                FfiType::Long => (size_of::<c_long>(), align_of::<c_long>()),
+                FfiType::LongLong => (size_of::<c_longlong>(), align_of::<c_longlong>()),
+                FfiType::Float => (size_of::<c_float>(), align_of::<c_float>()),
+                FfiType::Double => (size_of::<c_double>(), align_of::<c_double>()),
+                FfiType::UChar => (size_of::<c_uchar>(), align_of::<c_uchar>()),
+                FfiType::UShort => (size_of::<c_ushort>(), align_of::<c_ushort>()),
+                FfiType::UInt => (size_of::<c_uint>(), align_of::<c_uint>()),
+                FfiType::ULong => (size_of::<c_ulong>(), align_of::<c_ulong>()),
+                FfiType::ULongLong => (size_of::<c_ulonglong>(), align_of::<c_ulonglong>()),
+                FfiType::Ptr { .. } | FfiType::List { .. } => {
+                    (size_of::<usize>(), align_of::<usize>())
+                }
+                FfiType::Struct { fields } => struct_fields_size_align(fields),
+            }
+        }
+        /// Check if a type is a scalar type
+        pub fn is_scalar(&self) -> bool {
+            match self {
+                FfiType::Void | FfiType::Ptr { .. } | FfiType::List { .. } => false,
+                FfiType::Struct { fields } => {
+                    fields.iter().all(|f| f.is_scalar() && *f == fields[0])
+                }
+                FfiType::Char
+                | FfiType::Short
+                | FfiType::Int
+                | FfiType::Long
+                | FfiType::LongLong
+                | FfiType::Float
+                | FfiType::Double
+                | FfiType::UChar
+                | FfiType::UShort
+                | FfiType::UInt
+                | FfiType::ULong
+                | FfiType::ULongLong => true,
+            }
+        }
+    }
+
+    fn struct_fields_size_align(fields: &[FfiType]) -> (usize, usize) {
+        let mut size = 0;
+        let mut align = 1;
+        for field in fields {
+            let (field_size, field_align) = field.size_align();
+            dbgln!("size_align of field {field}: {field_size}, {field_align}");
+            align = align.max(field_align);
+            if size % field_align != 0 {
+                size += field_align - (size % field_align);
+            }
+            size += field_size;
+        }
+        size = size.div_ceil(align) * align;
+        dbgln!("size_align of struct {fields:?}: {size}, {align}");
+        (size, align)
     }
 
     #[derive(Default)]
@@ -288,7 +300,7 @@ mod enabled {
             // Bind arguments
             let mut args = args.iter();
             for (i, arg_ty) in arg_tys.iter().enumerate() {
-                cif_arg_tys.push(ffity_to_cty(arg_ty));
+                cif_arg_tys.push(arg_ty.into());
                 if let Some(len) = lengths[i] {
                     // Bind length
                     dbgln!("bind {i} len: {len}");
@@ -334,7 +346,7 @@ mod enabled {
                 cif_arg_tys.len(),
                 bindings.args.len()
             );
-            let cif = Cif::new(cif_arg_tys, ffity_to_cty(&return_ty));
+            let cif = Cif::new(cif_arg_tys, (&return_ty).into());
             let fptr = CodePtr::from_fun(*fptr);
             let mut results = Vec::new();
 
@@ -343,6 +355,7 @@ mod enabled {
                     results.push((unsafe { cif.call::<$ty>(fptr, &bindings.args) } as f64).into())
                 };
             }
+
             macro_rules! ret_list {
                 ($c_ty:ty, $len_index:expr) => {
                     unsafe {
@@ -360,15 +373,6 @@ mod enabled {
                         drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
                     }
                 };
-            }
-
-            macro_rules! ret_ptr {
-                ($ty:ty) => {{
-                    let ptr = unsafe { cif.call::<*const $ty>(fptr, &bindings.args) };
-                    let mut val = Value::default();
-                    val.meta.pointer = Some(MetaPtr::new(ptr, true));
-                    results.push(val);
-                }};
             }
 
             match &return_ty {
@@ -391,31 +395,20 @@ mod enabled {
                         let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
                         results.push(Value::from(s))
                     },
-                    FfiType::Struct { fields } => unsafe {
-                        let ptr = cif.call::<*const u8>(fptr, &bindings.args);
-                        let (size, _) = struct_fields_size_align(fields);
-                        let slice = slice::from_raw_parts(ptr, size);
-                        results.push(bindings.struct_repr_to_value(slice, fields)?);
-                        // Clean up the pointer's memory
-                        drop(Vec::from_raw_parts(ptr as *mut u8, size, size));
-                    },
-                    FfiType::Void => ret_ptr!(()),
-                    FfiType::UChar => ret_ptr!(c_uchar),
-                    FfiType::Short => ret_ptr!(c_short),
-                    FfiType::UShort => ret_ptr!(c_ushort),
-                    FfiType::Int => ret_ptr!(c_int),
-                    FfiType::UInt => ret_ptr!(c_uint),
-                    FfiType::Long => ret_ptr!(c_long),
-                    FfiType::ULong => ret_ptr!(c_ulong),
-                    FfiType::LongLong => ret_ptr!(c_longlong),
-                    FfiType::ULongLong => ret_ptr!(c_ulonglong),
-                    FfiType::Float => ret_ptr!(c_float),
-                    FfiType::Double => ret_ptr!(c_double),
-                    _ => {
-                        return Err(format!(
-                            "Invalid or unsupported FFI return type {return_ty}"
-                        ))
-                    }
+                    inner => {
+                        let ptr = unsafe { cif.call::<*const ()>(fptr, &bindings.args) };
+                        let mut val = Value::default();
+                        val.meta.pointer = Some(MetaPtr::new(ptr, true, inner.clone()));
+                        results.push(val);
+                    } // FfiType::Struct { fields } => unsafe {
+                      //     let ptr = cif.call::<*mut u8>(fptr, &bindings.args);
+                      //
+                      //     let (size, _) = struct_fields_size_align(fields);
+                      //     let slice = slice::from_raw_parts_mut(ptr, size);
+                      //     results.push(bindings.struct_repr_to_value(slice, fields)?);
+                      //     // Clean up the pointer's memory
+                      //     drop(Vec::from_raw_parts(ptr as *mut u8, size, size));
+                      // },
                 },
                 FfiType::List {
                     len_index, inner, ..
@@ -443,12 +436,13 @@ mod enabled {
                     let args = &bindings.args;
                     macro_rules! call_ret_struct {
                         ($n:literal) => {
-                            bindings.struct_repr_to_value(
+                            FfiBindings::struct_repr_to_value(
                                 &unsafe { cif.call::<[u8; $n]>(fptr, args) },
                                 fields,
                             )
                         };
                     }
+
                     let val = match size {
                         0 => Value::default(),
                         1 => call_ret_struct!(1)?,
@@ -478,12 +472,12 @@ mod enabled {
 
             // Get out parameters
             macro_rules! out_param_scalar {
-                ($ty:ty, $i:expr, $numty:ty ) => {
+                ($ty:ty, $i:expr, $numty:ty, $ffitype:expr) => {
                     match bindings.get_maybe_null::<$ty>($i) {
                         Some((&val, ptr)) => {
                             let mut val = Value::from(val as $numty);
                             if let Some(ptr) = ptr {
-                                val.meta.pointer = Some(MetaPtr::new(ptr, false));
+                                val.meta.pointer = Some(MetaPtr::new(ptr, false, $ffitype));
                             }
                             results.push(val)
                         }
@@ -523,26 +517,27 @@ mod enabled {
                             continue;
                         }
                         dbgln!("out {i} arg: {ty}");
-                        match &**inner {
+                        let inner = (**inner).clone();
+                        match &inner {
                             FfiType::Char => unsafe {
                                 let ptr = bindings.get::<c_char>(i);
                                 let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
                                 results.push(Value::from(s))
                             },
-                            FfiType::UChar => out_param_scalar!(c_uchar, i, u8),
-                            FfiType::Short => out_param_scalar!(c_short, i, f64),
-                            FfiType::UShort => out_param_scalar!(c_ushort, i, f64),
-                            FfiType::Int => out_param_scalar!(c_int, i, f64),
-                            FfiType::UInt => out_param_scalar!(c_uint, i, f64),
-                            FfiType::Long => out_param_scalar!(c_long, i, f64),
-                            FfiType::ULong => out_param_scalar!(c_ulong, i, f64),
-                            FfiType::LongLong => out_param_scalar!(c_longlong, i, f64),
-                            FfiType::ULongLong => out_param_scalar!(c_ulonglong, i, f64),
-                            FfiType::Float => out_param_scalar!(c_float, i, f64),
-                            FfiType::Double => out_param_scalar!(c_double, i, f64),
+                            FfiType::UChar => out_param_scalar!(c_uchar, i, u8, inner),
+                            FfiType::Short => out_param_scalar!(c_short, i, f64, inner),
+                            FfiType::UShort => out_param_scalar!(c_ushort, i, f64, inner),
+                            FfiType::Int => out_param_scalar!(c_int, i, f64, inner),
+                            FfiType::UInt => out_param_scalar!(c_uint, i, f64, inner),
+                            FfiType::Long => out_param_scalar!(c_long, i, f64, inner),
+                            FfiType::ULong => out_param_scalar!(c_ulong, i, f64, inner),
+                            FfiType::LongLong => out_param_scalar!(c_longlong, i, f64, inner),
+                            FfiType::ULongLong => out_param_scalar!(c_ulonglong, i, f64, inner),
+                            FfiType::Float => out_param_scalar!(c_float, i, f64, inner),
+                            FfiType::Double => out_param_scalar!(c_double, i, f64, inner),
                             FfiType::Struct { fields } => {
                                 let repr = bindings.get_repr(i);
-                                results.push(bindings.struct_repr_to_value(repr, fields)?);
+                                results.push(FfiBindings::struct_repr_to_value(repr, fields)?);
                             }
                             FfiType::Ptr { inner, .. } => match &**inner {
                                 FfiType::Char => unsafe {
@@ -552,7 +547,7 @@ mod enabled {
                                     dbgln!("    inner ptr to char: {ptr:p}");
                                     results.push(if ptr.is_null() {
                                         let mut val = Value::default();
-                                        val.meta.pointer = Some(MetaPtr::new(ptr, true));
+                                        val.meta.pointer = Some(MetaPtr::new(ptr, true, (**inner).clone() ));
                                         val
                                     } else {
                                         let s = CStr::from_ptr(ptr)
@@ -567,13 +562,13 @@ mod enabled {
                                     let ptr = *ptr;
                                     dbgln!("    inner ptr to void: {ptr:p}");
                                     let mut val = Value::from(ptr as usize);
-                                    val.meta.pointer = Some(MetaPtr::new(ptr, true));
+                                    val.meta.pointer = Some(MetaPtr::new(ptr, true, (**inner).clone() ));
                                     results.push(val);
                                 },
                                 _ => {
                                     let ptr = *bindings.get::<*mut ()>(i);
                                     let mut val = Value::from(ptr as usize);
-                                    val.meta.pointer = Some(MetaPtr::new(ptr, true));
+                                    val.meta.pointer = Some(MetaPtr::new(ptr, true, (**inner).clone() ));
                                     results.push(val);
                                 }
                             },
@@ -611,7 +606,7 @@ mod enabled {
                             }
                             let mut rows = Vec::new();
                             for chunk in repr.chunks_exact(repr.len() / len) {
-                                rows.push(bindings.struct_repr_to_value(chunk, fields)?);
+                                rows.push(FfiBindings::struct_repr_to_value(chunk, fields)?);
                             }
                             let value = Value::from_row_values_infallible(rows);
                             results.push(value);
@@ -893,7 +888,7 @@ mod enabled {
                         self.push_repr_ptr(repr)
                     }
                     (_, arg) if arg.meta.pointer.is_some() => {
-                        let ptr = arg.meta.pointer.unwrap().get_mut();
+                        let ptr = arg.meta.pointer.as_ref().unwrap().get_mut();
                         self.push_raw_ptr(ptr);
                         ptr
                     }
@@ -1076,7 +1071,7 @@ mod enabled {
                     }
                     // Pointers
                     (FfiType::Ptr { inner, .. }, value) => {
-                        if let Some(ptr_u) = value.meta.pointer {
+                        if let Some(ref ptr_u) = value.meta.pointer {
                             repr[range].copy_from_slice(&ptr_u.ptr.to_ne_bytes());
                         } else {
                             match (&**inner, value) {
@@ -1104,7 +1099,7 @@ mod enabled {
         }
         /// Convert a C-ABI-compatiable struct byte representation to a [`Value`]
         #[allow(clippy::only_used_in_recursion)]
-        fn struct_repr_to_value(&self, repr: &[u8], fields: &[FfiType]) -> Result<Value, String> {
+        fn struct_repr_to_value(repr: &[u8], fields: &[FfiType]) -> Result<Value, String> {
             let mut rows: Vec<Value> = Vec::new();
             let mut offset = 0;
             for (i, field) in fields.iter().enumerate() {
@@ -1134,7 +1129,10 @@ mod enabled {
                     FfiType::Double => scalar!(c_double),
                     // Structs
                     FfiType::Struct { fields } => {
-                        rows.push(self.struct_repr_to_value(&repr[offset..offset + size], fields)?);
+                        rows.push(Self::struct_repr_to_value(
+                            &repr[offset..offset + size],
+                            fields,
+                        )?);
                     }
                     // Pointers
                     FfiType::Ptr { inner, .. } => match &**inner {
@@ -1143,47 +1141,17 @@ mod enabled {
                             bytes.copy_from_slice(
                                 &repr[offset..offset + size_of::<*const c_char>()],
                             );
-                            let ptr = unsafe {
-                                transmute::<[u8; size_of::<*const c_char>()], *const c_char>(bytes)
-                            };
+                            let ptr = unsafe { transmute::<_, *const c_char>(bytes) };
                             let c_str = unsafe { CStr::from_ptr(ptr) };
                             let s = c_str.to_str().map_err(|e| e.to_string())?;
                             rows.push(Value::from(s));
                         }
-                        FfiType::Struct { fields } => {
+                        _ => {
                             let mut bytes: [u8; size_of::<*const u8>()] = Default::default();
                             bytes.copy_from_slice(&repr[offset..offset + size_of::<*const u8>()]);
-                            let ptr = unsafe {
-                                transmute::<[u8; size_of::<*const u8>()], *const u8>(bytes)
-                            };
-                            let (size, _) = struct_fields_size_align(fields);
-                            let inner_repr = unsafe { slice::from_raw_parts(ptr, size) };
-                            rows.push(self.struct_repr_to_value(inner_repr, fields)?);
-                        }
-                        FfiType::Void => {
-                            let mut bytes: [u8; size_of::<*const u8>()] = Default::default();
-                            bytes.copy_from_slice(&repr[offset..offset + size_of::<*const u8>()]);
-                            let ptr = unsafe {
-                                transmute::<[u8; size_of::<*const u8>()], *const u8>(bytes)
-                            };
+                            let ptr = unsafe { transmute::<_, *const u8>(bytes) };
                             let mut row = Value::default();
-                            row.meta.pointer = Some(MetaPtr::new(ptr, true));
-                            rows.push(row);
-                        }
-                        inner => {
-                            let mut bytes: [u8; size_of::<*const u8>()] = Default::default();
-                            bytes.copy_from_slice(&repr[offset..offset + size_of::<*const u8>()]);
-                            let ptr = unsafe {
-                                transmute::<[u8; size_of::<*const u8>()], *const u8>(bytes)
-                            };
-                            let (size, _) = inner.size_align();
-                            let inner_repr = unsafe { slice::from_raw_parts(ptr, size) };
-                            let mut row = self
-                                .struct_repr_to_value(inner_repr, slice::from_ref(inner))?
-                                .into_rows()
-                                .next()
-                                .unwrap();
-                            row.meta.pointer = Some(MetaPtr::new(ptr, false));
+                            row.meta.pointer = Some(MetaPtr::new(ptr, true, (**inner).clone()));
                             rows.push(row);
                         }
                     },
@@ -1212,34 +1180,6 @@ mod enabled {
         }
     }
 
-    /// Convert a [`FfiType`] to a C-compatible [`Type`]
-    pub(crate) fn ffity_to_cty(ty: &FfiType) -> Type {
-        match ty {
-            FfiType::Void => Type::void(),
-            FfiType::Char => Type::c_schar(),
-            FfiType::Short => Type::c_short(),
-            FfiType::Int => Type::c_int(),
-            FfiType::Long => Type::c_long(),
-            FfiType::LongLong => Type::c_longlong(),
-            FfiType::UChar => Type::c_uchar(),
-            FfiType::UShort => Type::c_ushort(),
-            FfiType::UInt => Type::c_uint(),
-            FfiType::ULong => Type::c_ulong(),
-            FfiType::ULongLong => Type::c_ulonglong(),
-            FfiType::Float => Type::f32(),
-            FfiType::Double => Type::f64(),
-            FfiType::Ptr { .. } => Type::pointer(),
-            FfiType::List { .. } => Type::pointer(),
-            FfiType::Struct { fields } => {
-                let mut types = Vec::with_capacity(fields.len());
-                for field in fields {
-                    types.push(ffity_to_cty(field));
-                }
-                Type::structure(types)
-            }
-        }
-    }
-
     pub(crate) fn ffi_copy(ty: FfiType, ptr: *const (), len: usize) -> Result<Value, String> {
         fn ptr_iter<T>(ptr: *const T, len: usize) -> impl ExactSizeIterator<Item = T> {
             (0..len).map(move |i| unsafe { ptr.add(i).read() })
@@ -1256,6 +1196,35 @@ mod enabled {
                     .to_str()
                     .map_err(|e| e.to_string())?;
                 Value::from(s)
+            },
+            FfiType::Ptr { ref inner, .. } => unsafe {
+                let slice = slice::from_raw_parts(ptr as *const usize, len);
+                Array::new(
+                    len,
+                    slice
+                        .into_iter()
+                        .map(|&addr| {
+                            let mut ptr_val = Value::default();
+                            ptr_val.meta.pointer =
+                                Some(MetaPtr::new::<()>(addr as *const (), true, (**inner).clone()));
+                            ptr_val
+                        })
+                        .map(Boxed)
+                        .collect::<EcoVec<_>>(),
+                )
+                .into()
+            },
+            FfiType::Struct { fields } => unsafe {
+                let (size, _) = struct_fields_size_align(&fields);
+                let bytes = slice::from_raw_parts(ptr as *const u8, len * size);
+                let mut structs = Vec::new();
+                for i in 0..len {
+                    structs.push(FfiBindings::struct_repr_to_value(
+                        &bytes[i * size..(i + 1) * size],
+                        &fields,
+                    )?);
+                }
+                Array::new(len, structs.into_iter().map(Boxed).collect::<EcoVec<_>>()).into()
             },
             FfiType::UChar => ptr_iter(ptr as *const c_uchar, len).collect(),
             FfiType::Short => as_f64!(c_short),
@@ -1277,8 +1246,36 @@ mod enabled {
             return;
         }
         let ptr = ptr as *mut ();
-        unsafe {
-            let _ = Box::from_raw(ptr);
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+
+    impl From<&FfiType> for Type {
+        /// Convert a [`FfiType`] to a C-compatible [`Type`]
+        fn from(ty: &FfiType) -> Self {
+            match ty {
+                FfiType::Void => Type::void(),
+                FfiType::Char => Type::c_schar(),
+                FfiType::Short => Type::c_short(),
+                FfiType::Int => Type::c_int(),
+                FfiType::Long => Type::c_long(),
+                FfiType::LongLong => Type::c_longlong(),
+                FfiType::UChar => Type::c_uchar(),
+                FfiType::UShort => Type::c_ushort(),
+                FfiType::UInt => Type::c_uint(),
+                FfiType::ULong => Type::c_ulong(),
+                FfiType::ULongLong => Type::c_ulonglong(),
+                FfiType::Float => Type::f32(),
+                FfiType::Double => Type::f64(),
+                FfiType::Ptr { .. } => Type::pointer(),
+                FfiType::List { .. } => Type::pointer(),
+                FfiType::Struct { fields } => {
+                    let mut types = Vec::with_capacity(fields.len());
+                    for field in fields {
+                        types.push(field.into());
+                    }
+                    Type::structure(types)
+                }
+            }
         }
     }
 }

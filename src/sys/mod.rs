@@ -1234,6 +1234,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .pop(2)?
                 .meta
                 .pointer
+                .as_ref()
                 .map(|p| p.get())
                 .ok_or_else(|| env.error("Copied pointer must be a pointer value"))?;
             let len = env
@@ -1244,11 +1245,29 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .map_err(|e| env.error(e))?;
             env.push(value);
         }
+        SysOp::MemWrite => {
+            // todo!();
+            // let ty = env
+            //     .pop(1)?
+            //     .as_string(env, "Pointer write type must be a string")?;
+            // let ty = ty.parse::<FfiType>().map_err(|e| env.error(e))?;
+            // let ptr: *const () = env
+            //     .pop(2)?
+            //     .meta
+            //     .pointer
+            //     .map(|p| p.get())
+            //     .ok_or_else(|| env.error("Copied pointer must be a pointer value"))?;
+            // let idx = env
+            //     .pop(3)?
+            //     .as_nat(env, "Write index must be a non-negative integer")?;
+            todo!()
+        }
         SysOp::MemFree => {
             let ptr = env
                 .pop(1)?
                 .meta
                 .pointer
+                .as_ref()
                 .map(|p| p.get())
                 .ok_or_else(|| env.error("Freed pointer must be a pointer value"))?;
             (env.rt.backend).mem_free(ptr).map_err(|e| env.error(e))?;

@@ -2301,12 +2301,12 @@ cmp_impls!(other_is_lt, other_is_le, other_is_gt, other_is_ge);
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        if let Some(a) = self.meta.pointer {
+        if let Some(a) = &self.meta.pointer {
             if a.raw {
-                return other.meta.pointer.is_some_and(|b| a == b);
+                return other.meta.pointer.as_ref().is_some_and(|b| a == b);
             }
         }
-        if let Some(b) = other.meta.pointer {
+        if let Some(b) = &other.meta.pointer {
             if b.raw {
                 return false;
             }

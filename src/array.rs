@@ -20,7 +20,8 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     fill::{Fill, FillValue},
     grid_fmt::GridFmt,
-    Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Value, WILDCARD_CHAR, WILDCARD_NAN,
+    Boxed, Complex, ExactDoubleIterator, FfiType, HandleKind, Shape, Value, WILDCARD_CHAR,
+    WILDCARD_NAN,
 };
 
 /// Uiua's array type
@@ -230,24 +231,31 @@ impl ArrayMeta {
 }
 
 /// Array pointer metadata
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct MetaPtr {
     /// The pointer value
     pub ptr: usize,
     /// Whether the pointer should prevent the array's value from being shown
     pub raw: bool,
+    ///
+    pub ffi_type: FfiType,
 }
 
 impl MetaPtr {
     /// Get a null metadata pointer
     pub const fn null() -> Self {
-        Self { ptr: 0, raw: true }
+        Self {
+            ptr: 0,
+            raw: true,
+            ffi_type: FfiType::Void,
+        }
     }
     /// Create a new metadata pointer
-    pub fn new<T: ?Sized>(ptr: *const T, raw: bool) -> Self {
+    pub fn new<T: ?Sized>(ptr: *const T, raw: bool, ffi_type: FfiType) -> Self {
         Self {
             ptr: ptr as *const () as usize,
             raw,
+            ffi_type,
         }
     }
     /// Get the pointer as a raw pointer

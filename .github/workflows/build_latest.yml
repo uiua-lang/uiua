@@ -11,6 +11,7 @@ on:
       - "site/**"
       - "pad/**"
       - "tests*/**"
+      - "generator/**"
       - "changelog.md"
       - "readme.md"
       - ".github/workflows/build_latest.yml"
@@ -103,6 +104,7 @@ jobs:
       run: |
         rustup target add wasm32-unknown-unknown
         cargo install trunk --locked --root target
+        cargo install --release --locked --package uiua-generator --root target
     - name: Build site
       run: |
         git checkout site
@@ -110,9 +112,12 @@ jobs:
         git reset --hard origin/site
         git rebase main || { echo "Rebase failed, aborting."; git rebase --abort; exit 1; }
         cd site
-        cargo test -p site gen_blog_html
+        ../target/bin/uiua-generator primitives-json ./primitives.json
+        ../target/bin/uiua-generator format-config-docs ./text/format_config.md
+        ../target/bin/uiua-generator blog-html ./blog/
         ../target/bin/trunk build --release -d ../docs
         git add --all
+        git add --force primitive.json text/format_config.md
         git commit --amend --no-edit
         git push --force
         git checkout main

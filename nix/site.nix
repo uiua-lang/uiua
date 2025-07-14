@@ -2,6 +2,7 @@
   craneLib,
   lib,
   wasm-bindgen-cli_0_2_93,
+  generator,
   doCheck ? true,
 }:
 let
@@ -27,8 +28,12 @@ let
   cargoArtifacts = craneLib.buildDepsOnly commonArgs;
   totalArgs = commonArgs // {
     inherit cargoArtifacts;
+    nativeBuildInputs = [ generator ];
     preBuild = ''
       cd ./site/
+      uiua-generator primitives-json ./primitives.json
+      uiua-generator format-config-docs ./text/format_config.md
+      uiua-generator blog-html ./blog/
     '';
     postBuild = ''
       cd ..

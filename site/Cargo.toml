@@ -28,8 +28,11 @@ wasm-bindgen.workspace = true
 web-sys = {workspace = true, features = ["HtmlElement"]}
 comrak = "0.39.0"
 console_error_panic_hook = "0.1.7"
-uiua = {path = "..", default-features = false, features = ["batteries", "web"]}
-uiua-editor = {path = "../pad/editor"}
+uiua = {path = "..", default-features = false}
+uiua-editor = {path = "../pad/editor", default_features = false}
 
 [features]
-audio = [] # Dummy for rust-analyzer
+# Dummy for rust-analyzer
+audio = []
+gen_blog_html = []
+default = ["uiua/batteries", "uiua/web", "uiua-editor/default"]

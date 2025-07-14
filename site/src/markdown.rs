@@ -52,7 +52,7 @@ pub fn markdown_view(text: &str) -> View {
     node_view(root)
 }
 
-#[cfg(test)]
+#[cfg(feature = "gen_blog_html")]
 pub fn markdown_html(text: &str) -> String {
     let arena = Arena::new();
     let text = text
@@ -215,7 +215,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
     }
 }
 
-#[cfg(test)]
+#[cfg(feature = "gen_blog_html")]
 fn node_html<'a>(node: &'a AstNode<'a>) -> String {
     use uiua::{Compiler, PrimDoc, SafeSys, Uiua, UiuaErrorKind, Value};
     use uiua_editor::prim_class;

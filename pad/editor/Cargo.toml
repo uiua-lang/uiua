@@ -18,7 +18,7 @@ workspace = true
 
 [dependencies]
 base64.workspace = true
-hound.workspace = true
+hound = {workspace = true, optional = true}
 js-sys.workspace = true
 leptos = {workspace = true, features = ["csr"]}
 leptos_router.workspace = true
@@ -27,13 +27,15 @@ unicode-segmentation.workspace = true
 urlencoding.workspace = true
 wasm-bindgen.workspace = true
 web-sys = {workspace = true, features = ["CustomElementRegistry", "Window"]}
-uiua = {path = "../..", default-features = false, features = [
-  "batteries",
-  "web",
-]}
+uiua = {path = "../..", default-features = false}
 image = "0.25"
 leptos-use = {version = "0.13.0", default-features = false, features = [
   "use_resize_observer",
 ]}
 wasm-bindgen-futures = "0.4.43"
 futures = "0.3.30"
+
+[features]
+image = ["dep:image", "uiua/image"]
+audio_encode = ["dep:hound", "uiua/audio_encode"]
+default = ["uiua/batteries", "uiua/web", "image", "audio_encode"]

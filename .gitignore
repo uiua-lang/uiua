@@ -27,3 +27,6 @@ uiua.tmLanguage.json
 # symlink created by `nix build`
 result
 .direnv
+
+site/primitives.json
+site/text/format_config.md

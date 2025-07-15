@@ -2601,9 +2601,10 @@ impl Compiler {
         let inputs = self.asm.inputs.clone();
         self.emit_diagnostic_impl(Diagnostic::new(message.into(), span, kind, inputs));
     }
+    #[allow(clippy::print_stdout)]
     fn emit_diagnostic_impl(&mut self, diagnostic: Diagnostic) {
         if self.print_diagnostics {
-            println!("{}", diagnostic.report()); // Allow println
+            println!("{}", diagnostic.report());
         } else {
             self.diagnostics.insert(diagnostic);
         }

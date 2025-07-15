@@ -4070,9 +4070,9 @@ sys_op! {
     ///   : Lib ← &ffi ⊂□"example.dll"
     ///   : GetInts ← Lib {"int*" "get_ints" "int"}
     ///   : ⊃&memfree(&memcpy "int":3) GetInts 3
-    (3, MemCopy, Ffi, "&memcpy", "foreign function interface - copy", Mutating, { experimental: true }),
+    (2, MemCopy, Ffi, "&memcpy", "foreign function interface - copy", Mutating, { experimental: true }),
     /// Write data from an array into a pointer
-    (3(0), MemWrite, Ffi, "&memwr", "foreign function interface - write", Mutating, { experimental: true }),
+    (3(0), MemSet, Ffi, "&memset", "foreign function interface - set", Mutating, { experimental: true }),
     /// Free a pointer
     ///
     /// *Warning ⚠️: [&memfree] can lead to undefined behavior if used incorrectly.*

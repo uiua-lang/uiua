@@ -22,7 +22,8 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
 use crate::{
-    terminal_size, GitTarget, Handle, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend, Uiua, Value,
+    terminal_size, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend,
+    Uiua, Value,
 };
 
 /// The default native system backend
@@ -1103,13 +1104,12 @@ impl SysBackend for NativeSys {
             .do_ffi(file, return_ty, name, arg_tys, arg_values)
     }
     #[cfg(feature = "ffi")]
-    fn mem_copy(
-        &self,
-        ty: crate::FfiType,
-        ptr: *const (),
-        len: usize,
-    ) -> Result<crate::Value, String> {
-        crate::ffi_copy(ty, ptr, len)
+    fn mem_copy(&self, ptr: MetaPtr, len: usize) -> Result<Value, String> {
+        crate::ffi_copy(ptr, len)
+    }
+    #[cfg(feature = "ffi")]
+    fn mem_set(&self, ptr: MetaPtr, idx: usize, value: Value) -> Result<(), String> {
+        crate::ffi_set(ptr, idx, value)
     }
     #[cfg(feature = "ffi")]
     fn mem_free(&self, ptr: *const ()) -> Result<(), String> {

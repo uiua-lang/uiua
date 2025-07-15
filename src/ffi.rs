@@ -1,3 +1,9 @@
+#[derive(Debug, Clone)]
+enum FfiArg {
+    Type(FfiType),
+    List { len_index: usize, elements: FfiType },
+}
+
 /// Types for FFI
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[allow(missing_docs)]
@@ -547,7 +553,8 @@ mod enabled {
                                     dbgln!("    inner ptr to char: {ptr:p}");
                                     results.push(if ptr.is_null() {
                                         let mut val = Value::default();
-                                        val.meta.pointer = Some(MetaPtr::new(ptr, true, (**inner).clone() ));
+                                        val.meta.pointer =
+                                            Some(MetaPtr::new(ptr, true, (**inner).clone()));
                                         val
                                     } else {
                                         let s = CStr::from_ptr(ptr)
@@ -562,13 +569,15 @@ mod enabled {
                                     let ptr = *ptr;
                                     dbgln!("    inner ptr to void: {ptr:p}");
                                     let mut val = Value::from(ptr as usize);
-                                    val.meta.pointer = Some(MetaPtr::new(ptr, true, (**inner).clone() ));
+                                    val.meta.pointer =
+                                        Some(MetaPtr::new(ptr, true, (**inner).clone()));
                                     results.push(val);
                                 },
                                 _ => {
                                     let ptr = *bindings.get::<*mut ()>(i);
                                     let mut val = Value::from(ptr as usize);
-                                    val.meta.pointer = Some(MetaPtr::new(ptr, true, (**inner).clone() ));
+                                    val.meta.pointer =
+                                        Some(MetaPtr::new(ptr, true, (**inner).clone()));
                                     results.push(val);
                                 }
                             },
@@ -1180,7 +1189,9 @@ mod enabled {
         }
     }
 
-    pub(crate) fn ffi_copy(ty: FfiType, ptr: *const (), len: usize) -> Result<Value, String> {
+    pub(crate) fn ffi_copy(ptr: MetaPtr, len: usize) -> Result<Value, String> {
+        let ty = ptr.ffi_type;
+        let ptr = ptr.ptr;
         fn ptr_iter<T>(ptr: *const T, len: usize) -> impl ExactSizeIterator<Item = T> {
             (0..len).map(move |i| unsafe { ptr.add(i).read() })
         }
@@ -1205,8 +1216,11 @@ mod enabled {
                         .into_iter()
                         .map(|&addr| {
                             let mut ptr_val = Value::default();
-                            ptr_val.meta.pointer =
-                                Some(MetaPtr::new::<()>(addr as *const (), true, (**inner).clone()));
+                            ptr_val.meta.pointer = Some(MetaPtr::new::<()>(
+                                addr as *const (),
+                                true,
+                                (**inner).clone(),
+                            ));
                             ptr_val
                         })
                         .map(Boxed)
@@ -1239,6 +1253,24 @@ mod enabled {
             FfiType::Double => as_f64!(c_double),
             ty => return Err(format!("Unsupported FFI read type {ty}")),
         })
+    }
+
+    pub(crate) fn ffi_set(ptr: MetaPtr, idx: usize, value: Value) -> Result<(), String> {
+        let ty = ptr.ffi_type;
+        dbg!(&ty);
+        let ptr = ptr.ptr as *mut u8;
+        let mut bindings = FfiBindings::default();
+
+        let bytes = bindings.value_to_struct_repr(&value, &[ty.clone()])?;
+
+        let (size, _) = ty.size_align();
+        assert_eq!(bytes.len(), size);
+
+        let ptr = unsafe { slice::from_raw_parts_mut(ptr, (idx + 1) * size) };
+
+        (ptr[idx * size..]).copy_from_slice(&bytes);
+
+        Ok(())
     }
 
     pub(crate) fn ffi_free(ptr: *const ()) {

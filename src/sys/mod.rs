@@ -22,7 +22,8 @@ pub use self::native::*;
 use crate::{
     algorithm::{multi_output, validate_size},
     cowslice::cowslice,
-    get_ops, Array, Boxed, FfiType, Ops, Primitive, SysOp, Uiua, UiuaErrorKind, UiuaResult, Value,
+    get_ops, Array, Boxed, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua, UiuaErrorKind,
+    UiuaResult, Value,
 };
 
 /// The text of Uiua's example module
@@ -481,8 +482,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("FFI is not supported in this environment".into())
     }
     /// Copy the data from a pointer into an array
-    fn mem_copy(&self, ty: FfiType, ptr: *const (), len: usize) -> Result<Value, String> {
+    fn mem_copy(&self, ptr: MetaPtr, len: usize) -> Result<Value, String> {
         Err("Pointer copying is not supported in this environment".into())
+    }
+    /// Write data from an array into a pointer
+    fn mem_set(&self, ptr: MetaPtr, idx: usize, value: Value) -> Result<(), String> {
+        Err("Pointer writing is not supported in this environment".into())
     }
     /// Free a pointer
     fn mem_free(&self, ptr: *const ()) -> Result<(), String> {
@@ -1226,41 +1231,36 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             env.push(result);
         }
         SysOp::MemCopy => {
-            let ty = env
-                .pop(1)?
-                .as_string(env, "Pointer copy type must be a string")?;
-            let ty = ty.parse::<FfiType>().map_err(|e| env.error(e))?;
             let ptr = env
-                .pop(2)?
+                .pop("pointer")?
                 .meta
                 .pointer
                 .as_ref()
-                .map(|p| p.get())
-                .ok_or_else(|| env.error("Copied pointer must be a pointer value"))?;
+                .ok_or_else(|| env.error("Copied pointer must be a pointer value"))?
+                .clone();
             let len = env
-                .pop(3)?
+                .pop("length")?
                 .as_nat(env, "Copied length must be a non-negative integer")?;
             let value = (env.rt.backend)
-                .mem_copy(ty, ptr, len)
+                .mem_copy(ptr, len)
                 .map_err(|e| env.error(e))?;
             env.push(value);
         }
-        SysOp::MemWrite => {
-            // todo!();
-            // let ty = env
-            //     .pop(1)?
-            //     .as_string(env, "Pointer write type must be a string")?;
-            // let ty = ty.parse::<FfiType>().map_err(|e| env.error(e))?;
-            // let ptr: *const () = env
-            //     .pop(2)?
-            //     .meta
-            //     .pointer
-            //     .map(|p| p.get())
-            //     .ok_or_else(|| env.error("Copied pointer must be a pointer value"))?;
-            // let idx = env
-            //     .pop(3)?
-            //     .as_nat(env, "Write index must be a non-negative integer")?;
-            todo!()
+        SysOp::MemSet => {
+            let ptr = env
+                .pop("pointer")?
+                .meta
+                .pointer
+                .as_ref()
+                .ok_or_else(|| env.error("Target pointer must be a pointer value"))?
+                .clone();
+            let idx = env
+                .pop("index")?
+                .as_nat(env, "Target index must be a non-negative integer")?;
+            let value = env.pop(3)?;
+            (env.rt.backend)
+                .mem_set(ptr, idx, value)
+                .map_err(|e| env.error(e))?;
         }
         SysOp::MemFree => {
             let ptr = env

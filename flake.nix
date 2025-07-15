@@ -69,7 +69,8 @@
             name = "Uiua site";
             runtimeInputs = [ pkgs.simple-http-server ];
             text = ''
-              simple-http-server --index "$@" -- ${lib.escapeShellArg self'.packages.site} 
+              cd ${lib.escapeShellArg self'.packages.site}
+              simple-http-server --index --try-file ./404.html "$@" -- .
             '';
           };
           devShells.default = pkgs.mkShell {

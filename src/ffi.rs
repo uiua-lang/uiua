@@ -3,9 +3,6 @@ use std::{
     str::FromStr,
 };
 
-#[allow(missing_docs)]
-pub const DEBUG: bool = false;
-
 /// Data for how to send an argument type to `&ffi`
 #[derive(Debug)]
 pub struct FfiArg {

@@ -1,3 +1,4 @@
+#![allow(clippy::print_stdout)]
 #[cfg(not(feature = "binary"))]
 compile_error!("To compile the uiua interpreter binary, you must enable the `binary` feature flag");
 
@@ -36,7 +37,7 @@ static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
 static WATCH_CHILD: Lazy<Mutex<Option<Child>>> = Lazy::new(Default::default);
 
 fn fail<T>(e: UiuaError) -> T {
-    println!("{}", e.report());
+    eprintln!("{}", e.report());
     exit(1)
 }
 

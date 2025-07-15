@@ -1,3 +1,4 @@
+#![allow(clippy::print_stdout)]
 #[macro_export]
 #[doc(hidden)]
 macro_rules! profile_function {

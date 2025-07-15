@@ -280,7 +280,7 @@ mod tests {
                 if let Some(s) = e.downcast_ref::<String>() {
                     panic!("{}", s);
                 } else {
-                    panic!("{:?}", e);
+                    panic!("{e:?}");
                 }
             }
         }

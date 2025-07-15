@@ -1227,7 +1227,7 @@ mod server {
                     return Ok(Some(Hover {
                         contents: HoverContents::Markup(MarkupContent {
                             kind: MarkupKind::Markdown,
-                            value: format!("`{}`", arr_meta),
+                            value: format!("`{arr_meta}`"),
                         }),
                         range: Some(uiua_span_to_lsp(span, &doc.asm.inputs)),
                     }));
@@ -2393,7 +2393,7 @@ mod server {
     fn path_to_uri(path: &Path) -> Result<Url> {
         Url::from_file_path(
             path.canonicalize()
-                .map_err(|e| Error::invalid_params(format!("Invalid file path: {}", e)))?,
+                .map_err(|e| Error::invalid_params(format!("Invalid file path: {e}")))?,
         )
         .map_err(|_| Error::invalid_params("Invalid file path"))
     }
@@ -2439,10 +2439,10 @@ mod server {
     fn doc_frag_markdown(md: &mut String, frag: &PrimDocFragment) {
         match frag {
             PrimDocFragment::Text(text) => md.push_str(text),
-            PrimDocFragment::Code(text) => md.push_str(&format!("`{}`", text)),
-            PrimDocFragment::Emphasis(text) => md.push_str(&format!("*{}*", text)),
-            PrimDocFragment::Strong(text) => md.push_str(&format!("**{}**", text)),
-            PrimDocFragment::Link { text, url } => md.push_str(&format!("[{}]({})", text, url)),
+            PrimDocFragment::Code(text) => md.push_str(&format!("`{text}`")),
+            PrimDocFragment::Emphasis(text) => md.push_str(&format!("*{text}*")),
+            PrimDocFragment::Strong(text) => md.push_str(&format!("**{text}**")),
+            PrimDocFragment::Link { text, url } => md.push_str(&format!("[{text}]({url})")),
             PrimDocFragment::Primitive { prim, named } => {
                 let text = if *named {
                     format!("`{}`", prim.format())
@@ -2459,10 +2459,7 @@ mod server {
     }
 
     fn full_prim_doc_markdown(prim: Primitive) -> String {
-        let sig = prim
-            .sig()
-            .map(|sig| format!(" {}", sig))
-            .unwrap_or_default();
+        let sig = prim.sig().map(|sig| format!(" {sig}")).unwrap_or_default();
         let mut value = format!("```uiua\n{}{}\n```", prim.format(), sig);
         let doc = PrimDoc::from(prim);
         value.push_str("\n\n");

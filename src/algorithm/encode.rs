@@ -348,7 +348,7 @@ impl Value {
             "u128" | "i128" => 16,
             "f32" => 4,
             "f64" => 8,
-            _ => return Err(env.error(format!("Invalid byte format: {}", format))),
+            _ => return Err(env.error(format!("Invalid byte format: {format}"))),
         };
         // Early return when a byte array can be reused
         if let Value::Byte(mut arr) = data {
@@ -444,7 +444,7 @@ impl Value {
             "u128" | "i128" => 16,
             "f32" => 4,
             "f64" => 8,
-            _ => return Err(env.error(format!("Invalid byte format: {}", format))),
+            _ => return Err(env.error(format!("Invalid byte format: {format}"))),
         };
         let bytes = match bytes {
             Value::Byte(arr) if format == "u8" => return Ok(arr.into()),
@@ -718,7 +718,7 @@ impl Value {
             let flags_u = *bytes.first().unwrap();
             *bytes = &bytes[1..];
             let flags = ArrayFlags::from_bits(flags_u)
-                .ok_or_else(|| env.error(format!("Invalid array flags {:08b}", flags_u)))?;
+                .ok_or_else(|| env.error(format!("Invalid array flags {flags_u:08b}")))?;
             meta.flags = flags;
 
             // Label

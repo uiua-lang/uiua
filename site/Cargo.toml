@@ -3,6 +3,9 @@ edition = "2021"
 name = "site"
 version = "0.1.0"
 
+[lints]
+workspace = true
+
 [dependencies]
 base64 = "0.22.0"
 comrak = "0.39.0"

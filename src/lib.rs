@@ -356,42 +356,10 @@ mod tests {
         }
     }
 
-    fn recurse_dirs(dir: &std::path::Path, f: &impl Fn(&std::path::Path)) {
-        for entry in std::fs::read_dir(dir).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if path.to_string_lossy().contains("target") {
-                continue;
-            }
-            if path.is_dir() {
-                recurse_dirs(&path, f);
-            } else {
-                f(&path);
-            }
-        }
-    }
-
     #[test]
     fn no_dbgs() {
-        recurse_dirs(std::path::Path::new("."), &|path| {
-            if path.extension().is_none_or(|ext| ext != "rs")
-                || path.canonicalize().unwrap()
-                    == std::path::Path::new(file!()).canonicalize().unwrap()
-            {
-                return;
-            }
-            let contents = std::fs::read_to_string(path).unwrap();
-            for line in contents.lines() {
-                if line.contains("dbg!") && !line.trim().starts_with("//") {
-                    panic!("File {} contains a dbg! macro", path.display());
-                }
-            }
-        });
         if crate::compile::invert::DEBUG {
             panic!("compile::invert::DEBUG is true");
-        }
-        if crate::ffi::DEBUG {
-            panic!("ffi::DEBUG is true");
         }
         if crate::compile::optimize::DEBUG {
             panic!("compile::optimize::DEBUG is true");
@@ -399,31 +367,6 @@ mod tests {
         if crate::compile::algebra::DEBUG {
             panic!("compile::algebra::DEBUG is true");
         }
-    }
-
-    #[test]
-    fn no_printlns() {
-        recurse_dirs(std::path::Path::new("."), &|path| {
-            if path.extension().is_none_or(|ext| ext != "rs")
-                || path.canonicalize().unwrap()
-                    == std::path::Path::new(file!()).canonicalize().unwrap()
-                || path
-                    .components()
-                    .any(|c| c.as_os_str() == "main.rs" || c.as_os_str() == "profile.rs")
-            {
-                return;
-            }
-            let contents = std::fs::read_to_string(path).unwrap();
-            for line in contents.lines() {
-                if line.contains("println!")
-                    && !(line.trim().starts_with("//")
-                        || line.contains("eprintln!")
-                        || line.contains("// Allow println"))
-                {
-                    panic!("File {} contains a println! macro", path.display());
-                }
-            }
-        });
     }
 
     #[test]

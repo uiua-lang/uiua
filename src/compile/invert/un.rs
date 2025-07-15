@@ -231,6 +231,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &RepeatPat,
     &DupPat,
     &DumpPat,
+    &DumpNPat,
     &NBitsPat,
     &(Sqrt, (Dup, Mul)),
     &(Select, (Dup, Len, Range)),
@@ -1092,6 +1093,27 @@ inverse!(DupPat, input, asm, Prim(Dup, dup_span), {
 inverse!(DumpPat, input, _, ref, Mod(Dump, args, span), {
     Ok((input, ImplMod(UnDump, args.clone(), *span)))
 });
+
+inverse!(
+    DumpNPat,
+    input,
+    _,
+    ref,
+    ImplMod(DumpN { n, inverse }, args, span),
+    {
+        Ok((
+            input,
+            ImplMod(
+                DumpN {
+                    n: *n,
+                    inverse: !inverse,
+                },
+                args.clone(),
+                *span,
+            ),
+        ))
+    }
+);
 
 inverse!(AlgebraPat, input, asm, {
     let mut error = Generic;

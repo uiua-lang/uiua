@@ -2195,6 +2195,7 @@ impl Compiler {
                             | (Rows | Each | Inventory)
                             | (Repeat | Tuples | Stencil)
                             | (Fill | Geometric)
+                            | Dump
                     ) {
                         self.add_error(
                             m.modifier.span.clone().merge(scr.span.clone()),

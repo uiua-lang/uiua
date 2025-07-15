@@ -2914,25 +2914,29 @@ primitive!(
     /// Preprocess and print all stack values without popping them
     ///
     /// [dump][identity] is equivalent to [stack].
-    /// ex: dump∘ 1 2 3
+    /// ex: ‽∘ 1 2 3
     /// This is useful when you want to inspect the current ordering of the stack.
     /// For example, if you are juggling some values on the stack, you can use [dump] to inspect the stack afterwards:
     /// ex: 1 2 3
     ///   : ◡⊙∘˜⊙.
-    ///   : dump∘
+    ///   : ‽∘
     ///   : +×-×+
     /// [dump][shape] is useful if your raw array data isn't worth looking at, but the shapes are.
     /// ex: 2_3_10 17 ↯3_4⇡12
-    ///   : dump△
+    ///   : ‽△
     ///   : ++
     /// ex: ↯¯1_5 ⇡30
     ///   : ⍉.⊃≡(⊟.)(⊞+.).
-    ///   : dump△
+    ///   : ‽△
     ///   : +++∩∩⧻
     /// Errors encountered within [dump]'s function are caught and dumped as strings.
     /// ex: 1_2_3 [] 5_6_7
-    ///   : dump⊢
-    (0(0)[1], Dump, Debug, "dump", Mutating),
+    ///   : ‽⊢
+    /// Subscripted [dump] prints that many values from the stack.
+    /// ex: ‽₂△ ∩₃⇡ 1 2_3 4_5_6
+    /// If you type `?!` followed by `N` `?`s, it will format to [dump] subscripted with `N`.
+    /// ex: ?!??sha bot,3ran 1 2_3 4_5_6 # Try formatting!
+    (0(0)[1], Dump, Debug, ("dump", AsciiToken::Interrobang, '‽'), Mutating),
     /// Convert a string into code at compile time
     ///
     /// ex: # Experimental!

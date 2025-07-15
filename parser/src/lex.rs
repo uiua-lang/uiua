@@ -773,6 +773,7 @@ pub enum AsciiToken {
     Tilde,
     DoubleTilde,
     Quote,
+    Interrobang,
 }
 
 impl fmt::Display for AsciiToken {
@@ -801,6 +802,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Tilde => write!(f, "~"),
             AsciiToken::DoubleTilde => write!(f, "~~"),
             AsciiToken::Quote => write!(f, "'"),
+            AsciiToken::Interrobang => write!(f, "?!"),
         }
     }
 }
@@ -1115,9 +1117,14 @@ impl<'a> Lexer<'a> {
                     self.next_char_exact("~");
                     self.end(CloseModule, start)
                 }
-                // Stack
+                // Stack/Dump
                 "?" => {
-                    self.end(Primitive::Stack, start);
+                    let tok = if self.next_char_exact("!") {
+                        Primitive::Dump
+                    } else {
+                        Primitive::Stack
+                    };
+                    self.end(tok, start);
                     let mut n = 0;
                     let start = self.loc;
                     while self.next_char_exact("?") {

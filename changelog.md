@@ -32,6 +32,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`&seek`](https://uiua.org/docs/&seek) function for working with large files
 - Remove previously deprecated `signature` and `stringify` modifiers
 - Calling [`&tcpa`](https://uius.org/docs/&tcpa) on a TLS listener created with [`&tlsl`](https://uiua.org/docs/&tlsl) now automatically tries conducting a TSL handshake
+- Add a glyph and subscript support to [`dump ‽`](https://uiua.org/docs/dump)
+  - Can be formatted from `?!`
+  - Subscripted version can be formatted from a sequence like `?!???`
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)

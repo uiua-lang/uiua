@@ -35,6 +35,7 @@ macro_rules! impl_primitive {
             UndoRotate(usize),
             ReduceDepth(usize),
             StackN { n: usize, inverse: bool },
+            DumpN { n: usize, inverse: bool },
             OnSub(usize),
             BySub(usize),
             WithSub(usize),
@@ -59,6 +60,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoRotate(n) => *n + 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
                     ImplPrimitive::StackN { n, .. } => *n,
+                    ImplPrimitive::DumpN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
                     ImplPrimitive::Ga(op, _) => op.args(),
@@ -72,6 +74,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n,
                     ImplPrimitive::StackN { n, .. } => *n,
+                    ImplPrimitive::DumpN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n + 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
                     ImplPrimitive::Ga(op, _) => op.outputs(),
@@ -99,6 +102,7 @@ macro_rules! impl_primitive {
                 match self {
                     $($(ImplPrimitive::$variant => {Purity::$purity},)*)*
                     ImplPrimitive::StackN { .. } => Purity::Mutating,
+                    ImplPrimitive::DumpN { .. } => Purity::Mutating,
                     _ => Purity::Pure
                 }
             }
@@ -456,6 +460,15 @@ impl fmt::Display for ImplPrimitive {
                     .map(|c| SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])
                     .collect();
                 write!(f, "{Stack}{n_str}")
+            }
+            &DumpN { n, inverse } => {
+                if inverse {
+                    write!(f, "{Un}")?;
+                }
+                let n_str: String = (n.to_string().chars())
+                    .map(|c| SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])
+                    .collect();
+                write!(f, "{Dump}{n_str}")
             }
             SidedFill(side) => write!(f, "{Fill}{side}"),
             RepeatWithInverse => write!(f, "{Repeat}"),

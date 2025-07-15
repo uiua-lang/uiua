@@ -1467,6 +1467,21 @@ impl Compiler {
                 let op = modified.code_operands().next().unwrap().clone();
                 self.geometric(op, subscript, None)?
             }
+            Dump => {
+                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let span = self.add_span(modified.modifier.span.clone());
+                let Some(n) = subscript.and_then(|sub| {
+                    self.subscript_n_only(&sub, prim)
+                        .map(|x| self.positive_subscript(x, prim, &sub.span))
+                }) else {
+                    return Ok(None);
+                };
+                Node::ImplMod(
+                    ImplPrimitive::DumpN { n, inverse: false },
+                    eco_vec![sn],
+                    span,
+                )
+            }
             _ => return Ok(None),
         }))
     }

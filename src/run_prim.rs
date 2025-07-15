@@ -5,7 +5,10 @@
 use ecow::EcoVec;
 use regex::Regex;
 
-use core::str;
+use core::{
+    fmt::{Debug, Display},
+    str,
+};
 use std::{
     borrow::{BorrowMut, Cow},
     cell::RefCell,
@@ -285,7 +288,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             vals.map(keys, env)?;
             env.push(vals);
         }
-        Primitive::Stack => stack(env, false)?,
+        Primitive::Stack => stack(env, None, prim)?,
         Primitive::Regex => regex(env)?,
         Primitive::Hsv => env.monadic_env(Value::rgb_to_hsv)?,
         Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
@@ -459,7 +462,7 @@ pub fn run_prim_mod(prim: &Primitive, ops: Ops, env: &mut Uiua) -> UiuaResult {
                 e
             })?;
         }
-        Primitive::Dump => dump(ops, env, false)?,
+        Primitive::Dump => dump(ops, env, None, prim)?,
         Primitive::Path => {
             let [neighbors, is_goal] = get_ops(ops, env)?;
             path::path(neighbors, is_goal, None, env)?;
@@ -670,8 +673,8 @@ impl ImplPrimitive {
             ImplPrimitive::UnParse => env.monadic_env(Value::unparse)?,
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
-            ImplPrimitive::StackN { n, inverse } => stack_n(env, *n, *inverse)?,
-            ImplPrimitive::UnStack => stack(env, true)?,
+            ImplPrimitive::StackN { n, .. } => stack(env, Some(*n), self)?,
+            ImplPrimitive::UnStack => stack(env, None, self)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
@@ -1277,7 +1280,8 @@ impl ImplPrimitive {
             ImplPrimitive::RepeatWithInverse => loops::repeat(ops, true, false, env)?,
             ImplPrimitive::RepeatCountConvergence => loops::repeat(ops, false, true, env)?,
             ImplPrimitive::UnScan => reduce::unscan(ops, env)?,
-            ImplPrimitive::UnDump => dump(ops, env, true)?,
+            ImplPrimitive::DumpN { n, .. } => dump(ops, env, Some(*n), self)?,
+            ImplPrimitive::UnDump => dump(ops, env, None, self)?,
             ImplPrimitive::UnFill => fill!(ops, None, env, with_unfill, without_unfill_but),
             &ImplPrimitive::SidedFill(side) => fill!(ops, side, env, with_fill, without_fill_but),
             ImplPrimitive::ReduceTable => table::reduce_table(ops, env)?,
@@ -1570,127 +1574,70 @@ pub fn seed_random(seed: u64) {
     random_with(|rng| *rng = SmallRng::seed_from_u64(seed));
 }
 
-fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
-    env.require_height(n)?;
+fn stack_inner<'a>(
+    env: &Uiua,
+    stack_height: usize,
+    items: impl IntoIterator<Item = &'a Value>,
+    prim: impl Display,
+) {
     let boundaries = stack_boundaries(env);
-    let span = format!("{} {}", ImplPrimitive::StackN { n, inverse }, env.span());
+    let span = format!("{prim} {}", env.span());
     let max_line_len = span.chars().count() + 2;
-    let stack_height = env.stack_height() - n;
-    let item_lines: Vec<Vec<String>> = env.stack()[stack_height..]
-        .iter()
-        .map(Value::show)
-        .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
+    let item_lines = items
+        .into_iter()
+        .map(|s| s.show().lines().map(Into::into).collect())
         .map(|lines| format_trace_item_lines(lines, max_line_len))
         .enumerate()
-        .flat_map(|(i, lines)| {
-            if let Some((_, id)) = boundaries
-                .iter()
-                .find(|(height, _)| i + stack_height == *height)
-            {
-                let id = id.as_ref().map_or_else(String::new, ToString::to_string);
-                vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
-            } else {
-                vec![lines]
-            }
-        })
-        .collect();
-    env.rt.backend.print_str_trace(&format!("┌╴{span}\n"));
-    for line in item_lines.iter().flatten() {
-        env.rt.backend.print_str_trace(line);
-    }
-    env.rt.backend.print_str_trace("└");
-    for _ in 0..max_line_len - 1 {
-        env.rt.backend.print_str_trace("╴");
-    }
-    env.rt.backend.print_str_trace("\n");
-    Ok(())
-}
-
-fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
-    let span = if inverse {
-        format!("{}{} {}", Primitive::Un, Primitive::Stack, env.span())
-    } else {
-        format!("{} {}", Primitive::Stack, env.span())
-    };
-    let items = env.stack();
-    let max_line_len = span.chars().count() + 2;
-    let boundaries = stack_boundaries(env);
-    let item_lines: Vec<Vec<String>> = items
-        .iter()
-        .map(Value::show)
-        .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
-        .map(|lines| format_trace_item_lines(lines, max_line_len))
-        .enumerate()
-        .flat_map(|(i, lines)| {
+        .map(|(i, x)| (i + stack_height, x))
+        .flat_map(|(i, mut lines)| {
             if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
-                let id = id.as_ref().map_or_else(String::new, ToString::to_string);
-                vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
-            } else {
-                vec![lines]
+                let id = id.as_ref().map(ToString::to_string).unwrap_or_default();
+                lines.insert(0, format!("│╴╴╴{id}╶╶╶\n"));
             }
-        })
-        .collect();
+            lines
+        });
     env.rt.backend.print_str_trace(&format!("┌╴{span}\n"));
-    for line in item_lines.iter().flatten() {
-        env.rt.backend.print_str_trace(line);
+    for line in item_lines {
+        env.rt.backend.print_str_trace(&line);
     }
-    env.rt.backend.print_str_trace("└");
-    for _ in 0..max_line_len - 1 {
-        env.rt.backend.print_str_trace("╴");
-    }
-    env.rt.backend.print_str_trace("\n");
+    env.rt
+        .backend
+        .print_str_trace(&format!("└{}\n", "╴".repeat(max_line_len - 1)));
+}
+
+fn stack(env: &mut Uiua, n: Option<usize>, prim: impl Display) -> UiuaResult {
+    let stack_height = n
+        .map(|x| env.require_height(x))
+        .transpose()?
+        .unwrap_or_default();
+    stack_inner(env, stack_height, &env.stack()[stack_height..], prim);
     Ok(())
 }
 
-fn dump(ops: Ops, env: &mut Uiua, inverse: bool) -> UiuaResult {
+fn dump(ops: Ops, env: &mut Uiua, n: Option<usize>, prim: impl Display + Debug) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
     if f.sig != (1, 1) {
         return Err(env.error(format!(
-            "{}'s function's signature must be |1, but it is {}",
-            Primitive::Dump.format(),
+            "{prim}'s function's signature must be |1, but it is {}",
             f.sig
         )));
     }
-    let span = if inverse {
-        format!("{}{} {}", Primitive::Un, Primitive::Dump, env.span())
-    } else {
-        format!("{} {}", Primitive::Dump, env.span())
-    };
-    let unprocessed = env.stack().to_vec();
-    let mut items = Vec::new();
-    for item in unprocessed {
-        env.push(item);
-        match env.exec(f.clone()) {
-            Ok(()) => items.push(env.pop("dump's function's processed result")?),
-            Err(e) => items.push(e.value()),
-        }
-    }
-    let max_line_len = span.chars().count() + 2;
-    let boundaries = stack_boundaries(env);
-    let item_lines: Vec<Vec<String>> = items
-        .iter()
-        .map(Value::show)
-        .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
-        .map(|lines| format_trace_item_lines(lines, max_line_len))
-        .enumerate()
-        .flat_map(|(i, lines)| {
-            if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
-                let id = id.as_ref().map_or_else(String::new, ToString::to_string);
-                vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
-            } else {
-                vec![lines]
-            }
+    let stack_height = n
+        .map(|x| env.require_height(x))
+        .transpose()?
+        .unwrap_or_default();
+    let unprocessed = env.stack()[stack_height..].to_vec();
+    let items = unprocessed
+        .into_iter()
+        .map(|x| {
+            env.push(x);
+            env.exec(f.clone()).map_or_else(
+                |e| Ok(e.value()),
+                |()| env.pop("dump's function's processed result"),
+            )
         })
-        .collect();
-    env.rt.backend.print_str_trace(&format!("┌╴{span}\n"));
-    for line in item_lines.iter().flatten() {
-        env.rt.backend.print_str_trace(line);
-    }
-    env.rt.backend.print_str_trace("└");
-    for _ in 0..max_line_len - 1 {
-        env.rt.backend.print_str_trace("╴");
-    }
-    env.rt.backend.print_str_trace("\n");
+        .collect::<UiuaResult<Vec<_>>>()?;
+    stack_inner(env, stack_height, &items, prim);
     Ok(())
 }
 

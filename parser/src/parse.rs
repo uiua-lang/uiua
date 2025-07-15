@@ -56,7 +56,7 @@ impl fmt::Display for Expectation {
             Expectation::ArgsOutputs => write!(f, "arguments and outputs count"),
             Expectation::ItemName => write!(f, "item name"),
             Expectation::Token(Simple(s)) => write!(f, "`{s}`"),
-            Expectation::Token(tok) => write!(f, "{:?}", tok),
+            Expectation::Token(tok) => write!(f, "{tok:?}"),
             Expectation::CloseModule => write!(f, "`---`"),
         }
     }

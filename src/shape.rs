@@ -210,7 +210,7 @@ impl fmt::Debug for Shape {
             if i > 0 {
                 write!(f, " × ")?;
             }
-            write!(f, "{}", dim)?;
+            write!(f, "{dim}")?;
         }
         write!(f, "]")
     }

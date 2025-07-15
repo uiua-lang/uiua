@@ -183,7 +183,7 @@ impl FromStr for RunMode {
             "normal" => Ok(RunMode::Normal),
             "test" => Ok(RunMode::Test),
             "all" => Ok(RunMode::All),
-            _ => Err(format!("unknown run mode `{}`", s)),
+            _ => Err(format!("unknown run mode `{s}`")),
         }
     }
 }

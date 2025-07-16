@@ -213,7 +213,7 @@ pub fn parse(
             errors,
             diagnostics,
             next_output_comment: 0,
-            start_addr: &base as *const u8 as usize,
+            start_addr: std::ptr::from_ref(&base) as usize,
         };
         let items = parser.items(ItemsKind::TopLevel);
         if parser.errors.is_empty() && parser.index < parser.tokens.len() {
@@ -1203,7 +1203,7 @@ impl Parser<'_> {
         #[cfg(target_arch = "wasm32")]
         const MAX_RECURSION_DEPTH: usize = 512 * 1024;
         let curr = 0u8;
-        let curr_addr = &curr as *const u8 as usize;
+        let curr_addr = std::ptr::from_ref(&curr) as usize;
         let diff = curr_addr.abs_diff(self.start_addr);
         let too_deep = diff > MAX_RECURSION_DEPTH;
         if too_deep {

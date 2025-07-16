@@ -7,7 +7,7 @@ use std::{
     error::Error,
     fmt, fs,
     io::{self, stderr, stdin, stdout, BufRead, Write},
-    path::{is_separator, Path, PathBuf},
+    path::{Path, PathBuf},
     process::{exit, Child, Command, Stdio},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -123,12 +123,13 @@ fn main() {
         set_use_window(true);
         args.next();
     }
-    if let Some(path) = args
-        .next()
-        .filter(|arg| arg.ends_with(".ua") || arg.contains(is_separator))
-    {
+    if let Some(path) = args.next().map(PathBuf::from).filter(|arg| {
+        arg.extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("ua"))
+            || arg.components().count() > 1
+    }) {
         let args = args.collect();
-        run(path.as_ref(), args, false, None, None, None, false);
+        run(&path, args, false, None, None, None, false);
         return;
     }
 

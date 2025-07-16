@@ -1241,7 +1241,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
     }
     if !stdout.is_empty() {
         if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
+            output.push(OutputItem::String(String::new()));
         }
         if label {
             output.push(OutputItem::String("stdout:".to_string()));
@@ -1250,7 +1250,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
     }
     if !stderr.is_empty() {
         if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
+            output.push(OutputItem::String(String::new()));
         }
         if label {
             output.push(OutputItem::String("stderr:".to_string()));
@@ -1265,7 +1265,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
     }
     if let Some(error) = &error {
         if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
+            output.push(OutputItem::String(String::new()));
         }
         const MAX_OUTPUT_BEFORE_ERROR: usize = 60;
         if output.len() >= MAX_OUTPUT_BEFORE_ERROR {
@@ -1283,7 +1283,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
     }
     if !diagnostics.is_empty() {
         if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
+            output.push(OutputItem::String(String::new()));
         }
         for diag in diagnostics {
             output.push(OutputItem::Report(diag.report()));
@@ -1408,7 +1408,7 @@ pub fn progressive_strings(input: &str) -> Vec<String> {
         curr_total.push('\n');
     }
     if strings.is_empty() {
-        strings.push("".into());
+        strings.push(String::new());
     }
     strings.rotate_right(1);
     strings[0] = input.into();

@@ -501,7 +501,7 @@ pub fn run_prim_mod(prim: &Primitive, ops: Ops, env: &mut Uiua) -> UiuaResult {
             let [f] = get_ops(ops, env)?;
             env.spawn(true, f)?;
         }
-        Primitive::Sys(op) => run_sys_op_mod(op, ops, env)?,
+        &Primitive::Sys(op) => run_sys_op_mod(op, ops, env)?,
         prim => {
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(

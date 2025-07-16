@@ -189,7 +189,7 @@ impl SysBackend for WebBackend {
             stdout.push(OutputItem::String(line.into()));
         }
         if s.ends_with('\n') {
-            stdout.push(OutputItem::String("".into()));
+            stdout.push(OutputItem::String(String::new()));
         }
         Ok(())
     }
@@ -510,64 +510,61 @@ impl SysBackend for WebBackend {
                     ))
                     .await;
 
-                    match tree_res {
-                        Err(_) => {
-                            cache_url(&url, tree_res);
+                    if tree_res.is_err() {
+                        cache_url(&url, tree_res);
+                        unmark_working(&original_url);
+                        return;
+                    } else {
+                        let tree = tree_res.unwrap();
+                        let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
+                        let tree = tree.get("tree").unwrap().as_array().unwrap();
+                        let paths = tree
+                            .iter()
+                            .filter_map(|entry| {
+                                let path = entry.get("path")?.as_str()?;
+                                if Path::new(path)
+                                    .extension()
+                                    .is_some_and(|ext| ext.eq_ignore_ascii_case("ua"))
+                                {
+                                    Some(path.to_string())
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect::<HashSet<_>>();
+
+                        if !paths.contains("lib.ua") {
+                            cache_url(&url, Err("lib.ua not found".into()));
                             unmark_working(&original_url);
                             return;
                         }
-                        Ok(_) => {
-                            let tree = tree_res.unwrap();
-                            let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
-                            let tree = tree.get("tree").unwrap().as_array().unwrap();
-                            let paths = tree
-                                .iter()
-                                .filter_map(|entry| {
-                                    let path = entry.get("path")?.as_str()?;
-                                    if Path::new(path)
-                                        .extension()
-                                        .is_some_and(|ext| ext.eq_ignore_ascii_case("ua"))
-                                    {
-                                        Some(path.to_string())
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect::<HashSet<_>>();
 
-                            if !paths.contains("lib.ua") {
-                                cache_url(&url, Err("lib.ua not found".into()));
-                                unmark_working(&original_url);
-                                return;
+                        let results = join_all(paths.iter().map(|path| {
+                            let repo_owner = repo_owner.clone();
+                            let repo_name = repo_name.clone();
+                            async move {
+                                let fetch_url = format!(
+                                    "https://raw.githubusercontent.com\
+                                    /{repo_owner}/{repo_name}/main/{path}",
+                                );
+                                let internal_path = Path::new("uiua-modules")
+                                    .join(repo_owner)
+                                    .join(repo_name)
+                                    .join(path.clone());
+
+                                (path, internal_path, fetch(fetch_url.as_str()).await)
+                            }
+                        }))
+                        .await;
+
+                        for (original_path, internal_path, res) in results {
+                            if original_path.eq("lib.ua") {
+                                cache_url(&url, res.clone());
                             }
 
-                            let results = join_all(paths.iter().map(|path| {
-                                let repo_owner = repo_owner.clone();
-                                let repo_name = repo_name.clone();
-                                async move {
-                                    let fetch_url = format!(
-                                        "https://raw.githubusercontent.com\
-                                        /{repo_owner}/{repo_name}/main/{path}",
-                                    );
-                                    let internal_path = Path::new("uiua-modules")
-                                        .join(repo_owner)
-                                        .join(repo_name)
-                                        .join(path.clone());
-
-                                    (path, internal_path, fetch(fetch_url.as_str()).await)
-                                }
-                            }))
-                            .await;
-
-                            for (original_path, internal_path, res) in results {
-                                if original_path.eq("lib.ua") {
-                                    cache_url(&url, res.clone());
-                                }
-
-                                if let Ok(text) = res {
-                                    let contents = text.as_bytes().to_vec();
-                                    drop_file(internal_path.clone(), contents);
-                                }
+                            if let Ok(text) = res {
+                                let contents = text.as_bytes().to_vec();
+                                drop_file(internal_path.clone(), contents);
                             }
                         }
                     }

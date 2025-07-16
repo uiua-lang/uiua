@@ -1327,13 +1327,13 @@ impl Line {
             _ => &[Line::OpenDouble, Line::CloseDouble],
         }
     }
-    fn vert(&self) -> char {
+    fn vert(self) -> char {
         match self {
             Line::Single | Line::OpenSingle | Line::CloseSingle | Line::ForceSingle => '│',
             Line::Double | Line::OpenDouble | Line::CloseDouble | Line::ForceDouble => '║',
         }
     }
-    fn horiz(&self) -> char {
+    fn horiz(self) -> char {
         match self {
             Line::Single | Line::OpenSingle | Line::CloseSingle | Line::ForceSingle => '─',
             Line::Double | Line::OpenDouble | Line::CloseDouble | Line::ForceDouble => '═',
@@ -1348,7 +1348,7 @@ impl Line {
             line => line,
         }
     }
-    fn intersect(&self, column: Self) -> char {
+    fn intersect(self, column: Self) -> char {
         use Line::*;
         match (self, column) {
             (Single, Single) | (ForceSingle, ForceSingle) => '┼',

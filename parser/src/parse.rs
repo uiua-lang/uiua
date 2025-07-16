@@ -306,25 +306,22 @@ impl Parser<'_> {
         }
         let mut trailing_newline = false;
         loop {
-            match self.item(kind) {
-                Some(item) => {
-                    trailing_newline = false;
-                    items.push(item)
+            if let Some(item) = self.item(kind) {
+                trailing_newline = false;
+                items.push(item)
+            } else {
+                if self.exact(Newline).is_none() {
+                    break;
                 }
-                None => {
-                    if self.exact(Newline).is_none() {
-                        break;
-                    }
-                    trailing_newline = true;
+                trailing_newline = true;
+                self.spaces();
+                let mut extra_newlines = false;
+                while self.exact(Newline).is_some() {
+                    extra_newlines = true;
                     self.spaces();
-                    let mut extra_newlines = false;
-                    while self.exact(Newline).is_some() {
-                        extra_newlines = true;
-                        self.spaces();
-                    }
-                    if extra_newlines {
-                        items.push(Item::Words(Vec::new()));
-                    }
+                }
+                if extra_newlines {
+                    items.push(Item::Words(Vec::new()));
                 }
             }
         }
@@ -940,31 +937,28 @@ impl Parser<'_> {
         let range = self.real()?.span.byte_range();
         let s = &self.input[range];
         Some(if let Some((a, o)) = s.split_once('.') {
-            let a = match a.parse() {
-                Ok(a) => a,
-                Err(_) => {
-                    self.errors
-                        .push(self.prev_span().sp(ParseError::InvalidArgCount(a.into())));
-                    1
-                }
+            let a = if let Ok(a) = a.parse() {
+                a
+            } else {
+                self.errors
+                    .push(self.prev_span().sp(ParseError::InvalidArgCount(a.into())));
+                1
             };
-            let o = match o.parse() {
-                Ok(o) => o,
-                Err(_) => {
-                    self.errors
-                        .push(self.prev_span().sp(ParseError::InvalidOutCount(o.into())));
-                    1
-                }
+            let o = if let Ok(o) = o.parse() {
+                o
+            } else {
+                self.errors
+                    .push(self.prev_span().sp(ParseError::InvalidOutCount(o.into())));
+                1
             };
             (a, o)
         } else {
-            let a = match s.parse() {
-                Ok(a) => a,
-                Err(_) => {
-                    self.errors
-                        .push(self.prev_span().sp(ParseError::InvalidArgCount(s.into())));
-                    1
-                }
+            let a = if let Ok(a) = s.parse() {
+                a
+            } else {
+                self.errors
+                    .push(self.prev_span().sp(ParseError::InvalidArgCount(s.into())));
+                1
             };
             (a, 1)
         })
@@ -1029,27 +1023,23 @@ impl Parser<'_> {
         // Collect items
         let mut items = Vec::new();
         while self.exact(Underscore.into()).is_some() {
-            let item = match self.modified() {
-                Some(mut item) => {
-                    if let Word::Spaces = item.value {
-                        if items.is_empty() {
-                            break;
-                        }
-                        self.errors.push(self.expected([Expectation::Term]));
-                        item = match self.modified() {
-                            Some(item) => item,
-                            None => {
-                                self.errors.push(self.expected([Expectation::Term]));
-                                break;
-                            }
-                        };
+            let item = if let Some(mut item) = self.modified() {
+                if let Word::Spaces = item.value {
+                    if items.is_empty() {
+                        break;
                     }
-                    item
-                }
-                None => {
                     self.errors.push(self.expected([Expectation::Term]));
-                    break;
+                    item = if let Some(item) = self.modified() {
+                        item
+                    } else {
+                        self.errors.push(self.expected([Expectation::Term]));
+                        break;
+                    };
                 }
+                item
+            } else {
+                self.errors.push(self.expected([Expectation::Term]));
+                break;
             };
             items.push(item);
         }

@@ -144,7 +144,7 @@ impl WebBackend {
         }
         panic!("Ran out of file handles");
     }
-    fn file<T>(&self, path: &Path, f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
+    fn file<T>(path: &Path, f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
         FILES.with(|files| {
             let files = files.borrow();
             files
@@ -251,10 +251,10 @@ impl SysBackend for WebBackend {
         Ok(set.into_iter().collect())
     }
     fn is_file(&self, path: &str) -> Result<bool, String> {
-        Ok(self.file(path.as_ref(), |_| {}).is_ok())
+        Ok(Self::file(path.as_ref(), |_| {}).is_ok())
     }
     fn file_exists(&self, path: &str) -> bool {
-        self.file(path.as_ref(), |_| {}).is_ok()
+        Self::file(path.as_ref(), |_| {}).is_ok()
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         FILES.with(|files| {
@@ -267,7 +267,7 @@ impl SysBackend for WebBackend {
         Ok(())
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
-        self.file(path, |contents| contents.to_vec())
+        Self::file(path, |contents| contents.to_vec())
     }
     fn open_file(&self, path: &Path, write: bool) -> Result<Handle, String> {
         let handle = self.new_handle();

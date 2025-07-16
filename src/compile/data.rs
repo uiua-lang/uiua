@@ -581,6 +581,7 @@ impl Compiler {
 
         Ok(())
     }
+    #[expect(clippy::unused_self, reason = "seems to be TBI")]
     pub(super) fn end_enum(&mut self) -> UiuaResult {
         Ok(())
     }

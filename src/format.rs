@@ -674,7 +674,7 @@ impl Formatter<'_> {
             }
             Item::Words(words) => {
                 self.prev_import_function = None;
-                let lines = flip_unsplit_lines(split_words(words.to_vec()));
+                let lines = flip_unsplit_lines(split_words(words.clone()));
                 let extra_newlines = lines.len() > 1 && self.output.ends_with('(') && depth > 0;
                 for (i, line) in lines.into_iter().enumerate() {
                     let line = trim_spaces(&line, true);

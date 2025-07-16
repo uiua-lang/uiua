@@ -254,8 +254,8 @@ fn path_impl(
         let mut env = PathEnv {
             env,
             neighbors,
-            heuristic,
             is_goal,
+            heuristic,
             args,
         };
 

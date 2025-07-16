@@ -17,8 +17,6 @@ dbg_macro = "warn"
 print_stdout = "warn"
 non_std_lazy_statics = "warn"
 pedantic = {level = "warn", priority = -1}
-needless_raw_string_hashes = "allow"  # 7
-unnecessary_wraps = "allow"  # 7
 unnested_or_patterns = "allow"  # 8
 borrow_as_ptr = "allow"  # 9
 explicit_iter_loop = "allow"  # 9

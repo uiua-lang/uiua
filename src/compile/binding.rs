@@ -385,10 +385,9 @@ impl Compiler {
                                     declared_sig.value
                                 ),
                             ));
-                        } else {
-                            node = self.force_sig(node, declared_sig.value, &declared_sig.span)?;
-                            sig = declared_sig.value;
                         }
+                        node = self.force_sig(node, declared_sig.value, &declared_sig.span)?;
+                        sig = declared_sig.value;
                     }
                 }
 

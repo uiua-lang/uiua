@@ -910,7 +910,7 @@ impl Compiler {
                         cache.borrow_mut().insert(path.clone(), clone);
                     });
                 }
-            };
+            }
         }
         let module = self.imports.get(&path).unwrap();
         if module.experimental {

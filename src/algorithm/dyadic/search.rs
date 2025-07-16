@@ -65,7 +65,7 @@ impl<T: ArrayValue> Array<T> {
                         result_data.push(is_member as u8);
                     }
                 }
-                let shape: Shape = elems.shape.iter().cloned().take(1).collect();
+                let shape: Shape = elems.shape.iter().copied().take(1).collect();
                 Array::new(shape, result_data)
             }
             Ordering::Greater => {

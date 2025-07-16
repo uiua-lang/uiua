@@ -25,6 +25,10 @@ use crate::{
 };
 
 /// Uiua's array type
+#[expect(
+    clippy::unsafe_derive_deserialize,
+    reason = "done through ArrayRep which is safe"
+)]
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(
     from = "ArrayRep<T>",

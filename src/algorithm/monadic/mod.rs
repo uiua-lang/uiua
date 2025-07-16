@@ -223,9 +223,9 @@ impl Value {
             (0 | 1, Value::Char(arr)) => {
                 let s: String = arr.data.iter().copied().collect();
                 match (
-                    s.strip_suffix("i").and_then(|s| s.split_once("r")),
-                    s.strip_suffix("i").and_then(|s| s.split_once("+")),
-                    s.strip_suffix("i").and_then(|s| s.split_once("-")),
+                    s.strip_suffix('i').and_then(|s| s.split_once('r')),
+                    s.strip_suffix('i').and_then(|s| s.split_once('+')),
+                    s.strip_suffix('i').and_then(|s| s.split_once('-')),
                 ) {
                     (Some((re, im)), None, _) | (None, Some((re, im)), _) => {
                         let re = parse_uiua_num(re.into(), env);
@@ -2060,17 +2060,16 @@ impl Array<f64> {
             let max = r.max(g).max(b);
             let min = r.min(g).min(b);
             let delta = max - min;
-            let recip_delta = if delta != 0.0 { 1.0 / delta } else { 0.0 };
-            let h = if delta != 0.0 {
-                (TAU * if max == r {
-                    ((g - b) * recip_delta).rem_euclid(6.0)
-                } else if max == g {
-                    (b - r).mul_add(recip_delta, 2.0)
-                } else {
-                    (r - g).mul_add(recip_delta, 4.0)
-                }) / 6.0
-            } else {
+            let h = if delta == 0.0 {
                 0.0
+            } else {
+                (TAU * if max == r {
+                    ((g - b) / delta).rem_euclid(6.0)
+                } else if max == g {
+                    (b - r) / delta + 2.0
+                } else {
+                    (r - g) / delta + 4.0
+                }) / 6.0
             };
             let s = if max == 0.0 { 0.0 } else { 1.0 - min / max };
             let v = max;

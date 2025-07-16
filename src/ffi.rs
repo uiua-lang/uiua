@@ -94,11 +94,11 @@ impl FromStr for FfiType {
         let input = input.trim();
 
         // Pointer
-        if let Some(ptr) = input.strip_suffix("*") {
+        if let Some(ptr) = input.strip_suffix('*') {
             return Ok(Self::Ptr(ptr.parse::<Self>()?.into()));
         }
 
-        if let Some((arr, len)) = input.strip_suffix("]").and_then(|s| s.rsplit_once("[")) {
+        if let Some((arr, len)) = input.strip_suffix(']').and_then(|s| s.rsplit_once('[')) {
             let len = len.parse::<usize>().map_err(|e| e.to_string())?;
             let ty = arr.parse::<Self>()?;
             if len == 0 {
@@ -109,7 +109,7 @@ impl FromStr for FfiType {
 
         let (unsigned, input) = match input
             .strip_prefix("unsigned ")
-            .or_else(|| input.strip_prefix("u"))
+            .or_else(|| input.strip_prefix('u'))
         {
             Some(scalar) => (true, scalar),
             None => (false, input),
@@ -137,9 +137,9 @@ impl FromStr for FfiType {
 
         // Struct
         if let Some(body) = input
-            .strip_prefix("{")
-            .and_then(|s| s.strip_suffix("}"))
-            .map(|s| s.trim_end_matches(";"))
+            .strip_prefix('{' )
+            .and_then(|s| s.strip_suffix('}'))
+            .map(|s| s.trim_end_matches(';'))
         {
             let mut depth = 0_usize;
             let mut field = String::new();
@@ -196,7 +196,7 @@ impl FromStr for FfiArg {
         };
 
         // Lists
-        if let Some((arg, len_index)) = input.split_once(":") {
+        if let Some((arg, len_index)) = input.split_once(':') {
             let len_index = Some(
                 len_index
                     .trim()

@@ -258,11 +258,7 @@ impl SysBackend for WebBackend {
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         FILES.with(|files| {
-            if !files.borrow().contains_key(path) {
-                files.borrow_mut().insert(path.into(), contents.to_vec());
-            } else {
-                *files.borrow_mut().get_mut(path).unwrap() = contents.to_vec();
-            }
+            files.borrow_mut().insert(path.into(), contents.to_vec());
         });
         Ok(())
     }

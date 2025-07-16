@@ -113,6 +113,7 @@ macro_rules! create_config {
 
         #[test]
         fn generate_format_cfg_docs() {
+            use std::fmt::Write;
             paste! {
                 let mut s: String = r"
 # Uiua Formatter Configuration
@@ -125,7 +126,8 @@ Example with default values:
 ```uiua
 ".into();
                 $(
-                    s.push_str(&format!("{} ← {}\n", stringify!([<$name:camel>]), default_to_uiua!($default)));
+                    write!(s, "{} ← {}\n", stringify!([<$name:camel>]), default_to_uiua!($default)).ok()
+                    ;
                 )*
                 s.push_str(r"```
 The following configuration options are available:
@@ -133,11 +135,11 @@ The following configuration options are available:
 ");
 
                 $(
-                    s.push_str(&format!("### {}\n", stringify!([<$name:camel>])));
-                    s.push_str(&format!("Type: {}\n\n", param_type!($ty)));
-                    s.push_str(&format!("Default: `{}`\n\n", default_to_uiua!($default)));
-                    $(s.push_str(&format!("{}\n", $doc.trim()));)*
-                    s.push_str("\n---\n\n");
+                    writeln!(s, "### {}", stringify!([<$name:camel>])).ok();
+                    writeln!(s, "Type: {}\n", param_type!($ty)).ok();
+                    writeln!(s, "Default: `{}`\n", default_to_uiua!($default)).ok();
+                    $(writeln!(s, "{}", $doc.trim()).ok();)*
+                    writeln!(s, "\n---\n").ok();
                 )*
 
                 fs::write("site/text/format_config.md", s).unwrap();

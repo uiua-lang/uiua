@@ -353,7 +353,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                                 line.push('\n');
                                 for formatted in formatted {
                                     for fline in formatted.lines() {
-                                        line.push_str(&format!("\n# {fline}"));
+                                        write!(line, "\n# {fline}").ok();
                                     }
                                 }
                             } else {
@@ -372,7 +372,9 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                     {
                         break;
                     }
-                    Err(e) => line.push_str(&format!("# {e}")),
+                    Err(e) => {
+                        write!(line, "# {e}").ok();
+                    }
                 }
             }
             let text = lines.join("\n");

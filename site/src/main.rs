@@ -403,6 +403,7 @@ fn NotFound() -> impl IntoView {
 
 #[cfg(test)]
 fn prim_html(prim: Primitive, glyph_only: bool, hide_docs: bool) -> String {
+    use std::fmt::Write;
     use uiua::PrimDoc;
 
     let symbol_class = format!("prim-glyph {}", uiua_editor::prim_class(prim));
@@ -415,7 +416,7 @@ fn prim_html(prim: Primitive, glyph_only: bool, hide_docs: bool) -> String {
     let href = format!("/docs/{}", prim.name());
     let mut title = String::new();
     if let Some(ascii) = prim.ascii() {
-        title.push_str(&format!("({ascii})"));
+        write!(title, "({ascii})").ok();
     }
     if prim.glyph().is_some() && glyph_only {
         if !title.is_empty() {

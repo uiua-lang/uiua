@@ -311,14 +311,13 @@ impl<T: ArrayValue> Array<T> {
                                 result_data.push(i as f64);
                                 cache.insert(elem_key, (i, false));
                                 continue 'needle;
-                            } else {
-                                for j in i + 1..haystack.row_count() {
-                                    let of_key = ArrayCmpSlice(haystack.row_slice(j));
-                                    if of_key == elem_key {
-                                        result_data.push(j as f64);
-                                        cache.insert(elem_key, (j, false));
-                                        continue 'needle;
-                                    }
+                            }
+                            for j in i + 1..haystack.row_count() {
+                                let of_key = ArrayCmpSlice(haystack.row_slice(j));
+                                if of_key == elem_key {
+                                    result_data.push(j as f64);
+                                    cache.insert(elem_key, (j, false));
+                                    continue 'needle;
                                 }
                             }
                         } else {

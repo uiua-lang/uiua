@@ -138,7 +138,7 @@ pub fn run_window() {
                 Err(e) => {
                     eprintln!("Failed to accept connection: {e}")
                 }
-            };
+            }
         }
     });
     let icon = image::load_from_memory(include_bytes!("assets/uiua-logo-512.png")).unwrap();

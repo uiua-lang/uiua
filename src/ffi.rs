@@ -130,7 +130,7 @@ impl FromStr for FfiType {
             _ => None,
         } {
             return Ok(ty);
-        };
+        }
 
         // Struct
         if let Some(body) = input
@@ -171,9 +171,8 @@ impl FromStr for FfiType {
 
             if depth != 0 {
                 return Err(format!("Unmatched opening braces `{original}`"));
-            } else {
-                return Ok(Self::Struct(fields));
             }
+            return Ok(Self::Struct(fields));
         }
 
         Err(format!("Unknown C type `{original}`"))

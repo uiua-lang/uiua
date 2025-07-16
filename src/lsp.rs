@@ -1248,7 +1248,7 @@ mod server {
                             }))
                         }
                         ImportSrc::File(_) => {}
-                    };
+                    }
                 }
             }
             // Hovering an arg setter
@@ -2009,7 +2009,7 @@ mod server {
                             })))
                         }
                         ImportSrc::Git(_) => {}
-                    };
+                    }
                 }
             }
             Ok(None)

@@ -1894,10 +1894,9 @@ impl<T: RealArrayValue> Array<T> {
                 if n == f64::INFINITY {
                     slice[i * num_digits + j] = n;
                     break;
-                } else {
-                    slice[i * num_digits + j] = n.rem_euclid(base);
-                    n = n.div_euclid(base);
                 }
+                slice[i * num_digits + j] = n.rem_euclid(base);
+                n = n.div_euclid(base);
             }
         }
         Ok(Array::new(new_shape, new_data))

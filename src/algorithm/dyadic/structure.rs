@@ -753,7 +753,7 @@ impl<T: ArrayValue> Array<T> {
                     for row in self.rows().take(end) {
                         new_rows.push(row.drop(sub_index, env)?);
                     }
-                };
+                }
                 if row_count == abs_dropping {
                     let mut shape = self.shape;
                     for (s, n) in shape.iter_mut().zip(once(&Err(true)).chain(sub_index)) {

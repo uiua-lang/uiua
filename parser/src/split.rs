@@ -290,7 +290,7 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                         'p' => Primitive::Pop,
                         _ => unreachable!(),
                     };
-                    prims.push((prim.into(), &sub_name[i..i + 1]))
+                    prims.push((prim.into(), &sub_name[i..=i]))
                 }
                 start += len;
                 continue 'outer;
@@ -356,7 +356,7 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                         'p' => Primitive::Pop,
                         _ => unreachable!(),
                     };
-                    prims.push((prim.into(), &sub_name[i..i + 1]))
+                    prims.push((prim.into(), &sub_name[i..=i]))
                 }
                 end -= len;
                 continue 'outer;
@@ -374,7 +374,7 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                         'f' => Primitive::Fix,
                         _ => unreachable!(),
                     };
-                    prims.push((prim.into(), &sub_name[i..i + 1]))
+                    prims.push((prim.into(), &sub_name[i..=i]))
                 }
                 end -= len;
                 continue 'outer;

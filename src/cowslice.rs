@@ -479,7 +479,7 @@ impl<T: Clone> IntoIterator for CowSlice<T> {
     }
 }
 
-/// An iterator over a CowSlice
+/// An iterator over a `CowSlice`
 pub struct CowSliceIntoIter<T> {
     data: EcoVec<T>,
     start: usize,

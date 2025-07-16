@@ -604,7 +604,7 @@ impl<T: ArrayValue> Array<T> {
             row.meta.take_label();
             return row;
         }
-        let row_count: usize = self.shape[..depth + 1].iter().product();
+        let row_count: usize = self.shape[..=depth].iter().product();
         if row >= row_count {
             panic!("row index out of bounds: {row} >= {row_count}");
         }

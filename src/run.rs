@@ -1744,7 +1744,7 @@ impl Uiua {
 
 /// A trait for types that can be used as argument specifiers for [`Uiua::pop`]
 ///
-/// If the stack is empty, the error message will be "Stack was empty when getting {arg_name}"
+/// If the stack is empty, the error message will be "Stack was empty when getting {`arg_name`}"
 pub trait StackArg {
     /// Get the name of the argument
     fn arg_name(self) -> String;

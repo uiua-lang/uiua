@@ -334,7 +334,7 @@ mod enabled {
                     let mut out_values = out_values;
                     out_values.pop().unwrap()
                 } else {
-                    Array::from_iter([ret].into_iter().chain(out_values).map(Boxed)).into()
+                    [ret].into_iter().chain(out_values).map(Boxed).collect::<Array<_>>().into()
                 }
             };
 
@@ -466,13 +466,11 @@ mod enabled {
             FfiType::ULong => arr!(c_ulong),
             FfiType::ULongLong => arr!(c_ulonglong),
             _ => Ok(if ptr.ty.is_string() {
-                Value::from_iter(
-                    (0..len)
+                (0..len)
                         .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
                         .collect::<Result<Vec<_>, String>>()?
                         .into_iter()
-                        .map(Boxed),
-                )
+                        .map(Boxed).collect()
             } else {
                 Value::from_row_values_infallible(
                     (0..len)
@@ -760,7 +758,7 @@ mod enabled {
             let value = if fields.iter().all(FfiType::is_num) {
                 Value::from_row_values_infallible(rows)
             } else {
-                Array::from_iter(rows.into_iter().map(Boxed)).into()
+                rows.into_iter().map(Boxed).collect::<Array<_>>().into()
             };
 
             Ok(value)

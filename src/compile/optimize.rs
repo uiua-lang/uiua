@@ -482,7 +482,7 @@ impl Optimization for ByToDup {
                     }
                 }
             }
-            let mut composed = Node::from_iter(nodes[i - back..i].iter().cloned());
+            let mut composed = nodes[i - back..i].iter().cloned().collect::<Node>();
             let mut dup = Prim(Dup, *span);
             if dip {
                 dup = Mod(Dip, eco_vec![dup.sig_node().unwrap()], *span);
@@ -519,7 +519,7 @@ impl Optimization for RowsFlipOpt {
             let [Prim(Flip, flip_span), rest @ ..] = f.node.as_slice() else {
                 return None;
             };
-            let args = eco_vec![Node::from_iter(rest.iter().cloned()).sig_node().ok()?];
+            let args = eco_vec![rest.iter().cloned().collect::<Node>().sig_node().ok()?];
             let node = Node::from_iter([Prim(Flip, *flip_span), Mod(Rows, args, *span)]);
             Some((1, node))
         })

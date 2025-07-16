@@ -500,9 +500,10 @@ impl<T: Clone> Array<T> {
             return row;
         }
         let row_count = self.row_count();
-        if row >= row_count {
-            panic!("row index out of bounds: {row} >= {row_count}");
-        }
+        assert!(
+            row < row_count,
+            "row index out of bounds: {row} >= {row_count}"
+        );
         let row_len = self.row_len();
         let start = row * row_len;
         let end = start + row_len;
@@ -605,9 +606,10 @@ impl<T: ArrayValue> Array<T> {
             return row;
         }
         let row_count: usize = self.shape[..=depth].iter().product();
-        if row >= row_count {
-            panic!("row index out of bounds: {row} >= {row_count}");
-        }
+        assert!(
+            row < row_count,
+            "row index out of bounds: {row} >= {row_count}"
+        );
         let row_len: usize = self.shape[depth + 1..].iter().product();
         let start = row * row_len;
         let end = start + row_len;

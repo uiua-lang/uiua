@@ -2225,17 +2225,27 @@ mod tests {
                     match env.run_str(&ex.input) {
                         Ok(mut comp) => {
                             if let Some(diag) = comp.take_diagnostics().into_iter().next() {
-                                if !ex.should_error {
-                                    panic!("\nExample failed:\n{}\n{}", ex.input, diag.report());
-                                }
-                            } else if ex.should_error {
-                                panic!("Example should have failed: {}", ex.input);
+                                assert!(
+                                    ex.should_error,
+                                    "\nExample failed:\n{}\n{}",
+                                    ex.input,
+                                    diag.report()
+                                );
+                            } else {
+                                assert!(
+                                    !ex.should_error,
+                                    "Example should have failed: {}",
+                                    ex.input
+                                );
                             }
                         }
                         Err(e) => {
-                            if !ex.should_error {
-                                panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
-                            }
+                            assert!(
+                                ex.should_error,
+                                "\nExample failed:\n{}\n{}",
+                                ex.input,
+                                e.report()
+                            );
                         }
                     }
                 }

@@ -17,9 +17,7 @@ dbg_macro = "warn"
 print_stdout = "warn"
 non_std_lazy_statics = "warn"
 pedantic = {level = "warn", priority = -1}
-manual_assert = "allow"  # 16
-inline_always = "allow"  # 18
-from_iter_instead_of_collect = "allow"  # 20
+inline_always = "allow"  # TODO: benchmark inlines
 default_trait_access = "allow"  # 23
 format_push_string = "allow"  # 27
 missing_panics_doc = "allow"  # 37

@@ -1,7 +1,14 @@
 [package]
+description = "Uiua editor"
 name = "uiua-editor"
 version = "0.1.0"
-edition = "2021"
+categories.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -10,45 +17,21 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
-leptos = { version = "0.6.10", features = ["csr"] }
-js-sys = "0.3.69"
-web-sys = { version = "0.3.70", features = [
-    "Window",
-    "CustomElementRegistry",
-    "CssStyleDeclaration",
-    "DomRect",
-    "Storage",
-    "HtmlAudioElement",
-    "HtmlBrElement",
-    "Selection",
-    "Node",
-    "Clipboard",
-    "ClipboardEvent",
-    "DataTransfer",
-    "Navigator",
-    "Permissions",
-    "ScrollIntoViewOptions",
-    "ScrollBehavior",
-    "ScrollLogicalPosition",
-    "StorageManager",
-    "FileReader",
-    "EventInit",
-    "DataTransfer",
-    "File",
-    "FileList",
-    "ResizeObserver",
-    "ResizeObserverEntry",
-    "Performance",
-] }
-base64 = "0.22.0"
-leptos_router = {version = "0.6.11", features = ["csr"]}
-leptos-use = "0.12.0"
-uiua = {path = "../..", default-features = false, features = ["batteries", "web"]}
+base64.workspace = true
+hound.workspace = true
+js-sys.workspace = true
+leptos = {workspace = true, features = ["csr"]}
+leptos_router.workspace = true
+serde_json.workspace = true
+unicode-segmentation.workspace = true
+urlencoding.workspace = true
+wasm-bindgen.workspace = true
+web-sys = {workspace = true, features = ["CustomElementRegistry", "Window"]}
+uiua = {path = "../..", default-features = false, features = [
+  "batteries",
+  "web",
+]}
 image = "0.25"
-unicode-segmentation = "1.10"
-urlencoding = "2"
-wasm-bindgen = "0.2.93"
+leptos-use = "0.12.0"
 wasm-bindgen-futures = "0.4.43"
-hound = "3.5.1"
-serde_json = "1.0.115"
 futures = "0.3.30"

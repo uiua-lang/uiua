@@ -17,10 +17,6 @@ print_stdout = "warn"
 print_stderr = "allow"
 dbg_macro = "warn"
 pedantic = {level = "warn", priority = -1}
-case_sensitive_file_extension_comparisons = "allow"  # 3
-cloned_instead_of_copied = "allow"  # 3
-ref_as_ptr = "allow"  # 3
-unsafe_derive_deserialize = "allow"  # 3
 doc_markdown = "allow"  # 5
 match_wildcard_for_single_variants = "allow"  # 5
 needless_continue = "allow"  # 5

@@ -125,7 +125,7 @@ pub unsafe extern "C" fn person_children(name: *const c_char, age: c_int) -> *co
         name: CString::new(format!("{name}ina")).unwrap().into_raw(),
         age: age - 27,
     });
-    children.leak() as *mut _ as *const _
+    std::ptr::from_mut(children.leak()) as *const _
 }
 
 #[no_mangle]

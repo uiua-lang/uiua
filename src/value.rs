@@ -181,6 +181,10 @@ impl Value {
         }
     }
     /// Get an iterator over the elements of the value
+    #[expect(
+        clippy::cloned_instead_of_copied,
+        reason = "not all value types are Copy"
+    )]
     pub fn elements(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
         val_as_arr!(self, |array| Box::new(
             array.data.iter().cloned().map(Value::from)
@@ -360,14 +364,14 @@ impl Deref for Value {
     type Target = ValueRepr;
     fn deref(&self) -> &Self::Target {
         // Safety: The layout of `Value` should always match that of `Value`
-        unsafe { &*(self as *const Self as *const ValueRepr) }
+        unsafe { &*(std::ptr::from_ref(self) as *const ValueRepr) }
     }
 }
 
 impl DerefMut for Value {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // Safety: The layout of `Value` should always match that of `Value`
-        unsafe { &mut *(self as *mut Self as *mut ValueRepr) }
+        unsafe { &mut *(std::ptr::from_mut(self) as *mut ValueRepr) }
     }
 }
 

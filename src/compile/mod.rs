@@ -478,7 +478,7 @@ impl Compiler {
         }
 
         let base = 0u8;
-        self.start_addrs.push(&base as *const u8 as usize);
+        self.start_addrs.push(std::ptr::from_ref(&base) as usize);
         let res = self.catching_crash(input, |env| env.items(items, ItemCompMode::TopLevel));
         self.start_addrs.pop();
 
@@ -1212,7 +1212,7 @@ impl Compiler {
             };
         let start_addr = *self.start_addrs.first().unwrap();
         let curr = 0u8;
-        let curr_addr = &curr as *const u8 as usize;
+        let curr_addr = std::ptr::from_ref(&curr) as usize;
         let diff = curr_addr.abs_diff(start_addr);
         if diff > MAX_RECURSION_DEPTH {
             return Err(self.error(span.clone(), "Compilation recursion limit reached"));

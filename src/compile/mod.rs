@@ -2072,8 +2072,7 @@ impl Compiler {
                     (0..end).rev().any(|start| {
                         let sub = node.slice(start..end);
                         match sub.as_slice() {
-                            [Node::Push(val), Node::Prim(Primitive::Dup, _)]
-                            | [Node::Push(val), Node::Push(..)]
+                            [Node::Push(val), Node::Prim(Primitive::Dup, _) | Node::Push(..)]
                                 if val != &Value::from(1) =>
                             {
                                 return true;
@@ -2198,6 +2197,7 @@ impl Compiler {
                     self.modified(*m, Some(scr.map(Into::into)))?
                 }
                 Modifier::Primitive(prim) => {
+                    #[expect(clippy::unnested_or_patterns, reason = "intentionally grouped")]
                     if !matches!(
                         prim,
                         (Both | Bracket)

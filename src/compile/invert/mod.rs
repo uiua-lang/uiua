@@ -287,7 +287,7 @@ impl From<SigCheckError> for InversionError {
     }
 }
 impl From<()> for InversionError {
-    fn from(_: ()) -> Self {
+    fn from((): ()) -> Self {
         InversionError::Generic
     }
 }

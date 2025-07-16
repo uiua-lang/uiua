@@ -2392,7 +2392,7 @@ mod server {
             path.canonicalize()
                 .map_err(|e| Error::invalid_params(format!("Invalid file path: {e}")))?,
         )
-        .map_err(|_| Error::invalid_params("Invalid file path"))
+        .map_err(|()| Error::invalid_params("Invalid file path"))
     }
 
     fn uri_path(uri: &Url) -> PathBuf {

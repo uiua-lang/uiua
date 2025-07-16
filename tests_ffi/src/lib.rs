@@ -36,13 +36,13 @@ pub unsafe extern "C" fn multi_list(
 }
 
 #[no_mangle]
-pub unsafe fn change_string(s: *mut *const c_char) {
+pub unsafe extern "C" fn change_string(s: *mut *const c_char) {
     let new_str = CString::new("Hello, World!").unwrap();
     *s = new_str.into_raw();
 }
 
 #[no_mangle]
-pub unsafe fn change_string_to_sum(a: c_int, b: c_int, s: *mut *const c_char) {
+pub unsafe extern "C" fn change_string_to_sum(a: c_int, b: c_int, s: *mut *const c_char) {
     let sum = a + b;
     let new_str = CString::new(format!("{a} + {b} = {sum}")).unwrap();
     *s = new_str.into_raw();

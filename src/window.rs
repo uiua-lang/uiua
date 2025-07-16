@@ -179,6 +179,10 @@ pub fn run_window() {
     .unwrap();
 }
 
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "doesn't seem to be a state machine"
+)]
 struct App {
     items: Vec<OutputItem>,
     recv: Receiver<Request>,

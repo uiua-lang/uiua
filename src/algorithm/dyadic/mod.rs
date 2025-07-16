@@ -395,7 +395,7 @@ impl<T: ArrayValue> Array<T> {
                 new_shape.extend_from_slice(&self.shape);
                 self.shape = new_shape.into();
             }
-            _ => {}
+            Ordering::Equal => {}
         }
 
         // If converting to rank 0, the rank-matching process
@@ -459,7 +459,7 @@ impl Value {
         if irank >= 0 {
             // Positive rank
             if rank >= shape.len() {
-                for _ in 0..rank - shape.len() + 1 {
+                for _ in 0..=rank - shape.len() {
                     shape.prepend(1);
                 }
             } else {

@@ -2083,7 +2083,7 @@ mod server {
                     Span::Code(span) => path_locs(span, &path)?,
                     Span::Builtin => err.meta.trace.iter().find_map(|frame| match &frame.span {
                         Span::Code(span) => Some(span),
-                        _ => None,
+                        Span::Builtin => None,
                     })?,
                 };
                 Some(uiua_span_to_lsp(span, &doc.asm.inputs))

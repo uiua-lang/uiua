@@ -86,6 +86,10 @@ pub trait GridFmt: Sized {
         rows.map(|row| row.len()).max().unwrap_or(0)
     }
     /// Get SoA rows
+    #[expect(
+        clippy::doc_markdown,
+        reason = "SoA is just an acronym, not a type/trait name"
+    )]
     fn soa_rows(_arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
         None
     }

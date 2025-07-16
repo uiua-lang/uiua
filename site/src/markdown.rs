@@ -475,11 +475,9 @@ fn text_code_blocks() {
                 Err(e) => Some(e.report()),
             };
             if let Some(report) = failure_report {
-                if !should_fail {
-                    panic!("\nBlock failed:\n{block}\n{report}")
-                }
-            } else if should_fail {
-                panic!("\nBlock should have failed:\n{block}")
+                assert!(should_fail, "\nBlock failed:\n{block}\n{report}");
+            } else {
+                assert!(!should_fail, "\nBlock should have failed:\n{block}");
             }
         }
     }

@@ -1753,7 +1753,7 @@ impl Parser<'_> {
         loop {
             self.ignore_whitespace();
             if let Some(span) = self.exact(Comment) {
-                let s = span.as_str(self.inputs, |s| s.trim_start_matches("#").trim().into());
+                let s = span.as_str(self.inputs, |s| s.trim_start_matches('#').trim().into());
                 lines.push(span.sp(s));
             } else if let Some(sem) = self.next_token_map(Token::as_semantic_comment) {
                 semantic.insert(sem.value, sem.span);

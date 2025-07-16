@@ -1313,9 +1313,7 @@ mod server {
             }
 
             let doc_uri = &params.text_document_position.text_document.uri;
-            let doc = if let Some(doc) = self.doc(doc_uri) {
-                doc
-            } else {
+            let Some(doc) = self.doc(doc_uri) else {
                 return Ok(None);
             };
             let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
@@ -1431,9 +1429,7 @@ mod server {
             &self,
             params: DocumentFormattingParams,
         ) -> Result<Option<Vec<TextEdit>>> {
-            let doc = if let Some(doc) = self.doc(&params.text_document.uri) {
-                doc
-            } else {
+            let Some(doc) = self.doc(&params.text_document.uri) else {
                 return Ok(None);
             };
             match format_str(&doc.input, &FormatConfig::find().unwrap_or_default()) {

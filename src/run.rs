@@ -140,8 +140,8 @@ struct ThisThread {
 impl Default for ThisThread {
     fn default() -> Self {
         Self {
-            parent: Default::default(),
-            children: Default::default(),
+            parent: None,
+            children: HashMap::new(),
             next_child_id: 1,
         }
     }

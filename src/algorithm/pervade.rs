@@ -8,6 +8,7 @@ use std::{
 use ecow::eco_vec;
 
 use crate::algorithm::validate_size;
+use crate::cowslice::CowSlice;
 use crate::fill::FillValue;
 use crate::{algorithm::loops::flip, array::*, Uiua, UiuaError, UiuaResult, Value};
 use crate::{Complex, Shape};
@@ -639,7 +640,7 @@ where
 
     if new_shape.contains(&0) {
         b.shape = new_shape;
-        b.data = Default::default();
+        b.data = CowSlice::new();
     } else if new_shape == b.shape {
         // The existing array can be used
         if a.shape == b.shape {

@@ -740,7 +740,7 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     let first_frame = decoder.read_next_frame()?.unwrap();
     let gif_width = first_frame.width as usize;
     let gif_height = first_frame.height as usize;
-    let mut data: crate::cowslice::CowSlice<f64> = Default::default();
+    let mut data = crate::cowslice::CowSlice::new();
     let mut frame_count = 1;
     let mut delay_sum = first_frame.delay as f64 / 100.0;
     // Init frame data with the first frame

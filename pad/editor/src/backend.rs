@@ -70,7 +70,7 @@ pub fn delete_file(path: &PathBuf) {
 }
 
 thread_local! {
-    static BREAKPOINTS: RefCell<HashMap<u64, (u64, usize)>> = Default::default();
+    static BREAKPOINTS: RefCell<HashMap<u64, (u64, usize)>> = RefCell::default();
 }
 
 impl Default for WebBackend {
@@ -434,8 +434,8 @@ impl SysBackend for WebBackend {
     }
     fn load_git_module(&self, original_url: &str, target: GitTarget) -> Result<PathBuf, String> {
         thread_local! {
-            static CACHE: RefCell<HashMap<String, Result<String, String>>> = Default::default();
-            static WORKING: RefCell<HashSet<String>> = Default::default();
+            static CACHE: RefCell<HashMap<String, Result<String, String>>> = RefCell::default();
+            static WORKING: RefCell<HashSet<String>> = RefCell::default();
         }
 
         fn cache_url(url: &str, res: Result<String, String>) {

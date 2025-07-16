@@ -656,7 +656,7 @@ mod enabled {
         }
         fn alloc_and_push_ptr_to<T: Any + Copy + std::fmt::Debug>(&mut self, arg: T) -> *mut () {
             let mut bx = Box::<T>::new(arg);
-            let ptr: *mut T = &mut *bx;
+            let ptr = &raw mut *bx;
             dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
             self.arg_data.push(Box::new((ptr, bx)));
             self.args.push(Arg::new(
@@ -733,7 +733,7 @@ mod enabled {
             let ptr = if arg.is_empty() {
                 ptr::null_mut()
             } else {
-                &mut arg[0] as *mut T
+                &raw mut arg[0]
             };
             dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
             let storage = (ptr, arg);

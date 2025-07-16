@@ -303,7 +303,7 @@ mod tests {
                 .load_str_src(section, path)
                 .and_then(|comp| env.run_asm(comp.finish()));
             match res {
-                Ok(_) => {
+                Ok(()) => {
                     if (comp.take_diagnostics().into_iter())
                         .filter(|diag| diag.kind > DiagnosticKind::Advice)
                         .count()

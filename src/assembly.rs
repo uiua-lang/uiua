@@ -648,6 +648,6 @@ impl fmt::Debug for Assembly {
         f.debug_struct("Assembly")
             .field("root", &self.root)
             .field("functions", &FmtFunctions(self))
-            .finish()
+            .finish_non_exhaustive() // TODO: maybe show all fields instead?
     }
 }

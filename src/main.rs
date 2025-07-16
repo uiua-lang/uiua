@@ -1176,7 +1176,7 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, stack: bool, config:
                 code
             }
             Err(ReadlineError::Eof | ReadlineError::Interrupted) => break,
-            Err(_) => panic!("Failed to read from Stdin"),
+            Err(e) => panic!("Failed to read from Stdin: {e}"),
         };
         if code.is_empty() {
             continue;

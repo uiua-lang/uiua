@@ -307,9 +307,9 @@ impl Value {
                                 &Data::Float(f) => f.into(),
                                 Data::String(s) => s.clone().into(),
                                 &Data::Bool(b) => b.into(),
-                                Data::DateTime(dt) => {
-                                    ((dt.as_f64() - 2.0) * 24.0 * 60.0 * 60.0 - 2208988800.0).into()
-                                }
+                                Data::DateTime(dt) => ((dt.as_f64() - 2.0) * 24.0 * 60.0 * 60.0
+                                    - 2_208_988_800.0)
+                                    .into(),
                                 Data::DateTimeIso(dt) => dt.clone().into(),
                                 Data::DurationIso(dur) => dur.clone().into(),
                                 Data::Error(e) => e.to_string().into(),

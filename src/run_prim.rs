@@ -1535,7 +1535,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
         for caps in regex.captures_iter(&target) {
             let row: EcoVec<Boxed> = caps
                 .iter()
-                .flat_map(|m| {
+                .filter_map(|m| {
                     m.map(|m| Boxed(Value::from(m.as_str()))).or_else(|| {
                         env.value_fill()
                             .map(|fv| fv.value.clone())

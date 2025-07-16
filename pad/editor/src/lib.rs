@@ -3,6 +3,7 @@ pub mod utils;
 
 use std::{
     cell::Cell,
+    fmt::Write,
     iter::{once, repeat_n},
     mem::take,
     path::PathBuf,
@@ -2275,7 +2276,7 @@ pub fn Prim(
     let href = format!("/docs/{}", prim.name());
     let mut title = String::new();
     if let Some(ascii) = prim.ascii() {
-        title.push_str(&format!("({ascii})"));
+        write!(title, "({ascii})").ok();
     }
     if prim.glyph().is_some() && glyph_only {
         if !title.is_empty() {

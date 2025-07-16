@@ -3,6 +3,7 @@
 use std::{
     collections::HashMap,
     f64::consts::{E, PI, TAU},
+    fmt::Write,
     iter::{once, repeat_n},
     mem::take,
 };
@@ -274,10 +275,12 @@ impl GridFmt for f64 {
                 round_sig_dec(mean, 4).grid_string(false)
             );
             if nan_count > 0 {
-                s.push_str(&format!(
+                write!(
+                    s,
                     " ({nan_count} NaN{})",
                     if nan_count > 1 { "s" } else { "" }
-                ));
+                )
+                .ok();
             }
             s
         }

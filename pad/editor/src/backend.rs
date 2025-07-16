@@ -491,7 +491,10 @@ impl SysBackend for WebBackend {
             .replace("github.com", "raw.githubusercontent.com")
             .replace("src/branch/master", "raw/branch/master");
 
-        if !url.ends_with(".ua") {
+        if !std::path::Path::new(&url)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("ua"))
+        {
             url = format!("{url}/main/lib.ua");
         }
 
@@ -525,7 +528,10 @@ impl SysBackend for WebBackend {
                                 .iter()
                                 .filter_map(|entry| {
                                     let path = entry.get("path")?.as_str()?;
-                                    if path.ends_with(".ua") {
+                                    if Path::new(path)
+                                        .extension()
+                                        .is_some_and(|ext| ext.eq_ignore_ascii_case("ua"))
+                                    {
                                         Some(path.to_string())
                                     } else {
                                         None

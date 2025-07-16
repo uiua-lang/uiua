@@ -1098,6 +1098,10 @@ macro_rules! node {
         /// A node is a tree structure of instructions. It can be used as both a single unit as well as a list.
         #[derive(Clone, Serialize, Deserialize)]
         #[repr(u8)]
+        #[expect(
+            clippy::unsafe_derive_deserialize,
+            reason="seems to be triggered by thread_local! usage",
+        )]
         #[allow(missing_docs)]
         #[serde(from = "NodeRep", into = "NodeRep")]
         pub enum Node {

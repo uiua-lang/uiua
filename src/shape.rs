@@ -9,6 +9,10 @@ use serde::*;
 use smallvec::SmallVec;
 
 /// Uiua's array shape type
+#[expect(
+    clippy::unsafe_derive_deserialize,
+    reason = "just a wrapper around SmallVec with no additional invariants"
+)]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Shape {

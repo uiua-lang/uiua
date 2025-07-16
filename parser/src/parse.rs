@@ -1216,6 +1216,11 @@ impl Parser<'_> {
         if self.too_deep() {
             return None;
         }
+        #[expect(
+            clippy::same_functions_in_if_condition,
+            reason = "methods seem to mutate self, so the second if may or may not be needed",
+            // TODO
+        )]
         let mut word = if let Some(n) = self.num() {
             n.map(|(n, s)| Word::Number(n, s))
         } else if let Some(prim) = self.prim() {

@@ -1437,6 +1437,10 @@ impl Formatter<'_> {
 
             let mut values = env.rt.output_comments;
             if let Err(e) = res {
+                #[expect(
+                    clippy::maybe_infinite_iter,
+                    reason="values doesn't contain all possible keys,so this should terminate at some point",
+                )]
                 let next = (0..).take_while(|i| values.contains_key(i)).count();
                 values.insert(next, vec![vec![e.to_string().into()]]);
             }

@@ -1786,7 +1786,7 @@ mod server {
                                     params.text_document.uri.clone(),
                                     vec![TextEdit {
                                         range: uiua_span_to_lsp(&span.span, &doc.asm.inputs),
-                                        new_text: "".into(),
+                                        new_text: String::new(),
                                     }],
                                 )]
                                 .into(),

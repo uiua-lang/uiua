@@ -1868,7 +1868,7 @@ pub fn Editor<'a>(
 
     let editor_style = move || {
         if !fullscreen_enabled.get() {
-            return "".to_string();
+            return String::new();
         }
 
         let ratio = splitter_ratio.get();
@@ -2270,7 +2270,7 @@ pub fn Prim(
     let name = if !glyph_only && symbol != prim.name() {
         format!(" {}", prim.name())
     } else {
-        "".to_string()
+        String::new()
     };
     let href = format!("/docs/{}", prim.name());
     let mut title = String::new();

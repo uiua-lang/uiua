@@ -432,19 +432,16 @@ impl<T: ArrayValue> Array<T> {
             .any(|(a, b)| a > b);
         if needle.rank() > haystack.rank() || any_dim_greater {
             // Fill
-            match env.scalar_fill() {
-                Ok(fill) => {
-                    let target_shape = max_shape(&haystack.shape, &needle.shape);
-                    local_searched = haystack.clone();
-                    local_searched.fill_to_shape(&target_shape, fill);
-                    haystack = &local_searched;
-                }
-                Err(_) => {
-                    let data = cowslice![0; haystack.element_count()];
-                    let mut arr = Array::new(haystack.shape.clone(), data);
-                    arr.meta.flags.insert(ArrayFlags::BOOLEAN);
-                    return Ok(arr);
-                }
+            if let Ok(fill) = env.scalar_fill() {
+                let target_shape = max_shape(&haystack.shape, &needle.shape);
+                local_searched = haystack.clone();
+                local_searched.fill_to_shape(&target_shape, fill);
+                haystack = &local_searched;
+            } else {
+                let data = cowslice![0; haystack.element_count()];
+                let mut arr = Array::new(haystack.shape.clone(), data);
+                arr.meta.flags.insert(ArrayFlags::BOOLEAN);
+                return Ok(arr);
             }
         }
 

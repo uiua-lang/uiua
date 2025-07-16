@@ -337,7 +337,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::ExeExt => env.push(std::env::consts::EXE_EXTENSION),
         Primitive::PathSep => env.push(std::path::MAIN_SEPARATOR),
         Primitive::NumProcs => env.push(num_cpus::get()),
-        Primitive::Sys(op) => run_sys_op(op, env)?,
+        Primitive::Sys(op) => run_sys_op(*op, env)?,
         prim => {
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(
@@ -515,7 +515,7 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
             let [f] = get_ops(ops, env)?;
             env.spawn(true, f)?;
         }
-        Primitive::Sys(op) => run_sys_op_mod(op, ops, env)?,
+        &Primitive::Sys(op) => run_sys_op_mod(op, ops, env)?,
         prim => {
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(
@@ -911,7 +911,7 @@ impl ImplPrimitive {
                 env.push(right);
                 env.push(left);
             }
-            ImplPrimitive::TryClose => _ = run_sys_op(&SysOp::Close, env),
+            ImplPrimitive::TryClose => _ = run_sys_op(SysOp::Close, env),
             ImplPrimitive::UndoInsert => {
                 let key = env.pop(1)?;
                 let _value = env.pop(2)?;

@@ -472,13 +472,11 @@ impl<'a> AlgebraEnv<'a> {
                 Complex => {
                     let a = self.pop()?;
                     let b = self.pop()?;
-                    match (a.as_constant(), b.as_constant()) {
-                        (Some(a), Some(b)) => self.stack.push((a * Complex::I + b).into()),
-                        _ => {
-                            let im =
-                                (a * Expr::from(Complex::I)).ok_or(AlgebraError::TooComplex)?;
-                            self.stack.push(b + im);
-                        }
+                    if let (Some(a), Some(b)) = (a.as_constant(), b.as_constant()) {
+                        self.stack.push((a * Complex::I + b).into())
+                    } else {
+                        let im = (a * Expr::from(Complex::I)).ok_or(AlgebraError::TooComplex)?;
+                        self.stack.push(b + im);
                     }
                     self.any_complex = true;
                 }

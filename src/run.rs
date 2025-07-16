@@ -538,7 +538,7 @@ impl Uiua {
                         }
                     }
                     BindingKind::Func(f) => {
-                        self.respect_recursion_limit().and_then(|_| self.call(&f))
+                        self.respect_recursion_limit().and_then(|()| self.call(&f))
                     }
                     BindingKind::Import { .. } | BindingKind::Module(_) | BindingKind::Scope(_) => {
                         Err(self.error(
@@ -1568,11 +1568,11 @@ impl Uiua {
                     std::thread::yield_now();
                 }
                 let mut env = make_env();
-                pool.execute(move || _ = send.send(env.exec(f).map(|_| env.take_stack())));
+                pool.execute(move || _ = send.send(env.exec(f).map(|()| env.take_stack())));
             } else {
                 let mut env = make_env();
                 std::thread::Builder::new()
-                    .spawn(move || _ = send.send(env.exec(f).map(|_| env.take_stack())))
+                    .spawn(move || _ = send.send(env.exec(f).map(|()| env.take_stack())))
                     .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
             }
             recv

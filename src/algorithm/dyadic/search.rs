@@ -503,9 +503,7 @@ impl<T: ArrayValue> Array<T> {
             if haystack.shape.iter().all(|&d| d > 0) {
                 'windows: loop {
                     // Reset curr
-                    for i in curr.iter_mut() {
-                        *i = 0;
-                    }
+                    curr.fill(0);
                     // Search the window whose top-left is the current corner
                     'items: loop {
                         // Get index for the current item in the haystack

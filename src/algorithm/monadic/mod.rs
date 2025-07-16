@@ -1136,8 +1136,8 @@ impl<T: ArrayValue> Array<T> {
             for i in 0..chunk_row_count / 2 {
                 let left = i * chunk_row_len;
                 let right = (chunk_row_count - i - 1) * chunk_row_len;
-                let left = &mut data[left] as *mut T;
-                let right = &mut data[right] as *mut T;
+                let left = &raw mut data[left];
+                let right = &raw mut data[right];
                 unsafe {
                     ptr::swap_nonoverlapping(left, right, chunk_row_len);
                 }
@@ -2303,7 +2303,7 @@ impl Array<f64> {
             let max = r.max(g).max(b);
             let min = r.min(g).min(b);
             let delta = max - min;
-            let h = if delta == 0.0 {
+            let hue = if delta == 0.0 {
                 0.0
             } else {
                 (TAU * if max == r {
@@ -2314,11 +2314,11 @@ impl Array<f64> {
                     (r - g) / delta + 4.0
                 }) / 6.0
             };
-            let s = if max == 0.0 { 0.0 } else { 1.0 - min / max };
-            let v = max;
-            rgb[0] = h;
-            rgb[1] = s;
-            rgb[2] = v;
+            let sat = if max == 0.0 { 0.0 } else { 1.0 - min / max };
+            let val = max;
+            rgb[0] = hue;
+            rgb[1] = sat;
+            rgb[2] = val;
         }
         self.meta.take_sorted_flags();
         self.validate();
@@ -2335,10 +2335,10 @@ impl Array<f64> {
         }
         let channels = *self.shape.last().unwrap();
         for hsv in self.data.as_mut_slice().chunks_exact_mut(channels) {
-            let [h, s, v, ..] = *hsv else {
+            let [hue, sat, val, ..] = *hsv else {
                 unreachable!();
             };
-            let [r, g, b] = hsv_to_rgb(h, s, v);
+            let [r, g, b] = hsv_to_rgb(hue, sat, val);
             hsv[0] = r;
             hsv[1] = g;
             hsv[2] = b;
@@ -2349,20 +2349,22 @@ impl Array<f64> {
     }
 }
 
-pub(crate) fn hsv_to_rgb(h: f64, s: f64, v: f64) -> [f64; 3] {
-    let h = h / TAU * 6.0;
-    let i = h.floor() as isize;
-    let f = h - i as f64;
-    let p = v * (1.0 - s);
-    let q = v * (1.0 - f * s);
-    let t = v * (1.0 - (1.0 - f) * s);
-    match i.rem_euclid(6) {
-        0 => [v, t, p],
-        1 => [q, v, p],
-        2 => [p, v, t],
-        3 => [p, q, v],
-        4 => [t, p, v],
-        _ => [v, p, q],
+pub(crate) fn hsv_to_rgb(hue: f64, sat: f64, val: f64) -> [f64; 3] {
+    let hue = hue / TAU * 6.0;
+    let sect = hue.floor() as isize;
+    let f = hue - sect as f64;
+    let chroma = val * sat;
+    let min = val - chroma;
+    let mid1 = val - f * chroma;
+    let mid0 = val - (1.0 - f) * chroma;
+    match sect.rem_euclid(6) {
+        0 => [val, mid0, min],
+        1 => [mid1, val, min],
+        2 => [min, val, mid0],
+        3 => [min, mid1, val],
+        4 => [mid0, min, val],
+        5 => [val, min, mid1],
+        _ => unreachable!(),
     }
 }
 

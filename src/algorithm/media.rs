@@ -849,6 +849,7 @@ builtin_params!(
     (Camera, "The position of the camera"),
 );
 
+#[expect(clippy::many_single_char_names, reason = "TODO")]
 pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
     let args = take(&mut env.rt.set_args);
     let converted: Array<f64>;
@@ -1482,7 +1483,7 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
         let mut canvas_data = if let Some(bg) = bg {
             let color = match &*bg.shape {
                 [] | [1] => [bg.data[0], bg.data[0], bg.data[0], 1.0],
-                [3] | [4] => {
+                [3 | 4] => {
                     let alpha = bg.data.get(3).copied().unwrap_or(1.0);
                     [bg.data[0], bg.data[1], bg.data[2], alpha]
                 }

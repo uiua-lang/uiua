@@ -72,17 +72,14 @@ impl Display for FfiType {
 
 impl Display for FfiArg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{out}{ty}{index}",
-            out = if self.out { "out " } else { "" },
-            ty = self.ty,
-            index = if let Some(len_index) = self.len_index {
-                format!(":{len_index}")
-            } else {
-                "".to_string()
-            }
-        )
+        if self.out {
+            write!(f, "out ")?;
+        }
+        write!(f, "{}", self.ty)?;
+        if let Some(len_index) = self.len_index {
+            write!(f, ":{len_index}")?;
+        }
+        Ok(())
     }
 }
 
@@ -137,7 +134,7 @@ impl FromStr for FfiType {
 
         // Struct
         if let Some(body) = input
-            .strip_prefix('{' )
+            .strip_prefix('{')
             .and_then(|s| s.strip_suffix('}'))
             .map(|s| s.trim_end_matches(';'))
         {

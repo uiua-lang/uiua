@@ -396,17 +396,16 @@ impl Value {
         val_as_arr!(from, |a| a.drop(&index, env).map(Into::into))
     }
     pub(crate) fn undo_take(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = match index.as_ints(env, None) {
-            Ok(indices) => indices,
-            Err(_) => {
-                let with_infs = index
-                    .as_ints_or_infs(env, "Taken amount must be a list of integers or infinity")?;
-                let mut indices = Vec::with_capacity(with_infs.len());
-                for (i, d) in with_infs.into_iter().zip(&into.shape) {
-                    indices.push(i.unwrap_or(*d as isize));
-                }
-                indices
+        let index = if let Ok(indices) = index.as_ints(env, None) {
+            indices
+        } else {
+            let with_infs = index
+                .as_ints_or_infs(env, "Taken amount must be a list of integers or infinity")?;
+            let mut indices = Vec::with_capacity(with_infs.len());
+            for (i, d) in with_infs.into_iter().zip(&into.shape) {
+                indices.push(i.unwrap_or(*d as isize));
             }
+            indices
         };
         self.generic_bin_into(
             into,
@@ -425,19 +424,16 @@ impl Value {
         )
     }
     pub(crate) fn undo_drop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = match index.as_ints(env, None) {
-            Ok(indices) => indices,
-            Err(_) => {
-                let with_infs = index.as_ints_or_infs(
-                    env,
-                    "Dropped amount must be a list of integers or infinity",
-                )?;
-                let mut indices = Vec::with_capacity(with_infs.len());
-                for (i, d) in with_infs.into_iter().zip(&into.shape) {
-                    indices.push(i.unwrap_or(*d as isize));
-                }
-                indices
+        let index = if let Ok(indices) = index.as_ints(env, None) {
+            indices
+        } else {
+            let with_infs = index
+                .as_ints_or_infs(env, "Dropped amount must be a list of integers or infinity")?;
+            let mut indices = Vec::with_capacity(with_infs.len());
+            for (i, d) in with_infs.into_iter().zip(&into.shape) {
+                indices.push(i.unwrap_or(*d as isize));
             }
+            indices
         };
         self.generic_bin_into(
             into,

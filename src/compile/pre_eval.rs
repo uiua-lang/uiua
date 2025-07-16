@@ -29,7 +29,7 @@ const MAX_PRE_EVAL_RANK: usize = 4;
 
 impl PreEvalMode {
     #[allow(unused)]
-    fn matches_nodes(&self, nodes: &[Node], asm: &Assembly) -> bool {
+    fn matches_nodes(self, nodes: &[Node], asm: &Assembly) -> bool {
         if nodes.iter().all(|node| matches!(node, Node::Push(_))) {
             return false;
         }
@@ -78,7 +78,7 @@ impl PreEvalMode {
             visited.truncate(len);
             matches
         }
-        recurse(*self, nodes, asm, &mut IndexSet::new())
+        recurse(self, nodes, asm, &mut IndexSet::new())
     }
 }
 

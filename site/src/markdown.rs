@@ -292,7 +292,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                 let symbol_class = format!("prim-glyph {}", prim_class(prim));
                 let symbol = prim.to_string();
                 let name = if symbol == prim.name() {
-                    "".to_string()
+                    String::new()
                 } else {
                     format!(" {}", prim.name())
                 };

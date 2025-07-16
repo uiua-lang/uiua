@@ -35,10 +35,10 @@ pub enum TutorialPage {
 }
 
 impl TutorialPage {
-    pub fn path(&self) -> String {
+    pub fn path(self) -> String {
         format!("{self:?}").to_lowercase()
     }
-    pub fn title(&self) -> &'static str {
+    pub fn title(self) -> &'static str {
         match self {
             Self::Introduction => "Introduction",
             Self::Basic => "Basic Stack Operations and Formatting",

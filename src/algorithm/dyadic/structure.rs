@@ -96,22 +96,20 @@ impl Value {
             Value::Num(arr) => {
                 let mut index_data = Vec::with_capacity(arr.element_count());
                 for &n in &arr.data {
-                    index_data.push(if n.fract() != 0.0 {
-                        if filled {
-                            isize::MAX
-                        } else if n.fract().is_nan() {
-                            return Err(env.error(format!(
-                                "{} cannot be used as an index without a fill",
-                                n.grid_string(false)
-                            )));
-                        } else {
-                            return Err(env.error(format!(
-                                "Index must be an array of integers, but {} is not an integer",
-                                n.grid_string(false)
-                            )));
-                        }
-                    } else {
+                    index_data.push(if n.fract() == 0.0 {
                         n as isize
+                    } else if filled {
+                        isize::MAX
+                    } else if n.fract().is_nan() {
+                        return Err(env.error(format!(
+                            "{} cannot be used as an index without a fill",
+                            n.grid_string(false)
+                        )));
+                    } else {
+                        return Err(env.error(format!(
+                            "Index must be an array of integers, but {} is not an integer",
+                            n.grid_string(false)
+                        )));
                     });
                 }
                 (&arr.shape, index_data)

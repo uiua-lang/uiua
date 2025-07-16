@@ -467,7 +467,7 @@ fn listed_examples() {
             continue;
         }
         let line = line.replace("\\\"", "<double quote>");
-        let Some(end) = line.rfind("\"") else {
+        let Some(end) = line.rfind('"') else {
             continue;
         };
         eprintln!("{line}");

@@ -222,9 +222,9 @@ impl Value {
             (0 | 1, Value::Char(arr)) => {
                 let s: String = arr.data.iter().copied().collect();
                 match (
-                    s.strip_suffix("i").and_then(|s| s.split_once("r")),
-                    s.strip_suffix("i").and_then(|s| s.split_once("+")),
-                    s.strip_suffix("i").and_then(|s| s.split_once("-")),
+                    s.strip_suffix('i').and_then(|s| s.split_once('r')),
+                    s.strip_suffix('i').and_then(|s| s.split_once('+')),
+                    s.strip_suffix('i').and_then(|s| s.split_once('-')),
                 ) {
                     (Some((re, im)), None, _) | (None, Some((re, im)), _) => {
                         let re = parse_uiua_num(re.into(), env);
@@ -374,8 +374,8 @@ impl Value {
         let parse_base_str = |mut s: &str| -> UiuaResult<Value> {
             if base == 64 {
                 let mut s = s.to_string();
-                s = s.replace("-", "+");
-                s = s.replace("_", "/");
+                s = s.replace('-', "+");
+                s = s.replace('_', "/");
 
                 let mut num = 0.0;
                 for (place, c) in s.chars().rev().enumerate() {
@@ -409,7 +409,7 @@ impl Value {
                 return Err(env.error("Number must have digits"));
             }
 
-            let fract = if let Some((num, sfract)) = s.split_once(".") {
+            let fract = if let Some((num, sfract)) = s.split_once('.') {
                 if num.is_empty() && sfract.is_empty() {
                     return Err(env.error("Number must have digits"));
                 }
@@ -533,7 +533,9 @@ impl Value {
                     .map(|(i, c)| if i <= sigfigs { c } else { '0' })
                     .collect();
 
-                let fract = if fract != 0.0 {
+                let fract = if fract == 0.0 {
+                    String::new()
+                } else {
                     let mut digits = ".".to_string();
                     for _ in 0..sigfigs - num.len() {
                         fract *= base as f64;
@@ -545,11 +547,9 @@ impl Value {
                         );
                         fract %= 1.0;
                     }
-                    let digits = digits.trim_end_matches("0");
-                    let digits = digits.trim_end_matches(".");
+                    let digits = digits.trim_end_matches('0');
+                    let digits = digits.trim_end_matches('.');
                     digits.to_string()
-                } else {
-                    String::new()
                 };
 
                 if num.is_empty() {
@@ -2303,17 +2303,16 @@ impl Array<f64> {
             let max = r.max(g).max(b);
             let min = r.min(g).min(b);
             let delta = max - min;
-            let recip_delta = if delta != 0.0 { 1.0 / delta } else { 0.0 };
-            let h = if delta != 0.0 {
-                (TAU * if max == r {
-                    ((g - b) * recip_delta).rem_euclid(6.0)
-                } else if max == g {
-                    (b - r).mul_add(recip_delta, 2.0)
-                } else {
-                    (r - g).mul_add(recip_delta, 4.0)
-                }) / 6.0
-            } else {
+            let h = if delta == 0.0 {
                 0.0
+            } else {
+                (TAU * if max == r {
+                    ((g - b) / delta).rem_euclid(6.0)
+                } else if max == g {
+                    (b - r) / delta + 2.0
+                } else {
+                    (r - g) / delta + 4.0
+                }) / 6.0
             };
             let s = if max == 0.0 { 0.0 } else { 1.0 - min / max };
             let v = max;

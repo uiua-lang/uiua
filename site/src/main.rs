@@ -630,7 +630,7 @@ fn site() {
                         continue;
                     }
                     threads.push((
-                        path.to_path_buf(),
+                        path.clone(),
                         code.clone(),
                         std::thread::spawn(move || {
                             (

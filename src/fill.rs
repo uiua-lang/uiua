@@ -2,8 +2,8 @@ use crate::{Array, Boxed, Complex, SubSide, Uiua, Value};
 
 pub struct Fill<'a> {
     env: &'a Uiua,
-    value_fill: fn(env: &'a Uiua) -> Option<&'a FillValue>,
-    other_value_fill: fn(env: &'a Uiua) -> Option<&'a FillValue>,
+    value: fn(env: &'a Uiua) -> Option<&'a FillValue>,
+    other_value: fn(env: &'a Uiua) -> Option<&'a FillValue>,
     other_error: &'static str,
 }
 
@@ -44,21 +44,21 @@ impl<'a> Fill<'a> {
     pub fn new(env: &'a Uiua) -> Self {
         Self {
             env,
-            value_fill: Uiua::value_fill,
-            other_value_fill: Uiua::value_unfill,
+            value: Uiua::value_fill,
+            other_value: Uiua::value_unfill,
             other_error: ". An unfill is set, but not a normal fill.",
         }
     }
     pub fn new_un(env: &'a Uiua) -> Self {
         Self {
             env,
-            value_fill: Uiua::value_unfill,
-            other_value_fill: Uiua::value_fill,
+            value: Uiua::value_unfill,
+            other_value: Uiua::value_fill,
             other_error: ". A normal fill is set, but not an unfill.",
         }
     }
     pub fn value(&self) -> Option<&FillValue> {
-        (self.value_fill)(self.env)
+        (self.value)(self.env)
     }
     fn value_map<U>(
         &self,
@@ -178,7 +178,7 @@ impl<'a> Fill<'a> {
                 Some(Value::Complex(_)) => ". A complex fill is set, but it is not a scalar.",
                 Some(Value::Box(_)) => ". A box fill is set, but it is not a scalar.",
                 None => {
-                    if (self.other_value_fill)(self.env).is_some() {
+                    if (self.other_value)(self.env).is_some() {
                         self.other_error
                     } else {
                         ""
@@ -197,7 +197,7 @@ impl<'a> Fill<'a> {
                 }
                 Some(Value::Box(_)) => ". A box fill is set, but the array is not boxed values.",
                 None => {
-                    if (self.other_value_fill)(self.env).is_some() {
+                    if (self.other_value)(self.env).is_some() {
                         self.other_error
                     } else {
                         ""

@@ -666,8 +666,8 @@ impl Parser<'_> {
                     let close_span = self.exact(CloseParen.into());
                     validator = Some(FieldValidator {
                         open_span,
-                        close_span,
                         words,
+                        close_span,
                     });
                 }
 

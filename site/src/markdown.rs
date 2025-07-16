@@ -291,10 +291,10 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 let symbol_class = format!("prim-glyph {}", prim_class(prim));
                 let symbol = prim.to_string();
-                let name = if symbol != prim.name() {
-                    format!(" {}", prim.name())
-                } else {
+                let name = if symbol == prim.name() {
                     "".to_string()
+                } else {
+                    format!(" {}", prim.name())
                 };
                 format!(
                     r#"<a 

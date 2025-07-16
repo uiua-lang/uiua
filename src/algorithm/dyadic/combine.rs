@@ -355,33 +355,7 @@ impl<T: ArrayValue> Array<T> {
                         }))?
                     }
 
-                    if self.shape[1..] != other.shape[1..] {
-                        // Fill
-                        match ctx.scalar_fill::<T>() {
-                            Ok(fill) => {
-                                if map_keys.is_some() {
-                                    return Err(ctx.error(format!(
-                                        "Cannot {} {} map arrays",
-                                        Primitive::Fill,
-                                        Primitive::Join
-                                    )));
-                                }
-                                let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
-                                for (array, fill) in [(&mut self, fill.clone()), (&mut other, fill)]
-                                {
-                                    let mut new_shape = new_row_shape.clone();
-                                    new_shape.prepend(array.shape[0]);
-                                    array.fill_to_shape(&new_shape, fill);
-                                }
-                            }
-                            Err(e) => {
-                                return Err(C::fill_error(ctx.error(format!(
-                                    "Cannot join arrays of shapes {} and {}. {e}",
-                                    self.shape, other.shape
-                                ))));
-                            }
-                        }
-                    } else {
+                    if self.shape[1..] == other.shape[1..] {
                         // Set sorted flags
                         match (self.row_count(), other.row_count()) {
                             (0, 0) => {
@@ -410,6 +384,32 @@ impl<T: ArrayValue> Array<T> {
                                     sorted_up = both_sorted_up && ordering != Ordering::Greater;
                                     sorted_down = both_sorted_down && ordering != Ordering::Less;
                                 }
+                            }
+                        }
+                    } else {
+                        // Fill
+                        match ctx.scalar_fill::<T>() {
+                            Ok(fill) => {
+                                if map_keys.is_some() {
+                                    return Err(ctx.error(format!(
+                                        "Cannot {} {} map arrays",
+                                        Primitive::Fill,
+                                        Primitive::Join
+                                    )));
+                                }
+                                let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
+                                for (array, fill) in [(&mut self, fill.clone()), (&mut other, fill)]
+                                {
+                                    let mut new_shape = new_row_shape.clone();
+                                    new_shape.prepend(array.shape[0]);
+                                    array.fill_to_shape(&new_shape, fill);
+                                }
+                            }
+                            Err(e) => {
+                                return Err(C::fill_error(ctx.error(format!(
+                                    "Cannot join arrays of shapes {} and {}. {e}",
+                                    self.shape, other.shape
+                                ))));
                             }
                         }
                     }
@@ -1045,9 +1045,8 @@ impl Value {
                     }
                 }
                 row_values = values.into_iter();
-                let arr = match row_values.next().unwrap() {
-                    Value::Num(arr) => arr,
-                    _ => unreachable!(),
+                let Value::Num(arr) = row_values.next().unwrap() else {
+                    unreachable!()
                 };
                 if let Some(box_rank) = box_rank {
                     Value::Box(arr.box_depth(box_rank))
@@ -1073,9 +1072,8 @@ impl Value {
                     }
                 }
                 row_values = values.into_iter();
-                let arr = match row_values.next().unwrap() {
-                    Value::Byte(arr) => arr,
-                    _ => unreachable!(),
+                let Value::Byte(arr) = row_values.next().unwrap() else {
+                    unreachable!()
                 };
                 if let Some(box_rank) = box_rank {
                     Value::Box(arr.box_depth(box_rank))
@@ -1099,9 +1097,8 @@ impl Value {
                     }
                 }
                 row_values = values.into_iter();
-                let arr = match row_values.next().unwrap() {
-                    Value::Complex(arr) => arr,
-                    _ => unreachable!(),
+                let Value::Complex(arr) = row_values.next().unwrap() else {
+                    unreachable!()
                 };
                 if let Some(box_rank) = box_rank {
                     Value::Box(arr.box_depth(box_rank))
@@ -1124,9 +1121,8 @@ impl Value {
                     }
                 }
                 row_values = values.into_iter();
-                let arr = match row_values.next().unwrap() {
-                    Value::Char(arr) => arr,
-                    _ => unreachable!(),
+                let Value::Char(arr) = row_values.next().unwrap() else {
+                    unreachable!()
                 };
                 if let Some(box_rank) = box_rank {
                     Value::Box(arr.box_depth(box_rank))

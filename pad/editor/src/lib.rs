@@ -1403,9 +1403,10 @@ pub fn Editor<'a>(
             EditorMode::Showcase | EditorMode::Pad => "medium-editor",
         };
 
-        let editor_layout = match fullscreen_enabled.get() {
-            true => "fullscreen-editor",
-            false => "normal-editor",
+        let editor_layout = if fullscreen_enabled.get() {
+            "fullscreen-editor"
+        } else {
+            "normal-editor"
         };
 
         format!("editor {editor_size} {editor_layout}")
@@ -1460,13 +1461,7 @@ pub fn Editor<'a>(
                 .unwrap()
                 .unchecked_into::<HtmlBodyElement>()
                 .style()
-                .set_property(
-                    "overflow",
-                    match *s {
-                        true => "hidden",
-                        false => "auto",
-                    },
-                );
+                .set_property("overflow", if *s { "hidden" } else { "auto" });
             if !*s {
                 set_timeout(
                     move || state.update(|state| state.update_line_number_width()),

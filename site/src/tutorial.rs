@@ -144,6 +144,11 @@ impl IntoParam for TutorialPage {
     }
 }
 
+#[expect(
+    clippy::unicode_not_nfc,
+    reason = "the suggested CJK characters don't look as good",
+    // TODO: maybe replace with better "arrows" that don't use characters
+)]
 #[component]
 fn TutorialNav(page: TutorialPage) -> impl IntoView {
     let next = move || {

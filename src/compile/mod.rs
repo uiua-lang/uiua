@@ -206,6 +206,10 @@ struct CurrentBinding {
 }
 
 /// A scope where names are defined
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "doesn't seem to be a state machine"
+)]
 #[derive(Debug, Clone)]
 pub(crate) struct Scope {
     kind: ScopeKind,

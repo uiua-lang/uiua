@@ -7,7 +7,8 @@ use ecow::{eco_vec, EcoVec};
 
 use crate::{
     cowslice::CowSlice, get_ops, types::push_empty_rows_value, val_as_arr, Array, ArrayValue,
-    Boxed, Node, Ops, Primitive, ScalarNum, Shape, SigNode, Uiua, UiuaResult, Value,
+    Boxed, Node, Ops, PersistentMeta, Primitive, ScalarNum, Shape, SigNode, Uiua, UiuaResult,
+    Value,
 };
 
 use super::multi_output;
@@ -753,7 +754,7 @@ where
         .collect::<UiuaResult<_>>()?;
 
     if indices.shape == [0]
-        && push_empty_rows_value(&f, &values, false, &mut Default::default(), env)
+        && push_empty_rows_value(&f, &values, false, &mut PersistentMeta::default(), env)
     {
         return Ok(());
     }

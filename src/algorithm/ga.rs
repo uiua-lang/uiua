@@ -9,8 +9,9 @@ use ecow::{eco_vec, EcoVec};
 use serde::*;
 
 use crate::{
-    algorithm::pervade::derive_new_shape, grid_fmt::GridFmt, is_default, Array, Boxed, Primitive,
-    Shape, Uiua, UiuaResult, Value,
+    algorithm::pervade::derive_new_shape,
+    grid_fmt::{GridFmt, GridFmtParams},
+    is_default, Array, Boxed, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
 macro_rules! ga_op {
@@ -1259,7 +1260,7 @@ pub fn unparse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Value> {
             }
             let mask = mask_table[i];
             if n.abs() != 1.0 || mask == 0 {
-                let n_grid = n.abs().fmt_grid(Default::default());
+                let n_grid = n.abs().fmt_grid(GridFmtParams::default());
                 s.extend(n_grid.into_iter().next().unwrap());
             }
             if mask == 0 {

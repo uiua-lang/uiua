@@ -131,7 +131,7 @@ pub fn Editor<'a>(
     let (fullscreen_enabled, set_fullscreen_enabled) = create_signal(false);
     let update_token_count = move |code: &str| {
         set_token_count.set(
-            lex(code, (), &mut Default::default())
+            lex(code, (), &mut uiua::Inputs::default())
                 .0
                 .into_iter()
                 .filter(|tok| {

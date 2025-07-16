@@ -1491,7 +1491,7 @@ impl Compiler {
             let sig = self.sig_of(&root, &mac.func.span)?;
             let code_mac = CodeMacro {
                 root: SigNode::new(sig, root),
-                names: Default::default(),
+                names: IndexMap::new(),
             };
             self.code_macro(None, span, operands, code_mac)?
         } else {

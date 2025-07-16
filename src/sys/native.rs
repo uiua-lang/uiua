@@ -226,7 +226,7 @@ impl Default for GlobalNativeSys {
             audio_time_socket: parking_lot::Mutex::new(None),
             colored_errors: DashMap::new(),
             #[cfg(feature = "ffi")]
-            ffi: Default::default(),
+            ffi: crate::FfiState::default(),
             #[cfg(all(feature = "gif", feature = "invoke"))]
             gifs_child: parking_lot::Mutex::new(None),
         }

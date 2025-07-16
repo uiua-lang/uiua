@@ -27,9 +27,9 @@ use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lex,
     lsp::BindingDocsKind,
-    parse, print_stack, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDoc,
-    PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Subscript, Token,
-    Uiua, UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
+    parse, print_stack, Assembly, CodeSpan, Compiler, Inputs, NativeSys, PreEvalMode, PrimClass,
+    PrimDoc, PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Subscript,
+    Token, Uiua, UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -231,7 +231,7 @@ fn main() {
                         exit(1);
                     }
                 };
-                let mut inputs = Default::default();
+                let mut inputs = Inputs::default();
                 let (items, errors, _) = parse(&input, &path, &mut inputs);
                 if !errors.is_empty() {
                     eprintln!(
@@ -1472,7 +1472,7 @@ fn find(path: Option<PathBuf>, text: String, raw: bool) -> UiuaResult {
                 }
             }
             Needle::Prim(prim) => {
-                let (tokens, ..) = lex(&contents, (), &mut Default::default());
+                let (tokens, ..) = lex(&contents, (), &mut Inputs::default());
                 for tok in tokens {
                     let Token::Glyph(prim2) = &tok.value else {
                         continue;

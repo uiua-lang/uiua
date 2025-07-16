@@ -1615,7 +1615,7 @@ impl<T: ArrayValue> Array<T> {
             .map(|&i| normalize_index(i, indices.len()))
             .collect();
         let outer_rank = indices_shape.last().copied().unwrap_or(1);
-        let mut outer_shape = Shape::from_iter(repeat_n(0, outer_rank));
+        let mut outer_shape = repeat_n(0, outer_rank).collect::<Shape>();
         if !normalized_indices.is_empty() {
             for index in normalized_indices.chunks_exact(index_size) {
                 for (d, &i) in outer_shape.iter_mut().zip(index) {

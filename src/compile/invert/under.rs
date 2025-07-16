@@ -39,7 +39,7 @@ fn under_inverse(
 
     type Key = (u64, Signature, bool);
     thread_local! {
-        static CACHE: RefCell<HashMap<Key, InversionResult<(Node, Node)>>> = Default::default();
+        static CACHE: RefCell<HashMap<Key, InversionResult<(Node, Node)>>> = RefCell::default();
     }
     let mut hasher = DefaultHasher::new();
     for node in input {
@@ -416,7 +416,7 @@ under!(BothPat, input, g_sig, inverse, asm, {
         (input, None)
     };
     let (sub, args, span, input) = match input {
-        [Mod(Both, args, span), input @ ..] => (Default::default(), args, span, input),
+        [Mod(Both, args, span), input @ ..] => (Subscript::default(), args, span, input),
         [ImplMod(BothImpl(sub), args, span), input @ ..] => (*sub, args, span, input),
         _ => return generic(),
     };

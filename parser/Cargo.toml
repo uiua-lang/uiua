@@ -1,25 +1,30 @@
 [package]
-categories = ["parser-implementations"]
 description = "Uiua parser implementation"
 documentation = "https://docs.rs/uiua_parser"
-edition = "2021"
-keywords = ["uiua", "array", "stack", "language", "apl"]
-license = "MIT"
 name = "uiua_parser"
-repository = "https://github.com/uiua-lang/uiua"
-rust-version = "1.82.0"
-version = "0.17.0-dev.1"
+categories.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
 
 [lints]
 workspace = true
 
 [dependencies]
-bytemuck = {version = "1.17", features = ["must_cast", "derive", "extern_crate_alloc"]}
-colored = "2"
-dashmap = {version = "6", features = ["serde"]}
-ecow = {version = "0.2.3", features = ["serde"]}
-enum-iterator = "2.1.0"
-once_cell = "1"
-serde = {version = "1", features = ["derive", "rc"]}
-serde_tuple = "0.5.0"
-unicode-segmentation = "1.10"
+bytemuck = {workspace = true, features = [
+  "must_cast",
+  "derive",
+  "extern_crate_alloc",
+]}
+colored.workspace = true
+dashmap.workspace = true
+ecow.workspace = true
+enum-iterator.workspace = true
+once_cell.workspace = true
+serde = {workspace = true, features = ["rc"]}
+unicode-segmentation.workspace = true
+serde_tuple = "1.0.0"

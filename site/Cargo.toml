@@ -10,13 +10,13 @@ console_error_panic_hook = "0.1.7"
 enum-iterator = "2.0.0"
 js-sys = "0.3"
 leptos = "0.6.11"
-leptos_meta = {version = "0.6.11", features = ["csr"]}
-leptos_router = {version = "0.6.11", features = ["csr"]}
-rand = {version = "0.8.5", features = ["small_rng"]}
-serde = {version = "1", features = ["derive"]}
+leptos_meta = { version = "0.6.11", features = ["csr"] }
+leptos_router = { version = "0.6.11", features = ["csr"] }
+rand = { version = "0.8.5", features = ["small_rng"] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-uiua = {path = "..", default-features = false, features = ["batteries", "web"]}
-uiua-editor = {path = "../pad/editor"}
+uiua = { path = "..", default-features = false }
+uiua-editor = { path = "../pad/editor", default-features = false }
 urlencoding = "2"
 wasm-bindgen = "0.2.93"
 
@@ -51,4 +51,7 @@ features = [
 version = "0.3.70"
 
 [features]
-audio = [] # Dummy for rust-analyzer
+# Dummy for rust-analyzer
+audio = []
+gen_blog_html = []
+default = ["uiua/batteries", "uiua/web", "uiua-editor/default"]

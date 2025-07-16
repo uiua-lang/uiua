@@ -357,7 +357,7 @@ mod enabled {
                                 .into(),
                         );
                         // Clean up the pointer's memory
-                        drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
+                        drop(Vec::from_raw_parts(ptr.cast_mut(), len, len));
                     }
                 };
             }
@@ -397,7 +397,7 @@ mod enabled {
                         let slice = slice::from_raw_parts(ptr, size);
                         results.push(bindings.struct_repr_to_value(slice, fields)?);
                         // Clean up the pointer's memory
-                        drop(Vec::from_raw_parts(ptr as *mut u8, size, size));
+                        drop(Vec::from_raw_parts(ptr.cast_mut(), size, size));
                     },
                     FfiType::Void => ret_ptr!(()),
                     FfiType::UChar => ret_ptr!(c_uchar),
@@ -796,7 +796,7 @@ mod enabled {
                 .or_else(|| {
                     any.downcast_ref::<ListStorage<T>>().map(|(_, b)| {
                         dbgln!("  list type");
-                        (&b[0], Some(std::ptr::from_ref(&b[0]) as *mut T))
+                        (&b[0], Some(std::ptr::from_ref(&b[0]).cast_mut()))
                     })
                 })
         }
@@ -1280,7 +1280,7 @@ mod enabled {
         if ptr.is_null() {
             return;
         }
-        let ptr = ptr as *mut ();
+        let ptr = ptr.cast_mut();
         unsafe {
             let _ = Box::from_raw(ptr);
         }

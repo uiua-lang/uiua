@@ -1364,7 +1364,7 @@ impl<'a> Lexer<'a> {
                     self.errors
                         .push(self.end_span(start).sp(LexError::UnexpectedChar(c.into())));
                 }
-            };
+            }
         }
 
         (self.tokens, self.errors)

@@ -271,7 +271,7 @@ impl Compiler {
                             ),
                         ))
                     }
-                };
+                }
                 let set_inverses = SetInverses {
                     un: cust.un.is_some(),
                     anti: cust.anti.is_some(),

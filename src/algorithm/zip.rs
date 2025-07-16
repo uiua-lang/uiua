@@ -228,9 +228,8 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
                 }
                 if start == nodes.len() {
                     break;
-                } else {
-                    return None;
                 }
+                return None;
             }
             (func?, depth.unwrap_or(0))
         }
@@ -699,7 +698,7 @@ pub fn rows1(f: SigNode, mut xs: Value, depth: usize, inv: bool, env: &mut Uiua)
                 new_rows[i].push(env.pop("rows' function result")?);
             }
         }
-    };
+    }
     collect_outputs(new_rows, is_scalar, is_empty, per_meta, env)
 }
 
@@ -778,7 +777,7 @@ fn rows2(
                         new_rows[i].push(env.pop("rows's function result")?);
                     }
                 }
-            };
+            }
             collect_outputs(new_rows, false, is_empty, per_meta, env)
         }
         (1, _) => {
@@ -821,7 +820,7 @@ fn rows2(
                         new_rows[i].push(env.pop("rows's function result")?);
                     }
                 }
-            };
+            }
             collect_outputs(new_rows, false, is_empty, per_meta, env)
         }
         (a, b) => {
@@ -882,7 +881,7 @@ fn rows2(
                         new_rows[i].push(env.pop("rows's function result")?);
                     }
                 }
-            };
+            }
             collect_outputs(new_rows, false, is_empty, per_meta, env)
         }
     }
@@ -934,7 +933,7 @@ fn rowsn(f: SigNode, args: Vec<Value>, depth: usize, inv: bool, env: &mut Uiua) 
                 new_values[i].push(env.pop("rows's function result")?);
             }
         }
-    };
+    }
     for new_values in new_values.into_iter().rev() {
         let mut rowsed = Value::from_row_values(new_values, env)?;
         if all_scalar {

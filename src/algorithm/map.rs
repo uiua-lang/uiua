@@ -277,7 +277,7 @@ impl Value {
                     ))
                 },
             )?;
-        };
+        }
         self.meta.map_keys = Some(keys);
         Ok(())
     }

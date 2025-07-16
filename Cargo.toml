@@ -17,10 +17,6 @@ dbg_macro = "warn"
 print_stdout = "warn"
 non_std_lazy_statics = "warn"
 pedantic = {level = "warn", priority = -1}
-doc_markdown = "allow"  # 5
-match_wildcard_for_single_variants = "allow"  # 5
-needless_continue = "allow"  # 5
-range_plus_one = "allow"  # 5
 if_not_else = "allow"  # 6
 manual_let_else = "allow"  # 6
 single_char_pattern = "allow"  # 6

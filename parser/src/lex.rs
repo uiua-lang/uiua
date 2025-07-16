@@ -1407,7 +1407,7 @@ impl<'a> Lexer<'a> {
                     while self.next_char_exact(" ") || self.next_char_exact("\t") {}
                     self.end(Spaces, start)
                 }
-                c if c.chars().all(|c| c.is_whitespace()) => continue,
+                c if c.chars().all(|c| c.is_whitespace()) => {}
                 c => {
                     if c.chars().count() == 1 {
                         let c = c.chars().next().unwrap();

@@ -31,13 +31,13 @@ pub enum SmartOutput {
 const MIN_AUTO_IMAGE_DIM: usize = 30;
 
 impl SmartOutput {
-    /// Convert a value to a SmartOutput
+    /// Convert a value to a `SmartOutput`
     ///
     /// Animations default to GIF
     pub fn from_value(value: Value, frame_rate: f64, backend: &dyn SysBackend) -> Self {
         Self::from_value_impl(value, frame_rate, false, backend)
     }
-    /// Convert a value to a SmartOutput
+    /// Convert a value to a `SmartOutput`
     ///
     /// Animations default to APNG
     pub fn from_value_prefer_apng(value: Value, frame_rate: f64, backend: &dyn SysBackend) -> Self {

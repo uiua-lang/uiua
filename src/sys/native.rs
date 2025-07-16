@@ -379,7 +379,7 @@ impl SysBackend for NativeSys {
             match b {
                 #[cfg(feature = "raw_mode")]
                 b'\r' if rawrrr::is_raw() => break,
-                b'\r' => continue,
+                b'\r' => {}
                 b'\n' | 3 => break,
                 b => buffer.push(b),
             }

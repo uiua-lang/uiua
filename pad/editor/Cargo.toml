@@ -32,6 +32,8 @@ uiua = {path = "../..", default-features = false, features = [
   "web",
 ]}
 image = "0.25"
-leptos-use = "0.12.0"
+leptos-use = {version = "0.13.0", default-features = false, features = [
+  "use_resize_observer",
+]}
 wasm-bindgen-futures = "0.4.43"
 futures = "0.3.30"

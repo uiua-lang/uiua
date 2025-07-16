@@ -26,4 +26,4 @@ ecow.workspace = true
 enum-iterator.workspace = true
 serde = {workspace = true, features = ["rc"]}
 unicode-segmentation.workspace = true
-serde_tuple = "0.5.0"
+serde_tuple = "1.0.0"

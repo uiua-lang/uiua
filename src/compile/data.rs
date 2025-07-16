@@ -327,7 +327,7 @@ impl Compiler {
                 comment: Some(DocComment::from(comment.as_str())),
                 ..Default::default()
             };
-            self.compile_bind_function(field_name.clone(), local, func, span, meta)?;
+            self.compile_bind_function(field_name.clone(), local, func, span, meta);
             self.code_meta
                 .global_references
                 .insert(field.name_span.clone(), local.index);
@@ -552,7 +552,7 @@ impl Compiler {
                 comment: def_comment,
                 ..Default::default()
             };
-            self.compile_bind_function("Call".into(), local, func, span, meta)?;
+            self.compile_bind_function("Call".into(), local, func, span, meta);
         }
         if let Some((local, func, span)) = args_function_stuff {
             let meta = BindingMeta {
@@ -563,7 +563,7 @@ impl Compiler {
                 })),
                 ..Default::default()
             };
-            self.compile_bind_function("Args".into(), local, func, span, meta)?;
+            self.compile_bind_function("Args".into(), local, func, span, meta);
         }
 
         // Bind the constructor
@@ -571,11 +571,11 @@ impl Compiler {
             comment: Some(DocComment::from(constr_comment.as_str())),
             ..Default::default()
         };
-        self.compile_bind_function(constructor_name, constr_local, constructor_func, span, meta)?;
+        self.compile_bind_function(constructor_name, constr_local, constructor_func, span, meta);
 
         Ok(())
     }
-    pub(super) fn end_enum(&mut self) -> UiuaResult {
+    pub(super) fn end_enum(&mut self) {
         // Add Variants binding
         if !self.scope.data_variants.is_empty()
             && !self.scope.names.get("Variants").is_some_and(|ln| ln.public)
@@ -596,6 +596,5 @@ impl Compiler {
             };
             self.compile_bind_const("Variants".into(), local, Some(value), 0, meta);
         }
-        Ok(())
     }
 }

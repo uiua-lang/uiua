@@ -246,7 +246,7 @@ pub fn MainPage() -> impl IntoView {
         rich_prim(
             Under,
             "for modifying only part of an array (among other things)",
-            r#"⍜(↙2|×10) 1_2_3_4_5"#,
+            r"⍜(↙2|×10) 1_2_3_4_5",
         ),
     ];
 

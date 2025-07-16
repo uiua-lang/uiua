@@ -1435,9 +1435,9 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=2
             prompt="returns the last word of a string"
             example=r#""What's the last word?""#
-            answer=r#"▽ ⍜⇌\× ⊸≠@ "#
+            answer=r"▽ ⍜⇌\× ⊸≠@ "
             tests={&[r#""Um, I um, arrays""#, r#""I like trains""#]}
-            hidden=r#"Wow"#/>
+            hidden=r"Wow"/>
 
         <Challenge
             number=3

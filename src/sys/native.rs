@@ -91,7 +91,7 @@ struct WebcamChannel {
 
 #[cfg(feature = "webcam")]
 impl WebcamChannel {
-    fn new(index: usize) -> Result<Self, String> {
+    fn new(index: usize) -> Self {
         use nokhwa::{
             pixel_format::RgbFormat,
             utils::{CameraIndex, RequestedFormat, RequestedFormatType},
@@ -139,10 +139,10 @@ impl WebcamChannel {
                 sleep();
             }
         });
-        Ok(Self {
+        Self {
             send: req_send,
             recv: image_recv,
-        })
+        }
     }
 }
 
@@ -1134,7 +1134,7 @@ impl SysBackend for NativeSys {
     fn webcam_capture(&self, index: usize) -> Result<crate::WebcamImage, String> {
         let cam_channels = &NATIVE_SYS.cam_channels;
         if !cam_channels.contains_key(&index) {
-            let ch = WebcamChannel::new(index)?;
+            let ch = WebcamChannel::new(index);
             cam_channels.insert(index, ch);
         }
         let ch = cam_channels.get_mut(&index).unwrap();
@@ -1145,7 +1145,7 @@ impl SysBackend for NativeSys {
                 Err("Failed to interact with webcam".into())
             }
         } else {
-            let ch = WebcamChannel::new(index)?;
+            let ch = WebcamChannel::new(index);
             cam_channels.insert(index, ch);
             let ch = cam_channels.get_mut(&index).unwrap();
             if ch.send.send(()).is_ok() {

@@ -1,5 +1,5 @@
 use std::{
-    fmt,
+    fmt::{self, Write},
     hash::{DefaultHasher, Hash, Hasher},
     ops::{Index, IndexMut},
     path::PathBuf,
@@ -263,7 +263,7 @@ impl Assembly {
                 if map.len() == 1 {
                     let key = map.keys().next().unwrap();
                     let value = map.values().next().unwrap();
-                    uasm.push_str(&format!("{key} {value}\n"));
+                    writeln!(uasm, "{key} {value}").ok();
                     continue;
                 }
             }
@@ -293,7 +293,7 @@ impl Assembly {
         for entry in &self.inputs.files {
             let key = entry.key();
             let value = entry.value();
-            uasm.push_str(&format!("{}: {:?}\n", key.display(), value));
+            writeln!(uasm, "{}: {:?}", key.display(), value).ok();
         }
 
         if !self.inputs.strings.is_empty() {

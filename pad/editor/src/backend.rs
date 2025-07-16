@@ -70,6 +70,7 @@ pub fn delete_file(path: &PathBuf) {
 }
 
 thread_local! {
+    static BREAKPOINTS: RefCell<HashMap<u64, (u64, usize)>> = RefCell::default();
 }
 
 impl Default for WebBackend {

@@ -1082,18 +1082,17 @@ fn update(main: bool, check: bool, mut features: Vec<String>) {
             if local >= remote {
                 println!("Your version of Uiua ({local_version}) is the latest!");
                 return;
-            } else {
-                println!(
-                    "{}\n",
-                    format!(
-                        "Update available: {local_version} → {remote_version}\n\
-                        Run `uiua update` to update\n\
-                        Changelog: https://github.com/uiua-lang/uiua/blob/main/changelog.md",
-                    )
-                    .bright_white()
-                    .bold()
-                );
             }
+            println!(
+                "{}\n",
+                format!(
+                    "Update available: {local_version} → {remote_version}\n\
+                    Run `uiua update` to update\n\
+                    Changelog: https://github.com/uiua-lang/uiua/blob/main/changelog.md",
+                )
+                .bright_white()
+                .bold()
+            );
         }
         if check {
             return;

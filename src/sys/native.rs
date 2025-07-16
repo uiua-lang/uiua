@@ -122,10 +122,9 @@ impl WebcamChannel {
                     if recv_tries > 100 {
                         _ = camera.stop_stream();
                         break;
-                    } else {
-                        sleep();
-                        continue;
                     }
+                    sleep();
+                    continue;
                 }
                 recv_tries = 0;
                 let res = camera

@@ -205,10 +205,9 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
                 if converged {
                     env.push(next);
                     break;
-                } else {
-                    env.push(next.clone());
-                    prev = next;
                 }
+                env.push(next.clone());
+                prev = next;
                 convergence_count += 1;
             }
         } else {

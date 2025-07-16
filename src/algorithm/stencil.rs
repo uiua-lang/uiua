@@ -140,42 +140,41 @@ where
             }
             env.push(val);
             return Ok(());
-        } else {
-            // General case
-            let row_len = arr.row_len();
-            let win_count = arr
-                .row_count()
-                .saturating_sub(dim.size.saturating_sub(dim.stride))
-                / dim.stride;
-            match action {
-                WindowAction::Id(mut data, f) => {
-                    for i in 0..win_count {
-                        data.extend_from_slice(
-                            &arr.data[i * dim.stride * row_len..][..dim.size * row_len],
-                        );
-                    }
-                    let mut new_shape = arr.shape;
-                    new_shape[0] = dim.size;
-                    new_shape.prepend(win_count);
-                    let mut val: Value = Array::new(new_shape, data).into();
-                    if let Some((f, d)) = f {
-                        val = f(val, dims.len() + d, env)?;
-                    }
-                    env.push(val);
-                    return Ok(());
+        }
+        // General case
+        let row_len = arr.row_len();
+        let win_count = arr
+            .row_count()
+            .saturating_sub(dim.size.saturating_sub(dim.stride))
+            / dim.stride;
+        match action {
+            WindowAction::Id(mut data, f) => {
+                for i in 0..win_count {
+                    data.extend_from_slice(
+                        &arr.data[i * dim.stride * row_len..][..dim.size * row_len],
+                    );
                 }
-                WindowAction::Box(mut boxes, _) => {
-                    for i in 0..win_count {
-                        boxes.push(Boxed(
-                            arr.slice_rows(i * dim.stride, i * dim.stride + dim.size)
-                                .into(),
-                        ));
-                    }
-                    env.push(Array::from(boxes));
-                    return Ok(());
+                let mut new_shape = arr.shape;
+                new_shape[0] = dim.size;
+                new_shape.prepend(win_count);
+                let mut val: Value = Array::new(new_shape, data).into();
+                if let Some((f, d)) = f {
+                    val = f(val, dims.len() + d, env)?;
                 }
-                WindowAction::Default(..) => {}
+                env.push(val);
+                return Ok(());
             }
+            WindowAction::Box(mut boxes, _) => {
+                for i in 0..win_count {
+                    boxes.push(Boxed(
+                        arr.slice_rows(i * dim.stride, i * dim.stride + dim.size)
+                            .into(),
+                    ));
+                }
+                env.push(Array::from(boxes));
+                return Ok(());
+            }
+            WindowAction::Default(..) => {}
         }
     }
 
@@ -226,9 +225,8 @@ where
                     if *o < d.size - 1 {
                         *o += 1;
                         continue 'window;
-                    } else {
-                        *o = 0;
                     }
+                    *o = 0;
                 }
                 break;
             }
@@ -253,9 +251,8 @@ where
                 if *c < maxs[i] - dims[i].stride as isize - dims[i].size as isize + 1 {
                     *c += dims[i].stride as isize;
                     continue 'windows;
-                } else {
-                    *c = corner_starts[i];
                 }
+                *c = corner_starts[i];
             }
             break;
         }

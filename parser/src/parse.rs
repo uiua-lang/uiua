@@ -685,7 +685,7 @@ impl Parser<'_> {
                         Vec::new()
                     });
                     init = Some(FieldInit { arrow_span, words })
-                };
+                }
 
                 trailing_newline |= self.ignore_whitespace();
                 let mut bar_span = self.exact(Bar.into());
@@ -1309,9 +1309,8 @@ impl Parser<'_> {
                     }
                     span.merge_with(dspan);
                     return Some(span.sp((n, s)));
-                } else {
-                    self.index = reset;
                 }
+                self.index = reset;
             }
         }
         // Let 1-letter string be identifiers
@@ -1446,10 +1445,9 @@ impl Parser<'_> {
             if s == "¯" {
                 self.index = reset;
                 return None;
-            } else {
-                // Just the number
-                (coef.into(), s, span)
             }
+            // Just the number
+            (coef.into(), s, span)
         } else {
             self.index = reset;
             return None;

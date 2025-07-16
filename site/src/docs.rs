@@ -363,23 +363,20 @@ impl Allowed {
                 classes: [prim.class()].into(),
                 prims,
             };
-        } else {
-            for &part in &parts {
-                if let Some(prim) = prim_matching_part_exactly(part) {
-                    prims.insert(prim);
-                    continue;
-                }
-                let matches = all()
-                    .filter(|p| p.name().to_lowercase().starts_with(part))
-                    .chain(all().filter(|p| {
-                        p.ascii()
-                            .is_some_and(|simple| part.contains(&simple.to_string()))
-                    }))
-                    .chain(
-                        all().filter(|p| p.glyph().is_some_and(|unicode| part.contains(unicode))),
-                    );
-                prims.extend(matches);
+        }
+        for &part in &parts {
+            if let Some(prim) = prim_matching_part_exactly(part) {
+                prims.insert(prim);
+                continue;
             }
+            let matches = all()
+                .filter(|p| p.name().to_lowercase().starts_with(part))
+                .chain(all().filter(|p| {
+                    p.ascii()
+                        .is_some_and(|simple| part.contains(&simple.to_string()))
+                }))
+                .chain(all().filter(|p| p.glyph().is_some_and(|unicode| part.contains(unicode))));
+            prims.extend(matches);
         }
         let mut classes: HashSet<PrimClass> = PrimClass::all().collect();
         let system_classes: Vec<PrimClass> = SysOpClass::all().map(PrimClass::Sys).collect();

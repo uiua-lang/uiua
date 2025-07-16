@@ -17,15 +17,6 @@ dbg_macro = "warn"
 print_stdout = "warn"
 non_std_lazy_statics = "warn"
 pedantic = {level = "warn", priority = -1}
-flat_map_option = "allow"  # 1
-format_collect = "allow"  # 1
-inefficient_to_string = "allow"  # 1
-match_wild_err_arm = "allow"  # 1
-maybe_infinite_iter = "allow"  # 1
-missing_fields_in_debug = "allow"  # 1
-same_functions_in_if_condition = "allow"  # 1
-unnecessary_debug_formatting = "allow"  # 1
-unreadable_literal = "allow"  # 1
 implicit_clone = "allow"  # 2
 inconsistent_struct_constructor = "allow"  # 2
 match_bool = "allow"  # 2

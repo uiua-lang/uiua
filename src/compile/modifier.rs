@@ -802,7 +802,7 @@ impl Compiler {
                         let mut dups = if n == 0 {
                             Node::Prim(Pop, span)
                         } else {
-                            Node::from_iter(repeat_n(Node::Prim(Dup, span), n - 1))
+                            repeat_n(Node::Prim(Dup, span), n - 1).collect()
                         };
                         if side.side == SubSide::Right && n < sig.args() {
                             dups = dups.sig_node().unwrap().dipped(sig.args() - n, span).node;

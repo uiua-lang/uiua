@@ -765,7 +765,7 @@ impl Value {
         if ishape.is_empty() {
             return Ok(Array::<f64>::new(0, CowSlice::new()).into());
         }
-        let mut shape = Shape::from_iter(ishape.iter().map(|d| d.unsigned_abs()));
+        let mut shape = ishape.iter().map(|d| d.unsigned_abs()).collect::<Shape>();
         shape.push(shape.len());
         let data = range(&ishape, start, env)?;
         let mut value: Value = match data {
@@ -783,9 +783,9 @@ impl Value {
             env,
             "Shape should be a single integer or a list of integers",
         )?;
-        let shape = Shape::from_iter(ishape.iter().map(|n| n.unsigned_abs()));
+        let shape = ishape.iter().map(|n| n.unsigned_abs()).collect::<Shape>();
         let elems: usize = validate_size::<f64>(shape.iter().copied(), env)?;
-        let data = EcoVec::from_iter((0..elems).map(|i| i as f64));
+        let data = (0..elems).map(|i| i as f64).collect::<EcoVec<_>>();
         let mut arr = Array::new(shape, data);
         let first_max = ishape.first().copied().unwrap_or(0);
         for (i, s) in ishape.into_iter().enumerate() {
@@ -1314,7 +1314,7 @@ impl<T: ArrayValue> Array<T> {
             return;
         }
         let subshape = Shape::from(&self.shape[depth..]);
-        let newshape = Shape::from_iter(subshape.iter().rev().copied());
+        let newshape = subshape.iter().rev().copied().collect::<Shape>();
         let chunk_size = subshape.elements();
         let data_slice = self.data.as_mut_slice();
         let mut temp = data_slice[..chunk_size].to_vec();
@@ -2030,7 +2030,10 @@ impl Value {
     /// Convert a string value to a list of UTF-16 code units
     pub fn utf16(&self, env: &Uiua) -> UiuaResult<Self> {
         let s = self.as_string(env, "Argument to utf₁₆ must be a string")?;
-        Ok(Array::<f64>::from_iter(s.encode_utf16().map(|u| u as f64)).into())
+        Ok(s.encode_utf16()
+            .map(|u| u as f64)
+            .collect::<Array<f64>>()
+            .into())
     }
     /// Convert a list of UTF-8 bytes to a string value
     pub fn unutf8(&self, env: &Uiua) -> UiuaResult<Self> {

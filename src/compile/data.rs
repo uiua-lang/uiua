@@ -348,7 +348,13 @@ impl Compiler {
         self.compile_bind_const(
             name,
             local,
-            Some(Array::from_iter(fields.iter().map(|f| f.name.as_str())).into()),
+            Some(
+                fields
+                    .iter()
+                    .map(|f| f.name.as_str())
+                    .collect::<Array<_>>()
+                    .into(),
+            ),
             span,
             BindingMeta {
                 comment: Some(DocComment::from(comment.as_str())),

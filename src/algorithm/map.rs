@@ -818,7 +818,7 @@ fn coerce_values(
     }
     if let Value::Box(b_arr) = &b {
         if b_arr.rank() == 0 && !matches!(a, Value::Box(_)) {
-            *a = Array::from_iter(a.rows().map(Boxed)).into();
+            *a = a.rows().map(Boxed).collect::<Array<_>>().into();
             return Ok(b);
         }
     }

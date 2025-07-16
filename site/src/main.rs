@@ -665,19 +665,21 @@ fn site() {
             (Err(_), true) => {}
             (Ok(mut comp), should_fail) => {
                 if let Some(diag) = comp.take_diagnostics().into_iter().next() {
-                    if !should_fail {
-                        panic!(
-                            "Test failed in {}\n{}\n{}",
-                            path.display(),
-                            code,
-                            diag.report()
-                        );
-                    }
+                    assert!(
+                        should_fail,
+                        "Test failed in {}\n{}\n{}",
+                        path.display(),
+                        code,
+                        diag.report()
+                    );
                     continue;
                 }
-                if should_fail {
-                    panic!("Test should have failed in {}\n{}", path.display(), code);
-                }
+                assert!(
+                    !should_fail,
+                    "Test should have failed in {}\n{}",
+                    path.display(),
+                    code
+                )
             }
         }
     }

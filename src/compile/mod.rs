@@ -1325,7 +1325,7 @@ impl Compiler {
                 }
                 self.code_meta.strands.insert(word.span.clone(), just_spans);
                 // Flatten instrs
-                let inner = Node::from_iter(op_nodes.into_iter().map(|sn| sn.node));
+                let inner = op_nodes.into_iter().map(|sn| sn.node).collect::<Node>();
 
                 // Normal strand
 
@@ -1584,9 +1584,9 @@ impl Compiler {
                 }
                 let diff = (new_delta - delta).unsigned_abs();
                 let spandex = self.add_span(span.clone());
-                let mut extra = Node::from_iter(
-                    (0..diff).map(|i| Node::new_push(Boxed(Value::from(format!("dbg-{}", i + 1))))),
-                );
+                let mut extra = (0..diff)
+                    .map(|i| Node::new_push(Boxed(Value::from(format!("dbg-{}", i + 1)))))
+                    .collect::<Node>();
                 for _ in 0..sig.outputs() {
                     extra = Node::Mod(Primitive::Dip, eco_vec![extra.sig_node().unwrap()], spandex);
                 }
@@ -1613,8 +1613,9 @@ impl Compiler {
                 }
                 let diff = (delta - new_delta).unsigned_abs();
                 let spandex = self.add_span(span.clone());
-                let mut pops =
-                    Node::from_iter((0..diff).map(|_| Node::Prim(Primitive::Pop, spandex)));
+                let mut pops = (0..diff)
+                    .map(|_| Node::Prim(Primitive::Pop, spandex))
+                    .collect::<Node>();
                 for _ in 0..new_sig.outputs() {
                     pops = Node::Mod(Primitive::Dip, eco_vec![pops.sig_node().unwrap()], spandex);
                 }
@@ -2360,9 +2361,7 @@ impl Compiler {
                     Join => match self.positive_subscript(n, Join, &span) {
                         0 => Node::new_push(Value::default()),
                         1 => Node::Prim(Identity, self.add_span(span)),
-                        n => {
-                            Node::from_iter(repeat_n(Node::Prim(Join, self.add_span(span)), n - 1))
-                        }
+                        n => repeat_n(Node::Prim(Join, self.add_span(span)), n - 1).collect(),
                     },
                     Box => Node::Array {
                         len: self.positive_subscript(n, Box, &span),

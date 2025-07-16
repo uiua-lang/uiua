@@ -1843,9 +1843,12 @@ impl Value {
                 let meta = chars.meta.get_mut().map(take);
                 let mut rows = Vec::new();
                 for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
-                    rows.push(Array::<char>::from_iter(
-                        row.data.iter().flat_map(|c| c.to_uppercase()),
-                    ));
+                    rows.push(
+                        row.data
+                            .iter()
+                            .flat_map(|c| c.to_uppercase())
+                            .collect::<Array<char>>(),
+                    );
                 }
                 let mut arr = Array::from_row_arrays(rows, env)?;
                 let last = arr.shape.pop().unwrap();

@@ -263,12 +263,12 @@ mod tests {
                     panic!("Test failed in {}:\n{}", path.display(), diag.report());
                 }
                 let (stack, under_stack) = env.take_stacks();
-                if !stack.is_empty() {
-                    panic!("{} had a non-empty stack", path.display());
-                }
-                if !under_stack.is_empty() {
-                    panic!("{} had a non-empty under stack", path.display());
-                }
+                assert!(stack.is_empty(), "{} had a non-empty stack", path.display());
+                assert!(
+                    under_stack.is_empty(),
+                    "{} had a non-empty under stack",
+                    path.display()
+                );
 
                 // Make sure lsp spans doesn't panic
                 _ = Spans::from_input(&code);
@@ -318,14 +318,13 @@ mod tests {
                 }
                 Err(e) => {
                     let message = e.to_string();
-                    if message.contains("interpreter") {
-                        panic!(
-                            "Test resulted in an interpreter bug in {}:\n{}\n{}",
-                            path.display(),
-                            e.report(),
-                            section
-                        );
-                    }
+                    assert!(
+                        !message.contains("interpreter"),
+                        "Test resulted in an interpreter bug in {}:\n{}\n{}",
+                        path.display(),
+                        e.report(),
+                        section
+                    )
                 }
             }
         }
@@ -356,17 +355,21 @@ mod tests {
         }
     }
 
+    #[expect(clippy::assertions_on_constants)]
     #[test]
     fn no_dbgs() {
-        if crate::compile::invert::DEBUG {
-            panic!("compile::invert::DEBUG is true");
-        }
-        if crate::compile::optimize::DEBUG {
-            panic!("compile::optimize::DEBUG is true");
-        }
-        if crate::compile::algebra::DEBUG {
-            panic!("compile::algebra::DEBUG is true");
-        }
+        assert!(
+            !crate::compile::invert::DEBUG,
+            "compile::invert::DEBUG is true"
+        );
+        assert!(
+            !crate::compile::optimize::DEBUG,
+            "compile::optimize::DEBUG is true"
+        );
+        assert!(
+            !crate::compile::algebra::DEBUG,
+            "compile::algebra::DEBUG is true"
+        )
     }
 
     #[test]

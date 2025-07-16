@@ -354,7 +354,7 @@ impl Node {
     where
         R: SliceIndex<[Node], Output = [Node]>,
     {
-        Self::from_iter(self.as_slice()[range].iter().cloned())
+        self.as_slice()[range].iter().cloned().collect()
     }
     /// Get a mutable vector of the nodes in this node
     ///
@@ -639,7 +639,7 @@ impl Node {
 
 impl From<&[Node]> for Node {
     fn from(nodes: &[Node]) -> Self {
-        Node::from_iter(nodes.iter().cloned())
+        nodes.iter().cloned().collect()
     }
 }
 

@@ -22,7 +22,7 @@ pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> im
     let (src, _) = create_signal(src);
     let once = create_resource(
         || (),
-        move |_| async move { fetch(&src.get_untracked()).await.unwrap() },
+        move |()| async move { fetch(&src.get_untracked()).await.unwrap() },
     );
     view! {{
         move || match once.get() {
@@ -345,7 +345,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                     line.push_str(&" ".repeat(max_len - line_len));
                 }
                 match comp.load_str(line).and_then(|comp| env.run_compiler(comp)) {
-                    Ok(_) => {
+                    Ok(()) => {
                         let values = env.take_stack();
                         if !values.is_empty() && !values.iter().any(|v| v.shape.elements() > 200) {
                             let formatted: Vec<String> = values.iter().map(Value::show).collect();
@@ -467,7 +467,7 @@ fn text_code_blocks() {
                 .load_str(&block)
                 .and_then(|comp| env.run_compiler(comp));
             let failure_report = match res {
-                Ok(_) => comp
+                Ok(()) => comp
                     .take_diagnostics()
                     .into_iter()
                     .next()

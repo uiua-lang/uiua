@@ -609,7 +609,7 @@ impl Formatter<'_> {
                     // Update subsequent mappings
                     let byte_len_diff = line.len() - start_byte_len - 1;
                     let char_len_diff = line.chars().count() - start_char_len - 1;
-                    for (before, after) in self.glyph_map.iter_mut() {
+                    for (before, after) in &mut self.glyph_map {
                         if before.start.line as usize > line_number {
                             after.0.byte_pos += byte_len_diff as u32;
                             after.0.char_pos += char_len_diff as u32;

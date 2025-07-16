@@ -1070,7 +1070,7 @@ impl Value {
                         Value::Char(_) => {
                             return Err(ctx.error("Cannot combine number and character arrays"))
                         }
-                        _ => {}
+                        Value::Byte(_) => {}
                     }
                 }
                 row_values = values.into_iter();
@@ -1121,7 +1121,7 @@ impl Value {
                         Value::Complex(_) => {
                             return Err(ctx.error("Cannot combine character and complex arrays"))
                         }
-                        _ => {}
+                        Value::Char(_) => {}
                     }
                 }
                 row_values = values.into_iter();

@@ -1192,7 +1192,7 @@ mod enabled {
                         }
                     },
                     FfiType::Void => return Err("Cannot have void fields in a struct".into()),
-                    _ => {
+                    FfiType::List { .. } => {
                         return Err(format!(
                             "Invalid or unsupported struct field {i} type {field}"
                         ))

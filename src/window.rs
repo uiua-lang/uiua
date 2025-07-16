@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     env::current_exe,
     fs,
     io::{ErrorKind, Read, Write},
@@ -200,7 +201,7 @@ struct Cache {
     ppp: f32,
     image_scale: f32,
     #[cfg(feature = "audio")]
-    samples_map: std::collections::HashMap<usize, bool>,
+    samples_map: HashMap<usize, bool>,
     last_frame: Instant,
     errors: Vec<String>,
 }
@@ -273,7 +274,7 @@ impl App {
                 ppp,
                 image_scale: 1.0,
                 #[cfg(feature = "audio")]
-                samples_map: Default::default(),
+                samples_map: HashMap::new(),
                 last_frame: Instant::now(),
                 errors: Vec::new(),
             },

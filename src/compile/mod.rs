@@ -2048,7 +2048,7 @@ impl Compiler {
                     sig,
                     explicit: func.signature.is_some(),
                     inline: true,
-                    set_inverses: Default::default(),
+                    set_inverses: SetInverses::default(),
                 },
             );
         }

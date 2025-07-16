@@ -686,9 +686,13 @@ mod enabled {
                 (self.arg_data.last().unwrap().downcast_ref::<T>())
                     .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>())),
             ));
-            (self.arg_data.last().unwrap().downcast_ref::<T>())
-                .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>()))
-                as *const T as *mut ()
+            std::ptr::from_ref(
+                self.arg_data
+                    .last()
+                    .unwrap()
+                    .downcast_ref::<T>()
+                    .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>())),
+            ) as *mut ()
         }
         fn push_repr(&mut self, arg: Vec<u8>) -> *mut () {
             self.arg_data.push(Box::new(arg));
@@ -792,7 +796,7 @@ mod enabled {
                 .or_else(|| {
                     any.downcast_ref::<ListStorage<T>>().map(|(_, b)| {
                         dbgln!("  list type");
-                        (&b[0], Some(&b[0] as *const T as *mut T))
+                        (&b[0], Some(std::ptr::from_ref(&b[0]) as *mut T))
                     })
                 })
         }

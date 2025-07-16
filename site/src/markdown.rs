@@ -182,7 +182,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
             if block.literal.trim() == "LOGO" {
                 view!(<Editor example=LOGO/>).into_view()
             } else if (block.info.is_empty() || block.info.starts_with("uiua"))
-                && uiua::parse(&block.literal, (), &mut Default::default())
+                && uiua::parse(&block.literal, (), &mut Inputs::default())
                     .1
                     .is_empty()
             {

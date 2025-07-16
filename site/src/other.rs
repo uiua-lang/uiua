@@ -1,5 +1,6 @@
 use leptos::*;
 use leptos_meta::*;
+use std::fmt::Write;
 use uiua::{ConstClass, Primitive, SysOp, CONSTANTS};
 use uiua_editor::{lang, Editor};
 
@@ -459,7 +460,7 @@ pub fn Combinators() -> impl IntoView {
                 if !line.starts_with('#') {
                     for i in 0..inputs {
                         let a = i * 3 + 1;
-                        ex.push_str(&format!(" {}_{}_{}", a, a + 1, a + 2));
+                        write!(ex, " {}_{}_{}", a, a+1, a+2).ok();
                     }
                     ex.push_str("  ");
                 }

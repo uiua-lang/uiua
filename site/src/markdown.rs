@@ -217,6 +217,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
 
 #[cfg(test)]
 fn node_html<'a>(node: &'a AstNode<'a>) -> String {
+    use std::fmt::Write;
     use uiua::{Compiler, PrimDoc, SafeSys, Uiua, UiuaErrorKind, Value};
     use uiua_editor::prim_class;
 
@@ -393,9 +394,10 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         NodeValue::Table(_) => format!(r#"<table class="bordered-table">{}</table>"#, children()),
         &NodeValue::TableRow(is_header) => {
             let tag = if is_header { "th" } else { "td" };
-            children_iter
-                .map(|s| format!("<{tag}>{s}</{tag}>"))
-                .collect()
+            children_iter.fold(String::new(), |mut acc, cur| {
+                write!(acc, "<{tag}>{cur}</{tag}>").ok();
+                acc
+            })
         }
         _ => children(),
     }

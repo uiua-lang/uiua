@@ -364,7 +364,7 @@ mod enabled {
         let mut len_indices = arg_tys
             .iter()
             .enumerate()
-            .flat_map(|(i, arg)| arg.len_index.map(|index| (i, index)))
+            .filter_map(|(i, arg)| arg.len_index.map(|index| (i, index)))
             .collect::<Vec<_>>();
         len_indices.sort_by_key(|tup| tup.1);
         let len_indices = len_indices;

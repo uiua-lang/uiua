@@ -48,7 +48,7 @@ impl Inputs {
             InputSrc::File(path) => self
                 .files
                 .get(&**path)
-                .unwrap_or_else(|| panic!("File {path:?} not found"))
+                .unwrap_or_else(|| panic!("File {} not found", path.display()))
                 .clone(),
             InputSrc::Str(index) => self
                 .strings

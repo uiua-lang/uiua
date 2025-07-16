@@ -79,7 +79,7 @@ pub fn Editor<'a>(
         id.set(i + 1);
         i
     });
-    let help: Vec<String> = help.iter().map(|s| s.to_string()).collect();
+    let help: Vec<String> = help.iter().copied().map(|s| s.to_string()).collect();
     // Initialize all the examples
     let examples = match mode {
         EditorMode::Example if !nonprogressive => progressive_strings(example),

@@ -1159,12 +1159,12 @@ impl<'a> Lexer<'a> {
                             let has_2nd_subscript = self.next_char_exact(",")
                                 || self.next_chars_exact(["_"; 2])
                                 || self.peek_char().is_some_and(is_formatted_subscript);
-                            if !has_2nd_subscript {
-                                self.end(Subscr(Subscript::numeric(n + num + m)), start);
-                            } else {
+                            if has_2nd_subscript {
                                 let sub_num = n + num + (m - 1).max(0);
                                 self.loc = before_last_2nd_chain;
                                 self.end(Subscr(Subscript::numeric(sub_num)), start);
+                            } else {
+                                self.end(Subscr(Subscript::numeric(n + num + m)), start);
                             }
                         }
                         Some(_) => {

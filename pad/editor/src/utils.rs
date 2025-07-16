@@ -1694,7 +1694,7 @@ pub fn element<T: JsCast>(id: &str) -> T {
 pub fn format_insert_file_code(path: &Path, content: Vec<u8>) -> String {
     let function = match path.extension().and_then(|ext| ext.to_str()) {
         Some("ua") => "~",
-        Some("txt") | Some("md") | Some("json") | None => "&fras",
+        Some("txt" | "md" | "json") | None => "&fras",
         _ => "&frab",
     };
 

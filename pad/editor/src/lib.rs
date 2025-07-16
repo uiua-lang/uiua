@@ -702,7 +702,7 @@ pub fn Editor<'a>(
                             let first_char = *chars.first().unwrap();
                             let class = char_class(first_char);
                             let mut encountered_space = false;
-                            for &c in chars.iter() {
+                            for &c in &chars {
                                 if c.is_whitespace() && c != '\n'
                                     || char_class(c) == class && !encountered_space
                                 {

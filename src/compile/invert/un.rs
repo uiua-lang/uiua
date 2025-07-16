@@ -647,8 +647,7 @@ inverse!(
 
 inverse!(ScanPat, input, asm, {
     let un = matches!(input, [ImplMod(UnScan, ..), ..]);
-    let ([Mod(Scan, args, span), input @ ..] | [ImplMod(UnScan, args, span), input @ ..]) = input
-    else {
+    let [Mod(Scan, args, span) | ImplMod(UnScan, args, span), input @ ..] = input else {
         return generic();
     };
     let [f] = args.as_slice() else {
@@ -1121,7 +1120,7 @@ inverse!(AntiContraFlip, input, asm, Prim(Flip, span), {
     if nodes_clean_sig(input).is_none_or(|sig| sig != (2, 1)) {
         return generic();
     }
-    for pat in CONTRA_PATTERNS.iter() {
+    for pat in CONTRA_PATTERNS {
         if let Ok((inp, mut inv)) = pat.invert_extract(input, asm) {
             inv.prepend(Prim(Flip, span));
             return Ok((inp, inv));

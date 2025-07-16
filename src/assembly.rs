@@ -249,7 +249,7 @@ impl Assembly {
     /// Serialize the assembly into a `.uasm` file
     pub fn to_uasm(&self) -> String {
         let mut uasm = String::new();
-        for node in self.root.iter() {
+        for node in &self.root {
             uasm.push_str(&serde_json::to_string(node).unwrap());
             uasm.push('\n');
         }

@@ -834,7 +834,7 @@ where
                 return arr;
             }
             let mut acc = arr.data[0];
-            for val in arr.data.as_mut_slice()[1..].iter_mut() {
+            for val in &mut arr.data.as_mut_slice()[1..] {
                 acc = f(acc, *val);
                 *val = acc;
             }
@@ -1019,10 +1019,8 @@ where
                 return arr;
             }
             let mut acc = arr.data[0];
-            for val in arr.data.as_mut_slice()[1..].iter_mut() {
-                let temp = *val;
-                *val = f(acc, *val);
-                acc = temp;
+            for val in &mut arr.data.as_mut_slice()[1..] {
+                acc = std::mem::replace(val, f(acc, *val));
             }
             arr
         }

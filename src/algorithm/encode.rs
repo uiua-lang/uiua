@@ -268,10 +268,7 @@ impl Value {
                 let mut rows = Vec::new();
                 for result in reader.records() {
                     let record = result.map_err(|e| env.error(e))?;
-                    let mut row = EcoVec::new();
-                    for field in record.iter() {
-                        row.push(Boxed(field.into()));
-                    }
+                    let row: EcoVec<_> = record.iter().map(|x| Boxed(x.into())).collect();
                     rows.push(Array::new(row.len(), row));
                 }
                 Array::from_row_arrays(rows, env).map(Into::into)

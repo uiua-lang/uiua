@@ -168,7 +168,12 @@ pub struct Module {
 #[derive(Clone)]
 struct IndexMacro {
     words: Vec<Sp<Word>>,
-    names: LocalNames,
+    /// Map of spans of identifiers used in the macro that were in scope
+    /// when the macro was declared to their local indices. This is used
+    /// for name resolution. It is keyed by span rather than by name so
+    /// that names in both the declaration and invocation's scope can
+    /// be disambiguated.
+    locals: HashMap<CodeSpan, LocalName>,
     sig: Option<Signature>,
     recursive: bool,
 }
@@ -177,7 +182,7 @@ struct IndexMacro {
 #[derive(Clone)]
 struct CodeMacro {
     root: SigNode,
-    names: IndexMap<Ident, LocalName>,
+    names: LocalNames,
 }
 
 impl AsRef<Assembly> for Compiler {
@@ -246,10 +251,11 @@ enum FileScopeKind {
     Git,
 }
 
+/// Indices of an index macro's locals
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct MacroLocal {
     macro_index: usize,
-    expansion_index: usize,
+    expansion_index: Option<usize>,
 }
 
 impl Default for Scope {
@@ -1262,8 +1268,8 @@ impl Compiler {
                 Node::Format(parts, span)
             }
             Word::Ref(r) => self.reference(r),
-            Word::IncompleteRef { path, in_macro_arg } => 'blk: {
-                if let Some((_, locals)) = self.ref_path(&path, in_macro_arg)? {
+            Word::IncompleteRef { path, .. } => 'blk: {
+                if let Some((_, locals)) = self.ref_path(&path)? {
                     self.add_error(
                         path.last().unwrap().tilde_span.clone(),
                         "Incomplete module reference",
@@ -1643,7 +1649,7 @@ impl Compiler {
     ///
     /// Returns [`None`] if the reference is to a constant
     fn ref_local(&self, r: &Ref) -> UiuaResult<Option<(Vec<LocalName>, LocalName)>> {
-        if let Some((names, path_locals)) = self.ref_path(&r.path, r.in_macro_arg)? {
+        if let Some((names, path_locals)) = self.ref_path(&r.path)? {
             if let Some(local) = names.get(&r.name.value).copied().or_else(|| {
                 (r.name.value.strip_suffix('!')).and_then(|name| {
                     names.get(name).copied().filter(|local| {
@@ -1665,7 +1671,7 @@ impl Compiler {
                     format!("Item `{}` not found", r.name.value),
                 ))
             }
-        } else if let Some(local) = self.find_name(&r.name.value, r.in_macro_arg) {
+        } else if let Some(local) = self.find_name(&r.name.value, &r.name.span) {
             Ok(Some((Vec::new(), local)))
         } else if r.path.is_empty() && CONSTANTS.iter().any(|def| def.name == r.name.value) {
             Ok(None)
@@ -1676,44 +1682,45 @@ impl Compiler {
             ))
         }
     }
-    fn find_name(&self, name: &str, skip_temp: bool) -> Option<LocalName> {
-        self.find_name_impl(name, skip_temp, false)
+    fn find_name(&self, name: &str, span: &CodeSpan) -> Option<LocalName> {
+        self.find_name_impl(name, span, false)
     }
     fn find_name_impl(
         &self,
         name: &str,
-        skip_temp: bool,
+        span: &CodeSpan,
         stop_at_binding: bool,
     ) -> Option<LocalName> {
-        // println!("name: {name:?}, skip_temp: {skip_temp}");
+        // println!("name: {name:?} @ {}", span);
         // for scope in self.scopes() {
         //     println!("  {:?} {:?}", scope.kind, scope.names);
         // }
-        let skip = if skip_temp {
-            self.scopes()
-                .rposition(|sc| matches!(sc.kind, ScopeKind::Macro(_)))
-                .map(|s| s + 1)
-                .unwrap_or(0)
-        } else {
-            0
-        };
-        let mut hit_file = false;
-        for scope in self.scopes().skip(skip) {
+        let mut hit_stop = false;
+        for scope in self.scopes() {
             if matches!(scope.kind, ScopeKind::File(_))
                 || stop_at_binding && matches!(scope.kind, ScopeKind::Binding)
             {
-                if hit_file {
+                if hit_stop {
                     break;
                 }
-                hit_file = true;
+                hit_stop = true;
             }
+            /// Look in the scope's names
             if let Some(local) = scope.names.get(name).copied() {
                 return Some(local);
             }
+            /// Look in the macro's locals. We look up by span rather than
+            /// name to disambiguate the macro declaration's locals from
+            /// the current ones.
+            if let ScopeKind::Macro(Some(mac_local)) = &scope.kind {
+                let mac = &self.index_macros[&mac_local.macro_index];
+                if let Some(local) = mac.locals.get(span).copied() {
+                    return Some(local);
+                }
+            }
         }
         // Attempt to look up the identifier as a non-macro
-        let as_non_macro =
-            self.find_name_impl(name.strip_suffix('!')?, skip_temp, stop_at_binding)?;
+        let as_non_macro = self.find_name_impl(name.strip_suffix('!')?, span, stop_at_binding)?;
         if let BindingKind::Module(_) | BindingKind::Import(_) =
             self.asm.bindings[as_non_macro.index].kind
         {
@@ -1723,17 +1730,13 @@ impl Compiler {
             None
         }
     }
-    fn ref_path(
-        &self,
-        path: &[RefComponent],
-        skip_local: bool,
-    ) -> UiuaResult<Option<(&LocalNames, Vec<LocalName>)>> {
+    fn ref_path(&self, path: &[RefComponent]) -> UiuaResult<Option<(&LocalNames, Vec<LocalName>)>> {
         let Some(first) = path.first() else {
             return Ok(None);
         };
         let mut path_locals = Vec::new();
         let module_local = self
-            .find_name(&first.module.value, skip_local)
+            .find_name(&first.module.value, &first.module.span)
             .ok_or_else(|| {
                 self.error(
                     first.module.span.clone(),
@@ -1817,7 +1820,7 @@ impl Compiler {
     }
     fn reference(&mut self, r: Ref) -> Node {
         if r.path.is_empty() {
-            self.ident(r.name.value, r.name.span, r.in_macro_arg)
+            self.ident(r.name.value, r.name.span)
         } else {
             match self.ref_local(&r) {
                 Ok(Some((path_locals, local))) => {
@@ -1832,7 +1835,7 @@ impl Compiler {
                         .insert(r.name.span.clone(), local.index);
                     self.global_index(&r.name.value, local.index, r.name.span)
                 }
-                Ok(None) => self.ident(r.name.value, r.name.span, r.in_macro_arg),
+                Ok(None) => self.ident(r.name.value, r.name.span),
                 Err(e) => {
                     self.errors.push(e);
                     Node::new_push(Value::default())
@@ -1866,14 +1869,14 @@ impl Compiler {
         }
         completions
     }
-    fn ident(&mut self, ident: Ident, span: CodeSpan, skip_local: bool) -> Node {
+    fn ident(&mut self, ident: Ident, span: CodeSpan) -> Node {
         // Add completions
         let completions = self.completions(&ident, &self.scope.names, false);
         if !completions.is_empty() {
             self.code_meta.completions.insert(span.clone(), completions);
         }
 
-        if let Some(local) = self.find_name_impl(&ident, skip_local, true) {
+        if let Some(local) = self.find_name_impl(&ident, &span, true) {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
@@ -1890,7 +1893,7 @@ impl Compiler {
             } else {
                 Node::empty()
             }
-        } else if let Some(local) = self.find_name(&ident, skip_local) {
+        } else if let Some(local) = self.find_name(&ident, &span) {
             // Name exists in scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
@@ -2817,7 +2820,7 @@ impl Compiler {
                         }
                         SetterStashKind::Scope(ScopeKind::Binding) => "binding",
                         SetterStashKind::Scope(ScopeKind::File(_)) => "file",
-                        SetterStashKind::Scope(ScopeKind::Macro(_)) => "macro",
+                        SetterStashKind::Scope(ScopeKind::Macro { .. }) => "macro",
                         SetterStashKind::Scope(ScopeKind::Module(_)) => "module",
                         SetterStashKind::Scope(ScopeKind::Test) => "test scope",
                     };

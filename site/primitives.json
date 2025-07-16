@@ -407,7 +407,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Call a function with its arguments reversed"
+    "description": "Call a function with its arguments swapped"
   },
   "base": {
     "glyph": "⊥",

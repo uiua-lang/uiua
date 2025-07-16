@@ -49,6 +49,25 @@ X ← "Outer"
 ⍤⤙≍ "Outer" Mod~Mac₁!X
 ⍤⤙≍ "Outer" Mod~Mac₂!X
 
+┌─╴Module
+  Func ← (5)
+└─╴
+Macro! ← Module!^0
+⍤⤙≍ 5 Macro!Func
+
+┌─╴Mod
+  X ← "Stuff"
+└─╴
+Mac! ← ^0
+⍤⤙≍ "Stuff" Mac!Mod!X
+
+┌─╴M
+  X  ← 5
+  F! ← +X ^0
+└─╴
+X ← 3
+⍤⤙≍ 8 M~F!X
+
 ###############
 # Code macros #
 ###############

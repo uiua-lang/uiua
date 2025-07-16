@@ -428,7 +428,7 @@ impl Compiler {
         };
         for field in &fields {
             match field.init.as_ref().map(|sn| sn.sig.args()) {
-                Some(0) => continue,
+                Some(0) => {}
                 Some(1) | None => {
                     constr_comment.push(' ');
                     constr_comment.push_str(&field.name);

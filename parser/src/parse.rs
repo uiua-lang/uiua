@@ -386,9 +386,7 @@ impl Parser<'_> {
             loop {
                 if let Some(ident) = self.ident() {
                     items.push(ident);
-                } else if self.spaces().is_some() {
-                    continue;
-                } else {
+                } else if self.spaces().is_none() {
                     break;
                 }
             }

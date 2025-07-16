@@ -898,7 +898,7 @@ impl Metrics {
         }
         metrics
     }
-    pub const fn get(&self, index: usize) -> i8 {
+    pub const fn get(self, index: usize) -> i8 {
         let bits = (self.0 >> (2 * index)) & 0b11;
         match bits {
             0b00 => 1,

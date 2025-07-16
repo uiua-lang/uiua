@@ -629,7 +629,7 @@ impl IntoSysBackend for Arc<dyn SysBackend> {
     }
 }
 
-pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
+pub(crate) fn run_sys_op(op: SysOp, env: &mut Uiua) -> UiuaResult {
     match op {
         SysOp::Show => {
             let val = env.pop(1)?;
@@ -1335,20 +1335,20 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 format!(
                     "{} was not handled as a modifier. \
                         This is a bug in the interpreter",
-                    Primitive::Sys(*prim)
+                    Primitive::Sys(prim)
                 )
             } else {
                 format!(
                     "{} was not handled as a function. \
                         This is a bug in the interpreter",
-                    Primitive::Sys(*prim)
+                    Primitive::Sys(prim)
                 )
             }))
         }
     }
     Ok(())
 }
-pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult {
+pub(crate) fn run_sys_op_mod(op: SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult {
     match op {
         SysOp::ReadLines => {
             let [f] = get_ops(ops, env)?;
@@ -1439,13 +1439,13 @@ pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult
                 format!(
                     "{} was not handled as a modifier. \
                         This is a bug in the interpreter",
-                    Primitive::Sys(*prim)
+                    Primitive::Sys(prim)
                 )
             } else {
                 format!(
                     "{} was handled as a modifier. \
                         This is a bug in the interpreter",
-                    Primitive::Sys(*prim)
+                    Primitive::Sys(prim)
                 )
             }))
         }

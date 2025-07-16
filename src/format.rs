@@ -114,7 +114,7 @@ macro_rules! create_config {
         #[test]
         fn generate_format_cfg_docs() {
             paste! {
-                let mut s: String = r#"
+                let mut s: String = r"
 # Uiua Formatter Configuration
 
 You can configure Uiua's formatter by creating a file called `.fmt.ua` in the directory from which you run the interpreter. This configuration file is also a Uiua program.
@@ -123,14 +123,14 @@ Configuration options are specified by binding values to specific names.
 
 Example with default values:
 ```uiua
-"#.into();
+".into();
                 $(
                     s.push_str(&format!("{} ← {}\n", stringify!([<$name:camel>]), default_to_uiua!($default)));
                 )*
-                s.push_str(r#"```
+                s.push_str(r"```
 The following configuration options are available:
 
-"#);
+");
 
                 $(
                     s.push_str(&format!("### {}\n", stringify!([<$name:camel>])));

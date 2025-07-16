@@ -521,7 +521,7 @@ impl Compiler {
         }
         // Collect errors
         match res {
-            Err(e) | Ok(Err(e)) => {
+            Err(e) => {
                 self.asm.root.truncate(node_start);
                 self.errors.push(e);
             }
@@ -565,7 +565,7 @@ enum ItemCompMode {
 }
 
 impl Compiler {
-    fn items(&mut self, items: Vec<Item>, mode: ItemCompMode) -> UiuaResult {
+    fn items(&mut self, items: Vec<Item>, mode: ItemCompMode) {
         // Set scope comment
         let mut started = false;
         let mut comment = String::new();
@@ -625,7 +625,6 @@ impl Compiler {
                 item_errored = true;
             }
         }
-        Ok(())
     }
     fn item(
         &mut self,
@@ -797,7 +796,7 @@ impl Compiler {
         function: Function,
         span: usize,
         meta: BindingMeta,
-    ) -> UiuaResult {
+    ) {
         self.scope.names.insert(name.clone(), local);
         let span = if span == 0 {
             Some(CodeSpan::literal(name))
@@ -806,7 +805,6 @@ impl Compiler {
         };
         self.asm
             .add_binding_at(local, BindingKind::Func(function), span, meta);
-        Ok(())
     }
     fn compile_bind_const(
         &mut self,
@@ -1404,8 +1402,9 @@ impl Compiler {
                 }
                 let root_start = self.asm.root.len();
                 self.in_scope(ScopeKind::Function, |comp| {
-                    comp.items(item_lines, ItemCompMode::Function)?;
-                    comp.items(word_lines, ItemCompMode::Function)
+                    comp.items(item_lines, ItemCompMode::Function);
+                    comp.items(word_lines, ItemCompMode::Function);
+                    Ok(())
                 })?;
                 let inner = self.asm.root.split_off(root_start);
                 // Calculate length
@@ -2028,7 +2027,8 @@ impl Compiler {
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Node> {
         let root_start = self.asm.root.len();
         self.in_scope(ScopeKind::Function, |comp| {
-            comp.items(func.lines, ItemCompMode::Function)
+            comp.items(func.lines, ItemCompMode::Function);
+            Ok(())
         })?;
         let mut root = self.asm.root.split_off(root_start);
 
@@ -2755,22 +2755,22 @@ impl Compiler {
     /// # Errors
     /// Returns an error in the binding name is not valid
     pub fn bind_function(&mut self, name: impl Into<EcoString>, function: Function) -> UiuaResult {
-        self.bind_function_with_meta(name, function, BindingMeta::default())
+        self.bind_function_with_meta(name, function, BindingMeta::default());
+        Ok(())
     }
     fn bind_function_with_meta(
         &mut self,
         name: impl Into<EcoString>,
         function: Function,
         meta: BindingMeta,
-    ) -> UiuaResult {
+    ) {
         let name = name.into();
         let local = LocalName {
             index: self.next_global,
             public: true,
         };
         self.next_global += 1;
-        self.compile_bind_function(name, local, function, 0, meta)?;
-        Ok(())
+        self.compile_bind_function(name, local, function, 0, meta);
     }
     /// Create and bind a function in the current scope
     ///
@@ -2788,15 +2788,15 @@ impl Compiler {
         if let Some(index) = self.externals.get(&name).copied() {
             let df = self.create_dynamic_function(signature.into(), f);
             self.asm.functions.make_mut()[index] = Node::Dynamic(df);
-            Ok(())
         } else {
             let function = self.create_function(signature, f);
             let meta = BindingMeta {
                 external: true,
                 ..Default::default()
             };
-            self.bind_function_with_meta(name, function, meta)
+            self.bind_function_with_meta(name, function, meta);
         }
+        Ok(())
     }
     fn sig_of(&self, node: &Node, span: &CodeSpan) -> UiuaResult<Signature> {
         node.sig().map_err(|e| {

@@ -1878,9 +1878,7 @@ impl Compiler {
             return Err(self.error(span.clone(), "Compile-time evaluation recurs too deep"));
         }
         let errors_before = self.errors.len();
-        let res = self
-            .items(items, ItemCompMode::CodeMacro)
-            .map_err(|e| e.trace_macro(name, span.clone()));
+        self.items(items, ItemCompMode::CodeMacro);
         let errors_after = self.errors.len();
         self.comptime_depth -= 1;
         self.pre_eval_mode = pre_eval_mod;
@@ -1889,7 +1887,6 @@ impl Compiler {
             return Ok(Node::empty());
         }
         let mut node = self.asm.root.split_off(root_node_len);
-        res?;
         if errors_after > errors_before {
             node = Node::empty();
         }

@@ -9,7 +9,7 @@ use std::{
     slice,
     sync::{
         atomic::{self, AtomicBool, AtomicU64},
-        Arc,
+        Arc, LazyLock,
     },
     thread::sleep,
     time::Duration,
@@ -19,7 +19,6 @@ use colored::Colorize;
 #[cfg(feature = "webcam")]
 use crossbeam_channel as channel;
 use dashmap::DashMap;
-use once_cell::sync::Lazy;
 
 use crate::{
     terminal_size, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend,
@@ -92,7 +91,7 @@ struct WebcamChannel {
 
 #[cfg(feature = "webcam")]
 impl WebcamChannel {
-    fn new(index: usize) -> Result<Self, String> {
+    fn new(index: usize) -> Self {
         use nokhwa::{
             pixel_format::RgbFormat,
             utils::{CameraIndex, RequestedFormat, RequestedFormatType},
@@ -140,10 +139,10 @@ impl WebcamChannel {
                 sleep();
             }
         });
-        Ok(Self {
+        Self {
             send: req_send,
             recv: image_recv,
-        })
+        }
     }
 }
 
@@ -298,7 +297,7 @@ impl GlobalNativeSys {
     }
 }
 
-static NATIVE_SYS: Lazy<GlobalNativeSys> = Lazy::new(Default::default);
+static NATIVE_SYS: LazyLock<GlobalNativeSys> = LazyLock::new(Default::default);
 
 #[cfg(all(feature = "audio", feature = "binary"))]
 #[doc(hidden)]
@@ -1135,7 +1134,7 @@ impl SysBackend for NativeSys {
     fn webcam_capture(&self, index: usize) -> Result<crate::WebcamImage, String> {
         let cam_channels = &NATIVE_SYS.cam_channels;
         if !cam_channels.contains_key(&index) {
-            let ch = WebcamChannel::new(index)?;
+            let ch = WebcamChannel::new(index);
             cam_channels.insert(index, ch);
         }
         let ch = cam_channels.get_mut(&index).unwrap();
@@ -1146,7 +1145,7 @@ impl SysBackend for NativeSys {
                 Err("Failed to interact with webcam".into())
             }
         } else {
-            let ch = WebcamChannel::new(index)?;
+            let ch = WebcamChannel::new(index);
             cam_channels.insert(index, ch);
             let ch = cam_channels.get_mut(&index).unwrap();
             if ch.send.send(()).is_ok() {

@@ -410,7 +410,7 @@ fn prim_html(prim: Primitive, glyph_only: bool, hide_docs: bool) -> String {
     let name = if !glyph_only && symbol != prim.name() {
         format!(" {}", prim.name())
     } else {
-        "".to_string()
+        String::new()
     };
     let href = format!("/docs/{}", prim.name());
     let mut title = String::new();

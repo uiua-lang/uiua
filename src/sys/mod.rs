@@ -7,13 +7,12 @@ use std::{
     mem::take,
     net::SocketAddr,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, LazyLock},
     time::Duration,
 };
 
 #[cfg(feature = "image")]
 use image::DynamicImage;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use time::UtcOffset;
 
@@ -46,13 +45,13 @@ use in example Uiua code ✨";
 
 /// Access the built-in `example.ua` file
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
-    static S: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(EXAMPLE_UA.to_string()));
+    static S: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(EXAMPLE_UA.to_string()));
     f(&mut S.lock())
 }
 
 /// Access the built-in `example.txt` file
 pub fn example_txt<T>(f: impl FnOnce(&mut String) -> T) -> T {
-    static S: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(EXAMPLE_TXT.to_string()));
+    static S: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(EXAMPLE_TXT.to_string()));
     f(&mut S.lock())
 }
 

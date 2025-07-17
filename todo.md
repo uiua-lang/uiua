@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.17
+- Put scalar dot on the value instead of the label
 - `Variants` field for module
 - Fix caching with labels
 - Fix performance of deep `dip` nesting

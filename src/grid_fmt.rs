@@ -943,7 +943,10 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                             && params.max_boxed_rank != 1))
                 {
                     // Disambiguate fixed arrays
-                    let fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();
+                    let mut fix_amnt = self.shape.iter().take_while(|&&d| d == 1).count();
+                    if T::compress_list_grid() && self.shape.last() == Some(&1) {
+                        fix_amnt = fix_amnt.saturating_sub(1);
+                    }
                     for row in &mut grid {
                         row.extend(repeat_n(' ', fix_amnt));
                         row.rotate_right(fix_amnt);

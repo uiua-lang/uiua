@@ -401,17 +401,17 @@ where
 
 #[track_caller]
 #[inline(always)]
-pub(crate) fn validate_shape(_shape: &[usize], _len: usize) {
+pub(crate) fn validate_shape(shape: &[usize], len: usize) {
     #[cfg(debug_assertions)]
     {
-        let elems = if _shape.contains(&0) {
+        let elems = if shape.contains(&0) {
             0
         } else {
-            _shape.iter().product()
+            shape.iter().product()
         };
         assert_eq!(
-            elems, _len,
-            "shape {_shape:?} does not match data length {_len}"
+            elems, len,
+            "shape {shape:?} does not match data length {len}"
         )
     }
 }

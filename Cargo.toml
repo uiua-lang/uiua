@@ -18,8 +18,7 @@ print_stdout = "warn"
 non_std_lazy_statics = "warn"
 pedantic = {level = "warn", priority = -1}
 inline_always = "allow"  # TODO: benchmark inlines
-missing_panics_doc = "allow"  # 37
-used_underscore_binding = "allow"  # 39
+missing_panics_doc = "allow"  # TODO
 float_cmp = "allow"  # 40
 map_unwrap_or = "allow"  # 59
 return_self_not_must_use = "allow"  # 61

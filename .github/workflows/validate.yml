@@ -42,21 +42,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Check formatting
       run: cargo fmt --all --check
-  install_deps:
-    needs: check_formatting
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Install depsAdd commentMore actions
-      run: |
-        sudo apt-get update -y
-        sudo apt-get --fix-missing install -y
-        sudo apt-get install libasound2-dev libudev-dev pkg-config libx11-dev libjpeg-dev
-    - name: Install WASM target
-      run: rustup target add wasm32-unknown-unknown
-  # Test the interpreter
-  test_bin:
-    needs: install_deps
+  clippy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -66,13 +52,28 @@ jobs:
         key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
         restore-keys: |
           build-${{ runner.os }}-
-    - name: Check interpreter clippy lints
-      run: cargo clippy --no-deps
+    - name: Install deps
+      run: |
+        sudo apt-get update -y
+        sudo apt-get --fix-missing install -y
+        sudo apt-get install libasound2-dev
+    - name: Run clippy
+      run: cargo clippy --no-deps --all-targets --workspace --all-features -- --deny=warnings
+  # Test the interpreter
+  test_bin:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/cache@v4
+      with:
+        path: target
+        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: |
+          build-${{ runner.os }}-
     - name: Run interpreter tests
       run: cargo test --lib
   # Test the site
   test_site:
-    needs: install_deps
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -86,7 +87,6 @@ jobs:
       run: cargo test -p site
   # Test ffi
   test_ffi:
-    needs: install_deps
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -98,10 +98,3 @@ jobs:
           build-${{ runner.os }}-
     - name: Run site tests
       run: cargo test -p tests_ffi
-  # check_features:
-  #   needs: test_bin
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   - name: Check feature combinations
-  #     run: cargo run ./.github/features.ua

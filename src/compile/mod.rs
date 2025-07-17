@@ -1705,13 +1705,13 @@ impl Compiler {
                 }
                 hit_stop = true;
             }
-            /// Look in the scope's names
+            // Look in the scope's names
             if let Some(local) = scope.names.get(name).copied() {
                 return Some(local);
             }
-            /// Look in the macro's locals. We look up by span rather than
-            /// name to disambiguate the macro declaration's locals from
-            /// the current ones.
+            // Look in the macro's locals. We look up by span rather than
+            // name to disambiguate the macro declaration's locals from
+            // the current ones.
             if let ScopeKind::Macro(Some(mac_local)) = &scope.kind {
                 let mac = &self.index_macros[&mac_local.macro_index];
                 if let Some(local) = mac.locals.get(span).copied() {

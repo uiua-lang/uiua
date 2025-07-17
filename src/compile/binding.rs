@@ -615,7 +615,7 @@ impl Compiler {
         words: &[Sp<Word>],
         mut code_macro: bool,
         recursive: &mut bool,
-        locals: &mut HashMap<CodeSpan, LocalName>,
+        locals: &mut HashMap<CodeSpan, usize>,
     ) {
         for word in words {
             let loc = &mut *locals;
@@ -720,7 +720,7 @@ impl Compiler {
                 {
                     *recursive = true;
                 }
-                locals.insert(name_span.clone(), local);
+                locals.insert(name_span.clone(), local.index);
                 self.validate_local(&nm.value, local, &nm.span);
                 (self.code_meta.global_references).insert(nm.span.clone(), local.index);
             }
@@ -739,7 +739,7 @@ impl Compiler {
         items: &[Item],
         code_macro: bool,
         recursive: &mut bool,
-        locals: &mut HashMap<CodeSpan, LocalName>,
+        locals: &mut HashMap<CodeSpan, usize>,
     ) -> bool {
         for item in items {
             match item {

@@ -173,7 +173,7 @@ struct IndexMacro {
     /// for name resolution. It is keyed by span rather than by name so
     /// that names in both the declaration and invocation's scope can
     /// be disambiguated.
-    locals: HashMap<CodeSpan, LocalName>,
+    locals: HashMap<CodeSpan, usize>,
     sig: Option<Signature>,
     recursive: bool,
 }
@@ -1714,8 +1714,11 @@ impl Compiler {
             // the current ones.
             if let ScopeKind::Macro(Some(mac_local)) = &scope.kind {
                 let mac = &self.index_macros[&mac_local.macro_index];
-                if let Some(local) = mac.locals.get(span).copied() {
-                    return Some(local);
+                if let Some(index) = mac.locals.get(span).copied() {
+                    return Some(LocalName {
+                        index,
+                        public: true,
+                    });
                 }
             }
         }

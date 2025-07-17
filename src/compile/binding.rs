@@ -615,10 +615,10 @@ impl Compiler {
         words: &[Sp<Word>],
         mut code_macro: bool,
         recursive: &mut bool,
-        locals: &mut HashMap<CodeSpan, usize>,
+        mod_locals: &mut HashMap<CodeSpan, usize>,
     ) {
         for word in words {
-            let loc = &mut *locals;
+            let loc = &mut *mod_locals;
             let mut path_locals = None;
             let mut name_local = None;
             match &word.value {
@@ -720,12 +720,13 @@ impl Compiler {
                 {
                     *recursive = true;
                 }
-                locals.insert(name_span.clone(), local.index);
+                mod_locals.insert(name_span.clone(), local.index);
                 self.validate_local(&nm.value, local, &nm.span);
                 (self.code_meta.global_references).insert(nm.span.clone(), local.index);
             }
             if let Some((path, locals)) = path_locals {
                 for (local, comp) in locals.into_iter().zip(path) {
+                    mod_locals.insert(comp.module.span.clone(), local.index);
                     (self.code_meta.global_references)
                         .insert(comp.module.span.clone(), local.index);
                 }

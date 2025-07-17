@@ -700,7 +700,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 }
             }
 
-            // SoA
+            // SoA (struct-of-arrays)
             let mut is_soa = false;
             if let Some(rows) = T::soa_rows(self) {
                 is_soa = true;
@@ -711,7 +711,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 }
                 metagrid.push(labels_row);
                 let row_params = GridFmtParams {
-                    label: false,
+                    label: true,
                     soa_row: true,
                     ..Default::default()
                 };

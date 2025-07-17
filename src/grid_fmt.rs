@@ -554,7 +554,7 @@ impl GridFmt for Boxed {
                     for row in &mut grid {
                         row.insert(0, ' ');
                     }
-                    grid[(height - 1) / 2][0] = symbol;
+                    grid[height / 2][0] = symbol;
                 }
             }
         }

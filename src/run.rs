@@ -1500,7 +1500,7 @@ impl Uiua {
         }
     }
     /// Spawn a thread
-    pub(crate) fn spawn(&mut self, _pool: bool, f: SigNode) -> UiuaResult {
+    pub(crate) fn spawn(&mut self, pool: bool, f: SigNode) -> UiuaResult {
         if !self.rt.backend.allow_thread_spawning() {
             return Err(self.error("Thread spawning is not allowed in this environment"));
         }
@@ -1555,7 +1555,7 @@ impl Uiua {
         #[cfg(not(target_arch = "wasm32"))]
         let recv = {
             let (send, recv) = crossbeam_channel::unbounded();
-            if _pool {
+            if pool {
                 let max_threads = std::thread::available_parallelism()
                     .map(|p| p.get())
                     .unwrap_or(1);

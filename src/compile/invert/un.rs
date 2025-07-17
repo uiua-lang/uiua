@@ -650,7 +650,7 @@ inverse!(ScanPat, input, asm, {
         Some(Primitive::Div) if un => Prim(Mul, *span),
         Some(Primitive::Eq) => Prim(Eq, *span),
         Some(Primitive::Ne) => Prim(Ne, *span),
-        _ => f.node.un_inverse(asm)?,
+        _ => f.node.anti_inverse(asm)?,
     }
     .sig_node()?;
     let inverse = if un {

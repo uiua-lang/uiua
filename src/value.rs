@@ -451,27 +451,27 @@ impl Value {
     pub(crate) fn generic_bin_into<T, E>(
         self,
         other: Self,
-        n: impl FnOnce(Array<f64>, Array<f64>) -> Result<T, E>,
-        _b: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, E>,
-        _co: impl FnOnce(Array<Complex>, Array<Complex>) -> Result<T, E>,
-        ch: impl FnOnce(Array<char>, Array<char>) -> Result<T, E>,
-        f: impl FnOnce(Array<Boxed>, Array<Boxed>) -> Result<T, E>,
+        num: impl FnOnce(Array<f64>, Array<f64>) -> Result<T, E>,
+        byte: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, E>,
+        comp: impl FnOnce(Array<Complex>, Array<Complex>) -> Result<T, E>,
+        char: impl FnOnce(Array<char>, Array<char>) -> Result<T, E>,
+        bx: impl FnOnce(Array<Boxed>, Array<Boxed>) -> Result<T, E>,
         err: impl FnOnce(Self, Self) -> E,
     ) -> Result<T, E> {
         match (self, other) {
-            (Self::Num(a), Self::Num(b)) => n(a, b),
-            (Self::Byte(a), Self::Byte(b)) => _b(a, b),
-            (Self::Byte(a), Self::Num(b)) => n(a.convert(), b),
-            (Self::Num(a), Self::Byte(b)) => n(a, b.convert()),
-            (Self::Complex(a), Self::Complex(b)) => _co(a, b),
-            (Self::Complex(a), Self::Num(b)) => _co(a, b.convert()),
-            (Self::Num(a), Self::Complex(b)) => _co(a.convert(), b),
-            (Self::Complex(a), Self::Byte(b)) => _co(a, b.convert()),
-            (Self::Byte(a), Self::Complex(b)) => _co(a.convert(), b),
-            (Self::Char(a), Self::Char(b)) => ch(a, b),
-            (Self::Box(a), Self::Box(b)) => f(a, b),
-            (Self::Box(a), b) => f(a, b.coerce_to_boxes()),
-            (a, Self::Box(b)) => f(a.coerce_to_boxes(), b),
+            (Self::Num(a), Self::Num(b)) => num(a, b),
+            (Self::Byte(a), Self::Byte(b)) => byte(a, b),
+            (Self::Byte(a), Self::Num(b)) => num(a.convert(), b),
+            (Self::Num(a), Self::Byte(b)) => num(a, b.convert()),
+            (Self::Complex(a), Self::Complex(b)) => comp(a, b),
+            (Self::Complex(a), Self::Num(b)) => comp(a, b.convert()),
+            (Self::Num(a), Self::Complex(b)) => comp(a.convert(), b),
+            (Self::Complex(a), Self::Byte(b)) => comp(a, b.convert()),
+            (Self::Byte(a), Self::Complex(b)) => comp(a.convert(), b),
+            (Self::Char(a), Self::Char(b)) => char(a, b),
+            (Self::Box(a), Self::Box(b)) => bx(a, b),
+            (Self::Box(a), b) => bx(a, b.coerce_to_boxes()),
+            (a, Self::Box(b)) => bx(a.coerce_to_boxes(), b),
             (a, b) => Err(err(a, b)),
         }
     }
@@ -479,27 +479,27 @@ impl Value {
     pub(crate) fn generic_bin_ref<T, E>(
         &self,
         other: &Self,
-        n: impl FnOnce(&Array<f64>, &Array<f64>) -> Result<T, E>,
-        _b: impl FnOnce(&Array<u8>, &Array<u8>) -> Result<T, E>,
-        _co: impl FnOnce(&Array<Complex>, &Array<Complex>) -> Result<T, E>,
-        ch: impl FnOnce(&Array<char>, &Array<char>) -> Result<T, E>,
-        f: impl FnOnce(&Array<Boxed>, &Array<Boxed>) -> Result<T, E>,
+        num: impl FnOnce(&Array<f64>, &Array<f64>) -> Result<T, E>,
+        byte: impl FnOnce(&Array<u8>, &Array<u8>) -> Result<T, E>,
+        comp: impl FnOnce(&Array<Complex>, &Array<Complex>) -> Result<T, E>,
+        char: impl FnOnce(&Array<char>, &Array<char>) -> Result<T, E>,
+        bx: impl FnOnce(&Array<Boxed>, &Array<Boxed>) -> Result<T, E>,
         err: impl FnOnce(&Self, &Self) -> E,
     ) -> Result<T, E> {
         match (self, other) {
-            (Self::Num(a), Self::Num(b)) => n(a, b),
-            (Self::Byte(a), Self::Byte(b)) => _b(a, b),
-            (Self::Byte(a), Self::Num(b)) => n(&a.convert_ref(), b),
-            (Self::Num(a), Self::Byte(b)) => n(a, &b.convert_ref()),
-            (Self::Complex(a), Self::Complex(b)) => _co(a, b),
-            (Self::Complex(a), Self::Num(b)) => _co(a, &b.convert_ref()),
-            (Self::Num(a), Self::Complex(b)) => _co(&a.convert_ref(), b),
-            (Self::Complex(a), Self::Byte(b)) => _co(a, &b.convert_ref()),
-            (Self::Byte(a), Self::Complex(b)) => _co(&a.convert_ref(), b),
-            (Self::Char(a), Self::Char(b)) => ch(a, b),
-            (Self::Box(a), Self::Box(b)) => f(a, b),
-            (Self::Box(a), b) => f(a, &b.coerce_as_boxes()),
-            (a, Self::Box(b)) => f(&a.coerce_as_boxes(), b),
+            (Self::Num(a), Self::Num(b)) => num(a, b),
+            (Self::Byte(a), Self::Byte(b)) => byte(a, b),
+            (Self::Byte(a), Self::Num(b)) => num(&a.convert_ref(), b),
+            (Self::Num(a), Self::Byte(b)) => num(a, &b.convert_ref()),
+            (Self::Complex(a), Self::Complex(b)) => comp(a, b),
+            (Self::Complex(a), Self::Num(b)) => comp(a, &b.convert_ref()),
+            (Self::Num(a), Self::Complex(b)) => comp(&a.convert_ref(), b),
+            (Self::Complex(a), Self::Byte(b)) => comp(a, &b.convert_ref()),
+            (Self::Byte(a), Self::Complex(b)) => comp(&a.convert_ref(), b),
+            (Self::Char(a), Self::Char(b)) => char(a, b),
+            (Self::Box(a), Self::Box(b)) => bx(a, b),
+            (Self::Box(a), b) => bx(a, &b.coerce_as_boxes()),
+            (a, Self::Box(b)) => bx(&a.coerce_as_boxes(), b),
             (a, b) => Err(err(a, b)),
         }
     }
@@ -507,43 +507,43 @@ impl Value {
     pub(crate) fn generic_bin_mut<T, E>(
         &mut self,
         other: Self,
-        n: impl FnOnce(&mut Array<f64>, Array<f64>) -> Result<T, E>,
-        _b: impl FnOnce(&mut Array<u8>, Array<u8>) -> Result<T, E>,
-        _co: impl FnOnce(&mut Array<Complex>, Array<Complex>) -> Result<T, E>,
-        ch: impl FnOnce(&mut Array<char>, Array<char>) -> Result<T, E>,
-        f: impl FnOnce(&mut Array<Boxed>, Array<Boxed>) -> Result<T, E>,
+        num: impl FnOnce(&mut Array<f64>, Array<f64>) -> Result<T, E>,
+        byte: impl FnOnce(&mut Array<u8>, Array<u8>) -> Result<T, E>,
+        comp: impl FnOnce(&mut Array<Complex>, Array<Complex>) -> Result<T, E>,
+        char: impl FnOnce(&mut Array<char>, Array<char>) -> Result<T, E>,
+        bx: impl FnOnce(&mut Array<Boxed>, Array<Boxed>) -> Result<T, E>,
         err: impl FnOnce(&Self, &Self) -> E,
     ) -> Result<T, E> {
         match (&mut *self, other) {
-            (Self::Num(a), Self::Num(b)) => n(a, b),
-            (Self::Byte(a), Self::Byte(b)) => _b(a, b),
+            (Self::Num(a), Self::Num(b)) => num(a, b),
+            (Self::Byte(a), Self::Byte(b)) => byte(a, b),
             (Self::Byte(a), Self::Num(b)) => {
                 let mut a_num = a.convert_ref();
-                let res = n(&mut a_num, b);
+                let res = num(&mut a_num, b);
                 *self = a_num.into();
                 res
             }
-            (Self::Num(a), Self::Byte(b)) => n(a, b.convert_ref()),
-            (Self::Complex(a), Self::Complex(b)) => _co(a, b),
-            (Self::Complex(a), Self::Num(b)) => _co(a, b.convert_ref()),
+            (Self::Num(a), Self::Byte(b)) => num(a, b.convert_ref()),
+            (Self::Complex(a), Self::Complex(b)) => comp(a, b),
+            (Self::Complex(a), Self::Num(b)) => comp(a, b.convert_ref()),
             (Self::Num(a), Self::Complex(b)) => {
                 let mut a_comp = a.convert_ref();
-                let res = _co(&mut a_comp, b);
+                let res = comp(&mut a_comp, b);
                 *self = a_comp.into();
                 res
             }
-            (Self::Complex(a), Self::Byte(b)) => _co(a, b.convert_ref()),
+            (Self::Complex(a), Self::Byte(b)) => comp(a, b.convert_ref()),
             (Self::Byte(a), Self::Complex(b)) => {
                 let mut a_comp = a.convert_ref();
-                let res = _co(&mut a_comp, b);
+                let res = comp(&mut a_comp, b);
                 *self = a_comp.into();
                 res
             }
-            (Self::Char(a), Self::Char(b)) => ch(a, b),
-            (Self::Box(a), b) => f(a, b.coerce_to_boxes()),
+            (Self::Char(a), Self::Char(b)) => char(a, b),
+            (Self::Box(a), b) => bx(a, b.coerce_to_boxes()),
             (a, Self::Box(b)) => {
                 let mut a_box = take(a).coerce_to_boxes();
-                let res = f(&mut a_box, b);
+                let res = bx(&mut a_box, b);
                 *self = a_box.into();
                 res
             }

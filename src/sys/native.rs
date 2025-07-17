@@ -158,15 +158,15 @@ enum TslConnection {
 }
 
 impl Read for &TlsSocket {
-    fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         #[cfg(feature = "tls")]
         {
             match &mut *self.conn.lock() {
                 TslConnection::Client(conn) => {
-                    rustls::Stream::new(conn, &mut &self.stream).read(_buf)
+                    rustls::Stream::new(conn, &mut &self.stream).read(buf)
                 }
                 TslConnection::Server(conn) => {
-                    rustls::Stream::new(conn, &mut &self.stream).read(_buf)
+                    rustls::Stream::new(conn, &mut &self.stream).read(buf)
                 }
             }
         }
@@ -176,15 +176,15 @@ impl Read for &TlsSocket {
 }
 
 impl Write for &TlsSocket {
-    fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         #[cfg(feature = "tls")]
         {
             match &mut *self.conn.lock() {
                 TslConnection::Client(conn) => {
-                    rustls::Stream::new(conn, &mut &self.stream).write(_buf)
+                    rustls::Stream::new(conn, &mut &self.stream).write(buf)
                 }
                 TslConnection::Server(conn) => {
-                    rustls::Stream::new(conn, &mut &self.stream).write(_buf)
+                    rustls::Stream::new(conn, &mut &self.stream).write(buf)
                 }
             }
         }
@@ -663,8 +663,8 @@ impl SysBackend for NativeSys {
     }
     #[allow(clippy::print_stdout)]
     #[cfg(all(feature = "terminal_image", feature = "image"))]
-    fn show_image(&self, image: image::DynamicImage, _label: Option<&str>) -> Result<(), String> {
-        let (_width, _height) = if let Some((w, h)) = terminal_size() {
+    fn show_image(&self, image: image::DynamicImage, label: Option<&str>) -> Result<(), String> {
+        let (width, height) = if let Some((w, h)) = terminal_size() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), (image.height() / 2).max(1));
             let scaled_to_height = (iw * th / ih.max(1), th);
@@ -701,15 +701,15 @@ impl SysBackend for NativeSys {
                 return crate::window::Request::Show(crate::media::SmartOutput::Png(
                     crate::media::image_to_bytes(&image, image::ImageFormat::Png)
                         .map_err(|e| e.to_string())?,
-                    _label.map(Into::into),
+                    label.map(Into::into),
                 ))
                 .send();
             }
             viuer::print(
                 &image,
                 &viuer::Config {
-                    width: _width,
-                    height: _height,
+                    width,
+                    height,
                     absolute_offset: false,
                     transparent: true,
                     ..Default::default()
@@ -720,12 +720,12 @@ impl SysBackend for NativeSys {
         }
     }
     #[cfg(all(feature = "gif", feature = "invoke"))]
-    fn show_gif(&self, gif_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
+    fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
         #[cfg(feature = "window")]
         if crate::window::use_window() {
             return crate::window::Request::Show(crate::media::SmartOutput::Gif(
                 gif_bytes,
-                _label.map(Into::into),
+                label.map(Into::into),
             ))
             .send();
         }
@@ -774,13 +774,13 @@ impl SysBackend for NativeSys {
         .map_err(|e| e.to_string())
     }
     #[cfg(feature = "audio")]
-    fn play_audio(&self, wav_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
+    fn play_audio(&self, wav_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
         use hodaun::*;
         #[cfg(feature = "window")]
         if crate::window::use_window() {
             return crate::window::Request::Show(crate::media::SmartOutput::Wav(
                 wav_bytes,
-                _label.map(Into::into),
+                label.map(Into::into),
             ))
             .send();
         }

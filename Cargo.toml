@@ -165,6 +165,7 @@ system = ["libffi?/system"]
 
 [[bin]]
 name = "uiua"
+required-features = ["binary"]
 
 [workspace]
 members = ["site", "tests_ffi", "pad/editor", "parser"]

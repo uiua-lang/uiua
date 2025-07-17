@@ -1179,6 +1179,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .change_directory(&path)
                 .map_err(|e| env.error(e))?;
         }
+        #[cfg_attr(not(feature = "image"), expect(clippy::let_unit_value))]
         SysOp::WebcamCapture => {
             let index = env.pop(1)?.as_nat(env, "Webcam index must be an integer")?;
             let _image = (env.rt.backend)

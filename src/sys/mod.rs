@@ -20,10 +20,7 @@ use time::UtcOffset;
 #[cfg(feature = "native_sys")]
 pub use self::native::*;
 use crate::{
-    algorithm::{multi_output, validate_size},
-    cowslice::cowslice,
-    get_ops, Array, Boxed, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua, UiuaErrorKind,
-    UiuaResult, Value,
+    algorithm::{multi_output, validate_size}, cowslice::cowslice, get_ops, Array, Boxed, FfiArg, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua, UiuaErrorKind, UiuaResult, Value
 };
 
 /// The text of Uiua's example module
@@ -476,7 +473,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         file: &str,
         result_ty: FfiType,
         name: &str,
-        arg_tys: &[FfiType],
+        arg_tys: &[FfiArg],
         args: &[Value],
     ) -> Result<Value, String> {
         Err("FFI is not supported in this environment".into())
@@ -1220,7 +1217,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             let arg_tys = sig_frags
                 .map(|frag| {
                     frag.as_string(env, "FFI argument type must be a string")
-                        .and_then(|ty| ty.parse::<FfiType>().map_err(|e| env.error(e)))
+                        .and_then(|ty| ty.parse::<FfiArg>().map_err(|e| env.error(e)))
                 })
                 .collect::<UiuaResult<Vec<_>>>()?;
             let args = env.pop(2)?;

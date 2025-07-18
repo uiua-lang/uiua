@@ -654,7 +654,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             if ffi_type.len() > 10 {
                 ffi_type = "{…}".to_string();
             }
-            vec![format!("0x{:x}: {}", pointer.ptr, ffi_type).chars().collect()]
+            vec![format!("0x{:x}: {}", pointer.ptr, ffi_type)
+                .chars()
+                .collect()]
         } else if self.rank() == 0 && !self.is_map() {
             // Scalar
             let params = GridFmtParams {

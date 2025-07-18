@@ -3,6 +3,7 @@ pub mod utils;
 
 use std::{
     cell::Cell,
+    fmt::Write,
     iter::{once, repeat_n},
     mem::take,
     path::PathBuf,
@@ -77,7 +78,7 @@ pub fn Editor<'a>(
         id.set(i + 1);
         i
     });
-    let help: Vec<String> = help.iter().map(|s| s.to_string()).collect();
+    let help: Vec<String> = help.iter().copied().map(|s| s.to_string()).collect();
     // Initialize all the examples
     let examples = match mode {
         EditorMode::Example if !nonprogressive => progressive_strings(example),
@@ -129,7 +130,7 @@ pub fn Editor<'a>(
     let (fullscreen_enabled, set_fullscreen_enabled) = create_signal(false);
     let update_token_count = move |code: &str| {
         set_token_count.set(
-            lex(code, (), &mut Default::default())
+            lex(code, (), &mut uiua::Inputs::default())
                 .0
                 .into_iter()
                 .filter(|tok| {
@@ -326,7 +327,7 @@ pub fn Editor<'a>(
             }
             OutputItem::Audio(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
-                let src = format!("data:audio/wav;base64,{}", encoded);
+                let src = format!("data:audio/wav;base64,{encoded}");
                 let label = label.map(|s| format!("{s}:"));
                 if allow_autoplay {
                     view! {
@@ -463,7 +464,7 @@ pub fn Editor<'a>(
             if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
                 return;
             }
-            let new_code = format!("# Experimental!\n{}", code);
+            let new_code = format!("# Experimental!\n{code}");
             let cursor = if let Some((start, end)) = get_code_cursor() {
                 Cursor::Set(start + 16, end + 16)
             } else {
@@ -668,7 +669,7 @@ pub fn Editor<'a>(
                                 if i == 0 || start_line == 1 && i == end_line {
                                     Some(line.into())
                                 } else {
-                                    Some(format!("\n{}", line))
+                                    Some(format!("\n{line}"))
                                 }
                             } else {
                                 None
@@ -690,7 +691,7 @@ pub fn Editor<'a>(
                             let first_char = *chars.first().unwrap();
                             let class = char_class(first_char);
                             let mut encountered_space = false;
-                            for &c in chars.iter() {
+                            for &c in &chars {
                                 if c.is_whitespace() && c != '\n'
                                     || char_class(c) == class && !encountered_space
                                 {
@@ -1105,7 +1106,7 @@ pub fn Editor<'a>(
             .or_else(|| prim.ascii().map(|s| s.to_string()))?;
         let mut title = prim.name().to_string();
         if let Some(ascii) = prim.ascii() {
-            title = format!("({}) {}", ascii, title);
+            title = format!("({ascii}) {title}");
         }
         // Navigate to the docs page on ctrl/shift+click
         let onclick = move |event: MouseEvent| {
@@ -1391,12 +1392,13 @@ pub fn Editor<'a>(
             EditorMode::Showcase | EditorMode::Pad => "medium-editor",
         };
 
-        let editor_layout = match fullscreen_enabled.get() {
-            true => "fullscreen-editor",
-            false => "normal-editor",
+        let editor_layout = if fullscreen_enabled.get() {
+            "fullscreen-editor"
+        } else {
+            "normal-editor"
         };
 
-        format!("editor {} {}", editor_size, editor_layout)
+        format!("editor {editor_size} {editor_layout}")
     };
 
     // Hide the example arrows if there is only one example
@@ -1448,13 +1450,7 @@ pub fn Editor<'a>(
                 .unwrap()
                 .unchecked_into::<HtmlBodyElement>()
                 .style()
-                .set_property(
-                    "overflow",
-                    match *s {
-                        true => "hidden",
-                        false => "auto",
-                    },
-                );
+                .set_property("overflow", if *s { "hidden" } else { "auto" });
             if !*s {
                 set_timeout(
                     move || state.update(|state| state.update_line_number_width()),
@@ -1859,7 +1855,7 @@ pub fn Editor<'a>(
 
     let editor_style = move || {
         if !fullscreen_enabled.get() {
-            return "".to_string();
+            return String::new();
         }
 
         let ratio = splitter_ratio.get();
@@ -2255,12 +2251,12 @@ pub fn Prim(
     let name = if !glyph_only && symbol != prim.name() {
         format!(" {}", prim.name())
     } else {
-        "".to_string()
+        String::new()
     };
     let href = format!("/docs/{}", prim.name());
     let mut title = String::new();
     if let Some(ascii) = prim.ascii() {
-        title.push_str(&format!("({})", ascii));
+        write!(title, "({ascii})").ok();
     }
     if prim.glyph().is_some() && glyph_only {
         if !title.is_empty() {

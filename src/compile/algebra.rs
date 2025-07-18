@@ -17,7 +17,7 @@ pub const DEBUG: bool = false;
 macro_rules! dbgln {
     ($($arg:tt)*) => {
         if DEBUG {
-            println!($($arg)*); // Allow println
+            println!($($arg)*);
         }
     }
 }
@@ -472,13 +472,11 @@ impl<'a> AlgebraEnv<'a> {
                 Complex => {
                     let a = self.pop()?;
                     let b = self.pop()?;
-                    match (a.as_constant(), b.as_constant()) {
-                        (Some(a), Some(b)) => self.stack.push((a * Complex::I + b).into()),
-                        _ => {
-                            let im =
-                                (a * Expr::from(Complex::I)).ok_or(AlgebraError::TooComplex)?;
-                            self.stack.push(b + im);
-                        }
+                    if let (Some(a), Some(b)) = (a.as_constant(), b.as_constant()) {
+                        self.stack.push((a * Complex::I + b).into())
+                    } else {
+                        let im = (a * Expr::from(Complex::I)).ok_or(AlgebraError::TooComplex)?;
+                        self.stack.push(b + im);
                     }
                     self.any_complex = true;
                 }
@@ -642,7 +640,7 @@ impl fmt::Debug for Term {
         match self {
             &Term::X(0.0) => write!(f, "1"),
             &Term::X(1.0) => write!(f, "x"),
-            &Term::X(x) => write!(f, "x^{}", x),
+            &Term::X(x) => write!(f, "x^{x}"),
             Term::Div(expr) => {
                 write!(f, "1/")?;
                 expr.fmt(f)
@@ -757,7 +755,7 @@ impl fmt::Debug for Expr {
                 write!(f, " + ")?;
             }
             if *coef == ONE {
-                write!(f, "{:?}", term)?;
+                write!(f, "{term:?}")?;
             } else if *coef == -ONE {
                 write!(f, "-{term:?}")?;
             } else {

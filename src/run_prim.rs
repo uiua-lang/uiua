@@ -285,7 +285,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             vals.map(keys, env)?;
             env.push(vals);
         }
-        Primitive::Stack => stack(env, false)?,
+        Primitive::Stack => stack(env, false),
         Primitive::Regex => regex(env)?,
         Primitive::Hsv => env.monadic_env(Value::rgb_to_hsv)?,
         Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
@@ -501,7 +501,7 @@ pub fn run_prim_mod(prim: &Primitive, ops: Ops, env: &mut Uiua) -> UiuaResult {
             let [f] = get_ops(ops, env)?;
             env.spawn(true, f)?;
         }
-        Primitive::Sys(op) => run_sys_op_mod(op, ops, env)?,
+        &Primitive::Sys(op) => run_sys_op_mod(op, ops, env)?,
         prim => {
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(
@@ -671,7 +671,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
             ImplPrimitive::StackN { n, inverse } => stack_n(env, *n, *inverse)?,
-            ImplPrimitive::UnStack => stack(env, true)?,
+            ImplPrimitive::UnStack => stack(env, true),
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
@@ -1525,7 +1525,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
             regex
         } else {
             let regex =
-                Regex::new(&pattern).map_err(|e| env.error(format!("Invalid pattern: {}", e)))?;
+                Regex::new(&pattern).map_err(|e| env.error(format!("Invalid pattern: {e}")))?;
             cache.entry(pattern.clone()).or_insert(regex.clone())
         };
 
@@ -1535,7 +1535,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
         for caps in regex.captures_iter(&target) {
             let row: EcoVec<Boxed> = caps
                 .iter()
-                .flat_map(|m| {
+                .filter_map(|m| {
                     m.map(|m| Boxed(Value::from(m.as_str()))).or_else(|| {
                         env.value_fill()
                             .map(|fv| fv.value.clone())
@@ -1606,7 +1606,7 @@ fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
     Ok(())
 }
 
-fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
+fn stack(env: &Uiua, inverse: bool) {
     let span = if inverse {
         format!("{}{} {}", Primitive::Un, Primitive::Stack, env.span())
     } else {
@@ -1639,7 +1639,6 @@ fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
         env.rt.backend.print_str_trace("╴");
     }
     env.rt.backend.print_str_trace("\n");
-    Ok(())
 }
 
 fn dump(ops: Ops, env: &mut Uiua, inverse: bool) -> UiuaResult {
@@ -2052,22 +2051,32 @@ mod tests {
                     {
                         continue;
                     }
-                    println!("{prim} example:\n{}", ex.input); // Allow println
+                    println!("{prim} example:\n{}", ex.input);
                     let mut env = Uiua::with_backend(SafeSys::with_thread_spawning());
                     match env.run_str(&ex.input) {
                         Ok(mut comp) => {
                             if let Some(diag) = comp.take_diagnostics().into_iter().next() {
-                                if !ex.should_error {
-                                    panic!("\nExample failed:\n{}\n{}", ex.input, diag.report());
-                                }
-                            } else if ex.should_error {
-                                panic!("Example should have failed: {}", ex.input);
+                                assert!(
+                                    ex.should_error,
+                                    "\nExample failed:\n{}\n{}",
+                                    ex.input,
+                                    diag.report()
+                                );
+                            } else {
+                                assert!(
+                                    !ex.should_error,
+                                    "Example should have failed: {}",
+                                    ex.input
+                                );
                             }
                         }
                         Err(e) => {
-                            if !ex.should_error {
-                                panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
-                            }
+                            assert!(
+                                ex.should_error,
+                                "\nExample failed:\n{}\n{}",
+                                ex.input,
+                                e.report()
+                            );
                         }
                     }
                 }
@@ -2187,7 +2196,7 @@ mod tests {
                         start.push(c);
                         end.push_str(")?");
                     }
-                    format!("{}{}", start, end)
+                    format!("{start}{end}")
                 })
                 .collect();
             let format_names = format_names.join("|");
@@ -2200,7 +2209,7 @@ mod tests {
             literal_names.reverse();
             let literal_names = literal_names.join("");
             format!(
-                r#"[{glyphs}]|(?<![a-zA-Z$])({format_names}{literal_names})(?![a-zA-Z]){additional}"#
+                r"[{glyphs}]|(?<![a-zA-Z$])({format_names}{literal_names})(?![a-zA-Z]){additional}"
             )
         }
 

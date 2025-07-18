@@ -9,7 +9,7 @@ use std::{
     slice,
     sync::{
         atomic::{self, AtomicBool, AtomicU64},
-        Arc,
+        Arc, LazyLock,
     },
     thread::sleep,
     time::Duration,
@@ -19,7 +19,6 @@ use colored::Colorize;
 #[cfg(feature = "webcam")]
 use crossbeam_channel as channel;
 use dashmap::DashMap;
-use once_cell::sync::Lazy;
 
 use crate::{
     terminal_size, GitTarget, Handle, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend, Uiua, Value,
@@ -85,7 +84,7 @@ struct WebcamChannel {
 
 #[cfg(feature = "webcam")]
 impl WebcamChannel {
-    fn new(index: usize) -> Result<Self, String> {
+    fn new(index: usize) -> Self {
         use nokhwa::{
             pixel_format::RgbFormat,
             utils::{CameraIndex, RequestedFormat, RequestedFormatType},
@@ -116,10 +115,9 @@ impl WebcamChannel {
                     if recv_tries > 100 {
                         _ = camera.stop_stream();
                         break;
-                    } else {
-                        sleep();
-                        continue;
                     }
+                    sleep();
+                    continue;
                 }
                 recv_tries = 0;
                 let res = camera
@@ -133,10 +131,10 @@ impl WebcamChannel {
                 sleep();
             }
         });
-        Ok(Self {
+        Self {
             send: req_send,
             recv: image_recv,
-        })
+        }
     }
 }
 
@@ -153,15 +151,15 @@ enum TslConnection {
 }
 
 impl Read for &TlsSocket {
-    fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         #[cfg(feature = "tls")]
         {
             match &mut *self.conn.lock() {
                 TslConnection::Client(conn) => {
-                    rustls::Stream::new(conn, &mut &self.stream).read(_buf)
+                    rustls::Stream::new(conn, &mut &self.stream).read(buf)
                 }
                 TslConnection::Server(conn) => {
-                    rustls::Stream::new(conn, &mut &self.stream).read(_buf)
+                    rustls::Stream::new(conn, &mut &self.stream).read(buf)
                 }
             }
         }
@@ -171,15 +169,15 @@ impl Read for &TlsSocket {
 }
 
 impl Write for &TlsSocket {
-    fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         #[cfg(feature = "tls")]
         {
             match &mut *self.conn.lock() {
                 TslConnection::Client(conn) => {
-                    rustls::Stream::new(conn, &mut &self.stream).write(_buf)
+                    rustls::Stream::new(conn, &mut &self.stream).write(buf)
                 }
                 TslConnection::Server(conn) => {
-                    rustls::Stream::new(conn, &mut &self.stream).write(_buf)
+                    rustls::Stream::new(conn, &mut &self.stream).write(buf)
                 }
             }
         }
@@ -220,7 +218,7 @@ impl Default for GlobalNativeSys {
             audio_time_socket: parking_lot::Mutex::new(None),
             colored_errors: DashMap::new(),
             #[cfg(feature = "ffi")]
-            ffi: Default::default(),
+            ffi: crate::FfiState::default(),
             #[cfg(all(feature = "gif", feature = "invoke"))]
             gifs_child: parking_lot::Mutex::new(None),
         }
@@ -277,7 +275,7 @@ impl GlobalNativeSys {
     }
 }
 
-static NATIVE_SYS: Lazy<GlobalNativeSys> = Lazy::new(Default::default);
+static NATIVE_SYS: LazyLock<GlobalNativeSys> = LazyLock::new(Default::default);
 
 #[cfg(all(feature = "audio", feature = "binary"))]
 #[doc(hidden)]
@@ -359,7 +357,7 @@ impl SysBackend for NativeSys {
             match b {
                 #[cfg(feature = "raw_mode")]
                 b'\r' if rawrrr::is_raw() => break,
-                b'\r' => continue,
+                b'\r' => {}
                 b'\n' | 3 => break,
                 b => buffer.push(b),
             }
@@ -642,9 +640,10 @@ impl SysBackend for NativeSys {
     fn allow_thread_spawning(&self) -> bool {
         true
     }
+    #[allow(clippy::print_stdout)]
     #[cfg(all(feature = "terminal_image", feature = "image"))]
-    fn show_image(&self, image: image::DynamicImage, _label: Option<&str>) -> Result<(), String> {
-        let (_width, _height) = if let Some((w, h)) = terminal_size() {
+    fn show_image(&self, image: image::DynamicImage, label: Option<&str>) -> Result<(), String> {
+        let (width, height) = if let Some((w, h)) = terminal_size() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), (image.height() / 2).max(1));
             let scaled_to_height = (iw * th / ih.max(1), th);
@@ -658,9 +657,7 @@ impl SysBackend for NativeSys {
         } else {
             (None, None)
         };
-        if std::env::var("TERM")
-            .unwrap_or("".to_owned())
-            .contains("sixel")
+        if std::env::var("TERM").is_ok_and(|s| s.contains("sixel"))
             || std::env::var("UIUA_ENABLE_SIXEL").is_ok_and(|s| s == "1")
         {
             let img_rgba8 = image.to_rgba8();
@@ -683,15 +680,15 @@ impl SysBackend for NativeSys {
                 return crate::window::Request::Show(crate::media::SmartOutput::Png(
                     crate::media::image_to_bytes(&image, image::ImageFormat::Png)
                         .map_err(|e| e.to_string())?,
-                    _label.map(Into::into),
+                    label.map(Into::into),
                 ))
                 .send();
             }
             viuer::print(
                 &image,
                 &viuer::Config {
-                    width: _width,
-                    height: _height,
+                    width,
+                    height,
                     absolute_offset: false,
                     transparent: true,
                     ..Default::default()
@@ -702,12 +699,12 @@ impl SysBackend for NativeSys {
         }
     }
     #[cfg(all(feature = "gif", feature = "invoke"))]
-    fn show_gif(&self, gif_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
+    fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
         #[cfg(feature = "window")]
         if crate::window::use_window() {
             return crate::window::Request::Show(crate::media::SmartOutput::Gif(
                 gif_bytes,
-                _label.map(Into::into),
+                label.map(Into::into),
             ))
             .send();
         }
@@ -756,13 +753,13 @@ impl SysBackend for NativeSys {
         .map_err(|e| e.to_string())
     }
     #[cfg(feature = "audio")]
-    fn play_audio(&self, wav_bytes: Vec<u8>, _label: Option<&str>) -> Result<(), String> {
+    fn play_audio(&self, wav_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
         use hodaun::*;
         #[cfg(feature = "window")]
         if crate::window::use_window() {
             return crate::window::Request::Show(crate::media::SmartOutput::Wav(
                 wav_bytes,
-                _label.map(Into::into),
+                label.map(Into::into),
             ))
             .send();
         }
@@ -909,8 +906,10 @@ impl SysBackend for NativeSys {
     #[cfg(feature = "tls")]
     fn tls_connect(&self, addr: &str) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
-        let root_store =
-            rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+        let root_store = webpki_roots::TLS_SERVER_ROOTS
+            .iter()
+            .cloned()
+            .collect::<rustls::RootCertStore>();
         let config = rustls::ClientConfig::builder()
             .with_root_certificates(root_store)
             .with_no_client_auth();
@@ -1064,7 +1063,7 @@ impl SysBackend for NativeSys {
     fn webcam_capture(&self, index: usize) -> Result<crate::WebcamImage, String> {
         let cam_channels = &NATIVE_SYS.cam_channels;
         if !cam_channels.contains_key(&index) {
-            let ch = WebcamChannel::new(index)?;
+            let ch = WebcamChannel::new(index);
             cam_channels.insert(index, ch);
         }
         let ch = cam_channels.get_mut(&index).unwrap();
@@ -1075,7 +1074,7 @@ impl SysBackend for NativeSys {
                 Err("Failed to interact with webcam".into())
             }
         } else {
-            let ch = WebcamChannel::new(index)?;
+            let ch = WebcamChannel::new(index);
             cam_channels.insert(index, ch);
             let ch = cam_channels.get_mut(&index).unwrap();
             if ch.send.send(()).is_ok() {
@@ -1210,27 +1209,28 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.git_paths.insert(url.to_string(), res.clone());
         res
     }
+    #[allow(clippy::print_stdout)]
     fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
         if !self.output_enabled() {
             return Ok(true);
         }
         match env.span() {
-            #[rustfmt::skip]
-            Span::Code(span) => println!( // Allow println
+            Span::Code(span) => println!(
                 "{} at {span} {}",
                 "&b".truecolor(237, 94, 106),
                 "(press enter to continue)".bright_black()
             ),
             Span::Builtin => {}
         }
-        println!(); // Allow println
+        println!();
         print_stack(env.stack(), true);
-        println!(); // Allow println
+        println!();
         _ = stdin().read_line(&mut String::new());
         Ok(true)
     }
 }
 
+#[allow(clippy::print_stdout)]
 #[doc(hidden)]
 pub fn print_stack(stack: &[Value], color: bool) {
     #[cfg(feature = "window")]
@@ -1244,8 +1244,7 @@ pub fn print_stack(stack: &[Value], color: bool) {
         )
         .send();
         _ = Request::ClearBeforeNext.send();
-        #[rustfmt::skip]
-        println!( // Allow println
+        println!(
             "{} value{} displayed in window",
             stack.len(),
             if stack.len() == 1 { "" } else { "s" }
@@ -1257,7 +1256,7 @@ pub fn print_stack(stack: &[Value], color: bool) {
     }
     if stack.len() == 1 || !color {
         for value in stack {
-            println!("{}", value.show()); // Allow println
+            println!("{}", value.show());
         }
         return;
     }
@@ -1276,6 +1275,6 @@ pub fn print_stack(stack: &[Value], color: bool) {
             5 => (w, b, w),
             _ => unreachable!(),
         };
-        println!("{}", value.show().truecolor(r, g, b)); // Allow println
+        println!("{}", value.show().truecolor(r, g, b));
     }
 }

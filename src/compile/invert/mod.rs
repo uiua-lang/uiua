@@ -32,7 +32,7 @@ pub(crate) const DEBUG: bool = false;
 macro_rules! dbgln {
     ($($arg:tt)*) => {
         if crate::compile::invert::DEBUG {
-            println!($($arg)*); // Allow println
+            println!($($arg)*);
         }
     }
 }
@@ -285,7 +285,7 @@ impl From<SigCheckError> for InversionError {
     }
 }
 impl From<()> for InversionError {
-    fn from(_: ()) -> Self {
+    fn from((): ()) -> Self {
         InversionError::Generic
     }
 }
@@ -334,7 +334,7 @@ pub(crate) fn match_format_pattern(parts: EcoVec<EcoString>, env: &mut Uiua) -> 
                 if !re.is_match(val.as_ref()) {
                     return Err(
                         if let Some(part) = parts.iter().find(|part| !val.contains(part.as_str())) {
-                            env.error(format!("String does not contain {:?}", part))
+                            env.error(format!("String does not contain {part:?}"))
                         } else {
                             env.error("String did not match format string pattern")
                         },

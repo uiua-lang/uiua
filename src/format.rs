@@ -113,8 +113,9 @@ macro_rules! create_config {
 
         #[test]
         fn generate_format_cfg_docs() {
+            use std::fmt::Write;
             paste! {
-                let mut s: String = r#"
+                let mut s: String = r"
 # Uiua Formatter Configuration
 
 You can configure Uiua's formatter by creating a file called `.fmt.ua` in the directory from which you run the interpreter. This configuration file is also a Uiua program.
@@ -123,21 +124,22 @@ Configuration options are specified by binding values to specific names.
 
 Example with default values:
 ```uiua
-"#.into();
+".into();
                 $(
-                    s.push_str(&format!("{} ← {}\n", stringify!([<$name:camel>]), default_to_uiua!($default)));
+                    write!(s, "{} ← {}\n", stringify!([<$name:camel>]), default_to_uiua!($default)).ok()
+                    ;
                 )*
-                s.push_str(r#"```
+                s.push_str(r"```
 The following configuration options are available:
 
-"#);
+");
 
                 $(
-                    s.push_str(&format!("### {}\n", stringify!([<$name:camel>])));
-                    s.push_str(&format!("Type: {}\n\n", param_type!($ty)));
-                    s.push_str(&format!("Default: `{}`\n\n", default_to_uiua!($default)));
-                    $(s.push_str(&format!("{}\n", $doc.trim()));)*
-                    s.push_str("\n---\n\n");
+                    writeln!(s, "### {}", stringify!([<$name:camel>])).ok();
+                    writeln!(s, "Type: {}\n", param_type!($ty)).ok();
+                    writeln!(s, "Default: `{}`\n", default_to_uiua!($default)).ok();
+                    $(writeln!(s, "{}", $doc.trim()).ok();)*
+                    writeln!(s, "\n---\n").ok();
                 )*
 
                 fs::write("site/text/format_config.md", s).unwrap();
@@ -609,7 +611,7 @@ impl Formatter<'_> {
                     // Update subsequent mappings
                     let byte_len_diff = line.len() - start_byte_len - 1;
                     let char_len_diff = line.chars().count() - start_char_len - 1;
-                    for (before, after) in self.glyph_map.iter_mut() {
+                    for (before, after) in &mut self.glyph_map {
                         if before.start.line as usize > line_number {
                             after.0.byte_pos += byte_len_diff as u32;
                             after.0.char_pos += char_len_diff as u32;
@@ -674,7 +676,7 @@ impl Formatter<'_> {
             }
             Item::Words(words) => {
                 self.prev_import_function = None;
-                let lines = flip_unsplit_lines(split_words(words.to_vec()));
+                let lines = flip_unsplit_lines(split_words(words.clone()));
                 let extra_newlines = lines.len() > 1 && self.output.ends_with('(') && depth > 0;
                 for (i, line) in lines.into_iter().enumerate() {
                     let line = trim_spaces(&line, true);
@@ -1437,6 +1439,10 @@ impl Formatter<'_> {
 
             let mut values = env.rt.output_comments;
             if let Err(e) = res {
+                #[expect(
+                    clippy::maybe_infinite_iter,
+                    reason="values doesn't contain all possible keys,so this should terminate at some point",
+                )]
                 let next = (0..).take_while(|i| values.contains_key(i)).count();
                 values.insert(next, vec![vec![e.to_string().into()]]);
             }

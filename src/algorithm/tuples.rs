@@ -54,14 +54,13 @@ fn tuple1(f: SigNode, env: &mut Uiua) -> UiuaResult {
         xs.shape.prepend(0);
         if push_empty_rows_value(&f, [&xs], false, &mut per_meta, env) {
             return Ok(());
-        } else {
-            let mut proxy = xs.proxy_row(env);
-            proxy.fix();
-            env.push(proxy);
-            _ = env.exec_maintain_sig(f);
-            if has_output {
-                results.push(env.pop("tuples' function result")?);
-            }
+        }
+        let mut proxy = xs.proxy_row(env);
+        proxy.fix();
+        env.push(proxy);
+        _ = env.exec_maintain_sig(f);
+        if has_output {
+            results.push(env.pop("tuples' function result")?);
         }
     } else {
         env.without_fill(|env| -> UiuaResult {

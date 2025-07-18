@@ -71,7 +71,7 @@ impl Value {
         let json_value: serde_json::Value = json5::from_str(json).map_err(|e| env.error(e))?;
         Self::from_json_value(json_value, env)
     }
-    pub(crate) fn from_json_value(json_value: serde_json::Value, _env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn from_json_value(json_value: serde_json::Value, env: &Uiua) -> UiuaResult<Self> {
         Ok(match json_value {
             serde_json::Value::Null => f64::NAN.into(),
             serde_json::Value::Bool(b) => b.into(),
@@ -90,7 +90,7 @@ impl Value {
             serde_json::Value::Array(arr) => {
                 let mut rows = Vec::with_capacity(arr.len());
                 for value in arr {
-                    let mut value = Value::from_json_value(value, _env)?;
+                    let mut value = Value::from_json_value(value, env)?;
                     if value.meta.map_keys.is_some() {
                         value = Boxed(value).into();
                     }
@@ -112,7 +112,7 @@ impl Value {
                 let mut values = Vec::with_capacity(map.len());
                 for (k, v) in map {
                     keys.push(Boxed(k.into()));
-                    let mut value = Value::from_json_value(v, _env)?;
+                    let mut value = Value::from_json_value(v, env)?;
                     if value.meta.map_keys.is_some() {
                         value = Boxed(value).into();
                     }
@@ -125,7 +125,7 @@ impl Value {
                 } else {
                     Array::from(values.into_iter().map(Boxed).collect::<EcoVec<_>>()).into()
                 };
-                values.map(keys.into(), _env)?;
+                values.map(keys.into(), env)?;
                 values
             }
         })
@@ -268,17 +268,14 @@ impl Value {
                 let mut rows = Vec::new();
                 for result in reader.records() {
                     let record = result.map_err(|e| env.error(e))?;
-                    let mut row = EcoVec::new();
-                    for field in record.iter() {
-                        row.push(Boxed(field.into()));
-                    }
+                    let row: EcoVec<_> = record.iter().map(|x| Boxed(x.into())).collect();
                     rows.push(Array::new(row.len(), row));
                 }
                 Array::from_row_arrays(rows, env).map(Into::into)
             })
         }
     }
-    pub(crate) fn from_xlsx(_xlsx: &[u8], env: &mut Uiua) -> UiuaResult<Self> {
+    pub(crate) fn from_xlsx(xlsx: &[u8], env: &mut Uiua) -> UiuaResult<Self> {
         #[cfg(not(feature = "calamine"))]
         return Err(env.error("XLSX decoding is not enabled in this environment"));
         #[cfg(feature = "calamine")]
@@ -286,7 +283,7 @@ impl Value {
             use calamine::*;
 
             let mut workbook: Xlsx<_> =
-                open_workbook_from_rs(std::io::Cursor::new(_xlsx)).map_err(|e| env.error(e))?;
+                open_workbook_from_rs(std::io::Cursor::new(xlsx)).map_err(|e| env.error(e))?;
             let sheet_names = workbook.sheet_names();
             let fill = env
                 .value_fill()
@@ -307,9 +304,9 @@ impl Value {
                                 &Data::Float(f) => f.into(),
                                 Data::String(s) => s.clone().into(),
                                 &Data::Bool(b) => b.into(),
-                                Data::DateTime(dt) => {
-                                    ((dt.as_f64() - 2.0) * 24.0 * 60.0 * 60.0 - 2208988800.0).into()
-                                }
+                                Data::DateTime(dt) => ((dt.as_f64() - 2.0) * 24.0 * 60.0 * 60.0
+                                    - 2_208_988_800.0)
+                                    .into(),
                                 Data::DateTimeIso(dt) => dt.clone().into(),
                                 Data::DurationIso(dur) => dur.clone().into(),
                                 Data::Error(e) => e.to_string().into(),
@@ -348,7 +345,7 @@ impl Value {
             "u128" | "i128" => 16,
             "f32" => 4,
             "f64" => 8,
-            _ => return Err(env.error(format!("Invalid byte format: {}", format))),
+            _ => return Err(env.error(format!("Invalid byte format: {format}"))),
         };
         // Early return when a byte array can be reused
         if let Value::Byte(mut arr) = data {
@@ -444,7 +441,7 @@ impl Value {
             "u128" | "i128" => 16,
             "f32" => 4,
             "f64" => 8,
-            _ => return Err(env.error(format!("Invalid byte format: {}", format))),
+            _ => return Err(env.error(format!("Invalid byte format: {format}"))),
         };
         let bytes = match bytes {
             Value::Byte(arr) if format == "u8" => return Ok(arr.into()),
@@ -718,7 +715,7 @@ impl Value {
             let flags_u = *bytes.first().unwrap();
             *bytes = &bytes[1..];
             let flags = ArrayFlags::from_bits(flags_u)
-                .ok_or_else(|| env.error(format!("Invalid array flags {:08b}", flags_u)))?;
+                .ok_or_else(|| env.error(format!("Invalid array flags {flags_u:08b}")))?;
             meta.flags = flags;
 
             // Label

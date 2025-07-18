@@ -1,5 +1,5 @@
 use std::{
-    fmt,
+    fmt::{self, Write},
     hash::{DefaultHasher, Hash, Hasher},
     ops::{Index, IndexMut},
     path::PathBuf,
@@ -249,7 +249,7 @@ impl Assembly {
     /// Serialize the assembly into a `.uasm` file
     pub fn to_uasm(&self) -> String {
         let mut uasm = String::new();
-        for node in self.root.iter() {
+        for node in &self.root {
             uasm.push_str(&serde_json::to_string(node).unwrap());
             uasm.push('\n');
         }
@@ -263,7 +263,7 @@ impl Assembly {
                 if map.len() == 1 {
                     let key = map.keys().next().unwrap();
                     let value = map.values().next().unwrap();
-                    uasm.push_str(&format!("{} {}\n", key, value));
+                    writeln!(uasm, "{key} {value}").ok();
                     continue;
                 }
             }
@@ -293,7 +293,7 @@ impl Assembly {
         for entry in &self.inputs.files {
             let key = entry.key();
             let value = entry.value();
-            uasm.push_str(&format!("{}: {:?}\n", key.display(), value));
+            writeln!(uasm, "{}: {:?}", key.display(), value).ok();
         }
 
         if !self.inputs.strings.is_empty() {
@@ -478,7 +478,7 @@ impl fmt::Display for DocCommentSig {
             for output in outputs {
                 write!(f, " {}", output.name)?;
                 if let Some(ty) = &output.ty {
-                    write!(f, ":{}", ty)?;
+                    write!(f, ":{ty}")?;
                 }
             }
             write!(f, " ")?;
@@ -496,7 +496,7 @@ impl fmt::Display for DocCommentSig {
                 }
                 write!(f, "{}", arg.name)?;
                 if let Some(ty) = &arg.ty {
-                    write!(f, ":{}", ty)?;
+                    write!(f, ":{ty}")?;
                 }
             }
         }
@@ -648,6 +648,6 @@ impl fmt::Debug for Assembly {
         f.debug_struct("Assembly")
             .field("root", &self.root)
             .field("functions", &FmtFunctions(self))
-            .finish()
+            .finish_non_exhaustive() // TODO: maybe show all fields instead?
     }
 }

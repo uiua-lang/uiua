@@ -7,13 +7,12 @@ use std::{
     mem::take,
     net::SocketAddr,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, LazyLock},
     time::Duration,
 };
 
 #[cfg(feature = "image")]
 use image::DynamicImage;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use time::UtcOffset;
 
@@ -45,13 +44,13 @@ use in example Uiua code ✨";
 
 /// Access the built-in `example.ua` file
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
-    static S: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(EXAMPLE_UA.to_string()));
+    static S: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(EXAMPLE_UA.to_string()));
     f(&mut S.lock())
 }
 
 /// Access the built-in `example.txt` file
 pub fn example_txt<T>(f: impl FnOnce(&mut String) -> T) -> T {
-    static S: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(EXAMPLE_TXT.to_string()));
+    static S: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(EXAMPLE_TXT.to_string()));
     f(&mut S.lock())
 }
 
@@ -149,10 +148,10 @@ impl fmt::Display for HandleKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::File(path) => write!(f, "file {}", path.display()),
-            Self::TcpListener(addr) => write!(f, "tcp listener {}", addr),
-            Self::TlsListener(addr) => write!(f, "tls listener {}", addr),
-            Self::TcpSocket(addr) => write!(f, "tcp socket {}", addr),
-            Self::TlsSocket(addr) => write!(f, "tls socket {}", addr),
+            Self::TcpListener(addr) => write!(f, "tcp listener {addr}"),
+            Self::TlsListener(addr) => write!(f, "tls listener {addr}"),
+            Self::TcpSocket(addr) => write!(f, "tcp socket {addr}"),
+            Self::TlsSocket(addr) => write!(f, "tls socket {addr}"),
             Self::ChildStdin(com) => write!(f, "stdin {com}"),
             Self::ChildStdout(com) => write!(f, "stdout {com}"),
             Self::ChildStderr(com) => write!(f, "stderr {com}"),
@@ -1174,13 +1173,14 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .change_directory(&path)
                 .map_err(|e| env.error(e))?;
         }
+        #[cfg_attr(not(feature = "image"), expect(clippy::let_unit_value))]
         SysOp::WebcamCapture => {
             let index = env.pop(1)?.as_nat(env, "Webcam index must be an integer")?;
-            let _image = (env.rt.backend)
+            let image = (env.rt.backend)
                 .webcam_capture(index)
                 .map_err(|e| env.error(e))?;
             #[cfg(feature = "image")]
-            env.push(crate::media::rgb_image_to_array(_image));
+            env.push(crate::media::rgb_image_to_array(image));
             #[cfg(not(feature = "image"))]
             return Err(env.error("Webcam capture is not supported in this environment"));
         }
@@ -1276,7 +1276,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
     }
     Ok(())
 }
-pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult {
+pub(crate) fn run_sys_op_mod(op: SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult {
     match op {
         SysOp::ReadLines => {
             let [f] = get_ops(ops, env)?;
@@ -1367,13 +1367,13 @@ pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult
                 format!(
                     "{} was not handled as a modifier. \
                         This is a bug in the interpreter",
-                    Primitive::Sys(*prim)
+                    Primitive::Sys(prim)
                 )
             } else {
                 format!(
                     "{} was handled as a modifier. \
                         This is a bug in the interpreter",
-                    Primitive::Sys(*prim)
+                    Primitive::Sys(prim)
                 )
             }))
         }

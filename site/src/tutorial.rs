@@ -35,10 +35,10 @@ pub enum TutorialPage {
 }
 
 impl TutorialPage {
-    pub fn path(&self) -> String {
+    pub fn path(self) -> String {
         format!("{self:?}").to_lowercase()
     }
-    pub fn title(&self) -> &'static str {
+    pub fn title(self) -> &'static str {
         match self {
             Self::Introduction => "Introduction",
             Self::Basic => "Basic Stack Operations and Formatting",
@@ -144,6 +144,11 @@ impl IntoParam for TutorialPage {
     }
 }
 
+#[expect(
+    clippy::unicode_not_nfc,
+    reason = "the suggested CJK characters don't look as good",
+    // TODO: maybe replace with better "arrows" that don't use characters
+)]
 #[component]
 fn TutorialNav(page: TutorialPage) -> impl IntoView {
     let next = move || {
@@ -1430,9 +1435,9 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=2
             prompt="returns the last word of a string"
             example=r#""What's the last word?""#
-            answer=r#"▽ ⍜⇌\× ⊸≠@ "#
+            answer=r"▽ ⍜⇌\× ⊸≠@ "
             tests={&[r#""Um, I um, arrays""#, r#""I like trains""#]}
-            hidden=r#"Wow"#/>
+            hidden=r"Wow"/>
 
         <Challenge
             number=3

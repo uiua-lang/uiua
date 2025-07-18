@@ -140,8 +140,8 @@ struct ThisThread {
 impl Default for ThisThread {
     fn default() -> Self {
         Self {
-            parent: Default::default(),
-            children: Default::default(),
+            parent: None,
+            children: HashMap::new(),
             next_child_id: 1,
         }
     }
@@ -183,7 +183,7 @@ impl FromStr for RunMode {
             "normal" => Ok(RunMode::Normal),
             "test" => Ok(RunMode::Test),
             "all" => Ok(RunMode::All),
-            _ => Err(format!("unknown run mode `{}`", s)),
+            _ => Err(format!("unknown run mode `{s}`")),
         }
     }
 }
@@ -274,9 +274,10 @@ impl Uiua {
         take(&mut self.rt.reports)
     }
     /// Print all pending reports
+    #[allow(clippy::print_stdout)]
     pub fn print_reports(&mut self) {
         for report in self.take_reports() {
-            println!("{report}"); // Allow println
+            println!("{report}");
         }
     }
     /// Take the assembly
@@ -537,7 +538,7 @@ impl Uiua {
                         }
                     }
                     BindingKind::Func(f) => {
-                        self.respect_recursion_limit().and_then(|_| self.call(&f))
+                        self.respect_recursion_limit().and_then(|()| self.call(&f))
                     }
                     BindingKind::Import { .. } | BindingKind::Module(_) | BindingKind::Scope(_) => {
                         Err(self.error(
@@ -790,11 +791,11 @@ impl Uiua {
                 Ok(())
             }
         };
+        #[allow(clippy::print_stdout)]
         if self.rt.time_instrs {
             let end_time = self.rt.backend.now();
             let padding = self.rt.call_stack.len().saturating_sub(1) * 2;
-            #[rustfmt::skip]
-            println!( // Allow println
+            println!(
                 "  ⏲{:padding$}{:.2}ms - {}",
                 "",
                 end_time - self.rt.last_time,
@@ -1499,7 +1500,7 @@ impl Uiua {
         }
     }
     /// Spawn a thread
-    pub(crate) fn spawn(&mut self, _pool: bool, f: SigNode) -> UiuaResult {
+    pub(crate) fn spawn(&mut self, pool: bool, f: SigNode) -> UiuaResult {
         if !self.rt.backend.allow_thread_spawning() {
             return Err(self.error("Thread spawning is not allowed in this environment"));
         }
@@ -1554,7 +1555,7 @@ impl Uiua {
         #[cfg(not(target_arch = "wasm32"))]
         let recv = {
             let (send, recv) = crossbeam_channel::unbounded();
-            if _pool {
+            if pool {
                 let max_threads = std::thread::available_parallelism()
                     .map(|p| p.get())
                     .unwrap_or(1);
@@ -1567,11 +1568,11 @@ impl Uiua {
                     std::thread::yield_now();
                 }
                 let mut env = make_env();
-                pool.execute(move || _ = send.send(env.exec(f).map(|_| env.take_stack())));
+                pool.execute(move || _ = send.send(env.exec(f).map(|()| env.take_stack())));
             } else {
                 let mut env = make_env();
                 std::thread::Builder::new()
-                    .spawn(move || _ = send.send(env.exec(f).map(|_| env.take_stack())))
+                    .spawn(move || _ = send.send(env.exec(f).map(|()| env.take_stack())))
                     .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
             }
             recv
@@ -1743,7 +1744,7 @@ impl Uiua {
 
 /// A trait for types that can be used as argument specifiers for [`Uiua::pop`]
 ///
-/// If the stack is empty, the error message will be "Stack was empty when getting {arg_name}"
+/// If the stack is empty, the error message will be "Stack was empty when getting {`arg_name`}"
 pub trait StackArg {
     /// Get the name of the argument
     fn arg_name(self) -> String;

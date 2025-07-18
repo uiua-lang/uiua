@@ -9,8 +9,9 @@ use ecow::{eco_vec, EcoVec};
 use serde::*;
 
 use crate::{
-    algorithm::pervade::derive_new_shape, grid_fmt::GridFmt, is_default, Array, Boxed, Primitive,
-    Shape, Uiua, UiuaResult, Value,
+    algorithm::pervade::derive_new_shape,
+    grid_fmt::{GridFmt, GridFmtParams},
+    is_default, Array, Boxed, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
 macro_rules! ga_op {
@@ -367,9 +368,9 @@ fn fast_dyadic_complex(
         drop(b);
         for chunk in a.data.as_mut_slice().chunks_exact_mut(2) {
             let [ar, ai] = [chunk[0], chunk[1]];
-            let [r, i] = f(ar, ai, ar, ai);
-            chunk[0] = r;
-            chunk[1] = i;
+            let [real, imag] = f(ar, ai, ar, ai);
+            chunk[0] = real;
+            chunk[1] = imag;
         }
         Ok(a)
     } else {
@@ -381,9 +382,9 @@ fn fast_dyadic_complex(
                     .zip(b.data.as_mut_slice().chunks_exact_mut(2))
                 {
                     let [ar, ai, br, bi] = [a[0], a[1], b[0], b[1]];
-                    let [r, i] = f(ar, ai, br, bi);
-                    b[0] = r;
-                    b[1] = i;
+                    let [real, imag] = f(ar, ai, br, bi);
+                    b[0] = real;
+                    b[1] = imag;
                 }
                 Ok(b)
             }
@@ -391,9 +392,9 @@ fn fast_dyadic_complex(
                 let [br, bi] = [b.data[0], b.data[1]];
                 for a in a.data.as_mut_slice().chunks_exact_mut(2) {
                     let [ar, ai] = [a[0], a[1]];
-                    let [r, i] = f(ar, ai, br, bi);
-                    a[0] = r;
-                    a[1] = i;
+                    let [real, imag] = f(ar, ai, br, bi);
+                    a[0] = real;
+                    a[1] = imag;
                 }
                 Ok(a)
             }
@@ -401,9 +402,9 @@ fn fast_dyadic_complex(
                 let [ar, ai] = [a.data[0], a.data[1]];
                 for b in b.data.as_mut_slice().chunks_exact_mut(2) {
                     let [br, bi] = [b[0], b[1]];
-                    let [r, i] = f(ar, ai, br, bi);
-                    b[0] = r;
-                    b[1] = i;
+                    let [real, imag] = f(ar, ai, br, bi);
+                    b[0] = real;
+                    b[1] = imag;
                 }
                 Ok(b)
             }
@@ -898,7 +899,7 @@ impl Metrics {
         }
         metrics
     }
-    pub const fn get(&self, index: usize) -> i8 {
+    pub const fn get(self, index: usize) -> i8 {
         let bits = (self.0 >> (2 * index)) & 0b11;
         match bits {
             0b00 => 1,
@@ -1259,7 +1260,7 @@ pub fn unparse(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Value> {
             }
             let mask = mask_table[i];
             if n.abs() != 1.0 || mask == 0 {
-                let n_grid = n.abs().fmt_grid(Default::default());
+                let n_grid = n.abs().fmt_grid(GridFmtParams::default());
                 s.extend(n_grid.into_iter().next().unwrap());
             }
             if mask == 0 {

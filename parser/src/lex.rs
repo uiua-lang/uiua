@@ -95,7 +95,7 @@ impl fmt::Display for LexError {
             LexError::ExpectedCharacter(chars) if chars.len() == 2 => {
                 write!(f, "Expected {:?} or {:?}", chars[0], chars[1])
             }
-            LexError::ExpectedCharacter(chars) => write!(f, "Expected one of {:?}", chars),
+            LexError::ExpectedCharacter(chars) => write!(f, "Expected one of {chars:?}"),
             LexError::InvalidEscape(c) => write!(f, "Invalid escape character {c:?}"),
             LexError::InvalidUnicodeEscape(c) => write!(f, "Invalid unicode escape \\\\{c:x}"),
             LexError::InvalidEscapeSequence(c) => write!(f, "Invalid escape \\\\{c}"),
@@ -324,7 +324,7 @@ impl fmt::Display for CodeSpan {
                 let mut file: String = path.to_string_lossy().into_owned();
                 if let Some(s) = file.strip_prefix("C:\\Users\\") {
                     if let Some((_, sub)) = s.split_once('\\') {
-                        file = format!("~\\{}", sub);
+                        file = format!("~\\{sub}");
                     } else {
                         file = s.to_string();
                     }
@@ -1351,7 +1351,7 @@ impl<'a> Lexer<'a> {
                     while self.next_char_exact(" ") || self.next_char_exact("\t") {}
                     self.end(Spaces, start)
                 }
-                c if c.chars().all(|c| c.is_whitespace()) => continue,
+                c if c.chars().all(|c| c.is_whitespace()) => {}
                 c => {
                     if c.chars().count() == 1 {
                         let c = c.chars().next().unwrap();
@@ -1364,7 +1364,7 @@ impl<'a> Lexer<'a> {
                     self.errors
                         .push(self.end_span(start).sp(LexError::UnexpectedChar(c.into())));
                 }
-            };
+            }
         }
 
         (self.tokens, self.errors)

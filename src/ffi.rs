@@ -119,7 +119,7 @@ impl FromStr for FfiType {
             "unsigned int" => FfiType::UInt,
             "unsigned long" => FfiType::ULong,
             "unsigned long long" => FfiType::ULongLong,
-            _ => return Err(format!("Unknown FFI type: {}", s)),
+            _ => return Err(format!("Unknown FFI type: {s}")),
         })
     }
 }
@@ -160,7 +160,7 @@ impl fmt::Display for FfiType {
                     if i > 0 {
                         write!(f, "; ")?;
                     }
-                    write!(f, "{}", field)?;
+                    write!(f, "{field}")?;
                 }
                 write!(f, "}}")
             }
@@ -236,7 +236,7 @@ mod enabled {
     macro_rules! dbgln {
         ($($arg:tt)*) => {
             if DEBUG {
-                println!($($arg)*); // Allow println
+                println!($($arg)*);
             }
         }
     }
@@ -357,7 +357,7 @@ mod enabled {
                                 .into(),
                         );
                         // Clean up the pointer's memory
-                        drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
+                        drop(Vec::from_raw_parts(ptr.cast_mut(), len, len));
                     }
                 };
             }
@@ -397,7 +397,7 @@ mod enabled {
                         let slice = slice::from_raw_parts(ptr, size);
                         results.push(bindings.struct_repr_to_value(slice, fields)?);
                         // Clean up the pointer's memory
-                        drop(Vec::from_raw_parts(ptr as *mut u8, size, size));
+                        drop(Vec::from_raw_parts(ptr.cast_mut(), size, size));
                     },
                     FfiType::Void => ret_ptr!(()),
                     FfiType::UChar => ret_ptr!(c_uchar),
@@ -656,7 +656,7 @@ mod enabled {
         }
         fn alloc_and_push_ptr_to<T: Any + Copy + std::fmt::Debug>(&mut self, arg: T) -> *mut () {
             let mut bx = Box::<T>::new(arg);
-            let ptr: *mut T = &mut *bx;
+            let ptr = &raw mut *bx;
             dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
             self.arg_data.push(Box::new((ptr, bx)));
             self.args.push(Arg::new(
@@ -686,9 +686,13 @@ mod enabled {
                 (self.arg_data.last().unwrap().downcast_ref::<T>())
                     .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>())),
             ));
-            (self.arg_data.last().unwrap().downcast_ref::<T>())
-                .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>()))
-                as *const T as *mut ()
+            std::ptr::from_ref(
+                self.arg_data
+                    .last()
+                    .unwrap()
+                    .downcast_ref::<T>()
+                    .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>())),
+            ) as *mut ()
         }
         fn push_repr(&mut self, arg: Vec<u8>) -> *mut () {
             self.arg_data.push(Box::new(arg));
@@ -729,7 +733,7 @@ mod enabled {
             let ptr = if arg.is_empty() {
                 ptr::null_mut()
             } else {
-                &mut arg[0] as *mut T
+                &raw mut arg[0]
             };
             dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
             let storage = (ptr, arg);
@@ -792,7 +796,7 @@ mod enabled {
                 .or_else(|| {
                     any.downcast_ref::<ListStorage<T>>().map(|(_, b)| {
                         dbgln!("  list type");
-                        (&b[0], Some(&b[0] as *const T as *mut T))
+                        (&b[0], Some(std::ptr::from_ref(&b[0]).cast_mut()))
                     })
                 })
         }
@@ -1188,7 +1192,7 @@ mod enabled {
                         }
                     },
                     FfiType::Void => return Err("Cannot have void fields in a struct".into()),
-                    _ => {
+                    FfiType::List { .. } => {
                         return Err(format!(
                             "Invalid or unsupported struct field {i} type {field}"
                         ))
@@ -1276,7 +1280,7 @@ mod enabled {
         if ptr.is_null() {
             return;
         }
-        let ptr = ptr as *mut ();
+        let ptr = ptr.cast_mut();
         unsafe {
             let _ = Box::from_raw(ptr);
         }

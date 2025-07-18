@@ -31,13 +31,13 @@ pub enum SmartOutput {
 const MIN_AUTO_IMAGE_DIM: usize = 30;
 
 impl SmartOutput {
-    /// Convert a value to a SmartOutput
+    /// Convert a value to a `SmartOutput`
     ///
     /// Animations default to GIF
     pub fn from_value(value: Value, frame_rate: f64, backend: &dyn SysBackend) -> Self {
         Self::from_value_impl(value, frame_rate, false, backend)
     }
-    /// Convert a value to a SmartOutput
+    /// Convert a value to a `SmartOutput`
     ///
     /// Animations default to APNG
     pub fn from_value_prefer_apng(value: Value, frame_rate: f64, backend: &dyn SysBackend) -> Self {
@@ -147,7 +147,7 @@ pub(crate) fn image_encode(env: &mut Uiua) -> UiuaResult {
             "ico" => ImageFormat::Ico,
             "qoi" => ImageFormat::Qoi,
             "webp" => ImageFormat::WebP,
-            format => return Err(env.error(format!("Invalid image format: {}", format))),
+            format => return Err(env.error(format!("Invalid image format: {format}"))),
         };
         let bytes =
             crate::media::value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
@@ -339,8 +339,7 @@ pub fn rgba_image_to_array(image: image::RgbaImage) -> Array<f64> {
 #[doc(hidden)]
 #[cfg(feature = "image")]
 pub fn image_bytes_to_array(bytes: &[u8], gray: bool, alpha: bool) -> Result<Array<f64>, String> {
-    let image =
-        image::load_from_memory(bytes).map_err(|e| format!("Failed to read image: {}", e))?;
+    let image = image::load_from_memory(bytes).map_err(|e| format!("Failed to read image: {e}"))?;
     Ok(match (gray, alpha) {
         (false, false) => rgb_image_to_array(image.into_rgb8()),
         (false, true) => {
@@ -586,8 +585,7 @@ pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
         }
         (SampleFormat::Float, 32) => array_from_wav_bytes_impl::<f32>(&mut reader, |f| f as f64),
         (sample_format, bits_per_sample) => Err(format!(
-            "Unsupported sample format: {:?} {} bits per sample",
-            sample_format, bits_per_sample
+            "Unsupported sample format: {sample_format:?} {bits_per_sample} bits per sample"
         )),
     }
 }
@@ -742,7 +740,7 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     let first_frame = decoder.read_next_frame()?.unwrap();
     let gif_width = first_frame.width as usize;
     let gif_height = first_frame.height as usize;
-    let mut data: crate::cowslice::CowSlice<f64> = Default::default();
+    let mut data = crate::cowslice::CowSlice::new();
     let mut frame_count = 1;
     let mut delay_sum = first_frame.delay as f64 / 100.0;
     // Init frame data with the first frame
@@ -851,6 +849,7 @@ builtin_params!(
     (Camera, "The position of the camera"),
 );
 
+#[expect(clippy::many_single_char_names, reason = "TODO")]
 pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
     let args = take(&mut env.rt.set_args);
     let converted: Array<f64>;
@@ -1484,7 +1483,7 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
         let mut canvas_data = if let Some(bg) = bg {
             let color = match &*bg.shape {
                 [] | [1] => [bg.data[0], bg.data[0], bg.data[0], 1.0],
-                [3] | [4] => {
+                [3 | 4] => {
                     let alpha = bg.data.get(3).copied().unwrap_or(1.0);
                     [bg.data[0], bg.data[1], bg.data[2], alpha]
                 }

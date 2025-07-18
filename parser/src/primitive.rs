@@ -229,11 +229,11 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     /// The modified signature of the primitive given a subscript
-    pub fn subscript_sig(&self, sub: Option<Subscript>) -> Option<Signature> {
+    pub fn subscript_sig(&self, sub: Option<&Subscript>) -> Option<Signature> {
         use Primitive::*;
         let sub = sub?;
-        let n = match sub.num? {
-            NumericSubscript::N(n) => Some(n),
+        let n = match sub.num.as_ref()? {
+            NumericSubscript::N(n) => Some(*n),
             _ => None,
         };
         Some(match (self, n) {

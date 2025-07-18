@@ -720,18 +720,17 @@ impl Spanner {
                 }
                 #[allow(clippy::match_single_binding)]
                 Word::Subscripted(sub) => {
-                    let n = Some(sub.script.value);
+                    let n = Some(sub.script.value.clone());
                     match &sub.word.value {
                         Word::Modified(m) => {
                             match &m.modifier.value {
                                 Modifier::Primitive(p) => {
                                     spans.push(
-                                        m.modifier.span.clone().sp(SpanKind::Primitive(*p, n)),
+                                        (m.modifier.span.clone())
+                                            .sp(SpanKind::Primitive(*p, n.clone())),
                                     );
                                     spans.push(
-                                        sub.script
-                                            .span
-                                            .clone()
+                                        (sub.script.span.clone())
                                             .sp(SpanKind::Subscript(Some(*p), n)),
                                     );
                                 }
@@ -758,7 +757,9 @@ impl Spanner {
                             spans.extend(self.words_spans(&m.operands));
                         }
                         Word::Primitive(p) => {
-                            spans.push((sub.word.span.clone()).sp(SpanKind::Primitive(*p, n)));
+                            spans.push(
+                                (sub.word.span.clone()).sp(SpanKind::Primitive(*p, n.clone())),
+                            );
                             spans
                                 .push(sub.script.span.clone().sp(SpanKind::Subscript(Some(*p), n)));
                         }
@@ -1599,7 +1600,7 @@ mod server {
             let mut tokens = Vec::new();
             let mut prev_line = 0;
             let mut prev_char = 0;
-            let for_prim = |p: Primitive, sub: Option<Subscript>| {
+            let for_prim = |p: Primitive, sub: Option<&Subscript>| {
                 let args = p.subscript_sig(sub).map(|sig| sig.args()).or(p.args());
                 Some(match p.class() {
                     PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
@@ -1625,7 +1626,7 @@ mod server {
                     SpanKind::Number => UIUA_NUMBER_STT,
                     SpanKind::Comment | SpanKind::OutputComment => SemanticTokenType::COMMENT,
                     SpanKind::Primitive(p, sub) => {
-                        let Some(stt) = for_prim(*p, *sub) else {
+                        let Some(stt) = for_prim(*p, sub.as_ref()) else {
                             continue;
                         };
                         stt
@@ -1653,7 +1654,7 @@ mod server {
                         BindingDocsKind::Error => continue,
                     },
                     SpanKind::Subscript(Some(prim), n) => {
-                        let Some(stt) = for_prim(*prim, *n) else {
+                        let Some(stt) = for_prim(*prim, n.as_ref()) else {
                             continue;
                         };
                         stt

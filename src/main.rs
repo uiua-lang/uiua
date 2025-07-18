@@ -1226,7 +1226,7 @@ const DYADIC: Color = Color::Blue;
 const MONADIC_MOD: Color = Color::Yellow;
 const DYADIC_MOD: Color = Color::Magenta;
 
-fn color_prim(prim: Primitive, sub: Option<Subscript>) -> Option<Color> {
+fn color_prim(prim: Primitive, sub: Option<&Subscript>) -> Option<Color> {
     match prim.class() {
         PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
             if prim.modifier_args().is_none() =>
@@ -1281,7 +1281,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             }
         }
         let color = match span.value {
-            SpanKind::Primitive(prim, sig) => color_prim(prim, sig),
+            SpanKind::Primitive(prim, sig) => color_prim(prim, sig.as_ref()),
             SpanKind::Ident {
                 docs: Some(docs), ..
             } => match docs.kind {
@@ -1303,7 +1303,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
                 g: 136,
                 b: 68,
             }),
-            SpanKind::Subscript(Some(prim), n) => color_prim(prim, n),
+            SpanKind::Subscript(Some(prim), n) => color_prim(prim, n.as_ref()),
             SpanKind::Comment | SpanKind::OutputComment | SpanKind::Strand => {
                 Some(Color::BrightBlack)
             }

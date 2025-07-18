@@ -1994,6 +1994,7 @@ F ← (
     | 3)
   )
 )
+⊟₁₂₃₄₅₆₇₈₉₀₁
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

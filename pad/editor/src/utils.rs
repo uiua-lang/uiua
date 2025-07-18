@@ -664,7 +664,9 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                 CodeFragment::Br => frag_views.push(view! { <br /> }.into_view()),
                 CodeFragment::Span(text, kind) => {
                     let color_class = match &kind {
-                        SpanKind::Primitive(prim, sig) => prim_sig_class(*prim, *sig),
+                        SpanKind::Primitive(prim, subscript) => {
+                            prim_sig_class(*prim, subscript.as_ref())
+                        }
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
                         SpanKind::Number if very_gay() => "text-gradient number-lesbian",
                         SpanKind::Number => "number-literal",
@@ -678,7 +680,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
                         SpanKind::Strand => "strand-span",
                         SpanKind::Subscript(None, _) => "number-literal",
-                        SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, *n),
+                        SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, n.as_ref()),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),
                         SpanKind::ArgSetter(_) => sig_class((1, 0).into()),
                         _ => "",
@@ -747,7 +749,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             else {
                                 unreachable!()
                             };
-                            let next_color_class = prim_sig_class(next_prim, next_sig);
+                            let next_color_class = prim_sig_class(next_prim, next_sig.as_ref());
                             let title =
                                 PAIR_ALIASES.with(|map| *map.get(&(prim, next_prim)).unwrap());
                             let title = format!("(compound) {title}");

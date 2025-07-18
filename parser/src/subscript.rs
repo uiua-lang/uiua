@@ -1,5 +1,6 @@
 use std::fmt;
 
+use ecow::EcoString;
 use serde::*;
 
 use crate::SUBSCRIPT_DIGITS;
@@ -35,13 +36,13 @@ impl From<i32> for Subscript {
 }
 
 /// The numeric part of a subscript
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum NumericSubscript {
     /// Only a negative sign
     NegOnly,
     /// The number is too large to be represented
-    TooLarge,
+    TooLarge(EcoString),
     /// A valid number
     #[serde(untagged)]
     N(i32),
@@ -85,8 +86,8 @@ impl Subscript {
     }
     /// Get the numeric part of the subscript as an integer, if it exists
     pub fn n(&self) -> Option<i32> {
-        self.num.and_then(|n| match n {
-            NumericSubscript::N(n) => Some(n),
+        self.num.as_ref().and_then(|n| match n {
+            NumericSubscript::N(n) => Some(*n),
             _ => None,
         })
     }
@@ -124,7 +125,7 @@ impl fmt::Display for NumericSubscript {
                 }
                 Ok(())
             }
-            NumericSubscript::TooLarge => write!(f, "…"),
+            NumericSubscript::TooLarge(s) => s.fmt(f),
         }
     }
 }

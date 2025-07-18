@@ -17,7 +17,7 @@ pub const DEBUG: bool = false;
 macro_rules! dbgln {
     ($($arg:tt)*) => {
         if DEBUG {
-            println!($($arg)*); // Allow println
+            eprintln!($($arg)*);
         }
     }
 }

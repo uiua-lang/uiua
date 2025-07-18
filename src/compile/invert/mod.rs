@@ -32,7 +32,7 @@ pub(crate) const DEBUG: bool = false;
 macro_rules! dbgln {
     ($($arg:tt)*) => {
         if crate::compile::invert::DEBUG {
-            println!($($arg)*); // Allow println
+            eprintln!($($arg)*);
         }
     }
 }

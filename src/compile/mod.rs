@@ -2603,7 +2603,7 @@ impl Compiler {
     }
     fn emit_diagnostic_impl(&mut self, diagnostic: Diagnostic) {
         if self.print_diagnostics {
-            println!("{}", diagnostic.report()); // Allow println
+            eprintln!("{}", diagnostic.report());
         } else {
             self.diagnostics.insert(diagnostic);
         }

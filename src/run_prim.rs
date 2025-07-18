@@ -2052,7 +2052,7 @@ mod tests {
                     {
                         continue;
                     }
-                    println!("{prim} example:\n{}", ex.input); // Allow println
+                    eprintln!("{prim} example:\n{}", ex.input);
                     let mut env = Uiua::with_backend(SafeSys::with_thread_spawning());
                     match env.run_str(&ex.input) {
                         Ok(mut comp) => {

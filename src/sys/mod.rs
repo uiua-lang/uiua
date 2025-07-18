@@ -149,10 +149,10 @@ impl fmt::Display for HandleKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::File(path) => write!(f, "file {}", path.display()),
-            Self::TcpListener(addr) => write!(f, "tcp listener {}", addr),
-            Self::TlsListener(addr) => write!(f, "tls listener {}", addr),
-            Self::TcpSocket(addr) => write!(f, "tcp socket {}", addr),
-            Self::TlsSocket(addr) => write!(f, "tls socket {}", addr),
+            Self::TcpListener(addr) => write!(f, "tcp listener {addr}"),
+            Self::TlsListener(addr) => write!(f, "tls listener {addr}"),
+            Self::TcpSocket(addr) => write!(f, "tcp socket {addr}"),
+            Self::TlsSocket(addr) => write!(f, "tls socket {addr}"),
             Self::ChildStdin(com) => write!(f, "stdin {com}"),
             Self::ChildStdout(com) => write!(f, "stdout {com}"),
             Self::ChildStderr(com) => write!(f, "stderr {com}"),
@@ -1174,6 +1174,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .change_directory(&path)
                 .map_err(|e| env.error(e))?;
         }
+        #[cfg_attr(not(feature = "image"), expect(clippy::let_unit_value))]
         SysOp::WebcamCapture => {
             let index = env.pop(1)?.as_nat(env, "Webcam index must be an integer")?;
             let _image = (env.rt.backend)

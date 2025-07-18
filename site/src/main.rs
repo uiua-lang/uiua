@@ -415,7 +415,7 @@ fn prim_html(prim: Primitive, glyph_only: bool, hide_docs: bool) -> String {
     let href = format!("/docs/{}", prim.name());
     let mut title = String::new();
     if let Some(ascii) = prim.ascii() {
-        title.push_str(&format!("({})", ascii));
+        title.push_str(&format!("({ascii})"));
     }
     if prim.glyph().is_some() && glyph_only {
         if !title.is_empty() {

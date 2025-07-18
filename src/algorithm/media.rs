@@ -147,7 +147,7 @@ pub(crate) fn image_encode(env: &mut Uiua) -> UiuaResult {
             "ico" => ImageFormat::Ico,
             "qoi" => ImageFormat::Qoi,
             "webp" => ImageFormat::WebP,
-            format => return Err(env.error(format!("Invalid image format: {}", format))),
+            format => return Err(env.error(format!("Invalid image format: {format}"))),
         };
         let bytes =
             crate::media::value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
@@ -339,8 +339,7 @@ pub fn rgba_image_to_array(image: image::RgbaImage) -> Array<f64> {
 #[doc(hidden)]
 #[cfg(feature = "image")]
 pub fn image_bytes_to_array(bytes: &[u8], gray: bool, alpha: bool) -> Result<Array<f64>, String> {
-    let image =
-        image::load_from_memory(bytes).map_err(|e| format!("Failed to read image: {}", e))?;
+    let image = image::load_from_memory(bytes).map_err(|e| format!("Failed to read image: {e}"))?;
     Ok(match (gray, alpha) {
         (false, false) => rgb_image_to_array(image.into_rgb8()),
         (false, true) => {
@@ -586,8 +585,7 @@ pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
         }
         (SampleFormat::Float, 32) => array_from_wav_bytes_impl::<f32>(&mut reader, |f| f as f64),
         (sample_format, bits_per_sample) => Err(format!(
-            "Unsupported sample format: {:?} {} bits per sample",
-            sample_format, bits_per_sample
+            "Unsupported sample format: {sample_format:?} {bits_per_sample} bits per sample"
         )),
     }
 }

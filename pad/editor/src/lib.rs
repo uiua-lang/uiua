@@ -326,7 +326,7 @@ pub fn Editor<'a>(
             }
             OutputItem::Audio(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
-                let src = format!("data:audio/wav;base64,{}", encoded);
+                let src = format!("data:audio/wav;base64,{encoded}");
                 let label = label.map(|s| format!("{s}:"));
                 if allow_autoplay {
                     view! {
@@ -463,7 +463,7 @@ pub fn Editor<'a>(
             if code.starts_with("# Experimental!\n") || code == "# Experimental!" {
                 return;
             }
-            let new_code = format!("# Experimental!\n{}", code);
+            let new_code = format!("# Experimental!\n{code}");
             let cursor = if let Some((start, end)) = get_code_cursor() {
                 Cursor::Set(start + 16, end + 16)
             } else {
@@ -668,7 +668,7 @@ pub fn Editor<'a>(
                                 if i == 0 || start_line == 1 && i == end_line {
                                     Some(line.into())
                                 } else {
-                                    Some(format!("\n{}", line))
+                                    Some(format!("\n{line}"))
                                 }
                             } else {
                                 None
@@ -1105,7 +1105,7 @@ pub fn Editor<'a>(
             .or_else(|| prim.ascii().map(|s| s.to_string()))?;
         let mut title = prim.name().to_string();
         if let Some(ascii) = prim.ascii() {
-            title = format!("({}) {}", ascii, title);
+            title = format!("({ascii}) {title}");
         }
         // Navigate to the docs page on ctrl/shift+click
         let onclick = move |event: MouseEvent| {
@@ -1396,7 +1396,7 @@ pub fn Editor<'a>(
             false => "normal-editor",
         };
 
-        format!("editor {} {}", editor_size, editor_layout)
+        format!("editor {editor_size} {editor_layout}")
     };
 
     // Hide the example arrows if there is only one example
@@ -2260,7 +2260,7 @@ pub fn Prim(
     let href = format!("/docs/{}", prim.name());
     let mut title = String::new();
     if let Some(ascii) = prim.ascii() {
-        title.push_str(&format!("({})", ascii));
+        title.push_str(&format!("({ascii})"));
     }
     if prim.glyph().is_some() && glyph_only {
         if !title.is_empty() {

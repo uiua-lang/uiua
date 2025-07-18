@@ -119,7 +119,7 @@ impl FromStr for FfiType {
             "unsigned int" => FfiType::UInt,
             "unsigned long" => FfiType::ULong,
             "unsigned long long" => FfiType::ULongLong,
-            _ => return Err(format!("Unknown FFI type: {}", s)),
+            _ => return Err(format!("Unknown FFI type: {s}")),
         })
     }
 }
@@ -160,7 +160,7 @@ impl fmt::Display for FfiType {
                     if i > 0 {
                         write!(f, "; ")?;
                     }
-                    write!(f, "{}", field)?;
+                    write!(f, "{field}")?;
                 }
                 write!(f, "}}")
             }
@@ -236,7 +236,7 @@ mod enabled {
     macro_rules! dbgln {
         ($($arg:tt)*) => {
             if DEBUG {
-                println!($($arg)*); // Allow println
+                println!($($arg)*);
             }
         }
     }

@@ -1,3 +1,4 @@
+#![allow(clippy::print_stdout)]
 #[cfg(not(feature = "binary"))]
 compile_error!("To compile the uiua interpreter binary, you must enable the `binary` feature flag");
 
@@ -36,7 +37,7 @@ static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
 static WATCH_CHILD: Lazy<Mutex<Option<Child>>> = Lazy::new(Default::default);
 
 fn fail<T>(e: UiuaError) -> T {
-    println!("{}", e.report());
+    eprintln!("{}", e.report());
     exit(1)
 }
 
@@ -192,7 +193,7 @@ fn main() {
                 match working_file_path() {
                     Ok(path) => path,
                     Err(e) => {
-                        eprintln!("{}", e);
+                        eprintln!("{e}");
                         return;
                     }
                 }
@@ -217,7 +218,7 @@ fn main() {
                 match working_file_path() {
                     Ok(path) => path,
                     Err(e) => {
-                        eprintln!("{}", e);
+                        eprintln!("{e}");
                         return;
                     }
                 }
@@ -298,7 +299,7 @@ fn main() {
                 match working_file_path() {
                     Ok(path) => path,
                     Err(e) => {
-                        eprintln!("{}", e);
+                        eprintln!("{e}");
                         return;
                     }
                 }
@@ -1034,7 +1035,7 @@ const WATCHING: &str = "\x1b[0mwatching for changes...";
 fn print_watching() {
     #[cfg(feature = "raw_mode")]
     rawrrr::disable_raw();
-    eprint!("{}", WATCHING);
+    eprint!("{WATCHING}");
     stderr().flush().unwrap();
 }
 fn clear_watching() {
@@ -1078,7 +1079,7 @@ fn update(main: bool, check: bool, mut features: Vec<String>) {
             parse_version(local_version).zip(parse_version(remote_version))
         {
             if local >= remote {
-                println!("Your version of Uiua ({}) is the latest!", local_version);
+                println!("Your version of Uiua ({local_version}) is the latest!");
                 return;
             } else {
                 println!(

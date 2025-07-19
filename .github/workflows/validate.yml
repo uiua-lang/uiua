@@ -1,33 +1,10 @@
 name: Validate
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "src/**"
-      - "parser/**"
-      - "site/**"
-      - "pad/**"
-      - "tests*/**"
-      - "changelog.md"
-      - "readme.md"
-      - ".github/workflows/validate.yml"
   pull_request:
-    branches: ["main"]
-    paths:
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "src/**"
-      - "parser/**"
-      - "site/**"
-      - "pad/**"
-      - "tests*/**"
-      - "changelog.md"
-      - "readme.md"
-      - ".github/workflows/validate.yml"
-
+  push:
+    branches-ignore:
+      - site
 env:
   CARGO_TERM_COLOR: always
 
@@ -51,3 +28,5 @@ jobs:
       run: rustup target add wasm32-unknown-unknown
     - name: Check feature combinations
       run: cargo run ./.github/features.ua
+    - name: Run tests
+      run: cargo test --workspace --no-fail-fast --all-targets --all-features

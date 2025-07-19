@@ -1097,7 +1097,7 @@ impl SysBackend for NativeSys {
         return_ty: crate::FfiType,
         name: &str,
         arg_tys: &[crate::FfiArg],
-        arg_values: &[crate::Value],
+        arg_values: Vec<crate::Value>,
     ) -> Result<crate::Value, String> {
         NATIVE_SYS
             .ffi

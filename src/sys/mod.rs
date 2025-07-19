@@ -474,7 +474,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         result_ty: FfiType,
         name: &str,
         arg_tys: &[FfiArg],
-        args: &[Value],
+        args: Vec<Value>,
     ) -> Result<Value, String> {
         Err("FFI is not supported in this environment".into())
     }
@@ -1223,7 +1223,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             let args = env.pop(2)?;
             let args: Vec<Value> = args.into_rows().map(Value::unpacked).collect();
             let result = (env.rt.backend)
-                .ffi(&file_name, result_ty, &name, &arg_tys, &args)
+                .ffi(&file_name, result_ty, &name, &arg_tys, args)
                 .map_err(|e| env.error(e))?;
             env.push(result);
         }

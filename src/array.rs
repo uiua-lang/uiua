@@ -235,9 +235,7 @@ impl ArrayMeta {
 pub struct MetaPtr {
     /// The pointer value
     pub ptr: usize,
-    /// Whether the pointer should prevent the array's value from being shown
-    pub raw: bool,
-    ///
+    /// The type of value stored at the pointer when read
     pub ffi_type: FfiType,
 }
 
@@ -246,17 +244,12 @@ impl MetaPtr {
     pub const fn null() -> Self {
         Self {
             ptr: 0,
-            raw: true,
             ffi_type: FfiType::Void,
         }
     }
     /// Create a new metadata pointer
-    pub fn new<T: ?Sized>(ptr: *const T, raw: bool, ffi_type: FfiType) -> Self {
-        Self {
-            ptr: ptr as *const () as usize,
-            raw,
-            ffi_type,
-        }
+    pub fn new(ptr: usize, ffi_type: FfiType) -> Self {
+        Self { ptr, ffi_type }
     }
     /// Get the pointer as a raw pointer
     pub fn get<T>(&self) -> *const T {

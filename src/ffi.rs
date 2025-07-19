@@ -110,12 +110,12 @@ impl FromStr for FfiType {
             .and_then(|s| s.strip_suffix("}"))
             .map(|s| s.trim_end_matches(";"))
         {
-            let mut depth: usize = 0;
+            let mut depth = 0_usize;
             let mut field = String::new();
             let mut fields = Vec::new();
 
             for c in body.chars() {
-                if c != ';' {
+                if c != ';' || depth != 0 {
                     field.push(c);
                 }
                 match c {
@@ -189,11 +189,12 @@ impl FromStr for FfiArg {
 pub(crate) use enabled::*;
 #[cfg(feature = "ffi")]
 mod enabled {
-    use crate::{MetaPtr, Value};
+    use crate::{Array, Boxed, MetaPtr, Value};
 
     use super::*;
     use core::slice;
     use dashmap::DashMap;
+    use ecow::EcoVec;
     use libffi::{
         low::CodePtr,
         middle::{Arg, Cif, Type},
@@ -215,20 +216,27 @@ mod enabled {
             arg_tys: &[FfiArg],
             args: Vec<Value>,
         ) -> Result<Value, String> {
+            if args.len() != arg_tys.len() {
+                return Err(format!(
+                    "FFI function takes {} arguments, but {} were provided",
+                    arg_tys.len(),
+                    args.len()
+                ));
+            }
+
             let code_ptr = {
                 if !self.libraries.contains_key(file) {
                     let lib =
                         unsafe { libloading::Library::new(file) }.map_err(|e| e.to_string())?;
                     self.libraries.insert(file.to_string(), lib);
                 }
-                let lib = self.libraries.get(file).unwrap();
+                let lib = self.libraries.get(file).expect("Library was loaded above");
                 let func_ptr: libloading::Symbol<unsafe extern "C" fn()> =
                     unsafe { lib.get(name.as_bytes()) }.map_err(|e| e.to_string())?;
                 CodePtr::from_fun(*func_ptr)
             };
 
             let arg_c_tys = arg_tys.iter().map(Type::from);
-
             let cif = Cif::new(arg_c_tys, Type::from(&return_ty));
 
             let reprs = args
@@ -242,12 +250,31 @@ mod enabled {
                 .map(|(repr, _)| Arg::new(&repr[0]))
                 .collect::<Vec<_>>();
 
-            let res = unsafe { cif.call::<c_int>(code_ptr, &c_args) as f64 };
+            let return_repr = unsafe { call(&cif, code_ptr, &c_args, return_ty.size()) };
+            let ret = return_ty.unrepr(&return_repr)?;
 
             drop(reprs);
 
-            Ok(Value::from(res))
+            Ok(ret)
         }
+    }
+
+    /// This is an in-lined version of [`libffi::middle::Cif::call`] with the change that instead of using a generic to specify the size of memory that is copied into, it uses a parameter and a vector.
+    pub unsafe fn call(cif: &Cif, fun: CodePtr, args: &[Arg], result_size: usize) -> Vec<u8> {
+        let mut result = vec![0; result_size];
+        libffi::raw::ffi_call(
+            cif.as_raw_ptr(),
+            Some(*fun.as_safe_fun()),
+            result.as_mut_ptr() as *mut c_void,
+            args.as_ptr() as *mut *mut c_void,
+        );
+        result
+    }
+
+    fn cstr_to_value(ptr: *const c_char) -> Result<Value, String> {
+        let cstr = unsafe { CStr::from_ptr(ptr) };
+        let str = cstr.to_str().map_err(|e| e.to_string())?;
+        Ok(str.into())
     }
 
     pub(crate) fn ffi_copy(_ptr: MetaPtr, _len: usize) -> Result<Value, String> {
@@ -319,6 +346,23 @@ mod enabled {
     type Buffers = (Vec<u8>, Vec<Vec<u8>>);
 
     impl FfiType {
+        fn is_num(&self) -> bool {
+            matches!(
+                self,
+                FfiType::Short
+                    | FfiType::Int
+                    | FfiType::Long
+                    | FfiType::LongLong
+                    | FfiType::Float
+                    | FfiType::Double
+                    | FfiType::UChar
+                    | FfiType::UShort
+                    | FfiType::UInt
+                    | FfiType::ULong
+                    | FfiType::ULongLong
+            )
+        }
+
         fn size_align(&self) -> (usize, usize) {
             match self {
                 FfiType::Void => (0, 1),
@@ -382,15 +426,15 @@ mod enabled {
             let is_scalar = value.shape.len() == 0;
 
             macro_rules! scalar {
-                ($arr:expr, $c_type:ty) => {{
+                ($arr:expr, $c_ty:ty) => {{
                     if !is_scalar {
                         return Err(format!("Array must be a scalar for C type {}", self));
                     }
-                    (($arr.data[0] as $c_type).to_ne_bytes().to_vec(), Vec::new())
+                    (($arr.data[0] as $c_ty).to_ne_bytes().to_vec(), Vec::new())
                 }};
             }
 
-            let repr = match (self, value) {
+            Ok(match (self, value) {
                 (FfiType::Char, Value::Char(arr)) => scalar!(arr, c_char),
                 (FfiType::Char, Value::Byte(arr)) => scalar!(arr, c_char),
                 (FfiType::Char, Value::Num(arr)) => scalar!(arr, c_char),
@@ -418,8 +462,8 @@ mod enabled {
                 (FfiType::ULongLong, Value::Byte(arr)) => scalar!(arr, c_ulonglong),
                 (FfiType::ULongLong, Value::Num(arr)) => scalar!(arr, c_ulonglong),
 
-                (FfiType::Ptr(ty), value) => FfiType::arr_repr(ty, value, true)?,
-                (FfiType::Struct(fields), value) => FfiType::struct_repr(fields, value)?,
+                (FfiType::Ptr(ty), value) => ty.repr_arr(value, true)?,
+                (FfiType::Struct(fields), value) => FfiType::repr_struct(fields, value)?,
 
                 (ty, value) => {
                     return Err(format!(
@@ -427,9 +471,42 @@ mod enabled {
                         value.type_name_plural()
                     ))
                 }
-            };
+            })
+        }
 
-            Ok(repr)
+        /// Marshall some bytes containing a C type into a [`Value`].
+        /// Assumes length of the bytes is the same as the size of the type.
+        fn unrepr(&self, repr: &[u8]) -> Result<Value, String> {
+            macro_rules! value {
+                ($c_ty:ty $(, $into:ty)?) => {
+                    <$c_ty>::from_ne_bytes(repr.try_into().expect("repr slice is the same size as the type")) $(as $into)?
+                };
+            }
+            Ok(match self {
+                FfiType::Void => Value::default(),
+                FfiType::Char => value!(c_uchar, char).into(),
+                FfiType::Short => value!(c_short, f64).into(),
+                FfiType::Int => value!(c_int, f64).into(),
+                FfiType::Long => value!(c_long, f64).into(),
+                FfiType::LongLong => value!(c_longlong, f64).into(),
+                FfiType::Float => value!(c_float, f64).into(),
+                FfiType::Double => value!(c_double, f64).into(),
+                FfiType::UChar => value!(c_uchar, u8).into(),
+                FfiType::UShort => value!(c_ushort, f64).into(),
+                FfiType::UInt => value!(c_uint, f64).into(),
+                FfiType::ULong => value!(c_ulong, f64).into(),
+                FfiType::ULongLong => value!(c_ulonglong, f64).into(),
+                FfiType::Ptr(ty) => {
+                    if **ty == FfiType::Char {
+                        cstr_to_value(value!(usize, *const c_char))?
+                    } else {
+                        let mut ptr = Value::default();
+                        ptr.meta.pointer = Some(MetaPtr::new(value!(usize), (**ty).clone()));
+                        ptr
+                    }
+                }
+                FfiType::Struct(fields) => FfiType::unrepr_struct(fields, repr)?,
+            })
         }
 
         fn data_to_buffer(data: Vec<u8>) -> Buffers {
@@ -437,7 +514,7 @@ mod enabled {
             (ptr, vec![data])
         }
 
-        fn struct_repr(fields: &[FfiType], value: Value) -> Result<Buffers, String> {
+        fn repr_struct(fields: &[FfiType], value: Value) -> Result<Buffers, String> {
             if fields.len() != value.row_count() {
                 return Err(format!(
                     "Struct has {} fields, but passed array has {} rows",
@@ -463,7 +540,29 @@ mod enabled {
             Ok((struct_repr, buffers))
         }
 
-        fn arr_repr(&self, value: Value, strings: bool) -> Result<Buffers, String> {
+        fn unrepr_struct(fields: &[FfiType], repr: &[u8]) -> Result<Value, String> {
+            let (_, offsets) = FfiType::struct_size_align_offsets(fields);
+
+            let rows = fields
+                .iter()
+                .zip(offsets)
+                .map(|(ty, offset)| ty.unrepr(&repr[offset..offset + ty.size()]))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let value = if fields.iter().all(FfiType::is_num) {
+                Value::from_row_values_infallible(rows)
+            } else {
+                Array::new(
+                    rows.len(),
+                    rows.into_iter().map(Boxed).collect::<EcoVec<_>>(),
+                )
+                .into()
+            };
+
+            Ok(value)
+        }
+
+        fn repr_arr(&self, value: Value, strings: bool) -> Result<Buffers, String> {
             macro_rules! arr {
                 ($arr:expr, $c_type:ty) => {
                     FfiType::data_to_buffer(
@@ -526,7 +625,7 @@ mod enabled {
                 (FfiType::Ptr(ty), arr) => {
                     let (ptrs, buffers): (Vec<Vec<u8>>, Vec<Vec<Vec<u8>>>) = arr
                         .rows()
-                        .map(|row| ty.arr_repr(row.unpacked(), true))
+                        .map(|row| ty.repr_arr(row.unpacked(), true))
                         .collect::<Result<Vec<_>, _>>()?
                         .into_iter()
                         .unzip();

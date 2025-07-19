@@ -649,7 +649,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         //     params.max_boxed_len
         // );
         let mut outlined = false;
-        let mut grid = if let Some(pointer) = self.meta.pointer.as_ref().filter(|p| p.raw) {
+        let mut grid = if let Some(pointer) = self.meta.pointer.as_ref() {
             let mut ffi_type = pointer.ffi_type.to_string();
             if ffi_type.len() > 10 {
                 ffi_type = "{…}".to_string();
@@ -1026,13 +1026,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         grid[0].push(' ');
                     }
                 }
-            }
-        }
-
-        // Add pointer
-        if let Some(pointer) = self.meta.pointer.as_ref().filter(|p| !p.raw) {
-            if grid.len() == 1 {
-                grid[0].extend(format!("(0x{:x})", pointer.ptr).chars());
             }
         }
 

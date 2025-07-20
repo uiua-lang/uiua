@@ -20,7 +20,10 @@ use time::UtcOffset;
 #[cfg(feature = "native_sys")]
 pub use self::native::*;
 use crate::{
-    algorithm::{multi_output, validate_size}, cowslice::cowslice, get_ops, Array, Boxed, FfiArg, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua, UiuaErrorKind, UiuaResult, Value
+    algorithm::{multi_output, validate_size},
+    cowslice::cowslice,
+    get_ops, Array, Boxed, FfiArg, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua, UiuaErrorKind,
+    UiuaResult, Value,
 };
 
 /// The text of Uiua's example module

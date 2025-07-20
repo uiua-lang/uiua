@@ -68,6 +68,22 @@ impl Display for FfiType {
     }
 }
 
+impl Display for FfiArg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{out}{ty}{index}",
+            out = if self.out { "out " } else { "" },
+            ty = self.ty,
+            index = if let Some(len_index) = self.len_index {
+                format!(":{len_index}")
+            } else {
+                "".to_string()
+            }
+        )
+    }
+}
+
 impl FromStr for FfiType {
     type Err = String;
 
@@ -78,6 +94,15 @@ impl FromStr for FfiType {
         // Pointer
         if let Some(ptr) = input.strip_suffix("*") {
             return Ok(Self::Ptr(ptr.parse::<Self>()?.into()));
+        }
+
+        if let Some((arr, len)) = input.strip_suffix("]").and_then(|s| s.rsplit_once("[")) {
+            let len = len.parse::<usize>().map_err(|e| e.to_string())?;
+            let ty = arr.parse::<Self>()?;
+            if len == 0 {
+                return Err(format!("Array of {ty} cannot have zero elements"));
+            }
+            return Ok(Self::Struct(vec![ty.clone(); len]));
         }
 
         let (unsigned, input) = match input.strip_prefix("unsigned ") {
@@ -123,7 +148,7 @@ impl FromStr for FfiType {
                     '}' => {
                         depth = depth
                             .checked_sub(1)
-                            .ok_or_else(|| "Unmatched closing braces".to_string())?
+                            .ok_or_else(|| format!("Unmatched closing braces `{original}`"))?
                     }
                     ';' if depth == 0 => {
                         fields.push(field.parse::<FfiType>()?);
@@ -138,17 +163,17 @@ impl FromStr for FfiType {
             }
 
             if fields.is_empty() {
-                return Err("Cannot have an empty struct".to_string());
+                return Err(format!("Cannot have an empty struct `{original}`"));
             }
 
             if depth != 0 {
-                return Err("Unmatched opening braces".to_string());
+                return Err(format!("Unmatched opening braces `{original}`"));
             } else {
                 return Ok(Self::Struct(fields));
             }
         }
 
-        Err(format!("Unknown C type {}", original))
+        Err(format!("Unknown C type `{original}`"))
     }
 }
 
@@ -172,7 +197,7 @@ impl FromStr for FfiArg {
                     .parse::<usize>()
                     .map_err(|e| e.to_string())?,
             );
-            let ty = arg.parse::<FfiType>()?;
+            let ty = FfiType::Ptr(arg.parse::<FfiType>()?.into());
             return Ok(FfiArg { out, len_index, ty });
         }
 
@@ -214,16 +239,8 @@ mod enabled {
             return_ty: FfiType,
             name: &str,
             arg_tys: &[FfiArg],
-            args: Vec<Value>,
+            mut args: Vec<Value>,
         ) -> Result<Value, String> {
-            if args.len() != arg_tys.len() {
-                return Err(format!(
-                    "FFI function takes {} arguments, but {} were provided",
-                    arg_tys.len(),
-                    args.len()
-                ));
-            }
-
             let code_ptr = {
                 if !self.libraries.contains_key(file) {
                     let lib =
@@ -236,8 +253,51 @@ mod enabled {
                 CodePtr::from_fun(*func_ptr)
             };
 
-            let arg_c_tys = arg_tys.iter().map(Type::from);
-            let cif = Cif::new(arg_c_tys, Type::from(&return_ty));
+            let c_arg_len = arg_tys.len();
+
+            let c_arg_tys = arg_tys.iter().map(Type::from);
+            let cif = Cif::new(c_arg_tys, Type::from(&return_ty));
+
+            // The first number is the enumerated index, the second is the parameter index
+            let mut len_indices = arg_tys
+                .iter()
+                .enumerate()
+                .flat_map(|(i, arg)| arg.len_index.map(|index| (i, index)))
+                .collect::<Vec<_>>();
+            len_indices.sort_by_key(|tup| tup.1);
+            let len_indices = len_indices;
+
+            for &(i, len_index) in &len_indices {
+                if let Some(arg) = arg_tys.get(len_index) {
+                    if !arg.is_num() {
+                        return Err(format!(
+                            "Argument at length index must be a number type, but it is {arg}"
+                        ));
+                    }
+                } else {
+                    return Err(format!("Length index {len_index} is out of bounds for function with {c_arg_len} arguments"));
+                }
+
+                if len_index == i {
+                    return Err("Length index cannot be the same as the array".to_string());
+                }
+            }
+
+            for &(_, len_index) in &len_indices {
+                args.insert(len_index, Value::default());
+            }
+
+            for &(i, len_index) in &len_indices {
+                args[len_index] = Value::from(args[i].row_count() as f64)
+            }
+
+            if args.len() != arg_tys.len() {
+                return Err(format!(
+                    "FFI function takes {} arguments, but {} were provided",
+                    arg_tys.len() - len_indices.len(),
+                    args.len() - len_indices.len(),
+                ));
+            }
 
             let reprs = args
                 .into_iter()
@@ -281,13 +341,13 @@ mod enabled {
         todo!()
     }
 
-    pub(crate) fn ffi_set(ptr: MetaPtr, idx: usize, value: Value) -> Result<(), String> {
+    pub(crate) fn ffi_set(ptr: MetaPtr, index: usize, value: Value) -> Result<(), String> {
         if ptr.ptr == 0 {
             return Err("Cannot write to a null pointer".to_string());
         }
         let ty = ptr.ffi_type;
         let size = ty.size();
-        let offset = size * idx;
+        let offset = size * index;
         let dest = unsafe { slice::from_raw_parts_mut((ptr.ptr + offset) as *mut u8, size) };
         let (repr, _) = ty.repr(value)?;
         dest.copy_from_slice(&repr);
@@ -308,6 +368,10 @@ mod enabled {
 
         fn is_ptr(&self) -> bool {
             self.out || self.is_list() || matches!(self.ty, FfiType::Ptr(_))
+        }
+
+        fn is_num(&self) -> bool {
+            self.ty.is_num() && !self.is_list()
         }
     }
 
@@ -384,7 +448,11 @@ mod enabled {
         }
 
         fn struct_size_align_offsets(fields: &[FfiType]) -> ((usize, usize), Vec<usize>) {
-            let align = fields.iter().map(FfiType::align).max().unwrap_or(1);
+            let align = fields
+                .iter()
+                .map(FfiType::align)
+                .max()
+                .expect("Struct must have at least on field");
 
             let mut offsets = Vec::new();
             let mut size = 0;
@@ -563,19 +631,35 @@ mod enabled {
         }
 
         fn repr_arr(&self, value: Value, strings: bool) -> Result<Buffers, String> {
+            let rank = value.shape.len();
+            let is_list = rank == 1;
+
+            let is_empty = value.row_count() == 0;
+
             macro_rules! arr {
-                ($arr:expr, $c_type:ty) => {
+                ($arr:expr, $c_type:ty) => {{
+                    if !is_list {
+                        return Err(format!("Array must be rank 1 to become a list of {self}, but it was rank {rank}"));
+                    }
+                    if is_empty {
+                        return Ok(((0_usize).to_ne_bytes().into(), Vec::new()));
+                    }
                     FfiType::data_to_buffer(
                         $arr.data
                             .iter()
                             .flat_map(|&n| (n as $c_type).to_ne_bytes())
                             .collect::<Vec<u8>>(),
                     )
-                };
+                }};
             }
 
             macro_rules! string {
-                ($arr:expr, $tochar:expr) => {
+                ($arr:expr, $tochar:expr) => {{
+                    if !is_list {
+                        return Err(format!(
+                            "Array must be rank 1 to become a string, but it was rank {rank}"
+                        ));
+                    }
                     FfiType::data_to_buffer(
                         $arr.data
                             .iter()
@@ -585,7 +669,7 @@ mod enabled {
                             .chain([b'\0'])
                             .collect(),
                     )
-                };
+                }};
             }
 
             Ok(match (self, value) {

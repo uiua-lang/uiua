@@ -223,7 +223,7 @@ impl FromStr for FfiArg {
 pub(crate) use enabled::*;
 #[cfg(feature = "ffi")]
 mod enabled {
-    use crate::{Array, Boxed, MetaPtr, Value};
+    use crate::{cowslice::CowSlice, Array, Boxed, MetaPtr, Value};
 
     use super::*;
     use core::slice;
@@ -428,21 +428,47 @@ mod enabled {
         let size = ptr.ty.size();
         let repr = unsafe { slice::from_raw_parts(ptr.get(), len * size) };
 
-        Ok(if ptr.ty.is_string() {
-            Value::from_iter(
-                (0..len)
-                    .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
-                    .collect::<Result<Vec<_>, String>>()?
-                    .into_iter()
-                    .map(Boxed),
-            )
-        } else {
-            Value::from_row_values_infallible(
-                (0..len)
-                    .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
-                    .collect::<Result<Vec<_>, String>>()?,
-            )
-        })
+        macro_rules! arr {
+            ($c_ty:ty) => {
+                Ok(Array::new(
+                    len,
+                    repr.chunks_exact(size)
+                        .map(|chunk| <$c_ty>::from_ne_bytes(chunk.try_into().unwrap()) as f64)
+                        .collect::<CowSlice<_>>(),
+                )
+                .into())
+            };
+        }
+
+        match ptr.ty {
+            FfiType::Void => return Err("Cannot read from a void pointer".to_string()),
+            FfiType::Short => arr!(c_short),
+            FfiType::Int => arr!(c_int),
+            FfiType::Long => arr!(c_long),
+            FfiType::LongLong => arr!(c_longlong),
+            FfiType::Float => arr!(c_float),
+            FfiType::Double => arr!(c_double),
+            FfiType::UChar => arr!(c_uchar),
+            FfiType::UShort => arr!(c_ushort),
+            FfiType::UInt => arr!(c_uint),
+            FfiType::ULong => arr!(c_ulong),
+            FfiType::ULongLong => arr!(c_ulonglong),
+            _ => Ok(if ptr.ty.is_string() {
+                Value::from_iter(
+                    (0..len)
+                        .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
+                        .collect::<Result<Vec<_>, String>>()?
+                        .into_iter()
+                        .map(Boxed),
+                )
+            } else {
+                Value::from_row_values_infallible(
+                    (0..len)
+                        .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
+                        .collect::<Result<Vec<_>, String>>()?,
+                )
+            }),
+        }
     }
 
     pub(crate) fn ffi_set(ptr: MetaPtr, index: usize, value: Value) -> Result<(), String> {

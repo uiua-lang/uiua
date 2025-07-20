@@ -219,17 +219,17 @@ mod enabled {
     use super::*;
     use core::slice;
     use dashmap::DashMap;
-    use ecow::EcoVec;
     use libffi::{
         low::CodePtr,
         middle::{Arg, Cif, Type},
     };
     use libloading::Library;
-    use std::ffi::*;
+    use std::{ffi::*, iter::zip};
 
     #[derive(Default)]
     pub struct FfiState {
         libraries: DashMap<String, Library>,
+        buffers: DashMap<usize, Vec<u8>>,
     }
 
     impl FfiState {
@@ -239,7 +239,7 @@ mod enabled {
             return_ty: FfiType,
             name: &str,
             arg_tys: &[FfiArg],
-            mut args: Vec<Value>,
+            mut arg_values: Vec<Value>,
         ) -> Result<Value, String> {
             let code_ptr = {
                 if !self.libraries.contains_key(file) {
@@ -253,81 +253,148 @@ mod enabled {
                 CodePtr::from_fun(*func_ptr)
             };
 
-            let c_arg_len = arg_tys.len();
+            handle_len_indices(arg_tys, &mut arg_values)?;
 
             let c_arg_tys = arg_tys.iter().map(Type::from);
             let cif = Cif::new(c_arg_tys, Type::from(&return_ty));
 
-            // The first number is the enumerated index, the second is the parameter index
-            let mut len_indices = arg_tys
-                .iter()
-                .enumerate()
-                .flat_map(|(i, arg)| arg.len_index.map(|index| (i, index)))
-                .collect::<Vec<_>>();
-            len_indices.sort_by_key(|tup| tup.1);
-            let len_indices = len_indices;
+            let mut reprs = Vec::new();
+            let mut buffers = Vec::new();
+            // Pointers to out parameters
+            let mut out_params = Vec::new();
 
-            for &(i, len_index) in &len_indices {
-                if let Some(arg) = arg_tys.get(len_index) {
-                    if !arg.is_num() {
-                        return Err(format!(
-                            "Argument at length index must be a number type, but it is {arg}"
-                        ));
+            for (arg, value) in zip(arg_tys, arg_values) {
+                let (repr, buffer) = arg.ty.repr(value)?;
+                if arg.out {
+                    if arg.ty.is_ptr() {
+                        let ptr =
+                            usize::from_ne_bytes(repr.clone().try_into().unwrap()) as *const u8;
+                        reprs.push(repr);
+                        out_params.push((ptr, arg.ty.clone()));
+                        for buffer in buffer {
+                            self.buffers.insert(buffer.as_ptr() as usize, buffer);
+                        }
+                    } else {
+                        let (out_repr, out_buffer) = FfiType::data_to_buffer(repr);
+                        out_params
+                            .push((usize::from_ne_bytes(out_repr) as *const u8, arg.ty.clone()));
+                        buffers.push(out_buffer);
+                        buffers.extend(buffer);
+                        reprs.push(out_repr.into());
                     }
                 } else {
-                    return Err(format!("Length index {len_index} is out of bounds for function with {c_arg_len} arguments"));
-                }
-
-                if len_index == i {
-                    return Err(format!(
-                        "Length index {len_index} cannot be the same as the array"
-                    ));
-                }
-
-                if len_indices
-                    .iter()
-                    .filter(|(_, index)| *index == len_index)
-                    .count()
-                    > 1
-                {
-                    return Err(format!("Cannot have duplicate length index {len_index}"));
+                    reprs.push(repr);
+                    buffers.extend(buffer);
                 }
             }
-
-            for &(_, len_index) in &len_indices {
-                args.insert(len_index, Value::default());
-            }
-
-            for &(i, len_index) in &len_indices {
-                args[len_index] = Value::from(args[i].row_count() as f64)
-            }
-
-            if args.len() != arg_tys.len() {
-                return Err(format!(
-                    "FFI function takes {} arguments, but {} were provided",
-                    arg_tys.len() - len_indices.len(),
-                    args.len() - len_indices.len(),
-                ));
-            }
-
-            let reprs = args
-                .into_iter()
-                .zip(arg_tys)
-                .map(|(arg, ty)| ty.ty.repr(arg))
-                .collect::<Result<Vec<_>, _>>()?;
 
             let c_args = reprs
                 .iter()
-                .map(|(repr, _)| Arg::new(&repr[0]))
+                .map(|repr| Arg::new(&repr[0]))
                 .collect::<Vec<_>>();
 
             let return_repr = unsafe { call(&cif, code_ptr, &c_args, return_ty.size()) };
             let ret = return_ty.unrepr(&return_repr)?;
 
-            drop(reprs);
+            let rets = if out_params.is_empty() {
+                ret
+            } else {
+                let out_values = out_params
+                    .into_iter()
+                    .map(|(ptr, ty)| {
+                        if let FfiType::Ptr(ty) = ty {
+                            let mut ptr_value = Value::default();
+                            ptr_value.meta.pointer = Some(MetaPtr::new(ptr as usize, *ty));
+                            Ok(ptr_value)
+                        } else {
+                            // SAFETY: this should never fail because the data should be allocated in [`buffers`]
+                            let repr = unsafe { slice::from_raw_parts(ptr, ty.size()) };
+                            ty.unrepr(repr)
+                        }
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                if out_values.len() == 1 && return_ty == FfiType::Void {
+                    let mut out_values = out_values;
+                    out_values.pop().unwrap()
+                } else {
+                    Array::from_iter([ret].into_iter().chain(out_values).map(Boxed)).into()
+                }
+            };
 
-            Ok(ret)
+            drop(reprs);
+            drop(buffers);
+
+            Ok(rets)
         }
+
+        pub(crate) fn ffi_free(&self, ptr: &MetaPtr) {
+            if !ptr.get().is_null() {
+                if let Some((_, buffer)) = self.buffers.remove(&ptr.ptr) {
+                    drop(buffer);
+                } else {
+                    unsafe { drop(Box::from_raw(ptr.get_mut())) };
+                }
+            }
+        }
+    }
+
+    fn handle_len_indices(arg_tys: &[FfiArg], arg_values: &mut Vec<Value>) -> Result<(), String> {
+        // The first number is the enumerated index, the second is the parameter index
+        let mut len_indices = arg_tys
+            .iter()
+            .enumerate()
+            .flat_map(|(i, arg)| arg.len_index.map(|index| (i, index)))
+            .collect::<Vec<_>>();
+        len_indices.sort_by_key(|tup| tup.1);
+        let len_indices = len_indices;
+
+        for &(i, len_index) in &len_indices {
+            if let Some(arg) = arg_tys.get(len_index) {
+                if !arg.is_num() {
+                    return Err(format!(
+                        "Argument at length index must be a number type, but it is {arg}"
+                    ));
+                }
+            } else {
+                return Err(format!(
+                    "Length index {len_index} is out of bounds for function with {} arguments",
+                    arg_tys.len()
+                ));
+            }
+
+            if len_index == i {
+                return Err(format!(
+                    "Length index {len_index} cannot be the same as the array"
+                ));
+            }
+
+            if len_indices
+                .iter()
+                .filter(|(_, index)| *index == len_index)
+                .count()
+                > 1
+            {
+                return Err(format!("Cannot have duplicate length index {len_index}"));
+            }
+        }
+
+        for &(_, len_index) in &len_indices {
+            arg_values.insert(len_index, Value::default());
+        }
+
+        for &(i, len_index) in &len_indices {
+            arg_values[len_index] = Value::from(arg_values[i].row_count() as f64);
+        }
+
+        if arg_values.len() != arg_tys.len() {
+            return Err(format!(
+                "FFI function takes {} arguments, but {} were provided",
+                arg_tys.len() - len_indices.len(),
+                arg_values.len() - len_indices.len(),
+            ));
+        }
+
+        Ok(())
     }
 
     /// This is an in-lined version of [`libffi::middle::Cif::call`] with the change that instead of using a generic to specify the size of memory that is copied into, it uses a parameter and a vector.
@@ -348,28 +415,38 @@ mod enabled {
         Ok(str.into())
     }
 
-    pub(crate) fn ffi_copy(_ptr: MetaPtr, _len: usize) -> Result<Value, String> {
-        todo!()
+    pub(crate) fn ffi_copy(ptr: MetaPtr, len: usize) -> Result<Value, String> {
+        let size = ptr.ty.size();
+        let repr = unsafe { slice::from_raw_parts(ptr.get(), len * size) };
+
+        Ok(if ptr.ty.is_string() {
+            Value::from_iter(
+                (0..len)
+                    .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
+                    .collect::<Result<Vec<_>, String>>()?
+                    .into_iter()
+                    .map(Boxed),
+            )
+        } else {
+            Value::from_row_values_infallible(
+                (0..len)
+                    .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
+                    .collect::<Result<Vec<_>, String>>()?,
+            )
+        })
     }
 
     pub(crate) fn ffi_set(ptr: MetaPtr, index: usize, value: Value) -> Result<(), String> {
         if ptr.ptr == 0 {
             return Err("Cannot write to a null pointer".to_string());
         }
-        let ty = ptr.ffi_type;
+        let ty = ptr.ty;
         let size = ty.size();
         let offset = size * index;
         let dest = unsafe { slice::from_raw_parts_mut((ptr.ptr + offset) as *mut u8, size) };
         let (repr, _) = ty.repr(value)?;
         dest.copy_from_slice(&repr);
         Ok(())
-    }
-
-    pub(crate) fn ffi_free(ptr: *const ()) {
-        if !ptr.is_null() {
-            let ptr = ptr as *mut ();
-            unsafe { drop(Box::from_raw(ptr)) };
-        }
     }
 
     impl FfiArg {
@@ -421,6 +498,10 @@ mod enabled {
     type Buffers = (Vec<u8>, Vec<Vec<u8>>);
 
     impl FfiType {
+        fn is_ptr(&self) -> bool {
+            matches!(self, FfiType::Ptr(_))
+        }
+
         fn is_num(&self) -> bool {
             matches!(
                 self,
@@ -436,6 +517,10 @@ mod enabled {
                     | FfiType::ULong
                     | FfiType::ULongLong
             )
+        }
+
+        fn is_string(&self) -> bool {
+            matches!(self, FfiType::Ptr(ty) if **ty == FfiType::Char)
         }
 
         fn size_align(&self) -> (usize, usize) {
@@ -588,9 +673,9 @@ mod enabled {
             })
         }
 
-        fn data_to_buffer(data: Vec<u8>) -> Buffers {
-            let ptr = (data.as_ptr() as usize).to_ne_bytes().to_vec();
-            (ptr, vec![data])
+        fn data_to_buffer(data: Vec<u8>) -> ([u8; size_of::<usize>()], Vec<u8>) {
+            let ptr = (data.as_ptr() as usize).to_ne_bytes();
+            (ptr, data)
         }
 
         fn repr_struct(fields: &[FfiType], value: Value) -> Result<Buffers, String> {
@@ -607,8 +692,7 @@ mod enabled {
             let mut struct_repr = vec![0u8; size];
             let mut buffers = Vec::new();
 
-            for ((offset, field_ty), row) in offsets.into_iter().zip(fields).zip(value.into_rows())
-            {
+            for ((offset, field_ty), row) in zip(offsets, fields).zip(value.into_rows()) {
                 let row = row.unpacked();
                 let (field_repr, buffer) = field_ty.repr(row)?;
                 buffers.extend(buffer.into_iter());
@@ -622,20 +706,14 @@ mod enabled {
         fn unrepr_struct(fields: &[FfiType], repr: &[u8]) -> Result<Value, String> {
             let (_, offsets) = FfiType::struct_size_align_offsets(fields);
 
-            let rows = fields
-                .iter()
-                .zip(offsets)
+            let rows = zip(fields, offsets)
                 .map(|(ty, offset)| ty.unrepr(&repr[offset..offset + ty.size()]))
                 .collect::<Result<Vec<_>, _>>()?;
 
             let value = if fields.iter().all(FfiType::is_num) {
                 Value::from_row_values_infallible(rows)
             } else {
-                Array::new(
-                    rows.len(),
-                    rows.into_iter().map(Boxed).collect::<EcoVec<_>>(),
-                )
-                .into()
+                Array::from_iter(rows.into_iter().map(Boxed)).into()
             };
 
             Ok(value)
@@ -655,12 +733,13 @@ mod enabled {
                     if is_empty {
                         return Ok(((0_usize).to_ne_bytes().into(), Vec::new()));
                     }
-                    FfiType::data_to_buffer(
+                    let (ptr, buffer) = FfiType::data_to_buffer(
                         $arr.data
                             .iter()
                             .flat_map(|&n| (n as $c_type).to_ne_bytes())
                             .collect::<Vec<u8>>(),
-                    )
+                    );
+                    (ptr.into(), vec![buffer])
                 }};
             }
 
@@ -671,7 +750,7 @@ mod enabled {
                             "Array must be rank 1 to become a string, but it was rank {rank}"
                         ));
                     }
-                    FfiType::data_to_buffer(
+                    let (ptr, buffer) = FfiType::data_to_buffer(
                         $arr.data
                             .iter()
                             .map($tochar)
@@ -679,7 +758,8 @@ mod enabled {
                             .bytes()
                             .chain([b'\0'])
                             .collect(),
-                    )
+                    );
+                    (ptr.into(), vec![buffer])
                 }};
             }
 
@@ -730,10 +810,10 @@ mod enabled {
                     let buffers = buffers
                         .into_iter()
                         .flatten()
-                        .chain(buffer)
+                        .chain([buffer])
                         .collect::<Vec<_>>();
 
-                    (ptr, buffers)
+                    (ptr.into(), buffers)
                 }
 
                 (_, value) => {

@@ -236,7 +236,7 @@ pub struct MetaPtr {
     /// The pointer value
     pub ptr: usize,
     /// The type of value stored at the pointer when read
-    pub ffi_type: FfiType,
+    pub ty: FfiType,
 }
 
 impl MetaPtr {
@@ -244,20 +244,20 @@ impl MetaPtr {
     pub const fn null() -> Self {
         Self {
             ptr: 0,
-            ffi_type: FfiType::Void,
+            ty: FfiType::Void,
         }
     }
     /// Create a new metadata pointer
     pub fn new(ptr: usize, ffi_type: FfiType) -> Self {
-        Self { ptr, ffi_type }
+        Self { ptr, ty: ffi_type }
     }
     /// Get the pointer as a raw pointer
-    pub fn get<T>(&self) -> *const T {
-        self.ptr as *const T
+    pub fn get(&self) -> *const u8 {
+        self.ptr as *const _
     }
     /// Get the pointer as a raw pointer
-    pub fn get_mut<T>(&self) -> *mut T {
-        self.ptr as *mut T
+    pub fn get_mut(&self) -> *mut u8 {
+        self.ptr as *mut _
     }
 }
 

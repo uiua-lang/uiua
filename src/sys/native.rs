@@ -1112,8 +1112,8 @@ impl SysBackend for NativeSys {
         crate::ffi_set(ptr, idx, value)
     }
     #[cfg(feature = "ffi")]
-    fn mem_free(&self, ptr: *const ()) -> Result<(), String> {
-        crate::ffi_free(ptr);
+    fn mem_free(&self, ptr: &MetaPtr) -> Result<(), String> {
+        NATIVE_SYS.ffi.ffi_free(ptr);
         Ok(())
     }
     fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {

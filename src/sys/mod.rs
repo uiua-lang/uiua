@@ -490,7 +490,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Pointer writing is not supported in this environment".into())
     }
     /// Free a pointer
-    fn mem_free(&self, ptr: *const ()) -> Result<(), String> {
+    fn mem_free(&self, ptr: &MetaPtr) -> Result<(), String> {
         Err("Pointer freeing is not supported in this environment".into())
     }
     /// Load a git repo as a module
@@ -1263,13 +1263,13 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .map_err(|e| env.error(e))?;
         }
         SysOp::MemFree => {
-            let ptr = env
-                .pop(1)?
+            let val = env.pop(1)?;
+            let ptr = val
                 .meta
                 .pointer
                 .as_ref()
-                .map(|p| p.get())
                 .ok_or_else(|| env.error("Freed pointer must be a pointer value"))?;
+
             (env.rt.backend).mem_free(ptr).map_err(|e| env.error(e))?;
         }
         SysOp::Breakpoint => {

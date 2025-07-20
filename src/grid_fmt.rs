@@ -650,7 +650,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         // );
         let mut outlined = false;
         let mut grid = if let Some(pointer) = self.meta.pointer.as_ref() {
-            let mut ffi_type = pointer.ffi_type.to_string();
+            let mut ffi_type = pointer.ty.to_string();
             if ffi_type.len() > 10 {
                 ffi_type = "{…}".to_string();
             }

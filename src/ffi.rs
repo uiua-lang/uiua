@@ -58,11 +58,16 @@ impl Display for FfiType {
                 FfiType::ULong => "unsigned long".to_string(),
                 FfiType::ULongLong => "unsigned long long".to_string(),
                 FfiType::Ptr(ty) => format!("{ty}*"),
-                FfiType::Struct(fields) => fields
-                    .iter()
-                    .map(|field| field.to_string())
-                    .collect::<Vec<_>>()
-                    .join(";"),
+                FfiType::Struct(fields) =>
+                    if fields.iter().all(|f| *f == fields[0]) {
+                        format!("{}[{}]", fields[0], fields.len())
+                    } else {
+                        fields
+                            .iter()
+                            .map(|field| field.to_string())
+                            .collect::<Vec<_>>()
+                            .join(";")
+                    },
             }
         )
     }

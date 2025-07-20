@@ -52,11 +52,11 @@ impl Display for FfiType {
                 FfiType::LongLong => "long long".to_string(),
                 FfiType::Float => "float".to_string(),
                 FfiType::Double => "double".to_string(),
-                FfiType::UChar => "unsigned char".to_string(),
-                FfiType::UShort => "unsigned short".to_string(),
-                FfiType::UInt => "unsigned int".to_string(),
-                FfiType::ULong => "unsigned long".to_string(),
-                FfiType::ULongLong => "unsigned long long".to_string(),
+                FfiType::UChar => "uchar".to_string(),
+                FfiType::UShort => "ushort".to_string(),
+                FfiType::UInt => "uint".to_string(),
+                FfiType::ULong => "ulong".to_string(),
+                FfiType::ULongLong => "ulong long".to_string(),
                 FfiType::Ptr(ty) => format!("{ty}*"),
                 FfiType::Struct(fields) =>
                     if fields.iter().all(|f| *f == fields[0]) {

@@ -110,7 +110,10 @@ impl FromStr for FfiType {
             return Ok(Self::Struct(vec![ty.clone(); len]));
         }
 
-        let (unsigned, input) = match input.strip_prefix("unsigned ") {
+        let (unsigned, input) = match input
+            .strip_prefix("unsigned ")
+            .or_else(|| input.strip_prefix("u"))
+        {
             Some(scalar) => (true, scalar),
             None => (false, input),
         };
@@ -118,6 +121,7 @@ impl FromStr for FfiType {
         // Scalar
         if let Some(ty) = match input {
             "void" => Some(Self::Void),
+            "byte" | "bool" => Some(Self::UChar),
             "char" => Some(if unsigned { Self::UChar } else { Self::Char }),
             "short" => Some(if unsigned { Self::UShort } else { Self::Short }),
             "int" => Some(if unsigned { Self::UInt } else { Self::Int }),

@@ -279,7 +279,18 @@ mod enabled {
                 }
 
                 if len_index == i {
-                    return Err("Length index cannot be the same as the array".to_string());
+                    return Err(format!(
+                        "Length index {len_index} cannot be the same as the array"
+                    ));
+                }
+
+                if len_indices
+                    .iter()
+                    .filter(|(_, index)| *index == len_index)
+                    .count()
+                    > 1
+                {
+                    return Err(format!("Cannot have duplicate length index {len_index}"));
                 }
             }
 

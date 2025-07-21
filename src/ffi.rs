@@ -273,20 +273,30 @@ mod enabled {
             let mut out_params = Vec::new();
 
             for (arg, value) in zip(arg_tys, arg_values) {
+                let value_len = value.row_count();
+                let value_is_ptr = value.meta().pointer.is_some();
+
                 let (repr, buffer) = arg.ty.repr(value)?;
                 if arg.out {
                     if arg.ty.is_ptr() {
                         let ptr =
                             usize::from_ne_bytes(repr.clone().try_into().unwrap()) as *const u8;
                         reprs.push(repr);
-                        out_params.push((ptr, arg.ty.clone()));
+                        out_params.push((
+                            ptr,
+                            arg.ty.clone(),
+                            if value_is_ptr { None } else { Some(value_len) },
+                        ));
                         for buffer in buffer {
                             self.buffers.insert(buffer.as_ptr() as usize, buffer);
                         }
                     } else {
                         let (out_repr, out_buffer) = FfiType::data_to_buffer(repr);
-                        out_params
-                            .push((usize::from_ne_bytes(out_repr) as *const u8, arg.ty.clone()));
+                        out_params.push((
+                            usize::from_ne_bytes(out_repr) as *const u8,
+                            arg.ty.clone(),
+                            None,
+                        ));
                         buffers.push(out_buffer);
                         buffers.extend(buffer);
                         reprs.push(out_repr.into());
@@ -310,11 +320,16 @@ mod enabled {
             } else {
                 let out_values = out_params
                     .into_iter()
-                    .map(|(ptr, ty)| {
+                    .map(|(ptr, ty, len)| {
                         if let FfiType::Ptr(ty) = ty {
-                            let mut ptr_value = Value::default();
-                            ptr_value.meta.pointer = Some(MetaPtr::new(ptr as usize, *ty));
-                            Ok(ptr_value)
+                            let ptr = MetaPtr::new(ptr as usize, *ty);
+                            if let Some(len) = len {
+                                ffi_copy(ptr, len)
+                            } else {
+                                let mut ptr_value = Value::default();
+                                ptr_value.meta.pointer = Some(ptr);
+                                Ok(ptr_value)
+                            }
                         } else {
                             // SAFETY: this should never fail because the data should be allocated in [`buffers`]
                             let repr = unsafe { slice::from_raw_parts(ptr, ty.size()) };
@@ -425,6 +440,10 @@ mod enabled {
     }
 
     pub(crate) fn ffi_copy(ptr: MetaPtr, len: usize) -> Result<Value, String> {
+        if ptr.get().is_null() && len != 0 {
+            return Err("Cannot read from a null pointer".to_string());
+        }
+
         let size = ptr.ty.size();
         let repr = unsafe { slice::from_raw_parts(ptr.get(), len * size) };
 
@@ -831,17 +850,16 @@ mod enabled {
                 (FfiType::ULong, Value::Num(arr)) => arr!(arr, c_ulong),
                 (FfiType::ULongLong, Value::Byte(arr)) => arr!(arr, c_ulonglong),
                 (FfiType::ULongLong, Value::Num(arr)) => arr!(arr, c_ulonglong),
-
-                (FfiType::Ptr(ty), arr) => {
-                    let (ptrs, buffers): (Vec<Vec<u8>>, Vec<Vec<Vec<u8>>>) = arr
+                (ty, arr) => {
+                    let (row_reprs, buffers): (Vec<Vec<u8>>, Vec<Vec<Vec<u8>>>) = arr
                         .rows()
-                        .map(|row| ty.repr_arr(row.unpacked(), true))
+                        .map(|row| ty.repr(row.unpacked()))
                         .collect::<Result<Vec<_>, _>>()?
                         .into_iter()
                         .unzip();
 
-                    let ptrs = ptrs.into_iter().flatten().collect::<Vec<_>>();
-                    let (ptr, buffer) = FfiType::data_to_buffer(ptrs);
+                    let arr_repr = row_reprs.into_iter().flatten().collect::<Vec<_>>();
+                    let (ptr, buffer) = FfiType::data_to_buffer(arr_repr);
                     let buffers = buffers
                         .into_iter()
                         .flatten()
@@ -849,13 +867,6 @@ mod enabled {
                         .collect::<Vec<_>>();
 
                     (ptr.into(), buffers)
-                }
-
-                (_, value) => {
-                    return Err(format!(
-                        "Unsupported pointer type {self} with array of {}",
-                        value.type_name_plural()
-                    ))
                 }
             })
         }

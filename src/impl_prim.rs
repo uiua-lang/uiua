@@ -237,6 +237,7 @@ impl_primitive!(
     (1, TransposeN(i32)),
     (2, MultiKeep(usize)),
     (1, ParseSub(usize)),
+    (1, UnParseSub(usize)),
     (1, Utf16),
     (1, Retropose),
     ([2], RepeatWithInverse),
@@ -478,6 +479,10 @@ impl fmt::Display for ImplPrimitive {
             }
             &ParseSub(n) => {
                 write!(f, "{Parse}")?;
+                fmt_subscript(f, n as i32)
+            }
+            &UnParseSub(n) => {
+                write!(f, "{Un}{Parse}")?;
                 fmt_subscript(f, n as i32)
             }
         }

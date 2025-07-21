@@ -2,7 +2,7 @@
 
 mod sort;
 
-use core::str;
+use core::{ops::BitXor, str};
 use std::{
     borrow::Cow,
     cmp::Ordering,
@@ -338,6 +338,57 @@ impl Value {
         parsed.meta.set_per_meta(per_meta);
         Ok(parsed)
     }
+    pub(crate) fn unparse_radix(mut self, radix: u32, env: &Uiua) -> UiuaResult<Self> {
+        let per_meta = self.meta.take_per_meta();
+        let mut unparsed = if self.rank() == 0 {
+            match self {
+                Value::Box(b) => b.into_scalar().unwrap().0.unparse_radix(radix, env)?,
+                Value::Byte(val) => val.into_scalar().unwrap().unparse_radix(radix).into(),
+                Value::Num(val) => val.into_scalar().unwrap().unparse_radix(radix).into(),
+                val => Err(env.error(format!(
+                    "Cannot unparse {} with custom radix",
+                    val.type_name()
+                )))?,
+            }
+        } else {
+            match self {
+                Value::Num(arr) => {
+                    if let Ok(c) = env.scalar_fill::<char>() {
+                        unparse_padded(c.value, c.is_right(), arr, |x| x.unparse_radix(radix), env)?
+                            .into()
+                    } else {
+                        let new_data: CowSlice<Boxed> =
+                            (arr.data.iter().map(|v| v.unparse_radix(radix)))
+                                .map(Value::from)
+                                .map(Boxed)
+                                .collect();
+                        Array::new(arr.shape.clone(), new_data).into()
+                    }
+                }
+                Value::Byte(arr) => {
+                    if let Ok(c) = env.scalar_fill::<char>() {
+                        unparse_padded(c.value, c.is_right(), arr, |x| x.unparse_radix(radix), env)?
+                            .into()
+                    } else {
+                        let new_data: CowSlice<Boxed> =
+                            (arr.data.iter().map(|v| v.unparse_radix(radix)))
+                                .map(Value::from)
+                                .map(Boxed)
+                                .collect();
+                        Array::new(arr.shape.clone(), new_data).into()
+                    }
+                }
+                val => {
+                    return Err(env.error(format!(
+                        "Cannot unparse {} array with custom radix",
+                        val.type_name()
+                    )))
+                }
+            }
+        };
+        unparsed.meta.set_per_meta(per_meta);
+        Ok(unparsed)
+    }
     pub(crate) fn unparse(mut self, env: &Uiua) -> UiuaResult<Self> {
         let per_meta = self.meta.take_per_meta();
         let mut unparsed = if self.rank() == 0 {
@@ -346,66 +397,10 @@ impl Value {
                 value => value.format().into(),
             }
         } else {
-            fn padded<T: fmt::Display>(
-                c: char,
-                right: bool,
-                arr: Array<T>,
-                env: &Uiua,
-            ) -> UiuaResult<Array<char>> {
-                let mut buf = Vec::new();
-                let mut max_whole = 0;
-                let mut max_dec = 0;
-                for v in &arr.data {
-                    buf.clear();
-                    write!(&mut buf, "{v}").unwrap();
-                    if let Some(i) = buf.iter().position(|&c| c == b'.') {
-                        max_whole = max_whole.max(i);
-                        max_dec = max_dec.max(buf.len() - i - 1);
-                    } else {
-                        max_whole = max_whole.max(buf.len());
-                    }
-                }
-                let max_len = if max_dec == 0 {
-                    max_whole
-                } else {
-                    max_whole + max_dec + 1
-                };
-                let mut new_shape = arr.shape.clone();
-                new_shape.push(max_len);
-                let elem_count = validate_size::<char>(new_shape.iter().copied(), env)?;
-                let mut new_data = eco_vec![c; elem_count];
-                if max_len > 0 {
-                    for (i, s) in new_data.make_mut().chunks_exact_mut(max_len).enumerate() {
-                        let n = arr.data[i].to_string();
-                        let dot_pos = n.find('.');
-                        if right {
-                            for (s, c) in s.iter_mut().zip(n.chars()) {
-                                *s = c;
-                            }
-                        } else {
-                            let skip = if max_dec == 0 {
-                                0
-                            } else {
-                                dot_pos
-                                    .map(|i| max_dec - (n.len() - i - 1))
-                                    .unwrap_or(max_dec + 1)
-                            };
-                            for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
-                                *s = c;
-                            }
-                        }
-                        if dot_pos.is_none() && max_dec > 0 && c.is_ascii_digit() {
-                            s[max_whole] = '.';
-                        }
-                    }
-                }
-                Ok(Array::new(new_shape, new_data))
-            }
-
             match self {
                 Value::Num(arr) => {
                     if let Ok(c) = env.scalar_fill::<char>() {
-                        padded(c.value, c.is_right(), arr, env)?.into()
+                        unparse_padded(c.value, c.is_right(), arr, identity, env)?.into()
                     } else {
                         let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
                             .map(Value::from)
@@ -416,7 +411,7 @@ impl Value {
                 }
                 Value::Byte(arr) => {
                     if let Ok(c) = env.scalar_fill::<char>() {
-                        padded(c.value, c.is_right(), arr, env)?.into()
+                        unparse_padded(c.value, c.is_right(), arr, identity, env)?.into()
                     } else {
                         let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
                             .map(Value::from)
@@ -437,6 +432,176 @@ impl Value {
         };
         unparsed.meta.set_per_meta(per_meta);
         Ok(unparsed)
+    }
+}
+fn unparse_padded<T: Copy, U: fmt::Display>(
+    c: char,
+    right: bool,
+    arr: Array<T>,
+    fmt: impl Fn(T) -> U,
+    env: &Uiua,
+) -> UiuaResult<Array<char>> {
+    let mut buf = Vec::new();
+    let mut max_whole = 0;
+    let mut max_dec = 0;
+    for v in &arr.data {
+        buf.clear();
+        write!(&mut buf, "{}", fmt(*v)).unwrap();
+        if let Some(i) = buf.iter().position(|&c| c == b'.') {
+            max_whole = max_whole.max(i);
+            max_dec = max_dec.max(buf.len() - i - 1);
+        } else {
+            max_whole = max_whole.max(buf.len());
+        }
+    }
+    let max_len = if max_dec == 0 {
+        max_whole
+    } else {
+        max_whole + max_dec + 1
+    };
+    let mut new_shape = arr.shape.clone();
+    new_shape.push(max_len);
+    let elem_count = validate_size::<char>(new_shape.iter().copied(), env)?;
+    let mut new_data = eco_vec![c; elem_count];
+    if max_len > 0 {
+        for (i, s) in new_data.make_mut().chunks_exact_mut(max_len).enumerate() {
+            let n = fmt(arr.data[i]).to_string();
+            let dot_pos = n.find('.');
+            if right {
+                for (s, c) in s.iter_mut().zip(n.chars()) {
+                    *s = c;
+                }
+            } else {
+                let skip = if max_dec == 0 {
+                    0
+                } else {
+                    dot_pos
+                        .map(|i| max_dec - (n.len() - i - 1))
+                        .unwrap_or(max_dec + 1)
+                };
+                for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
+                    *s = c;
+                }
+            }
+            if dot_pos.is_none() && max_dec > 0 && c.is_ascii_digit() {
+                s[max_whole] = '.';
+            }
+        }
+    }
+    Ok(Array::new(new_shape, new_data))
+}
+
+macro_rules! base_digits {
+    ($val:expr; $ty:ty; $radix:expr; as $as:ty) => {{
+        let mut val = $val;
+        let radix = $radix as $ty;
+        std::iter::from_fn(move || {
+            (val != 0).then(|| {
+                let res = val % radix;
+                val /= radix;
+                res as $as
+            })
+        })
+    }};
+}
+
+fn digit_as_char(radix: u32) -> impl Fn(u32) -> char {
+    move |x| {
+        char::from_digit(x, radix)
+            .expect("result of division modulo radix should be a valid digit in radix")
+    }
+}
+
+trait UnparseRadix {
+    fn unparse_radix(self, radix: u32) -> String;
+}
+
+impl UnparseRadix for u8 {
+    fn unparse_radix(self, radix: u32) -> String {
+        if self == 0 {
+            return "0".to_owned();
+        }
+        base_digits!(self; Self; radix; as u32)
+            .map(digit_as_char(radix))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect()
+    }
+}
+
+impl UnparseRadix for f64 {
+    fn unparse_radix(mut self, radix: u32) -> String {
+        const BIAS: i32 = f64::MAX_EXP - 1;
+        const MANTISSA_LEN: u32 = f64::MANTISSA_DIGITS - 1;
+        assert!(self.is_finite());
+        assert!((2..=36).contains(&radix));
+        if radix == 10 {
+            return self.to_string();
+        }
+        let mut res = String::new();
+        if self.is_sign_negative() {
+            res.push('-');
+            self = -self;
+        }
+        if self == 0.0 {
+            res.push('0');
+            return res;
+        }
+        let bits = self.to_bits();
+        let exp = bits >> MANTISSA_LEN;
+        let mut mant = bits - (exp << MANTISSA_LEN);
+        if self.is_normal() {
+            mant |= 1 << MANTISSA_LEN;
+        }
+        let exp = exp as i32 - BIAS - (MANTISSA_LEN as i32);
+        if radix.is_power_of_two() {
+            let mut d = base_digits!(mant; u64; 2; as u32);
+            let int: Vec<_>;
+            let mut frac: Vec<_>;
+            let log = radix.ilog2();
+            let ea = exp.unsigned_abs() as usize;
+            if exp < 0 {
+                frac = d.by_ref().chain(std::iter::repeat(0)).take(ea).collect();
+                frac.reverse();
+                int = d.collect();
+            } else {
+                frac = vec![];
+                int = std::iter::repeat_n(0, ea).chain(d).collect();
+            }
+            let nint = int
+                .chunks(log as usize)
+                .map(|c| {
+                    c.iter()
+                        .copied()
+                        .enumerate()
+                        .map(|(i, x)| x << i)
+                        .reduce(BitXor::bitxor)
+                        .unwrap_or_default()
+                })
+                .rev()
+                .map(digit_as_char(radix));
+            let nfrac = frac
+                .chunks(log as usize)
+                .map(|c| {
+                    c.iter()
+                        .copied()
+                        .rev()
+                        .enumerate()
+                        .map(|(i, x)| x << i)
+                        .reduce(BitXor::bitxor)
+                        .unwrap_or_default()
+                        << (log - c.len() as u32)
+                })
+                .map(digit_as_char(radix));
+            res.extend(nint);
+            if !frac.is_empty() {
+                res.extend(std::iter::once('.').chain(nfrac));
+            }
+        } else {
+            todo!("radix unparse for non powers of two")
+        }
+        res
     }
 }
 

@@ -1327,6 +1327,8 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
             },
             span,
         ),
+        ParseSub(n) => ImplPrim(UnParseSub(n), span),
+        UnParseSub(n) => ImplPrim(ParseSub(n), span),
         _ => return generic(),
     };
     Ok((input, inv))

@@ -3977,7 +3977,7 @@ sys_op! {
     (1, WebcamCapture, Misc, "&camcap", "webcam - capture", Mutating),
     /// Call a foreign function interface
     ///
-    /// *Warning ⚠️: Using FFI is deeply unsafe. Calling a function incorrectly is undefined behavior and can lead to segfaults.*
+    /// *Warning ⚠️: Using FFI is deeply unsafe. Calling a function incorrectly is undefined behavior.*
     ///
     /// The first argument is a list of boxed strings specifying the source and signature of the foreign function.
     /// The second argument is a list of values to pass to the foreign function.

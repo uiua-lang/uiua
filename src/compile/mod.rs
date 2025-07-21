@@ -2446,6 +2446,11 @@ impl Compiler {
                             Node::Prim(Lt, span),
                         ])
                     }
+                    Parse => {
+                        let n = self.positive_subscript(n, prim, &span);
+                        let span = self.add_span(span);
+                        Node::ImplPrim(ImplPrimitive::ParseSub(n), span)
+                    }
                     _ => {
                         self.add_error(
                             span.clone(),

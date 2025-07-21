@@ -544,6 +544,11 @@ impl ImplPrimitive {
                 let bits = val.bits(Some(*n), env)?;
                 env.push(bits);
             }
+            ImplPrimitive::ParseSub(n) => {
+                let val = env.pop(1)?;
+                let bits = val.parse_num_radix(*n as u32, env)?;
+                env.push(bits);
+            }
             ImplPrimitive::Root => env.dyadic_oo_env(Value::root)?,
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,

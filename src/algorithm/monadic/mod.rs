@@ -216,6 +216,84 @@ impl Value {
         arr.meta.set_per_meta(per_meta);
         arr
     }
+    pub(crate) fn parse_num_radix(mut self, radix: u32, env: &Uiua) -> UiuaResult<Self> {
+        if !(2..=36).contains(&radix) {
+            return Err(env.error("Radix must be in 2..=36"));
+        }
+        let per_meta = self.meta.take_per_meta();
+        let mut parsed = match (self.rank(), self) {
+            (0 | 1, Value::Char(arr)) => {
+                #[derive(Default)]
+                struct RadixParse {
+                    neg: Option<bool>,
+                    cur: f64,
+                    frac_pow: Option<i32>,
+                }
+                arr.data
+                    .iter()
+                    .try_fold(RadixParse::default(), |acc, cur| {
+                        Ok(match (acc, cur) {
+                            (RadixParse { neg: None, .. }, '¯' | '`' | '-') => RadixParse {
+                                neg: Some(true),
+                                ..Default::default()
+                            },
+                            (RadixParse { neg: None, .. }, '+') => RadixParse {
+                                neg: Some(false),
+                                ..Default::default()
+                            },
+                            (num @ RadixParse { frac_pow: None, .. }, '.') => RadixParse {
+                                frac_pow: Some(0),
+                                ..num
+                            },
+                            (_, '+' | '¯' | '`' | '-') => {
+                                return Err(
+                                    env.error("Sign can only be the first character of a number")
+                                )
+                            }
+                            (_, '.') => {
+                                return Err(env.error("`.` can only occur once in a number"))
+                            }
+                            (RadixParse { neg, cur, frac_pow }, c) => {
+                                let Some(dig) = c.to_digit(radix) else {
+                                    return Err(env.error(format!(
+                                        "Invalid character in base {radix} number: {c:?}"
+                                    )));
+                                };
+                                RadixParse {
+                                    neg,
+                                    cur: cur.mul_add(radix as f64, dig as f64),
+                                    frac_pow: frac_pow.map(|x| x + 1),
+                                }
+                            }
+                        })
+                    })
+                    .map(|res| {
+                        let mut num =
+                            res.cur * (radix as f64).powi(-res.frac_pow.unwrap_or_default());
+                        if res.neg.unwrap_or(false) {
+                            num *= -1.0;
+                        }
+                        num
+                    })
+                    .map(Into::into)
+                    .or_else(|e| env.value_fill().map(|fv| fv.value.clone()).ok_or(e))?
+            }
+            (0, Value::Box(arr)) => {
+                let Boxed(value) = arr.into_scalar().unwrap();
+                value.parse_num_radix(radix, env)?
+            }
+            (_, val @ (Value::Char(_) | Value::Box(_))) => {
+                let rows = val
+                    .into_rows()
+                    .map(|x| x.parse_num_radix(radix, env))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Value::from_row_values(rows, env)?
+            }
+            (_, val) => return Err(env.error(format!("Cannot parse {} array", val.type_name()))),
+        };
+        parsed.meta.set_per_meta(per_meta);
+        Ok(parsed)
+    }
     /// Attempt to parse the value into a number
     pub fn parse_num(mut self, env: &Uiua) -> UiuaResult<Self> {
         let per_meta = self.meta.take_per_meta();

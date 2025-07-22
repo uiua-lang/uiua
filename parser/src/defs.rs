@@ -865,9 +865,14 @@ primitive!(
     /// ex: ⋕ {"5" "24" "106"}
     /// ex: ⋕ .↯3_4 "012"
     ///
+    /// [parse] can take a subscript to parse in a different base. Bases `1` through `36` are supported as well as [Base64](https://en.wikipedia.org/wiki/Base64).
+    /// ex: ⋕₁₆"beef"
+    /// ex: ⋕₂ "-101010"
+    ///
     /// [un][parse] will convert a scalar number into a string.
     /// ex: °⋕ 58
     /// ex: °⋕ 6.283185307179586
+    /// ex: °⋕₁₆ 250.9375
     /// [un][parse] on a non-scalar number array will [box] each string.
     /// ex: °⋕ 1_2_3
     /// ex: °⋕ ↯3_4⇡12

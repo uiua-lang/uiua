@@ -36,7 +36,7 @@ static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
 static WATCH_CHILD: Lazy<Mutex<Option<Child>>> = Lazy::new(Default::default);
 
 fn fail<T>(e: UiuaError) -> T {
-    println!("{}", e.report());
+    eprintln!("{}", e.report());
     exit(1)
 }
 
@@ -72,7 +72,7 @@ fn main() {
         if let Some(ch) = &mut *child {
             _ = ch.kill();
             *child = None;
-            println!("# Program interrupted");
+            eprintln!("# Program interrupted");
             print_watching();
         } else {
             match App::try_parse().ok().and_then(|app| app.command) {
@@ -316,7 +316,7 @@ fn main() {
                     .load_file(path)
             });
             if let Err(e) = &res {
-                println!("{}", e.report());
+                eprintln!("{}", e.report());
             }
             rt.print_reports();
             if res.is_err() {
@@ -529,7 +529,7 @@ fn run(
         let res = rt.compile_run(|comp| comp.mode(mode).print_diagnostics(true).load_file(path));
         if let Err(e) = &res {
             print_stack(&rt.take_stack(), !no_color);
-            println!("{}", e.report());
+            eprintln!("{}", e.report());
         }
         rt.print_reports();
         if res.is_err() {
@@ -629,7 +629,7 @@ impl WatchArgs {
         let mut watcher = notify::recommended_watcher(send)?;
         watcher.watch(Path::new("."), RecursiveMode::Recursive)?;
 
-        println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
+        eprintln!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
 
         let config = FormatConfig::from_source(format_config_source, initial_path.as_deref()).ok();
         #[cfg(feature = "audio")]
@@ -709,14 +709,14 @@ impl WatchArgs {
                             sleep(Duration::from_millis((i as u64 + 1) * 10))
                         } else {
                             clear_watching();
-                            println!("{}", e.report());
+                            eprintln!("{}", e.report());
                             print_watching();
                             return Ok(());
                         }
                     }
                 }
             }
-            println!("Failed to format file after {TRIES} tries");
+            eprintln!("Failed to format file after {TRIES} tries");
             Ok(())
         };
         if let Some(path) = initial_path {
@@ -1042,7 +1042,7 @@ fn clear_watching() {
 }
 
 fn clear_watching_with(s: &str, end: &str) {
-    print!(
+    eprint!(
         "\r{}{}",
         s.repeat(terminal_size::terminal_size().map_or(10, |(w, _)| w.0 as usize)),
         end,
@@ -1364,7 +1364,7 @@ fn update_modules(modules: &[PathBuf]) -> io::Result<()> {
         .collect::<io::Result<_>>()?;
     for (path, canonical) in modules.iter().zip(canonical) {
         env::set_current_dir(&canonical)?;
-        println!("{} {}", "Updating".bold().bright_green(), path.display());
+        eprintln!("{} {}", "Updating".bold().bright_green(), path.display());
         Command::new("git").args(["pull"]).spawn()?.wait()?;
     }
     Ok(())
@@ -1379,7 +1379,7 @@ fn check(path: Option<PathBuf>) -> UiuaResult {
         let message_length = format!("Checking {} ({}/{})", path.display(), i + 1, path_count)
             .chars()
             .count();
-        print!(
+        eprint!(
             "\r{} {} ({}/{}){}",
             "Checking".bold().bright_green(),
             path.display(),
@@ -1390,7 +1390,7 @@ fn check(path: Option<PathBuf>) -> UiuaResult {
         stdout().flush().unwrap();
         let mut comp = Compiler::with_backend(NativeSys);
         if let Err(e) = comp.load_file(path) {
-            println!("\n{}", e.report());
+            eprintln!("\n{}", e.report());
         } else {
             successes += 1;
         }
@@ -1410,7 +1410,7 @@ fn check(path: Option<PathBuf>) -> UiuaResult {
     } else {
         Color::BrightYellow
     };
-    println!(
+    eprintln!(
         "\r{}{}",
         message.color(color),
         " ".repeat(width.saturating_sub(message.chars().count()))

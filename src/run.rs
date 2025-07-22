@@ -276,7 +276,7 @@ impl Uiua {
     /// Print all pending reports
     pub fn print_reports(&mut self) {
         for report in self.take_reports() {
-            println!("{report}"); // Allow println
+            eprintln!("{report}");
         }
     }
     /// Take the assembly
@@ -793,8 +793,7 @@ impl Uiua {
         if self.rt.time_instrs {
             let end_time = self.rt.backend.now();
             let padding = self.rt.call_stack.len().saturating_sub(1) * 2;
-            #[rustfmt::skip]
-            println!( // Allow println
+            eprintln!(
                 "  ⏲{:padding$}{:.2}ms - {}",
                 "",
                 end_time - self.rt.last_time,

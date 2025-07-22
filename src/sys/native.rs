@@ -1215,17 +1215,16 @@ impl SysBackend for NativeSys {
             return Ok(true);
         }
         match env.span() {
-            #[rustfmt::skip]
-            Span::Code(span) => println!( // Allow println
+            Span::Code(span) => eprintln!(
                 "{} at {span} {}",
                 "&b".truecolor(237, 94, 106),
                 "(press enter to continue)".bright_black()
             ),
             Span::Builtin => {}
         }
-        println!(); // Allow println
+        eprintln!();
         print_stack(env.stack(), true);
-        println!(); // Allow println
+        eprintln!();
         _ = stdin().read_line(&mut String::new());
         Ok(true)
     }
@@ -1244,8 +1243,7 @@ pub fn print_stack(stack: &[Value], color: bool) {
         )
         .send();
         _ = Request::ClearBeforeNext.send();
-        #[rustfmt::skip]
-        println!( // Allow println
+        eprintln!(
             "{} value{} displayed in window",
             stack.len(),
             if stack.len() == 1 { "" } else { "s" }
@@ -1257,7 +1255,7 @@ pub fn print_stack(stack: &[Value], color: bool) {
     }
     if stack.len() == 1 || !color {
         for value in stack {
-            println!("{}", value.show()); // Allow println
+            eprintln!("{}", value.show());
         }
         return;
     }
@@ -1276,6 +1274,6 @@ pub fn print_stack(stack: &[Value], color: bool) {
             5 => (w, b, w),
             _ => unreachable!(),
         };
-        println!("{}", value.show().truecolor(r, g, b)); // Allow println
+        eprintln!("{}", value.show().truecolor(r, g, b));
     }
 }

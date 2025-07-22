@@ -3998,8 +3998,10 @@ sys_op! {
     /// - `unsigned int`
     /// - `unsigned long`
     /// - `unsigned long long`
+    /// Any unsigned type can be written with just a `u` such as `uint` instead of `unsigned int`.
     /// Suffixing any of these with `*` makes them a pointer type.
     /// Struct types are defined as a list of types between `{}`s separated by `;`s, i.e. `{int; float}`. A trailing `;` is optional.
+    /// A struct with all fields of the same type can be written like `type[number]`. For example a pair of `int`s would be written `int[2]`.
     ///
     /// Arguments are passed as a list of boxed values.
     /// If we have a C function `int add(int a, int b)` in a shared library `example.dll`, we can call it like this:
@@ -4011,32 +4013,25 @@ sys_op! {
     /// Uiua arrays can be passed to foreign functions as pointer-length pairs.
     /// To do this, specify the type of the list items followed by `:n`, where `n` is the index of the parameter that corresponds to the length.
     /// The interpreter will automatically pass the number of elements in the array to this parameter.
-    /// Arrays passed in this way will be implicitely [deshape]ed, unless the item type is a struct.
     /// If we wave a C function `int sum(const int* arr, int len)` in a shared library `example.dll`, we can call it like this:
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
-    ///   : Sum ← Lib {"int" "sum" "const int:1" "int"}
+    ///   : Sum ← Lib {"int" "sum" "int:1" "int"}
     ///   : Sum {[1 2 3 4 5]} # 15
     ///
     /// [&ffi] calls can return multiple values.
-    /// In addition to the return value, any non-`const` pointer parameters will be interpreted as out-parameters.
+    /// In addition to the return value, any parameters prefixed with `out` will be sent and returned as out parameters.
+    /// If the out parameter is not marked as a pointer, it will be interpreted as a single value, and will be read back into an array when returned.
+    /// If the out parameter is marked as a pointer, it will be interpreted as an array and will be returned as a pointer value. This is allows you to keep memory that is allocated by passing an array valid.
     /// If there is more than one output value (including the return value), [&ffi] will return a list of the boxed output values.
-    /// If we have a C function `int split_head(int* list, int* len)` in a shared library `example.dll`, we can call it like this:
-    /// ex! # Experimental!
-    ///   : Lib ← &ffi ⊂□"example.dll"
-    ///   : SplitHead ← Lib {"int" "split_head" "int:1" "int*"}
-    ///   : SplitHead {[1 2 3 4 5]} # {1 [2 3 4 5]}
-    /// Note that the length parameter is a non-`const` pointer. This is because the function will modify it.
-    ///
-    /// `const char*` parameters and return types are interpreted as null-terminated strings, without an associated length parameter.
     ///
     /// Structs can be passed either as lists of boxed values or, if all fields are of the same type, as a normal array.
     /// If all fields of a struct returned by a foreign function are of the same type, the interpreter will automatically interpret it as an array rather than a list of boxed values.
     /// If we have a C struct `struct Vec2 { float x; float y; }` and a function `Vec2 vec2_add(Vec2 a, Vec2 b)` in a shared library `example.dll`, we can call it like this:
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
-    ///   : VecII ← "{float; float}"
-    ///   : Add ← Lib {VecII "vec2_add" VecII VecII}
+    ///   : Vec₂ ← "float[2]"
+    ///   : Add ← Lib {Vec₂ "vec2_add" Vec₂ Vec₂}
     ///   : Add {[1 2] [3 4]} # [4 6]
     ///
     /// If a foreign function returns or has an out-parameter that is a pointer type, a special array is returned representing the pointer. This array is not useful as a normal array, but it can be passed back as an [&ffi] argument, read from with [&memcpy], or freed with [&memfree].
@@ -4052,31 +4047,33 @@ sys_op! {
     /// Expects a string indicating the type, a pointer, and a length.
     ///
     /// The returned array will always be rank-`1`.
-    /// The type of the array depends on the given type.
-    /// Types are specified in the same way as in [&ffi].
-    /// `"char"` will create a character array.
-    /// `"unsigned char"` will create a number array with efficient byte storage.
-    /// All other number types will create a normal number array.
+    /// The type of the array depends on the pointer's type.
     ///
     /// For example, if we have a C function `int* get_ints(int len)` in a shared library `example.dll`, we can call it and copy the result like this:
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
     ///   : GetInts ← Lib {"int*" "get_ints" "int"}
-    ///   : &memcpy "int":3 GetInts 3
+    ///   : &memcpy ⊸GetInts 3
     ///
     /// Importantly, [&memcpy] does *not* free the memory allocated by the foreign function.
     /// Use [&memfree] to free the memory.
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
     ///   : GetInts ← Lib {"int*" "get_ints" "int"}
-    ///   : ⊃&memfree(&memcpy "int":3) GetInts 3
-    (3, MemCopy, Ffi, "&memcpy", "foreign function interface - copy", Mutating, { experimental: true }),
+    ///   : ⊃&memfree&memcpy ⊸GetInts 3
+    (2, MemCopy, Ffi, "&memcpy", "foreign function interface - copy", Mutating, { experimental: true }),
+    /// Write data from an array into a pointer
+    ///
+    /// Expects a pointer, an index, and a value.
+    ///
+    /// This function is equivalent to the C syntax `pointer[index] = value`
+    (3(0), MemSet, Ffi, "&memset", "write to memory", Mutating, { experimental: true }),
     /// Free a pointer
     ///
     /// *Warning ⚠️: [&memfree] can lead to undefined behavior if used incorrectly.*
     ///
-    /// This is useful for freeing memory allocated by a foreign function.
-    /// Expects a pointer.
+    /// This is useful for freeing memory allocated by a foreign function, or by an out-pointer.
+    /// Expects a pointer. If the pointer is `NULL` [&memfree] will do nothing.
     /// See [&memcpy] for an example.
     (1(0), MemFree, Ffi, "&memfree", "free memory", Mutating, { experimental: true }),
 }

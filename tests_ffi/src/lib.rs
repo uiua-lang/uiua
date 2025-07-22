@@ -9,7 +9,6 @@ pub extern "C" fn add(a: c_int, b: c_int) -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn strlen(s: *const c_char) -> c_int {
-    // println!("s ptr: {:p}", s);
     let mut len = 0;
     while unsafe { *s.offset(len) } != 0 {
         len += 1;
@@ -20,29 +19,6 @@ pub unsafe extern "C" fn strlen(s: *const c_char) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn reverse(list: *mut c_int, len: c_int) {
     std::slice::from_raw_parts_mut(list, len as usize).reverse();
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn reversed(list: *const c_int, len: c_int) -> *const c_int {
-    let slice = std::slice::from_raw_parts(list, len as usize);
-    let mut reversed = slice.to_vec();
-    reversed.reverse();
-    reversed.leak().as_ptr()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn head_tail(list: *mut c_int, len: *mut c_int) -> c_int {
-    // println!("list ptr b: {:p}", list);
-    // println!("len ptr b: {:p}", len);
-    // println!("len: {}", *len);
-    // println!("first: {}", *list);
-    // println!("second: {}", *list.offset(1));
-    // println!("third: {}", *list.offset(2));
-    let slice = std::slice::from_raw_parts_mut(list, *len as usize);
-    let head = slice[0];
-    slice.rotate_left(1);
-    *len -= 1;
-    head
 }
 
 #[no_mangle]
@@ -81,9 +57,6 @@ pub struct Vec2 {
 
 #[no_mangle]
 pub unsafe extern "C" fn vec2_len(v: Vec2) -> f64 {
-    // println!("v: {:?}", v);
-    // println!("v.x bytes: {:?}", v.x.to_ne_bytes());
-    // println!("v.y bytes: {:?}", v.y.to_ne_bytes());
     (v.x * v.x + v.y * v.y).sqrt()
 }
 
@@ -137,27 +110,31 @@ pub struct Person {
 
 #[no_mangle]
 pub unsafe extern "C" fn person_new(name: *const c_char, age: c_int) -> Person {
-    // println!("name ptr: {:p}", name);
-    // println!("age: {}", age);
     Person { name, age }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn person_new_ptr(name: *const c_char, age: c_int) -> *const Person {
-    // println!("name ptr: {:p}", name);
-    // println!("age: {}", age);
-    Box::into_raw(Box::new(Person { name, age }))
+pub unsafe extern "C" fn person_children(name: *const c_char, age: c_int) -> *const Person {
+    let name = CStr::from_ptr(name).to_str().unwrap().to_string();
+    let mut children = Vec::new();
+    children.push(Person {
+        name: CString::new(format!("{name} Jr.")).unwrap().into_raw(),
+        age: age - 25,
+    });
+    children.push(Person {
+        name: CString::new(format!("{name}ina")).unwrap().into_raw(),
+        age: age - 27,
+    });
+    children.leak() as *mut _ as *const _
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn person_val_age(p: Person) -> c_int {
-    // println!("p ptr: {:p}", p);
     p.age
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn person_ptr_age(p: *const Person) -> c_int {
-    // println!("p ptr: {:p}", p);
     (*p).age
 }
 
@@ -170,28 +147,6 @@ pub struct TwoPeople {
 #[no_mangle]
 pub unsafe extern "C" fn two_people_new(a: Person, b: Person) -> TwoPeople {
     TwoPeople { a, b }
-}
-
-#[repr(C)]
-pub struct TwoPeoplePtrs {
-    pub a: *const Person,
-    pub b: *const Person,
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn two_people_new_ptr(a: *const Person, b: *const Person) -> TwoPeoplePtrs {
-    TwoPeoplePtrs { a, b }
-}
-
-#[repr(C)]
-pub struct TwoInts {
-    pub a: *const c_int,
-    pub b: *const c_int,
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn two_ints_new(a: *const c_int, b: *const c_int) -> TwoInts {
-    TwoInts { a, b }
 }
 
 #[no_mangle]

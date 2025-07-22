@@ -20,7 +20,8 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     fill::{Fill, FillValue},
     grid_fmt::GridFmt,
-    Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Value, WILDCARD_CHAR, WILDCARD_NAN,
+    Boxed, Complex, ExactDoubleIterator, FfiType, HandleKind, Shape, Value, WILDCARD_CHAR,
+    WILDCARD_NAN,
 };
 
 /// Uiua's array type
@@ -230,33 +231,33 @@ impl ArrayMeta {
 }
 
 /// Array pointer metadata
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct MetaPtr {
     /// The pointer value
     pub ptr: usize,
-    /// Whether the pointer should prevent the array's value from being shown
-    pub raw: bool,
+    /// The type of value stored at the pointer when read
+    pub ty: FfiType,
 }
 
 impl MetaPtr {
     /// Get a null metadata pointer
     pub const fn null() -> Self {
-        Self { ptr: 0, raw: true }
-    }
-    /// Create a new metadata pointer
-    pub fn new<T: ?Sized>(ptr: *const T, raw: bool) -> Self {
         Self {
-            ptr: ptr as *const () as usize,
-            raw,
+            ptr: 0,
+            ty: FfiType::Void,
         }
     }
-    /// Get the pointer as a raw pointer
-    pub fn get<T>(&self) -> *const T {
-        self.ptr as *const T
+    /// Create a new metadata pointer
+    pub fn new(ptr: usize, ffi_type: FfiType) -> Self {
+        Self { ptr, ty: ffi_type }
     }
     /// Get the pointer as a raw pointer
-    pub fn get_mut<T>(&self) -> *mut T {
-        self.ptr as *mut T
+    pub fn get(&self) -> *const u8 {
+        self.ptr as *const _
+    }
+    /// Get the pointer as a raw pointer
+    pub fn get_mut(&self) -> *mut u8 {
+        self.ptr as *mut _
     }
 }
 

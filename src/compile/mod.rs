@@ -2604,9 +2604,10 @@ impl Compiler {
         let inputs = self.asm.inputs.clone();
         self.emit_diagnostic_impl(Diagnostic::new(message.into(), span, kind, inputs));
     }
+    #[allow(clippy::print_stdout)]
     fn emit_diagnostic_impl(&mut self, diagnostic: Diagnostic) {
         if self.print_diagnostics {
-            println!("{}", diagnostic.report()); // Allow println
+            println!("{}", diagnostic.report());
         } else {
             self.diagnostics.insert(diagnostic);
         }
@@ -2702,7 +2703,7 @@ impl Compiler {
                 .or_else(|| self.scopes_to_file().skip(1).find_map(get))
                 .is_none_or(|l| l.index != local.index)
         {
-            self.add_error(span.clone(), format!("`{}` is private", name));
+            self.add_error(span.clone(), format!("`{name}` is private"));
         }
     }
     /// Get a span by its index

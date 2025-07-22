@@ -66,7 +66,7 @@ pub fn markdown_html(text: &str) -> String {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://uiua.org/styles.css">
     "#;
-    format!("<!DOCTYPE html><html><head>{}</head>{}</html>", head, body)
+    format!("<!DOCTYPE html><html><head>{head}</head>{body}</html>")
 }
 
 fn node_view<'a>(node: &'a AstNode<'a>) -> View {
@@ -231,7 +231,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                 .and_then(|text| text.strip_suffix(']'))
             {
                 if let Some(prim) = Primitive::from_name(text) {
-                    return format!("{:?}", prim);
+                    return format!("{prim:?}");
                 }
             }
             text.clone()
@@ -458,7 +458,7 @@ fn text_code_blocks() {
         }
 
         for (block, should_fail) in text_code_blocks(root) {
-            eprintln!("Code block:\n{}", block);
+            eprintln!("Code block:\n{block}");
             let mut comp = uiua::Compiler::with_backend(WebBackend::default());
             let mut env = uiua::Uiua::with_backend(WebBackend::default());
             let res = comp

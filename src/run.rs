@@ -183,7 +183,7 @@ impl FromStr for RunMode {
             "normal" => Ok(RunMode::Normal),
             "test" => Ok(RunMode::Test),
             "all" => Ok(RunMode::All),
-            _ => Err(format!("unknown run mode `{}`", s)),
+            _ => Err(format!("unknown run mode `{s}`")),
         }
     }
 }
@@ -274,9 +274,10 @@ impl Uiua {
         take(&mut self.rt.reports)
     }
     /// Print all pending reports
+    #[allow(clippy::print_stdout)]
     pub fn print_reports(&mut self) {
         for report in self.take_reports() {
-            println!("{report}"); // Allow println
+            println!("{report}");
         }
     }
     /// Take the assembly
@@ -790,11 +791,11 @@ impl Uiua {
                 Ok(())
             }
         };
+        #[allow(clippy::print_stdout)]
         if self.rt.time_instrs {
             let end_time = self.rt.backend.now();
             let padding = self.rt.call_stack.len().saturating_sub(1) * 2;
-            #[rustfmt::skip]
-            println!( // Allow println
+            println!(
                 "  ⏲{:padding$}{:.2}ms - {}",
                 "",
                 end_time - self.rt.last_time,

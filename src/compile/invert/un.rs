@@ -1301,6 +1301,8 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnDiv => Prim(Div, span),
         UnCouple => Prim(Couple, span),
         UnParse => Prim(Parse, span),
+        ParseSub(n) => ImplPrim(UnParseSub(n), span),
+        UnParseSub(n) => ImplPrim(ParseSub(n), span),
         UnFix => Prim(Fix, span),
         UnShape => Prim(Shape, span),
         UnMap => Prim(Map, span),

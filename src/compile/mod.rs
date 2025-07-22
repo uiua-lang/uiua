@@ -2368,6 +2368,12 @@ impl Compiler {
                         prim: Some(Box),
                         span: self.add_span(span),
                     },
+                    Parse => {
+                        if !matches!(n, 1..=36 | 64) {
+                            self.add_error(span.clone(), format!("Cannot parse base {n}"));
+                        }
+                        Node::ImplPrim(ImplPrimitive::ParseSub(n as usize), self.add_span(span))
+                    }
                     Stack => Node::ImplPrim(
                         ImplPrimitive::StackN {
                             n: self.positive_subscript(n, Stack, &span),

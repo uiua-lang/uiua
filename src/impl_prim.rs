@@ -126,6 +126,7 @@ impl_primitive!(
     (1, UnUtf16),
     (1, UnGraphemes),
     (1, UnParse),
+    (1, UnParseSub(usize)),
     (1, UnFix),
     (1, UnShape),
     (1[1], UnScan),
@@ -234,6 +235,7 @@ impl_primitive!(
     (2(3), Over),
     (1, NBits(usize)),
     (1, DeshapeSub(i32)),
+    (1, ParseSub(usize)),
     (1, TransposeN(i32)),
     (2, MultiKeep(usize)),
     (1, Utf16),
@@ -249,16 +251,8 @@ impl_primitive!(
     (2(1), TagVariant),
 );
 
-fn fmt_subscript(f: &mut fmt::Formatter<'_>, mut i: i32) -> fmt::Result {
-    if i < 0 {
-        write!(f, "₋")?;
-        i = -i;
-    }
-    while i > 0 {
-        write!(f, "{}", SUBSCRIPT_DIGITS[i as usize % 10])?;
-        i /= 10;
-    }
-    Ok(())
+fn fmt_subscript(f: &mut fmt::Formatter<'_>, i: i32) -> fmt::Result {
+    write!(f, "{}", Subscript::numeric(i.into()))
 }
 
 impl fmt::Display for ImplPrimitive {
@@ -269,6 +263,14 @@ impl fmt::Display for ImplPrimitive {
             &DeshapeSub(i) => {
                 write!(f, "{Deshape}")?;
                 fmt_subscript(f, i)
+            }
+            &ParseSub(i) => {
+                write!(f, "{Parse}")?;
+                fmt_subscript(f, i as i32)
+            }
+            &UnParseSub(i) => {
+                write!(f, "{Un}{Parse}")?;
+                fmt_subscript(f, i as i32)
             }
             &EachSub(i) => {
                 write!(f, "{Each}")?;

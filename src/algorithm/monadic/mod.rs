@@ -9,7 +9,6 @@ use std::{
     collections::{HashMap, HashSet},
     convert::identity,
     f64::consts::{PI, TAU},
-    fmt,
     io::Write,
     iter::{self, once},
     mem::{size_of, take},
@@ -260,6 +259,66 @@ impl Value {
         parsed.meta.set_per_meta(per_meta);
         Ok(parsed)
     }
+
+    fn padded(
+        c: char,
+        right: bool,
+        arr: Array<impl Into<f64> + Copy>,
+        base: usize,
+        to_string: impl Fn(f64) -> UiuaResult<String>,
+        env: &Uiua,
+    ) -> UiuaResult<Array<char>> {
+        let is_digit = Self::BASE_CHARSET[..base].contains(c.to_ascii_lowercase());
+
+        let mut buf = Vec::new();
+        let mut max_whole = 0;
+        let mut max_dec = 0;
+        for v in &arr.data {
+            buf.clear();
+            write!(&mut buf, "{}", to_string((*v).into())?).unwrap();
+            if let Some(i) = buf.iter().position(|&c| c == b'.') {
+                max_whole = max_whole.max(i);
+                max_dec = max_dec.max(buf.len() - i - 1);
+            } else {
+                max_whole = max_whole.max(buf.len());
+            }
+        }
+        let max_len = if max_dec == 0 {
+            max_whole
+        } else {
+            max_whole + max_dec + 1
+        };
+        let mut new_shape = arr.shape.clone();
+        new_shape.push(max_len);
+        let elem_count = validate_size::<char>(new_shape.iter().copied(), env)?;
+        let mut new_data = eco_vec![c; elem_count];
+        if max_len > 0 {
+            for (i, s) in new_data.make_mut().chunks_exact_mut(max_len).enumerate() {
+                let n = to_string(arr.data[i].into())?;
+                let dot_pos = n.find('.');
+                if right {
+                    for (s, c) in s.iter_mut().zip(n.chars()) {
+                        *s = c;
+                    }
+                } else {
+                    let skip = if max_dec == 0 {
+                        0
+                    } else {
+                        dot_pos
+                            .map(|i| max_dec - (n.len() - i - 1))
+                            .unwrap_or(max_dec + 1)
+                    };
+                    for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
+                        *s = c;
+                    }
+                }
+                if dot_pos.is_none() && max_dec > 0 && is_digit {
+                    s[max_whole] = '.';
+                }
+            }
+        }
+        Ok(Array::new(new_shape, new_data))
+    }
     pub(crate) fn unparse(mut self, env: &Uiua) -> UiuaResult<Self> {
         let per_meta = self.meta.take_per_meta();
         let mut unparsed = if self.rank() == 0 {
@@ -268,66 +327,11 @@ impl Value {
                 value => value.format().into(),
             }
         } else {
-            fn padded<T: fmt::Display>(
-                c: char,
-                right: bool,
-                arr: Array<T>,
-                env: &Uiua,
-            ) -> UiuaResult<Array<char>> {
-                let mut buf = Vec::new();
-                let mut max_whole = 0;
-                let mut max_dec = 0;
-                for v in &arr.data {
-                    buf.clear();
-                    write!(&mut buf, "{v}").unwrap();
-                    if let Some(i) = buf.iter().position(|&c| c == b'.') {
-                        max_whole = max_whole.max(i);
-                        max_dec = max_dec.max(buf.len() - i - 1);
-                    } else {
-                        max_whole = max_whole.max(buf.len());
-                    }
-                }
-                let max_len = if max_dec == 0 {
-                    max_whole
-                } else {
-                    max_whole + max_dec + 1
-                };
-                let mut new_shape = arr.shape.clone();
-                new_shape.push(max_len);
-                let elem_count = validate_size::<char>(new_shape.iter().copied(), env)?;
-                let mut new_data = eco_vec![c; elem_count];
-                if max_len > 0 {
-                    for (i, s) in new_data.make_mut().chunks_exact_mut(max_len).enumerate() {
-                        let n = arr.data[i].to_string();
-                        let dot_pos = n.find('.');
-                        if right {
-                            for (s, c) in s.iter_mut().zip(n.chars()) {
-                                *s = c;
-                            }
-                        } else {
-                            let skip = if max_dec == 0 {
-                                0
-                            } else {
-                                dot_pos
-                                    .map(|i| max_dec - (n.len() - i - 1))
-                                    .unwrap_or(max_dec + 1)
-                            };
-                            for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
-                                *s = c;
-                            }
-                        }
-                        if dot_pos.is_none() && max_dec > 0 && c.is_ascii_digit() {
-                            s[max_whole] = '.';
-                        }
-                    }
-                }
-                Ok(Array::new(new_shape, new_data))
-            }
-
             match self {
                 Value::Num(arr) => {
                     if let Ok(c) = env.scalar_fill::<char>() {
-                        padded(c.value, c.is_right(), arr, env)?.into()
+                        Self::padded(c.value, c.is_right(), arr, 10, |n| Ok(n.to_string()), env)?
+                            .into()
                     } else {
                         let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
                             .map(Value::from)
@@ -338,7 +342,8 @@ impl Value {
                 }
                 Value::Byte(arr) => {
                     if let Ok(c) = env.scalar_fill::<char>() {
-                        padded(c.value, c.is_right(), arr, env)?.into()
+                        Self::padded(c.value, c.is_right(), arr, 10, |n| Ok(n.to_string()), env)?
+                            .into()
                     } else {
                         let new_data: CowSlice<Boxed> = (arr.data.iter().map(|v| v.to_string()))
                             .map(Value::from)
@@ -353,6 +358,253 @@ impl Value {
                         .map(Boxed)
                         .collect();
                     Array::new(arr.shape.clone(), new_data).into()
+                }
+                val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
+            }
+        };
+        unparsed.meta.set_per_meta(per_meta);
+        Ok(unparsed)
+    }
+
+    const BASE_CHARSET: &str = "0123456789abcdefghijklmnopqrstuvwxyz";
+    const BASE64_CHARSET: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    /// Attempt to parse strings in some base into numbers
+    pub fn parse_base(mut self, base: usize, env: &Uiua) -> UiuaResult<Self> {
+        let parse_base_str = |mut s: &str| -> UiuaResult<Value> {
+            if base == 64 {
+                let mut s = s.to_string();
+                s = s.replace("-", "+");
+                s = s.replace("_", "/");
+
+                let mut num = 0.0;
+                for (place, c) in s.chars().rev().enumerate() {
+                    let scale = (base as f64).powi(place as i32);
+                    if let Some(value) = Self::BASE64_CHARSET.find(c) {
+                        num += value as f64 * scale;
+                    } else {
+                        return Err(env.error(format!("Cannot parse character {c} in base {base}")));
+                    }
+                }
+                return Ok(num.into());
+            }
+
+            let sign = if let Some(pos) = s.strip_prefix("-") {
+                s = pos;
+                -1.0
+            } else {
+                1.0
+            };
+
+            if base == 1 {
+                let not_one = s.chars().find(|&c| c != '1');
+                return if let Some(c) = not_one {
+                    Err(env.error(format!("Cannot parse character {c} in base {base}")))
+                } else {
+                    Ok(s.len().into())
+                };
+            }
+
+            if s.is_empty() {
+                return Err(env.error("Number must have digits"));
+            }
+
+            let fract = if let Some((num, sfract)) = s.split_once(".") {
+                if num.is_empty() && sfract.is_empty() {
+                    return Err(env.error("Number must have digits"));
+                }
+                s = num;
+                let mut fract = 0.0;
+                for (place, c) in sfract.chars().enumerate() {
+                    let scale = (base as f64).powi(-(place as i32 + 1));
+                    if let Some(value) =
+                        Self::BASE_CHARSET[..base as usize].find(c.to_ascii_lowercase())
+                    {
+                        fract += value as f64 * scale;
+                    } else {
+                        return Err(env.error(format!("Cannot parse character {c} in base {base}")));
+                    }
+                }
+                fract
+            } else {
+                0.0
+            };
+
+            let mut num = 0.0;
+            for (place, c) in s.chars().rev().enumerate() {
+                let scale = (base as f64).powi(place as i32);
+                if let Some(value) =
+                    Self::BASE_CHARSET[..base as usize].find(c.to_ascii_lowercase())
+                {
+                    num += value as f64 * scale;
+                } else {
+                    return Err(env.error(format!("Cannot parse character {c} in base {base}")));
+                }
+            }
+
+            num += fract;
+            num *= sign;
+
+            Ok(num.into())
+        };
+
+        let per_meta = self.meta.take_per_meta();
+        let mut parsed = match (self.rank(), self) {
+            (0 | 1, Value::Char(arr)) => {
+                let s = arr.data.iter().copied().collect::<String>();
+
+                parse_base_str(&s)
+                    .or_else(|e| env.value_fill().map(|fv| fv.value.clone()).ok_or(e))?
+            }
+            (0, Value::Box(arr)) => {
+                let Boxed(value) = arr.into_scalar().unwrap();
+                value.parse_base(base, env)?
+            }
+            (_, val @ (Value::Char(_) | Value::Box(_))) => {
+                let mut rows = Vec::with_capacity(val.row_count());
+                for row in val.into_rows() {
+                    rows.push(row.parse_base(base, env)?);
+                }
+                Value::from_row_values(rows, env)?
+            }
+            (_, val) => return Err(env.error(format!("Cannot parse {} array", val.type_name()))),
+        };
+        parsed.meta.set_per_meta(per_meta);
+        Ok(parsed)
+    }
+    /// Format numbers into some base
+    pub fn unparse_base(mut self, base: usize, env: &Uiua) -> UiuaResult<Self> {
+        // This expression expression determines how many digits in some base
+        let sigfigs = (40.0 / (base as f64).ln()).ceil() as usize;
+
+        let unparse_base_num = |mut n: f64| match base {
+            _ if n.is_infinite() || n.is_nan() => {
+                Err(env.error(format!("Cannot unparse {n} to base {base}")))
+            }
+            1 => {
+                if n < 0.0 || n.fract() != 0.0 {
+                    return Err(env.error(format!("Cannot unparse {n} to base {base}")));
+                }
+                Ok(iter::repeat_n('1', n as usize).collect::<String>().into())
+            }
+            10 => Ok(n.to_string()),
+            64 => {
+                if n.fract() != 0.0 {
+                    return Err(env.error(format!("Cannot unparse {n} to base {base}")));
+                }
+                if n == 0.0 {
+                    return Ok("A".to_string());
+                }
+
+                let mut num = Vec::new();
+                while n != 0.0 {
+                    num.push(
+                        Self::BASE64_CHARSET
+                            .chars()
+                            .nth((n % 64.0) as usize)
+                            .unwrap(),
+                    );
+                    n = (n / 64.0).floor();
+                }
+
+                Ok(num.into_iter().rev().collect())
+            }
+            _ => {
+                let sign = if n < 0.0 {
+                    "-".to_string()
+                } else {
+                    String::new()
+                };
+                n = n.abs();
+                let mut fract = n.fract();
+                n = n.floor();
+
+                let mut num = Vec::new();
+                while n != 0.0 {
+                    num.push(
+                        Self::BASE_CHARSET[..base]
+                            .chars()
+                            .nth((n % base as f64) as usize)
+                            .unwrap(),
+                    );
+                    n = (n / base as f64).floor();
+                }
+                num = num
+                    .into_iter()
+                    .rev()
+                    .enumerate()
+                    .map(|(i, c)| if i <= sigfigs { c } else { '0' })
+                    .collect();
+
+                let fract = if fract != 0.0 {
+                    let mut digits = ".".to_string();
+                    for _ in 0..sigfigs - num.len() {
+                        fract *= base as f64;
+                        digits.push(
+                            Self::BASE_CHARSET[..base]
+                                .chars()
+                                .nth(fract.floor() as usize)
+                                .unwrap(),
+                        );
+                        fract %= 1.0;
+                    }
+                    let digits = digits.trim_end_matches("0");
+                    let digits = digits.trim_end_matches(".");
+                    digits.to_string()
+                } else {
+                    String::new()
+                };
+
+                if num.is_empty() {
+                    num.push('0');
+                }
+
+                let num = num.into_iter().collect::<String>();
+
+                Ok(format!("{sign}{num}{fract}"))
+            }
+        };
+
+        let per_meta = self.meta.take_per_meta();
+        let mut unparsed = if self.rank() == 0 {
+            match self {
+                Value::Box(b) => b.into_scalar().unwrap().0.unparse_base(base, env)?,
+                Value::Byte(n) => unparse_base_num(*n.as_scalar().unwrap() as f64)?.into(),
+                Value::Num(n) => unparse_base_num(*n.as_scalar().unwrap())?.into(),
+                val => {
+                    return Err(env.error(format!(
+                        "Cannot unparse {} array in base {base}",
+                        val.type_name()
+                    )))
+                }
+            }
+        } else {
+            match self {
+                Value::Num(arr) => {
+                    if let Ok(c) = env.scalar_fill::<char>() {
+                        Self::padded(c.value, c.is_right(), arr, base, unparse_base_num, env)?
+                            .into()
+                    } else {
+                        let new_data: CowSlice<Boxed> =
+                            (arr.data.iter().copied().map(unparse_base_num))
+                                .map(|v| v.map(Value::from))
+                                .map(|v| v.map(Boxed))
+                                .collect::<UiuaResult<_>>()?;
+                        Array::new(arr.shape.clone(), new_data).into()
+                    }
+                }
+                Value::Byte(arr) => {
+                    if let Ok(c) = env.scalar_fill::<char>() {
+                        Self::padded(c.value, c.is_right(), arr, base, unparse_base_num, env)?
+                            .into()
+                    } else {
+                        let new_data: CowSlice<Boxed> =
+                            (arr.data.iter().map(|&n| n as f64).map(unparse_base_num))
+                                .map(|v| v.map(Value::from))
+                                .map(|v| v.map(Boxed))
+                                .collect::<UiuaResult<_>>()?;
+                        Array::new(arr.shape.clone(), new_data).into()
+                    }
                 }
                 val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
             }

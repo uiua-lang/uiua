@@ -286,6 +286,7 @@ pub enum SysOpClass {
     Command,
     Media,
     Tcp,
+    Udp,
     Ffi,
     Misc,
 }

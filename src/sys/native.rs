@@ -41,6 +41,7 @@ struct GlobalNativeSys {
     tls_listeners: DashMap<Handle, TlsListener>,
     tcp_sockets: DashMap<Handle, TcpStream>,
     tls_sockets: DashMap<Handle, TlsSocket>,
+    udp_sockets: DashMap<Handle, UdpSocket>,
     #[cfg(feature = "webcam")]
     cam_channels: DashMap<usize, WebcamChannel>,
     hostnames: DashMap<Handle, String>,
@@ -63,6 +64,11 @@ enum SysStream<'a> {
     ChildStderr(dashmap::mapref::one::RefMut<'a, Handle, ChildStream<BufReader<ChildStderr>>>),
     TcpSocket(dashmap::mapref::one::Ref<'a, Handle, TcpStream>),
     TlsSocket(dashmap::mapref::one::Ref<'a, Handle, TlsSocket>),
+}
+
+struct UdpSocket {
+    socket: std::net::UdpSocket,
+    max_msg_len: usize,
 }
 
 struct ChildStream<T> {
@@ -211,6 +217,7 @@ impl Default for GlobalNativeSys {
             tls_listeners: DashMap::new(),
             tcp_sockets: DashMap::new(),
             tls_sockets: DashMap::new(),
+            udp_sockets: DashMap::new(),
             #[cfg(feature = "webcam")]
             cam_channels: DashMap::new(),
             hostnames: DashMap::new(),
@@ -274,6 +281,13 @@ impl GlobalNativeSys {
             Some(f(&sock))
         } else {
             (self.tls_sockets.get(&handle)).map(|sock| f(&sock.stream))
+        }
+    }
+    fn get_udp_socket<T>(&self, handle: Handle, f: impl FnOnce(&mut UdpSocket) -> T) -> Option<T> {
+        if let Some(mut sock) = self.udp_sockets.get_mut(&handle) {
+            Some(f(&mut sock))
+        } else {
+            None
         }
     }
 }
@@ -969,6 +983,47 @@ impl SysBackend for NativeSys {
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?
             .map_err(|e| e.to_string())
     }
+    fn udp_bind(&self, addr: &str) -> Result<Handle, String> {
+        let handle = NATIVE_SYS.new_handle();
+        let socket = std::net::UdpSocket::bind(addr).map_err(|e| e.to_string())?;
+        let socket = UdpSocket {
+            max_msg_len: 256,
+            socket: socket,
+        };
+        NATIVE_SYS.udp_sockets.insert(handle, socket);
+        NATIVE_SYS.hostnames.insert(
+            handle,
+            (addr.split_once(':').ok_or("No colon in address")?.0).to_string(),
+        );
+        Ok(handle)
+    }
+    fn udp_recv(&self, handle: Handle) -> Result<(Vec<u8>, SocketAddr), String> {
+        NATIVE_SYS
+            .get_udp_socket(handle, |sock| {
+                let mut buf: Vec<u8> = vec![0; sock.max_msg_len];
+                sock.socket.recv_from(&mut buf).map(|(n, addr)| {
+                    buf.truncate(n);
+                    (buf, addr)
+                })
+            })
+            .ok_or_else(|| "Invalid UDP socket handle".to_string())?
+            .map_err(|e| e.to_string())
+    }
+    fn udp_send(&self, handle: Handle, bytes: Vec<u8>, addr: &str) -> Result<(), String> {
+        NATIVE_SYS
+            .get_udp_socket(handle, |sock| {
+                sock.socket.send_to(bytes.as_slice(), addr).map(|_| ())
+            })
+            .ok_or_else(|| "Invalid UDP socket handle".to_string())?
+            .map_err(|e| e.to_string())
+    }
+    fn udp_set_max_msg_length(&self, handle: Handle, max_len: usize) -> Result<(), String> {
+        NATIVE_SYS
+            .get_udp_socket(handle, |sock| {
+                sock.max_msg_len = max_len;
+            })
+            .ok_or_else(|| "Invalid UDP socket handle".to_string())
+    }
     fn close(&self, handle: Handle) -> Result<(), String> {
         if NATIVE_SYS.child_stdins.remove(&handle).is_some()
             | NATIVE_SYS.child_stdouts.remove(&handle).is_some()
@@ -985,6 +1040,7 @@ impl SysBackend for NativeSys {
             (&mut &socket).flush().map_err(|e| e.to_string())
         } else if NATIVE_SYS.tcp_listeners.remove(&handle).is_some()
             || NATIVE_SYS.tls_listeners.remove(&handle).is_some()
+            || NATIVE_SYS.udp_sockets.remove(&handle).is_some()
         {
             NATIVE_SYS.hostnames.remove(&handle);
             Ok(())

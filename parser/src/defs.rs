@@ -3974,6 +3974,36 @@ sys_op! {
     (2(0), TcpSetWriteTimeout, Tcp, "&tcpswt", "tcp - set write timeout", Mutating),
     /// Get the connection address of a TCP socket
     (1, TcpAddr, Tcp, "&tcpaddr", "tcp - address", Mutating),
+    /// Bind a UDP socket
+    ///
+    /// Returns a UDP socket handle
+    /// You can receive messages with [&udpr] or send messages with [&udps].
+    /// You can adjust the maximum length of received messages using [&udpsml].
+    /// The default is 256 bytes.
+    ///
+    /// ex: S ← &udpb "0.0.0.0:7777"
+    ///   :
+    ///   : ⍢(&p $"_: _" °utf₈ &udpr S)1
+    /// This example binds a socket and then continuously prints received UTF₈ messages.
+    (1, UdpBind, Udp, "&udpb", "udp - bind", Mutating),
+    /// Receive a single message from a UDP socket
+    ///
+    /// Uses the internal maximum length, the default is 256 bytes.
+    /// To change the maximum length use [&udpsml]
+    /// Returns data and the address of the sender.
+    (1(2), UdpReceive, Udp, "&udpr", "udp - receive", Mutating),
+    /// Send a message on a UDP socket
+    ///
+    /// The first argument is the message to send in bytes.
+    /// The second argument is the address to send to.
+    /// The third argument is the UDP socket to send on.
+    (3(0), UdpSend, Udp, "&udps", "udp - send", Mutating),
+    /// Set the maximum message length for incoming messages
+    ///
+    /// Warning: Messages that contain more bytes than the max length will be chopped off.
+    ///
+    /// The default is 256 bytes.
+    (2(0), UdpSetMaxMsgLength, Udp, "&udpsml", "udp - set maximum message length", Mutating),
     /// Capture an image from a webcam
     ///
     /// Takes the index of the webcam to capture from.

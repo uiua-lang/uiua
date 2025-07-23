@@ -82,6 +82,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Abs => env.monadic_env(Value::abs)?,
         Primitive::Sign => env.monadic_env(Value::sign)?,
         Primitive::Sqrt => env.monadic_env(Value::sqrt)?,
+        Primitive::Reciprocal => env.monadic_env(Value::recip)?,
         Primitive::Exp => env.monadic_env(Value::exp)?,
         Primitive::Sin => env.monadic_env(Value::sin)?,
         Primitive::Floor => env.monadic_env(Value::floor)?,

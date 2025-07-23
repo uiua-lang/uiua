@@ -202,6 +202,15 @@ primitive!(
     ///
     /// The glyph looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, ("absolute value", '⌵')),
+    /// Get the reciprocal of a number
+    ///
+    /// ex: # Experimental!
+    ///   : ⨪3
+    /// ex: # Experimental!
+    ///   : ⨪[1 2 3 6]
+    /// ex: # Experimental!
+    ///   : ⨪ℂ2 1
+    (1, Reciprocal, MonadicPervasive, ("reciprocal", '⨪'), { experimental: true }),
     /// Take the square root of a number
     ///
     /// ex: √4

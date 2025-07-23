@@ -417,7 +417,8 @@ fn prim_docs() {
         for line in &doc.lines {
             if let PrimDocLine::Example(ex) = line {
                 if [
-                    "&sl", "&tcpc", "&tlsc", "&ast", "&clip", "&frab", "&fmd", "&b",
+                    "&sl", "&tcpc", "&tlsc", "&ast", "&clip", "&frab", "&fmd", "&b", "&udpb",
+                    "&udpr", "&udps", "&udpsml",
                 ]
                 .iter()
                 .any(|prim| ex.input().contains(prim))

@@ -3983,7 +3983,7 @@ sys_op! {
     ///
     /// ex: S ← &udpb "0.0.0.0:7777"
     ///   :
-    ///   : ⍢(&p $"_: _" °utf₈ &udpr S)1
+    ///   : ⍢(&p ˜$"_: _" °utf₈ &udpr S)1
     /// This example binds a socket and then continuously prints received UTF₈ messages.
     (1, UdpBind, Udp, "&udpb", "udp - bind", Mutating),
     /// Receive a single message from a UDP socket

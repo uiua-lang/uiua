@@ -291,7 +291,11 @@ impl GlobalNativeSys {
             None
         }
     }
-    fn get_udp_socket_mut<T>(&self, handle: Handle, f: impl FnOnce(&mut UdpSocket) -> T) -> Option<T> {
+    fn get_udp_socket_mut<T>(
+        &self,
+        handle: Handle,
+        f: impl FnOnce(&mut UdpSocket) -> T,
+    ) -> Option<T> {
         if let Some(mut sock) = self.udp_sockets.get_mut(&handle) {
             Some(f(&mut sock))
         } else {

@@ -246,6 +246,7 @@ impl GlobalNativeSys {
                 && !self.tcp_listeners.contains_key(&handle)
                 && !self.tcp_sockets.contains_key(&handle)
                 && !self.tls_sockets.contains_key(&handle)
+                && !self.udp_sockets.contains_key(&handle)
             {
                 return handle;
             }

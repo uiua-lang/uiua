@@ -283,7 +283,14 @@ impl GlobalNativeSys {
             (self.tls_sockets.get(&handle)).map(|sock| f(&sock.stream))
         }
     }
-    fn get_udp_socket<T>(&self, handle: Handle, f: impl FnOnce(&mut UdpSocket) -> T) -> Option<T> {
+    fn get_udp_socket<T>(&self, handle: Handle, f: impl FnOnce(&UdpSocket) -> T) -> Option<T> {
+        if let Some(sock) = self.udp_sockets.get(&handle) {
+            Some(f(&sock))
+        } else {
+            None
+        }
+    }
+    fn get_udp_socket_mut<T>(&self, handle: Handle, f: impl FnOnce(&mut UdpSocket) -> T) -> Option<T> {
         if let Some(mut sock) = self.udp_sockets.get_mut(&handle) {
             Some(f(&mut sock))
         } else {
@@ -1019,7 +1026,7 @@ impl SysBackend for NativeSys {
     }
     fn udp_set_max_msg_length(&self, handle: Handle, max_len: usize) -> Result<(), String> {
         NATIVE_SYS
-            .get_udp_socket(handle, |sock| {
+            .get_udp_socket_mut(handle, |sock| {
                 sock.max_msg_len = max_len;
             })
             .ok_or_else(|| "Invalid UDP socket handle".to_string())

@@ -141,6 +141,7 @@ pub enum HandleKind {
     TlsListener(SocketAddr),
     TcpSocket(SocketAddr),
     TlsSocket(SocketAddr),
+    UdpSocket(String),
     ChildStdin(String),
     ChildStdout(String),
     ChildStderr(String),
@@ -154,6 +155,7 @@ impl fmt::Display for HandleKind {
             Self::TlsListener(addr) => write!(f, "tls listener {}", addr),
             Self::TcpSocket(addr) => write!(f, "tcp socket {}", addr),
             Self::TlsSocket(addr) => write!(f, "tls socket {}", addr),
+            Self::UdpSocket(addr) => write!(f, "udp socket {}", addr),
             Self::ChildStdin(com) => write!(f, "stdin {com}"),
             Self::ChildStdout(com) => write!(f, "stdout {com}"),
             Self::ChildStderr(com) => write!(f, "stderr {com}"),
@@ -437,6 +439,22 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         timeout: Option<Duration>,
     ) -> Result<(), String> {
         Err("TCP sockets are not supported in this environment".into())
+    }
+    /// Create a UDP socket and bind it to an address
+    fn udp_bind(&self, addr: &str) -> Result<Handle, String> {
+        Err("UDP sockets are not supported in this environment".into())
+    }
+    /// Receive a single datagram on a UDP socket
+    fn udp_recv(&self, handle: Handle) -> Result<(Vec<u8>, SocketAddr), String> {
+        Err("UDP sockets are not supported in this environment".into())
+    }
+    /// Send a datagram to an address over a UDP socket
+    fn udp_send(&self, handle: Handle, packet: Vec<u8>, addr: &str) -> Result<(), String> {
+        Err("UDP sockets are not supported in this environment".into())
+    }
+    /// Set the maximum message length for a UDP socket
+    fn udp_set_max_msg_length(&self, handle: Handle, max_len: usize) -> Result<(), String> {
+        Err("UDP sockets are not supported in this environment".into())
     }
     /// Close a stream
     fn close(&self, handle: Handle) -> Result<(), String> {
@@ -1131,6 +1149,37 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             let handle = env.pop(2)?.as_handle(env, None)?;
             (env.rt.backend)
                 .tcp_set_write_timeout(handle, timeout)
+                .map_err(|e| env.error(e))?;
+        }
+        SysOp::UdpBind => {
+            let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
+            let handle = (env.rt.backend).udp_bind(&addr).map_err(|e| env.error(e))?;
+            let handle = handle.value(HandleKind::UdpSocket(addr));
+            env.push(handle)
+        }
+        SysOp::UdpReceive => {
+            let handle = env.pop(1)?.as_handle(env, None)?;
+            let (bytes, addr) = (env.rt.backend)
+                .udp_recv(handle)
+                .map_err(|e| env.error(e))?;
+            env.push(addr.to_string());
+            env.push(Array::from(bytes.as_slice()));
+        }
+        SysOp::UdpSend => {
+            let bytes = env.pop(1)?.as_bytes(env, "Datagram must be bytes")?;
+            let addr = env.pop(2)?.as_string(env, "Address must be a string")?;
+            let handle = env.pop(3)?.as_handle(env, None)?;
+            (env.rt.backend)
+                .udp_send(handle, bytes, &addr)
+                .map_err(|e| env.error(e))?;
+        }
+        SysOp::UdpSetMaxMsgLength => {
+            let length = env
+                .pop(1)?
+                .as_nat(env, "Message length must be a natural number")?;
+            let handle = env.pop(2)?.as_handle(env, None)?;
+            (env.rt.backend)
+                .udp_set_max_msg_length(handle, length)
                 .map_err(|e| env.error(e))?;
         }
         SysOp::Close => {

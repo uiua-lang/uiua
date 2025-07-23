@@ -579,6 +579,7 @@ impl Allowed {
                         SysOpClass::Command => ("System - Commands".into_view(), "Execute commands"),
                         SysOpClass::Media => ("System - Media".into_view(), "Present media"),
                         SysOpClass::Tcp => ("System - TCP".into_view(), "Work with TCP sockets"),
+                        SysOpClass::Udp => ("System - UDP".into_view(), "Work with UDP sockets"),
                         SysOpClass::Ffi => ("System - FFI".into_view(), "Foreign function interface"),
                         SysOpClass::Misc => ("System - Misc".into_view(), ""),
                     }

@@ -40,6 +40,8 @@ use backend::{delete_file, drop_file, OutputItem, WebBackend};
 use js_sys::Date;
 use std::sync::OnceLock;
 
+use leptos_use::use_resize_observer;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EditorMode {
     #[default]
@@ -489,6 +491,44 @@ pub fn Editor<'a>(
             }
         });
     };
+
+    // // Update textarea line height
+    let update_rounded_line_height = move || {
+        state.update(|state| state.update_rounded_line_height());
+    };
+    let line_height_sampler_ref = NodeRef::new();
+    use_resize_observer(line_height_sampler_ref, move |_, _| {
+        // logging::log!("sample code line resized on pad {id}");
+        update_rounded_line_height();
+    });
+    // let line_height_sample_id = format!("line-height-sample{id}");
+    // {
+    //     let callback = update_rounded_line_height.clone();
+    //     let sample_id = line_height_sample_id.clone();
+    //     Effect::new(move |_| {
+    //         callback();
+    //         let sample = element::<HtmlDivElement>(&sample_id);
+    //         logging::log!("{:?}", sample);
+    //         use_resize_observer(sample, move |_, _| {
+    //             callback();
+    //             logging::log!("sample code line resized ({id})");
+    //         });
+    //     })
+    // };
+    // window_event_listener(ev::resize, move |_| {
+    //     let line_numbers = element::<HtmlDivElement>(&line_numbers_id());
+    //     let code_line = line_numbers.first_element_child().unwrap();
+    //     let height = code_line.get_bounding_client_rect().height();
+    //     logging::log!("resized to {height}");
+    // });
+
+    // window_event_listener(ev::resize, move |_| update_rounded_line_height());
+    // let closure = Closure::<dyn FnMut(js_sys::Array, web_sys::ResizeObserver)>::new(
+    //     move |_entries, _observer| {
+    //         logging::log!("resized");
+    //     },
+    // )
+    // .into_js_value();
 
     // Handle key events
     window_event_listener(mousemove, move |event| {
@@ -1692,11 +1732,13 @@ pub fn Editor<'a>(
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let name = input.value();
         set_font_name(&name);
+        update_rounded_line_height();
     };
     let on_select_font_size = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let size = input.value();
         set_font_size(&size);
+        update_rounded_line_height();
     };
     let on_select_top_at_top = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
@@ -2108,6 +2150,10 @@ pub fn Editor<'a>(
                     >
                         <div id=code_outer_id class="code code-outer sized-code">
                             <div id=line_numbers_id class="line-numbers">
+                                <div class="code-line hidden-line-height-sampler"
+                                node_ref=line_height_sampler_ref>
+            <span class="code-span">"0"</span>
+        </div>
                                 {line_numbers}
                             </div>
                             <div class="code-and-overlay">

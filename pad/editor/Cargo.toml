@@ -39,6 +39,7 @@ web-sys = { version = "0.3.70", features = [
 ] }
 base64 = "0.22.0"
 leptos_router = {version = "0.6.11", features = ["csr"]}
+leptos-use = "0.12.0"
 uiua = {path = "../..", default-features = false, features = ["batteries", "web"]}
 image = "0.25"
 unicode-segmentation = "1.10"

@@ -507,6 +507,8 @@ option,
 }
 
 .code-area {
+    --rounded-line-height: 0px;
+    --line-count: 0;
     overflow: auto;
 }
 
@@ -542,7 +544,7 @@ option,
     resize: none;
     font-family: "Code Font", monospace;
     font-size: inherit;
-    line-height: 1.25em;
+    line-height: var(--rounded-line-height);
     overflow-wrap: normal;
     white-space: pre;
     overflow: hidden;
@@ -565,12 +567,20 @@ option,
 }
 
 .code-line {
-    height: 1.25em;
+    /* --rounded-line-height will be set to this */
+    height: round(down, 1.25em, 1px);
     padding: 0;
     margin: 0;
 }
 
+.hidden-line-height-sampler {
+    position: absolute;
+    inset: 0 auto auto 0;
+    visibility: hidden;
+}
+
 .line-numbers {
+    position: relative;
     text-align: right;
 }
 
@@ -1783,6 +1793,7 @@ a.clean {
     --line-numbers-width: 0;
 
     .code-area {
+        min-height: calc(var(--line-count) * var(--rounded-line-height) + 0.75em);
         min-height: var(--normal-min-height);
         resize: vertical;
     }

@@ -97,7 +97,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Sub => env.dyadic_oo_env(Value::sub)?,
         Primitive::Mul => env.dyadic_oo_env(Value::mul)?,
         Primitive::Div => env.dyadic_oo_env(Value::div)?,
-        Primitive::Modulus => env.dyadic_oo_env(Value::modulus)?,
+        Primitive::Modulo => env.dyadic_oo_env(Value::modulo)?,
         Primitive::Or => env.dyadic_oo_env(Value::or)?,
         Primitive::Pow => env.dyadic_oo_env(Value::pow)?,
         Primitive::Log => env.dyadic_oo_env(Value::log)?,

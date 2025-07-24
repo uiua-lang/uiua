@@ -211,7 +211,7 @@ pub fn Optimizations() -> impl IntoView {
         <table class="bordered-table cell-centered-table">
             <tr>
                 <th/>
-                <th><Prims prims=[Add, Sub, Mul, Div, Modulus, Atan, Min, Max]/></th>
+                <th><Prims prims=[Add, Sub, Mul, Div, Modulo, Atan, Min, Max]/></th>
                 <th><Prims prims=[Eq, Ne]/></th>
                 <th><Prims prims=[Lt, Le, Gt, Ge]/></th>
                 <th><Prim prim=Join glyph_only=true/></th>
@@ -226,7 +226,7 @@ pub fn Optimizations() -> impl IntoView {
         <p>"On top of this, particular combinations of "<code>"F"</code>" and "<code>"G"</code>" are optimized to eliminate all interpreter overhead. All combinations of the following functions are optimized:"</p>
         <table class="bordered-table cell-centered-table">
             <tr><th><Prim prim=Reduce/></th><td><Prims prims=[Add, Mul, Min, Max]/></td></tr>
-            <tr><th><Prim prim=Table/></th><td><Prims prims=[Add, Sub, Mul, Div, Modulus, Atan, Eq, Ne, Lt, Le, Gt, Ge, Min, Max, Complex, Join, Couple]/></td></tr>
+            <tr><th><Prim prim=Table/></th><td><Prims prims=[Add, Sub, Mul, Div, Modulo, Atan, Eq, Ne, Lt, Le, Gt, Ge, Min, Max, Complex, Join, Couple]/></td></tr>
         </table>
 
         <Hd id="rows"><Prim prim=Rows/></Hd>

@@ -950,7 +950,7 @@
     "class": "DyadicPervasive",
     "description": "Take the minimum of two arrays"
   },
-  "modulus": {
+  "modulo": {
     "glyph": "◿",
     "args": 2,
     "outputs": 1,

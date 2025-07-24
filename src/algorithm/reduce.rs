@@ -249,7 +249,7 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
         }
         _ => match last {
             Node::Prim(Add | Sub, _) if init_sig() => Array::new(shape, eco_vec![0u8; len]).into(),
-            Node::Prim(Mul | Div | Modulus, _) if init_sig() => {
+            Node::Prim(Mul | Div | Modulo, _) if init_sig() => {
                 Array::new(shape, eco_vec![f64::INFINITY; len]).into()
             }
             Node::Prim(Max, _) if init_sig() => {
@@ -740,8 +740,8 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
                 Primitive::Mul => fast_scan(nums, mul::num_num),
                 Primitive::Div if flipped => fast_scan(nums, flip(div::num_num)),
                 Primitive::Div => fast_scan(nums, div::num_num),
-                Primitive::Modulus if flipped => fast_scan(nums, flip(modulus::num_num)),
-                Primitive::Modulus => fast_scan(nums, modulus::num_num),
+                Primitive::Modulo if flipped => fast_scan(nums, flip(modulo::num_num)),
+                Primitive::Modulo => fast_scan(nums, modulo::num_num),
                 Primitive::Atan if flipped => fast_scan(nums, flip(atan2::num_num)),
                 Primitive::Atan => fast_scan(nums, atan2::num_num),
                 Primitive::Min => {
@@ -784,10 +784,10 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
                     fast_scan::<f64>(bytes.convert(), flip(div::num_num)).into()
                 }
                 Primitive::Div => fast_scan::<f64>(bytes.convert(), div::num_num).into(),
-                Primitive::Modulus if flipped => {
-                    fast_scan::<f64>(bytes.convert(), flip(modulus::num_num)).into()
+                Primitive::Modulo if flipped => {
+                    fast_scan::<f64>(bytes.convert(), flip(modulo::num_num)).into()
                 }
-                Primitive::Modulus => fast_scan::<f64>(bytes.convert(), modulus::num_num).into(),
+                Primitive::Modulo => fast_scan::<f64>(bytes.convert(), modulo::num_num).into(),
                 Primitive::Atan if flipped => {
                     fast_scan::<f64>(bytes.convert(), flip(atan2::num_num)).into()
                 }

@@ -309,7 +309,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Sub], Optional, view!("Optional "<Prim prim=Backward/>), "⍜-(×2) 1 5") }
             { inverse_row([Mul], Optional, view!("Optional "<Prim prim=Backward/>), "⍜×(+1) 2 5") }
             { inverse_row([Div], Optional, view!("Optional "<Prim prim=Backward/>), "⍜÷(+1) 2 5") }
-            { inverse_row([Modulus], Optional, view!("Optional "<Prim prim=Backward/>), "⍜◿(×10) 4 9") }
+            { inverse_row([Modulo], Optional, view!("Optional "<Prim prim=Backward/>), "⍜◿(×10) 4 9") }
             { inverse_row([Pow], Optional, view!("Optional "<Prim prim=Backward/>), "⍜ⁿ(-9) 2 5") }
             { inverse_row([Exp], No, "", "⍜ₑ(ⁿ2) 7") }
             { inverse_row([Get], Optional, "", "⍜get(×10) @b map \"abc\" 1_2_3") }

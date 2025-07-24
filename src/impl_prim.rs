@@ -252,7 +252,7 @@ impl_primitive!(
 );
 
 fn fmt_subscript(f: &mut fmt::Formatter<'_>, i: i32) -> fmt::Result {
-    write!(f, "{}", Subscript::numeric(i.into()))
+    write!(f, "{}", Subscript::numeric(i))
 }
 
 impl fmt::Display for ImplPrimitive {

@@ -1,6 +1,9 @@
 # Uiua Todo
 
 # 0.17
+- Improve PR validation
+  - Check for clippy lints
+  - Run tests
 - `Variants` field for module
 - Smarter `under rows`
 - Fix caching with labels

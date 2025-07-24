@@ -417,9 +417,7 @@ impl Value {
                 let mut fract = 0.0;
                 for (place, c) in sfract.chars().enumerate() {
                     let scale = (base as f64).powi(-(place as i32 + 1));
-                    if let Some(value) =
-                        Self::BASE_CHARSET[..base as usize].find(c.to_ascii_lowercase())
-                    {
+                    if let Some(value) = Self::BASE_CHARSET[..base].find(c.to_ascii_lowercase()) {
                         fract += value as f64 * scale;
                     } else {
                         return Err(env.error(format!("Cannot parse character {c} in base {base}")));
@@ -433,9 +431,7 @@ impl Value {
             let mut num = 0.0;
             for (place, c) in s.chars().rev().enumerate() {
                 let scale = (base as f64).powi(place as i32);
-                if let Some(value) =
-                    Self::BASE_CHARSET[..base as usize].find(c.to_ascii_lowercase())
-                {
+                if let Some(value) = Self::BASE_CHARSET[..base].find(c.to_ascii_lowercase()) {
                     num += value as f64 * scale;
                 } else {
                     return Err(env.error(format!("Cannot parse character {c} in base {base}")));

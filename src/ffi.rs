@@ -460,7 +460,7 @@ mod enabled {
         }
 
         match ptr.ty {
-            FfiType::Void => return Err("Cannot read from a void pointer".to_string()),
+            FfiType::Void => Err("Cannot read from a void pointer".to_string()),
             FfiType::Short => arr!(c_short),
             FfiType::Int => arr!(c_int),
             FfiType::Long => arr!(c_long),
@@ -641,7 +641,7 @@ mod enabled {
                 };
             }
 
-            let is_scalar = value.shape.len() == 0;
+            let is_scalar = value.shape.is_empty();
 
             macro_rules! scalar {
                 ($arr:expr, $c_ty:ty) => {{

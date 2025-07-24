@@ -1794,6 +1794,7 @@ a.clean {
 
     .code-area {
         min-height: calc(var(--line-count) * var(--rounded-line-height) + 0.75em);
+        overflow-y: hidden;
         resize: vertical;
     }
 

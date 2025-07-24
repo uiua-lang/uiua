@@ -2122,10 +2122,12 @@ pub fn Editor<'a>(
                     >
                         <div id=code_outer_id class="code code-outer sized-code">
                             <div id=line_numbers_id class="line-numbers">
-                                <div class="code-line hidden-line-height-sampler"
-                                node_ref=line_height_sampler_ref>
-            <span class="code-span">"0"</span>
-        </div>
+                                <div
+                                    class="code-line hidden-line-height-sampler"
+                                    node_ref=line_height_sampler_ref
+                                >
+                                    <span class="code-span">"0"</span>
+                                </div>
                                 {line_numbers}
                             </div>
                             <div class="code-and-overlay">

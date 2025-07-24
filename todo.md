@@ -1,8 +1,8 @@
 # Uiua Todo
 
 # 0.17
-- Put scalar dot on the value instead of the label
 - `Variants` field for module
+- Smarter `under rows`
 - Fix caching with labels
 - Fix performance of deep `dip` nesting
 - Don't serialize sortedness flags

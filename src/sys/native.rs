@@ -285,22 +285,16 @@ impl GlobalNativeSys {
         }
     }
     fn get_udp_socket<T>(&self, handle: Handle, f: impl FnOnce(&UdpSocket) -> T) -> Option<T> {
-        if let Some(sock) = self.udp_sockets.get(&handle) {
-            Some(f(&sock))
-        } else {
-            None
-        }
+        self.udp_sockets.get(&handle).map(|sock| f(&sock))
     }
     fn get_udp_socket_mut<T>(
         &self,
         handle: Handle,
         f: impl FnOnce(&mut UdpSocket) -> T,
     ) -> Option<T> {
-        if let Some(mut sock) = self.udp_sockets.get_mut(&handle) {
-            Some(f(&mut sock))
-        } else {
-            None
-        }
+        self.udp_sockets
+            .get_mut(&handle)
+            .map(|mut sock| f(&mut sock))
     }
 }
 
@@ -1000,7 +994,7 @@ impl SysBackend for NativeSys {
         let socket = std::net::UdpSocket::bind(addr).map_err(|e| e.to_string())?;
         let socket = UdpSocket {
             max_msg_len: 256,
-            socket: socket,
+            socket,
         };
         NATIVE_SYS.udp_sockets.insert(handle, socket);
         NATIVE_SYS.hostnames.insert(

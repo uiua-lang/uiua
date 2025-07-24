@@ -171,7 +171,7 @@
     "description": "Invoke a path with the system's default program"
   },
   "&memcpy": {
-    "args": 3,
+    "args": 2,
     "outputs": 1,
     "class": "Ffi",
     "description": "Copy data from a pointer into an array",
@@ -182,6 +182,13 @@
     "outputs": 0,
     "class": "Ffi",
     "description": "Free a pointer",
+    "experimental": true
+  },
+  "&memset": {
+    "args": 3,
+    "outputs": 0,
+    "class": "Ffi",
+    "description": "Write data from an array into a pointer",
     "experimental": true
   },
   "&p": {
@@ -328,6 +335,30 @@
     "outputs": 1,
     "class": "Env",
     "description": "Get the size of the terminal"
+  },
+  "&udpb": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Udp",
+    "description": "Bind a UDP socket"
+  },
+  "&udpr": {
+    "args": 1,
+    "outputs": 2,
+    "class": "Udp",
+    "description": "Receive a single message from a UDP socket"
+  },
+  "&udps": {
+    "args": 3,
+    "outputs": 0,
+    "class": "Udp",
+    "description": "Send a message on a UDP socket"
+  },
+  "&udpsml": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Udp",
+    "description": "Set the maximum message length for incoming messages"
   },
   "&var": {
     "args": 1,

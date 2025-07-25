@@ -3,7 +3,6 @@
 # 0.17
 - Improve PR validation
   - Check for clippy lints
-  - Run tests
 - LSP optimizations
   - Fix rename
   - Fix goto references

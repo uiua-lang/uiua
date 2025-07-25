@@ -52,6 +52,19 @@ jobs:
           build-${{ runner.os }}-
     - name: Run site tests
       run: cargo test -p site
+  # Test ffi
+  test_ffi:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/cache@v4
+      with:
+        path: target
+        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: |
+          build-${{ runner.os }}-
+    - name: Run site tests
+      run: cargo test -p tests_ffi
   # Build the site
   build_site:
     needs: test_site

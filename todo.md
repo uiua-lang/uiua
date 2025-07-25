@@ -4,8 +4,10 @@
 - Improve PR validation
   - Check for clippy lints
   - Run tests
+- LSP optimizations
+  - Fix rename
+  - Fix goto references
 - `Variants` field for module
-- Smarter `under rows`
 - Fix caching with labels
 - Fix performance of deep `dip` nesting
 - Don't serialize sortedness flags

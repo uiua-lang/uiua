@@ -570,24 +570,33 @@ under!(RowsPat, input, g_sig, inverse, asm, {
         return generic();
     };
     let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
-    let befores = Node::from_iter([
-        ImplPrim(MaxRowCount(f.sig.args()), *span),
-        Mod(
-            Dip,
-            eco_vec![Mod(*prim, eco_vec![f_before], *span).sig_node()?],
-            *span,
-        ),
-        PushUnder(1, *span),
-    ]);
-    let undo_prim = if matches!(*prim, Rows) {
-        UndoRows
+    let (befores, afters) = if f_before.sig.under() == (0, 0) && f_after.sig.under() == (0, 0) {
+        (
+            Mod(*prim, eco_vec![f_before], *span),
+            Mod(*prim, eco_vec![f_after], *span),
+        )
     } else {
-        UndoInventory
+        let befores = Node::from_iter([
+            ImplPrim(MaxRowCount(f.sig.args()), *span),
+            Mod(
+                Dip,
+                eco_vec![Mod(*prim, eco_vec![f_before], *span).sig_node()?],
+                *span,
+            ),
+            PushUnder(1, *span),
+        ]);
+        let undo_prim = if matches!(*prim, Rows) {
+            UndoRows
+        } else {
+            UndoInventory
+        };
+        let afters = Node::from_iter([
+            PopUnder(1, *span),
+            ImplMod(undo_prim, eco_vec![f_after], *span),
+        ]);
+        (befores, afters)
     };
-    let afters = Node::from_iter([
-        PopUnder(1, *span),
-        ImplMod(undo_prim, eco_vec![f_after], *span),
-    ]);
+
     Ok((input, befores, afters))
 });
 

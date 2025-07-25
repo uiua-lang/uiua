@@ -78,7 +78,6 @@
             packages = with pkgs; [
               lld_18
               trunk
-              libffi
               ((toolchainFor pkgs).override {
                 extensions = [
                   "rust-src"

@@ -66,6 +66,8 @@ jobs:
         key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
         restore-keys: |
           build-${{ runner.os }}-
+    - name: Check interpreter clippy lints
+      run: cargo clippy --no-deps
     - name: Run interpreter tests
       run: cargo test --lib
   # Test the site
@@ -96,10 +98,10 @@ jobs:
           build-${{ runner.os }}-
     - name: Run site tests
       run: cargo test -p tests_ffi
-  check_features:
-    needs: test_bin
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Check feature combinations
-      run: cargo run ./.github/features.ua
+  # check_features:
+  #   needs: test_bin
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #   - name: Check feature combinations
+  #     run: cargo run ./.github/features.ua

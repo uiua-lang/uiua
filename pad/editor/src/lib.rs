@@ -40,6 +40,8 @@ use backend::{delete_file, drop_file, OutputItem, WebBackend};
 use js_sys::Date;
 use std::sync::OnceLock;
 
+use leptos_use::use_resize_observer;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EditorMode {
     #[default]
@@ -489,6 +491,16 @@ pub fn Editor<'a>(
             }
         });
     };
+
+    // Update textarea line height
+    let update_rounded_line_height = move || {
+        state.update(|state| state.update_rounded_line_height());
+    };
+    let line_height_sampler_ref = NodeRef::new();
+    use_resize_observer(line_height_sampler_ref, move |_, _| {
+        // logging::log!("sample code line resized on pad {id}");
+        update_rounded_line_height();
+    });
 
     // Handle key events
     window_event_listener(mousemove, move |event| {
@@ -1692,11 +1704,13 @@ pub fn Editor<'a>(
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let name = input.value();
         set_font_name(&name);
+        update_rounded_line_height();
     };
     let on_select_font_size = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let size = input.value();
         set_font_size(&size);
+        update_rounded_line_height();
     };
     let on_select_top_at_top = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
@@ -2108,6 +2122,12 @@ pub fn Editor<'a>(
                     >
                         <div id=code_outer_id class="code code-outer sized-code">
                             <div id=line_numbers_id class="line-numbers">
+                                <div
+                                    class="code-line hidden-line-height-sampler"
+                                    node_ref=line_height_sampler_ref
+                                >
+                                    <span class="code-span">"0"</span>
+                                </div>
                                 {line_numbers}
                             </div>
                             <div class="code-and-overlay">

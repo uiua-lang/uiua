@@ -1199,8 +1199,9 @@ impl Compiler {
                 }
                 let span = self.add_span(modified.modifier.span.clone());
                 if let Some(side) = subscript.and_then(|sub| {
+                    let side = self.subscript_side_only(&sub, Fill.format())?;
                     self.experimental_error_it(&sub.span, || format!("Sided {}", Fill.format()));
-                    self.subscript_side_only(&sub, Fill.format())
+                    Some(side)
                 }) {
                     Node::ImplMod(ImplPrimitive::SidedFill(side), eco_vec![fill, f], span)
                 } else {

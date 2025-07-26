@@ -1705,12 +1705,24 @@ impl<T: ArrayValue> Array<T> {
         env: &Uiua,
     ) -> UiuaResult<Self> {
         let new_shape = derive_orient_data(&mut undices, &self.shape, env)?;
-        if new_shape.len() > into.rank() {
-            return Err(env.error(format!(
-                "Cannot reorient because the rank of the array changed from {} to {}",
-                new_shape.len() - into.rank(),
-                self.rank(),
-            )));
+        match new_shape.len().cmp(&into.rank()) {
+            Ordering::Equal => {}
+            Ordering::Less => {
+                return Err(env.error(format!(
+                    "Indices of length {} cannot be used to reorient \
+                    shape {} array into shape {} array",
+                    undices.len(),
+                    self.shape,
+                    into.shape
+                )))
+            }
+            Ordering::Greater => {
+                return Err(env.error(format!(
+                    "Cannot reorient because the rank of the array changed from {} to {}",
+                    new_shape.len() - into.rank(),
+                    self.rank(),
+                )))
+            }
         }
         self.orient_into(&mut into, &undices);
         Ok(into)

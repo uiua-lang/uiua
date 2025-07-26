@@ -6,9 +6,7 @@
   lib,
   pkg-config,
   libffi,
-  libiconv,
   alsa-lib,
-  darwin,
   rustPlatform,
   doCheck ? true,
 }:
@@ -37,20 +35,7 @@ let
       rustPlatform.bindgenHook
       makeBinaryWrapper
     ];
-    buildInputs =
-      [ libffi ]
-      ++ lib.optionals stdenv.isLinux [ alsa-lib ]
-      ++ lib.optionals stdenv.isDarwin (
-        with darwin.apple_sdk.frameworks;
-        [
-          libiconv
-          AppKit
-          Foundation
-          CoreAudio
-          CoreMedia
-          AVFoundation
-        ]
-      );
+    buildInputs = [ libffi ] ++ lib.optionals stdenv.isLinux [ alsa-lib ];
     # https://crane.dev/faq/rebuilds-bindgen.html
     env.NIX_OUTPATH_USED_AS_RANDOM_SEED = "uiuarustbg";
   };

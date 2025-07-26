@@ -413,7 +413,7 @@ primitive!(
     /// ex: ◿ 4 ¯21
     /// If you prefer the negative modulo instead of the remainder, you may use [under]:
     /// ex: ⍜⊙⌵◿ 4 ¯21
-    (2, Modulus, DyadicPervasive, ("modulus", '◿')),
+    (2, Modulo, DyadicPervasive, ("modulo", '◿')),
     /// Logical OR and greatest common divisor
     ///
     /// ex: # Experimental!
@@ -2142,7 +2142,7 @@ primitive!(
     ///
     /// If only a single function is provided, its inverse will be nothing.
     /// This is useful when a function has to do some setup before the main [under]able part.
-    /// Consider this function which [keep]s only odd numbers. While [keep] is compatible with [under], `by``modulus``2` is not.
+    /// Consider this function which [keep]s only odd numbers. While [keep] is compatible with [under], `by``modulo``2` is not.
     /// ex! F ← ▽⊸◿2
     ///   : F [1 2 3 4 5]
     ///   : ⍜F(×10) [1 2 3 4 5]

@@ -121,8 +121,8 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &(Sign, (CopyUnd(1), Sign), (PopUnd(1), Flip, SetSign)),
     // Mod
     &MaybeVal((
-        Modulus,
-        (Over, Over, Flip, Over, Div, Floor, Mul, PushUnd(1), Modulus),
+        Modulo,
+        (Over, Over, Flip, Over, Div, Floor, Mul, PushUnd(1), Modulo),
         (PopUnd(1), Add),
     )),
     // Array restructuring

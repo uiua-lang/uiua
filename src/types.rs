@@ -186,7 +186,7 @@ impl TypeRt<'_> {
                     let x = self.pop()?;
                     self.stack.push(x);
                 }
-                Add | Sub | Mul | Div | Pow | Modulus | Log => {
+                Add | Sub | Mul | Div | Pow | Modulo | Log => {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     let shape = if a.shape.len() > b.shape.len() {

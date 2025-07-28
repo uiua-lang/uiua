@@ -139,7 +139,7 @@ where
         Ok(()) => {
             let per_meta = take(per_meta);
             let count = rt.stack.len();
-            let mut tys = rt.stack.into_iter().rev();
+            let mut tys = rt.stack.into_iter();
             for ty in tys.by_ref().take(count.saturating_sub(1)) {
                 let mut val = make_val(ty);
                 val.meta.set_per_meta(per_meta.clone());

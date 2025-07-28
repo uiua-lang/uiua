@@ -279,6 +279,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([ImageEncode], Optional, "Decodes bytes", None) }
             { inverse_row([GifEncode], Optional, "Decodes bytes", None) }
             { inverse_row([Sys(Clip)], No, "Set the clipboard", None) }
+            { inverse_row([Sys(ChangeDirectory)], No, "Get the current directory", None) }
             { inverse_row([Sys(RawMode)], No, "Terminal raw state", None) }
         </table>
     }
@@ -359,6 +360,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Sys(TcpAccept)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
             { inverse_row([Sys(FReadAllStr)], Optional, view!("Calls "<Prim prim=Sys(FWriteAll)/>), None) }
             { inverse_row([Sys(FReadAllBytes)], Optional, view!("Calls "<Prim prim=Sys(FWriteAll)/>), None) }
+            { inverse_row([Sys(ChangeDirectory)], Optional, "Returns to original directory", None) }
             { inverse_row([Sys(RawMode)], Optional, "Resets raw state", None) }
         </table>
     }

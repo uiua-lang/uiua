@@ -41,6 +41,9 @@ This version is not yet released. If you are reading this on the website, then t
   - [`&udpsml`](https://uiua.org/docs/&udpsml) to set the maximum message length
 - Rename `◿ modulus` to [`modulo ◿`](https://uiua.org/docs/modulo)
   - "Modulo" is the correct term for the operation this function conducts
+- Add [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under) capability to [`&cd`](https://uiua.org/docs/&cd)
+  - [`un °`](https://uiua.org/docs/un)[`&cd`](https://uiua.org/docs/&cd) will output the current working directory
+  - [`under ⍜`](https://uiua.org/docs/under)[`&cd`](https://uiua.org/docs/&cd) will return to the original directory afterward
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)

@@ -1123,6 +1123,13 @@ impl SysBackend for NativeSys {
     fn change_directory(&self, path: &str) -> Result<(), String> {
         env::set_current_dir(path).map_err(|e| e.to_string())
     }
+    fn get_current_directory(&self) -> Result<String, String> {
+        env::current_dir().map_err(|e| e.to_string()).and_then(|p| {
+            p.into_os_string()
+                .into_string()
+                .map_err(|_| "Path was not valid unicode".into())
+        })
+    }
     #[cfg(feature = "webcam")]
     fn webcam_capture(&self, index: usize) -> Result<crate::WebcamImage, String> {
         let cam_channels = &NATIVE_SYS.cam_channels;

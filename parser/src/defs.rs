@@ -3686,6 +3686,9 @@ sys_op! {
     /// [under][&runs] calls [&cl] on all 3 streams automatically.
     (1(3), RunStream, Command, "&runs", "run command stream", Mutating),
     /// Change the current directory
+    ///
+    /// [un][&cd] will output the current working directory.
+    /// [under][&cd] will return to the original directory afterward.
     (1(0), ChangeDirectory, Filesystem, "&cd", "change directory", Mutating),
     /// Get the contents of the clipboard
     ///

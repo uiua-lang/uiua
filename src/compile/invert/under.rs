@@ -239,6 +239,15 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &(Now, (Now, PushUnd(1)), (Now, PopUnd(1), Sub)),
     &MaybeVal(Store1Copy(Sys(SysOp::FOpen), Sys(SysOp::Close))),
     &MaybeVal(Store1Copy(Sys(SysOp::FCreate), Sys(SysOp::Close))),
+    &MaybeVal((
+        Sys(SysOp::ChangeDirectory),
+        (
+            ImplPrimitive::UnChangeDirectory,
+            PushUnd(1),
+            Sys(SysOp::ChangeDirectory),
+        ),
+        (PopUnd(1), Sys(SysOp::ChangeDirectory)),
+    )),
     &MaybeVal(Store1Copy(Sys(SysOp::TcpConnect), Sys(SysOp::Close))),
     &MaybeVal(Store1Copy(Sys(SysOp::TlsConnect), Sys(SysOp::Close))),
     &MaybeVal(Store1Copy(Sys(SysOp::TcpAccept), Sys(SysOp::Close))),

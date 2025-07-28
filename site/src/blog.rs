@@ -120,7 +120,7 @@ fn gen_blog_html() {
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
     {
         let (path, _) = line.split_once('(').unwrap_or_default();
-        let md_path = format!("blog/{}-text.md", path);
+        let md_path = format!("blog/{path}-text.md");
         let mut markdown =
             fs::read_to_string(&md_path).unwrap_or_else(|e| panic!("{md_path}: {e}"));
         let mut lines: Vec<Cow<str>> = markdown.lines().map(Cow::Borrowed).collect();
@@ -137,7 +137,7 @@ fn gen_blog_html() {
         );
         markdown = lines.join("\n");
         let html = markdown_html(&markdown);
-        let html_path = format!("blog/{}-html.html", path);
+        let html_path = format!("blog/{path}-html.html");
         fs::write(html_path, html).unwrap();
     }
 }

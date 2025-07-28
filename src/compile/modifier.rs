@@ -1713,10 +1713,10 @@ impl Compiler {
                 });
                 let message = match (&mac_name, name) {
                     (Some(mac_name), Some(name)) => {
-                        format!("{} references runtime binding `{}`", mac_name, name)
+                        format!("{mac_name} references runtime binding `{name}`")
                     }
-                    (Some(mac_name), None) => format!("{} references runtime binding", mac_name),
-                    (None, Some(name)) => format!("macro references runtime binding `{}`", name),
+                    (Some(mac_name), None) => format!("{mac_name} references runtime binding"),
+                    (None, Some(name)) => format!("macro references runtime binding `{name}`"),
                     (None, None) => "macro references runtime binding".into(),
                 };
                 return Err(self.error(modifier_span.clone(), message));

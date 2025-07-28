@@ -358,8 +358,7 @@ impl SysBackend for WebBackend {
             uiua::StreamSeek::Start(off) => {
                 if off >= size {
                     Err(format!(
-                        "Tried to seek to {}, but the file stream is only {} bytes",
-                        off, size
+                        "Tried to seek to {off}, but the file stream is only {size} bytes"
                     ))?
                 }
                 off
@@ -367,8 +366,7 @@ impl SysBackend for WebBackend {
 
             uiua::StreamSeek::End(off) => size.checked_sub(off).ok_or_else(|| {
                 format!(
-                    "Tried to seek {} bytes from file stream end, but the file stream is only {} bytes",
-                    off, size
+                    "Tried to seek {off} bytes from file stream end, but the file stream is only {size} bytes"
                 )
             })?,
         };

@@ -125,9 +125,9 @@ impl From<(&'static str, AsciiToken, char)> for PrimNames {
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(c) = self.glyph() {
-            write!(f, "{}", c)
+            write!(f, "{c}")
         } else if let Some(s) = self.ascii() {
-            write!(f, "{}", s)
+            write!(f, "{s}")
         } else {
             write!(f, "{}", self.name())
         }

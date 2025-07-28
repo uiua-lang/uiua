@@ -151,11 +151,11 @@ impl fmt::Display for HandleKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::File(path) => write!(f, "file {}", path.display()),
-            Self::TcpListener(addr) => write!(f, "tcp listener {}", addr),
-            Self::TlsListener(addr) => write!(f, "tls listener {}", addr),
-            Self::TcpSocket(addr) => write!(f, "tcp socket {}", addr),
-            Self::TlsSocket(addr) => write!(f, "tls socket {}", addr),
-            Self::UdpSocket(addr) => write!(f, "udp socket {}", addr),
+            Self::TcpListener(addr) => write!(f, "tcp listener {addr}"),
+            Self::TlsListener(addr) => write!(f, "tls listener {addr}"),
+            Self::TcpSocket(addr) => write!(f, "tcp socket {addr}"),
+            Self::TlsSocket(addr) => write!(f, "tls socket {addr}"),
+            Self::UdpSocket(addr) => write!(f, "udp socket {addr}"),
             Self::ChildStdin(com) => write!(f, "stdin {com}"),
             Self::ChildStdout(com) => write!(f, "stdout {com}"),
             Self::ChildStderr(com) => write!(f, "stderr {com}"),

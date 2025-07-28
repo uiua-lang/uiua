@@ -2708,7 +2708,7 @@ impl Compiler {
                 .or_else(|| self.scopes_to_file().skip(1).find_map(get))
                 .is_none_or(|l| l.index != local.index)
         {
-            self.add_error(span.clone(), format!("`{}` is private", name));
+            self.add_error(span.clone(), format!("`{name}` is private"));
         }
     }
     /// Get a span by its index

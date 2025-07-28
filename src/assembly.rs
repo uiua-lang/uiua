@@ -263,7 +263,7 @@ impl Assembly {
                 if map.len() == 1 {
                     let key = map.keys().next().unwrap();
                     let value = map.values().next().unwrap();
-                    uasm.push_str(&format!("{} {}\n", key, value));
+                    uasm.push_str(&format!("{key} {value}\n"));
                     continue;
                 }
             }
@@ -478,7 +478,7 @@ impl fmt::Display for DocCommentSig {
             for output in outputs {
                 write!(f, " {}", output.name)?;
                 if let Some(ty) = &output.ty {
-                    write!(f, ":{}", ty)?;
+                    write!(f, ":{ty}")?;
                 }
             }
             write!(f, " ")?;
@@ -496,7 +496,7 @@ impl fmt::Display for DocCommentSig {
                 }
                 write!(f, "{}", arg.name)?;
                 if let Some(ty) = &arg.ty {
-                    write!(f, ":{}", ty)?;
+                    write!(f, ":{ty}")?;
                 }
             }
         }

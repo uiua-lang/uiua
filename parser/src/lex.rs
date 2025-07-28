@@ -95,7 +95,7 @@ impl fmt::Display for LexError {
             LexError::ExpectedCharacter(chars) if chars.len() == 2 => {
                 write!(f, "Expected {:?} or {:?}", chars[0], chars[1])
             }
-            LexError::ExpectedCharacter(chars) => write!(f, "Expected one of {:?}", chars),
+            LexError::ExpectedCharacter(chars) => write!(f, "Expected one of {chars:?}"),
             LexError::InvalidEscape(c) => write!(f, "Invalid escape character {c:?}"),
             LexError::InvalidUnicodeEscape(c) => write!(f, "Invalid unicode escape \\\\{c:x}"),
             LexError::InvalidEscapeSequence(c) => write!(f, "Invalid escape \\\\{c}"),
@@ -324,13 +324,13 @@ impl fmt::Display for CodeSpan {
                 let mut file: String = path.to_string_lossy().into_owned();
                 if let Some(s) = file.strip_prefix("C:\\Users\\") {
                     if let Some((_, sub)) = s.split_once('\\') {
-                        file = format!("~\\{}", sub);
+                        file = format!("~\\{sub}");
                     } else {
                         file = s.to_string();
                     }
                 }
                 let file = file.replace("\\.\\", "\\");
-                write!(f, "{}:{}", file, self.start)
+                write!(f, "{file}:{}", self.start)
             }
             InputSrc::Str(_) => self.start.fmt(f),
             InputSrc::Macro(span) => span.fmt(f),

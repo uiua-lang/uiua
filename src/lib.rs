@@ -278,9 +278,9 @@ mod tests {
         for thread in threads {
             if let Err(e) = thread.join() {
                 if let Some(s) = e.downcast_ref::<String>() {
-                    panic!("{}", s);
+                    panic!("{s}");
                 } else {
-                    panic!("{:?}", e);
+                    panic!("{e:?}");
                 }
             }
         }

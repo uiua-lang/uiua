@@ -632,7 +632,7 @@ fn parse_uiua_num(mut s: Cow<str>, env: &Uiua) -> UiuaResult<f64> {
                     break 'glyphs;
                 } else if let Some(start) = before.strip_suffix(name) {
                     mul = constant;
-                    s = format!("{}/{}", start, after).into();
+                    s = format!("{start}/{after}").into();
                     break 'glyphs;
                 }
             }
@@ -656,7 +656,7 @@ fn parse_uiua_num(mut s: Cow<str>, env: &Uiua) -> UiuaResult<f64> {
         None => s.parse::<f64>(),
     }
     .map(|n| n * mul)
-    .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))
+    .map_err(|e| env.error(format!("Cannot parse into number: {e}")))
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -2387,7 +2387,7 @@ fn f64_repr(n: f64) -> String {
         abs.to_string()
     };
     if n < 0.0 {
-        format!("¯{}", pos)
+        format!("¯{pos}")
     } else {
         pos
     }

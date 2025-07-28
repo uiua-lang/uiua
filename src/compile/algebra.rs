@@ -642,7 +642,7 @@ impl fmt::Debug for Term {
         match self {
             &Term::X(0.0) => write!(f, "1"),
             &Term::X(1.0) => write!(f, "x"),
-            &Term::X(x) => write!(f, "x^{}", x),
+            &Term::X(x) => write!(f, "x^{x}"),
             Term::Div(expr) => {
                 write!(f, "1/")?;
                 expr.fmt(f)
@@ -757,7 +757,7 @@ impl fmt::Debug for Expr {
                 write!(f, " + ")?;
             }
             if *coef == ONE {
-                write!(f, "{:?}", term)?;
+                write!(f, "{term:?}")?;
             } else if *coef == -ONE {
                 write!(f, "-{term:?}")?;
             } else {

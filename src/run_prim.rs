@@ -1535,7 +1535,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
             regex
         } else {
             let regex =
-                Regex::new(&pattern).map_err(|e| env.error(format!("Invalid pattern: {}", e)))?;
+                Regex::new(&pattern).map_err(|e| env.error(format!("Invalid pattern: {e}")))?;
             cache.entry(pattern.clone()).or_insert(regex.clone())
         };
 
@@ -2198,7 +2198,7 @@ mod tests {
                         start.push(c);
                         end.push_str(")?");
                     }
-                    format!("{}{}", start, end)
+                    format!("{start}{end}")
                 })
                 .collect();
             let format_names = format_names.join("|");

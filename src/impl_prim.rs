@@ -166,6 +166,7 @@ impl_primitive!(
     (1(2), GifDecode),
     (1(3), AudioDecode),
     (0, UnRawMode, Impure),
+    (0, UnChangeDirectory, Impure),
     (1(0), UnClip, Mutating),
     // Unders
     (1, UndoFix),
@@ -358,6 +359,7 @@ impl fmt::Display for ImplPrimitive {
             GifDecode => write!(f, "{Un}{GifEncode}"),
             AudioDecode => write!(f, "{Un}{AudioEncode}"),
             UnRawMode => write!(f, "{Un}{}", Sys(SysOp::RawMode)),
+            UnChangeDirectory => write!(f, "{Un}{}", Sys(SysOp::ChangeDirectory)),
             UnClip => write!(f, "{Un}{}", Sys(SysOp::Clip)),
             UndoUnBits => write!(f, "{Under}{Un}{Bits}"),
             AntiBase => write!(f, "{Anti}{Base}"),

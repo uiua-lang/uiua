@@ -1267,6 +1267,7 @@ inverse!(PrimPat, input, _, Prim(prim, span), {
         AudioEncode => ImplPrim(AudioDecode, span),
         ImageEncode => ImplPrim(ImageDecode, span),
         Sys(SysOp::Clip) => ImplPrim(UnClip, span),
+        Sys(SysOp::ChangeDirectory) => ImplPrim(UnChangeDirectory, span),
         Sys(SysOp::RawMode) => ImplPrim(UnRawMode, span),
         Hsv => ImplPrim(UnHsv, span),
         Json => ImplPrim(UnJson, span),

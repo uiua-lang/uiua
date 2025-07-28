@@ -718,6 +718,12 @@ impl ImplPrimitive {
                 let raw_mode = env.rt.backend.get_raw_mode().map_err(|e| env.error(e))?;
                 env.push(raw_mode);
             }
+            ImplPrimitive::UnChangeDirectory => {
+                let cur_dir = (env.rt.backend)
+                    .get_current_directory()
+                    .map_err(|e| env.error(e))?;
+                env.push(cur_dir);
+            }
             ImplPrimitive::UnClip => {
                 let contents = env.pop(1)?.as_string(env, "Contents must be a string")?;
                 (env.rt.backend)

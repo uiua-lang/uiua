@@ -484,6 +484,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn change_directory(&self, path: &str) -> Result<(), String> {
         Err("Changing directories is not supported in this environment".into())
     }
+    /// Get the current directory
+    fn get_current_directory(&self) -> Result<String, String> {
+        Err("Getting the current directory is not supported in this environment".into())
+    }
     /// Capture an image from the webcam
     fn webcam_capture(&self, index: usize) -> Result<WebcamImage, String> {
         Err("Capturing from webcam is not supported in this environment".into())

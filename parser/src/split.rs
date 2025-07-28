@@ -56,6 +56,8 @@ pub enum PrimComponent {
     Prim(Primitive),
     /// A numeric component
     Num(NumComponent),
+    /// Subscript 0
+    Sub0,
     /// Subscript 2
     Sub2,
 }
@@ -78,6 +80,7 @@ impl PrimComponent {
         match self {
             PrimComponent::Prim(prim) => prim.name(),
             PrimComponent::Num(num) => num.name(),
+            PrimComponent::Sub0 => "₀",
             PrimComponent::Sub2 => "₂",
         }
     }
@@ -127,7 +130,7 @@ impl fmt::Display for PrimComponent {
         match self {
             PrimComponent::Prim(prim) => prim.fmt(f),
             PrimComponent::Num(num) => num.fmt(f),
-            PrimComponent::Sub2 => self.name().fmt(f),
+            PrimComponent::Sub0 | PrimComponent::Sub2 => self.name().fmt(f),
         }
     }
 }
@@ -210,6 +213,13 @@ impl Primitive {
                 &[
                     (PrimComponent::Prim(Keep), "kor"),
                     (PrimComponent::Sub2, "k"),
+                ],
+            ),
+            (
+                "each",
+                &[
+                    (PrimComponent::Prim(Rows), "eac"),
+                    (PrimComponent::Sub0, "h"),
                 ],
             ),
         ]

@@ -108,7 +108,7 @@ pub fn Audio() -> impl IntoView {
         <p>"For a minimal example, here is a simple 1 second sawtooth wave:"</p>
         <Editor example="÷2 ◿1×220 ÷⟜⇡&asr"/>
         <p>"First, we make a range of numbers from 0 to 1 by getting the "<Prim prim=Range/>" up to the sample rate and dividing it by that much. This array represents the time at each sample."</p>
-        <p>"Then, we multiply the time by 220, the frequency of an A3 note, and take the "<Prim prim=Modulus/>"1 of that. This gives us a nice pure sawtooth wave."</p>
+        <p>"Then, we multiply the time by 220, the frequency of an A3 note, and take the "<Prim prim=Modulo/>"1 of that. This gives us a nice pure sawtooth wave."</p>
         <p>"Finally, the wave is a little loud on its own, so we "<Prim prim=Div/>" it by 2."</p>
         <br/>
         <p>"For longer time arrays, "<Prim prim=Mul/>" the number of samples by the number of seconds you want before calling "<Prim prim=Range/>" but inside "<Prim prim=On/>"."</p>

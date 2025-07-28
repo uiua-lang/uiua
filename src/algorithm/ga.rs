@@ -71,7 +71,7 @@ impl fmt::Display for GaOp {
             GeometricAdd => write!(f, "{Geometric}{Add}"),
             GeometricSub => write!(f, "{Geometric}{Sub}"),
             GeometricProduct => write!(f, "{Geometric}{Mul}"),
-            GeometricInner => write!(f, "{Geometric}{Modulus}"),
+            GeometricInner => write!(f, "{Geometric}{Modulo}"),
             GeometricWedge => write!(f, "{Geometric}{Min}"),
             GeometricRegressive => write!(f, "{Geometric}{Max}"),
             GeometricDivide => write!(f, "{Geometric}{Div}"),

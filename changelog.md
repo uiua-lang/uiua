@@ -39,6 +39,8 @@ This version is not yet released. If you are reading this on the website, then t
   - [`&udpr`](https://uiua.org/docs/&udpr) to receive a datagram
   - [`&udps`](https://uiua.org/docs/&udps) to send a datagram
   - [`&udpsml`](https://uiua.org/docs/&udpsml) to set the maximum message length
+- Rename `◿ modulus` to [`modulo ◿`](https://uiua.org/docs/modulo)
+  - "Modulo" is the correct term for the operation this function conducts
 ### Interpreter
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)

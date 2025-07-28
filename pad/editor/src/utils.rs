@@ -205,7 +205,7 @@ impl State {
         let line_numbers = element::<HtmlDivElement>(&self.line_numbers_id);
         let editor = element::<HtmlDivElement>(&self.editor_wrapper_id);
         let line_numbers_width = line_numbers.get_bounding_client_rect().width();
-        let line_numbers_width_str = format!("{}px", line_numbers_width);
+        let line_numbers_width_str = format!("{line_numbers_width}px");
         editor
             .style()
             .set_property("--line-numbers-width", &line_numbers_width_str)
@@ -218,7 +218,7 @@ impl State {
         let code_area = element::<HtmlDivElement>(&self.code_area_id);
         code_area
             .style()
-            .set_property("--rounded-line-height", &format!("{}px", height))
+            .set_property("--rounded-line-height", &format!("{height}px"))
             .unwrap();
         // logging::log!(
         //     "updated line height to {}px on #{}",
@@ -627,7 +627,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
         color_class: &str,
         frag_views: &mut Vec<View>,
     ) {
-        let class = format!("code-span code-underline {}", color_class);
+        let class = format!("code-span code-underline {color_class}");
         let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
         let onclick = move |event: web_sys::MouseEvent| {
             if os_ctrl(&event) {
@@ -785,7 +785,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             let mut title =
                                 format!("{}: {}", name, PrimDoc::from(prim).short_text());
                             if let Some(ascii) = prim.ascii() {
-                                title = format!("({}) {}", ascii, title);
+                                title = format!("({ascii}) {title}");
                             }
                             add_prim_view(prim, text, title, color_class, &mut frag_views);
                         }
@@ -804,7 +804,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             let class = format!("code-span {color_class}");
                             if text == "@ " {
                                 let space_class =
-                                    format!("code-span space-character {}", color_class);
+                                    format!("code-span space-character {color_class}");
                                 frag_views.push(
                                     view! {
                                         <span class=class data-title="space character">
@@ -834,7 +834,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         }
                         SpanKind::ImportSrc(ImportSrc::Git(path)) => {
                             let title = "Git module path (Ctrl+Click to open)";
-                            let class = format!("code-span code-underline {}", color_class);
+                            let class = format!("code-span code-underline {color_class}");
                             let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
                             let onclick = move |event: web_sys::MouseEvent| {
                                 if os_ctrl(&event) {

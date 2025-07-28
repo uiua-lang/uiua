@@ -1319,8 +1319,7 @@ impl<T: ArrayValue> Array<T> {
                             Err(e) => {
                                 return Err(env
                                     .error(format!(
-                                        "Index {} is out of bounds of length {}{e}",
-                                        i, row_count
+                                        "Index {i} is out of bounds of length {row_count}{e}"
                                     ))
                                     .fill());
                             }
@@ -1338,8 +1337,7 @@ impl<T: ArrayValue> Array<T> {
                             if pos_i >= row_count {
                                 return Err(env
                                     .error(format!(
-                                        "Index {} is out of bounds of length {}{e}",
-                                        i, row_count
+                                        "Index {i} is out of bounds of length {row_count}{e}"
                                     ))
                                     .fill());
                             }

@@ -379,14 +379,14 @@ where
             0 => write!(f, "{}", self.data[0]),
             1 => {
                 let (start, end) = T::format_delims();
-                write!(f, "{}", start)?;
+                write!(f, "{start}")?;
                 for (i, x) in self.data.iter().enumerate() {
                     if i > 0 {
                         write!(f, "{}", T::format_sep())?;
                     }
                     write!(f, "{x}")?;
                 }
-                write!(f, "{}", end)
+                write!(f, "{end}")
             }
             _ => {
                 write!(f, "\n{}", self.grid_string(false))
@@ -497,7 +497,7 @@ impl<T: Clone> Array<T> {
         }
         let row_count = self.row_count();
         if row >= row_count {
-            panic!("row index out of bounds: {} >= {}", row, row_count);
+            panic!("row index out of bounds: {row} >= {row_count}");
         }
         let row_len = self.row_len();
         let start = row * row_len;
@@ -602,7 +602,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let row_count: usize = self.shape[..depth + 1].iter().product();
         if row >= row_count {
-            panic!("row index out of bounds: {} >= {}", row, row_count);
+            panic!("row index out of bounds: {row} >= {row_count}");
         }
         let row_len: usize = self.shape[depth + 1..].iter().product();
         let start = row * row_len;

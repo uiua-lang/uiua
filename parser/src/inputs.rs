@@ -48,17 +48,17 @@ impl Inputs {
             InputSrc::File(path) => self
                 .files
                 .get(&**path)
-                .unwrap_or_else(|| panic!("File {:?} not found", path))
+                .unwrap_or_else(|| panic!("File {path:?} not found"))
                 .clone(),
             InputSrc::Str(index) => self
                 .strings
                 .get(*index)
-                .unwrap_or_else(|| panic!("String {} not found", index))
+                .unwrap_or_else(|| panic!("String {index} not found"))
                 .clone(),
             InputSrc::Macro(span) => self
                 .macros
                 .get(span)
-                .unwrap_or_else(|| panic!("Macro at {} not found", span))
+                .unwrap_or_else(|| panic!("Macro at {span} not found"))
                 .clone(),
             InputSrc::Literal(s) => s.clone(),
         }

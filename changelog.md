@@ -30,9 +30,6 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`exponential ₑ`](https://uiua.org/docs/exponential) function, which computes the exponential function
 - Deprecate [`logarithm ₙ`](https://uiua.org/docs/logarithm) in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
 - Remove experimental `ln` in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
-- Remove the `ⁿ%:1` ("root" pattern) optimization
-  - It inverted incorrectly when used with [`under ⍜`](https://uiua.org/docs/under)
-  - Existing uses should be replaced with [`anti ⌝`](https://uiua.org/docs/anti)[`power ⁿ`](https://uiua.org/docs/power)
 - Add [`&seek`](https://uiua.org/docs/&seek) function for working with large files
 - Remove previously deprecated `signature` and `stringify` modifiers
 - Calling [`&tcpa`](https://uiua.org/docs/&tcpa) on a TLS listener created with [`&tlsl`](https://uiua.org/docs/&tlsl) now automatically tries conducting a TSL handshake
@@ -56,6 +53,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Improve "Array would be too large" error messages
 - Change short form of the `--experimental` flag for `uiua eval` to use `-x` instead of `-e`
   - This is consistent with the corresponding flag for `uiua repl`
+- Remove the `ⁿ÷:1` ("root" pattern) optimization
+  - It inverted incorrectly when used with [`under ⍜`](https://uiua.org/docs/under)
+  - Existing uses should be replaced with [`anti ⌝`](https://uiua.org/docs/anti)[`power ⁿ`](https://uiua.org/docs/power)
 ### Pad
 - Add `primitives.json` to the pre-included files in the pad
 

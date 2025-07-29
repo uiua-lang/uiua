@@ -358,8 +358,7 @@ fn multi_partition_indices(markers: &Array<i64>) -> Vec<(i64, Vec<usize>)> {
                     continue;
                 }
                 if group.iter().any(|idx| {
-                    idx.iter()
-                        .zip(&curr)
+                    (idx.iter().zip(&curr))
                         .map(|(a, b)| a.abs_diff(*b))
                         .sum::<usize>()
                         == 1
@@ -369,9 +368,7 @@ fn multi_partition_indices(markers: &Array<i64>) -> Vec<(i64, Vec<usize>)> {
             }
             // Add the current index to the adjacent group, possibly merging groups
             match adjacent_groups.len() {
-                0 => {
-                    groups.push((marker, vec![curr.clone()]));
-                }
+                0 => groups.push((marker, vec![curr.clone()])),
                 1 => groups[adjacent_groups[0]].1.push(curr.clone()),
                 _ => {
                     let mut adjacent_groups = adjacent_groups.into_iter();

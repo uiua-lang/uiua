@@ -2355,43 +2355,51 @@ impl Ord for Value {
 }
 
 impl Hash for Value {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        val_as_arr!(self, |arr| arr.hash(state))
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        val_as_arr!(self, |arr| arr.hash(hasher))
     }
 }
 
-/// A wrapper for values that hashes their labels in addition to the normal hashing
-///
-/// Works with both [`Value`] and `&Value`
-#[derive(Debug, Clone)]
-pub struct HashLabels<T = Value>(pub T);
+#[derive(Clone)]
+pub(crate) struct HashLabels<V = Value>(pub V);
 
-impl PartialEq for HashLabels {
+impl PartialEq for HashLabels<Value> {
     fn eq(&self, other: &Self) -> bool {
-        HashLabels(&self.0).eq(&HashLabels(&other.0))
+        HashLabels(&self.0) == HashLabels(&other.0)
     }
 }
-impl Eq for HashLabels {}
-impl Hash for HashLabels {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        HashLabels(&self.0).hash(state);
+impl Eq for HashLabels<Value> {}
+impl Hash for HashLabels<Value> {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        HashLabels(&self.0).hash(hasher)
     }
 }
 
 impl PartialEq for HashLabels<&Value> {
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq(other.0) && self.0.meta.label == other.0.meta.label
+        self.0 == other.0 && self.0.meta.label == other.0.meta.label
     }
 }
 impl Eq for HashLabels<&Value> {}
 impl Hash for HashLabels<&Value> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-        self.0.meta.label.hash(state);
-        if let HashLabels(Value::Box(arr)) = self {
-            for Boxed(val) in &arr.data {
-                HashLabels(val).hash(state);
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        self.0.meta.label.hash(hasher);
+        match self.0 {
+            Value::Box(arr) => {
+                if let Some(keys) = &arr.meta.map_keys {
+                    keys.hash(hasher);
+                }
+                Boxed::TYPE_ID.hash(hasher);
+                if let Some(scalar) = arr.as_scalar() {
+                    if let Some(value) = scalar.nested_value() {
+                        value.hash(hasher);
+                        return;
+                    }
+                }
+                arr.shape.hash(hasher);
+                arr.data.iter().for_each(|x| HashLabels(&x.0).hash(hasher));
             }
+            val => val_as_arr!(val, |arr| arr.hash(hasher)),
         }
     }
 }

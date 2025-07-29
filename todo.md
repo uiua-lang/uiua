@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.17
-- Improve PR validation
-  - Check for clippy lints
 - LSP optimizations
   - Fix rename
   - Fix goto references

@@ -18,8 +18,8 @@ use serde::*;
 use crate::{
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
-    Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive, Purity, Signature,
-    Value,
+    Assembly, BindingKind, DynamicFunction, Function, HashLabels, ImplPrimitive, Primitive, Purity,
+    Signature, Value,
 };
 
 node!(
@@ -1155,15 +1155,16 @@ macro_rules! node {
             #[allow(unused_variables)]
             fn hash<H: Hasher>(&self, state: &mut H) {
                 macro_rules! hash_field {
-                    (span) => {};
-                    ($nm:ident) => {Hash::hash($nm, state)};
+                    (span span) => {};
+                    (val $val:ident) => {Hash::hash(&HashLabels($val), state)};
+                    ($nm:ident $_nm:ident) => {Hash::hash($nm, state)};
                 }
                 match self {
                     $(
                         Self::$name $(($($tup_name),*))? $({$($field_name),*})? => {
                             discriminant(self).hash(state);
-                            $($(hash_field!($field_name);)*)?
-                            $($(hash_field!($tup_name);)*)?
+                            $($(hash_field!($field_name $field_name);)*)?
+                            $($(hash_field!($tup_name $tup_name);)*)?
                         }
                     )*
                 }

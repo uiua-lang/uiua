@@ -214,6 +214,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Identity], No, "Self inverse", "°∘ 5") }
             { inverse_row([Neg], No, "Self inverse", "°¯ 5") }
             { inverse_row([Not], No, "Self inverse", "°¬ 5") }
+            { inverse_row([Reciprocal], No, "Self inverse", "# Experimental!\n°⨪ 5") }
             { inverse_row([Sqrt], No, "", "°√ 5") }
             { inverse_row([Sin], No, "Arcsine", "°∿ 1") }
             { inverse_row([Add], Required, "", "°(+1) 5") }

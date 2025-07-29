@@ -270,7 +270,7 @@ fn TutorialBasic() -> impl IntoView {
         <p><Prim prim=Backward/>" swaps the arguments to a function that takes two values."</p>
         <blockquote>"Note that "<Prim prim=Backward/>" is not actually a function itself. It is something called a "<em>"modifier"</em>". We'll talk about modifiers in more depth in a "<A href="/tutorial/functions#modifiers">"later section"</A>"."</blockquote>
         <p><Prim prim=Backward/>" is useful when you want to call a function that takes two arguments, but the arguments are on the stack in the wrong order."</p>
-        <p>"For example, if you wanted to get the reciprocal of a number, you would "<Prim prim=Div/>" "<code>"1"</code>" by it. But, if the number is already on the stack, you would need to use "<Prim prim=Backward/>"."</p>
+        <p>"For example, if you wanted to get the reciprocal of a number without using "<Prim prim=Reciprocal/>", you would "<Prim prim=Div/>" "<code>"1"</code>" by it. But, if the number is already on the stack, you would need to use "<Prim prim=Backward/>"."</p>
         <Editor example=" ÷1 5\n˜÷1 5"/>
         <Editor example="    -2 5\nback-2 5"/>
         <br/>

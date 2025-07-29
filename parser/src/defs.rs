@@ -3905,8 +3905,9 @@ sys_op! {
     /// ex: Sp   ← 1.5
     ///   : Mod  ← ∿×π× # Modulate ? Freq Time
     ///   : Note ← +110×20⌊÷4◿8
-    ///   : Bass ← ×0.2Mod×⟜(
-    ///   :   ×2+1⌊◿2      # Volume modulation freq
+    ///   : Bass ← ⟜(
+    ///   :   ×0.2Mod×
+    ///   : | ×2+1⌊◿2      # Volume modulation freq
     ///   : | ±Mod÷Sp⟜Note # Note
     ///   : )
     ///   : Kick  ← Mod80√√◿1
@@ -3914,7 +3915,7 @@ sys_op! {
     ///   : Noisy ← ×⊸(↯△⊙Noise)
     ///   : Hit   ← Noisy /≠⊞<0.5_0.6 ÷⟜◿2
     ///   : Hat   ← ×0.3 Noisy <0.1 ÷⟜◿0.25
-    ///   : &ast(÷3/+[⊃(Hat|Kick|Hit|Bass)]×Sp)
+    ///   : &ast(÷3/+⊃[Hat|Kick|Hit|Bass]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
     /// How long the audio is can be configured in the editor settings.
     (0(0)[1], AudioStream, Media, "&ast", "audio - stream", Mutating),

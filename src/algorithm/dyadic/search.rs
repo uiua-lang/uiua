@@ -232,26 +232,20 @@ impl<T: ArrayValue> Array<T> {
                 if haystack.rank() - needle.rank() == 1 {
                     if haystack.meta.is_sorted_up() {
                         // Binary search
-                        if haystack.row_count() == 0 {
-                            return Ok(default.into());
-                        }
                         let needle_slice = ArrayCmpSlice(needle.data.as_slice());
                         let mut l = 0;
-                        let mut r = haystack.row_count().saturating_sub(1);
-                        let mut res = None;
-                        while l <= r {
+                        let mut r = haystack.row_count();
+                        while l < r {
                             let mid = l + (r - l) / 2;
-                            match ArrayCmpSlice(haystack.row_slice(mid)).cmp(&needle_slice) {
-                                Ordering::Equal => {
-                                    res = Some(mid);
-                                    break;
-                                }
-                                Ordering::Less => l = mid + 1,
-                                Ordering::Greater if mid == 0 => break,
-                                Ordering::Greater => r = mid - 1,
+                            if ArrayCmpSlice(haystack.row_slice(mid)) < needle_slice {
+                                l = mid + 1;
+                            } else {
+                                r = mid;
                             }
                         }
-                        (res.map(|i| i as f64).unwrap_or(default)).into()
+                        let found = l < haystack.row_count()
+                            && ArrayCmpSlice(haystack.row_slice(l)) == needle_slice;
+                        if found { l as f64 } else { default }.into()
                     } else {
                         // Linear search
                         (haystack

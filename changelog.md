@@ -43,6 +43,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under) capability to [`&cd`](https://uiua.org/docs/&cd)
   - [`un °`](https://uiua.org/docs/un)[`&cd`](https://uiua.org/docs/&cd) will output the current working directory
   - [`under ⍜`](https://uiua.org/docs/under)[`&cd`](https://uiua.org/docs/&cd) will return to the original directory afterward
+- Add experimental [`reciprocal ⨪`](https://uiua.org/docs/reciprocal) function, which computes the multiplicative inverse AKA reciprocal of a number
 ### Interpreter
 - Speed up the implementation of [`or ∨`](https://uiua.org/docs/or)
 - The fomatter no longer truncates trailing decimal `0`s from number literals

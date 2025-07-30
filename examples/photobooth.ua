@@ -3,7 +3,7 @@
 
 # Pixelate an image with the given ratio
 # ? Ratio Image
-Pixelate ← ◌⍥(÷⊙1⟜▽⟜≡▽)2 ÷⊙1
+Pixelate ← ◌⍥(⨪⟜▽⟜≡▽)2 ⨪
 
 # Run an edge-detection algorithm on an image.
 # Uses a 5x5 kernel.

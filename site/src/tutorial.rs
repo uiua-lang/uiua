@@ -654,8 +654,8 @@ fn TutorialBindings() -> impl IntoView {
         <p><em>"Warning"</em>": It is not guaranteed that any particular non-alphanumeric character will not be used for a built-in function in the future. Use them at your own risk. Emojis are safe though."</p>
         <p>"Unlike most programming languages, binding names in "{lang}" "<em>"cannot"</em>" contain numbers or underscores."</p>
         <Editor example="Variable_1 ← 5"/> // Should fail
-        <p>"Bindings "<em>"can"</em>" contain subscript numbers. These will format from "<code>"__"</code>" followed by some digits. Try formatting the example below!"</p>
-        <Editor example="X__1 = 5\nSha__256 = \"TODO\""/>
+        <p>"Bindings "<em>"can"</em>" contain subscript numbers. These will format from "<code>","</code>" followed by some digits. Try formatting the example below!"</p>
+        <Editor example="X,1 = 5\nSha,256 = \"TODO\""/>
         <p>"Subscripts are only allowed at the end of a binding name."</p>
         <p><strong>"Bindings are case-sensitive."</strong></p>
         <p>"The parser can sometimes mistake all-lowercase binding names for unformatted built-in functions."</p>
@@ -846,10 +846,10 @@ fn TutorialMoreStack() -> impl IntoView {
 
         <Hd id="Subscripts">"Subscripts"</Hd>
         <p>"Subscripts are a special syntax that allows you to augment some functions and modifiers with a number."</p>
-        <p>"Subscripts are typed with "<code>"__"</code>" followed by some digits. The formatter will turn them into subscript digit characters. A leading negative sign is allowed."</p>
+        <p>"Subscripts are typed with "<code>","</code>" followed by some digits. The formatter will turn them into subscript digit characters. A leading negative sign is allowed."</p>
         <p>"Several functions and modifiers are supported, but we'll only cover some stack-related ones here. You can find a full list of subscript-compatible functions "<A href="/docs/subscripts">"here"</A>"."</p>
         <p>"Subscripted "<Prim prim=Both/>" calls its function on N sets of arguments."</p>
-        <Editor example="[∩+ 1 2 3 4]\n[∩__3+ 1 2 3 4 5 6]\n[∩__4+ 1 2 3 4 5 6 7 8] # Try formatting!"/>
+        <Editor example="[∩+ 1 2 3 4]\n[∩,3+ 1 2 3 4 5 6]\n[∩,4+ 1 2 3 4 5 6 7 8] # Try formatting!"/>
         <p>"Subscripted "<Prim prim=Couple/>" collects N values from the stack into an array."</p>
         <Editor example="⊟₄ 1 2 3 4 5"/>
         <p><Prim prim=Box/>" has similar behavior, but it boxes each value."</p>

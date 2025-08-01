@@ -1306,7 +1306,7 @@ enum ArrayRep<T: ArrayValueSer> {
 
 impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
     fn from(rep: ArrayRep<T>) -> Self {
-        match rep {
+        let mut arr = match rep {
             ArrayRep::Scalar(data) => Self::new([], [data.into()]),
             ArrayRep::List(data) => {
                 let data = T::make_data(data);
@@ -1326,7 +1326,30 @@ impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
                 let data = T::make_data(data);
                 Self { shape, data, meta }
             }
+        };
+
+        // Update sortedness flags
+        let mut is_sorted_up = true;
+        let mut is_sorted_down = true;
+        {
+            let mut rows = arr.row_slices();
+            if let Some(mut curr) = rows.next() {
+                for row in rows {
+                    if !is_sorted_up && !is_sorted_down {
+                        break;
+                    }
+                    match ArrayCmpSlice(curr).cmp(&ArrayCmpSlice(row)) {
+                        Ordering::Equal => {}
+                        Ordering::Less => is_sorted_down = false,
+                        Ordering::Greater => is_sorted_up = false,
+                    }
+                    curr = row;
+                }
+            }
         }
+        arr.meta.mark_sorted_up(is_sorted_up);
+        arr.meta.mark_sorted_down(is_sorted_down);
+        arr
     }
 }
 
@@ -1343,7 +1366,7 @@ impl<T: ArrayValueSer> From<Array<T>> for ArrayRep<T> {
             } else {
                 inner.map_keys = map_keys;
             }
-            inner.flags &= !ArrayFlags::BOOLEAN;
+            inner.flags = ArrayFlags::empty();
             if inner != DEFAULT_META_INNER {
                 return ArrayRep::Full(
                     arr.shape,

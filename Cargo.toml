@@ -41,7 +41,7 @@ time = {version = "0.3.36", features = ["local-offset"]}
 unicode-segmentation = "1.10"
 open = {version = "5", optional = true}
 rawrrr = {version = "0.2.1", optional = true}
-rustls = {version = "0.23.2", optional = true, default-features = false, features = [
+rustls = {version = "0.23.31", optional = true, default-features = false, features = [
   "std",
   "tls12",
   "ring",

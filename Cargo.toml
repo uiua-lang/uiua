@@ -20,7 +20,7 @@ bitflags = {version = "2", features = ["serde"]}
 bytemuck = {version = "1.17", features = ["must_cast", "derive", "extern_crate_alloc"]}
 colored = "2"
 crossbeam-channel = "0.5.12"
-dashmap = {version = "5", features = ["serde"]}
+dashmap = {version = "6", features = ["serde"]}
 ecow = {version = "0.2.3", features = ["serde"]}
 enum-iterator = "2.1.0"
 indexmap = {version = "2", features = ["serde"]}

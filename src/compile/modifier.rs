@@ -806,9 +806,7 @@ impl Compiler {
                             Node::from_iter(repeat_n(Node::Prim(Dup, span), n - 1))
                         };
                         if side.side == SubSide::Right && n < sig.args() {
-                            for _ in 0..sig.args() - n {
-                                dups = Node::Mod(Dip, eco_vec![dups.sig_node().unwrap()], span);
-                            }
+                            dups = dups.sig_node().unwrap().dipped(sig.args() - n, span).node;
                         }
                         node.prepend(dups);
                         return Ok(Some(node));
@@ -840,9 +838,9 @@ impl Compiler {
                     let span = self.add_span(modified.modifier.span.clone());
                     let mut flip = Node::Prim(Flip, span);
                     if side.value == SubSide::Right {
-                        for _ in 0..sig.args().saturating_sub(2) {
-                            flip = Node::Mod(Dip, eco_vec![flip.sig_node().unwrap()], span);
-                        }
+                        flip = (flip.sig_node().unwrap())
+                            .dipped(sig.args().saturating_sub(2), span)
+                            .node;
                     }
                     node.prepend(flip);
                 } else {
@@ -1127,14 +1125,9 @@ impl Compiler {
                 if tried.sig.args() + 1 < handler.sig.args() {
                     // Tried must pop arguments that are only for the handler
                     let arg_diff = handler.sig.args() - tried.sig.args() - 1;
-                    let mut pre =
-                        SigNode::new((arg_diff, 0), eco_vec![Node::Prim(Pop, span); arg_diff]);
-                    for _ in 0..tried.sig.args() {
-                        pre = SigNode::new(
-                            (pre.sig.args() + 1, pre.sig.outputs() + 1),
-                            Node::Mod(Dip, eco_vec![pre], span),
-                        );
-                    }
+                    let pre =
+                        SigNode::new((arg_diff, 0), eco_vec![Node::Prim(Pop, span); arg_diff])
+                            .dipped(tried.sig.args(), span);
                     tried.sig.update_args(|a| a + arg_diff);
                     tried.node.prepend(pre.node);
                 } else if tried.sig.outputs() < handler.sig.outputs() {
@@ -1149,16 +1142,11 @@ impl Compiler {
                         let diff_diff = arg_diff.saturating_sub(output_diff);
                         if diff_diff > 0 {
                             // Handler must pop arguments that are only for the tried
-                            let mut pre = SigNode::new(
+                            let pre = SigNode::new(
                                 (diff_diff, 0),
                                 eco_vec![Node::Prim(Pop, span); diff_diff],
-                            );
-                            for _ in 0..handler.sig.args() + arg_diff - diff_diff {
-                                pre = SigNode::new(
-                                    (pre.sig.args() + 1, pre.sig.outputs() + 1),
-                                    Node::Mod(Dip, eco_vec![pre], span),
-                                );
-                            }
+                            )
+                            .dipped(handler.sig.args() + arg_diff - diff_diff, span);
                             (handler.sig)
                                 .update_args_outputs(|a, o| (a + arg_diff, o + output_diff));
                             handler.node.prepend(pre.node);
@@ -1292,15 +1280,11 @@ impl Compiler {
                                         0 => Node::empty(),
                                         1 => Node::Prim(Fix, sub_span),
                                         n => {
-                                            let mut node = Node::Prim(Fix, sub_span);
-                                            for _ in 1..n {
-                                                node = Node::Mod(
-                                                    Dip,
-                                                    eco_vec![node.sig_node().unwrap()],
-                                                    sub_span,
-                                                );
-                                            }
-                                            node
+                                            Node::Prim(Fix, sub_span)
+                                                .sig_node()
+                                                .unwrap()
+                                                .dipped(n.saturating_sub(1), sub_span)
+                                                .node
                                         }
                                     },
                                 };

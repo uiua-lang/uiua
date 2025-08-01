@@ -165,6 +165,17 @@ impl SigNode {
         };
         SigNode::new(sig, node)
     }
+    /// Dip before calling this node
+    pub fn dipped(self, depth: usize, span: usize) -> SigNode {
+        let mut sig = self.sig;
+        sig.update_args_outputs(|a, o| (a + depth, o + depth));
+        let node = match depth {
+            0 => self.node,
+            1 => Node::Mod(Primitive::Dip, eco_vec![self], span),
+            n => Node::ImplMod(ImplPrimitive::DipN(n), eco_vec![self], span),
+        };
+        SigNode::new(sig, node)
+    }
 }
 
 impl From<SigNode> for Node {

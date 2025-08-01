@@ -1250,6 +1250,12 @@ impl ImplPrimitive {
                 env.insert_stack(outputs, kept)?;
                 env.push_all(temp);
             }
+            &ImplPrimitive::DipN(n) => {
+                let [f] = get_ops(ops, env)?;
+                let dipped = env.pop_n(n)?;
+                env.exec(f)?;
+                env.push_all(dipped);
+            }
             ImplPrimitive::Astar => {
                 let [neighbors, heuristic, is_goal] = get_ops(ops, env)?;
                 path::path(neighbors, is_goal, Some(heuristic), env)?;

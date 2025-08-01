@@ -5,8 +5,6 @@
   - Fix rename
   - Fix goto references
 - `Variants` field for module
-- Fix caching with labels
-- Fix performance of deep `dip` nesting
 - Don't serialize sortedness flags
 - Sided `fork`
 - Sided `join`

@@ -459,6 +459,11 @@ impl VirtualEnv {
                     self.sig_node(sn)?;
                     self.handle_args_outputs(0, n);
                 }
+                &DipN(n) => {
+                    let [mut sig] = get_args(args)?;
+                    sig.update_args_outputs(|a, o| (a + n, o + n));
+                    self.handle_sig(sig);
+                }
                 ReduceContent | ReduceDepth(_) => {
                     let [sig] = get_args(args)?;
                     let args = sig.args().saturating_sub(sig.outputs());

@@ -343,14 +343,29 @@ macro_rules! under {
     };
 }
 
-under!(DipPat, input, g_sig, inverse, asm, Dip, span, [f], {
+under!(DipPat, input, g_sig, inverse, asm, {
+    let (input, n, args, span) = match input {
+        [Mod(Dip, args, span), input @ ..] => (input, 1, args, *span),
+        [ImplMod(DipN(n), args, span), input @ ..] => (input, *n, args, *span),
+        _ => return generic(),
+    };
+    let m = |sn: SigNode| {
+        if n == 1 {
+            Mod(Dip, eco_vec![sn], span)
+        } else {
+            ImplMod(DipN(n), eco_vec![sn], span)
+        }
+    };
+    let [f] = args.as_slice() else {
+        return generic();
+    };
     if f.sig.args() == 0 {
         return generic();
     }
     // F inverse
     let inner_g_sig = Signature::new(
-        g_sig.args().saturating_sub(1),
-        g_sig.outputs().saturating_sub(1),
+        g_sig.args().saturating_sub(n),
+        g_sig.outputs().saturating_sub(n),
     );
     let (f_before, f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
     // Rest inverse
@@ -365,7 +380,7 @@ under!(DipPat, input, g_sig, inverse, asm, Dip, span, [f], {
 
     // Make before
     let mut before = if !inverse || balanced {
-        Mod(Dip, eco_vec![f_before], span)
+        m(f_before)
     } else {
         f_before.node
     };
@@ -373,7 +388,7 @@ under!(DipPat, input, g_sig, inverse, asm, Dip, span, [f], {
     // Make after
     let mut after = rest_after;
     let after_inner = if inverse || balanced {
-        Mod(Dip, eco_vec![f_after], span)
+        m(f_after)
     } else {
         f_after.node
     };

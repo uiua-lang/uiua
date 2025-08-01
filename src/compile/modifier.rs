@@ -99,9 +99,7 @@ impl Compiler {
                 }
                 self.modified_impl(new, subscript)
             }
-            Modifier::Primitive(
-                Primitive::Fork | Primitive::Bracket | Primitive::Try | Primitive::Fill,
-            ) => {
+            Modifier::Primitive(Primitive::Fork | Primitive::Try | Primitive::Fill) => {
                 let mut branches = pack.lexical_order().cloned().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),
@@ -402,6 +400,7 @@ impl Compiler {
             }
         } else {
             let strict_args = match &modified.modifier.value {
+                Modifier::Primitive(Primitive::Bracket) => false,
                 Modifier::Primitive(_) => true,
                 Modifier::Macro(..) => false,
                 Modifier::Ref(name) => self
@@ -641,7 +640,7 @@ impl Compiler {
                             modified.modifier.span.clone().merge(sub.span),
                             format!(
                                 "Sided {}'s functions must both have 2 arguments, \
-                            but their signatures are {} and {}.",
+                                but their signatures are {} and {}.",
                                 Primitive::Bracket.format(),
                                 a.sig,
                                 b.sig

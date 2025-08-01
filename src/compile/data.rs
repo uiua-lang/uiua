@@ -360,9 +360,8 @@ impl Compiler {
             .map(|f| f.init.as_ref().map(|sn| sn.sig.args()).unwrap_or(1))
             .sum();
         let mut node = if has_fields {
-            let mut inner = Node::default();
-            let mut sig = Signature::new(0, 0);
-            for field in fields.iter().rev() {
+            let mut field_nodes = EcoVec::with_capacity(fields.len());
+            for field in &fields {
                 let mut arg = if let Some(sn) = &field.init {
                     sn.clone()
                 } else {
@@ -378,18 +377,11 @@ impl Compiler {
                         Node::ImplPrim(ImplPrimitive::ValidateNonBoxedVariant, field.span).into(),
                     ));
                 }
-                if !inner.is_empty() {
-                    for _ in 0..arg.sig.args() {
-                        inner = Node::Mod(Primitive::Dip, eco_vec![SigNode::new(sig, inner)], span);
-                    }
-                }
-                sig.update_args(|a| a + arg.sig.args());
-                sig.update_outputs(|o| o + arg.sig.outputs());
-                inner.push(arg.node);
+                field_nodes.push(arg);
             }
             let mut node = Node::Array {
                 len: fields.len(),
-                inner: inner.into(),
+                inner: Node::Mod(Primitive::Bracket, field_nodes, span).into(),
                 boxed,
                 allow_ext: true,
                 prim: None,

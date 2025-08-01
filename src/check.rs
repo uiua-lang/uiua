@@ -375,8 +375,10 @@ impl VirtualEnv {
                     self.handle_args_outputs(f.args().max(g.args()), f.outputs() + g.outputs());
                 }
                 Bracket => {
-                    let [f, g] = get_args(args)?;
-                    self.handle_args_outputs(f.args() + g.args(), f.outputs() + g.outputs());
+                    let (args, outputs) = args.iter().fold((0, 0), |(a, o), sn| {
+                        (a + sn.sig.args(), o + sn.sig.outputs())
+                    });
+                    self.handle_args_outputs(args, outputs);
                 }
                 Both => {
                     let [f] = get_args_nodes(args)?;
@@ -490,8 +492,10 @@ impl VirtualEnv {
                 }
                 UnFill | SidedFill(_) => self.fill(args)?,
                 UnBracket => {
-                    let [f, g] = get_args(args)?;
-                    self.handle_args_outputs(f.args() + g.args(), f.outputs() + g.outputs());
+                    let (args, outputs) = args.iter().fold((0, 0), |(a, o), sn| {
+                        (a + sn.sig.args(), o + sn.sig.outputs())
+                    });
+                    self.handle_args_outputs(args, outputs);
                 }
                 BothImpl(sub) | UnBothImpl(sub) => {
                     let [f] = get_args(args)?;

@@ -465,10 +465,12 @@ inverse!(
     }
 );
 
-inverse!(BracketPat, input, asm, Bracket, span, [f, g], {
-    let f_inv = f.un_inverse(asm)?;
-    let g_inv = g.un_inverse(asm)?;
-    Ok((input, ImplMod(UnBracket, eco_vec![f_inv, g_inv], span)))
+inverse!(BracketPat, input, asm, Bracket, span, args, {
+    let mut inv_args = EcoVec::with_capacity(args.len());
+    for sn in args {
+        inv_args.push(sn.un_inverse(asm)?);
+    }
+    Ok((input, ImplMod(UnBracket, inv_args, span)))
 });
 
 inverse!(OnPat, input, asm, On, span, [f], {

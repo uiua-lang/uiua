@@ -4,6 +4,7 @@
 
 use ecow::EcoVec;
 use regex::Regex;
+use smallvec::SmallVec;
 
 use core::str;
 use std::{
@@ -350,7 +351,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 /// Execute a primitive as a modifier
-pub fn run_prim_mod(prim: &Primitive, ops: Ops, env: &mut Uiua) -> UiuaResult {
+pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResult {
     match prim {
         // Looping
         Primitive::Reduce => reduce::reduce(ops, 0, env)?,
@@ -388,11 +389,17 @@ pub fn run_prim_mod(prim: &Primitive, ops: Ops, env: &mut Uiua) -> UiuaResult {
             env.exec(f)?;
         }
         Primitive::Bracket => {
-            let [f, g] = get_ops(ops, env)?;
-            let vals = env.pop_n(f.sig.args())?;
-            env.exec(g)?;
-            env.push_all(vals);
-            env.exec(f)?;
+            let mut args: SmallVec<[Vec<Value>; 3]> = SmallVec::new();
+            for sn in ops.iter().rev().skip(1).rev() {
+                args.push(env.pop_n(sn.sig.args())?);
+            }
+            if let Some(last) = ops.pop() {
+                env.exec(last)?;
+            }
+            for (sn, args) in ops.into_iter().zip(args).rev() {
+                env.push_all(args);
+                env.exec(sn)?;
+            }
         }
         Primitive::Both => {
             let [f] = get_ops(ops, env)?;
@@ -1305,11 +1312,15 @@ impl ImplPrimitive {
             &ImplPrimitive::SidedFill(side) => fill!(ops, side, env, with_fill, without_fill_but),
             ImplPrimitive::ReduceTable => table::reduce_table(ops, env)?,
             ImplPrimitive::UnBracket => {
-                let [f, g] = get_ops(ops, env)?;
-                env.exec(f.node)?;
-                let f_outputs = env.pop_n(f.sig.outputs())?;
-                env.exec(g.node)?;
-                env.push_all(f_outputs);
+                let mut outputs: SmallVec<[Vec<Value>; 3]> = SmallVec::new();
+                for sn in ops {
+                    let o = sn.sig.outputs();
+                    env.exec(sn)?;
+                    outputs.push(env.pop_n(o)?);
+                }
+                for outputs in outputs.into_iter().rev() {
+                    env.push_all(outputs);
+                }
             }
             ImplPrimitive::SplitByScalar => {
                 let [f] = get_ops(ops, env)?;

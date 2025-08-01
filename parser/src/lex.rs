@@ -1118,13 +1118,68 @@ impl<'a> Lexer<'a> {
                 // Stack
                 "?" => {
                     self.end(Primitive::Stack, start);
-                    let mut n = 0;
                     let start = self.loc;
-                    while self.next_char_exact("?") {
-                        n += 1;
+
+                    fn read_chain(lexer: &mut Lexer) -> (i32, Loc) {
+                        let mut n = 0;
+                        let mut before_last = lexer.loc;
+                        loop {
+                            let start = lexer.loc;
+                            if lexer.next_char_exact("?") {
+                                n += 1;
+                                if lexer.peek_char() != Some("?") {
+                                    before_last = start;
+                                    break;
+                                }
+                            } else {
+                                break;
+                            }
+                        }
+                        (n, before_last)
                     }
-                    if n > 0 {
-                        self.end(Subscr(Subscript::numeric(n)), start);
+
+                    let (n, before_last_in_chain) = read_chain(&mut self);
+
+                    let subscript = {
+                        if self.next_char_exact(",") || self.next_chars_exact(["_"; 2]) {
+                            Some(self.subscript(","))
+                        } else if self.peek_char().map_or(false, is_formatted_subscript) {
+                            let init = self.next_char().unwrap();
+                            Some(self.subscript(init))
+                        } else {
+                            None
+                        }
+                    };
+                    match subscript {
+                        Some(Subscript {
+                            num: Some(NumericSubscript::N(num)),
+                            side: None,
+                        }) => {
+                            let (m, before_last_2nd_chain) = read_chain(&mut self);
+                            let has_2nd_subscript = self.next_char_exact(",")
+                                || self.next_chars_exact(["_"; 2])
+                                || self.peek_char().map_or(false, is_formatted_subscript);
+                            if !has_2nd_subscript {
+                                self.end(Subscr(Subscript::numeric(n + num + m)), start);
+                            } else {
+                                let sub_num = n + num + (m - 1).max(0);
+                                self.loc = before_last_2nd_chain;
+                                self.end(Subscr(Subscript::numeric(sub_num)), start);
+                            }
+                        }
+                        Some(_) => {
+                            // invalid subscript
+                            self.loc = before_last_in_chain;
+                            if n > 1 {
+                                self.end(Subscr(Subscript::numeric(n - 1)), start);
+                            }
+                        }
+                        None => {
+                            // no subscript
+                            if n != 0 {
+                                self.end(Subscr(Subscript::numeric(n)), start);
+                            }
+                        }
                     }
                 }
                 // Comments
@@ -1263,7 +1318,7 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 // Formatted subscripts
-                c if "₋⌞⌟".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c)) => {
+                c if is_formatted_subscript(c) => {
                     let sub = self.subscript(c);
                     self.end(Subscr(sub), start)
                 }
@@ -1704,6 +1759,10 @@ pub fn is_custom_glyph(c: &str) -> bool {
             .chars()
             .all(|c| !c.is_ascii() && !is_ident_char(c) && Primitive::from_glyph(c).is_none()),
     }
+}
+
+fn is_formatted_subscript(c: &str) -> bool {
+    "₋⌞⌟".contains(c) || c.chars().all(|c| SUBSCRIPT_DIGITS.contains(&c))
 }
 
 pub(crate) fn canonicalize_ident(ident: &str) -> Ident {

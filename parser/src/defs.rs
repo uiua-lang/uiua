@@ -2923,7 +2923,10 @@ primitive!(
     /// Subscripted [stack] prints that many values from the stack.
     /// ex: ?₂ 1 2 3 4
     /// If you type `N+1` `?`s, it will format to [stack] subscripted with `N`.
-    /// ex: ??? 1 2 3 4 # Try formatting!
+    /// A subscripted `?` will merge adjacent `?s` into its subscript.
+    /// ex: # Try formatting!
+    ///   : ???? 1 2 3 4
+    ///   : ?₂?? 5 6 7 8
     (0(0), Stack, Debug, ("stack", '?'), Mutating),
     /// Preprocess and print all stack values without popping them
     ///

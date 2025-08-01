@@ -611,7 +611,7 @@ impl Compiler {
     }
     fn analyze_macro_body(
         &mut self,
-        macro_name: &str,
+        mac_name: &str,
         words: &[Sp<Word>],
         mut code_macro: bool,
         recursive: &mut bool,
@@ -623,24 +623,22 @@ impl Compiler {
             let mut name_local = None;
             match &word.value {
                 Word::Strand(items) => {
-                    self.analyze_macro_body(macro_name, items, code_macro, recursive, loc)
+                    self.analyze_macro_body(mac_name, items, code_macro, recursive, loc)
                 }
                 Word::Array(arr) => {
-                    if self.analyze_macro_items(macro_name, &arr.lines, code_macro, recursive, loc)
-                    {
+                    if self.analyze_macro_items(mac_name, &arr.lines, code_macro, recursive, loc) {
                         return;
                     }
                 }
                 Word::Func(func) => {
-                    if self.analyze_macro_items(macro_name, &func.lines, code_macro, recursive, loc)
-                    {
+                    if self.analyze_macro_items(mac_name, &func.lines, code_macro, recursive, loc) {
                         return;
                     }
                 }
                 Word::Pack(pack) => {
                     for branch in &pack.branches {
                         if self.analyze_macro_items(
-                            macro_name,
+                            mac_name,
                             &branch.value.lines,
                             code_macro,
                             recursive,
@@ -684,7 +682,7 @@ impl Compiler {
                             if let Err(e) = self.in_scope(ScopeKind::AllInModule, move |comp| {
                                 comp.scope.names.extend(names);
                                 comp.analyze_macro_body(
-                                    macro_name,
+                                    mac_name,
                                     &m.operands,
                                     false,
                                     recursive,
@@ -698,7 +696,7 @@ impl Compiler {
                             // Name errors are ignored in code macros
                             let error_count = self.errors.len();
                             self.analyze_macro_body(
-                                macro_name,
+                                mac_name,
                                 &m.operands,
                                 code_macro,
                                 recursive,
@@ -709,14 +707,13 @@ impl Compiler {
                             }
                         }
                     } else {
-                        self.analyze_macro_body(macro_name, &m.operands, code_macro, recursive, loc)
+                        self.analyze_macro_body(mac_name, &m.operands, code_macro, recursive, loc)
                     }
                 }
                 _ => {}
             }
             if let Some((nm, name_span, local)) = name_local {
-                if nm.value == macro_name
-                    && path_locals.as_ref().is_none_or(|(pl, _)| pl.is_empty())
+                if nm.value == mac_name && path_locals.as_ref().is_none_or(|(pl, _)| pl.is_empty())
                 {
                     *recursive = true;
                 }

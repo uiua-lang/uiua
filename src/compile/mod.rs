@@ -21,7 +21,7 @@ use std::{
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -217,8 +217,8 @@ pub(crate) struct Scope {
     names: LocalNames,
     /// Whether the scope has a data def defined
     has_data_def: bool,
-    /// Number of named data variants
-    data_variants: usize,
+    /// Names of data variants
+    data_variants: IndexSet<EcoString>,
     /// Whether to allow experimental features
     pub experimental: bool,
     /// Whether an error has been emitted for experimental features
@@ -266,7 +266,7 @@ impl Default for Scope {
             comment: None,
             names: IndexMap::new(),
             has_data_def: false,
-            data_variants: 0,
+            data_variants: IndexSet::new(),
             experimental: false,
             experimental_error: false,
             fill_sig_error: false,
@@ -812,9 +812,9 @@ impl Compiler {
         span: usize,
         meta: BindingMeta,
     ) {
-        let span = self.get_span(span).clone().code().unwrap();
+        let span = self.get_span(span).clone().code();
         self.asm
-            .add_binding_at(local, BindingKind::Const(value), Some(span), meta);
+            .add_binding_at(local, BindingKind::Const(value), span, meta);
         self.scope.names.insert(name, local);
     }
     /// Import a module

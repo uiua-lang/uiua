@@ -4,8 +4,6 @@
 - LSP optimizations
   - Fix rename
   - Fix goto references
-- `Variants` field for module
-- Don't serialize sortedness flags
 - Sided `join`
 - `table` subscripts for rank selection
 - Mixed subscripts

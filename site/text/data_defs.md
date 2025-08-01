@@ -223,6 +223,16 @@ If you have a lot of variants, you can put more than one on a single line.
 └─╴
 ```
 
+A module that contains variants has a `Variants` binding that lists their names.
+
+```uiua
+┌─╴IpAddr
+  |V₄ [A B C D]
+  |V₆ [A B C D E F]
+└─╴
+IpAddr~Variants
+```
+
 ## Structs of Arrays
 
 There is a well-known optimization for lower-level languages called "structs of arrays". It is a design pattern where instead of making a list of similar data structures, you make a single structure with a list for each field. This makes code faster by making data take up less memory and therefore making CPU cache misses less likely.

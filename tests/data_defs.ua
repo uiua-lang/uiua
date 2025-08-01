@@ -25,6 +25,13 @@
 └─╴
 ⍤⤙≍ 5 Foo~Bar~a Foo~Bar 5
 
+┌─╴Foo
+  |Bar
+  |Baz {A B}
+  |Uiua [C]
+└─╴
+⍤⤙≍ {"Bar" "Baz" "Uiua"} Foo~Variants
+
 ┌─╴S
   ~ {A B C}
   PopA  ← ˜⊙∘⍜A(˜⊙∘⍜⇌°⊂)

@@ -278,8 +278,9 @@ impl Compiler {
         let mut variant_index = 0;
         if data.variant {
             let module_scope = self.higher_scopes.last_mut().unwrap_or(&mut self.scope);
-            variant_index = module_scope.data_variants;
-            module_scope.data_variants += 1;
+            variant_index = module_scope.data_variants.len();
+            let name = data.name.as_ref().unwrap().value.clone();
+            module_scope.data_variants.insert(name);
         }
 
         // Make getters
@@ -574,6 +575,26 @@ impl Compiler {
         Ok(())
     }
     pub(super) fn end_enum(&mut self) -> UiuaResult {
+        // Add Variants binding
+        if !self.scope.data_variants.is_empty()
+            && !self.scope.names.get("Variants").is_some_and(|ln| ln.public)
+        {
+            let index = self.next_global;
+            self.next_global += 1;
+            let local = LocalName {
+                index,
+                public: true,
+            };
+            let value = take(&mut self.scope.data_variants)
+                .into_iter()
+                .map(|s| Boxed(s.chars().collect()))
+                .collect();
+            let meta = BindingMeta {
+                comment: Some("Names of the data variants of the module".into()),
+                ..Default::default()
+            };
+            self.compile_bind_const("Variants".into(), local, Some(value), 0, meta);
+        }
         Ok(())
     }
 }

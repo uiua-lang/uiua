@@ -15,8 +15,9 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`dip ⊙`](https://uiua.org/docs/dip) and [`on ⟜`](https://uiua.org/docs/on) function packs no longer apply their modifier to the leftmost function
   - This change makes most usecases of these function packs cleaner, as `A⊙(B|C)` changes to `⊙(A|B|C)` and likewise for [`on ⟜`](https://uiua.org/docs/on)
 - **Breaking Change** - The FFI function API has been changed considerably, read more in the documentation for [`&ffi`](https://uiua.org/docs/&ffi), [`&memcpy`](https://uiua.org/docs/&memcpy), and [`&memset`](https://uiua.org/docs/&memset)
-- [`parse ⋕`](https://uiua.org/docs/parse) can be subscripted to parse strings in different bases
+- Add [`parse ⋕`](https://uiua.org/docs/parse) subscripts to parse strings in different bases
 - Allow for private [modules](https://uiua.org/tutorial/modules#private-scoped-modules), [imports](https://uiua.org/tutorial/modules#private-imports), and [data definitions](https://uiua.org/tutorial/datadefs#visibility)
+- Modules containing data definition variants now contains a `Variants` binding that lists their names
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 - Subscripts can now be typed with `,` instead of `__`s
 - Add numeric subscripts for [`keep ▽`](https://uiua.org/docs/keep) to keep along a number of dimensions

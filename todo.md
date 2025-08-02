@@ -4,6 +4,7 @@
 - LSP optimizations
   - Fix rename
   - Fix goto references
+- `first group/partition` optimization
 - Sided `join`
 - `table` subscripts for rank selection
 - Mixed subscripts

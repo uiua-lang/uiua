@@ -1507,6 +1507,9 @@ impl<T: ArrayValue> Array<T> {
                 }
                 self.data.truncate(new_len * row_len);
             }
+        } else if self.element_count() == 0 && self.row_count() > 0 {
+            self.shape[0] = 1;
+            return Ok(());
         } else {
             let mut seen = HashSet::new();
             let mut deduped = CowSlice::new();

@@ -1917,7 +1917,7 @@ mod server {
             let mut binding: Option<(&BindingInfo, usize)> = None;
             // Check for span in bindings
             for (i, gb) in doc.asm.bindings.iter().enumerate() {
-                if gb.span.contains_line_col(line, col) && gb.span.src == path {
+                if gb.span.contains_line_col_end(line, col) && gb.span.src == path {
                     binding = Some((gb, i));
                     break;
                 }
@@ -1925,7 +1925,7 @@ mod server {
             // Check for span in binding references
             if binding.is_none() {
                 for (name_span, index) in &doc.code_meta.global_references {
-                    if name_span.contains_line_col(line, col) && name_span.src == path {
+                    if name_span.contains_line_col_end(line, col) && name_span.src == path {
                         binding = Some((&doc.asm.bindings[*index], *index));
                         break;
                     }

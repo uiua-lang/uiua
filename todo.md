@@ -1,18 +1,21 @@
 # Uiua Todo
 
 # 0.17
+- `recur` modifier
 - LSP optimizations
   - Fix rename
   - Fix goto references
-- `first group/partition` optimization
 - Sided `join`
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`
 - Reserved modifier glyphs?
-- `un`/`anti` `stencil`
-- Compile-time code string evaluation?
 - Streaming gif and audio encoding
+
+# 0.18
+- Compile-time code string evaluation?
+- `un`/`anti` `stencil`
+- `first group/partition` optimization
 
 ## Planned Features
 Features that are planned to be implemented in the future.
@@ -29,12 +32,6 @@ Features that are planned to be implemented in the future.
   - Enabled things from simple config files to game mods
 - System APIs
   - UDP Sockets
-    - `&udpb` to bind a socket
-    - `&udpc` to connect a socket?
-    - `&udpr` to receive data from a socket
-      - Returns both data and source address
-    - `&udps` to send data to a socket
-      - Takes both data and destination address
     - Change `&tcpsnb`, `&tcpsrt`, `&tcpswt` to work for UDP sockets as well
       - Rename them
   - File metadata

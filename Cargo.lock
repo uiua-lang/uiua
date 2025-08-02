@@ -1716,6 +1716,20 @@ dependencies = [
  "lock_api",
  "once_cell",
  "parking_lot_core",
+]
+
+[[package]]
+name = "dashmap"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
+dependencies = [
+ "cfg-if 1.0.0",
+ "crossbeam-utils",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
  "serde",
 ]
 
@@ -5680,7 +5694,7 @@ dependencies = [
  "bytes",
  "ciborium",
  "const_format",
- "dashmap",
+ "dashmap 5.5.3",
  "futures",
  "gloo-net",
  "http",
@@ -6398,7 +6412,7 @@ dependencies = [
  "async-trait",
  "auto_impl",
  "bytes",
- "dashmap",
+ "dashmap 5.5.3",
  "futures",
  "httparse",
  "lsp-types",
@@ -6580,7 +6594,7 @@ dependencies = [
  "crossbeam-channel",
  "csv",
  "ctrlc",
- "dashmap",
+ "dashmap 6.1.0",
  "ecow",
  "eframe",
  "enum-iterator",
@@ -6663,7 +6677,7 @@ version = "0.17.0-dev.1"
 dependencies = [
  "bytemuck",
  "colored",
- "dashmap",
+ "dashmap 6.1.0",
  "ecow",
  "enum-iterator",
  "once_cell",

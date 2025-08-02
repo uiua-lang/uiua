@@ -656,7 +656,7 @@ fn TutorialBindings() -> impl IntoView {
         <Editor example="Variable_1 ← 5"/> // Should fail
         <p>"Bindings "<em>"can"</em>" contain subscript numbers. These will format from "<code>","</code>" followed by some digits. Try formatting the example below!"</p>
         <Editor example="X,1 = 5\nSha,256 = \"TODO\""/>
-        <p>"Subscripts are only allowed at the end of a binding name."</p>
+        <p>"Subscripts in binding names are only allowed at the end."</p>
         <p><strong>"Bindings are case-sensitive."</strong></p>
         <p>"The parser can sometimes mistake all-lowercase binding names for unformatted built-in functions."</p>
         <p>"Here, the parser thinks that "<code>"part"</code>" is "<Prim prim=Partition/>"."</p>

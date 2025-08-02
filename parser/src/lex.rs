@@ -1143,7 +1143,7 @@ impl<'a> Lexer<'a> {
                     let subscript = {
                         if self.next_char_exact(",") || self.next_chars_exact(["_"; 2]) {
                             Some(self.subscript(","))
-                        } else if self.peek_char().map_or(false, is_formatted_subscript) {
+                        } else if self.peek_char().is_some_and(is_formatted_subscript) {
                             let init = self.next_char().unwrap();
                             Some(self.subscript(init))
                         } else {
@@ -1158,7 +1158,7 @@ impl<'a> Lexer<'a> {
                             let (m, before_last_2nd_chain) = read_chain(&mut self);
                             let has_2nd_subscript = self.next_char_exact(",")
                                 || self.next_chars_exact(["_"; 2])
-                                || self.peek_char().map_or(false, is_formatted_subscript);
+                                || self.peek_char().is_some_and(is_formatted_subscript);
                             if !has_2nd_subscript {
                                 self.end(Subscr(Subscript::numeric(n + num + m)), start);
                             } else {

@@ -277,10 +277,11 @@ impl Compiler {
 
         let mut variant_index = 0;
         if data.variant {
-            let module_scope = self.higher_scopes.last_mut().unwrap_or(&mut self.scope);
-            variant_index = module_scope.data_variants.len();
-            let name = data.name.as_ref().unwrap().value.clone();
-            module_scope.data_variants.insert(name);
+            if let Some(name) = data.name.as_ref() {
+                let module_scope = self.higher_scopes.last_mut().unwrap_or(&mut self.scope);
+                variant_index = module_scope.data_variants.len();
+                module_scope.data_variants.insert(name.value.clone());
+            }
         }
 
         // Make getters

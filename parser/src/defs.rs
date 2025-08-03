@@ -2619,12 +2619,15 @@ primitive!(
     /// ex: regex "hi" "dog"
     ///   : △.
     /// ex: regex "[a-z]+" "hello world"
-    /// Escaped regex characters must be double-escaped.
+    /// If the pattern contains escaped characters such as `\w`, either these must be double escaped or the whole pattern must be represented with a raw string.
     /// ex: regex "\\d+" "123"
-    /// ex: P ← $"(\\d{_})"
+    /// ex: P ← $$ (\d{_})
     ///   : regex $"_-_-_"P3P3P4 "123-456-7890"
     /// Regex patterns with optional captures can be used with [fill].
     /// ex: ⬚""regex "a(b)?" "a ab"
+    /// [under] can be used to run arbitrary regex-based substitutions.
+    /// ex: Lorem
+    ///   : ⍜regex≡(□⊂⋅⊙⇌°□₃) $ (\w)(\w+)
     ///
     /// Uiua uses the [Rust regex crate](https://docs.rs/regex/latest/regex/) internally.
     (2, Regex, Algorithm, "regex"),

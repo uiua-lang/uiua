@@ -353,6 +353,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Repeat], Required, "Inner function must be invertible", "⍜⍥(×2). 5 1") }
             { inverse_row([Repeat], No, "Inner function must be invertible", "°⍥°(↧1000×2) 5") }
             { inverse_row([Switch], No, "", "⍜(⨬⊢⊣|×10) 1 [1 2 3 4]") }
+            { inverse_row([Regex], Optional, "Substitution", r#"⍜regex≡(□⊂⋅⊙⇌°□₃) ⊙"Hello, world!" $ (\w)(\w+)"#) }
             { inverse_row([Now], No, "Times execution", "⍜now(&sl 0.005)") }
             { inverse_row([Sys(FOpen)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
             { inverse_row([Sys(FCreate)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }

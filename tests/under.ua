@@ -482,3 +482,25 @@ F ← ⌅(+|⌅(-|⟜-|×10+))
 ⍤⤙≍ [¯1 ∞ ¯2] [⍜𝄐⊟¯ 1 ∞ 2]
 ⍤⤙≍ [4 ∞ 5] [⍜(⊟⊙◌)+ 1 ∞ 2 3]
 ⍤⤙≍ [¯1 ∞ ¯2] [⍜(⊟⊙◌)¯ 1 ∞ 2]
+
+# Regex
+⍤⤙≍ Lorem ⍜(regex"\\w+")∘ Lorem
+H ← "Hello,   world!!"
+⍤⤙≍ "world,   Hello!!" ⍜regex⇌ ⊙H$ \w+
+⍤⤙≍ "Holle,   wdlro!!" ⍜regex≡(□⊂⋅⊙⇌°□₃) ⊙H$ (\w)(\w+)
+⍤⤙≍ 0 ⍤⤙≍ H ⍜regex⟜⧻ ⊙H$ \d+
+⍤⤙≍ "@,   w!!" ⬚@@⍜regex≡⊣ ⊙H$ \b([a-z])?\w*\s?
+⍤⤙≍ "HHello,   wworld!!" ⍜regex≡(▽2°□⊣) ⊙H$ \b(\w)
+⍤⤙≍ ".H.e.l.l.o.,. . . .w.o.r.l.d.!.!." ⍜regex⋅@. "" H
+# different replacement forms:
+⊙H $ (\w)(\w*)
+⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡⍜⊢⇌ # 2d, boxed strings
+# TODO: remove ∘ when the misoptimization is fixed
+⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡(∘⇌⊢) # 1d boxed strings
+⍤⤙≍ "bip,   bip!!" ◡⍜regex⋅(□"bip") # boxed string
+⍤⤙≍ "*,   *!!" ◡⍜regex⋅(□@*) # boxed char
+⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡(⇌°□⊢) # 2d strings
+⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡(⊟⊸⇌°□⊢) # 1d strings
+⍤⤙≍ "bip,   bip!!" ◡⍜regex⋅"bip" # string
+⍤⤙≍ "*,   *!!" ◡⍜regex⋅@* # char
+⋅◌

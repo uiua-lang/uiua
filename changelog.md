@@ -46,6 +46,7 @@ This version is not yet released. If you are reading this on the website, then t
   - [`under ⍜`](https://uiua.org/docs/under)[`&cd`](https://uiua.org/docs/&cd) will return to the original directory afterward
 - Add experimental [`reciprocal ⨪`](https://uiua.org/docs/reciprocal) function, which computes the multiplicative inverse AKA reciprocal of a number
 - Make subscripted [`stack ?`](https://uiua.org/docs/stack) merge adjacent non-subscripted [`stack ?`](https://uiua.org/docs/stack) chains
+- Implement [`under ⍜`](https://uiua.org/docs/under)[`regex`](https://uiua.org/docs/regex) for replacing using regex (called `gsub` in some other languages)
 ### Interpreter
 - Speed up the implementation of [`or ∨`](https://uiua.org/docs/or)
 - The fomatter no longer truncates trailing decimal `0`s from number literals

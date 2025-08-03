@@ -163,6 +163,19 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &Stash(2, Pick, UndoPick),
     &Stash(2, Select, UndoSelect),
     &Stash(2, AntiOrient, UndoAntiOrient),
+    &(
+        Regex,
+        (
+            Over,
+            Flip,
+            DoRegex,
+            PushUnd(1),
+            CopyUnd(1),
+            Flip,
+            PushUnd(1),
+        ),
+        (PopUnd(3), UndoRegex),
+    ),
     // Map control
     &MaybeVal((Get, (CopyUnd(2), Get), (PopUnd(1), Flip, PopUnd(1), Insert))),
     &Stash(2, Remove, UndoRemove),

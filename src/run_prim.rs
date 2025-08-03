@@ -3,6 +3,7 @@
 //! For the meat of the actual array algorithms, see [`crate::algorithm`].
 
 use ecow::EcoVec;
+use rayon::iter::Either;
 use regex::Regex;
 use smallvec::SmallVec;
 
@@ -288,7 +289,12 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             env.push(vals);
         }
         Primitive::Stack => stack(env, false)?,
-        Primitive::Regex => regex(env)?,
+        Primitive::Regex => {
+            regex(env)?;
+            // NOTE: if you want to expose the match locations, n.t. they are given in bytes rather than codepoints
+            // that is, you should also convert between byte and codepoint positions in `regex` and `undo_regex`
+            env.pop("regex locations")?;
+        }
         Primitive::Hsv => env.monadic_env(Value::rgb_to_hsv)?,
         Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
         Primitive::Binary => env.monadic_ref_env(Value::to_binary)?,
@@ -834,6 +840,8 @@ impl ImplPrimitive {
                 let from = env.pop(3)?;
                 env.push(from.undo_anti_orient(indices, into, env)?);
             }
+            ImplPrimitive::DoRegex => regex(env)?,
+            ImplPrimitive::UndoRegex => undo_regex(env)?,
             ImplPrimitive::UndoRerank => {
                 let rank = env.pop(1)?;
                 let shape = Shape::from(
@@ -1565,11 +1573,12 @@ fn regex(env: &mut Uiua) -> UiuaResult {
 
         let mut matches: Value =
             Array::<Boxed>::new([0, regex.captures_len()].as_slice(), []).into();
+        let mut locations: Value = Array::<f64>::new([0].as_slice(), []).into();
 
         for caps in regex.captures_iter(&target) {
-            let row: EcoVec<Boxed> = caps
+            let row: EcoVec<_> = caps
                 .iter()
-                .flat_map(|m| {
+                .filter_map(|m| {
                     m.map(|m| Boxed(Value::from(m.as_str()))).or_else(|| {
                         env.value_fill()
                             .map(|fv| fv.value.clone())
@@ -1578,11 +1587,136 @@ fn regex(env: &mut Uiua) -> UiuaResult {
                 })
                 .collect();
             matches.append(row.into(), false, env)?;
+            locations.append(
+                (caps
+                    .get(0)
+                    .expect("existence of 0 group is guaranteed")
+                    .start() as f64)
+                    .into(),
+                false,
+                env,
+            )?;
         }
 
         env.push(matches);
+        env.push(locations);
         Ok(())
     })
+}
+
+fn undo_regex(env: &mut Uiua) -> UiuaResult {
+    use std::iter::{once, repeat, zip, Repeat};
+    let locations = env
+        .pop(1)?
+        .as_nats(env, "Capture locations should be natural numbers")?;
+    let captures = env.pop(2)?;
+    let haystack = env.pop(3)?.as_string(env, "Haystack should be a string")?;
+    let mut repls = env.pop(4)?;
+    debug_assert_eq!(locations.len(), captures.row_count());
+    let captures: Vec<_> = captures
+        .into_rows()
+        .map(|x| {
+            x.first(env)
+                .expect("Capture group rows should have at least one element")
+                .as_string_opt()
+                .expect("Capture group content should be a string")
+                .len()
+        })
+        .collect();
+    enum OneOrMany<T> {
+        One(T),
+        Many(Vec<T>),
+    }
+    impl<T: Clone> IntoIterator for OneOrMany<T> {
+        type Item = T;
+        type IntoIter = Either<Repeat<T>, std::vec::IntoIter<T>>;
+
+        fn into_iter(self) -> Self::IntoIter {
+            match self {
+                Self::One(x) => Either::Left(repeat(x)),
+                Self::Many(items) => Either::Right(items.into_iter()),
+            }
+        }
+    }
+    use OneOrMany::{Many, One};
+    impl<'a, T> IntoIterator for &'a OneOrMany<T> {
+        type Item = &'a T;
+        type IntoIter = Either<Repeat<&'a T>, std::slice::Iter<'a, T>>;
+
+        fn into_iter(self) -> Self::IntoIter {
+            match self {
+                One(x) => Either::Left(repeat(x)),
+                Many(items) => Either::Right(items.iter()),
+            }
+        }
+    }
+    let repls: OneOrMany<String> = loop {
+        let rank = repls.rank();
+        repls =
+            match (repls, rank) {
+                (Value::Char(arr), 0 | 1) => break One(arr.data.into_iter().collect()),
+                (Value::Char(arr), 2) => {
+                    break Many(arr.row_slices().map(|x| x.iter().collect()).collect())
+                }
+                (Value::Char(arr), 3) => {
+                    break Many(
+                        arr.into_rows()
+                            .map(|x| x.first(env).map(|x| x.data.into_iter().collect()))
+                            .collect::<UiuaResult<Vec<_>>>()?,
+                    )
+                }
+                (Value::Box(bx), 0) => bx
+                    .into_unboxed()
+                    .expect("Scalar box array should be unboxable"),
+                (Value::Box(arr), 1) => {
+                    break Many(
+                        arr.data
+                            .into_iter()
+                            .map(|x| x.0)
+                            .map(|x| x.as_string(env, "Expected boxed replacements to be strings"))
+                            .collect::<UiuaResult<_>>()?,
+                    )
+                }
+                (Value::Box(arr), 2) => {
+                    break Many(
+                        arr.into_rows()
+                            .map(|x| {
+                                x.first(env).and_then(|x| {
+                                    x.into_unboxed()
+                                        .expect("rank 0 box array should be unboxable")
+                                        .as_string(env, "Expected boxed replacements to be strings")
+                                })
+                            })
+                            .collect::<UiuaResult<_>>()?,
+                    )
+                }
+                _ => return Err(env.error(
+                    "Expected replacements to be a string, array of strings or 2d array of strings",
+                )),
+            }
+    };
+    if let Many(ref x) = repls {
+        if locations.len() != x.len() {
+            return Err(env.error("Expected to have the same amount of captures and replacements"));
+        }
+    }
+    let repls = (&repls)
+        .into_iter()
+        .take(locations.len())
+        .map(String::as_str)
+        .chain(once(""));
+    let ends = zip(&locations, captures).map(|(&loc, len)| loc + len);
+    let chunks = zip(
+        once(0).chain(ends),
+        locations.iter().copied().chain(once(haystack.len())),
+    )
+    .map(|(s, e)| &haystack[s..e]);
+    env.push(
+        zip(chunks, repls)
+            .flat_map(|(chunk, repl)| [chunk, repl])
+            .collect::<String>(),
+    );
+    Ok(())
 }
 
 thread_local! {

@@ -494,13 +494,13 @@ H ← "Hello,   world!!"
 ⍤⤙≍ ".H.e.l.l.o.,. . . .w.o.r.l.d.!.!." ⍜regex⋅@. "" H
 # different replacement forms:
 ⊙H $ (\w)(\w*)
-⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡⍜⊢⇌ # 2d, boxed strings
+⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡⍜⊢⍚⇌ # 2d, boxed strings
 # TODO: remove ∘ when the misoptimization is fixed
-⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡(∘⇌⊢) # 1d boxed strings
-⍤⤙≍ "bip,   bip!!" ◡⍜regex⋅(□"bip") # boxed string
-⍤⤙≍ "*,   *!!" ◡⍜regex⋅(□@*) # boxed char
-⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡(⇌°□⊢) # 2d strings
+⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡(∘⍚⇌⊢)   # 1d boxed strings
+⍤⤙≍ "bip,   bip!!" ◡⍜regex⋅(□"bip")     # boxed string
+⍤⤙≍ "*,   *!!" ◡⍜regex⋅(□@*)            # boxed char
+⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡(⇌°□⊢)   # 2d strings
 ⍤⤙≍ "olleH,   dlrow!!" ◡⍜regex≡(⊟⊸⇌°□⊢) # 1d strings
-⍤⤙≍ "bip,   bip!!" ◡⍜regex⋅"bip" # string
-⍤⤙≍ "*,   *!!" ◡⍜regex⋅@* # char
+⍤⤙≍ "bip,   bip!!" ◡⍜regex⋅"bip"        # string
+⍤⤙≍ "*,   *!!" ◡⍜regex⋅@*               # char
 ⋅◌

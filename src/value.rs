@@ -443,28 +443,6 @@ impl Value {
     pub(crate) fn slice_rows(&self, start: usize, end: usize) -> Self {
         val_as_arr!(self, |arr| arr.slice_rows(start, end).into())
     }
-    pub(crate) fn generic_mut_deep<T>(
-        &mut self,
-        n: impl FnOnce(&mut Array<f64>) -> T,
-        b: impl FnOnce(&mut Array<u8>) -> T,
-        co: impl FnOnce(&mut Array<Complex>) -> T,
-        ch: impl FnOnce(&mut Array<char>) -> T,
-        f: impl FnOnce(&mut Array<Boxed>) -> T,
-    ) -> T {
-        match self {
-            Self::Num(array) => n(array),
-            Self::Byte(array) => b(array),
-            Self::Complex(array) => co(array),
-            Self::Char(array) => ch(array),
-            Self::Box(array) => {
-                if let Some(Boxed(value)) = array.as_scalar_mut() {
-                    value.generic_mut_deep(n, b, co, ch, f)
-                } else {
-                    f(array)
-                }
-            }
-        }
-    }
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn generic_bin_into<T, E>(
         self,

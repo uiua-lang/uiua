@@ -602,9 +602,7 @@ primitive!(
     ///
     /// ex: ⇌1_2_3_9
     /// ex: ⇌[1_2 3_4 5_6]
-    /// [reverse] works through boxes.
-    /// ex: ⇌ □[1 2 3]
-    /// ex: ≡⇌ {1_2_3_4 5_6_7 8_9}
+    /// ex: ⇌"Hello!"
     (1, Reverse, MonadicArray, ("reverse", '⇌')),
     /// Make an array 1-dimensional
     ///
@@ -674,9 +672,6 @@ primitive!(
     ///
     /// ex: ⍉.[1_2 3_4 5_6]
     /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
-    /// [transpose] works through boxes.
-    /// ex: ⍉ □[1_2_3 4_5_6]
-    /// ex: ≡⍉ {[1_2 3_4] [1_2_3 4_5_6]}
     /// [un][transpose] transposes in the opposite direction.
     /// This is useful for arrays with rank `greater than``2`.
     /// ex: °⍉ .⊟.[1_2_3 4_5_6]
@@ -1183,10 +1178,6 @@ primitive!(
     /// ex: ⬚0↻ 2 [1 2 3 4 5]
     ///   :   ↻ 2 [1 2 3 4 5]
     /// ex: ⬚0↻ 1_2 .↯4_5⇡20
-    ///
-    /// [rotate] works through boxes.
-    /// ex: ↻1 □[1 2 3 4]
-    /// ex: ≡↻1 {1_2_3 4_5_6}
     ///
     /// If the rotation amount is rank `2` or greater, multiple copies of the rotated array will be made, each rotated by a different row of the rotation amount.
     /// ex: ↻ [[1] [2] [4]] [0 0 0 0 0 0 1]

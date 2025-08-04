@@ -1108,13 +1108,7 @@ impl Value {
         self.reverse_depth(0);
     }
     pub(crate) fn reverse_depth(&mut self, depth: usize) {
-        self.generic_mut_deep(
-            |a| a.reverse_depth(depth),
-            |a| a.reverse_depth(depth),
-            |a| a.reverse_depth(depth),
-            |a| a.reverse_depth(depth),
-            |a| a.reverse_depth(depth),
-        )
+        val_as_arr!(self, |arr| arr.reverse_depth(depth))
     }
 }
 
@@ -1169,13 +1163,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Transpose the value
     pub fn transpose(&mut self) {
-        self.generic_mut_deep(
-            Array::transpose,
-            Array::transpose,
-            Array::transpose,
-            Array::transpose,
-            Array::transpose,
-        )
+        val_as_arr!(self, |arr| arr.transpose());
     }
     pub(crate) fn transpose_depth(&mut self, depth: usize, amnt: i32) {
         match self {

@@ -440,13 +440,10 @@ pub fn each(ops: Ops, env: &mut Uiua) -> UiuaResult {
 
 pub(crate) fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, ..)) = f_mon_fast_fn(&f.node, env) {
-        let maybe_through_boxes = matches!(&xs, Value::Box(..));
-        if !maybe_through_boxes {
-            let rank = xs.rank();
-            let val = f(xs, rank, env)?;
-            env.push(val);
-            return Ok(());
-        }
+        let rank = xs.rank();
+        let val = f(xs, rank, env)?;
+        env.push(val);
+        return Ok(());
     }
     let outputs = f.sig.outputs();
     let mut new_values = multi_output(outputs, Vec::with_capacity(xs.shape.elements()));
@@ -653,21 +650,15 @@ pub fn rows1(f: SigNode, mut xs: Value, depth: usize, inv: bool, env: &mut Uiua)
     if !inv {
         if let Some((f, mut d)) = f_mon_fast_fn(&f.node, env) {
             d += depth;
-            let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
-            if !maybe_through_boxes {
-                let val = f(xs, d + 1, env)?;
-                env.push(val);
-                return Ok(());
-            }
+            let val = f(xs, d + 1, env)?;
+            env.push(val);
+            return Ok(());
         } else if let Some((f, mut d)) = f_mon2_fast_fn(&f.node, env) {
             d += depth;
-            let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
-            if !maybe_through_boxes {
-                let (xs, ys) = f(xs, d + 1, env)?;
-                env.push(ys);
-                env.push(xs);
-                return Ok(());
-            }
+            let (xs, ys) = f(xs, d + 1, env)?;
+            env.push(ys);
+            env.push(xs);
+            return Ok(());
         }
     }
     let outputs = f.sig.outputs();

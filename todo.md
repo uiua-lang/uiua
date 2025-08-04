@@ -6,6 +6,7 @@
   - Fix rename
   - Fix goto references
 - Sided `join`
+- Sided `box`
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

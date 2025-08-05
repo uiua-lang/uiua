@@ -1,11 +1,10 @@
 use std::{
     f64::consts::TAU,
     path::{Path, PathBuf},
-    sync::OnceLock,
+    sync::{LazyLock, OnceLock},
 };
 
 use ecow::EcoVec;
-use once_cell::sync::Lazy;
 use rand::prelude::*;
 
 use crate::{
@@ -19,9 +18,9 @@ pub struct ConstantDef {
     /// The constant's class
     pub class: ConstClass,
     /// The constant's value
-    pub value: Lazy<ConstantValue>,
+    pub value: LazyLock<ConstantValue>,
     /// The constant's documentation
-    pub doc: Lazy<String>,
+    pub doc: LazyLock<String>,
     /// The suggested replacement because of deprecation
     pub deprecation: Option<&'static str>,
 }
@@ -135,9 +134,9 @@ macro_rules! constant {
                 $(#[$attr])*
                 ConstantDef {
                     name: $name,
-                    value: Lazy::new(|| {$value.into()}),
+                    value: LazyLock::new(|| {$value.into()}),
                     class: ConstClass::$class,
-                    doc: Lazy::new(|| {
+                    doc: LazyLock::new(|| {
                         let mut s = String::new();
                         $(
                             s.push_str($doc.trim());

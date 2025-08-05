@@ -246,7 +246,7 @@ pub fn MainPage() -> impl IntoView {
         rich_prim(
             Under,
             "for modifying only part of an array (among other things)",
-            r#"⍜(↙2|×10) 1_2_3_4_5"#,
+            r"⍜(↙2|×10) 1_2_3_4_5",
         ),
     ];
 
@@ -403,6 +403,7 @@ fn NotFound() -> impl IntoView {
 
 #[cfg(test)]
 fn prim_html(prim: Primitive, glyph_only: bool, hide_docs: bool) -> String {
+    use std::fmt::Write;
     use uiua::PrimDoc;
 
     let symbol_class = format!("prim-glyph {}", uiua_editor::prim_class(prim));
@@ -410,12 +411,12 @@ fn prim_html(prim: Primitive, glyph_only: bool, hide_docs: bool) -> String {
     let name = if !glyph_only && symbol != prim.name() {
         format!(" {}", prim.name())
     } else {
-        "".to_string()
+        String::new()
     };
     let href = format!("/docs/{}", prim.name());
     let mut title = String::new();
     if let Some(ascii) = prim.ascii() {
-        title.push_str(&format!("({ascii})"));
+        write!(title, "({ascii})").ok();
     }
     if prim.glyph().is_some() && glyph_only {
         if !title.is_empty() {
@@ -630,7 +631,7 @@ fn site() {
                         continue;
                     }
                     threads.push((
-                        path.to_path_buf(),
+                        path.clone(),
                         code.clone(),
                         std::thread::spawn(move || {
                             (
@@ -665,19 +666,21 @@ fn site() {
             (Err(_), true) => {}
             (Ok(mut comp), should_fail) => {
                 if let Some(diag) = comp.take_diagnostics().into_iter().next() {
-                    if !should_fail {
-                        panic!(
-                            "Test failed in {}\n{}\n{}",
-                            path.display(),
-                            code,
-                            diag.report()
-                        );
-                    }
+                    assert!(
+                        should_fail,
+                        "Test failed in {}\n{}\n{}",
+                        path.display(),
+                        code,
+                        diag.report()
+                    );
                     continue;
                 }
-                if should_fail {
-                    panic!("Test should have failed in {}\n{}", path.display(), code);
-                }
+                assert!(
+                    !should_fail,
+                    "Test should have failed in {}\n{}",
+                    path.display(),
+                    code
+                )
             }
         }
     }

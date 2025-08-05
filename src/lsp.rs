@@ -845,7 +845,7 @@ pub use server::run_language_server;
 
 #[cfg(feature = "lsp")]
 mod server {
-    use std::{char::decode_utf16, env::current_dir, path::Path, sync::Arc};
+    use std::{char::decode_utf16, env::current_dir, fmt::Write, path::Path, sync::Arc};
 
     use dashmap::DashMap;
     use tower_lsp::{
@@ -1127,7 +1127,7 @@ mod server {
                     span.as_str(&doc.asm.inputs, |s| value.push_str(s));
                     match docs.kind {
                         BindingDocsKind::Function { sig, .. } => {
-                            value.push_str(&format!(" {sig}"));
+                            write!(value, " {sig}").ok();
                         }
                         _ => {}
                     }
@@ -1148,7 +1148,7 @@ mod server {
                     }
                     value.push_str("\n```");
                     if let Some(escape) = &docs.escape {
-                        value.push_str(&format!("\n`{escape}`"));
+                        write!(value, "\n`{escape}`").ok();
                     }
                     match docs.kind {
                         BindingDocsKind::Function {
@@ -1248,7 +1248,7 @@ mod server {
                             }))
                         }
                         ImportSrc::File(_) => {}
-                    };
+                    }
                 }
             }
             // Hovering an arg setter
@@ -1314,9 +1314,7 @@ mod server {
             }
 
             let doc_uri = &params.text_document_position.text_document.uri;
-            let doc = if let Some(doc) = self.doc(doc_uri) {
-                doc
-            } else {
+            let Some(doc) = self.doc(doc_uri) else {
                 return Ok(None);
             };
             let (line, col) = lsp_pos_to_uiua(params.text_document_position.position, &doc.input);
@@ -1432,9 +1430,7 @@ mod server {
             &self,
             params: DocumentFormattingParams,
         ) -> Result<Option<Vec<TextEdit>>> {
-            let doc = if let Some(doc) = self.doc(&params.text_document.uri) {
-                doc
-            } else {
+            let Some(doc) = self.doc(&params.text_document.uri) else {
                 return Ok(None);
             };
             match format_str(&doc.input, &FormatConfig::find().unwrap_or_default()) {
@@ -1790,7 +1786,7 @@ mod server {
                                     params.text_document.uri.clone(),
                                     vec![TextEdit {
                                         range: uiua_span_to_lsp(&span.span, &doc.asm.inputs),
-                                        new_text: "".into(),
+                                        new_text: String::new(),
                                     }],
                                 )]
                                 .into(),
@@ -2013,7 +2009,7 @@ mod server {
                             })))
                         }
                         ImportSrc::Git(_) => {}
-                    };
+                    }
                 }
             }
             Ok(None)
@@ -2083,7 +2079,7 @@ mod server {
                     Span::Code(span) => path_locs(span, &path)?,
                     Span::Builtin => err.meta.trace.iter().find_map(|frame| match &frame.span {
                         Span::Code(span) => Some(span),
-                        _ => None,
+                        Span::Builtin => None,
                     })?,
                 };
                 Some(uiua_span_to_lsp(span, &doc.asm.inputs))
@@ -2396,7 +2392,7 @@ mod server {
             path.canonicalize()
                 .map_err(|e| Error::invalid_params(format!("Invalid file path: {e}")))?,
         )
-        .map_err(|_| Error::invalid_params("Invalid file path"))
+        .map_err(|()| Error::invalid_params("Invalid file path"))
     }
 
     fn uri_path(uri: &Url) -> PathBuf {
@@ -2439,20 +2435,21 @@ mod server {
 
     fn doc_frag_markdown(md: &mut String, frag: &PrimDocFragment) {
         match frag {
-            PrimDocFragment::Text(text) => md.push_str(text),
-            PrimDocFragment::Code(text) => md.push_str(&format!("`{text}`")),
-            PrimDocFragment::Emphasis(text) => md.push_str(&format!("*{text}*")),
-            PrimDocFragment::Strong(text) => md.push_str(&format!("**{text}**")),
-            PrimDocFragment::Link { text, url } => md.push_str(&format!("[{text}]({url})")),
+            PrimDocFragment::Text(text) => write!(md, "{text}"),
+            PrimDocFragment::Code(text) => write!(md, "`{text}`"),
+            PrimDocFragment::Emphasis(text) => write!(md, "*{text}*"),
+            PrimDocFragment::Strong(text) => write!(md, "**{text}**"),
+            PrimDocFragment::Link { text, url } => write!(md, "[{text}]({url})"),
             PrimDocFragment::Primitive { prim, named } => {
                 let text = if *named {
                     format!("`{}`", prim.format())
                 } else {
                     prim.to_string()
                 };
-                md.push_str(&format!("[{text}](https://uiua.org/docs/{})", prim.name()))
+                write!(md, "[{}](https://uiua.org/docs/{})", text, prim.name())
             }
         }
+        .ok();
     }
 
     fn full_prim_doc_markdown(prim: Primitive) -> String {
@@ -2463,12 +2460,12 @@ mod server {
         for frag in &doc.short {
             doc_frag_markdown(&mut value, frag);
         }
-        value.push_str("\n\n");
-        value.push_str(&format!(
-            "[Documentation](https://uiua.org/docs/{})",
+        write!(
+            value,
+            "\n\n[Documentation](https://uiua.org/docs/{})\n\n",
             prim.name()
-        ));
-        value.push_str("\n\n");
+        )
+        .ok();
         for line in &doc.lines {
             match line {
                 PrimDocLine::Text(frags) => {
@@ -2478,7 +2475,8 @@ mod server {
                     value.push('\n');
                 }
                 PrimDocLine::Example(ex) => {
-                    value.push_str(&format!(
+                    write!(
+                        value,
                         "\
 ```uiua
 {}
@@ -2486,14 +2484,17 @@ mod server {
 > ```
 ",
                         ex.input()
-                    ));
+                    )
+                    .ok();
                     match ex.output_strings() {
                         Ok(lines) => {
                             for line in lines.iter().flat_map(|l| l.lines()) {
-                                value.push_str(&format!("> {line}\n"));
+                                writeln!(value, "> {line}").ok();
                             }
                         }
-                        Err(err) => value.push_str(&format!("> Error: {err}\n")),
+                        Err(err) => {
+                            writeln!(value, "> Error: {err}").ok();
+                        }
                     }
                     value.push_str("> ```\n\n");
                 }

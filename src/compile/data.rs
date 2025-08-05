@@ -327,7 +327,7 @@ impl Compiler {
                 comment: Some(DocComment::from(comment.as_str())),
                 ..Default::default()
             };
-            self.compile_bind_function(field_name.clone(), local, func, span, meta)?;
+            self.compile_bind_function(field_name.clone(), local, func, span, meta);
             self.code_meta
                 .global_references
                 .insert(field.name_span.clone(), local.index);
@@ -348,7 +348,13 @@ impl Compiler {
         self.compile_bind_const(
             name,
             local,
-            Some(Array::from_iter(fields.iter().map(|f| f.name.as_str())).into()),
+            Some(
+                fields
+                    .iter()
+                    .map(|f| f.name.as_str())
+                    .collect::<Array<_>>()
+                    .into(),
+            ),
             span,
             BindingMeta {
                 comment: Some(DocComment::from(comment.as_str())),
@@ -428,7 +434,7 @@ impl Compiler {
         };
         for field in &fields {
             match field.init.as_ref().map(|sn| sn.sig.args()) {
-                Some(0) => continue,
+                Some(0) => {}
                 Some(1) | None => {
                     constr_comment.push(' ');
                     constr_comment.push_str(&field.name);
@@ -552,7 +558,7 @@ impl Compiler {
                 comment: def_comment,
                 ..Default::default()
             };
-            self.compile_bind_function("Call".into(), local, func, span, meta)?;
+            self.compile_bind_function("Call".into(), local, func, span, meta);
         }
         if let Some((local, func, span)) = args_function_stuff {
             let meta = BindingMeta {
@@ -563,7 +569,7 @@ impl Compiler {
                 })),
                 ..Default::default()
             };
-            self.compile_bind_function("Args".into(), local, func, span, meta)?;
+            self.compile_bind_function("Args".into(), local, func, span, meta);
         }
 
         // Bind the constructor
@@ -571,11 +577,11 @@ impl Compiler {
             comment: Some(DocComment::from(constr_comment.as_str())),
             ..Default::default()
         };
-        self.compile_bind_function(constructor_name, constr_local, constructor_func, span, meta)?;
+        self.compile_bind_function(constructor_name, constr_local, constructor_func, span, meta);
 
         Ok(())
     }
-    pub(super) fn end_enum(&mut self) -> UiuaResult {
+    pub(super) fn end_enum(&mut self) {
         // Add Variants binding
         if !self.scope.data_variants.is_empty()
             && !self.scope.names.get("Variants").is_some_and(|ln| ln.public)
@@ -596,6 +602,5 @@ impl Compiler {
             };
             self.compile_bind_const("Variants".into(), local, Some(value), 0, meta);
         }
-        Ok(())
     }
 }

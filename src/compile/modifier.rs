@@ -169,87 +169,87 @@ impl Compiler {
                     ..Default::default()
                 };
                 match nodes.as_slice() {
-                    [a, b] => {
-                        cust.normal = Ok(a.clone());
-                        if a.sig == b.sig.inverse() {
-                            cust.un = Some(b.clone());
-                        } else if a.sig.anti().is_some_and(|sig| sig == b.sig) {
-                            cust.anti = Some(b.clone());
+                    [normal, other] => {
+                        cust.normal = Ok(normal.clone());
+                        if normal.sig == other.sig.inverse() {
+                            cust.un = Some(other.clone());
+                        } else if normal.sig.anti().is_some_and(|sig| sig == other.sig) {
+                            cust.anti = Some(other.clone());
                         } else {
-                            cust.under = Some((a.clone(), b.clone()));
+                            cust.under = Some((normal.clone(), other.clone()));
                         }
                     }
-                    [a, b, c] => {
-                        cust.normal = Ok(a.clone());
-                        if !b.node.is_empty() && !c.node.is_empty() {
-                            cust.under = Some((b.clone(), c.clone()));
+                    [normal, under_do, under_undo] => {
+                        cust.normal = Ok(normal.clone());
+                        if !under_do.node.is_empty() && !under_undo.node.is_empty() {
+                            cust.under = Some((under_do.clone(), under_undo.clone()));
                         }
                     }
-                    [a, b, c, d] => {
-                        cust.normal = Ok(a.clone());
-                        if !b.node.is_empty() {
-                            if !a.sig.is_compatible_with(b.sig.inverse()) {
+                    [normal, un, under_do, under_undo] => {
+                        cust.normal = Ok(normal.clone());
+                        if !un.node.is_empty() {
+                            if !normal.sig.is_compatible_with(un.sig.inverse()) {
                                 self.emit_diagnostic(
                                     format!(
                                         "First and second functions must have \
                                         opposite signatures, \
                                         but their signatures are {} and {}",
-                                        a.sig, b.sig
+                                        normal.sig, un.sig
                                     ),
                                     DiagnosticKind::Warning,
                                     modifier.span.clone(),
                                 );
                             }
-                            cust.un = Some(b.clone());
+                            cust.un = Some(un.clone());
                         }
-                        if !d.node.is_empty() {
-                            if !c.node.is_empty() {
-                                cust.under = Some((c.clone(), d.clone()));
+                        if !under_undo.node.is_empty() {
+                            if !under_do.node.is_empty() {
+                                cust.under = Some((under_do.clone(), under_undo.clone()));
                             }
-                            if a.sig.anti().is_some_and(|sig| sig == d.sig) {
-                                cust.anti = Some(d.clone());
+                            if normal.sig.anti().is_some_and(|sig| sig == under_undo.sig) {
+                                cust.anti = Some(under_undo.clone());
                             }
                         }
                     }
-                    [a, b, c, d, e] => {
-                        cust.normal = Ok(a.clone());
-                        if !b.node.is_empty() {
-                            if !a.sig.is_compatible_with(b.sig.inverse()) {
+                    [normal, un, under_do, under_undo, anti] => {
+                        cust.normal = Ok(normal.clone());
+                        if !un.node.is_empty() {
+                            if !normal.sig.is_compatible_with(un.sig.inverse()) {
                                 self.emit_diagnostic(
                                     format!(
                                         "First and second functions must have \
                                         opposite signatures, \
                                         but their signatures are {} and {}",
-                                        a.sig, b.sig
+                                        normal.sig, un.sig
                                     ),
                                     DiagnosticKind::Warning,
                                     modifier.span.clone(),
                                 );
                             }
-                            cust.un = Some(b.clone());
+                            cust.un = Some(un.clone());
                         }
-                        if !c.node.is_empty() && !d.node.is_empty() {
-                            cust.under = Some((c.clone(), d.clone()));
+                        if !under_do.node.is_empty() && !under_undo.node.is_empty() {
+                            cust.under = Some((under_do.clone(), under_undo.clone()));
                         }
-                        if !e.node.is_empty() {
-                            match a.sig.anti() {
+                        if !anti.node.is_empty() {
+                            match normal.sig.anti() {
                                 None => self.emit_diagnostic(
                                     format!(
                                         "An anti inverse is specified, but the first \
                                         function's signature {} cannot have an \
                                         anti inverse",
-                                        a.sig
+                                        normal.sig
                                     ),
                                     DiagnosticKind::Warning,
                                     modifier.span.clone(),
                                 ),
-                                Some(sig) if sig != e.sig => {
+                                Some(sig) if sig != anti.sig => {
                                     self.emit_diagnostic(
                                         format!(
                                             "The first function's signature implies an \
                                             anti inverse with signature {sig}, but the \
                                             fifth function's signature is {}",
-                                            e.sig
+                                            anti.sig
                                         ),
                                         DiagnosticKind::Warning,
                                         modifier.span.clone(),
@@ -257,7 +257,7 @@ impl Compiler {
                                 }
                                 Some(_) => {}
                             }
-                            cust.anti = Some(e.clone());
+                            cust.anti = Some(anti.clone());
                         }
                     }
                     funcs => {
@@ -271,7 +271,7 @@ impl Compiler {
                             ),
                         ))
                     }
-                };
+                }
                 let set_inverses = SetInverses {
                     un: cust.un.is_some(),
                     anti: cust.anti.is_some(),
@@ -802,7 +802,7 @@ impl Compiler {
                         let mut dups = if n == 0 {
                             Node::Prim(Pop, span)
                         } else {
-                            Node::from_iter(repeat_n(Node::Prim(Dup, span), n - 1))
+                            repeat_n(Node::Prim(Dup, span), n - 1).collect()
                         };
                         if side.side == SubSide::Right && n < sig.args() {
                             dups = dups.sig_node().unwrap().dipped(sig.args() - n, span).node;
@@ -1491,7 +1491,7 @@ impl Compiler {
             let sig = self.sig_of(&root, &mac.func.span)?;
             let code_mac = CodeMacro {
                 root: SigNode::new(sig, root),
-                names: Default::default(),
+                names: IndexMap::new(),
             };
             self.code_macro(None, span, operands, code_mac)?
         } else {
@@ -1878,9 +1878,7 @@ impl Compiler {
             return Err(self.error(span.clone(), "Compile-time evaluation recurs too deep"));
         }
         let errors_before = self.errors.len();
-        let res = self
-            .items(items, ItemCompMode::CodeMacro)
-            .map_err(|e| e.trace_macro(name, span.clone()));
+        self.items(items, ItemCompMode::CodeMacro);
         let errors_after = self.errors.len();
         self.comptime_depth -= 1;
         self.pre_eval_mode = pre_eval_mod;
@@ -1889,7 +1887,6 @@ impl Compiler {
             return Ok(Node::empty());
         }
         let mut node = self.asm.root.split_off(root_node_len);
-        res?;
         if errors_after > errors_before {
             node = Node::empty();
         }
@@ -2109,6 +2106,7 @@ impl Compiler {
             Prim(Identity | Dup | Flip | Pop | Stack | Sys(_), _) => {}
             ImplPrim(Over | StackN { .. }, _) => {}
             Push(_) | Array { .. } => {}
+            #[expect(clippy::unnested_or_patterns, reason = "intentionally grouped")]
             Mod(
                 (Fork | Bracket | Both)
                 | (Dip | Gap | Reach)

@@ -1,3 +1,4 @@
+#![allow(clippy::print_stdout)]
 #[macro_export]
 #[doc(hidden)]
 macro_rules! profile_function {
@@ -297,8 +298,7 @@ Life ← ↥∩=₃⟜+⊸(/+↻⊂A₂C₂)
                     }
                 }
                 println!(
-                    "{:<26} | {:>7} {:>5} | {:>5} {:>5} |",
-                    name, median_dur, media_dur_change, share, share_change
+                    "{name:<26} | {median_dur:>7} {media_dur_change:>5} | {share:>5} {share_change:>5} |"
                 );
             }
         }

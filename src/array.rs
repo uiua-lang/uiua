@@ -25,6 +25,10 @@ use crate::{
 };
 
 /// Uiua's array type
+#[expect(
+    clippy::unsafe_derive_deserialize,
+    reason = "done through ArrayRep which is safe"
+)]
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(
     from = "ArrayRep<T>",
@@ -397,17 +401,17 @@ where
 
 #[track_caller]
 #[inline(always)]
-pub(crate) fn validate_shape(_shape: &[usize], _len: usize) {
+pub(crate) fn validate_shape(shape: &[usize], len: usize) {
     #[cfg(debug_assertions)]
     {
-        let elems = if _shape.contains(&0) {
+        let elems = if shape.contains(&0) {
             0
         } else {
-            _shape.iter().product()
+            shape.iter().product()
         };
         assert_eq!(
-            elems, _len,
-            "shape {_shape:?} does not match data length {_len}"
+            elems, len,
+            "shape {shape:?} does not match data length {len}"
         )
     }
 }
@@ -496,9 +500,10 @@ impl<T: Clone> Array<T> {
             return row;
         }
         let row_count = self.row_count();
-        if row >= row_count {
-            panic!("row index out of bounds: {row} >= {row_count}");
-        }
+        assert!(
+            row < row_count,
+            "row index out of bounds: {row} >= {row_count}"
+        );
         let row_len = self.row_len();
         let start = row * row_len;
         let end = start + row_len;
@@ -600,10 +605,11 @@ impl<T: ArrayValue> Array<T> {
             row.meta.take_label();
             return row;
         }
-        let row_count: usize = self.shape[..depth + 1].iter().product();
-        if row >= row_count {
-            panic!("row index out of bounds: {row} >= {row_count}");
-        }
+        let row_count: usize = self.shape[..=depth].iter().product();
+        assert!(
+            row < row_count,
+            "row index out of bounds: {row} >= {row_count}"
+        );
         let row_len: usize = self.shape[depth + 1..].iter().product();
         let start = row * row_len;
         let end = start + row_len;

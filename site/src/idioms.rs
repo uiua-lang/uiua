@@ -45,7 +45,7 @@ fn aliases() -> impl IntoView {
                     .map(|&s| view!(<code>{s}</code>" "))
                     .collect::<Vec<_>>() 
             }{
-                (p.aliases().iter().any(|a| a.contains("&")) || matches!(p, Primitive::Sys(_)))
+                (p.aliases().iter().any(|a| a.contains('&')) || matches!(p, Primitive::Sys(_)))
                     .then(|| view!(<span style="opacity: 0.7">"Temporary"</span>))
             }</td></tr>)
         })

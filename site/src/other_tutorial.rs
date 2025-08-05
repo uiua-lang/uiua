@@ -22,10 +22,10 @@ pub enum OtherTutorialPage {
 }
 
 impl OtherTutorialPage {
-    pub fn path(&self) -> String {
+    pub fn path(self) -> String {
         format!("{self:?}").to_lowercase()
     }
-    pub fn view(&self) -> View {
+    pub fn view(self) -> View {
         match self {
             Self::Strings => title_markdown(
                 "Strings",
@@ -52,7 +52,7 @@ impl OtherTutorialPage {
             Self::EvenMoreStack => EvenMoreStack().into_view(),
         }
     }
-    pub fn title(&self) -> &'static str {
+    pub fn title(self) -> &'static str {
         match self {
             OtherTutorialPage::Strings => "Strings",
             OtherTutorialPage::FilesAndStreams => "Files and Streams",
@@ -64,7 +64,7 @@ impl OtherTutorialPage {
             OtherTutorialPage::Ranges => "Ranges",
         }
     }
-    pub fn description(&self) -> Cow<'static, str> {
+    pub fn description(self) -> Cow<'static, str> {
         Cow::Borrowed(match self {
             OtherTutorialPage::Strings => "how to manipulate strings",
             OtherTutorialPage::FilesAndStreams => "how to read and write files and streams",

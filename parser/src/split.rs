@@ -1,13 +1,12 @@
-use std::{collections::HashMap, fmt};
+use std::{collections::HashMap, fmt, sync::LazyLock};
 
 use enum_iterator::Sequence;
-use once_cell::sync::Lazy;
 
 use crate::{ast::NumWord, Complex, SysOp};
 
 use super::Primitive;
 
-static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
+static ALIASES: LazyLock<HashMap<Primitive, &[&str]>> = LazyLock::new(|| {
     [
         (Primitive::Identity, &["id"] as &[_]),
         (Primitive::Gap, &["ga"]),
@@ -148,7 +147,7 @@ impl Primitive {
         if name.len() < 2 {
             return None;
         }
-        static REVERSE_ALIASES: Lazy<HashMap<&'static str, Primitive>> = Lazy::new(|| {
+        static REVERSE_ALIASES: LazyLock<HashMap<&'static str, Primitive>> = LazyLock::new(|| {
             ALIASES
                 .iter()
                 .flat_map(|(prim, aliases)| aliases.iter().map(|&s| (s, *prim)))
@@ -290,7 +289,7 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                         'p' => Primitive::Pop,
                         _ => unreachable!(),
                     };
-                    prims.push((prim.into(), &sub_name[i..i + 1]))
+                    prims.push((prim.into(), &sub_name[i..=i]))
                 }
                 start += len;
                 continue 'outer;
@@ -356,7 +355,7 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                         'p' => Primitive::Pop,
                         _ => unreachable!(),
                     };
-                    prims.push((prim.into(), &sub_name[i..i + 1]))
+                    prims.push((prim.into(), &sub_name[i..=i]))
                 }
                 end -= len;
                 continue 'outer;
@@ -374,7 +373,7 @@ pub fn split_name(name: &str) -> Option<Vec<(PrimComponent, &str)>> {
                         'f' => Primitive::Fix,
                         _ => unreachable!(),
                     };
-                    prims.push((prim.into(), &sub_name[i..i + 1]))
+                    prims.push((prim.into(), &sub_name[i..=i]))
                 }
                 end -= len;
                 continue 'outer;

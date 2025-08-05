@@ -1159,12 +1159,12 @@ impl<'a> Lexer<'a> {
                             let has_2nd_subscript = self.next_char_exact(",")
                                 || self.next_chars_exact(["_"; 2])
                                 || self.peek_char().is_some_and(is_formatted_subscript);
-                            if !has_2nd_subscript {
-                                self.end(Subscr(Subscript::numeric(n + num + m)), start);
-                            } else {
+                            if has_2nd_subscript {
                                 let sub_num = n + num + (m - 1).max(0);
                                 self.loc = before_last_2nd_chain;
                                 self.end(Subscr(Subscript::numeric(sub_num)), start);
+                            } else {
+                                self.end(Subscr(Subscript::numeric(n + num + m)), start);
                             }
                         }
                         Some(_) => {
@@ -1407,7 +1407,7 @@ impl<'a> Lexer<'a> {
                     while self.next_char_exact(" ") || self.next_char_exact("\t") {}
                     self.end(Spaces, start)
                 }
-                c if c.chars().all(|c| c.is_whitespace()) => continue,
+                c if c.chars().all(|c| c.is_whitespace()) => {}
                 c => {
                     if c.chars().count() == 1 {
                         let c = c.chars().next().unwrap();
@@ -1420,7 +1420,7 @@ impl<'a> Lexer<'a> {
                     self.errors
                         .push(self.end_span(start).sp(LexError::UnexpectedChar(c.into())));
                 }
-            };
+            }
         }
 
         (self.tokens, self.errors)

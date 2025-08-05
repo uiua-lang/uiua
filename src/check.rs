@@ -169,9 +169,8 @@ impl VirtualEnv {
     fn nodes(&mut self, nodes: &[Node]) -> Result<(), SigCheckError> {
         nodes.iter().try_for_each(|node| self.node(node))
     }
-    fn sig_node(&mut self, sn: &SigNode) -> Result<(), SigCheckError> {
+    fn sig_node(&mut self, sn: &SigNode) {
         self.handle_sig(sn.sig);
-        Ok(())
     }
     fn node(&mut self, node: &Node) -> Result<(), SigCheckError> {
         use ImplPrimitive::*;
@@ -208,9 +207,7 @@ impl VirtualEnv {
                 self.handle_args_outputs(1, parts.len().saturating_sub(1))
             }
             Node::Unpack { count, .. } => self.handle_args_outputs(1, *count),
-            Node::ImplMod(Astar, args, _)
-            | Node::ImplMod(AstarFirst, args, _)
-            | Node::ImplMod(AstarSignLen, args, _) => {
+            Node::ImplMod(Astar | AstarFirst | AstarSignLen, args, _) => {
                 self.pop();
                 let [neighbors, heuristic, is_goal] = get_args(args)?;
                 let has_costs = neighbors.outputs() == 2;
@@ -244,9 +241,7 @@ impl VirtualEnv {
                     .saturating_sub(1);
                 self.handle_args_outputs(args, has_costs as usize);
             }
-            Node::Mod(Path, args, _)
-            | Node::ImplMod(PathFirst, args, _)
-            | Node::ImplMod(PathSignLen, args, _) => {
+            Node::Mod(Path, args, _) | Node::ImplMod(PathFirst | PathSignLen, args, _) => {
                 self.pop();
                 let [neighbors, is_goal] = get_args(args)?;
                 let has_costs = neighbors.outputs() == 2;
@@ -294,7 +289,7 @@ impl VirtualEnv {
                 }
                 Each | Rows | Inventory => {
                     let [f] = get_args_nodes(args)?;
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                 }
                 Table | Tuples => {
                     let [sig] = get_args(args)?;
@@ -318,7 +313,7 @@ impl VirtualEnv {
                 Repeat => {
                     let [f] = get_args_nodes(args)?;
                     self.pop();
-                    self.repeat(f)?;
+                    self.repeat(f);
                 }
                 Do => {
                     let [body, cond] = get_args(args)?;
@@ -383,38 +378,38 @@ impl VirtualEnv {
                 Both => {
                     let [f] = get_args_nodes(args)?;
                     self.stack.pop_n(f.sig.args());
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                     self.stack.push_n(f.sig.args());
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                 }
                 Dip => {
                     let [f] = get_args_nodes(args)?;
                     self.pop();
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                     self.push();
                 }
                 Gap => {
                     let [f] = get_args_nodes(args)?;
                     self.pop();
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                 }
                 Reach => {
                     let [f] = get_args_nodes(args)?;
                     self.pop();
                     self.pop();
                     self.push();
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                 }
                 On => {
                     let [f] = get_args_nodes(args)?;
                     self.pop();
                     self.push();
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                     self.push();
                 }
                 By => {
                     let [f] = get_args_nodes(args)?;
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                     self.push();
                 }
                 Above | Below => {
@@ -458,7 +453,7 @@ impl VirtualEnv {
                     let [sn] = get_args_nodes(args)?;
                     let args = sn.sig.args().max(n);
                     self.handle_args_outputs(args, args);
-                    self.sig_node(sn)?;
+                    self.sig_node(sn);
                     self.handle_args_outputs(0, n);
                 }
                 &DipN(n) => {
@@ -483,11 +478,11 @@ impl VirtualEnv {
                         ));
                     }
                     self.pop();
-                    self.repeat(f)?;
+                    self.repeat(f);
                 }
                 RepeatCountConvergence => {
                     let [f] = get_args_nodes(args)?;
-                    self.repeat(f)?;
+                    self.repeat(f);
                     self.push();
                 }
                 UnFill | SidedFill(_) => self.fill(args)?,
@@ -508,7 +503,7 @@ impl VirtualEnv {
                 }
                 EachSub(_) => {
                     let [f] = get_args_nodes(args)?;
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                 }
                 RowsSub(sub, _) => {
                     let [mut f] = get_args(args)?;
@@ -522,7 +517,7 @@ impl VirtualEnv {
                 UndoRows | UndoInventory => {
                     let [f] = get_args_nodes(args)?;
                     self.stack.pop();
-                    self.sig_node(f)?;
+                    self.sig_node(f);
                 }
                 UnScan => self.handle_args_outputs(1, 1),
                 SplitBy | SplitByScalar | SplitByKeepEmpty => {
@@ -591,18 +586,18 @@ impl VirtualEnv {
     fn fill(&mut self, args: &[SigNode]) -> Result<(), SigCheckError> {
         let [fill, f] = get_args_nodes(args)?;
         if fill.sig.outputs() > 0 || fill.sig.args() > 0 && fill.sig.outputs() != 0 {
-            self.sig_node(fill)?;
+            self.sig_node(fill);
         }
         self.handle_args_outputs(fill.sig.outputs(), 0);
-        self.sig_node(f)
+        self.sig_node(f);
+        Ok(())
     }
-    fn repeat(&mut self, sn: &SigNode) -> Result<(), SigCheckError> {
+    fn repeat(&mut self, sn: &SigNode) {
         let sig = sn.sig;
-        self.sig_node(sn)?;
+        self.sig_node(sn);
         if sig.outputs() > sig.args() {
             self.stack.pop_n(sig.args());
         }
-        Ok(())
     }
 }
 

@@ -354,7 +354,7 @@ impl Node {
     where
         R: SliceIndex<[Node], Output = [Node]>,
     {
-        Self::from_iter(self.as_slice()[range].iter().cloned())
+        self.as_slice()[range].iter().cloned().collect()
     }
     /// Get a mutable vector of the nodes in this node
     ///
@@ -639,7 +639,7 @@ impl Node {
 
 impl From<&[Node]> for Node {
     fn from(nodes: &[Node]) -> Self {
-        Node::from_iter(nodes.iter().cloned())
+        nodes.iter().cloned().collect()
     }
 }
 
@@ -1098,6 +1098,10 @@ macro_rules! node {
         /// A node is a tree structure of instructions. It can be used as both a single unit as well as a list.
         #[derive(Clone, Serialize, Deserialize)]
         #[repr(u8)]
+        #[expect(
+            clippy::unsafe_derive_deserialize,
+            reason="seems to be triggered by thread_local! usage",
+        )]
         #[allow(missing_docs)]
         #[serde(from = "NodeRep", into = "NodeRep")]
         pub enum Node {

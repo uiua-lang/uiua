@@ -263,12 +263,12 @@ mod tests {
                     panic!("Test failed in {}:\n{}", path.display(), diag.report());
                 }
                 let (stack, under_stack) = env.take_stacks();
-                if !stack.is_empty() {
-                    panic!("{} had a non-empty stack", path.display());
-                }
-                if !under_stack.is_empty() {
-                    panic!("{} had a non-empty under stack", path.display());
-                }
+                assert!(stack.is_empty(), "{} had a non-empty stack", path.display());
+                assert!(
+                    under_stack.is_empty(),
+                    "{} had a non-empty under stack",
+                    path.display()
+                );
 
                 // Make sure lsp spans doesn't panic
                 _ = Spans::from_input(&code);
@@ -303,7 +303,7 @@ mod tests {
                 .load_str_src(section, path)
                 .and_then(|comp| env.run_asm(comp.finish()));
             match res {
-                Ok(_) => {
+                Ok(()) => {
                     if (comp.take_diagnostics().into_iter())
                         .filter(|diag| diag.kind > DiagnosticKind::Advice)
                         .count()
@@ -318,14 +318,13 @@ mod tests {
                 }
                 Err(e) => {
                     let message = e.to_string();
-                    if message.contains("interpreter") {
-                        panic!(
-                            "Test resulted in an interpreter bug in {}:\n{}\n{}",
-                            path.display(),
-                            e.report(),
-                            section
-                        );
-                    }
+                    assert!(
+                        !message.contains("interpreter"),
+                        "Test resulted in an interpreter bug in {}:\n{}\n{}",
+                        path.display(),
+                        e.report(),
+                        section
+                    )
                 }
             }
         }
@@ -356,74 +355,21 @@ mod tests {
         }
     }
 
-    fn recurse_dirs(dir: &std::path::Path, f: &impl Fn(&std::path::Path)) {
-        for entry in std::fs::read_dir(dir).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if path.to_string_lossy().contains("target") {
-                continue;
-            }
-            if path.is_dir() {
-                recurse_dirs(&path, f);
-            } else {
-                f(&path);
-            }
-        }
-    }
-
+    #[expect(clippy::assertions_on_constants)]
     #[test]
     fn no_dbgs() {
-        recurse_dirs(std::path::Path::new("."), &|path| {
-            if path.extension().is_none_or(|ext| ext != "rs")
-                || path.canonicalize().unwrap()
-                    == std::path::Path::new(file!()).canonicalize().unwrap()
-            {
-                return;
-            }
-            let contents = std::fs::read_to_string(path).unwrap();
-            for line in contents.lines() {
-                if line.contains("dbg!") && !line.trim().starts_with("//") {
-                    panic!("File {} contains a dbg! macro", path.display());
-                }
-            }
-        });
-        if crate::compile::invert::DEBUG {
-            panic!("compile::invert::DEBUG is true");
-        }
-        if crate::ffi::DEBUG {
-            panic!("ffi::DEBUG is true");
-        }
-        if crate::compile::optimize::DEBUG {
-            panic!("compile::optimize::DEBUG is true");
-        }
-        if crate::compile::algebra::DEBUG {
-            panic!("compile::algebra::DEBUG is true");
-        }
-    }
-
-    #[test]
-    fn no_printlns() {
-        recurse_dirs(std::path::Path::new("."), &|path| {
-            if path.extension().is_none_or(|ext| ext != "rs")
-                || path.canonicalize().unwrap()
-                    == std::path::Path::new(file!()).canonicalize().unwrap()
-                || path
-                    .components()
-                    .any(|c| c.as_os_str() == "main.rs" || c.as_os_str() == "profile.rs")
-            {
-                return;
-            }
-            let contents = std::fs::read_to_string(path).unwrap();
-            for line in contents.lines() {
-                if line.contains("println!")
-                    && !(line.trim().starts_with("//")
-                        || line.contains("eprintln!")
-                        || line.contains("// Allow println"))
-                {
-                    panic!("File {} contains a println! macro", path.display());
-                }
-            }
-        });
+        assert!(
+            !crate::compile::invert::DEBUG,
+            "compile::invert::DEBUG is true"
+        );
+        assert!(
+            !crate::compile::optimize::DEBUG,
+            "compile::optimize::DEBUG is true"
+        );
+        assert!(
+            !crate::compile::algebra::DEBUG,
+            "compile::algebra::DEBUG is true"
+        )
     }
 
     #[test]

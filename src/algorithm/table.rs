@@ -817,7 +817,7 @@ where
     let acc_slice = acc.make_mut();
     for a in a.data {
         let mut i = 0;
-        for b in b.data.iter().cloned() {
+        for b in b.data.iter().copied() {
             acc_slice[i] = f(acc_slice[i], a);
             i += 1;
             acc_slice[i] = f(acc_slice[i], b);

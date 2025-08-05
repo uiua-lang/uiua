@@ -7,7 +7,8 @@ use ecow::{eco_vec, EcoVec};
 
 use crate::{
     cowslice::CowSlice, get_ops, types::push_empty_rows_value, val_as_arr, Array, ArrayValue,
-    Boxed, Node, Ops, Primitive, ScalarNum, Shape, SigNode, Uiua, UiuaResult, Value,
+    Boxed, Node, Ops, PersistentMeta, Primitive, ScalarNum, Shape, SigNode, Uiua, UiuaResult,
+    Value,
 };
 
 use super::multi_output;
@@ -34,11 +35,11 @@ pub fn split_by(f: SigNode, by_scalar: bool, keep_empty: bool, env: &mut Uiua) -
     if let Some(Primitive::Box) = f.node.as_primitive() {
         let val = haystack.generic_bin_ref(
             &delim,
-            |a, b| a.split_by(b, keep_empty, |data| Boxed(data.into())),
-            |a, b| a.split_by(b, keep_empty, |data| Boxed(data.into())),
+            |a, b| Ok(a.split_by(b, keep_empty, |data| Boxed(data.into()))),
+            |a, b| Ok(a.split_by(b, keep_empty, |data| Boxed(data.into()))),
             |_, _| unreachable!("split by complex"),
-            |a, b| a.split_by(b, keep_empty, |data| Boxed(data.into())),
-            |a, b| a.split_by(b, keep_empty, |data| Boxed(data.into())),
+            |a, b| Ok(a.split_by(b, keep_empty, |data| Boxed(data.into()))),
+            |a, b| Ok(a.split_by(b, keep_empty, |data| Boxed(data.into()))),
             |a, b| {
                 env.error(format!(
                     "Cannot split {} by {}",
@@ -51,11 +52,11 @@ pub fn split_by(f: SigNode, by_scalar: bool, keep_empty: bool, env: &mut Uiua) -
     } else {
         let parts = haystack.generic_bin_ref(
             &delim,
-            |a, b| a.split_by(b, keep_empty, Value::from),
-            |a, b| a.split_by(b, keep_empty, Value::from),
+            |a, b| Ok(a.split_by(b, keep_empty, Value::from)),
+            |a, b| Ok(a.split_by(b, keep_empty, Value::from)),
             |_, _| unreachable!("split by complex"),
-            |a, b| a.split_by(b, keep_empty, Value::from),
-            |a, b| a.split_by(b, keep_empty, Value::from),
+            |a, b| Ok(a.split_by(b, keep_empty, Value::from)),
+            |a, b| Ok(a.split_by(b, keep_empty, Value::from)),
             |a, b| {
                 env.error(format!(
                     "Cannot split {} by {}",
@@ -97,11 +98,11 @@ where
         delim: &Self,
         keep_empty: bool,
         f: impl Fn(CowSlice<T>) -> R,
-    ) -> UiuaResult<EcoVec<R>> {
+    ) -> EcoVec<R> {
         let haystack = self.data.as_slice();
         let delim_slice = delim.data.as_slice();
         if delim_slice.is_empty() {
-            return Ok(eco_vec![f(self.data.clone())]);
+            return eco_vec![f(self.data.clone())];
         }
         let mut curr = 0;
         let mut data = EcoVec::new();
@@ -136,7 +137,7 @@ where
                 data.push(f(CowSlice::new()));
             }
         }
-        Ok(data)
+        data
     }
 }
 
@@ -753,7 +754,7 @@ where
         .collect::<UiuaResult<_>>()?;
 
     if indices.shape == [0]
-        && push_empty_rows_value(&f, &values, false, &mut Default::default(), env)
+        && push_empty_rows_value(&f, &values, false, &mut PersistentMeta::default(), env)
     {
         return Ok(());
     }

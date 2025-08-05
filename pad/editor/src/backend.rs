@@ -70,7 +70,7 @@ pub fn delete_file(path: &PathBuf) {
 }
 
 thread_local! {
-    static BREAKPOINTS: RefCell<HashMap<u64, (u64, usize)>> = Default::default();
+    static BREAKPOINTS: RefCell<HashMap<u64, (u64, usize)>> = RefCell::default();
 }
 
 impl Default for WebBackend {
@@ -144,7 +144,7 @@ impl WebBackend {
         }
         panic!("Ran out of file handles");
     }
-    fn file<T>(&self, path: &Path, f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
+    fn file<T>(path: &Path, f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
         FILES.with(|files| {
             let files = files.borrow();
             files
@@ -189,7 +189,7 @@ impl SysBackend for WebBackend {
             stdout.push(OutputItem::String(line.into()));
         }
         if s.ends_with('\n') {
-            stdout.push(OutputItem::String("".into()));
+            stdout.push(OutputItem::String(String::new()));
         }
         Ok(())
     }
@@ -251,23 +251,19 @@ impl SysBackend for WebBackend {
         Ok(set.into_iter().collect())
     }
     fn is_file(&self, path: &str) -> Result<bool, String> {
-        Ok(self.file(path.as_ref(), |_| {}).is_ok())
+        Ok(Self::file(path.as_ref(), |_| {}).is_ok())
     }
     fn file_exists(&self, path: &str) -> bool {
-        self.file(path.as_ref(), |_| {}).is_ok()
+        Self::file(path.as_ref(), |_| {}).is_ok()
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         FILES.with(|files| {
-            if !files.borrow().contains_key(path) {
-                files.borrow_mut().insert(path.into(), contents.to_vec());
-            } else {
-                *files.borrow_mut().get_mut(path).unwrap() = contents.to_vec();
-            }
+            files.borrow_mut().insert(path.into(), contents.to_vec());
         });
         Ok(())
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
-        self.file(path, |contents| contents.to_vec())
+        Self::file(path, |contents| contents.to_vec())
     }
     fn open_file(&self, path: &Path, write: bool) -> Result<Handle, String> {
         let handle = self.new_handle();
@@ -438,8 +434,8 @@ impl SysBackend for WebBackend {
     }
     fn load_git_module(&self, original_url: &str, target: GitTarget) -> Result<PathBuf, String> {
         thread_local! {
-            static CACHE: RefCell<HashMap<String, Result<String, String>>> = Default::default();
-            static WORKING: RefCell<HashSet<String>> = Default::default();
+            static CACHE: RefCell<HashMap<String, Result<String, String>>> = RefCell::default();
+            static WORKING: RefCell<HashSet<String>> = RefCell::default();
         }
 
         fn cache_url(url: &str, res: Result<String, String>) {
@@ -491,7 +487,10 @@ impl SysBackend for WebBackend {
             .replace("github.com", "raw.githubusercontent.com")
             .replace("src/branch/master", "raw/branch/master");
 
-        if !url.ends_with(".ua") {
+        if !std::path::Path::new(&url)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("ua"))
+        {
             url = format!("{url}/main/lib.ua");
         }
 
@@ -511,62 +510,61 @@ impl SysBackend for WebBackend {
                     ))
                     .await;
 
-                    match tree_res {
-                        Err(_) => {
-                            cache_url(&url, tree_res);
-                            unmark_working(&original_url);
-                            return;
+                    if tree_res.is_err() {
+                        cache_url(&url, tree_res);
+                        unmark_working(&original_url);
+                        return;
+                    }
+                    let tree = tree_res.unwrap();
+                    let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
+                    let tree = tree.get("tree").unwrap().as_array().unwrap();
+                    let paths = tree
+                        .iter()
+                        .filter_map(|entry| {
+                            let path = entry.get("path")?.as_str()?;
+                            if Path::new(path)
+                                .extension()
+                                .is_some_and(|ext| ext.eq_ignore_ascii_case("ua"))
+                            {
+                                Some(path.to_string())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<HashSet<_>>();
+
+                    if !paths.contains("lib.ua") {
+                        cache_url(&url, Err("lib.ua not found".into()));
+                        unmark_working(&original_url);
+                        return;
+                    }
+
+                    let results = join_all(paths.iter().map(|path| {
+                        let repo_owner = repo_owner.clone();
+                        let repo_name = repo_name.clone();
+                        async move {
+                            let fetch_url = format!(
+                                "https://raw.githubusercontent.com\
+                                /{repo_owner}/{repo_name}/main/{path}",
+                            );
+                            let internal_path = Path::new("uiua-modules")
+                                .join(repo_owner)
+                                .join(repo_name)
+                                .join(path.clone());
+
+                            (path, internal_path, fetch(fetch_url.as_str()).await)
                         }
-                        Ok(_) => {
-                            let tree = tree_res.unwrap();
-                            let tree: serde_json::Value = serde_json::from_str(&tree).unwrap();
-                            let tree = tree.get("tree").unwrap().as_array().unwrap();
-                            let paths = tree
-                                .iter()
-                                .filter_map(|entry| {
-                                    let path = entry.get("path")?.as_str()?;
-                                    if path.ends_with(".ua") {
-                                        Some(path.to_string())
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect::<HashSet<_>>();
+                    }))
+                    .await;
 
-                            if !paths.contains("lib.ua") {
-                                cache_url(&url, Err("lib.ua not found".into()));
-                                unmark_working(&original_url);
-                                return;
-                            }
+                    for (original_path, internal_path, res) in results {
+                        if original_path.eq("lib.ua") {
+                            cache_url(&url, res.clone());
+                        }
 
-                            let results = join_all(paths.iter().map(|path| {
-                                let repo_owner = repo_owner.clone();
-                                let repo_name = repo_name.clone();
-                                async move {
-                                    let fetch_url = format!(
-                                        "https://raw.githubusercontent.com\
-                                        /{repo_owner}/{repo_name}/main/{path}",
-                                    );
-                                    let internal_path = Path::new("uiua-modules")
-                                        .join(repo_owner)
-                                        .join(repo_name)
-                                        .join(path.clone());
-
-                                    (path, internal_path, fetch(fetch_url.as_str()).await)
-                                }
-                            }))
-                            .await;
-
-                            for (original_path, internal_path, res) in results {
-                                if original_path.eq("lib.ua") {
-                                    cache_url(&url, res.clone());
-                                }
-
-                                if let Ok(text) = res {
-                                    let contents = text.as_bytes().to_vec();
-                                    drop_file(internal_path.clone(), contents);
-                                }
-                            }
+                        if let Ok(text) = res {
+                            let contents = text.as_bytes().to_vec();
+                            drop_file(internal_path.clone(), contents);
                         }
                     }
 

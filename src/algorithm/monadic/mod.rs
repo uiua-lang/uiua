@@ -222,9 +222,9 @@ impl Value {
             (0 | 1, Value::Char(arr)) => {
                 let s: String = arr.data.iter().copied().collect();
                 match (
-                    s.strip_suffix("i").and_then(|s| s.split_once("r")),
-                    s.strip_suffix("i").and_then(|s| s.split_once("+")),
-                    s.strip_suffix("i").and_then(|s| s.split_once("-")),
+                    s.strip_suffix('i').and_then(|s| s.split_once('r')),
+                    s.strip_suffix('i').and_then(|s| s.split_once('+')),
+                    s.strip_suffix('i').and_then(|s| s.split_once('-')),
                 ) {
                     (Some((re, im)), None, _) | (None, Some((re, im)), _) => {
                         let re = parse_uiua_num(re.into(), env);
@@ -374,8 +374,8 @@ impl Value {
         let parse_base_str = |mut s: &str| -> UiuaResult<Value> {
             if base == 64 {
                 let mut s = s.to_string();
-                s = s.replace("-", "+");
-                s = s.replace("_", "/");
+                s = s.replace('-', "+");
+                s = s.replace('_', "/");
 
                 let mut num = 0.0;
                 for (place, c) in s.chars().rev().enumerate() {
@@ -409,7 +409,7 @@ impl Value {
                 return Err(env.error("Number must have digits"));
             }
 
-            let fract = if let Some((num, sfract)) = s.split_once(".") {
+            let fract = if let Some((num, sfract)) = s.split_once('.') {
                 if num.is_empty() && sfract.is_empty() {
                     return Err(env.error("Number must have digits"));
                 }
@@ -533,7 +533,9 @@ impl Value {
                     .map(|(i, c)| if i <= sigfigs { c } else { '0' })
                     .collect();
 
-                let fract = if fract != 0.0 {
+                let fract = if fract == 0.0 {
+                    String::new()
+                } else {
                     let mut digits = ".".to_string();
                     for _ in 0..sigfigs - num.len() {
                         fract *= base as f64;
@@ -545,11 +547,9 @@ impl Value {
                         );
                         fract %= 1.0;
                     }
-                    let digits = digits.trim_end_matches("0");
-                    let digits = digits.trim_end_matches(".");
+                    let digits = digits.trim_end_matches('0');
+                    let digits = digits.trim_end_matches('.');
                     digits.to_string()
-                } else {
-                    String::new()
                 };
 
                 if num.is_empty() {
@@ -765,7 +765,7 @@ impl Value {
         if ishape.is_empty() {
             return Ok(Array::<f64>::new(0, CowSlice::new()).into());
         }
-        let mut shape = Shape::from_iter(ishape.iter().map(|d| d.unsigned_abs()));
+        let mut shape = ishape.iter().map(|d| d.unsigned_abs()).collect::<Shape>();
         shape.push(shape.len());
         let data = range(&ishape, start, env)?;
         let mut value: Value = match data {
@@ -783,9 +783,9 @@ impl Value {
             env,
             "Shape should be a single integer or a list of integers",
         )?;
-        let shape = Shape::from_iter(ishape.iter().map(|n| n.unsigned_abs()));
+        let shape = ishape.iter().map(|n| n.unsigned_abs()).collect::<Shape>();
         let elems: usize = validate_size::<f64>(shape.iter().copied(), env)?;
-        let data = EcoVec::from_iter((0..elems).map(|i| i as f64));
+        let data = (0..elems).map(|i| i as f64).collect::<EcoVec<_>>();
         let mut arr = Array::new(shape, data);
         let first_max = ishape.first().copied().unwrap_or(0);
         for (i, s) in ishape.into_iter().enumerate() {
@@ -1136,8 +1136,8 @@ impl<T: ArrayValue> Array<T> {
             for i in 0..chunk_row_count / 2 {
                 let left = i * chunk_row_len;
                 let right = (chunk_row_count - i - 1) * chunk_row_len;
-                let left = &mut data[left] as *mut T;
-                let right = &mut data[right] as *mut T;
+                let left = &raw mut data[left];
+                let right = &raw mut data[right];
                 unsafe {
                     ptr::swap_nonoverlapping(left, right, chunk_row_len);
                 }
@@ -1314,7 +1314,7 @@ impl<T: ArrayValue> Array<T> {
             return;
         }
         let subshape = Shape::from(&self.shape[depth..]);
-        let newshape = Shape::from_iter(subshape.iter().rev().copied());
+        let newshape = subshape.iter().rev().copied().collect::<Shape>();
         let chunk_size = subshape.elements();
         let data_slice = self.data.as_mut_slice();
         let mut temp = data_slice[..chunk_size].to_vec();
@@ -2030,7 +2030,10 @@ impl Value {
     /// Convert a string value to a list of UTF-16 code units
     pub fn utf16(&self, env: &Uiua) -> UiuaResult<Self> {
         let s = self.as_string(env, "Argument to utf₁₆ must be a string")?;
-        Ok(Array::<f64>::from_iter(s.encode_utf16().map(|u| u as f64)).into())
+        Ok(s.encode_utf16()
+            .map(|u| u as f64)
+            .collect::<Array<f64>>()
+            .into())
     }
     /// Convert a list of UTF-8 bytes to a string value
     pub fn unutf8(&self, env: &Uiua) -> UiuaResult<Self> {
@@ -2303,23 +2306,22 @@ impl Array<f64> {
             let max = r.max(g).max(b);
             let min = r.min(g).min(b);
             let delta = max - min;
-            let recip_delta = if delta != 0.0 { 1.0 / delta } else { 0.0 };
-            let h = if delta != 0.0 {
-                (TAU * if max == r {
-                    ((g - b) * recip_delta).rem_euclid(6.0)
-                } else if max == g {
-                    (b - r).mul_add(recip_delta, 2.0)
-                } else {
-                    (r - g).mul_add(recip_delta, 4.0)
-                }) / 6.0
-            } else {
+            let hue = if delta == 0.0 {
                 0.0
+            } else {
+                (TAU * if max == r {
+                    ((g - b) / delta).rem_euclid(6.0)
+                } else if max == g {
+                    (b - r) / delta + 2.0
+                } else {
+                    (r - g) / delta + 4.0
+                }) / 6.0
             };
-            let s = if max == 0.0 { 0.0 } else { 1.0 - min / max };
-            let v = max;
-            rgb[0] = h;
-            rgb[1] = s;
-            rgb[2] = v;
+            let sat = if max == 0.0 { 0.0 } else { 1.0 - min / max };
+            let val = max;
+            rgb[0] = hue;
+            rgb[1] = sat;
+            rgb[2] = val;
         }
         self.meta.take_sorted_flags();
         self.validate();
@@ -2336,10 +2338,10 @@ impl Array<f64> {
         }
         let channels = *self.shape.last().unwrap();
         for hsv in self.data.as_mut_slice().chunks_exact_mut(channels) {
-            let [h, s, v, ..] = *hsv else {
+            let [hue, sat, val, ..] = *hsv else {
                 unreachable!();
             };
-            let [r, g, b] = hsv_to_rgb(h, s, v);
+            let [r, g, b] = hsv_to_rgb(hue, sat, val);
             hsv[0] = r;
             hsv[1] = g;
             hsv[2] = b;
@@ -2350,20 +2352,22 @@ impl Array<f64> {
     }
 }
 
-pub(crate) fn hsv_to_rgb(h: f64, s: f64, v: f64) -> [f64; 3] {
-    let h = h / TAU * 6.0;
-    let i = h.floor() as isize;
-    let f = h - i as f64;
-    let p = v * (1.0 - s);
-    let q = v * (1.0 - f * s);
-    let t = v * (1.0 - (1.0 - f) * s);
-    match i.rem_euclid(6) {
-        0 => [v, t, p],
-        1 => [q, v, p],
-        2 => [p, v, t],
-        3 => [p, q, v],
-        4 => [t, p, v],
-        _ => [v, p, q],
+pub(crate) fn hsv_to_rgb(hue: f64, sat: f64, val: f64) -> [f64; 3] {
+    let hue = hue / TAU * 6.0;
+    let sect = hue.floor() as isize;
+    let f = hue - sect as f64;
+    let chroma = val * sat;
+    let min = val - chroma;
+    let mid1 = val - f * chroma;
+    let mid0 = val - (1.0 - f) * chroma;
+    match sect.rem_euclid(6) {
+        0 => [val, mid0, min],
+        1 => [mid1, val, min],
+        2 => [min, val, mid0],
+        3 => [min, mid1, val],
+        4 => [mid0, min, val],
+        5 => [val, min, mid1],
+        _ => unreachable!(),
     }
 }
 

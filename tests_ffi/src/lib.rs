@@ -36,13 +36,13 @@ pub unsafe extern "C" fn multi_list(
 }
 
 #[no_mangle]
-pub unsafe fn change_string(s: *mut *const c_char) {
+pub unsafe extern "C" fn change_string(s: *mut *const c_char) {
     let new_str = CString::new("Hello, World!").unwrap();
     *s = new_str.into_raw();
 }
 
 #[no_mangle]
-pub unsafe fn change_string_to_sum(a: c_int, b: c_int, s: *mut *const c_char) {
+pub unsafe extern "C" fn change_string_to_sum(a: c_int, b: c_int, s: *mut *const c_char) {
     let sum = a + b;
     let new_str = CString::new(format!("{a} + {b} = {sum}")).unwrap();
     *s = new_str.into_raw();
@@ -125,7 +125,7 @@ pub unsafe extern "C" fn person_children(name: *const c_char, age: c_int) -> *co
         name: CString::new(format!("{name}ina")).unwrap().into_raw(),
         age: age - 27,
     });
-    children.leak() as *mut _ as *const _
+    std::ptr::from_mut(children.leak()) as *const _
 }
 
 #[no_mangle]

@@ -288,7 +288,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             vals.map(keys, env)?;
             env.push(vals);
         }
-        Primitive::Stack => stack(env, false)?,
+        Primitive::Stack => stack(env, false),
         Primitive::Regex => {
             regex(env)?;
             // NOTE: if you want to expose the match locations, n.t. they are given in bytes rather than codepoints
@@ -337,7 +337,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::ExeExt => env.push(std::env::consts::EXE_EXTENSION),
         Primitive::PathSep => env.push(std::path::MAIN_SEPARATOR),
         Primitive::NumProcs => env.push(num_cpus::get()),
-        Primitive::Sys(op) => run_sys_op(op, env)?,
+        Primitive::Sys(op) => run_sys_op(*op, env)?,
         prim => {
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(
@@ -515,7 +515,7 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
             let [f] = get_ops(ops, env)?;
             env.spawn(true, f)?;
         }
-        Primitive::Sys(op) => run_sys_op_mod(op, ops, env)?,
+        &Primitive::Sys(op) => run_sys_op_mod(op, ops, env)?,
         prim => {
             return Err(env.error(if prim.modifier_args().is_some() {
                 format!(
@@ -695,7 +695,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
             ImplPrimitive::StackN { n, inverse } => stack_n(env, *n, *inverse)?,
-            ImplPrimitive::UnStack => stack(env, true)?,
+            ImplPrimitive::UnStack => stack(env, true),
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
@@ -911,7 +911,7 @@ impl ImplPrimitive {
                 env.push(right);
                 env.push(left);
             }
-            ImplPrimitive::TryClose => _ = run_sys_op(&SysOp::Close, env),
+            ImplPrimitive::TryClose => _ = run_sys_op(SysOp::Close, env),
             ImplPrimitive::UndoInsert => {
                 let key = env.pop(1)?;
                 let _value = env.pop(2)?;
@@ -1774,7 +1774,7 @@ fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
     Ok(())
 }
 
-fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
+fn stack(env: &Uiua, inverse: bool) {
     let span = if inverse {
         format!("{}{} {}", Primitive::Un, Primitive::Stack, env.span())
     } else {
@@ -1807,7 +1807,6 @@ fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
         env.rt.backend.print_str_trace("╴");
     }
     env.rt.backend.print_str_trace("\n");
-    Ok(())
 }
 
 fn dump(ops: Ops, env: &mut Uiua, inverse: bool) -> UiuaResult {
@@ -2226,17 +2225,27 @@ mod tests {
                     match env.run_str(&ex.input) {
                         Ok(mut comp) => {
                             if let Some(diag) = comp.take_diagnostics().into_iter().next() {
-                                if !ex.should_error {
-                                    panic!("\nExample failed:\n{}\n{}", ex.input, diag.report());
-                                }
-                            } else if ex.should_error {
-                                panic!("Example should have failed: {}", ex.input);
+                                assert!(
+                                    ex.should_error,
+                                    "\nExample failed:\n{}\n{}",
+                                    ex.input,
+                                    diag.report()
+                                );
+                            } else {
+                                assert!(
+                                    !ex.should_error,
+                                    "Example should have failed: {}",
+                                    ex.input
+                                );
                             }
                         }
                         Err(e) => {
-                            if !ex.should_error {
-                                panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
-                            }
+                            assert!(
+                                ex.should_error,
+                                "\nExample failed:\n{}\n{}",
+                                ex.input,
+                                e.report()
+                            );
                         }
                     }
                 }
@@ -2369,7 +2378,7 @@ mod tests {
             literal_names.reverse();
             let literal_names = literal_names.join("");
             format!(
-                r#"[{glyphs}]|(?<![a-zA-Z$])({format_names}{literal_names})(?![a-zA-Z]){additional}"#
+                r"[{glyphs}]|(?<![a-zA-Z$])({format_names}{literal_names})(?![a-zA-Z]){additional}"
             )
         }
 

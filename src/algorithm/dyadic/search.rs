@@ -65,7 +65,7 @@ impl<T: ArrayValue> Array<T> {
                         result_data.push(is_member as u8);
                     }
                 }
-                let shape: Shape = elems.shape.iter().cloned().take(1).collect();
+                let shape: Shape = elems.shape.iter().copied().take(1).collect();
                 Array::new(shape, result_data)
             }
             Ordering::Greater => {
@@ -311,14 +311,13 @@ impl<T: ArrayValue> Array<T> {
                                 result_data.push(i as f64);
                                 cache.insert(elem_key, (i, false));
                                 continue 'needle;
-                            } else {
-                                for j in i + 1..haystack.row_count() {
-                                    let of_key = ArrayCmpSlice(haystack.row_slice(j));
-                                    if of_key == elem_key {
-                                        result_data.push(j as f64);
-                                        cache.insert(elem_key, (j, false));
-                                        continue 'needle;
-                                    }
+                            }
+                            for j in i + 1..haystack.row_count() {
+                                let of_key = ArrayCmpSlice(haystack.row_slice(j));
+                                if of_key == elem_key {
+                                    result_data.push(j as f64);
+                                    cache.insert(elem_key, (j, false));
+                                    continue 'needle;
                                 }
                             }
                         } else {
@@ -432,19 +431,16 @@ impl<T: ArrayValue> Array<T> {
             .any(|(a, b)| a > b);
         if needle.rank() > haystack.rank() || any_dim_greater {
             // Fill
-            match env.scalar_fill() {
-                Ok(fill) => {
-                    let target_shape = max_shape(&haystack.shape, &needle.shape);
-                    local_searched = haystack.clone();
-                    local_searched.fill_to_shape(&target_shape, fill);
-                    haystack = &local_searched;
-                }
-                Err(_) => {
-                    let data = cowslice![0; haystack.element_count()];
-                    let mut arr = Array::new(haystack.shape.clone(), data);
-                    arr.meta.flags.insert(ArrayFlags::BOOLEAN);
-                    return Ok(arr);
-                }
+            if let Ok(fill) = env.scalar_fill() {
+                let target_shape = max_shape(&haystack.shape, &needle.shape);
+                local_searched = haystack.clone();
+                local_searched.fill_to_shape(&target_shape, fill);
+                haystack = &local_searched;
+            } else {
+                let data = cowslice![0; haystack.element_count()];
+                let mut arr = Array::new(haystack.shape.clone(), data);
+                arr.meta.flags.insert(ArrayFlags::BOOLEAN);
+                return Ok(arr);
             }
         }
 
@@ -503,9 +499,7 @@ impl<T: ArrayValue> Array<T> {
             if haystack.shape.iter().all(|&d| d > 0) {
                 'windows: loop {
                     // Reset curr
-                    for i in curr.iter_mut() {
-                        *i = 0;
-                    }
+                    curr.fill(0);
                     // Search the window whose top-left is the current corner
                     'items: loop {
                         // Get index for the current item in the haystack

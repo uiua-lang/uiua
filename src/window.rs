@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     env::current_exe,
     fs,
     io::{ErrorKind, Read, Write},
@@ -138,7 +139,7 @@ pub fn run_window() {
                 Err(e) => {
                     eprintln!("Failed to accept connection: {e}")
                 }
-            };
+            }
         }
     });
     let icon = image::load_from_memory(include_bytes!("assets/uiua-logo-512.png")).unwrap();
@@ -179,6 +180,10 @@ pub fn run_window() {
     .unwrap();
 }
 
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "doesn't seem to be a state machine"
+)]
 struct App {
     items: Vec<OutputItem>,
     recv: Receiver<Request>,
@@ -196,7 +201,7 @@ struct Cache {
     ppp: f32,
     image_scale: f32,
     #[cfg(feature = "audio")]
-    samples_map: std::collections::HashMap<usize, bool>,
+    samples_map: HashMap<usize, bool>,
     last_frame: Instant,
     errors: Vec<String>,
 }
@@ -269,7 +274,7 @@ impl App {
                 ppp,
                 image_scale: 1.0,
                 #[cfg(feature = "audio")]
-                samples_map: Default::default(),
+                samples_map: HashMap::new(),
                 last_frame: Instant::now(),
                 errors: Vec::new(),
             },

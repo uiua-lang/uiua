@@ -213,7 +213,7 @@ pub fn parse(
             errors,
             diagnostics,
             next_output_comment: 0,
-            start_addr: &base as *const u8 as usize,
+            start_addr: std::ptr::from_ref(&base) as usize,
         };
         let items = parser.items(ItemsKind::TopLevel);
         if parser.errors.is_empty() && parser.index < parser.tokens.len() {
@@ -306,25 +306,22 @@ impl Parser<'_> {
         }
         let mut trailing_newline = false;
         loop {
-            match self.item(kind) {
-                Some(item) => {
-                    trailing_newline = false;
-                    items.push(item)
+            if let Some(item) = self.item(kind) {
+                trailing_newline = false;
+                items.push(item)
+            } else {
+                if self.exact(Newline).is_none() {
+                    break;
                 }
-                None => {
-                    if self.exact(Newline).is_none() {
-                        break;
-                    }
-                    trailing_newline = true;
+                trailing_newline = true;
+                self.spaces();
+                let mut extra_newlines = false;
+                while self.exact(Newline).is_some() {
+                    extra_newlines = true;
                     self.spaces();
-                    let mut extra_newlines = false;
-                    while self.exact(Newline).is_some() {
-                        extra_newlines = true;
-                        self.spaces();
-                    }
-                    if extra_newlines {
-                        items.push(Item::Words(Vec::new()));
-                    }
+                }
+                if extra_newlines {
+                    items.push(Item::Words(Vec::new()));
                 }
             }
         }
@@ -386,9 +383,7 @@ impl Parser<'_> {
             loop {
                 if let Some(ident) = self.ident() {
                     items.push(ident);
-                } else if self.spaces().is_some() {
-                    continue;
-                } else {
+                } else if self.spaces().is_none() {
                     break;
                 }
             }
@@ -666,8 +661,8 @@ impl Parser<'_> {
                     let close_span = self.exact(CloseParen.into());
                     validator = Some(FieldValidator {
                         open_span,
-                        close_span,
                         words,
+                        close_span,
                     });
                 }
 
@@ -690,7 +685,7 @@ impl Parser<'_> {
                         Vec::new()
                     });
                     init = Some(FieldInit { arrow_span, words })
-                };
+                }
 
                 trailing_newline |= self.ignore_whitespace();
                 let mut bar_span = self.exact(Bar.into());
@@ -942,31 +937,28 @@ impl Parser<'_> {
         let range = self.real()?.span.byte_range();
         let s = &self.input[range];
         Some(if let Some((a, o)) = s.split_once('.') {
-            let a = match a.parse() {
-                Ok(a) => a,
-                Err(_) => {
-                    self.errors
-                        .push(self.prev_span().sp(ParseError::InvalidArgCount(a.into())));
-                    1
-                }
+            let a = if let Ok(a) = a.parse() {
+                a
+            } else {
+                self.errors
+                    .push(self.prev_span().sp(ParseError::InvalidArgCount(a.into())));
+                1
             };
-            let o = match o.parse() {
-                Ok(o) => o,
-                Err(_) => {
-                    self.errors
-                        .push(self.prev_span().sp(ParseError::InvalidOutCount(o.into())));
-                    1
-                }
+            let o = if let Ok(o) = o.parse() {
+                o
+            } else {
+                self.errors
+                    .push(self.prev_span().sp(ParseError::InvalidOutCount(o.into())));
+                1
             };
             (a, o)
         } else {
-            let a = match s.parse() {
-                Ok(a) => a,
-                Err(_) => {
-                    self.errors
-                        .push(self.prev_span().sp(ParseError::InvalidArgCount(s.into())));
-                    1
-                }
+            let a = if let Ok(a) = s.parse() {
+                a
+            } else {
+                self.errors
+                    .push(self.prev_span().sp(ParseError::InvalidArgCount(s.into())));
+                1
             };
             (a, 1)
         })
@@ -1031,27 +1023,23 @@ impl Parser<'_> {
         // Collect items
         let mut items = Vec::new();
         while self.exact(Underscore.into()).is_some() {
-            let item = match self.modified() {
-                Some(mut item) => {
-                    if let Word::Spaces = item.value {
-                        if items.is_empty() {
-                            break;
-                        }
-                        self.errors.push(self.expected([Expectation::Term]));
-                        item = match self.modified() {
-                            Some(item) => item,
-                            None => {
-                                self.errors.push(self.expected([Expectation::Term]));
-                                break;
-                            }
-                        };
+            let item = if let Some(mut item) = self.modified() {
+                if let Word::Spaces = item.value {
+                    if items.is_empty() {
+                        break;
                     }
-                    item
-                }
-                None => {
                     self.errors.push(self.expected([Expectation::Term]));
-                    break;
+                    item = if let Some(item) = self.modified() {
+                        item
+                    } else {
+                        self.errors.push(self.expected([Expectation::Term]));
+                        break;
+                    };
                 }
+                item
+            } else {
+                self.errors.push(self.expected([Expectation::Term]));
+                break;
             };
             items.push(item);
         }
@@ -1203,7 +1191,7 @@ impl Parser<'_> {
         #[cfg(target_arch = "wasm32")]
         const MAX_RECURSION_DEPTH: usize = 512 * 1024;
         let curr = 0u8;
-        let curr_addr = &curr as *const u8 as usize;
+        let curr_addr = std::ptr::from_ref(&curr) as usize;
         let diff = curr_addr.abs_diff(self.start_addr);
         let too_deep = diff > MAX_RECURSION_DEPTH;
         if too_deep {
@@ -1216,6 +1204,11 @@ impl Parser<'_> {
         if self.too_deep() {
             return None;
         }
+        #[expect(
+            clippy::same_functions_in_if_condition,
+            reason = "methods seem to mutate self, so the second if may or may not be needed",
+            // TODO
+        )]
         let mut word = if let Some(n) = self.num() {
             n.map(|(n, s)| Word::Number(n, s))
         } else if let Some(prim) = self.prim() {
@@ -1316,9 +1309,8 @@ impl Parser<'_> {
                     }
                     span.merge_with(dspan);
                     return Some(span.sp((n, s)));
-                } else {
-                    self.index = reset;
                 }
+                self.index = reset;
             }
         }
         // Let 1-letter string be identifiers
@@ -1453,10 +1445,9 @@ impl Parser<'_> {
             if s == "¯" {
                 self.index = reset;
                 return None;
-            } else {
-                // Just the number
-                (coef.into(), s, span)
             }
+            // Just the number
+            (coef.into(), s, span)
         } else {
             self.index = reset;
             return None;
@@ -1750,7 +1741,7 @@ impl Parser<'_> {
         loop {
             self.ignore_whitespace();
             if let Some(span) = self.exact(Comment) {
-                let s = span.as_str(self.inputs, |s| s.trim_start_matches("#").trim().into());
+                let s = span.as_str(self.inputs, |s| s.trim_start_matches('#').trim().into());
                 lines.push(span.sp(s));
             } else if let Some(sem) = self.next_token_map(Token::as_semantic_comment) {
                 semantic.insert(sem.value, sem.span);

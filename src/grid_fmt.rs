@@ -3,6 +3,7 @@
 use std::{
     collections::HashMap,
     f64::consts::{E, PI, TAU},
+    fmt::Write,
     iter::{once, repeat_n},
     mem::take,
 };
@@ -86,6 +87,10 @@ pub trait GridFmt: Sized {
         rows.map(|row| row.len()).max().unwrap_or(0)
     }
     /// Get SoA rows
+    #[expect(
+        clippy::doc_markdown,
+        reason = "SoA is just an acronym, not a type/trait name"
+    )]
     fn soa_rows(_arr: &Array<Self>) -> Option<Vec<(&EcoString, &Value)>> {
         None
     }
@@ -270,10 +275,12 @@ impl GridFmt for f64 {
                 round_sig_dec(mean, 4).grid_string(false)
             );
             if nan_count > 0 {
-                s.push_str(&format!(
+                write!(
+                    s,
                     " ({nan_count} NaN{})",
                     if nan_count > 1 { "s" } else { "" }
-                ));
+                )
+                .ok();
             }
             s
         }
@@ -1034,7 +1041,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         // Handle really big grid
         if self.rank() > 1 {
             let max_width = terminal_size().map_or(1000, |(w, _)| w);
-            for row in grid.iter_mut() {
+            for row in &mut grid {
                 if row.len() > max_width {
                     let diff = row.len() - max_width;
                     row.truncate(max_width);
@@ -1327,13 +1334,13 @@ impl Line {
             _ => &[Line::OpenDouble, Line::CloseDouble],
         }
     }
-    fn vert(&self) -> char {
+    fn vert(self) -> char {
         match self {
             Line::Single | Line::OpenSingle | Line::CloseSingle | Line::ForceSingle => '│',
             Line::Double | Line::OpenDouble | Line::CloseDouble | Line::ForceDouble => '║',
         }
     }
-    fn horiz(&self) -> char {
+    fn horiz(self) -> char {
         match self {
             Line::Single | Line::OpenSingle | Line::CloseSingle | Line::ForceSingle => '─',
             Line::Double | Line::OpenDouble | Line::CloseDouble | Line::ForceDouble => '═',
@@ -1348,7 +1355,7 @@ impl Line {
             line => line,
         }
     }
-    fn intersect(&self, column: Self) -> char {
+    fn intersect(self, column: Self) -> char {
         use Line::*;
         match (self, column) {
             (Single, Single) | (ForceSingle, ForceSingle) => '┼',

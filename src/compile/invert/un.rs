@@ -33,7 +33,7 @@ pub fn un_inverse(input: &[Node], asm: &Assembly) -> InversionResult<Node> {
     }
 
     thread_local! {
-        static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = Default::default();
+        static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = RefCell::default();
     }
     let mut hasher = DefaultHasher::new();
     for node in input {
@@ -95,7 +95,7 @@ fn anti_inverse(input: &[Node], asm: &Assembly, for_un: bool) -> InversionResult
         return generic();
     }
     thread_local! {
-        static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = Default::default();
+        static CACHE: RefCell<HashMap<u64, InversionResult<Node>>> = RefCell::default();
     }
     let mut hasher = DefaultHasher::new();
     for node in input {
@@ -445,7 +445,7 @@ inverse!(BothPat, input, asm, Both, span, [f], {
     let inv = f.un_inverse(asm)?;
     Ok((
         input,
-        ImplMod(UnBothImpl(Default::default()), eco_vec![inv], span),
+        ImplMod(UnBothImpl(Subscript::default()), eco_vec![inv], span),
     ))
 });
 
@@ -647,8 +647,7 @@ inverse!(
 
 inverse!(ScanPat, input, asm, {
     let un = matches!(input, [ImplMod(UnScan, ..), ..]);
-    let ([Mod(Scan, args, span), input @ ..] | [ImplMod(UnScan, args, span), input @ ..]) = input
-    else {
+    let [Mod(Scan, args, span) | ImplMod(UnScan, args, span), input @ ..] = input else {
         return generic();
     };
     let [f] = args.as_slice() else {
@@ -1121,7 +1120,7 @@ inverse!(AntiContraFlip, input, asm, Prim(Flip, span), {
     if nodes_clean_sig(input).is_none_or(|sig| sig != (2, 1)) {
         return generic();
     }
-    for pat in CONTRA_PATTERNS.iter() {
+    for pat in CONTRA_PATTERNS {
         if let Ok((inp, mut inv)) = pat.invert_extract(input, asm) {
             inv.prepend(Prim(Flip, span));
             return Ok((inp, inv));

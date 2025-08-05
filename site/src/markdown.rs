@@ -22,7 +22,7 @@ pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> im
     let (src, _) = create_signal(src);
     let once = create_resource(
         || (),
-        move |_| async move { fetch(&src.get_untracked()).await.unwrap() },
+        move |()| async move { fetch(&src.get_untracked()).await.unwrap() },
     );
     view! {{
         move || match once.get() {
@@ -60,7 +60,7 @@ pub fn markdown_html(text: &str) -> String {
         .replace("``", "` `")
         .replace("<code block delim>", "```");
     let root = parse_document(&arena, &text, &options());
-    let body = format!(r#"<body><div id=top>{}</div></body>"#, node_html(root));
+    let body = format!(r"<body><div id=top>{}</div></body>", node_html(root));
     let head = r#"
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -182,7 +182,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
             if block.literal.trim() == "LOGO" {
                 view!(<Editor example=LOGO/>).into_view()
             } else if (block.info.is_empty() || block.info.starts_with("uiua"))
-                && uiua::parse(&block.literal, (), &mut Default::default())
+                && uiua::parse(&block.literal, (), &mut Inputs::default())
                     .1
                     .is_empty()
             {
@@ -217,6 +217,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
 
 #[cfg(test)]
 fn node_html<'a>(node: &'a AstNode<'a>) -> String {
+    use std::fmt::Write;
     use uiua::{Compiler, PrimDoc, SafeSys, Uiua, UiuaErrorKind, Value};
     use uiua_editor::prim_class;
 
@@ -290,10 +291,10 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 let symbol_class = format!("prim-glyph {}", prim_class(prim));
                 let symbol = prim.to_string();
-                let name = if symbol != prim.name() {
-                    format!(" {}", prim.name())
+                let name = if symbol == prim.name() {
+                    String::new()
                 } else {
-                    "".to_string()
+                    format!(" {}", prim.name())
                 };
                 format!(
                     r#"<a 
@@ -344,7 +345,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                     line.push_str(&" ".repeat(max_len - line_len));
                 }
                 match comp.load_str(line).and_then(|comp| env.run_compiler(comp)) {
-                    Ok(_) => {
+                    Ok(()) => {
                         let values = env.take_stack();
                         if !values.is_empty() && !values.iter().any(|v| v.shape.elements() > 200) {
                             let formatted: Vec<String> = values.iter().map(Value::show).collect();
@@ -352,7 +353,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                                 line.push('\n');
                                 for formatted in formatted {
                                     for fline in formatted.lines() {
-                                        line.push_str(&format!("\n# {fline}"));
+                                        write!(line, "\n# {fline}").ok();
                                     }
                                 }
                             } else {
@@ -371,7 +372,9 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                     {
                         break;
                     }
-                    Err(e) => line.push_str(&format!("# {e}")),
+                    Err(e) => {
+                        write!(line, "# {e}").ok();
+                    }
                 }
             }
             let text = lines.join("\n");
@@ -393,9 +396,10 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         NodeValue::Table(_) => format!(r#"<table class="bordered-table">{}</table>"#, children()),
         &NodeValue::TableRow(is_header) => {
             let tag = if is_header { "th" } else { "td" };
-            children_iter
-                .map(|s| format!("<{tag}>{s}</{tag}>"))
-                .collect()
+            children_iter.fold(String::new(), |mut acc, cur| {
+                write!(acc, "<{tag}>{cur}</{tag}>").ok();
+                acc
+            })
         }
         _ => children(),
     }
@@ -465,7 +469,7 @@ fn text_code_blocks() {
                 .load_str(&block)
                 .and_then(|comp| env.run_compiler(comp));
             let failure_report = match res {
-                Ok(_) => comp
+                Ok(()) => comp
                     .take_diagnostics()
                     .into_iter()
                     .next()
@@ -473,11 +477,9 @@ fn text_code_blocks() {
                 Err(e) => Some(e.report()),
             };
             if let Some(report) = failure_report {
-                if !should_fail {
-                    panic!("\nBlock failed:\n{block}\n{report}")
-                }
-            } else if should_fail {
-                panic!("\nBlock should have failed:\n{block}")
+                assert!(should_fail, "\nBlock failed:\n{block}\n{report}");
+            } else {
+                assert!(!should_fail, "\nBlock should have failed:\n{block}");
             }
         }
     }

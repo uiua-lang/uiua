@@ -1,5 +1,6 @@
 use leptos::*;
 use leptos_router::*;
+use std::fmt::Write;
 use uiua::{PrimClass, PrimDoc, PrimDocFragment, PrimDocLine, Primitive, SysOp};
 use uiua_editor::Editor;
 
@@ -49,11 +50,12 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
         sig.push_str("Constant");
     } else if let Some(margs) = prim.modifier_args() {
         match margs {
-            1 => sig.push_str("Monadic"),
-            2 => sig.push_str("Dyadic"),
-            3 => sig.push_str("Triadic"),
-            n => sig.push_str(&format!("{n}-function")),
+            1 => write!(sig, "Monadic"),
+            2 => write!(sig, "Dyadic"),
+            3 => write!(sig, "Triadic"),
+            n => write!(sig, "{n}-function"),
         }
+        .ok();
         if let Some(args) = prim.args() {
             sig.push(' ');
             sig.push_str(&args.to_string());
@@ -62,16 +64,17 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
         sig.push_str(" modifier");
     } else {
         match prim.args() {
-            Some(0) => sig.push_str("Noadic"),
-            Some(1) => sig.push_str("Monadic"),
-            Some(2) => sig.push_str("Dyadic"),
-            Some(3) => sig.push_str("Triadic"),
-            Some(n) => sig.push_str(&format!("{n}-argument")),
-            None => sig.push_str("Variadic"),
+            Some(0) => write!(sig, "Noadic"),
+            Some(1) => write!(sig, "Monadic"),
+            Some(2) => write!(sig, "Dyadic"),
+            Some(3) => write!(sig, "Triadic"),
+            Some(n) => write!(sig, "{n}-argument"),
+            None => write!(sig, "Variadic"),
         }
+        .ok();
         if let Some(outputs) = prim.outputs() {
             if outputs != 1 {
-                sig.push_str(&format!(" {outputs}-output"));
+                write!(sig, " {outputs}-output").ok();
             }
         } else {
             sig.push_str(" variable-output");
@@ -433,17 +436,27 @@ fn prim_docs() {
                 match Uiua::with_backend(WebBackend::default()).run_str(ex.input()) {
                     Ok(mut comp) => {
                         if let Some(diag) = comp.take_diagnostics().into_iter().next() {
-                            if !ex.should_error() {
-                                panic!("\nExample failed:\n{}\n{}", ex.input(), diag.report());
-                            }
-                        } else if ex.should_error() {
-                            panic!("Example should have failed: {}", ex.input());
+                            assert!(
+                                ex.should_error(),
+                                "\nExample failed:\n{}\n{}",
+                                ex.input(),
+                                diag.report()
+                            );
+                        } else {
+                            assert!(
+                                !ex.should_error(),
+                                "Example should have failed: {}",
+                                ex.input()
+                            );
                         }
                     }
                     Err(e) => {
-                        if !ex.should_error() {
-                            panic!("\nExample failed:\n{}\n{}", ex.input(), e.report());
-                        }
+                        assert!(
+                            ex.should_error(),
+                            "\nExample failed:\n{}\n{}",
+                            ex.input(),
+                            e.report()
+                        );
                     }
                 }
             }
@@ -467,7 +480,7 @@ fn listed_examples() {
             continue;
         }
         let line = line.replace("\\\"", "<double quote>");
-        let Some(end) = line.rfind("\"") else {
+        let Some(end) = line.rfind('"') else {
             continue;
         };
         eprintln!("{line}");

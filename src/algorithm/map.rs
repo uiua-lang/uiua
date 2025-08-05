@@ -277,7 +277,7 @@ impl Value {
                     ))
                 },
             )?;
-        };
+        }
         self.meta.map_keys = Some(keys);
         Ok(())
     }
@@ -446,13 +446,13 @@ impl MapKeys {
                             &key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
                         if cell_key[0].is_any_tombstone() {
                             continue;
-                        } else if cell_key[0].is_any_empty_cell() {
+                        }
+                        if cell_key[0].is_any_empty_cell() {
                             key_index = orig;
                             break false;
-                        } else if ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
+                        }
+                        if ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
                             break true;
-                        } else {
-                            continue;
                         }
                     }
                 } else {
@@ -818,7 +818,7 @@ fn coerce_values(
     }
     if let Value::Box(b_arr) = &b {
         if b_arr.rank() == 0 && !matches!(a, Value::Box(_)) {
-            *a = Array::from_iter(a.rows().map(Boxed)).into();
+            *a = a.rows().map(Boxed).collect::<Array<_>>().into();
             return Ok(b);
         }
     }

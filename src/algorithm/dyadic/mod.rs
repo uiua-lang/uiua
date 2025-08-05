@@ -395,7 +395,7 @@ impl<T: ArrayValue> Array<T> {
                 new_shape.extend_from_slice(&self.shape);
                 self.shape = new_shape.into();
             }
-            _ => {}
+            Ordering::Equal => {}
         }
 
         // If converting to rank 0, the rank-matching process
@@ -459,7 +459,7 @@ impl Value {
         if irank >= 0 {
             // Positive rank
             if rank >= shape.len() {
-                for _ in 0..rank - shape.len() + 1 {
+                for _ in 0..=rank - shape.len() {
                     shape.prepend(1);
                 }
             } else {
@@ -1891,10 +1891,9 @@ impl<T: RealArrayValue> Array<T> {
                 if n == f64::INFINITY {
                     slice[i * num_digits + j] = n;
                     break;
-                } else {
-                    slice[i * num_digits + j] = n.rem_euclid(base);
-                    n = n.div_euclid(base);
                 }
+                slice[i * num_digits + j] = n.rem_euclid(base);
+                n = n.div_euclid(base);
             }
         }
         Ok(Array::new(new_shape, new_data))

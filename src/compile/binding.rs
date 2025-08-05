@@ -385,10 +385,9 @@ impl Compiler {
                                     declared_sig.value
                                 ),
                             ));
-                        } else {
-                            node = self.force_sig(node, declared_sig.value, &declared_sig.span)?;
-                            sig = declared_sig.value;
                         }
+                        node = self.force_sig(node, declared_sig.value, &declared_sig.span)?;
+                        sig = declared_sig.value;
                     }
                 }
 
@@ -456,7 +455,7 @@ impl Compiler {
                             sig = declared_sig.value;
                         }
                         let func = make_fn(node, sig, self);
-                        self.compile_bind_function(name, local, func, spandex, meta)?;
+                        self.compile_bind_function(name, local, func, spandex, meta);
                     } else {
                         // Binds some |0.1 code
                         self.compile_bind_const(name, local, None, spandex, meta);
@@ -468,7 +467,7 @@ impl Compiler {
                 } else {
                     // Binding is a normal function
                     let func = make_fn(node, sig, self);
-                    self.compile_bind_function(name, local, func, spandex, meta)?;
+                    self.compile_bind_function(name, local, func, spandex, meta);
                 }
 
                 self.code_meta.function_sigs.insert(
@@ -477,7 +476,7 @@ impl Compiler {
                         sig,
                         explicit: binding.signature.is_some(),
                         inline: false,
-                        set_inverses: Default::default(),
+                        set_inverses: SetInverses::default(),
                     },
                 );
             }
@@ -518,8 +517,8 @@ impl Compiler {
         };
         // Compile items
         let (module, ()) = self.in_scope(scope_kind, |comp| {
-            comp.items(m.items, ItemCompMode::TopLevel)?;
-            comp.end_enum()?;
+            comp.items(m.items, ItemCompMode::TopLevel);
+            comp.end_enum();
             Ok(())
         })?;
         if let Some((name, local)) = name_and_local {

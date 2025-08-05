@@ -1,3 +1,4 @@
+#![allow(clippy::print_stdout)]
 #[cfg(not(feature = "binary"))]
 compile_error!("To compile the uiua interpreter binary, you must enable the `binary` feature flag");
 
@@ -6,11 +7,12 @@ use std::{
     error::Error,
     fmt, fs,
     io::{self, stderr, stdin, stdout, BufRead, Write},
-    path::{is_separator, Path, PathBuf},
+    path::{Path, PathBuf},
     process::{exit, Child, Command, Stdio},
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::channel,
+        LazyLock,
     },
     thread::sleep,
     time::{Duration, Instant},
@@ -19,7 +21,6 @@ use std::{
 use clap::{Parser, Subcommand};
 use colored::*;
 use notify::{event::ModifyKind, EventKind, RecursiveMode, Watcher};
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use terminal_size::terminal_size;
@@ -27,13 +28,13 @@ use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lex,
     lsp::BindingDocsKind,
-    parse, print_stack, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDoc,
-    PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Subscript, Token,
-    Uiua, UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
+    parse, print_stack, Assembly, CodeSpan, Compiler, Inputs, NativeSys, PreEvalMode, PrimClass,
+    PrimDoc, PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Subscript,
+    Token, Uiua, UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
-static WATCH_CHILD: Lazy<Mutex<Option<Child>>> = Lazy::new(Default::default);
+static WATCH_CHILD: LazyLock<Mutex<Option<Child>>> = LazyLock::new(Default::default);
 
 fn fail<T>(e: UiuaError) -> T {
     eprintln!("{}", e.report());
@@ -122,12 +123,13 @@ fn main() {
         set_use_window(true);
         args.next();
     }
-    if let Some(path) = args
-        .next()
-        .filter(|arg| arg.ends_with(".ua") || arg.contains(is_separator))
-    {
+    if let Some(path) = args.next().map(PathBuf::from).filter(|arg| {
+        arg.extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("ua"))
+            || arg.components().count() > 1
+    }) {
         let args = args.collect();
-        run(path.as_ref(), args, false, None, None, None, false);
+        run(&path, args, false, None, None, None, false);
         return;
     }
 
@@ -230,7 +232,7 @@ fn main() {
                         exit(1);
                     }
                 };
-                let mut inputs = Default::default();
+                let mut inputs = Inputs::default();
                 let (items, errors, _) = parse(&input, &path, &mut inputs);
                 if !errors.is_empty() {
                     eprintln!(
@@ -1080,18 +1082,17 @@ fn update(main: bool, check: bool, mut features: Vec<String>) {
             if local >= remote {
                 println!("Your version of Uiua ({local_version}) is the latest!");
                 return;
-            } else {
-                println!(
-                    "{}\n",
-                    format!(
-                        "Update available: {local_version} → {remote_version}\n\
-                        Run `uiua update` to update\n\
-                        Changelog: https://github.com/uiua-lang/uiua/blob/main/changelog.md",
-                    )
-                    .bright_white()
-                    .bold()
-                );
             }
+            println!(
+                "{}\n",
+                format!(
+                    "Update available: {local_version} → {remote_version}\n\
+                    Run `uiua update` to update\n\
+                    Changelog: https://github.com/uiua-lang/uiua/blob/main/changelog.md",
+                )
+                .bright_white()
+                .bold()
+            );
         }
         if check {
             return;
@@ -1175,7 +1176,7 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, stack: bool, config:
                 code
             }
             Err(ReadlineError::Eof | ReadlineError::Interrupted) => break,
-            Err(_) => panic!("Failed to read from Stdin"),
+            Err(e) => panic!("Failed to read from Stdin: {e}"),
         };
         if code.is_empty() {
             continue;
@@ -1472,7 +1473,7 @@ fn find(path: Option<PathBuf>, text: String, raw: bool) -> UiuaResult {
                 }
             }
             Needle::Prim(prim) => {
-                let (tokens, ..) = lex(&contents, (), &mut Default::default());
+                let (tokens, ..) = lex(&contents, (), &mut Inputs::default());
                 for tok in tokens {
                     let Token::Glyph(prim2) = &tok.value else {
                         continue;

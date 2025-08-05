@@ -96,22 +96,20 @@ impl Value {
             Value::Num(arr) => {
                 let mut index_data = Vec::with_capacity(arr.element_count());
                 for &n in &arr.data {
-                    index_data.push(if n.fract() != 0.0 {
-                        if filled {
-                            isize::MAX
-                        } else if n.fract().is_nan() {
-                            return Err(env.error(format!(
-                                "{} cannot be used as an index without a fill",
-                                n.grid_string(false)
-                            )));
-                        } else {
-                            return Err(env.error(format!(
-                                "Index must be an array of integers, but {} is not an integer",
-                                n.grid_string(false)
-                            )));
-                        }
-                    } else {
+                    index_data.push(if n.fract() == 0.0 {
                         n as isize
+                    } else if filled {
+                        isize::MAX
+                    } else if n.fract().is_nan() {
+                        return Err(env.error(format!(
+                            "{} cannot be used as an index without a fill",
+                            n.grid_string(false)
+                        )));
+                    } else {
+                        return Err(env.error(format!(
+                            "Index must be an array of integers, but {} is not an integer",
+                            n.grid_string(false)
+                        )));
                     });
                 }
                 (&arr.shape, index_data)
@@ -398,17 +396,16 @@ impl Value {
         val_as_arr!(from, |a| a.drop(&index, env).map(Into::into))
     }
     pub(crate) fn undo_take(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = match index.as_ints(env, None) {
-            Ok(indices) => indices,
-            Err(_) => {
-                let with_infs = index
-                    .as_ints_or_infs(env, "Taken amount must be a list of integers or infinity")?;
-                let mut indices = Vec::with_capacity(with_infs.len());
-                for (i, d) in with_infs.into_iter().zip(&into.shape) {
-                    indices.push(i.unwrap_or(*d as isize));
-                }
-                indices
+        let index = if let Ok(indices) = index.as_ints(env, None) {
+            indices
+        } else {
+            let with_infs = index
+                .as_ints_or_infs(env, "Taken amount must be a list of integers or infinity")?;
+            let mut indices = Vec::with_capacity(with_infs.len());
+            for (i, d) in with_infs.into_iter().zip(&into.shape) {
+                indices.push(i.unwrap_or(*d as isize));
             }
+            indices
         };
         self.generic_bin_into(
             into,
@@ -427,19 +424,16 @@ impl Value {
         )
     }
     pub(crate) fn undo_drop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = match index.as_ints(env, None) {
-            Ok(indices) => indices,
-            Err(_) => {
-                let with_infs = index.as_ints_or_infs(
-                    env,
-                    "Dropped amount must be a list of integers or infinity",
-                )?;
-                let mut indices = Vec::with_capacity(with_infs.len());
-                for (i, d) in with_infs.into_iter().zip(&into.shape) {
-                    indices.push(i.unwrap_or(*d as isize));
-                }
-                indices
+        let index = if let Ok(indices) = index.as_ints(env, None) {
+            indices
+        } else {
+            let with_infs = index
+                .as_ints_or_infs(env, "Dropped amount must be a list of integers or infinity")?;
+            let mut indices = Vec::with_capacity(with_infs.len());
+            for (i, d) in with_infs.into_iter().zip(&into.shape) {
+                indices.push(i.unwrap_or(*d as isize));
             }
+            indices
         };
         self.generic_bin_into(
             into,
@@ -759,7 +753,7 @@ impl<T: ArrayValue> Array<T> {
                     for row in self.rows().take(end) {
                         new_rows.push(row.drop(sub_index, env)?);
                     }
-                };
+                }
                 if row_count == abs_dropping {
                     let mut shape = self.shape;
                     for (s, n) in shape.iter_mut().zip(once(&Err(true)).chain(sub_index)) {
@@ -1621,7 +1615,7 @@ impl<T: ArrayValue> Array<T> {
             .map(|&i| normalize_index(i, indices.len()))
             .collect();
         let outer_rank = indices_shape.last().copied().unwrap_or(1);
-        let mut outer_shape = Shape::from_iter(repeat_n(0, outer_rank));
+        let mut outer_shape = repeat_n(0, outer_rank).collect::<Shape>();
         if !normalized_indices.is_empty() {
             for index in normalized_indices.chunks_exact(index_size) {
                 for (d, &i) in outer_shape.iter_mut().zip(index) {

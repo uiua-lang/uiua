@@ -3,9 +3,6 @@ use std::{
     str::FromStr,
 };
 
-#[allow(missing_docs)]
-pub const DEBUG: bool = false;
-
 /// Data for how to send an argument type to `&ffi`
 #[derive(Debug)]
 pub struct FfiArg {
@@ -75,17 +72,14 @@ impl Display for FfiType {
 
 impl Display for FfiArg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{out}{ty}{index}",
-            out = if self.out { "out " } else { "" },
-            ty = self.ty,
-            index = if let Some(len_index) = self.len_index {
-                format!(":{len_index}")
-            } else {
-                "".to_string()
-            }
-        )
+        if self.out {
+            write!(f, "out ")?;
+        }
+        write!(f, "{}", self.ty)?;
+        if let Some(len_index) = self.len_index {
+            write!(f, ":{len_index}")?;
+        }
+        Ok(())
     }
 }
 
@@ -97,11 +91,11 @@ impl FromStr for FfiType {
         let input = input.trim();
 
         // Pointer
-        if let Some(ptr) = input.strip_suffix("*") {
+        if let Some(ptr) = input.strip_suffix('*') {
             return Ok(Self::Ptr(ptr.parse::<Self>()?.into()));
         }
 
-        if let Some((arr, len)) = input.strip_suffix("]").and_then(|s| s.rsplit_once("[")) {
+        if let Some((arr, len)) = input.strip_suffix(']').and_then(|s| s.rsplit_once('[')) {
             let len = len.parse::<usize>().map_err(|e| e.to_string())?;
             let ty = arr.parse::<Self>()?;
             if len == 0 {
@@ -112,7 +106,7 @@ impl FromStr for FfiType {
 
         let (unsigned, input) = match input
             .strip_prefix("unsigned ")
-            .or_else(|| input.strip_prefix("u"))
+            .or_else(|| input.strip_prefix('u'))
         {
             Some(scalar) => (true, scalar),
             None => (false, input),
@@ -136,13 +130,13 @@ impl FromStr for FfiType {
             _ => None,
         } {
             return Ok(ty);
-        };
+        }
 
         // Struct
         if let Some(body) = input
-            .strip_prefix("{")
-            .and_then(|s| s.strip_suffix("}"))
-            .map(|s| s.trim_end_matches(";"))
+            .strip_prefix('{')
+            .and_then(|s| s.strip_suffix('}'))
+            .map(|s| s.trim_end_matches(';'))
         {
             let mut depth = 0_usize;
             let mut field = String::new();
@@ -177,9 +171,8 @@ impl FromStr for FfiType {
 
             if depth != 0 {
                 return Err(format!("Unmatched opening braces `{original}`"));
-            } else {
-                return Ok(Self::Struct(fields));
             }
+            return Ok(Self::Struct(fields));
         }
 
         Err(format!("Unknown C type `{original}`"))
@@ -199,7 +192,7 @@ impl FromStr for FfiArg {
         };
 
         // Lists
-        if let Some((arg, len_index)) = input.split_once(":") {
+        if let Some((arg, len_index)) = input.split_once(':') {
             let len_index = Some(
                 len_index
                     .trim()
@@ -341,7 +334,7 @@ mod enabled {
                     let mut out_values = out_values;
                     out_values.pop().unwrap()
                 } else {
-                    Array::from_iter([ret].into_iter().chain(out_values).map(Boxed)).into()
+                    [ret].into_iter().chain(out_values).map(Boxed).collect::<Array<_>>().into()
                 }
             };
 
@@ -367,7 +360,7 @@ mod enabled {
         let mut len_indices = arg_tys
             .iter()
             .enumerate()
-            .flat_map(|(i, arg)| arg.len_index.map(|index| (i, index)))
+            .filter_map(|(i, arg)| arg.len_index.map(|index| (i, index)))
             .collect::<Vec<_>>();
         len_indices.sort_by_key(|tup| tup.1);
         let len_indices = len_indices;
@@ -473,13 +466,11 @@ mod enabled {
             FfiType::ULong => arr!(c_ulong),
             FfiType::ULongLong => arr!(c_ulonglong),
             _ => Ok(if ptr.ty.is_string() {
-                Value::from_iter(
-                    (0..len)
+                (0..len)
                         .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
                         .collect::<Result<Vec<_>, String>>()?
                         .into_iter()
-                        .map(Boxed),
-                )
+                        .map(Boxed).collect()
             } else {
                 Value::from_row_values_infallible(
                     (0..len)
@@ -767,7 +758,7 @@ mod enabled {
             let value = if fields.iter().all(FfiType::is_num) {
                 Value::from_row_values_infallible(rows)
             } else {
-                Array::from_iter(rows.into_iter().map(Boxed)).into()
+                rows.into_iter().map(Boxed).collect::<Array<_>>().into()
             };
 
             Ok(value)

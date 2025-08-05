@@ -709,24 +709,26 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             // SoA (struct-of-arrays)
             let mut is_soa = false;
             if let Some(rows) = T::soa_rows(self) {
-                is_soa = true;
-                let metagrid = metagrid.get_or_insert_with(Metagrid::new);
-                let mut labels_row = Vec::with_capacity(rows.len());
-                for (label, _) in &rows {
-                    labels_row.push(vec![label.chars().collect()]);
-                }
-                metagrid.push(labels_row);
-                let row_params = GridFmtParams {
-                    label: true,
-                    soa_row: true,
-                    ..Default::default()
-                };
-                for i in 0..rows[0].1.row_count() {
-                    let mut metarow = Vec::with_capacity(rows.len());
-                    for (_, val) in &rows {
-                        metarow.push(val.row(i).fmt_grid(row_params));
+                if !rows.iter().any(|(_, val)| val.is_map()) {
+                    is_soa = true;
+                    let metagrid = metagrid.get_or_insert_with(Metagrid::new);
+                    let mut labels_row = Vec::with_capacity(rows.len());
+                    for (label, _) in &rows {
+                        labels_row.push(vec![label.chars().collect()]);
                     }
-                    metagrid.push(metarow);
+                    metagrid.push(labels_row);
+                    let row_params = GridFmtParams {
+                        label: true,
+                        soa_row: true,
+                        ..Default::default()
+                    };
+                    for i in 0..rows[0].1.row_count() {
+                        let mut metarow = Vec::with_capacity(rows.len());
+                        for (_, val) in &rows {
+                            metarow.push(val.row(i).fmt_grid(row_params));
+                        }
+                        metagrid.push(metarow);
+                    }
                 }
             }
 

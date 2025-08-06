@@ -1656,9 +1656,8 @@ impl Compiler {
     ) -> UiuaResult<Node> {
         let full_span = (modifier_span.clone()).merge(operands.last().unwrap().span.clone());
         // Collect operands as strings
-        let mut operands: Vec<Sp<Word>> = (operands.into_iter())
-            .filter(|w| w.value.is_code())
-            .collect();
+        let mut operands: Vec<Sp<Word>> =
+            operands.into_iter().filter(|w| w.value.is_code()).collect();
         if operands.len() == 1 {
             let operand = operands.remove(0);
             operands = match operand.value {

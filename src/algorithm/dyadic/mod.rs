@@ -1796,6 +1796,9 @@ impl<T: RealArrayValue> Array<T> {
         if base == 1.0 {
             return Err(env.error("Base cannot be 1"));
         }
+        if base == -1.0 {
+            return Err(env.error("Base cannot be ¯1"));
+        }
         if base.is_infinite() {
             return Err(env.error("Base cannot be infinite"));
         }

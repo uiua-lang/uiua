@@ -248,17 +248,18 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
             val
         }
         _ => match last {
-            Node::Prim(Add | Sub, _) if init_sig() => Array::new(shape, eco_vec![0u8; len]).into(),
-            Node::Prim(Mul | Div | Modulo, _) if init_sig() => {
-                Array::new(shape, eco_vec![f64::INFINITY; len]).into()
+            Node::Prim(Add | Sub | Or | Complex, _) if init_sig() => {
+                Array::new(shape, eco_vec![0u8; len]).into()
+            }
+            Node::Prim(Mul | Div | Pow, _) if init_sig() => {
+                Array::new(shape, eco_vec![1u8; len]).into()
             }
             Node::Prim(Max, _) if init_sig() => {
                 Array::new(shape, eco_vec![f64::NEG_INFINITY; len]).into()
             }
-            Node::Prim(Min, _) if init_sig() => {
+            Node::Prim(Modulo | Min, _) if init_sig() => {
                 Array::new(shape, eco_vec![f64::INFINITY; len]).into()
             }
-            Node::Prim(Atan, _) if init_sig() => Array::new(shape, eco_vec![0.0; len]).into(),
             Node::Prim(Join, _) if init_sig() => {
                 if val.rank() < 2 {
                     val.shape[0] = 0;

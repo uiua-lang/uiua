@@ -1457,8 +1457,7 @@ primitive!(
     /// ex: /× []
     /// ex: /↥ []
     /// ex: /↧ []
-    /// ex: /∠ []
-    /// ex! /⊡ []
+    /// ex! /∊ []
     ///
     /// An initial value can be set with [fill].
     /// ex:   /↥ []

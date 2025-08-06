@@ -1171,15 +1171,7 @@ impl Value {
             Value::Byte(b) => b.transpose_depth(depth, amnt),
             Value::Complex(c) => c.transpose_depth(depth, amnt),
             Value::Char(c) => c.transpose_depth(depth, amnt),
-            Value::Box(b) => {
-                if depth == b.rank() {
-                    for b in b.data.as_mut_slice() {
-                        b.0.transpose();
-                    }
-                } else {
-                    b.transpose_depth(depth, amnt);
-                }
-            }
+            Value::Box(b) => b.transpose_depth(depth, amnt),
         }
     }
     /// Like transpose, but the axes are reversed instead of rotated
@@ -1189,15 +1181,7 @@ impl Value {
             Value::Byte(b) => b.retropose_depth(depth),
             Value::Complex(c) => c.retropose_depth(depth),
             Value::Char(c) => c.retropose_depth(depth),
-            Value::Box(b) => {
-                if depth == b.rank() {
-                    for b in b.data.as_mut_slice() {
-                        b.0.retropose_depth(0);
-                    }
-                } else {
-                    b.retropose_depth(depth);
-                }
-            }
+            Value::Box(b) => b.retropose_depth(depth),
         }
     }
 }

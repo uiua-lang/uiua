@@ -48,6 +48,7 @@ impl Complex {
         Self { re, im }
     }
     /// Get the minimum of the real and imaginary parts of two complex numbers, ignoring NaN
+    #[must_use]
     pub fn min(self, rhs: impl Into<Self>) -> Self {
         let rhs = rhs.into();
         Self {
@@ -56,6 +57,7 @@ impl Complex {
         }
     }
     /// Get the maximum of the real and imaginary parts of two complex numbers, ignoring NaN
+    #[must_use]
     pub fn max(self, rhs: impl Into<Self>) -> Self {
         let rhs = rhs.into();
         Self {
@@ -64,6 +66,7 @@ impl Complex {
         }
     }
     /// Get the floor of the real and imaginary parts of a complex number
+    #[must_use]
     pub fn floor(self) -> Self {
         Self {
             re: self.re.floor(),
@@ -71,6 +74,7 @@ impl Complex {
         }
     }
     /// Get the ceiling of the real and imaginary parts of a complex number
+    #[must_use]
     pub fn ceil(self) -> Self {
         Self {
             re: self.re.ceil(),
@@ -78,6 +82,7 @@ impl Complex {
         }
     }
     /// Round the real and imaginary parts of a complex number
+    #[must_use]
     pub fn round(self) -> Self {
         Self {
             re: self.re.round(),
@@ -90,12 +95,14 @@ impl Complex {
         (self.re * self.re + self.im * self.im).sqrt()
     }
     /// Get the arctangent of a complex number
+    #[must_use]
     pub fn atan2(self, x: impl Into<Self>) -> Complex {
         let y = self;
         let x = x.into();
         -Complex::I * ((x + Complex::I * y) / (y * y + x * x).sqrt()).ln()
     }
     /// Normalize a complex number
+    #[must_use]
     pub fn normalize(self) -> Self {
         let len = self.abs();
         if len == 0.0 {
@@ -117,6 +124,7 @@ impl Complex {
         r * Self::new(theta.cos(), theta.sin())
     }
     /// Raise a complex number to a complex power
+    #[must_use]
     pub fn powc(self, power: impl Into<Self>) -> Self {
         let power = power.into();
         if power.im == 0.0 {
@@ -126,6 +134,7 @@ impl Complex {
         ((r.ln() + Self::I * theta) * power).exp()
     }
     /// Raise a complex number to a real power
+    #[must_use]
     pub fn powf(self, power: f64) -> Self {
         if power == 0.0 {
             return Self::ONE;
@@ -137,20 +146,24 @@ impl Complex {
         Self::from_polar(r.powf(power), theta * power)
     }
     /// Calculate the exponential of a complex number
+    #[must_use]
     pub fn exp(self) -> Self {
         Self::from_polar(E.powf(self.re), self.im)
     }
     /// Calculate the natural logarithm of a complex number
+    #[must_use]
     pub fn ln(self) -> Self {
         let (r, theta) = self.to_polar();
         Self::new(r.ln(), theta)
     }
     /// Calculate the logarithm of a complex number
+    #[must_use]
     pub fn log(self, base: impl Into<Self>) -> Self {
         let base = base.into();
         Self::new(self.abs().ln(), self.arg()) / (Self::new(base.abs().ln(), base.arg()))
     }
     /// Calculate the square root of a complex number
+    #[must_use]
     pub fn sqrt(self) -> Self {
         if self.im == 0.0 {
             return if self.re >= 0.0 {
@@ -163,6 +176,7 @@ impl Complex {
         Self::from_polar(r.sqrt(), theta / 2.0)
     }
     /// Calculate the sine of a complex number
+    #[must_use]
     pub fn sin(self) -> Self {
         Self::new(
             self.re.sin() * self.im.cosh(),
@@ -170,6 +184,7 @@ impl Complex {
         )
     }
     /// Calculate the cosine of a complex number
+    #[must_use]
     pub fn cos(self) -> Self {
         Self::new(
             self.re.cos() * self.im.cosh(),
@@ -177,10 +192,12 @@ impl Complex {
         )
     }
     /// Calculate the arc sine of a complex number
+    #[must_use]
     pub fn asin(self) -> Self {
         -Self::I * ((Self::ONE - self * self).sqrt() + Self::I * self).ln()
     }
     /// Calculate the arc cosine of a complex number
+    #[must_use]
     pub fn acos(self) -> Self {
         -Self::I * (Self::I * (Self::ONE - self * self).sqrt() + self).ln()
     }
@@ -197,6 +214,7 @@ impl Complex {
         }
     }
     /// Multiply by another complex number, with 0 × ∞ = 0
+    #[must_use]
     pub fn safe_mul(self, rhs: impl Into<Self>) -> Self {
         let rhs = rhs.into();
         Self {
@@ -204,6 +222,7 @@ impl Complex {
             im: safe_mul(self.re, rhs.im) + safe_mul(self.im, rhs.re),
         }
     }
+    #[must_use]
     pub fn recip(self) -> Self {
         Self::ONE / self
     }

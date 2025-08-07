@@ -321,6 +321,7 @@ pub struct PersistentMeta {
 
 impl PersistentMeta {
     /// XOR this metadata with another
+    #[must_use]
     pub fn xor(self, other: Self) -> Self {
         Self {
             label: self.label.xor(other.label),
@@ -492,6 +493,7 @@ impl<T: Clone> Array<T> {
     }
     /// Get a row array
     #[track_caller]
+    #[must_use]
     pub fn row(&self, row: usize) -> Self {
         if self.rank() == 0 {
             let mut row = self.clone();
@@ -633,6 +635,7 @@ impl<T: ArrayValue> Array<T> {
     /// - `start` must be <= `end`
     /// - `start` must be < `self.row_count()`
     /// - `end` must be <= `self.row_count()`
+    #[must_use]
     pub fn slice_rows(&self, start: usize, end: usize) -> Self {
         assert!(start <= end);
         assert!(start < self.row_count());

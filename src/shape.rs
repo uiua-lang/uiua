@@ -76,6 +76,7 @@ impl Shape {
         self.dims.iter().skip(1).product()
     }
     /// Get the row shape
+    #[must_use]
     pub fn row(&self) -> Shape {
         let mut shape = self.clone();
         shape.make_row();
@@ -86,6 +87,7 @@ impl Shape {
         &self.dims[self.len().min(1)..]
     }
     /// Construct a subshape
+    #[must_use]
     pub fn subshape<R>(&self, range: R) -> Shape
     where
         [usize]: Index<R>,
@@ -153,6 +155,7 @@ impl Shape {
         self.dims.extend_from_slice(dims);
     }
     /// Split the shape at the given index
+    #[must_use]
     pub fn split_off(&mut self, at: usize) -> Self {
         let (_, b) = self.dims.split_at(at);
         let second = Shape::from(b);

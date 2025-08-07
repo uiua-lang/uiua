@@ -113,6 +113,7 @@ impl Value {
     ///
     /// # Panics
     /// Panics if the arrays have incompatible shapes
+    #[must_use]
     pub fn join_infallible(self, other: Self, allow_ext: bool) -> Self {
         self.join_impl(other, allow_ext, &()).unwrap()
     }
@@ -233,6 +234,7 @@ impl<T: ArrayValue> Array<T> {
     ///
     /// # Panics
     /// Panics if the arrays have incompatible shapes
+    #[must_use]
     pub fn join_infallible(self, other: Self, allow_ext: bool) -> Self {
         self.join_impl(other, allow_ext, &()).unwrap()
     }
@@ -767,6 +769,7 @@ impl Value {
     ///
     /// # Panics
     /// Panics if the values have incompatible shapes
+    #[must_use]
     pub fn couple_infallible(mut self, other: Self, allow_ext: bool) -> Self {
         self.couple_impl(other, allow_ext, &()).unwrap();
         self
@@ -833,6 +836,7 @@ impl<T: ArrayValue> Array<T> {
     ///
     /// # Panics
     /// Panics if the arrays have incompatible shapes
+    #[must_use]
     pub fn couple_infallible(mut self, other: Self, allow_ext: bool) -> Self {
         self.couple_impl(other, allow_ext, &()).unwrap();
         self

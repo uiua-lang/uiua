@@ -39,6 +39,7 @@ impl Signature {
         }
     }
     /// Set the number of arguments and outputs of the under stack
+    #[must_use]
     pub fn with_under(self, under_args: usize, under_outputs: usize) -> Self {
         Self {
             args: self.args,
@@ -108,6 +109,7 @@ impl Signature {
         self.is_compatible_with(other) && self.args <= other.args
     }
     /// Get the signature that has the maximum of the arguments and outputs of this signature and another
+    #[must_use]
     pub fn max_with(self, other: Self) -> Self {
         Self::new(
             self.args().max(other.args()),
@@ -119,6 +121,7 @@ impl Signature {
         )
     }
     /// Compose signatures as if a function with signature `other` was called before a function with signature `self`
+    #[must_use]
     pub fn compose(self, other: Self) -> Self {
         let args = other.args() + self.args().saturating_sub(other.outputs());
         let outputs = self.outputs() + other.outputs().saturating_sub(self.args());
@@ -129,6 +132,7 @@ impl Signature {
         Self::new(args, outputs).with_under(under_args, under_outputs)
     }
     /// Get the un-inverse of this signature
+    #[must_use]
     pub fn inverse(self) -> Self {
         Self::new(self.outputs(), self.args())
     }
@@ -140,6 +144,7 @@ impl Signature {
         Some(Signature::new(self.outputs() + 1, self.args() - 1))
     }
     /// The signature on the under stack
+    #[must_use]
     pub fn under(self) -> Signature {
         Signature::new(self.under_args(), self.under_outputs())
     }

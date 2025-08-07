@@ -429,6 +429,7 @@ impl Value {
     }
     /// Get the row at the given index
     #[track_caller]
+    #[must_use]
     pub fn row(&self, i: usize) -> Self {
         val_as_arr!(self, |arr| arr.row(i).into())
     }
@@ -1311,6 +1312,7 @@ impl Value {
         }
     }
     /// Remove all top-level layers of boxing
+    #[must_use]
     pub fn unpacked(self) -> Self {
         match self {
             Self::Box(arr) => match arr.into_unboxed() {
@@ -1330,6 +1332,7 @@ impl Value {
         }
     }
     /// Apply a function to the highest-level unboxed value
+    #[must_use]
     pub fn map_boxed(self, f: impl FnOnce(Self) -> Self) -> Self {
         match self {
             Value::Box(boxed) => match boxed.into_scalar() {
@@ -1358,6 +1361,7 @@ impl Value {
         }
     }
     /// Remove a single layer of boxing
+    #[must_use]
     pub fn unboxed(self) -> Self {
         match self {
             Value::Box(boxed) => match boxed.into_scalar() {
@@ -1368,6 +1372,7 @@ impl Value {
         }
     }
     /// Remove a single layer of boxing if the condition is met
+    #[must_use]
     pub fn unboxed_if(self, unbox: bool) -> Self {
         if unbox {
             self.unboxed()
@@ -1376,6 +1381,7 @@ impl Value {
         }
     }
     /// Box the value if the condition is met
+    #[must_use]
     pub fn boxed_if(self, do_box: bool) -> Self {
         if do_box {
             Boxed(self).into()

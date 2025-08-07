@@ -168,6 +168,7 @@ impl Span {
         Sp { value, span: self }
     }
     /// Merge two spans
+    #[must_use]
     pub fn merge(self, other: Self) -> Self {
         match (self, other) {
             (Span::Code(a), Span::Code(b)) => Span::Code(a.merge(b)),
@@ -396,6 +397,7 @@ impl CodeSpan {
         self.end.char_pos.saturating_sub(self.start.char_pos)
     }
     /// Merge two spans
+    #[must_use]
     pub fn merge(mut self, end: Self) -> Self {
         self.merge_with(end);
         self
@@ -406,6 +408,7 @@ impl CodeSpan {
         self.end = self.end.max(end.end);
     }
     /// Get the span between this span and another after it
+    #[must_use]
     pub fn end_to(self, other: &Self) -> Self {
         CodeSpan {
             start: self.end,
@@ -458,6 +461,7 @@ impl CodeSpan {
         inputs.try_get_with(&self.src, |input| f(&input[self.byte_range()]))
     }
     /// Get just the span of the first character
+    #[must_use]
     pub fn just_start(&self, inputs: &Inputs) -> Self {
         let start = self.start;
         let mut end = self.start;
@@ -473,6 +477,7 @@ impl CodeSpan {
         }
     }
     /// Get just the span of the last character
+    #[must_use]
     pub fn just_end(&self, inputs: &Inputs) -> Self {
         let end = self.end;
         let mut start = self.end;

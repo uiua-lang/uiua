@@ -1317,6 +1317,7 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// `classify` the rows of the value
+    #[must_use]
     pub fn classify(&self) -> Self {
         if self.rank() == 0 {
             return 0.into();
@@ -1344,6 +1345,7 @@ impl Value {
         val_as_arr!(self, |a| a.deduplicate(env))
     }
     /// Mask the `unique` rows of the value
+    #[must_use]
     pub fn unique(&self) -> Self {
         val_as_arr!(self, Array::unique).into()
     }

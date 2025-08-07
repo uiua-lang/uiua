@@ -192,6 +192,7 @@ The following configuration options are available:
             impl FormatConfig {
                 $(
                     #[allow(missing_docs)]
+                    #[must_use]
                     pub fn [<with_ $name>](self, $name: $ty) -> Self {
                         Self {
                             $name,

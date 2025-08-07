@@ -125,6 +125,7 @@ impl SigNode {
         }
     }
     /// Call this node on N sets of arguments
+    #[must_use]
     pub fn on_all(self, n: usize, span: usize) -> SigNode {
         let sig = self.sig;
         let mut sig = sig.with_under(sig.under_args() * n, sig.under_outputs() * n);
@@ -166,6 +167,7 @@ impl SigNode {
         SigNode::new(sig, node)
     }
     /// Dip before calling this node
+    #[must_use]
     pub fn dipped(self, depth: usize, span: usize) -> SigNode {
         let mut sig = self.sig;
         sig.update_args_outputs(|a, o| (a + depth, o + depth));
@@ -350,6 +352,7 @@ impl Node {
         }
     }
     /// Slice the node to get a subnode
+    #[must_use]
     pub fn slice<R>(&self, range: R) -> Self
     where
         R: SliceIndex<[Node], Output = [Node]>,
@@ -401,6 +404,7 @@ impl Node {
     }
     /// Split the node at the given index
     #[track_caller]
+    #[must_use]
     pub fn split_off(&mut self, index: usize) -> Self {
         if let Node::Run(nodes) = self {
             let removed = EcoVec::from(&nodes[index..]);

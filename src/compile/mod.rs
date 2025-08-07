@@ -307,6 +307,7 @@ impl Compiler {
         }
     }
     /// Set the compiler's assembly
+    #[must_use]
     pub fn with_assembly(self, asm: Assembly) -> Self {
         Self { asm, ..self }
     }

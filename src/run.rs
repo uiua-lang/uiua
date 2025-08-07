@@ -285,16 +285,19 @@ impl Uiua {
         take(&mut self.asm)
     }
     /// Set whether to emit the time taken to execute each instruction
+    #[must_use]
     pub fn time_instrs(mut self, time_instrs: bool) -> Self {
         self.rt.time_instrs = time_instrs;
         self
     }
     /// Limit the execution duration
+    #[must_use]
     pub fn with_execution_limit(mut self, limit: Duration) -> Self {
         self.rt.execution_limit = Some(limit.as_secs_f64());
         self
     }
     /// Limit the execution duration
+    #[must_use]
     pub fn maybe_with_execution_limit(mut self, limit: Option<Duration>) -> Self {
         self.rt.execution_limit = limit.map(|limit| limit.as_secs_f64());
         self
@@ -302,12 +305,14 @@ impl Uiua {
     /// Set the recursion limit
     ///
     /// Default is 100 for release builds and 20 for debug builds
+    #[must_use]
     pub fn with_recursion_limit(mut self, limit: usize) -> Self {
         self.rt.recursion_limit = limit;
         self
     }
     /// Set the interrupted hook
     #[cfg(not(target_arch = "wasm32"))]
+    #[must_use]
     pub fn with_interrupt_hook(mut self, hook: impl Fn() -> bool + Send + Sync + 'static) -> Self {
         self.rt.interrupted = Some(Arc::new(hook));
         self
@@ -319,6 +324,7 @@ impl Uiua {
         self
     }
     /// Set the command line arguments
+    #[must_use]
     pub fn with_args(mut self, args: Vec<String>) -> Self {
         self.rt.cli_arguments = args;
         self
@@ -328,6 +334,7 @@ impl Uiua {
         self.rt.cli_arguments.as_slice()
     }
     /// Set the path of the file that is being executed
+    #[must_use]
     pub fn with_file_path(mut self, file_path: impl Into<PathBuf>) -> Self {
         self.rt.cli_file_path = file_path.into();
         self

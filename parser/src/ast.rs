@@ -857,6 +857,7 @@ impl From<Result<Complex, String>> for NumWord {
 
 impl NumWord {
     /// Map the number
+    #[must_use]
     pub fn map<R, C>(self, real: impl FnOnce(f64) -> R, complex: impl FnOnce(Complex) -> C) -> Self
     where
         C: Into<Self>,
@@ -869,6 +870,7 @@ impl NumWord {
         }
     }
     /// Map the number with another
+    #[must_use]
     pub fn map_with<R, C>(
         self,
         other: Self,

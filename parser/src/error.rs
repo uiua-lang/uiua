@@ -139,6 +139,7 @@ impl Report {
     /// Change whether to color the report with ANSI escape codes when converting it to a string
     ///
     /// Defaults to `true`
+    #[must_use]
     pub fn color(mut self, color: bool) -> Self {
         self.color = color;
         self

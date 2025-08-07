@@ -1,6 +1,4 @@
-use std::{env, fs, io, path::Path};
-
-use once_cell::sync::Lazy;
+use std::{env, fs, io, path::Path, sync::LazyLock};
 
 use crate::{Assembly, Compiler, NativeSys, UiuaResult};
 
@@ -43,5 +41,5 @@ fn load_asm() -> io::Result<Option<Assembly>> {
     Ok(Some(asm))
 }
 
-pub static STAND_ASM: Lazy<Option<Assembly>> =
-    Lazy::new(|| load_asm().unwrap_or_else(|e| panic!("{e}")));
+pub static STAND_ASM: LazyLock<Option<Assembly>> =
+    LazyLock::new(|| load_asm().unwrap_or_else(|e| panic!("{e}")));

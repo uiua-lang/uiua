@@ -139,7 +139,8 @@ The `uiua` crate has the following noteable feature flags:
     clippy::single_match,
     clippy::needless_range_loop,
     clippy::mutable_key_type,
-    clippy::match_like_matches_macro
+    clippy::match_like_matches_macro,
+    mismatched_lifetime_syntaxes
 )]
 #![warn(missing_docs)]
 

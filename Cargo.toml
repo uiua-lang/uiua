@@ -171,9 +171,9 @@ required-features = ["binary"]
 members = ["site", "tests_ffi", "pad/editor", "parser"]
 
 [workspace.lints.clippy]
-print_stdout = "warn"
-print_stderr = "allow"
 dbg_macro = "warn"
+print_stderr = "allow"
+print_stdout = "warn"
 
 [lints]
 workspace = true

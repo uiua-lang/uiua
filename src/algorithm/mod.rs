@@ -31,6 +31,7 @@ pub mod media;
 mod monadic;
 pub mod path;
 pub mod pervade;
+pub mod recur;
 pub mod reduce;
 pub mod stencil;
 pub mod table;

@@ -136,6 +136,7 @@ The `uiua` crate has the following noteable feature flags:
 */
 
 #![allow(
+    unknown_lints,
     clippy::single_match,
     clippy::needless_range_loop,
     clippy::mutable_key_type,

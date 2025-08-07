@@ -334,7 +334,12 @@ mod enabled {
                     let mut out_values = out_values;
                     out_values.pop().unwrap()
                 } else {
-                    [ret].into_iter().chain(out_values).map(Boxed).collect::<Array<_>>().into()
+                    [ret]
+                        .into_iter()
+                        .chain(out_values)
+                        .map(Boxed)
+                        .collect::<Array<_>>()
+                        .into()
                 }
             };
 
@@ -420,7 +425,7 @@ mod enabled {
         libffi::raw::ffi_call(
             cif.as_raw_ptr(),
             Some(*fun.as_safe_fun()),
-            result.as_mut_ptr() as *mut c_void,
+            result.as_mut_ptr().cast(),
             args.as_ptr() as *mut *mut c_void,
         );
         result
@@ -467,10 +472,11 @@ mod enabled {
             FfiType::ULongLong => arr!(c_ulonglong),
             _ => Ok(if ptr.ty.is_string() {
                 (0..len)
-                        .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
-                        .collect::<Result<Vec<_>, String>>()?
-                        .into_iter()
-                        .map(Boxed).collect()
+                    .map(|index| ptr.ty.unrepr(&repr[index * size..(index + 1) * size]))
+                    .collect::<Result<Vec<_>, String>>()?
+                    .into_iter()
+                    .map(Boxed)
+                    .collect()
             } else {
                 Value::from_row_values_infallible(
                     (0..len)

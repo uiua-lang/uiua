@@ -364,14 +364,14 @@ impl Deref for Value {
     type Target = ValueRepr;
     fn deref(&self) -> &Self::Target {
         // Safety: The layout of `Value` should always match that of `Value`
-        unsafe { &*(std::ptr::from_ref(self) as *const ValueRepr) }
+        unsafe { &*std::ptr::from_ref(self).cast() }
     }
 }
 
 impl DerefMut for Value {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // Safety: The layout of `Value` should always match that of `Value`
-        unsafe { &mut *(std::ptr::from_mut(self) as *mut ValueRepr) }
+        unsafe { &mut *std::ptr::from_mut(self).cast() }
     }
 }
 

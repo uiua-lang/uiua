@@ -974,9 +974,7 @@ impl Uiua {
     }
     pub(crate) fn span_index(&self) -> usize {
         self.rt.call_stack.last().map_or(0, |frame| {
-            (frame.spans.last())
-                .map(|(i, _)| *i)
-                .unwrap_or(frame.call_span)
+            (frame.spans.last()).map_or(frame.call_span, |(i, _)| *i)
         })
     }
     /// Get the span of the current function call

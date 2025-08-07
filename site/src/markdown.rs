@@ -153,16 +153,13 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         }
         NodeValue::Link(link) => {
             let text = leaf_text(node).unwrap_or_default();
-            let name = text
-                .rsplit_once(' ')
-                .map(|(a, b)| {
-                    if a.chars().count() > b.chars().count() {
-                        a
-                    } else {
-                        b
-                    }
-                })
-                .unwrap_or(&text);
+            let name = text.rsplit_once(' ').map_or(text.as_str(), |(a, b)| {
+                if a.chars().count() > b.chars().count() {
+                    a
+                } else {
+                    b
+                }
+            });
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 view!(<Prim prim=prim/>).into_view()
             } else {
@@ -278,16 +275,13 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         }
         NodeValue::Link(link) => {
             let text = leaf_text(node).unwrap_or_default();
-            let name = text
-                .rsplit_once(' ')
-                .map(|(a, b)| {
-                    if a.chars().count() > b.chars().count() {
-                        a
-                    } else {
-                        b
-                    }
-                })
-                .unwrap_or(&text);
+            let name = text.rsplit_once(' ').map_or(text.as_str(), |(a, b)| {
+                if a.chars().count() > b.chars().count() {
+                    a
+                } else {
+                    b
+                }
+            });
             if let Some(prim) = Primitive::from_name(name).or_else(|| Primitive::from_name(&text)) {
                 let symbol_class = format!("prim-glyph {}", prim_class(prim));
                 let symbol = prim.to_string();
@@ -332,8 +326,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                 .map(|s| {
                     s.chars()
                         .position(|c| c == '#')
-                        .map(|i| i + 1)
-                        .unwrap_or_else(|| s.chars().count() + 2)
+                        .map_or_else(|| s.chars().count() + 2, |i| i + 1)
                 })
                 .max()
                 .unwrap_or(0);

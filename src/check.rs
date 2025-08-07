@@ -494,7 +494,7 @@ impl VirtualEnv {
                 }
                 BothImpl(sub) | UnBothImpl(sub) => {
                     let [f] = get_args(args)?;
-                    let reused = sub.side.map(|side| side.n.unwrap_or(1)).unwrap_or(0);
+                    let reused = sub.side.map_or(0, |side| side.n.unwrap_or(1));
                     let n = sub.num.unwrap_or(2) as usize;
                     let unique = f.args().saturating_sub(reused) * n;
                     let sig = Signature::new(unique + reused, n * f.outputs())

@@ -198,10 +198,10 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         }
     };
     let update_title = move || {
-        current_prim
-            .get()
-            .map(|p| format!("{} - {} Docs", lang(), p.name()))
-            .unwrap_or_else(|| format!("{} Docs", lang()))
+        current_prim.get().map_or_else(
+            || format!("{} Docs", lang()),
+            |p| format!("{} - {} Docs", lang(), p.name()),
+        )
     };
 
     set_timeout(

@@ -2650,8 +2650,7 @@ impl Compiler {
         let take = self
             .scopes()
             .position(|sc| matches!(sc.kind, ScopeKind::File(_)))
-            .map(|i| i + 1)
-            .unwrap_or(usize::MAX);
+            .map_or(usize::MAX, |i| i + 1);
         self.scopes()
             .take(take)
             .any(|sc| sc.experimental || sc.experimental_error)
@@ -3025,10 +3024,10 @@ fn line_sig(line: &[Sp<Word>]) -> Option<Sp<DocCommentSig>> {
                 while rest.last().is_some_and(|w| matches!(w.value, Word::Spaces)) {
                     rest = &rest[..rest.len() - 1];
                 }
-                let span = (rest.first())
-                    .zip(rest.last())
-                    .map(|(f, l)| f.span.clone().merge(l.span.clone()))
-                    .unwrap_or_else(|| last.span.clone());
+                let span = (rest.first()).zip(rest.last()).map_or_else(
+                    || last.span.clone(),
+                    |(f, l)| f.span.clone().merge(l.span.clone()),
+                );
                 span.sp(sig)
             }),
             _ => None,

@@ -21,7 +21,6 @@ inline_always = "allow"  # TODO: benchmark inlines
 missing_panics_doc = "allow"  # TODO
 similar_names = "allow"  # 26
 float_cmp = "allow"  # 42
-map_unwrap_or = "allow"  # 56
 return_self_not_must_use = "allow"  # 63
 needless_pass_by_value = "allow"  # 70
 redundant_closure_for_method_calls = "allow"  # 76

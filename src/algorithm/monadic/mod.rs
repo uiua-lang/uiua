@@ -304,9 +304,7 @@ impl Value {
                     let skip = if max_dec == 0 {
                         0
                     } else {
-                        dot_pos
-                            .map(|i| max_dec - (n.len() - i - 1))
-                            .unwrap_or(max_dec + 1)
+                        dot_pos.map_or(max_dec + 1, |i| max_dec - (n.len() - i - 1))
                     };
                     for (s, c) in s.iter_mut().rev().skip(skip).zip(n.chars().rev()) {
                         *s = c;
@@ -1900,7 +1898,7 @@ impl Value {
                     .iter()
                     .zip(indices.iter().skip(1))
                     .all(|(&a, &b)| a <= b);
-                let mut size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
+                let mut size = indices.iter().max().map_or(0, |&i| i + 1);
                 if let Some(&min) = min_size.first() {
                     size = size.max(min);
                 }

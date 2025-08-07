@@ -123,8 +123,7 @@ where
                 let prev_end = haystack[curr..]
                     .windows(delim_slice.len())
                     .position(|win| win.iter().zip(delim_slice).all(|(a, b)| a.array_eq(b)))
-                    .map(|i| curr + i)
-                    .unwrap_or(haystack.len());
+                    .map_or(haystack.len(), |i| curr + i);
                 let next_start = prev_end + delim_slice.len();
                 if curr == prev_end && !keep_empty {
                     curr = next_start;

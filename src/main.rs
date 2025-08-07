@@ -1374,7 +1374,7 @@ fn check(path: Option<PathBuf>) -> UiuaResult {
     let paths = uiua_files(path.as_deref(), None)?;
     let path_count = paths.len();
     let mut successes = 0;
-    let width = terminal_size().map(|(w, _)| w.0 as usize).unwrap_or(60);
+    let width = terminal_size().map_or(60, |(w, _)| w.0 as usize);
     for (i, path) in paths.into_iter().enumerate() {
         let message_length = format!("Checking {} ({}/{})", path.display(), i + 1, path_count)
             .chars()

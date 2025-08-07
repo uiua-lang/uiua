@@ -804,8 +804,7 @@ impl SysBackend for NativeSys {
             .and_then(|device| {
                 hodaun::cpal::traits::DeviceTrait::default_output_config(&device).ok()
             })
-            .map(|config| config.sample_rate().0)
-            .unwrap_or(44100)
+            .map_or(44100, |config| config.sample_rate().0)
     }
     #[cfg(feature = "audio")]
     fn stream_audio(&self, f: crate::AudioStreamFn) -> Result<(), String> {

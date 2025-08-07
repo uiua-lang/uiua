@@ -17,9 +17,7 @@ struct BlogParam(String);
 impl IntoParam for BlogParam {
     fn into_param(value: Option<&str>, _: &str) -> Result<Self, ParamsError> {
         let s = value.unwrap_or_default();
-        let name = urlencoding::decode(s)
-            .map(Into::into)
-            .unwrap_or_else(|_| s.into());
+        let name = urlencoding::decode(s).map_or_else(|_| s.into(), Into::into);
         Ok(BlogParam(name))
     }
 }

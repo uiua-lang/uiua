@@ -879,8 +879,7 @@ mod server {
             let path = path
                 .to_string_lossy()
                 .strip_prefix("\\\\?\\")
-                .map(PathBuf::from)
-                .unwrap_or_else(|| path.to_path_buf());
+                .map_or_else(|| path.to_path_buf(), PathBuf::from);
             let path = current_dir()
                 .ok()
                 .and_then(|curr| pathdiff::diff_paths(&path, curr))
@@ -1385,8 +1384,7 @@ mod server {
                             range: uiua_span_to_lsp(&sp.span, &doc.asm.inputs),
                             new_text: prim
                                 .glyph()
-                                .map(|c| c.to_string())
-                                .unwrap_or_else(|| prim.name().to_string()),
+                                .map_or_else(|| prim.name().to_string(), |c| c.to_string()),
                         })),
                         insert_text_mode: if prim.glyph().is_none() {
                             // Insert a space before the completion if the token is not a glyph

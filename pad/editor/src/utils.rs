@@ -126,7 +126,7 @@ impl State {
             return;
         };
         let code = get_code(&self.code_id);
-        let before = self.past.last().map(|r| r.after).unwrap_or(cursor);
+        let before = self.past.last().map_or(cursor, |r| r.after);
         let new_curr = Record {
             code: code.clone(),
             before,

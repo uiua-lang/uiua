@@ -27,9 +27,7 @@ impl Value {
                 } else if n.fract() == 0.0 && n.abs() < i64::MAX as f64 {
                     serde_json::Value::Number((n as i64).into())
                 } else {
-                    serde_json::Number::from_f64(n)
-                        .map(Into::into)
-                        .unwrap_or(serde_json::Value::Null)
+                    serde_json::Number::from_f64(n).map_or(serde_json::Value::Null, Into::into)
                 }
             }
             Value::Byte(bytes) if bytes.rank() == 0 => {

@@ -1359,7 +1359,7 @@ impl ImplPrimitive {
                     .map(|v| &v.shape)
                     .max_by_key(|sh| sh.len())
                     .cloned();
-                let max_rank = max_shape.as_ref().map(|sh| sh.len()).unwrap_or(0);
+                let max_rank = max_shape.as_ref().map_or(0, |sh| sh.len());
                 for mut val in vals {
                     val.deshape_sub(n + 1, 0, val.rank() == max_rank, env)?;
                     env.push(val);

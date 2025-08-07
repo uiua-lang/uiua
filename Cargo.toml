@@ -165,9 +165,18 @@ system = ["libffi?/system"]
 
 [[bin]]
 name = "uiua"
+required-features = ["binary"]
 
 [workspace]
 members = ["site", "tests_ffi", "pad/editor", "parser"]
+
+[workspace.lints.clippy]
+print_stdout = "warn"
+print_stderr = "allow"
+dbg_macro = "warn"
+
+[lints]
+workspace = true
 
 [profile.dev]
 incremental = true

@@ -663,6 +663,7 @@ impl SysBackend for NativeSys {
     fn allow_thread_spawning(&self) -> bool {
         true
     }
+    #[allow(clippy::print_stdout)]
     #[cfg(all(feature = "terminal_image", feature = "image"))]
     fn show_image(&self, image: image::DynamicImage, _label: Option<&str>) -> Result<(), String> {
         let (_width, _height) = if let Some((w, h)) = terminal_size() {
@@ -1279,6 +1280,7 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.git_paths.insert(url.to_string(), res.clone());
         res
     }
+    #[allow(clippy::print_stdout)]
     fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
         if !self.output_enabled() {
             return Ok(true);
@@ -1299,6 +1301,7 @@ impl SysBackend for NativeSys {
     }
 }
 
+#[allow(clippy::print_stdout)]
 #[doc(hidden)]
 pub fn print_stack(stack: &[Value], color: bool) {
     #[cfg(feature = "window")]

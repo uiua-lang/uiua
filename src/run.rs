@@ -274,6 +274,7 @@ impl Uiua {
         take(&mut self.rt.reports)
     }
     /// Print all pending reports
+    #[allow(clippy::print_stdout)]
     pub fn print_reports(&mut self) {
         for report in self.take_reports() {
             eprintln!("{report}");
@@ -790,6 +791,7 @@ impl Uiua {
                 Ok(())
             }
         };
+        #[allow(clippy::print_stdout)]
         if self.rt.time_instrs {
             let end_time = self.rt.backend.now();
             let padding = self.rt.call_stack.len().saturating_sub(1) * 2;

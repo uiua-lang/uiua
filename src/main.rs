@@ -1,3 +1,4 @@
+#![allow(clippy::print_stdout)]
 #[cfg(not(feature = "binary"))]
 compile_error!("To compile the uiua interpreter binary, you must enable the `binary` feature flag");
 

@@ -10,6 +10,9 @@ repository = "https://github.com/uiua-lang/uiua"
 rust-version = "1.82.0"
 version = "0.17.0-dev.2"
 
+[lints]
+workspace = true
+
 [dependencies]
 bytemuck = {version = "1.17", features = ["must_cast", "derive", "extern_crate_alloc"]}
 colored = "2"

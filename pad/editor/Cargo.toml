@@ -6,6 +6,9 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[lints]
+workspace = true
+
 [dependencies]
 leptos = { version = "0.6.10", features = ["csr"] }
 js-sys = "0.3.69"

@@ -208,6 +208,7 @@ impl Primitive {
             alias!((s, Un), (et, By)),
             alias!((wr, Sub), (en, By), (ch, Not)),
             alias!((sel, Select), (first, First)),
+            alias!((l, Un), (og, Exp)),
             (
                 "kork",
                 &[

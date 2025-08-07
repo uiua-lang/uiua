@@ -839,8 +839,10 @@ impl Formatter<'_> {
                                         .iter()
                                         .find_map(|l| l.first())
                                         .zip(lines.iter().rev().find_map(|l| l.last()))
-                                        .map(|(s, e)| s.span.clone().merge(e.span.clone()))
-                                        .unwrap_or_else(|| span.clone());
+                                        .map_or_else(
+                                            || span.clone(),
+                                            |(s, e)| s.span.clone().merge(e.span.clone()),
+                                        );
                                     lines.push(Vec::new());
                                     self.format_words(
                                         &[span.sp(Word::Func(Func {
@@ -956,20 +958,14 @@ impl Formatter<'_> {
     }
     fn format_ref(&mut self, r: &Ref) {
         self.pre_space(
-            (r.path.first())
-                .map(|comp| comp.module.value.as_str())
-                .unwrap_or(r.name.value.as_str()),
+            (r.path.first()).map_or(r.name.value.as_str(), |comp| comp.module.value.as_str()),
         );
         self.format_ref_path(&r.path, false);
         self.push(&r.name.span, &r.name.value);
     }
     fn format_ref_path(&mut self, comps: &[RefComponent], incomplete: bool) {
         if incomplete {
-            self.pre_space(
-                (comps.first())
-                    .map(|comp| comp.module.value.as_str())
-                    .unwrap_or(""),
-            );
+            self.pre_space((comps.first()).map_or("", |comp| comp.module.value.as_str()));
         }
         for comp in comps {
             self.push(&comp.module.span, &comp.module.value);

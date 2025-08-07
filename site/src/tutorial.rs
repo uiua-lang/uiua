@@ -153,19 +153,19 @@ impl IntoParam for TutorialPage {
 fn TutorialNav(page: TutorialPage) -> impl IntoView {
     let next = move || {
         page.next()
-            .map(|p| {
-                view!( <div>"Next: "<A href=format!("/tutorial/{}", p.path())>{p.title()}</A>" 〉"</div>)
-                    .into_view()
+            .map_or_else(
+                || view!( <div/>).into_view(),
+                |p| {
+                    view!( <div>"Next: "<A href=format!("/tutorial/{}", p.path())>{p.title()}</A>" 〉"</div>).into_view()
             })
-            .unwrap_or_else(|| view!( <div/>).into_view())
     };
     let previous = move || {
         page.previous()
-            .map(|p| {
-                view!( <div>"〈 Previous: "<A href=format!("/tutorial/{}", p.path())>{p.title()}</A></div>)
-                    .into_view()
+            .map_or_else(
+                || view!( <div/>).into_view(),
+                |p| {
+                    view!( <div>"〈 Previous: "<A href=format!("/tutorial/{}", p.path())>{p.title()}</A></div>).into_view()
             })
-            .unwrap_or_else(|| view!( <div/>).into_view())
     };
 
     view! {

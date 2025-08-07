@@ -365,7 +365,7 @@ impl Compiler {
         // Make constructor
         let constructor_args: usize = fields
             .iter()
-            .map(|f| f.init.as_ref().map(|sn| sn.sig.args()).unwrap_or(1))
+            .map(|f| f.init.as_ref().map_or(1, |sn| sn.sig.args()))
             .sum();
         let mut node = if has_fields {
             let mut field_nodes = EcoVec::with_capacity(fields.len());

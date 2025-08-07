@@ -113,16 +113,14 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     if bytes.rank() == 1 {
                         if bytes.meta.is_sorted_up() {
                             env.push(
-                                (bytes.data.first().copied().map(f64::from))
-                                    .unwrap_or(f64::INFINITY)
+                                (bytes.data.first().copied().map_or(f64::INFINITY, f64::from))
                                     .min(fill.unwrap_or(f64::INFINITY)),
                             );
                             return Ok(());
                         }
                         if bytes.meta.is_sorted_down() {
                             env.push(
-                                (bytes.data.last().copied().map(f64::from))
-                                    .unwrap_or(f64::INFINITY)
+                                (bytes.data.last().copied().map_or(f64::INFINITY, f64::from))
                                     .min(fill.unwrap_or(f64::INFINITY)),
                             );
                             return Ok(());
@@ -147,17 +145,23 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     if bytes.rank() == 1 {
                         if bytes.meta.is_sorted_up() {
                             env.push(
-                                (bytes.data.last().copied().map(f64::from))
-                                    .unwrap_or(f64::NEG_INFINITY)
-                                    .max(fill.unwrap_or(f64::NEG_INFINITY)),
+                                (bytes
+                                    .data
+                                    .last()
+                                    .copied()
+                                    .map_or(f64::NEG_INFINITY, f64::from))
+                                .max(fill.unwrap_or(f64::NEG_INFINITY)),
                             );
                             return Ok(());
                         }
                         if bytes.meta.is_sorted_down() {
                             env.push(
-                                (bytes.data.first().copied().map(f64::from))
-                                    .unwrap_or(f64::NEG_INFINITY)
-                                    .max(fill.unwrap_or(f64::NEG_INFINITY)),
+                                (bytes
+                                    .data
+                                    .first()
+                                    .copied()
+                                    .map_or(f64::NEG_INFINITY, f64::from))
+                                .max(fill.unwrap_or(f64::NEG_INFINITY)),
                             );
                             return Ok(());
                         }
@@ -879,8 +883,7 @@ fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
             if xs.row_count() == 0 {
                 env.push(
                     env.value_fill()
-                        .map(|fv| fv.value.clone())
-                        .unwrap_or_else(|| (xs.first_dim_zero())),
+                        .map_or_else(|| (xs.first_dim_zero()), |fv| fv.value.clone()),
                 );
                 return Ok(());
             }

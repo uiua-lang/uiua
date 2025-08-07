@@ -86,8 +86,7 @@ fn path_impl(
     let nei_sig = neighbors.sig;
     let heu_sig = heuristic
         .as_ref()
-        .map(|h| h.sig)
-        .unwrap_or_else(|| Signature::new(0, 1));
+        .map_or_else(|| Signature::new(0, 1), |h| h.sig);
     let isg_sig = is_goal.sig;
     for (name, sig, req_out) in &[
         ("neighbors", nei_sig, [1, 2].as_slice()),
@@ -345,7 +344,7 @@ fn path_impl(
                     let mut new_paths = Vec::new();
                     currs.retain_mut(|path| {
                         let parents = came_from.get(path.last().unwrap());
-                        match parents.map(|p| p.len()).unwrap_or(0) {
+                        match parents.map_or(0, |p| p.len()) {
                             0 => {
                                 these_paths.push(take(path));
                                 false

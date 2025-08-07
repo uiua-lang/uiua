@@ -1926,10 +1926,7 @@ impl<T: RealArrayValue> Array<T> {
             let slice = data.make_mut();
             let mut bases = bases.to_vec();
             let count = row_len.saturating_sub(bases.len());
-            bases.extend(repeat_n(
-                fill.as_ref().map(|fv| fv.value).unwrap_or(1.0),
-                count,
-            ));
+            bases.extend(repeat_n(fill.as_ref().map_or(1.0, |fv| fv.value), count));
             if fill.is_some_and(|fv| fv.is_left()) {
                 bases.rotate_right(count);
             }

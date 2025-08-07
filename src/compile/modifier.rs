@@ -1390,11 +1390,7 @@ impl Compiler {
                 Node::Mod(Fold, eco_vec![sn], span)
             }
             prim @ (Spawn | Pool) => {
-                let recurses_before = self
-                    .current_bindings
-                    .last()
-                    .map(|curr| curr.recurses)
-                    .unwrap_or(0);
+                let recurses_before = self.current_bindings.last().map_or(0, |curr| curr.recurses);
                 let (sn, span) = self.monadic_modifier_op(modified)?;
                 if let Some(curr) = self.current_bindings.last() {
                     if curr.recurses > recurses_before {

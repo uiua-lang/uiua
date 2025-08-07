@@ -894,8 +894,7 @@ impl<T: ArrayValue> Array<T> {
     fn anti_drop(mut self, mut index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         let fill = env
             .array_fill::<T>()
-            .map(|fv| fv.value)
-            .unwrap_or_else(|_| T::proxy().into());
+            .map_or_else(|_| T::proxy().into(), |fv| fv.value);
         if self.shape.len() < index.len() {
             return Err(env.error(format!(
                 "Index array specifies {} axes, \
@@ -1526,11 +1525,7 @@ impl<T: ArrayValue> Array<T> {
             .iter()
             .map(|&i| normalize_index(i, indices.len()))
             .collect();
-        let row_count = normalized_indices
-            .iter()
-            .max()
-            .map(|&max| max + 1)
-            .unwrap_or(0);
+        let row_count = normalized_indices.iter().max().map_or(0, |&max| max + 1);
         // Check indices totality
         let indices_are_total = indices_are_total(indices, row_count);
         // Get fill if not total

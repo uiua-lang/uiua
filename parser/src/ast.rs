@@ -165,12 +165,8 @@ pub struct ImportLine {
 impl Import {
     /// The full span of the import
     pub fn span(&self) -> CodeSpan {
-        let first = (self.name.as_ref())
-            .map(|n| n.span.clone())
-            .unwrap_or_else(|| self.path.span.clone());
-        let last = (self.items().last())
-            .map(|i| i.span.clone())
-            .unwrap_or_else(|| self.path.span.clone());
+        let first = (self.name.as_ref()).map_or_else(|| self.path.span.clone(), |n| n.span.clone());
+        let last = (self.items().last()).map_or_else(|| self.path.span.clone(), |i| i.span.clone());
         first.merge(last)
     }
     /// The imported items
@@ -249,16 +245,14 @@ pub struct FieldInit {
 impl DataDef {
     /// Get the span of this data definition
     pub fn span(&self) -> CodeSpan {
-        let end = self
-            .fields
-            .as_ref()
-            .map(|fields| fields.span())
-            .unwrap_or_else(|| {
+        let end = self.fields.as_ref().map_or_else(
+            || {
                 self.name
                     .as_ref()
-                    .map(|name| name.span.clone())
-                    .unwrap_or_else(|| self.init_span.clone())
-            });
+                    .map_or_else(|| self.init_span.clone(), |name| name.span.clone())
+            },
+            |fields| fields.span(),
+        );
         let mut span = (self.init_span.clone()).merge(end);
         if let Some(words) = &self.func {
             if let Some(word) = words.last() {
@@ -295,8 +289,7 @@ impl DataField {
             self.init.as_ref().map(|d| {
                 d.words
                     .last()
-                    .map(|w| w.span.clone())
-                    .unwrap_or_else(|| d.arrow_span.clone())
+                    .map_or_else(|| d.arrow_span.clone(), |w| w.span.clone())
             })
         }) else {
             return self.name.span.clone();

@@ -182,8 +182,7 @@ impl<T: ArrayValue> Array<T> {
                     for elem in needle.row_slices() {
                         let index = (haystack.row_slices())
                             .position(|row| ArrayCmpSlice(row) == ArrayCmpSlice(elem))
-                            .map(|i| i as f64)
-                            .unwrap_or(default);
+                            .map_or(default, |i| i as f64);
                         result_data.push(index);
                     }
                 } else {
@@ -254,8 +253,7 @@ impl<T: ArrayValue> Array<T> {
                                 r.len() == needle.data.len()
                                     && r.iter().zip(&needle.data).all(|(a, b)| a.array_eq(b))
                             })
-                            .map(|i| i as f64)
-                            .unwrap_or(default))
+                            .map_or(default, |i| i as f64))
                         .into()
                     }
                 } else {
@@ -290,7 +288,7 @@ impl<T: ArrayValue> Array<T> {
                     let mut cache = HashMap::with_capacity(needle.row_count());
                     'needle: for elem in needle.row_slices() {
                         let elem_key = ArrayCmpSlice(elem);
-                        let start_index = cache.get(&elem_key).map(|&i| i + 1).unwrap_or(0);
+                        let start_index = cache.get(&elem_key).map_or(0, |&i| i + 1);
                         for i in start_index..haystack.row_count() {
                             let of_key = ArrayCmpSlice(haystack.row_slice(i));
                             if of_key == elem_key {
@@ -365,8 +363,7 @@ impl<T: ArrayValue> Array<T> {
                             r.len() == needle.data.len()
                                 && r.iter().zip(&needle.data).all(|(a, b)| a.array_eq(b))
                         })
-                        .map(|i| i as f64)
-                        .unwrap_or(default))
+                        .map_or(default, |i| i as f64))
                     .into()
                 } else {
                     let mut rows = Vec::with_capacity(haystack.row_count());

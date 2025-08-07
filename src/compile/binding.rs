@@ -294,12 +294,14 @@ impl Compiler {
         };
         let words_span = (binding.words.first())
             .zip(binding.words.last())
-            .map(|(f, l)| f.span.clone().merge(l.span.clone()))
-            .unwrap_or_else(|| {
-                let mut span = binding.arrow_span;
-                span.start = span.end;
-                span
-            });
+            .map_or_else(
+                || {
+                    let mut span = binding.arrow_span;
+                    span.start = span.end;
+                    span
+                },
+                |(f, l)| f.span.clone().merge(l.span.clone()),
+            );
 
         // Compile the body
         let in_function = self

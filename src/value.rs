@@ -228,20 +228,25 @@ impl Value {
     }
     pub(crate) fn proxy_scalar(&self, env: &Uiua) -> Self {
         match self {
-            Self::Num(_) => (env.scalar_fill().map(|fv| fv.value))
-                .unwrap_or_else(|_| f64::proxy())
+            Self::Num(_) => env
+                .scalar_fill()
+                .map_or_else(|_| f64::proxy(), |fv| fv.value)
                 .into(),
-            Self::Byte(_) => (env.scalar_fill().map(|fv| fv.value))
-                .unwrap_or_else(|_| u8::proxy())
+            Self::Byte(_) => env
+                .scalar_fill()
+                .map_or_else(|_| u8::proxy(), |fv| fv.value)
                 .into(),
-            Self::Complex(_) => (env.scalar_fill().map(|fv| fv.value))
-                .unwrap_or_else(|_| Complex::proxy())
+            Self::Complex(_) => env
+                .scalar_fill()
+                .map_or_else(|_| Complex::proxy(), |fv| fv.value)
                 .into(),
-            Self::Char(_) => (env.scalar_fill().map(|fv| fv.value))
-                .unwrap_or_else(|_| char::proxy())
+            Self::Char(_) => env
+                .scalar_fill()
+                .map_or_else(|_| char::proxy(), |fv| fv.value)
                 .into(),
-            Self::Box(_) => (env.scalar_fill().map(|fv| fv.value))
-                .unwrap_or_else(|_| Boxed::proxy())
+            Self::Box(_) => env
+                .scalar_fill()
+                .map_or_else(|_| Boxed::proxy(), |fv| fv.value)
                 .into(),
         }
     }
@@ -256,8 +261,7 @@ impl Value {
                 shape,
                 CowSlice::from_elem(
                     env.scalar_fill()
-                        .map(|fv| fv.value)
-                        .unwrap_or_else(|_| f64::proxy()),
+                        .map_or_else(|_| f64::proxy(), |fv| fv.value),
                     elem_count,
                 ),
             )
@@ -266,8 +270,7 @@ impl Value {
                 shape,
                 CowSlice::from_elem(
                     env.scalar_fill()
-                        .map(|fv| fv.value)
-                        .unwrap_or_else(|_| u8::proxy()),
+                        .map_or_else(|_| u8::proxy(), |fv| fv.value),
                     elem_count,
                 ),
             )
@@ -276,8 +279,7 @@ impl Value {
                 shape,
                 CowSlice::from_elem(
                     env.scalar_fill()
-                        .map(|fv| fv.value)
-                        .unwrap_or_else(|_| Complex::proxy()),
+                        .map_or_else(|_| Complex::proxy(), |fv| fv.value),
                     elem_count,
                 ),
             )
@@ -286,8 +288,7 @@ impl Value {
                 shape,
                 CowSlice::from_elem(
                     env.scalar_fill()
-                        .map(|fv| fv.value)
-                        .unwrap_or_else(|_| char::proxy()),
+                        .map_or_else(|_| char::proxy(), |fv| fv.value),
                     elem_count,
                 ),
             )
@@ -296,8 +297,7 @@ impl Value {
                 shape,
                 CowSlice::from_elem(
                     env.scalar_fill()
-                        .map(|fv| fv.value)
-                        .unwrap_or_else(|_| Boxed::proxy()),
+                        .map_or_else(|_| Boxed::proxy(), |fv| fv.value),
                     elem_count,
                 ),
             )

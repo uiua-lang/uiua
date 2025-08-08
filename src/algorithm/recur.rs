@@ -71,6 +71,12 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
         scalar_child,
     }) = stack.pop()
     {
+        env.respect_execution_limit()?;
+        if stack.len() > 1_000_000 {
+            return Err(env.error(
+                "recur reached more than 1 million nodes at once. The base case may be incorrect.",
+            ));
+        }
         // println!("value: {value:?}, parent: {parent:?}, child_nodes: {child_nodes:?}");
         if let Some(child_nodes) = child_nodes {
             env.push_all(
@@ -144,21 +150,23 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
                 env.push(value.clone());
                 env.exec(children.clone())?;
                 let children = env.pop("child nodes")?;
-                let index = stack.len();
-                // println!("{value:?} has children {children:?}");
-                stack.push(RecNode {
-                    parent,
-                    value,
-                    child_nodes: Some(Vec::new()),
-                    scalar_child: children.rank() == 0,
-                });
-                for value in children.into_rows() {
+                if children.row_count() > 0 {
+                    let index = stack.len();
+                    // println!("{value:?} has children {children:?}");
                     stack.push(RecNode {
-                        parent: Some(index),
+                        parent,
                         value,
-                        child_nodes: None,
-                        scalar_child: false,
+                        child_nodes: Some(Vec::new()),
+                        scalar_child: children.rank() == 0,
                     });
+                    for value in children.into_rows() {
+                        stack.push(RecNode {
+                            parent: Some(index),
+                            value,
+                            child_nodes: None,
+                            scalar_child: false,
+                        });
+                    }
                 }
             }
         }

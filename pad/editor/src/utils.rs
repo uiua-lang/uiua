@@ -1523,7 +1523,7 @@ pub fn set_autorun(autorun: bool) {
 }
 
 pub fn get_autoplay() -> bool {
-    get_local_var("autoplay", || true)
+    get_local_var("autoplay", || false)
 }
 pub fn set_autoplay(autoplay: bool) {
     set_local_var("autoplay", autoplay)

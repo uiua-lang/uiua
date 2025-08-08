@@ -3074,22 +3074,27 @@ primitive!(
     /// Many of the examples here can be better expressed using array operations, and are merely demonstrative.
     ///
     /// We can express a simple recursive factorial function like so.
-    /// ex: Fact ← recur(<2|-1|×)
+    /// ex: # Experimental!
+    ///   : Fact ← recur(<2|-1|×)
     ///   : Fact 5
     ///   : Fact 7
     /// The [less than]`2` determines when to cease recursion. The [subtract]`1` is the next recursive call, the "child node". The [multiply] gets called on a node and the result of its child.
     ///
     /// We can express the classic recursive fibanacci function in a similar way. In this example, the second function returns two children. The third function ignores the parent node and simply adds the results of the children.
-    /// ex: Fib ← recur(<2|⊃[-1|-2]|/+)
+    /// ex: # Experimental!
+    ///   : Fib ← recur(<2|⊃[-1|-2]|/+)
     ///   : Fib 10
-    /// Because a boolean result from the first function returns a node as its own result, that example interprets the 0th fibonacci number to be `0``.
+    /// Because a boolean result from the first function returns a node as its own result, that example interprets the 0th fibonacci number to be `0`.
     /// If we instead want the 0th fibonacci to be `1`, we can return a list of 0 or 1 items from the first function instead. A 1-item list is interpreted as a leaf node, with that item as the result.
-    /// ex: Fib ← recur(▽⊙1<2|⊃[-1|-2]|/+)
+    /// In this example, we use `keep``dip``1` to return `[1]` if the node is `less than``2` or `[]` if it is not.
+    /// ex: # Experimental!
+    ///   : Fib ← recur(▽⊙1<2|⊃[-1|-2]|/+)
     ///   : Fib 10
     ///
     /// The results of a node's children will be passed to the third function as an array. The creation of this array will fail if the results of the children have incompatible shapes. There is an acception for box lists, which will be [join]ed instead of used as rows. This makes it possible to combine variable-length lists.
     /// One example use case for this is listing all files in all subdirectories.
-    /// ex: ListFiles ← recur&fif&fld∘
+    /// ex: # Experimental!
+    ///   : ListFiles ← recur&fif&fld∘
     ///   : ListFiles "."
     ([3], Recur, Algorithm, "recur", { experimental: true }),
     /// Calculate the derivative of a mathematical expression

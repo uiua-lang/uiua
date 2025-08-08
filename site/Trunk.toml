@@ -4,7 +4,7 @@ no_sri = true
 public_url = "/"
 
 [watch]
-watch = [".", "../src", "../pad/editor", "../changelog.md"]
+watch = [".", "../src", "../parser", "../pad/editor", "../changelog.md"]
 
 [serve]
 address = "0.0.0.0"

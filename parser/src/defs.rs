@@ -3062,6 +3062,35 @@ primitive!(
     /// [path] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[2], Path, Algorithm, "path"),
     /// Execute a recursive or tree algorithm
+    ///
+    /// Takes three functions.
+    /// The first function checks for a base case.
+    /// The second function gets a node's children.
+    /// The third function combines parent and child nodes.
+    ///
+    /// If the first function returns a boolean, it determines whether a given node is a leaf node. The second function will only be called on non-leaf nodes.
+    /// The third function is passed the results of all a node's children. If it takes at least 2 arguments, it will also be passed the parent node on top.
+    ///
+    /// Many of the examples here can be better expressed using array operations, and are merely demonstrative.
+    ///
+    /// We can express a simple recursive factorial function like so.
+    /// ex: Fact ← recur(<2|-1|×)
+    ///   : Fact 5
+    ///   : Fact 7
+    /// The [less than]`2` determines when to cease recursion. The [subtract]`1` is the next recursive call, the "child node". The [multiply] gets called on a node and the result of its child.
+    ///
+    /// We can express the classic recursive fibanacci function in a similar way. In this example, the second function returns two children. The third function ignores the parent node and simply adds the results of the children.
+    /// ex: Fib ← recur(<2|⊃[-1|-2]|/+)
+    ///   : Fib 10
+    /// Because a boolean result from the first function returns a node as its own result, that example interprets the 0th fibonacci number to be `0``.
+    /// If we instead want the 0th fibonacci to be `1`, we can return a list of 0 or 1 items from the first function instead. A 1-item list is interpreted as a leaf node, with that item as the result.
+    /// ex: Fib ← recur(▽⊙1<2|⊃[-1|-2]|/+)
+    ///   : Fib 10
+    ///
+    /// The results of a node's children will be passed to the third function as an array. The creation of this array will fail if the results of the children have incompatible shapes. There is an acception for box lists, which will be [join]ed instead of used as rows. This makes it possible to combine variable-length lists.
+    /// One example use case for this is listing all files in all subdirectories.
+    /// ex: ListFiles ← recur&fif&fld∘
+    ///   : ListFiles "."
     ([3], Recur, Algorithm, "recur", { experimental: true }),
     /// Calculate the derivative of a mathematical expression
     ///

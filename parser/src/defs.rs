@@ -3091,7 +3091,7 @@ primitive!(
     ///   : Fib ← recur(▽⊙1<2|⊃[-1|-2]|/+)
     ///   : Fib 10
     ///
-    /// The results of a node's children will be passed to the third function as an array. The creation of this array will fail if the results of the children have incompatible shapes. There is an acception for box lists, which will be [join]ed instead of used as rows. This makes it possible to combine variable-length lists.
+    /// The results of a node's children will be passed to the third function as an array. The creation of this array will fail if the results of the children have incompatible shapes. There is an exception for box lists, which will be [join]ed instead of used as rows. This makes it possible to combine variable-length lists.
     /// One example use case for this is listing all files in all subdirectories.
     /// ex: # Experimental!
     ///   : ListFiles ← recur&fif&fld∘

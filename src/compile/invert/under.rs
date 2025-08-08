@@ -430,7 +430,9 @@ under!(BothPat, input, g_sig, inverse, asm, {
     );
     let (f_before, mut f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
 
-    let balanced = g_sig.args() <= g_sig.outputs() && !(val.is_some() && f.sig == (1, 1));
+    let balanced = g_sig.args()
+        <= g_sig.outputs() + sub.side.as_ref().map_or(0, |sided| sided.n.unwrap_or(1))
+        && !(val.is_some() && f.sig == (1, 1));
     // Make before
     let mut before = val.unwrap_or_default();
     before.push(if !inverse || balanced {

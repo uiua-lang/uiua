@@ -71,7 +71,7 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
         scalar_child,
     }) = stack.pop()
     {
-        println!("value: {value:?}, parent: {parent:?}, child_nodes: {child_nodes:?}");
+        // println!("value: {value:?}, parent: {parent:?}, child_nodes: {child_nodes:?}");
         if let Some(child_nodes) = child_nodes {
             env.push_all(
                 (consts.iter())
@@ -80,6 +80,16 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
             );
             let children_value = if scalar_child && child_nodes.len() == 1 {
                 child_nodes.into_iter().next().unwrap()
+            } else if child_nodes
+                .iter()
+                .all(|val| matches!(val, Value::Box(_)) && val.rank() <= 1)
+            {
+                let mut child_nodes = child_nodes.into_iter();
+                let mut val = child_nodes.next().unwrap();
+                for child in child_nodes {
+                    val = val.join(child, false, env)?;
+                }
+                val
             } else {
                 Value::from_row_values(child_nodes, env)?
             };
@@ -135,7 +145,7 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
                 env.exec(children.clone())?;
                 let children = env.pop("child nodes")?;
                 let index = stack.len();
-                println!("{value:?} has children {children:?}");
+                // println!("{value:?} has children {children:?}");
                 stack.push(RecNode {
                     parent,
                     value,

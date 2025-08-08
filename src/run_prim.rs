@@ -385,6 +385,10 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
         }
         Primitive::Tuples => tuples::tuples(ops, env)?,
         Primitive::Stencil => stencil::stencil(ops, env)?,
+        Primitive::Recur => {
+            let [is_leaf, children, combine] = get_ops(ops, env)?;
+            recur::recur(is_leaf, children, combine, env)?;
+        }
 
         // Stack
         Primitive::Fork => {

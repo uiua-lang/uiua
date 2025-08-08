@@ -3061,6 +3061,8 @@ primitive!(
     /// ex: ⊢path(+⊙¤ ⊂¯.⊞=. °⊏)≍ "thud" "uiua"
     /// [path] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[2], Path, Algorithm, "path"),
+    /// Execute a recursive or tree algorithm
+    ([3], Recur, Algorithm, "recur", { experimental: true }),
     /// Calculate the derivative of a mathematical expression
     ///
     /// Basic polynomials are supported, along with [sine] and [logarithm].

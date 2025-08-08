@@ -8,7 +8,7 @@ license = "MIT"
 name = "uiua"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-rust-version = "1.82.0"
+rust-version = "1.83.0"
 version = "0.17.0-dev.2"
 
 [dependencies]

@@ -425,6 +425,11 @@ impl VirtualEnv {
                     let [f] = get_args(args)?;
                     self.handle_args_outputs(f.args(), f.outputs() + 1);
                 }
+                Recur => {
+                    let [_is_leaf, children, _combine] = get_args(args)?;
+                    let args = children.args();
+                    self.handle_args_outputs(args, 1);
+                }
                 Sys(SysOp::ReadLines) => {
                     let [f] = get_args(args)?;
                     self.handle_sig(f);

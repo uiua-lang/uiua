@@ -2479,7 +2479,7 @@ mod tests {
 	"repository": {{
         "idents": {{
             "name": "variable.parameter.uiua",
-            "match": "\\b[a-zA-Z]+(₋?[₀₁₂₃₄₅₆₇₈₉]|,`?\\d+)*[!‼]*\\b"
+            "match": "\\b[a-zA-Z]+['′″‴]*(₋?[₀₁₂₃₄₅₆₇₈₉]|,`?\\d+)*[!‼]*\\b"
         }},
 		"comments": {{
 			"name": "comment.line.uiua",

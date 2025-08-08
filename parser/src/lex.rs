@@ -1323,9 +1323,15 @@ impl<'a> Lexer<'a> {
                     self.end(Subscr(sub), start)
                 }
                 // Identifiers and unformatted glyphs
-                c if is_custom_glyph(c) || c.chars().all(is_ident_char) || "&!‼".contains(c) => {
+                c if is_custom_glyph(c)
+                    || c.chars().all(is_ident_char)
+                    || "&!‼'′″‴".contains(c) =>
+                {
                     // Get ident start
                     let mut ident = self.ident(start, c).to_string();
+                    while let Some(ch) = self.next_char_if(|ch| "'′″‴".contains(ch)) {
+                        ident.push_str(ch);
+                    }
                     let mut exclam_count = match c {
                         "!" => 1,
                         "‼" => 2,
@@ -1766,7 +1772,7 @@ fn is_formatted_subscript(c: &str) -> bool {
 }
 
 pub(crate) fn canonicalize_ident(ident: &str) -> Ident {
-    canonicalize_subscripts(canonicalize_exclams(ident))
+    canonicalize_subscripts(canonicalize_primes(canonicalize_exclams(ident).as_str()))
 }
 
 /// Rewrite the identifier with the same number of exclamation points
@@ -1786,6 +1792,38 @@ fn place_exclams(ident: &str, count: usize) -> Ident {
     }
     if trailing_single {
         new.push('!');
+    }
+    new
+}
+
+/// Rewrite the identifier with the same number of primes
+/// using triple, double, and single prime characters as needed
+fn canonicalize_primes(ident: &str) -> Ident {
+    let mut count = 0;
+    for ch in ident.chars() {
+        count += match ch {
+            '\'' => 1,
+            '′' => 1,
+            '″' => 2,
+            '‴' => 3,
+            _ => 0,
+        };
+    }
+    place_primes(ident, count)
+}
+
+fn place_primes(ident: &str, count: usize) -> Ident {
+    let mut new: Ident = ident.trim_end_matches(['\'', '′', '″', '‴']).into();
+    let num_triple = count / 3;
+    let trailing_num = count % 3;
+    for _ in 0..num_triple {
+        new.push('‴');
+    }
+    match trailing_num {
+        0 => {}
+        1 => new.push('′'),
+        2 => new.push('″'),
+        _ => unreachable!(),
     }
     new
 }

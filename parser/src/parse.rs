@@ -558,7 +558,7 @@ impl Parser<'_> {
                     chars.extend(Primitive::non_deprecated().filter_map(|p| p.glyph()));
                     chars.extend(' '..='~');
                     chars.extend(SUBSCRIPT_DIGITS);
-                    chars.extend("←↚‼₋⌞⌟↓".chars());
+                    chars.extend("←↚‼′″‴₋⌞⌟↓".chars());
                     chars.sort_unstable();
                     chars
                 };
@@ -738,7 +738,12 @@ impl Parser<'_> {
             self.errors
                 .push(name.span.clone().sp(ParseError::AmpersandBindingName));
         }
-        if name.value.trim_end_matches(['!', '‼']).chars().count() >= 2
+        if name
+            .value
+            .trim_end_matches(['!', '‼', '\'', '′', '″', '‴'])
+            .chars()
+            .count()
+            >= 2
             && name.value.chars().next().unwrap().is_ascii_lowercase()
         {
             let captialized: String = name

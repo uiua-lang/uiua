@@ -1813,7 +1813,10 @@ fn canonicalize_primes(ident: &str) -> Ident {
 }
 
 fn place_primes(ident: &str, count: usize) -> Ident {
-    let mut new: Ident = ident.trim_end_matches(['\'', '′', '″', '‴']).into();
+    let exclams_removed = ident.trim_end_matches(['!', '‼']);
+    let mut new: Ident = exclams_removed
+        .trim_end_matches(['\'', '′', '″', '‴'])
+        .into();
     let num_triple = count / 3;
     let trailing_num = count % 3;
     for _ in 0..num_triple {
@@ -1825,6 +1828,7 @@ fn place_primes(ident: &str, count: usize) -> Ident {
         2 => new.push('″'),
         _ => unreachable!(),
     }
+    new.push_str(&ident[exclams_removed.len()..]);
     new
 }
 

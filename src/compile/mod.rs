@@ -2749,7 +2749,7 @@ impl Compiler {
     /// Bind a function in the current scope
     ///
     /// # Errors
-    /// Returns an error in the binding name is not valid
+    /// Returns an error if the binding name is not valid
     pub fn bind_function(&mut self, name: impl Into<EcoString>, function: Function) -> UiuaResult {
         self.bind_function_with_meta(name, function, BindingMeta::default())
     }
@@ -2773,7 +2773,7 @@ impl Compiler {
     /// This function is the only way to bind `# External!` functions.
     ///
     /// # Errors
-    /// Returns an error in the binding name is not valid
+    /// Returns an error if the binding name is not valid
     pub fn create_bind_function(
         &mut self,
         name: impl Into<EcoString>,

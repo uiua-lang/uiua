@@ -1201,6 +1201,13 @@
     "description": "Get the reciprocal of a number",
     "experimental": true
   },
+  "recur": {
+    "outputs": 1,
+    "modifier_args": 3,
+    "class": "Algorithm",
+    "description": "Execute a recursive or tree algorithm",
+    "experimental": true
+  },
   "recv": {
     "args": 1,
     "outputs": 1,

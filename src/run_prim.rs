@@ -262,7 +262,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             let key = env.pop("key")?;
             let val = env.pop("value")?;
             let mut map = env.pop("map")?;
-            map.insert(key, val, env)?;
+            map.insert(key, val, false, env)?;
             env.push(map);
         }
         Primitive::Has => {
@@ -916,6 +916,13 @@ impl ImplPrimitive {
                 env.push(left);
             }
             ImplPrimitive::TryClose => _ = run_sys_op(&SysOp::Close, env),
+            ImplPrimitive::UndoGet => {
+                let key = env.pop("key")?;
+                let val = env.pop("value")?;
+                let mut map = env.pop("map")?;
+                map.insert(key, val, true, env)?;
+                env.push(map);
+            }
             ImplPrimitive::UndoInsert => {
                 let key = env.pop(1)?;
                 let _value = env.pop(2)?;

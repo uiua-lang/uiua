@@ -177,7 +177,11 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
         (PopUnd(3), UndoRegex),
     ),
     // Map control
-    &MaybeVal((Get, (CopyUnd(2), Get), (PopUnd(1), Flip, PopUnd(1), Insert))),
+    &MaybeVal((
+        Get,
+        (CopyUnd(2), Get),
+        (PopUnd(1), Flip, PopUnd(1), UndoGet),
+    )),
     &Stash(2, Remove, UndoRemove),
     &MaybeVal((Insert, (CopyUnd(3), Insert), (PopUnd(3), UndoInsert))),
     // Shaping

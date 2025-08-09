@@ -411,6 +411,9 @@ G ← ⍜(⊙⊙⊢) ⋅⊙∘
 ⍤⤙≍ map "abc" [1 2 3] ⍜remove∘ @d map "abc" [1 2 3]
 ⍤⤙≍ ⟜⍜(get"abc")∘ map {"abc"} [1]
 ⍤⤙≍ □⟜⍜(◇get"abc")∘ map {"abc"} [1]
+map {"alice" "bob" "charlie"} [1 2 3]
+⍜get(+1) {"alice" "charlie"}
+⍤⤙≍ map {"alice" "bob" "charlie"} [2 2 4]
 
 # Pattern matching
 ⍤⤙≍ "2 - 4" ⍜°$"_ - _"∩(×2⋕) "1 - 2"

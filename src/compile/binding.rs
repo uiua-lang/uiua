@@ -183,7 +183,7 @@ impl Compiler {
             return Ok(());
         }
         // Index macro
-        match (ident_margs, max_placeholder) {
+        match (ident_margs, &max_placeholder) {
             (0, None) => {}
             (_, None) => {
                 self.add_error(
@@ -204,7 +204,7 @@ impl Compiler {
                 );
                 return Ok(());
             }
-            (n, Some(max)) => {
+            (n, Some((max, shorthand_span))) => {
                 if max + 1 > n {
                     self.emit_diagnostic(
                         format!(
@@ -215,6 +215,17 @@ impl Compiler {
                         DiagnosticKind::Warning,
                         span.clone(),
                     );
+                }
+                if let Some(span) = shorthand_span {
+                    if *max > 0 {
+                        self.add_error(
+                            span.clone(),
+                            format!(
+                                "`{name}` cannot use the placeholder shorthand \
+                                because it contains a ^{max}. Use explicit ^0 instead."
+                            ),
+                        )
+                    }
                 }
             }
         }

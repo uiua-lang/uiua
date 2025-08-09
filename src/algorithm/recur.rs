@@ -1,4 +1,4 @@
-use crate::{SigNode, Uiua, UiuaResult, Value};
+use crate::{Primitive, SigNode, Uiua, UiuaResult, Value};
 
 pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Uiua) -> UiuaResult {
     // Signature validation
@@ -26,23 +26,27 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
             children.sig
         )));
     }
-    if combine.sig.args() == 0 {
-        return Err(env.error(format!(
-            "Combine function must have at least 1 argument, but its signature is {}",
-            combine.sig
-        )));
+    if combine.sig != (0, 0) {
+        if combine.sig.args() == 0 {
+            return Err(env.error(format!(
+                "Combine function must have at least 1 argument, but its signature is {}",
+                combine.sig
+            )));
+        }
+        if combine.sig.outputs() != 1 {
+            return Err(env.error(format!(
+                "Combine function must have 1 output, but its signature is {}",
+                combine.sig
+            )));
+        }
     }
-    if combine.sig.outputs() != 1 {
-        return Err(env.error(format!(
-            "Combine function must have 1 output, but its signature is {}",
-            combine.sig
-        )));
-    }
+    let call_combine =
+        !(combine.node.is_empty() || combine.node.as_primitive() == Some(Primitive::Identity));
 
     // State initialization
     let arg_count = (is_leaf.sig.args())
         .max(children.sig.args())
-        .max(combine.sig.args() - 1);
+        .max(combine.sig.args().saturating_sub(1));
     let const_count = arg_count - 1;
     let initial = env.pop(1)?;
     let mut consts = Vec::with_capacity(const_count);
@@ -99,12 +103,16 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
             } else {
                 Value::from_row_values(child_nodes, env)?
             };
-            env.push(children_value);
-            if combine.sig.args() > 1 {
-                env.push(value);
+            if call_combine {
+                env.push(children_value);
+                if combine.sig.args() > 1 {
+                    env.push(value);
+                }
+                env.exec(combine.clone())?;
+                value = env.pop("combined")?;
+            } else {
+                value = children_value;
             }
-            env.exec(combine.clone())?;
-            value = env.pop("combined")?;
             if let Some(parent) = parent {
                 stack[parent].child_nodes.as_mut().unwrap().push(value);
             } else {

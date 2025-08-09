@@ -7,10 +7,12 @@ use std::{
 
 use ecow::eco_vec;
 
-use crate::algorithm::validate_size;
-use crate::fill::FillValue;
-use crate::{algorithm::loops::flip, array::*, Uiua, UiuaError, UiuaResult, Value};
-use crate::{Complex, Shape};
+use crate::{
+    algorithm::{loops::flip, validate_size},
+    array::*,
+    fill::FillValue,
+    Complex, Shape, Uiua, UiuaError, UiuaResult, Value,
+};
 
 use super::{multi_output, FillContext, MultiOutput};
 

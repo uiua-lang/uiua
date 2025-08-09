@@ -1,58 +1,35 @@
 [package]
-edition = "2021"
+description = "Uiua website"
 name = "site"
 version = "0.1.0"
+categories.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [lints]
 workspace = true
 
 [dependencies]
-base64 = "0.22.0"
+base64.workspace = true
+enum-iterator.workspace = true
+js-sys.workspace = true
+leptos.workspace = true
+leptos_meta.workspace = true
+leptos_router.workspace = true
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+urlencoding.workspace = true
+wasm-bindgen.workspace = true
+web-sys = {workspace = true, features = ["HtmlElement"]}
 comrak = "0.39.0"
 console_error_panic_hook = "0.1.7"
-enum-iterator = "2.0.0"
-js-sys = "0.3"
-leptos = "0.6.11"
-leptos_meta = {version = "0.6.11", features = ["csr"]}
-leptos_router = {version = "0.6.11", features = ["csr"]}
-rand = {version = "0.8.5", features = ["small_rng"]}
-serde = {version = "1", features = ["derive"]}
-serde_json = "1"
 uiua = {path = "..", default-features = false, features = ["batteries", "web"]}
 uiua-editor = {path = "../pad/editor"}
-urlencoding = "2"
-# NOTE: if you change the wasm-bindgen version, remember to change it in nix/site.nix as well
-wasm-bindgen = "=0.2.93"
-
-[dependencies.web-sys]
-features = [
-  "CssStyleDeclaration",
-  "DomRect",
-  "Storage",
-  "HtmlAudioElement",
-  "HtmlBrElement",
-  "HtmlElement",
-  "Selection",
-  "Node",
-  "Clipboard",
-  "ClipboardEvent",
-  "DataTransfer",
-  "Navigator",
-  "Permissions",
-  "ScrollIntoViewOptions",
-  "ScrollBehavior",
-  "ScrollLogicalPosition",
-  "StorageManager",
-  "FileReader",
-  "EventInit",
-  "DataTransfer",
-  "File",
-  "FileList",
-  "ResizeObserver",
-  "ResizeObserverEntry",
-  "Performance",
-]
-version = "0.3.70"
 
 [features]
 audio = [] # Dummy for rust-analyzer

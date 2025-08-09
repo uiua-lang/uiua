@@ -47,6 +47,13 @@ F‼(×2|+1) 5
 F‼(+1|⊂0) 1
 ```
 
+Because macros using a only `^0` placeholders are very common, `^0` can be written as just `^`.
+
+```uiua
+F! ← ^⇌^
+F!(⊂1) 5
+```
+
 ## Two Kinds of Macros
 The macros described so far are called *index macros*, because arguments are referenced directly by their position when the macro is called.
 

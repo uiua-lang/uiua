@@ -464,7 +464,7 @@ impl Parser<'_> {
         } else {
             glyph_span
         };
-        let array_macro = if let Some(span) = self.exact(Caret.into()) {
+        let array_macro = if let Some(span) = self.exact(Placeholder(None)) {
             arrow_span = arrow_span.merge(span);
             true
         } else {
@@ -1612,7 +1612,7 @@ impl Parser<'_> {
         Some(if branches.is_empty() {
             // Normal func
             let reset = self.index;
-            let caret_span = self.exact(Caret.into());
+            let caret_span = self.exact(Placeholder(None));
             if let Some(ident) = self
                 .ident()
                 .filter(|ident| !is_array && ident.value.chars().all(|c| "!‼".contains(c)))
@@ -2009,7 +2009,7 @@ pub fn max_placeholder(words: &[Sp<Word>]) -> Option<usize> {
     };
     for word in words {
         match &word.value {
-            Word::Placeholder(i) => set(Some(*i)),
+            Word::Placeholder(i) => set(Some(i.unwrap_or(0))),
             Word::Strand(items) => set(max_placeholder(items)),
             Word::Array(arr) => {
                 for line in arr.word_lines() {

@@ -34,7 +34,7 @@ pub enum SpanKind {
     Label,
     Signature,
     Whitespace,
-    Placeholder(usize),
+    Placeholder(Option<usize>),
     Delimiter,
     LexOrder,
     FuncDelim(Signature, SetInverses),

@@ -1838,7 +1838,8 @@ impl Compiler {
         let mut error = None;
         recurse_words_mut(words, &mut |word| match &mut word.value {
             Word::Placeholder(n) => {
-                if let Some(replacement) = initial.get(*n) {
+                let n = n.unwrap_or(0);
+                if let Some(replacement) = initial.get(n) {
                     *word = replacement.clone();
                 } else {
                     error = Some(self.error(

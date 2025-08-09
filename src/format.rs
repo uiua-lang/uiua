@@ -1100,7 +1100,8 @@ impl Formatter<'_> {
                 self.format_modifier(&m.modifier, depth);
                 self.format_words(&m.operands, true, depth);
             }
-            Word::Placeholder(i) => self.push(&word.span, &format!("^{i}")),
+            Word::Placeholder(Some(i)) => self.push(&word.span, &format!("^{i}")),
+            Word::Placeholder(None) => self.push(&word.span, "^"),
             Word::Subscripted(sub) => match &sub.word.value {
                 Word::Modified(m) => {
                     if sub.script.value.num.is_some()

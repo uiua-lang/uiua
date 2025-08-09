@@ -609,7 +609,7 @@ pub enum Token {
     MultilineFormatStr(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
-    Placeholder(usize),
+    Placeholder(Option<usize>),
     Subscr(Subscript),
     LeftArrow,
     LeftStrokeArrow,
@@ -674,7 +674,7 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_placeholder(&self) -> Option<usize> {
+    pub(crate) fn as_placeholder(&self) -> Option<Option<usize>> {
         match self {
             Token::Placeholder(i) => Some(*i),
             _ => None,
@@ -741,7 +741,8 @@ impl fmt::Display for Token {
             Token::OpenModule => write!(f, "┌─╴"),
             Token::OpenPrivateModule => write!(f, "┌╶╶"),
             Token::CloseModule => write!(f, "└─╴"),
-            Token::Placeholder(i) => write!(f, "^{i}"),
+            Token::Placeholder(Some(i)) => write!(f, "^{i}"),
+            Token::Placeholder(None) => write!(f, "^"),
         }
     }
 }
@@ -763,7 +764,6 @@ pub enum AsciiToken {
     DoubleSemicolon,
     Star,
     Percent,
-    Caret,
     Equal,
     EqualTilde,
     BangEqual,
@@ -791,7 +791,6 @@ impl fmt::Display for AsciiToken {
             AsciiToken::DoubleSemicolon => write!(f, ";;"),
             AsciiToken::Star => write!(f, "*"),
             AsciiToken::Percent => write!(f, "%"),
-            AsciiToken::Caret => write!(f, "^"),
             AsciiToken::Equal => write!(f, "="),
             AsciiToken::BangEqual => write!(f, "!="),
             AsciiToken::EqualTilde => write!(f, "=~"),
@@ -1083,9 +1082,9 @@ impl<'a> Lexer<'a> {
                 "%" => self.end(Percent, start),
                 "^" => {
                     if let Some(x) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_digit())) {
-                        self.end(Placeholder(x.parse().unwrap()), start)
+                        self.end(Placeholder(Some(x.parse().unwrap())), start)
                     } else {
-                        self.end(Caret, start)
+                        self.end(Placeholder(None), start)
                     }
                 }
                 "=" if self.next_char_exact("~") => self.end(EqualTilde, start),

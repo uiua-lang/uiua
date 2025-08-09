@@ -1,10 +1,6 @@
 # Uiua Todo
 
 # 0.17
-- `recur` modifier
-- LSP optimizations
-  - Fix rename
-  - Fix goto references
 - Sided `join`
 - Sided `box`
 - `table` subscripts for rank selection

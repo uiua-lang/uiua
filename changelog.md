@@ -27,6 +27,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add numeric subscripts for [`keep ▽`](https://uiua.org/docs/keep) to keep along a number of dimensions
 - Add [`under ⍜`](https://uiua.org/docs/under) capability to [`fork ⊃`](https://uiua.org/docs/fork)s of monadic functions
   - This allows using [`un °`](https://uiua.org/docs/un)[`by ⊸`](https://uiua.org/docs/by)[`fork ⊃`](https://uiua.org/docs/fork) to set multiple properties at once
+- Add `^` shorthand for `^0` in index macros
 - Stabilize [`self ˙`](https://uiua.org/docs/self)
   - Add experimental sided subscripts for [`self ˙`](https://uiua.org/docs/self)
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)

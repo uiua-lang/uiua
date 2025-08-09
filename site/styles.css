@@ -1023,7 +1023,7 @@ option,
     }
 }
 
-.private-binding>* {
+.private-binding {
     opacity: 0.75;
 }
 

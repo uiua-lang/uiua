@@ -1,4 +1,4 @@
-use crate::{Primitive, SigNode, Uiua, UiuaResult, Value};
+use crate::{Array, Boxed, Primitive, SigNode, Uiua, UiuaResult, Value};
 
 pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Uiua) -> UiuaResult {
     // Signature validation
@@ -95,7 +95,9 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
                 .all(|val| matches!(val, Value::Box(_)) && val.rank() <= 1)
             {
                 let mut child_nodes = child_nodes.into_iter();
-                let mut val = child_nodes.next().unwrap();
+                let mut val = child_nodes
+                    .next()
+                    .unwrap_or_else(|| Array::<Boxed>::default().into());
                 for child in child_nodes {
                     val = val.join(child, false, env)?;
                 }
@@ -146,6 +148,7 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
             };
             if this_is_leaf {
                 // This is a leaf node
+                // println!("{value:?} is a leaf node");
                 if let Some(parent) = parent {
                     stack[parent].child_nodes.as_mut().unwrap().push(value);
                 } else {
@@ -158,9 +161,9 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
                 env.push(value.clone());
                 env.exec(children.clone())?;
                 let children = env.pop("child nodes")?;
+                // println!("{value:?} has children {children:?}");
                 if children.row_count() > 0 {
                     let index = stack.len();
-                    // println!("{value:?} has children {children:?}");
                     stack.push(RecNode {
                         parent,
                         value,

@@ -1629,6 +1629,13 @@ pub fn set_gayness(gayness: Gayness) {
     _ = window().location().reload();
 }
 
+pub fn get_rgb_bindings() -> bool {
+    get_local_var("rgb-bindings", || false)
+}
+pub fn set_rgb_bindings(rgb_bindings: bool) {
+    set_local_var("rgb-bindings", rgb_bindings);
+}
+
 fn update_style() {
     let font_name = get_font_name();
     let font_size = get_font_size();

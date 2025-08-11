@@ -2426,6 +2426,9 @@ fn prim_sig_class(prim: Primitive, subscript: Option<&Subscript>) -> &'static st
 }
 
 pub fn binding_name_class(name: &str) -> Option<&'static str> {
+    if get_gayness() == Gayness::None {
+        return None;
+    }
     Some(match name {
         "Trans" | "Transgender" => code_font!("trans text-gradient"),
         "Bi" | "Bisexual" => code_font!("bi text-gradient"),

@@ -1726,6 +1726,10 @@ pub fn Editor<'a>(
     let on_select_gayness = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         set_gayness(input.value().as_str().into());
+        set_timeout(
+            move || get_state.get().refresh_code(),
+            Duration::from_millis(0),
+        );
     };
     let toggle_rgb_bindings = move |_| {
         set_rgb_bindings(!get_rgb_bindings());

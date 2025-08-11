@@ -1626,7 +1626,6 @@ pub fn get_gayness() -> Gayness {
 }
 pub fn set_gayness(gayness: Gayness) {
     set_local_var("gayness", gayness.str());
-    _ = window().location().reload();
 }
 
 pub fn get_rgb_bindings() -> bool {

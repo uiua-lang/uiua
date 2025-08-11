@@ -1727,6 +1727,13 @@ pub fn Editor<'a>(
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         set_gayness(input.value().as_str().into());
     };
+    let toggle_rgb_bindings = move |_| {
+        set_timeout(
+            move || get_state.get().refresh_code(),
+            Duration::from_millis(0),
+        );
+        set_rgb_bindings(!get_rgb_bindings());
+    };
     set_font_name(&get_font_name());
     set_font_size(&get_font_size());
 
@@ -1991,6 +1998,14 @@ pub fn Editor<'a>(
                                     {Gayness::VeryGay.str()}
                                 </option>
                             </select>
+                        </div>
+                        <div title="Color constant [r g b] bindings according to their value">
+                            "RGB bindings:"
+                            <input
+                                type="checkbox"
+                                checked=get_rgb_bindings
+                                on:change=toggle_rgb_bindings
+                            />
                         </div>
                         <div title="Show line values to the right of the code">
                             "Show values:"
@@ -2437,6 +2452,9 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
 }
 
 fn binding_style(docs: &BindingDocs) -> String {
+    if !get_rgb_bindings() {
+        return String::new();
+    }
     if let BindingDocsKind::Constant(Some(val)) = &docs.kind {
         if let Ok(nums) = val.as_nums(&IgnoreError, "") {
             if let [r, g, b] = *nums {

@@ -106,6 +106,11 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
                 Value::from_row_values(child_nodes, env)?
             };
             if call_combine {
+                env.push_all(
+                    (consts.iter())
+                        .take(combine.sig.args().saturating_sub(2))
+                        .cloned(),
+                );
                 env.push(children_value);
                 if combine.sig.args() > 1 {
                     env.push(value);

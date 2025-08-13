@@ -426,8 +426,11 @@ impl VirtualEnv {
                     self.handle_args_outputs(f.args(), f.outputs() + 1);
                 }
                 Recur => {
-                    let [_is_leaf, children, _combine] = get_args(args)?;
-                    let args = children.args();
+                    let [is_leaf, children, combine] = get_args(args)?;
+                    let args = is_leaf
+                        .args()
+                        .max(children.args())
+                        .max(combine.args().saturating_sub(1).max(1));
                     self.handle_args_outputs(args, 1);
                 }
                 Sys(SysOp::ReadLines) => {

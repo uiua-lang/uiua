@@ -490,8 +490,8 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="↯2_3_4 ⇡24"/>
         <p>"Notice there are "<code>"2"</code>" big cells, each with "<code>"3"</code>" rows of "<code>"4"</code>" elements."</p>
         <p>"This expands to any number of dimensions. The elements of the last axis are always laid out horizontally. The rows of the second-to-last axis are always laid out vertically. The third-to-last axis is horizontal, the fourth-to-last is vertical, etc."</p>
-        <p>"We can see here that the shape "<code>"[2 3 4 5]"</code>" appears almost like a 2×3 matrix of 4×5 matrices."</p>
-        <Editor example="↯2_3_4_5 ⇡120"/>
+        <p>"We can see here that the shape "<code>"[2 3 4 5]"</code>" appears almost like a 2×3 matrix of 4×5 matrices. Also note that reshape cycles through elements if it doesn't have enough."</p>
+        <Editor example="↯2_3_4_5 ⇡119"/>
 
         <Hd id="pervasion">"Pervasion"</Hd>
         <p>"Most operations that apply to scalars are what is called "<em>"pervasive"</em>" when it comes to arrays. This means that the operation automatically applies to every item in the array."</p>

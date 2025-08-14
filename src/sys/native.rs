@@ -9,7 +9,7 @@ use std::{
     slice,
     sync::{
         atomic::{self, AtomicBool, AtomicU64},
-        Arc,
+        Arc, LazyLock,
     },
     thread::sleep,
     time::Duration,
@@ -19,7 +19,6 @@ use colored::Colorize;
 #[cfg(feature = "webcam")]
 use crossbeam_channel as channel;
 use dashmap::DashMap;
-use once_cell::sync::Lazy;
 
 use crate::{
     terminal_size, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend,
@@ -298,7 +297,7 @@ impl GlobalNativeSys {
     }
 }
 
-static NATIVE_SYS: Lazy<GlobalNativeSys> = Lazy::new(Default::default);
+static NATIVE_SYS: LazyLock<GlobalNativeSys> = LazyLock::new(Default::default);
 
 #[cfg(all(feature = "audio", feature = "binary"))]
 #[doc(hidden)]

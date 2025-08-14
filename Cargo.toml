@@ -1,15 +1,85 @@
-[package]
+[workspace]
+members = ["site", "tests_ffi", "pad/editor", "parser"]
+
+[workspace.package]
 categories = ["compilers", "algorithms", "multimedia", "parser-implementations"]
-description = "A stack-based array programming language"
-documentation = "https://docs.rs/uiua"
 edition = "2021"
 keywords = ["uiua", "array", "stack", "language", "apl"]
 license = "MIT"
-name = "uiua"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
 rust-version = "1.83.0"
 version = "0.17.0-dev.2"
+
+[workspace.lints.clippy]
+cargo = {level = "warn", priority = -1}
+dbg_macro = "warn"
+print_stdout = "warn"
+non_std_lazy_statics = "warn"
+
+[workspace.dependencies]
+base64 = "0.22.0"
+bytemuck = "1.17"
+colored = "2"
+dashmap = {version = "6", features = ["serde"]}
+ecow = {version = "0.2.3", features = ["serde"]}
+enum-iterator = "2.1.0"
+hound = "3.5.1"
+js-sys = "0.3.69"
+leptos = "0.6.11"
+leptos_router = {version = "0.6.11", features = ["csr"]}
+leptos_meta = {version = "0.6.11", features = ["csr"]}
+rand = {version = "0.8.5", features = ["small_rng"]}
+serde = {version = "1", features = ["derive"]}
+serde_json = "1.0.115"
+unicode-segmentation = "1.10"
+urlencoding = "2"
+# NOTE: if you change the wasm-bindgen version, remember to change it in nix/site.nix as well
+wasm-bindgen = "=0.2.93"
+
+[workspace.dependencies.web-sys]
+version = "0.3.70"
+features = [
+  "Clipboard",
+  "ClipboardEvent",
+  "CssStyleDeclaration",
+  "DataTransfer",
+  "DataTransfer",
+  "DomRect",
+  "EventInit",
+  "File",
+  "FileList",
+  "FileReader",
+  "HtmlAudioElement",
+  "HtmlBrElement",
+  "Navigator",
+  "Node",
+  "Performance",
+  "Permissions",
+  "ResizeObserver",
+  "ResizeObserverEntry",
+  "ScrollBehavior",
+  "ScrollIntoViewOptions",
+  "ScrollLogicalPosition",
+  "Selection",
+  "Storage",
+  "StorageManager",
+]
+
+
+[package]
+description = "A stack-based array programming language"
+documentation = "https://docs.rs/uiua"
+name = "uiua"
+categories.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
 
 [dependencies]
 # Uiua dependencies
@@ -17,20 +87,23 @@ uiua_parser = {path = "parser", version = "0.17.0-dev.2"}
 
 # Core dependencies
 bitflags = {version = "2", features = ["serde"]}
-bytemuck = {version = "1.17", features = ["must_cast", "derive", "extern_crate_alloc"]}
-colored = "2"
+bytemuck = {workspace = true, features = [
+  "must_cast",
+  "derive",
+  "extern_crate_alloc",
+]}
+colored.workspace = true
 crossbeam-channel = "0.5.12"
-dashmap = {version = "6", features = ["serde"]}
-ecow = {version = "0.2.3", features = ["serde"]}
-enum-iterator = "2.1.0"
+dashmap.workspace = true
+ecow.workspace = true
+enum-iterator.workspace = true
 indexmap = {version = "2", features = ["serde"]}
 num_cpus = "1.16.0"
-once_cell = "1"
 open = {version = "5", optional = true}
 parking_lot = "0.12.1"
 paste = "1.0.14"
 pathdiff = "0.2.1"
-rand = {version = "0.8.5", features = ["small_rng"]}
+rand.workspace = true
 rawrrr = {version = "0.2.1", optional = true}
 rayon = "1.9.0"
 regex = "1.10.3"
@@ -39,15 +112,15 @@ rustls = {version = "0.23.2", optional = true, default-features = false, feature
   "tls12",
   "ring",
 ]}
-serde = {version = "1", features = ["derive", "rc"]}
-serde_json = "1"
+serde = {workspace = true, features = ["rc"]}
+serde_json.workspace = true
 smallvec = {version = "1.9", features = ["serde", "union", "const_new"]}
-terminal_size = {version = "0.3.0", optional = true}
+terminal_size = {version = "0.4.2", optional = true}
 thread_local = "1"
 threadpool = "1.8.1"
 time = {version = "0.3.36", features = ["local-offset"]}
 trash = {version = "5.2.2", optional = true}
-unicode-segmentation = "1.10"
+unicode-segmentation.workspace = true
 viuer = {version = "0.9", optional = true}
 webpki-roots = {version = "1.0.2", optional = true}
 
@@ -57,10 +130,10 @@ hodaun = {version = "0.4.1", optional = true, features = ["output", "wav"]}
 # Binary dependencies
 clap = {version = "4", optional = true, features = ["derive"]}
 color-backtrace = {version = "0.6.1", optional = true}
-ctrlc = {version = "=3.4.4", optional = true}
+ctrlc = {version = "3.4.6", optional = true}
 icy_sixel = {version = "0.1.2", optional = true}
-notify = {version = "6", optional = true}
-rustyline = {version = "16.0.0", optional = true}
+notify = {version = "7", optional = true}
+rustyline = {version = "15.0.0", optional = true}
 terminal-light = {version = "1.4.0", optional = true}
 tokio = {version = "1", optional = true, features = ["io-std", "rt"]}
 tower-lsp = {version = "0.20.0", optional = true, features = ["proposed"]}
@@ -75,13 +148,23 @@ color_quant = {version = "1.1", optional = true}
 cosmic-text = {version = "0.12.1", optional = true}
 csv = {version = "1", optional = true}
 gif = {version = "0.13.1", optional = true}
-hound = {version = "3", optional = true}
-image = {version = "0.25", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi", "webp"]}
+hound = {workspace = true, optional = true}
+image = {version = "0.25", optional = true, default-features = false, features = [
+  "bmp",
+  "gif",
+  "ico",
+  "jpeg",
+  "png",
+  "qoi",
+  "webp",
+]}
 json5 = {version = "0.4.1", optional = true}
 libffi = {version = "4", optional = true}
 libloading = {version = "0.8.3", optional = true}
 nokhwa = {version = "0.10.7", optional = true, features = ["input-native"]}
-num-complex = {version = ">=0.4.1", optional = true, default-features = false, features = ["bytemuck"]}
+num-complex = {version = ">=0.4.1", optional = true, default-features = false, features = [
+  "bytemuck",
+]}
 png = {version = "0.17.16", optional = true}
 rustfft = {version = "6.2.0", optional = true}
 rustls-pemfile = {version = "2.1.2", optional = true}
@@ -89,8 +172,8 @@ simple_excel_writer = {version = "0.2.0", optional = true}
 sys-locale = {version = "0.3.1", optional = true}
 
 # Web-only dependencies
-js-sys = {version = "0.3", optional = true}
-wasm-bindgen = {version = "0.2.92", optional = true}
+js-sys = {workspace = true, optional = true}
+wasm-bindgen = {workspace = true, optional = true}
 web-sys = {version = "0.3.60", optional = true}
 
 # Window dependencies
@@ -166,14 +249,6 @@ system = ["libffi?/system"]
 [[bin]]
 name = "uiua"
 required-features = ["binary"]
-
-[workspace]
-members = ["site", "tests_ffi", "pad/editor", "parser"]
-
-[workspace.lints.clippy]
-dbg_macro = "warn"
-print_stderr = "allow"
-print_stdout = "warn"
 
 [lints]
 workspace = true

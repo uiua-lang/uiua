@@ -20,7 +20,6 @@ use std::{
 use clap::{Parser, Subcommand};
 use colored::*;
 use notify::{event::ModifyKind, EventKind, RecursiveMode, Watcher};
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use terminal_size::terminal_size;
@@ -34,7 +33,7 @@ use uiua::{
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
-static WATCH_CHILD: Lazy<Mutex<Option<Child>>> = Lazy::new(Default::default);
+static WATCH_CHILD: Mutex<Option<Child>> = Mutex::new(None);
 
 fn fail<T>(e: UiuaError) -> T {
     eprintln!("{}", e.report());

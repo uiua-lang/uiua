@@ -2047,7 +2047,16 @@ pub fn Editor<'a>(
                         <div>
                             "Font:" <select on:change=on_select_font>
                                 <option value="Uiua386" selected=get_font_name() == "Uiua386">
-                                    {lang}
+                                    {format!("{}386", lang())}
+                                </option>
+                                <option value="TerminusUiua_14" selected=get_font_name() == "TerminusUiua_14">
+                                    "TerminusUiua 14"
+                                </option>
+                                <option value="TerminusUiua_16" selected=get_font_name() == "TerminusUiua_16">
+                                    "TerminusUiua 16"
+                                </option>
+                                <option value="TerminusUiua_24" selected=get_font_name() == "TerminusUiua_24">
+                                    "TerminusUiua 24"
                                 </option>
                                 <option value="Pixua" selected=get_font_name() == "Pixua">
                                     "Pixua"

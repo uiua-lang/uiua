@@ -42,17 +42,6 @@
             rustc = toolchainFor pkgs;
             cargo = toolchainFor pkgs;
           };
-          libPath =
-            with pkgs;
-            lib.makeLibraryPath [
-              libGL
-              libxkbcommon
-              wayland
-              xorg.libX11
-              xorg.libXcursor
-              xorg.libXi
-              xorg.libXrandr
-            ];
         in
         {
           _module.args.pkgs = import nixpkgs {
@@ -60,7 +49,7 @@
             overlays = [ rust-overlay.overlays.default ];
           };
           packages = {
-            default = pkgs.callPackage ./nix/package.nix { inherit craneLib libPath rustPlatform; };
+            default = pkgs.callPackage ./nix/package.nix { inherit craneLib rustPlatform; };
             fonts = pkgs.callPackage ./nix/fonts.nix { };
             site = pkgs.callPackage ./nix/site.nix { inherit craneLib; };
             toolchain = toolchainFor pkgs;
@@ -85,7 +74,7 @@
                 ];
               })
             ];
-            LD_LIBRARY_PATH = libPath;
+            LD_LIBRARY_PATH = self'.packages.default.passthru.libPath;
           };
         };
     };

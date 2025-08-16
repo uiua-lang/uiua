@@ -142,7 +142,7 @@ impl GridFmt for f64 {
         } else if positive == f64::INFINITY {
             format!("{minus}∞")
         } else if f.to_bits() == EMPTY_NAN.to_bits() {
-            "_".into()
+            "∅".into()
         } else if f.to_bits() == TOMBSTONE_NAN.to_bits() {
             "⊥".into()
         } else if f.to_bits() == WILDCARD_NAN.to_bits() {
@@ -419,12 +419,11 @@ impl GridFmt for Value {
     }
 }
 
-pub fn format_char_inner(c: char) -> String {
+pub fn format_char_inner_repr(c: char) -> String {
     match c {
-        char::MAX => return "\\x¯01".into(),
-        WILDCARD_CHAR => return '�'.to_string(),
-        EMPTY_CHAR => return '_'.to_string(),
-        TOMBSTONE_CHAR => return '⊥'.to_string(),
+        char::MAX => return r"\_".into(),
+        WILDCARD_CHAR => return r"\W".into(),
+        ' ' => return r"\s".into(),
         _ => {}
     }
     let formatted = format!("{c:?}");
@@ -441,6 +440,15 @@ pub fn format_char_inner(c: char) -> String {
         }
     } else {
         formatted[1..formatted.len() - 1].to_string()
+    }
+}
+
+pub fn format_char_inner(c: char) -> String {
+    match c {
+        EMPTY_CHAR => r"\∅".into(),
+        TOMBSTONE_CHAR => r"\⊥".into(),
+        ' ' => " ".into(),
+        _ => format_char_inner_repr(c),
     }
 }
 

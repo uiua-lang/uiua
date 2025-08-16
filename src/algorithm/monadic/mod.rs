@@ -24,7 +24,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::{
     array::*,
     cowslice::{cowslice, CowSlice},
-    grid_fmt::GridFmt,
+    grid_fmt::{format_char_inner_repr, GridFmt},
     val_as_arr,
     value::Value,
     Boxed, Complex, Primitive, Shape, Uiua, UiuaResult,
@@ -2409,13 +2409,7 @@ impl Value {
                         format!("ℂ{} {}", f64_repr(c.im), f64_repr(c.re))
                     }
                 }
-                Value::Char(arr) => {
-                    let c = arr.data[0];
-                    match c {
-                        ' ' => "@\\s".into(),
-                        c => c.grid_string(false),
-                    }
-                }
+                Value::Char(arr) => format!("@{}", format_char_inner_repr(arr.data[0])),
                 Value::Box(arr) => format!("□{}", arr.data[0].0.representation()),
             },
             1 => match self {

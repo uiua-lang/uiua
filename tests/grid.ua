@@ -90,3 +90,22 @@ $    a│b
 $   ∙5│@x  
 $         ┘
 ⍤⤙≍ ⊜∘⊸≠@\n
+
+Roundtrip!     ← ⍤⟜≍⊃(|0 pretty^0||0 ¤(repr°□₁)^!^0)
+RoundtripRepr! ← ⍤⟜≍⊃(|0 repr^0||0 (repr°□₁)^!^0)
+
+Roundtrip!@\W
+Roundtrip!@\_
+
+RoundtripRepr!@\s
+RoundtripRepr!@\W
+RoundtripRepr!@\_
+RoundtripRepr!@\u{100001}
+RoundtripRepr!@\u{100002}
+
+⍤⤙≍ ["@ "] pretty@\s
+⍤⟜≍ pretty@\u{100001} ¤$ @\∅
+⍤⟜≍ pretty@\u{100002} ¤$ @\⊥
+
+# Experimental!
+⍤⤙≍ ["∅"] pretty⍜(bytes"f64")⍜⊢+₁NaN

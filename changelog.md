@@ -54,6 +54,12 @@ This version is not yet released. If you are reading this on the website, then t
   - This would replace existing recursive functions
 - Make subscripted [`stack ?`](https://uiua.org/docs/stack) merge adjacent non-subscripted [`stack ?`](https://uiua.org/docs/stack) chains
 - Implement [`under ⍜`](https://uiua.org/docs/under)[`regex`](https://uiua.org/docs/regex) for replacing using regex (called `gsub` in some other languages)
+- `@\_` and `@\W` now roundtrip through [`pretty`](https://uiua.org/docs/pretty) and [`repr`](https://uiua.org/docs/repr) (previously they would be formatted as `@\x¯01` and `@�` respectively)
+- "empty" and "tombstone" sentinels used in [`map`s](https://uiua.org/docs/map) now format through [`pretty`](https://uiua.org/docs/pretty) differently, although this shouldn't be noticable to users. Namely:
+  - Tombstone char is now `@\⊥` (was `@⊥`)
+  - Empty char is now `@\∅` (was `@_`)
+  - Empty number is now `∅` (was `_`)
+  - Also, empty and tombstone chars now roundtrip through [`repr`](https://uiua.org/docs/repr) (formatting as `@\u{100001}` and `@\u{100002}` respectively, previously would match [`pretty`](https://uiua.org/docs/pretty) formatting)
 ### Interpreter
 - Speed up the implementation of [`or ∨`](https://uiua.org/docs/or)
 - The fomatter no longer truncates trailing decimal `0`s from number literals

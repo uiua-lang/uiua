@@ -1273,6 +1273,12 @@ impl<T: ArrayValue> Array<T> {
                     .collect();
                 return Ok(Array::new(shape, CowSlice::new()));
             }
+            validate_size::<T>(
+                (indices_shape.iter())
+                    .chain(self.shape.iter().skip(1))
+                    .copied(),
+                env,
+            )?;
             let mut rows = Vec::with_capacity(row_count);
             for indices_row in indices.chunks_exact(row_len) {
                 rows.push(self.select(&indices_shape[1..], indices_row, env)?);

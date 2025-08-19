@@ -42,7 +42,8 @@ thread_local! {
         [
             ("example.ua", EXAMPLE_UA),
             ("example.txt", EXAMPLE_TXT),
-            ("primitives.json", include_str!("../../../site/primitives.json"))
+            #[cfg(feature="default")]
+            ("primitives.json", include_str!("../../../site/primitives.json")),
         ]
         .map(|(path, content)| (PathBuf::from(path), content.as_bytes().to_vec()))
         .into(),
@@ -214,6 +215,7 @@ impl SysBackend for WebBackend {
             .prompt_with_message("Enter a line of text for stdin")
             .unwrap_or(None))
     }
+    #[cfg(feature = "image")]
     fn show_image(&self, image: image::DynamicImage, label: Option<&str>) -> Result<(), String> {
         let mut bytes = Cursor::new(Vec::new());
         image
@@ -383,6 +385,7 @@ impl SysBackend for WebBackend {
         (self.stdout.lock().unwrap()).push(OutputItem::Audio(wav_bytes, label.map(Into::into)));
         Ok(())
     }
+    #[cfg(feature = "audio_encode")]
     fn stream_audio(&self, mut f: uiua::AudioStreamFn) -> Result<(), String> {
         let mut samples = Vec::new();
         const SAMPLE_RATE: u32 = 44100;

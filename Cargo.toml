@@ -1,5 +1,5 @@
 [workspace]
-members = ["site", "tests_ffi", "pad/editor", "parser"]
+members = ["site", "tests_ffi", "pad/editor", "parser", "generator"]
 
 [workspace.package]
 categories = ["compilers", "algorithms", "multimedia", "parser-implementations"]
@@ -243,6 +243,7 @@ web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "nokhwa"]
 window = ["eframe", "rmp-serde", "image", "native-dialog"]
 xlsx = ["calamine", "simple_excel_writer"]
+internal_fmt_doc = []
 # Use system static libraries instead of building them
 system = ["libffi?/system"]
 

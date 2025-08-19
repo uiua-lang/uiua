@@ -108,36 +108,3 @@ fn BlogRssButton() -> impl IntoView {
         </button>
     }
 }
-
-#[cfg(test)]
-#[test]
-fn gen_blog_html() {
-    use std::{borrow::Cow, fs};
-
-    let list = include_str!("../blog/list.txt");
-    for line in list
-        .lines()
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-    {
-        let (path, _) = line.split_once('(').unwrap_or_default();
-        let md_path = format!("blog/{path}-text.md");
-        let mut markdown =
-            fs::read_to_string(&md_path).unwrap_or_else(|e| panic!("{md_path}: {e}"));
-        let mut lines: Vec<Cow<str>> = markdown.lines().map(Cow::Borrowed).collect();
-        lines.insert(
-            0,
-            Cow::Borrowed("[Uiua](https://uiua.org)\n\n[Blog Home](https://uiua.org/blog)"),
-        );
-        lines.insert(
-            3,
-            Cow::Owned(format!(
-                "\n\n**You can read this post with full editor \
-                features [here](https://uiua.org/blog/{path}).**\n\n"
-            )),
-        );
-        markdown = lines.join("\n");
-        let html = markdown_html(&markdown);
-        let html_path = format!("blog/{path}-html.html");
-        fs::write(html_path, html).unwrap();
-    }
-}

@@ -33,6 +33,8 @@ static ALIASES: LazyLock<HashMap<Primitive, &[&str]>> = LazyLock::new(|| {
         (Primitive::Last, &["lst"]),
         (Primitive::Slf, &["slf"]),
         (Primitive::Select, &["sel"]),
+        (Primitive::Parse, &["prs"]),
+        (Primitive::Rand, &["rnd"]),
         (Primitive::Voxels, &["project"]),
         (Primitive::Evert, &["ev"]),
     ]

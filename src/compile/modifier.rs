@@ -517,7 +517,7 @@ impl Compiler {
                 if let Some(n) = subscript
                     .and_then(|sub| {
                         self.subscript_n_only(&sub, On)
-                            .map(|n| self.positive_subscript(n, On, &sub.span))
+                            .map(|n| self.positive_subscript(n, By, &sub.span))
                     })
                     .filter(|&n| n > 1)
                 {

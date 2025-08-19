@@ -119,7 +119,7 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
                     Ok(row) => row.next().unwrap(),
                     Err(row) => row.clone(),
                 };
-                if n.rank() > row.rank() || is_empty {
+                if is_empty || n.rank() == 0 || n.rank() > row.rank() {
                     rows_to_sel.push(Err(row));
                 } else if row.row_count() == 1 && n.row_count() >= 1 {
                     let row_shape = row.shape[n.rank()..].into();

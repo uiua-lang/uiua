@@ -593,9 +593,9 @@ pub fn switch(
                 {
                     let r = row.shape.iter().take_while(|&&d| d == 1).count();
                     let row_shape: Shape =
-                        row.shape[(selector.rank() - r).min(row.rank())..].into();
+                        row.shape[selector.rank().saturating_sub(r).min(row.rank())..].into();
                     let row_count: usize = (row.shape.iter())
-                        .take(selector.rank() - r)
+                        .take(selector.rank().saturating_sub(r))
                         .copied()
                         .product();
                     // println!(" (repeated, shape {row_shape})");

@@ -1,6 +1,5 @@
 {
   craneLib,
-  libPath,
   makeBinaryWrapper,
   stdenv,
   lib,
@@ -8,9 +7,24 @@
   libffi,
   alsa-lib,
   rustPlatform,
+  libGL,
+  libxkbcommon,
+  wayland,
+  xorg,
   doCheck ? true,
 }:
 let
+  libPath = lib.makeLibraryPath (
+    lib.optionals stdenv.hostPlatform.isLinux [
+      libGL
+      libxkbcommon
+      wayland
+      xorg.libX11
+      xorg.libXcursor
+      xorg.libXi
+      xorg.libXrandr
+    ]
+  );
   commonArgs = {
     src = lib.fileset.toSource {
       root = ../.;
@@ -46,6 +60,9 @@ let
     postInstall = ''
       wrapProgram "$out/bin/uiua" --prefix LD_LIBRARY_PATH : "${libPath}"
     '';
+    passthru = {
+      inherit libPath;
+    };
   };
 in
 craneLib.buildPackage totalArgs

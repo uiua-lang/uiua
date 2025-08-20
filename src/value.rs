@@ -149,9 +149,10 @@ impl Value {
         }
     }
     pub(crate) fn depth_rows(&self, depth: usize) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
-        val_as_arr!(self, |array| Box::new(
-            array.depth_rows(depth).map(Value::from)
-        ))
+        val_as_arr!(self, |a| Box::new(a.depth_rows(depth).map(Value::from)))
+    }
+    pub(crate) fn row_shaped_slice(&self, index: usize, row_shape: Shape) -> Self {
+        val_as_arr!(self, |a| a.row_shaped_slice(index, row_shape).into())
     }
     /// Get an iterator over the rows of the value that have the given shape
     pub fn row_shaped_slices(

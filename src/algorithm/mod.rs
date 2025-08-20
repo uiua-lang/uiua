@@ -565,7 +565,7 @@ pub fn switch(
 
         // Switch with each selector element
         let mut outputs = multi_output(sig.outputs(), Vec::new());
-        let mut rows_to_sel = Vec::with_capacity(sig.args());
+        let mut rows_to_sel: Vec<Box<dyn Iterator<Item = Value>>> = Vec::with_capacity(sig.args());
         for _ in 0..row_count {
             let selector = match &mut rows[0] {
                 Ok(selector) => selector.next().unwrap(),
@@ -591,12 +591,23 @@ pub fn switch(
                     || is_empty
                     || arg_shapes[i].row_count() == 1
                 {
-                    // println!(" (repeated)");
-                    rows_to_sel.push(Err(row));
+                    let r = row.shape.iter().take_while(|&&d| d == 1).count();
+                    let row_shape: Shape =
+                        row.shape[(selector.rank() - r).min(row.rank())..].into();
+                    let row_count: usize = (row.shape.iter())
+                        .take(selector.rank() - r)
+                        .copied()
+                        .product();
+                    // println!(" (repeated, shape {row_shape})");
+                    rows_to_sel.push(Box::new(
+                        (0..row_count)
+                            .map(move |i| row.row_shaped_slice(i, row_shape.clone()))
+                            .cycle(),
+                    ));
                 } else {
                     // println!(" (iterated)");
                     let row_shape = row.shape[selector.rank()..].into();
-                    rows_to_sel.push(Ok(row.into_row_shaped_slices(row_shape)));
+                    rows_to_sel.push(row.into_row_shaped_slices(row_shape));
                 }
             }
             for sel_row_slice in selector.row_slices() {
@@ -605,10 +616,7 @@ pub fn switch(
                     let node = &branches[sel_elem];
                     let arg_count = args[sel_elem];
                     for (i, row) in rows_to_sel.iter_mut().rev().enumerate().rev() {
-                        let row = match row {
-                            Ok(row) => row.next().unwrap(),
-                            Err(row) => row.clone(),
-                        };
+                        let row = row.next().unwrap();
                         // println!("  row: {:?}", row);
                         if i < arg_count {
                             env.push(row);

@@ -27,7 +27,7 @@ use crate::{
     grid_fmt::{format_char_inner_repr, GridFmt},
     val_as_arr,
     value::Value,
-    Boxed, Complex, Primitive, Shape, Uiua, UiuaResult,
+    Boxed, Complex, Primitive, Shape, Uiua, UiuaResult, WILDCARD_NAN,
 };
 
 use super::{validate_size, ArrayCmpSlice, FillContext};
@@ -2361,6 +2361,8 @@ fn f64_repr(n: f64) -> String {
         "τ".into()
     } else if abs.is_infinite() {
         "∞".into()
+    } else if n.to_bits() == WILDCARD_NAN.to_bits() {
+        "W".into()
     } else {
         abs.to_string()
     };

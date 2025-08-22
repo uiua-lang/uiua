@@ -30,11 +30,14 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `^` shorthand for `^0` in index macros
 - Stabilize [`self ˙`](https://uiua.org/docs/self)
   - Add experimental sided subscripts for [`self ˙`](https://uiua.org/docs/self)
+- Stabilize [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)
 - Add numeric subscripts for [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Deprecate experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) in favor of [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Add the [`exponential ₑ`](https://uiua.org/docs/exponential) function, which computes the exponential function
 - Deprecate [`logarithm ₙ`](https://uiua.org/docs/logarithm) in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
+- Deprecate [`unique ◰`](https://uiua.org/docs/logarithm) in favor of subscripted [`occurrences ⧆`](https://uiua.org/docs/occurrences)
+  - `◰` will automatically format to `⧆₁`
 - Remove experimental `ln` in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
 - Add [`&seek`](https://uiua.org/docs/&seek) function for working with large files
 - Remove previously deprecated `signature` and `stringify` modifiers

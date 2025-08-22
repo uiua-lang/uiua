@@ -755,6 +755,12 @@ primitive!(
     /// ex: ⊚3
     /// ex: ⊚8
     (1, Where, MonadicArray, ("where", '⊚')),
+    /// Remove duplicate rows from an array
+    ///
+    /// ex: ◴ 7_7_8_0_1_2_0
+    /// ex: ◴ "Hello, World!"
+    /// ex: ◴ [3_2 1_4 3_2 5_6 1_4 7_8]
+    (1, Deduplicate, MonadicArray, ("deduplicate", '◴')),
     /// Assign a unique index to each unique row in an array
     ///
     /// ex: ⊛7_7_8_0_1_2_0
@@ -767,19 +773,14 @@ primitive!(
     /// Mark each row of an array with its occurrence count
     ///
     /// Each row in the array becomes a number corresponding to the number of times it has already appeared in the array.
-    /// ex: # Experimental!
-    ///   : ⧆ "aabccdab"
-    /// ex: # Experimental!
-    ///   : ⧆ "lego helmet"
-    /// ex: # Experimental!
-    ///   : ⧆ [1_2 4_3 1_2 3_0]
-    (1, Occurrences, MonadicArray, ("occurrences", '⧆'), { experimental: true }),
-    /// Remove duplicate rows from an array
+    /// ex: ⧆ "aabccdab"
+    /// ex: ⧆ "lego helmet"
+    /// ex: ⧆ [1_2 4_3 1_2 3_0]
     ///
-    /// ex: ◴ 7_7_8_0_1_2_0
-    /// ex: ◴ "Hello, World!"
-    /// ex: ◴ [3_2 1_4 3_2 5_6 1_4 7_8]
-    (1, Deduplicate, MonadicArray, ("deduplicate", '◴')),
+    /// Subscripted [occurrences] marks `1` the first N occurrences of each row and `0` for the rest.
+    /// ex: ⧆₁ "lego helmet"
+    /// ex: ⧆₂ "aaaabcbcbcbc"
+    (1, Occurrences, MonadicArray, ("occurrences", '⧆')),
     /// Get a mask of first occurrences of items in an array
     ///
     /// ex: ◰ 7_7_8_0_1_2_0

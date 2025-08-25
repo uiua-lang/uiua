@@ -116,10 +116,20 @@ pub fn Editor<'a>(
     // Track line count
     let (line_count, set_line_count) = create_signal(1);
 
-    let initial_code_str = examples.first().cloned().unwrap_or_else(|| example.into());
+    let initial_code_str = if mode == EditorMode::Example && !nonprogressive {
+        examples.last()
+    } else {
+        examples.first()
+    }
+    .cloned()
+    .unwrap_or_else(|| example.into());
     let (initial_code, set_initial_code) = create_signal(Some(initial_code_str.clone()));
 
-    let (example, set_example) = create_signal(0);
+    let (example, set_example) = create_signal(if mode == EditorMode::Example && !nonprogressive {
+        examples.len().saturating_sub(1)
+    } else {
+        0
+    });
     let (diag_output, set_diag_output) = create_signal(View::default());
     let (output, set_output) = create_signal(View::default());
     let (token_count, set_token_count) = create_signal(0);

@@ -1426,8 +1426,7 @@ pub fn progressive_strings(input: &str) -> Vec<String> {
     if strings.is_empty() {
         strings.push("".into());
     }
-    strings.rotate_right(1);
-    strings[0] = input.into();
+    *strings.last_mut().unwrap() = input.into();
     strings
 }
 

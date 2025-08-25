@@ -1372,6 +1372,9 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// `classify` the rows of the array
     pub fn classify(&self) -> Vec<usize> {
+        if self.shape.contains(&0) {
+            return vec![0; self.row_count()];
+        }
         let mut classified = Vec::with_capacity(self.row_count());
         if self.meta.is_sorted_up() {
             let mut rows = self.row_slices().map(ArrayCmpSlice);

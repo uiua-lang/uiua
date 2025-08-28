@@ -1071,10 +1071,6 @@ impl Uiua {
     pub fn pop_string(&mut self) -> UiuaResult<String> {
         self.pop_convert(Value::as_string)
     }
-    /// Simulates popping a value and immediately pushing it back
-    pub(crate) fn touch_stack(&self, n: usize) -> UiuaResult {
-        self.require_height(n).map(drop)
-    }
     pub(crate) fn make_array(
         &mut self,
         len: usize,

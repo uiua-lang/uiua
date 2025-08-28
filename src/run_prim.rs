@@ -78,7 +78,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Pi => env.push(pi()),
         Primitive::Tau => env.push(tau()),
         Primitive::Infinity => env.push(inf()),
-        Primitive::Identity => env.touch_stack(1)?,
+        Primitive::Identity => {}
         Primitive::Not => env.monadic_env(Value::not)?,
         Primitive::Neg => env.monadic_env(Value::neg)?,
         Primitive::Abs => env.monadic_env(Value::abs)?,
@@ -781,8 +781,7 @@ impl ImplPrimitive {
                 }
             }
             &ImplPrimitive::UndoTransposeN(n, amnt) => {
-                env.touch_stack(n)?;
-                let end = env.stack_height() - n;
+                let end = env.require_height(n)?;
                 let vals = &mut env.stack_mut()[end..];
                 let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
                 for val in vals {
@@ -792,7 +791,7 @@ impl ImplPrimitive {
                 }
             }
             &ImplPrimitive::UndoRotate(n) => {
-                env.touch_stack(n + 1)?;
+                env.require_height(n + 1)?;
                 let mut amount = env.pop(1)?;
                 let depth = amount.rank().saturating_sub(1);
                 if n == 1 {

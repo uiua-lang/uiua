@@ -840,7 +840,7 @@
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",
-    "description": "Find the first index in an array of each row of another array Find the first index of each row of one array in another"
+    "description": "Find the first index in an array of each row of another array"
   },
   "indexof": {
     "glyph": "⊗",

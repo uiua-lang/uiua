@@ -1422,9 +1422,17 @@ impl ImplPrimitive {
                     }
                 } else if let Some(n) = sub.num {
                     if n > 0 {
+                        let n = n.unsigned_abs() as usize;
                         for val in vals.iter_mut() {
-                            while val.rank() < max_rank {
-                                val.fix();
+                            if val.rank() <= n {
+                                while val.rank() < max_rank {
+                                    val.fix()
+                                }
+                            } else {
+                                while val.rank() < max_rank {
+                                    let i = val.rank() - n;
+                                    val.shape.insert(i, 1);
+                                }
                             }
                         }
                     }

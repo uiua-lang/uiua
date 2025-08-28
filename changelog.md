@@ -33,6 +33,11 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Add experimental sided subscripts for [`backward ˜`](https://uiua.org/docs/backward)
 - Add numeric subscripts for [`occurrences ⧆`](https://uiua.org/docs/occurrences)
+- Add [`indexin ⨂`](https://uiua.org/docs/indexin) function, which is a flipped version of [`indexof ⊗`](https://uiua.org/docs/indexof)
+  - This makes its calling convention match [`memberof ∊`](https://uiua.org/docs/memberof)
+  - It also matches the argument order of the more common case
+  - [`indexof ⊗`](https://uiua.org/docs/indexof) has been deprecated
+  - The formatter will automatically convert existing code
 - Deprecate experimental [`progressive indexof ⊘`](https://uiua.org/docs/progressiveindexof) in favor of [`occurrences ⧆`](https://uiua.org/docs/occurrences)
 - Add the [`exponential ₑ`](https://uiua.org/docs/exponential) function, which computes the exponential function
 - Deprecate [`logarithm ₙ`](https://uiua.org/docs/logarithm) in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)

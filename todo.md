@@ -1,9 +1,10 @@
 # Uiua Todo
 
 # 0.17
-- Sided `box`
+- Change how optional arguments work
 
 # 0.18
+- Sided `box`
 - Sided `join`
 - `table` subscripts for rank selection
 - Mixed subscripts

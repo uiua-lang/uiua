@@ -1,19 +1,19 @@
 # Uiua Todo
 
 # 0.17
-- Sided `join`
 - Sided `box`
+
+# 0.18
+- Sided `join`
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`
-- Reserved modifier glyphs?
-- Streaming gif and audio encoding
-
-# 0.18
 - Compile-time code string evaluation?
 - `un`/`anti` `stencil`
 - `first group/partition` optimization
 - `under group/partition inventory` optimization
+- Reserved modifier glyphs?
+- Streaming gif and audio encoding
 
 ## Planned Features
 Features that are planned to be implemented in the future.

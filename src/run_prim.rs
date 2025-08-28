@@ -1420,6 +1420,14 @@ impl ImplPrimitive {
                             }
                         }
                     }
+                } else if let Some(n) = sub.num {
+                    if n > 0 {
+                        for val in vals.iter_mut() {
+                            while val.rank() < max_rank {
+                                val.fix();
+                            }
+                        }
+                    }
                 }
                 if depth == 0 {
                     if inv {

@@ -2,6 +2,7 @@
 
 # 0.17
 - Change how optional arguments work
+- Fix `⍜(▽∩♭) ⊸◿2 °△3_3`
 
 # 0.18
 - Sided `box`

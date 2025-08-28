@@ -324,6 +324,7 @@ pub static CONTRA_PATTERNS: &[&dyn InvertPattern] = &[
     &(Max, Max),
     &(Select, IndexOf),
     &(IndexOf, Select),
+    &((Flip, IndexIn), Select),
     &NoUnder(ContraCouplePat),
 ];
 

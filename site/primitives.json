@@ -835,12 +835,20 @@
     "class": "Encoding",
     "description": "Encode an image into a byte array with the specified format"
   },
+  "indexin": {
+    "glyph": "⨂",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Find the first index in an array of each row of another array Find the first index of each row of one array in another"
+  },
   "indexof": {
     "glyph": "⊗",
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",
-    "description": "Find the first index of each row of one array in another"
+    "description": "Find the first index of each row of one array in another",
+    "deprecated": true
   },
   "infinity": {
     "glyph": "∞",

@@ -13,6 +13,7 @@
 - Compile-time code string evaluation?
 - `un`/`anti` `stencil`
 - `first group/partition` optimization
+- `under group/partition inventory` optimization
 
 ## Planned Features
 Features that are planned to be implemented in the future.

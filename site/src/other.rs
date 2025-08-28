@@ -321,7 +321,7 @@ pub fn Optimizations() -> impl IntoView {
             <li><Prim prim=Deduplicate/>" and "<Prim prim=Classify/></li>
             <li><Prims prims=[Reduce, Min]/>" and "<Prims prims=[Reduce, Max]/>" on rank-1 arrays"</li>
             <li><Prims prims=[Scan, Min]/>" and "<Prims prims=[Scan, Max]/>" on rank-1 arrays"</li>
-            <li><Prim prim=MemberOf/>" and "<Prim prim=IndexOf/>" when searching for a single row"</li>
+            <li><Prim prim=MemberOf/>" and "<Prim prim=IndexIn/>" when searching for a single row"</li>
             <li>"The "<a href="#complexity">"above"</a>" optimizations for checking if all rows of an array are the same"</li>
             <li>"More may be added in the future"</li>
         </ul>

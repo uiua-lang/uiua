@@ -1195,8 +1195,8 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p><Prim prim=Switch/>" can use a "<A href="/tutorial/morestack#function-packs">"function pack"</A>" to select from more functions."</p>
         <Editor example="⨬(+|-|×|÷) [1 2 0 3] [...2] [...5]"/>
         <Editor example="⨬(×10|+1|⨬¯∘ =2.) ◿3. [2 9 4 0 8 3]"/>
-        <p>"With "<Prim prim=IndexOf/>", "<Prim prim=Switch/>" can be used to implement behavior similar to "<code>"switch"</code>" statements in other languages."</p>
-        <Editor example="F ← (\n  ⊗□⊙{\"foo\" \"bar\" \"baz\"}\n  ⨬(+1|×10|÷2|¯)\n)\nF \"foo\" 5\nF \"bar\" 5\nF \"baz\" 5\nF \"wow\" 5"/>
+        <p>"With "<Prim prim=IndexIn/>", "<Prim prim=Switch/>" can be used to implement behavior similar to "<code>"switch"</code>" statements in other languages."</p>
+        <Editor example="F ← (\n  ⨂{\"foo\" \"bar\" \"baz\"} □\n  ⨬(+1|×10|÷2|¯)\n)\nF \"foo\" 5\nF \"bar\" 5\nF \"baz\" 5\nF \"wow\" 5"/>
         <p>"Each branch can have a signature specified. For the overall "<Prim prim=Switch/>" to have a valid signature, all branches must either change the height of the stack by the same amount "<em>"or"</em>" return the same number of outputs."</p>
         <Editor example="F ← ⨬(|2 ×||3.2 ⊃(++)×)\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
         <p>"Signatures in "<Prim prim=Switch/>" functions are a bit messy, so try to avoid them when possible."</p>

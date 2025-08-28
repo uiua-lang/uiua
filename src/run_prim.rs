@@ -139,6 +139,12 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Find => env.dyadic_rr_env(Value::find)?,
         Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
         Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
+        Primitive::IndexIn => {
+            let a = env.pop(1)?;
+            let b = env.pop(2)?;
+            let res = b.index_of(&a, env)?;
+            env.push(res);
+        }
         Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
         Primitive::Box => {
             let val = env.pop(1)?;

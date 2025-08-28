@@ -1,6 +1,6 @@
 ✅ ← ⍤⤙≍ 0 &runi
 
-$Branch ⍣(°□⊡+1)"main"⊸(↧⊃(⊗□"-b"|⊗□"--branch")) &args
+$Branch ⍣(°□⊡+1)"main"⊸(↧⊃(˜⨂□"-b"|˜⨂□"--branch")) &args
 $Resume ¬∊ &args □"resume"
 ⊸⍥(
   ✅ {"git" "checkout" "site" "--"}

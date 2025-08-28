@@ -267,6 +267,7 @@ impl Primitive {
             Tag => "use data variants instead".into(),
             ProgressiveIndexOf => format!("use {} instead", Occurrences.format()),
             Unique => format!("use {Occurrences}₁"),
+            IndexOf => format!("use {} {} instead", Backward.format(), IndexIn.format()),
             _ => return None,
         })
     }

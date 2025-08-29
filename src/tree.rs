@@ -74,14 +74,6 @@ node!(
     NoInline(inner(Arc<Node>)),
     /// Track the caller of this node
     TrackCaller(inner(Arc<Node>)),
-    /// Set an optional argument
-    SetArg { index: usize, span: usize },
-    /// Sort optional arguments
-    SortArgs { indices: EcoVec<(usize, usize)> },
-    /// Use optional arguments
-    UseArgs { size: usize, span: usize },
-    /// Clear optional arguments
-    ClearArgs,
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),
@@ -793,10 +785,6 @@ impl fmt::Debug for Node {
             Node::TrackCaller(inner) => {
                 f.debug_tuple("track-caller").field(inner.as_ref()).finish()
             }
-            Node::SetArg { index, .. } => write!(f, "set-arg {index}"),
-            Node::SortArgs { indices: rise, .. } => write!(f, "sort-args {rise:?}"),
-            Node::UseArgs { .. } => write!(f, "use-args"),
-            Node::ClearArgs => write!(f, "clear-args"),
         }
     }
 }
@@ -855,10 +843,6 @@ impl Node {
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, purity, asm, visited)),
                 Node::Dynamic(_) => false,
-                Node::SetArg { .. }
-                | Node::SortArgs { .. }
-                | Node::UseArgs { .. }
-                | Node::ClearArgs => false,
                 _ => true,
             };
             visited.truncate(len);

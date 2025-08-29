@@ -352,16 +352,7 @@ impl Compiler {
         modified: Modified,
         subscript: Option<Sp<Subscript>>,
     ) -> UiuaResult<Node> {
-        let prim = if let Modifier::Primitive(prim) = modified.modifier.value {
-            Some(prim)
-        } else {
-            None
-        };
-        self.setter_stash
-            .push((SetterStashKind::Modifier(prim), take(&mut self.set_args)));
-        let res = self.modified_impl(modified, subscript);
-        self.set_args.extend(self.setter_stash.pop().unwrap().1);
-        res
+        self.modified_impl(modified, subscript)
     }
     #[allow(clippy::collapsible_match)]
     fn modified_impl(
@@ -1564,10 +1555,31 @@ impl Compiler {
         {
             // Module import macro
             let names = m.names.clone();
-            let (_, node) = self.in_scope(ScopeKind::AllInModule, move |comp| {
+            let data_func = m.data_func;
+            let call = m.names.get("Call").copied();
+            let (_, sn) = self.in_scope(ScopeKind::AllInModule, move |comp| {
                 comp.scope.names.extend(names);
-                comp.words(operands)
+                comp.words_sig(operands)
             })?;
+            let (mut node, sig) = (sn.node, sn.sig);
+            dbg!(&node);
+            if data_func {
+                // Data macro
+                let BindingKind::Func(call_func) =
+                    self.asm.bindings[call.unwrap().index].kind.clone()
+                else {
+                    unreachable!()
+                };
+                let mut call_node = self.asm[&call_func].clone();
+                call_node.as_mut_slice().rotate_left(1);
+                let mut new_node = call_node.pop().unwrap();
+                let span = self.add_span(modifier_span);
+                new_node = (new_node.sig_node().unwrap())
+                    .dipped(sig.args().saturating_sub(1), span)
+                    .node;
+                node.prepend(new_node);
+                node.push(call_node);
+            }
             node
         } else {
             Node::empty()

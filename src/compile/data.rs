@@ -55,10 +55,12 @@ impl Compiler {
                     public: data.public,
                 };
 
-                let (module, ()) = self
+                let data_func = data.func.is_some();
+                let (mut module, ()) = self
                     .in_scope(ScopeKind::Module(name.value.clone()), |comp| {
                         comp.data_def(data, false, prelude)
                     })?;
+                module.data_func = data_func;
 
                 // Add global
                 self.asm.add_binding_at(
@@ -381,19 +383,14 @@ impl Compiler {
                 }
                 field_nodes.push(arg);
             }
-            let mut node = Node::Array {
+            Node::Array {
                 len: fields.len(),
                 inner: Node::Mod(Primitive::Bracket, field_nodes, span).into(),
                 boxed,
                 allow_ext: true,
                 prim: None,
                 span,
-            };
-            if data.func.is_some() {
-                let size = fields.len();
-                node.push(Node::UseArgs { size, span });
             }
-            node
         } else {
             Node::empty()
         };
@@ -480,9 +477,7 @@ impl Compiler {
 
                 // Make with args function
                 if !fields.iter().any(|field| field.name == "Args") {
-                    let mut sn = sn.clone();
-                    let size = fields.len();
-                    sn.node.prepend(Node::UseArgs { size, span });
+                    let sn = sn.clone();
                     let local = LocalName {
                         index: comp.next_global,
                         public: true,

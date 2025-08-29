@@ -1,6 +1,6 @@
 //! En/decode Uiua arrays to/from media formats
 
-use std::{collections::BTreeMap, f64::consts::E, mem::take};
+use std::{collections::BTreeMap, f64::consts::E};
 
 use ecow::{eco_vec, EcoString, EcoVec};
 use enum_iterator::{all, Sequence};
@@ -849,8 +849,7 @@ builtin_params!(
     (Camera, "The position of the camera"),
 );
 
-pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
-    let args = take(&mut env.rt.set_args);
+pub(crate) fn voxels(val: &Value, params: Option<&Value>, env: &mut Uiua) -> UiuaResult<Value> {
     let converted: Array<f64>;
     if ![3, 4].contains(&val.rank()) {
         return Err(env.error(format!(
@@ -906,33 +905,34 @@ pub(crate) fn voxels(val: &Value, env: &mut Uiua) -> UiuaResult<Value> {
     let mut pos: Option<[f64; 3]> = None;
     let mut scale = None;
     let mut fog = None;
-    for (arg, index) in args {
-        match all::<VoxelsParam>().nth(index).unwrap() {
-            VoxelsParam::Fog => {
-                let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
+    for (i, param) in params.into_iter().flat_map(Value::rows).enumerate() {
+        match all::<VoxelsParam>().nth(i) {
+            Some(VoxelsParam::Fog) => {
+                let nums = param.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
                 match *nums {
-                    [gray] if arg.shape.is_empty() => fog = Some([gray; 3]),
+                    [gray] if param.shape.is_empty() => fog = Some([gray; 3]),
                     [r, g, b] => fog = Some([r, g, b]),
                     _ => {
                         return Err(env.error(format!(
                             "Fog must be a scalar or list of 3 numbers, but its shape is {}",
-                            arg.shape
+                            param.shape
                         )))
                     }
                 }
             }
-            VoxelsParam::Scale => scale = Some(arg.as_num(env, "Scale must be a number")?),
-            VoxelsParam::Camera => {
-                let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
+            Some(VoxelsParam::Scale) => scale = Some(param.as_num(env, "Scale must be a number")?),
+            Some(VoxelsParam::Camera) => {
+                let nums = param.as_nums(env, "Camera position must be 3 numbers")?;
                 if let [x, y, z] = *nums {
                     pos = Some([x, y, z]);
                 } else {
                     return Err(env.error(format!(
                         "Camera position must be 3 numbers, but its shape is {}",
-                        arg.shape
+                        param.shape
                     )));
                 }
             }
+            None => return Err(env.error(format!("Invalid voxels params index {i}"))),
         }
     }
 
@@ -1268,17 +1268,27 @@ builtin_params!(
     (Bg, "Background color"),
 );
 
-pub(crate) fn layout_text(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Value> {
+pub(crate) fn layout_text(
+    size: Value,
+    text: Value,
+    params: Option<Value>,
+    env: &mut Uiua,
+) -> UiuaResult<Value> {
     #[cfg(feature = "font_shaping")]
     {
-        layout_text_impl(size, text, env)
+        layout_text_impl(size, text, params, env)
     }
     #[cfg(not(feature = "font_shaping"))]
     Err(env.error("Text layout is not supported in this environment"))
 }
 
 #[cfg(feature = "font_shaping")]
-fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Value> {
+fn layout_text_impl(
+    size: Value,
+    text: Value,
+    params: Option<Value>,
+    env: &mut Uiua,
+) -> UiuaResult<Value> {
     use std::{cell::RefCell, iter::repeat_n};
 
     use cosmic_text::*;
@@ -1292,8 +1302,6 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
     thread_local! {
         static FONT_STUFF: RefCell<Option<FontStuff>> = const { RefCell::new(None) };
     }
-
-    let args = take(&mut env.rt.set_args);
 
     let mut string = String::new();
     match text {
@@ -1363,12 +1371,12 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
     let mut bg = None;
 
     // Parse options
-    for (arg, index) in args {
-        match all::<LayoutParam>().nth(index).unwrap() {
-            LayoutParam::LineHeight => {
+    for (i, arg) in params.into_iter().flat_map(Value::into_rows).enumerate() {
+        match all::<LayoutParam>().nth(i) {
+            Some(LayoutParam::LineHeight) => {
                 line_height = arg.as_num(env, "Line height must be a scalar number")? as f32
             }
-            LayoutParam::Size => {
+            Some(LayoutParam::Size) => {
                 let nums = arg.as_nums(env, "Size must be a scalar number or 2 numbers")?;
                 let [h, w] = match *nums {
                     [s] if arg.shape.is_empty() => [s; 2],
@@ -1399,7 +1407,7 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
                     height = Some(h as f32);
                 }
             }
-            LayoutParam::Color => {
+            Some(LayoutParam::Color) => {
                 let nums = arg.as_nums(
                     env,
                     "Color must be a scalar number or list of 3 or 4 numbers",
@@ -1426,9 +1434,10 @@ fn layout_text_impl(size: Value, text: Value, env: &mut Uiua) -> UiuaResult<Valu
                     Color::rgb((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
                 });
             }
-            LayoutParam::Bg => {
+            Some(LayoutParam::Bg) => {
                 bg = Some(arg.as_number_array::<f64>(env, "Background color must be numbers")?)
             }
+            None => return Err(env.error(format!("Invalid layout params index {i}"))),
         }
     }
 

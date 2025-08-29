@@ -296,6 +296,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
         SidedEncodeBytes(SubSide::Right),
         DecodeBytes(Some(SubSide::Right)),
     ),
+    &(IndexIn, (Flip, Select)),
     &AntiEncodings,
     &MatrixDivPat,
     &NoUnder(AntiCouplePat),

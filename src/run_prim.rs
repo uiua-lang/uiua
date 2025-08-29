@@ -314,13 +314,13 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::AudioEncode => media::audio_encode(env)?,
         Primitive::Voxels => {
             let val = env.pop(1)?;
-            let res = media::voxels(&val, env)?;
+            let res = media::voxels(&val, None, env)?;
             env.push(res);
         }
         Primitive::Layout => {
             let size = env.pop(1)?;
             let text = env.pop(2)?;
-            let res = media::layout_text(size, text, env)?;
+            let res = media::layout_text(size, text, None, env)?;
             env.push(res);
         }
         Primitive::Fft => algorithm::fft(env)?,

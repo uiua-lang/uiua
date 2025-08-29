@@ -17,7 +17,7 @@ use crate::{
 };
 
 impl Value {
-    #[allow(clippy::unit_arg)]
+    #[allow(clippy::unit_arg, unused)]
     pub(crate) fn set_row(&mut self, index: usize, row: Self, env: &Uiua) -> UiuaResult {
         if self.shape.row() != row.shape {
             return Err(env.error(format!(

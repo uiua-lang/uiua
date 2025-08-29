@@ -48,8 +48,6 @@ pub(crate) struct Runtime {
     pub(crate) call_stack: Vec<StackFrame>,
     /// The local stack
     pub(crate) local_stack: EcoVec<(usize, Value)>,
-    /// Set args
-    pub(crate) set_args: Vec<(Value, usize)>,
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
@@ -198,7 +196,6 @@ impl Default for Runtime {
                 ..Default::default()
             }],
             local_stack: EcoVec::new(),
-            set_args: Vec::new(),
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             fill_boundary_stack: Vec::new(),
@@ -755,40 +752,6 @@ impl Uiua {
             Node::TrackCaller(inner) => {
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
                 self.exec(inner)
-            }
-            Node::SetArg { index, span } => self.with_span(span, |env| {
-                let val = env.pop(1)?;
-                env.rt.set_args.push((val, index));
-                Ok(())
-            }),
-            Node::SortArgs { indices } => {
-                for (_, idx) in &mut self.rt.set_args {
-                    if let Some((_, index)) = indices.iter().find(|(i, _)| i == idx) {
-                        *idx = *index;
-                    }
-                }
-                Ok(())
-            }
-            Node::UseArgs { size, span } => self.with_span(span, |env| {
-                let mut target = env.pop(1)?;
-                if target.row_count() != size {
-                    return Err(env.error(format!(
-                        "Args array should be length {size}, but its shape is {}",
-                        target.shape
-                    )));
-                }
-                for (mut row, index) in take(&mut env.rt.set_args) {
-                    if let Value::Box(_) = target {
-                        row.box_if_not();
-                    }
-                    target.set_row(index, row, env)?;
-                }
-                env.push(target);
-                Ok(())
-            }),
-            Node::ClearArgs => {
-                self.rt.set_args.clear();
-                Ok(())
             }
         };
         #[allow(clippy::print_stdout)]
@@ -1524,7 +1487,6 @@ impl Uiua {
                     .collect(),
                 under_stack: Vec::new(),
                 local_stack: self.rt.local_stack.clone(),
-                set_args: Vec::new(),
                 fill_stack: Vec::new(),
                 fill_boundary_stack: Vec::new(),
                 unfill_stack: Vec::new(),

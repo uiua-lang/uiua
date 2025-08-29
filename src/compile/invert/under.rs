@@ -433,8 +433,8 @@ under!(BothPat, input, g_sig, inverse, asm, {
         g_sig.outputs().saturating_sub(1),
     );
     let (f_before, mut f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
-
-    let balanced = g_sig.args()
+    let rest_sig = nodes_sig(input)?;
+    let balanced = (g_sig.args() + rest_sig.args()).saturating_sub(rest_sig.outputs())
         <= g_sig.outputs() + sub.side.as_ref().map_or(0, |sided| sided.n.unwrap_or(1))
         && !(val.is_some() && f.sig == (1, 1));
     // Make before

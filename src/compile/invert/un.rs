@@ -297,6 +297,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
         DecodeBytes(Some(SubSide::Right)),
     ),
     &(IndexIn, (Flip, Select)),
+    &AntiMultiKeepPat,
     &AntiEncodings,
     &MatrixDivPat,
     &NoUnder(AntiCouplePat),
@@ -1100,6 +1101,11 @@ inverse!(DupPat, input, asm, Prim(Dup, dup_span), {
         }
     };
     Ok((input, inverse))
+});
+
+inverse!(AntiMultiKeepPat, input, _, ImplPrim(MultiKeep(n), span), {
+    let node = Node::from([Prim(Reciprocal, span), ImplPrim(MultiKeep(n), span)]);
+    Ok((input, node))
 });
 
 inverse!(DumpPat, input, _, ref, Mod(Dump, args, span), {

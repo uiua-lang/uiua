@@ -3,7 +3,6 @@
 # 0.17
 - Change how optional arguments work
 - Style warnings for `base,2`, `range,0`, `deshape,1`
-- `antikeep,n`
 
 # 0.18
 - Sided `box`

@@ -204,6 +204,8 @@ pub(crate) struct Scope {
     names: LocalNames,
     /// Whether the scope has a data def defined
     has_data_def: bool,
+    /// Whether the scope's data def is a data function
+    is_data_func: bool,
     /// Names of data variants
     data_variants: IndexSet<EcoString>,
     /// Whether to allow experimental features
@@ -253,6 +255,7 @@ impl Default for Scope {
             comment: None,
             names: IndexMap::new(),
             has_data_def: false,
+            is_data_func: false,
             data_variants: IndexSet::new(),
             experimental: false,
             experimental_error: false,
@@ -430,7 +433,7 @@ impl Compiler {
         let module = Module {
             comment: scope.comment,
             names: scope.names,
-            data_func: false,
+            data_func: scope.is_data_func,
             experimental: scope.experimental,
         };
         Ok((module, res))
@@ -1691,7 +1694,7 @@ impl Compiler {
         }
         // Attempt to look up the identifier as a non-macro
         let as_non_macro = self.find_name_impl(name.strip_suffix('!')?, span, stop_at_binding)?;
-        if let BindingKind::Module(_) | BindingKind::Import(_) =
+        if let BindingKind::Module(_) | BindingKind::Scope(_) | BindingKind::Import(_) =
             self.asm.bindings[as_non_macro.index].kind
         {
             // Only allow it if it is a module
@@ -1887,11 +1890,7 @@ impl Compiler {
             self.code_meta
                 .constant_references
                 .insert(span.clone().sp(ident));
-            Node::Push(
-                constant
-                    .value
-                    .resolve(self.scope_file_path(), &*self.backend()),
-            )
+            Node::Push((constant.value).resolve(self.scope_file_path(), &*self.backend()))
         } else {
             self.add_error(span, format!("Unknown identifier `{ident}`"));
             Node::new_push(Value::default())

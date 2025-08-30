@@ -55,12 +55,11 @@ impl Compiler {
                     public: data.public,
                 };
 
-                let data_func = data.func.is_some();
-                let (mut module, ()) = self
-                    .in_scope(ScopeKind::Module(name.value.clone()), |comp| {
+                let (module, ()) =
+                    self.in_scope(ScopeKind::Module(name.value.clone()), |comp| {
+                        comp.scope.is_data_func = data.func.is_some();
                         comp.data_def(data, false, prelude)
                     })?;
-                module.data_func = data_func;
 
                 // Add global
                 self.asm.add_binding_at(
@@ -86,10 +85,11 @@ impl Compiler {
                     data.init_span.clone(),
                     "Unnamed data definitions cannot be marked private",
                 );
+            } else if let ScopeKind::Module(_) = &self.scope.kind {
+                self.scope.is_data_func = data.func.is_some();
             }
         }
 
-        // Add to defs
         let def_name = if let ScopeKind::Module(name) = &self.scope.kind {
             Some(name.clone())
         } else {

@@ -1546,17 +1546,25 @@ impl Compiler {
         } else if let Some(mac) = self.code_macros.get(&local.index).cloned() {
             // Code macros
             self.code_macro(Some(r.name.value), modifier_span, operands, mac)?
-        } else if let Some(m) =
-            (self.asm.bindings.get(local.index)).and_then(|binfo| match &binfo.kind {
-                BindingKind::Module(m) => Some(m),
-                BindingKind::Import(path) => self.imports.get(path),
-                _ => None,
-            })
+        } else if let Some((names, data_func)) =
+            self.asm
+                .bindings
+                .get(local.index)
+                .and_then(|binfo| match &binfo.kind {
+                    BindingKind::Module(m) => Some((m.names.clone(), m.data_func)),
+                    BindingKind::Import(path) => {
+                        let m = self.imports.get(path)?;
+                        Some((m.names.clone(), m.data_func))
+                    }
+                    BindingKind::Scope(i) => {
+                        let scope = self.higher_scopes.get(*i).unwrap_or(&self.scope);
+                        Some((scope.names.clone(), scope.is_data_func))
+                    }
+                    _ => None,
+                })
         {
             // Module import macro
-            let names = m.names.clone();
-            let data_func = m.data_func;
-            let call = m.names.get("Call").copied();
+            let call = names.get("Call").copied();
             let (_, sn) = self.in_scope(ScopeKind::AllInModule, move |comp| {
                 comp.scope.names.extend(names);
                 comp.words_sig(operands)

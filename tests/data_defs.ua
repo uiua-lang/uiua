@@ -90,43 +90,40 @@ Foo 1 2 3
 # Data functions
 ~Foo [X ← 0] ⊟ ⊓X(/+ 1_2_3)
 ⍤⤙≍ [0 6] Foo
-⍤⤙≍ [5 6] Foo X:5
+⍤⤙≍ [5 6] Foo!°⊸X 5
 
 ~F {A ← 1|B ← 2|C ← 3} ∘
 ⍤⤙≍ {1 2 3} F
-⍤⤙≍ {1 2 5} F C:5
-⍤⤙≍ {0 2 5} F A:0 C:5
-⍤⤙≍ {0 2 5} F C:5 A:0
-⍤⤙≍ {0 9 5} F C:5 A:0 B:9
+⍤⤙≍ {1 2 5} F!°⊸C 5
+⍤⤙≍ {0 2 5} F!(°⊸A 0 °⊸C 5)
+⍤⤙≍ {0 2 5} F!(°⊸C 5 °⊸A 0)
+⍤⤙≍ {0 9 5} F!(°⊸A 0 °⊸C 5 °⊸B 9)
+
+~F {A ← 0|B ← 0|C ← 0|D ← 0} ∘
+⍤⤙≍ {2 3 4 1} F!(°⊸D1⊙(°⊸A|°⊸B|°⊸C)) 2 3 4
+⍤⤙≍ {2 3 4 1} F!⊙(°⊸A|°⊸B|°⊸C|°⊸D) 2 3 4 1
 
 ~F {A ← +|B C ← 0} ∘
 ⍤⤙≍ {3 4 0} F 1 2 4
-⍤⤙≍ {3 4 5} F 1 C:5 2 4
+⍤⤙≍ {3 4 5} F!°⊸C 5 1 2 4
 
 ~F {A ← 0|B C ← 0} ∘
-M! ← F^0
-⍤⤙≍ F A:2 3 M!A:2 3
+M! ← F!^
+⍤⤙≍ F!°⊸A 2 3 M!°⊸A 2 3
 
 ┌─╴Range
   ~ {Min ← 0|Max Inclusive ← 0} ⍜-⇡ ⊃Min(+⊃Max Inclusive)
-  ~Incl {Min ← 0} Call Inclusive:1 Min:Min
-  APL ← Call Inclusive:1 Min:1
+  ~Incl {Min ← 0} Range!(°⊸Inclusive 1 °⊸Min Min)
+  APL ← Range!(°⊸Inclusive1 °⊸Min1)
 └─╴
+
 ⍤⤙≍ ⇡5 Range 5
+⍤⤙≍ ⇡₄6 Range!°⊸Min 4 10
 ⍤⤙≍ ⇡₁5 Range~APL 5
-⍤⤙≍ ⇡₄6 Range Min:4 10
-⍤⤙≍ ⇡₄7 Range~Incl Min:4 10
+⍤⤙≍ ⇡6 Range~Incl 5
 
 ~Run {A ← 0|B ← 1|C} ≡°□
 ⍤⤙≍ [0 1 2] Run 2
-⍤⤙≍ {2 1 5} Run~New A:2 5
-⍤⤙≍ [2 8 5] Run~Args B:8 Run~New A:2 5
-
-~F {A ← 0|B ← 0|C ← 0|D ← 0} ∘
-⍤⤙≍ {2 3 4 1} F D:1 ⊓A:C: 2 B:3 4
-
-┌─╴A
-  Call ← +1
-  B    ← A
-└─╴
-⍤⤙≍ 6 A~B 5
+⍤⤙≍ {2 1 5} °⊸Run~A 2 Run~New 5
+⍤⤙≍ [0 8 5] Run!°⊸B8 5
+⍤⤙≍ [2 8 5] Run!(°⊸A2 °⊸B8) 5

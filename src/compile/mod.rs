@@ -96,8 +96,6 @@ pub struct Compiler {
     data_function_info: HashMap<usize, Arc<DataFuncInfo>>,
 }
 
-type SetArgs = IndexMap<Ident, (usize, CodeSpan)>;
-
 impl Default for Compiler {
     fn default() -> Self {
         Compiler {
@@ -136,12 +134,6 @@ struct BindingPrelude {
     no_inline: bool,
     external: bool,
     deprecation: Option<EcoString>,
-}
-
-#[derive(Debug, Clone)]
-enum SetterStashKind {
-    Scope(ScopeKind),
-    Modifier(Option<Primitive>),
 }
 
 type LocalNames = IndexMap<Ident, LocalName>;
@@ -1811,7 +1803,7 @@ impl Compiler {
                     self.code_meta
                         .global_references
                         .insert(r.name.span.clone(), local.index);
-                    self.global_index(&r.name.value, local.index, r.name.span)
+                    self.global_index(local.index, r.name.span)
                 }
                 Ok(None) => self.ident(r.name.value, r.name.span),
                 Err(e) => {
@@ -1858,7 +1850,7 @@ impl Compiler {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
-            self.global_index(&ident, local.index, span)
+            self.global_index(local.index, span)
         } else if let Some(curr) =
             (self.current_bindings.last_mut()).filter(|curr| curr.name == ident)
         {
@@ -1875,7 +1867,7 @@ impl Compiler {
             // Name exists in scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
-            self.global_index(&ident, local.index, span)
+            self.global_index(local.index, span)
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
             if let Some(suggestion) = constant.deprecation {
@@ -1913,7 +1905,7 @@ impl Compiler {
         }
         None
     }
-    fn global_index(&mut self, name: &str, index: usize, span: CodeSpan) -> Node {
+    fn global_index(&mut self, index: usize, span: CodeSpan) -> Node {
         let binfo = &mut self.asm.bindings.make_mut()[index];
         binfo.used = true;
         let bkind = binfo.kind.clone();
@@ -1925,7 +1917,7 @@ impl Compiler {
                 if let Some(local) = self.imports.get(&path).and_then(|m| m.names.get("Call")) {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
-                    self.global_index(name, local.index, span)
+                    self.global_index(local.index, span)
                 } else {
                     self.add_error(
                         span,
@@ -1947,7 +1939,7 @@ impl Compiler {
                 if let Some(&local) = names.get("Call").or_else(|| names.get("New")) {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
-                    self.global_index(name, local.index, span.clone())
+                    self.global_index(local.index, span.clone())
                 } else {
                     self.add_error(
                         span,

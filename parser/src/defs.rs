@@ -1979,7 +1979,7 @@ primitive!(
     /// ex: [⊙⊙+ 1 2 3 4]
     /// This is especially useful when used in a [fork].
     /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
-    /// For example, if you wanted to add 3 values but keep the all 3 on top of the stack:
+    /// For example, if you wanted to add 3 values but keep all 3 on top of the stack:
     /// ex: [⊃⊙⊙∘(++) 3 5 10]
     /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
     /// ex: [⊃⊙⊙∘(++) 3 5 10]
@@ -1988,9 +1988,9 @@ primitive!(
     /// ex: [⊃⊙∘(++) 3 5 10]
     ///
     /// [dip] can be used with a function pack.
-    /// `dip``(F|G|H|..)` is equivalent to `dip``(F``dip``(G``dip``(H``dip``(..))))`.
-    /// ex: ⊙(+|×) 1 2 3 4
-    /// ex: ⊙(⊂×10|{⊙∘}|⊟) 1 2 3 4 5
+    /// `dip``(F|G|H|..)` is equivalent to `F``dip``(G``dip``(H``dip``(..)))`.
+    /// ex: ⊙(+|×) 1 2 3
+    /// ex: ⊙(⊂×10|□₂|⊟) 1 2 3 4
     ([1], Dip, Planet, ("dip", '⊙')),
     /// Call a function on the first and third values on the stack
     ///

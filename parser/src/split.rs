@@ -16,7 +16,7 @@ static ALIASES: LazyLock<HashMap<Primitive, &[&str]>> = LazyLock::new(|| {
         (Primitive::IndexIn, &["idx"]),
         (Primitive::ProgressiveIndexOf, &["pidx"]),
         (Primitive::Switch, &["sw"]),
-        (Primitive::Stencil, &["st", "win"]),
+        (Primitive::Stencil, &["st"]),
         (Primitive::Floor, &["flr", "flor"]),
         (Primitive::Range, &["ran"]),
         (Primitive::Partition, &["par"]),
@@ -209,6 +209,7 @@ impl Primitive {
             alias!((wr, Sub), (en, By), (ch, Not)),
             alias!((sel, Select), (first, First)),
             alias!((l, Un), (og, Exp)),
+            alias!((wi, Stencil), (n, Identity)),
             (
                 "kork",
                 &[

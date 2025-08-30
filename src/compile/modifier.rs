@@ -1562,7 +1562,6 @@ impl Compiler {
                 comp.words_sig(operands)
             })?;
             let (mut node, sig) = (sn.node, sn.sig);
-            dbg!(&node);
             if data_func {
                 // Data macro
                 let BindingKind::Func(call_func) =
@@ -1571,6 +1570,9 @@ impl Compiler {
                     unreachable!()
                 };
                 let mut call_node = self.asm[&call_func].clone();
+                // Dip the constructor and insert the setter function
+                // between the constructor and the call function
+                // i.e. F!G  ->  F~Call G ⊙F~New
                 call_node.as_mut_slice().rotate_left(1);
                 let mut new_node = call_node.pop().unwrap();
                 let span = self.add_span(modifier_span);

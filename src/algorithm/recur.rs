@@ -175,7 +175,7 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
                         child_nodes: Some(Vec::new()),
                         scalar_child: children.rank() == 0,
                     });
-                    for value in children.into_rows() {
+                    for value in children.into_rows().rev() {
                         stack.push(RecNode {
                             parent: Some(index),
                             value,

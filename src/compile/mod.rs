@@ -1503,7 +1503,12 @@ impl Compiler {
             Word::ArgSetter(_) => {
                 self.add_error(
                     word.span.clone(),
-                    "Argument setters are no longer supported",
+                    format!(
+                        "Argument setters are no longer supported. \
+                        Use {}{} aka `set` instead.",
+                        Primitive::Un,
+                        Primitive::By
+                    ),
                 );
                 Node::Prim(Primitive::Pop, self.add_span(word.span))
             }

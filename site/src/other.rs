@@ -566,7 +566,6 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Last, "Last N values", "⊣₂ \"hello\""),
         subscript(Bits, "Force N bits", "⋯₄ [1 2 3]"),
         subscript(Parse, "Parse in base N", "⋕₁₆ \"beef\""),
-        subscript(Base, "Base N", "⊥₁₀ 123"),
         subscript(Keep, "Keep along N axes", "▽₂ 1.5 [1_2_3_4 5_6_7_8]"),
         subscript(Rand, "Random integer", "⚂₁₀₀"),
         subscript(Len, "Length of the Nth axis", "⧻₁ °△2_3_4_5"),

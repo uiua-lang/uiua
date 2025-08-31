@@ -296,7 +296,7 @@ However, this is not the case for boxing data definitions. Notice here how there
 Person {"Alice" "Bob" "Carol"} [21 54 49]
 ```
 
-We can use the idiom `/⍚⊂≡` to properly initializes lists of default fields as well as repeat items.
+We can use the idiom `/⍚⊂≡` to properly initialize lists of default fields as well as repeat items.
 
 ```uiua
 ~Person {Name Age Score ← 0}
@@ -312,7 +312,7 @@ However, we sometimes want to be a little more dynamic with our data.
 
 One common need is to be able to access a field by name *as a runtime string*. For example, imagine you want to get user input and return the corresponding field.
 
-Every data definition has a generated `Fields` constant which is a list of the field names. We can get the index of some name with [`indexof`](), then get it from the structure with [`select`]().
+Every data definition has a generated `Fields` constant which is a list of the field names. We can get the index of some name with [`indexin`](), then get it from the structure with [`select`]().
 
 ```uiua
 ~Person {Name Age Score}

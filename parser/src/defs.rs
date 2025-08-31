@@ -3119,6 +3119,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : ListFiles ← recur&fif&fld∘
     ///   : ListFiles "."
+    ///
+    /// This simple example inverts a binary tree.
+    /// ex: # Experimental!
+    ///   : {1_2_3 4 {5_6_7 8 9}}
+    ///   : °□recur(≤1◇⧻|◇⇌|□)
     ([3], Recur, Algorithm, "recur", { experimental: true }),
     /// Calculate the derivative of a mathematical expression
     ///

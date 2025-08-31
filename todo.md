@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.17
-- Change how optional arguments work
 - Style warnings for `base,2`, `range,0`, `deshape,1`
 
 # 0.18

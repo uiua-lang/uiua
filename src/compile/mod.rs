@@ -9,7 +9,7 @@ mod pre_eval;
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
+    collections::{BTreeSet, HashMap, HashSet, VecDeque},
     env::current_dir,
     fmt, fs,
     iter::{once, repeat_n},
@@ -42,8 +42,8 @@ use crate::{
     Sp, Span, SubSide, Subscript, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
     CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
+pub(crate) use modifier::*;
 pub use pre_eval::PreEvalMode;
-pub(crate) use {data::*, modifier::*};
 
 /// The Uiua compiler
 #[derive(Clone)]
@@ -92,8 +92,6 @@ pub struct Compiler {
     macro_env: Uiua,
     /// Start addresses
     start_addrs: Vec<usize>,
-    /// Data function info, maps Call index to info
-    data_function_info: HashMap<usize, Arc<DataFuncInfo>>,
     /// Primitive optional arg getter bindings
     prim_arg_bindings: HashMap<(Primitive, Ident), usize>,
 }
@@ -124,7 +122,6 @@ impl Default for Compiler {
             pre_eval_mode: PreEvalMode::default(),
             macro_env: Uiua::default(),
             start_addrs: Vec::new(),
-            data_function_info: HashMap::new(),
             prim_arg_bindings: HashMap::new(),
         }
     }

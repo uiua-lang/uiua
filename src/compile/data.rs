@@ -1,18 +1,5 @@
 use super::*;
 
-#[derive(Clone)]
-pub(crate) struct DataFuncInfo {
-    pub name: EcoString,
-    pub fields: BTreeMap<EcoString, FieldInfo>,
-}
-
-#[derive(Clone)]
-pub(crate) struct FieldInfo {
-    pub index: usize,
-    pub init_sig: Option<Signature>,
-    pub comment: EcoString,
-}
-
 impl Compiler {
     pub(super) fn data_def(
         &mut self,
@@ -503,39 +490,6 @@ impl Compiler {
                     sn.sig,
                     sn.node,
                 );
-                let fields = (fields.iter().enumerate())
-                    .map(|(index, field)| {
-                        let init_sig = field.init.as_ref().map(|sn| sn.sig);
-                        let field_name = &field.name;
-                        let comment = match (&def_name, &field.comment) {
-                            (Some(def_name), Some(comment)) => {
-                                format!("Set {def_name}'s {field_name}\n{comment}")
-                            }
-                            (Some(def_name), None) => format!("Set {def_name}'s {field_name}"),
-                            (None, Some(comment)) => format!("Set {field_name}\n{comment}"),
-                            (None, None) => format!("Set {field_name}"),
-                        }
-                        .into();
-                        let info = FieldInfo {
-                            index,
-                            init_sig,
-                            comment,
-                        };
-                        (field.name.clone(), info)
-                    })
-                    .collect();
-
-                // Register data function info
-                let info = Arc::new(DataFuncInfo {
-                    name: def_name.clone().unwrap_or_default(),
-                    fields,
-                });
-                comp.data_function_info.insert(local.index, info.clone());
-                comp.data_function_info
-                    .insert(constr_local.index, info.clone());
-                if let Some((local, ..)) = &args_function_stuff {
-                    comp.data_function_info.insert(local.index, info);
-                }
                 function_stuff = Some((local, func, span));
                 Ok(())
             })?;

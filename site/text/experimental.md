@@ -16,81 +16,20 @@ Person "Dave"
 
 But if the function is called immediately, how do we set `Surname`?
 
-In this case `Surname` is an *optional argument*. We can set optional arguments with their name followed by a `:` before calling the function.
+In this case `Surname` is an *optional argument*. When the data function's name is used as a macro, we can set optional arguments within the macro's function. We can set optional arguments with the [un](/docs/un) [by](/docs/by) idiom followed by their name.
 
 ```uiua
 # Experimental!
 ~Person {Name Surname ← ""} $"_ _"⊃(Name|Surname)
-Person "Dave" Surname:"Daveson"
+Person!°⊸Surname "Daveson" "Dave"
 ```
 
-The argument setter is just a `|1.0` function. Setters for multiple optional arguments can occur in any order.
+Setters for multiple optional arguments can occur in any order.
 
 ```uiua
 # Experimental!
-~F {A ← 0|B ← 0|C ← 0|D ← 0} ∘
-F D:1 ⊓A:C: 2 B:3 4
-```
-
-We can bundle the function's arguments before calling it with the data definition's normal `New` constructor. The bundled arguments can then be used with the `Args` function. Both of these functions also accept optional arguments.
-
-```uiua
-# Experimental!
-~Run {A ← 0|B ← 1|C} $"A:_ B:_ C:_"⊃(A|B|C)
-Run 2
-Run~New A:2 5
-Run~Args B:8 .
-```
-
-If some argument patterns are common, we can give them names by putting the data function in a module and adding more functions (or even more data functions) to it.
-
-```uiua
-# Experimental!
-┌─╴Range
-  ~ {Min ← 0|Max Inclusive ← 0} ⍜-⇡ ⊃Min(+⊃Max Inclusive)
-  ~Incl {Min ← 0} Call Inclusive:1 Min:Min
-  APL ← Call Inclusive:1 Min:1
-└─╴
-Range 5
-Range~APL 5
-Range Min:4 10
-Range~Incl Min:4 10
-```
-
-Optional arguments *must* be used by the first named call (including primitives without glyphs).
-
-```uiua should fail
-# Experimental!
-~F {A ← 0|B ← 0} ∘
-A:5
-```
-
-```uiua should fail
-# Experimental!
-~F {A ← 0|B ← 2} ∘
-F C:6
-```
-
-Optional arguments can be set from scopes lower than the function that uses them, but the opposite is not true.
-
-```uiua
-# Experimental!
-~F {A ← 0|B ← 0} ∘
-F (A:5)
-```
-
-```uiua should fail
-# Experimental!
-~F {A ← 0|B} ≡°□
-≡F A:5 ⇡3
-```
-
-To set an optional argument for a function inside a modifier, set the argument inside the modifier itself.
-
-```uiua
-# Experimental!
-~F {A ← 0|B} ≡°□
-≡(F A:) 5 ⇡3
+~F {A ← 0|B ← 0|C ← 0|D ← 0|E} ∘
+F!(°⊸D1 °⊸A4 °⊸C2 °⊸B3) 5
 ```
 
 ---

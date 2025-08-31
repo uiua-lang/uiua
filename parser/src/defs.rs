@@ -3441,77 +3441,6 @@ primitive!(
     /// Returns a scalar integer.
     /// ex: numprocs
     (0, NumProcs, Environment, "numprocs", Impure),
-    /// Project a voxel array to an image
-    ///
-    /// [voxels] orthographically projects a 3D array of voxels to an image.
-    ///
-    /// The input voxel array must be rank 3 or 4.
-    /// - A rank 3 array produces a grayscale image with no alpha channel.
-    /// - A rank 4 array with last axis `2` produces a grayscale image with an alpha channel.
-    /// - A rank 4 array with last axis `3` produces an color image with no alpha channel.
-    /// - A rank 4 array with last axis `4` produces an color image with an alpha channel.
-    ///
-    /// Accepts 3 optionals arguments:
-    /// - `Fog` - A "fog" color. Fog helps to give a sense of depth to the image. Can be scalar or a list of 3 numbers.
-    /// - `Scale` - The ratio of voxel size to pixel size
-    /// - `Camera` - A camera position vector. It will be normalized and placed outside the array.
-    ///
-    /// Here is a simple 5x5x5 voxel scene.
-    /// ex: ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
-    /// If we project it with no parameters, the result is not very interesting.
-    /// ex: # Experimental!
-    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
-    ///   : voxels
-    /// We can scale up the image by passing a `Scale` factor.
-    /// ex: # Experimental!
-    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
-    ///   : voxels Scale:20
-    /// We can change the camera position with a 3D `Camera` vector
-    /// ex: # Experimental!
-    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
-    ///   : voxels Scale:20 Camera:[1 2 1]
-    /// Passing a `Fog` color lets us see depth.
-    /// ex: # Experimental!
-    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
-    ///   : voxels Scale:20 Camera:[1 2 1] Fog:Black
-    ///
-    /// The image will be transparent if the voxel array has transparency.
-    /// ex: # Experimental!
-    ///   : ↯5_5_5_2 0
-    ///   : ⍜⊢⋅1
-    ///   : [1_0_0 1_2_2 2_2_2 2_2_3 2_2_4]
-    ///   : [[1 1][1 1][1 0.3][1 0.3][1 0.3]]
-    ///   : ∧⍜⊙⊡⊙◌
-    ///   : voxels Scale:20 Camera:[1.2 2 0.5] Fog:Black
-    /// Color is also supported.
-    /// ex: # Experimental!
-    ///   : ↯5_5_5_4 0
-    ///   : ⍜⊢⋅1
-    ///   : [1_0_0 1_2_2 2_2_2 2_2_3 2_2_4]
-    ///   : [[1 1 1 1][1 1 1 1][1 0 0 0.3][0 1 0 0.3][0 1 1 0.3]]
-    ///   : ∧⍜⊙⊡⊙◌
-    ///   : voxels Scale:20 Camera:[1 2 0.5] Fog:Black
-    ///
-    /// Like with normal image arrays, [voxels] supports complex numbers.
-    /// The same domain coloring algorithm is used as in [img] and [&ims].
-    /// By default, because there is no alpha channel, only numbers with 0 magnitude are transparent.
-    /// ex: # Experimental!
-    ///   : ⊞+⟜⊞ℂ. -⊸¬ ÷⟜⇡30
-    ///   : voxels Scale:2
-    /// We can set transparency by adding a 4th axis to the array. This is a complex alpha channel where the opacity is the magnitude of the complex number.
-    /// ex: # Experimental!
-    ///   : ⊞+⟜⊞ℂ. -⊸¬ ÷⟜⇡30
-    ///   : ⍜°⍉(⊟⟜(<1⌵)) # Only show <1 magnitude
-    ///   : voxels Scale:2 Camera:[0.5 2 2]
-    ///
-    /// You can show rotation of a voxel array by turning it into a gif.
-    /// In this example, we create a list of angles and apply each one to the camera position using [un][atangent].
-    /// ex: # Experimental!
-    ///   : -⊸¬ ÷⟜(°⍉⇡)↯3 50    # Cube from ¯1 to 1
-    ///   : <0.4⌵-⊙(+∩∿) °⊟₃ ×τ # z = (sin(τx) + sin(τy))/τ
-    ///   : ×τ÷⟜⇡30             # Rotation angles
-    ///   : ≡⌟(voxels Scale:2 Camera:[1 °∠] Fog:[0 0.5 1])
-    (1, Voxels, Encoding, "voxels", { experimental: true }),
     /// Render text into an image array
     ///
     /// The first argument is a font size and the second argument is the text to render.
@@ -3543,10 +3472,81 @@ primitive!(
     ///   : $ array-oriented
     ///   : $ programming
     ///   : $ language
-    ///   : layout 30 LineHeight:1.5 Size:300_350 Color:0.5_0.5_1
+    ///   : layout!(°⊸LineHeight 1.5 °⊸Size 300_350 °⊸Color 0.5_0.5_1) 30
     /// ex: # Experimental!
-    ///   : layout 100 Color:Green Bg:Red "Green on Red!"
+    ///   : layout!(°⊸Color Green °⊸Bg Red) 100 "Green on Red!"
     (2, Layout, Encoding, "layout", Impure, { experimental: true }),
+    /// Project a voxel array to an image
+    ///
+    /// [voxels] orthographically projects a 3D array of voxels to an image.
+    ///
+    /// The input voxel array must be rank 3 or 4.
+    /// - A rank 3 array produces a grayscale image with no alpha channel.
+    /// - A rank 4 array with last axis `2` produces a grayscale image with an alpha channel.
+    /// - A rank 4 array with last axis `3` produces an color image with no alpha channel.
+    /// - A rank 4 array with last axis `4` produces an color image with an alpha channel.
+    ///
+    /// Accepts 3 optionals arguments:
+    /// - `Fog` - A "fog" color. Fog helps to give a sense of depth to the image. Can be scalar or a list of 3 numbers.
+    /// - `Scale` - The ratio of voxel size to pixel size
+    /// - `Camera` - A camera position vector. It will be normalized and placed outside the array.
+    ///
+    /// Here is a simple 5x5x5 voxel scene.
+    /// ex: ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    /// If we project it with no parameters, the result is not very interesting.
+    /// ex: # Experimental!
+    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    ///   : voxels
+    /// We can scale up the image by passing a `Scale` factor.
+    /// ex: # Experimental!
+    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    ///   : voxels!°⊸Scale 20
+    /// We can change the camera position with a 3D `Camera` vector
+    /// ex: # Experimental!
+    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    ///   : voxels!(°⊸Scale 20 °⊸Camera [1 2 1])
+    /// Passing a `Fog` color lets us see depth.
+    /// ex: # Experimental!
+    ///   : ⍥(⍉⊂1)3⬚0↯4_4_4⋯131191
+    ///   : voxels!(°⊸Scale 20 °⊸Camera [1 2 1] °⊸Fog Black)
+    ///
+    /// The image will be transparent if the voxel array has transparency.
+    /// ex: # Experimental!
+    ///   : ↯5_5_5_2 0
+    ///   : ⍜⊢⋅1
+    ///   : [1_0_0 1_2_2 2_2_2 2_2_3 2_2_4]
+    ///   : [[1 1][1 1][1 0.3][1 0.3][1 0.3]]
+    ///   : ∧⍜⊙⊡⊙◌
+    ///   : voxels!(°⊸Scale 20 °⊸Camera [1.2 2 0.5] °⊸Fog Black)
+    /// Color is also supported.
+    /// ex: # Experimental!
+    ///   : ↯5_5_5_4 0
+    ///   : ⍜⊢⋅1
+    ///   : [1_0_0 1_2_2 2_2_2 2_2_3 2_2_4]
+    ///   : [[1 1 1 1][1 1 1 1][1 0 0 0.3][0 1 0 0.3][0 1 1 0.3]]
+    ///   : ∧⍜⊙⊡⊙◌
+    ///   : voxels!(°⊸Scale 20 °⊸Camera [1 2 0.5] °⊸Fog Black)
+    ///
+    /// Like with normal image arrays, [voxels] supports complex numbers.
+    /// The same domain coloring algorithm is used as in [img] and [&ims].
+    /// By default, because there is no alpha channel, only numbers with 0 magnitude are transparent.
+    /// ex: # Experimental!
+    ///   : ⊞+⟜⊞ℂ. -⊸¬ ÷⟜⇡30
+    ///   : voxels!°⊸Scale 2
+    /// We can set transparency by adding a 4th axis to the array. This is a complex alpha channel where the opacity is the magnitude of the complex number.
+    /// ex: # Experimental!
+    ///   : ⊞+⟜⊞ℂ. -⊸¬ ÷⟜⇡30
+    ///   : ⍜°⍉(⊟⟜(<1⌵)) # Only show <1 magnitude
+    ///   : voxels!(°⊸Scale 2 °⊸Camera [0.5 2 2])
+    ///
+    /// You can show rotation of a voxel array by turning it into a gif.
+    /// In this example, we create a list of angles and apply each one to the camera position using [un][atangent].
+    /// ex: # Experimental!
+    ///   : -⊸¬ ÷⟜(°⍉⇡)↯3 50    # Cube from ¯1 to 1
+    ///   : <0.4⌵-⊙(+∩∿) °⊟₃ ×τ # z = (sin(τx) + sin(τy))/τ
+    ///   : ×τ÷⟜⇡30             # Rotation angles
+    ///   : ≡⌟voxels!(°⊸Scale 2 °⊸Fog [0 0.5 1] °⊸Camera [1 °∠])
+    (1, Voxels, Encoding, "voxels", { experimental: true }),
 );
 
 macro_rules! sys_op {

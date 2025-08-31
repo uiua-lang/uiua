@@ -1,8 +1,8 @@
 //! En/decode Uiua arrays to/from media formats
 
-use std::{collections::BTreeMap, f64::consts::E};
+use std::f64::consts::E;
 
-use ecow::{eco_vec, EcoString, EcoVec};
+use ecow::{eco_vec, EcoVec};
 use enum_iterator::{all, Sequence};
 #[cfg(feature = "audio_encode")]
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
@@ -12,7 +12,7 @@ use serde::*;
 
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
-use crate::{Complex, FieldInfo, Shape, Signature, SysBackend};
+use crate::{Complex, OptionalArg, Shape, SysBackend};
 
 use super::monadic::hsv_to_rgb;
 
@@ -812,29 +812,19 @@ pub(crate) fn value_to_apng_bytes(value: &Value, frame_rate: f64) -> Result<EcoV
 }
 
 macro_rules! builtin_params {
-    ($name:ident, $(($param:ident, $comment:literal)),* $(,)?) => {
+    ($name:ident, $(($param:ident, $comment:literal, $default:expr)),* $(,)?) => {
         #[derive(Sequence)]
         pub(crate) enum $name {
             $($param,)*
         }
         impl $name {
-            pub fn field_info() -> BTreeMap<EcoString, FieldInfo> {
-                (all::<Self>().enumerate())
-                    .map(|(index, param)| {
-                        let name = match param {
-                            $($name::$param => stringify!($param),)*
+            pub fn args() -> Vec<OptionalArg> {
+                all::<Self>()
+                    .map(|param| {
+                        let (name, comment, default) = match param {
+                            $($name::$param => (stringify!($param), $comment, $default.into()),)*
                         };
-                        let comment = match param {
-                            $($name::$param => $comment,)*
-                        }
-                        .into();
-                        let init_sig = Some(Signature::new(0, 1));
-                        let info = FieldInfo {
-                            index,
-                            init_sig,
-                            comment,
-                        };
-                        (name.into(), info)
+                        OptionalArg { name, comment, default }
                     })
                     .collect()
             }
@@ -844,13 +834,12 @@ macro_rules! builtin_params {
 
 builtin_params!(
     VoxelsParam,
-    (Fog, "Color for depth fog"),
-    (Scale, "Number of pixels per voxel"),
-    (Camera, "The position of the camera"),
+    (Fog, "Color for depth fog", Value::default()),
+    (Scale, "Number of pixels per voxel", 1),
+    (Camera, "The position of the camera", [1, 1, 1]),
 );
 
-pub(crate) fn voxels(val: &Value, params: Option<&Value>, env: &mut Uiua) -> UiuaResult<Value> {
-    let converted: Array<f64>;
+pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaResult<Value> {
     if ![3, 4].contains(&val.rank()) {
         return Err(env.error(format!(
             "Voxel array must be rank 3 or 4, but its shape is {}",
@@ -866,10 +855,7 @@ pub(crate) fn voxels(val: &Value, params: Option<&Value>, env: &mut Uiua) -> Uiu
     }
     let arr = match val {
         Value::Num(arr) => arr,
-        Value::Byte(arr) => {
-            converted = arr.convert_ref();
-            &converted
-        }
+        Value::Byte(arr) => arr.convert(),
         Value::Complex(arr) => {
             let mut shape = arr.shape.clone();
             let data: EcoVec<_> = if shape.last() == Some(&2) {
@@ -892,8 +878,7 @@ pub(crate) fn voxels(val: &Value, params: Option<&Value>, env: &mut Uiua) -> Uiu
                 shape.push(3);
                 arr.data.iter().flat_map(|&c| complex_color(c)).collect()
             };
-            converted = Array::new(shape, data);
-            &converted
+            Array::new(shape, data)
         }
         val => {
             return Err(env.error(format!(
@@ -905,30 +890,38 @@ pub(crate) fn voxels(val: &Value, params: Option<&Value>, env: &mut Uiua) -> Uiu
     let mut pos: Option<[f64; 3]> = None;
     let mut scale = None;
     let mut fog = None;
-    for (i, param) in params.into_iter().flat_map(Value::rows).enumerate() {
+    for (i, arg) in args
+        .into_iter()
+        .flat_map(Value::into_rows)
+        .map(Value::unboxed)
+        .enumerate()
+    {
         match all::<VoxelsParam>().nth(i) {
             Some(VoxelsParam::Fog) => {
-                let nums = param.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
+                if arg.shape == 0 {
+                    continue;
+                }
+                let nums = arg.as_nums(env, "Fog must be a scalar number or 3 numbers")?;
                 match *nums {
-                    [gray] if param.shape.is_empty() => fog = Some([gray; 3]),
+                    [gray] if arg.shape.is_empty() => fog = Some([gray; 3]),
                     [r, g, b] => fog = Some([r, g, b]),
                     _ => {
                         return Err(env.error(format!(
                             "Fog must be a scalar or list of 3 numbers, but its shape is {}",
-                            param.shape
+                            arg.shape
                         )))
                     }
                 }
             }
-            Some(VoxelsParam::Scale) => scale = Some(param.as_num(env, "Scale must be a number")?),
+            Some(VoxelsParam::Scale) => scale = Some(arg.as_num(env, "Scale must be a number")?),
             Some(VoxelsParam::Camera) => {
-                let nums = param.as_nums(env, "Camera position must be 3 numbers")?;
+                let nums = arg.as_nums(env, "Camera position must be 3 numbers")?;
                 if let [x, y, z] = *nums {
                     pos = Some([x, y, z]);
                 } else {
                     return Err(env.error(format!(
                         "Camera position must be 3 numbers, but its shape is {}",
-                        param.shape
+                        arg.shape
                     )));
                 }
             }
@@ -1262,21 +1255,21 @@ pub(crate) fn voxels(val: &Value, params: Option<&Value>, env: &mut Uiua) -> Uiu
 
 builtin_params!(
     LayoutParam,
-    (LineHeight, "The height of a line"),
-    (Size, "Size of the rendering area"),
-    (Color, "Text color"),
-    (Bg, "Background color"),
+    (LineHeight, "The height of a line", 1),
+    (Size, "Size of the rendering area", Value::default()),
+    (Color, "Text color", Value::default()),
+    (Bg, "Background color", Value::default()),
 );
 
 pub(crate) fn layout_text(
     size: Value,
     text: Value,
-    params: Option<Value>,
+    args: Option<Value>,
     env: &mut Uiua,
 ) -> UiuaResult<Value> {
     #[cfg(feature = "font_shaping")]
     {
-        layout_text_impl(size, text, params, env)
+        layout_text_impl(size, text, args, env)
     }
     #[cfg(not(feature = "font_shaping"))]
     Err(env.error("Text layout is not supported in this environment"))
@@ -1286,7 +1279,7 @@ pub(crate) fn layout_text(
 fn layout_text_impl(
     size: Value,
     text: Value,
-    params: Option<Value>,
+    args: Option<Value>,
     env: &mut Uiua,
 ) -> UiuaResult<Value> {
     use std::{cell::RefCell, iter::repeat_n};
@@ -1371,12 +1364,20 @@ fn layout_text_impl(
     let mut bg = None;
 
     // Parse options
-    for (i, arg) in params.into_iter().flat_map(Value::into_rows).enumerate() {
+    for (i, arg) in args
+        .into_iter()
+        .flat_map(Value::into_rows)
+        .map(Value::unboxed)
+        .enumerate()
+    {
         match all::<LayoutParam>().nth(i) {
             Some(LayoutParam::LineHeight) => {
                 line_height = arg.as_num(env, "Line height must be a scalar number")? as f32
             }
             Some(LayoutParam::Size) => {
+                if arg.shape == 0 {
+                    continue;
+                }
                 let nums = arg.as_nums(env, "Size must be a scalar number or 2 numbers")?;
                 let [h, w] = match *nums {
                     [s] if arg.shape.is_empty() => [s; 2],
@@ -1408,6 +1409,9 @@ fn layout_text_impl(
                 }
             }
             Some(LayoutParam::Color) => {
+                if arg.shape == 0 {
+                    continue;
+                }
                 let nums = arg.as_nums(
                     env,
                     "Color must be a scalar number or list of 3 or 4 numbers",
@@ -1435,6 +1439,9 @@ fn layout_text_impl(
                 });
             }
             Some(LayoutParam::Bg) => {
+                if arg.shape == 0 {
+                    continue;
+                }
                 bg = Some(arg.as_number_array::<f64>(env, "Background color must be numbers")?)
             }
             None => return Err(env.error(format!("Invalid layout params index {i}"))),

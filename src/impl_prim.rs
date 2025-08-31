@@ -254,6 +254,8 @@ impl_primitive!(
     (1, ValidateNonBoxedVariant),
     (2(1), ValidateVariant),
     (2(1), TagVariant),
+    (3, LayoutArgs),
+    (2, VoxelsArgs),
 );
 
 fn fmt_subscript(f: &mut fmt::Formatter<'_>, i: i32) -> fmt::Result {
@@ -492,6 +494,8 @@ impl fmt::Display for ImplPrimitive {
                 }
                 Ok(())
             }
+            LayoutArgs => write!(f, "layout!"),
+            VoxelsArgs => write!(f, "voxels!"),
         }
     }
 }

@@ -312,15 +312,15 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::GifEncode => media::gif_encode(env)?,
         Primitive::ApngEncode => media::apng_encode(env)?,
         Primitive::AudioEncode => media::audio_encode(env)?,
-        Primitive::Voxels => {
-            let val = env.pop(1)?;
-            let res = media::voxels(&val, None, env)?;
-            env.push(res);
-        }
         Primitive::Layout => {
             let size = env.pop(1)?;
             let text = env.pop(2)?;
             let res = media::layout_text(size, text, None, env)?;
+            env.push(res);
+        }
+        Primitive::Voxels => {
+            let val = env.pop(1)?;
+            let res = media::voxels(val, None, env)?;
             env.push(res);
         }
         Primitive::Fft => algorithm::fft(env)?,
@@ -1203,6 +1203,19 @@ impl ImplPrimitive {
                 let count = env.pop(1)?;
                 let val = env.pop(2)?;
                 let res = count.multikeep(val, dims, env)?;
+                env.push(res);
+            }
+            ImplPrimitive::LayoutArgs => {
+                let args = env.pop(1)?;
+                let size = env.pop(2)?;
+                let text = env.pop(3)?;
+                let res = media::layout_text(size, text, Some(args), env)?;
+                env.push(res);
+            }
+            ImplPrimitive::VoxelsArgs => {
+                let args = env.pop(1)?;
+                let val = env.pop(2)?;
+                let res = media::voxels(val, Some(args), env)?;
                 env.push(res);
             }
             &ImplPrimitive::Ga(op, spec) => match op {

@@ -118,13 +118,13 @@ impl Assembly {
     pub(crate) fn add_binding_at(
         &mut self,
         local: LocalName,
-        global: BindingKind,
+        kind: BindingKind,
         span: Option<CodeSpan>,
         meta: BindingMeta,
     ) {
         let binding = BindingInfo {
             public: local.public,
-            kind: global,
+            kind,
             span: span.unwrap_or_else(CodeSpan::dummy),
             meta,
             used: local.public,

@@ -42,8 +42,8 @@ use crate::{
     Sp, Span, SubSide, Subscript, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
     CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
-pub(crate) use data::*;
 pub use pre_eval::PreEvalMode;
+pub(crate) use {data::*, modifier::*};
 
 /// The Uiua compiler
 #[derive(Clone)]
@@ -94,6 +94,8 @@ pub struct Compiler {
     start_addrs: Vec<usize>,
     /// Data function info, maps Call index to info
     data_function_info: HashMap<usize, Arc<DataFuncInfo>>,
+    /// Primitive optional arg getter bindings
+    prim_arg_bindings: HashMap<(Primitive, Ident), usize>,
 }
 
 impl Default for Compiler {
@@ -123,6 +125,7 @@ impl Default for Compiler {
             macro_env: Uiua::default(),
             start_addrs: Vec::new(),
             data_function_info: HashMap::new(),
+            prim_arg_bindings: HashMap::new(),
         }
     }
 }
@@ -2099,19 +2102,7 @@ impl Compiler {
     fn primitive(&mut self, prim: Primitive, span: CodeSpan) -> Node {
         self.validate_primitive(prim, &span);
         let spandex = self.add_span(span.clone());
-        let node = Node::Prim(prim, spandex);
-
-        match prim {
-            Primitive::Voxels => {
-                todo!()
-            }
-            Primitive::Layout => {
-                todo!()
-            }
-            _ => {}
-        }
-
-        node
+        Node::Prim(prim, spandex)
     }
     #[allow(clippy::match_single_binding, unused_parens)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {

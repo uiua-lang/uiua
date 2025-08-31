@@ -16,6 +16,13 @@ macro_rules! func {
     };
 }
 
+#[derive(Debug, Clone)]
+pub struct OptionalArg {
+    pub name: &'static str,
+    pub comment: &'static str,
+    pub default: Value,
+}
+
 impl Compiler {
     fn desugar_function_pack(
         &mut self,
@@ -1520,6 +1527,13 @@ impl Compiler {
         modifier_span: CodeSpan,
         operands: Vec<Sp<Word>>,
     ) -> UiuaResult<Node> {
+        if let Some(prim) = (r.name.value.strip_suffix('!'))
+            .and_then(Primitive::from_name)
+            .filter(|p| p.glyph().is_none())
+        {
+            return self.prim_args_macro(prim, modifier_span, operands);
+        }
+
         let Some((path_locals, local)) = self.ref_local(&r)? else {
             return Ok(Node::empty());
         };
@@ -1569,7 +1583,7 @@ impl Compiler {
                 comp.scope.names.extend(names);
                 comp.words_sig(operands)
             })?;
-            let (mut node, sig) = (sn.node, sn.sig);
+            let (mut node, sig) = sn.into();
             if data_func {
                 // Data macro
                 let BindingKind::Func(call_func) =
@@ -1595,6 +1609,84 @@ impl Compiler {
             Node::empty()
         };
         self.comptime_depth -= 1;
+        Ok(node)
+    }
+    /// Compile a primitive as a macro specifying optional arguments
+    fn prim_args_macro(
+        &mut self,
+        prim: Primitive,
+        modifier_span: CodeSpan,
+        operands: Vec<Sp<Word>>,
+    ) -> UiuaResult<Node> {
+        use crate::media::*;
+        let (args_prim, args) = match prim {
+            Primitive::Layout => (ImplPrimitive::LayoutArgs, LayoutParam::args()),
+            Primitive::Voxels => (ImplPrimitive::VoxelsArgs, VoxelsParam::args()),
+            _ => return Err(self.error(modifier_span, format!("{prim} has no optional arguments"))),
+        };
+        let span = self.add_span(modifier_span);
+        let (_, sn) = self.in_scope(ScopeKind::AllInModule, |comp| {
+            // Bind field getters
+            for (index, arg) in args.iter().enumerate() {
+                let name = Ident::from(arg.name);
+                let key = (prim, name.clone());
+                if !comp.prim_arg_bindings.contains_key(&key) {
+                    let node = Node::from([
+                        Node::new_push(index),
+                        Node::Prim(Primitive::Pick, span),
+                        Node::ImplPrim(ImplPrimitive::UnBox, span),
+                    ]);
+                    let local = LocalName {
+                        index: comp.next_global,
+                        public: true,
+                    };
+                    comp.next_global += 1;
+                    let func = comp.asm.add_function(
+                        FunctionId::Named(name.clone()),
+                        Signature::new(1, 1),
+                        node,
+                    );
+                    let meta = BindingMeta {
+                        comment: Some(arg.comment.into()),
+                        ..Default::default()
+                    };
+                    comp.asm
+                        .add_binding_at(local, BindingKind::Func(func), None, meta);
+                    comp.prim_arg_bindings.insert(key.clone(), local.index);
+                }
+                let local = LocalName {
+                    index: comp.prim_arg_bindings[&key],
+                    public: true,
+                };
+                comp.scope.names.insert(name.clone(), local);
+            }
+            // Compile words
+            comp.words_sig(operands)
+        })?;
+        let len = args.len();
+        let inner: Node = args
+            .into_iter()
+            .rev()
+            .flat_map(|arg| {
+                [
+                    Node::new_push(arg.default),
+                    Node::Label(arg.name.into(), span),
+                ]
+            })
+            .collect();
+        let constructor = Node::Array {
+            len,
+            inner: inner.into(),
+            boxed: true,
+            allow_ext: false,
+            prim: Some(prim),
+            span,
+        }
+        .sig_node()
+        .unwrap();
+        let (mut node, sig) = sn.into();
+        node.prepend(constructor.dipped(sig.args().saturating_sub(1), span).node);
+        node.push(Node::ImplPrim(args_prim, span));
         Ok(node)
     }
     fn index_macro(

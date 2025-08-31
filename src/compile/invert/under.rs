@@ -114,6 +114,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &TransposePat,
     &RotatePat,
     &AtanPat,
+    &UnpackPat,
     &FillPat,
     &DupPat,
     // Sign ops
@@ -1094,6 +1095,40 @@ under!(AtanPat, input, _, _, _, Prim(Atan, span), {
     ]);
     Ok((input, before, after))
 });
+
+under!(
+    UnpackPat,
+    input,
+    g_sig,
+    inverse,
+    asm,
+    Unpack {
+        count,
+        unbox,
+        allow_ext,
+        prim,
+        span,
+    },
+    {
+        let (mut before, mut after) = under_inverse(input, g_sig, inverse, asm)?;
+        after.push(Array {
+            len: count,
+            inner: Node::empty().into(),
+            boxed: unbox,
+            allow_ext,
+            prim,
+            span,
+        });
+        before.prepend(Unpack {
+            count,
+            unbox,
+            allow_ext,
+            prim,
+            span,
+        });
+        Ok((&[], before, after))
+    }
+);
 
 under!(
     (FillPat, input, g_sig, inverse, asm, Fill, span, [fill, f]),

@@ -206,7 +206,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &InnerContraDip,
     &JoinPat,
     &ArrayPat,
-    &UnpackPat,
+    &NoUnder(UnpackPat),
     &DipPat,
     &DipNPat,
     &BothPat,

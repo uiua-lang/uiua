@@ -365,7 +365,7 @@ impl CodeSpan {
     #[doc(hidden)]
     pub fn dummy() -> Self {
         Self {
-            src: InputSrc::Str(0),
+            src: InputSrc::Literal("".into()),
             start: Loc::default(),
             end: Loc::default(),
         }

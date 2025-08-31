@@ -1317,7 +1317,8 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             | SpanKind::Delimiter
             | SpanKind::LexOrder
             | SpanKind::FuncDelim(..)
-            | SpanKind::Obverse(_) => None,
+            | SpanKind::Obverse(_)
+            | SpanKind::PrimArgs(_) => None,
         };
         span.span.as_str(&spans.inputs, |s| {
             colored.push_str(&if let Some(color) = color {

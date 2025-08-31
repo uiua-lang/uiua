@@ -1529,7 +1529,7 @@ impl Compiler {
     ) -> UiuaResult<Node> {
         if let Some(prim) = (r.name.value.strip_suffix('!'))
             .and_then(Primitive::from_name)
-            .filter(|p| p.glyph().is_none())
+            .filter(|p| r.path.is_empty() && p.glyph().is_none())
         {
             return self.prim_args_macro(prim, modifier_span, operands);
         }

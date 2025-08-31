@@ -681,6 +681,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         SpanKind::Primitive(prim, subscript) => {
                             prim_sig_class(*prim, subscript.as_ref())
                         }
+                        SpanKind::PrimArgs(_) => "module",
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
                         SpanKind::Number if very_gay() => "text-gradient number-lesbian",
                         SpanKind::Number => "number-literal",
@@ -780,7 +781,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                 );
                             }
                         }
-                        SpanKind::Primitive(prim, _) => {
+                        SpanKind::Primitive(prim, _) | SpanKind::PrimArgs(prim) => {
                             let name = prim.name();
                             let mut title =
                                 format!("{}: {}", name, PrimDoc::from(prim).short_text());

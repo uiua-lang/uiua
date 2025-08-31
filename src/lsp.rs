@@ -19,7 +19,10 @@ use crate::{
 #[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpanKind {
+    /// A primitive, with an optional subscript which may affect coloring
     Primitive(Primitive, Option<Subscript>),
+    /// An optional argument macro for a primitive. Should be colored like a module.
+    PrimArgs(Primitive),
     String,
     Number,
     Comment,
@@ -41,6 +44,7 @@ pub enum SpanKind {
     MacroDelim(usize),
     ImportSrc(ImportSrc),
     Subscript(Option<Primitive>, Option<Subscript>),
+    /// `obverse` primitive. Contains which inverses are set.
     Obverse(SetInverses),
     ArgSetter(Option<EcoString>),
 }
@@ -794,6 +798,13 @@ impl Spanner {
         spans
     }
     fn ref_spans(&self, r: &Ref) -> Vec<Sp<SpanKind>> {
+        if let Some(prim) = (r.name.value.strip_suffix('!'))
+            .and_then(Primitive::from_name)
+            .filter(|p| r.path.is_empty() && p.glyph().is_none())
+        {
+            return vec![r.name.span.clone().sp(SpanKind::PrimArgs(prim))];
+        }
+
         let mut spans = self.ref_path_spans(&r.path);
         let docs = self.reference_docs(&r.name.span);
         spans.push(r.name.span.clone().sp(SpanKind::Ident {
@@ -1631,6 +1642,7 @@ mod server {
                         };
                         stt
                     }
+                    SpanKind::PrimArgs(_) => MODULE_STT,
                     SpanKind::Obverse(_) => for_prim(Primitive::Obverse, None).unwrap(),
                     SpanKind::Ident {
                         docs: Some(docs), ..

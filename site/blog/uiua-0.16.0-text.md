@@ -139,5 +139,5 @@ You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the
 )                     # Heart
 ⍉⊞× [1 0.3 0.3] ⤸2 ≤0 # Threshold/color
 ×τ ÷⟜⇡24              # Rotation angles
-≡⌟(voxels Camera:[0.2 °∠] Fog:Black)
+≡⌟(voxels °⊸Fog Black °⊸Camera [0.2 °∠])
 ```

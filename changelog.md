@@ -5,9 +5,6 @@ Uiua is not yet stable.
 ## 0.17.0 - 2025-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- **Breaking Change** - Add experimental [data functions](https://www.uiua.org/docs/experimental#data-functions) with optional arguments
-  - Remove existing experimental non-tacit data functions and methods
-  - This breaks uses of [`flip :`](https://uiua.org/docs/flip) immediately after an identifier
 - **Breaking Change** - Numeric subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays
 - **Breaking Change** - Remove combining `e` number literals
   - It was confusing when combined with `e` scientific number notation
@@ -60,6 +57,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`reciprocal ⨪`](https://uiua.org/docs/reciprocal) function, which computes the multiplicative inverse AKA reciprocal of a number
 - Add experimental [`recur`](https://uiua.org/docs/recur) modifier, which generalizes recursive algorithms
   - This would replace existing recursive functions
+- Add experimental [data functions](https://www.uiua.org/docs/experimental#data-functions) with optional arguments
+  - Remove existing experimental non-tacit data functions and methods
+  - [`layout`](https://uiua.org/docs/layout) and [`voxels`](https://uiua.org/docs/voxels) now use this system for configuration
 - Make subscripted [`stack ?`](https://uiua.org/docs/stack) merge adjacent non-subscripted [`stack ?`](https://uiua.org/docs/stack) chains
 - Implement [`under ⍜`](https://uiua.org/docs/under)[`regex`](https://uiua.org/docs/regex) for replacing using regex (called `gsub` in some other languages)
 - `@\_` and `@\W` now roundtrip through [`pretty`](https://uiua.org/docs/pretty) and [`repr`](https://uiua.org/docs/repr) (previously they would be formatted as `@\x¯01` and `@�` respectively)

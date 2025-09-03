@@ -2,6 +2,7 @@
 
 # 0.17
 - Style warnings for `base,2`, `range,0`, `deshape,1`
+- Warn about missing modifier functions
 
 # 0.18
 - Sided `box`

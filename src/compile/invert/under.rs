@@ -499,10 +499,11 @@ under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {
 
 under!(ForkPat, input, g_sig, inverse, asm, Fork, span, [f1, f2], {
     if f1.sig.args() != 1 || f2.sig.args() != 1 {
-        return Err(InversionError::Signature(SigCheckError {
-            message: "Cannot invert fork of non monadic functions".into(),
-            kind: crate::check::SigCheckErrorKind::NoInverse,
-        }));
+        return Err(
+            SigCheckError::from("Cannot invert fork of non monadic functions")
+                .no_inverse()
+                .into(),
+        );
     }
 
     let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;
@@ -511,27 +512,17 @@ under!(ForkPat, input, g_sig, inverse, asm, Fork, span, [f1, f2], {
     before.push(Mod(Fork, eco_vec![f1.clone(), f2.clone()], span));
     before.push(rest_before);
 
-    let n_dip = |mut node, n| -> Result<SigNode, SigCheckError> {
-        for _ in 0..n {
-            node = Mod(Dip, eco_vec![node], span).sig_node()?;
-        }
-        Ok(node)
-    };
-
-    let f2_after = n_dip(
-        Mod(By, eco_vec![f2.clone()], span)
-            .un_inverse(asm)?
-            .sig_node()?,
-        f1.sig.outputs(),
-    )?;
+    let f2_after = Mod(By, eco_vec![f2.clone()], span)
+        .un_inverse(asm)?
+        .sig_node()?
+        .dipped(f1.sig.outputs(), span);
 
     let mut after = rest_after;
     after.push(
-        n_dip(
-            PopUnder(1, span).sig_node()?,
-            f1.sig.outputs() + f2.sig.outputs(),
-        )?
-        .node,
+        PopUnder(1, span)
+            .sig_node()?
+            .dipped(f1.sig.outputs() + f2.sig.outputs(), span)
+            .node,
     );
     after.push(f2_after.node);
     after.push(Mod(By, eco_vec![f1.clone()], span).un_inverse(asm)?);

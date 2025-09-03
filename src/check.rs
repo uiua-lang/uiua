@@ -30,7 +30,7 @@ impl Node {
 }
 
 pub fn nodes_sig(nodes: &[Node]) -> Result<Signature, SigCheckError> {
-    VirtualEnv::from_nodes(nodes).map(|env| env.stack.sig())
+    nodes_all_sigs(nodes)
 }
 
 pub fn nodes_clean_sig(nodes: &[Node]) -> Option<Signature> {
@@ -170,12 +170,10 @@ impl VirtualEnv {
         nodes.iter().try_for_each(|node| self.node(node))
     }
     fn sig_node(&mut self, sn: &SigNode) -> Result<(), SigCheckError> {
-        self.handle_sig(sn.sig);
-        Ok(())
+        self.node(&sn.node)
     }
     fn node(&mut self, node: &Node) -> Result<(), SigCheckError> {
-        use ImplPrimitive::*;
-        use Primitive::*;
+        use {ImplPrimitive::*, Primitive::*};
         if self.node_depth > MAX_NODE_DEPTH {
             return Err("Function is too complex".into());
         }

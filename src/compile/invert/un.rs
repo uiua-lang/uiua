@@ -527,10 +527,13 @@ inverse!(ByPat, input, asm, By, span, [f], {
         } else if let Ok((before, after)) = f.node.under_inverse(Signature::new(1, 1), false, asm) {
             let mut inv = before;
             (0..f.sig.outputs()).for_each(|_| inv.push(Prim(Pop, span)));
-            for _ in 0..f.sig.outputs() {
-                inv = Mod(Dip, eco_vec![inv.sig_node()?], span);
-            }
+            inv = inv.sig_node()?.dipped(f.sig.outputs(), span).node;
             inv.push(after);
+            let inv_sig = nodes_sig(&inv)?;
+            if inv_sig.args() != f.sig.args() + f.sig.outputs() {
+                // Temporary fix to deny broken inverse
+                return generic();
+            }
             return Ok((input, inv));
         }
     }

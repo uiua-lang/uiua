@@ -42,8 +42,9 @@ This version is not yet released. If you are reading this on the website, then t
   - `◰` will automatically format to `⧆₁`
 - Remove experimental `ln` in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
 - Add [`&seek`](https://uiua.org/docs/&seek) function for working with large files
-- Remove previously deprecated `signature` and `stringify` modifiers
 - Calling [`&tcpa`](https://uiua.org/docs/&tcpa) on a TLS listener created with [`&tlsl`](https://uiua.org/docs/&tlsl) now automatically tries conducting a TSL handshake
+- Make subscripted [`stack ?`](https://uiua.org/docs/stack) merge adjacent non-subscripted [`stack ?`](https://uiua.org/docs/stack) chains
+- Implement [`under ⍜`](https://uiua.org/docs/under)[`regex`](https://uiua.org/docs/regex) for replacing using regex (called `gsub` in some other languages)
 - Add functions to work with UDP:
   - [`&udpb`](https://uiua.org/docs/&udpb) to bind a socket
   - [`&udpr`](https://uiua.org/docs/&udpr) to receive a datagram
@@ -60,17 +61,12 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [data functions](https://www.uiua.org/docs/experimental#data-functions) with optional arguments
   - Remove existing experimental non-tacit data functions and methods
   - [`layout`](https://uiua.org/docs/layout) and [`voxels`](https://uiua.org/docs/voxels) now use this system for configuration
-- Make subscripted [`stack ?`](https://uiua.org/docs/stack) merge adjacent non-subscripted [`stack ?`](https://uiua.org/docs/stack) chains
-- Implement [`under ⍜`](https://uiua.org/docs/under)[`regex`](https://uiua.org/docs/regex) for replacing using regex (called `gsub` in some other languages)
 - `@\_` and `@\W` now roundtrip through [`pretty`](https://uiua.org/docs/pretty) and [`repr`](https://uiua.org/docs/repr) (previously they would be formatted as `@\x¯01` and `@�` respectively)
-- "empty" and "tombstone" sentinels used in [`map`s](https://uiua.org/docs/map) now format through [`pretty`](https://uiua.org/docs/pretty) differently, although this shouldn't be noticable to users. Namely:
-  - Tombstone char is now `@\⊥` (was `@⊥`)
-  - Empty char is now `@\∅` (was `@_`)
-  - Empty number is now `∅` (was `_`)
-  - Also, empty and tombstone chars now roundtrip through [`repr`](https://uiua.org/docs/repr) (formatting as `@\u{100001}` and `@\u{100002}` respectively, previously would match [`pretty`](https://uiua.org/docs/pretty) formatting)
+- Remove previously deprecated `signature` and `stringify` modifiers
 ### Interpreter
 - Many bug fixes
 - Emit a diagnostic when most modifiers are not provided enough arguments
+- Emit a diagnostic for redundant subscripts
 - Speed up the implementation of [`or ∨`](https://uiua.org/docs/or)
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)

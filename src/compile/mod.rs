@@ -2197,9 +2197,27 @@ impl Compiler {
                             .subscript_sig(Some(&Subscript::numeric(2)))
                             .is_some_and(|sig| sig == (1, 1)) =>
                     {
+                        if prim == Base && n == 2 {
+                            self.emit_diagnostic(
+                                format!("{Base}₂ is equivalent to {}", Bits.format()),
+                                DiagnosticKind::Advice,
+                                span.clone().merge(scr.span),
+                            );
+                        }
                         Node::from_iter([Node::new_push(n), self.primitive(prim, span)])
                     }
-                    Deshape => Node::ImplPrim(ImplPrimitive::DeshapeSub(n), self.add_span(span)),
+                    Deshape => {
+                        if n == 1 {
+                            self.emit_diagnostic(
+                                format!("{Deshape}₁ is equivalent to just {}", Deshape.format()),
+                                DiagnosticKind::Advice,
+                                span.clone().merge(scr.span),
+                            );
+                            Node::Prim(Deshape, self.add_span(span))
+                        } else {
+                            Node::ImplPrim(ImplPrimitive::DeshapeSub(n), self.add_span(span))
+                        }
+                    }
                     Transpose => {
                         self.subscript_experimental(prim, &span);
                         if n > 100 {
@@ -2360,12 +2378,21 @@ impl Compiler {
                         ])
                     }
                     Range => {
-                        let span = self.add_span(span);
-                        Node::from_iter([
-                            Node::Prim(Range, span),
-                            Node::new_push(n),
-                            Node::Prim(Add, span),
-                        ])
+                        if n == 0 {
+                            self.emit_diagnostic(
+                                format!("{Range}₀ is equivalent to just {}", Range.format()),
+                                DiagnosticKind::Advice,
+                                span.clone().merge(scr.span),
+                            );
+                            Node::Prim(Range, self.add_span(span))
+                        } else {
+                            let span = self.add_span(span);
+                            Node::from_iter([
+                                Node::Prim(Range, span),
+                                Node::new_push(n),
+                                Node::Prim(Add, span),
+                            ])
+                        }
                     }
                     Keep => {
                         let n = self.positive_subscript(n, Keep, &span);

@@ -101,6 +101,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &CustomPat,
     &OnPat,
     &ForkPat,
+    &BracketPat,
     &BothPat,
     &Trivial,
     &SwitchPat,
@@ -352,6 +353,7 @@ macro_rules! under {
     // Mod pattern
     ($(#[$attr:meta])* $($doc:literal)? $name:ident, $input:ident, $g_sig:tt, $inverse:tt, $asm:tt, $prim:ident, $span:ident, $args:pat, $body:expr) => {
         under!($([$attr])* $($doc)? $name, $input, $g_sig, $inverse, $asm, ref, Mod($prim, args, $span), {
+            #[allow(irrefutable_let_patterns)]
             let $args = args.as_slice() else {
                 return generic();
             };
@@ -529,6 +531,22 @@ under!(ForkPat, input, g_sig, inverse, asm, Fork, span, [f1, f2], {
 
     Ok((&[], before, after))
 });
+
+under!(
+    (BracketPat, input, g_sig, inverse, asm, Bracket, span, args),
+    {
+        let mut args_before = EcoVec::with_capacity(args.len());
+        let mut args_after = EcoVec::with_capacity(args.len());
+        for arg in args {
+            let (before, after) = arg.under_inverse(g_sig, inverse, asm)?;
+            args_before.push(before);
+            args_after.push(after);
+        }
+        let before = Mod(Bracket, args_before, span);
+        let after = ImplMod(UnBracket, args_after, span);
+        Ok((input, before, after))
+    }
+);
 
 under!(
     "Derives under inverses from un inverses",

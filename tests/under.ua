@@ -442,6 +442,9 @@ map {"alice" "bob" "charlie"} [1 2 3]
 ⍤⤙≍ "wham" °⊸⊃⊢⊣ @w @m "that"
 ⍤⤙≍ "THESE THOSE" °⊸⊃±◴ 1 "thes o" "abcdceabfdc"
 
+# Bracket
+⍤⤙≍ {[6 2 3] [4 5 1]} {⍜⊓⊢⊣˜⊙∘} [1 2 3] [4 5 6]
+
 # No anti
 ⍤⤙≍ ⟜⍜(ℂ°⊟)∘ [1 2]
 ⍤⤙≍ ⟜⍜(ℂ°[⊙⊙∘])∘ [1 2 3]

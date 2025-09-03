@@ -330,6 +330,10 @@ impl TypeRt<'_> {
                     self.node(&f.node)?;
                     self.stack.push(x);
                 }
+                Pool | Spawn => {
+                    let [f] = get_args(args)?;
+                    return self.node(&f.node);
+                }
                 _ => return Err(TypeError::NotSupported),
             },
             Node::NoInline(inner) | Node::TrackCaller(inner) => self.node(inner)?,

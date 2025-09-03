@@ -52,7 +52,7 @@ impl Compiler {
                         .collect(),
                     pack_expansion: true,
                 };
-                self.modified_impl(new, subscript)
+                self.modified(new, subscript)
             }
             Modifier::Primitive(Primitive::Dip) => {
                 let mut nodes = Vec::with_capacity(pack.branches.len());
@@ -104,7 +104,7 @@ impl Compiler {
                         pack_expansion: true,
                     };
                 }
-                self.modified_impl(new, subscript)
+                self.modified(new, subscript)
             }
             Modifier::Primitive(Primitive::Fork | Primitive::Try | Primitive::Fill) => {
                 let mut branches = pack.lexical_order().cloned().rev();
@@ -131,7 +131,7 @@ impl Compiler {
                         pack_expansion: true,
                     };
                 }
-                self.modified_impl(new, subscript)
+                self.modified(new, subscript)
             }
             Modifier::Primitive(Primitive::On) => {
                 let mut words = Vec::new();
@@ -320,7 +320,7 @@ impl Compiler {
                         .collect(),
                     pack_expansion: true,
                 };
-                self.modified_impl(new, subscript)
+                self.modified(new, subscript)
             }
             m => {
                 if let Modifier::Ref(name) = m {
@@ -356,14 +356,6 @@ impl Compiler {
     }
     pub(crate) fn modified(
         &mut self,
-        modified: Modified,
-        subscript: Option<Sp<Subscript>>,
-    ) -> UiuaResult<Node> {
-        self.modified_impl(modified, subscript)
-    }
-    #[allow(clippy::collapsible_match)]
-    fn modified_impl(
-        &mut self,
         mut modified: Modified,
         subscript: Option<Sp<Subscript>>,
     ) -> UiuaResult<Node> {
@@ -379,8 +371,39 @@ impl Compiler {
             }
         }
 
-        if op_count < modified.modifier.value.args() {
-            let missing = modified.modifier.value.args() - op_count;
+        let required_ops = modified.modifier.value.args();
+        if op_count < required_ops {
+            // Warn about not enough args
+            if !matches!(
+                modified.modifier.value,
+                Modifier::Primitive(Primitive::Dip | Primitive::Gap)
+            ) {
+                let message = if op_count == 0 {
+                    if required_ops == 1 {
+                        format!("{} should be passed an operand", modified.modifier.value)
+                    } else {
+                        format!(
+                            "{} should be passed {} operands",
+                            modified.modifier.value, required_ops
+                        )
+                    }
+                } else {
+                    format!(
+                        "{} should be passed {} operands, but only {} {} provided",
+                        modified.modifier.value,
+                        required_ops,
+                        op_count,
+                        if op_count == 1 { "was" } else { "were" }
+                    )
+                };
+                self.emit_diagnostic(
+                    message,
+                    DiagnosticKind::Advice,
+                    modified.modifier.span.clone(),
+                )
+            }
+            // Fill args
+            let missing = required_ops - op_count;
             let span = modified.modifier.span.clone();
             for _ in 0..missing {
                 modified.operands.push(span.clone().sp(Word::Func(Func {
@@ -391,7 +414,7 @@ impl Compiler {
             }
             op_count = modified.code_operands().count();
         }
-        if op_count == modified.modifier.value.args() {
+        if op_count == required_ops {
             // Inlining
             if let Some(node) = self.inline_modifier(&modified, subscript)? {
                 return Ok(node);
@@ -1336,13 +1359,8 @@ impl Compiler {
             Table => {
                 // Normal table compilation, but get some diagnostics
                 let (sn, span) = self.monadic_modifier_op(modified)?;
-                match sn.sig.args() {
-                    0 => self.emit_diagnostic(
-                        format!("{} of 0 arguments is redundant", Table.format()),
-                        DiagnosticKind::Advice,
-                        span,
-                    ),
-                    1 => self.emit_diagnostic(
+                if sn.sig.args() == 1 {
+                    self.emit_diagnostic(
                         format!(
                             "{} with 1 argument is just {rows}. \
                             Use {rows} instead.",
@@ -1351,8 +1369,7 @@ impl Compiler {
                         ),
                         DiagnosticKind::Advice,
                         span,
-                    ),
-                    _ => {}
+                    )
                 }
 
                 fn table_fork(sn: SigNode, table_span: usize, asm: &Assembly) -> Node {

@@ -1,3 +1,5 @@
+//! Splitting primitive names
+
 use std::{collections::HashMap, fmt, sync::LazyLock};
 
 use enum_iterator::Sequence;

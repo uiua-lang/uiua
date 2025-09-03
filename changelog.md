@@ -69,6 +69,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Empty number is now `∅` (was `_`)
   - Also, empty and tombstone chars now roundtrip through [`repr`](https://uiua.org/docs/repr) (formatting as `@\u{100001}` and `@\u{100002}` respectively, previously would match [`pretty`](https://uiua.org/docs/pretty) formatting)
 ### Interpreter
+- Many bug fixes
+- Emit a diagnostic when most modifiers are not provided enough arguments
 - Speed up the implementation of [`or ∨`](https://uiua.org/docs/or)
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)

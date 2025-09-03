@@ -169,7 +169,7 @@ M![G H I] ⇡3
 └─╴
 A! ←^ $"Wup!(_)" ⊢
 B! ← A!X ^0
-⍤⤙≍ 5 B!
+⍤⤙≍ 5 B!()
 
 # Modules should overwrite macros
 Foo! ←^ repr⊢

@@ -785,17 +785,20 @@ impl Value {
         )?;
         let shape = Shape::from_iter(ishape.iter().map(|n| n.unsigned_abs()));
         let elems: usize = validate_size::<f64>(shape.iter().copied(), env)?;
-        let data = EcoVec::from_iter((0..elems).map(|i| i as f64));
-        let mut arr = Array::new(shape, data);
+        let mut val: Value = if elems < 256 {
+            Array::new(shape, EcoVec::from_iter((0..elems).map(|i| i as u8))).into()
+        } else {
+            Array::new(shape, EcoVec::from_iter((0..elems).map(|i| i as f64))).into()
+        };
         let first_max = ishape.first().copied().unwrap_or(0);
         for (i, s) in ishape.into_iter().enumerate() {
             if s < 0 {
-                arr.reverse_depth(i);
+                val.reverse_depth(i);
             }
         }
-        arr.meta.mark_sorted_up(first_max >= 0);
-        arr.meta.mark_sorted_down(first_max <= 0);
-        Ok(arr.into())
+        val.meta.mark_sorted_up(first_max >= 0);
+        val.meta.mark_sorted_down(first_max <= 0);
+        Ok(val)
     }
 }
 

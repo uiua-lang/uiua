@@ -9,13 +9,17 @@ license = "MIT"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
 rust-version = "1.83.0"
-version = "0.17.0-dev.2"
+version = "0.17.0-rc.1"
+
+[dependencies.uiua_parser]
+path = "parser"
+version = "0.17.0-rc.1"
 
 [workspace.lints.clippy]
 cargo = {level = "warn", priority = -1}
 dbg_macro = "warn"
-print_stdout = "warn"
 non_std_lazy_statics = "warn"
+print_stdout = "warn"
 
 [workspace.dependencies]
 base64 = "0.22.0"
@@ -27,8 +31,8 @@ enum-iterator = "2.1.0"
 hound = "3.5.1"
 js-sys = "0.3.69"
 leptos = "0.6.11"
-leptos_router = {version = "0.6.11", features = ["csr"]}
 leptos_meta = {version = "0.6.11", features = ["csr"]}
+leptos_router = {version = "0.6.11", features = ["csr"]}
 rand = {version = "0.8.5", features = ["small_rng"]}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0.115"
@@ -38,7 +42,6 @@ urlencoding = "2"
 wasm-bindgen = "=0.2.93"
 
 [workspace.dependencies.web-sys]
-version = "0.3.70"
 features = [
   "Clipboard",
   "ClipboardEvent",
@@ -65,25 +68,22 @@ features = [
   "Storage",
   "StorageManager",
 ]
-
+version = "0.3.70"
 
 [package]
+categories.workspace = true
 description = "A stack-based array programming language"
 documentation = "https://docs.rs/uiua"
-name = "uiua"
-categories.workspace = true
 edition.workspace = true
 keywords.workspace = true
 license.workspace = true
+name = "uiua"
 readme.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
-
 [dependencies]
-# Uiua dependencies
-uiua_parser = {path = "parser", version = "0.17.0-dev.2"}
 
 # Core dependencies
 bitflags = {version = "2", features = ["serde"]}

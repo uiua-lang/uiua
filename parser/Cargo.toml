@@ -1,11 +1,11 @@
 [package]
+categories.workspace = true
 description = "Uiua parser implementation"
 documentation = "https://docs.rs/uiua_parser"
-name = "uiua_parser"
-categories.workspace = true
 edition.workspace = true
 keywords.workspace = true
 license.workspace = true
+name = "uiua_parser"
 readme.workspace = true
 repository.workspace = true
 rust-version.workspace = true
@@ -25,5 +25,5 @@ dashmap.workspace = true
 ecow.workspace = true
 enum-iterator.workspace = true
 serde = {workspace = true, features = ["rc"]}
-unicode-segmentation.workspace = true
 serde_tuple = "1.0.0"
+unicode-segmentation.workspace = true

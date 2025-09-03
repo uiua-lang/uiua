@@ -390,7 +390,7 @@ fn derive_dims(
                         but axis {i} has fill size {fill}"
                     )));
                 }
-                let fill = fill as usize;
+                let fill = fill as usize * has_fill as usize;
                 dims.push(WindowDim { size, stride, fill });
             }
             dims

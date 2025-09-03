@@ -1,5 +1,7 @@
 use std::{array, cmp::Ordering, mem::take};
 
+use uiua_parser::PrimClass;
+
 use crate::{
     cowslice::CowSlice, Array, Assembly, Boxed, Complex, ImplPrimitive, Node, PersistentMeta,
     Primitive, Shape, SigNode, Uiua, Value,
@@ -333,6 +335,26 @@ impl TypeRt<'_> {
                 Pool | Spawn => {
                     let [f] = get_args(args)?;
                     return self.node(&f.node);
+                }
+                Reduce => {
+                    let [f] = get_args(args)?;
+                    match f.node.as_primitive() {
+                        Some(Join) => {
+                            let mut x = self.pop()?;
+                            if x.shape.len() >= 2 {
+                                let b = x.shape.remove(1);
+                                let a = x.shape.remove(0);
+                                x.shape.insert(0, a * b)
+                            }
+                            self.stack.push(x);
+                        }
+                        Some(prim) if prim.class() == PrimClass::DyadicPervasive => {
+                            let mut x = self.pop()?;
+                            x.shape.make_row();
+                            self.stack.push(x);
+                        }
+                        _ => return Err(TypeError::NotSupported),
+                    }
                 }
                 _ => return Err(TypeError::NotSupported),
             },

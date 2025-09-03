@@ -10,6 +10,7 @@ use crate::{
         FillContext, MultiOutput,
     },
     cowslice::extend_repeat,
+    types::push_empty_rows_value,
     val_as_arr, Array, ArrayValue, Boxed, Node, Primitive, Shape, SigNode, Uiua, UiuaResult, Value,
 };
 
@@ -91,12 +92,6 @@ where
             .map(|d| d.size)
             .chain(arr.shape.iter().skip(dims.len()).copied()),
     );
-    if shape_prefix.contains(&0) {
-        let mut shape = shape_prefix;
-        shape.extend(window_shape);
-        env.push(Array::new(shape, EcoVec::new()));
-        return Ok(());
-    }
 
     // Initialize action
     let mut action: WindowAction<T> = match &f.node {
@@ -109,19 +104,34 @@ where
         }
         Node::Prim(Primitive::Box, _) => WindowAction::Box(EcoVec::new(), EcoVec::new()),
         node => {
-            if let Some((f, size)) = f_mon_fast_fn(node, env).and_then(|f| {
-                validate_size_of::<T>(
-                    (shape_prefix.iter().copied()).chain(window_shape.iter().copied()),
-                )
-                .ok()
-                .map(|size| (f, size))
-            }) {
+            if let Some((f, size)) = f_mon_fast_fn(node, env)
+                .filter(|_| !shape_prefix.contains(&0))
+                .and_then(|f| {
+                    validate_size_of::<T>(
+                        (shape_prefix.iter().copied()).chain(window_shape.iter().copied()),
+                    )
+                    .ok()
+                    .map(|size| (f, size))
+                })
+            {
                 WindowAction::Id(EcoVec::with_capacity(size), Some(f))
             } else {
                 WindowAction::Default(multi_output(f.sig.outputs(), Vec::new()), EcoVec::new())
             }
         }
     };
+
+    if shape_prefix.contains(&0) {
+        arr.fix();
+        if !(matches!(action, WindowAction::Default(..))
+            && push_empty_rows_value(&f, [&arr.into()], false, &mut Default::default(), env))
+        {
+            let mut shape = shape_prefix;
+            shape.extend(window_shape);
+            env.push(Array::new(shape, EcoVec::new()));
+        }
+        return Ok(());
+    }
 
     let fill = env.scalar_fill::<T>().ok().map(|fv| fv.value);
     if dims.len() == 1 && (fill.is_none() || dims[0].fill == 0) {

@@ -525,11 +525,21 @@ inverse!(ByPat, input, asm, By, span, [f], {
             };
             return Ok((input, CustomInverse(adjust_rank.into(), *span)));
         } else if let Ok((before, after)) = f.node.under_inverse(Signature::new(1, 1), false, asm) {
+            let before_sig = nodes_sig(&before)?;
+            let after_sig = nodes_sig(&after)?;
+            dbg!(
+                &f.node,
+                f.sig,
+                &before,
+                before_sig,
+                before_sig.under(),
+                &after,
+                after_sig,
+                after_sig.under(),
+            );
             let mut inv = before;
             (0..f.sig.outputs()).for_each(|_| inv.push(Prim(Pop, span)));
-            for _ in 0..f.sig.outputs() {
-                inv = Mod(Dip, eco_vec![inv.sig_node()?], span);
-            }
+            inv = inv.sig_node()?.dipped(f.sig.outputs(), span).node;
             inv.push(after);
             return Ok((input, inv));
         }

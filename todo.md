@@ -3,7 +3,9 @@
 # 0.17
 
 # 0.18
-- Sided `box`
+- `evert` optimizations
+- `transpose` subscripts for leading or trailing axes
+- Sided `box`?
 - Sided `join`
 - `table` subscripts for rank selection
 - Mixed subscripts

@@ -4,6 +4,7 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     ops::{Deref, DerefMut},
+    slice,
     sync::Arc,
 };
 
@@ -465,7 +466,10 @@ impl<T> Array<T> {
         T: Send + Sync,
     {
         let row_len = self.row_len();
-        self.data.chunks_exact(row_len.max(1))
+        let data = self.data.as_slice();
+        // Safety: Just look at it
+        (0..self.row_count())
+            .map(move |i| unsafe { slice::from_raw_parts(data.as_ptr().add(i * row_len), row_len) })
     }
     /// Get a slice of a row
     #[track_caller]
@@ -483,8 +487,13 @@ impl<T: Clone> Array<T> {
     where
         T: Send + Sync,
     {
+        let row_count = self.row_count();
         let row_len = self.row_len();
-        self.data.as_mut_slice().chunks_exact_mut(row_len.max(1))
+        let data = self.data.as_mut_slice();
+        // Safety: Just look at it
+        (0..row_count).map(move |i| unsafe {
+            slice::from_raw_parts_mut(data.as_mut_ptr().add(i * row_len), row_len)
+        })
     }
     /// Get a row array
     #[track_caller]

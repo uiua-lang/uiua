@@ -414,6 +414,7 @@ impl Uiua {
                 output_comments: take(&mut self.rt.output_comments),
                 reports: take(&mut self.rt.reports),
                 stack: take(&mut self.rt.stack),
+                cli_arguments: take(&mut self.rt.cli_arguments),
                 ..Runtime::default()
             };
         }

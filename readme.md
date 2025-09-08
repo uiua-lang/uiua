@@ -15,7 +15,7 @@ You can support Uiua's development via [GitHub Sponsors](https://github.com/spon
 
 You can try the language without installing anything on [the website](https://uiua.org).
 
-If you want to install the interpreter locally there are 2 options:
+If you want to install the interpreter locally, there are 2 options:
 - If your OS is supported, you can simply download the [latest release](https://github.com/uiua-lang/uiua/releases).
 - If not, you will need to install via Cargo.
 This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be installed.
@@ -41,7 +41,7 @@ This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be ins
   cargo install --git https://github.com/uiua-lang/uiua uiua -F full
   cargo install --git https://github.com/uiua-lang/uiua uiua
   ```
-- If you use Nix or NixOS, you can clone this repo and do following:
+- If you use Nix or NixOS, you can clone this repo and do the following:
   ```
   nix develop    # to drop into a shell prompt with all the dependencies
   cargo check    # to make sure you can compile/build latest version

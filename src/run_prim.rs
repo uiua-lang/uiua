@@ -78,7 +78,9 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Pi => env.push(pi()),
         Primitive::Tau => env.push(tau()),
         Primitive::Infinity => env.push(inf()),
-        Primitive::Identity => {}
+        Primitive::Identity => {
+            env.require_height(1)?;
+        }
         Primitive::Not => env.monadic_env(Value::not)?,
         Primitive::Neg => env.monadic_env(Value::neg)?,
         Primitive::Abs => env.monadic_env(Value::abs)?,

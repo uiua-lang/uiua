@@ -1806,6 +1806,9 @@ impl<T: RealArrayValue> Array<T> {
         if base.is_nan() {
             return Err(env.error("Base cannot be NaN"));
         }
+        if (-1.0..0.0).contains(&base) {
+            return Err(env.error("Base cannot be between ¯1 and 0"));
+        }
         Ok(if base >= 0.0 {
             let max_row_len = (self.data.iter())
                 .map(|&n| digits_needed_for_base(n.to_f64(), base))

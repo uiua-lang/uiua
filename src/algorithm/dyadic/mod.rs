@@ -661,6 +661,9 @@ impl<T: ArrayValue> Array<T> {
     /// `keep` this array with a real-valued scalar
     pub fn keep_scalar_real(mut self, count: f64, env: &Uiua) -> UiuaResult<Self> {
         let abs_count = count.abs();
+        if abs_count.is_infinite() {
+            return Err(env.error("Cannot keep an infinite amount"));
+        }
         if abs_count.fract() == 0.0 && count >= 0.0 {
             return self.keep_scalar_integer(abs_count as usize, env);
         }

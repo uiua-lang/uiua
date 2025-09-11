@@ -199,7 +199,7 @@ We can use [pattern matching](/tutorial/patternmatching) to do something differe
   |Point 
   Square ← Rectangle .
   Area ← ⍣(
-    ×π ×. °Circle
+    ×π ˙× °Circle
   | × °Rectangle
   | 0
   )

@@ -5,7 +5,7 @@ F ← ⌝⊡⊃(
     ⊂0\+                  # Offsets
   )
   +¤⌊÷2⊟. # Indices
-| +1⇡×.   # Numbers
+| +1⇡˙×   # Numbers
 )
 
 F 3

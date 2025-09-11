@@ -126,14 +126,14 @@ Suffixing a `()` function with `!` or `^!` will make it an inline index macro or
 For example, the formula for the standard deviation of a set of numbers could be written like this:
 
 ```uiua
-StdDev ← √÷⊃⧻/+ ×. -⊸(÷⊃⧻/+)
+StdDev ← √÷⊃⧻/+ ˙× -⊸(÷⊃⧻/+)
 StdDev [1 2 3 4]
 ```
 
 Notice, however, that we calculate the average twice. We can deduplicate that code by using an inline index macro.
 
 ```uiua
-StdDev ← √(^0 ×. -⊸^0)!(÷⊃⧻/+)
+StdDev ← √(^0 ˙× -⊸^0)!(÷⊃⧻/+)
 StdDev [1 2 3 4]
 ```
 

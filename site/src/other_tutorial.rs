@@ -150,17 +150,17 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <Editor example="÷⟜⇡10"/>
         <p>"If we make the list a bit bigger and "<Prim prim=Table/>" it with itself, we can form a square array of numbers."</p>
         <p>"Let's see what that looks like with different functions used in the "<Prim prim=Table/>"."</p>
-        <Editor example="⊞<. ÷⟜⇡100"/>
-        <Editor example="⊞×. ÷⟜⇡100"/>
-        <Editor example="⊞◿. ÷⟜⇡100"/>
+        <Editor example="˙⊞< ÷⟜⇡100"/>
+        <Editor example="˙⊞× ÷⟜⇡100"/>
+        <Editor example="˙⊞◿ ÷⟜⇡100"/>
         <p>"We can use a bit of math(s) to make more interesting patterns. Here, we use a "<Prim prim=Dip/>" and "<Prim prim=Identity/>" in the "<Prim prim=Table/>" to turn each list into its own image. See what happens if you remove "<Prim prim=Lt/>"."</p>
         <Editor example="< ⊞⊙∘ ⊃(-1/2|×0.2∿×τ) ÷⟜⇡100"/>
         <p>"So far, these images have all been rank-2 arrays of grayscale pixel data, but rank-3 arrays allow for multiple color channels!"</p>
         <p>"The last axis is always the colors. In this example, we create an array with "<Prim prim=Shape/>" "<code>"[100 100 2]"</code>". Because there are only 2 color channels, the image will be interpreted as grayscale with an alpha channel."</p>
-        <Editor example="⊞⊟. ÷⟜⇡100"/>
+        <Editor example="˙⊞⊟ ÷⟜⇡100"/>
         <p>"With 3 or 4 color channels, you can create full-color images."</p>
-        <Editor example="⊞(⊂⊂.). ÷⟜⇡100 # RGB"/>
-        <Editor example="⊞(⊂.⊂). ÷⟜⇡100 # RGBA"/>
+        <Editor example="˙⊞(⊂⊂.) ÷⟜⇡100 # RGB"/>
+        <Editor example="˙⊞(⊂.⊂) ÷⟜⇡100 # RGBA"/>
         <p>"In the examples above, the image array is constructed in such a way that the color channels are already the last axis. To create an image by combining color channels, it may be necessary to use "<Prim prim=Transpose/>"."</p>
         <Editor example="< ⊞⊙∘ ⊃(-0.4|×0.2∿×τ) ÷⟜⇡100\n[⍉.⇌.]\n⟜△ # Not a valid image shape\n⍉\n⊸△ # Valid image shape"/>
         <p>"Of course, images need not be sqaure."</p>
@@ -175,7 +175,7 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <Hd id="gifs">"GIFs"</Hd>
         <p>"To create a GIF, simply create an array where every row is an image."</p>
         <p>"Here, we define a function that takes a frame parameter and generates an image, then evaluate it for each value in a range."</p>
-        <Editor example="F ← <⊞×. ÷⟜⇡100 ÷2+1∿×τ\n≡F ÷⟜⇡30"/>
+        <Editor example="F ← <˙⊞× ÷⟜⇡100 ÷2+1∿×τ\n≡F ÷⟜⇡30"/>
 
         <Hd id="system-functions">"System Functions"</Hd>
         <p>"If you use the native interpreter, arrays will not be automatically converted into images or GIFs like they are on the website. To generate them, you must explicitly call certain system functions."</p>

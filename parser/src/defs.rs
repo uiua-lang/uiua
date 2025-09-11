@@ -2274,7 +2274,7 @@ primitive!(
     ///
     /// [under][both] works, and whether [both] is applied when undoing depends on the signature of `g`.
     /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
-    /// ex: ⍜∩(×.)+ 3 4
+    /// ex: ⍜∩˙×+ 3 4
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
     /// ex: ⍜∩°□(⊂◡⋅⊢) □[1 2 3] □[4 5 6 7 8]
     ///
@@ -2385,8 +2385,8 @@ primitive!(
     ///   : ⨬+- 1 3 5
     /// The signatures of the functions do not need to match exactly.
     /// Excess arguments will be discarded.
-    /// ex: ⨬(×.)+ 0 3 5
-    ///   : ⨬(×.)+ 1 3 5
+    /// ex: ⨬˙×+ 0 3 5
+    ///   : ⨬˙×+ 1 3 5
     /// A function pack can be used to switch between more than 2 functions.
     /// ex: ⨬(+|-|×|÷) 0 2 5
     ///   : ⨬(+|-|×|÷) 1 2 5
@@ -2545,7 +2545,7 @@ primitive!(
     ///   : wait spawn(+10+) 1 2
     ///
     /// You can use [rows] to spawn a thread for each row of an array.
-    /// ex: ≡spawn(/+⇡×.) ⇡10
+    /// ex: ≡spawn(/+⇡˙×) ⇡10
     ///
     /// [wait] is pervasive.
     /// ex: ↯3_3⇡9
@@ -3130,7 +3130,7 @@ primitive!(
     /// Basic polynomials are supported, along with [sine] and [logarithm].
     /// ex: # Experimental!
     ///   : # x² → 2x
-    ///   : ∂(×.) 5
+    ///   : ∂˙× 5
     /// ex: # Experimental!
     ///   : # √x → 1/(2√x)
     ///   : ∂√ 1/9
@@ -3157,7 +3157,7 @@ primitive!(
     /// Basic polynomials are supported, along with [sine].
     /// ex: # Experimental!
     ///   : # x² → x³/3
-    ///   : ∫(×.) 3
+    ///   : ∫˙× 3
     /// ex: # Experimental!
     ///   : # √x → (2x^1.5)/3
     ///   : ∫√ 1

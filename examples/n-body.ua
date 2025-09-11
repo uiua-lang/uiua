@@ -6,7 +6,7 @@ Step ← (
   ⊞≠.°⊏         # Make comparison matrix
   ⊃(≡▽⊙¤)⋅∘     # Make others
   ⊃≡(-¤)∘˜⊙∘    # Get diffs
-  ÷⊸⍜♭₂(≡/+×.)  # Inverse square
+  ÷⊸⍜♭₂(≡/+˙×)  # Inverse square
   ≡/+×G         # Get accs
   ⊃(+⊙⋅∘|⋅∘)×Dt # apply accs
   ⊃(+×Dt)∘      # Apply vels

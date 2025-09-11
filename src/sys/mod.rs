@@ -29,7 +29,7 @@ use crate::{
 pub const EXAMPLE_UA: &str = "\
 # Uiua's example module
 
-Square ← ×.
+Square ← ˙×
 Double ← +.
 Increment ← +1
 RangeDiff ↚ ⇡-

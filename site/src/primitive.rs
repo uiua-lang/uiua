@@ -223,8 +223,8 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Div], Required, "", "°(÷2) 5") }
             { inverse_row([Pow], Required, "", "°(ⁿ2) 36") }
             { inverse_row([Exp], No, "Natural logarithm", "°ₑ 10") }
-            { inverse_row([Add, Dup], No, "", "°(+.) 10") }
-            { inverse_row([Mul, Dup], No, "", "°(×.) 16") }
+            { inverse_row([Slf, Add], No, "", "°˙+ 10") }
+            { inverse_row([Slf, Mul], No, "", "°˙× 16") }
             { inverse_row([Atan], No, view!(<Prim prim=Sin/>" and cosine"), "°∠ π") }
             { inverse_row([Complex], No, "Complex part on top", "°ℂ i") }
             { inverse_row([Couple], No, view!("Array must have "<Prim prim=Len/>" 2"), "°⊟ [1_2_3 4_5_6]") }

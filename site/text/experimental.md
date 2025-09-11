@@ -123,14 +123,14 @@ Currently, only polynomials are supported.
 
 ```uiua
 # Experimental!
-∂(×.) 5                 # x² → 2x
+∂˙× 5                 # x² → 2x
 ∂√ 1/9                  # √x → 1/(2√x)
 ∂(-4+⊃(ⁿ2|×¯2)) [0 1 2] # x² - 2x - 4  →  2x² - 2x
 ```
 
 ```uiua
 # Experimental!
-∫(×.) 3   # x² → x³/3
+∫˙× 3   # x² → x³/3
 ∫√ 1      # √x → (2x^1.5)/3
 ∫(+5×2) 2 # 2x + 5  →  x² + 5x
 ```

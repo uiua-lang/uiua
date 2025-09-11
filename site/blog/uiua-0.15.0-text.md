@@ -53,7 +53,7 @@ Enum-like data definitions can be defined in a module with `|`s. [Pattern matchi
   |Rectangle {Width Height}
   |Point
   Area ← $Area ⍣(
-    ×π×. °Circle
+    ×π˙× °Circle
   | × °Rectangle
   | 0)
   Format ← ⍣(

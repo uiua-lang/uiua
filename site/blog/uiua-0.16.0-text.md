@@ -94,7 +94,7 @@ Inline macros are macros that do not need to be given a name. They are defined a
 This example calculates the standard deviation and reuses the code that calculates the mean.
 
 ```uiua
-StdDev ← √(^0 ×. -⊸^0)!(÷⊃⧻/+)
+StdDev ← √(^0 ˙× -⊸^0)!(÷⊃⧻/+)
 StdDev [1 2 3 4]
 ```
 

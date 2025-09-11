@@ -41,7 +41,7 @@ pub(crate) mod enabled {
     use crate::Uiua;
 
     const BENCHMARKS: &[(&str, &str)] = &[
-        ("PRIMES", "▽¬∊♭⊞×...+2⇡1000"),
+        ("PRIMES", "▽¬∊♭˙⊞×..+2⇡1000"),
         (
             "STRIPES",
             "\

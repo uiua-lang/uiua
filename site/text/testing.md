@@ -13,7 +13,7 @@ While this can be used in some forms of [control flow](/tutorial/controlflow), i
 When testing is enabled (as it is in all editors on this website), a line with [assert](/docs/assert) at the beginning will be interpreted as a test.
 
 ```uiua should fail
-Square ← ×.
+Square ← ˙×
 ⍤. =9 Square 3
 ⍤. =12 Square 4
 ⍤. =225 Square 15
@@ -27,7 +27,7 @@ When the program is done running, the successes and failures are aggregated and 
 A [scoped module](/tutorial/modules#scoped-modules) with the name `test` is special in that code inside it will *not* be run when using the `uiua run` command. The `uiua test` and `uiua watch` commands *will* run test scope code. Test scopes are also always run on this website.
 
 ```uiua
-Square ← ×.
+Square ← ˙×
 ┌─╴test
   ⍤. =9 Square 3
   ⍤. =225 Square 15
@@ -43,7 +43,7 @@ The first argument to [assert](/docs/assert) is the value that will be thrown if
 If the result does not match the expectation, that incorrect result will be thrown.
 
 ```uiua should fail
-Square ← ×.
+Square ← ˙×
 ⍤"3² is not 9!" =9 Square 3
 ⍤"4² is not 12!" =12 Square 4
 ⍤"15² is not 225!" =225 Square 15
@@ -54,7 +54,7 @@ One nice pattern for writing tests is to put the expected result before the test
 This should be immediately followed by the expected result.
 
 ```uiua should fail
-Square ← ×.
+Square ← ˙×
 ⍤⤙≍ 9 Square 3
 ⍤⤙≍ 12 Square 4
 ⍤⤙≍ 225 Square 15

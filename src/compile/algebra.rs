@@ -469,6 +469,12 @@ impl<'a> AlgebraEnv<'a> {
                     self.stack.push(Term::Sin(a).into());
                     self.handled += 1;
                 }
+                Reciprocal => {
+                    let a = self.pop()?;
+                    self.stack
+                        .push((Expr::from(1.0) / a).ok_or(AlgebraError::TooComplex)?);
+                    self.handled += 1;
+                }
                 Complex => {
                     let a = self.pop()?;
                     let b = self.pop()?;

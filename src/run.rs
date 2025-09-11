@@ -1029,7 +1029,7 @@ impl Uiua {
     }
     /// Attempt to pop a value and convert it to a list of numbers
     pub fn pop_nums(&mut self) -> UiuaResult<Vec<f64>> {
-        self.pop_convert(Value::as_nums)
+        Ok(self.pop(())?.as_nums(self, "")?.into_owned())
     }
     /// Attempt to pop a value and convert it to a string
     pub fn pop_string(&mut self) -> UiuaResult<String> {

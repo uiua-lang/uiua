@@ -997,15 +997,20 @@ impl Value {
     /// Attempt to convert the array to a list of numbers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_nums<C: ErrorContext>(
-        &self,
+    pub fn as_nums<'a, C: ErrorContext>(
+        &'a self,
         ctx: &C,
         requirement: impl Into<Option<&'static str>>,
-    ) -> Result<Vec<f64>, C::Error> {
+    ) -> Result<Cow<'a, [f64]>, C::Error> {
+        if self.rank() <= 1 {
+            if let Value::Num(arr) = self {
+                return Ok(Cow::Borrowed(arr.data.as_slice()));
+            }
+        }
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of numbers");
-        self.as_number_list(ctx, requirement)
+        self.as_number_list(ctx, requirement).map(Cow::Owned)
     }
     /// Attempt to convert the array to a list of natural numbers
     ///
@@ -1032,15 +1037,20 @@ impl Value {
     /// Attempt to convert the array to a list of bytes
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_bytes(
-        &self,
+    pub fn as_bytes<'a>(
+        &'a self,
         env: &Uiua,
         requirement: impl Into<Option<&'static str>>,
-    ) -> UiuaResult<Vec<u8>> {
+    ) -> UiuaResult<Cow<'a, [u8]>> {
+        if self.rank() <= 1 {
+            if let Value::Byte(arr) = self {
+                return Ok(Cow::Borrowed(arr.data.as_slice()));
+            }
+        }
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be array of bytes");
-        self.as_number_list(env, requirement)
+        self.as_number_list(env, requirement).map(Cow::Owned)
     }
     /// Attempt to convert the array to a list of u16s
     ///

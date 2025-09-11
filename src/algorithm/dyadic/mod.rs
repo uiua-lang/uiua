@@ -2026,13 +2026,13 @@ impl Value {
             return fallback(of, &elems, env);
         }
 
-        let Some(range_bound) =
+        let Some(bound) =
             (of.as_nums(env, None).ok()).filter(|nums| nums.iter().all(|f| f.fract() == 0.0))
         else {
             return fallback(of, &elems, env);
         };
 
-        if !(elems.rank() == 0 || elems.shape.ends_with(&[range_bound.len()])) {
+        if !(elems.rank() == 0 || elems.shape.ends_with(&[bound.len()])) {
             let new_shape = &elems.shape[..elems.rank() - 1];
             return Ok(Value::Byte(Array::new(
                 new_shape,
@@ -2046,7 +2046,7 @@ impl Value {
                     let data: EcoVec<u8> = nums
                         .row_slices()
                         .map(|row| {
-                            row.iter().zip(&range_bound).all(|(&r, &b)| {
+                            row.iter().zip(bound.iter()).all(|(&r, &b)| {
                                 r.fract() == 0.0 && r >= b.min(0.0) && r < b.max(0.0)
                             })
                         })
@@ -2057,7 +2057,7 @@ impl Value {
                 Value::Byte(bytes) => {
                     let data: EcoVec<u8> = bytes
                         .row_slices()
-                        .map(|row| row.iter().zip(&range_bound).all(|(&r, &b)| (r as f64) < b))
+                        .map(|row| row.iter().zip(bound.iter()).all(|(&r, &b)| (r as f64) < b))
                         .map(Into::into)
                         .collect();
                     Array::new(&bytes.shape[..1], data).into()

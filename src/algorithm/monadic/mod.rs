@@ -2025,7 +2025,7 @@ impl Value {
     /// Convert a list of UTF-8 bytes to a string value
     pub fn unutf8(&self, env: &Uiua) -> UiuaResult<Self> {
         let bytes = self.as_bytes(env, "Argument to °utf₈ must be a list of bytes")?;
-        let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
+        let s = String::from_utf8(bytes.into_owned()).map_err(|e| env.error(e))?;
         Ok(s.into())
     }
     /// Convert a list of UTF-16 code units to a string value

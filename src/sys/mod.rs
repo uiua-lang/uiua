@@ -448,7 +448,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("UDP sockets are not supported in this environment".into())
     }
     /// Send a datagram to an address over a UDP socket
-    fn udp_send(&self, handle: Handle, packet: Vec<u8>, addr: &str) -> Result<(), String> {
+    fn udp_send(&self, handle: Handle, packet: &[u8], addr: &str) -> Result<(), String> {
         Err("UDP sockets are not supported in this environment".into())
     }
     /// Set the maximum message length for a UDP socket
@@ -1169,11 +1169,12 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             env.push(Array::from(bytes.as_slice()));
         }
         SysOp::UdpSend => {
-            let bytes = env.pop(1)?.as_bytes(env, "Datagram must be bytes")?;
+            let bytes = env.pop(1)?;
+            let bytes = bytes.as_bytes(env, "Datagram must be bytes")?;
             let addr = env.pop(2)?.as_string(env, "Address must be a string")?;
             let handle = env.pop(3)?.as_handle(env, None)?;
             (env.rt.backend)
-                .udp_send(handle, bytes, &addr)
+                .udp_send(handle, &bytes, &addr)
                 .map_err(|e| env.error(e))?;
         }
         SysOp::UdpSetMaxMsgLength => {

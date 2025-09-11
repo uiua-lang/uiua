@@ -1015,11 +1015,9 @@ impl SysBackend for NativeSys {
             .ok_or_else(|| "Invalid UDP socket handle".to_string())?
             .map_err(|e| e.to_string())
     }
-    fn udp_send(&self, handle: Handle, bytes: Vec<u8>, addr: &str) -> Result<(), String> {
+    fn udp_send(&self, handle: Handle, bytes: &[u8], addr: &str) -> Result<(), String> {
         NATIVE_SYS
-            .get_udp_socket(handle, |sock| {
-                sock.socket.send_to(bytes.as_slice(), addr).map(|_| ())
-            })
+            .get_udp_socket(handle, |sock| sock.socket.send_to(bytes, addr).map(|_| ()))
             .ok_or_else(|| "Invalid UDP socket handle".to_string())?
             .map_err(|e| e.to_string())
     }

@@ -721,7 +721,8 @@ impl ImplPrimitive {
                 env.push(val);
             }
             ImplPrimitive::UnBinary => {
-                let bytes = env.pop(1)?.as_bytes(env, "Binary expects bytes")?;
+                let bytes = env.pop(1)?;
+                let bytes = bytes.as_bytes(env, "Binary expects bytes")?;
                 let val = Value::from_binary(&bytes, env)?;
                 env.push(val);
             }
@@ -731,7 +732,8 @@ impl ImplPrimitive {
                 env.push(val);
             }
             ImplPrimitive::UnXlsx => {
-                let xlsx = env.pop(1)?.as_bytes(env, "XLSX expects bytes")?;
+                let xlsx = env.pop(1)?;
+                let xlsx = xlsx.as_bytes(env, "XLSX expects bytes")?;
                 let val = Value::from_xlsx(&xlsx, env)?;
                 env.push(val);
             }

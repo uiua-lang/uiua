@@ -1000,7 +1000,7 @@ pub fn pad_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> UiuaResu
     };
     // Process grades
     let grades = grades.as_bytes(env, "Grades must be a list of natural numbers")?;
-    for &grade in &grades {
+    for &grade in &*grades {
         if grade > dims {
             return Err(env.error(format!(
                 "Cannot pad grade {grade} blades in {dims} dimensions"
@@ -1041,7 +1041,7 @@ pub fn pad_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> UiuaResu
         }
     } else {
         let mut left_sizes = Vec::with_capacity(grades.len());
-        for grade in grades {
+        for &grade in &*grades {
             let left_size: usize = (0..grade).map(|g| grade_size(dims, g)).sum();
             let size = grade_size(dims, grade);
             left_sizes.push((left_size, size));
@@ -1063,7 +1063,7 @@ pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> Uiua
     };
     // Process grades
     let grades = grades.as_bytes(env, "Grades must be a list of natural numbers")?;
-    for &grade in &grades {
+    for &grade in &*grades {
         if grade > dims {
             return Err(env.error(format!(
                 "Cannot extract grade {grade} blades in {dims} dimensions"
@@ -1082,7 +1082,7 @@ pub fn extract_blades(spec: Spec, grades: Value, val: Value, env: &Uiua) -> Uiua
     let half_size = full_size / 2;
     if size != full_size {
         if size == half_size {
-            for &grade in &grades {
+            for &grade in &*grades {
                 if grade % 2 == 1 {
                     return Err(env.error(format!(
                         "Cannot extract odd grade {grade} blades from \

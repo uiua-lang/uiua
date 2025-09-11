@@ -178,7 +178,8 @@ fn path_impl(
             self.env.exec(self.neighbors.clone())?;
             let (nodes, costs) = if self.neighbors.sig.outputs() == 2 {
                 let costs = (self.env.pop("neighbors costs")?)
-                    .as_nums(self.env, "Costs must be a list of numbers")?;
+                    .as_nums(self.env, "Costs must be a list of numbers")?
+                    .into_owned();
                 let nodes = self.env.pop("neighbors nodes")?;
                 if costs.len() != nodes.row_count() {
                     return Err(self.env.error(format!(

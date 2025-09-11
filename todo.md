@@ -1,7 +1,6 @@
 # Uiua Todo
 
 # 0.17
-- Use `Cow` for some buffers
 
 # 0.18
 - `evert` optimizations

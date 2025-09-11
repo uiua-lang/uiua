@@ -170,6 +170,13 @@ fn expr_deriv(expr: Expr) -> Option<Expr> {
             Term::Div(expr) => {
                 *deriv.0.entry(Term::Div(expr.pow(2.0.into())?)).or_default() += coef
             }
+            Term::Exp(expr) => {
+                let (term, coef2) = expr.single()?;
+                if !matches!(term, Term::X(1.0)) {
+                    return None;
+                }
+                *deriv.0.entry(Term::Exp(expr)).or_default() += coef * coef2;
+            }
             Term::Log(base, expr) => {
                 let prime = expr_deriv(expr.clone())?.as_constant()?;
                 let term = Term::Div(expr);
@@ -247,6 +254,10 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                         node.push(Node::new_push(1.0));
                         node.push(Prim(Flip, span));
                         node.push(Prim(Div, span));
+                    }
+                    Term::Exp(expr) => {
+                        recur(node, expr, any_complex, span);
+                        node.push(Prim(Exp, span));
                     }
                     Term::Log(base, expr) => {
                         recur(node, expr, any_complex, span);
@@ -639,6 +650,7 @@ enum Term {
     X(f64),
     Div(Expr),
     Log(f64, Expr),
+    Exp(Expr),
     Sin(Expr),
     Cos(Expr),
 }
@@ -652,6 +664,11 @@ impl fmt::Debug for Term {
             Term::Div(expr) => {
                 write!(f, "1/")?;
                 expr.fmt(f)
+            }
+            Term::Exp(expr) => {
+                write!(f, "e^(")?;
+                expr.fmt(f)?;
+                write!(f, ")")
             }
             Term::Log(base, expr) => {
                 write!(f, "log_{base}")?;
@@ -706,9 +723,11 @@ impl Expr {
     fn is_complex(&self) -> bool {
         self.0.keys().any(|term| match term {
             Term::X(x) => *x != 0.0 && *x != 1.0,
-            Term::Div(expr) | Term::Log(_, expr) | Term::Sin(expr) | Term::Cos(expr) => {
-                expr.is_complex()
-            }
+            Term::Div(expr)
+            | Term::Log(_, expr)
+            | Term::Sin(expr)
+            | Term::Cos(expr)
+            | Term::Exp(expr) => expr.is_complex(),
         })
     }
     fn single(&self) -> Option<(Term, Complex)> {
@@ -729,6 +748,11 @@ impl Expr {
         }
     }
     fn pow(self, power: Self) -> Option<Self> {
+        if self.as_constant().is_some_and(|c| c == E.into()) {
+            if let Some((Term::X(1.0), _)) = power.single() {
+                return Some(Term::Exp(power).into());
+            }
+        }
         let power = power.as_constant()?.into_real()?;
         if power.fract() == 0.0 && power >= 0.0 {
             let n = power as usize;

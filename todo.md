@@ -7,6 +7,7 @@
 - `transpose` subscripts for leading or trailing axes
 - Sided `box`?
 - Sided `join`
+- `anti by` inverses?
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

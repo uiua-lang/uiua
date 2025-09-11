@@ -412,15 +412,21 @@ fn path_impl(
                 } else {
                     path_val
                 });
-            } else if let Some(val) = env.value_fill().map(|fv| fv.value.clone()) {
-                env.push(val);
+            } else if let Some(val) = env.value_fill().map(|fv| &fv.value) {
+                if val.rank() == 0 {
+                    env.push(if has_costs {
+                        Array::<Boxed>::default().into()
+                    } else {
+                        Value::default()
+                    });
+                } else {
+                    return Err(env.error("No path found. A fill is set, but it is not scalar."));
+                }
             } else {
                 return Err(env.error("No path found"));
             }
         }
-        PathMode::Exists => {
-            env.push(!ends.is_empty());
-        }
+        PathMode::Exists => env.push(!ends.is_empty()),
         PathMode::CostOnly => {}
     }
     Ok(())

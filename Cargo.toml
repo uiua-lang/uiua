@@ -161,7 +161,7 @@ image = {version = "0.25", optional = true, default-features = false, features =
 json5 = {version = "0.4.1", optional = true}
 libffi = {version = "4", optional = true}
 libloading = {version = "0.8.3", optional = true}
-nokhwa = {version = "0.10.7", optional = true, features = ["input-native"]}
+nokhwa = {version = "0.10.9", optional = true, features = ["input-native"]}
 num-complex = {version = ">=0.4.1", optional = true, default-features = false, features = [
   "bytemuck",
 ]}

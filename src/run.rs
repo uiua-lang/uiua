@@ -1324,7 +1324,7 @@ impl Uiua {
     }
     #[inline]
     pub(crate) fn truncate_stack(&mut self, size: usize) -> Vec<Value> {
-        self.rt.stack.split_off(size)
+        self.rt.stack.split_off(size.min(self.rt.stack.len()))
     }
     #[inline]
     pub(crate) fn truncate_under_stack(&mut self, size: usize) {

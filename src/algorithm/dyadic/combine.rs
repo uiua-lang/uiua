@@ -333,6 +333,7 @@ impl<T: ArrayValue> Array<T> {
             }
             Ordering::Equal => {
                 let map_keys = self.meta.take_map_keys().zip(other.meta.take_map_keys());
+                self.meta.combine(&other.meta);
                 let mut res = if self.rank() == 0 {
                     debug_assert_eq!(other.rank(), 0);
                     let label = match (self.meta.take_label(), other.meta.take_label()) {

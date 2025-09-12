@@ -108,7 +108,11 @@ fn path_impl(
         }
     }
     let has_costs = nei_sig.outputs() == 2;
-    let arg_count = nei_sig.args().max(heu_sig.args()).max(isg_sig.args()) - 1;
+    let arg_count = nei_sig
+        .args()
+        .max(heu_sig.args())
+        .max(isg_sig.args())
+        .saturating_sub(1);
     let mut args = Vec::with_capacity(arg_count);
     for i in 0..arg_count {
         args.push(env.pop(i + 1)?);

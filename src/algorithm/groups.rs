@@ -755,6 +755,9 @@ where
     if indices.shape == [0]
         && push_empty_rows_value(&f, &values, false, &mut Default::default(), env)
     {
+        if sig.args() == 0 {
+            env.pop("excess value")?;
+        }
         return Ok(());
     }
 

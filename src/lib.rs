@@ -221,9 +221,9 @@ const _: () = {
 
 #[cfg(test)]
 mod tests {
-    use std::path::*;
+    use std::{path::*, process::exit};
 
-    use crate::{Compiler, Uiua};
+    use crate::{Compiler, Primitive, Uiua};
 
     fn test_files(filter: impl Fn(&Path) -> bool) -> impl Iterator<Item = PathBuf> {
         std::fs::read_dir("tests")
@@ -415,5 +415,25 @@ mod tests {
             .unwrap_or_else(|e| panic!("{e}"));
         let res = env.pop_int().unwrap();
         assert_eq!(res, 3);
+    }
+
+    #[test]
+    #[ignore] // Too expensive
+    fn fuzz() {
+        let iter = Primitive::non_deprecated().filter(|p| !matches!(p, Primitive::Sys(_)));
+        for a in iter.clone() {
+            for b in iter.clone() {
+                for c in iter.clone() {
+                    let funcs = format!("{a}{b}{c}");
+                    eprintln!("{funcs}");
+                    let code = format!("{funcs} [1] [2] [3] [4] [5] [6]");
+                    if let Err(e) = Uiua::with_safe_sys().run_str(&code) {
+                        if e.to_string().contains("The interpreter has crashed!") {
+                            exit(1);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

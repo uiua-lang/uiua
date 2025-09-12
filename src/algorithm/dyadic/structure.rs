@@ -215,8 +215,20 @@ impl<T: ArrayValue> Array<T> {
         index_data: &[isize],
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        let index_row_elems = index_shape[1..].iter().product();
+        let mut new_shape = Shape::from(&index_shape[..index_shape.len() - 1]);
         let index_last_axis_len = *index_shape.last().unwrap();
+        if index_last_axis_len > self.shape.len() {
+            return Err(env.error(format!(
+                "Cannot pick from rank {} array with index of length {}",
+                self.rank(),
+                index_last_axis_len
+            )));
+        }
+        new_shape.extend_from_slice(&self.shape[index_last_axis_len..]);
+        if new_shape.contains(&0) {
+            return Ok(Array::new(new_shape, []));
+        }
+        let index_row_elems = index_shape[1..].iter().product();
         let mut new_data =
             CowSlice::with_capacity(index_shape[..index_shape.len() - 1].iter().product());
         if index_row_elems == 0 {
@@ -224,22 +236,12 @@ impl<T: ArrayValue> Array<T> {
             for _ in 0..index_shape[0] {
                 new_data.extend_from_slice(&row.data);
             }
-        } else if index_shape[0] == 0 {
-            if index_last_axis_len > self.shape.len() {
-                return Err(env.error(format!(
-                    "Cannot pick from rank {} array with index of length {}",
-                    self.rank(),
-                    index_last_axis_len
-                )));
-            }
-        } else {
+        } else if index_shape[0] != 0 {
             for index_row in index_data.chunks(index_row_elems) {
                 let row = self.pick(&index_shape[1..], index_row, env)?;
                 new_data.extend_from_slice(&row.data);
             }
         }
-        let mut new_shape = Shape::from(&index_shape[..index_shape.len() - 1]);
-        new_shape.extend_from_slice(&self.shape[index_last_axis_len..]);
         Ok(Array::new(new_shape, new_data))
     }
     fn pick_single(&self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {

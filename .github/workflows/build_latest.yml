@@ -102,7 +102,7 @@ jobs:
     - name: Install dependencies
       run: |
         rustup target add wasm32-unknown-unknown
-        cargo install trunk --locked --root target
+        cargo install trunk --force --locked --root target
     - name: Build site
       run: |
         git checkout site

@@ -34,7 +34,7 @@ pub fn algebraic_inverse(nodes: &[Node], asm: &Assembly) -> Result<Node, Option<
     let mut expr = data.expr.inspect_err(|e| dbgln!("{e:?}")).map_err(Some)?;
     dbgln!("expression: {expr:?}");
 
-    let c = expr.0.remove(&Term::X(0.0)).unwrap_or(ZERO);
+    let c = expr.0.remove(&Term::ONE).unwrap_or(ZERO);
     let b = expr.0.remove(&Term::X(1.0)).unwrap_or(ZERO);
     let a = (expr.0).remove(&Term::X(2.0)).filter(|&a| a != ZERO);
 
@@ -248,6 +248,10 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                                 node.push(Prim(Pow, span));
                             }
                         }
+                    }
+                    Term::Div(expr) if coef == Complex::ONE => {
+                        recur(node, expr, any_complex, span);
+                        node.push(Prim(Reciprocal, span));
                     }
                     Term::Div(expr) => {
                         recur(node, expr, any_complex, span);
@@ -658,7 +662,7 @@ enum Term {
 impl fmt::Debug for Term {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            &Term::X(0.0) => write!(f, "1"),
+            &Term::ONE => write!(f, "1"),
             &Term::X(1.0) => write!(f, "x"),
             &Term::X(x) => write!(f, "x^{x}"),
             Term::Div(expr) => {
@@ -687,6 +691,7 @@ impl fmt::Debug for Term {
 }
 
 impl Term {
+    const ONE: Self = Term::X(0.0);
     fn pow(self, power: f64) -> Option<Self> {
         Some(match self {
             Term::X(x) => Term::X(x * power),
@@ -741,7 +746,7 @@ impl Expr {
     }
     fn as_constant(&self) -> Option<Complex> {
         let (term, coef) = self.single()?;
-        if term == Term::X(0.0) {
+        if term == Term::ONE {
             Some(coef)
         } else {
             None
@@ -846,7 +851,7 @@ impl From<f64> for Expr {
 
 impl From<Complex> for Expr {
     fn from(val: Complex) -> Self {
-        Expr::new_single(Term::X(0.0), val)
+        Expr::new_single(Term::ONE, val)
     }
 }
 
@@ -909,8 +914,10 @@ impl ops::Div for Term {
     type Output = Option<Expr>;
     fn div(self, other: Self) -> Self::Output {
         Some(match (self, other) {
+            (Term::ONE, Term::Div(b)) => b,
+            (Term::ONE, Term::X(p)) => Term::X(-p).into(),
+            (Term::ONE, b) => Term::Div(b.into()).into(),
             (Term::X(a), Term::X(b)) => Term::X(a - b).into(),
-            (Term::X(0.0), Term::Div(b)) => b,
             (a @ Term::X(_), Term::Div(b)) => (Expr::from(a) * b)?,
             (a, b) if a == b => Term::X(1.0).into(),
             _ => return None,

@@ -268,7 +268,8 @@ impl Value {
         to_string: impl Fn(f64) -> UiuaResult<String>,
         env: &Uiua,
     ) -> UiuaResult<Array<char>> {
-        let is_digit = Self::BASE_CHARSET[..base].contains(c.to_ascii_lowercase());
+        let is_digit = base < Self::BASE_CHARSET.len()
+            && Self::BASE_CHARSET[..base].contains(c.to_ascii_lowercase());
 
         let mut buf = Vec::new();
         let mut max_whole = 0;

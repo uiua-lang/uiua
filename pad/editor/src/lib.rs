@@ -2194,7 +2194,7 @@ pub fn Editor<'a>(
 
                 <div class="output-frame">
                     <div class="output-lines">
-                        <div class="output-diagnostics">{move || diag_output.get()}</div>
+                        <div class="output-diagnostics sized-code">{move || diag_output.get()}</div>
                         <div class="output-wrapper">
                             <div id=format!("output-{id}") class="output sized-code">
                                 {move || output.get()}

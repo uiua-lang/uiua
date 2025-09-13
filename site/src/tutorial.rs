@@ -1174,7 +1174,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Hd id="try">"Catching errors with "<Prim prim=Try/></Hd>
         <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called to handle it."</p>
         <p>"The function must have the same number of outputs."</p>
-        <p>"The handler function can take at most 1 more agument that the first function."</p>
+        <p>"The handler function can take at most 1 more agument than the first function."</p>
         <p>"We can see how this works by using it with "<Prim prim=Parse/>"."</p>
         <p>"If the handler function has 0 arguments, then it is simply called. This is a nice way to provide default values in the event of a failure."</p>
         <Editor example="⍣⋕0 \"5\"\n⍣⋕0 \"dog\""/>

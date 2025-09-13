@@ -334,6 +334,19 @@ impl Value {
             Self::Box(_) => size_of::<Boxed>(),
         }
     }
+    /// Or with reversed sorted flags
+    pub fn or_sorted_flags_rev(&mut self, mut flags: ArrayFlags) {
+        if let Value::Box(_) = self {
+            self.meta.take_sorted_flags();
+            return;
+        }
+        flags &= ArrayFlags::SORTEDNESS;
+        if flags == ArrayFlags::NONE {
+            return;
+        }
+        flags.reverse_sorted();
+        self.meta.flags |= flags;
+    }
 }
 
 /// A representation of a [`Value`] that allows direct access to the
@@ -1772,7 +1785,7 @@ value_mon_impl!(
     [|meta| meta.flags.is_boolean(), Byte, bool],
     (Byte, byte),
     [Complex, com],
-    |val, flags| val.meta.or_sorted_flags_rev(flags)
+    |val, flags| val.or_sorted_flags_rev(flags)
 );
 value_mon_impl!(
     scalar_abs,
@@ -1902,7 +1915,7 @@ impl Value {
             }
             value => value.scalar_neg(env)?,
         };
-        val.meta.or_sorted_flags_rev(sorted_flags);
+        val.or_sorted_flags_rev(sorted_flags);
         Ok(val)
     }
     /// Raise a value to a power

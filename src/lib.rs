@@ -421,15 +421,26 @@ mod tests {
     #[ignore] // Too expensive
     fn fuzz() {
         let iter = Primitive::non_deprecated().filter(|p| !matches!(p, Primitive::Sys(_)));
-        for a in iter.clone() {
-            for b in iter.clone() {
-                for c in iter.clone() {
-                    let funcs = format!("{a}{b}{c}");
-                    eprintln!("{funcs}");
-                    let code = format!("{funcs} [1] [2] [3] [4] [5] [6]");
-                    if let Err(e) = Uiua::with_safe_sys().run_str(&code) {
-                        if e.to_string().contains("The interpreter has crashed!") {
-                            exit(1);
+        for needs_name in [false, true] {
+            for a in iter.clone() {
+                for b in iter.clone() {
+                    for c in iter.clone() {
+                        if a.glyph().is_none()
+                            || b.glyph().is_none()
+                            || c.glyph().is_none() != needs_name
+                        {
+                            continue;
+                        }
+                        if [Primitive::Repeat, Primitive::Infinity] == [a, c] {
+                            continue;
+                        }
+                        let funcs = format!("{a}{b}{c}");
+                        eprintln!("{funcs}");
+                        let code = format!("{funcs} [1] [2] [3] [4] [5] [6]");
+                        if let Err(e) = Uiua::with_safe_sys().run_str(&code) {
+                            if e.to_string().contains("The interpreter has crashed!") {
+                                exit(1);
+                            }
                         }
                     }
                 }

@@ -700,20 +700,13 @@ impl Compiler {
                     })
                     .filter(|&n| n > 1);
                 if sig.args() < 2 {
-                    self.emit_diagnostic(
-                        format!(
-                            "The current behavior of {} with {} argument{} \
-                            is deprecated and may be changed or removed in the future. \
-                            Use {}, {}, or {} instead",
-                            prim.format(),
-                            sig.args(),
-                            if sig.args() == 1 { "" } else { "s" },
-                            Fork.format(),
-                            Bracket.format(),
-                            Below.format()
-                        ),
-                        DiagnosticKind::Warning,
+                    self.add_error(
                         modified.modifier.span.clone(),
+                        format!(
+                            "{}'s function must take at least 2 arguments, \
+                            but its signature is {sig}",
+                            prim.format()
+                        ),
                     );
                 }
                 let (inner, before) = match sn.sig.args() {
@@ -760,14 +753,14 @@ impl Compiler {
             prim @ (Above | Below) => {
                 let (mut sn, _) = self.monadic_modifier_op(modified)?;
                 if sn.sig.args() < 2 {
-                    self.emit_diagnostic(
-                        format!(
-                            "The current behavior of {} with < 2 arguments \
-                            is deprecated and will change in the future",
-                            prim.format(),
-                        ),
-                        DiagnosticKind::Warning,
+                    self.add_error(
                         modified.modifier.span.clone(),
+                        format!(
+                            "{}'s function must take at least 2 arguments, \
+                            but its signature is {}",
+                            prim.format(),
+                            sn.sig
+                        ),
                     );
                     sn.sig.update_args(|a| a + 1);
                     sn.sig.update_outputs(|o| o + 1);

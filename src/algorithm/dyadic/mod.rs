@@ -1164,7 +1164,7 @@ impl<T: ArrayValue> Array<T> {
                     rotate_maybe_fill(by, shape, rotated, fill);
                 }
                 [] => {
-                    let shape = &shape[1..];
+                    let shape = &shape[shape.len().min(1)..];
                     let row_len = shape.iter().product::<usize>();
                     for chunk in rotated.chunks_exact_mut(row_len) {
                         recur(&[], by, shape, chunk, depth.saturating_sub(1), fill, env)?;
@@ -1789,7 +1789,7 @@ fn digits_needed_for_base(n: f64, base: f64) -> usize {
     }
 }
 
-impl<T: RealArrayValue> Array<T> {
+impl<T: RealArrayValue + GridFmt> Array<T> {
     fn base_scalar(&self, base: f64, env: &Uiua) -> UiuaResult<Array<f64>> {
         if base == 0.0 {
             return Err(env.error("Base cannot be 0"));
@@ -1808,6 +1808,9 @@ impl<T: RealArrayValue> Array<T> {
         }
         if (-1.0..0.0).contains(&base) {
             return Err(env.error("Base cannot be between ¯1 and 0"));
+        }
+        if let Some(n) = self.data.iter().find(|n| n.to_f64().is_infinite()) {
+            return Err(env.error(format!("Cannot take base of {}", n.grid_string(false))));
         }
         Ok(if base >= 0.0 {
             let max_row_len = (self.data.iter())

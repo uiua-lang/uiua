@@ -186,15 +186,6 @@ impl ArrayMeta {
         }
         self.flags |= flags;
     }
-    /// Or with reversed sorted flags
-    pub fn or_sorted_flags_rev(&mut self, mut flags: ArrayFlags) {
-        flags &= ArrayFlags::SORTEDNESS;
-        if flags == ArrayFlags::NONE {
-            return;
-        }
-        flags.reverse_sorted();
-        self.flags |= flags;
-    }
     /// Mark the array as sorted ascending
     ///
     /// It is a logic error to set this to `true` when it is not the case

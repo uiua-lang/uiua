@@ -751,7 +751,6 @@ where
     let values: Vec<Value> = (0..sig.args().max(1))
         .map(|i| env.pop(i + 2))
         .collect::<UiuaResult<_>>()?;
-
     if indices.shape == [0]
         && push_empty_rows_value(&f, &values, false, &mut Default::default(), env)
     {

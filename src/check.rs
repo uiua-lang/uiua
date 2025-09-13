@@ -287,7 +287,7 @@ impl VirtualEnv {
             Node::Mod(prim, args, _) => match prim {
                 Reduce | Scan => {
                     let [sig] = get_args(args)?;
-                    let args = sig.args().saturating_sub(sig.outputs());
+                    let args = sig.args().saturating_sub(sig.outputs()).max(1);
                     self.handle_args_outputs(args, sig.outputs());
                 }
                 Each | Rows | Inventory => {

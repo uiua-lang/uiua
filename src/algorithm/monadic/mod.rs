@@ -1617,15 +1617,12 @@ impl<T: RealArrayValue> Array<T> {
         let mut negatives = Vec::with_capacity(self.data.len());
         let mut any_neg = false;
 
-        if count > Some(127) {
-            return Err(env.error(format!(
-                "{} is to many bits for the {} algorithm",
-                // SAFETY: it compared as greater than Some(_)
-                //         therefore it must be Some(_) itself
-                count.unwrap(),
-                Primitive::Bits.format()
-            )));
-        }
+        let (right_padding, count) = match count {
+            Some(n) if n >= 128 => (n - 127, Some(127)),
+            c @ Some(_) => (0, c),
+            None => (0, None),
+        };
+
         for &n in &self.data {
             if !n.is_int() {
                 return Err(env.error(format!(
@@ -1650,7 +1647,7 @@ impl<T: RealArrayValue> Array<T> {
             any_neg |= n < 0.0;
         }
         let bit_count = if let Some(count) = count {
-            count
+            right_padding + count
         } else {
             let mut max = if let Some(max) = nats.iter().max() {
                 *max
@@ -1674,7 +1671,7 @@ impl<T: RealArrayValue> Array<T> {
             let new_data_slice = new_data.make_mut();
             // LSB first
             for (i, (n, is_neg)) in nats.into_iter().zip(negatives).enumerate() {
-                for j in 0..bit_count {
+                for j in 0..bit_count.min(127) {
                     let index = i * bit_count + j;
                     new_data_slice[index] = u8::from(n & (1 << j) != 0) as f64;
                     if is_neg {
@@ -1689,7 +1686,7 @@ impl<T: RealArrayValue> Array<T> {
             let new_data_slice = new_data.make_mut();
             // LSB first
             for (i, n) in nats.into_iter().enumerate() {
-                for j in 0..bit_count {
+                for j in 0..bit_count.min(127) {
                     let index = i * bit_count + j;
                     new_data_slice[index] = u8::from(n & (1 << j) != 0);
                 }

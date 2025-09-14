@@ -1616,6 +1616,16 @@ impl<T: RealArrayValue> Array<T> {
         let mut nats = Vec::with_capacity(self.data.len());
         let mut negatives = Vec::with_capacity(self.data.len());
         let mut any_neg = false;
+
+        if count > Some(127) {
+            return Err(env.error(format!(
+                "{} is to many bits for the {} algorithm",
+                // SAFETY: it compared as greater than Some(_)
+                //         therefore it must be Some(_) itself
+                count.unwrap(),
+                Primitive::Bits.format()
+            )));
+        }
         for &n in &self.data {
             if !n.is_int() {
                 return Err(env.error(format!(

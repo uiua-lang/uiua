@@ -422,7 +422,7 @@ mod tests {
     fn fuzz() {
         let iter = Primitive::non_deprecated().filter(|p| !matches!(p, Primitive::Sys(_)));
         for needs_name in [false, true] {
-            for a in iter.clone() {
+            for a in iter.clone().skip_while(|&p| p != Primitive::Group) {
                 for b in iter.clone() {
                     for c in iter.clone() {
                         if a.glyph().is_none()

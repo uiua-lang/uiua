@@ -31,20 +31,6 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
     }
     let n = env.pop("repetition count")?;
     env.require_height(f.sig.args())?;
-    fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
-        Ok(match value {
-            Value::Num(n) => n,
-            Value::Byte(n) => n.convert(),
-            val => {
-                return Err(env.error(format!(
-                    "Repetitions must be a scalar or list of \
-                    natural numbers or infinity, \
-                    but it is {}",
-                    val.type_name_plural()
-                )))
-            }
-        })
-    }
     if n.rank() == 0 {
         // Scalar repeat
         let n = rep_count(n, env)?;
@@ -91,78 +77,64 @@ pub fn repeat(ops: Ops, with_inverse: bool, count_convergence: bool, env: &mut U
             args.push(arg);
         }
         args[1..].reverse();
-        let FixedRowsData {
-            mut rows,
-            row_count,
-            is_empty,
-            ..
-        } = fixed_rows(Primitive::Repeat.format(), sig.outputs(), args, env)?;
-
-        // Switch with each selector element
-        let mut outputs = multi_output(sig.outputs(), Vec::new());
-        let mut rows_to_sel = Vec::with_capacity(sig.args());
-        for _ in 0..row_count {
-            let n = rep_count(
-                match &mut rows[0] {
-                    Ok(n) => n.next().unwrap(),
-                    Err(n) => n.clone(),
-                },
-                env,
-            )?;
-            if row_count == 1 && n.row_count() == 0 {
-                new_shape = true_shape;
-                break;
-            }
-            rows_to_sel.clear();
-            for row in &mut rows[1..] {
-                let row = match row {
-                    Ok(row) => row.next().unwrap(),
-                    Err(row) => row.clone(),
-                };
-                if is_empty || n.rank() == 0 || n.rank() > row.rank() {
-                    rows_to_sel.push(Err(row));
-                } else if row.row_count() == 1 && n.row_count() >= 1 {
-                    let row_shape = row.shape[n.rank()..].into();
-                    rows_to_sel.push(Err(row.into_row_shaped_slices(row_shape).next().unwrap()));
-                } else {
-                    let row_shape = row.shape[n.rank()..].into();
-                    rows_to_sel.push(Ok(row.into_row_shaped_slices(row_shape)));
-                }
-            }
-            for sel_row_slice in n.row_slices() {
-                for &elem in sel_row_slice {
-                    // println!("  elem: {}", elem);
-                    for row in &mut rows_to_sel {
-                        let row = match row {
-                            Ok(row) => row.next().unwrap(),
-                            Err(row) => row.clone(),
-                        };
-                        // println!("  row: {:?}", row);
-                        env.push(row);
-                    }
-                    repeat_impl(f.clone(), inv.clone(), elem, env)?;
-                    for i in 0..sig.outputs() {
-                        let res = env.pop("repeat output")?;
-                        // println!("    res: {:?}", res);
-                        outputs[i].push(res);
-                    }
-                }
-            }
-        }
-        // Collect output
-        for output in outputs.into_iter().rev() {
-            let mut new_value = Value::from_row_values(output, env)?;
-            let mut new_shape = new_shape.clone();
-            new_shape.extend_from_slice(&new_value.shape[1..]);
-            new_value.shape = new_shape;
-            new_value.validate();
-            if is_empty {
-                new_value.pop_row();
-            }
-            env.push(new_value);
-        }
-        Ok(())
+        rep_recur(f, inv, args, env)
     }
+}
+
+fn rep_recur(f: SigNode, inv: Option<SigNode>, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    if args[0].rank() == 0 {
+        // Scalar repeat
+        let n = rep_count(args.remove(0), env)?;
+        for arg in args {
+            env.push(arg);
+        }
+        repeat_impl(f, inv, n.data[0], env)?;
+        return Ok(());
+    }
+    let FixedRowsData {
+        mut rows,
+        row_count,
+        is_empty,
+        ..
+    } = fixed_rows(Primitive::Repeat.format(), f.sig.outputs(), args, env)?;
+    let mut new_values = multi_output(f.sig.outputs(), Vec::new());
+    for _ in 0..row_count {
+        let args: Vec<_> = rows
+            .iter_mut()
+            .map(|arg| match arg {
+                Ok(rows) => rows.next().unwrap(),
+                Err(row) => row.clone(),
+            })
+            .collect();
+        rep_recur(f.clone(), inv.clone(), args, env)?;
+        for i in 0..f.sig.outputs() {
+            new_values[i].push(env.pop("rows's function result")?);
+        }
+    }
+    for new_values in new_values.into_iter().rev() {
+        let mut rowsed = Value::from_row_values(new_values, env)?;
+        if is_empty {
+            rowsed.pop_row();
+        }
+        rowsed.validate();
+        env.push(rowsed);
+    }
+    Ok(())
+}
+
+fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+    Ok(match value {
+        Value::Num(n) => n,
+        Value::Byte(n) => n.convert(),
+        val => {
+            return Err(env.error(format!(
+                "Repetitions must be a scalar or list of \
+                natural numbers or infinity, \
+                but it is {}",
+                val.type_name_plural()
+            )))
+        }
+    })
 }
 
 fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> UiuaResult<u64> {

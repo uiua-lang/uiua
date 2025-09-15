@@ -962,6 +962,7 @@ impl<T: ArrayValue> Array<T> {
                 Ok(fill) => {
                     self.data.extend_repeat(&fill.value, self.row_len());
                     self.shape = rest.into();
+                    self.validate();
                     Ok(self)
                 }
                 Err(e) => Err(env
@@ -977,6 +978,8 @@ impl<T: ArrayValue> Array<T> {
                 self.data.truncate(row_len);
                 self.meta.take_map_keys();
                 self.meta.take_label();
+                self.meta.take_sorted_flags();
+                self.validate();
                 Ok(self)
             }
         }
@@ -1037,6 +1040,7 @@ impl<T: ArrayValue> Array<T> {
                 Ok(fill) => {
                     self.data.extend_repeat(&fill.value, self.row_len());
                     self.shape = rest.into();
+                    self.validate();
                     Ok(self)
                 }
                 Err(e) => Err(env
@@ -1050,6 +1054,8 @@ impl<T: ArrayValue> Array<T> {
                 self.data = self.data[prefix_len..].into();
                 self.meta.take_map_keys();
                 self.meta.take_label();
+                self.meta.take_sorted_flags();
+                self.validate();
                 Ok(self)
             }
         }

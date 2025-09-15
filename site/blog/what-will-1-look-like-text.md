@@ -20,7 +20,7 @@ I think working with the stack, at least for up to 3 values, has become mostly p
 
 The experimental [`bind`](https://uiua.org/docs/experimental#swizzles) modifier is a potential solution to this problem.
 
-There is a balance to be struc between Uiua's goal of tacitness and its goal of being ergonomic. While the beauty of fully tacit code is a worthy goal, some problems involve data flows that are inherently complex, and so some kind of labeling system may be necessary to make such problems workable.
+There is a balance to be struck between Uiua's goal of tacitness and its goal of being ergonomic. While the beauty of fully tacit code is a worthy goal, some problems involve data flows that are inherently complex, and so some kind of labeling system may be necessary to make such problems workable.
 
 ### Box Ergonomics
 

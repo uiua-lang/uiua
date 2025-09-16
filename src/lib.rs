@@ -418,11 +418,15 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Too expensive
+    #[ignore] // Too expensive.
+    /// Run with:
+    /// ```
+    /// cargo t fuzz -- --nocapture --ignored
+    /// ```
     fn fuzz() {
         let iter = Primitive::non_deprecated().filter(|p| !matches!(p, Primitive::Sys(_)));
         for needs_name in [false, true] {
-            for a in iter.clone().skip_while(|&p| p != Primitive::Group) {
+            for a in iter.clone() {
                 for b in iter.clone() {
                     for c in iter.clone() {
                         if a.glyph().is_none()
@@ -431,7 +435,10 @@ mod tests {
                         {
                             continue;
                         }
-                        if [Primitive::Repeat, Primitive::Infinity] == [a, c] {
+                        if [a, c] == [Primitive::Repeat, Primitive::Infinity]
+                            || [a, b] == [Primitive::Un, Primitive::Repeat]
+                            || a == Primitive::Do
+                        {
                             continue;
                         }
                         let funcs = format!("{a}{b}{c}");

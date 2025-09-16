@@ -128,7 +128,9 @@ where
         {
             let mut shape = shape_prefix;
             shape.extend(window_shape);
-            env.push(Array::new(shape, EcoVec::new()));
+            for _ in 0..f.sig.outputs() {
+                env.push(Array::new(shape.clone(), EcoVec::new()));
+            }
         }
         return Ok(());
     }

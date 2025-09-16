@@ -1789,29 +1789,34 @@ fn digits_needed_for_base(n: f64, base: f64) -> usize {
     }
 }
 
+fn validate_base(base: f64, env: &Uiua) -> UiuaResult {
+    if base == 0.0 {
+        Err(env.error("Base cannot be 0"))
+    } else if base == 1.0 {
+        Err(env.error("Base cannot be 1"))
+    } else if base == -1.0 {
+        Err(env.error("Base cannot be ¯1"))
+    } else if base.is_nan() {
+        Err(env.error("Base cannot be NaN"))
+    } else if (-1.0..0.0).contains(&base) {
+        Err(env.error("Base cannot be between ¯1 and 0"))
+    } else {
+        Ok(())
+    }
+}
+
 impl<T: RealArrayValue + GridFmt> Array<T> {
     fn base_scalar(&self, base: f64, env: &Uiua) -> UiuaResult<Array<f64>> {
-        if base == 0.0 {
-            return Err(env.error("Base cannot be 0"));
-        }
-        if base == 1.0 {
-            return Err(env.error("Base cannot be 1"));
-        }
-        if base == -1.0 {
-            return Err(env.error("Base cannot be ¯1"));
-        }
+        validate_base(base, env)?;
+
+        // Validation
         if base.is_infinite() {
             return Err(env.error("Base cannot be infinite"));
-        }
-        if base.is_nan() {
-            return Err(env.error("Base cannot be NaN"));
-        }
-        if (-1.0..0.0).contains(&base) {
-            return Err(env.error("Base cannot be between ¯1 and 0"));
         }
         if let Some(n) = self.data.iter().find(|n| n.to_f64().is_infinite()) {
             return Err(env.error(format!("Cannot take base of {}", n.grid_string(false))));
         }
+
         Ok(if base >= 0.0 {
             let max_row_len = (self.data.iter())
                 .map(|&n| digits_needed_for_base(n.to_f64(), base))
@@ -1859,17 +1864,17 @@ impl<T: RealArrayValue + GridFmt> Array<T> {
     }
     fn base_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
         let fill = env.scalar_fill::<f64>().ok().map(|fv| fv.value);
+        // Validation
         for base in bases.iter().copied().chain(fill) {
-            if base == 0.0 {
-                return Err(env.error("Base cannot contain 0s"));
-            }
             if base.is_infinite() && base.is_sign_negative() {
                 return Err(env.error("Base cannot contain negative infinities"));
             }
-            if base.is_nan() {
-                return Err(env.error("Base cannot contain NaNs"));
-            }
+            validate_base(base, env)?;
         }
+        if let Some(n) = self.data.iter().find(|n| n.to_f64().is_infinite()) {
+            return Err(env.error(format!("Cannot take base of {}", n.grid_string(false))));
+        }
+
         let fill_digits = if let Some(fill) = fill {
             let product: f64 = bases.iter().product();
             self.data

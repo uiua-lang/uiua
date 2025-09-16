@@ -373,6 +373,7 @@ impl<T: ArrayValue> Array<T> {
             *x = i;
         }
         into.meta.take_sorted_flags();
+        into.meta.take_value_flags();
         into.validate();
         Ok(into)
     }

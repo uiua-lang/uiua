@@ -159,7 +159,7 @@ impl ArrayMeta {
     /// Take the value flags
     pub fn take_value_flags(&mut self) -> ArrayFlags {
         let flags = self.flags & ArrayFlags::VALUE;
-        self.flags &= !flags;
+        self.flags &= !ArrayFlags::VALUE;
         flags
     }
     /// Set the label for the value
@@ -214,6 +214,8 @@ impl ArrayMeta {
             if self.handle_kind != other.handle_kind {
                 self.handle_kind = None;
             }
+        } else if let Some(inner) = self.get_inner_mut() {
+            inner.flags &= !ArrayFlags::VALUE;
         }
     }
     /// Reset the flags
@@ -738,6 +740,7 @@ impl<T: ArrayValue> Array<T> {
                     }
                 }
             }
+            T::dbg_validate(self);
         }
     }
 }
@@ -1016,6 +1019,8 @@ pub trait ArrayValue:
     fn is_sortable(&self) -> bool {
         true
     }
+    /// Validate array correctness in debug mode
+    fn dbg_validate(arr: &Array<Self>) {}
 }
 
 fn default_sort_list<T: ArrayCmp + Send>(list: &mut [T], up: bool) {
@@ -1107,6 +1112,14 @@ impl ArrayValue for u8 {
                     list[offset - i] = n;
                     i += 1;
                 }
+            }
+        }
+    }
+    #[track_caller]
+    fn dbg_validate(arr: &Array<Self>) {
+        if arr.meta.flags.is_boolean() {
+            if let Some(b) = arr.data.iter().find(|&b| *b > 1) {
+                panic!("Array marked as boolean contains {b}")
             }
         }
     }

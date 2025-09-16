@@ -2152,7 +2152,7 @@ value_dy_math_impl!(
         (Char, Num, char_num),
         (Byte, Char, byte_char),
         (Char, Byte, char_byte),
-        [|meta| meta.flags.is_boolean(), Byte, bool_bool, true]
+        [|meta| meta.flags.is_boolean(), Byte, bool_bool, true],
     ),
     maintain_both_sortedness
 );

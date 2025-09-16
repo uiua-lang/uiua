@@ -72,6 +72,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Remove `rkok` alias and change `kork` to format to `▽₂`
 - Add `each` alias for `≡₀`
+- Add `elem` alias for `∊`
 - Add `log` alias for [`un °`](https://uiua.org/docs/un)[`exponential ₑ`](https://uiua.org/docs/exponential)
 - Add `set` alias for [`un °`](https://uiua.org/docs/un)[`by ⊸`](https://uiua.org/docs/by)
 - Improve "Array would be too large" error messages

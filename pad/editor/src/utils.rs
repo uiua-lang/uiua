@@ -7,21 +7,15 @@ use std::cmp::min_by_key;
 use std::io::Write;
 use std::path::Path;
 use std::{
-    borrow::Cow,
-    cell::Cell,
-    collections::HashMap,
-    mem::{replace, take},
-    str::FromStr,
-    time::Duration,
+    borrow::Cow, cell::Cell, collections::HashMap, mem::replace, str::FromStr, time::Duration,
 };
-use uiua::{PrimDoc, UiuaErrorKind};
+use uiua::UiuaErrorKind;
 
 use uiua::{
-    Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
+    DiagnosticKind, Inputs, PrimDoc, Primitive, Report, ReportFragment, ReportKind, SpanKind,
     Spans, Uiua, UiuaError, UiuaResult, Value,
     ast::Item,
     lsp::{BindingDocsKind, ImportSrc},
-    media::SmartOutput,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
@@ -30,10 +24,9 @@ use web_sys::{
     KeyboardEvent, MouseEvent,
 };
 
-use crate::{
-    backend::{OutputItem, WebBackend},
-    binding_class, code_font, modifier_class, prim_sig_class,
-};
+use crate::worker_backend::{Test, WebWorkerBackend, ping, run_code};
+use crate::worker_types::{OutputItem, RunRequest};
+use crate::{binding_class, code_font, modifier_class, prim_sig_class};
 use crate::{binding_style, comment_class, module_class, number_class, sig_class, string_class};
 
 #[derive(Clone)]
@@ -457,7 +450,7 @@ fn build_code_lines(id: &str, code: &str, hidden: &str) -> CodeLines {
     };
 
     let mut end = 0;
-    let spans = Spans::with_backend(&full_code, WebBackend::new(id, &full_code));
+    let spans = Spans::with_backend(&full_code, WebWorkerBackend::new(id.to_string()));
     for span in spans.spans {
         let kind = span.value;
         let span = span.span;
@@ -1067,14 +1060,14 @@ pub fn gen_code_view(id: &str, code: &str, hidden: &str) -> View {
     line_views.into_view()
 }
 
-fn init_rt(id: &str, code: &str) -> Uiua {
-    Uiua::with_backend(WebBackend::new(id, code))
+fn init_rt(id: &str) -> Uiua {
+    Uiua::with_backend(WebWorkerBackend::new(id.to_string()))
         .with_execution_limit(Duration::from_secs_f64(get_execution_limit()))
         .with_recursion_limit(50)
 }
 
 fn just_values(id: &str, code: &str) -> UiuaResult<Vec<Value>> {
-    let mut rt = init_rt(id, code);
+    let mut rt = init_rt(id);
     rt.run_str(code)?;
     Ok(rt.take_stack())
 }
@@ -1089,18 +1082,21 @@ fn challenge_code(input: &str, test: &str, flip: bool) -> String {
 
 impl State {
     /// Run code and return the output
-    pub fn run_code(&mut self, code: &str) -> Vec<Vec<OutputItem>> {
+    pub async fn run_code(self, code: &str) -> Vec<Vec<OutputItem>> {
         let full_code = if self.hidden.is_empty() {
             code.into()
         } else {
             format!("{}\n{code}", self.hidden)
         };
+
         if let Some(chal) = &self.challenge {
             let mut example = run_code_single(
                 &self.code_id,
                 &challenge_code(&chal.intended_answer, &chal.example, chal.flip),
             )
+            .await
             .0;
+
             example.insert(
                 0,
                 vec![OutputItem::Faint(format!("Example: {}", chal.example))],
@@ -1122,7 +1118,7 @@ impl State {
                         (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
                         _ => false,
                     };
-                let mut output = run_code_single(&self.code_id, &user_input).0;
+                let mut output = run_code_single(&self.code_id, &user_input).await.0;
                 output.insert(
                     0,
                     vec![OutputItem::Faint(format!("Test {}: {test}", i + 1))],
@@ -1138,6 +1134,7 @@ impl State {
             } else {
                 Vec::new()
             };
+
             chal.did_init_run.set(true);
             for section in output_sections {
                 output.push(vec![OutputItem::Separator]);
@@ -1145,181 +1142,33 @@ impl State {
             }
             output
         } else {
-            let (output, error) = run_code_single(&self.code_id, &full_code);
-            self.loading_module = false;
-            if let Some(error) = error {
-                if error.to_string().contains("Waiting for module") {
-                    self.loading_module = true;
-                }
-            }
-            output
+            run_code_single(&self.code_id, &full_code).await.0
         }
     }
 }
 
-#[allow(clippy::mutable_key_type)]
-fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
-    // Run
-    let mut rt = init_rt(id, code);
-    let mut error = None;
-    let mut comp = Compiler::with_backend(WebBackend::new(id, code));
-    let comp_backend;
-    let res = comp.load_str(code).map(|comp| rt.run_compiler(comp));
-    let (mut value_lines, io) = match res {
-        Ok(Ok(())) => {
-            let stack = rt.take_stack_lines();
-            let backend = rt.downcast_backend::<WebBackend>().unwrap();
-            backend.finish();
-            (stack, backend)
-        }
-        Ok(Err(e)) if matches!(*e.kind, UiuaErrorKind::Interrupted) => (
-            rt.take_stack_lines(),
-            rt.downcast_backend::<WebBackend>().unwrap(),
-        ),
-        Ok(Err(e)) => {
-            error = Some(e);
-            (
-                rt.take_stack_lines(),
-                rt.downcast_backend::<WebBackend>().unwrap(),
-            )
-        }
-        Err(e) => {
-            error = Some(e);
-            comp_backend = comp.take_backend::<WebBackend>().unwrap();
-            (Vec::new(), &comp_backend)
-        }
-    };
-    if get_top_at_top() {
-        value_lines.reverse();
-    }
-    let diagnostics = comp.take_diagnostics();
-    // Get stdout and stderr
-    let stdout = take(&mut *io.stdout.lock().unwrap());
-    let mut stack_lines = Vec::new();
-    let value_count: usize = value_lines.iter().map(|line| line.len()).sum();
-    let make_smart_output = if get_animation_format() == "APNG" {
-        SmartOutput::from_value_prefer_apng
-    } else {
-        SmartOutput::from_value
-    };
-    let mut i = 0;
-    for value_line in value_lines {
-        let mut stack_line = Vec::new();
-        for value in value_line {
-            let value = match make_smart_output(value, 24.0, io) {
-                SmartOutput::Png(bytes, label) => {
-                    stack_line.push(OutputItem::Image(bytes, label));
-                    continue;
-                }
-                SmartOutput::Gif(bytes, label) => {
-                    stack_line.push(OutputItem::Gif(bytes, label));
-                    continue;
-                }
-                SmartOutput::Apng(bytes, label) => {
-                    stack_line.push(OutputItem::Apng(bytes, label));
-                    continue;
-                }
-                SmartOutput::Wav(bytes, label) => {
-                    stack_line.push(OutputItem::Audio(bytes, label));
-                    continue;
-                }
-                SmartOutput::Svg { svg, original } => {
-                    stack_line.push(OutputItem::Svg(
-                        svg,
-                        original.meta.label.as_ref().map(Into::into),
-                    ));
-                    continue;
-                }
-                SmartOutput::Normal(value) => value,
-            };
-            // Otherwise, just show the value
-            let class = if value_count == 1 {
-                ""
-            } else {
-                match i % 6 {
-                    0 => "output-a",
-                    1 => "output-b",
-                    2 => "output-c",
-                    3 => "output-d",
-                    4 => "output-e",
-                    5 => "output-f",
-                    _ => unreachable!(),
-                }
-            };
-            stack_line.push(OutputItem::Classed(class, value));
-            i += 1;
-        }
-        stack_lines.push(stack_line);
-    }
-    let stderr = take(&mut *io.stderr.lock().unwrap());
-    let trace = take(&mut *io.trace.lock().unwrap());
+async fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
+    // TODO: debug only
+    let _ = ping(Test {
+        a: "aaa".to_string(),
+    })
+    .await;
 
-    // Construct output
-    let label = ((!stack_lines.is_empty()) as u8)
-        + ((!stdout.is_empty()) as u8)
-        + ((!stderr.is_empty()) as u8)
-        + ((!trace.is_empty()) as u8)
-        >= 2;
-    let mut output = Vec::new();
-    if !trace.is_empty() {
-        output.extend((trace.lines()).map(|line| vec![OutputItem::String(line.into())]));
+    let result = run_code(RunRequest {
+        editor_id: id.to_string(),
+        code: code.to_string(),
+        execution_limit_secs: Some(get_execution_limit()),
+        animation_format: Some(get_animation_format()),
+    })
+    .await;
+
+    match &result {
+        Ok(res) => (res.output.clone(), res.error.clone()),
+        Err(e) => (
+            Vec::new(),
+            Some(UiuaErrorKind::CompilerPanic(e.to_string()).into()),
+        ),
     }
-    if !stdout.is_empty() {
-        if !output.is_empty() {
-            output.push(vec![OutputItem::String("".into())]);
-        }
-        if label {
-            output.push(vec![OutputItem::String("stdout:".to_string())]);
-        }
-        output.extend(stdout.into_iter().map(|item| vec![item]));
-    }
-    if !stderr.is_empty() {
-        if !output.is_empty() {
-            output.push(vec![OutputItem::String("".into())]);
-        }
-        if label {
-            output.push(vec![OutputItem::String("stderr:".to_string())]);
-        }
-        output.extend((stderr.lines()).map(|line| vec![OutputItem::String(line.into())]));
-    }
-    if !stack_lines.is_empty() {
-        if label {
-            output.push(vec![OutputItem::Separator]);
-        }
-        output.extend(stack_lines);
-    }
-    if let Some(error) = &error {
-        if !output.is_empty() {
-            output.push(vec![OutputItem::String("".into())]);
-        }
-        const MAX_OUTPUT_BEFORE_ERROR: usize = 60;
-        if output.len() >= MAX_OUTPUT_BEFORE_ERROR {
-            output = output.split_off(output.len() - MAX_OUTPUT_BEFORE_ERROR);
-            output[0] = vec![OutputItem::String("Previous output truncated...".into())];
-        }
-        let report = error.report();
-        let execution_limit_reached = report.fragments.iter().any(|frag| matches!(frag, ReportFragment::Plain(s) if s.contains("Maximum execution time exceeded")));
-        output.push(vec![OutputItem::Report(report)]);
-        if execution_limit_reached {
-            output.push(vec![OutputItem::String(
-                "You can increase the execution time limit in the editor settings".into(),
-            )]);
-        }
-    }
-    if !diagnostics.is_empty() {
-        if !output.is_empty() {
-            output.push(vec![OutputItem::String("".into())]);
-        }
-        for diag in diagnostics {
-            output.push(vec![OutputItem::Report(diag.report())]);
-        }
-    }
-    output.extend(
-        rt.take_reports()
-            .into_iter()
-            .map(|r| vec![OutputItem::Report(r)]),
-    );
-    (output, error)
 }
 
 pub fn report_view(report: &Report) -> impl IntoView {

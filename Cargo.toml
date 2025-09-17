@@ -3,8 +3,6 @@ members = [
   "site",
   "tests_ffi",
   "pad/editor",
-  "pad/worker",
-  "pad/shared",
   "parser",
 ]
 

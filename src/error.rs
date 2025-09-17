@@ -1,4 +1,6 @@
-use std::{convert::Infallible, error::Error, fmt, io, mem::take, path::PathBuf, sync::Arc};
+use std::{convert::Infallible, error::Error, fmt, io, mem::take, path::PathBuf};
+
+use serde::{Deserialize, Serialize};
 
 use crate::{
     CodeSpan, DiagnosticKind, Ident, Inputs, Report, ReportFragment, ReportKind, Sp, Span,
@@ -6,7 +8,7 @@ use crate::{
 };
 
 /// An error produced when running/compiling/formatting a Uiua program
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[must_use]
 pub struct UiuaError {
     /// The kind of error
@@ -16,7 +18,7 @@ pub struct UiuaError {
 }
 
 /// Additional data attached to a Uiua error
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorMeta {
     /// A stack trace of the error
     pub trace: Vec<TraceFrame>,
@@ -31,12 +33,12 @@ pub struct ErrorMeta {
 }
 
 /// The kind of an error produced when running/compiling/formatting a Uiua program
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UiuaErrorKind {
     /// An error occurred while loading a file
-    Load(PathBuf, Arc<io::Error>),
+    Load(PathBuf, String),
     /// An error occurred while formatting a file
-    Format(PathBuf, Arc<io::Error>),
+    Format(PathBuf, String),
     /// An error occurred while parsing a file
     Parse(Vec<Sp<ParseError>>, Box<Inputs>),
     /// An error occurred while compiling or executing a program
@@ -85,7 +87,7 @@ impl From<UiuaErrorKind> for UiuaError {
 pub type UiuaResult<T = ()> = Result<T, UiuaError>;
 
 /// A frame in a trace
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TraceFrame {
     /// The function that was called
     pub id: Option<FunctionId>,
@@ -177,11 +179,11 @@ impl UiuaError {
     }
     /// Make a Load error
     pub fn load(path: PathBuf, error: io::Error) -> Self {
-        UiuaErrorKind::Load(path, Arc::new(error)).into()
+        UiuaErrorKind::Load(path, error.to_string()).into()
     }
     /// Make a Format error
     pub fn format(path: PathBuf, error: io::Error) -> Self {
-        UiuaErrorKind::Format(path, Arc::new(error)).into()
+        UiuaErrorKind::Format(path, error.to_string()).into()
     }
 }
 
@@ -336,7 +338,9 @@ impl UiuaError {
                         .fragments,
                 );
             } else {
-                report.fragments.push(ReportFragment::colored("Info", DiagnosticKind::Info.into()));
+                report
+                    .fragments
+                    .push(ReportFragment::Colored("Info".to_string(), DiagnosticKind::Info.into()));
                 report.fragments.push(ReportFragment::Plain(": ".into()));
                 report.fragments.push(ReportFragment::Plain(info.into()));
             }

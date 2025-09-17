@@ -10,6 +10,7 @@ use std::{
 };
 
 use ecow::EcoString;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent, Primitive,
@@ -19,7 +20,7 @@ use crate::{
 };
 
 /// An error that occurred while parsing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum ParseError {
     Lex(LexError),
@@ -34,7 +35,7 @@ pub enum ParseError {
     RecursionLimit,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Expectation {
     Term,
     ArgsOutputs,

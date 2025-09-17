@@ -21,8 +21,7 @@ uiua = {path = "../..", default-features = false, features = [
   "batteries",
   "web",
 ]}
-uiua-pad-worker = {path = "../worker"}
-uiua-pad-shared = {path = "../shared"}
+leptos_workers = "0.3.0"
 base64.workspace = true
 flate2.workspace = true
 futures = "0.3.30"

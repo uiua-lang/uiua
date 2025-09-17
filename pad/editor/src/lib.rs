@@ -1,14 +1,9 @@
-pub mod backend;
 pub mod utils;
+pub mod worker_backend;
+pub mod worker_types;
 
 use std::{
-    cell::Cell,
-    iter::{once, repeat_n},
-    mem::take,
-    path::PathBuf,
-    rc::Rc,
-    sync::Arc,
-    time::Duration,
+    cell::{Cell, RefCell}, collections::HashMap, iter::{once, repeat_n}, path::PathBuf, rc::Rc, sync::Arc, time::Duration
 };
 
 use base64::engine::{Engine, general_purpose::STANDARD};
@@ -21,11 +16,7 @@ use leptos::{
 
 use leptos_router::{BrowserIntegration, History, LocationChange, NavigateOptions, use_navigate};
 use uiua::{
-    IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SysOp, Token,
-    format::{FormatConfig, format_str},
-    is_ident_char, lex,
-    lsp::{BindingDocs, BindingDocsKind},
-    now, seed_random,
+    EXAMPLE_TXT, EXAMPLE_UA, IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SysOp, Token, format::{FormatConfig, format_str}, is_ident_char, lex, lsp::{BindingDocs, BindingDocsKind}, now, seed_random
 };
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::{
@@ -36,7 +27,6 @@ use web_sys::{
 use utils::*;
 use utils::{element, format_insert_file_code, get_ast_time};
 
-use backend::{OutputItem, WebBackend, delete_file, drop_file};
 use js_sys::Date;
 use std::sync::OnceLock;
 
@@ -52,6 +42,24 @@ pub enum EditorMode {
 
 thread_local! {
     static ID: Cell<u64> = const { Cell::new(0) };
+
+    pub static FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new(
+        [
+            ("example.ua", EXAMPLE_UA),
+            ("example.txt", EXAMPLE_TXT),
+            ("primitives.json", include_str!("../../../site/primitives.json"))
+        ]
+        .map(|(path, content)| (PathBuf::from(path), content.as_bytes().to_vec()))
+        .into(),
+    );
+}
+
+pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
+    FILES.with(|files| files.borrow_mut().insert(path, contents));
+}
+
+pub fn delete_file(path: &PathBuf) {
+    FILES.with(|files| files.borrow_mut().remove(path));
 }
 
 static START_TIME: OnceLock<f64> = OnceLock::new();
@@ -242,7 +250,7 @@ pub fn Editor<'a>(
                 &code_text,
                 &FormatConfig {
                     trailing_newline: mode == EditorMode::Pad,
-                    backend: Some(Arc::new(WebBackend::default())),
+                    backend: Some(Arc::new(WebWorkerBackend::default())),
                     ..Default::default()
                 },
             ) {
@@ -410,44 +418,19 @@ pub fn Editor<'a>(
         };
         set_timeout(
             move || {
-                state.update(|st| {
+                spawn_local(async move {
                     seed_random(seed);
-                    let output = st.run_code(&input);
-                    if take(&mut st.loading_module) {
-                        set_timeout(
-                            move || {
-                                state.update(|st| {
-                                    seed_random(seed);
-                                    let output = st.run_code(&input);
-                                    let (diags, items): (Vec<_>, Vec<_>) = output
-                                        .into_iter()
-                                        .partition(|line| line.len() == 1 && line[0].is_report());
-                                    let items: Vec<_> =
-                                        items.into_iter().map(render_output_items).collect();
-                                    let diags: Vec<_> = diags
-                                        .into_iter()
-                                        .map(|line| {
-                                            render_output_item(line.into_iter().next().unwrap())
-                                        })
-                                        .collect();
-                                    set_output.set(items.into_view());
-                                    set_diag_output.set(diags.into_view());
-                                });
-                            },
-                            Duration::from_millis(200),
-                        );
-                    } else {
-                        let (diags, items): (Vec<_>, Vec<_>) = output
-                            .into_iter()
-                            .partition(|line| line.len() == 1 && line[0].is_report());
-                        let items: Vec<_> = items.into_iter().map(render_output_items).collect();
-                        let diags: Vec<_> = diags
-                            .into_iter()
-                            .map(|line| render_output_item(line.into_iter().next().unwrap()))
-                            .collect();
-                        set_output.set(items.into_view());
-                        set_diag_output.set(diags.into_view());
-                    }
+                    let output = get_state.get_untracked().run_code(&input).await;
+                    let (diags, items): (Vec<_>, Vec<_>) = output
+                        .into_iter()
+                        .partition(|line| line.len() == 1 && line[0].is_report());
+                    let items: Vec<_> = items.into_iter().map(render_output_items).collect();
+                    let diags: Vec<_> = diags
+                        .into_iter()
+                        .map(|line| render_output_item(line.into_iter().next().unwrap()))
+                        .collect();
+                    set_output.set(items.into_view());
+                    set_diag_output.set(diags.into_view());
                 });
             },
             Duration::ZERO,
@@ -1620,7 +1603,7 @@ pub fn Editor<'a>(
         handle_load_files(files);
     });
 
-    let h = &get_state.get().hidden;
+    let h = &get_state.get_untracked().hidden;
     let hidden_lines = if h.is_empty() {
         0
     } else {
@@ -1812,7 +1795,7 @@ pub fn Editor<'a>(
         let _ = output.get();
 
         let excluded_files = ["example.txt", "example.ua", "primitives.json"];
-        backend::FILES.with(|files| {
+        FILES.with(|files| {
             files
                 .borrow()
                 .iter()
@@ -1844,7 +1827,7 @@ pub fn Editor<'a>(
                 let path_clone = path.clone();
                 let on_download = move |event: MouseEvent| {
                     event.stop_propagation();
-                    let content = backend::FILES.with(|files| {
+                    let content = FILES.with(|files| {
                         files
                             .borrow()
                             .iter()
@@ -1874,7 +1857,7 @@ pub fn Editor<'a>(
 
                 let path_clone = path.clone();
                 let on_insert = move |_: MouseEvent| {
-                    let content = backend::FILES.with(|files| {
+                    let content = FILES.with(|files| {
                         files
                             .borrow()
                             .iter()
@@ -2414,6 +2397,8 @@ macro_rules! code_font {
 }
 
 pub(crate) use code_font;
+
+use crate::{worker_backend::WebWorkerBackend, worker_types::OutputItem};
 
 fn number_class() -> &'static str {
     match get_gayness() {

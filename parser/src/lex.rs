@@ -70,7 +70,7 @@ pub fn lex(
 
 /// An error that occurred while lexing
 #[allow(missing_docs)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LexError {
     UnexpectedChar(String),
     ExpectedCharacter(Vec<char>),
@@ -601,7 +601,7 @@ impl<T> From<Sp<T>> for Sp<T, Span> {
 
 /// A Uiua lexical token
 #[allow(missing_docs)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Token {
     Comment,
     SemanticComment(SemanticComment),
@@ -756,7 +756,7 @@ impl fmt::Display for Token {
 
 /// An ASCII lexical token
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AsciiToken {
     OpenParen,
     CloseParen,

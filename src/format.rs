@@ -445,7 +445,7 @@ fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<
 pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult<FormatOutput> {
     let path = path.as_ref();
     let input =
-        fs::read_to_string(path).map_err(|e| UiuaErrorKind::Load(path.to_path_buf(), e.into()))?;
+        fs::read_to_string(path).map_err(|e| UiuaErrorKind::Load(path.to_path_buf(), e.to_string()))?;
     let formatted = format(&input, path, config)?;
     if formatted.output == input {
         return Ok(formatted);
@@ -454,7 +454,7 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
     let should_write = !is_no_format_set;
     if should_write {
         fs::write(path, &formatted.output)
-            .map_err(|e| UiuaErrorKind::Format(path.to_path_buf(), e.into()))?;
+            .map_err(|e| UiuaErrorKind::Format(path.to_path_buf(), e.to_string()))?;
     }
     Ok(formatted)
 }

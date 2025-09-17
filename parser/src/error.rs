@@ -115,31 +115,17 @@ impl ReportKind {
 
 /// A text fragment of a report
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
 pub enum ReportFragment {
     /// Just plain text
     Plain(String),
     /// Text colored according to the report kind
-    Colored {
-        text: String,
-        kind: ReportKind,
-    },
+    Colored(String, ReportKind),
     /// Faint text
     Faint(String),
     /// Even fainter text
     Fainter(String),
     /// A newline
     Newline,
-}
-
-impl ReportFragment {
-    /// Create a colored report fragment
-    pub fn colored(text: impl Into<String>, kind: ReportKind) -> Self {
-        Self::Colored {
-            text: text.into(),
-            kind,
-        }
-    }
 }
 
 /// A rich-text error/diagnostic report
@@ -166,7 +152,7 @@ impl Report {
     pub fn new(kind: ReportKind, message: impl Into<String>) -> Self {
         let message = message.into();
         let mut fragments = vec![
-            ReportFragment::colored(kind.str(), kind),
+            ReportFragment::Colored(kind.str().into(), kind),
             ReportFragment::Plain(": ".into()),
         ];
         if message.lines().count() > 1 {
@@ -189,7 +175,7 @@ impl Report {
             if i > 0 {
                 fragments.push(ReportFragment::Newline);
             }
-            fragments.push(ReportFragment::colored(kind.str(), kind));
+            fragments.push(ReportFragment::Colored(kind.str().into(), kind));
             fragments.push(ReportFragment::Plain(": ".into()));
             let message = message.to_string();
             for (i, line) in message.lines().enumerate() {
@@ -234,14 +220,14 @@ impl Report {
                     .collect();
                 let post_color: String = line.chars().skip(end_char_pos as usize).collect();
                 fragments.push(ReportFragment::Faint(pre_color));
-                fragments.push(ReportFragment::colored(color, kind));
+                fragments.push(ReportFragment::Colored(color, kind));
                 fragments.push(ReportFragment::Faint(post_color));
                 fragments.push(ReportFragment::Newline);
                 fragments.push(ReportFragment::Plain(
                     " ".repeat(line_prefix.chars().count()),
                 ));
                 fragments.push(ReportFragment::Plain(" ".repeat(start_char_pos as usize)));
-                fragments.push(ReportFragment::colored(
+                fragments.push(ReportFragment::Colored(
                     "─".repeat(end_char_pos.saturating_sub(start_char_pos).max(1) as usize),
                     kind,
                 ));
@@ -258,7 +244,7 @@ impl Report {
             if failures == 0 {
                 vec![]
             } else {
-                vec![ReportFragment::colored(
+                vec![ReportFragment::Colored(
                     match failures {
                         1 => "Test failed".into(),
                         2 => "Both tests failed".into(),
@@ -268,7 +254,7 @@ impl Report {
                 )]
             }
         } else {
-            let mut fragments = vec![ReportFragment::colored(
+            let mut fragments = vec![ReportFragment::Colored(
                 match (successes, failures) {
                     (1, 0) if not_run == 0 => "Test passed".into(),
                     (2, 0) if not_run == 0 => "Both tests passed".into(),
@@ -282,20 +268,20 @@ impl Report {
             if failures > 0 {
                 fragments.extend([
                     ReportFragment::Plain(", ".into()),
-                    ReportFragment::colored(format!("{failures} failed"), ReportKind::Error),
+                    ReportFragment::Colored(format!("{failures} failed"), ReportKind::Error),
                 ])
             }
             fragments
         };
         if not_run > 0 {
             if fragments.is_empty() {
-                fragments.push(ReportFragment::colored(
+                fragments.push(ReportFragment::Colored(
                     format!("0 of {not_run} tests ran"),
                     ReportKind::Error,
                 ));
             } else {
                 fragments.push(ReportFragment::Plain(", ".into()));
-                fragments.push(ReportFragment::colored(
+                fragments.push(ReportFragment::Colored(
                     format!("{not_run} didn't run"),
                     DiagnosticKind::Warning.into(),
                 ));
@@ -315,7 +301,7 @@ impl fmt::Display for Report {
                 ReportFragment::Plain(s)
                 | ReportFragment::Faint(s)
                 | ReportFragment::Fainter(s) => write!(f, "{s}")?,
-                ReportFragment::Colored { text: s, kind } => {
+                ReportFragment::Colored(s, kind) => {
                     if self.color {
                         let s = s.color(match kind {
                             ReportKind::Error => Color::Red,

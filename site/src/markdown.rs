@@ -7,9 +7,36 @@ use comrak::{
 use leptos::*;
 use leptos_router::*;
 use uiua::{EXAMPLE_UA, Inputs, Primitive, Token};
-use uiua_editor::{Editor, backend::fetch, lang, replace_lang_name, utils::ChallengeDef};
+use uiua_editor::{Editor, lang, replace_lang_name, utils::ChallengeDef};
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{Request, RequestInit, RequestMode, Response};
 
 use crate::{Hd, Hd3, NotFound, Prim, ScrollToHash, examples::LOGO};
+
+pub async fn fetch(url: &str) -> Result<String, String> {
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
+    let request = Request::new_with_str_and_init(url, &opts)
+        .map_err(|e| format!("Fetch request error: {e:?}"))?;
+    let window = web_sys::window().unwrap();
+    let resp_value = JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|e| format!("Fetch response error: {e:?}"))?;
+    assert!(resp_value.is_instance_of::<Response>());
+    let resp: Response = resp_value.dyn_into().unwrap();
+    let text = JsFuture::from(resp.text().map_err(|e| format!("Fetch error: {e:?}"))?)
+        .await
+        .map(|s| s.as_string().unwrap())
+        .map_err(|e| format!("Fetch error: {e:?}"))?;
+
+    if resp.status() == 200 {
+        Ok(text)
+    } else {
+        Err(text)
+    }
+}
 
 #[component]
 #[allow(unused_braces)]

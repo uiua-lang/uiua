@@ -412,7 +412,7 @@ impl Compiler {
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
         let path = path.as_ref();
         let input: EcoString = fs::read_to_string(path)
-            .map_err(|e| UiuaErrorKind::Load(path.into(), e.into()))?
+            .map_err(|e| UiuaErrorKind::Load(path.into(), e.to_string()))?
             .into();
         // _ = crate::lsp::Spans::from_input(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());

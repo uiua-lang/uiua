@@ -1107,7 +1107,19 @@ impl<T: ArrayValue> Array<T> {
         if !forward && env.scalar_unfill::<T>().is_ok() {
             return Err(env.error("Cannot invert filled rotation"));
         }
-        let fill = env.scalar_fill::<T>().ok();
+        let fill = env.array_fill::<T>().ok().map(|fv| fv.value);
+        if let Some(fill) = &fill {
+            let by_dims = by.shape.last().copied().unwrap_or(1);
+            let end_dims = &self.shape[self.rank().min(depth + by_dims)..];
+            if fill.rank() > end_dims.len() || !end_dims.ends_with(&fill.shape) {
+                return Err(env.error(format!(
+                    "Rotated rows each have shape {}, \
+                    but the fill value has incompatible shape {}",
+                    FormatShape(end_dims),
+                    fill.shape
+                )));
+            }
+        }
 
         // Expand the array if doing multiple rotations
         if self.rank() > by.rank() && self.shape.contains(&1) {
@@ -1144,7 +1156,7 @@ impl<T: ArrayValue> Array<T> {
             shape: &[usize],
             rotated: &mut [T],
             depth: usize,
-            fill: Option<&T>,
+            fill: Option<&[T]>,
             env: &Uiua,
         ) -> UiuaResult {
             if by.is_empty() || rotated.is_empty() {
@@ -1205,7 +1217,7 @@ impl<T: ArrayValue> Array<T> {
             &self.shape,
             self.data.as_mut_slice(),
             depth,
-            fill.as_ref().map(|fv| &fv.value),
+            fill.as_ref().map(|fv| fv.data.as_slice()),
             env,
         )?;
 
@@ -1225,10 +1237,10 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-fn rotate_maybe_fill<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: Option<&T>) {
+fn rotate_maybe_fill<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: Option<&[T]>) {
     rotate(by, shape, data);
     if let Some(fill) = fill {
-        fill_shift(by, shape, data, fill.clone());
+        fill_shift(by, shape, data, fill);
     }
 }
 
@@ -1257,7 +1269,7 @@ fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
     }
 }
 
-fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: T) {
+fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: &[T]) {
     if by.is_empty() || shape.is_empty() {
         return;
     }
@@ -1270,13 +1282,17 @@ fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: T) 
     if offset != 0 {
         let abs_offset = offset.unsigned_abs() * row_len;
         let data_len = data.len();
-        if offset > 0 {
-            for val in &mut data[data_len.saturating_sub(abs_offset)..] {
-                *val = fill.clone();
-            }
-        } else {
-            for val in &mut data[..abs_offset.min(data_len)] {
-                *val = fill.clone();
+        if !fill.is_empty() {
+            if offset > 0 {
+                for slice in
+                    data[data_len.saturating_sub(abs_offset)..].chunks_exact_mut(fill.len())
+                {
+                    slice.clone_from_slice(fill);
+                }
+            } else {
+                for slice in data[..abs_offset.min(data_len)].chunks_exact_mut(fill.len()) {
+                    slice.clone_from_slice(fill);
+                }
             }
         }
     }
@@ -1286,7 +1302,7 @@ fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: T) 
         return;
     }
     for cell in data.chunks_mut(row_len) {
-        fill_shift(index, shape, cell, fill.clone());
+        fill_shift(index, shape, cell, fill);
     }
 }
 

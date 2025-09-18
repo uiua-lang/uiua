@@ -14,13 +14,18 @@ use std::{
     collections::HashMap,
     f64::consts::{PI, TAU},
     iter::repeat_n,
+    mem::transmute,
     sync::{
         atomic::{self, AtomicUsize},
         OnceLock,
     },
+    time::{SystemTime, UNIX_EPOCH},
 };
 
-use rand::prelude::*;
+use rand_xoshiro::{
+    rand_core::{RngCore, SeedableRng},
+    Xoshiro256Plus,
+};
 
 use crate::{
     algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
@@ -1783,22 +1788,22 @@ fn undo_regex(env: &mut Uiua) -> UiuaResult {
 }
 
 thread_local! {
-    pub(crate) static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
+    pub(crate) static RNG: RefCell<Xoshiro256Plus> = RefCell::new(Xoshiro256Plus::from_seed(transmute(SystemTime::now().saturating_duration_since(UNIX_EPOCH).as_micros())));
 }
 
 /// Generate a random number, equivalent to [`Primitive::Rand`]
 pub fn random() -> f64 {
-    random_with(|rng| rng.gen())
+    random_with(|rng| f64::from_bits(rng.next_u64()))
 }
 
 /// Access the interpreter's random number generator for the thread
-pub fn random_with<T>(f: impl FnOnce(&mut SmallRng) -> T) -> T {
+pub fn random_with<T>(f: impl FnOnce(&mut Xoshiro256Plus) -> T) -> T {
     RNG.with(|rng| f(&mut rng.borrow_mut()))
 }
 
 /// Seed the random number generator
 pub fn seed_random(seed: u64) {
-    random_with(|rng| *rng = SmallRng::seed_from_u64(seed));
+    random_with(|rng| *rng = Xoshiro256Plus::seed_from_u64(seed));
 }
 
 fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {

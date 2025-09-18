@@ -1,7 +1,8 @@
 use std::{cmp::Ordering, ptr};
 
 use ecow::EcoVec;
-use rand::Rng;
+use rand_xoshiro::rand_core::SeedableRng;
+use rand_xoshiro::Xoshiro256Plus;
 use rayon::prelude::*;
 
 use crate::{algorithm::ArrayCmpSlice, random_with, val_as_arr, Array, ArrayValue, Value};

@@ -2173,9 +2173,9 @@ impl Value {
                 let i = RNG.with_borrow_mut(|rng| {
                     let upper = len.next_power_of_two();
                     loop {
-                        let r = rng.next_u64() as usize;
-                        if r % upper < len {
-                            break len;
+                        let r = rng.next_u64() as usize % upper;
+                        if r < len {
+                            break r;
                         }
                     }
                 });

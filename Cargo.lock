@@ -6564,6 +6564,7 @@ dependencies = [
 name = "uiua"
 version = "0.18.0-dev.1"
 dependencies = [
+ "ahash",
  "arboard",
  "bitflags 2.9.1",
  "bytemuck",

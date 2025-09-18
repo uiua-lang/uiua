@@ -8,11 +8,12 @@ use core::f64;
 use std::{
     borrow::Cow,
     cmp::Ordering,
-    hash::{DefaultHasher, Hash, Hasher},
+    hash::{Hash, Hasher},
     iter::{once, repeat_n},
     mem::{replace, swap, take},
 };
 
+use ahash::AHasher;
 use bytemuck::allocation::cast_vec;
 use ecow::{eco_vec, EcoVec};
 use rand_xoshiro::{
@@ -2113,7 +2114,7 @@ impl Value {
     }
     /// Generate randomly seeded arrays
     pub fn gen(&self, seed: &Self, env: &Uiua) -> UiuaResult<Value> {
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = AHasher::default();
         seed.hash(&mut hasher);
         let seed = hasher.finish();
         let mut rng = Xoshiro256Plus::seed_from_u64(seed);

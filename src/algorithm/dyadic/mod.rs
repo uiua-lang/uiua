@@ -14,33 +14,41 @@ use std::{
 };
 
 use bytemuck::allocation::cast_vec;
-use ecow::{EcoVec, eco_vec};
-use rand::prelude::*;
+use ecow::{eco_vec, EcoVec};
+use rand_xoshiro::{
+    rand_core::{RngCore, SeedableRng},
+    Xoshiro256Plus,
+};
+
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
 use smallvec::SmallVec;
 
 use crate::{
-    Complex, RNG, Shape, Uiua, UiuaResult,
-    algorithm::pervade::{self, InfalliblePervasiveFn, bin_pervade_recursive},
+    algorithm::pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
     array::*,
     boxed::Boxed,
-    cowslice::{CowSlice, cowslice, extend_repeat},
+    cowslice::{cowslice, extend_repeat, CowSlice},
     fill::FillValue,
     grid_fmt::GridFmt,
     val_as_arr,
     value::Value,
+    Complex, Shape, Uiua, UiuaResult, RNG,
 };
 
 use super::{
-    ArrayCmpSlice, FillContext, SizeError, shape_prefixes_match, validate_size, validate_size_of,
+    shape_prefixes_match, validate_size, validate_size_of, ArrayCmpSlice, FillContext, SizeError,
 };
 
 macro_rules! par_if {
     ($cond:expr, $if_true:expr, $if_false:expr) => {{
         #[cfg(not(target_arch = "wasm32"))]
         {
-            if $cond { $if_true } else { $if_false }
+            if $cond {
+                $if_true
+            } else {
+                $if_false
+            }
         }
         #[cfg(target_arch = "wasm32")]
         $if_false
@@ -2122,7 +2130,7 @@ impl Value {
         let mut hasher = DefaultHasher::new();
         seed.hash(&mut hasher);
         let seed = hasher.finish();
-        let mut rng = SmallRng::seed_from_u64(seed);
+        let mut rng = Xoshiro256Plus::seed_from_u64(seed);
 
         const SHAPE_REQ: &str = "Shape must be an array of natural \
             numbers with at most rank 2";
@@ -2132,7 +2140,7 @@ impl Value {
             let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
             let mut data = eco_vec![0.0; elem_count];
             for x in data.make_mut() {
-                *x = rng.random();
+                *x = f64::from_bits(rng.next_u64());
             }
             Ok(Array::new(shape, data))
         };
@@ -2178,7 +2186,15 @@ impl Value {
             0 => Err(env.error("Cannot pick random row of an empty array").fill()),
             1 => Ok(self.row(0)),
             len => {
-                let i = RNG.with_borrow_mut(|rng| rng.random_range(0..len));
+                let i = RNG.with_borrow_mut(|rng| {
+                    let upper = len.next_power_of_two();
+                    loop {
+                        let r = rng.next_u64() as usize;
+                        if r % upper < len {
+                            break len;
+                        }
+                    }
+                });
                 Ok(self.row(i))
             }
         }

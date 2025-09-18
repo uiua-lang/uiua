@@ -5,7 +5,8 @@ use std::{
 };
 
 use ecow::EcoVec;
-use rand::prelude::*;
+use rand_xoshiro::rand_core::SeedableRng;
+use rand_xoshiro::Xoshiro256Plus;
 
 use crate::{
     parse_doc_line_fragments, Array, Boxed, PrimDocFragment, SysBackend, Value, WILDCARD_NAN,
@@ -463,7 +464,7 @@ fn music_constant(backend: &dyn SysBackend) -> Value {
         hat_mask.push((hat_bits & 1) as f64);
         hat_bits >>= 1;
     }
-    let mut rng = SmallRng::seed_from_u64(0);
+    let mut rng = Xoshiro256Plus::seed_from_u64(0);
     let sr = backend.audio_sample_rate();
     (0..(BEAT * 2.0 * 16.0 * sr as f64) as usize)
         .map(|s| {

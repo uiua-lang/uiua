@@ -15,7 +15,11 @@ use std::{
 
 use bytemuck::allocation::cast_vec;
 use ecow::{eco_vec, EcoVec};
-use rand::prelude::*;
+use rand_xoshiro::{
+    rand_core::{RngCore, SeedableRng},
+    Xoshiro256Plus,
+};
+
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -2110,7 +2114,7 @@ impl Value {
         let mut hasher = DefaultHasher::new();
         seed.hash(&mut hasher);
         let seed = hasher.finish();
-        let mut rng = SmallRng::seed_from_u64(seed);
+        let mut rng = Xoshiro256Plus::seed_from_u64(seed);
 
         const SHAPE_REQ: &str = "Shape must be an array of natural \
             numbers with at most rank 2";
@@ -2120,7 +2124,7 @@ impl Value {
             let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
             let mut data = eco_vec![0.0; elem_count];
             for x in data.make_mut() {
-                *x = rng.gen();
+                *x = f64::from_bits(rng.next_u64());
             }
             Ok(Array::new(shape, data))
         };
@@ -2166,7 +2170,15 @@ impl Value {
             0 => Err(env.error("Cannot pick random row of an empty array").fill()),
             1 => Ok(self.row(0)),
             len => {
-                let i = RNG.with_borrow_mut(|rng| rng.gen_range(0..len));
+                let i = RNG.with_borrow_mut(|rng| {
+                    let upper = len.next_power_of_two();
+                    loop {
+                        let r = rng.next_u64() as usize;
+                        if r % upper < len {
+                            break len;
+                        }
+                    }
+                });
                 Ok(self.row(i))
             }
         }

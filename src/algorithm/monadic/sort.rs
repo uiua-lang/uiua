@@ -1,8 +1,10 @@
 use std::{cmp::Ordering, ptr};
 
 use ecow::EcoVec;
-use rand_xoshiro::rand_core::SeedableRng;
-use rand_xoshiro::Xoshiro256Plus;
+use rand_xoshiro::{
+    rand_core::{RngCore, SeedableRng},
+    Xoshiro256Plus,
+};
 use rayon::prelude::*;
 
 use crate::{algorithm::ArrayCmpSlice, random_with, val_as_arr, Array, ArrayValue, Value};
@@ -242,6 +244,7 @@ impl<T: ArrayValue> Array<T> {
                         }
                     }
                 };
+
                 if i == j {
                     continue;
                 }

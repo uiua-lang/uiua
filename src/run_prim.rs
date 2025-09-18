@@ -1873,14 +1873,8 @@ fn undo_regex(env: &mut Uiua) -> UiuaResult {
 }
 
 thread_local! {
-    pub(crate) static RNG: RefCell<Xoshiro256Plus> = RefCell::new(Xoshiro256Plus::from_seed(unsafe {
-        transmute(
-            [SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or(Duration::ZERO)
-                .as_micros(); 2],
-        )
-    }));
+    pub(crate) static RNG: RefCell<Xoshiro256Plus> = RefCell::new(Xoshiro256Plus::seed_from_u64(
+        SystemTime::now().duration_since(UNIX_EPOCH).map(|t|t.as_micros()).unwrap_or(42) as u64));
 }
 
 /// Generate a random number, equivalent to [`Primitive::Rand`]

@@ -1,8 +1,8 @@
 use std::{cmp::Ordering, ptr};
 
 use ecow::EcoVec;
-use rand_xoshiro::rand_core::SeedableRng;
 use rand_xoshiro::Xoshiro256Plus;
+use rand_xoshiro::rand_core::SeedableRng;
 use rayon::prelude::*;
 
 use crate::{Array, ArrayValue, Value, algorithm::ArrayCmpSlice, random_with, val_as_arr};
@@ -237,7 +237,15 @@ impl<T: ArrayValue> Array<T> {
             let row_len = self.row_len();
             let slice = self.data.as_mut_slice();
             for i in (1..row_count).rev() {
-                let j = rng.random_range(0..=i);
+                let j = {
+                    let upper = i.next_power_of_two();
+                    loop {
+                        let r = rng.next_u64() as usize % upper;
+                        if r <= i {
+                            break r;
+                        }
+                    }
+                };
                 if i == j {
                     continue;
                 }

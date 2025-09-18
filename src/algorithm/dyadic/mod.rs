@@ -8,16 +8,17 @@ use core::f64;
 use std::{
     borrow::Cow,
     cmp::Ordering,
-    hash::{DefaultHasher, Hash, Hasher},
+    hash::{Hash, Hasher},
     iter::{once, repeat_n},
     mem::{replace, swap, take},
 };
 
+use ahash::AHasher;
 use bytemuck::allocation::cast_vec;
-use ecow::{eco_vec, EcoVec};
+use ecow::{EcoVec, eco_vec};
 use rand_xoshiro::{
-    rand_core::{RngCore, SeedableRng},
     Xoshiro256Plus,
+    rand_core::{RngCore, SeedableRng},
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -25,30 +26,26 @@ use rayon::prelude::*;
 use smallvec::SmallVec;
 
 use crate::{
-    algorithm::pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
+    Complex, RNG, Shape, Uiua, UiuaResult,
+    algorithm::pervade::{self, InfalliblePervasiveFn, bin_pervade_recursive},
     array::*,
     boxed::Boxed,
-    cowslice::{cowslice, extend_repeat, CowSlice},
+    cowslice::{CowSlice, cowslice, extend_repeat},
     fill::FillValue,
     grid_fmt::GridFmt,
     val_as_arr,
     value::Value,
-    Complex, Shape, Uiua, UiuaResult, RNG,
 };
 
 use super::{
-    shape_prefixes_match, validate_size, validate_size_of, ArrayCmpSlice, FillContext, SizeError,
+    ArrayCmpSlice, FillContext, SizeError, shape_prefixes_match, validate_size, validate_size_of,
 };
 
 macro_rules! par_if {
     ($cond:expr, $if_true:expr, $if_false:expr) => {{
         #[cfg(not(target_arch = "wasm32"))]
         {
-            if $cond {
-                $if_true
-            } else {
-                $if_false
-            }
+            if $cond { $if_true } else { $if_false }
         }
         #[cfg(target_arch = "wasm32")]
         $if_false
@@ -2127,7 +2124,7 @@ impl Value {
     }
     /// Generate randomly seeded arrays
     pub fn seeded_gen(&self, seed: &Self, env: &Uiua) -> UiuaResult<Value> {
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = AHasher::default();
         seed.hash(&mut hasher);
         let seed = hasher.finish();
         let mut rng = Xoshiro256Plus::seed_from_u64(seed);

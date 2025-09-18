@@ -2140,7 +2140,7 @@ impl Value {
             let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
             let mut data = eco_vec![0.0; elem_count];
             for x in data.make_mut() {
-                *x = f64::from_bits(rng.next_u64());
+                *x = f64::from_bits(rng.next_u64() >> 12 | 0x3FF0_0000_0000_0000) - 1.0;
             }
             Ok(Array::new(shape, data))
         };

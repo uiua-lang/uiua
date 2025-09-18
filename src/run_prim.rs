@@ -14,12 +14,11 @@ use std::{
     collections::HashMap,
     f64::consts::{PI, TAU},
     iter::repeat_n,
-    mem::transmute,
     sync::{
         OnceLock,
         atomic::{self, AtomicUsize},
     },
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use rand_xoshiro::{
@@ -1879,7 +1878,7 @@ thread_local! {
 
 /// Generate a random number, equivalent to [`Primitive::Rand`]
 pub fn random() -> f64 {
-    random_with(|rng| f64::from_bits(rng.next_u64()))
+    random_with(|rng| f64::from_bits(rng.next_u64() >> 12 | 0x3FF0_0000_0000_0000) - 1.0)
 }
 
 /// Access the interpreter's random number generator for the thread

@@ -6520,6 +6520,7 @@ dependencies = [
 name = "uiua"
 version = "0.17.0-rc.2"
 dependencies = [
+ "ahash",
  "arboard",
  "bitflags 2.9.1",
  "bytemuck",

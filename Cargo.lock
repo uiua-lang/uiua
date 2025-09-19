@@ -5128,9 +5128,9 @@ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
 name = "rawrrr"
-version = "0.2.1"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "777851894d3083685d2a5d50b10ed314f4f4526e61867fba27b04fa8c82c63ea"
+checksum = "d9646e2b7f14eb8c6b244fad2a6f44b778d079331f9e8eea7aeb81432c46637a"
 dependencies = [
  "libc",
  "winapi",

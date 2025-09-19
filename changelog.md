@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.17.0 - 2025-??-??
+## 0.17.0 - 2025-09-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change** - Numeric subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays

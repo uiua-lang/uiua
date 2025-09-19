@@ -1953,6 +1953,9 @@ primitive!(
     /// ex: /◇⊂ {1_2_3 4_5 6}
     /// This case will still unbox a single element.
     /// ex: /◇⊂ {"Hi"}
+    /// [content] is also good for deriving data from an array of boxes
+    /// ex: ≡◇⧻ {"These" "are" "some" "words"}
+    /// ex: ≡◇/+ {3_0_1 5 2_7}
     ([1], Content, OtherModifier, ("content", '◇')),
     /// Discard the top stack value then call a function
     ///

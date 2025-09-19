@@ -56,7 +56,7 @@ The parentheses of the function pack can be replaced with the array brackets.
 
 ## [`indexin ⨂`](https://uiua.org/docs/indexin)
 
-[`indexof ⊗`](https://uiua.org/docs/indexof) is now deprecated. It was almost always used along with [`backward ˜`](https://uiua.org/docs/backward), and this change also makes it's argument order convention match that of [`memberof ∊`](https://uiua.org/docs/memberof).
+[`indexof ⊗`](https://uiua.org/docs/indexof) is now deprecated. It was almost always used along with [`backward ˜`](https://uiua.org/docs/backward), and this change also makes its argument order convention match that of [`memberof ∊`](https://uiua.org/docs/memberof).
 
 It has been replaced with [`indexin ⨂`](https://uiua.org/docs/indexin), which has the exact same functionality, except its arguments are flipped.
 
@@ -75,8 +75,8 @@ F "beefcake"
     ⧆ "abbacaab"
     ⧆₁ "abbacaab"
     ```
-  - Replaces and deprecates [`unique ◰`](https://uiua.org/docs/logarithm)
-  - [`unique ◰`](https://uiua.org/docs/logarithm) will be automatically replaced
+  - Replaces and deprecates [`unique ◰`](https://uiua.org/docs/unique)
+  - [`unique ◰`](https://uiua.org/docs/unique) will be automatically replaced
 - [`self ˙`](https://uiua.org/docs/self)
   ```uiua
   ˙× 5

@@ -64,12 +64,13 @@ This version is not yet released. If you are reading this on the website, then t
 - `@\_` and `@\W` now roundtrip through [`pretty`](https://uiua.org/docs/pretty) and [`repr`](https://uiua.org/docs/repr) (previously they would be formatted as `@\x¯01` and `@�` respectively)
 - Remove previously deprecated `signature` and `stringify` modifiers
 ### Interpreter
-- Many bug fixes
+- Many bug and crash fixes
 - Emit a diagnostic when most modifiers are not provided enough arguments
 - Emit a diagnostic for redundant subscripts
 - Speed up the implementation of [`or ∨`](https://uiua.org/docs/or)
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
+- Optimize `=1⧻◴`
 - Remove `rkok` alias and change `kork` to format to `▽₂`
 - Add `each` alias for `≡₀`
 - Add `elem` alias for `∊`

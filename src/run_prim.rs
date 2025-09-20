@@ -974,6 +974,7 @@ impl ImplPrimitive {
             ImplPrimitive::LastWhere => env.monadic_ref_env(Value::last_where)?,
             ImplPrimitive::SortDown => env.monadic_mut(Value::sort_down)?,
             ImplPrimitive::AllSame => env.monadic_ref(Value::all_same)?,
+            ImplPrimitive::OneUnique => env.monadic_ref(Value::one_unique)?,
             ImplPrimitive::ReplaceRand => {
                 env.pop(1)?;
                 env.push(random());

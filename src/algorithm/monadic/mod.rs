@@ -2005,6 +2005,9 @@ impl Value {
     pub(crate) fn undo_where(&self, shape: &[usize], env: &Uiua) -> UiuaResult<Self> {
         self.unwhere_impl(shape, env)
     }
+    pub(crate) fn one_unique(&self) -> bool {
+        self.row_count() > 0 && self.all_same()
+    }
     pub(crate) fn all_same(&self) -> bool {
         if self.row_count() <= 1
             || self.rank() == 1 && self.meta.is_sorted_up() && self.meta.is_sorted_down()

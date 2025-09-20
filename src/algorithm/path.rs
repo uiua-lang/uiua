@@ -181,16 +181,22 @@ fn path_impl(
             }
             self.env.exec(self.neighbors.clone())?;
             let (nodes, costs) = if self.neighbors.sig.outputs() == 2 {
-                let costs = (self.env.pop("neighbors costs")?)
-                    .as_nums(self.env, "Costs must be a list of numbers")?
+                let costs = self.env.pop("neighbors costs")?;
+                let costs_rank = costs.rank();
+                let mut costs = costs
+                    .as_nums(self.env, "Costs must be a number or list of numbers")?
                     .into_owned();
                 let nodes = self.env.pop("neighbors nodes")?;
                 if costs.len() != nodes.row_count() {
-                    return Err(self.env.error(format!(
-                        "Number of nodes {} does not match number of costs {}",
-                        nodes.row_count(),
-                        costs.len(),
-                    )));
+                    if costs_rank == 0 {
+                        costs.resize(nodes.row_count(), costs[0]);
+                    } else {
+                        return Err(self.env.error(format!(
+                            "Number of nodes {} does not match number of costs {}",
+                            nodes.row_count(),
+                            costs.len(),
+                        )));
+                    }
                 }
                 if costs.iter().any(|&c| c < 0.0) {
                     return Err(self.env.error("Negative costs are not allowed in A*"));

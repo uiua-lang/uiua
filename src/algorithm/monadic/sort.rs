@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, ptr};
 
 use ecow::EcoVec;
-use rand::Rng;
+use rand_xoshiro::rand_core::RngCore;
 use rayon::prelude::*;
 
 use crate::{algorithm::ArrayCmpSlice, random_with, val_as_arr, Array, ArrayValue, Value};
@@ -232,7 +232,16 @@ impl<T: ArrayValue> Array<T> {
             let row_len = self.row_len();
             let slice = self.data.as_mut_slice();
             for i in (1..row_count).rev() {
-                let j = rng.gen_range(0..=i);
+                let j = {
+                    let upper = i.next_power_of_two();
+                    loop {
+                        let r = rng.next_u64() as usize % upper;
+                        if r <= i {
+                            break r;
+                        }
+                    }
+                };
+
                 if i == j {
                     continue;
                 }

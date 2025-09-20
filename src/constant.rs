@@ -5,7 +5,10 @@ use std::{
 };
 
 use ecow::EcoVec;
-use rand::prelude::*;
+use rand_xoshiro::{
+    rand_core::{RngCore, SeedableRng},
+    Xoshiro256Plus,
+};
 
 use crate::{
     parse_doc_line_fragments, Array, Boxed, PrimDocFragment, SysBackend, Value, WILDCARD_NAN,
@@ -463,7 +466,9 @@ fn music_constant(backend: &dyn SysBackend) -> Value {
         hat_mask.push((hat_bits & 1) as f64);
         hat_bits >>= 1;
     }
-    let mut rng = SmallRng::seed_from_u64(0);
+    let mut rng = Xoshiro256Plus::seed_from_u64(0);
+    let mut rand_wrench =
+        || 2.0 * f64::from_bits(rng.next_u64() >> 12 | 0x3FF0_0000_0000_0000) - 3.0; // gen_range(-1..=1)
     let sr = backend.audio_sample_rate();
     (0..(BEAT * 2.0 * 16.0 * sr as f64) as usize)
         .map(|s| {
@@ -477,11 +482,11 @@ fn music_constant(backend: &dyn SysBackend) -> Value {
             let h = if (h * secs % 1.0) < 0.5 { 1.0 } else { -1.0 } / 3.0; // Square wave
             let kick = ((secs % BEAT).powf(0.4) * 40.0 * TAU).sin();
             let hat = 0.3
-                * rng.gen_range(-1.0..=1.0)
+                * rand_wrench()
                 * hat_mask[(4.0 * beat) as usize % 32]
                 * (0.0..=0.1).contains(&(secs % (BEAT / 4.0) / (BEAT / 4.0))) as u8 as f64;
             let snare = 0.5
-                * rng.gen_range(-1.0..=1.0)
+                * rand_wrench()
                 * ((0.5..=0.6).contains(&(secs % (2.0 * BEAT) / (2.0 * BEAT))) as u8 as f64);
 
             0.5 * (m + h + kick + hat + snare)

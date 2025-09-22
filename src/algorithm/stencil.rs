@@ -30,7 +30,11 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
         let mut xs = env.pop(1)?;
         xs.match_fill(env);
         let n = f.sig.args();
-        return if f.sig == (2, 1) {
+        return if xs.row_count() < n
+            && push_empty_rows_value(&f, [&xs, &xs], false, &mut Default::default(), env)
+        {
+            Ok(())
+        } else if f.sig == (2, 1) {
             adjacent_impl(f, xs, n, env)
         } else {
             val_as_arr!(&mut xs, |arr| pad_adjacent_fill(arr, n, env));

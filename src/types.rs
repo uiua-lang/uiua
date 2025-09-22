@@ -196,7 +196,10 @@ impl TypeRt<'_> {
                     } else {
                         b.shape
                     };
-                    let scalar = a.scalar.max(b.scalar);
+                    let scalar = match (prim, a.scalar, b.scalar) {
+                        (Sub, ScalarType::Char, ScalarType::Char) => ScalarType::Real,
+                        (_, a, b) => a.max(b),
+                    };
                     self.stack.push(Ty::new(scalar, shape));
                 }
                 Couple => {

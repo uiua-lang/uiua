@@ -223,6 +223,8 @@ const _: () = {
 mod tests {
     use std::{path::*, process::exit};
 
+    use uiua_parser::PrimClass;
+
     use crate::{Compiler, Primitive, Uiua};
 
     fn test_files(filter: impl Fn(&Path) -> bool) -> impl Iterator<Item = PathBuf> {
@@ -425,8 +427,31 @@ mod tests {
     /// ```
     fn fuzz() {
         let iter = Primitive::non_deprecated().filter(|p| !matches!(p, Primitive::Sys(_)));
+        let arg_strs: Vec<_> = ((0..3).map(|n| {
+            ((0..=6).map(|i| {
+                let mut s = String::new();
+                for j in 0..i {
+                    if j > 0 {
+                        s.push(' ');
+                    }
+                    s.push('[');
+                    for k in 0..n {
+                        if k > 0 {
+                            s.push(' ');
+                        }
+                        s.push_str(&(j * n + k).to_string());
+                    }
+                    s.push(']');
+                }
+                s
+            }))
+            .collect::<Vec<_>>()
+        }))
+        .collect();
         for needs_name in [false, true] {
-            for a in iter.clone() {
+            for a in (iter.clone()).filter(|p| {
+                ![PrimClass::Stack, PrimClass::Planet].contains(&p.class()) || p.sig().is_none()
+            }) {
                 for b in iter.clone() {
                     for c in iter.clone() {
                         if a.glyph().is_none()
@@ -441,12 +466,17 @@ mod tests {
                         {
                             continue;
                         }
-                        let funcs = format!("{a}{b}{c}");
-                        eprintln!("{funcs}");
-                        let code = format!("{funcs} [1] [2] [3] [4] [5] [6]");
-                        if let Err(e) = Uiua::with_safe_sys().run_str(&code) {
-                            if e.to_string().contains("The interpreter has crashed!") {
-                                exit(1);
+                        let arg_count = (a.sig().zip(b.sig()).zip(c.sig()))
+                            .map(|((a, b), c)| c.compose(b.compose(a)).args())
+                            .unwrap_or(4);
+                        for args in &arg_strs {
+                            let args = &args[arg_count];
+                            let code = format!("{a}{b}{c} {args}");
+                            eprintln!("{code}");
+                            if let Err(e) = Uiua::with_safe_sys().run_str(&code) {
+                                if e.to_string().contains("The interpreter has crashed!") {
+                                    exit(1);
+                                }
                             }
                         }
                     }

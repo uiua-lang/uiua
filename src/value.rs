@@ -346,6 +346,13 @@ impl Value {
         }
         flags.reverse_sorted();
         self.meta.flags |= flags;
+        if self.meta.is_sorted_up() || self.meta.is_sorted_down() {
+            if let Value::Num(arr) = self {
+                if arr.data.iter().any(|n| n.is_nan()) {
+                    arr.meta.take_sorted_flags();
+                }
+            }
+        }
     }
 }
 
@@ -1800,7 +1807,7 @@ value_mon_impl!(
     [Byte, byte],
     [Complex, com],
     (Char, char),
-    |val, flags| if val.rank() < 2 {
+    |val, flags| if val.rank() < 2 && !matches!(val, Value::Complex(_)) {
         val.meta.or_sorted_flags(flags)
     }
 );
@@ -1823,21 +1830,27 @@ value_mon_impl!(
     [Num, num],
     [Byte, byte],
     [Complex, com],
-    |val, flags| val.meta.or_sorted_flags(flags)
+    |val, flags| if val.rank() < 2 {
+        val.meta.or_sorted_flags(flags)
+    }
 );
 value_mon_impl!(
     ceil,
     [Num, num],
     [Byte, byte],
     [Complex, com],
-    |val, flags| val.meta.or_sorted_flags(flags)
+    |val, flags| if val.rank() < 2 {
+        val.meta.or_sorted_flags(flags)
+    }
 );
 value_mon_impl!(
     round,
     [Num, num],
     [Byte, byte],
     [Complex, com],
-    |val, flags| val.meta.or_sorted_flags(flags)
+    |val, flags| if val.rank() < 2 {
+        val.meta.or_sorted_flags(flags)
+    }
 );
 value_mon_impl!(
     complex_re,
@@ -2106,7 +2119,12 @@ macro_rules! value_dy_math_impl {
             pre {
                 get_pre: |a, b, _left| {
                     let negative = match b {
-                        Value::Num(arr) if arr.shape == [] => arr.data[0] < 0.0,
+                        Value::Num(arr) if arr.shape == [] => {
+                            if arr.data[0].is_infinite() || arr.data[0].is_nan() {
+                                return None;
+                            }
+                            arr.data[0] < 0.0
+                        },
                         Value::Byte(arr) if arr.shape == [] => false,
                         _ => return None,
                     };
@@ -2122,6 +2140,13 @@ macro_rules! value_dy_math_impl {
                 handle_pre: |a: Option<ArrayFlags>, b, val| {
                     if let Some(flags) = a.or(b) {
                         val.meta.or_sorted_flags(flags);
+                    }
+                    if val.meta.is_sorted_up() || val.meta.is_sorted_down() {
+                        if let Value::Num(arr) =  val {
+                            if arr.data.iter().any(|&n| n.is_nan()) {
+                                arr.meta.take_sorted_flags();
+                            }
+                        }
                     }
                 },
             }

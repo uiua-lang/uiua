@@ -1292,9 +1292,11 @@ impl<T: ArrayValue> Array<T> {
             }
             Ok(arr)
         } else {
-            let indices_sorted_up = indices_shape.len() == 1 && indices.is_sorted();
-            let indices_sorted_down =
-                indices_shape.len() == 1 && indices.is_sorted_by(|&a, &b| a >= b);
+            let indices_sorted_up =
+                indices_shape.len() == 1 && indices.is_sorted() && indices.iter().all(|&i| i >= 0);
+            let indices_sorted_down = indices_shape.len() == 1
+                && indices.is_sorted_by(|&a, &b| a >= b)
+                && indices.iter().all(|&i| i >= 0);
             let selected_sorted_up = self.meta.is_sorted_up();
             let selected_sorted_down = self.meta.is_sorted_down();
 

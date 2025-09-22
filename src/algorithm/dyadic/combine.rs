@@ -433,6 +433,7 @@ impl<T: ArrayValue> Array<T> {
                         other.data.extend_from_cowslice(self.data);
                         other.data.as_mut_slice().rotate_right(rot_len);
                         other.shape[0] += self.shape[0];
+                        other.meta = self.meta;
                         self = other;
                     }
                     self

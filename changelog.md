@@ -67,6 +67,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Many bug and crash fixes
 - Emit a diagnostic when most modifiers are not provided enough arguments
 - Emit a diagnostic for redundant subscripts
+- [`below ◡`](https://uiua.org/docs/below) now accepts noadic and dyadic functions
+  - An advice/style diagnostic will be emitted
 - Speed up the implementation of [`or ∨`](https://uiua.org/docs/or)
 - The fomatter no longer truncates trailing decimal `0`s from number literals
 - Implement filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)

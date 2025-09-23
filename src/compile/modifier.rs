@@ -751,22 +751,47 @@ impl Compiler {
                 ])
             }
             prim @ (Above | Below) => {
-                let (mut sn, _) = self.monadic_modifier_op(modified)?;
-                if sn.sig.args() < 2 {
-                    self.add_error(
-                        modified.modifier.span.clone(),
-                        format!(
-                            "{}'s function must take at least 2 arguments, \
-                            but its signature is {}",
-                            prim.format(),
-                            sn.sig
-                        ),
-                    );
-                    sn.sig.update_args(|a| a + 1);
-                    sn.sig.update_outputs(|o| o + 1);
+                let (sn, _) = self.monadic_modifier_op(modified)?;
+                match (prim, sn.sig.args()) {
+                    (_, 0) => {
+                        self.emit_diagnostic(
+                            format!("{} on a noadic function is redundant", prim.format()),
+                            DiagnosticKind::Advice,
+                            modified.modifier.span.clone(),
+                        );
+                        sn.node
+                    }
+                    (Below, 1) => {
+                        self.emit_diagnostic(
+                            format!(
+                                "Prefer {} over {} for a monadic function",
+                                By.format(),
+                                prim.format()
+                            ),
+                            DiagnosticKind::Style,
+                            modified.modifier.span.clone(),
+                        );
+                        let span = self.add_span(modified.modifier.span.clone());
+                        Node::Mod(By, eco_vec![sn], span)
+                    }
+                    (Above, 1) => {
+                        self.emit_diagnostic(
+                            format!(
+                                "Prefer {} over {} for a monadic function",
+                                On.format(),
+                                prim.format()
+                            ),
+                            DiagnosticKind::Style,
+                            modified.modifier.span.clone(),
+                        );
+                        let span = self.add_span(modified.modifier.span.clone());
+                        Node::Mod(On, eco_vec![sn], span)
+                    }
+                    _ => {
+                        let span = self.add_span(modified.modifier.span.clone());
+                        Node::Mod(prim, eco_vec![sn], span)
+                    }
                 }
-                let span = self.add_span(modified.modifier.span.clone());
-                Node::Mod(prim, eco_vec![sn], span)
             }
             Slf => {
                 let (SigNode { mut node, sig }, _) = self.monadic_modifier_op(modified)?;

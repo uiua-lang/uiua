@@ -436,10 +436,12 @@ under!(BothPat, input, g_sig, inverse, asm, {
         g_sig.outputs().saturating_sub(1),
     );
     let (f_before, mut f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
-    let rest_sig = nodes_sig(input)?;
-    let balanced = (g_sig.args() + rest_sig.args()).saturating_sub(rest_sig.outputs())
-        <= g_sig.outputs() + sub.side.as_ref().map_or(0, |sided| sided.n.unwrap_or(1))
-        && !(val.is_some() && f.sig == (1, 1));
+    let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;
+    let rest_before_sig = rest_before.sig()?;
+    let rest_after_sig = rest_after.sig()?;
+    let other_sig = rest_after_sig.compose(g_sig.compose(rest_before_sig));
+    let balanced = other_sig.args()
+        <= other_sig.outputs() + sub.side.as_ref().map_or(0, |sided| sided.n.unwrap_or(1));
     // Make before
     let mut before = val.unwrap_or_default();
     before.push(if !inverse || balanced {
@@ -461,7 +463,7 @@ under!(BothPat, input, g_sig, inverse, asm, {
         node
     });
     // Make after
-    let after = if inverse || balanced {
+    let mut after = if inverse || balanced {
         let sub = Subscript { side: None, ..sub };
         ImplMod(UnBothImpl(sub), eco_vec![f_after], span)
     } else {
@@ -472,7 +474,9 @@ under!(BothPat, input, g_sig, inverse, asm, {
         }
         f_after.node
     };
-    Ok((input, before, after))
+    before.push(rest_before);
+    after.prepend(rest_after);
+    Ok((&[], before, after))
 });
 
 under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {

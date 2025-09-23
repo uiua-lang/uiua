@@ -6,7 +6,7 @@ use bytemuck::{Pod, Zeroable};
 use serde::*;
 
 /// Uiua's complex number type
-#[derive(Debug, Clone, Copy, PartialOrd, Default, Serialize, Deserialize, Pod, Zeroable)]
+#[derive(Clone, Copy, PartialOrd, Default, Serialize, Deserialize, Pod, Zeroable)]
 #[serde(from = "(f64, f64)", into = "(f64, f64)")]
 #[repr(C)]
 pub struct Complex {
@@ -226,6 +226,12 @@ impl From<f64> for Complex {
 impl From<u8> for Complex {
     fn from(value: u8) -> Self {
         f64::from(value).into()
+    }
+}
+
+impl fmt::Debug for Complex {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
     }
 }
 

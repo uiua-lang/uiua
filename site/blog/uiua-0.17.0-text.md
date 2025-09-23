@@ -1,12 +1,12 @@
 # Announcing Uiua 0.17.0
 
-2025-09-??
+2025-09-23
 
 ---
 
 Uiua 0.17.0 is now available!
 
-You can find the full changelog [here](https://uiua.org/docs/changelog#0.17.0---2025-09-??).
+You can find the full changelog [here](https://uiua.org/docs/changelog#0.17.0---2025-09-23).
 
 You can download pre-built binaries [here](https://github.com/uiua-lang/uiua/releases).
 
@@ -61,7 +61,7 @@ The parentheses of the function pack can be replaced with the array brackets.
 It has been replaced with [`indexin ⨂`](https://uiua.org/docs/indexin), which has the exact same functionality, except its arguments are flipped.
 
 ```uiua
-F ← ⨂"abc"
+F ← ⨂"abcde"
 F "beefcake"
 ```
 
@@ -111,7 +111,7 @@ Subscripted [`join ⊂`](https://uiua.org/docs/join) now joins that many arrays.
 
 ## Thank You!
 
-There are lots of other small changes and improvements. You can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.17.0---2025-09-??).
+There are lots of other small changes and improvements. You can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.17.0---2025-09-23).
 
 Thanks to Uiua's generous [GitHub sponsors](https://github.com/sponsors/uiua-lang), who help pay my rent!
 

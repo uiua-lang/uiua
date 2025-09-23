@@ -9,11 +9,11 @@ license = "MIT"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
 rust-version = "1.83.0"
-version = "0.17.0-rc.2"
+version = "0.17.0"
 
 [dependencies.uiua_parser]
 path = "parser"
-version = "0.17.0-rc.2"
+version = "0.17.0"
 
 [workspace.lints.clippy]
 cargo = {level = "warn", priority = -1}

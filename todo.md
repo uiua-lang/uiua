@@ -1,7 +1,5 @@
 # Uiua Todo
 
-# 0.17
-
 # 0.18
 - Recursion ergonomics for `path`
 - `evert` optimizations
@@ -33,9 +31,6 @@ Features that are planned to be implemented in the future.
   - Instances of a dynamic module can be loaded at runtime
   - Enabled things from simple config files to game mods
 - System APIs
-  - UDP Sockets
-    - Change `&tcpsnb`, `&tcpsrt`, `&tcpswt` to work for UDP sockets as well
-      - Rename them
   - File metadata
     - `&fmeta` to get metadata about a file
     - Should somehow provide:

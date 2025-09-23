@@ -221,6 +221,7 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
     }
     // Collect excess values
     for rows in excess_rows.into_iter().rev() {
+        env.respect_execution_limit()?;
         let new_val = Value::from_row_values(rows, env)?;
         env.push(new_val);
     }

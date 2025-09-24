@@ -186,7 +186,14 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
                     .1
                     .is_empty()
             {
-                view!(<Editor example={block.literal.trim_end()}/>).into_view()
+                let mut help: &[_] = &[];
+                let hlp;
+                if let Some(pos) = block.info.find("help(") {
+                    let text = block.info[pos + "help".len()..].trim_end_matches(')');
+                    hlp = ["", text];
+                    help = &hlp;
+                }
+                view!(<Editor example={block.literal.trim_end()} help=help/>).into_view()
             } else {
                 view!(<code class="code-block">{&block.literal}</code>).into_view()
             }

@@ -202,3 +202,47 @@ You'll most often see [on]() with another function immediately to its left.
 ⊸(+2)
 ⊸(×10)
 ```
+
+## Challenges
+
+At the end of most sections of this tutorial, there will be a few challenges to test your understanding.
+
+The code you write will be run multiple inputs and tested for correctness.
+
+Each challenge has an example input and output followed by some test cases.
+
+Remember that you can click the `⌵` on the right side of the editor to see a list of all the glyphs.
+
+Answers are available, but **try to solve the challenges yourself first!**
+
+Some challenges have additional answers that use functions and concepts not yet covered in the tutorial, but which are more idiomatic.
+
+```challenge
+adds 3 numbers
+++
+
+1 2 3
+0 10 1
+10 ¯1 5
+0 5 1
+```
+
+```challenge
+divides the first number by the second
+˜÷
+
+5 10
+6 24
+2 100
+17 51
+```
+
+```challenge
+subtracts the second number from the first then squares the result
+˙×˜-
+
+10 1
+5 3
+9 2
+5 6
+```

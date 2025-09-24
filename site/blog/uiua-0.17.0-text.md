@@ -115,6 +115,8 @@ There are lots of other small changes and improvements. You can find the full ch
 
 Thanks to Uiua's generous [GitHub sponsors](https://github.com/sponsors/uiua-lang), who help pay my rent!
 
+Extra special thanks to everyone who directly contributed code to this release, including [magistau](https://github.com/magistau), [Marcos-cat](https://github.com/Marcos-cat), [Omnikar](https://github.com/Omnikar), [amatgil](https://github.com/amatgil), [Jacob Lockwood](https://github.com/Jacob-Lockwood), [lemonlime4](https://github.com/lemonlime4), [Madeline Vergani](https://github.com/RubenVerg), and [alex-s168](https://github.com/alex-s168)! Your care for fixing bugs and docs, and for making quality-of-life improvements, are what makes the Uiua community great!
+
 You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!
 
 ```uiua

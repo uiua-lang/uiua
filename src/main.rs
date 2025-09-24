@@ -1051,6 +1051,7 @@ fn clear_watching_with(s: &str, end: &str) {
     );
 }
 
+#[cfg(not(feature = "no_self_update"))]
 fn update(main: bool, check: bool, mut features: Vec<String>) {
     if !main || check {
         let output = match Command::new("cargo").args(["search", "uiua"]).output() {

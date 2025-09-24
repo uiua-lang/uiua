@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, cell::Cell};
 
 use comrak::{
     nodes::{AstNode, ListType, NodeValue},
@@ -6,7 +6,7 @@ use comrak::{
 };
 use leptos::*;
 use uiua::{Inputs, Primitive, Token};
-use uiua_editor::{backend::fetch, lang, replace_lang_name, Editor};
+use uiua_editor::{backend::fetch, lang, replace_lang_name, utils::ChallengeDef, Editor};
 
 use crate::{examples::LOGO, Hd, Hd3, NotFound, Prim, ScrollToHash};
 
@@ -49,7 +49,7 @@ pub fn markdown_view(text: &str) -> View {
         .replace("<code block delim>", "```")
         .replace("<code backtick>", "`` ` ``");
     let root = parse_document(&arena, &text, &options());
-    node_view(root)
+    node_view(root, &mut State { next_chal_num: 1 })
 }
 
 #[cfg(test)]
@@ -69,8 +69,12 @@ pub fn markdown_html(text: &str) -> String {
     format!("<!DOCTYPE html><html><head>{head}</head>{body}</html>")
 }
 
-fn node_view<'a>(node: &'a AstNode<'a>) -> View {
-    let children: Vec<_> = node.children().map(node_view).collect();
+struct State {
+    next_chal_num: usize,
+}
+
+fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
+    let children: Vec<_> = node.children().map(|node| node_view(node, state)).collect();
     match &node.data.borrow().value {
         NodeValue::Text(text) => {
             if let Some(text) = text
@@ -194,6 +198,33 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
                     help = &hlp;
                 }
                 view!(<Editor example={block.literal.trim_end()} help=help/>).into_view()
+            } else if block.info.starts_with("challenge") {
+                let mut lines = block.literal.lines().map(|s| s.to_string());
+                let prompt = lines.next().unwrap_or_default();
+                let answer = lines.next().unwrap_or_default();
+                let best_answer = lines.next().unwrap_or_default();
+                let example = lines.next().unwrap_or_default();
+                let tests: Vec<_> = lines.collect();
+                let flip = block.info.contains("flip");
+                let number = state.next_chal_num;
+                state.next_chal_num += 1;
+                let def = ChallengeDef {
+                    example,
+                    intended_answer: answer,
+                    best_answer: (!best_answer.is_empty()).then_some(best_answer),
+                    tests,
+                    hidden: None,
+                    flip,
+                    did_init_run: Cell::new(false),
+                };
+                view! {
+                    <div class="challenge">
+                        <h3>"Challenge "{number}</h3>
+                        <p>"Write a program that "<strong>{prompt}</strong>"."</p>
+                        <Editor challenge=def example=""/>
+                    </div>
+                }
+                .into_view()
             } else {
                 view!(<code class="code-block">{&block.literal}</code>).into_view()
             }

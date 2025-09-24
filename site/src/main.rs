@@ -792,13 +792,13 @@ fn ScrollToHash() -> impl IntoView {
 }
 
 #[component]
-pub fn Challenge<'a, P: IntoView + 'static>(
+pub fn Challenge<'a, P: IntoView + 'a>(
     number: u8,
     prompt: P,
     example: &'a str,
     answer: &'a str,
     tests: &'a [&'a str],
-    hidden: &'a str,
+    #[prop(optional)] hidden: &'a str,
     #[prop(optional)] default: &'a str,
     #[prop(optional)] flip: bool,
     #[prop(optional)] best_answer: &'a str,
@@ -808,7 +808,7 @@ pub fn Challenge<'a, P: IntoView + 'static>(
         intended_answer: answer.into(),
         best_answer: (!best_answer.is_empty()).then(|| best_answer.into()),
         tests: tests.iter().copied().map(Into::into).collect(),
-        hidden: hidden.into(),
+        hidden: Some(hidden.to_string()).filter(|s| !s.is_empty()),
         flip,
         did_init_run: Cell::new(false),
     };

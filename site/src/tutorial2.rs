@@ -36,7 +36,7 @@ pub fn Tutorial2() -> impl IntoView {
     }
 }
 
-const TUTORIAL_NAMES: &[&str] = &["Introduction", "Basic Stack Manipulation and Formatting"];
+const TUTORIAL_NAMES: &[&str] = &["Introduction", "Basic Data Manipulation and Formatting"];
 fn next_page(name: &str) -> Option<&'static str> {
     (TUTORIAL_NAMES.iter().copied())
         .skip_while(|&n| n != name)

@@ -965,12 +965,26 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let FixedRowsData {
         mut rows,
         row_count,
+        all_scalar,
         ..
     } = fixed_rows(Primitive::Inventory.format(), 1, args, env)?;
     let mut acc = if let Some(fv) = env.value_fill() {
         fv.value.clone()
     } else if row_count == 0 {
         env.push(Array::<Boxed>::default());
+        return Ok(());
+    } else if all_scalar {
+        env.push(
+            (rows.into_iter().next())
+                .map(|arg| match arg {
+                    Ok(_) => unreachable!(),
+                    Err(row) => row,
+                })
+                .unwrap_or_default(),
+        );
+        env.exec(f)?;
+        let val = env.pop("accumulator")?;
+        env.push(Boxed(val));
         return Ok(());
     } else {
         for arg in rows.iter_mut().rev() {

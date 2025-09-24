@@ -42,7 +42,7 @@ pub struct ChallengeDef {
     pub intended_answer: String,
     pub best_answer: Option<String>,
     pub tests: Vec<String>,
-    pub hidden: String,
+    pub hidden: Option<String>,
     pub flip: bool,
     pub did_init_run: Cell<bool>,
 }
@@ -1109,21 +1109,23 @@ impl State {
                 output_sections.push(output);
             }
             let hidden_answer = || {
-                just_values(
-                    &self.code_id,
-                    &challenge_code(&chal.intended_answer, &chal.hidden, chal.flip),
-                )
+                chal.hidden.as_ref().map(|hidden| {
+                    just_values(
+                        &self.code_id,
+                        &challenge_code(&chal.intended_answer, hidden, chal.flip),
+                    )
+                })
             };
             let hidden_user_output = || {
-                just_values(
-                    &self.code_id,
-                    &challenge_code(code, &chal.hidden, chal.flip),
-                )
+                chal.hidden.as_ref().map(|hidden| {
+                    just_values(&self.code_id, &challenge_code(code, hidden, chal.flip))
+                })
             };
             let hidden_correct = match (hidden_answer(), hidden_user_output()) {
-                (Ok(answer), Ok(users)) => answer == users,
-                (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
-                _ => false,
+                (Some(Ok(answer)), Some(Ok(users))) => answer == users,
+                (Some(Err(answer)), Some(Err(users))) => answer.to_string() == users.to_string(),
+                (Some(_), Some(_)) => false,
+                _ => true,
             };
             let mut output = if chal.did_init_run.get() {
                 vec![OutputItem::String(if correct {

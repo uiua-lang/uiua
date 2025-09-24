@@ -978,7 +978,7 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
             (rows.into_iter().next())
                 .map(|arg| match arg {
                     Ok(_) => unreachable!(),
-                    Err(row) => row,
+                    Err(row) => row.unboxed(),
                 })
                 .unwrap_or_default(),
         );

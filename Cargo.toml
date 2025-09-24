@@ -18,6 +18,7 @@ version = "0.17.1"
 [workspace.lints.clippy]
 cargo = {level = "warn", priority = -1}
 dbg_macro = "warn"
+negative_feature_names = "allow"
 non_std_lazy_statics = "warn"
 print_stdout = "warn"
 
@@ -233,6 +234,7 @@ gif = ["dep:gif", "image", "color_quant"]
 invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]
 native_sys = []
+no_self_update = [] # Disable the `uiua update` command
 opt = [] # Enables some optimizations but increases binary size
 profile = ["serde_yaml"]
 raw_mode = ["rawrrr", "native_sys"]

@@ -378,6 +378,7 @@ fn main() {
             }
             repl(rt, compiler, true, stack, config);
         }
+        #[cfg(not(feature = "no_self_update"))]
         Some(Comm::Update {
             main,
             check,
@@ -911,6 +912,7 @@ enum Comm {
         args: Vec<String>,
     },
     #[clap(about = "Update Uiua by installing with Cargo")]
+    #[cfg(not(feature = "no_self_update"))]
     Update {
         #[clap(long, help = "Install from the main branch instead of crates.io")]
         main: bool,

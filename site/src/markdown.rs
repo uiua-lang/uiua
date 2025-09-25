@@ -180,6 +180,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     </div>)
                     .into_view();
                 }
+                "\\" => return view!(<code>"\\"</code>).into_view(),
                 lit => {
                     for (prefix, class) in [
                         ("noadic", "noadic-function"),
@@ -189,6 +190,8 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                         ("tetradic", "tetradic-function"),
                         ("monadic mod", "monadic-modifier"),
                         ("dyadic mod", "dyadic-modifier"),
+                        ("number", "number-literal"),
+                        ("character", "string-literal-span"),
                     ] {
                         if let Some(mut text) = lit.strip_prefix(prefix) {
                             text = text.trim();

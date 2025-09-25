@@ -10,6 +10,9 @@ const TUTORIAL_NAMES: &[&str] = &[
     "Basic Data Manipulation and Formatting",
     "Math and Comparison",
     "Arrays",
+    "Types",
+    "Bindings",
+    "Modifiers and Functions",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Params)]

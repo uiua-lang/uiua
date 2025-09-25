@@ -382,7 +382,7 @@ fn inverse_row<const N: usize>(
     example: impl Into<Option<&'static str>>,
 ) -> impl IntoView {
     inverse_row_impl(
-        view!(<h3><Prims prims=prims show_names={N == 1}/></h3>).into_view(),
+        view!(<h3><Prims prims=prims show_names=true/></h3>).into_view(),
         value_req,
         notes.into_view(),
         example.into(),

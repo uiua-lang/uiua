@@ -52,7 +52,7 @@ You can also use array notation to make multidimensional arrays.
 [⊸√ 4_9_49]
 ```
 
-Unlike strand notation, stack notation may span multiple lines. The lines are still executed right-to-left, but they are exercuted bottom-to-top so that the arrays come out the same way they look in the code.
+Unlike strand notation, array notation may span multiple lines. The lines are still executed right-to-left, but they are exercuted bottom-to-top so that the arrays come out the same way they look in the code.
 
 ```uiua
 [1 2 3
@@ -105,7 +105,7 @@ From shape we can derive two closely-related properties called **length** and **
 
 ## Pretty Array Output
 
-The online editor and native interpreter both pretty-print any values that remain on the stack when a program is finished. (This can be invoked manually using the [&s]() or [pretty]() functions.)
+The online editor and native interpreter both pretty-print any values that are left when a program is finished. (This can be invoked manually using the [&s]() or [pretty]() functions.)
 
 To understand how the pretty-printed output corresponds to the actual array, we can use [reshape]() to create a multidimensional array. [reshape]() uses its first argument as a new shape for its second argument.
 

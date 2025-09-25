@@ -25,7 +25,6 @@ pub fn Tutorial2() -> impl IntoView {
         .into_view(),
         Err(_) => {
             let params = use_params::<TutorialParams>().get().unwrap();
-            logging::log!("params: {params:?}");
             page_view(
                 (params.page.as_deref())
                     .filter(|s| !s.is_empty())
@@ -36,7 +35,11 @@ pub fn Tutorial2() -> impl IntoView {
     }
 }
 
-const TUTORIAL_NAMES: &[&str] = &["Introduction", "Basic Data Manipulation and Formatting"];
+const TUTORIAL_NAMES: &[&str] = &[
+    "Introduction",
+    "Basic Data Manipulation and Formatting",
+    "Math and Comparison",
+];
 fn next_page(name: &str) -> Option<&'static str> {
     (TUTORIAL_NAMES.iter().copied())
         .skip_while(|&n| n != name)

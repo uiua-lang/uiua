@@ -128,7 +128,7 @@ Click Run to try it out!
 ##
 ```
 
-Output comments on the same line as other code show the values at the top of the stack after the code is run. This is useful for debugging.
+Output comments on the same line as other code show the values output after that line is run. This is useful for debugging.
 
 ```uiua
 +1 2 ##

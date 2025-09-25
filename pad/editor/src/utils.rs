@@ -1089,7 +1089,7 @@ impl State {
             example.insert(0, OutputItem::Faint(format!("Example: {}", chal.example)));
             let mut output_sections = vec![example];
             let mut correct = true;
-            for test in &chal.tests {
+            for (i, test) in chal.tests.iter().enumerate() {
                 let answer = || {
                     just_values(
                         &self.code_id,
@@ -1105,7 +1105,7 @@ impl State {
                         _ => false,
                     };
                 let mut output = run_code_single(&self.code_id, &user_input).0;
-                output.insert(0, OutputItem::Faint(format!("Input: {test}")));
+                output.insert(0, OutputItem::Faint(format!("Test {}: {test}", i + 1)));
                 output_sections.push(output);
             }
             let hidden_answer = || {

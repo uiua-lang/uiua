@@ -5,6 +5,13 @@ use uiua_editor::lang;
 
 use crate::{markdown::Markdown, other_tutorial::OtherTutorialParams};
 
+const TUTORIAL_NAMES: &[&str] = &[
+    "Introduction",
+    "Basic Data Manipulation and Formatting",
+    "Math and Comparison",
+    "Arrays",
+];
+
 #[derive(Debug, Clone, PartialEq, Eq, Params)]
 pub struct TutorialParams {
     page: Option<String>,
@@ -34,12 +41,6 @@ pub fn Tutorial2() -> impl IntoView {
         }
     }
 }
-
-const TUTORIAL_NAMES: &[&str] = &[
-    "Introduction",
-    "Basic Data Manipulation and Formatting",
-    "Math and Comparison",
-];
 fn next_page(name: &str) -> Option<&'static str> {
     (TUTORIAL_NAMES.iter().copied())
         .skip_while(|&n| n != name)

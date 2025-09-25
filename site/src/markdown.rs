@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cell::Cell};
+use std::{borrow::Cow, cell::Cell, fmt::Display};
 
 use comrak::{
     nodes::{AstNode, ListType, NodeValue},
@@ -73,6 +73,14 @@ struct State {
     next_chal_num: usize,
 }
 
+fn maybe_code<T: Display>(val: Option<T>) -> impl IntoView {
+    if let Some(val) = val {
+        view! {  <code>{ val.to_string() }</code> }.into_view()
+    } else {
+        view! {  "" }.into_view()
+    }
+}
+
 fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
     let children: Vec<_> = node.children().map(|node| node_view(node, state)).collect();
     match &node.data.borrow().value {
@@ -124,6 +132,77 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
         NodeValue::Item(_) => view!(<li>{children}</li>).into_view(),
         NodeValue::Paragraph => view!(<p>{children}</p>).into_view(),
         NodeValue::Code(code) => {
+            // Special cases
+            match code.literal.as_str() {
+                "MATH TABLES" => {
+                    use Primitive::*;
+                    fn primitive_rows(
+                        prims: impl IntoIterator<Item = Primitive>,
+                    ) -> Vec<impl IntoView> {
+                        prims
+                            .into_iter()
+                            .map(|p| {
+                                let ascii = p.ascii().map(|s| s.to_string()).or_else(|| {
+                                    p.glyph().filter(|c| c.is_ascii()).map(|c| c.to_string())
+                                });
+                                view! {
+                                    <tr>
+                                        <td><Prim prim=p/></td>
+                                        <td>{maybe_code(ascii)}</td>
+                                        <td>{view!(<code>{p.args()}</code>)}</td>
+                                    </tr>
+                                }
+                            })
+                            .collect()
+                    }
+                    let math_table = primitive_rows([
+                        Add, Sub, Mul, Div, Modulo, Pow, Log, Neg, Abs, Sqrt, Sign, Sin, Atan,
+                    ]);
+                    let comp_table =
+                        primitive_rows([Eq, Ne, Lt, Gt, Le, Ge, Min, Max, Floor, Ceil, Round]);
+                    return view!(<div id="ascii-glyphs">
+                        <table class="bordered-table">
+                            <tr>
+                                <th>"Function"</th>
+                                <th>"ASCII"</th>
+                                <th>"Args"</th>
+                            </tr>
+                            {math_table}
+                        </table>
+                        <table class="bordered-table">
+                            <tr>
+                                <th>"Function"</th>
+                                <th>"ASCII"</th>
+                                <th>"Args"</th>
+                            </tr>
+                            {comp_table}
+                        </table>
+                    </div>)
+                    .into_view();
+                }
+                lit => {
+                    for (prefix, class) in [
+                        ("noadic", "noadic-function"),
+                        ("monadic", "monadic-function"),
+                        ("dyadic", "dyadic-function"),
+                        ("triadic", "triadic-function"),
+                        ("tetradic", "tetradic-function"),
+                        ("monadic mod", "monadic-modifier"),
+                        ("dyadic mod", "dyadic-modifier"),
+                    ] {
+                        if let Some(mut text) = lit.strip_prefix(prefix) {
+                            text = text.trim();
+                            if text.is_empty() {
+                                text = prefix.split_whitespace().next().unwrap();
+                            }
+                            let text = text.to_string();
+                            return view!(<span class=class>{text}</span>).into_view();
+                        }
+                    }
+                }
+            }
+
+            // Normal case
             let mut lit = code.literal.clone();
             if lit.contains("<backtick>") {
                 lit = lit.replace("<backtick>", "`");
@@ -193,7 +272,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 let mut help: &[_] = &[];
                 let hlp;
                 if let Some(pos) = block.info.find("help(") {
-                    let text = block.info[pos + "help".len()..].trim_end_matches(')');
+                    let text = block.info[pos + "help(".len()..].trim_end_matches(')');
                     hlp = ["", text];
                     help = &hlp;
                 }

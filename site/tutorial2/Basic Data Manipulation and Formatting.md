@@ -29,6 +29,19 @@ If code generates multiple outputs, those outputs will be displayed on multiple 
 - 2 10
 ```
 
+Because functions always take the same number of arguments, we can actually rearrange commutative operations like [add]() or [multiply]().
+
+```uiua
++ 2 + 3 5
++ + 2 3 5
+```
+By wrapping functions and their arguments in `()`s, we can make the grouping more visually apparent.
+
+```uiua
+(+ 2 (+ 3 5))
+(+ (+ 2 3) 5)
+```
+
 ## Comments
 
 Comments are denoted with a `#` and run to the end of the line. Comments are useful for documenting what a particular piece of code does.

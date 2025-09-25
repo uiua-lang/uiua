@@ -18,7 +18,7 @@ pub struct TutorialParams {
 }
 
 #[component]
-pub fn Tutorial2() -> impl IntoView {
+pub fn NewTutorial() -> impl IntoView {
     move || match use_params::<OtherTutorialParams>().get() {
         Ok(params) => view! {
             <A href="/docs">"Back to Docs Home"</A>
@@ -59,7 +59,7 @@ fn page_view(name: &str) -> impl IntoView {
         <br/>
         <br/>
         <TutorialNav name=name/>
-        <Markdown src={format!("/tutorial2/{name}.md")}/>
+        <Markdown src={format!("/new_tutorial/{name}.md")}/>
         <br/>
         <br/>
         <TutorialNav name=name/>
@@ -76,7 +76,7 @@ fn TutorialNav<'a>(name: &'a str) -> impl IntoView {
     let next = move || {
         next_page(&nm)
             .map(|p| {
-                view!( <div>"Next: "<A href=format!("/tutorial2/{p}")>{p}</A>" 〉"</div>)
+                view!( <div>"Next: "<A href=format!("/new-tutorial/{p}")>{p}</A>" 〉"</div>)
                     .into_view()
             })
             .unwrap_or_else(|| view!( <div/>).into_view())
@@ -85,7 +85,7 @@ fn TutorialNav<'a>(name: &'a str) -> impl IntoView {
     let previous = move || {
         prev_page(&nm)
             .map(|p| {
-                view!( <div>"〈 Previous: "<A href=format!("/tutorial2/{p}")>{p}</A></div>)
+                view!( <div>"〈 Previous: "<A href=format!("/new-tutorial/{p}")>{p}</A></div>)
                     .into_view()
             })
             .unwrap_or_else(|| view!( <div/>).into_view())

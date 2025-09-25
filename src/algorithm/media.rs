@@ -576,6 +576,9 @@ pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
         WavReader::new(std::io::Cursor::new(bytes)).map_err(|e| e.to_string())?;
     let spec = reader.spec();
     match (spec.sample_format, spec.bits_per_sample) {
+        (SampleFormat::Int, 8) => {
+            array_from_wav_bytes_impl::<i8>(&mut reader, |i| i as f64 / i8::MAX as f64)
+        }
         (SampleFormat::Int, 16) => {
             array_from_wav_bytes_impl::<i16>(&mut reader, |i| i as f64 / i16::MAX as f64)
         }

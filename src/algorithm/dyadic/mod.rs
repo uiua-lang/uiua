@@ -671,9 +671,16 @@ impl<T: ArrayValue> Array<T> {
             [(abs_count * self.row_count() as f64).round() as usize],
             env,
         )?;
+        self = self.keep_scalar_real_impl(new_row_count);
+        if count < 0.0 {
+            self.reverse();
+        }
+        Ok(self)
+    }
+    pub(crate) fn keep_scalar_real_impl(mut self, new_row_count: usize) -> Self {
         let row_len = self.row_len();
         let mut new_data = EcoVec::with_capacity(new_row_count * row_len);
-        let delta = 1.0 / abs_count;
+        let delta = self.row_count() as f64 / new_row_count as f64;
         for k in 0..new_row_count {
             let t = k as f64 * delta;
             let fract = t.fract();
@@ -684,9 +691,6 @@ impl<T: ArrayValue> Array<T> {
             };
             new_data.extend_from_slice(&self.data[src_row * row_len..][..row_len]);
         }
-        if count < 0.0 {
-            new_data.make_mut().reverse();
-        }
         if self.shape.is_empty() {
             self.shape.push(new_row_count);
         } else {
@@ -694,7 +698,7 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data = new_data.into();
         self.validate();
-        Ok(self)
+        self
     }
     pub(crate) fn multikeep(mut self, dims: usize, count: f64, env: &Uiua) -> UiuaResult<Self> {
         let dims = dims.min(self.rank());

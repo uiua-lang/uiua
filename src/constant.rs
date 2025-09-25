@@ -46,6 +46,9 @@ pub enum ConstantValue {
     Static(Value),
     /// The music constant
     Music,
+    /// The amen constant
+    #[cfg(feature = "audio_encode")]
+    Amen,
     /// The path of the current source file relative to the current working directory
     ThisFile,
     /// The name of the current source file
@@ -75,6 +78,21 @@ impl ConstantValue {
             ConstantValue::Music => {
                 static MUSIC: OnceLock<Value> = OnceLock::new();
                 MUSIC.get_or_init(|| music_constant(backend)).clone()
+            }
+            #[cfg(feature = "audio_encode")]
+            ConstantValue::Amen => {
+                static AMEN: OnceLock<Value> = OnceLock::new();
+                AMEN.get_or_init(|| {
+                    let (samples, sr) =
+                        crate::media::array_from_wav_bytes(include_bytes!("assets/amen-break.wav"))
+                            .unwrap();
+                    let new_row_count = (samples.row_count() as f64
+                        * backend.audio_sample_rate() as f64
+                        / sr as f64)
+                        .round() as usize;
+                    samples.keep_scalar_real_impl(new_row_count).into()
+                })
+                .clone()
             }
             ConstantValue::ThisFile => {
                 current_file_path.map_or_else(|| "".into(), |p| p.display().to_string().into())
@@ -375,6 +393,10 @@ constant!(
     ),
     /// Sample music data
     ("Music", Media, ConstantValue::Music),
+    /// Amen break
+    ///
+    /// Thank you Gregory Coleman 🙏
+    (#[cfg(feature = "audio_encode")] "Amen", Media, ConstantValue::Amen),
     /// Lorem Ipsum text
     ("Lorem", Media, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
     /// Rainbow flag colors

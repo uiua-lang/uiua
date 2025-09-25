@@ -122,7 +122,7 @@ This expands to any number of dimensions. The elements of the last axis are alwa
 We can see here that the shape `[2 3 4 5]` appears almost like a 2×3 matrix of 4×5 matrices. Also note that reshape cycles through elements if it doesn't have enough.
 
 ```uiua
-↯2_3_4_5 ⇡119
+↯2_3_4_5 ⇡100
 ```
 
 ## Pervasion

@@ -13,6 +13,8 @@ const TUTORIAL_NAMES: &[&str] = &[
     "Types",
     "Bindings",
     "Modifiers and Functions",
+    "More Argument Manipulation",
+    "Inverses",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Params)]

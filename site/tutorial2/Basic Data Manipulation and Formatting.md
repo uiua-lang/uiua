@@ -29,6 +29,13 @@ If code generates multiple outputs, those outputs will be displayed on multiple 
 - 2 10
 ```
 
+Outputs will be displayed on multiple lines even if they were generated on the same line. The value that was generated last will be displayed at the bottom.
+
+```uiua
++ 1 2 5
+6 × 7 8 9
+```
+
 Because functions always take the same number of arguments, we can actually rearrange commutative operations like [add]() or [multiply]().
 
 ```uiua
@@ -91,7 +98,7 @@ roundsqrtpi
 
 On this site, you can also click the 🔗 symbol on any editor to show a palette of all the Uiua glyphs. You can then click on any glyph to insert it into the editor.
 
-The [negate]() function formats from ```, but this is also used for negative numbers.
+The [negate]() function formats from ````, but this is also used for negative numbers.
 
 ```uiua
 + `4 20 # Format me!
@@ -216,6 +223,24 @@ You'll most often see [on]() with another function immediately to its left.
 ⊸(×10)
 ```
 
+### [dip]()
+
+[dip]() temporarily ignores the first argument and calls its function on lower arguments.
+
+```uiua
+⊙¯ 3 5 # Ignore 3
+```
+
+```
+⊙+ 2 3 5 # Ignore 2
+```
+
+[dip]() can be chained to dip past multiple arguments.
+
+```
+⊙⊙⊙× 1 2 3 4 5 # Ignore 1 2 3
+```
+
 ## Challenges
 
 At the end of most sections of this tutorial, there will be a few challenges to test your understanding.
@@ -258,4 +283,14 @@ subtracts the second number from the first then squares the result
 5 3
 9 2
 5 6
+```
+
+```challenge
+adds the first number to the square root of the second
++⊙√
+
+2 9
+10 4
+9 121
+16 16
 ```

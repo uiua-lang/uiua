@@ -8,7 +8,7 @@ In Uiua, all operations appear to the left of their arguments.
 + 2 3
 ```
 
-We often read Uiua code from right to left to understand the order of operations. In this example, addition happens before multiplication:
+We often read Uiua code from right to left to understand the order of operations. In this example, we [add]() `3` to `5`, then [multiply]() by `2`
 
 ```uiua
 × 2 + 3 5
@@ -26,7 +26,7 @@ If code generates multiple outputs, those outputs will be displayed on multiple 
 ```uiua
 7
 + 1.1 5
-- 2 10
+× 2 10
 ```
 
 Outputs will be displayed on multiple lines even if they were generated on the same line. The value that was generated last will be displayed at the bottom.
@@ -61,7 +61,7 @@ Uiua does not have multiline comments.
 
 ## Formatting
 
-Most of Uiua's built-in functions use special Unicode characters. To type multiplications and divisions signs, you can use `*` and `%` respectively. Then, run the code to format the ASCII characters into Unicode.
+Most of Uiua's built-in functions use special Unicode characters. To type multiplication and division signs, you can use `*` and `%` respectively. Then, run the code to format the ASCII characters into Unicode.
 
 ```uiua help(⇡⇡⇡⇡ Click   )
 # Click Run to format!
@@ -70,7 +70,7 @@ Most of Uiua's built-in functions use special Unicode characters. To type multip
 
 Most built-in functions have names you can type rather than symbols. Formatting works on these too. **This is the primary way of entering Uiua's glyphs.**
 
-Try ormatting the lines below by clicking **"Run**.
+Try formatting the lines below by clicking **Run**.
 
 ```uiua
 max sqrt 10 mod 10 pow 2 8
@@ -98,7 +98,7 @@ roundsqrtpi
 
 On this site, you can also click the 🔗 symbol on any editor to show a palette of all the Uiua glyphs. You can then click on any glyph to insert it into the editor.
 
-The [negate]() function formats from ````, but this is also used for negative numbers.
+The [negate]() function formats from `\``, but this is also used for negative numbers.
 
 ```uiua
 + `4 20 # Format me!
@@ -115,7 +115,7 @@ The formatter will align consecutive end-of-line comments. Try it out!
 
 ## Output Comments
 
-A comments that starts with additional `#`s is an *output comment*. The formatter replaces the text of an output comment with as many values as there are extra `#`s. These are the values that can be used by the next function that is called.
+A comment that starts with additional `#`s is an *output comment*. The formatter replaces the text of an output comment with as many values as there are extra `#`s. These are the values that can be used by the next function that is called.
 
 Click Run to try it out!
 
@@ -139,7 +139,7 @@ Output comments on the same line as other code show the values output after that
 
 So far, we can do the same sort of basic operations you can do on a calculator. But programming is about more than that!
 
-What if you wanted to [multiply]() a number by itself. Of course, you could simply square it with the [power]() function.
+What if you wanted to [multiply]() a number by itself? Of course, you could simply square it with the [power]() function.
 
 ```uiua
 ⁿ2 5
@@ -155,7 +155,7 @@ There are many built-in modifiers, but we'll look at a few related to data manip
 
 ### [self]()
 
-[self]() turns a function that takes multiple arguments into a function that takes 1 argument by passing it the same argument multiple times. When used on [multiply](), this can get us our squaring function from before.
+[self]() turns a function that takes multiple arguments into a function that takes one argument by passing it the same argument multiple times. When used on [multiply](), this can get us our squaring function from before.
 
 ```uiua
 ˙× 5
@@ -189,11 +189,13 @@ By using `()`s, we can apply a modifier to a more complex function.
 ⟜√ 81
 ```
 
+The value that appears at the bottom of the output list would be the first argument of the next function to be called.
+
 ```uiua
 ⟜+ 2 5
 ```
 
-You'll most often see [on]() with another function immediately to its left.
+You'll most often see [on]() with another function immediately to its left, to use that preserved value.
 
 ```uiua
 ×⟜+ 2 5
@@ -211,7 +213,7 @@ You'll most often see [on]() with another function immediately to its left.
 -⊸√ 25
 ```
 
-[by]() is often used in examples on this site to show both the inputs and outputs of a function
+[by]() is often used in examples on this site to show both the inputs and outputs of a function.
 
 ```uiua
 ⊸√ 144

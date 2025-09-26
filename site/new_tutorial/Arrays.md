@@ -229,8 +229,10 @@ You can also click the names of functions in the site text to see their document
 
 Negative values [take]() or [drop]() from the end.
 
+```uiua
 ↙¯3 [1 2 3 4 5]
 ↘¯3 [1 2 3 4 5]
+```
 
 [pick]() indexes an array. Longer indices index deeper into the array.
 

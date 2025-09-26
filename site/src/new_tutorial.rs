@@ -15,6 +15,7 @@ const TUTORIAL_NAMES: &[&str] = &[
     "Modifiers and Functions",
     "More Argument Manipulation",
     "Inverses",
+    "Pattern Matching",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Params)]

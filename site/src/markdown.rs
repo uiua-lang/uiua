@@ -41,6 +41,10 @@ fn options() -> ComrakOptions<'static> {
 }
 
 pub fn markdown_view(text: &str) -> View {
+    markdown_view_impl(text, true)
+}
+
+fn markdown_view_impl(text: &str, make_paragraph: bool) -> View {
     let arena = Arena::new();
     let text = text
         .replace("`` ` ``", "<code backtick>")
@@ -49,7 +53,13 @@ pub fn markdown_view(text: &str) -> View {
         .replace("<code block delim>", "```")
         .replace("<code backtick>", "`` ` ``");
     let root = parse_document(&arena, &text, &options());
-    node_view(root, &mut State { next_chal_num: 1 })
+    node_view(
+        root,
+        &mut State {
+            make_paragraph,
+            ..Default::default()
+        },
+    )
 }
 
 #[cfg(test)]
@@ -71,6 +81,16 @@ pub fn markdown_html(text: &str) -> String {
 
 struct State {
     next_chal_num: usize,
+    make_paragraph: bool,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State {
+            next_chal_num: 1,
+            make_paragraph: true,
+        }
+    }
 }
 
 fn maybe_code<T: Display>(val: Option<T>) -> impl IntoView {
@@ -130,7 +150,13 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
             ListType::Ordered => view!(<ol>{children}</ol>).into_view(),
         },
         NodeValue::Item(_) => view!(<li>{children}</li>).into_view(),
-        NodeValue::Paragraph => view!(<p>{children}</p>).into_view(),
+        NodeValue::Paragraph => {
+            if state.make_paragraph {
+                view!(<p>{children}</p>).into_view()
+            } else {
+                children.into_view()
+            }
+        }
         NodeValue::Code(code) => {
             // Special cases
             match code.literal.as_str() {
@@ -282,7 +308,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 view!(<Editor example={block.literal.trim_end()} help=help/>).into_view()
             } else if block.info.starts_with("challenge") {
                 let mut lines = block.literal.lines().map(|s| s.to_string());
-                let prompt = lines.next().unwrap_or_default();
+                let prompt = markdown_view_impl(&lines.next().unwrap_or_default(), false);
                 let answer = lines.next().unwrap_or_default();
                 let best_answer = lines.next().unwrap_or_default();
                 let example = lines.next().unwrap_or_default();

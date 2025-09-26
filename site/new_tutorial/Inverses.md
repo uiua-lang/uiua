@@ -260,3 +260,32 @@ Lerp 10_20 0.5
 Sometimes more nuanced inverses are required. Maybe the behavior for the [un](/docs/un), [anti](/docs/anti), and [under](/docs/under) inverses needs to be subtly different in some way. Fully specifying all inverses simply requires providing [obverse](/docs/obverse) a function pack with more functions. The full description of how this works is in its documentation.
 
 Defining custom inverses for functions allows you to create powerful and flexible behaviors, often encapsulating multiple functionalities into a single function. They are useful for everything from reversible mathematical transformations to all-in-one encoding/decoding functions.
+
+## Challenges
+
+```challenge
+adds 100 to the 2nd and 4th rows of an array
+⍜(⊏1_3|+100)
+⍜⊙⊏+ 100 1_3
+[1 2 3 4 5]
+↯4_3⇡12
+⊚10
+```
+
+```challenge
+transposes an array so that the last axis becomes the first
+°⍉
+
+[[1_2_3 4_5_6] [7_8_9 10_11_12]]
+↯2_4⇡8
+↯2_2_4⇡16
+```
+
+```challenge
+multiplies the first column of a matrix by 10
+≡⍜⊢(×10)
+⍜≡⊢×₁₀
+[1_2 3_4]
++1↯3_3⇡9
+↯2_4 1
+```

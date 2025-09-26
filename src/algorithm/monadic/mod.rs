@@ -2462,6 +2462,21 @@ impl Value {
                     s
                 }
             },
+            _ if self.shape.contains(&0) => {
+                let mut s = "°△".to_string();
+                for (i, d) in self.shape.iter().enumerate() {
+                    if i > 0 {
+                        s.push('_');
+                    }
+                    s.push_str(&d.to_string());
+                }
+                match self {
+                    Value::Num(_) | Value::Byte(_) => s,
+                    Value::Char(_) => format!("+@a{s}"),
+                    Value::Complex(_) => format!("ℂ0{s}"),
+                    Value::Box(_) => format!("≡₀□{s}"),
+                }
+            }
             _ => {
                 let mut s = '['.to_string();
                 let rows: Vec<String> = self.rows().map(|v| v.representation()).collect();

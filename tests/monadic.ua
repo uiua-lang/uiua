@@ -200,6 +200,16 @@ repr[{[[1 2][2 3]][3 4]}{[[1 2][2 3]]□{[[1 2][2 3]]□□[3 4]}}]
 ⍤⤙≍ "{¯i ¯π W}" repr {¯i ¯π W}
 ⍤⤙≍ "[True False]" repr [True False]
 ⍤⤙≍ "$x 5" repr $x 5
+ReprTest! ←^ ˙$"\"_\" repr _" °□⊢
+⍤⤙≍ ReprTest!(°△2_0)
+⍤⤙≍ ReprTest!(°△2_0_1)
+⍤⤙≍ ReprTest!(°△2_0_0)
+⍤⤙≍ ReprTest!(°△0_2)
+⍤⤙≍ ReprTest!(°△0_2_0)
+⍤⤙≍ ReprTest!(°△0_2_1)
+⍤⤙≍ ReprTest!(+@a°△0_2)
+⍤⤙≍ ReprTest!(ℂ0°△0_2)
+⍤⤙≍ ReprTest!(≡₀□°△0_2)
 
 # Sort
 ⍤⤙≍ [1 2 4 4 8] ⍆ [4 8 2 1 4]

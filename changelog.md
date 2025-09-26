@@ -11,6 +11,7 @@ Uiua is not yet stable.
 ## 0.17.1 - 2025-09-??
 ### Interpreter
 - Fix a bug in `/◇⊂⍚`
+- Fix a bug in [`repr`](https://uiua.org/docs/repr)
 
 ## 0.17.0 - 2025-09-23
 ### Language

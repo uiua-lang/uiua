@@ -665,12 +665,12 @@ impl ScalarNum for usize {
     fn from_f64(f: f64) -> Result<Self, FromF64Error> {
         if f.is_nan() {
             Err(FromF64Error::NaN)
+        } else if f.fract() != 0.0 {
+            Err(FromF64Error::NonInteger)
         } else if f > usize::MAX as f64 {
             Err(FromF64Error::TooHigh)
         } else if f < 0.0 {
             Err(FromF64Error::TooLow)
-        } else if f.fract() != 0.0 {
-            Err(FromF64Error::NonInteger)
         } else {
             Ok(f as usize)
         }
@@ -684,12 +684,12 @@ impl ScalarNum for isize {
     fn from_f64(f: f64) -> Result<Self, FromF64Error> {
         if f.is_nan() {
             Err(FromF64Error::NaN)
+        } else if f.fract() != 0.0 {
+            Err(FromF64Error::NonInteger)
         } else if f > isize::MAX as f64 {
             Err(FromF64Error::TooHigh)
         } else if f < isize::MIN as f64 {
             Err(FromF64Error::TooLow)
-        } else if f.fract() != 0.0 {
-            Err(FromF64Error::NonInteger)
         } else {
             Ok(f as isize)
         }
@@ -1131,10 +1131,12 @@ impl Value {
                 }
                 let mut result = Vec::with_capacity(nums.row_count());
                 for &num in &nums.data {
-                    result.push(
-                        T::from_f64(num)
-                            .map_err(|e| ctx.error(format!("{requirement}, but {num} is {e}")))?,
-                    );
+                    result.push(T::from_f64(num).map_err(|e| {
+                        ctx.error(format!(
+                            "{requirement}, but {} is {e}",
+                            num.grid_string(false)
+                        ))
+                    })?);
                 }
                 result
             }
@@ -1179,7 +1181,10 @@ impl Value {
             {
                 let power = n.log10().floor() as i32;
                 n /= 10f64.powi(power);
-                return Err(env.error(format!("{requirement}, but {n}e{power} is too large")));
+                return Err(env.error(format!(
+                    "{requirement}, but {}e{power} is too large",
+                    n.grid_string(false)
+                )));
             }
         }
         self.as_number_array(env, requirement)
@@ -1193,10 +1198,12 @@ impl Value {
             Value::Num(nums) => {
                 let mut result = EcoVec::with_capacity(nums.element_count());
                 for &num in &nums.data {
-                    result.push(
-                        T::from_f64(num)
-                            .map_err(|e| env.error(format!("{requirement}, but {num} is {e}")))?,
-                    );
+                    result.push(T::from_f64(num).map_err(|e| {
+                        env.error(format!(
+                            "{requirement}, but {} is {e}",
+                            num.grid_string(false)
+                        ))
+                    })?);
                 }
                 Array::new(self.shape.clone(), result)
             }

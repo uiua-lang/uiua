@@ -4,7 +4,7 @@ Uiua is not yet stable.
 
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.17.0 - 2025-09-??
+## 0.17.1 - 2025-09-27
 ### Interpreter
 - Fix a bug in `/◇⊂⍚`
 - Fix a bug in [`repr`](https://uiua.org/docs/repr)

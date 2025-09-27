@@ -7,6 +7,8 @@ Uiua is not yet stable.
 ## 0.18.0 - 2025-??-??
 ### Interpreter
 - Add an `Amen` audio constant
+### Website
+- Pad links will automatically be compressed if it would be shorter
 
 ## 0.17.1 - 2025-09-??
 ### Interpreter

@@ -1,21 +1,24 @@
 [package]
-description = "Uiua website"
-name = "site"
-version = "0.1.0"
 categories.workspace = true
+description = "Uiua website"
 edition.workspace = true
 keywords.workspace = true
 license.workspace = true
+name = "site"
 readme.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+version = "0.1.0"
 
 [lints]
 workspace = true
 
 [dependencies]
 base64.workspace = true
+comrak = "0.39.0"
+console_error_panic_hook = "0.1.7"
 enum-iterator.workspace = true
+flate2.workspace = true
 js-sys.workspace = true
 leptos.workspace = true
 leptos_meta.workspace = true
@@ -23,13 +26,11 @@ leptos_router.workspace = true
 rand.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+uiua = {path = "..", default-features = false, features = ["batteries", "web"]}
+uiua-editor = {path = "../pad/editor"}
 urlencoding.workspace = true
 wasm-bindgen.workspace = true
 web-sys = {workspace = true, features = ["HtmlElement"]}
-comrak = "0.39.0"
-console_error_panic_hook = "0.1.7"
-uiua = {path = "..", default-features = false, features = ["batteries", "web"]}
-uiua-editor = {path = "../pad/editor"}
 
 [features]
 audio = [] # Dummy for rust-analyzer

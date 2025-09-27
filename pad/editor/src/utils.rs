@@ -1,6 +1,10 @@
 use base64::engine::{general_purpose::URL_SAFE, Engine};
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
 use js_sys::Date;
 use leptos::*;
+use std::cmp::min_by_key;
+use std::io::Write;
 use std::path::Path;
 use std::{
     borrow::Cow,
@@ -1432,10 +1436,13 @@ pub fn progressive_strings(input: &str) -> Vec<String> {
 }
 
 pub fn url_encode_code(code: &str) -> String {
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(code.as_bytes()).unwrap();
+    let compressed = encoder.finish().unwrap();
     format!(
         "{}__{}",
         uiua::VERSION.replace('.', "_"),
-        URL_SAFE.encode(code)
+        URL_SAFE.encode(min_by_key(code.as_bytes(), &compressed, |b| b.len()))
     )
 }
 

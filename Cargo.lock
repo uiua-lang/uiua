@@ -5788,6 +5788,7 @@ dependencies = [
  "comrak",
  "console_error_panic_hook",
  "enum-iterator",
+ "flate2",
  "js-sys",
  "leptos",
  "leptos_meta",
@@ -6592,6 +6593,7 @@ name = "uiua-editor"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "flate2",
  "futures",
  "hound",
  "image",

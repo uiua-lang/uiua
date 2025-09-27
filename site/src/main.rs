@@ -11,9 +11,10 @@ mod primitive;
 mod tutorial;
 mod uiuisms;
 
-use std::{cell::Cell, sync::OnceLock, time::Duration};
+use std::{cell::Cell, io::Read, sync::OnceLock, time::Duration};
 
 use base64::engine::{general_purpose::URL_SAFE, Engine};
+use flate2::read::ZlibDecoder;
 use js_sys::Date;
 use leptos::*;
 use leptos_meta::*;
@@ -569,18 +570,31 @@ pub fn Embed() -> impl IntoView {
 }
 
 fn pad_src() -> String {
-    let mut src = use_query_map()
+    let src = use_query_map()
         .with_untracked(|params| params.get("src").cloned())
         .unwrap_or_default();
+    let mut url_decoded = src.clone().into_bytes();
     if let Some((_, encoded)) = src.split_once("__") {
-        // logging::log!("{:?}", encoded);
-        if let Ok(decoded) = URL_SAFE.decode(encoded.as_bytes()) {
-            src = String::from_utf8_lossy(&decoded).to_string();
+        if let Ok(dec) = URL_SAFE.decode(encoded.as_bytes()) {
+            logging::log!("decoded base64 after version number");
+            url_decoded = dec;
         }
-    } else if let Ok(decoded) = URL_SAFE.decode(src.as_bytes()) {
-        src = String::from_utf8_lossy(&decoded).to_string();
+    } else if let Ok(dec) = URL_SAFE.decode(src.as_bytes()) {
+        logging::log!("decoded base64 without version number");
+        url_decoded = dec;
     }
-    src
+    let mut decoder = ZlibDecoder::new(url_decoded.as_slice());
+    let mut unzipped = String::new();
+    match decoder.read_to_string(&mut unzipped) {
+        Ok(_) => {
+            logging::log!("decompressed");
+            unzipped
+        }
+        Err(e) => {
+            logging::log!("decompression error: {e}");
+            String::from_utf8_lossy(&url_decoded).into_owned()
+        }
+    }
 }
 
 #[test]

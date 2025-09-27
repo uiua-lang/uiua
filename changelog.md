@@ -5,6 +5,8 @@ Uiua is not yet stable.
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
 ## 0.18.0 - 2025-??-??
+### Language
+- Improve signature checking for collecting [`do ⍢`](https://uiua.org/docs/do)
 ### Interpreter
 - Add an `Amen` audio constant
 

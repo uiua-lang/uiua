@@ -6,7 +6,7 @@ use crate::{
     algorithm::{fixed_rows, get_ops, pervade::pervade_dim, FixedRowsData},
     array::Array,
     value::Value,
-    Ops, Primitive, Shape, SigNode, Signature, Uiua, UiuaResult,
+    Ops, Primitive, Shape, SigNode, Uiua, UiuaResult,
 };
 
 use super::{multi_output, validate_size_impl};
@@ -240,16 +240,21 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
     } else {
         None
     };
-    let copy_count = (cond.sig.args()).saturating_sub(cond.sig.outputs().saturating_sub(1));
-    let cond_sub_sig = Signature::new(
-        cond.sig.args(),
-        (cond.sig.outputs() + copy_count).saturating_sub(1),
-    );
-    let comp_sig = body.sig.compose(cond_sub_sig);
-    let excess_count = comp_sig.outputs().saturating_sub(comp_sig.args());
+    let cond_preserve_count = cond.sig.args().saturating_sub(cond.sig.outputs());
+    let body_preserve_count = (body.sig.args())
+        .saturating_sub(body.sig.outputs())
+        .saturating_sub(cond.sig.outputs().saturating_sub(cond.sig.args()));
+    let copy_count = (cond.sig.args())
+        .saturating_sub(cond.sig.outputs().saturating_sub(1))
+        .saturating_sub(cond_preserve_count);
+    let excess_count = body.sig.outputs().saturating_sub(body.sig.args());
     let mut excess_rows = vec![Vec::new(); excess_count];
-    let preserve_count = comp_sig.args().saturating_sub(comp_sig.outputs());
-    let preserved = env.copy_n_down(preserve_count, comp_sig.args())?;
+    let cond_threaded = cond.sig.args().min(cond.sig.outputs());
+    let body_threaded = body.sig.args().min(body.sig.outputs());
+    let max_preserve_count = cond_preserve_count.max(body_preserve_count);
+    let preserve_depth =
+        max_preserve_count + (cond.sig.args() - cond_threaded).max(body.sig.args() - body_threaded);
+    let preserved: Vec<_> = env.remove_n(max_preserve_count, preserve_depth)?.collect();
     loop {
         // Make sure there are enough values
         if env.stack().len() < copy_count {
@@ -260,6 +265,12 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
         }
         // Copy necessary condition args
         env.dup_values(copy_count, copy_count)?;
+        if cond_preserve_count > 0 {
+            env.insert_stack(
+                cond.sig.args() - cond_preserve_count,
+                preserved.iter().take(cond_preserve_count).cloned(),
+            )?;
+        }
         // Call condition
         env.exec(cond.clone())?;
         // Break if condition is false
@@ -271,22 +282,21 @@ pub fn do_(ops: Ops, env: &mut Uiua) -> UiuaResult {
             break;
         }
         // Call body
-        if preserve_count > 0 {
-            env.insert_stack(comp_sig.outputs(), preserved.iter().cloned())?;
+        if body_preserve_count > 0 {
+            env.insert_stack(
+                body.sig.args() - body_preserve_count,
+                preserved.iter().take(body_preserve_count).cloned(),
+            )?;
         }
         env.exec(body.clone())?;
-        for (i, row) in env
-            .remove_n(excess_count, comp_sig.args() + excess_count)?
-            .enumerate()
-        {
+        // Remove excess
+        for (i, row) in env.remove_n(excess_count, body.sig.outputs())?.enumerate() {
             excess_rows[i].push(row);
         }
     }
     // Remove preserved/excess values
     if excess_count > 0 {
-        _ = env.remove_n(comp_sig.args(), comp_sig.args())?;
-    } else if preserve_count > 0 {
-        _ = env.remove_n(preserve_count, comp_sig.args())?;
+        _ = env.remove_n(excess_count, excess_count)?;
     }
     // Collect excess values
     for rows in excess_rows.into_iter().rev() {

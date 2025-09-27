@@ -2336,7 +2336,7 @@ impl Array<f64> {
     pub fn hsv_to_rgb(mut self, env: &Uiua) -> UiuaResult<Self> {
         if !(self.shape.ends_with(&[3]) || self.shape.ends_with(&[4])) {
             return Err(env.error(format!(
-                "Array to convert to RBG must have a shape \
+                "Array to convert to RGB must have a shape \
                 ending with 3 or 4, but its shape is {}",
                 self.shape
             )));

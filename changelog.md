@@ -10,7 +10,7 @@ Uiua is not yet stable.
 ### Website
 - Pad links will automatically be compressed if it would be shorter
 
-## 0.17.1 - 2025-09-??
+## 0.17.1 - 2025-09-27
 ### Interpreter
 - Fix a bug in `/◇⊂⍚`
 - Fix a bug in [`repr`](https://uiua.org/docs/repr)

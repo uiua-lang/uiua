@@ -2973,8 +2973,6 @@ primitive!(
     ///
     /// ex: # Experimental!
     ///   : quote("+1") 5
-    ///
-    /// The opposite of [quote] is [stringify].
     (0[1], Quote, Comptime, "quote", { experimental: true }),
     /// Run the Fast Fourier Transform on an array
     ///

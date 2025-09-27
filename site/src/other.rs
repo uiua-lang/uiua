@@ -41,7 +41,7 @@ pub fn Install() -> impl IntoView {
         <Hd id="installing-uiua">"Installing "{lang}""</Hd>
         <p><strong>"If your OS is supported, then the newest version of the "{lang}" interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</strong></p>
         <p>"Otherwise, the native "{lang}" interpreter can be installed via Cargo."</p>
-        <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.78)."</p>
+        <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.83)."</p>
         <p>"Once you have that, run one of the following commands:"</p>
         <code class="code-block">"cargo install uiua -F full"</code>
         <code class="code-block">"cargo install uiua"</code>
@@ -68,12 +68,8 @@ pub fn Install() -> impl IntoView {
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
 
         <Hd id="fonts">"Fonts"</Hd>
-        <p>{lang}" supports a few custom fonts, but "<a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">{lang}"386"</a>" is the primary one."</p>
-        <ul>
-            <li><a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">{lang}"386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
-            <li>"Jonathan Perret's "<a href="https://github.com/jonathanperret/uiua386color">{lang}"386Color"</a>" - a colored version of "{lang}"386"</li>
-        </ul>
-        <p>{lang}" was originally designed to be used with stock "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>", but further development and glyph choices target "{lang}"386."</p>
+        <p><a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">{lang}"386"</a>" is the only font that is updated alongside the language itself. It is a heavily modified version of BQN386. Thanks to Gifti for doing the original redesign!"</p>
+        <p>"Other fonts will work, but they may look odd in some cases, especially if they do not have every glyph."</p>
 
         <Hd id="editor-support">"Editor Support"</Hd>
         <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">{lang}" language extension for VSCode"</a>" is available."</p>

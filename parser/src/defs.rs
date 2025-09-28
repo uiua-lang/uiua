@@ -4043,7 +4043,7 @@ sys_op! {
     ///   : $ Connection: close
     ///   : $
     ///   : $
-    ///   : ⍜(&tlsc "example.com:443"|&rs∞⊸&w:)
+    ///   : ⍜(&tlsc "example.com:443"|&rs∞˜⊸&w)
     ///
     /// See also: [&tcpc]
     (1, TlsConnect, Tcp, "&tlsc", "tls - connect", Mutating),

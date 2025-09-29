@@ -642,7 +642,7 @@ fn generic_reduce_table(
     ys: Value,
     env: &mut Uiua,
 ) -> UiuaResult {
-    if env.value_fill().is_some() {
+    if xs.rank() == 0 || ys.rank() == 0 || env.value_fill().is_some() {
         env.push(ys);
         env.push(xs);
         table_impl(g, env)?;

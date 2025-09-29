@@ -4,6 +4,10 @@ Uiua is not yet stable.
 
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.17.2 - 2025-??-??
+### Interpreter
+- Fix a bug in `/F⊞G`
+
 ## 0.17.1 - 2025-09-27
 ### Interpreter
 - Fix a bug in `/◇⊂⍚`

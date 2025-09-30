@@ -2197,13 +2197,6 @@ impl Compiler {
                             .subscript_sig(Some(&Subscript::numeric(2)))
                             .is_some_and(|sig| sig == (1, 1)) =>
                     {
-                        if prim == Base && n == 2 {
-                            self.emit_diagnostic(
-                                format!("{Base}₂ is equivalent to {}", Bits.format()),
-                                DiagnosticKind::Advice,
-                                span.clone().merge(scr.span),
-                            );
-                        }
                         Node::from_iter([Node::new_push(n), self.primitive(prim, span)])
                     }
                     Deshape => {

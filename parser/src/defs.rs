@@ -2351,6 +2351,11 @@ primitive!(
     /// ex: ⬚∘[1 2_3_4] 0
     /// ex: ⬚∘+ ∞ [1 2] [3 4 5 6]
     ///
+    /// You can return multiple fill values from the fill function to use a different one depending on the arguments.
+    /// ex: F ← ⬚(0@0)+
+    ///   : F 1_2_3 40_50
+    ///   : F 1_2_3 "ab"
+    ///
     /// Fill values are temporarily removed for the body of looping modifiers that can use them to fix their row shapes.
     /// These include [reduce], [scan], [rows], [partition], and [group].
     /// ex! ⬚0≡(↙3) [3 4]
@@ -2378,6 +2383,8 @@ primitive!(
     ///   : b ← (°□⊡1°◌)
     ///   : c ← (°□⊡2°◌)
     ///   : ⬚{⊙⊙∘}(×b+c×a a) 2 3 4
+    /// [fill][un][pop] always returns the first fill value if there are multiple.
+    /// ex: ⬚(5@x)°◌
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Call the function at the given index
     ///

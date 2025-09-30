@@ -21,12 +21,12 @@ use threadpool::ThreadPool;
 
 use crate::{
     algorithm::{self, validate_size_impl},
-    fill::{Fill, FillValue},
+    fill::{Fill, FillFrame, FillValue},
     invert::match_format_pattern,
     run_prim_func, run_prim_mod, Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan,
     Compiler, Function, FunctionId, Ident, Inputs, IntoSysBackend, LocalName, Node, Primitive,
-    Report, SafeSys, SigNode, Signature, Span, SubSide, SysBackend, TraceFrame, UiuaError,
-    UiuaErrorKind, UiuaResult, Value, VERSION,
+    Report, SafeSys, SigNode, Signature, Span, SysBackend, TraceFrame, UiuaError, UiuaErrorKind,
+    UiuaResult, Value, VERSION,
 };
 
 /// The Uiua interpreter
@@ -51,9 +51,9 @@ pub(crate) struct Runtime {
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
-    fill_stack: Vec<FillValue>,
+    fill_stack: Vec<FillFrame>,
     /// The unfill stack
-    unfill_stack: Vec<FillValue>,
+    unfill_stack: Vec<FillFrame>,
     /// The fill boundary stack
     fill_boundary_stack: Vec<(usize, usize)>,
     /// A limit on the execution duration in milliseconds
@@ -1340,7 +1340,7 @@ impl Uiua {
         let height = self.require_height(n)?;
         Ok(&mut self.rt.stack[height..])
     }
-    pub(crate) fn value_fill(&self) -> Option<&FillValue> {
+    pub(crate) fn fill_frame(&self) -> Option<&FillFrame> {
         if (self.rt.fill_boundary_stack.last()).is_some_and(|&(i, _)| i >= self.rt.fill_stack.len())
         {
             None
@@ -1348,7 +1348,7 @@ impl Uiua {
             self.last_fill()
         }
     }
-    pub(crate) fn value_unfill(&self) -> Option<&FillValue> {
+    pub(crate) fn unfill_frame(&self) -> Option<&FillFrame> {
         if (self.rt.fill_boundary_stack.last())
             .is_some_and(|&(_, i)| i >= self.rt.unfill_stack.len())
         {
@@ -1357,10 +1357,26 @@ impl Uiua {
             self.last_unfill()
         }
     }
-    pub(crate) fn last_fill(&self) -> Option<&FillValue> {
+    pub(crate) fn value_fill(&self) -> Option<FillValue<&Value>> {
+        self.fill_frame().and_then(|frame| {
+            frame.values.first().map(|value| FillValue {
+                value,
+                side: frame.side,
+            })
+        })
+    }
+    pub(crate) fn _value_unfill(&self) -> Option<FillValue<&Value>> {
+        self.unfill_frame().and_then(|frame| {
+            frame.values.first().map(|value| FillValue {
+                value,
+                side: frame.side,
+            })
+        })
+    }
+    pub(crate) fn last_fill(&self) -> Option<&FillFrame> {
         self.rt.fill_stack.last()
     }
-    pub(crate) fn last_unfill(&self) -> Option<&FillValue> {
+    pub(crate) fn last_unfill(&self) -> Option<&FillFrame> {
         self.rt.unfill_stack.last()
     }
     pub(crate) fn fill(&self) -> Fill {
@@ -1372,11 +1388,10 @@ impl Uiua {
     /// Do something with the fill context set
     pub(crate) fn with_fill<T>(
         &mut self,
-        val: Value,
-        side: Option<SubSide>,
+        vals: impl Into<FillFrame>,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        self.rt.fill_stack.push(FillValue { value: val, side });
+        self.rt.fill_stack.push(vals.into());
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
         res
@@ -1384,11 +1399,10 @@ impl Uiua {
     /// Do something with the unfill context set
     pub(crate) fn with_unfill<T>(
         &mut self,
-        val: Value,
-        side: Option<SubSide>,
+        vals: impl Into<FillFrame>,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        self.rt.unfill_stack.push(FillValue { value: val, side });
+        self.rt.unfill_stack.push(vals.into());
         let res = in_ctx(self);
         self.rt.unfill_stack.pop();
         res
@@ -1414,8 +1428,10 @@ impl Uiua {
                 self.push(Value::default());
             }
         }
-        for fv in fills.into_iter().rev() {
-            self.push(fv.value);
+        for frame in fills.into_iter().rev() {
+            for val in frame.values {
+                self.push(val);
+            }
         }
         but(self)?;
         self.without_fill(|env| in_ctx(env))
@@ -1432,8 +1448,10 @@ impl Uiua {
                 self.push(Value::default());
             }
         }
-        for fv in fills.into_iter().rev() {
-            self.push(fv.value);
+        for frame in fills.into_iter().rev() {
+            for val in frame.values {
+                self.push(val);
+            }
         }
         but(self)?;
         self.without_fill(|env| in_ctx(env))

@@ -1231,19 +1231,7 @@ impl Compiler {
 
                 // Get-fill function
                 let fill_word = operands.next().unwrap();
-                let fill_span = fill_word.span.clone();
                 let fill = self.word_sig(fill_word)?;
-                if fill.sig.outputs() > 1 && !self.scope.fill_sig_error {
-                    self.scope.fill_sig_error = true;
-                    self.add_error(
-                        fill_span,
-                        format!(
-                            "{} function can have at most 1 output, but its signature is {}",
-                            Primitive::Fill.format(),
-                            fill.sig
-                        ),
-                    );
-                }
                 let span = self.add_span(modified.modifier.span.clone());
                 if let Some(side) = subscript.and_then(|sub| {
                     let side = self.subscript_side_only(&sub, Fill.format())?;

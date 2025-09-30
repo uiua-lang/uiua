@@ -423,7 +423,7 @@ fn path_impl(
                 } else {
                     path_val
                 });
-            } else if let Some(val) = env.value_fill().map(|fv| &fv.value) {
+            } else if let Some(val) = env.value_fill().map(|fv| fv.value) {
                 if val.rank() == 0 {
                     env.push(if has_costs {
                         Array::<Boxed>::default().into()

@@ -2,9 +2,10 @@
 
 Uiua is not yet stable.
 
-
-## 0.18.0 - 2025-??-??
+## 0.18.0 - 202?-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
 ### Interpreter
 - Add an `Amen` audio constant
 ### Website

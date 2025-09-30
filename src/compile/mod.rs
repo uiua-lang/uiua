@@ -212,8 +212,6 @@ pub(crate) struct Scope {
     pub experimental: bool,
     /// Whether an error has been emitted for experimental features
     experimental_error: bool,
-    /// Whether an error has been emitted for fill function signatures
-    fill_sig_error: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -259,7 +257,6 @@ impl Default for Scope {
             data_variants: IndexSet::new(),
             experimental: false,
             experimental_error: false,
-            fill_sig_error: false,
         }
     }
 }

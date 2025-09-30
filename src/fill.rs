@@ -1,10 +1,39 @@
+use smallvec::SmallVec;
+
 use crate::{Array, Boxed, Complex, SubSide, Uiua, Value};
 
 pub struct Fill<'a> {
     env: &'a Uiua,
-    value_fill: fn(env: &'a Uiua) -> Option<&'a FillValue>,
-    other_value_fill: fn(env: &'a Uiua) -> Option<&'a FillValue>,
+    value_fill: fn(env: &'a Uiua) -> Option<&'a FillFrame>,
+    other_value_fill: fn(env: &'a Uiua) -> Option<&'a FillFrame>,
     other_error: &'static str,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct FillFrame {
+    pub values: SmallVec<[Value; 1]>,
+    pub side: Option<SubSide>,
+}
+
+impl From<Value> for FillFrame {
+    fn from(value: Value) -> Self {
+        (value, None).into()
+    }
+}
+
+impl From<(Value, Option<SubSide>)> for FillFrame {
+    fn from((value, side): (Value, Option<SubSide>)) -> Self {
+        FillFrame {
+            values: [value].into(),
+            side,
+        }
+    }
+}
+
+impl From<FillValue> for FillFrame {
+    fn from(fv: FillValue) -> Self {
+        (fv.value, fv.side).into()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -40,32 +69,52 @@ impl<T> FillValue<T> {
     }
 }
 
+impl<T: Clone> FillValue<&T> {
+    pub fn cloned(self) -> FillValue<T> {
+        FillValue {
+            value: self.value.clone(),
+            side: self.side,
+        }
+    }
+}
+
 impl<'a> Fill<'a> {
     pub fn new(env: &'a Uiua) -> Self {
         Self {
             env,
-            value_fill: Uiua::value_fill,
-            other_value_fill: Uiua::value_unfill,
+            value_fill: Uiua::fill_frame,
+            other_value_fill: Uiua::unfill_frame,
             other_error: ". An unfill is set, but not a normal fill.",
         }
     }
     pub fn new_un(env: &'a Uiua) -> Self {
         Self {
             env,
-            value_fill: Uiua::value_unfill,
-            other_value_fill: Uiua::value_fill,
+            value_fill: Uiua::unfill_frame,
+            other_value_fill: Uiua::fill_frame,
             other_error: ". A normal fill is set, but not an unfill.",
         }
     }
-    pub fn value(&self) -> Option<&FillValue> {
+    pub fn frame(&self) -> Option<&FillFrame> {
         (self.value_fill)(self.env)
     }
     fn value_map<U>(
         &self,
-        f: impl FnOnce(&Value) -> Result<U, &'static str>,
+        f: impl Fn(&Value) -> Result<U, &'static str>,
     ) -> Result<FillValue<U>, &'static str> {
-        match self.value() {
-            Some(val) => val.try_map(f),
+        match self.frame() {
+            Some(frame) => {
+                let mut error = None;
+                for val in &frame.values {
+                    match f(val) {
+                        Ok(val) => return Ok(FillValue::new(val, frame.side)),
+                        Err(e) => {
+                            error.get_or_insert(e);
+                        }
+                    }
+                }
+                Err(error.unwrap_or_else(|| self.error(false)))
+            }
             None => Err(self.error(false)),
         }
     }
@@ -159,19 +208,15 @@ impl<'a> Fill<'a> {
             _ => Err(self.error(false)),
         })
     }
-    pub(crate) fn value_for(&self, val: &Value) -> Option<&FillValue> {
-        let fill = &self.value()?;
-        match (val, &fill.value) {
-            (Value::Num(_) | Value::Byte(_), Value::Num(_) | Value::Byte(_))
-            | (Value::Char(_), Value::Char(_))
-            | (Value::Complex(_), Value::Complex(_))
-            | (Value::Box(_), Value::Box(_)) => Some(fill),
-            _ => None,
-        }
+    pub(crate) fn value_for(&self, val: &Value) -> Option<FillValue<&Value>> {
+        let frame = self.frame()?;
+        (frame.values.iter())
+            .find(|v| val.type_id() == v.type_id())
+            .map(|value| FillValue::new(value, frame.side))
     }
     fn error(&self, scalar: bool) -> &'static str {
         if scalar {
-            match self.value().map(|fv| &fv.value) {
+            match self.frame().and_then(|frame| frame.values.first()) {
                 Some(Value::Num(_)) => ". A number fill is set, but it is not a scalar.",
                 Some(Value::Byte(_)) => ". A number fill is set, but it is not a scalar.",
                 Some(Value::Char(_)) => ". A character fill is set, but it is not a scalar.",
@@ -186,7 +231,7 @@ impl<'a> Fill<'a> {
                 }
             }
         } else {
-            match self.value().map(|fv| &fv.value) {
+            match self.frame().and_then(|frame| frame.values.first()) {
                 Some(Value::Num(_)) => ". A number fill is set, but the array is not numbers.",
                 Some(Value::Byte(_)) => ". A number fill is set, but the array is not numbers.",
                 Some(Value::Char(_)) => {

@@ -262,9 +262,9 @@ impl Value {
 
             let fill = env
                 .value_fill()
-                .cloned()
+                .map(FillValue::cloned)
                 .unwrap_or_else(|| FillValue::new("", None));
-            env.with_fill(fill.value, fill.side, |env| {
+            env.with_fill(fill, |env| {
                 let mut rows = Vec::new();
                 for result in reader.records() {
                     let record = result.map_err(|e| env.error(e))?;
@@ -290,10 +290,10 @@ impl Value {
             let sheet_names = workbook.sheet_names();
             let fill = env
                 .value_fill()
-                .cloned()
+                .map(FillValue::cloned)
                 .unwrap_or_else(|| FillValue::new("", None));
             let mut sheet_values = EcoVec::new();
-            env.with_fill(fill.value, fill.side, |env| {
+            env.with_fill(fill, |env| {
                 for sheet_name in &sheet_names {
                     let sheet = workbook
                         .worksheet_range(sheet_name)

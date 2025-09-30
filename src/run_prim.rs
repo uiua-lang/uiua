@@ -26,6 +26,7 @@ use crate::{
     algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
+    fill::FillFrame,
     grid_fmt::GridFmt,
     media, run_sys_op, run_sys_op_mod,
     value::*,
@@ -55,19 +56,17 @@ macro_rules! fill {
         let env = $env;
         let [fill, f] = get_ops($ops, env)?;
         let outputs = fill.sig.outputs();
-        if outputs > 1 {
-            return Err(env.error(format!(
-                "{} function can have at most 1 output, but its signature is {}",
-                Primitive::Fill.format(),
-                fill.sig
-            )));
-        }
         if outputs == 0 {
             return env.$without_but(fill.sig.args(), |env| env.exec(fill), |env| env.exec(f));
         }
         env.exec(fill)?;
         let fill_value = env.pop("fill value")?;
-        env.$with(fill_value, $side.into(), |env| env.exec(f))?;
+        let mut frame: FillFrame = fill_value.into();
+        frame.side = $side.into();
+        for _ in 0..outputs - 1 {
+            frame.values.push(env.pop("fill value")?);
+        }
+        env.$with(frame, |env| env.exec(f))?;
     }};
 }
 
@@ -581,8 +580,8 @@ impl ImplPrimitive {
             ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
             ImplPrimitive::Ln => env.monadic_env(Value::ln)?,
             ImplPrimitive::UnPop => {
-                let fv = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
-                env.push(fv.value.clone());
+                let frame = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
+                env.push(frame.values.first().cloned().unwrap_or_default());
             }
             ImplPrimitive::UnCouple => {
                 let coupled = env.pop(1)?;

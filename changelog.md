@@ -8,6 +8,7 @@ Uiua is not yet stable.
 ### Interpreter
 - Fix a bug in `/F⊞G`
 - Fix a bug in function callability checking
+- Fix a bug in filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
 
 ## 0.17.1 - 2025-09-27
 ### Interpreter

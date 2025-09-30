@@ -692,7 +692,27 @@ impl Compiler {
         let root_len_before = self.asm.root.len();
         let error_count_before = self.errors.len();
 
-        let mut line_node = self.line(line, true)?;
+        let mut line_node = self.line(line)?;
+
+        // Validate callability
+        if matches!(self.scope.kind, ScopeKind::File(_)) {
+            if let Err((e, f, mut spans)) = line_node.check_callability(&self.asm) {
+                let e = e.clone();
+                if let Some(f_id) = f.map(|f| f.id.clone()) {
+                    let src_span = self.get_span(spans.remove(0));
+                    let call_span = self.get_span(spans.pop().unwrap());
+                    let error = self.error_with_info(
+                        call_span,
+                        format!("Cannot call {f_id} because of an inversion error"),
+                        [(src_span, e)],
+                    );
+                    self.errors.push(error);
+                } else {
+                    let span = self.get_span(spans.pop().unwrap());
+                    self.add_error(span, e);
+                }
+            }
+        }
 
         let binding_count_after = self.asm.bindings.len();
         let error_count_after = self.errors.len();
@@ -924,7 +944,7 @@ impl Compiler {
         }
     }
     // Compile a line, checking an end-of-line signature comment
-    fn line(&mut self, mut line: Vec<Sp<Word>>, must_be_callable: bool) -> UiuaResult<Node> {
+    fn line(&mut self, mut line: Vec<Sp<Word>>) -> UiuaResult<Node> {
         let comment_sig = line_sig(&line);
         let output_comment = if line
             .last()
@@ -941,25 +961,6 @@ impl Compiler {
         // Validate line signature
         if let Some(comment_sig) = comment_sig {
             self.apply_node_comment(&mut node, &comment_sig.value, "Line", &comment_sig.span);
-        }
-        // Validate callability
-        if must_be_callable {
-            if let Err((e, f, mut spans)) = node.check_callability(&self.asm) {
-                let e = e.clone();
-                if let Some(f_id) = f.map(|f| f.id.clone()) {
-                    let src_span = self.get_span(spans.remove(0));
-                    let call_span = self.get_span(spans.pop().unwrap());
-                    let error = self.error_with_info(
-                        call_span,
-                        format!("Cannot call {f_id} because of an inversion error"),
-                        [(src_span, e)],
-                    );
-                    self.errors.push(error);
-                } else {
-                    let span = self.get_span(spans.pop().unwrap());
-                    self.add_error(span, e);
-                }
-            }
         }
         Ok(node)
     }

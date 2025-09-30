@@ -326,7 +326,7 @@ impl Compiler {
 
         // Compile the words
         let (_, mut node) = self.in_scope(ScopeKind::Binding, |comp| {
-            comp.line(binding.words, false).inspect_err(|_| {
+            comp.line(binding.words).inspect_err(|_| {
                 comp.asm
                     .add_binding_at(local, BindingKind::Error, Some(span.clone()), meta.clone())
             })

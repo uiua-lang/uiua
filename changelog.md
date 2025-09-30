@@ -7,6 +7,7 @@ Uiua is not yet stable.
 ## 0.17.2 - 2025-??-??
 ### Interpreter
 - Fix a bug in `/F⊞G`
+- Fix a bug in function callability checking
 
 ## 0.17.1 - 2025-09-27
 ### Interpreter

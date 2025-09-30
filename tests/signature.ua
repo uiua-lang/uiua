@@ -62,3 +62,5 @@ F ← |1 ⊸()
 # Obverse
 F ← |1 ⌅+₁
 G ← |1 °F
+# Uncallable
+F ← |0 (°&p)

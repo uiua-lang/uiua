@@ -14,6 +14,8 @@ This version is not yet released. If you are reading this on the website, then t
 ## 0.17.2 - 2025-??-??
 ### Interpreter
 - Fix a bug in `/F⊞G`
+- Fix a bug in function callability checking
+- Fix a bug in filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
 
 ## 0.17.1 - 2025-09-27
 ### Interpreter

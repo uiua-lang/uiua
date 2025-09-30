@@ -31,6 +31,7 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
         xs.match_fill(env);
         let n = f.sig.args();
         return if xs.row_count() < n
+            && xs.fill(env).is_err()
             && push_empty_rows_value(&f, [&xs, &xs], false, &mut Default::default(), env)
         {
             Ok(())

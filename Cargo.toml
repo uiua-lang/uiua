@@ -28,7 +28,7 @@ bytemuck = "1.17"
 colored = "2"
 dashmap = {version = "6", features = ["serde"]}
 ecow = {version = "0.2.3", features = ["serde"]}
-enum-iterator = "2.1.0"
+enum-iterator = "2.3.0"
 flate2 = "1"
 hound = "3.5.1"
 js-sys = "0.3.69"

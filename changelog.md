@@ -7,6 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
 ### Interpreter
+- Add option to provide folder as test cases destination
 - Add an `Amen` audio constant
 ### Website
 - Pad links will automatically be compressed if it would be shorter

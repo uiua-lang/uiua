@@ -877,11 +877,7 @@ fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
         ))),
         2 => {
             if xs.row_count() == 0 {
-                env.push(
-                    env.value_fill()
-                        .map(|fv| fv.value.clone())
-                        .unwrap_or_else(|| (xs.first_dim_zero())),
-                );
+                env.push(xs.first_dim_zero());
                 return Ok(());
             }
             let row_count = xs.row_count();

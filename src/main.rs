@@ -292,35 +292,51 @@ fn main() {
             formatter_options,
             args,
         }) => {
-            let path = if let Some(path) = path {
-                path
+            let paths = if let Some(path) = path {
+                if path.is_file() {
+                    vec![path]
+                } else {
+                    match uiua_files_in(&path, None) {
+                        Ok(paths) => paths,
+                        Err(e) => {
+                            eprintln!("{e}");
+                            return;
+                        }
+                    }
+                }
             } else {
                 match working_file_path() {
-                    Ok(path) => path,
+                    Ok(path) => vec![path],
+                    Err(NoWorkingFile::MultipleFiles(paths)) => paths,
                     Err(e) => {
                         eprintln!("{e}");
                         return;
                     }
                 }
             };
-            let config =
-                FormatConfig::from_source(formatter_options.format_config_source, Some(&path))
-                    .unwrap_or_else(fail);
-            format_file(&path, &config).unwrap_or_else(fail);
-            let mut rt = Uiua::with_native_sys()
-                .with_file_path(&path)
-                .with_args(args);
-            let res = rt.compile_run(|comp| {
-                comp.mode(RunMode::Test)
-                    .print_diagnostics(true)
-                    .load_file(path)
-            });
-            if let Err(e) = &res {
-                eprintln!("{}", e.report());
-            }
-            rt.print_reports();
-            if res.is_err() {
-                exit(1);
+            for path in paths {
+                let config = FormatConfig::from_source(
+                    formatter_options.format_config_source.clone(),
+                    Some(&path),
+                )
+                .unwrap_or_else(fail);
+                format_file(&path, &config).unwrap_or_else(fail);
+                let mut rt = Uiua::with_native_sys()
+                    .with_file_path(&path)
+                    .with_args(args.clone());
+                eprintln!("Testing {}:", path.display());
+                let res = rt.compile_run(|comp| {
+                    comp.mode(RunMode::Test)
+                        .print_diagnostics(true)
+                        .load_file(path)
+                });
+                if let Err(e) = &res {
+                    eprintln!("{}", e.report());
+                }
+                rt.print_reports();
+                if res.is_err() {
+                    exit(1);
+                }
             }
         }
         Some(Comm::Watch {
@@ -466,7 +482,7 @@ fn main() {
                     ..Default::default()
                 }
                 .watch(),
-                Err(NoWorkingFile::MultipleFiles) => WatchArgs::default().watch(),
+                Err(NoWorkingFile::MultipleFiles(_)) => WatchArgs::default().watch(),
                 Err(_)
                     if app.window
                         || uiua_files(None, Some(2)).is_ok_and(|files| !files.is_empty()) =>
@@ -545,7 +561,7 @@ fn run(
 #[derive(Debug)]
 enum NoWorkingFile {
     NoFile,
-    MultipleFiles,
+    MultipleFiles(Vec<PathBuf>),
 }
 
 impl fmt::Display for NoWorkingFile {
@@ -555,7 +571,7 @@ impl fmt::Display for NoWorkingFile {
                 "No .ua file found nearby. Initialize one in the \
                 current directory with `uiua init`"
             }
-            NoWorkingFile::MultipleFiles => {
+            NoWorkingFile::MultipleFiles(_) => {
                 "No main.ua file found nearby, and multiple other \
                 .ua files found. Please specify which file to run \
                 with `uiua run <PATH>`"
@@ -586,7 +602,7 @@ fn working_file_path() -> Result<PathBuf, NoWorkingFile> {
         match paths.len() {
             0 => Err(NoWorkingFile::NoFile),
             1 => Ok(paths.into_iter().next().unwrap()),
-            _ => Err(NoWorkingFile::MultipleFiles),
+            _ => Err(NoWorkingFile::MultipleFiles(paths)),
         }
     }
 }

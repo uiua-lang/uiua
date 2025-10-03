@@ -612,7 +612,11 @@ impl<T: ArrayValue> Array<T> {
         Self::new(&self.shape[depth + 1..], self.data.slice(start..end))
     }
     #[track_caller]
-    pub(crate) fn depth_rows(&self, depth: usize) -> impl ExactDoubleIterator<Item = Self> + '_ {
+    pub(crate) fn depth_rows(
+        &self,
+        mut depth: usize,
+    ) -> impl ExactDoubleIterator<Item = Self> + '_ {
+        depth = depth.min(self.rank());
         let row_count: usize = self.shape[..depth].iter().product();
         let row_len: usize = self.shape[depth..].iter().product();
         (0..row_count).map(move |row| {

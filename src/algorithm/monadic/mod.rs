@@ -1105,9 +1105,15 @@ impl<T: ArrayValue> Array<T> {
         }
     }
     pub(crate) fn undo_first(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if into.rank() == 0 && self.rank() == 0 {
+            return Ok(self);
+        }
         self.join(into.drop(&[Ok(1)], env)?, true, env)
     }
     pub(crate) fn undo_last(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if into.rank() == 0 && self.rank() == 0 {
+            return Ok(self);
+        }
         into.drop(&[Ok(-1)], env)?.join(self, true, env)
     }
 }

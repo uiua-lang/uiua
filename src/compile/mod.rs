@@ -886,6 +886,7 @@ impl Compiler {
                 self.asm.inputs.strings = comp.asm.inputs.strings;
                 self.asm.inputs.files.extend(comp.asm.inputs.files);
                 self.scope.experimental = comp.scope.experimental;
+                self.higher_scopes = comp.higher_scopes;
                 self.diagnostics.extend(comp.diagnostics);
             } else {
                 let input: EcoString = String::from_utf8(bytes)

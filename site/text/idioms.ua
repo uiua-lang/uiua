@@ -31,4 +31,4 @@
 # Scale an array along the first two axes
 # Useful for scaling images
 # Can scale both up and down
-▽⟜≡▽ 2 [1_2 3_4]
+▽₂ 2 [1_2 3_4]

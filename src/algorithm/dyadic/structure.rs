@@ -717,6 +717,24 @@ impl<T: ArrayValue> Array<T> {
     }
     /// `drop` from this array
     pub fn drop(mut self, index: &[Result<isize, bool>], env: &Uiua) -> UiuaResult<Self> {
+        if self.shape.iter().zip(index).any(|(d, i)| match i {
+            Ok(i) => *d <= i.unsigned_abs(),
+            Err(_) => true,
+        }) {
+            // Handle drops that leave the array with no elements
+            self.data = CowSlice::new();
+            for (d, i) in self.shape.iter_mut().zip(index) {
+                *d = match i {
+                    Ok(i) => d.saturating_sub(i.unsigned_abs()),
+                    Err(_) => 0,
+                }
+            }
+            return Ok(self);
+        }
+
+        self.drop_impl(index, env)
+    }
+    fn drop_impl(mut self, index: &[Result<isize, bool>], env: &Uiua) -> UiuaResult<Self> {
         let map_keys = self.meta.take_map_keys();
         if self.rank() == 0 {
             self.shape.push(1);
@@ -755,12 +773,12 @@ impl<T: ArrayValue> Array<T> {
                 let row_count = self.row_count();
                 if dropping >= 0 {
                     for row in self.rows().skip(abs_dropping) {
-                        new_rows.push(row.drop(sub_index, env)?);
+                        new_rows.push(row.drop_impl(sub_index, env)?);
                     }
                 } else {
                     let end = row_count.saturating_sub(abs_dropping);
                     for row in self.rows().take(end) {
-                        new_rows.push(row.drop(sub_index, env)?);
+                        new_rows.push(row.drop_impl(sub_index, env)?);
                     }
                 };
                 if row_count == abs_dropping {

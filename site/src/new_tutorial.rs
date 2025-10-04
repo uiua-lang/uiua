@@ -18,6 +18,8 @@ const TUTORIAL_NAMES: &[&str] = &[
     "Pattern Matching",
     "More Array Manipulation",
     "Thinking With Arrays",
+    "Macros",
+    "Modules",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Params)]

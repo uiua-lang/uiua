@@ -5,7 +5,8 @@ use comrak::{
     *,
 };
 use leptos::*;
-use uiua::{Inputs, Primitive, Token};
+use leptos_router::*;
+use uiua::{Inputs, Primitive, Token, EXAMPLE_UA};
 use uiua_editor::{backend::fetch, lang, replace_lang_name, utils::ChallengeDef, Editor};
 
 use crate::{examples::LOGO, Hd, Hd3, NotFound, Prim, ScrollToHash};
@@ -160,6 +161,15 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
         NodeValue::Code(code) => {
             // Special cases
             match code.literal.as_str() {
+                "EXAMPLE.UA" => return view!(<Editor example=EXAMPLE_UA/>).into_view(),
+                "END OF TUTORIAL LIST" => return view! {
+                    <ul>
+                        <li><A href="/docs#functions">"The list of all functions"</A></li>
+                        <li><A href="/docs#other-tutorials">"Other tutorials about more specific topics"</A></li>
+                        <li><A href="/docs#other-docs">"Other language topics"</A></li>
+                        <li>"The online "<A href="/pad">"pad"</A>" for writing longer code"</li>
+                    </ul>
+                }.into_view(),
                 "MATH TABLES" => {
                     use Primitive::*;
                     fn primitive_rows(
@@ -314,6 +324,11 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 let example = lines.next().unwrap_or_default();
                 let tests: Vec<_> = lines.collect();
                 let flip = block.info.contains("flip");
+                let default = if let Some(i) = block.info.rfind("default:") {
+                    block.info[i + "default:".len()..].trim_start()
+                } else {
+                    ""
+                };
                 let number = state.next_chal_num;
                 state.next_chal_num += 1;
                 let def = ChallengeDef {
@@ -329,7 +344,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     <div class="challenge">
                         <h3>"Challenge "{number}</h3>
                         <p>"Write a program that "<strong>{prompt}</strong>"."</p>
-                        <Editor challenge=def example=""/>
+                        <Editor challenge=def example=default/>
                     </div>
                 }
                 .into_view()

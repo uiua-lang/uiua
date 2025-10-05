@@ -1126,10 +1126,8 @@ impl<T: ArrayValue> Array<T> {
         }
 
         // Expand the array if doing multiple rotations
-        if self.rank() > by.rank() && self.shape.contains(&1) {
-            let fixed_dims = self
-                .shape
-                .iter()
+        if self.rank() > by.rank() && (by.rank() > 1 || depth > 0) && self.shape.contains(&1) {
+            let fixed_dims = (self.shape.iter())
                 .take(by.rank())
                 .take_while(|&&d| d == 1)
                 .count();

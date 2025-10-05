@@ -385,7 +385,11 @@ under!(DipPat, input, g_sig, inverse, asm, {
     // F inverse
     let inner_g_sig = Signature::new(
         g_sig.args().saturating_sub(n),
-        g_sig.outputs().saturating_sub(n),
+        if g_sig.args() > g_sig.outputs() {
+            g_sig.outputs()
+        } else {
+            g_sig.outputs().saturating_sub(n)
+        },
     );
     let (f_before, f_after) = f.under_inverse(inner_g_sig, inverse, asm)?;
     // Rest inverse
@@ -440,20 +444,19 @@ under!(BothPat, input, g_sig, inverse, asm, {
     let rest_before_sig = rest_before.sig()?;
     let rest_after_sig = rest_after.sig()?;
     let other_sig = rest_after_sig.compose(g_sig.compose(rest_before_sig));
-    let balanced = other_sig.args()
-        <= other_sig.outputs() + sub.side.as_ref().map_or(0, |sided| sided.n.unwrap_or(1));
+    let n_reduction = other_sig.args().saturating_sub(other_sig.outputs());
     // Make before
     let mut before = val.unwrap_or_default();
-    before.push(if !inverse || balanced {
+    before.push(if !inverse || n_reduction == 0 {
         ImplMod(BothImpl(sub), eco_vec![f_before], span)
     } else {
-        let node = f_before.node;
-        let (mut node, val) = if let Ok((nodes, val)) = Val.invert_extract(&node, asm) {
+        let bef_node = f_before.node;
+        let (mut node, val) = if let Ok((nodes, val)) = Val.invert_extract(&bef_node, asm) {
             (nodes.into(), Some(val))
         } else {
-            (node, None)
+            (bef_node, None)
         };
-        let to_copy = f_after.sig.under_args();
+        let to_copy = f_after.sig.under_args() * n_reduction;
         if to_copy > 0 {
             node.prepend(CopyToUnder(to_copy, span));
         }
@@ -463,11 +466,19 @@ under!(BothPat, input, g_sig, inverse, asm, {
         node
     });
     // Make after
-    let mut after = if inverse || balanced {
+    let mut after = if inverse || n_reduction == 0 {
         let sub = Subscript { side: None, ..sub };
         ImplMod(UnBothImpl(sub), eco_vec![f_after], span)
     } else {
-        let to_discard = f_after.sig.under_args();
+        let undo_n = (sub.num.unwrap_or(2) as usize)
+            .saturating_sub(n_reduction)
+            .max(1);
+        let to_discard = f_after.sig.under_args() * n_reduction;
+        if undo_n > 1 {
+            let num = Some(undo_n as u32);
+            let sub = Subscript { num, side: None };
+            f_after = ImplMod(UnBothImpl(sub), eco_vec![f_after], span).sig_node()?;
+        }
         if to_discard > 0 {
             f_after.node.push(PopUnder(to_discard, span));
             (0..to_discard).for_each(|_| f_after.node.push(Prim(Pop, span)));

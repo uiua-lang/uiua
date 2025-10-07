@@ -4,12 +4,19 @@ Uiua is not yet stable.
 
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.17.3 - 2025-10-07
+### Interpreter
+- Fix a bug in [`fill ⬚`](https://uiua.org/docs/fill)ed multidimensional [`rotate ↻`](https://uiua.org/docs/rotate)
+- Fix a bug in [`under ⍜`](https://uiua.org/docs/under) subscripted [`both ∩`](https://uiua.org/docs/both)
+- Fix a bug in multidimensional [`drop ↘`](https://uiua.org/docs/drop)
+- Fix a bug in [`under ⍜`](https://uiua.org/docs/under) [`first ⊢`](https://uiua.org/docs/first)/[`last ⊣`](https://uiua.org/docs/last)
+
 ## 0.17.2 - 2025-10-02
 ### Interpreter
-- Fix a bug in `/F⊞G`
+- Fix a bug in `/``F``⊞``G`
 - Fix a bug in function callability checking
-- Fix a bug in filled adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
-- Fix a bug in filled [`scan \\`](https://uiua.org/docs/scan)
+- Fix a bug in [`fill ⬚`](https://uiua.org/docs/fill)ed adjacent [`stencil ⧈`](https://uiua.org/docs/stencil)
+- Fix a bug in [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \`](https://uiua.org/docs/scan)
 
 ## 0.17.1 - 2025-09-27
 ### Interpreter
@@ -121,7 +128,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.16.0).
   - This makes a lot of accumulation patterns much shorter and simpler
   - These loops now always have well-defined signatures
   - This breaks the common pattern of wrapping these loops in `[]`s, which is now unnecessary and will need to be changed in your code
-- **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) no longer uses the fill value as the first row
+- **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \`](https://uiua.org/docs/scan) no longer uses the fill value as the first row
 - **Breaking Change** - [`fft`](https://uiua.org/docs/fft) now works along every axis of an array rather than only its last
   - This is more consistent with other functions
 - **Breaking Change** - Overhaul number literals
@@ -265,7 +272,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.14.0).
   - This new behavior is more useful
 - **Breaking Change**: [`un °`](https://uiua.org/docs/un) [`json`](https://uiua.org/docs/json) no longer attempts to form multidimensional arrays
   - This makes deserializing JSON more consistent
-- **Breaking Change**: [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \\`](https://uiua.org/docs/scan) now sets the initial value as well as filling row shapes
+- **Breaking Change**: [`fill ⬚`](https://uiua.org/docs/fill)ed [`scan \`](https://uiua.org/docs/scan) now sets the initial value as well as filling row shapes
   - This behavior is hard to get otherwise
   - Fixes to existing code should be simple
 - **Breaking Change**: [`obverse ⌅`](https://uiua.org/docs/obverse) with a single function now just nullifies the inverse
@@ -397,7 +404,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
   - For example `⍜⇌°⊂` behaves in a more useful way
 - [`under ⍜`](https://uiua.org/docs/under) [`length ⧻`](https://uiua.org/docs/len) now reshapes an array to have the transformed length
 - `NaN` and `∞` indices for [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now get the [`fill ⬚`](https://uiua.org/docs/fill) value
-- [`scan \\`](https://uiua.org/docs/scan) now accepts functions that take more than 2 arguments
+- [`scan \`](https://uiua.org/docs/scan) now accepts functions that take more than 2 arguments
   - The behavior is similar to the analogous behavior for [`reduce /`](https://uiua.org/docs/reduce)
 - Allow [`on ⟜`](https://uiua.org/docs/on) to use function packs
 - Allow [`under ⍜`](https://uiua.org/docs/under) of scalar [`keep ▽`](https://uiua.org/docs/keep)
@@ -705,7 +712,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.11.0).
 ## 0.10.1 - 2024-04-07
 ### Interpreter
 - [`under ⍜`](https://uiua.org/docs/under) of pattern matching now works correctly
-- [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`scan \\`](https://uiua.org/docs/scan) now works correctly
+- [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`scan \`](https://uiua.org/docs/scan) now works correctly
 - Style and advice diagnostics are no longer emitted from macros
 
 ## 0.10.0 - 2024-04-04
@@ -736,7 +743,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - Most circle glyphs like `○` are used for array functions or stack manipulation
   - `○` will continue to work and will be formatted as `∿`
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
-- [`un °`](https://uiua.org/docs/un) [`scan \\`](https://uiua.org/docs/scan) now works with [`equals =`](https://uiua.org/docs/equals) and [`not equals ≠`](https://www.uiua.org/docs/not%20equals)
+- [`un °`](https://uiua.org/docs/un) [`scan \`](https://uiua.org/docs/scan) now works with [`equals =`](https://uiua.org/docs/equals) and [`not equals ≠`](https://www.uiua.org/docs/not%20equals)
 - [`group ⊕`](https://uiua.org/docs/group) can now take multidimensional index arrays
 - [`partition ⊜`](https://uiua.org/docs/partition) can now take multidimensional marker arrays
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`pick ⊡`](https://uiua.org/docs/pick) now work with duplicate indices if the values at those indices are the same

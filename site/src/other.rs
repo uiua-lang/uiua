@@ -377,8 +377,8 @@ pub fn Combinators() -> impl IntoView {
             ("◌\n⋅∘", 2, "KI", "Kite"),
         ),
         (
-            view!(<Prim prim=Dup/>).into_view(),
-            ("⊂.", 1, "W", "Warbler"),
+            view!(<Prim prim=Slf/>).into_view(),
+            ("˙⊂", 1, "W", "Warbler"),
         ),
         (
             view!(<Prim prim=Backward/>).into_view(),

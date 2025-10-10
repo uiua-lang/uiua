@@ -70,7 +70,7 @@ const LIFE: &str = "\
 Life ← ↥∩=₃⟜+⊸(/+↻⊂A₂C₂)
 ⁅×0.6 gen⊙⚂ ˙⊟30 # Init
 ⍥⊸Life100        # Run
-≡(▽⟜≡▽) 4        # Upscale";
+≡▽₂ 4            # Upscale";
 
 pub const EXAMPLES: &[&str] = &[
     AVG, X_MATRIX, UIUA, PRIMES, LOGO, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA,

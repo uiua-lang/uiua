@@ -786,6 +786,9 @@ fn product_impl_transposed(
 
     let mul = InfalliblePervasiveFn::new(pervade::mul::num_num);
     for i in 0..1usize << dims {
+        if dims > 5 {
+            env.respect_execution_limit()?;
+        }
         let i_mask = mask_table[i];
         for j in 0..1usize << dims {
             let j_mask = mask_table[j];

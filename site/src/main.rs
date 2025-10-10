@@ -315,7 +315,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <Hd id="saying less">"Saying Less"</Hd>
                     <p>{lang}" combines the array-oriented programming paradigm with a stack-based execution model. Combining these already terse systems results in code with a very high information density and little syntactic noise."</p>
-                    <Editor example="⍥◡+9 .1"/>
+                    <Editor example="⍥◡+9∩1"/>
                     <p>"If this code seems weird and unreadable, that's okay! It's important to remember that "<a href="https://vector-of-bool.github.io/2018/10/31/become-perl.html">"foreign ≠ confusing"</a>"."</p>
                 </div>
                 <div>
@@ -370,8 +370,8 @@ pub fn MainPage() -> impl IntoView {
                         } else {
                             Some(view!{
                                 <Editor example="⍉⊞<⊞+⇡3∿∩(÷25)⇡240⇡80"/>
-                                <Editor example="÷3/+∿⊞×⊟×1.5.220×τ÷⟜⇡&asr"/>
-                                <Editor example="Xy ← ⍉⍉⊞⊟.÷⟜⇡\nF  ← ⍉◿1⊂⊃(+/÷|÷3+1∿×τ+)Xy\n≡F100 ÷⟜⇡10"/>
+                                <Editor example="÷3/+∿⊞×⊟⊸×1.5 220×τ÷⟜⇡&asr"/>
+                                <Editor example="Xy ← °⍉˙⊞⊟÷⟜⇡\nF  ← ⍉◿1⊂⊃(+/÷|÷3+1∿×τ+)Xy\n≡F100 ÷⟜⇡10"/>
                             })
                         }
                     }

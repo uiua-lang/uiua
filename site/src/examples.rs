@@ -18,9 +18,9 @@ pub const WEEWUH: &str = "\
 ⊜⊢   # All first letters";
 const PRIMES: &str = "\
 # Click Run to format!
-+1drop1range40   # Range 2 to 40
-deshapebytable*. # List of products
-keepnotbymember  # Keep not in list";
++1drop1range40      # Range 2 to 40
+deshapebyselftable* # List of products
+keepnotbymember     # Keep not in list";
 pub const LOGO: &str = "\
 U ← =∩⌟<0.2 0.7 /+×⟜ⁿ1_2
 I ← <⊙(⌵/ℂ) # Circle
@@ -64,7 +64,7 @@ F "LVII"
 F "MCMXCIV""#;
 const MANDELBROT: &str = "\
 ×2 ⊞ℂ⤙-1/4 -1/2÷⟜⇡300 # Init
->2⌵ ⍥⟜⊸(+⊙°√) 50 .    # Run
+>2⌵ ⍥⟜⊸(+⊙°√) 50 ⟜∘   # Run
 ÷⧻⟜/+                 # Normalize";
 const LIFE: &str = "\
 Life ← ↥∩=₃⟜+⊸(/+↻⊂A₂C₂)

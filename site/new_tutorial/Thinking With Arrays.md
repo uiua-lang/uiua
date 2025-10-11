@@ -143,11 +143,62 @@ A hint for one of the challenges below: [partition]() works with [under]()!
 
 ## [group]()
 
-TODO
+[group]() is similar to [partition](), except that instead of grouping things based on sequential keys, it groups them into buckets by index.
+
+```uiua
+[1 2 3 4 5 6 7 8]
+[3 0 1 1 3 1 2 0]
+⊕□
+```
+
+This is useful to group items by some key. For example, if we wanted to count the number of occurences of each character in a string, we could [group]() with the [classify]() of the string. [classify]() maps each character to a unique index.
+
+```uiua
+⊸⊛ "lego helmet motel"
+```
+
+Here, [group]()'s function produces both the character of each group and the group's [length](). We then use a format string to nicely display the results.
+
+```uiua
+"lego helmet motel"
+⊕⊃⊢⧻ ⊸⊛
+≡$"_: _"
+```
 
 ## [inventory]() and [content]()
 
-TODO
+Often, we want to work on the contents of a [box](), rather than the box itself. One way to do this is with [under]()[un]()[box]().
+
+```uiua
+⍜°□⇌ □[1 2 3]
+≡⍜°□\+ {1_2_3 4_5_6}
+```
+
+These patterns are so common that there is a dedicated modifier called [inventory]() for it. [inventory]() is similar to [rows](), except it unboxes each row and reboxes the result.
+
+```uiua
+⍚⇌ □[1 2 3]
+⍚\+ {1_2_3 4_5_6}
+```
+
+Note that [inventory]() works on non-box arrays as well, and it will still box the results.
+
+```uiua
+⍚◴ [2_1_1 3_4_0 2_2_2]
+```
+
+Sometimes we *don't* want to rebox the results. The [content]() modifier [un]()[box]()es all arguments before calling its function.
+
+```uiua
+◇⊂ □[1 2] □[3 4 5]
+≡◇/+ {1_2 3_4_5}
+```
+
+This is often necessary when [reduce]()ing a list of boxes.
+
+```uiua
+/◇⊂ {1_2 3_4_5 6}
+```
 
 ## Challenges
 

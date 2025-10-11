@@ -295,7 +295,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             vals.map(keys, env)?;
             env.push(vals);
         }
-        Primitive::Stack => stack(env, false)?,
+        Primitive::Args => stack(env, false)?,
         Primitive::Regex => {
             regex(env)?;
             // NOTE: if you want to expose the match locations, n.t. they are given in bytes rather than codepoints
@@ -705,8 +705,8 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
-            ImplPrimitive::StackN { n, inverse } => stack_n(env, *n, *inverse)?,
-            ImplPrimitive::UnStack => stack(env, true)?,
+            ImplPrimitive::ArgsN { n, inverse } => stack_n(env, *n, *inverse)?,
+            ImplPrimitive::UnArgs => stack(env, true)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
@@ -1790,7 +1790,7 @@ pub fn seed_random(seed: u64) {
 fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
     env.require_height(n)?;
     let boundaries = stack_boundaries(env);
-    let span = format!("{} {}", ImplPrimitive::StackN { n, inverse }, env.span());
+    let span = format!("{} {}", ImplPrimitive::ArgsN { n, inverse }, env.span());
     let max_line_len = span.chars().count() + 2;
     let stack_height = env.stack_height() - n;
     let item_lines: Vec<Vec<String>> = env.stack()[stack_height..]
@@ -1825,9 +1825,9 @@ fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
 
 fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
     let span = if inverse {
-        format!("{}{} {}", Primitive::Un, Primitive::Stack, env.span())
+        format!("{}{} {}", Primitive::Un, Primitive::Args, env.span())
     } else {
-        format!("{} {}", Primitive::Stack, env.span())
+        format!("{} {}", Primitive::Args, env.span())
     };
     let items = env.stack();
     let max_line_len = span.chars().count() + 2;

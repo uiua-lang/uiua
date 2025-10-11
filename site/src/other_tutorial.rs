@@ -226,7 +226,7 @@ pub fn Documentation() -> impl IntoView {
         <Editor example="# Remove the first instance of one array from another\n# ? Needle Haystack\nRemFirst ← ⍜↻(↘1)⊸˜⨂"/>
         <p>"These names should follow the same conventions as binding names."</p>
         <Editor example="# Do the thing\n# ? x y\nFoo ← ≡↻⇡⧻⟜¤"/> // Should fail
-        <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Stack/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
+        <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Args/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
         <p>"If you also want to give names to a function's outputs, you can list them in front of the "<code>"?"</code>". This lets you read the comment signature right-to-left, the same way as normal "{lang}" code."</p>
         <Editor example="# Quotient Remainder ? Divisor Dividend\nDivRem ← ⌊⊃÷◿\nDivRem 3 7"/>
         <p>"These kinds of comments can also be put at the end of lines. The signature of the line will be checked against the signature specified in the comment."</p>

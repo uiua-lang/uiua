@@ -1282,7 +1282,7 @@ inverse!(PrimPat, input, _, Prim(prim, span), {
         Fix => ImplPrim(UnFix, span),
         Shape => ImplPrim(UnShape, span),
         Map => ImplPrim(UnMap, span),
-        Stack => ImplPrim(UnStack, span),
+        Args => ImplPrim(UnArgs, span),
         Keep => ImplPrim(UnKeep, span),
         Take => ImplPrim(UnTake, span),
         Sort => ImplPrim(UnSort, span),
@@ -1330,7 +1330,7 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnFix => Prim(Fix, span),
         UnShape => Prim(Shape, span),
         UnMap => Prim(Map, span),
-        UnStack => Prim(Stack, span),
+        UnArgs => Prim(Args, span),
         UnJoin => Prim(Join, span),
         UnKeep => Prim(Keep, span),
         UnBox => Prim(Box, span),
@@ -1346,8 +1346,8 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnDatetime => Prim(DateTime, span),
         UnRawMode => Prim(Sys(SysOp::RawMode), span),
         UnClip => Prim(Sys(SysOp::Clip), span),
-        StackN { n, inverse } => ImplPrim(
-            StackN {
+        ArgsN { n, inverse } => ImplPrim(
+            ArgsN {
                 n,
                 inverse: !inverse,
             },

@@ -2243,8 +2243,8 @@ impl Compiler {
                     spec.metrics = metrics;
                 }
             }
-            Prim(Identity | Dup | Flip | Pop | Stack | Sys(_), _) => {}
-            ImplPrim(Over | StackN { .. }, _) => {}
+            Prim(Identity | Dup | Flip | Pop | Args | Sys(_), _) => {}
+            ImplPrim(Over | ArgsN { .. }, _) => {}
             Push(_) | Array { .. } => {}
             Mod(
                 (Fork | Bracket | Both)

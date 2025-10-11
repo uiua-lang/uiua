@@ -34,7 +34,7 @@ macro_rules! impl_primitive {
             UndoReverse { n: usize, all: bool },
             UndoRotate(usize),
             ReduceDepth(usize),
-            StackN { n: usize, inverse: bool },
+            ArgsN { n: usize, inverse: bool },
             OnSub(usize),
             BySub(usize),
             WithSub(usize),
@@ -58,7 +58,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n + 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
-                    ImplPrimitive::StackN { n, .. } => *n,
+                    ImplPrimitive::ArgsN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
                     ImplPrimitive::Ga(op, _) => op.args(),
@@ -71,7 +71,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
                     ImplPrimitive::UndoReverse { n, .. } => *n,
                     ImplPrimitive::UndoRotate(n) => *n,
-                    ImplPrimitive::StackN { n, .. } => *n,
+                    ImplPrimitive::ArgsN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n + 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
                     ImplPrimitive::Ga(op, _) => op.outputs(),
@@ -98,7 +98,7 @@ macro_rules! impl_primitive {
             pub fn purity(&self) -> Purity {
                 match self {
                     $($(ImplPrimitive::$variant => {Purity::$purity},)*)*
-                    ImplPrimitive::StackN { .. } => Purity::Mutating,
+                    ImplPrimitive::ArgsN { .. } => Purity::Mutating,
                     _ => Purity::Pure
                 }
             }
@@ -131,7 +131,7 @@ impl_primitive!(
     (1, UnShape),
     (1[1], UnScan),
     (1(2), UnMap),
-    (0(0), UnStack, Impure),
+    (0(0), UnArgs, Impure),
     (0(0)[1], UnDump, Impure),
     (0[2], UnFill),
     (1, Primes),
@@ -347,7 +347,7 @@ impl fmt::Display for ImplPrimitive {
             UnScan => write!(f, "{Un}{Scan}"),
             UnGroup => write!(f, "{Un}{Group}"),
             UnPartition => write!(f, "{Un}{Partition}"),
-            UnStack => write!(f, "{Un}{Stack}"),
+            UnArgs => write!(f, "{Un}{Args}"),
             UnDump => write!(f, "{Un}{Dump}"),
             UnFill => write!(f, "{Un}{Fill}"),
             UnBox => write!(f, "{Un}{Box}"),
@@ -463,14 +463,14 @@ impl fmt::Display for ImplPrimitive {
                 }
                 Ok(())
             }
-            &StackN { n, inverse } => {
+            &ArgsN { n, inverse } => {
                 if inverse {
                     write!(f, "{Un}")?;
                 }
                 let n_str: String = (n.to_string().chars())
                     .map(|c| SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])
                     .collect();
-                write!(f, "{Stack}{n_str}")
+                write!(f, "{Args}{n_str}")
             }
             SidedFill(side) => write!(f, "{Fill}{side}"),
             RepeatWithInverse => write!(f, "{Repeat}"),

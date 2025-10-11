@@ -124,7 +124,12 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
             text.into_owned().into_view()
         }
         NodeValue::Heading(heading) => {
-            let id = all_text(node).to_lowercase().replace(' ', "-");
+            let id = all_text(node)
+                .chars()
+                .flat_map(|c| if c.is_ascii() { c } else { ' ' }.to_lowercase())
+                .collect::<String>()
+                .replace("  ", " ")
+                .replace(' ', "-");
             match heading.level {
                 0 | 1 => view!(<h1 id=id>{children}</h1>).into_view(),
                 2 => {

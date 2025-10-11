@@ -24,4 +24,50 @@ This is not to say that local bindings are not useful in other languages. There 
 
 But in the end, the primary motivation for forbidding local variables is that leads to code that is both beautiful and enjoyable to write. This is, of course, highly subjective, but if you've made it this far into the tutorial, then hopefully you've seen some of that beauty, felt some of that joy.
 
-TODO
+## A Motivating Example
+
+If an operation accesses arguments in a more complicated way, it may not be immediately obvious how to use the stack manipulation modifiers to implement it.
+
+As a motivating example, let's attempt to implement the quadratic formula. Given numbers `a`, `b`, and `c`, the roots of the function `ax² + bx + c` can be found via the expression `(-b ± √(b² - 4ac)) / 2a`.
+
+We'll start with a blank definition:
+
+```uiua
+Quad ←
+Quad 1 ¯3 2
+```
+
+The simplest way to approach a problem like this is to break it up into smaller pieces, then put those parts together with liberal use of [fork]().
+
+We'll start with the `4ac` term. This is implemented easily using [planet notation](</new-tutorial/More Argument Manipulation#planet-notation>).
+
+```uiua
+Quad ← ×4×⊙⋅∘
+Quad 1 ¯3 2
+```
+
+We can also calculate the `b²` part by wrapping both expressions in a [fork](). Note the use of [gap]() to skip `a` and square `b` instead.
+
+```uiua
+Quad ← ⊃(×4×⊙⋅∘)⋅˙×
+Quad 1 ¯3 2
+```
+
+Because we ordered the [fork]()'s functions in this way, the arguments to the `-` in `b² - 4ac` are already in the right order. Now we have the full discriminant.
+
+```uiua
+Quad ← -⊃(×4×⊙⋅∘)⋅˙×
+Quad 1 ¯3 2
+```
+
+Because the results of the quadratic formula can be complex numbers, we need to convert the discriminant to [complex]() before taking the [sqrt](). 
+
+Quad ← √ℂ0 -⊃(×4×⊙⋅∘|⋅˙×)
+Quad 1 ¯3 2
+
+The `±` in the formula comes from the fact that there are two valid square roots for any number. We can express this by [couple]()ing the square root with its [negate]()d version.
+
+```uiua
+Quad ← ⊟⟜¯ √ℂ0 -⊃(×4×⊙⋅∘|⋅˙×)
+Quad 1 ¯3 2
+```

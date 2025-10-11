@@ -2,6 +2,29 @@
 
 [self](), [backward](), [on](), [by](), and [dip](), which were introduced in the [first tutorial](</new-tutorial/Basic Data Manipulation#Manipulating-Data-with-Modifiers>), can get you pretty far writing tacit code. However, there are some argument access patterns that require much more powerful control over which arguments go where.
 
+## A Bunch of Arguments
+
+The state of a Uiua program can be thought of as a list of arguments. When you call a function, it uses arguments from the front of the list and replaces those arguments with its outputs.
+
+We can visualize this using array notation.
+
+```uiua
+[  1.21 5 4.8 2]
+[⁅ 1.21 5 4.8 2]
+```
+
+```uiua
+[  2 4 5 0 1]
+[+ 2 4 5 0 1]
+```
+
+```uiua
+{  2_3 0 5 1_2_3}  
+{↯ 2_3 0 5 1_2_3}
+```
+
+The previously introduced argument manipulation modifiers, as well as the ones that will be introduced below, all work by changing which arguments a function is called on and/or rearranging arguments before calling a function. This is the essence of tacit programming in Uiua.
+
 ## [fork]()
 
 [fork]() is a dyadic modifier that takes 2 functions and calls them both on the same set of arguments. The number of arguments used is the maximum of the two functions.
@@ -41,6 +64,10 @@ To round off the trio, we have [bracket](), a dyadic modifier that calls each of
 ## Function Packs
 
 All dyadic modifiers allow a special notation with a single set of `()`s with a `|` in the middle separating the functions. This is called a *function pack*.
+
+```uiua
+⊃(⊟¯|×) 2 5
+```
 
 ```uiua
 ⊓(+|×) 1 2 3 4

@@ -19,6 +19,7 @@ const TUTORIAL_NAMES: &[&str] = &[
     "More Array Manipulation",
     "Thinking With Arrays",
     "Macros",
+    "Tacit Code",
     "Modules",
 ];
 

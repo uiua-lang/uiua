@@ -8,7 +8,7 @@ In Uiua, all operations appear to the left of their arguments.
 + 2 3
 ```
 
-We often read Uiua code from right to left to understand the order of operations. In this example, we [add]() `3` to `5`, then [multiply]() by `2`
+We often read Uiua code from right to left to understand the order of operations. In this example, we [add]() `3` to `5`, then [multiply]() by `2`.
 
 ```uiua
 × 2 + 3 5
@@ -227,7 +227,7 @@ You'll most often see [on]() with another function immediately to its left, to u
 
 ### [dip]()
 
-[dip]() temporarily ignores the first argument and calls its function on lower arguments.
+[dip]() temporarily ignores the first argument and calls its function on later arguments.
 
 ```uiua
 ⊙¯ 3 5 # Ignore 3

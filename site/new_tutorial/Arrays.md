@@ -52,7 +52,7 @@ You can also use array notation to make multidimensional arrays.
 [⊸√ 4_9_49]
 ```
 
-Unlike strand notation, array notation may span multiple lines. The lines are still executed right-to-left, but they are exercuted bottom-to-top so that the arrays come out the same way they look in the code.
+Unlike strand notation, array notation may span multiple lines. The lines are still executed right-to-left, but they are executed bottom-to-top so that the arrays come out the same way they look in the code.
 
 ```uiua
 [1 2 3
@@ -67,7 +67,7 @@ Unlike strand notation, array notation may span multiple lines. The lines are st
 
 ## [shape]() and [length]()
 
-Other than their data, arrays also have a property called their **shape**. Shape is a list of non-negative integers that describes the array;s size along each of its axes.
+Other than their data, arrays also have a property called their **shape**. Shape is a list of non-negative integers that describes the array's size along each of its axes.
 
 We can get the array's shape with the [shape]() function. It's a triangle because a triangle is a shape.
 
@@ -267,7 +267,7 @@ For curious array aficionados, Uiua use an array model resembling [J's boxed arr
 
 All arrays are flat and homogenous. Arrays always have a rectangular shape, meaning that all rows along an axis always have the same length. Different types of data, like numbers and characters, cannot be mixed in the same array.
 
-However, there is an escape hatch for when you really want hegged, nested, or mixed-type arrays. In Uiua, an array of heterogeneous values can be simulated with an array of *boxes*.
+However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In Uiua, an array of heterogeneous values can be simulated with an array of *boxes*.
 
 The array below cannot be constructed normally because its rows have different [shape]()s.
 
@@ -389,8 +389,9 @@ creates a matrix of 0's with as many rows as the first argument and as many colu
 
 ```challenge
 adds a 1-row leading axis to an array
-↯⊂1⊸△ [1 2 3]
+↯⊂1⊸△
 ¤
+[1 2 3]
 1_3_1_5
 5
 ↯2_3⇡6

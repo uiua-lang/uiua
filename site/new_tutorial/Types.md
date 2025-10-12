@@ -126,7 +126,7 @@ Characters like newline or null need to be escaped with `\`, but spaces do not.
 @\0
 ```
 
-If you don't like the significant whitespace of `@ `, `@\s` is also sace.
+If you don't like the significant whitespace of `@ `, `@\s` is also space.
 
 s noted in the advice diagnostic above, string literals, delimited by `"`s, create rank-1 character arrays, which are generally just called strings.
 
@@ -204,7 +204,7 @@ You can [multiply]() or [divide]() a `character` by a `number` to possible toggl
 +@a @b
 ```
 
-[sign] gives the case of a character. It gives `1` for uppercase, `¯1` for lowercase, and `0` for caseless characters.
+[sign]() gives the case of a character. It gives `1` for uppercase, `¯1` for lowercase, and `0` for caseless characters.
 
 ```uiua
 ± "Hello, World!"

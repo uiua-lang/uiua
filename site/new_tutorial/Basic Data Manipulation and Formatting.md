@@ -21,7 +21,7 @@ Code is also executed from top to bottom. We could actually split the code above
 × 2
 ```
 
-If code generates multiple outputs, those outputs will be displayed on multiple lines
+If code generates multiple outputs, those outputs will be displayed on multiple lines.
 
 ```uiua
 7

@@ -160,7 +160,7 @@ If you want to do some pervasive operation on arrays whose shapes do not match, 
 ⬚10+ [1 2] [3 4 5 6 7]
 ```
 
-[fill]() can be used in a lot of other cases. See it's documentation for more.
+[fill]() can be used in a lot of other cases. See its documentation for more.
 
 Pervasive operations are optimized in the interpreter to be very fast. You should prefer to use them whenever possible.
 

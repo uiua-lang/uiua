@@ -974,14 +974,12 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
         env.push(Array::<Boxed>::default());
         return Ok(());
     } else if all_scalar {
-        env.push(
-            (rows.into_iter().next())
-                .map(|arg| match arg {
-                    Ok(_) => unreachable!(),
-                    Err(row) => row.unboxed(),
-                })
-                .unwrap_or_default(),
-        );
+        for rows in rows.into_iter().rev() {
+            env.push(match rows {
+                Ok(mut rows) => rows.next().unwrap_or_default(),
+                Err(row) => row.unboxed(),
+            });
+        }
         env.exec(f)?;
         let val = env.pop("accumulator")?;
         env.push(Boxed(val));

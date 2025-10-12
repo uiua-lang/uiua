@@ -128,7 +128,7 @@ Characters like newline or null need to be escaped with `\`, but spaces do not.
 
 If you don't like the significant whitespace of `@ `, `@\s` is also space.
 
-s noted in the advice diagnostic above, string literals, delimited by `"`s, create rank-1 character arrays, which are generally just called strings.
+As noted in the advice diagnostic above, string literals, delimited by `"`s, create rank-1 character arrays, which are generally just called strings.
 
 ```uiua
 ⊸△ "Hellow, World!"

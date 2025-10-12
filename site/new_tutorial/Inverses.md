@@ -178,8 +178,8 @@ It's not just [pick](/docs/pick)! Many functions work with [under](/docs/under)!
 ```
 
 ```uiua
-.↯3_4⇡12
-⍜♭⇌
+↯3_4⇡12
+⊸⍜♭⇌
 ```
 
 You can even use [under](/docs/under) on a function that has already been [un](/docs/un)ed. This is a nice way to work with [box](/docs/box)ed data.

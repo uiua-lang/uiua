@@ -43,7 +43,7 @@ We'll see just how important [fork]() is later in this section.
 
 ## [both]()
 
-[both]() is a monadic modifier and a sort of compliment to [fork](). While [fork]() calls multiple functions on the same set of arguments, [both]() calls a *single* function on [multiple]() sets of arguments.
+[both]() is a monadic modifier and a sort of compliment to [fork](). While [fork]() calls multiple functions on the same set of arguments, [both]() calls a *single* function on multiple sets of arguments.
 
 ```uiua
 ∩⇌ [1 2 3] [4 5 6]
@@ -127,7 +127,7 @@ The [gap]() modifier discards the first argument and calls its function.
 
 This is of limitied usefulness on its own.
 
-However, by combining [dip]()s and [gap]()s along with the [identity]() function inside a [fork](), we get a useful emergent notation. Chained [dip]()s and [gaps]() (with a terminating [identity]()) act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch.
+However, by combining [dip]()s and [gap]()s along with the [identity]() function inside a [fork](), we get a useful emergent notation. Chained [dip]()s and [gap]()s (with a terminating [identity]()) act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch.
 
 This is called *planet notation*, because it looks like the planets in a solar system chart.
 
@@ -203,7 +203,7 @@ Alternatively, you can use a function pack.
 
 And there you have it! A readable syntax juggling lots of values without any names!
 
-It's annoying to write long lists of names like `gapdipgapgapide`, so those three functions (plus [pop]()) have a special rule in the parser that allows you to write them with only 1 character as long as there are at least 2 characters in the sequence. Also, 'i' and 'p' for [identity]() and [pop]() only work if they are the last character.
+It's annoying to write long lists of names like `gapdipgapgapid`, so those three functions (plus [pop]()) have a special rule in the parser that allows you to write them with only 1 character as long as there are at least 2 characters in the sequence. Also, 'i' and 'p' for [identity]() and [pop]() only work if they are the last character.
 
 Try it out!
 

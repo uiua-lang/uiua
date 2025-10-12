@@ -157,7 +157,7 @@ Times₃ ← |1   ×3
 Times₃ 7
 ```
 ```uiua
-≡(|2.1 ⊟.×) 1_2_3 4_5_6
+≡(|2.1 ˙⊟×) 1_2_3 4_5_6
 ```
 
 Signatures are useful for documenting functions to make sure that they are used correctly.

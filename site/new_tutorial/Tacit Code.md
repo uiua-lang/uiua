@@ -26,7 +26,7 @@ But in the end, the primary motivation for forbidding local variables is that le
 
 ## A Motivating Example
 
-If an operation accesses arguments in a more complicated way, it may not be immediately obvious how to use the stack manipulation modifiers to implement it.
+If an operation accesses arguments in a more complicated way, it may not be immediately obvious how to use the argument manipulation modifiers to implement it.
 
 As a motivating example, let's attempt to implement the quadratic formula. Given numbers `a`, `b`, and `c`, the roots of the function `ax² + bx + c` can be found via the expression `(-b ± √(b² - 4ac)) / 2a`.
 
@@ -62,12 +62,54 @@ Quad 1 ¯3 2
 
 Because the results of the quadratic formula can be complex numbers, we need to convert the discriminant to [complex]() before taking the [sqrt](). 
 
-Quad ← √ℂ0 -⊃(×4×⊙⋅∘|⋅˙×)
+```uiua
+Quad ← √ℂ0 -⊃(×4×⊙⋅∘)⋅˙×
 Quad 1 ¯3 2
+```
 
 The `±` in the formula comes from the fact that there are two valid square roots for any number. We can express this by [couple]()ing the square root with its [negate]()d version.
 
 ```uiua
-Quad ← ⊟⟜¯ √ℂ0 -⊃(×4×⊙⋅∘|⋅˙×)
+Quad ← ⊟⟜¯ √ℂ0 -⊃(×4×⊙⋅∘)⋅˙×
 Quad 1 ¯3 2
 ```
+
+We can express `-b` easily enough with another [fork](). We use `⋅∘` to select out `b`.
+
+```uiua
+Quad ← -⊃⋅∘(⊟⟜¯ √ℂ0 -⊃(×4×⊙⋅∘)⋅˙×)
+Quad 1 ¯3 2
+```
+
+With one more [fork](), we can express `/ 2a`.
+
+```uiua
+Quad ← ÷⊃(×2|-⊃⋅∘(⊟⟜¯ √ℂ0 -⊃(×4×⊙⋅∘)⋅˙×))
+Quad 1 ¯3 2
+```
+
+And there we have it, the Quadratic Formula! One important quality this code has is that, for every operation, it is immediately apparent what the arguments are. We can easily see which arguments are passed to [divide]() and [subtract]() because there is a [fork]() immediately to their right. This is important for keeping the code clear and readable.
+
+If you like, you can pull out the discriminant into its own function to break the code up a little.
+
+```uiua
+Disc ↚ -⊃(×4×⊙⋅∘)⋅˙×
+Quad ← ÷⊃(×2|-⊃⋅∘(⊟⟜¯ √ℂ0 Disc))
+Quad 1 ¯3 2
+```
+
+## Reordering
+
+Sometimes, the argument order that is most convenient for calling a function is not the same as the argument order that is easiest to work with in the implementation. In these cases, it may be useful to do a one-time argument reordering at the beginning of the function. It is good to annotate this reordering with a [line signature comment](/tutorial/documentation).
+
+```uiua
+Quad ← (
+  ⊃⊙⋅∘⋅∘ # ? a c b
+  ÷⊃(×2|-⤙(⊟⟜¯ √ℂ0 -×4⊓×˙×))
+)
+Quad 1 ¯3 2
+```
+
+Notice that by reordering the arguments at the beginning, we require less argument manipulation later on. Whether refactoring this way is more readable is up to your discretion.
+
+Like all programming languages (though perhaps more than some), writing Uiua code is as much art as it is science. The deconstruction of a problem, the synthesis of a solution, the care for the reader; these are all things you get a feel for as you work more with the language.

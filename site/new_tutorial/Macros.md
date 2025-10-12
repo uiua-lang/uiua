@@ -216,11 +216,3 @@ F‼⇌(⊂10) [1 2 3]
 F‼⇌⍉ [1_2 3_4]
 F‼⊂⇌ 1_2 3_4 5_6
 ```
-
----
-
-Hooray! You've reached the end of the tutorial!
-
-To keep going with Uiua, you can check out:
-
-END OF TUTORIAL LIST

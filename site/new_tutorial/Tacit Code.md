@@ -113,3 +113,13 @@ Quad 1 ¯3 2
 Notice that by reordering the arguments at the beginning, we require less argument manipulation later on. Whether refactoring this way is more readable is up to your discretion.
 
 Like all programming languages (though perhaps more than some), writing Uiua code is as much art as it is science. The deconstruction of a problem, the synthesis of a solution, the care for the reader; these are all things you get a feel for as you work more with the language.
+
+---
+
+This is the end of the tutorial that pertains to writing *programs*.
+
+If you want to use Uiua to write *software*, then read on for the sections on modules and testing.
+
+If you don't care about that stuff and want to learn more about the language, you can check out:
+
+`END OF TUTORIAL LIST`

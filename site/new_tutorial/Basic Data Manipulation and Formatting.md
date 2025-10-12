@@ -247,7 +247,7 @@ You'll most often see [on]() with another function immediately to its left, to u
 
 At the end of most sections of this tutorial, there will be a few challenges to test your understanding.
 
-The code you write will be run multiple inputs and tested for correctness.
+The code you write will be run on multiple inputs and tested for correctness.
 
 Each challenge has an example input and output followed by some test cases.
 

@@ -230,7 +230,7 @@ Use [negate]() and [absolute value]() together to lowercase a character.
 
 ## Boxes
 
-Boxes are containers that can wrap an array of any type or shape. Multiple boxes can be put in the sam earray, no matter their contents.
+Boxes are containers that can wrap an array of any type or shape. Multiple boxes can be put in the same array, no matter their contents.
 
 Boxes can be created either by using the [box]() function or with boxing array notations between `{}`s.
 

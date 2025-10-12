@@ -224,13 +224,13 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 "\\" => return view!(<code>"\\"</code>).into_view(),
                 lit => {
                     for (prefix, class) in [
+                        ("monadic mod", "monadic-modifier"),
+                        ("dyadic mod", "dyadic-modifier"),
                         ("noadic", "noadic-function"),
                         ("monadic", "monadic-function"),
                         ("dyadic", "dyadic-function"),
                         ("triadic", "triadic-function"),
                         ("tetradic", "tetradic-function"),
-                        ("monadic mod", "monadic-modifier"),
-                        ("dyadic mod", "dyadic-modifier"),
                         ("number", "number-literal"),
                         ("character", "string-literal-span"),
                     ] {

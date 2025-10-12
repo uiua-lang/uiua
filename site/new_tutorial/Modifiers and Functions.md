@@ -75,6 +75,7 @@ X 5
 
 Output comments inside inline functions will show the values for each time the function is called. Try it out!
 
+```uiua
 F ← (
   ### Run to see values here!
   +⊸× ##
@@ -82,6 +83,7 @@ F ← (
 F 3 5
 F 2 9
 F 10 11
+```
 
 ## A Note on Local Bindings
 

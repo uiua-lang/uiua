@@ -136,7 +136,7 @@ As noted in the advice diagnostic above, string literals, delimited by `"`s, cre
 
 You can make raw string literals, which do not escaping, with a `$` followed by a space. They run to the end of the line.
 
-[&p]() pretty-prints a value.
+[`&p`]() pretty-prints a value.
 
 ```uiua
 &p $ "How are you?" she asked.
@@ -146,10 +146,10 @@ Raw strings that followed each other form multi-line strings.
 
 ```uiua
 $ Hello
-# World!
+$ World!
 ```
 
-This style of string is useful when your string contains a lot of quotes that yo udon't want to escape.
+This style of string is useful when your string contains a lot of quotes that you don't want to escape.
 
 ```uiua
 $ And then she was like "No way!"

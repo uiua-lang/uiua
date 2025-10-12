@@ -21,6 +21,8 @@ const TUTORIAL_NAMES: &[&str] = &[
     "Macros",
     "Tacit Code",
     "Modules",
+    "Data Definitions",
+    "Testing",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Params)]

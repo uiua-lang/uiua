@@ -235,7 +235,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             .map(|p| view!( <li><A href={format!("/tutorial/{}", p.path())}>{p.title()}</A></li>))
             .collect::<Vec<_>>()
         }</ul>
-        <p>"The tutorial is currently in the process of being partially rewritten. You can find the work-in-progress new tutorial "<A href="/new-tutorial">"here"</A>"."</p>
+        <p>"The tutorial is currently in the process of being partially rewritten. You can find the working draft of the new tutorial "<A href="/new-tutorial">"here"</A>". It is content-complete but is still being refined."</p>
 
         <Hd id="other-tutorials">"Other Tutorials"</Hd>
         <p>"These tutorials cover more specific topics. They assume you have read the main tutorial above, but they can be read in any order."</p>

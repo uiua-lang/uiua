@@ -79,3 +79,11 @@ If a function returns multiple values, you can simply box them with `{}`s.
 ⍤⤙≍ {1 2_3} {°⊂} [1 2 3]
 ⍤⤙≍ {1_2 3_4_5} {⊃↙↘2} [1 2 3 4 5]
 ```
+
+---
+
+Hooray! You've reached the end of the tutorial!
+
+To keep going with Uiua, you can check out:
+
+`END OF TUTORIAL LIST`

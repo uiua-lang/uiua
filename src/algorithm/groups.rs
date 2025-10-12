@@ -810,7 +810,7 @@ where
     let mut groups: Vec<_> = values
         .into_iter()
         .map(|xs| {
-            let mut empty_shape = xs.shape.clone();
+            let mut empty_shape = Shape::from(&xs.shape[indices.rank().saturating_sub(1)..]);
             is_scalar |= empty_shape.is_empty();
             *empty_shape.row_count_mut() = 0;
             let groups = get_groups(xs, &indices).into_iter();

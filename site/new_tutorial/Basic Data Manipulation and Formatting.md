@@ -36,7 +36,7 @@ Outputs will be displayed on multiple lines even if they were generated on the s
 6 × 7 8 9
 ```
 
-Because functions always take the same number of arguments, we can actually rearrange commutative operations like [add]() or [multiply]().
+Because functions always take the same number of arguments, we can actually rearrange associative operations like [add]() or [multiply]().
 
 ```uiua
 + 2 + 3 5
@@ -98,7 +98,7 @@ roundsqrtpi
 
 On this site, you can also click the 🔗 symbol on any editor to show a palette of all the Uiua glyphs. You can then click on any glyph to insert it into the editor.
 
-The [negate]() function formats from `\``, but this is also used for negative numbers.
+The [negate]() function formats from `` ` ``, but this is also used for negative numbers.
 
 ```uiua
 + `4 20 # Format me!

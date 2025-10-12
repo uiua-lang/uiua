@@ -60,7 +60,7 @@ For example, [sqrt]() is a monadic function, and [add]() is a dyadic function.
 
 On this site, `monadic` functions are in `monadic green` and `dyadic` functions are in `dyadic blue`.
 
-Some documentation may also reference functions which are `noadic`, `triadic`, or `tetradic`. These are the words for functions that take 0, 3, or 4 arguments respectively. The word `noadic` is not common outside of Uiua, but it is chosen because such a functions takes *no* arguments.
+Some documentation may also reference functions which are `noadic`, `triadic`, or `tetradic`. These are the words for functions that take 0, 3, or 4 arguments respectively. The word `noadic` is not common outside of Uiua, but it is chosen because such a function takes *no* arguments.
 
 ## Challenges
 

@@ -101,7 +101,7 @@ This website has a virtual file system. You can write to virtual files with [`&f
 
 There is also a test module that can always be imported as `example.ua`. Its contents is:
 
-EXAMPLE.UA
+`EXAMPLE.UA`
 
 ## Importing Modules
 

@@ -30,7 +30,7 @@ pub const EXAMPLE_UA: &str = "\
 # Uiua's example module
 
 Square ← ˙×
-Double ← +.
+Double ← ˙+
 Increment ← +1
 RangeDiff ↚ ⇡-
 Span ← +⟜RangeDiff

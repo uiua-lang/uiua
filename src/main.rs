@@ -27,9 +27,9 @@ use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lex,
     lsp::BindingDocsKind,
-    parse, print_stack, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDoc,
-    PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Subscript, Token,
-    Uiua, UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
+    parse, print_stack, print_stack_lines, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode,
+    PrimClass, PrimDoc, PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans,
+    Subscript, Token, Uiua, UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -285,7 +285,7 @@ fn main() {
                     .load_str(&code)
             })
             .unwrap_or_else(fail);
-            print_stack(&rt.take_stack(), !no_color);
+            print_stack_lines(&rt.take_stack_lines(), !no_color);
         }
         Some(Comm::Test {
             path,
@@ -545,7 +545,7 @@ fn run(
         let mode = mode.unwrap_or(RunMode::Normal);
         let res = rt.compile_run(|comp| comp.mode(mode).print_diagnostics(true).load_file(path));
         if let Err(e) = &res {
-            print_stack(&rt.take_stack(), !no_color);
+            print_stack_lines(&rt.take_stack_lines(), !no_color);
             eprintln!("{}", e.report());
         }
         rt.print_reports();
@@ -553,7 +553,7 @@ fn run(
             exit(1);
         }
     }
-    print_stack(&rt.take_stack(), !no_color);
+    print_stack_lines(&rt.take_stack_lines(), !no_color);
     #[cfg(feature = "raw_mode")]
     rawrrr::disable_raw();
 }

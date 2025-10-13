@@ -23,12 +23,12 @@ type Metagrid = Grid<Grid>;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GridFmtParams {
-    label: bool,
-    depth: usize,
-    parent_rank: usize,
-    max_boxed_rank: usize,
-    max_boxed_len: usize,
-    soa_row: bool,
+    pub(crate) label: bool,
+    pub(crate) depth: usize,
+    pub(crate) parent_rank: usize,
+    pub(crate) max_boxed_rank: usize,
+    pub(crate) max_boxed_len: usize,
+    pub(crate) soa_row: bool,
 }
 
 pub trait GridFmt: Sized {

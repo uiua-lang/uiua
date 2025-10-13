@@ -1079,14 +1079,17 @@ fn challenge_code(input: &str, test: &str, flip: bool) -> String {
 
 impl State {
     /// Run code and return the output
-    pub fn run_code(&mut self, code: &str) -> Vec<OutputItem> {
+    pub fn run_code(&mut self, code: &str) -> Vec<Vec<OutputItem>> {
         if let Some(chal) = &self.challenge {
             let mut example = run_code_single(
                 &self.code_id,
                 &challenge_code(&chal.intended_answer, &chal.example, chal.flip),
             )
             .0;
-            example.insert(0, OutputItem::Faint(format!("Example: {}", chal.example)));
+            example.insert(
+                0,
+                vec![OutputItem::Faint(format!("Example: {}", chal.example))],
+            );
             let mut output_sections = vec![example];
             let mut correct = true;
             for (i, test) in chal.tests.iter().enumerate() {
@@ -1105,7 +1108,10 @@ impl State {
                         _ => false,
                     };
                 let mut output = run_code_single(&self.code_id, &user_input).0;
-                output.insert(0, OutputItem::Faint(format!("Test {}: {test}", i + 1)));
+                output.insert(
+                    0,
+                    vec![OutputItem::Faint(format!("Test {}: {test}", i + 1))],
+                );
                 output_sections.push(output);
             }
             let hidden_answer = || {
@@ -1128,7 +1134,7 @@ impl State {
                 _ => true,
             };
             let mut output = if chal.did_init_run.get() {
-                vec![OutputItem::String(if correct {
+                vec![vec![OutputItem::String(if correct {
                     if hidden_correct {
                         "✅ Correct!".into()
                     } else {
@@ -1136,13 +1142,13 @@ impl State {
                     }
                 } else {
                     "❌ Incorrect".into()
-                })]
+                })]]
             } else {
                 Vec::new()
             };
             chal.did_init_run.set(true);
             for section in output_sections {
-                output.push(OutputItem::Separator);
+                output.push(vec![OutputItem::Separator]);
                 output.extend(section);
             }
             output
@@ -1160,28 +1166,28 @@ impl State {
 }
 
 #[allow(clippy::mutable_key_type)]
-fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
+fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaError>) {
     // Run
     let mut rt = init_rt(id, code);
     let mut error = None;
     let mut comp = Compiler::with_backend(WebBackend::new(id, code));
     let comp_backend;
     let res = comp.load_str(code).map(|comp| rt.run_compiler(comp));
-    let (mut values, io) = match res {
+    let (mut value_lines, io) = match res {
         Ok(Ok(())) => {
-            let stack = rt.take_stack();
+            let stack = rt.take_stack_lines();
             let backend = rt.downcast_backend::<WebBackend>().unwrap();
             backend.finish();
             (stack, backend)
         }
         Ok(Err(e)) if matches!(*e.kind, UiuaErrorKind::Interrupted) => (
-            rt.take_stack(),
+            rt.take_stack_lines(),
             rt.downcast_backend::<WebBackend>().unwrap(),
         ),
         Ok(Err(e)) => {
             error = Some(e);
             (
-                rt.take_stack(),
+                rt.take_stack_lines(),
                 rt.downcast_backend::<WebBackend>().unwrap(),
             )
         }
@@ -1192,127 +1198,143 @@ fn run_code_single(id: &str, code: &str) -> (Vec<OutputItem>, Option<UiuaError>)
         }
     };
     if get_top_at_top() {
-        values.reverse();
+        value_lines.reverse();
     }
     let diagnostics = comp.take_diagnostics();
     // Get stdout and stderr
     let stdout = take(&mut *io.stdout.lock().unwrap());
-    let mut stack = Vec::new();
-    let value_count = values.len();
+    let mut stack_lines = Vec::new();
+    let value_count: usize = value_lines.iter().map(|line| line.len()).sum();
     let make_smart_output = if get_animation_format() == "APNG" {
         SmartOutput::from_value_prefer_apng
     } else {
         SmartOutput::from_value
     };
-    for (i, value) in values.into_iter().enumerate() {
-        let value = match make_smart_output(value, 24.0, io) {
-            SmartOutput::Png(bytes, label) => {
-                stack.push(OutputItem::Image(bytes, label));
-                continue;
-            }
-            SmartOutput::Gif(bytes, label) => {
-                stack.push(OutputItem::Gif(bytes, label));
-                continue;
-            }
-            SmartOutput::Apng(bytes, label) => {
-                stack.push(OutputItem::Apng(bytes, label));
-                continue;
-            }
-            SmartOutput::Wav(bytes, label) => {
-                stack.push(OutputItem::Audio(bytes, label));
-                continue;
-            }
-            SmartOutput::Svg { svg, original } => {
-                stack.push(OutputItem::Svg(
-                    svg,
-                    original.meta.label.as_ref().map(Into::into),
-                ));
-                continue;
-            }
-            SmartOutput::Normal(value) => value,
-        };
-        // Otherwise, just show the value
-        let class = if value_count == 1 {
-            ""
-        } else {
-            match i % 6 {
-                0 => "output-a",
-                1 => "output-b",
-                2 => "output-c",
-                3 => "output-d",
-                4 => "output-e",
-                5 => "output-f",
-                _ => unreachable!(),
-            }
-        };
-        for line in value.lines() {
-            stack.push(OutputItem::Classed(class, line.to_string()));
+    let mut i = 0;
+    for value_line in value_lines {
+        let mut stack_line = Vec::new();
+        for value in value_line {
+            let value = match make_smart_output(value, 24.0, io) {
+                SmartOutput::Png(bytes, label) => {
+                    stack_line.push(OutputItem::Image(bytes, label));
+                    continue;
+                }
+                SmartOutput::Gif(bytes, label) => {
+                    stack_line.push(OutputItem::Gif(bytes, label));
+                    continue;
+                }
+                SmartOutput::Apng(bytes, label) => {
+                    stack_line.push(OutputItem::Apng(bytes, label));
+                    continue;
+                }
+                SmartOutput::Wav(bytes, label) => {
+                    stack_line.push(OutputItem::Audio(bytes, label));
+                    continue;
+                }
+                SmartOutput::Svg { svg, original } => {
+                    stack_line.push(OutputItem::Svg(
+                        svg,
+                        original.meta.label.as_ref().map(Into::into),
+                    ));
+                    continue;
+                }
+                SmartOutput::Normal(value) => value,
+            };
+            // Otherwise, just show the value
+            let class = if value_count == 1 {
+                ""
+            } else {
+                match i % 6 {
+                    0 => "output-a",
+                    1 => "output-b",
+                    2 => "output-c",
+                    3 => "output-d",
+                    4 => "output-e",
+                    5 => "output-f",
+                    _ => unreachable!(),
+                }
+            };
+            stack_line.push(OutputItem::Classed(class, value));
+            i += 1;
         }
+        stack_lines.push(stack_line);
     }
     let stderr = take(&mut *io.stderr.lock().unwrap());
     let trace = take(&mut *io.trace.lock().unwrap());
 
     // Construct output
-    let label = ((!stack.is_empty()) as u8)
+    let label = ((!stack_lines.is_empty()) as u8)
         + ((!stdout.is_empty()) as u8)
         + ((!stderr.is_empty()) as u8)
         + ((!trace.is_empty()) as u8)
         >= 2;
     let mut output = Vec::new();
     if !trace.is_empty() {
-        output.extend(trace.lines().map(|line| OutputItem::String(line.into())));
+        output.extend(
+            trace
+                .lines()
+                .map(|line| vec![OutputItem::String(line.into())]),
+        );
     }
     if !stdout.is_empty() {
         if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
+            output.push(vec![OutputItem::String("".into())]);
         }
         if label {
-            output.push(OutputItem::String("stdout:".to_string()));
+            output.push(vec![OutputItem::String("stdout:".to_string())]);
         }
-        output.extend(stdout);
+        output.extend(vec![stdout]);
     }
     if !stderr.is_empty() {
         if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
+            output.push(vec![OutputItem::String("".into())]);
         }
         if label {
-            output.push(OutputItem::String("stderr:".to_string()));
+            output.push(vec![OutputItem::String("stderr:".to_string())]);
         }
-        output.extend(stderr.lines().map(|line| OutputItem::String(line.into())));
+        output.extend(
+            stderr
+                .lines()
+                .map(|line| vec![OutputItem::String(line.into())]),
+        );
     }
-    if !stack.is_empty() {
+    if !stack_lines.is_empty() {
         if label {
-            output.push(OutputItem::Separator);
+            output.push(vec![OutputItem::Separator]);
         }
-        output.extend(stack);
+        output.extend(stack_lines);
     }
     if let Some(error) = &error {
         if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
+            output.push(vec![OutputItem::String("".into())]);
         }
         const MAX_OUTPUT_BEFORE_ERROR: usize = 60;
         if output.len() >= MAX_OUTPUT_BEFORE_ERROR {
             output = output.split_off(output.len() - MAX_OUTPUT_BEFORE_ERROR);
-            output[0] = OutputItem::String("Previous output truncated...".into());
+            output[0] = vec![OutputItem::String("Previous output truncated...".into())];
         }
         let report = error.report();
         let execution_limit_reached = report.fragments.iter().any(|frag| matches!(frag, ReportFragment::Plain(s) if s.contains("Maximum execution time exceeded")));
-        output.push(OutputItem::Report(report));
+        output.push(vec![OutputItem::Report(report)]);
         if execution_limit_reached {
-            output.push(OutputItem::String(
+            output.push(vec![OutputItem::String(
                 "You can increase the execution time limit in the editor settings".into(),
-            ));
+            )]);
         }
     }
     if !diagnostics.is_empty() {
         if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
+            output.push(vec![OutputItem::String("".into())]);
         }
         for diag in diagnostics {
-            output.push(OutputItem::Report(diag.report()));
+            output.push(vec![OutputItem::Report(diag.report())]);
         }
     }
-    output.extend(rt.take_reports().into_iter().map(OutputItem::Report));
+    output.extend(
+        rt.take_reports()
+            .into_iter()
+            .map(|r| vec![OutputItem::Report(r)]),
+    );
     (output, error)
 }
 

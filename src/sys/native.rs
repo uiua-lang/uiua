@@ -3,6 +3,7 @@ use std::{
     env::{self, set_current_dir},
     fs::{self, File, OpenOptions},
     io::{stderr, stdin, stdout, BufRead, BufReader, Read, Write},
+    iter::repeat_n,
     net::*,
     path::{Path, PathBuf},
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
@@ -21,6 +22,7 @@ use crossbeam_channel as channel;
 use dashmap::DashMap;
 
 use crate::{
+    grid_fmt::{GridFmt, GridFmtParams},
     terminal_size, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend,
     Uiua, Value,
 };
@@ -1345,4 +1347,64 @@ pub fn print_stack(stack: &[Value], color: bool) {
         };
         eprintln!("{}", value.show().truecolor(r, g, b));
     }
+}
+
+#[allow(clippy::print_stdout)]
+#[doc(hidden)]
+pub fn print_stack_lines(stack_lines: &[Vec<Value>], color: bool) {
+    for line in format_stack_lines(stack_lines, color) {
+        eprintln!("{line}");
+    }
+}
+
+fn format_stack_lines(stack_lines: &[Vec<Value>], color: bool) -> Vec<String> {
+    let mut formatted_lines = Vec::new();
+    let mut i = 0;
+    #[cfg(feature = "terminal-light")]
+    let is_light = terminal_light::luma().is_ok_and(|luma| luma > 0.6);
+    #[cfg(not(feature = "terminal-light"))]
+    let is_light = false;
+    for line in stack_lines {
+        let grids: Vec<_> = line
+            .iter()
+            .map(|v| {
+                v.fmt_grid(GridFmtParams {
+                    label: true,
+                    ..Default::default()
+                })
+            })
+            .collect();
+        let max_height = grids.iter().map(|grid| grid.len()).max().unwrap_or(0);
+        let widths: Vec<usize> = grids.iter().map(|grid| grid[0].len()).collect();
+        for j in 0..max_height {
+            let mut full_line = String::new();
+            for (k, grid) in grids.iter().enumerate() {
+                let (w, b) = if is_light { (0, 35) } else { (255, 200) };
+                let (r, g, b) = match (i + k + 3) % 6 {
+                    0 => (w, b, b),
+                    1 => (w, w, b),
+                    2 => (b, w, b),
+                    3 => (b, w, w),
+                    4 => (b, b, w),
+                    5 => (w, b, w),
+                    _ => unreachable!(),
+                };
+                let offset = max_height / 2 - grid.len() / 2;
+                if let Some(line) = grid.get(j.saturating_sub(offset)).filter(|_| j >= offset) {
+                    if color {
+                        let line: String = line.iter().copied().collect();
+                        full_line.push_str(&line.truecolor(r, g, b).to_string());
+                    } else {
+                        full_line.extend(line.iter().copied())
+                    }
+                } else {
+                    full_line.extend(repeat_n(' ', widths[k]));
+                }
+                full_line.push_str("  ");
+            }
+            formatted_lines.push(full_line);
+        }
+        i += grids.len();
+    }
+    formatted_lines
 }

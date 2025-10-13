@@ -97,7 +97,7 @@ Foo!(Format Incr New) "Oh" 10
 
 Using files as modules involves loading files from the file system.
 
-This website has a virtual file system. You can write to virtual files with [&fwa](). You can also drag and drop files from your computer into the editor to make them available to import.
+This website has a virtual file system. You can write to virtual files with [`&fwa`](). You can also drag and drop files from your computer into the editor to make them available to import.
 
 There is also a test module that can always be imported as `example.ua`. Its contents is:
 

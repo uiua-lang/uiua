@@ -162,7 +162,7 @@ F! ←^ $"_ _"⊙X ⊢
 F!¯
 ```
 
-However, if we use a value that cannot be known at compile time, like the result of the [rand]() function, we will get an error.
+However, if we use a value that cannot be known at compile time, like the result of the [random]() function, we will get an error.
 
 ```uiua should fail
 X ← ⚂

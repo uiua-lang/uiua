@@ -134,7 +134,7 @@ As noted in the advice diagnostic above, string literals, delimited by `"`s, cre
 ⊸△ "Hellow, World!"
 ```
 
-You can make raw string literals, which do not escaping, with a `$` followed by a space. They run to the end of the line.
+You can make raw string literals, which do not require escaping, with a `$` followed by a space. They run to the end of the line.
 
 [`&p`]() pretty-prints a value.
 

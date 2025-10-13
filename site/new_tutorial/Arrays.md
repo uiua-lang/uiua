@@ -275,7 +275,7 @@ The array below cannot be constructed normally because its rows have different [
 [1_2 3 [4 5 6] [7]]
 ```
 
-By use [box](), we can turn any value into a **box** that contains that value. We can then put these boxes into an array together.
+By using [box](), we can turn any value into a **box** that contains that value. We can then put these boxes into an array together.
 
 ```uiua
 [□1_2 □3 □[4 5 6] □[7]]
@@ -400,16 +400,17 @@ adds a 1-row leading axis to an array
 ```challenge
 prepends the first row of the first argument to the second argument
 ⊂⊢
+
 [1 2 3] 4_5_6
 3_3 2_2
-[1_2_3 4_5_6]
-+10↯3_3⇡9
+[1_2_3 4_5_6] +10↯3_3⇡9
 [2 4 3] [9 9 9 9 9 1]
 ```
 
 ```challenge
 removes the first and last rows from an array
 ↘¯1↘1
+
 1_2_3_4
 [27 9 3 1]
 ↯4_3⇡12

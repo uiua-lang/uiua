@@ -96,7 +96,7 @@ You don't even have to remove spaces between built-in function names. The format
 roundsqrtpi
 ```
 
-On this site, you can also click the 🔗 symbol on any editor to show a palette of all the Uiua glyphs. You can then click on any glyph to insert it into the editor.
+On this site, you can also click the `⌄` symbol on any editor to show a palette of all the Uiua glyphs. You can then click on any glyph to insert it into the editor.
 
 The [negate]() function formats from `` ` ``, but this is also used for negative numbers.
 
@@ -203,7 +203,7 @@ You'll most often see [on]() with another function immediately to its left, to u
 
 ### [by]()
 
-[by]() is a sort of opposite of [on](). It makes the *last* argument of a function available to be a last argument to the next function that will be called.
+[by]() is a sort of opposite of [on](). It keeps the *last* argument of a function available as an argument (after its outputs) to the next function that will be called.
 
 ```uiua
 ⊸÷ 4 12

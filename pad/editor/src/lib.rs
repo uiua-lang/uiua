@@ -387,12 +387,24 @@ pub fn Editor<'a>(
                                 state.update(|st| {
                                     seed_random(seed);
                                     let output = st.run_code(&input);
-                                    let (diags, items): (Vec<_>, Vec<_>) =
-                                        output.into_iter().partition(OutputItem::is_report);
-                                    let items: Vec<_> =
-                                        items.into_iter().map(render_output_item).collect();
-                                    let diags: Vec<_> =
-                                        diags.into_iter().map(render_output_item).collect();
+                                    let (diags, items): (Vec<_>, Vec<_>) = output
+                                        .into_iter()
+                                        .partition(|line| line.len() == 1 && line[0].is_report());
+                                    let items: Vec<_> = items
+                                        .into_iter()
+                                        .map(|line| {
+                                            view!(<div class="output-line">{
+                                                line.into_iter().map(render_output_item)
+                                                    .collect::<Vec<_>>()
+                                            }</div>)
+                                        })
+                                        .collect();
+                                    let diags: Vec<_> = diags
+                                        .into_iter()
+                                        .map(|line| {
+                                            render_output_item(line.into_iter().next().unwrap())
+                                        })
+                                        .collect();
                                     set_output.set(items.into_view());
                                     set_diag_output.set(diags.into_view());
                                 });
@@ -400,10 +412,22 @@ pub fn Editor<'a>(
                             Duration::from_millis(200),
                         );
                     } else {
-                        let (diags, items): (Vec<_>, Vec<_>) =
-                            output.into_iter().partition(OutputItem::is_report);
-                        let items: Vec<_> = items.into_iter().map(render_output_item).collect();
-                        let diags: Vec<_> = diags.into_iter().map(render_output_item).collect();
+                        let (diags, items): (Vec<_>, Vec<_>) = output
+                            .into_iter()
+                            .partition(|line| line.len() == 1 && line[0].is_report());
+                        let items: Vec<_> = items
+                            .into_iter()
+                            .map(|line| {
+                                view!(<div class="output-line">{
+                                    line.into_iter().map(render_output_item)
+                                        .collect::<Vec<_>>()
+                                }</div>)
+                            })
+                            .collect();
+                        let diags: Vec<_> = diags
+                            .into_iter()
+                            .map(|line| render_output_item(line.into_iter().next().unwrap()))
+                            .collect();
                         set_output.set(items.into_view());
                         set_diag_output.set(diags.into_view());
                     }

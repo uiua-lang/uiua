@@ -691,8 +691,8 @@ impl Compiler {
 
         let mut line_node = self.line(line)?;
 
-        // Validate callability
         if matches!(self.scope.kind, ScopeKind::File(_)) {
+            // Validate callability
             if let Err((e, f, mut spans)) = line_node.check_callability(&self.asm) {
                 let e = e.clone();
                 if let Some(f_id) = f.map(|f| f.id.clone()) {
@@ -708,6 +708,10 @@ impl Compiler {
                     let span = self.get_span(spans.pop().unwrap());
                     self.add_error(span, e);
                 }
+            }
+            // Track stack height
+            if let Ok(sig) = line_node.sig() {
+                self.asm.line_sigs.insert(span.end.line, sig);
             }
         }
 

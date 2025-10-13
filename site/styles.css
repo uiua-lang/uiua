@@ -638,6 +638,13 @@ option,
     overflow-x: auto;
 }
 
+.output-line {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1em;
+    align-items: center;
+}
+
 .output-diagnostics {
     white-space: pre-wrap;
     text-align: left;

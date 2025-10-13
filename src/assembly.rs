@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     fmt,
     hash::{DefaultHasher, Hash, Hasher},
     ops::{Index, IndexMut},
@@ -32,6 +33,8 @@ pub struct Assembly {
     pub inputs: Inputs,
     pub(crate) dynamic_functions: EcoVec<DynFn>,
     pub(crate) test_assert_count: usize,
+    /// Height of the stack on each line
+    pub(crate) line_sigs: BTreeMap<u16, Signature>,
 }
 
 /// A Uiua function
@@ -244,6 +247,7 @@ impl Assembly {
             },
             dynamic_functions: EcoVec::new(),
             test_assert_count: 0,
+            line_sigs: BTreeMap::new(),
         })
     }
     /// Serialize the assembly into a `.uasm` file
@@ -344,6 +348,7 @@ impl Default for Assembly {
             dynamic_functions: EcoVec::new(),
             inputs: Inputs::default(),
             test_assert_count: 0,
+            line_sigs: BTreeMap::new(),
         }
     }
 }

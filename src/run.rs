@@ -364,6 +364,7 @@ impl Uiua {
         self.rt.backend = compiler.backend();
         let res = self.run_asm(compiler.finish());
         let asm = self.take_asm();
+        self.asm.line_sigs = asm.line_sigs.clone();
         match res {
             Ok(()) => {
                 *compiler.assembly_mut() = asm;
@@ -1076,6 +1077,32 @@ impl Uiua {
     pub fn take_stack(&mut self) -> Vec<Value> {
         self.rt.under_stack.clear();
         take(&mut self.rt.stack)
+    }
+    /// Take the entire stack split up into lines
+    pub fn take_stack_lines(&mut self) -> Vec<Vec<Value>> {
+        let mut stack = self.take_stack();
+        let mut sigs = self.asm.line_sigs.clone();
+        let Some((_, mut curr)) = sigs.pop_last() else {
+            return stack.into_iter().map(|v| vec![v]).collect();
+        };
+        let mut lines = Vec::new();
+        if curr.outputs() > 0 {
+            lines.push(stack.split_off(stack.len().saturating_sub(curr.outputs())));
+        }
+        while let Some((_, prev)) = sigs.pop_last() {
+            if prev.outputs() > curr.args() {
+                let n = prev.outputs() - curr.args();
+                lines.push(stack.split_off(stack.len() - n));
+                curr = prev;
+            } else {
+                curr = curr.compose(prev)
+            }
+        }
+        lines.reverse();
+        for line in &mut lines {
+            line.reverse();
+        }
+        lines
     }
     /// Take the main stack and under stack
     pub fn take_stacks(&mut self) -> (Vec<Value>, Vec<Value>) {

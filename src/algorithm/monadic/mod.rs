@@ -1071,6 +1071,7 @@ impl<T: ArrayValue> Array<T> {
                 Ok(fill) => {
                     self.shape = self.shape[..depth].iter().chain(rest).copied().collect();
                     self.data.extend_repeat(&fill.value, self.shape.elements());
+                    self.meta.take_sorted_flags();
                     Ok(self)
                 }
                 Err(e) => Err(env
@@ -1079,6 +1080,7 @@ impl<T: ArrayValue> Array<T> {
             },
             [1, ..] => {
                 self.shape.remove(depth);
+                self.meta.take_sorted_flags();
                 self.validate();
                 Ok(self)
             }
@@ -1099,6 +1101,7 @@ impl<T: ArrayValue> Array<T> {
                 }
                 self.shape.remove(depth);
                 self.data.truncate(self.shape.elements());
+                self.meta.take_sorted_flags();
                 self.validate();
                 Ok(self)
             }

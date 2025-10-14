@@ -2,7 +2,11 @@
 <description>Blog of the Uiua Programming Language</description>
 <link>https://uiua.org/blog</link>
 <atom:link href="https://uiua.org/blog/feed.rss" rel="self" type="application/rss+xml"></atom:link>
-<lastBuildDate>Fri, 30 May 2025 06:08:44 +0000</lastBuildDate>
+<lastBuildDate>Tue, 14 Oct 2025 04:28:06 +0000</lastBuildDate>
+<item><link>https://uiua.org/blog/uiua-0.17.0</link>
+<guid isPermaLink="false">f0369adf-a4f1-4267-96e1-9c6527298cd3</guid>
+<pubDate>Tue, 23 Sep 2025 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.17.0</title></item>
 <item><link>https://uiua.org/blog/how-the-uiua-logo-works</link>
 <guid isPermaLink="false">f7077c7c-3968-4f10-8e7d-140ebcaebc77</guid>
 <pubDate>Thu, 29 May 2025 00:00:00 +0000</pubDate>

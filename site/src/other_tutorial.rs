@@ -29,25 +29,28 @@ impl OtherTutorialPage {
         match self {
             Self::Strings => title_markdown(
                 "Strings",
-                "/text/strings.md",
+                "/text/other_tutorial/strings.md",
                 strings_challenges().into_view(),
             )
             .into_view(),
             Self::FilesAndStreams => title_markdown(
                 "Files and Streams",
-                "/text/files_and_streams.md",
+                "/text/other_tutorial/files_and_streams.md",
                 View::default(),
             )
             .into_view(),
             Self::Audio => Audio().into_view(),
             Self::Images => ImagesAndGifs().into_view(),
             Self::Documentation => Documentation().into_view(),
-            Self::CodeTactility => {
-                title_markdown("Code Tactility", "/text/code_tactility.md", View::default())
-                    .into_view()
-            }
+            Self::CodeTactility => title_markdown(
+                "Code Tactility",
+                "/text/other_tutorial/code_tactility.md",
+                View::default(),
+            )
+            .into_view(),
             Self::Ranges => {
-                title_markdown("Ranges", "/text/ranges.md", View::default()).into_view()
+                title_markdown("Ranges", "/text/other_tutorial/ranges.md", View::default())
+                    .into_view()
             }
             Self::EvenMoreArgument => EvenMoreArgument().into_view(),
         }

@@ -72,7 +72,7 @@ fn page_view(name: &str) -> impl IntoView {
         <br/>
         <br/>
         <TutorialNav name=name/>
-        <Markdown src={format!("/tutorial/{name}.md")}/>
+        <Markdown src={format!("/text/tutorial/{name}.md")}/>
         <br/>
         <br/>
         <TutorialNav name=name/>

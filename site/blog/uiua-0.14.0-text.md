@@ -160,7 +160,7 @@ You can import `rayua` into a Uiua file with this line:
 
 - [`sort ⍆`](https://uiua.org/docs/sort), [`last ⊣`](https://uiua.org/docs/last), [`case ⍩`](https://uiua.org/docs/case), and [`off ⤚`](https://uiua.org/docs/off) have been stabilized.
 - Functions with declared signatures that do not match the inferred signature will now cause a warning rather than an error.
-  - You can read more about this feature in the updated [Stack Signatures](https://www.uiua.org/tutorial/functions#stack-signatures) section of the tutorial.
+  - You can read more about this feature in the updated [Stack Signatures](https://www.uiua.org/tutorial/Modifiers and Functions#stack-signatures) section of the tutorial.
 - New [`# Deprecated!`](https://www.uiua.org/tutorial/documentation#deprecated) semantic comments will cause a function to emit a warning when it is used.
 - The `astar` modifier has been deprecated and replaced with a new modifier called [`path`](https://uiua.org/docs/path). It has all the same functionality, but the default behavior is easier to use. It is also not `# Experimental!`.
 - New [adjecency offset constants](https://www.uiua.org/docs/constants#A%E2%82%81) make it easier to use [`path`](https://uiua.org/docs/path) with grids.

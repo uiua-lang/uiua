@@ -10,7 +10,7 @@ This section covers a few tools that Uiua provides for making code easier to wor
 
 Uiua already prints out any values left on the stack when the program ends. This is usually enough for smaller programs, but sometimes, you need to be able to see what values are on the stack somewhere in the middle of the code.
 
-[stack]() was mentioned near the [beginning](/tutorial/basic#stack) of this tutorial. It prints out values from the stack without removing them. Subscripting [stack]() prints out only that many values.
+[stack]() was mentioned near the [beginning](/tutorial/Basic Data Manipulation and Formatting#stack) of this tutorial. It prints out values from the stack without removing them. Subscripting [stack]() prints out only that many values.
 
 ```uiua
 5 ? 1 [2 3] "uiua"

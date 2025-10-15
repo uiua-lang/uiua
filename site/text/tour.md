@@ -473,7 +473,7 @@ On this site, arrays that look like they should be GIFs will be displayed as GIF
 GIFs can be explicitly rendered with the [`&gifs`](/docs/&gifs) function.
 
 ## Next Steps
-If you want a more in-depth introduction to Uiua, you can check out the [tutorial](/tutorial/introduction).
+If you want a more in-depth introduction to Uiua, you can check out the [tutorial](/tutorial/Introduction).
 
 For information on installing the native Uiua interpreter, see the [install page](/install).
 

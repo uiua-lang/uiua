@@ -1,9 +1,11 @@
 # Macros
+
 Defining your own functions that work on arrays is pretty easy. Just a name, a `←`, and you're done.
 
 But what if you want to define functions that use other functions?
 
 ## Placeholders and `!`s
+
 Anywhere you can put a built-in or inline function, you can also put a `^` followed by a number. This is called a *placeholder*.
 
 Any named function with `^`s in it is a macro.
@@ -55,11 +57,13 @@ F!(⊂1) 5
 ```
 
 ## Two Kinds of Macros
+
 The macros described so far are called *index macros*, because arguments are referenced directly by their position when the macro is called.
 
 But Uiua actually has a second kind of macro. *Code macros* put their operands in an array. The array can then be arbitrarily manipulated with normal Uiua code.
 
 ## Code Macros
+
 Code macros are defined by putting a `^` right after the binding's `←`. Code macro names must still end in some number of `!`s.
 
 Here is a basic example that simply prints its operands. It returns the number `5` as the actual generated code.
@@ -119,6 +123,7 @@ SigOf!⊓+¯
 ```
 
 ## Inline Macros
+
 Sometimes you want to rearrange or generate code in a one-off way without needing a reusable named macro definition.
 
 Suffixing a `()` function with `!` or `^!` will make it an inline index macro or inline code macro, respectively. Any number of `!`s can be used, just like named macros.
@@ -140,12 +145,13 @@ StdDev [1 2 3 4]
 Inline code macros can be useful for programmatically generating bindings.
 
 ```uiua
-(⍚$"_ify ← $\"_\_\"\n".)^!(Foo|Bar|Baz)
+(⍚˙$"_ify ← $\"_\_\"\n")^!(Foo|Bar|Baz)
 Fooify 1
 Bazify Barify "bo"
 ```
 
 ## Compile Time vs Run Time
+
 The body of a code macro is always evaluated at compile time. One consequence of this is that bindings whose values cannot be known at compile time cannot be used in a code macro.
 
 For example, because the value `5` is always the same, it is always known at compile time, and we can use a name that binds `5` in a code macro.
@@ -156,7 +162,7 @@ F! ←^ $"_ _"⊙X ⊢
 F!¯
 ```
 
-However, if we use a value that cannot be known at compile time, like the result of the [rand]() function, we will get an error.
+However, if we use a value that cannot be known at compile time, like the result of the [random]() function, we will get an error.
 
 ```uiua should fail
 X ← ⚂
@@ -180,6 +186,7 @@ F!¯
 ```
 
 ## What kind of macro should I use?
+
 Which kind of macro you use depends on what kind of code you are writing.
 
 Code macros are much more powerful than index macros, but they can be more complicated to write.
@@ -189,3 +196,23 @@ Additionally, index macros are [hygienic](https://en.wikipedia.org/wiki/hygienic
 If you conceptually just want to define your own modifier, an index macro is probably the simplest way to go.
 
 If you want the full power (and all the complexity) of compile-time meta-programming, you'll need to use a code macro.
+
+## Challenges
+
+```challenge flip default: F! ← ^
+creates a macro called F! which calls its function on each row of an array, reverses each row, and reverses the whole array
+F! ← ⇌≡(⇌^)
+
+F!˙⊂ ↯3_4⇡12
+F!(↯3) [1_2_3 4_5_6]
+F!˙⊟ 1_2 3_4
+```
+
+```challenge flip default: F‼ ← ^0
+creates a macro called F‼ which calls its first function, then its second, then its first again
+F‼ ← ^0^1^0
+
+F‼⇌(⊂10) [1 2 3]
+F‼⇌⍉ [1_2 3_4]
+F‼⊂⇌ 1_2 3_4 5_6
+```

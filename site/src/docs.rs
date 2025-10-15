@@ -15,7 +15,7 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 
 use crate::{
     element, idioms::Idioms, markdown::Markdown, other::*, other_tutorial::OtherTutorialPage,
-    primitive::*, tutorial::TutorialPage, uiuisms::Uiuisms, Hd, Prim, Tour,
+    primitive::*, tutorial::TUTORIAL_NAMES, uiuisms::Uiuisms, Hd, Prim, Tour,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -231,11 +231,10 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <h3><strong><em>"If you are new to "{lang}", you will likely be lost if you don't read this!"</em></strong></h3>
         <p>"These pages introduce "{lang}" concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
         <p>"They are meant to be read in order, but feel free to skip around!"</p>
-        <ul>{ all::<TutorialPage>()
-            .map(|p| view!( <li><A href={format!("/tutorial/{}", p.path())}>{p.title()}</A></li>))
+        <ul>{ TUTORIAL_NAMES.iter()
+            .map(|&p| view!(<li><A href={format!("/tutorial/{p}")}>{p}</A></li>))
             .collect::<Vec<_>>()
         }</ul>
-        <p>"The tutorial is currently in the process of being partially rewritten. You can find the working draft of the new tutorial "<A href="/new-tutorial">"here"</A>". It is content-complete but is still being refined."</p>
 
         <Hd id="other-tutorials">"Other Tutorials"</Hd>
         <p>"These tutorials cover more specific topics. They assume you have read the main tutorial above, but they can be read in any order."</p>

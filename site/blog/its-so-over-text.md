@@ -8,7 +8,7 @@ In the coming Uiua version 0.15.0, the [`over ,`](https://uiua.org/docs/over) fu
 
 [`over ,`](https://uiua.org/docs/over) copied the second-to-top value on the stack to the top of the stack. This is a pretty common primitive in many stack languages, so its removal may seem like an odd choice.
 
-This change is part of Uiua's general shift toward more structured forms of stack management. The last year has seen many [stack manipulation modifiers](https://uiua.org/tutorial/evenmorestack) added to the language. In particular, basically all uses of [`over ,`](https://uiua.org/docs/over) can be replaced with [`with ⤙`](https://uiua.org/docs/with) or [`below ◡`](https://uiua.org/docs/below).
+This change is part of Uiua's general shift toward more structured forms of stack management. The last year has seen many [stack manipulation modifiers](https://uiua.org/tutorial/evenmoreargument) added to the language. In particular, basically all uses of [`over ,`](https://uiua.org/docs/over) can be replaced with [`with ⤙`](https://uiua.org/docs/with) or [`below ◡`](https://uiua.org/docs/below).
 
 Here are some examples of how to replace common uses of [`over ,`](https://uiua.org/docs/over):
 

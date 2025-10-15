@@ -23,7 +23,7 @@ It can also be used on arrays of boxed strings.
 
 ## Splitting with [`partition`]()
 
-As discussed in the [Thinking With Arrays](/tutorial/thinkingwitharrays) tutorial, [`partition`]() can be used to split an array by a delimiter.
+As discussed in the [Thinking With Arrays](/tutorial/Thinking With Arrays) tutorial, [`partition`]() can be used to split an array by a delimiter.
 
 First, we create a mask of places where the delimiter is *not* using [`by`]() [`not equals ≠`](). In this case, we'll use the space character.
 ```uiua
@@ -116,7 +116,7 @@ F "ababab|abababab"
 
 ## Format String Tricks
 
-As discussed [in the main tutorial](/tutorial/functions#format-strings), format strings allow you to create strings with interpolated values.
+As discussed [in the main tutorial](/tutorial/Modifiers and Functions#format-strings), format strings allow you to create strings with interpolated values.
 
 ```uiua
 $"_ + _ = _" 1 2 3

@@ -5,7 +5,6 @@ mod docs;
 mod examples;
 mod idioms;
 mod markdown;
-mod new_tutorial;
 mod other;
 mod other_tutorial;
 mod primitive;
@@ -33,9 +32,7 @@ use uiua_editor::{
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlAudioElement};
 
-use crate::{
-    blog::*, docs::*, new_tutorial::NewTutorial, other::*, tutorial::Tutorial, uiuisms::*,
-};
+use crate::{blog::*, docs::*, other::*, tutorial::Tutorial, uiuisms::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -69,7 +66,7 @@ pub fn Site() -> impl IntoView {
         view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
         view! {
             <div style="font-style: normal">
-                <a href="/tutorial/morestack#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
+                <a href="/tutorial/More Argument Manipulation#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
                 <code style="font-style: normal">
                     <span class="monadic-modifier">"⋅⋅⊙⋅⋅"</span>
                     <span class="stack-function">"∘"</span>
@@ -162,7 +159,6 @@ pub fn Site() -> impl IntoView {
                 }>
                     <Route path="" view=MainPage/>
                     <Route path="tutorial/:page?" view=Tutorial/>
-                    <Route path="new-tutorial/:page?" view=NewTutorial/>
                     <Route path="docs/:page?" view=Docs/>
                     <Route path="isms/:search?" view=Uiuisms/>
                     <Route path="pad" view=PadPage/>
@@ -281,7 +277,7 @@ pub fn MainPage() -> impl IntoView {
                 <A href="/tour">"Language Tour"</A>
             </div>
             <div>
-                <A href="/tutorial/introduction" class="slow-pulse">"Tutorial"</A>
+                <A href="/tutorial/Introduction" class="slow-pulse">"Tutorial"</A>
                 <A href="/pad">"Pad"</A>
                 <A href="/blog">"Blog"</A>
                 <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>
@@ -334,7 +330,7 @@ pub fn MainPage() -> impl IntoView {
                 </div>
                 <div>
                     <Hd id="syntactic-simplicity">"Syntactic Simplicity"</Hd>
-                    <p>{lang}" has a simple, context-free, LL(3) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/tutorial/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, "{lang}" code reads a little bit like a Lisp, but with fewer parentheses."</p>
+                    <p>{lang}" has a simple, context-free, LL(3) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/tutorial/Modifiers and Functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, "{lang}" code reads a little bit like a Lisp, but with fewer parentheses."</p>
                 </div>
                 <div>
                     <Hd id="system-apis">"System APIs"</Hd>

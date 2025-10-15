@@ -20,7 +20,7 @@ The [un](/docs/un) modifier inverts the behavior of a function.
 °∿ 1 # Arcsine
 ```
 
-As discussed [previously](/tutorial/arrays#array-model), [un](/docs/un)[box](/docs/box) removes an array from a box.
+As discussed [previously](/tutorial/Arrays#array-model), [un](/docs/un)[box](/docs/box) removes an array from a box.
 
 ```uiua
 °□ ⊢{"unbox" "me!"}

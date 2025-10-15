@@ -34,7 +34,7 @@ The new [`obverse ⌅`](https://uiua.org/docs/obverse) replaces, extends, unifie
 
 It allows you set multiple kinds of inverses at once.
 
-The [Inverses Tutorial](https://uiua.org/tutorial/inverses) has been updated to include [`anti ⌝`](https://uiua.org/docs/anti) and [`obverse ⌅`](https://uiua.org/docs/obverse).
+The [Inverses Tutorial](https://uiua.org/tutorial/Inverses) has been updated to include [`anti ⌝`](https://uiua.org/docs/anti) and [`obverse ⌅`](https://uiua.org/docs/obverse).
 
 [`un °`](https://uiua.org/docs/un) [`by ⊸`](https://uiua.org/docs/by) can now be used to access the "undo" part of a function's [`under ⍜`](https://uiua.org/docs/under) functionality.
 

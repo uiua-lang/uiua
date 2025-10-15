@@ -15,7 +15,7 @@ pub enum OtherTutorialPage {
     Documentation,
     Strings,
     Ranges,
-    EvenMoreStack,
+    EvenMoreArgument,
     FilesAndStreams,
     Audio,
     Images,
@@ -49,14 +49,14 @@ impl OtherTutorialPage {
             Self::Ranges => {
                 title_markdown("Ranges", "/text/ranges.md", View::default()).into_view()
             }
-            Self::EvenMoreStack => EvenMoreStack().into_view(),
+            Self::EvenMoreArgument => EvenMoreArgument().into_view(),
         }
     }
     pub fn title(&self) -> &'static str {
         match self {
             OtherTutorialPage::Strings => "Strings",
             OtherTutorialPage::FilesAndStreams => "Files and Streams",
-            OtherTutorialPage::EvenMoreStack => "Even More Stack Manipulation",
+            OtherTutorialPage::EvenMoreArgument => "Even More Argument Manipulation",
             OtherTutorialPage::Audio => "Audio",
             OtherTutorialPage::Images => "Images and GIFs",
             OtherTutorialPage::Documentation => "Documenting Code",
@@ -68,7 +68,7 @@ impl OtherTutorialPage {
         Cow::Borrowed(match self {
             OtherTutorialPage::Strings => "how to manipulate strings",
             OtherTutorialPage::FilesAndStreams => "how to read and write files and streams",
-            OtherTutorialPage::EvenMoreStack => "more ways to manipulate the stack",
+            OtherTutorialPage::EvenMoreArgument => "more ways to manipulate arguments",
             OtherTutorialPage::Audio => "how to generate and play audio",
             OtherTutorialPage::Images => "how to generate images and GIFs",
             OtherTutorialPage::Documentation => {
@@ -227,7 +227,7 @@ pub fn Documentation() -> impl IntoView {
         <Editor example="# Remove the first instance of one array from another\n# ? Needle Haystack\nRemFirst ← ⍜↻(↘1)⊸˜⨂"/>
         <p>"These names should follow the same conventions as binding names."</p>
         <Editor example="# Do the thing\n# ? x y\nFoo ← ≡↻⇡⧻⟜¤"/> // Should fail
-        <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Args/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
+        <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Args/>" function because the arguments indicate the intended state of the argument list before the function is called."</p>
         <p>"If you also want to give names to a function's outputs, you can list them in front of the "<code>"?"</code>". This lets you read the comment signature right-to-left, the same way as normal "{lang}" code."</p>
         <Editor example="# Quotient Remainder ? Divisor Dividend\nDivRem ← ⌊⊃÷◿\nDivRem 3 7"/>
         <p>"These kinds of comments can also be put at the end of lines. The signature of the line will be checked against the signature specified in the comment."</p>
@@ -267,17 +267,17 @@ pub fn Documentation() -> impl IntoView {
 }
 
 #[component]
-fn EvenMoreStack() -> impl IntoView {
+fn EvenMoreArgument() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text=format!("Even More Stack Manipulation - {} Docs", lang())/>
-        <h1>"Even More Stack Manipulation"</h1>
-        <p>"In the "<A href="/tutorial/morestack">"More Stack Manipulation"</A>" tutorial, we learned about various ways of working with the stack including "<Prim prim=Fork/>", "<Prim prim=Bracket/>", "<Prim prim=Both/>", and "<Prim prim=Dip/>". We even touched briefly on "<Prim prim=On/>" and "<Prim prim=By/>"."</p>
+        <Title text=format!("Even More Argument Manipulation - {} Docs", lang())/>
+        <h1>"Even More Argument Manipulation"</h1>
+        <p>"In the "<A href="/tutorial/More Argument Manipulation">"More Argument Manipulation"</A>" tutorial, we learned about various ways of working with arguments including "<Prim prim=Fork/>", "<Prim prim=Bracket/>" and "<Prim prim=Both/>". At the beginning of this tutorial, we touched briefly on "<Prim prim=On/>" and "<Prim prim=By/>"."</p>
         <p>"But "<Prim prim=On/>" and "<Prim prim=By/>" are just two modifiers in a larger category."</p>
 
         <Hd id="more-modifiers">"More Modifiers"</Hd>
-        <p>"Consider that "<Prim prim=On/>" keeps the "<strong>"first"</strong>" argument "<strong>"above"</strong>" the outputs of a function, and "<Prim prim=By/>" keeps the "<strong>"last"</strong>" argument "<strong>"below"</strong>" the outputs of a function. We can then conceive of similar modifiers that fill in other possible combinations."</p>
-        <p><Prim prim=With/>" keeps the "<strong>"last"</strong>" argument "<strong>"above"</strong>" the outputs of a function, and "<Prim prim=Off/>" keeps the "<strong>"first"</strong>" argument "<strong>"below"</strong>" the outputs of a function."</p>
+        <p>"Consider that "<Prim prim=On/>" keeps the "<strong>"first"</strong>" argument "<strong>"before"</strong>" the outputs of a function, and "<Prim prim=By/>" keeps the "<strong>"last"</strong>" argument "<strong>"after"</strong>" the outputs of a function. We can then conceive of similar modifiers that fill in other possible combinations."</p>
+        <p><Prim prim=With/>" keeps the "<strong>"last"</strong>" argument "<strong>"before"</strong>" the outputs of a function, and "<Prim prim=Off/>" keeps the "<strong>"first"</strong>" argument "<strong>"after"</strong>" the outputs of a function."</p>
         <p><Prim prim=Below/>" and the "<code>"# Experimental!"</code>" "<Prim prim=Above/>" do something similar, but with "<em>"every"</em>" argument instead of just the first or last."</p>
         <p>"This table shows how these six modifiers are related:"</p>
         <table class="bordered-table header-centered-table">
@@ -325,28 +325,28 @@ fn EvenMoreStack() -> impl IntoView {
         <Editor example="▽⊸≥4 [2 3 8 4 9 1]"/>
 
         <Hd id="off"><Prim prim=Off/></Hd>
-        <p>"Use "<Prim prim=Off/>" in similar situations to "<Prim prim=By/>", but when the derived calculation also relies on values farther down the stack."</p>
+        <p>"Use "<Prim prim=Off/>" in similar situations to "<Prim prim=By/>", but when the derived calculation also relies on later arguments."</p>
         <p>"For example, if we wanted to keep all indices in an array that have "<code>"1"</code>"s in some mask, we can use "<Prim prim=Off/>" to make sure everything ends up where we want it."</p>
         <Editor example="▽⤚⊏ [1 2 3 4 5] [0 1 0 0 1 1 0 1]"/>
 
         <Hd id="with"><Prim prim=With/></Hd>
-        <p><Prim prim=With/>" has fewer common patterns that come up often, (other than "<Prims prims=[Assert, With, Match]/>" for "<A href="/tutorial/testing">"testing"</A>"), but it can still be useful in some situations."</p>
+        <p><Prim prim=With/>" has fewer common patterns that come up often, (other than "<Prims prims=[Assert, With, Match]/>" for "<A href="/tutorial/Testing">"testing"</A>"), but it can still be useful in some situations."</p>
         <p>"Its name was chosen because after using it, you end up with an array "<em>"with"</em>" a transformed version of it."</p>
         <Editor example="⊟⤙↻1 [1 2 3 4 5] # Couple *with* rotation"/>
 
         <Hd id="below"><Prim prim=Below/></Hd>
-        <p>"Use "<Prim prim=Below/>" when you want to call a function without disturbing the stack "<em>"at all"</em>"."</p>
+        <p>"Use "<Prim prim=Below/>" when you want to call a function without disturbing the argument list "<em>"at all"</em>"."</p>
         <p><Prim prim=By/>" is generally prefered for monadic functions on a single argument, but "<Prim prim=Below/>" is useful for the more general case."</p>
         <p>"For example, here, we use "<Prim prim=Below/>" to retrieve the "<Prim prim=Shape/>"s of two arrays so that we can scale one array to the size of the other."</p>
         <Editor example="∧(⍉▽)÷◡∩△ [1_2 3_4] °△4_6"/>
-        <p>"For a simpler example, we can use "<Prim prim=Below/>" with "<Prim prim=Gap/>" to call a function on a value further down the stack."</p>
+        <p>"For a simpler example, we can use "<Prim prim=Below/>" with "<Prim prim=Gap/>" to call a function on a later argument."</p>
         <Editor example="◡⋅⧻ 1_2_3 \"hello!\""/>
-        <p>"This leaves the output of the function on "<em>"top"</em>" of the stack, and leaves the input to the function alone, unlike "<Prim prim=Dip/>" would."</p>
+        <p>"This leaves the output of the function at the "<em>"beginning"</em>" of the arguments, and leaves the input to the function alone, unlike "<Prim prim=Dip/>" would."</p>
 
         <br/>
         <hr/>
 
-        <p>"Mastering these stack manipulation modifiers takes time and practice. When you end up with a convoluted bit of stack manipulation code, try to see if you can simplify it by using one of these modifiers."</p>
+        <p>"Mastering these argument manipulation modifiers takes time and practice. When you end up with a convoluted bit of argument manipulation code, try to see if you can simplify it by using one of these modifiers."</p>
         <p>"Often, even simple patterns can be simplified further. For example, "<Prim prim=Backward/>"near"<Prim prim=On/>" is often just "<Prim prim=Off/>"."</p>
         <Editor example="˜(▽<2)⟜⊡ [1_2 0_1] [0_1_2 3_4_5]\n  ▽<2 ⤚⊡ [1_2 0_1] [0_1_2 3_4_5]"/>
         <p>"When you reduce a pattern to its simplest form, you can often gain a better view of the flow of data through the program."</p>

@@ -78,7 +78,7 @@ It is often necessary to generate a range that has as many elements as an array 
 The intuitive way to do this is with [`length`]().
 
 ```uiua
-⇡⧻. "Hello!"
+⇡⊸⧻ "Hello!"
 ```
 
 This is a very common operation. [`un`]() [`select`]() is defined as a shortcut for this.

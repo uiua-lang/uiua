@@ -131,7 +131,7 @@ One option is to simply chain [rows]() multiple times.
 ≡≡≡□ °△ 2_3_4
 ```
 
-This can get a bit unwieldy if an array has a lot of dimensions. You can instead use [numeric subscripts](/tutorial/morestack#subscripts) with [rows]() to specify the rank of the arrays you want to work on.
+This can get a bit unwieldy if an array has a lot of dimensions. You can instead use [numeric subscripts](</tutorial/More Argument Manipulation#subscripts>) with [rows]() to specify the rank of the arrays you want to work on.
 
 ```uiua
 ≡₀□ °△ 2_3_4 # Scalars
@@ -164,9 +164,9 @@ Combined with [range](), this is a nice way to generate all combinations of indi
 ⍉ ♭₂ ⇡2_2_3
 ```
 
-Subscripting these works in the vast majority of cases. However, subscripts are static. The rank to use cannot be taken from the stack.
+Subscripting these works in the vast majority of cases. However, subscripts are static. The rank to use cannot be determined at runtime.
 
-In the rare event that you need a dynamic rank, you can use the `unby` `(` `lengthshape` `)` idiom introduced in the [Inverses](/tutorial/inverses#un-by) tutorial.
+In the rare event that you need a dynamic rank, you can use the `unby` `(` `lengthshape` `)` idiom introduced in the [Inverses](/tutorial/Inverses#un-by) tutorial.
 
 ```uiua
 ⍉ °⊸(⧻△) 2 ⇡2_2_2
@@ -174,4 +174,25 @@ In the rare event that you need a dynamic rank, you can use the `unby` `(` `leng
 
 ```uiua
 °⊸(⧻△) 1 °△2_3_3
+```
+
+## Challenges
+
+```challenge
+adds the first argument list to each row of the second argument matrix
++¤
+
+1_2_3 [4_5_6 7_8_9]
+10_20 ↯4_2⇡8
+"Wow" ¯[10_0_10 19_14_19]
+```
+
+```challenge
+joins the first argument to each list in the second argument
+≡₁⌞⊂
+
+0 +1°△3_4
+0 [1 2 3]
+@| ⬚@\s[["Hey""there""buddy"] [@a "bc" "def"]]
+η_π_τ ⇡2_2_2
 ```

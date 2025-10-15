@@ -27,7 +27,7 @@ F [1 2 3]
 F [5 6 7]
 F "cool!"
 ```
-You can read more in the [Pattern Matching](https://uiua.org/tutorial/patternmatching) tutorial.
+You can read more in the [Pattern Matching](https://uiua.org/tutorial/Pattern Matching) tutorial.
 
 ## Array Macros
 
@@ -41,7 +41,7 @@ F!(1|2|3)
 [A B C B B]
 ```
 
-You can read more in the updated [Macros](https://uiua.org/tutorial/macros) tutorial.
+You can read more in the updated [Macros](https://uiua.org/tutorial/Macros) tutorial.
 
 ## Git Modules
 
@@ -54,7 +54,7 @@ In the native interpreter, this automatically creates a Git submodule.
 
 On the web, it fetches a `lib.ua` file from the repository.
 
-You can read more in the updated [Modules](https://uiua.org/tutorial/modules) tutorial.
+You can read more in the updated [Modules](https://uiua.org/tutorial/Modules) tutorial.
 
 ## [`mask`](https://uiua.org/docs/mask)
 

@@ -1230,28 +1230,28 @@ pub fn Editor<'a>(
                     "strand",
                     "strand-span",
                     None,
-                    "tutorial/arrays#creating-arrays",
+                    "tutorial/Arrays#creating-arrays",
                 ),
                 (
                     "[]",
                     "array",
                     "",
                     Some(('[', ']')),
-                    "tutorial/arrays#creating-arrays",
+                    "tutorial/Arrays#creating-arrays",
                 ),
                 (
                     "{}",
                     "box array",
                     "",
                     Some(('{', '}')),
-                    "tutorial/arrays#nested-arrays",
+                    "tutorial/Arrays#nested-arrays",
                 ),
                 (
                     "()",
                     "function",
                     "",
                     Some(('(', ')')),
-                    "tutorial/functions#inline-functions",
+                    "tutorial/Modifiers and Functions#inline-functions",
                 ),
                 (
                     "¯",
@@ -1273,7 +1273,7 @@ pub fn Editor<'a>(
                         "string-literal-span"
                     },
                     None,
-                    "tutorial/types#characters",
+                    "tutorial/Types#characters",
                 ),
                 (
                     "$",
@@ -1284,7 +1284,7 @@ pub fn Editor<'a>(
                         "string-literal-span"
                     },
                     None,
-                    "tutorial/functions#format-strings",
+                    "tutorial/Modifiers and Functions#format-strings",
                 ),
                 (
                     "\"",
@@ -1295,25 +1295,25 @@ pub fn Editor<'a>(
                         "string-literal-span"
                     },
                     Some(('"', '"')),
-                    "tutorial/types#characters",
+                    "tutorial/Types#characters",
                 ),
-                ("!", "macro", "", None, "tutorial/macros"),
-                ("^", "placeholder", "", None, "tutorial/custommodifiers"),
-                ("←", "(=) binding", "", None, "tutorial/bindings"),
-                ("~", "module", "", None, "tutorial/modules"),
+                ("!", "macro", "", None, "tutorial/Macros"),
+                ("^", "placeholder", "", None, "tutorial/Macros"),
+                ("←", "(=) binding", "", None, "tutorial/Bindings"),
+                ("~", "module", "", None, "tutorial/Modules"),
                 (
                     "|",
                     "signature",
                     "",
                     None,
-                    "tutorial/functions#stack-signatures",
+                    "tutorial/Modifiers and Functions#stack-signatures",
                 ),
                 (
                     "#",
                     "comment",
                     "comment-span",
                     None,
-                    "tutorial/basic#comments",
+                    "tutorial/Basic Argument Manipulation and Formatting#comments",
                 ),
             ] {
                 let class = format!("glyph-button {class}");

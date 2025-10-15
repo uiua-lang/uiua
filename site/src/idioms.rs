@@ -109,7 +109,7 @@ pub fn Idioms() -> impl IntoView {
                 </table>
 
                 <Hd id="planet-aliases">"Planet Aliases"</Hd>
-                <p>"As discussed in the "<A href="/tutorial/morestack#planet-notation">"Planet Notation"</A>" tutorial, sequences of some primitives can be represented by sequences of corresponding characters. These compose arbitrarily long."</p>
+                <p>"As discussed in the "<A href="/tutorial/More Argument Manipulation#planet-notation">"Planet Notation"</A>" tutorial, sequences of some primitives can be represented by sequences of corresponding characters. These compose arbitrarily long."</p>
                 <p>"The rules are:"</p>
                 <table class="bordered-table all-centered-table" style="width: 100%">
                     <tr><th>"Where"</th><th>"Characters"</th><th>"Formats to"</th></tr>

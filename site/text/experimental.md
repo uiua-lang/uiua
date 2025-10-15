@@ -1,6 +1,6 @@
 ## Data Definitions
 
-[Data definitions](/tutorial/datadefs) have a few experimental features.
+[Data definitions](/tutorial/Data Definitions) have a few experimental features.
 
 ### Data Functions
 

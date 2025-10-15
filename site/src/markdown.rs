@@ -592,7 +592,7 @@ fn all_text<'a>(node: &'a AstNode<'a>) -> String {
 fn text_code_blocks() {
     use uiua_editor::backend::WebBackend;
 
-    for entry in ["text", "new_tutorial"]
+    for entry in ["text", "tutorial"]
         .into_iter()
         .flat_map(|path| std::fs::read_dir(path).unwrap())
     {
@@ -612,6 +612,9 @@ fn text_code_blocks() {
             for child in node.children() {
                 match &child.data.borrow().value {
                     NodeValue::CodeBlock(block) if block.info.contains("uiua") => {
+                        if block.info.contains("not uiua") {
+                            continue;
+                        }
                         let should_fail = block.info.contains("should fail");
                         let literal = if block.literal.trim() == "LOGO" {
                             LOGO
@@ -627,6 +630,9 @@ fn text_code_blocks() {
         }
 
         for (block, should_fail) in text_code_blocks(root) {
+            if block.contains("~ \"git:") {
+                continue;
+            }
             eprintln!("Code block:\n{block}");
             let mut comp = uiua::Compiler::with_backend(WebBackend::default());
             let mut env = uiua::Uiua::with_backend(WebBackend::default());

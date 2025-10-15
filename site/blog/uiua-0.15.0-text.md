@@ -18,7 +18,7 @@ Here are some highlights of this release:
 
 Data definitions are a newly stabilized feature that allows names to be given to the rows of heterogeneous arrays. This is similar to structures or classes in other languages.
 
-There is [new tutorial](https://uiua.org/tutorial/datadefs) detailing all the features of data definitions, but here are a few examples:
+There is [new tutorial](https://uiua.org/tutorial/Data Definitions) detailing all the features of data definitions, but here are a few examples:
 
 Simple data definitions can be defined following a `~`. We can then use the name of the definition to construct an array, and we can use the field names to access the fields.
 
@@ -28,7 +28,7 @@ Customer "John Doe" "555-1234" "123 Main St"
 Customer~Name .
 ```
 
-If we want to add functions associated with the data definition, we can put the definition inside a module. We can use a [module import macro](https://www.uiua.org/tutorial/modules#module-import-macros) to easily access the items in the module.
+If we want to add functions associated with the data definition, we can put the definition inside a module. We can use a [module import macro](https://www.uiua.org/tutorial/Modules#module-import-macros) to easily access the items in the module.
 
 ```uiua
 ┌─╴Customer
@@ -45,7 +45,7 @@ Customer!(
 )
 ```
 
-Enum-like data definitions can be defined in a module with `|`s. [Pattern matching](https://www.uiua.org/tutorial/patternmatching) can be used to do different things based on the variant.
+Enum-like data definitions can be defined in a module with `|`s. [Pattern matching](https://www.uiua.org/tutorial/Pattern Matching) can be used to do different things based on the variant.
 
 ```uiua
 ┌─╴Shape
@@ -107,7 +107,7 @@ Sided subscripts are [subscripts](https://www.uiua.org/docs/subscripts) that ins
 
 Sided subscripts are formatted from `,<` and `,>`. They are currently only stabilized for [`both ∩`](https://www.uiua.org/docs/both) and [`bracket ⊓`](https://www.uiua.org/docs/bracket). These cases simplify some common stack manipulation patterns.
 
-There is a [short tutorial section](https://www.uiua.org/tutorial/evenmorestack#sided-subscripts) about them, but here are some simple examples:
+There is a [short tutorial section](https://www.uiua.org/tutorial/evenmoreargument#sided-subscripts) about them, but here are some simple examples:
 
 ```uiua
 {∩⌟⊟ 1 2 3}

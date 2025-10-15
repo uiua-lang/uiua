@@ -8,15 +8,15 @@ The language has a couple built-in mechanisms for streamlining testing.
 
 The [assert](/docs/assert) function will return an error when its second argument is anything other than `1`.
 
-While this can be used in some forms of [control flow](/tutorial/controlflow), it is also useful for testing.
+While this can be used in some forms of [control flow](/tutorial/Control Flow), it is also useful for testing.
 
 When testing is enabled (as it is in all editors on this website), a line with [assert](/docs/assert) at the beginning will be interpreted as a test.
 
 ```uiua should fail
 Square ← ˙×
-⍤. =9 Square 3
-⍤. =12 Square 4
-⍤. =225 Square 15
+˙⍤ =9 Square 3
+˙⍤ =12 Square 4
+˙⍤ =225 Square 15
 ```
 
 As you can see, these when one of these top-level [assert](/docs/assert)s fails, the program continues running.
@@ -24,13 +24,13 @@ When the program is done running, the successes and failures are aggregated and 
 
 ## Test Scopes
 
-A [scoped module](/tutorial/modules#scoped-modules) with the name `test` is special in that code inside it will *not* be run when using the `uiua run` command. The `uiua test` and `uiua watch` commands *will* run test scope code. Test scopes are also always run on this website.
+A [scoped module](/tutorial/Modules#scoped-modules) with the name `test` is special in that code inside it will *not* be run when using the `uiua run` command. The `uiua test` and `uiua watch` commands *will* run test scope code. Test scopes are also always run on this website.
 
 ```uiua
 Square ← ˙×
 ┌─╴test
-  ⍤. =9 Square 3
-  ⍤. =225 Square 15
+  ˙⍤ =9 Square 3
+  ˙⍤ =225 Square 15
 └─╴
 ```
 
@@ -38,7 +38,7 @@ Importantly, `uiua run` will not run test scopes, but it will *also* not interpr
 
 ## Testing Patterns
 
-The first argument to [assert](/docs/assert) is the value that will be thrown if the assertion fails. In the examples above, we have simply been [duplicate](/docs/duplicate)ing the test value. We can throw a message instead.
+The first argument to [assert](/docs/assert) is the value that will be thrown if the assertion fails. In the examples above, we have simply been duplicating the test value with [self](/docs/self). We can throw a message instead.
 
 If the result does not match the expectation, that incorrect result will be thrown.
 
@@ -79,3 +79,11 @@ If a function returns multiple values, you can simply box them with `{}`s.
 ⍤⤙≍ {1 2_3} {°⊂} [1 2 3]
 ⍤⤙≍ {1_2 3_4_5} {⊃↙↘2} [1 2 3 4 5]
 ```
+
+---
+
+Hooray! You've reached the end of the tutorial!
+
+To keep going with Uiua, you can check out:
+
+`END OF TUTORIAL LIST`

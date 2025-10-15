@@ -17,7 +17,7 @@ Here are some of the highlights:
 ## New Tutorials
 
 There are two new tutorials on the site:
-- [Tacit Code](https://uiua.org/tutorial/tacitcode)
+- [Tacit Code](https://uiua.org/tutorial/Tacit Code)
 - [Code Tactility](https://uiua.org/tutorial/codetactility)
 
 ## Scoped Modules

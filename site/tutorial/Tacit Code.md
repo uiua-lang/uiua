@@ -39,7 +39,7 @@ Quad 1 ¯3 2
 
 The simplest way to approach a problem like this is to break it up into smaller pieces, then put those parts together with liberal use of [fork]().
 
-We'll start with the `4ac` term. This is implemented easily using [planet notation](</new-tutorial/More Argument Manipulation#planet-notation>).
+We'll start with the `4ac` term. This is implemented easily using [planet notation](</tutorial/More Argument Manipulation#planet-notation>).
 
 ```uiua
 Quad ← ×4×⊙⋅∘

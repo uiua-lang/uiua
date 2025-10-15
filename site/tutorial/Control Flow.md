@@ -199,7 +199,7 @@ F 12
 
 You can read more about `# Track caller!` [here](/tutorial/documentation#track-caller).
 
-Using [assert]() for this purpose will be covered more in the [section on testing](/new-tutorial/Testing).
+Using [assert]() for this purpose will be covered more in the [section on testing](/tutorial/Testing).
 
 ## Challenges
 

@@ -46,7 +46,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This caused consistency issues and was rarely used anyway
 - **Breaking Change** - The FFI function API has been changed considerably, read more in the documentation for [`&ffi`](https://uiua.org/docs/&ffi), [`&memcpy`](https://uiua.org/docs/&memcpy), and [`&memset`](https://uiua.org/docs/&memset)
 - Add [`parse ⋕`](https://uiua.org/docs/parse) subscripts to parse strings in different bases
-- Allow for private [modules](https://uiua.org/tutorial/modules#private-scoped-modules), [imports](https://uiua.org/tutorial/modules#private-imports), and [data definitions](https://uiua.org/tutorial/datadefs#visibility)
+- Allow for private [modules](https://uiua.org/tutorial/Modules#private-scoped-modules), [imports](https://uiua.org/tutorial/Modules#private-imports), and [data definitions](https://uiua.org/tutorial/Data Definitions#visibility)
 - Modules containing data definition variants now contains a `Variants` binding that lists their names
 - Add array pack syntactic sugar. This lets you write code like `[⊃(+|×)]` as `⊃[+|×]`.
 - Subscripts can now be typed with `,` instead of `__`s
@@ -159,10 +159,10 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.16.0).
 - Stabilize [`negate ¯`](https://uiua.org/docs/negate) subscripts
 - Stabilize [`base ⊥`](https://uiua.org/docs/fft)
 - Stabilize [`fft`](https://uiua.org/docs/fft)
-- Stabilize [inline macros](https://uiua.org/tutorial/macros#inline-macros)
+- Stabilize [inline macros](https://uiua.org/tutorial/Macros#inline-macros)
 - The first argument to [`rotate ↻`](https://uiua.org/docs/rotate) can now be rank > 1.
   - This creates an array with multiple copies of the target array rotated by different amounts
-- [Output comments](https://uiua.org/tutorial/basic#output-comments) now show values on the stack *after* their line rather than before it
+- [Output comments](https://uiua.org/tutorial/Basic Data Manipulation and Formatting#output-comments) now show values on the stack *after* their line rather than before it
 - Add [`un °`](https://uiua.org/docs/un) [`fill ⬚`](https://uiua.org/docs/fill)ed [`take ↙`](https://uiua.org/docs/take)
 - Add [`un °`](https://uiua.org/docs/un) [`add +`](https://uiua.org/docs/add), [`un °`](https://uiua.org/docs/un) [`multiply ×`](https://uiua.org/docs/multiply) and [`un °`](https://uiua.org/docs/un) [`divide ÷`](https://uiua.org/docs/divide)
   - These split into fraction and whole, sign and magnitude, and denominator and numerator respectively
@@ -233,7 +233,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
   - These preserve N arguments rather than just the first or last
 - Add data definition methods
 - Stabilize most of data definitions
-  - A new [section](https://uiua.org/tutorial/datadefs) has been added to the tutorial
+  - A new [section](https://uiua.org/tutorial/Data Definitions) has been added to the tutorial
   - Things not stabilized:
     - Data functions
     - Methods
@@ -250,7 +250,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
   - It is part of a stack manipulation paradigm that Uiua is slowly moving away from
   - [`with ⤙`](https://uiua.org/docs/with) and [`below ◡`](https://uiua.org/docs/below) replace the vast majority of [`over ,`](https://uiua.org/docs/over)'s use cases
   - You can find a short blog post about this change [here](https://uiua.org/blog/its-so-over)
-- Stabilize [sided subscripts](https://uiua.org/tutorial/evenmorestack#sided-subscripts) for [`both ∩`](https://uiua.org/docs/both) and [`bracket ⊓`](https://uiua.org/docs/bracket)
+- Stabilize [sided subscripts](https://uiua.org/tutorial/evenmoreargument#sided-subscripts) for [`both ∩`](https://uiua.org/docs/both) and [`bracket ⊓`](https://uiua.org/docs/bracket)
 - Add [`un °`](https://uiua.org/docs/un) [`with ⤙`](https://uiua.org/docs/with) and [`un °`](https://uiua.org/docs/un) [`off ⤚`](https://uiua.org/docs/off)
 - Add sided subscripts for [`reach 𝄐`](https://uiua.org/docs/reach)
 - Add the [`# External!`](https://www.uiua.org/tutorial/documentation#external) semantic comment to mark functions that are provided via Rust code
@@ -268,7 +268,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
 ### Website
 - Add an expanded mode to the pad. Click the ⤢ button to toggle it.
 - Change pad icons
-- Add new [Data Definitions](https://uiua.org/tutorial/datadefs) tutorial
+- Add new [Data Definitions](https://uiua.org/tutorial/Data Definitions) tutorial
 - Add a [Format String Tricks](https://uiua.org/tutorial/strings#format-string-tricks) section to the [Working with Strings](https://uiua.org/tutorial/strings) tutorial
 
 ## 0.14.1 - 2024-12-23
@@ -362,7 +362,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.14.0).
 ### Website
 - Add a new pad setting to show line values to the right of the code
 - Add [Subscripts](https://uiua.org/docs/subscripts) page
-- Update [More Stack Manipulation](https://uiua.org/tutorial/morestack) and [More Array Manipulation](https://uiua.org/tutorial/advancedarray) tutorials to include subscripts
+- Update [More Stack Manipulation](https://uiua.org/tutorial/More Argument Manipulation) and [More Array Manipulation](https://uiua.org/tutorial/advancedarray) tutorials to include subscripts
   - Change their titles from "Advanced" to "More"
 - Add new [Idioms](https://uiua.org/docs/idioms) page
 
@@ -400,7 +400,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
   - Stabilize existing placeholder indexing syntax (`^0`, `^1`, etc.)
   - Deprecate existing stack-based macro placeholders (`^!`, `^.`, etc.)
 - [`assert ⍤`](https://uiua.org/docs/assert) at the beginning of a line is now interpreted as a test in some contexts
-  - See the updated [Testing Tutorial](https://uiua.org/tutorial/testing) for more information
+  - See the updated [Testing Tutorial](https://uiua.org/tutorial/Testing) for more information
 - [`parse ⋕`](https://uiua.org/docs/parse) now parses complex values from both `arbi`and `a+bi` formats
   - [`un °`](https://uiua.org/docs/un)[`parse ⋕`](https://uiua.org/docs/parse)'s return value uses the `arbi` format
 - [`un °`](https://uiua.org/docs/un) [`orient ⤸`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
@@ -484,9 +484,9 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
 - After programs finish executing, the terminal raw mode will be automatically disabled if it was left on. 
 ### Website
 - Add [Ranges](https://uiua.org/tutorial/ranges) tutorial
-- Update the [Inverses](https://uiua.org/docs/inverses) tutorial with information about [`anti ⌝`](https://uiua.org/docs/anti) and [`obverse ⌅`](https://uiua.org/docs/obverse)
+- Update the [Inverses](https://uiua.org/tutorial/inverses) tutorial with information about [`anti ⌝`](https://uiua.org/docs/anti) and [`obverse ⌅`](https://uiua.org/docs/obverse)
 - Add an [RSS Feed](https://uiua.org/blog/feed.rss) for the blog
-- Update the [Testing Tutorial](https://uiua.org/tutorial/testing)
+- Update the [Testing Tutorial](https://uiua.org/tutorial/Testing)
 - In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
 - Add the option to decouple running and formatting in the pad
 - Add a dropdown to the pad to insert named functions
@@ -540,7 +540,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
   - You can read about them in the new [Code Tactility Tutorial](https://uiua.org/tutorial/codetactility#labels)
 - [`windows ◫`](https://uiua.org/docs/windows) can now use a [`fill ⬚`](https://uiua.org/docs/fill) value to pad the array
   - This is useful for convolutions
-- Add new [Scoped Modules](https://uiua.org/tutorial/modules#scoped-modules)
+- Add new [Scoped Modules](https://uiua.org/tutorial/Modules#scoped-modules)
   - These allow you to create a module without creating a file
 - A `Call` or `New` function inside a module can now be called via the module's name
 - A module name used as a macro with `!` now imports all names from the module into the macro's function's scope
@@ -606,7 +606,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
   - Add some commands, which can be listed by typing `help` in the repl
 - Allow Uiua-specific tokens types to be disabled in the LSP
 ### Website
-- Add new [Tacit Code Tutorial](https://uiua.org/tutorial/tacitcode)
+- Add new [Tacit Code Tutorial](https://uiua.org/tutorial/Tacit Code)
 - Add new [Code Tactility Tutorial](https://uiua.org/tutorial/codetactility)
 - Fix a bug where running pad code that has end-of-line comments via ctrl+Enter would cause the cursor to move every time
 - Remove the Uiuisms page
@@ -742,10 +742,10 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - Add pattern matching with [`un °`](https://uiua.org/docs/un)
   - Constant values can now be inverted to form a function which errors if the top value on the stack does not match
   - Format strings can be inverted to extract substrings
-  - Read more in the new [Pattern Matching](https://uiua.org/tutorial/patternmatching) tutorial
+  - Read more in the new [Pattern Matching](https://uiua.org/tutorial/Pattern Matching) tutorial
 - Git modules are no longer experimental
   - Modules are added automatically as Git submodules when imported
-  - See the [Modules](https://uiua.org/tutorial/modules#git-modules) tutorial for more information
+  - See the [Modules](https://uiua.org/tutorial/Modules#git-modules) tutorial for more information
 - [`map`](https://uiua.org/docs/map) and related functions [`insert`](https://uiua.org/docs/insert), [`has`](https://uiua.org/docs/has), [`get`](https://uiua.org/docs/get), and [`remove`](https://uiua.org/docs/remove) are no longer experimental
 - Add the [`mask ⦷`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
   - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
@@ -776,7 +776,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - Stack macros are now [hygienic](https://en.wikipedia.org/wiki/Hygienic_macro)
 - Add array macros, which allow code to be generated and manipulated at compile time as strings
   - These are specified with a `^` immediately following a binding's arrow
-  - They are documented in the [Macros](https://uiua.org/tutorial/macros) tutorial
+  - They are documented in the [Macros](https://uiua.org/tutorial/Macros) tutorial
 - [`un °`](https://uiua.org/docs/un) [`pop ◌`](https://uiua.org/docs/pop) can now be used to retrieve the [`fill ⬚`](https://uiua.org/docs/fill) value
   - See more details in [`fill ⬚`](https://uiua.org/docs/fill)'s documentation
 - Add the wildcard constant `W`, which matches any number, and `@\W`, which matches any character
@@ -830,8 +830,8 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ### Website
 - Tutorials
   - Add a [Working with Strings](https://uiua.org/tutorial/strings) tutorial
-  - Add array macros to the [Macros](https://uiua.org/tutorial/macros) tutorial
-  - Add the [Pattern Matching](https://uiua.org/tutorial/patternmatching) tutorial
+  - Add array macros to the [Macros](https://uiua.org/tutorial/Macros) tutorial
+  - Add the [Pattern Matching](https://uiua.org/tutorial/Pattern Matching) tutorial
 - Add some modifier compatibility tables to documentation
   - [`un °`](https://uiua.org/docs/un)
   - [`under ⍜`](https://uiua.org/docs/under)
@@ -874,14 +874,14 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - **Breaking Change** - [`&ad`](https://uiua.org/docs/&ad) and [`&imd`](https://uiua.org/docs/&imd) now return an encoding format as a string in addition to the media data
   - They are also now deprecated in favor of using [`un °`](https://uiua.org/docs/un) with [`&ae`](https://uiua.org/docs/audio) or [`&ime`](https://uiua.org/docs/img)
 - Overhaul the module system
-  - Details can be found in the updated [Modules](https://uiua.org/tutorial/modules) tutorial
+  - Details can be found in the updated [Modules](https://uiua.org/tutorial/Modules) tutorial
   - Deprecate [`&i`](https://uiua.org/docs/&i), as it is no longer necessary
   - Enabling experimental allows a module path of the form `git: <repo url>` to load a module from a git repository
 - Custom modifiers are now called "macros"
   - Rather than requiring signatures, placeholders are now a sort of function that operates on the macro's arguments
   - This allows for more complex and flexible code-reuse
   - Existing code should continue to work. Existing placeholders will be formatted into the new syntax.
-  - You can read more about macros in the updated [Macros](https://uiua.org/tutorial/macros) tutorial
+  - You can read more about macros in the updated [Macros](https://uiua.org/tutorial/Macros) tutorial
 - Add the [`on ⟜`](https://uiua.org/docs/on) modifier, which captures a common [`fork ⊃`](https://uiua.org/docs/fork) pattern in a more readable way
 - [`join ⊂`](https://uiua.org/docs/join) can now be used with [`under ⍜`](https://uiua.org/docs/under)
   - This only works when the joined arrays have different ranks
@@ -951,7 +951,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - Add inline function hovering
   - Show [`un °`](https://uiua.org/docs/un)/[`under ⍜`](https://uiua.org/docs/under) compatibility for user-defined functions
 ### Website
-- Add [Tutorial Introduction](https://uiua.org/tutorial/introduction)
+- Add [Tutorial Introduction](https://uiua.org/tutorial/Introduction)
 - Add [primitives.json](https://uiua.org/primitives.json) for use with tooling
 - Tutorials are now in a `/tutorial` route instead of `/docs`
 
@@ -991,7 +991,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - [`&ime`](https://uiua.org/docs/img) and [`&imd`](https://uiua.org/docs/&imd) now support the QOI image format
 - Lots of bug and crash fixes
 ### Website
-- Add a new tutorial: [Thinking With Arrays](https://uiua.org/tutorial/thinkingwitharrays)
+- Add a new tutorial: [Thinking With Arrays](https://uiua.org/tutorial/Thinking With Arrays)
 
 ## 0.7.1 - 2023-12-18
 ### Interpreter
@@ -1025,12 +1025,12 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - Bug and crash fixes
 - Performance improvements
 ### Website
-- Add an [Inverses](https://uiua.org/tutorial/inverses) tutorial
+- Add an [Inverses](https://uiua.org/tutorial/Inverses) tutorial
 - Each tutorial challenge now contains 1 or 2 answers
 
 ## 0.6.1 - 2023-12-07
 ### Interpreter
-- Make [proxy values](https://uiua.org/tutorial/functions#proxy) a little less leaky
+- Make [proxy values](https://uiua.org/tutorial/Modifiers and Functions#proxy) a little less leaky
 - Make placeholders work properly with [`both ∩`](https://uiua.org/docs/both)
 - Some other bug and crash fixes
 
@@ -1204,7 +1204,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ### Website
 - Add challenges to the end of tutorial sections
 - Make the introductory examples on the main page less esoteric
-- Update the [Advanced Stack Manipulation Tutorial](https://uiua.org/tutorial/morestack) to include `reach ⟜`
+- Update the [Advanced Stack Manipulation Tutorial](https://uiua.org/tutorial/More Argument Manipulation) to include `reach ⟜`
 ### Crate
 - The [Uiua Rust crate](https://crates.io/crates/uiua) is now [fully documented](https://docs.rs/uiua) and has a decent API
 
@@ -1251,7 +1251,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - Boxes still work as normal, but are now their own type distinct from functions
   - Remove `sig`, as everything that can be on the stack now has the same signature
 - Add new syntax for defining [custom modifiers](https://uiua.org/tutorial/custommodifiers)
-- Add new syntax for [calling a function from a list of functions](https://uiua.org/tutorial/controlflow#switch)
+- Add new syntax for [calling a function from a list of functions](https://uiua.org/tutorial/Control Flow#switch)
 - Add the `pack ⊐` modifier, which calls its function and implicitly boxes/unboxes values
 - Add the `combinate ◳` modifier, which is a rank-generic version of [`table ⊞`](https://uiua.org/docs/table)
 - [`fold ∧`](https://uiua.org/docs/fold) is now rank-generic and requires a rank list
@@ -1265,7 +1265,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - Some mathematical functions that previously did not work with [`invert ⍘`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under) when accompanied by [`flip :`](https://uiua.org/docs/flip) now do
 ### Website
 - Add 3 new tutorials
-  - [Control Flow](https://uiua.org/tutorial/controlflow)
+  - [Control Flow](https://uiua.org/tutorial/Control Flow)
   - [Advanced Array Manipulation](https://uiua.org/tutorial/advancedarray)
   - [Custom Modifiers](https://uiua.org/tutorial/custommodifiers)
 - The orientation of stack values in the output can be flipped in the settings
@@ -1357,7 +1357,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ## 0.0.15 - 2023-10-05
 This version changes a lot of glyphs. If you are coming from the previous version, most of the old glyphs will be automatically formatted to the new ones. The only change you may need to make is replacing all `^`s with `|`s.
 
-You may want to read the new version of the [Advanced Stack Manipulation Tutorial](https://uiua.org/tutorial/morestack) to understand the reason for so many of these changes.
+You may want to read the new version of the [Advanced Stack Manipulation Tutorial](https://uiua.org/tutorial/More Argument Manipulation) to understand the reason for so many of these changes.
 
 ### Language
 - Add the [`bracket ⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments

@@ -786,7 +786,7 @@ primitive!(
     /// ex! -  1_3 [3_4 5_6 7_8]
     /// ex: - ¤1_3 [3_4 5_6 7_8]
     /// [fix]'s name come from the way it "fixes" an array in this way.
-    /// See the [More Array Manipulation Tutorial](/tutorial/morearray) for more information on this use case.
+    /// See the [More Array Manipulation Tutorial](/tutorial/More Array Manipulation) for more information on this use case.
     (1, Fix, MonadicArray, ("fix", '¤')),
     /// Encode an array as bits (LSB-first)
     ///
@@ -2213,7 +2213,7 @@ primitive!(
     /// Most functions are not invertible.
     /// [under] also uses inverses, but expresses a different pattern and is generally more powerful.
     /// A function's [un]-inverse can be set with [obverse].
-    /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
+    /// For more about inverses, see the [Inverse Tutorial](/tutorial/Inverses).
     ([1], Un, InversionModifier, ("un", '°')),
     /// Invert the behavior of a function, treating its first argument as a constant
     ///
@@ -2233,7 +2233,7 @@ primitive!(
     /// ex: ⌝⊂ 1 [1 2 3]
     /// ex! ⌝⊂ 1 [2 3 4]
     /// A function's [anti]-inverse can be set with [obverse].
-    /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
+    /// For more about inverses, see the [Inverse Tutorial](/tutorial/Inverses).
     ([1], Anti, InversionModifier, ("anti", '⌝')),
     /// Operate on a transformed array, then reverse the transformation
     ///
@@ -2265,7 +2265,7 @@ primitive!(
     ///
     /// [obverse] can be used to define a function's [under] behavior.
     ///
-    /// For more about [under] and inverses, see the [Inverse Tutorial](/tutorial/inverses).
+    /// For more about [under] and inverses, see the [Inverse Tutorial](/tutorial/Inverses).
     ([2], Under, InversionModifier, ("under", '⍜')),
     /// Call two functions on the same values
     ///
@@ -2477,7 +2477,7 @@ primitive!(
     /// ex! ⍤"Oh no!" "any array"
     /// ex: ⍤"Oh no!" 1
     /// ex! ⍤"Oh no!" 0
-    /// As you can see, a top-level [assert] is interpreted as a test in some contexts. See the [Testing Tutorial](/tutorial/testing) for more information.
+    /// As you can see, a top-level [assert] is interpreted as a test in some contexts. See the [Testing Tutorial](/tutorial/Testing) for more information.
     /// Use [duplicate] if you do not care about the message.
     /// ex: ˙⍤ =6 6
     /// ex! ˙⍤ =8 9

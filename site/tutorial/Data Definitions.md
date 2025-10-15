@@ -45,7 +45,7 @@ We can define a `Person` data definition like this.
 ~Person {Name Age}
 ```
 
-This defines a [module](/tutorial/modules) called `Person`. In this case, the module contains three functions: `New`, `Name`, and `Age`. Because a `New` function exists, we can call the module as a function.
+This defines a [module](/tutorial/Modules) called `Person`. In this case, the module contains three functions: `New`, `Name`, and `Age`. Because a `New` function exists, we can call the module as a function.
 
 ```uiua
 ~Person {Name Age}
@@ -57,7 +57,7 @@ As you can see, the generated constructor function also adds [labels](/tutorial/
 
 Notice the `{}` brackets in the example above. If we expect all fields to have the same type and shape, we can use `[]` brackets instead. This prevents the fields from being boxed, but disables labels.
 
-This example defines a `Color` data definition with red, green, and blue channels. We use a [module import macro](/tutorial/modules#module-import-macros) to more concisely access the `g` and `b` fields.
+This example defines a `Color` data definition with red, green, and blue channels. We use a [module import macro](/tutorial/Modules#module-import-macros) to more concisely access the `g` and `b` fields.
 
 ```uiua
 ~Color [r g b]
@@ -190,7 +190,7 @@ Shape~Circle 5
 Shape~Rectangle~Height
 ```
 
-We can use [pattern matching](/tutorial/patternmatching) to do something different depending on which variant we have.
+We can use [pattern matching](/tutorial/Pattern Matching) to do something different depending on which variant we have.
 
 ```uiua
 ┌─╴Shape

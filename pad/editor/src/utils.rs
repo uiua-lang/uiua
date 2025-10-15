@@ -735,7 +735,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                 if os_ctrl(&event) {
                                     window()
                                         .open_with_url_and_target(
-                                            "/tutorial/morestack#on-and-by",
+                                            "/tutorial/Basic Data Manipulation#on",
                                             "_blank",
                                         )
                                         .unwrap();

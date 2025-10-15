@@ -376,7 +376,7 @@
     "glyph": "◠",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Keep all arguments to a function above the outputs on the stack",
     "experimental": true
   },
@@ -444,7 +444,7 @@
     "glyph": "˜",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Call a function with its arguments swapped"
   },
   "base": {
@@ -458,7 +458,7 @@
     "glyph": "◡",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Keep all arguments to a function after the outputs"
   },
   "binary": {
@@ -479,7 +479,7 @@
     "glyph": "∩",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Planet",
+    "class": "Arguments",
     "description": "Call a function on two sets of values"
   },
   "box": {
@@ -493,14 +493,14 @@
     "glyph": "⊓",
     "outputs": 1,
     "modifier_args": 2,
-    "class": "Planet",
+    "class": "Arguments",
     "description": "Call two functions on two distinct sets of values"
   },
   "by": {
     "glyph": "⊸",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Call a function but keep its last argument after its outputs"
   },
   "bytes": {
@@ -596,7 +596,7 @@
     "glyph": "⊙",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Planet",
+    "class": "Arguments",
     "description": "Skip the first argument and call a function on later arguments"
   },
   "divide": {
@@ -638,7 +638,7 @@
     "glyph": ".",
     "args": 1,
     "outputs": 2,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Duplicate the top value on the stack",
     "deprecated": true
   },
@@ -732,7 +732,7 @@
     "glyph": ":",
     "args": 2,
     "outputs": 2,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Swap the top two values on the stack",
     "deprecated": true
   },
@@ -754,14 +754,14 @@
     "glyph": "⊃",
     "outputs": 1,
     "modifier_args": 2,
-    "class": "Planet",
+    "class": "Arguments",
     "description": "Call two functions on the same values"
   },
   "gap": {
     "glyph": "⋅",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Planet",
+    "class": "Arguments",
     "description": "Discard the first argument then call a function"
   },
   "gen": {
@@ -835,7 +835,7 @@
     "glyph": "∘",
     "args": 1,
     "outputs": 1,
-    "class": "Planet",
+    "class": "Arguments",
     "description": "Do nothing with one value"
   },
   "img": {
@@ -1066,14 +1066,14 @@
     "glyph": "⤚",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Call a function but keep its first argument after its outputs"
   },
   "on": {
     "glyph": "⟜",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Call a function but keep its first argument before its outputs"
   },
   "or": {
@@ -1154,7 +1154,7 @@
     "glyph": "◌",
     "args": 1,
     "outputs": 0,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Discard the first argument"
   },
   "power": {
@@ -1205,7 +1205,7 @@
     "glyph": "𝄐",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Planet",
+    "class": "Arguments",
     "description": "Call a function on the first and third values on the stack",
     "experimental": true,
     "deprecated": true
@@ -1332,7 +1332,7 @@
     "glyph": "˙",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Call a function with the same array as all arguments"
   },
   "send": {
@@ -1531,7 +1531,7 @@
     "glyph": "⤙",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Stack",
+    "class": "Arguments",
     "description": "Call a function but keep its last argument before its outputs"
   },
   "xlsx": {

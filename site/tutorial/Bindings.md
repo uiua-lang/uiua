@@ -47,7 +47,7 @@ The parser can sometimes mistake all-lowercase bindings names for unformatted bu
 
 Here, the parser thinks that `part` is [partition]().
 
-```uiua help(Run to format and reveal why this does not work)
+```uiua should fail help(Run to format and reveal why this does not work)
 part = 5
 ```
 

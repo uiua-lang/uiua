@@ -1,6 +1,6 @@
 //! En/decode Uiua arrays to/from media formats
 
-use std::f64::consts::TAU;
+use std::f64::consts::PI;
 
 use ecow::{eco_vec, EcoVec};
 use enum_iterator::{all, Sequence};
@@ -435,7 +435,7 @@ fn complex_color(c: Complex) -> [f64; 3] {
     let h = c.arg();
     let mag = c.abs();
     let s = (0.3 + 0.7 * (-mag / 10.0).exp()) / (0.3 + 0.7 * (-0.1 as f64).exp());
-    let v = (1.0 - (-TAU * mag).exp()) / (1.0 - (-TAU).exp());
+    let v = (1.0 - (-PI * mag).exp()) / (1.0 - (-PI).exp());
     hsv_to_rgb(h, s.min(1.0), v.min(1.0))
 }
 

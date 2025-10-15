@@ -34,7 +34,7 @@
     "args": 0,
     "outputs": 0,
     "class": "Misc",
-    "description": "Pause the execution and print the stack",
+    "description": "Pause the execution and print the argument list",
     "experimental": true
   },
   "&camcap": {
@@ -418,7 +418,7 @@
     "args": 0,
     "outputs": 0,
     "class": "Debug",
-    "description": "Debug print all stack values without popping them"
+    "description": "Debug print all arguments without consuming them"
   },
   "assert": {
     "glyph": "⍤",
@@ -459,7 +459,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Keep all arguments to a function below the outputs on the stack"
+    "description": "Keep all arguments to a function after the outputs"
   },
   "binary": {
     "args": 1,
@@ -501,7 +501,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Duplicate a function's last argument before calling it"
+    "description": "Call a function but keep its last argument after its outputs"
   },
   "bytes": {
     "args": 2,
@@ -597,7 +597,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Planet",
-    "description": "Temporarily pop the top value off the stack and call a function"
+    "description": "Skip the first argument and call a function on later arguments"
   },
   "divide": {
     "ascii": "%",
@@ -632,14 +632,15 @@
     "outputs": 0,
     "modifier_args": 1,
     "class": "Debug",
-    "description": "Preprocess and print all stack values without popping them"
+    "description": "Preprocess and print all arguments without popping them"
   },
   "duplicate": {
     "glyph": ".",
     "args": 1,
     "outputs": 2,
     "class": "Stack",
-    "description": "Duplicate the top value on the stack"
+    "description": "Duplicate the top value on the stack",
+    "deprecated": true
   },
   "each": {
     "glyph": "∵",
@@ -732,7 +733,8 @@
     "args": 2,
     "outputs": 2,
     "class": "Stack",
-    "description": "Swap the top two values on the stack"
+    "description": "Swap the top two values on the stack",
+    "deprecated": true
   },
   "floor": {
     "glyph": "⌊",
@@ -760,7 +762,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Planet",
-    "description": "Discard the top stack value then call a function"
+    "description": "Discard the first argument then call a function"
   },
   "gen": {
     "args": 2,
@@ -1065,14 +1067,14 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Call a function but keep its first argument under the outputs on the stack"
+    "description": "Call a function but keep its first argument after its outputs"
   },
   "on": {
     "glyph": "⟜",
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Call a function but keep its first argument on the top of the stack"
+    "description": "Call a function but keep its first argument before its outputs"
   },
   "or": {
     "glyph": "∨",
@@ -1153,7 +1155,7 @@
     "args": 1,
     "outputs": 0,
     "class": "Stack",
-    "description": "Discard the top stack value"
+    "description": "Discard the first argument"
   },
   "power": {
     "glyph": "ⁿ",
@@ -1205,7 +1207,8 @@
     "modifier_args": 1,
     "class": "Planet",
     "description": "Call a function on the first and third values on the stack",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "reciprocal": {
     "glyph": "⨪",
@@ -1507,7 +1510,7 @@
     "args": 1,
     "outputs": 1,
     "class": "Thread",
-    "description": "Wait for a thread to finish and push its results to the stack"
+    "description": "Wait for a thread to finish and return its results"
   },
   "where": {
     "glyph": "⊚",
@@ -1529,7 +1532,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Call a function but keep its last argument on the top of the stack"
+    "description": "Call a function but keep its last argument before its outputs"
   },
   "xlsx": {
     "args": 1,

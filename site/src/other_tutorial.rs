@@ -159,10 +159,10 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <p>"The last axis is always the colors. In this example, we create an array with "<Prim prim=Shape/>" "<code>"[100 100 2]"</code>". Because there are only 2 color channels, the image will be interpreted as grayscale with an alpha channel."</p>
         <Editor example="˙⊞⊟ ÷⟜⇡100"/>
         <p>"With 3 or 4 color channels, you can create full-color images."</p>
-        <Editor example="˙⊞(⊂⊂.) ÷⟜⇡100 # RGB"/>
-        <Editor example="˙⊞(⊂.⊂) ÷⟜⇡100 # RGBA"/>
+        <Editor example="˙⊞(⊂˙⊂) ÷⟜⇡100 # RGB"/>
+        <Editor example="˙⊞(˙⊂⊂) ÷⟜⇡100 # RGBA"/>
         <p>"In the examples above, the image array is constructed in such a way that the color channels are already the last axis. To create an image by combining color channels, it may be necessary to use "<Prim prim=Transpose/>"."</p>
-        <Editor example="< ⊞⊙∘ ⊃(-0.4|×0.2∿×τ) ÷⟜⇡100\n[⍉.⇌.]\n⟜△ # Not a valid image shape\n⍉\n⊸△ # Valid image shape"/>
+        <Editor example="< ⊞⊙∘ ⊃(-0.4|×0.2∿×τ) ÷⟜⇡100\n[⊸⍉⊸⇌]\n⟜△ # Not a valid image shape\n⍉\n⊸△ # Valid image shape"/>
         <p>"Of course, images need not be sqaure."</p>
         <Editor example="⊞< ⊙(+1/2÷3∿×τ) ∩(÷100⇡) 100 300"/>
         <p>"The "<code>"Logo"</code>" constant is a quick way to get the "{lang}" logo as an image."</p>
@@ -170,7 +170,8 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <p>"The "<Prim prim=Keep/>" function can be used to scale an image vertically. "<Prims prims=[Rows, Keep]/>" scales it horizontally. Non-integer scales are allowed."</p>
         <Editor example="▽ 0.5 Logo"/>
         <Editor example="≡▽ 2 Logo"/>
-        <Editor example="▽⟜≡▽ 0.7 Logo"/>
+        <p>"Subscripted "<Prim prim=Keep/>" scales multiple dimensions by the same amount."</p>
+        <Editor example="▽₂ 0.7 Logo"/>
 
         <Hd id="gifs">"GIFs"</Hd>
         <p>"To create a GIF, simply create an array where every row is an image."</p>
@@ -181,7 +182,7 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <p>"If you use the native interpreter, arrays will not be automatically converted into images or GIFs like they are on the website. To generate them, you must explicitly call certain system functions."</p>
         <p>"You can find lists of "<A href="/docs/imag">"image"</A>" and "<A href="/docs/gif">"GIF"</A>" system functions on the main docs page."</p>
         <p>"One system function that is particularly useful on the website is "<Prim prim=Sys(SysOp::GifShow)/>", which lets you set the framerate of a GIF."</p>
-        <Editor example="÷2+1∿×τ÷⟜⇡30\n≡(⍉[⍉..]⊞× ⟜(+∿) ÷⟜⇡80)\n&gifs 30"/>
+        <Editor example="÷2+1∿×τ÷⟜⇡30\n≡(⍉[˙(⍉⊙⊙∘)]⊞× ⟜(+∿) ÷⟜⇡80)\n&gifs 30"/>
     }
 }
 

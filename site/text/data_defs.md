@@ -20,7 +20,7 @@ Person ← □₂
 Name   ← °□⊡0
 Age    ← °□⊡1
 Person "Dave" 31
-Age .
+⊸Age
 ```
 
 We can even use [`under`]() to modify one of the fields.
@@ -50,7 +50,7 @@ This defines a [module](/tutorial/modules) called `Person`. In this case, the mo
 ```uiua
 ~Person {Name Age}
 Person "Dave" 31
-Person~Age .
+⊸Person~Age
 ```
 
 As you can see, the generated constructor function also adds [labels](/tutorial/codetactility#labels) to aid in reading the data.
@@ -62,7 +62,7 @@ This example defines a `Color` data definition with red, green, and blue channel
 ```uiua
 ~Color [r g b]
 Color 0.5 0.4 1
-Color!(+⊃g b) .
+⊸Color!(+⊃g b)
 ```
 
 Default values can be specified with `←` after the field name. This formats from `=`, just like bindings.
@@ -72,7 +72,7 @@ Fields with a default value will not be arguments to the constructor.
 ```uiua
 ~Person {Name Age Items ← {}}
 Person "Hannah" 19
-⍜⊙Person~Items⊂ {"Book" "Spatula"} .
+⊸⍜⊙Person~Items⊂ {"Book" "Spatula"}
 ```
 
 Multiple default values can be separated with `|`s.
@@ -106,7 +106,7 @@ If the default functions for all fields are invertible (or if fields have no def
 ```uiua
 ~Particle {Mass Velocity ← ⊟}
 Particle 1 3 5
-°Particle .
+⊸°Particle
 ```
 
 Fields can be easily set with the [`un`]()[`by`]() idiom.
@@ -197,7 +197,7 @@ We can use [pattern matching](/tutorial/patternmatching) to do something differe
   |Circle {Radius}
   |Rectangle {Width Height}
   |Point 
-  Square ← Rectangle .
+  Square ← ˙Rectangle
   Area ← ⍣(
     ×π ˙× °Circle
   | × °Rectangle

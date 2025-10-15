@@ -157,8 +157,8 @@ fn all_fills() -> impl IntoView {
             { fill_row(Reduce, "Sets initial value", "⬚10/+ [1 2 3]") }
             { fill_row(Scan, "Sets initial value and fills row shapes", "⬚10\\⊂ [1 2 3]") }
             { fill_row(Rows, "Fills row shapes", "⬚0≡⇡ [4 7 3]") }
-            { fill_row(Partition, "Fills row shapes", "⬚@ ⊜∘ ≠@ . \"Hey there\"") }
-            { fill_row(Group, "Fills row shapes", "⬚0⊕∘ ◿3. [1 8 4 9 3 8 2]") }
+            { fill_row(Partition, "Fills row shapes", "⬚@ ⊜∘ ⊸≠@  \"Hey there\"") }
+            { fill_row(Group, "Fills row shapes", "⬚0⊕∘ ⊸◿3 [1 8 4 9 3 8 2]") }
             { fill_row(Base, "Repeating base", "⬚10base[12 20] 999999") }
             { fill_row_impl(view!(<Prims prims=[Un, Pop]/>), "Get fill value", "⬚5°◌") }
         </table>

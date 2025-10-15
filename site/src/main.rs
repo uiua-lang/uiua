@@ -401,7 +401,7 @@ pub fn MainPage() -> impl IntoView {
 fn NotFound() -> impl IntoView {
     view! {
         <h1>"Page not found"</h1>
-        <Editor example="$ Where could it be?\n×101⧻⊜⧻≠@ ."/>
+        <Editor example="$ Where could it be?\n×101⧻⊜⧻⊸≠@ "/>
         <h3><A href="/">"Go home"</A></h3>
     }
 }

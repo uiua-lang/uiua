@@ -2241,11 +2241,14 @@ impl Compiler {
                         }
                         Node::from_iter([Node::new_push(1.0 / n as f64), self.primitive(Pow, span)])
                     }
-                    Exp => Node::from_iter([
-                        Node::new_push(n as f64),
-                        self.primitive(Flip, span.clone()),
-                        self.primitive(Pow, span),
-                    ]),
+                    Exp => {
+                        let span = self.add_span(span);
+                        Node::from_iter([
+                            Node::new_push(n as f64),
+                            Node::Prim(Flip, span),
+                            Node::Prim(Pow, span),
+                        ])
+                    }
                     Floor | Ceil => {
                         self.subscript_experimental(prim, &span);
                         let mul = 10f64.powi(n);

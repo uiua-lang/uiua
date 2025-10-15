@@ -385,7 +385,7 @@ primitive!(
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [multiply] can be used as a logical AND.
-    /// ex: ◡×⊓⌟≥≤5 8 . [6 2 5 9 6 5 0 4]
+    /// ex: ⊸(◡×⊓⌟≥≤5 8) [6 2 5 9 6 5 0 4]
     ///
     /// [un][multiply] splits a number into sign and magnitude.
     /// ex: °× [1.5 0 ¯4]
@@ -428,7 +428,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : ∨ [0 1 0 1] [0 0 1 1]
     /// ex: # Experimental!
-    ///   : ⊞∨.[0 1]
+    ///   : ˙⊞∨ [0 1]
     /// Non-boolean values give the GCD.
     /// ex: # Experimental!
     ///   : ∨ 16 24
@@ -475,7 +475,7 @@ primitive!(
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [maximum] can be used as a logical OR.
-    /// ex: ◡↥⊓⌟≤≥5 8 . [6 2 5 9 6 5 0 4]
+    /// ex: ⊸(◡↥⊓⌟≤≥5 8) [6 2 5 9 6 5 0 4]
     ///
     /// See also: [minimum]
     (2, Max, DyadicPervasive, ("maximum", '↥')),
@@ -506,7 +506,7 @@ primitive!(
     /// ex: ± ℂ3 4
     /// You can use [un][complex] to get the imaginary and real parts back out.
     /// ex: [°ℂ] i
-    /// ex: [°ℂ] ×. ℂ3 4
+    /// ex: [°ℂ] ˙× ℂ3 4
     /// A complex number [equals] a real one if the imaginary part is 0 and the real parts [match].
     /// ex: = 5 ℂ0 5
     (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
@@ -551,17 +551,17 @@ primitive!(
     /// ex: ⇡[3]
     ///
     /// When creating ranges with upper bounds that are rank `1`, [pick]ing the generated range array from an array with the [shape] of the input will yield that array.
-    /// ex:     [1_2_3 4_5_6]
-    ///   :    △[1_2_3 4_5_6]
-    ///   :   ⇡△[1_2_3 4_5_6]
-    ///   : ⊡⇡△.[1_2_3 4_5_6]
+    /// ex:       [1_2_3 4_5_6]
+    ///   :      △[1_2_3 4_5_6]
+    ///   :     ⇡△[1_2_3 4_5_6]
+    ///   : ⊸(⊡⇡△)[1_2_3 4_5_6]
     ///
     /// Taking the [range] of a negative number will yield a decreasing sequence starting at `¯1`.
     /// ex: ⇡¯5
     /// [pick]ing from an array with the [range] of its [negate]d [shape] will reverse all elements.
-    /// ex:       [1_2_3 4_5_6]
-    ///   : ⊡⇡¯△. [1_2_3 4_5_6]
-    ///   :  ⍜♭⇌  [1_2_3 4_5_6]
+    /// ex:         [1_2_3 4_5_6]
+    ///   : ⊸(⊡⇡¯△) [1_2_3 4_5_6]
+    ///   :    ⍜♭⇌  [1_2_3 4_5_6]
     ///
     /// Subscripted [range] changes the offset of the range.
     /// ex: ⇡₁ 5
@@ -606,9 +606,9 @@ primitive!(
     (1, Reverse, MonadicArray, ("reverse", '⇌')),
     /// Make an array 1-dimensional
     ///
-    /// ex: ♭5
-    /// ex: ♭[1 2 3]
-    /// ex: ♭.[1_2 3_4 5_6]
+    /// ex: ♭ 5
+    /// ex: ♭ [1 2 3]
+    /// ex: ⊸♭ [1_2 3_4 5_6]
     /// Subscripted [deshape] collapses the upper dimensions of the array until it is the given rank.
     /// ex: △ ♭  °△2_3_4_5
     ///   : △ ♭₂ °△2_3_4_5
@@ -670,11 +670,11 @@ primitive!(
     (1, Bits, MonadicArray, ("bits", '⋯')),
     /// Rotate the shape of an array
     ///
-    /// ex: ⍉.[1_2 3_4 5_6]
-    /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
+    /// ex: ⊸⍉ [1_2 3_4 5_6]
+    /// ex: ⊸⍉ [[1_2 3_4] [5_6 7_8]]
     /// [un][transpose] transposes in the opposite direction.
     /// This is useful for arrays with rank `greater than``2`.
-    /// ex: °⍉ .⊟.[1_2_3 4_5_6]
+    /// ex: ⊸°⍉ ˙⊟ [1_2_3 4_5_6]
     ///
     /// `shape``transpose` is always equivalent to `rotate``1``shape`.
     /// ex: [1_2 3_4 5_6]
@@ -687,7 +687,7 @@ primitive!(
     /// ex: ⍆ [3 9 1 8 2 7]
     /// ex: ⍆ "uiua"
     /// Multidimensional arrays have their rows sorted lexicographically.
-    /// ex: ⍆ . [1_5_3 4_3_2 1_5_2]
+    /// ex: ⊸⍆ [1_5_3 4_3_2 1_5_2]
     /// [sort] is equivalent to [select][by][rise]
     /// ex!   ⍆ "uiua"
     ///   : ⊏⊸⍏ "uiua"
@@ -696,7 +696,7 @@ primitive!(
     /// ex: °⍆ [1 2 3 4]
     ///   : °⍆ [1 2 3 4]
     /// [under][sort] sort reverses the sorting operation when undoing.
-    /// ex: ⍜⍆(↻1) . [3 1 5 2 4]
+    /// ex: ⊸⍜⍆(↻1) [3 1 5 2 4]
     ///
     /// The current [sort] implementation is a parallel [Introsort](https://en.wikipedia.org/wiki/Introsort). It has O(n log n) worst-case time complexity and O(log n) space complexity. It sorts the array in place and allocates no heap memory.
     /// If an array is rank-`1` and known to be all bytes, it will be sorted with counting sort.
@@ -706,12 +706,11 @@ primitive!(
     /// The [rise] of an array is the list of indices that would sort the array ascending if used with [select].
     /// ex: ⍏ 6_2_7_0_¯1_5
     /// Using the [rise] as a selector in [select] yields the sorted array.
-    /// ex! ⊏⍏. 6_2_7_0_¯1_5
     /// ex! ⊏⊸⍏ 6_2_7_0_¯1_5
     /// This can also be done with [sort].
     /// If we transform the array before [rise]ing, we can sort by a key.
     /// Here, we sort the array ascending by the [absolute value] of its elements.
-    /// ex: ⊏⍏⌵. 6_2_7_0_¯1_5
+    /// ex: ⊏⍏⊸⌵ 6_2_7_0_¯1_5
     ///
     /// [first][rise] and [first][reverse][rise] are optimized in the interpreter to be O(n).
     (1, Rise, MonadicArray, ("rise", '⍏')),
@@ -720,12 +719,11 @@ primitive!(
     /// The [fall] of an array is the list of indices that would sort the array descending if used with [select].
     /// ex: ⍖ 6_2_7_0_¯1_5
     /// Using the [fall] as a selector in [select] yields the sorted array.
-    /// ex: ⊏⍖. 6_2_7_0_¯1_5
     /// ex: ⊏⊸⍖ 6_2_7_0_¯1_5
     /// This can also be done with [reverse][sort].
     /// If we transform the array before [fall]ing, we can sort by a key.
     /// Here, we sort the array descending by the [absolute value] of its elements.
-    /// ex: ⊏⍖⌵. 6_2_7_0_¯1_5
+    /// ex: ⊏⍖⊸⌵ 6_2_7_0_¯1_5
     ///
     /// [first][fall] and [first][reverse][fall] are optimized in the interpreter to be O(n).
     (1, Fall, MonadicArray, ("fall", '⍖')),
@@ -733,7 +731,7 @@ primitive!(
     ///
     /// The most basic use is to convert a mask into a list of indices.
     /// ex: ⊚ [1 0 0 1 0 1 1 0]
-    /// ex: ⊚.=0◿3.[1 0 2 9 3 8 3 4 6]
+    /// ex: ⊸⊚ =0⊸◿3 [1 0 2 9 3 8 3 4 6]
     /// It also works for counts `greater than` 1.
     /// ex: ⊚ 1_2_3
     /// ex: ⊚ 1_4_2
@@ -747,9 +745,9 @@ primitive!(
     /// ex: °⊚ [0 1 2 2 0 3 2 1 2 0 2]
     ///
     /// [where] can be used on multidimensional arrays, and the result will always be rank-2
-    /// ex: ⊚.[1_0_0 0_1_1 0_2_0]
+    /// ex: ⊸⊚ [1_0_0 0_1_1 0_2_0]
     /// The inverse works as well
-    /// ex: °⊚[3_4 2_1 0_3]
+    /// ex: °⊚ [3_4 2_1 0_3]
     ///
     /// [where] on a scalar is equivalent to [where] on a singleton array of that scalar, and so creates a list of `0`s.
     /// ex: ⊚3
@@ -768,7 +766,7 @@ primitive!(
     ///
     /// When combined with [group], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters in this string
-    ///   : ⊕($"_ _"⊃⊢⧻) ⊛.⍆
+    ///   : ⊕($"_ _"⊃⊢⧻) ⊸⊛ ⍆
     (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Mark each row of an array with its occurrence count
     ///
@@ -811,7 +809,7 @@ primitive!(
     /// The more important use case of [box] is for jagged or nested data.
     /// If you want to collect unevenly-sized groups from [partition] or [group], without [fill]ing, you must use [box].
     /// ex: $ Words of different lengths
-    ///   : ⊜□⊸≠@
+    ///   : ⊜□⊸≠@ #
     ///
     /// Pervasive functions work through boxes and preserve the maximum [box] depth of their arguments.
     /// ex: ¯ 1
@@ -835,17 +833,17 @@ primitive!(
     /// ex: ⊢ °□[1 2 3]
     /// [under][un][box] is useful when you want to re-[box] the result.
     /// ex: $ Reverse these words
-    ///   : ⊜□≠@ .
-    ///   : ≡⍜°□⇌.
+    ///   : ⊜□⊸≠@ #
+    ///   : ⊸≡⍜°□⇌
     /// ex: {"Hey" "there" "world"}
-    ///   : ≡⍜°□(⊂⊢.)
+    ///   : ≡⍜°□˙(⊂⊢)
     /// [under][un][box] works because `un``un``box` is just `box`. For each element, it [un][box]es the array out, does something to it, then [box]es the result.
-    /// ex: .{1_2_3 4_5 [7]}
-    ///   : ≡⍜°□(⬚0↙3)
+    /// ex: {1_2_3 4_5 [7]}
+    ///   : ⊸≡⍜°□(⬚0↙3)
     /// However, [rows][under][un][box] is such a common pattern, that this is what the [inventory] modifier does.
-    /// ex: PrepLen ← $"_ _"⧻.
-    ///   : .⊜□≠@ . $ Prepend the word length
-    ///   : ⍚PrepLen
+    /// ex: PrepLen ← $"_ _"⊸⧻
+    ///   : ⊜□⊸≠@  $ Prepend the word length
+    ///   : ⊸⍚PrepLen
     /// If you do not need to re-[box] the result, you can use [content] instead.
     /// [content] [un][box]es all box elements that are passed to a function before calling it.
     /// ex: {1_2_3 9_2 5_5_5_5}
@@ -868,7 +866,7 @@ primitive!(
     ///
     /// [parse] is semi-pervasive. It works on multidimensional arrays of characters or boxes.
     /// ex: ⋕ {"5" "24" "106"}
-    /// ex: ⋕ .↯3_4 "012"
+    /// ex: ⊸⋕ ↯3_4 "012"
     ///
     /// [parse] can take a subscript to parse in a different base. Bases `1` through `36` are supported as well as [Base64](https://en.wikipedia.org/wiki/Base64).
     /// ex: ⋕₁₆"beef"
@@ -1010,7 +1008,7 @@ primitive!(
     ///
     /// An index with rank `0` or `1` will pick a single row or element from an array.
     /// ex: ⊡ 2 [8 3 9 2 0]
-    /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
+    /// ex: ⊸⊡ 1_1 [1_2_3 4_5_6]
     ///
     /// If the index's rank is `2` or greater, then multiple rows or elements will be picked.
     /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
@@ -1063,7 +1061,7 @@ primitive!(
     /// ex: ⬚0↯ ∞_5 ⇡12
     ///
     /// [under][shape] will [reshape] the array as an inverse.
-    /// ex: ⍜△⇌. ↯2_3_4⇡24
+    /// ex: ⊸⍜△⇌ ↯2_3_4⇡24
     ///
     /// Negative axes in the shape will reverse the corresponding axes of the array.
     /// ex: ↯[¯3] 1_2_3
@@ -1103,8 +1101,8 @@ primitive!(
     /// ex: ↙ ¯3 [8 3 9 2 0]
     /// ex: ↙ ¯2 ↯3_3⇡9
     /// The amount to take can also be a list to take along multiple axes.
-    /// ex: .↯3_4⇡12
-    ///   : ⊃(↙¯2_¯2|↙2_3)
+    /// ex: ↯3_4⇡12
+    ///   : ⊸⊃(↙¯2_¯2|↙2_3)
     ///
     /// By default, taking more than the length of the array will throw an error.
     /// ex! ↙7 [8 3 9 2 0]
@@ -1115,7 +1113,7 @@ primitive!(
     ///
     /// [infinity] can be used to take every row along an axis.
     /// ex: ↯2_3_4⇡24
-    ///   : ↙¯1_∞_2.
+    ///   : ⊸↙¯1_∞_2
     ///
     /// [un][fill]ed [take] will trim rows from the end of an array and return the pre-trimmed dimensions.
     /// ex: °⬚@-↙ "abc-----"
@@ -1131,8 +1129,8 @@ primitive!(
     /// ex: ↘ ¯3 [8 3 9 2 0]
     /// ex: ↘ ¯2 ↯3_3⇡9
     /// The amount to drop can also be a list to drop along multiple axes.
-    /// ex: .↯3_4⇡12
-    ///   : ⊃(↘¯2_¯1|↘1_2)
+    /// ex: ↯3_4⇡12
+    ///   : ⊸⊃(↘¯2_¯1|↘1_2)
     ///
     /// Dropping more than the length of the array will leave an empty array.
     /// ex: ↘ 7 [8 3 9 2 0]
@@ -1170,20 +1168,20 @@ primitive!(
     /// ex: ↻1 ⇡5
     /// ex: ↻2 ⇡5
     /// ex: ↻¯1 ⇡5
-    /// ex: ↻2 .↯3_4⇡12
+    /// ex: ⊸↻2 ↯3_4⇡12
     ///
     /// Multi-dimensional rotations are supported.
-    /// ex: ↻1_2 .↯4_5⇡20
+    /// ex: ⊸↻1_2 ↯4_5⇡20
     ///
     /// [fill][rotate] fills in array elements instead of wrapping them.
     /// ex: ⬚0↻ 2 [1 2 3 4 5]
     ///   :   ↻ 2 [1 2 3 4 5]
-    /// ex: ⬚0↻ 1_2 .↯4_5⇡20
+    /// ex: ⊸⬚0↻ 1_2 ↯4_5⇡20
     ///
     /// If the rotation amount is rank `2` or greater, multiple copies of the rotated array will be made, each rotated by a different row of the rotation amount.
     /// ex: ↻ [[1] [2] [4]] [0 0 0 0 0 0 1]
     ///   : ↻ ≡¤1_2_4       [0 0 0 0 0 0 1]
-    /// ex: [.. 0_0_0_0 0_0_0_1]
+    /// ex: [˙⊙⊙∘ 0_0_0_0 0_0_0_1]
     ///   : ↻ [0_0 1_2 0_3]
     (2, Rotate, DyadicArray, ("rotate", '↻')),
     /// Change the order of the axes of an array
@@ -1192,7 +1190,7 @@ primitive!(
     /// The corresponding axes of the array will be moved to the front of the array's shape.
     /// Positive indices start from the leading axis. Negative indices start from the trailing axis.
     /// ex: °△ 2_3_4
-    ///   : ⤸ 1 .
+    ///   : ⊸⤸ 1
     /// ex: △ ⤸ 2_1 °△ 2_3_4_5
     /// [orient]`¯1` is equivalent to [un][transpose].
     /// ex: °△ 2_3_4
@@ -1206,10 +1204,10 @@ primitive!(
     /// ex: △  ⤸ 3_1 °△ 2_3_4_5
     ///   : △ ⌝⤸ 3_1 °△ 2_3_4_5
     /// Repeated axis indices will retrieve the diagonal along those axes.
-    /// ex: ⌝⤸ 0_0 . °△ 3_3
-    /// ex: ⌝⤸ 0_0_0 . °△ 3_3_3
+    /// ex: ⊸⌝⤸ 0_0 °△ 3_3
+    /// ex: ⊸⌝⤸ 0_0_0 °△ 3_3_3
     /// ex: ⌝⤸ 0_0 °△ 3_3_3
-    /// ex: ⌝⤸ 0_1_1 . °△ 2_2_2
+    /// ex: ⊸⌝⤸ 0_1_1 °△ 2_2_2
     /// ex: ⌝⤸ 1_1_0 °△ 2_2_2
     /// ex: ⌝⤸ 1_0_1 °△ 2_2_2
     ///
@@ -1311,8 +1309,8 @@ primitive!(
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
     /// ex: ⌕ "ab" "abracadabra"
     /// If the searched-in array is multidimensional, the `1` marker will be placed in the minimum index "top left" corner.
-    /// ex: ⌕ 1_2 . ↯4_4⇡3
-    /// ex: ⌕ [1_2 2_0] . ↯4_4⇡3
+    /// ex: ⊸⌕ 1_2 ↯4_4⇡3
+    /// ex: ⊸⌕ [1_2 2_0] ↯4_4⇡3
     ///
     /// If you want to mark the entire occurrence, use [mask] instead.
     (2, Find, DyadicArray, ("find", '⌕')),
@@ -1321,10 +1319,10 @@ primitive!(
     /// Occurrences of the first array in the second array will be marked with increasing numbers.
     /// While [find] only marks the start of each occurrence, [mask] marks the entire occurrence.
     /// ex: ⦷ "ab" "abracadabra"
-    /// ex: ⦷ [1 2 3].[0 1 2 3 1 2 3 4 5 1 2 3 4 5 6]
+    /// ex: ⊸⦷ [1 2 3] [0 1 2 3 1 2 3 4 5 1 2 3 4 5 6]
     /// Increasing numbers are used so that adjacent occurrences can be distinguished.
     /// An occurrence that would overlap with a previous occurrence is not marked.
-    /// ex: ⦷ [3 4 3 4].[0 3 4 3 4 3 4 0 0 3 4 3 4 0]
+    /// ex: ⊸⦷ [3 4 3 4] [0 3 4 3 4 3 4 0 0 3 4 3 4 0]
     ///
     /// Arbitrary rank arrays are supported.
     /// The first array's rank must be `less or equal` the rank of the second.
@@ -1460,8 +1458,8 @@ primitive!(
     /// [reduce] goes from left to right. This is important for non-commutative functions like [subtract].
     /// ex: /- 1_2_3_4_5
     /// [reduce] works on arrays of arbitrary rank. The leading-axis rows will always be iterated over.
-    /// ex: /+ . [1_2_3 4_5_6]
-    /// ex: /+ . [[0_1 1_0] [2_0 0_0] [0_0 0_3]]
+    /// ex: ⊸/+ [1_2_3 4_5_6]
+    /// ex: ⊸/+ [[0_1 1_0] [2_0 0_0] [0_0 0_3]]
     ///
     /// If you want to see the intermediate values, you can use [scan].
     /// ex: /- 1_2_3_4_5
@@ -1472,7 +1470,7 @@ primitive!(
     ///
     /// [reduce][join] is the simplest way to combine the first two dimensions of an array.
     /// It is optimized in the interpreter to be very fast.
-    /// ex: /⊂ .↯2_2_4⇡16
+    /// ex: ⊸/⊂ ↯2_2_4⇡16
     ///
     /// Some functions have default values if the array is empty.
     /// Functions without default values will throw an error if the array is empty.
@@ -1537,17 +1535,17 @@ primitive!(
     /// ex: \˜- 1_2_3_4
     /// [scan] is often used to do something with masks.
     /// [scan]ning with [minimum] or [maximum] will propogate `0`s or `1`s.
-    /// ex: ▽\↧≠@ . "Hello World!"
+    /// ex: ▽\↧⊸≠@  "Hello World!"
     /// [scan]ning with [add] and then using [group] can split by a delimiter while keeping the delimiter.
-    /// ex: ⊕□\+=@    . "Everyday man's on the block"
-    ///   : ⊕□\+↻¯1=@ . "Everyday man's on the block"
+    /// ex: ⊕□\+⊸=@     "Everyday man's on the block"
+    ///   : ⊕□\+↻¯1⊸=@  "Everyday man's on the block"
     ///
     /// [fill] both sets the initial value and fills mismatched shapes if necessary.
     /// ex:    \+ [1 2 3 4 5]
     ///   : ⬚@a\+ [1 2 3 4 5]
     /// ex: +1⇡5
-    ///   : ⬚0\⊂ .
-    ///   : ↘1_1 .
+    ///   : ⊸⬚0\⊂
+    ///   : ⊸↘1_1
     ///
     /// If the function takes more than 2 arguments, additional arguments before the array will be passed to the function on every iteration.
     /// ex: \(+×) 10 [1 2 3 4]
@@ -1748,15 +1746,15 @@ primitive!(
     /// A rank-2 array with only one row will "chunk" the array with non-overlapping windows.
     /// ex: ⧈∘[[4]] ⇡12
     /// ex: ⧈∘ ¤¤4  ⇡12
-    /// ex: ⧈□ ¤[2 2] . °△4_6
+    /// ex: ⊸⧈□ ¤[2 2] °△4_6
     /// Negative sizes still specify the number of windows desired.
     /// ex: ⧈∘ ¤¤¯4 ⇡12
-    /// ex: ⧈□ ¤[¯2 ¯2] . °△4_6
+    /// ex: ⊸⧈□ ¤[¯2 ¯2] °△4_6
     /// A rank-2 array with two rows allows the "stride" of the windows to be specified.
     /// The first row specifies the window size, and the second row specifies the stride.
     /// ex: ⧈□ [¤3¤4] ⇡12
     /// ex: ⧈□ [¤4¤2] ⇡12
-    /// ex: ⧈□ [2_2 1_3] . °△4_6
+    /// ex: ⊸⧈□ [2_2 1_3] °△4_6
     /// By default, [fill]ed [stencil] pads each side of an axis with a number equal to the axis's window size [subtract]`1`.
     /// This number is then [multiply]d by the specified stride.
     /// ex: ⬚0⧈□ 2_2 +1°△2_2
@@ -1794,7 +1792,7 @@ primitive!(
     /// The number of repetitions may be non-scalar. In this case, the function will be repeated each row of the input a different number of times.
     /// ex: ⍥(×2) [1 2 3 4] [5 5 5 5]
     /// If you want to conditionally either run some function or not, you can use [repeat] to repeat `0` or `1` times.
-    /// ex: F ← ⍥(×10)<10.
+    /// ex: F ← ⍥(×10)⊸<10
     ///   : F 5
     ///   : F 12
     /// [repeat]ing a negative number of times will repeat the function's [un]-inverse.
@@ -1824,7 +1822,7 @@ primitive!(
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters in this string
-    ///   : ⊟∩≡□ ⊕⊃⊢⧻ ⊛.
+    ///   : ⊟∩≡□ ⊕⊃⊢⧻ ⊸⊛
     ///
     /// If the function takes more than 1 argument, groups are extracted for each argument.
     /// This example combines each character with the index of its first appearance in the string as well as the number of times it appears.
@@ -1841,9 +1839,9 @@ primitive!(
     /// ex: °⊕□ {1 2_3_4 5_6}
     ///
     /// [under][group] works if [group]'s function is [under]able.
-    /// ex: ⍜⊕□≡⇌ ≠@ . $ These are some words
+    /// ex: ⍜⊕□≡⇌ ⊸≠@  $ These are some words
     /// The length of each group must not change.
-    /// ex! ⍜⊕□⇌ ≠@ . $ These are some words
+    /// ex! ⍜⊕□⇌ ⊸≠@  $ These are some words
     ///
     /// [group] is closely related to [partition].
     (2[1], Group, AggregatingModifier, ("group", '⊕')),
@@ -1866,11 +1864,11 @@ primitive!(
     /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
-    /// ex: ⊜□ ≠@ . $ Hey there friendo
+    /// ex: ⊜□ ⊸≠@  $ Hey there friendo
     /// You can nest [partition]s to split by multiple delimiters and create a multi-dimensional array.
     /// ex: $ 1 1 2 3
     ///   : $ 5 8 13 21
-    ///   : ⊜(⊜⋕≠@ .)≠@\n.
+    ///   : ⊜(⊜⋕⊸≠@ )⊸≠@\n
     ///
     /// If the function takes more than 1 argument, groups are extracted for each argument.
     /// This example couples each word from a string with its start index.
@@ -1880,7 +1878,7 @@ primitive!(
     ///
     /// [partition] also works with multidimensional markers. Groups are formed from markers that are adjacent along any axis.
     /// Each group will be flattened before being passed to the function.
-    /// ex: ⊜□.. ↯4_4 [0 1 1 2 2]
+    /// ex: ⊸˙⊜□ ↯4_4 [0 1 1 2 2]
     /// If we wanted to group the indices that are adjacent, we could use the array to [partition] its own indices.
     /// ex: ⊜□⟜°⊡ ↯4_4 [0 1 1 2 2]
     ///
@@ -1893,9 +1891,9 @@ primitive!(
     /// ex: ⬚@-°⊜□ {"Hey" "there" "buddy"}
     ///
     /// [under][partition] works if [partition]'s function is [under]able.
-    /// ex: ⍜⊜□⇌  ≠@ . $ These are some words
-    /// ex: ⍜⊜□≡⇌ ≠@ . $ These are some words
-    /// ex: ⍜⊜⊢⌵  ≠@ . $ These are some words
+    /// ex: ⍜⊜□⇌  ⊸≠@  $ These are some words
+    /// ex: ⍜⊜□≡⇌ ⊸≠@  $ These are some words
+    /// ex: ⍜⊜⊢⌵  ⊸≠@  $ These are some words
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
@@ -2019,18 +2017,10 @@ primitive!(
     /// ex: +⟜(×-) 10 20 0.3
     /// ex: ↯⟜⊚ 4
     ///
-    /// [on] can be thought of as a compliment of [duplicate].
-    /// ex: [¯. 1]
-    ///   : [⟜¯ 1]
+    /// [on] can be thought of as a compliment of [by].
+    /// ex: [⟜¯ 1]
+    ///   : [⊸¯ 1]
     ///
-    /// [on] in planet notation acts as a way of [duplicate]ing a value.
-    /// You can read `on``dip` or `on``identity` as a single unit that keeps 2 copies of the value at that position.
-    /// ex: [⟜⊙⋅⟜⊙◌   1 2 3 4] # Easy to read with ⟜
-    ///   : [.⊙⋅(.⊙◌) 1 2 3 4] # Hard to read with .
-    ///   : [∩⊓.◌     1 2 3 4] # Shorter, maybe hard to read
-    /// ex: [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
-    ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
-    ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
     /// [on] can be used with a function pack. `on``(F|G)` becomes `on``F``on``G`.
     /// ex: [⟜(+1|×2|¯)] 5
     /// Subscripted [on] keeps the first N arguments on as initial arguments.
@@ -2412,10 +2402,10 @@ primitive!(
     /// We can see how values are passed to the handler by wrapping them in an array.
     /// ex: ⍣⋕{⊙∘} "5"   # No error
     ///   : ⍣⋕{⊙∘} "dog" # Error
-    /// ex: ⍣(⍤0.+)10 3 5 # Ignore both arguments and error
-    ///   : ⍣(⍤0.+)⊟₁ 3 5 # First argument only
-    ///   : ⍣(⍤0.+)⊟₂ 3 5 # Both arguments
-    ///   : ⍣(⍤0.+)⊟₃ 3 5 # Both arguments and error
+    /// ex: ⍣(˙⍤0+)10 3 5 # Ignore both arguments and error
+    ///   : ⍣(˙⍤0+)⊟₁ 3 5 # First argument only
+    ///   : ⍣(˙⍤0+)⊟₂ 3 5 # Both arguments
+    ///   : ⍣(˙⍤0+)⊟₃ 3 5 # Both arguments and error
     /// If we want to provide a default value, we can ignore it in the tried function with [gap] and then use [identity] in the handler.
     /// ex: ⍣⋅⋕∘ 5 "12"  # No error
     ///   : ⍣⋅⋕∘ 5 "dog" # Error
@@ -2489,8 +2479,8 @@ primitive!(
     /// ex! ⍤"Oh no!" 0
     /// As you can see, a top-level [assert] is interpreted as a test in some contexts. See the [Testing Tutorial](/tutorial/testing) for more information.
     /// Use [duplicate] if you do not care about the message.
-    /// ex: ⍤. =6 6
-    /// ex! ⍤. =8 9
+    /// ex: ˙⍤ =6 6
+    /// ex! ˙⍤ =8 9
     /// Errors thrown by [assert] can be caught with [try].
     (2(0), Assert, Misc, ("assert", '⍤'), Impure),
     /// Generate a random number in the range `[0, 1)`
@@ -2507,7 +2497,7 @@ primitive!(
     ///
     /// `rows``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
     /// ex: ⌊×10 ≡⋅⚂ ⇡10
-    /// ex: ⌊×10 ⊞⋅⋅⚂ .⇡10
+    /// ex: ⌊×10 ˙⊞⋅⋅⚂ ⇡10
     (0, Rand, Rng, ("random", '⚂'), Impure),
     /// Memoize a function
     ///
@@ -2547,7 +2537,7 @@ primitive!(
     ///
     /// [wait] is pervasive.
     /// ex: ↯3_3⇡9
-    ///   : wait≡spawn/+.
+    ///   : wait⊸≡spawn/+
     ///
     /// To spawn threads in a thread pool, use [pool].
     ([1], Spawn, Thread, "spawn", Impure),
@@ -2570,7 +2560,7 @@ primitive!(
     ///
     /// [wait] is pervasive.
     /// ex: ↯3_3⇡9
-    ///   : wait≡spawn/+.
+    ///   : wait⊸≡spawn/+
     ///
     /// [wait] will always return a single value. If the spawned function returns multiple values, they will be put in an array.
     /// ex: wait spawn(1 2 3)
@@ -2628,7 +2618,7 @@ primitive!(
     /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match
     /// ex: regex "h([io])" "hihaho"
     /// ex: regex "hi" "dog"
-    ///   : △.
+    ///   : ⊸△
     /// ex: regex "[a-z]+" "hello world"
     /// If the pattern contains escaped characters such as `\w`, either these must be double escaped or the whole pattern must be represented with a raw string.
     /// ex: regex "\\d+" "123"
@@ -2681,7 +2671,7 @@ primitive!(
     /// [graphemes] splits a string into its grapheme clusters.
     /// ex: graphemes "🏳️‍⚧️ 👩🏼‍🤝‍👩🏽 ȗ̵̬ị̶̿u̴̠͘ă̸̰"
     ///   : ≡¤
-    ///   : -@\0.
+    ///   : ⊸-@\0
     ///
     /// [graphemes] works with [un] and [under].
     /// ex: ⍜graphemes≡◇⊢ "ų̶̢̢̛̥͈̖̦̜̥͔͕̙͚̜͚͊͋̑̿̔̓̐͐̀̓̐̈́̑͆͆͘į̴̥̞̀̑̋̀̽̌̓̐̓̚ư̷̯̖͈͇̌͌́̄̿͑̓̚͜͜à̶͓̜̗̩̝̰̲͎͉̲͆̇͗̄̆̏̍̑̍͌͝ͅ"
@@ -2728,9 +2718,9 @@ primitive!(
     /// [datetime] is semi-pervasive.
     /// ex: datetime [1e8 1e9 1e10]
     /// You can format the time like this:
-    /// ex: datetime now         # Time
-    ///   : ⍚(⬚@0↙¯⊙°⋕) [4....2] # Pad
-    ///   : °[°$"_-_-_ _:_:_"]   # Format
+    /// ex: datetime now              # Time
+    ///   : ⍚(⬚@0↙¯⊙°⋕) [4 2 2 2 2 2] # Pad
+    ///   : °[°$"_-_-_ _:_:_"]        # Format
     ///
     /// You can use [un][datetime] to convert an array back into a time.
     /// An array with fewer than 6 numbers will be padded with zeros.
@@ -2779,7 +2769,7 @@ primitive!(
     ///   : map {"Alice" "Bob" "Carol"} [3_8 12_2 4_5]
     /// Use [get] to get the value corresponding to a key.
     /// ex: map 1_2 3_4
-    ///   : get 2 .
+    ///   : ⊸get 2
     /// Use [insert] to insert additional key-value pairs.
     /// ex: map 1_2 3_4
     ///   : insert 5 6
@@ -2791,7 +2781,7 @@ primitive!(
     ///   : insert 1 2_3
     ///   : insert 4 5_6
     ///   : insert 7 8_9
-    ///   : °map .
+    ///   : ⊸°map
     ///
     /// Pervasive operations work on the values of a map, but not on the keys.
     /// ex: ×10 map 1_2_3 4_5_6
@@ -2820,13 +2810,13 @@ primitive!(
     /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.
     /// ex: Times ← (
-    ///   :   map.⇡
+    ///   :   ˙map⇡
     ///   :   ⊟⊃(
     ///   :     ⊙◌⍜now(get 5)
     ///   :   | ⊙◌⍜now(insert 1 2))
     ///   : )
     ///   : ˜ⁿ10+1⇡5
-    ///   : ≡Times.
+    ///   : ⊸≡Times
     (2, Map, Map, "map"),
     /// Insert a key-value pair into a map array
     ///
@@ -2870,10 +2860,10 @@ primitive!(
     /// See [map] for an overview of map arrays.
     ///
     /// ex: map 1_2 3_4
-    ///   : has 2 .
+    ///   : ⊸has 2
     /// The presence of multiple keys can be checked at once.
     /// ex: map 1_2 3_4
-    ///   : has 2_5 .
+    ///   : ⊸has 2_5
     ///
     /// See also: [insert], [get], [remove]
     (2, Has, Map, "has"),
@@ -2882,20 +2872,20 @@ primitive!(
     /// See [map] for an overview of map arrays.
     ///
     /// ex: map 1_2_3 4_5_6
-    ///   : get 2 .
+    ///   : ⊸get 2
     /// Multiple values can be retrieved at once.
     /// ex: map 1_2_3 4_5_6
-    ///   : get 1_3 .
+    ///   : ⊸get 1_3
     /// If the key is not found, an error is thrown.
     /// ex! map 1_2 3_4
-    ///   : get 5 .
+    ///   : ⊸get 5
     /// You can use [fill], [try], or [has] to avoid the error.
     /// ex: map 1_2 3_4
-    ///   : ⬚0get 5 .
+    ///   : ⊸⬚0get 5
     /// ex: map 1_2 3_4
-    ///   : ⍣get0 5 .
+    ///   : ⊸⍣get0 5
     /// ex: map 1_2 3_4
-    ///   : ⨬⋅⋅0get ◡has 5 .
+    ///   : ⊸⨬⋅⋅0get ◡has 5
     /// You can provide a default value with [fill].
     /// ex: map 1_2 3_4
     ///   : ⊃(⬚0get 1|⬚0get 5)
@@ -2912,8 +2902,8 @@ primitive!(
     /// The key is removed if it is present.
     /// If the key is not present, the array is unchanged.
     /// ex: map 1_2 3_4
-    ///   : remove 2 .
-    ///   : remove 5 .
+    ///   : ⊸remove 2
+    ///   : ⊸remove 5
     /// Multiple values can be removed at once
     /// ex: map 1_2_3 4_5_6
     ///   : remove 1_3_4
@@ -2982,7 +2972,7 @@ primitive!(
     /// ex: ÷⟜⇡200             # 200 numbers between 0 and 1
     ///   : /+∿⊞×[100 200 400] # Add some frequencies
     ///   : ⌵ fft              # Run the FFT
-    ///   : ↘⌊÷2⧻.             # Drop the top half
+    ///   : ↘⌊÷2⊸⧻             # Drop the top half
     ///   : ⬚0≡▽⊙1 ×15         # Render
     ///
     /// You can use [un][fft] to calculate the inverse FFT.
@@ -2994,7 +2984,7 @@ primitive!(
     /// Because [fft] runs on every axis of an array, we can get the frequency domain of each color channel of an image using [under][un][transpose][fft].
     /// ex: Lena
     ///   : ▽₂ 0.5
-    ///   : ⌵⍜°⍉≡fft .
+    ///   : ⌵⊸⍜°⍉≡fft
     (1, Fft, Algorithm, "fft"),
     /// Convert an operation to be in geometric algebra
     ///
@@ -3077,7 +3067,7 @@ primitive!(
     /// Pathfinding isn't just good for solving problems with grids or graphs.
     /// Anything that involves finding a series of steps to get from one point to another is a good candidate for [path].
     /// For example, you can use it to find edits to a string to turn it into another string.
-    /// ex: ⊢path(+⊙¤ ⊂¯.⊞=. °⊏)≍ "thud" "uiua"
+    /// ex: ⊢path(+⊙¤ ⊂⊸¯˙⊞= °⊏)≍ "thud" "uiua"
     /// [path] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[2], Path, Algorithm, "path"),
     /// Execute a recursive or tree algorithm
@@ -3140,7 +3130,7 @@ primitive!(
     /// Most derivatives that would require the chain or product rule are not supported.
     /// ex! # Experimental!
     ///   : # xsin(x)  →  sin(x) + xcos(x)
-    ///   : ∂(×∿.) ×τ÷⟜⇡8
+    ///   : ∂(×⊸∿) ×τ÷⟜⇡8
     /// They do work if the inner derivative is a constant.
     /// ex: # Experimental!
     ///   : # sin(2x) → 2cos(2x)
@@ -3167,7 +3157,7 @@ primitive!(
     /// Most integrals that would require u-substitution or integration by parts are not supported.
     /// ex! # Experimental!
     ///   : # xsin(x)  →  sin(x) - xcos(x)
-    ///   : ∫(×∿.) ×τ÷⟜⇡8
+    ///   : ∫(×⊸∿) ×τ÷⟜⇡8
     ///
     /// See also: [derivative]
     ([1], Integral, Algorithm, ("integral", '∫'), { experimental: true }),
@@ -3233,7 +3223,7 @@ primitive!(
     /// In the resulting sheet map, each sheet will be a boxed rank-`2` array of boxed values.
     ///
     /// While it is not useful to display the output bytes here, we can see how the result of decoding works:
-    /// ex: °xlsx xlsx . ↯3_6⇡18
+    /// ex: °xlsx ⊸xlsx ↯3_6⇡18
     (1, Xlsx, Encoding, "xlsx"),
     /// Encode an array into a compact binary representation
     ///
@@ -3255,16 +3245,16 @@ primitive!(
     ///
     /// You can use [un][binary] to decode a binary byte array into its original value.
     /// ex: # Experimental!
-    ///   : °binary . binary . map [1 2 3] [4 5 6]
+    ///   : ⊸°binary ⊸binary map [1 2 3] [4 5 6]
     /// ex: # Experimental!
-    ///   : °binary . binary . {1 η_π_τ 4_5_6 "wow!"}
+    ///   : ⊸°binary ⊸binary {1 η_π_τ 4_5_6 "wow!"}
     ///
     /// [binary] adds at *least* 6 bytes of overhead to the encoded array. This includes at least 6 bytes for every box element.
     /// The overhead is type, shape, and metadata information.
     /// ex: # Experimental!
     ///   : binary [1 2 3 4 5]
-    ///   : binary.
-    ///   : binary.
+    ///   : ⊸binary
+    ///   : ⊸binary
     ///
     /// For number arrays, the smallest type that can represent all the numbers is used so that the encoded array is as small as possible.
     /// ex: # Experimental!
@@ -3532,11 +3522,11 @@ primitive!(
     /// The same domain coloring algorithm is used as in [img] and [&ims].
     /// By default, because there is no alpha channel, only numbers with 0 magnitude are transparent.
     /// ex: # Experimental!
-    ///   : ⊞+⟜⊞ℂ. -⊸¬ ÷⟜⇡30
+    ///   : ⊞+⟜˙⊞ℂ -⊸¬ ÷⟜⇡30
     ///   : voxels!°⊸Scale 2
     /// We can set transparency by adding a 4th axis to the array. This is a complex alpha channel where the opacity is the magnitude of the complex number.
     /// ex: # Experimental!
-    ///   : ⊞+⟜⊞ℂ. -⊸¬ ÷⟜⇡30
+    ///   : ⊞+⟜˙⊞ℂ -⊸¬ ÷⟜⇡30
     ///   : ⍜°⍉(⊟⟜(<1⌵)) # Only show <1 magnitude
     ///   : voxels!(°⊸Scale 2 °⊸Camera [0.5 2 2])
     ///
@@ -3811,7 +3801,7 @@ sys_op! {
     /// If the stream is a file, the file may not be written to until it is closed with [&cl].
     /// The stream handle `1` is stdout.
     /// The stream handle `2` is stderr.
-    /// ex: &cl &w "Hello, world!" . &fc "file.txt"
+    /// ex: &cl ⊸&w "Hello, world!" &fc "file.txt"
     ///   : &fras "file.txt"
     (2(0), Write, Stream, "&w", "write", Mutating),
     /// Move to an absolute position in a file stream

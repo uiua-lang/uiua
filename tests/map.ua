@@ -5,10 +5,10 @@ MapA  ←
 MapB  ← insert 5 6 MapA
 MapsI ← MapA MapB
 
-∩(⍤. has 1) MapsI
-∩(⍤. has 3) MapsI
-∩(⍤. has "hi") MapsI
-∩(⍤. has [1 2 3]) MapsI
+∩(˙⍤ has 1) MapsI
+∩(˙⍤ has 3) MapsI
+∩(˙⍤ has "hi") MapsI
+∩(˙⍤ has [1 2 3]) MapsI
 
 ∩(⍤⤙≍ □2 get 1) MapsI
 ∩(⍤⤙≍ □4 get 3) MapsI
@@ -16,10 +16,10 @@ MapsI ← MapA MapB
 ∩(⍤⤙≍ □[4 5 6] get [1 2 3]) MapsI
 
 MapsII ← ∩(remove 1) MapsI
-∩(⍤. ¬has 1) MapsII
-∩(⍤. has 3) MapsII
-∩(⍤. has "hi") MapsII
-∩(⍤. has [1 2 3]) MapsII
+∩(˙⍤ ¬has 1) MapsII
+∩(˙⍤ has 3) MapsII
+∩(˙⍤ has "hi") MapsII
+∩(˙⍤ has [1 2 3]) MapsII
 ⍤⤙≍ {{3 "hi" [1 2 3]} {4 "there" [4 5 6]} {3 "hi" [1 2 3] 5} {4 "there" [4 5 6] 6}} {∩°map MapsII}
 
 ⍤⤙≍ 5 get 1_2 map [1_2 3_4] 5_6
@@ -41,14 +41,14 @@ MapsII ← ∩(remove 1) MapsI
 ⍤⤙≍ [[1] [5]] [°map] ↙1 map 1_2_3_4 5_6_7_8
 
 ⍤⤙≍ 0 ≍ ⟜map [1 2 3] [4 5 6]
-⍤⤙≍ 1 ≍ .map [1 2 3] [4 5 6]
+⍤⤙≍ 1 ˙≍ map [1 2 3] [4 5 6]
 
 ⍤⤙≍ map [1] {"a"} insert 1 □"a" map 1 □"a"
 
 # Fix
 ⍤⤙≍ ≡¤[4 5 6] ⊞get 1_2_3 ¤ map 1_2_3 4_5_6
 ⍤⤙≍ [4 5 6] ≡get 1_2_3 ¤ map 1_2_3 4_5_6
-⍤⤙≍ ↯3≡¤ [4 5 6] ⊞⋅get . 1_2_3 ¤ map1_2_3 4_5_6
+⍤⤙≍ ↯3≡¤ [4 5 6] ⊞⋅get ⟜∘ 1_2_3 ¤ map1_2_3 4_5_6
 
 # Empty keys
 ⍤⟜≍ insert[][] map[]°△0_0 insert[][] °△0_0

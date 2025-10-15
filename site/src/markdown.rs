@@ -592,7 +592,10 @@ fn all_text<'a>(node: &'a AstNode<'a>) -> String {
 fn text_code_blocks() {
     use uiua_editor::backend::WebBackend;
 
-    for entry in std::fs::read_dir("text").unwrap() {
+    for entry in ["text", "new_tutorial"]
+        .into_iter()
+        .flat_map(|path| std::fs::read_dir(path).unwrap())
+    {
         let entry = entry.unwrap();
         let path = entry.path();
         eprintln!("Testing code blocks in {:?}", path.display());

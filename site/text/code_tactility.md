@@ -50,7 +50,7 @@ Labels are *only* visible in debugging outputs. This includes normal interpreter
 Labels will *not* be shown when arrays are formatted using [`&p`]() or format strings.
 
 ```uiua
-&p $"--_--" . $TheThing ⇡5
+⊸&p $"--_--" $TheThing ⇡5
 ```
 
 You can easily label multiple values with [bracket]().
@@ -92,7 +92,7 @@ Another problem is that if you want to split a line of code into two lines, it i
 Instead, you can type `;;` at the point you want to split the code. Upon formatting, the line will be split in a way that preserves the same meaning!
 
 ```uiua
-↥⊸⇌;;⊞=.⇡5 # Format to split!
+↥⊸⇌;;˙⊞=⇡5 # Format to split!
 ```
 
 You can put as many of these splitters in your code as you like, and the formatter will handle them all at once.

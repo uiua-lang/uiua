@@ -1995,8 +1995,11 @@ impl PrimDoc {
     pub(crate) fn from_lines(s: &str) -> Self {
         let mut short = Vec::new();
         let mut lines = Vec::new();
-        for line in s.lines() {
-            let line = line.trim();
+        for mut line in s.lines() {
+            line = line.trim();
+            if line.ends_with("@ #") {
+                line = line.trim_end_matches('#');
+            }
             if let Some(mut ex) = line.strip_prefix("ex:") {
                 // Example
                 if ex.starts_with(' ') {

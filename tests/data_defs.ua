@@ -62,7 +62,7 @@ F! ← ^0 Foo
 
 ~Foo {A B C}
 Foo 1 2 3
-⍤⤙⊸≍ Foo 3 2 1 ⍜Foo!⊃A C :
+⍤⤙⊸≍ Foo 3 2 1 ⍜(Foo!⊃A C)˜⊙∘
 ⍤⤙≍ Foo 4 5 6 °⊸Foo!⊃(C|B|A) 6 5 4
 
 # Unnamed top-level def

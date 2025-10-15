@@ -90,7 +90,7 @@ This is because the writes we have made have not been flushed to the file.
 Streams should always be closed with [`&cl`]() (close) when they are no longer needed. This will flush any remaining writes to the file and close the file handle.
 
 ```uiua
-&cl &w "Hello, world!" . &fc "file.txt"
+&cl ⊸&w "Hello, world!" &fc "file.txt"
 &fras "file.txt"
 ```
 

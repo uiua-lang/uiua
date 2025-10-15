@@ -116,14 +116,20 @@ primitive!(
     /// ex: ⊞=.⇡4
     /// Sometimes it is also good with [group] or [partition]
     /// ex: ⊜⧻.[1 1 0 0 2 2 2 2 0 1 0 3 3]
-    (1(2), Dup, Stack, ("duplicate", '.')),
+    (1(2), Dup, Arguments, ("duplicate", '.')),
     /// Swap the top two values on the stack
     ///
     /// ex: [: 1 2 3 4 5]
     ///
     /// [flip] is generally recommend against. It is largely a relic of when Uiua was a different language.
     /// Many cases can be replaced with [backward]. Others can be replaced with [dip], [fork], [both], [on], [by], [with], or [off].
-    (2(2), Flip, Stack, ("flip", AsciiToken::Colon, ':')),
+    (2(2), Flip, Arguments, ("flip", AsciiToken::Colon, ':')),
+    /// Do nothing with one value
+    ///
+    /// ex: ∘ 5
+    ///
+    /// [identity] is mostly useless on its own. See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) to understand what it is for.
+    (1, Identity, Arguments, ("identity", '∘')),
     /// Discard the first argument
     ///
     /// ex: [◌ 1 2 ◌ 3 4]
@@ -131,13 +137,151 @@ primitive!(
     ///
     /// [un][pop] can be used to retrieve the [fill] value.
     /// ex: ⬚3(+°◌°◌)
-    (1(0), Pop, Stack, ("pop", '◌')),
-    /// Do nothing with one value
+    (1(0), Pop, Arguments, ("pop", '◌')),
+    /// Call a function with the same array as all arguments
     ///
-    /// ex: ∘ 5
+    /// ex: ˙+ 5
+    /// ex: ˙⊞+ 1_2_3
+    /// ex: ˙(⊂⊂) π
+    ([1], Slf, Arguments, ("self", '˙')),
+    /// Call a function with its arguments swapped
     ///
-    /// [identity] is mostly useless on its own. See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) to understand what it is for.
-    (1, Identity, Planet, ("identity", '∘')),
+    /// ex:  - 2 5
+    ///   : ˜- 2 5
+    /// ex: ˜⊂ 1 [2 3]
+    /// ex: °˜⊂ [1 2 3]
+    /// If the function takes 4 arguments, the second two arguments are swapped.
+    /// ex: ˜⊟₄ 1 2 3 4
+    /// ex: [˜∩⊟] 1 2 3 4
+    /// [backward] is currently only allowed with dyadic and tetradic functions.
+    ([1], Backward, Arguments, ("backward", '˜')),
+    /// Skip the first argument and call a function on later arguments
+    ///
+    /// See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) for a more complete understanding of why [dip] is useful.
+    ///
+    /// ex: [⊙+ 1 2 3]
+    /// ex: [⊙⊙+ 1 2 3 4]
+    /// This is especially useful when used in a [fork].
+    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
+    /// For example, if you wanted to add 3 values but keep all 3 as leading arguments:
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙⋅∘(++) 3 5 10]
+    /// ex: [⊃⋅⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙∘(++) 3 5 10]
+    ///
+    /// [dip] can be used with a function pack.
+    /// `dip``(F|G|H|..)` is equivalent to `F``dip``(G``dip``(H``dip``(..)))`.
+    /// ex: ⊙(+|×) 1 2 3
+    /// ex: ⊙(⊂×10|□₂|⊟) 1 2 3 4
+    ([1], Dip, Arguments, ("dip", '⊙')),
+    /// Discard the first argument then call a function
+    ///
+    /// See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) for a more complete understanding of why [gap] is useful.
+    ///
+    /// ex: ⋅+ 1 2 3
+    /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
+    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
+    /// For example, if you wanted to add 3 values but keep the last argument as the first:
+    /// ex: [⊃⋅⋅∘(++) 3 5 10]
+    /// By using fewer `gap`s, you can select a different value.
+    /// ex: [⊃⋅∘(++) 3 5 10]
+    /// ex! [⊃∘(++) 3 5 10]
+    /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
+    /// ex: [⊃⊙⋅∘(++) 3 5 10]
+    /// ex: [⊃⋅⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    ([1], Gap, Arguments, ("gap", '⋅')),
+    /// Call a function but keep its first argument before its outputs
+    ///
+    /// ex: [⟜+ 2 5]
+    ///   : [⟜- 2 5]
+    /// ex: ÷⟜⇡ 10
+    /// ex: +⟜(⇡-) 4 10
+    /// ex: +⟜(×-) 10 20 0.3
+    /// ex: ↯⟜⊚ 4
+    ///
+    /// [on] can be thought of as a compliment of [by].
+    /// ex: [⟜¯ 1]
+    ///   : [⊸¯ 1]
+    ///
+    /// [on] can be used with a function pack. `on``(F|G)` becomes `on``F``on``G`.
+    /// ex: [⟜(+1|×2|¯)] 5
+    /// Subscripted [on] keeps the first N arguments on as initial arguments.
+    /// ex: {⟜₂[⊙⊙∘] 1 2 3}
+    /// [on] is equivalent to [fork][identity], but can often be easier to read.
+    ([1], On, Arguments, ("on", '⟜')),
+    /// Call a function but keep its last argument after its outputs
+    ///
+    /// ex: ⊸¯ 4
+    /// ex: ⊸+ 2 5
+    /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
+    /// With [by], the filtering function above can be written more simply.
+    /// ex: F ← ▽⊸<
+    ///   : F 10 [1 27 8 3 14 9]
+    /// Here are some more examples of [by] in action.
+    /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
+    ///   : ⊜□⊸≠ @  "Hey there buddy"
+    ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
+    /// Subscripted [by] keeps the last N arguments after the outputs.
+    /// ex: {⊸₂[⊙⊙∘] 1 2 3}
+    ([1], By, Arguments, ("by", '⊸')),
+    /// Call a function but keep its last argument before its outputs
+    ///
+    /// ex: [⤙+ 2 5]
+    ///   : [⤙- 2 5]
+    /// [with] makes it easy to call multiple dyadic functions with the same last argument.
+    /// There are many cases where this can read quite nicely.
+    /// "Couple +1 with ×2"
+    /// ex: ⊟+1⤙×2 5
+    /// There is the common testing pattern "assert with match".
+    /// ex: ⍤⤙≍ 5 +2 3
+    /// ex! ⍤⤙≍ 5 +2 2
+    /// [with] can be used to copy a value from much later in the argument list, or to move it.
+    /// ex: [⤙⊙⊙⊙∘ 1 2 3 4]
+    ///   : [⤙⊙⊙⊙◌ 1 2 3 4]
+    /// If you do not want these behaviors, use [on] instead.
+    /// Subscripted [with] keeps the last N arguments before the outputs.
+    /// ex: {⤙₂[⊙⊙∘] 1 2 3}
+    ([1], With, Arguments, ("with", '⤙')),
+    /// Call a function but keep its first argument after its outputs
+    ///
+    /// ex: [⤚+ 2 5]
+    ///   : [⤚- 2 5]
+    /// [off] makes it easy to call multiple dyadic functions with the same first argument.
+    /// This example keeps only 2D vectors in the first argument with `1`s in that position in the second argument.
+    /// ex: ▽⤚⊡ [0_2 1_0 1_1] [0_1_1 1_0_1]
+    /// Or you could quickly [join] a row to either side of an array.
+    /// ex: ⊂⤚⊂ 0 [1 2 3 4]
+    /// If [off]'s function is commutative, then it can be used in a place where [by] would work if the arguments were reversed.
+    /// ex: ▽⤚≠ [1 2 3 4 5] 2
+    ///   : ▽⊸≠ 2 [1 2 3 4 5]
+    /// [off] can be used to copy the first argument to a later position, or to move it.
+    /// ex: [⤚⊙⊙⊙∘ 1 2 3 4]
+    ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
+    /// If you do not want these behaviors, use [by] instead.
+    /// Subscripted [off] keeps the first N arguments after the outputs.
+    /// ex: {⤚₂[⊙⊙∘] 1 2 3}
+    ([1], Off, Arguments, ("off", '⤚')),
+    /// Keep all arguments to a function above the outputs on the stack
+    ///
+    /// ex: # Experimental!
+    ///   : [◠+ 1 2]
+    /// ex: # Experimental!
+    ///   : [◠(++) 1 2 3]
+    ///
+    /// See also: [below]
+    ([1], Above, Arguments, ("above", '◠'), { experimental: true }),
+    /// Keep all arguments to a function after the outputs
+    ///
+    /// ex: [◡+ 1 2]
+    /// ex: [◡(++) 1 2 3]
+    /// This can be used with [gap] and [identity] to copy values from arbitrarily far in the argument list.
+    /// ex: [◡⋅⋅⋅⋅∘ 1 2 3 4 5]
+    ///
+    /// See also: [above]
+    ([1], Below, Arguments, ("below", '◡')),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -1955,44 +2099,6 @@ primitive!(
     /// ex: ≡◇⧻ {"These" "are" "some" "words"}
     /// ex: ≡◇/+ {3_0_1 5 2_7}
     ([1], Content, OtherModifier, ("content", '◇')),
-    /// Discard the first argument then call a function
-    ///
-    /// See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) for a more complete understanding of why [gap] is useful.
-    ///
-    /// ex: ⋅+ 1 2 3
-    /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
-    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
-    /// For example, if you wanted to add 3 values but keep the last argument as the first:
-    /// ex: [⊃⋅⋅∘(++) 3 5 10]
-    /// By using fewer `gap`s, you can select a different value.
-    /// ex: [⊃⋅∘(++) 3 5 10]
-    /// ex! [⊃∘(++) 3 5 10]
-    /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
-    /// ex: [⊃⊙⋅∘(++) 3 5 10]
-    /// ex: [⊃⋅⊙∘(++) 3 5 10]
-    /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    ([1], Gap, Planet, ("gap", '⋅')),
-    /// Skip the first argument and call a function on later arguments
-    ///
-    /// See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) for a more complete understanding of why [dip] is useful.
-    ///
-    /// ex: [⊙+ 1 2 3]
-    /// ex: [⊙⊙+ 1 2 3 4]
-    /// This is especially useful when used in a [fork].
-    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
-    /// For example, if you wanted to add 3 values but keep all 3 as leading arguments:
-    /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
-    /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    /// ex: [⊃⊙⋅∘(++) 3 5 10]
-    /// ex: [⊃⋅⊙∘(++) 3 5 10]
-    /// ex: [⊃⊙∘(++) 3 5 10]
-    ///
-    /// [dip] can be used with a function pack.
-    /// `dip``(F|G|H|..)` is equivalent to `F``dip``(G``dip``(H``dip``(..)))`.
-    /// ex: ⊙(+|×) 1 2 3
-    /// ex: ⊙(⊂×10|□₂|⊟) 1 2 3 4
-    ([1], Dip, Planet, ("dip", '⊙')),
     /// Call a function on the first and third values on the stack
     ///
     /// ex: # Experimental!
@@ -2007,113 +2113,7 @@ primitive!(
     ///   : {𝄐⌞⊟ 1 2 3}
     /// ex: # Experimental!
     ///   : {𝄐⌟⊟ 1 2 3}
-    ([1], Reach, Planet, ("reach", '𝄐'), { experimental: true }),
-    /// Call a function but keep its first argument before its outputs
-    ///
-    /// ex: [⟜+ 2 5]
-    ///   : [⟜- 2 5]
-    /// ex: ÷⟜⇡ 10
-    /// ex: +⟜(⇡-) 4 10
-    /// ex: +⟜(×-) 10 20 0.3
-    /// ex: ↯⟜⊚ 4
-    ///
-    /// [on] can be thought of as a compliment of [by].
-    /// ex: [⟜¯ 1]
-    ///   : [⊸¯ 1]
-    ///
-    /// [on] can be used with a function pack. `on``(F|G)` becomes `on``F``on``G`.
-    /// ex: [⟜(+1|×2|¯)] 5
-    /// Subscripted [on] keeps the first N arguments on as initial arguments.
-    /// ex: {⟜₂[⊙⊙∘] 1 2 3}
-    /// [on] is equivalent to [fork][identity], but can often be easier to read.
-    ([1], On, Stack, ("on", '⟜')),
-    /// Call a function but keep its last argument after its outputs
-    ///
-    /// ex: ⊸¯ 4
-    /// ex: ⊸+ 2 5
-    /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
-    /// With [by], the filtering function above can be written more simply.
-    /// ex: F ← ▽⊸<
-    ///   : F 10 [1 27 8 3 14 9]
-    /// Here are some more examples of [by] in action.
-    /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
-    ///   : ⊜□⊸≠ @  "Hey there buddy"
-    ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
-    /// Subscripted [by] keeps the last N arguments after the outputs.
-    /// ex: {⊸₂[⊙⊙∘] 1 2 3}
-    ([1], By, Stack, ("by", '⊸')),
-    /// Call a function but keep its last argument before its outputs
-    ///
-    /// ex: [⤙+ 2 5]
-    ///   : [⤙- 2 5]
-    /// [with] makes it easy to call multiple dyadic functions with the same last argument.
-    /// There are many cases where this can read quite nicely.
-    /// "Couple +1 with ×2"
-    /// ex: ⊟+1⤙×2 5
-    /// There is the common testing pattern "assert with match".
-    /// ex: ⍤⤙≍ 5 +2 3
-    /// ex! ⍤⤙≍ 5 +2 2
-    /// [with] can be used to copy a value from much later in the argument list, or to move it.
-    /// ex: [⤙⊙⊙⊙∘ 1 2 3 4]
-    ///   : [⤙⊙⊙⊙◌ 1 2 3 4]
-    /// If you do not want these behaviors, use [on] instead.
-    /// Subscripted [with] keeps the last N arguments before the outputs.
-    /// ex: {⤙₂[⊙⊙∘] 1 2 3}
-    ([1], With, Stack, ("with", '⤙')),
-    /// Call a function but keep its first argument after its outputs
-    ///
-    /// ex: [⤚+ 2 5]
-    ///   : [⤚- 2 5]
-    /// [off] makes it easy to call multiple dyadic functions with the same first argument.
-    /// This example keeps only 2D vectors in the first argument with `1`s in that position in the second argument.
-    /// ex: ▽⤚⊡ [0_2 1_0 1_1] [0_1_1 1_0_1]
-    /// Or you could quickly [join] a row to either side of an array.
-    /// ex: ⊂⤚⊂ 0 [1 2 3 4]
-    /// If [off]'s function is commutative, then it can be used in a place where [by] would work if the arguments were reversed.
-    /// ex: ▽⤚≠ [1 2 3 4 5] 2
-    ///   : ▽⊸≠ 2 [1 2 3 4 5]
-    /// [off] can be used to copy the first argument to a later position, or to move it.
-    /// ex: [⤚⊙⊙⊙∘ 1 2 3 4]
-    ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
-    /// If you do not want these behaviors, use [by] instead.
-    /// Subscripted [off] keeps the first N arguments after the outputs.
-    /// ex: {⤚₂[⊙⊙∘] 1 2 3}
-    ([1], Off, Stack, ("off", '⤚')),
-    /// Keep all arguments to a function above the outputs on the stack
-    ///
-    /// ex: # Experimental!
-    ///   : [◠+ 1 2]
-    /// ex: # Experimental!
-    ///   : [◠(++) 1 2 3]
-    ///
-    /// See also: [below]
-    ([1], Above, Stack, ("above", '◠'), { experimental: true }),
-    /// Keep all arguments to a function after the outputs
-    ///
-    /// ex: [◡+ 1 2]
-    /// ex: [◡(++) 1 2 3]
-    /// This can be used with [gap] and [identity] to copy values from arbitrarily far in the argument list.
-    /// ex: [◡⋅⋅⋅⋅∘ 1 2 3 4 5]
-    ///
-    /// See also: [above]
-    ([1], Below, Stack, ("below", '◡')),
-    /// Call a function with the same array as all arguments
-    ///
-    /// ex: ˙+ 5
-    /// ex: ˙⊞+ 1_2_3
-    /// ex: ˙(⊂⊂) π
-    ([1], Slf, Stack, ("self", '˙')),
-    /// Call a function with its arguments swapped
-    ///
-    /// ex:  - 2 5
-    ///   : ˜- 2 5
-    /// ex: ˜⊂ 1 [2 3]
-    /// ex: °˜⊂ [1 2 3]
-    /// If the function takes 4 arguments, the second two arguments are swapped.
-    /// ex: ˜⊟₄ 1 2 3 4
-    /// ex: [˜∩⊟] 1 2 3 4
-    /// [backward] is currently only allowed with dyadic and tetradic functions.
-    ([1], Backward, Stack, ("backward", '˜')),
+    ([1], Reach, Arguments, ("reach", '𝄐'), { experimental: true }),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the first 2 arguments.
@@ -2141,7 +2141,7 @@ primitive!(
     /// [both] accepts mixed numeric and sided subscripts. The side quantifier determines how many arguments are reused on each call.
     /// ex: ∩₃⌞⊟ 1 2 3 4
     ///   : ∩₃⌞₂⊟₃ 1 2 3 4 5
-    ([1], Both, Planet, ("both", '∩')),
+    ([1], Both, Arguments, ("both", '∩')),
     /// Define the various inverses of a function
     ///
     /// [obverse] defines how a function should interact with [un], [anti], and [under].
@@ -2278,7 +2278,7 @@ primitive!(
     /// ex: [⊃+¯ 3 5]
     /// By default, [fork] can only work with two functions. However, a function pack can be used to pass the same arguments to many functions.
     /// ex: ⊃(+1|×3|÷|$"_ and _") 6 12
-    ([2], Fork, Planet, ("fork", '⊃')),
+    ([2], Fork, Arguments, ("fork", '⊃')),
     /// Call two functions on two distinct sets of values
     ///
     /// ex: ⊓⇌◴ 1_2_3 [1 4 2 4 2]
@@ -2291,7 +2291,7 @@ primitive!(
     /// [bracket] with sided subscripts reuses a value in both functions.
     /// One use of this is to check if a number is within a range.
     /// ex: ◡×⊸⊓⌟≥≤5 8 [6 2 5 9 6 5 0 4]
-    ([2], Bracket, Planet, ("bracket", '⊓')),
+    ([2], Bracket, Arguments, ("bracket", '⊓')),
     /// Repeat a function while a condition holds
     ///
     /// The first function is the loop function, and it is run as long as the condition is true.

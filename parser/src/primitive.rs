@@ -11,7 +11,7 @@ use crate::{AsciiToken, NumericSubscript, Primitive, Signature, Subscript};
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 #[allow(missing_docs)]
 pub enum PrimClass {
-    Stack,
+    Arguments,
     Constant,
     MonadicPervasive,
     DyadicPervasive,
@@ -20,7 +20,6 @@ pub enum PrimClass {
     IteratingModifier,
     AggregatingModifier,
     InversionModifier,
-    Planet,
     OtherModifier,
     Comptime,
     Debug,
@@ -57,7 +56,7 @@ impl fmt::Debug for PrimClass {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use PrimClass::*;
         match self {
-            Stack => write!(f, "Stack"),
+            Arguments => write!(f, "Arguments"),
             Constant => write!(f, "Constant"),
             MonadicPervasive => write!(f, "MonadicPervasive"),
             DyadicPervasive => write!(f, "DyadicPervasive"),
@@ -66,7 +65,6 @@ impl fmt::Debug for PrimClass {
             IteratingModifier => write!(f, "IteratingModifier"),
             AggregatingModifier => write!(f, "AggregatingModifier"),
             InversionModifier => write!(f, "InversionModifier"),
-            Planet => write!(f, "Planet"),
             OtherModifier => write!(f, "OtherModifier"),
             Comptime => write!(f, "Comptime"),
             Debug => write!(f, "Debug"),

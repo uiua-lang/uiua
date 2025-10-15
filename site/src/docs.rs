@@ -386,7 +386,7 @@ impl Allowed {
         let system_classes: Vec<PrimClass> = SysOpClass::all().map(PrimClass::Sys).collect();
         let mut function_classes: Vec<PrimClass> = system_classes.clone();
         function_classes.extend([
-            PrimClass::Stack,
+            PrimClass::Arguments,
             PrimClass::MonadicPervasive,
             PrimClass::DyadicPervasive,
             PrimClass::MonadicArray,
@@ -395,7 +395,7 @@ impl Allowed {
         ]);
         'parts: for part in &parts {
             for (pattern, pat_classes) in [
-                ("stack", [PrimClass::Stack].as_slice()),
+                ("arguments", [PrimClass::Arguments].as_slice()),
                 (
                     "pervasive pervade",
                     &[PrimClass::MonadicPervasive, PrimClass::DyadicPervasive],
@@ -424,7 +424,6 @@ impl Allowed {
                 ("constant", &[PrimClass::Constant]),
                 ("system", &system_classes),
                 ("function", &function_classes),
-                ("planet", &[PrimClass::Planet]),
                 ("images", &[PrimClass::Sys(SysOpClass::Media)]),
                 ("gifs", &[PrimClass::Sys(SysOpClass::Media)]),
                 ("audio", &[PrimClass::Sys(SysOpClass::Media)]),
@@ -468,7 +467,7 @@ impl Allowed {
                 continue;
             }
             let id = match class {
-                PrimClass::Stack => "stack-functions",
+                PrimClass::Arguments => "arguments",
                 PrimClass::Constant => "constant-functions",
                 PrimClass::MonadicPervasive => "monadic-pervasive-functions",
                 PrimClass::DyadicPervasive => "dyadic-pervasive-functions",
@@ -477,7 +476,6 @@ impl Allowed {
                 PrimClass::AggregatingModifier => "aggregating-modifiers",
                 PrimClass::IteratingModifier => "iterating-modifiers",
                 PrimClass::InversionModifier => "inversion-modifiers",
-                PrimClass::Planet => "planet-modifiers",
                 PrimClass::Comptime => "comptime-modifiers",
                 PrimClass::OtherModifier => "other-modifiers",
                 PrimClass::Debug => "debug",
@@ -524,11 +522,8 @@ impl Allowed {
                 continue;
             }
             let (header, description) = match class {
-                PrimClass::Stack => ("Stack".into_view(), "Work with the stack"),
-                PrimClass::Constant => (
-                    "Constants".into_view(),
-                    "Push a constant value onto the stack",
-                ),
+                PrimClass::Arguments => ("Arguments".into_view(), "Manipulate function arguments"),
+                PrimClass::Constant => ("Constants".into_view(), "Symbolic constants"),
                 PrimClass::MonadicPervasive => (
                     "Monadic Pervasive".into_view(),
                     "Operate on every element in an array",
@@ -553,38 +548,49 @@ impl Allowed {
                     "Inversion Modifiers".into_view(),
                     "Work with the inverses of functions",
                 ),
-                PrimClass::Planet => (
-                    view!(<a class="clean" href="/tutorial/morestack#planet-notation">"🌎 Planet 🪐"</a>).into_view(),
-                    "Advanced stack manipulation",
-                ),
-                PrimClass::Comptime => (
-                    "Comptime".into_view(),
-                    "Do things at compile time",
-                ),
+                PrimClass::Comptime => ("Comptime".into_view(), "Do things at compile time"),
                 PrimClass::OtherModifier => ("Other Modifiers".into_view(), ""),
                 PrimClass::Debug => ("Debug".into_view(), "Debug your code"),
                 PrimClass::Thread => ("Thread".into_view(), "Work with OS threads"),
                 PrimClass::Map => ("Map".into_view(), "Use arrays as hash maps"),
-                PrimClass::Encoding => ("Encoding".into_view(), "Convert to and from different encodings"),
+                PrimClass::Encoding => (
+                    "Encoding".into_view(),
+                    "Convert to and from different encodings",
+                ),
                 PrimClass::Algorithm => ("Algorithms".into_view(), "Useful, specific algorithms"),
-                PrimClass::Rng => ("Random Number Generation".into_view(), "Generate random numbers"),
+                PrimClass::Rng => (
+                    "Random Number Generation".into_view(),
+                    "Generate random numbers",
+                ),
                 PrimClass::Time => ("Time".into_view(), "Work with time"),
-                PrimClass::Environment => ("Environment".into_view(), "Get information about the environment"),
+                PrimClass::Environment => (
+                    "Environment".into_view(),
+                    "Get information about the environment",
+                ),
                 PrimClass::Misc => ("Miscellaneous".into_view(), ""),
-                PrimClass::Sys(class) => {
-                    match class {
-                        SysOpClass::Filesystem => ("System - Filesystem".into_view(), "Work with files and directories"),
-                        SysOpClass::StdIO => ("System - Standard I/O".into_view(), "Read and write standard input and output"),
-                        SysOpClass::Env => ("System - Environment".into_view(), "Query the environment"),
-                        SysOpClass::Stream => ("System - Streams".into_view(), "Read from and write to streams"),
-                        SysOpClass::Command => ("System - Commands".into_view(), "Execute commands"),
-                        SysOpClass::Media => ("System - Media".into_view(), "Present media"),
-                        SysOpClass::Tcp => ("System - TCP".into_view(), "Work with TCP sockets"),
-                        SysOpClass::Udp => ("System - UDP".into_view(), "Work with UDP sockets"),
-                        SysOpClass::Ffi => ("System - FFI".into_view(), "Foreign function interface"),
-                        SysOpClass::Misc => ("System - Misc".into_view(), ""),
+                PrimClass::Sys(class) => match class {
+                    SysOpClass::Filesystem => (
+                        "System - Filesystem".into_view(),
+                        "Work with files and directories",
+                    ),
+                    SysOpClass::StdIO => (
+                        "System - Standard I/O".into_view(),
+                        "Read and write standard input and output",
+                    ),
+                    SysOpClass::Env => {
+                        ("System - Environment".into_view(), "Query the environment")
                     }
-                }
+                    SysOpClass::Stream => (
+                        "System - Streams".into_view(),
+                        "Read from and write to streams",
+                    ),
+                    SysOpClass::Command => ("System - Commands".into_view(), "Execute commands"),
+                    SysOpClass::Media => ("System - Media".into_view(), "Present media"),
+                    SysOpClass::Tcp => ("System - TCP".into_view(), "Work with TCP sockets"),
+                    SysOpClass::Udp => ("System - UDP".into_view(), "Work with UDP sockets"),
+                    SysOpClass::Ffi => ("System - FFI".into_view(), "Foreign function interface"),
+                    SysOpClass::Misc => ("System - Misc".into_view(), ""),
+                },
             };
             table_cells.push(view! {
                 <td id=id style="vertical-align: top;"><div>

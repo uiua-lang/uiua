@@ -1614,9 +1614,7 @@ mod server {
             let for_prim = |p: Primitive, sub: Option<&Subscript>| {
                 let args = p.subscript_sig(sub).map(|sig| sig.args()).or(p.args());
                 Some(match p.class() {
-                    PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
-                        if p.modifier_args().is_none() =>
-                    {
+                    PrimClass::Arguments | PrimClass::Debug if p.modifier_args().is_none() => {
                         STACK_FUNCTION_STT
                     }
                     PrimClass::Constant => UIUA_NUMBER_STT,

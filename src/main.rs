@@ -1247,11 +1247,7 @@ const DYADIC_MOD: Color = Color::Magenta;
 
 fn color_prim(prim: Primitive, sub: Option<&Subscript>) -> Option<Color> {
     match prim.class() {
-        PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
-            if prim.modifier_args().is_none() =>
-        {
-            None
-        }
+        PrimClass::Arguments | PrimClass::Debug if prim.modifier_args().is_none() => None,
         PrimClass::Constant => None,
         _ => {
             if let Some(margs) = prim.modifier_args() {

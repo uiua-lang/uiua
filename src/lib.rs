@@ -449,9 +449,9 @@ mod tests {
         }))
         .collect();
         for needs_name in [false, true] {
-            for a in (iter.clone()).filter(|p| {
-                ![PrimClass::Stack, PrimClass::Planet].contains(&p.class()) || p.sig().is_none()
-            }) {
+            for a in
+                (iter.clone()).filter(|p| p.class() != PrimClass::Arguments || p.sig().is_none())
+            {
                 for b in iter.clone() {
                     for c in iter.clone() {
                         if a.glyph().is_none()

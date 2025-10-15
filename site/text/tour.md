@@ -1,14 +1,12 @@
 # Uiua Language Tour
 
-## Arrays on a Stack
+## Arrays Without Names
 
-Uiua is an **array-oriented** programming language with a stack-based execution model.
+Uiua is a tacit, **array-oriented** programming language.
 
 An **array-oriented** language is one where the primary data structure is the array. In array languages, many operations that can apply to a single value can also apply to every value in an array. This is known as *rank-polymorphism*.
 
-A **stack-based** language is one where all operations manipulate a global stack of values. Functions pop values off the top of the stack, perform their calculation, then push the results back onto the stack.
-
-In Uiua, functions work on a global stack of arrays.
+A tacit language is one where functions do not need to refer to their arguments by name. They have mechanisms for rearanging arguments to thread data through programs.
 
 That's enough introduction, let's see some code!
 
@@ -16,7 +14,7 @@ That's enough introduction, let's see some code!
 +1 ×2 ⇡10
 ```
 
-Uiua code runs from [right to left](../rtl), top to bottom. Operators are put to the *left* of their arguments, rather than in-between.
+Uiua code runs from [right to left](/rtl), top to bottom. Operators are put to the *left* of their arguments, rather than in-between.
 
 This program makes an array of all the numbers less than 10, multiplies each one by 2, then adds 1 to each.
 
@@ -46,9 +44,17 @@ You can ctrl/⌘-click any glyph in the editor to see its documentation.
 
 Click the `↧` on the right of the editor to see a list of all the built-in functions.
 
-## The Stack
+## Arguments
 
-A number in Uiua code pushes its value to the stack. On the website's editor, the values on *top* of the stack are displayed at the *bottom*. This is so that sequential lines of code show their result in the correct order.
+Uiua programs are about building up and transforming a list of arguments.
+
+A number literal in Uiua code makes the first argument to the next function that is called, pushing to the right all current arguments.
+
+```uiua
++ 2 7 5
+```
+
+On the website's editor, values that are generated on the same line appear in the same line in the output.
 
 ```uiua
 10 11
@@ -58,27 +64,22 @@ A number in Uiua code pushes its value to the stack. On the website's editor, th
 # By the way, comments start with #
 ```
 
-If you like, you can put values on the stack first, then operate on them.
+If you like, you can build up a big list of arguments then operate on them all at once. This works because Uiua functions always take the same number of arguments.
 
 ```uiua
 ×++ 1 2 3 4
 ```
 
-[duplicate](/docs/dup) duplicates the top value on the stack.
+[self](/docs/self) makes a function take a single value as all of its arguments. [self](/docs/self) is one of many *modifiers* in Uiua. Modifiers apply to one or more functions and change how they behave.
 
 ```uiua
-×.3
-```
-
-[duplicate](/docs/dup) is often used in the examples on this site to show both the input and output of a function.
-
-```uiua
-√.225
+˙× 3
+self+ 5 # ← Format this!
 ```
 
 For math functions where the order matters, like [subtract](/docs/sub) and [divide](/docs/div), what would normally be the second argument is instead the first. This is so you can think of fragments like `-``2` as a single unit.
 
-If you want them to work the other way, you can use [backward](/docs/backward), which swaps the top two values on the stack.
+If you want them to work the other way, you can use the [backward](/docs/backward) modifier, which makes a function take its arguments in reversed order.
 
 ```uiua
 -3 10
@@ -91,15 +92,36 @@ By the way, since `-` is for [subtract](/docs/subtract), use `` ` `` for negativ
 `10
 ```
 
-You can inspect the stack at any point with [stack](/docs/stack).
+The [on](/docs/on) modifier keeps the first argument to a function in front of the function's outputs.
 
 ```uiua
-+1?×2?×.-3 5
+⟜+ 3 5
+⟜√ 36
+```
+
+The [by](/docs/by) modifier keeps the last argument to a function after the function's outputs. [by](/docs/by) is often used in examples on this site to show both the inputs and outputs of a function.
+
+```uiua
+⊸+ 3 5
+⊸√ 36
+```
+
+The [dip](/docs/dip) modifier skips the first arguments and calls its function on later arguments. You can chain [dip](/docs/dip) to operate on even lower arguments.
+
+```uiua
+⊙¯ 1 2 3
+⊙⊙+ 1 2 3 4 5
+```
+
+You can inspect the current argument list at any point with [stack](/docs/stack).
+
+```uiua
++1 ? ×2 ? ˙×-3 5
 ```
 
 ## Arrays
 
-So far, we have only talked about the stack part of Uiua. Now, let's talk about the most important part: Arrays!
+So far, we have only talked about operations on simple numbers. Now, let's talk about the most important part of Uiua: Arrays!
 
 An array is a rectangular collection of elements arranged along some number of axes.
 
@@ -119,10 +141,10 @@ You can also just surround them with `[]`s.
 [5 6 7 8]
 ```
 
-But wait! You can put whatever code you want between the brackets! The code runs from right to left as normal, and any values pushed to the stack get put in the array!
+But wait! You can put whatever code you want between the brackets! The code runs from right to left as normal, and any values it generates get put in the array!
 
 ```uiua
-[×3 . -2 . 10]
+[⊸×3 ⊸-2 10]
 ```
 
 If you put arrays inside others, you can make arrays with multiple dimensions.
@@ -132,7 +154,7 @@ If you put arrays inside others, you can make arrays with multiple dimensions.
 ```
 
 ```uiua
-[×3. 4_5_6]
+[⊸×3 4_5_6]
 ```
 
 Some operations are *pervasive*, which means they apply to every element of an array or every pair of elements between two arrays. All the math operators are pervasive!
@@ -167,25 +189,17 @@ The *rank* of an array refers to the number of axes it has.
 The [length](/docs/length) is the number of rows it has along its first axis.
 
 ```uiua
-a ← [1_2_3_4 5_6_7_8 9_10_11_12]
-△a
-⧻a
-⧻△a # rank
+A ← [1_2_3_4 5_6_7_8 9_10_11_12]
+△A
+⧻A
+⧻△A # rank
 ```
 
 If you want to type that fancy `←` so you can give names to arrays, you can type `=` after a name at the start of a line, and the formatter will convert it for you.
 
 ```uiua
-x = 5
-+x x
-```
-
-`←` just pops the first thing off the stack and assigns it to the name on the left, so if there is already a value on the stack, you don't actually need anything on the right.
-
-```uiua
-×2 [2 3 4]
-x ←
-x
+X = 5
++X X
 ```
 
 Names are case-sensitive and can only contain letters.
@@ -199,30 +213,30 @@ rev[1 2 3] # Run to format!
 ```
 
 ```uiua
-⇌[1_2_3 4_5_6]
+⇌ [1_2_3 4_5_6]
 ```
 
 You can concatenate two arrays with [join](/docs/join).
 
 ```uiua
-⊂1 [2 3 4]
-⊂[1 2 3] [4 5 6]
+⊂ 1 [2 3 4]
+⊂ [1 2 3] [4 5 6]
 ```
 
 You can make two arrays the rows of a new array with [couple](/docs/couple).
 
 ```uiua
-⊟[1 2 3] [4 5 6]
+⊟ [1 2 3] [4 5 6]
 ```
 
 You can get the first row of an array with [first](/docs/first) (or the last row with [last](/docs/last)).
 
 ```uiua
-⊢[1 2 3]
+⊢ [1 2 3]
 ```
 
 ```uiua
-fir[1_2_3 4_5_6]
+fir [1_2_3 4_5_6]
 ```
 
 ```uiua
@@ -232,20 +246,20 @@ lst "hello"
 [take](/docs/take) and [drop](/docs/drop) can be used to get just part of an array.
 
 ```uiua
-↙3 [1 2 3 4 5]
-↘3 [1 2 3 4 5]
+↙ 3 [1 2 3 4 5]
+↘ 3 [1 2 3 4 5]
 ```
 
 [reshape](/docs/reshape) changes the shape of an array while keeping the elements in the same order.
 
 ```uiua
-↯3_3 .⇡9
+⊸↯ 3_3 ⇡9
 ```
 
 [transpose](/docs/transpose) rotates the axes of an array.
 
 ```uiua
-trans.[1_2_3 4_5_6]
+bytrans [1_2_3 4_5_6]
 ```
 
 Uiua has a lot of built-in functions like these. You can explore their documentation on the [main docs page](/docs#functions).
@@ -278,7 +292,7 @@ One basic use of [reduce](/docs/reduce) is to sum an array.
 It works on multi-dimensional arrays too! In this case, it adds each row to the next, effectively summing along the columns.
 
 ```uiua
-/+ .[1_2_3 4_5_6 7_8_9]
+⊸/+ [1_2_3 4_5_6 7_8_9]
 ```
 
 This works with any function. For example, you can use [maximum](/docs/maximum) instead of [add](/docs/add) to get the maximum of each column rather than the sum.
@@ -290,10 +304,10 @@ This works with any function. For example, you can use [maximum](/docs/maximum) 
 [rows](/docs/rows) applies a function to each row of an array.
 
 ```uiua
-x ← [1_2_3 4_5_6]
-  x
- ⇌x
-≡⇌x
+X ← [1_2_3 4_5_6]
+  X
+ ⇌X
+≡⇌X
 ```
 
 [rows](/docs/rows) also works *between* two arrays if it is given a dyadic function like [join](/docs/join).
@@ -358,7 +372,7 @@ For more complex operations, you can use the [inventory](/docs/inventory) modifi
 
 ```uiua
 {"dog" "cat" "fish"}
-⍚(⊂⇌.).
+⊸⍚˙(⊂⇌)
 ```
 
 ## Inverses
@@ -422,7 +436,7 @@ Here, we get the [first](/docs/first) character of each word, capitalize them wi
 ## Multimedia
 Uiua can natively generate images, audio, and GIFs.
 
-On this site, simply leaving an array on the stack that *looks* like image or audio data will display it.
+On this site, simply returning an array that *looks* like image or audio data will display it.
 
 ### Images
 Image data can either be a rank 2 array of grayscale pixel data or a rank 3 array of grayscale with alpha, RGB, or RGBA pixel data.
@@ -430,7 +444,7 @@ Image data can either be a rank 2 array of grayscale pixel data or a rank 3 arra
 This minimal example uses three different functions on x/y coordinates to generate RGB values and make a pretty gradient.
 
 ```uiua
-⍉[⊞⊃⊃+-×].÷⟜⇡100
+⍉[˙⊞⊃⊃+-×]÷⟜⇡100
 ```
 
 The Uiua logo is made with Uiua itself!

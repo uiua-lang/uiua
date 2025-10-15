@@ -413,6 +413,13 @@
     "class": "Environment",
     "description": "Get the current architecture"
   },
+  "args": {
+    "glyph": "?",
+    "args": 0,
+    "outputs": 0,
+    "class": "Debug",
+    "description": "Debug print all stack values without popping them"
+  },
   "assert": {
     "glyph": "⍤",
     "args": 2,
@@ -1371,13 +1378,6 @@
     "outputs": 1,
     "class": "MonadicPervasive",
     "description": "Take the square root of a number"
-  },
-  "stack": {
-    "glyph": "?",
-    "args": 0,
-    "outputs": 0,
-    "class": "Debug",
-    "description": "Debug print all stack values without popping them"
   },
   "stencil": {
     "glyph": "⧈",

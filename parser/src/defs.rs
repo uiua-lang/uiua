@@ -124,7 +124,7 @@ primitive!(
     /// [flip] is generally recommend against. It is largely a relic of when Uiua was a different language.
     /// Many cases can be replaced with [backward]. Others can be replaced with [dip], [fork], [both], [on], [by], [with], or [off].
     (2(2), Flip, Stack, ("flip", AsciiToken::Colon, ':')),
-    /// Discard the top stack value
+    /// Discard the first argument
     ///
     /// ex: [◌ 1 2 ◌ 3 4]
     /// This is usually used to discard values that are no longer needed.
@@ -136,7 +136,7 @@ primitive!(
     ///
     /// ex: ∘ 5
     ///
-    /// [identity] is mostly useless on its own. See the [More Stack Manipulation Tutorial](/tutorial/morestack) to understand what it is for.
+    /// [identity] is mostly useless on its own. See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) to understand what it is for.
     (1, Identity, Planet, ("identity", '∘')),
     // Pervasive monadic ops
     /// Logical not
@@ -578,7 +578,7 @@ primitive!(
     /// [under][first] allows you to modify the first row of an array.
     /// ex: ⍜⊢(×10) [2 3 4]
     ///
-    /// Subscripted [first] puts the first N rows of an array onto the stack.
+    /// Subscripted [first] get the first N rows of an array as individual values.
     /// ex: ⊢₂ [1 2 3 4]
     ///
     /// See also: [last]
@@ -593,7 +593,7 @@ primitive!(
     /// [under][last] allows you to modify the last row of an array.
     /// ex: ⍜⊣(×10) [2 3 4]
     ///
-    /// Subscripted [last] puts the last N rows of an array onto the stack.
+    /// Subscripted [last] gets the last N rows of an array as individual values.
     /// ex: ⊣₂ [1 2 3 4]
     ///
     /// See also: [first]
@@ -804,14 +804,14 @@ primitive!(
     /// ex: {@a 3 7_8_9}
     /// Use [un][box] to get the values back out.
     /// ex: °□ □1_2_3
-    /// Use [un] with `{}`s, [dip]s, and [identity] to get the values back onto the stack
-    /// ex: °{⊙⊙∘} {@a 3 7_8_9}
+    /// Use [un] with subscripted [box] to decompose a list of boxes.
+    /// ex: °□₃ {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
     /// The more important use case of [box] is for jagged or nested data.
     /// If you want to collect unevenly-sized groups from [partition] or [group], without [fill]ing, you must use [box].
     /// ex: $ Words of different lengths
-    ///   : ⊜□≠@ .
+    ///   : ⊜□⊸≠@
     ///
     /// Pervasive functions work through boxes and preserve the maximum [box] depth of their arguments.
     /// ex: ¯ 1
@@ -911,8 +911,8 @@ primitive!(
     ///   : ⊂ 1 2
     /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
     /// ex: ⊟ [1 2 3] [4 5 6]
-    /// [un][couple] uncouples a [length] `2` array and pushes both rows onto the stack.
-    /// ex: °⊟ .[1_2_3 4_5_6]
+    /// [un][couple] uncouples a [length] `2` array and yields both rows.
+    /// ex: ⊸°⊟ [1_2_3 4_5_6]
     /// ex: °⊟ [1_2 3_4]
     ///
     /// If one array's shape is a suffix of the other's, the smaller array will be repeated to match the shape of the larger array.
@@ -1488,7 +1488,7 @@ primitive!(
     /// ex:   /↥ [1 2 3]
     /// ex: ⬚5/↥ [1 2 3]
     ///
-    /// If the function takes more than 2 arguments, additional arguments above the array on the stack will be passed to the function on every iteration. This is useful for things like interspersing one array between the rows of another.
+    /// If the function takes more than 2 arguments, additional arguments in front of the array will be passed to the function on every iteration. This is useful for things like interspersing one array between the rows of another.
     /// ex: /(⊂⊂) 0_1 [2 3 4 5]
     /// ex: /◇(⊂⊂) @, {"cat" "bird" "dog"}
     ([1], Reduce, AggregatingModifier, ("reduce", '/')),
@@ -1500,16 +1500,16 @@ primitive!(
     ///   : ∧+ [] 10
     ///
     /// If the function takes at least 1 more argument than it returns:
-    /// Arguments that are lower on the stack that will be used as accumulators.
+    /// Later arguments will be used as accumulators.
     /// There will be as many accumulators as the function's outputs.
-    /// Arguments that are higher on the stack will be iterated over.
+    /// Earlier arguments will be iterated over.
     /// The number of iterated arrays is the number of arguments minus the number of outputs.
     /// The function will be repeatedly called with the rows of the iterated arrays, followed by the accumulators.
     /// On each iteration, the returned values will be used as the new accumulators.
     ///
     /// Multiple accumulators can be used
     /// ex: ∧(⊃+(×⊙⋅∘)) +1⇡5 0 1
-    /// If the iterated array is already on the stack, you can use [dip] to place the accumulators below it.
+    /// If the iterated array is already present, you can use [dip] to place the accumulators below it.
     /// ex: ∧(⊃+(×⊙⋅∘))⊙(0 1) +1⇡5
     ///
     /// Multiple iterated arrays are also fine.
@@ -1521,12 +1521,12 @@ primitive!(
     ///
     /// If the function returns the same or more values than it takes as arguments:
     /// There will be exactly one iterated array. The rest of the arguments will be used as accumulators.
-    /// Excess outputs will be collected into arrays. When the [fold] is done, these arrays will be placed *below* the accumulators on the stack.
+    /// Excess outputs will be collected into arrays. When the [fold] is done, these arrays will be placed *after* the accumulators.
     /// This behavior is currently `# Experimental!`.
     ///
-    /// For example, [scan] can be manually reimplemented by [duplicate]ing the result of the function.
+    /// For example, [scan] can be manually reimplemented by duplicating the result of the function.
     /// ex: # Experimental!
-    ///   : ∧(.+) [1 2 3 4 5] 0
+    ///   : ∧(⟜∘+) [1 2 3 4 5] 0
     /// ex: # Experimental!
     ///   : ∧(◡⊙∘⊓⌞+×) [1 2 3 4 5] 0 1
     ([1], Fold, AggregatingModifier, ("fold", '∧')),
@@ -1549,7 +1549,7 @@ primitive!(
     ///   : ⬚0\⊂ .
     ///   : ↘1_1 .
     ///
-    /// If the function takes more than 2 arguments, additional arguments above the array on the stack will be passed to the function on every iteration.
+    /// If the function takes more than 2 arguments, additional arguments before the array will be passed to the function on every iteration.
     /// ex: \(+×) 10 [1 2 3 4]
     /// ex: ⬚@ \(⊂⊂) @, "abcd"
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
@@ -1769,20 +1769,20 @@ primitive!(
     ///
     /// ex: ⍥(+2)5 0
     /// ex: ⍥(⊂2)5 []
-    /// If the net stack change of the function is negative, then lower stack values will be preserved between iterations.
+    /// If the net signature of the function is negative, then later values will be preserved between iterations.
     /// In this example, `10` is added to `3` `5` times.
     /// ex: ⍥+5 3 10
     /// In this example, `2` is [join]ed with `1` `5` times.
     /// ex: ⍥⊂5 1 2
     ///
-    /// If the net stack change of the function is positive, then outputs of the function that are lower on the stack exceeding the number of arguments will be collected into arrays.
+    /// If the net signature of the function is positive, then later outputs of the function exceeding the number of arguments will be collected into arrays.
     /// ex: ⌊×10 ⍥⚂5
     /// [by] or [below] can be used to put collected values below others.
     /// ex: ⍥⊸√4 6561
     /// ex: ⍥◡+10 1 1
-    /// Note that depending on how the stack in the function is managed, the collected arrays may contain different results.
-    /// ex: ⍥(⊸+1)4 10 # Omit final value
-    ///   : ⍥(.+1)4 10 # Omit initial value
+    /// Note that depending on how the arguments in the function is managed, the collected arrays may contain different results.
+    /// ex: ⍥( ⊸+1)4 10 # Omit final value
+    ///   : ⍥(⟜∘+1)4 10 # Omit initial value
     /// This is because length of the accumulated arrays will always be the same as the number of repetitions, so they cannot contain both the initial and final values.
     ///
     /// Repeating [infinity] times will do a fixed-point iteration.
@@ -1957,14 +1957,14 @@ primitive!(
     /// ex: ≡◇⧻ {"These" "are" "some" "words"}
     /// ex: ≡◇/+ {3_0_1 5 2_7}
     ([1], Content, OtherModifier, ("content", '◇')),
-    /// Discard the top stack value then call a function
+    /// Discard the first argument then call a function
     ///
-    /// See the [More Stack Manipulation Tutorial](/tutorial/morestack) for a more complete understanding of why [gap] is useful.
+    /// See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) for a more complete understanding of why [gap] is useful.
     ///
     /// ex: ⋅+ 1 2 3
     /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
     /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
-    /// For example, if you wanted to add 3 values but keep the last value on top of the stack:
+    /// For example, if you wanted to add 3 values but keep the last argument as the first:
     /// ex: [⊃⋅⋅∘(++) 3 5 10]
     /// By using fewer `gap`s, you can select a different value.
     /// ex: [⊃⋅∘(++) 3 5 10]
@@ -1974,15 +1974,15 @@ primitive!(
     /// ex: [⊃⋅⊙∘(++) 3 5 10]
     /// ex: [⊃⊙⊙∘(++) 3 5 10]
     ([1], Gap, Planet, ("gap", '⋅')),
-    /// Temporarily pop the top value off the stack and call a function
+    /// Skip the first argument and call a function on later arguments
     ///
-    /// See the [More Stack Manipulation Tutorial](/tutorial/morestack) for a more complete understanding of why [dip] is useful.
+    /// See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) for a more complete understanding of why [dip] is useful.
     ///
     /// ex: [⊙+ 1 2 3]
     /// ex: [⊙⊙+ 1 2 3 4]
     /// This is especially useful when used in a [fork].
     /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
-    /// For example, if you wanted to add 3 values but keep all 3 on top of the stack:
+    /// For example, if you wanted to add 3 values but keep all 3 as leading arguments:
     /// ex: [⊃⊙⊙∘(++) 3 5 10]
     /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
     /// ex: [⊃⊙⊙∘(++) 3 5 10]
@@ -2010,7 +2010,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : {𝄐⌟⊟ 1 2 3}
     ([1], Reach, Planet, ("reach", '𝄐'), { experimental: true }),
-    /// Call a function but keep its first argument on the top of the stack
+    /// Call a function but keep its first argument before its outputs
     ///
     /// ex: [⟜+ 2 5]
     ///   : [⟜- 2 5]
@@ -2033,18 +2033,14 @@ primitive!(
     ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
     /// [on] can be used with a function pack. `on``(F|G)` becomes `on``F``on``G`.
     /// ex: [⟜(+1|×2|¯)] 5
-    /// Subscripted [on] keeps the first N arguments on top of the stack.
+    /// Subscripted [on] keeps the first N arguments on as initial arguments.
     /// ex: {⟜₂[⊙⊙∘] 1 2 3}
     /// [on] is equivalent to [fork][identity], but can often be easier to read.
     ([1], On, Stack, ("on", '⟜')),
-    /// Duplicate a function's last argument before calling it
+    /// Call a function but keep its last argument after its outputs
     ///
-    /// If you want to filter out every element of an array that is not [less than] 10, you can use [keep].
-    /// ex: ▽<10. [1 27 8 3 14 9]
-    /// However, if you want to make this a function, you have to [dip] below the first argument to [duplicate] the array.
-    /// ex: F ← ▽<⊙.
-    ///   : F 10 [1 27 8 3 14 9]
-    /// While this works, it may take a moment to process in your mind how the stack is changing.
+    /// ex: ⊸¯ 4
+    /// ex: ⊸+ 2 5
     /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
     /// With [by], the filtering function above can be written more simply.
     /// ex: F ← ▽⊸<
@@ -2053,10 +2049,10 @@ primitive!(
     /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
     ///   : ⊜□⊸≠ @  "Hey there buddy"
     ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
-    /// Subscripted [by] keeps the last N arguments below the outputs on the stack.
+    /// Subscripted [by] keeps the last N arguments after the outputs.
     /// ex: {⊸₂[⊙⊙∘] 1 2 3}
     ([1], By, Stack, ("by", '⊸')),
-    /// Call a function but keep its last argument on the top of the stack
+    /// Call a function but keep its last argument before its outputs
     ///
     /// ex: [⤙+ 2 5]
     ///   : [⤙- 2 5]
@@ -2067,14 +2063,14 @@ primitive!(
     /// There is the common testing pattern "assert with match".
     /// ex: ⍤⤙≍ 5 +2 3
     /// ex! ⍤⤙≍ 5 +2 2
-    /// [with] can be used to copy a value from deep in the stack, or to move it.
+    /// [with] can be used to copy a value from much later in the argument list, or to move it.
     /// ex: [⤙⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤙⊙⊙⊙◌ 1 2 3 4]
     /// If you do not want these behaviors, use [on] instead.
-    /// Subscripted [with] keeps the last N arguments above the outputs on the stack.
+    /// Subscripted [with] keeps the last N arguments before the outputs.
     /// ex: {⤙₂[⊙⊙∘] 1 2 3}
     ([1], With, Stack, ("with", '⤙')),
-    /// Call a function but keep its first argument under the outputs on the stack
+    /// Call a function but keep its first argument after its outputs
     ///
     /// ex: [⤚+ 2 5]
     ///   : [⤚- 2 5]
@@ -2086,11 +2082,11 @@ primitive!(
     /// If [off]'s function is commutative, then it can be used in a place where [by] would work if the arguments were reversed.
     /// ex: ▽⤚≠ [1 2 3 4 5] 2
     ///   : ▽⊸≠ 2 [1 2 3 4 5]
-    /// [off] can be used to copy a value from the top of the stack to a position deeper, or to move it.
+    /// [off] can be used to copy the first argument to a later position, or to move it.
     /// ex: [⤚⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
     /// If you do not want these behaviors, use [by] instead.
-    /// Subscripted [off] keeps the first N arguments below the outputs on the stack.
+    /// Subscripted [off] keeps the first N arguments after the outputs.
     /// ex: {⤚₂[⊙⊙∘] 1 2 3}
     ([1], Off, Stack, ("off", '⤚')),
     /// Keep all arguments to a function above the outputs on the stack
@@ -2102,11 +2098,11 @@ primitive!(
     ///
     /// See also: [below]
     ([1], Above, Stack, ("above", '◠'), { experimental: true }),
-    /// Keep all arguments to a function below the outputs on the stack
+    /// Keep all arguments to a function after the outputs
     ///
     /// ex: [◡+ 1 2]
     /// ex: [◡(++) 1 2 3]
-    /// This can be used with [gap] and [identity] to copy values from arbitrarily low in the stack.
+    /// This can be used with [gap] and [identity] to copy values from arbitrarily far in the argument list.
     /// ex: [◡⋅⋅⋅⋅∘ 1 2 3 4 5]
     ///
     /// See also: [above]
@@ -2130,16 +2126,12 @@ primitive!(
     ([1], Backward, Stack, ("backward", '˜')),
     /// Call a function on two sets of values
     ///
-    /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
+    /// For monadic functions, [both] calls its function on each of the first 2 arguments.
     /// ex: ∩⇡ 3 5
     ///
-    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
+    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` arguments.
     /// ex: [∩+ 1 2 3 4]
     /// ex: [∩(++) 1 2 3 4 5 6]
-    ///
-    /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
-    /// ex: [∩∩(□+2) 1 @a 2_3 5]
-    /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
     ///
     /// Subscripted [both] calls its function on N sets of arguments.
     /// ex: [∩₃+ 1 2 3 4 5 6]
@@ -2287,13 +2279,11 @@ primitive!(
     ([2], Under, InversionModifier, ("under", '⍜')),
     /// Call two functions on the same values
     ///
-    /// [fork] is one of the most important functions for working with the stack.
-    /// See the [More Stack Manipulation Tutorial](/tutorial/morestack) for a more complete understanding as to why.
+    /// [fork] is one of the most important functions for threading data through a program.
+    /// See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) for a more complete understanding as to why.
     ///
     /// ex: ⊃⇌◴ 1_2_2_3
     /// ex: ⊃(+1)(×2) 5
-    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
-    /// ex: [⊃⊃⊃+-×÷ 5 8]
     /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
     /// ex: [⊃+¯ 3 5]
     /// By default, [fork] can only work with two functions. However, a function pack can be used to pass the same arguments to many functions.
@@ -2306,13 +2296,11 @@ primitive!(
     /// ex: ⊓+× 1 2 3 4
     /// The functions' signatures need not be the same.
     /// ex: ⊓+(++) 1 2 3 4 5
-    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
-    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
-    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
+    /// [bracket] can use a function pack to call many functions on many sets of arguments.
     /// ex: [⊓(+|-|×|÷) 10 20 5 8 3 7 2 5]
     /// [bracket] with sided subscripts reuses a value in both functions.
     /// One use of this is to check if a number is within a range.
-    /// ex: ◡×⊓⌟≥≤5 8 . [6 2 5 9 6 5 0 4]
+    /// ex: ◡×⊸⊓⌟≥≤5 8 [6 2 5 9 6 5 0 4]
     ([2], Bracket, Planet, ("bracket", '⊓')),
     /// Repeat a function while a condition holds
     ///
@@ -2326,13 +2314,13 @@ primitive!(
     ///   : ◌⍢⊂⊸(¬⊸∊⟜(C⊢)) [7]
     /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitly copied.
     /// Consider this equivalence:
-    /// ex: ⍢(×3|<100)  1
-    ///   : ⍢(×3|<100.) 1
-    /// The net stack change of the two functions, minus the condition, is called the *composed signature*.
-    /// A composed signature with a positive net stack change will collect the outputs into an array.
-    /// ex: ⍢(⊸×2|≤1000) 10
-    /// ex: ⍢(.×2|≤1000) 10
-    /// A composed signature with a negative net stack change will reuse values lower on the stack.
+    /// ex: ⍢(×3| <100) 1
+    ///   : ⍢(×3|⊸<100) 1
+    /// The net signature of the two functions, minus the condition, is called the *composed signature*.
+    /// A composed signature with a positive net signature will collect the outputs into an array.
+    /// ex: ⍢( ⊸×2|≤1000) 10
+    /// ex: ⍢(⟜∘×2|≤1000) 10
+    /// A composed signature with a negative net signature will reuse values lower on the stack.
     /// ex: ⍢(×|<100) 1 2
     /// ex: ⍢(⊂⤚(×⊢)|<100⊢) 1 2
     ([2], Do, IteratingModifier, ("do", '⍢')),
@@ -2347,7 +2335,7 @@ primitive!(
     /// ex: ⬚0[1 2_3_4 5_6]
     /// ex: ⬚10+ [1 2 3 4] [5 6]
     /// ex: ⬚0≡⇡ [3 6 2]
-    /// A fill value can be pulled from the stack with [identity].
+    /// You can set the first argument as the fill value with [identity].
     /// ex: ⬚∘[1 2_3_4] 0
     /// ex: ⬚∘+ ∞ [1 2] [3 4 5 6]
     ///
@@ -2414,7 +2402,7 @@ primitive!(
     /// If the handler function has 0 arguments, then it is simply called. This is a nice way to provide a default value.
     /// ex: ⍣⋕0 "5"
     ///   : ⍣⋕0 "dog"
-    /// The handler function will be passed the original arguments, followed by the error value below them on the stack. It will not be passed arguments it doesn't need.
+    /// The handler function will be passed the original arguments, followed by the error value. It will not be passed arguments it doesn't need.
     /// Normal runtime errors become strings. If you only care about the error, you can use [gap] or [pop] to ignore the arguments passed to the handler.
     /// ex: ⍣(+1)⋅$"Error: _" 2   # No error
     /// ex: ⍣(+@a)⋅$"Error: _" @b # Error
@@ -2428,7 +2416,7 @@ primitive!(
     ///   : ⍣(⍤0.+)⊟₁ 3 5 # First argument only
     ///   : ⍣(⍤0.+)⊟₂ 3 5 # Both arguments
     ///   : ⍣(⍤0.+)⊟₃ 3 5 # Both arguments and error
-    /// If we want to provide a default value from the stack, we can ignore it in the tried function with [gap] and then use [identity] in the handler.
+    /// If we want to provide a default value, we can ignore it in the tried function with [gap] and then use [identity] in the handler.
     /// ex: ⍣⋅⋕∘ 5 "12"  # No error
     ///   : ⍣⋅⋕∘ 5 "dog" # Error
     /// The handler function may actually take *more* arguments than the first function. These additional arguments will be passed above the error. This can be used to pass additional context to the handler.
@@ -2547,8 +2535,8 @@ primitive!(
     /// Expects a function.
     /// In the native interpreter, the function is called in a new OS thread.
     /// In the web editor, the function is called and blocks until it returns.
-    /// A thread id that can be passed to [wait] is pushed to the stack. Handles are just numbers.
-    /// [wait] consumes the thread id and appends the thread's stack to the current stack.
+    /// A thread id that can be passed to [wait] is returned. Handles are just numbers.
+    /// [wait] consumes the thread id and appends the thread's argument list to the current one.
     /// ex:      spawn⇡ 10
     ///   : wait spawn⇡ 10
     /// ex:      spawn(+10+) 1 2
@@ -2570,7 +2558,7 @@ primitive!(
     /// The thread pool has as many threads as the machine has processors.
     /// If all threads in the pool are busy, then [pool] will block until a thread is available.
     ([1], Pool, Thread, "pool", Impure),
-    /// Wait for a thread to finish and push its results to the stack
+    /// Wait for a thread to finish and return its results
     ///
     /// The argument must be a thread id returned by [spawn] or [pool].
     /// ex: wait spawn(/+⇡) 10
@@ -2934,19 +2922,19 @@ primitive!(
     ///
     /// See also: [insert], [has], [get]
     (2, Remove, Map, "remove"),
-    /// Debug print all stack values without popping them
+    /// Debug print all arguments without consuming them
     ///
     /// This is equivalent to [dump][identity], but is easier to type.
     ///
-    /// This is useful when you want to inspect the current ordering of the stack.
-    /// For example, if you are juggling some values on the stack, you can use [args] to inspect the stack afterwards:
+    /// This is useful when you want to inspect the current argument list.
+    /// For example, if you are juggling some arguments, you can use [args] to inspect the arguments at some point:
     /// ex: 1 2 3
-    ///   : ◡⊙∘˜⊙.
+    ///   : ◡⊙∘˜⊙⟜∘
     ///   : ?
     ///   : +×-×+
     /// ex: 2_3_10 ? 17 ↯3_4⇡12
     ///   : ++
-    /// Subscripted [args] prints that many values from the stack.
+    /// Subscripted [args] prints that many arguments.
     /// ex: ?₂ 1 2 3 4
     /// If you type `N+1` `?`s, it will format to [args] subscripted with `N`.
     /// A subscripted `?` will merge adjacent `?s` into its subscript.
@@ -2954,14 +2942,14 @@ primitive!(
     ///   : ???? 1 2 3 4
     ///   : ?₂?? 5 6 7 8
     (0(0), Args, Debug, ("args", '?'), Mutating),
-    /// Preprocess and print all stack values without popping them
+    /// Preprocess and print all arguments without popping them
     ///
-    /// [dump][identity] is equivalent to [stack].
+    /// [dump][identity] is equivalent to [arguments].
     /// ex: dump∘ 1 2 3
-    /// This is useful when you want to inspect the current ordering of the stack.
-    /// For example, if you are juggling some values on the stack, you can use [dump] to inspect the stack afterwards:
+    /// This is useful when you want to inspect the current argument list.
+    /// For example, if you are juggling some arguments, you can use [dump] to inspect the arguments at some point:
     /// ex: 1 2 3
-    ///   : ◡⊙∘˜⊙.
+    ///   : ◡⊙∘˜⊙⟜∘
     ///   : dump∘
     ///   : +×-×+
     /// [dump][shape] is useful if your raw array data isn't worth looking at, but the shapes are.
@@ -2969,7 +2957,7 @@ primitive!(
     ///   : dump△
     ///   : ++
     /// ex: ↯¯1_5 ⇡30
-    ///   : ⍉.⊃≡(⊟.)(⊞+.).
+    ///   : ⊸⍉⊸⊃≡˙⊟˙(⊞+)
     ///   : dump△
     ///   : +++∩∩⧻
     /// Errors encountered within [dump]'s function are caught and dumped as strings.
@@ -3045,10 +3033,10 @@ primitive!(
     /// The value is the starting node.
     /// The first function should return 1 or 2 arrays of equal [length].
     /// - An array of the neighboring nodes must always be returned.
-    /// - An array of costs may be returned above the nodes array on the stack. If ommitted, all costs are assumed to be 1.
+    /// - An array of costs may be returned before the nodes array. If ommitted, all costs are assumed to be 1.
     /// The second function should return whether or not the goal node has been reached.
     ///
-    /// When called, [path] will pop any additional arguments its functions need from the stack.
+    /// When called, [path] will consume any additional arguments its functions need.
     /// On each iteration, the current node will be passed to each function, along with any of the additional arguments that each function needs.
     ///
     /// If a path is found, a list of arrays of all shortest paths is returned.
@@ -3653,17 +3641,17 @@ macro_rules! sys_op {
 }
 
 sys_op! {
-    /// Pause the execution and print the stack
+    /// Pause the execution and print the argument list
     ///
     /// This is useful for debugging.
-    /// On the website, each [&b], in the same editor, with the same input code, will end execution and print the stack.
+    /// On the website, each [&b], in the same editor, with the same input code, will end execution and print the argument list.
     /// Running the code multiple times will allow the code to advance to the next [&b].
     /// Try it out!
     /// ex: # Experimental!
     ///   : ≡(&b⇌&b) &b °△ &b 3_3 &b
-    /// Once the execution has completed, the final stack state will be shown as normal. Running again will start from the beginning.
+    /// Once the execution has completed, the final argument state will be shown as normal. Running again will start from the beginning.
     ///
-    /// In the native interpreter, [&b] pauses execution, prints the stack, and waits for the user to press enter.
+    /// In the native interpreter, [&b] pauses execution, prints the argument list, and waits for the user to press enter.
     (0(0), Breakpoint, Misc, "&b", "breakpoint", Mutating, { experimental: true }),
     /// Print a nicely formatted representation of a value to stdout
     ///
@@ -3749,7 +3737,7 @@ sys_op! {
     (1, RunInherit, Command, "&runi", "run command inherit", Mutating),
     /// Run a command and wait for it to finish
     ///
-    /// Standard IO will be captured. The exit code, stdout, and stderr will each be pushed to the stack.
+    /// Standard IO will be captured. The exit code, stdout, and stderr will be returned.
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
     (1(3), RunCapture, Command, "&runc", "run command capture", Mutating),
@@ -3814,8 +3802,8 @@ sys_op! {
     ///
     /// [&rl] calls its function on each line in the stream without reading the entire stream into memory.
     /// Lines are delimited by either `\n` or `\r\n`.
-    /// For each line, it will be pushed onto the stack and the function will be called.
-    /// Additional arguments to the function will be bellow the line.
+    /// The function will be called on each line.
+    /// Additional arguments to the function will be after the line.
     /// Outputs in excess of the number of accumulators will be collected into arrays.
     (1[1], ReadLines, Stream, "&rl", "read lines", Mutating),
     /// Write an array to a stream

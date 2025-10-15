@@ -113,7 +113,7 @@ The [dip](/docs/dip) modifier skips the first arguments and calls its function o
 ⊙⊙+ 1 2 3 4 5
 ```
 
-You can inspect the current argument list at any point with [stack](/docs/stack).
+You can inspect the current argument list at any point with [args](/docs/args).
 
 ```uiua
 +1 ? ×2 ? ˙×-3 5

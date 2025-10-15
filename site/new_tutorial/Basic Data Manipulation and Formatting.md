@@ -243,6 +243,14 @@ You'll most often see [on]() with another function immediately to its left, to u
 ⊙⊙⊙× 1 2 3 4 5 # Ignore 1 2 3
 ```
 
+### [args]()
+
+[args]() prints out the current argument list. This is useful for debugging.
+
+```uiua
++1 ? ×2 ? ˙×-3 5
+```
+
 ## Challenges
 
 At the end of most sections of this tutorial, there will be a few challenges to test your understanding.

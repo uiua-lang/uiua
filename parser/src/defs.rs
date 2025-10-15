@@ -2939,21 +2939,21 @@ primitive!(
     /// This is equivalent to [dump][identity], but is easier to type.
     ///
     /// This is useful when you want to inspect the current ordering of the stack.
-    /// For example, if you are juggling some values on the stack, you can use [stack] to inspect the stack afterwards:
+    /// For example, if you are juggling some values on the stack, you can use [args] to inspect the stack afterwards:
     /// ex: 1 2 3
     ///   : ◡⊙∘˜⊙.
     ///   : ?
     ///   : +×-×+
     /// ex: 2_3_10 ? 17 ↯3_4⇡12
     ///   : ++
-    /// Subscripted [stack] prints that many values from the stack.
+    /// Subscripted [args] prints that many values from the stack.
     /// ex: ?₂ 1 2 3 4
-    /// If you type `N+1` `?`s, it will format to [stack] subscripted with `N`.
+    /// If you type `N+1` `?`s, it will format to [args] subscripted with `N`.
     /// A subscripted `?` will merge adjacent `?s` into its subscript.
     /// ex: # Try formatting!
     ///   : ???? 1 2 3 4
     ///   : ?₂?? 5 6 7 8
-    (0(0), Stack, Debug, ("stack", '?'), Mutating),
+    (0(0), Args, Debug, ("args", '?'), Mutating),
     /// Preprocess and print all stack values without popping them
     ///
     /// [dump][identity] is equivalent to [stack].
@@ -3735,7 +3735,7 @@ sys_op! {
     ///
     /// The first element will always be the name of your script
     // Doesn't actually mutate, but this is necessary for the LSP
-    (0, Args, Env, "&args", "arguments", Mutating),
+    (0, EnvArgs, Env, "&args", "arguments", Mutating),
     /// Get the value of an environment variable
     ///
     /// Expects a string and returns a string.

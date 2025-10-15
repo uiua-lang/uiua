@@ -2243,7 +2243,7 @@ impl Compiler {
                     spec.metrics = metrics;
                 }
             }
-            Prim(Identity | Dup | Flip | Pop | Stack | Sys(_), _) => {}
+            Prim(Identity | Dup | Flip | Pop | Args | Sys(_), _) => {}
             ImplPrim(Over | StackN { .. }, _) => {}
             Push(_) | Array { .. } => {}
             Mod(

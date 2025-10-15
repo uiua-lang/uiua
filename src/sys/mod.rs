@@ -683,7 +683,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .set_raw_mode(raw_mode)
                 .map_err(|e| env.error(e))?;
         }
-        SysOp::Args => {
+        SysOp::EnvArgs => {
             let mut args = Vec::new();
             args.push(env.file_path().to_string_lossy().into_owned());
             args.extend(env.args().to_owned());

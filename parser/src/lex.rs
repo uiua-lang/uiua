@@ -1120,7 +1120,7 @@ impl<'a> Lexer<'a> {
                 }
                 // Stack
                 "?" => {
-                    self.end(Primitive::Stack, start);
+                    self.end(Primitive::Args, start);
                     let start = self.loc;
 
                     fn read_chain(lexer: &mut Lexer) -> (i32, Loc) {

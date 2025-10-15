@@ -582,7 +582,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Repeat, "Repetition count", "⍥₅(⊂⟜/+) [1 2]"),
         subscript(Tuples, "Tuple size", "⧅₂< ⇡4"),
         subscript(Stencil, "Window size", "⧈₃∘ ⇡6"),
-        subscript(Stack, "Print top N values", "?₂ 1 2 3 4"),
+        subscript(Args, "Print top N values", "?₂ 1 2 3 4"),
     ];
 
     let sided = vec![

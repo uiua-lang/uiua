@@ -2314,9 +2314,9 @@ impl Compiler {
                         }
                         Node::ImplPrim(ImplPrimitive::ParseSub(n as usize), self.add_span(span))
                     }
-                    Stack => Node::ImplPrim(
+                    Args => Node::ImplPrim(
                         ImplPrimitive::StackN {
-                            n: self.positive_subscript(n, Stack, &span),
+                            n: self.positive_subscript(n, Args, &span),
                             inverse: false,
                         },
                         self.add_span(span),

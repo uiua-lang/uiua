@@ -347,7 +347,7 @@ impl fmt::Display for ImplPrimitive {
             UnScan => write!(f, "{Un}{Scan}"),
             UnGroup => write!(f, "{Un}{Group}"),
             UnPartition => write!(f, "{Un}{Partition}"),
-            UnStack => write!(f, "{Un}{Stack}"),
+            UnStack => write!(f, "{Un}{Args}"),
             UnDump => write!(f, "{Un}{Dump}"),
             UnFill => write!(f, "{Un}{Fill}"),
             UnBox => write!(f, "{Un}{Box}"),
@@ -470,7 +470,7 @@ impl fmt::Display for ImplPrimitive {
                 let n_str: String = (n.to_string().chars())
                     .map(|c| SUBSCRIPT_DIGITS[(c as u32 as u8 - b'0') as usize])
                     .collect();
-                write!(f, "{Stack}{n_str}")
+                write!(f, "{Args}{n_str}")
             }
             SidedFill(side) => write!(f, "{Fill}{side}"),
             RepeatWithInverse => write!(f, "{Repeat}"),

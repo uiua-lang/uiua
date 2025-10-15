@@ -249,7 +249,7 @@ impl Primitive {
                 Transpose | Sqrt | Exp | Round | Floor | Ceil | Rand | Utf8 | Len | Shape | Range,
                 _,
             ) => return self.sig(),
-            (Stack, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),
+            (Args, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),
             _ => return None,
         })
     }

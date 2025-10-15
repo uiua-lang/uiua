@@ -295,7 +295,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             vals.map(keys, env)?;
             env.push(vals);
         }
-        Primitive::Stack => stack(env, false)?,
+        Primitive::Args => stack(env, false)?,
         Primitive::Regex => {
             regex(env)?;
             // NOTE: if you want to expose the match locations, n.t. they are given in bytes rather than codepoints
@@ -1825,9 +1825,9 @@ fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
 
 fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
     let span = if inverse {
-        format!("{}{} {}", Primitive::Un, Primitive::Stack, env.span())
+        format!("{}{} {}", Primitive::Un, Primitive::Args, env.span())
     } else {
-        format!("{} {}", Primitive::Stack, env.span())
+        format!("{} {}", Primitive::Args, env.span())
     };
     let items = env.stack();
     let max_line_len = span.chars().count() + 2;

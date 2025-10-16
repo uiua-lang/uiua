@@ -142,7 +142,7 @@ You can make raw string literals, which do not require escaping, with a `$` foll
 &p $ "How are you?" she asked.
 ```
 
-Raw strings that followed each other form multi-line strings.
+Raw strings that follow each other form multi-line strings.
 
 ```uiua
 $ Hello
@@ -184,7 +184,7 @@ You can [subtract]() a `number` from a `character` to get another `character`.
 
 You can [subtract]() two `character`s to get a `number`.
 
-You can [multiply]() or [divide]() a `character` by a `number` to possible toggle its case.
+You can [multiply]() or [divide]() a `character` by a `number` to possibly toggle its case.
 
 *No* other dyadic arithmetic operations can be done on `character`s.
 

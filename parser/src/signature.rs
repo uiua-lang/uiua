@@ -132,7 +132,7 @@ impl Signature {
     pub fn inverse(self) -> Self {
         Self::new(self.outputs(), self.args())
     }
-    /// The the anti-inverse of this signature
+    /// The anti-inverse of this signature
     pub fn anti(self) -> Option<Self> {
         if self.args == 0 {
             return None;

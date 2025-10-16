@@ -18,7 +18,7 @@ NumTwo ← 2
 
 *Warning*: It is not guaranteed that any particular non-alphanumeric character will not be used for a built-in function in the future. Use them at your own risk. Emojis are safe though.
 
-Unlike most programming languages, binding names in Uiua *cannot* contain numbers or underscored.
+Unlike most programming languages, binding names in Uiua *cannot* contain numbers or underscores.
 
 ```uiua should fail
 Var_1 ← 5
@@ -58,7 +58,7 @@ Part = 5
 *2 Part
 ```
 
-Bindings run and bind the code to the right of the `←`. Note, though, that an empty right side is perfectly valid! This means you can bind values that were created on previous lines.
+Bindings bind a value to the name on the left of the `←`. Note, though, that an empty right side is perfectly valid! This means you can bind values that were created on previous lines.
 
 ```uiua
 ×6 7
@@ -68,7 +68,7 @@ Answer ←
 
 ## Binding Functions
 
-The the code on the right side of the `←` takes more that 0 arguments, then instead of evaluating its right side immediately, the right side will be bound as a function.
+If the code on the right side of the `←` takes more than 0 arguments, then instead of evaluating its right side immediately, the right side will be bound as a function.
 
 This is how you make named functions in Uiua.
 

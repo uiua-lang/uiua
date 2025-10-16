@@ -1547,10 +1547,23 @@ impl<T: ArrayValue> Array<T> {
         if self.element_count() == 0 && self.row_count() > 0 {
             return 1;
         }
-        let mut seen = HashSet::new();
-        self.row_slices()
-            .filter(|row| seen.insert(ArrayCmpSlice(row)))
-            .count()
+        let mut rows = self.row_slices().map(ArrayCmpSlice);
+        if self.meta.is_sorted_up() || self.meta.is_sorted_down() {
+            let Some(mut curr) = rows.next() else {
+                return 0;
+            };
+            let mut unique = 1;
+            for row in rows {
+                if row != curr {
+                    curr = row;
+                    unique += 1;
+                }
+            }
+            unique
+        } else {
+            let mut seen = HashSet::new();
+            rows.filter(|&row| seen.insert(row)).count()
+        }
     }
     /// Count which occurrence of each row that row is
     pub fn occurrences(&self) -> Array<f64> {

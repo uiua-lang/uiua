@@ -21,7 +21,7 @@ pub fn Technical() -> impl IntoView {
         <p>"Built-in functions are implemented in Rust so they can be as fast as possible. User-defined functions are passed around as IR trees."</p>
 
         <Hd id="arrays">"Arrays"</Hd>
-        <p>"Values on the stack are implemented as Rust "<code>"enum"</code>"s, where each variant contains a different array type."</p>
+        <p>"Values are implemented as Rust "<code>"enum"</code>"s, where each variant contains a different array type."</p>
         <p>"While the language itself only has 4 types, the interpreter can have 1 extra: a byte array. IO streams and some operations which have boolean results return byte arrays for space efficiency."</p>
         <p>"Array elements are stored in a reference-counted contiguous-memory container I call a "<em>"CowSlice"</em>" or clone-on-write slice. When an array is modified, its data is only copied if it is shared with another array. In addition, pulling out the rows of an array only increments the reference count of the data, and the row arrays have modified shapes and data offsets."</p>
         <p>"Array shapes are stored in a special array type that only allocates when there are more than 3 items."</p>
@@ -100,7 +100,7 @@ uiua run -w <PATH>
 uiua watch -w"
         </code>
         <p>"It can also be enabled by default if you set the "<code>"UIUA_WINDOW"</code>" environment variable to "<code>"1"</code>"."</p>
-        <p>"The values left on the stack after a program finishes will be shown in the window. In addition, the "<Prim prim=Sys(SysOp::Show)/>", "<Prim prim=Sys(SysOp::ImShow)/>", "<Prim prim=Sys(SysOp::GifShow)/>", and "<Prim prim=Sys(SysOp::AudioPlay)/>" functions will all show their output in the window."</p>
+        <p>"The remaining arguments after a program finishes will be shown in the window. In addition, the "<Prim prim=Sys(SysOp::Show)/>", "<Prim prim=Sys(SysOp::ImShow)/>", "<Prim prim=Sys(SysOp::GifShow)/>", and "<Prim prim=Sys(SysOp::AudioPlay)/>" functions will all show their output in the window."</p>
 
         <Hd id="local-site">"Running the Site Locally"</Hd>
         <p>"This website is a static, single-page application. As such, it can be build and run locally, without connecting to a server."</p>
@@ -110,33 +110,6 @@ uiua watch -w"
         <p>"Then, from the root of the "{lang}" repository, run:"</p>
         <code class="code-block">"cd site\ntrunk serve"</code>
         <p>"The site will be available at "<code>"http://localhost:8080"</code>"."</p>
-    }
-}
-
-#[component]
-pub fn RightToLeft() -> impl IntoView {
-    use Primitive::*;
-    view! {
-        <Title text=format!("Right-to-Left - {} Docs", lang())/>
-        <Hd id="right-to-left">"Right-to-Left"</Hd>
-        <p>"One of the most asked questions about "{lang}" is \"Why does code execute right-to-left?\" It's a valid question. Every other stack-oriented language I know goes left-to-right."</p>
-        <p>"The simple answer is that while "{lang}" is stack-"<em>"based"</em>", it is not stack-"<em>"oriented"</em>"."</p>
-        <p>"The misunderstanding is largely my own fault. The initial version of the website said \"stack-oriented\" everywhere and made references to FORTH. I have since rectified this."</p>
-        <p>"When you write "{lang}" code the stack should just be a tool, a convention. It's how you pass values around. "<strong>"The stack should not guide how you think about solving problems in "{lang}"."</strong></p>
-        <p>{lang}" is about composing arrays. The stack makes it possible to do this without naming local variables. This is the entire reason for its presence in the language. In particular, the stack can be used to construct arbitrary combinators and data flows. It is an extremely powerful mechanism for this purpose."</p>
-        <p>"You should not think of "{lang}" syntax like a FORTH. You should think of it like any of the numerous other languages that put functions before their arguments. This group includes languages of vastly different kinds, like C, Haskell, and Lisp."</p>
-        <p>"The left side of an expression is "<em>"not"</em>" the end or the beginning. It is the "<em>"root"</em>". The expression is a tree with branches that converge and diverge in different ways. It is not a list of instructions."</p>
-        <p>"This allows us to separate the execution model from the mental model. With a separate mental model, why does it matter which direction the code executes? Why can't the root be on the right?"</p>
-        <p>"Of course, "<em>"now"</em>" the decision is arbitrary. I'm used to languages that put the root on the left, so that is what I chose."</p>
-        <hr/>
-        <p>"Enough with the philosophical. There are also some syntactic reasons that left-to-right execution would be weird."</p>
-        <p>"Consider some mathematical expressions:"</p>
-        <Editor example="√4\n-3 5"/>
-        <p>"The square root looks almost just like it does in mathematical notation. It would not be so if the "<Prim prim=Sqrt glyph_only=true/>" were to the right of the number. Similar problems arise with "<Prim prim=Neg glyph_only=true/>" and "<Prim prim=Not glyph_only=true/>"."</p>
-        <p><code>"-3"</code>" has this nice quality where it kind of becomes its own little monadic function that also has a syntactic similarity to mathematical notation. You could do something similar if the language went the other way, with "<code>"5-"</code>", but subtracting is a more common and intuitive operation than subtracting from."</p>
-        <p>"Consider the simple "<Prim prim=First/>" function:"</p>
-        <Editor example="⊢[1 2 3]"/>
-        <p>"The "<Prim prim=First glyph_only=true/>" glyph was chosen because it looks like it indicates the left side of a span (imagine some longer "<code>"⊢–––––⊣"</code>"). If it had to go on the right, there is no glyph that would indicate it quite so nicely. "<code>"⊣"</code>" has a similar aesthetic when put at the end, but that would indicate the last item rather than the first."</p>
     }
 }
 

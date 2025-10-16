@@ -165,7 +165,6 @@ pub fn Site() -> impl IntoView {
                     <Route path="install" view=Install/>
                     <Route path="tour" view=Tour/>
                     <Route path="isms" view=Uiuisms/>
-                    <Route path="rtl" view=RightToLeft/>
                     <Route path="blog/:page?" view=Blog/>
                     <Route path="*" view=NotFound/>
                 </Route>
@@ -314,7 +313,7 @@ pub fn MainPage() -> impl IntoView {
             <div>
                 <div>
                     <Hd id="saying less">"Saying Less"</Hd>
-                    <p>{lang}" combines the array-oriented programming paradigm with a stack-based execution model. Combining these already terse systems results in code with a very high information density and little syntactic noise."</p>
+                    <p>{lang}" combines the array-oriented programming paradigm with a fully tacit execution model. Combining these already terse systems results in code with a very high information density and little syntactic noise."</p>
                     <Editor example="⍥◡+9∩1"/>
                     <p>"If this code seems weird and unreadable, that's okay! It's important to remember that "<a href="https://vector-of-bool.github.io/2018/10/31/become-perl.html">"foreign ≠ confusing"</a>"."</p>
                 </div>
@@ -330,7 +329,7 @@ pub fn MainPage() -> impl IntoView {
                 </div>
                 <div>
                     <Hd id="syntactic-simplicity">"Syntactic Simplicity"</Hd>
-                    <p>{lang}" has a simple, context-free, LL(3) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/tutorial/Modifiers and Functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, "{lang}" code reads a little bit like a Lisp, but with fewer parentheses."</p>
+                    <p>{lang}" has a simple, context-free, LL(3) grammar. Code runs from right to left, top to bottom, with only "<A href="/tutorial/Modifiers and Functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, "{lang}" code reads a little bit like a Lisp, but with fewer parentheses."</p>
                 </div>
                 <div>
                     <Hd id="system-apis">"System APIs"</Hd>

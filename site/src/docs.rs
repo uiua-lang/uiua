@@ -27,7 +27,6 @@ pub enum DocsPage {
     Install,
     Uiuisms,
     Changelog,
-    RightToLeft,
     Constants,
     Combinators,
     Subscripts,
@@ -48,7 +47,6 @@ impl IntoParam for DocsPage {
             "install" => Ok(Self::Install),
             "isms" => Ok(Self::Uiuisms),
             "changelog" => Ok(Self::Changelog),
-            "rtl" => Ok(Self::RightToLeft),
             "constants" => Ok(Self::Constants),
             "combinators" => Ok(Self::Combinators),
             "subscripts" => Ok(Self::Subscripts),
@@ -83,7 +81,6 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Install => Install().into_view(),
             DocsPage::Uiuisms => Uiuisms().into_view(),
             DocsPage::Changelog => Changelog().into_view(),
-            DocsPage::RightToLeft => RightToLeft().into_view(),
             DocsPage::Constants => Constants().into_view(),
             DocsPage::Subscripts => Subscripts().into_view(),
             DocsPage::Combinators => Combinators().into_view(),
@@ -258,7 +255,6 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <Hd id="other-pages">"Other Pages"</Hd>
         <ul>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of "{lang}"'s design decisions"</li>
-            <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about "{lang}"'s design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the "{lang}" interpreter and this website"</li>
             <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in "{lang}</li>
             <li><a href="https://tankorsmash.unison-services.cloud/s/uiuisms-service/">{

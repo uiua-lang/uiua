@@ -14,7 +14,7 @@ That's enough introduction, let's see some code!
 +1 ×2 ⇡10
 ```
 
-Uiua code runs from [right to left](/rtl), top to bottom. Operators are put to the *left* of their arguments, rather than in-between.
+Uiua code runs from right to left, top to bottom. Operators are put to the *left* of their arguments, rather than in-between.
 
 This program makes an array of all the numbers less than 10, multiplies each one by 2, then adds 1 to each.
 

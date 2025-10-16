@@ -199,7 +199,7 @@ fn strings_challenges() -> impl IntoView {
             example="\"ab\" \"abracadabra\""
             answer="/+⌕"
             tests={&["\"123\" \"12345678\"", "\"()\" \"(()(())()(()()))\""]}
-            hidden="\"5\" \"dog\""/>
+        />
 
         <Challenge
             number=2
@@ -208,7 +208,7 @@ fn strings_challenges() -> impl IntoView {
             answer="+⊃⊢⊣ ⋕♭regex\"\\\\d+\""
             tests={&["\"What is 1 + 2?\"", "\"99 bottles of beer on the wall, 99 bottles of beer\"", "\"(555) 555-5555\""]}
             best_answer="+⊃⊢⊣ ⊜⋕⊸∊+@0⇡10"
-            hidden="\"123\""/>
+         />
     }
 }
 

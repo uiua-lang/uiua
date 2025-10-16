@@ -341,7 +341,6 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     intended_answer: answer,
                     best_answer: (!best_answer.is_empty()).then_some(best_answer),
                     tests,
-                    hidden: None,
                     flip,
                     did_init_run: Cell::new(false),
                 };
@@ -590,14 +589,25 @@ fn all_text<'a>(node: &'a AstNode<'a>) -> String {
 #[cfg(test)]
 #[test]
 fn text_code_blocks() {
+    use std::path::PathBuf;
+
     use uiua_editor::backend::WebBackend;
 
-    for entry in ["text", "tutorial"]
-        .into_iter()
-        .flat_map(|path| std::fs::read_dir(path).unwrap())
-    {
-        let entry = entry.unwrap();
-        let path = entry.path();
+    // Collect text file paths
+    let mut file_paths = Vec::new();
+    let mut to_search = vec![PathBuf::from("text")];
+    while let Some(path) = to_search.pop() {
+        for entry in std::fs::read_dir(path).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_file() {
+                file_paths.push(path);
+            } else {
+                to_search.push(path);
+            }
+        }
+    }
+
+    for path in file_paths {
         eprintln!("Testing code blocks in {:?}", path.display());
         let text = std::fs::read_to_string(path).unwrap();
         let arena = Arena::new();

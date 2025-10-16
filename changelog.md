@@ -6,6 +6,7 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
+- Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)
 - Deprecate experimental [`reach 𝄐`](https://uiua.org/docs/reach)
@@ -13,6 +14,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add option to provide folder as test cases destination
 - Add an `Amen` audio constant
 ### Website
+- Reword all documentation and tutorials to no longer refer to a stack
 - Pad links will automatically be compressed if it would be shorter
 
 ## 0.17.3 - 2025-10-07
@@ -74,7 +76,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Remove experimental `ln` in favor of [`exponential ₑ`](https://uiua.org/docs/exponential)
 - Add [`&seek`](https://uiua.org/docs/&seek) function for working with large files
 - Calling [`&tcpa`](https://uiua.org/docs/&tcpa) on a TLS listener created with [`&tlsl`](https://uiua.org/docs/&tlsl) now automatically tries conducting a TSL handshake
-- Make subscripted [`stack ?`](https://uiua.org/docs/stack) merge adjacent non-subscripted [`stack ?`](https://uiua.org/docs/stack) chains
+- Make subscripted [`args ?`](https://uiua.org/docs/args) merge adjacent non-subscripted [`args ?`](https://uiua.org/docs/args) chains
 - Implement [`under ⍜`](https://uiua.org/docs/under)[`regex`](https://uiua.org/docs/regex) for replacing using regex (called `gsub` in some other languages)
 - Add functions to work with UDP:
   - [`&udpb`](https://uiua.org/docs/&udpb) to bind a socket
@@ -304,8 +306,8 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.14.0).
   - [`windows ◫`](https://uiua.org/docs/windows) has been deprecated. All existing uses will continue to work and will be formatted as `⧈∘`.
 - [`get`](https://uiua.org/docs/get), [`has`](https://uiua.org/docs/has), and [`remove`](https://uiua.org/docs/remove) now support working on multiple key-value pairs at once
 - Deprecate [`trace ⸮`](https://uiua.org/docs/trace)
-  - It is equivalent to subscripted [`stack ?`](https://uiua.org/docs/stack)
-  - Sequential `?`s, which formatted to [`trace ⸮`](https://uiua.org/docs/trace)s, now format to subscripted [`stack ?`](https://uiua.org/docs/stack)
+  - It is equivalent to subscripted [`args ?`](https://uiua.org/docs/args)
+  - Sequential `?`s, which formatted to [`trace ⸮`](https://uiua.org/docs/trace)s, now format to subscripted [`args ?`](https://uiua.org/docs/args)
 - Stabilize [`tuples ⧅`](https://uiua.org/docs/tuples)
 - Stabilize [`sort ⍆`](https://uiua.org/docs/sort)
   - Sorting is a very common operation, and it's useful to have such simple access to it
@@ -581,7 +583,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
 - Deprecate implicit GitHub domain in `"git: ..."` modules
   - GitHub should not be a default
 - Adjacent [`trace ⸮`](https://uiua.org/docs/trace)s now function as a single [`trace ⸮`](https://uiua.org/docs/trace) of more values
-- N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
+- N+1 adjacent [`args ?`](https://uiua.org/docs/args)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
 - Add the [`&camcap`](https://uiua.org/docs/&camcap) system function, which captures a frame from a camera
 ### Interpreter
 - A ton of bug and crash fixes
@@ -1055,7 +1057,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - For operating on just part of an array, use [`under ⍜`](https://uiua.org/docs/under) [`take ↙`](https://uiua.org/docs/take), [`drop ↘`](https://uiua.org/docs/drop), or [`select ⊏`](https://uiua.org/docs/select)
 - [`box □`](https://uiua.org/docs/box)ed arrays can once again be compared lexicographically
 ### Interpreter
-- Make [`stack ?`](https://uiua.org/docs/stack) and [`dump`](https://uiua.org/docs/dump) output show call stack
+- Make [`args ?`](https://uiua.org/docs/args) and [`dump`](https://uiua.org/docs/dump) output show call stack
 - Show type and shape information when pretty-printing empty arrays with rank 2 or greater
 - Improve language server hover information
 - Bug and crash fixes
@@ -1066,12 +1068,12 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 
 ## 0.5.1 - 2023-12-02
 ### Interpreter
-- Fix [`stack ?`](https://uiua.org/docs/stack) signature
+- Fix [`args ?`](https://uiua.org/docs/args) signature
 
 ## 0.5.0 - 2023-12-02
 ### Language
 - [`invert ⍘`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under) now work with stack array notation.
-- Add the [`stack ?`](https://uiua.org/docs/stack) function, which debug-prints the entire stack
+- Add the [`args ?`](https://uiua.org/docs/args) function, which debug-prints the entire stack
 - [`dump`](https://uiua.org/docs/dump) now works with [`invert ⍘`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under)
 - [`fill ⬚`](https://uiua.org/docs/fill) and `pack ⊐` are now exclusive
 - Change how [`regex`](https://uiua.org/docs/regex) works to be more powerful

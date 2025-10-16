@@ -3,17 +3,14 @@
 This page explains the reasons for some of Uiua's design decisions.  
 It serves as a [defense of design](https://news.knowledia.com/US/en/articles/more-software-projects-need-defenses-of-design-85ea9e23ffd85f5fde5a2d3d42001393cbce169a).
 
-## Stack Basing
+## Tacit Code
 
 ### Combinators
 
-When I first started developing Uiua, it was neither stack-based nor array-oriented. What it *did* focus a lot on was *combinators*. I had this whole hierarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly.  
+When I first started developing Uiua, it was neither tacit nor array-oriented. What it *did* focus a lot on was *combinators*. I had this whole hierarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly.  
 I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about.
 
-Eventually, I moved to a stack-based model and discovered that you can write almost any 1 or 2 argument combinator with just [`duplicate`](/docs/duplicate), `, over`, and `: flip`.  
-Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer. This is especially true if you try to *rotate* the stack like you could with the now-removed functions `roll` and `unroll`. [`dip`](/docs/dip) replaced the rolling functions as it is more general and easier to reason about, and eventually grew into [Planet Notation](/tutorial/More Argument Manipulation#planet-notation).
-
-As more and more Uiua code was written, I developed the principle of [Stack-Source Locality](/tutorial/Tacit Code#stack-source-locality) to guide readability. The [`on`](/docs/on) and [`by`](/docs/by) modifiers were added to express common patterns of stack manipulation.
+For a long time, Uiua learning materials made reference to a "stack" of values, and like other stack-based languages, Uiua had many functions specifically dedicated to rearranging the stack. However, stack manipulation lends itself much more to creating hard-to-read code. As modifiers like [`self ˙`](/docs/self) and [`backward ˜`](/docs/backward) were added, I found them to be a more coherent and easy-to-read way of threading values through a program, and thus the stack terminology was removed, and Uiua is now meant to be thought of as simply moving around function arguments.
 
 ### Expressions
 
@@ -27,7 +24,7 @@ In contrast, here is their equivalent in Uiua, implemented the same way:
 Trim ← ▽¬\×⊸∊
 ```
 
-You'll notice that stack basing simplifies the expression in a few ways:
+You'll notice that Uiua's tacit model simplifies the expression in a few ways:
 
 - There is no Uiua code corresponding to the BQN combinator `∘`. Function composition is implicit.
 - Functions are executed right-to-left instead of in a tree ordering.
@@ -43,7 +40,7 @@ I switched to a flat array model with "fill elements". While arrays could not be
 
 Finally, I switched to the current model, which resembles J's Boxed array model. While you can do something resembling J's `box <` using [`box`](/docs/box) (and `open >` with [`un`](/docs/un)[`box`](/docs/box)), I designed functions like [`partition`](/docs/partition) and [`group`](/docs/group) to allow selecting uniformly-shaped rows from a non-uniform list in an effort to minimize interaction with jagged data.
 
-The fact that the stack is always available also makes putting non-uniform data in arrays less necessary.
+The fact that Uiua functions can both take and return multiple values also makes putting non-uniform data in arrays less necessary.
 
 ## The Glyphs
 
@@ -64,7 +61,7 @@ Forbidding general local variables has a few benefits:
 - I don't have to implement them (score!)
 - It forces you to write (often beautiful) tacit code, which I would argue Uiua enables better than almost any other programming language.
 - It frees you from the burden of naming things.
-- Because values only exist on the stack as long as they are needed, memory is allocated, reused, and collected in an efficient way.
+- Because values only exist as long as they are needed, memory is allocated, reused, and collected in an efficient way.
 
 ## Identifiers and Formatting
 

@@ -41,9 +41,9 @@ In a similar way, `/+` will add each row of a matrix to the next, effectively su
 ≡/+ [1_2_3 4_5_6 7_8_9]
 ```
 
-[table]() applies a function between all combinations of rows of two arrays. This is sometimes called the *outer product*.
+[table]() applies a function on all combinations of rows of two arrays. This is sometimes called the *outer product*.
 
-In the same way that "monadic" and "dyadic" functions refer to functions that take one or two array arguments respectively, "monadic" and "dyadic" *modifiers* refer to modifiers that take on or two *functions* respectively.
+In the same way that "monadic" and "dyadic" functions refer to functions that take one or two array arguments respectively, "monadic" and "dyadic" *modifiers* refer to modifiers that take one or two *functions* respectively.
 
 ```uiua
 ⊞+ [5 6 7 8] [10 20 30 40]
@@ -111,7 +111,7 @@ $"x = _" x
 $"_, _, and _" 1 2 3
 ```
 
-If you need to use a literal `_`, you can escape them with `\`.
+If you need to use a literal `_`, you can escape it with `\`.
 
 ```uiua
 $"\__\_" 27
@@ -173,7 +173,7 @@ In that example, the net change of the declared signature of `|3.2` is actually 
 
 If this is *not* the case, the declared signature will be *made* to be correct by, after the function has run, either removing extra arguments or adding extra outputs.
 
-For example, even though this functions has signature `|2.1`, the declared signature of `|2.2` causes an extra debug output to be returned. This debug output is a boxed string. This is done to ensure that the function does in fact have 2 outputs.
+For example, even though this function has signature `|2.1`, the declared signature of `|2.2` causes an extra debug output to be returned. This debug output is a boxed string. This is done to ensure that the function does in fact have 2 outputs.
 
 ```uiua should fail
 F ← |2.2 ⊟+1
@@ -187,7 +187,7 @@ F ← |4.2 ⊟+1
 F 1 4 5 6
 ```
 
-**The point of allowing this is that function which are only partially written can still be run and debugged. But finished code should never have warnings!**
+**The point of allowing this is that functions which are only partially written can still be run and debugged. But finished code should never have warnings!**
 
 If the compiler cannot derive the signature of a function and you give it one which is *wrong*, the function will throw an error at runtime.
 

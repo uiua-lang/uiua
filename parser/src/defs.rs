@@ -202,7 +202,7 @@ primitive!(
     /// ex: +⟜(×-) 10 20 0.3
     /// ex: ↯⟜⊚ 4
     ///
-    /// [on] can be thought of as a compliment of [by].
+    /// [on] can be thought of as a complement of [by].
     /// ex: [⟜¯ 1]
     ///   : [⊸¯ 1]
     ///

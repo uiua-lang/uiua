@@ -572,7 +572,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
 - Add the experimental [`fft`](https://uiua.org/docs/fft) function, which performs the Fast Fourier transform
   - The inverse FFT is also supported via [`un °`](https://uiua.org/docs/un)
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm
-- Add the experimental [`but ⤙`](https://uiua.org/docs/but) and [`with ⤚`](https://uiua.org/docs/with) modifiers, which are compliments to [`on ⟜`](https://uiua.org/docs/on) and [`by ⊸`](https://uiua.org/docs/by)
+- Add the experimental [`but ⤙`](https://uiua.org/docs/but) and [`with ⤚`](https://uiua.org/docs/with) modifiers, which are complements to [`on ⟜`](https://uiua.org/docs/on) and [`by ⊸`](https://uiua.org/docs/by)
 - Add the experimental [`above ◠`](https://uiua.org/docs/above) and [`below ◡`](https://uiua.org/docs/below) modifiers, which keep all arguments to a function above or below the outputs on the stack
 - Add the experimental [`struct`](https://uiua.org/docs/struct) macro, which generates constructor and getter functions given some names
 - Un-deprecate [`dip ⊙`](https://uiua.org/docs/dip) function packs

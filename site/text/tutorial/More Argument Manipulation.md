@@ -43,7 +43,7 @@ We'll see just how important [fork]() is later in this section.
 
 ## [both]()
 
-[both]() is a monadic modifier and a sort of compliment to [fork](). While [fork]() calls multiple functions on the same set of arguments, [both]() calls a *single* function on multiple sets of arguments.
+[both]() is a monadic modifier and a sort of complement to [fork](). While [fork]() calls multiple functions on the same set of arguments, [both]() calls a *single* function on multiple sets of arguments.
 
 ```uiua
 ∩⇌ [1 2 3] [4 5 6]

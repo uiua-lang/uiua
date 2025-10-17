@@ -289,12 +289,7 @@ pub fn Editor<'a>(
         let render_output_item = move |item| match item {
             OutputItem::String(s) => {
                 if s.is_empty() {
-                    view! {
-                        <div class="output-item">
-                            <br />
-                        </div>
-                    }
-                    .into_view()
+                    view!().into_view()
                 } else {
                     view! { <div class="output-item">{s}</div> }.into_view()
                 }
@@ -376,22 +371,23 @@ pub fn Editor<'a>(
             }
             .into_view(),
         };
-        let render_output_items = move |items: Vec<OutputItem>| {
-            if let [OutputItem::Separator] = items.as_slice() {
-                view!(<div class="output-item">
+        let render_output_items = move |items: Vec<OutputItem>| match items.as_slice() {
+            [] => View::default(),
+            [OutputItem::Separator] => view!(<div class="output-item">
                     <hr />
                 </div>)
-                .into_view()
-            } else {
-                view!(<div class="output-values">{    (items.into_iter())
-                    .map(|item| {
-                        render_output_item(item)
-                            .into_view()
-                    })
-                    .collect::<Vec<_>>()}
+            .into_view(),
+            [OutputItem::String(s)] if s.is_empty() => View::default(),
+            _ => view!(<div class="output-values">
+                    {(items.into_iter())
+                        .map(|item| {
+                            render_output_item(item)
+                                .into_view()
+                        })
+                        .collect::<Vec<_>>()
+                    }
                 </div>)
-                .into_view()
-            }
+            .into_view(),
         };
         set_timeout(
             move || {

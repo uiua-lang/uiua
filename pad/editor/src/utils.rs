@@ -1246,11 +1246,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaEr
         >= 2;
     let mut output = Vec::new();
     if !trace.is_empty() {
-        output.extend(
-            trace
-                .lines()
-                .map(|line| vec![OutputItem::String(line.into())]),
-        );
+        output.extend((trace.lines()).map(|line| vec![OutputItem::String(line.into())]));
     }
     if !stdout.is_empty() {
         if !output.is_empty() {
@@ -1259,7 +1255,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaEr
         if label {
             output.push(vec![OutputItem::String("stdout:".to_string())]);
         }
-        output.extend(vec![stdout]);
+        output.extend(stdout.into_iter().map(|item| vec![item]));
     }
     if !stderr.is_empty() {
         if !output.is_empty() {
@@ -1268,11 +1264,7 @@ fn run_code_single(id: &str, code: &str) -> (Vec<Vec<OutputItem>>, Option<UiuaEr
         if label {
             output.push(vec![OutputItem::String("stderr:".to_string())]);
         }
-        output.extend(
-            stderr
-                .lines()
-                .map(|line| vec![OutputItem::String(line.into())]),
-        );
+        output.extend((stderr.lines()).map(|line| vec![OutputItem::String(line.into())]));
     }
     if !stack_lines.is_empty() {
         if label {

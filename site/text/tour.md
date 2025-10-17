@@ -2,11 +2,11 @@
 
 ## Arrays Without Names
 
-Uiua is a tacit, **array-oriented** programming language.
+Uiua is a *tacit*, **array-oriented** programming language.
 
 An **array-oriented** language is one where the primary data structure is the array. In array languages, many operations that can apply to a single value can also apply to every value in an array. This is known as *rank-polymorphism*.
 
-A tacit language is one where functions do not need to refer to their arguments by name. They have mechanisms for rearanging arguments to thread data through programs.
+A *tacit* language is one where functions do not need to refer to their arguments by name. They have mechanisms for rearanging arguments to thread data through programs.
 
 That's enough introduction, let's see some code!
 
@@ -82,7 +82,7 @@ For math functions where the order matters, like [subtract](/docs/sub) and [divi
 If you want them to work the other way, you can use the [backward](/docs/backward) modifier, which makes a function take its arguments in reversed order.
 
 ```uiua
--3 10
+ -3 10
 ˜-3 10
 ```
 

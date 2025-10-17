@@ -220,9 +220,7 @@ You'll most often see [on]() with another function immediately to its left, to u
 ```
 
 ```uiua
-3
-⊸(+2)
-⊸(×10)
+⊸(×10) ⊸(+2) 3
 ```
 
 ### [dip]()

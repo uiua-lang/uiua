@@ -638,11 +638,14 @@ option,
     overflow-x: auto;
 }
 
-.output-line {
+.output-values {
     display: flex;
     flex-wrap: nowrap;
     gap: 1em;
     align-items: center;
+    font-family: "Code Font", monospace;
+    font-size: inherit;
+    white-space: pre;
 }
 
 .output-diagnostics {

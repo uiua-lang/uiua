@@ -376,6 +376,23 @@ pub fn Editor<'a>(
             }
             .into_view(),
         };
+        let render_output_items = move |items: Vec<OutputItem>| {
+            if let [OutputItem::Separator] = items.as_slice() {
+                view!(<div class="output-item">
+                    <hr />
+                </div>)
+                .into_view()
+            } else {
+                view!(<div class="output-values">{    (items.into_iter())
+                    .map(|item| {
+                        render_output_item(item)
+                            .into_view()
+                    })
+                    .collect::<Vec<_>>()}
+                </div>)
+                .into_view()
+            }
+        };
         set_timeout(
             move || {
                 state.update(|st| {
@@ -390,15 +407,8 @@ pub fn Editor<'a>(
                                     let (diags, items): (Vec<_>, Vec<_>) = output
                                         .into_iter()
                                         .partition(|line| line.len() == 1 && line[0].is_report());
-                                    let items: Vec<_> = items
-                                        .into_iter()
-                                        .map(|line| {
-                                            view!(<div class="output-line">{
-                                                line.into_iter().map(render_output_item)
-                                                    .collect::<Vec<_>>()
-                                            }</div>)
-                                        })
-                                        .collect();
+                                    let items: Vec<_> =
+                                        items.into_iter().map(render_output_items).collect();
                                     let diags: Vec<_> = diags
                                         .into_iter()
                                         .map(|line| {
@@ -415,15 +425,7 @@ pub fn Editor<'a>(
                         let (diags, items): (Vec<_>, Vec<_>) = output
                             .into_iter()
                             .partition(|line| line.len() == 1 && line[0].is_report());
-                        let items: Vec<_> = items
-                            .into_iter()
-                            .map(|line| {
-                                view!(<div class="output-line">{
-                                    line.into_iter().map(render_output_item)
-                                        .collect::<Vec<_>>()
-                                }</div>)
-                            })
-                            .collect();
+                        let items: Vec<_> = items.into_iter().map(render_output_items).collect();
                         let diags: Vec<_> = diags
                             .into_iter()
                             .map(|line| render_output_item(line.into_iter().next().unwrap()))

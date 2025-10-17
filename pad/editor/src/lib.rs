@@ -1218,13 +1218,29 @@ pub fn Editor<'a>(
 
     let glyph_buttons_container = move || {
         show_glyphs.get().then(|| {
-            let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
-                .filter(|prim| !prim.is_experimental() && *prim != Primitive::Flip)
-                .filter_map(make_glyph_button)
-                .collect();
+            let shown_prims = Primitive::non_deprecated().filter(|prim| !prim.is_experimental());
+            let insertion_point = shown_prims
+                .clone()
+                .enumerate()
+                .find(|(_, p)| p.class() == PrimClass::MonadicArray)
+                .unwrap()
+                .0
+                - 2;
+            let mut glyph_buttons: Vec<_> = shown_prims.filter_map(make_glyph_button).collect();
 
             // Additional code buttons
-            for (glyph, title, class, surround, doc) in [
+            let syntax_buttons = [
+                (
+                    "¯",
+                    "(`) negative",
+                    if very_gay() {
+                        "text-gradient lesbian"
+                    } else {
+                        "number-literal"
+                    },
+                    None,
+                    "",
+                ),
                 (
                     "_",
                     "strand",
@@ -1252,17 +1268,6 @@ pub fn Editor<'a>(
                     "",
                     Some(('(', ')')),
                     "tutorial/Modifiers and Functions#inline-functions",
-                ),
-                (
-                    "¯",
-                    "(`) negative",
-                    if very_gay() {
-                        "text-gradient lesbian"
-                    } else {
-                        "number-literal"
-                    },
-                    None,
-                    "",
                 ),
                 (
                     "@",
@@ -1315,7 +1320,9 @@ pub fn Editor<'a>(
                     None,
                     "tutorial/Basic Argument Manipulation and Formatting#comments",
                 ),
-            ] {
+            ];
+            for (i, (glyph, title, class, surround, doc)) in syntax_buttons.into_iter().enumerate()
+            {
                 let class = format!("glyph-button {class}");
                 // Navigate to the docs page on ctrl/shift+click
                 let onclick = move |event: MouseEvent| {
@@ -1347,7 +1354,8 @@ pub fn Editor<'a>(
                         _ = glyph_doc_element().style().remove_property("display");
                     }
                 };
-                glyph_buttons.push(
+                glyph_buttons.insert(
+                    insertion_point + i,
                     view! {
                         <button
                             class=class
@@ -1414,6 +1422,7 @@ pub fn Editor<'a>(
                 }
                 .into_view(),
             );
+            glyph_buttons.swap(insertion_point, insertion_point - 1);
 
             let experimental_glyph_buttons: Vec<_> = once(glyph_toggle_experimental_button.clone())
                 .chain(

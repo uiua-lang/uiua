@@ -206,7 +206,7 @@ primitive!(
     /// ex: [⟜¯ 1]
     ///   : [⊸¯ 1]
     ///
-    /// [on] can be used with a function pack. `on``(F|G)` becomes `on``F``on``G`.
+    /// [on] can be used with a function pack. `on``(F|G|H|..)` becomes `F``on``G``on``H``on``(..)`.
     /// ex: [⟜(+1|×2|¯)] 5
     /// Subscripted [on] keeps the first N arguments on as initial arguments.
     /// ex: {⟜₂[⊙⊙∘] 1 2 3}
@@ -282,6 +282,59 @@ primitive!(
     ///
     /// See also: [above]
     ([1], Below, Arguments, ("below", '◡')),
+    /// Call a function on two sets of values
+    ///
+    /// For monadic functions, [both] calls its function on each of the first 2 arguments.
+    /// ex: ∩⇡ 3 5
+    ///
+    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` arguments.
+    /// ex: [∩+ 1 2 3 4]
+    /// ex: [∩(++) 1 2 3 4 5 6]
+    ///
+    /// Subscripted [both] calls its function on N sets of arguments.
+    /// ex: [∩₃+ 1 2 3 4 5 6]
+    /// ex: [∩₃⊟ 1 2 3 4 5 6]
+    ///
+    /// There are two common patterns that involve a dyadic function and three values.
+    /// If we call the function `f` and the values `a`, `b`, and `c`, then the patterns are:
+    /// - `fac fbc`
+    /// - `fab fac`
+    /// These patterns can be achieved with [both] with sided subscripts.
+    /// For example, if you wanted to check that a number is divisible by two other numbers:
+    /// ex: F ← ∩⌟(=0◿)
+    ///   : F 3 5 ⇡16
+    /// ex: G ← ∩⌞(=0˜◿)
+    ///   : G ⇡16 3 5
+    ///
+    /// [both] accepts mixed numeric and sided subscripts. The side quantifier determines how many arguments are reused on each call.
+    /// ex: ∩₃⌞⊟ 1 2 3 4
+    ///   : ∩₃⌞₂⊟₃ 1 2 3 4 5
+    ([1], Both, Arguments, ("both", '∩')),
+    /// Call two functions on the same values
+    ///
+    /// [fork] is one of the most important functions for threading data through a program.
+    /// See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) for a more complete understanding as to why.
+    ///
+    /// ex: ⊃⇌◴ 1_2_2_3
+    /// ex: ⊃(+1)(×2) 5
+    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
+    /// ex: [⊃+¯ 3 5]
+    /// By default, [fork] can only work with two functions. However, a function pack can be used to pass the same arguments to many functions.
+    /// ex: ⊃(+1|×3|÷|$"_ and _") 6 12
+    ([2], Fork, Arguments, ("fork", '⊃')),
+    /// Call two functions on two distinct sets of values
+    ///
+    /// ex: ⊓⇌◴ 1_2_3 [1 4 2 4 2]
+    /// Each function will always be called on its own set of values.
+    /// ex: ⊓+× 1 2 3 4
+    /// The functions' signatures need not be the same.
+    /// ex: ⊓+(++) 1 2 3 4 5
+    /// [bracket] can use a function pack to call many functions on many sets of arguments.
+    /// ex: [⊓(+|-|×|÷) 10 20 5 8 3 7 2 5]
+    /// [bracket] with sided subscripts reuses a value in both functions.
+    /// One use of this is to check if a number is within a range.
+    /// ex: ◡×⊸⊓⌟≥≤5 8 [6 2 5 9 6 5 0 4]
+    ([2], Bracket, Arguments, ("bracket", '⊓')),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -654,6 +707,109 @@ primitive!(
     /// A complex number [equals] a real one if the imaginary part is 0 and the real parts [match].
     /// ex: = 5 ℂ0 5
     (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
+    /// Generate a random number in the range `[0, 1)`
+    ///
+    /// If you need a seeded random number, use [gen].
+    ///
+    /// ex: ⚂
+    /// ex: [⚂⚂⚂]
+    ///
+    /// Use [multiply] and [floor] to generate a random integer in a range.
+    /// ex: ⌊×10 ⍥⚂5
+    /// The range can be given with a subscript.
+    /// ex: ⍥⚂₁₀5
+    ///
+    /// `rows``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
+    /// ex: ⌊×10 ≡⋅⚂ ⇡10
+    /// ex: ⌊×10 ˙⊞⋅⋅⚂ ⇡10
+    (0, Rand, Rng, ("random", '⚂'), Impure),
+    /// Generate an array of random numbers with a seed
+    ///
+    /// The first argument is the shape, the second argument is the seed. The returned array will have the given shape where each element is in the range [0, 1).
+    /// If you don't care about the seed or shape, you can use [random] instead.
+    /// ex: gen [] 0
+    /// ex: gen [] 1
+    /// ex: gen 3 0
+    /// ex: gen 3 1
+    /// Use [multiply] and [floor] to generate a random integer in a range.
+    /// ex: ⌊×10 gen 10 42
+    /// ex: ⌊×10 gen 2_3 0
+    /// ex: ⌊×10 gen 2_3 1
+    /// A rank-2 array or box array of shapes can be used to generate multiple arrays. The resulting arrays will be in a boxed list
+    /// ex: ⌊×10 gen [2_3 3_4] 0
+    /// ex: ⌊×10 gen {2_2 [] 2_3_3 4} 0
+    /// If you want a seed to use for a subsequent [gen], you can use [fork] and `[]`.
+    /// ex: gen 8 ⊃(gen[]|gen5) 0
+    ///   : ∩(⌊×10)
+    /// For non-determinism, [random] can be used as a seed.
+    /// ex: ⌊×10 gen 3_4 ⚂
+    (2, Gen, Rng, "gen"),
+
+    /// The number of radians in a quarter circle
+    ///
+    /// Equivalent to `divide``2``pi` or `divide``4``tau`
+    /// ex: [η π/2 τ/4]
+    (0, Eta, Constant, ("eta", 'η')),
+    /// The ratio of a circle's circumference to its diameter
+    ///
+    /// Equivalent to `multiply``2``eta` or `divide``2``tau`
+    /// ex: [2η π τ/2]
+    (0, Pi, Constant, ("pi", 'π')),
+    /// The ratio of a circle's circumference to its radius
+    ///
+    /// Equivalent to `multiply``4``eta` or `multiply``2``pi`
+    /// ex: [4η 2π τ]
+    (0, Tau, Constant, ("tau", 'τ')),
+    /// The biggest number
+    ///
+    /// ex: ∞
+    /// ex: +1 ∞
+    /// ex: -1 ∞
+    /// ex: ↧5 ∞
+    /// ex: ↥5 ∞
+    (0, Infinity, Constant, ("infinity", '∞')),
+    /// Debug print all arguments without consuming them
+    ///
+    /// This is equivalent to [dump][identity], but is easier to type.
+    ///
+    /// This is useful when you want to inspect the current argument list.
+    /// For example, if you are juggling some arguments, you can use [args] to inspect the arguments at some point:
+    /// ex: 1 2 3
+    ///   : ◡⊙∘˜⊙⟜∘
+    ///   : ?
+    ///   : +×-×+
+    /// ex: 2_3_10 ? 17 ↯3_4⇡12
+    ///   : ++
+    /// Subscripted [args] prints that many arguments.
+    /// ex: ?₂ 1 2 3 4
+    /// If you type `N+1` `?`s, it will format to [args] subscripted with `N`.
+    /// A subscripted `?` will merge adjacent `?s` into its subscript.
+    /// ex: # Try formatting!
+    ///   : ???? 1 2 3 4
+    ///   : ?₂?? 5 6 7 8
+    (0(0), Args, Debug, ("args", '?'), Mutating),
+    /// Preprocess and print all arguments without popping them
+    ///
+    /// [dump][identity] is equivalent to [arguments].
+    /// ex: dump∘ 1 2 3
+    /// This is useful when you want to inspect the current argument list.
+    /// For example, if you are juggling some arguments, you can use [dump] to inspect the arguments at some point:
+    /// ex: 1 2 3
+    ///   : ◡⊙∘˜⊙⟜∘
+    ///   : dump∘
+    ///   : +×-×+
+    /// [dump][shape] is useful if your raw array data isn't worth looking at, but the shapes are.
+    /// ex: 2_3_10 17 ↯3_4⇡12
+    ///   : dump△
+    ///   : ++
+    /// ex: ↯¯1_5 ⇡30
+    ///   : ⊸⍉⊸⊃≡˙⊟˙(⊞+)
+    ///   : dump△
+    ///   : +++∩∩⧻
+    /// Errors encountered within [dump]'s function are caught and dumped as strings.
+    /// ex: 1_2_3 [] 5_6_7
+    ///   : dump⊢
+    (0(0)[1], Dump, Debug, "dump", Mutating),
     /// Get the number of rows in an array
     ///
     /// ex: ⧻5
@@ -2114,34 +2270,6 @@ primitive!(
     /// ex: # Experimental!
     ///   : {𝄐⌟⊟ 1 2 3}
     ([1], Reach, Arguments, ("reach", '𝄐'), { experimental: true }),
-    /// Call a function on two sets of values
-    ///
-    /// For monadic functions, [both] calls its function on each of the first 2 arguments.
-    /// ex: ∩⇡ 3 5
-    ///
-    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` arguments.
-    /// ex: [∩+ 1 2 3 4]
-    /// ex: [∩(++) 1 2 3 4 5 6]
-    ///
-    /// Subscripted [both] calls its function on N sets of arguments.
-    /// ex: [∩₃+ 1 2 3 4 5 6]
-    /// ex: [∩₃⊟ 1 2 3 4 5 6]
-    ///
-    /// There are two common patterns that involve a dyadic function and three values.
-    /// If we call the function `f` and the values `a`, `b`, and `c`, then the patterns are:
-    /// - `fac fbc`
-    /// - `fab fac`
-    /// These patterns can be achieved with [both] with sided subscripts.
-    /// For example, if you wanted to check that a number is divisible by two other numbers:
-    /// ex: F ← ∩⌟(=0◿)
-    ///   : F 3 5 ⇡16
-    /// ex: G ← ∩⌞(=0˜◿)
-    ///   : G ⇡16 3 5
-    ///
-    /// [both] accepts mixed numeric and sided subscripts. The side quantifier determines how many arguments are reused on each call.
-    /// ex: ∩₃⌞⊟ 1 2 3 4
-    ///   : ∩₃⌞₂⊟₃ 1 2 3 4 5
-    ([1], Both, Arguments, ("both", '∩')),
     /// Define the various inverses of a function
     ///
     /// [obverse] defines how a function should interact with [un], [anti], and [under].
@@ -2267,31 +2395,6 @@ primitive!(
     ///
     /// For more about [under] and inverses, see the [Inverse Tutorial](/tutorial/Inverses).
     ([2], Under, InversionModifier, ("under", '⍜')),
-    /// Call two functions on the same values
-    ///
-    /// [fork] is one of the most important functions for threading data through a program.
-    /// See the [More Argument Manipulation Tutorial](/tutorial/More Argument Manipulation) for a more complete understanding as to why.
-    ///
-    /// ex: ⊃⇌◴ 1_2_2_3
-    /// ex: ⊃(+1)(×2) 5
-    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
-    /// ex: [⊃+¯ 3 5]
-    /// By default, [fork] can only work with two functions. However, a function pack can be used to pass the same arguments to many functions.
-    /// ex: ⊃(+1|×3|÷|$"_ and _") 6 12
-    ([2], Fork, Arguments, ("fork", '⊃')),
-    /// Call two functions on two distinct sets of values
-    ///
-    /// ex: ⊓⇌◴ 1_2_3 [1 4 2 4 2]
-    /// Each function will always be called on its own set of values.
-    /// ex: ⊓+× 1 2 3 4
-    /// The functions' signatures need not be the same.
-    /// ex: ⊓+(++) 1 2 3 4 5
-    /// [bracket] can use a function pack to call many functions on many sets of arguments.
-    /// ex: [⊓(+|-|×|÷) 10 20 5 8 3 7 2 5]
-    /// [bracket] with sided subscripts reuses a value in both functions.
-    /// One use of this is to check if a number is within a range.
-    /// ex: ◡×⊸⊓⌟≥≤5 8 [6 2 5 9 6 5 0 4]
-    ([2], Bracket, Arguments, ("bracket", '⊓')),
     /// Repeat a function while a condition holds
     ///
     /// The first function is the loop function, and it is run as long as the condition is true.
@@ -2483,22 +2586,6 @@ primitive!(
     /// ex! ˙⍤ =8 9
     /// Errors thrown by [assert] can be caught with [try].
     (2(0), Assert, Misc, ("assert", '⍤'), Impure),
-    /// Generate a random number in the range `[0, 1)`
-    ///
-    /// If you need a seeded random number, use [gen].
-    ///
-    /// ex: ⚂
-    /// ex: [⚂⚂⚂]
-    ///
-    /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: ⌊×10 ⍥⚂5
-    /// The range can be given with a subscript.
-    /// ex: ⍥⚂₁₀5
-    ///
-    /// `rows``gap``random` and `table``gap``gap``random` are optimized in the interpreter to generate a lot of random numbers very fast.
-    /// ex: ⌊×10 ≡⋅⚂ ⇡10
-    /// ex: ⌊×10 ˙⊞⋅⋅⚂ ⇡10
-    (0, Rand, Rng, ("random", '⚂'), Impure),
     /// Memoize a function
     ///
     /// If a function is [memo]ized, then its results are cached.
@@ -2592,27 +2679,6 @@ primitive!(
     /// If no value is available, then an error is thrown.
     /// The error can be caught with [try].
     (1, TryRecv, Thread, "tryrecv", Impure),
-    /// Generate an array of random numbers with a seed
-    ///
-    /// The first argument is the shape, the second argument is the seed. The returned array will have the given shape where each element is in the range [0, 1).
-    /// If you don't care about the seed or shape, you can use [random] instead.
-    /// ex: gen [] 0
-    /// ex: gen [] 1
-    /// ex: gen 3 0
-    /// ex: gen 3 1
-    /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: ⌊×10 gen 10 42
-    /// ex: ⌊×10 gen 2_3 0
-    /// ex: ⌊×10 gen 2_3 1
-    /// A rank-2 array or box array of shapes can be used to generate multiple arrays. The resulting arrays will be in a boxed list
-    /// ex: ⌊×10 gen [2_3 3_4] 0
-    /// ex: ⌊×10 gen {2_2 [] 2_3_3 4} 0
-    /// If you want a seed to use for a subsequent [gen], you can use [fork] and `[]`.
-    /// ex: gen 8 ⊃(gen[]|gen5) 0
-    ///   : ∩(⌊×10)
-    /// For non-determinism, [random] can be used as a seed.
-    /// ex: ⌊×10 gen 3_4 ⚂
-    (2, Gen, Rng, "gen"),
     /// Match a regex pattern
     ///
     /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match
@@ -2736,29 +2802,6 @@ primitive!(
     /// ex: timezone
     /// ex: datetime +×3600 timezone now
     (0, TimeZone, Time, "timezone", Impure),
-    /// The number of radians in a quarter circle
-    ///
-    /// Equivalent to `divide``2``pi` or `divide``4``tau`
-    /// ex: [η π/2 τ/4]
-    (0, Eta, Constant, ("eta", 'η')),
-    /// The ratio of a circle's circumference to its diameter
-    ///
-    /// Equivalent to `multiply``2``eta` or `divide``2``tau`
-    /// ex: [2η π τ/2]
-    (0, Pi, Constant, ("pi", 'π')),
-    /// The ratio of a circle's circumference to its radius
-    ///
-    /// Equivalent to `multiply``4``eta` or `multiply``2``pi`
-    /// ex: [4η 2π τ]
-    (0, Tau, Constant, ("tau", 'τ')),
-    /// The biggest number
-    ///
-    /// ex: ∞
-    /// ex: +1 ∞
-    /// ex: -1 ∞
-    /// ex: ↧5 ∞
-    /// ex: ↥5 ∞
-    (0, Infinity, Constant, ("infinity", '∞')),
     /// Create a hashmap from a list of keys and list values
     ///
     /// A hashmap is a normal array that is used as a mapping from keys to values.
@@ -2912,48 +2955,6 @@ primitive!(
     ///
     /// See also: [insert], [has], [get]
     (2, Remove, Map, "remove"),
-    /// Debug print all arguments without consuming them
-    ///
-    /// This is equivalent to [dump][identity], but is easier to type.
-    ///
-    /// This is useful when you want to inspect the current argument list.
-    /// For example, if you are juggling some arguments, you can use [args] to inspect the arguments at some point:
-    /// ex: 1 2 3
-    ///   : ◡⊙∘˜⊙⟜∘
-    ///   : ?
-    ///   : +×-×+
-    /// ex: 2_3_10 ? 17 ↯3_4⇡12
-    ///   : ++
-    /// Subscripted [args] prints that many arguments.
-    /// ex: ?₂ 1 2 3 4
-    /// If you type `N+1` `?`s, it will format to [args] subscripted with `N`.
-    /// A subscripted `?` will merge adjacent `?s` into its subscript.
-    /// ex: # Try formatting!
-    ///   : ???? 1 2 3 4
-    ///   : ?₂?? 5 6 7 8
-    (0(0), Args, Debug, ("args", '?'), Mutating),
-    /// Preprocess and print all arguments without popping them
-    ///
-    /// [dump][identity] is equivalent to [arguments].
-    /// ex: dump∘ 1 2 3
-    /// This is useful when you want to inspect the current argument list.
-    /// For example, if you are juggling some arguments, you can use [dump] to inspect the arguments at some point:
-    /// ex: 1 2 3
-    ///   : ◡⊙∘˜⊙⟜∘
-    ///   : dump∘
-    ///   : +×-×+
-    /// [dump][shape] is useful if your raw array data isn't worth looking at, but the shapes are.
-    /// ex: 2_3_10 17 ↯3_4⇡12
-    ///   : dump△
-    ///   : ++
-    /// ex: ↯¯1_5 ⇡30
-    ///   : ⊸⍉⊸⊃≡˙⊟˙(⊞+)
-    ///   : dump△
-    ///   : +++∩∩⧻
-    /// Errors encountered within [dump]'s function are caught and dumped as strings.
-    /// ex: 1_2_3 [] 5_6_7
-    ///   : dump⊢
-    (0(0)[1], Dump, Debug, "dump", Mutating),
     /// Convert a string into code at compile time
     ///
     /// ex: # Experimental!

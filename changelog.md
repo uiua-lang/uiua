@@ -13,8 +13,11 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Add option to provide folder as test cases destination
 - Add an `Amen` audio constant
+- Values generated on the same line in code will appear on the same line in output
 ### Website
 - Reword all documentation and tutorials to no longer refer to a stack
+  - Introduce argument manipulation modifiers earlier in the tutorial
+- Remove hidden cases from tutorial challenges
 - Pad links will automatically be compressed if it would be shorter
 
 ## 0.17.3 - 2025-10-07

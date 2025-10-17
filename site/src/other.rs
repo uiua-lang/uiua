@@ -169,7 +169,7 @@ pub fn Optimizations() -> impl IntoView {
 
         <Hd id="pervasive-functions">"Pervasive Functions"</Hd>
         <p>"All pervasive functions run on arrays in hot loops that should have performance comparable to an implementation in a languages like C or Rust. This includes all mathematical and comparison functions."</p>
-        <p>"The interpreter does its best to re-use allocated memory when possible instead of copying. Arrays are reference-counted, so an array's memory is only copied when it is modified "<em>"and"</em>" a duplicate exists somewhere. "<Prim prim=Dup/>" does not copy actual array memory. It only copies pointers and increments reference counts."</p>
+        <p>"The interpreter does its best to re-use allocated memory when possible instead of copying. Arrays are reference-counted, so an array's memory is only copied when it is modified "<em>"and"</em>" a duplicate exists somewhere. Duplicating an array with "<Prim prim=On/>"/"<Prim prim=By/>"/etc does not copy actual array memory. It only copies pointers and increments reference counts."</p>
         <p>"In this example, only the last line results in a copy:"</p>
         <Editor no_run=true example="+1 ⇡10\n˙× ⇡10\n×+1⇡10⇡10\n+1.⇡10"/>
         <p>"Using pervasive functions whenever possible, on the largest arrays possible, is the best way to get good performance out of "{lang}"."</p>
@@ -211,8 +211,8 @@ pub fn Optimizations() -> impl IntoView {
                 <tr><td><Prim prim=Box/></td></tr>
                 <tr><td><Prim prim=First/></td></tr>
                 <tr><td><Prim prim=Last/></td></tr>
-                <tr><td><Prims prims=[Sort]/>" / "<Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></td></tr>
-                <tr><td><Prims prims=[Reverse, Sort]/>" / "<Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></td></tr>
+                <tr><td><Prims prims=[Sort]/>" / "<Prims prims=[Select, By, Rise]/></td></tr>
+                <tr><td><Prims prims=[Reverse, Sort]/>" / "<Prims prims=[Select, By, Fall]/></td></tr>
             </table>
             <table class="bordered-table cell-centered-table">
                 <tr><td><Prims prims=[Gap, Rand] show_names=true/></td></tr>
@@ -240,8 +240,8 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[Last, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[First, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from front"</td></tr>
             <tr><th><Prims prims=[Last, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from back"</td></tr>
-            <tr><th><Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></th><td>"Create intermediate "<Prim prim=Rise/>" array"</td><td>"Just sort"</td></tr>
-            <tr><th><Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></th><td>"Create intermediate "<Prim prim=Fall/>" array"</td><td>"Just sort"</td></tr>
+            <tr><th><Prims prims=[Select, By, Rise]/></th><td>"Create intermediate "<Prim prim=Rise/>" array"</td><td>"Just sort"</td></tr>
+            <tr><th><Prims prims=[Select, By, Fall]/></th><td>"Create intermediate "<Prim prim=Fall/>" array"</td><td>"Just sort"</td></tr>
             <tr><th><Prims prims=[Reverse, Sort]/></th><td>"Sort then reverse"</td><td>"Sort backwards"</td></tr>
             <tr><th><Prims prims=[Dip, Dip, Dip]/>"…"</th><td><Prim prim=Dip/>" n times"</td><td>"Single "<Prim prim=Dip/>" of n values"</td></tr>
             <tr><th><Prims prims=[Transpose, Transpose, Transpose]/>"…"</th><td><Prim prim=Transpose/>" n times"</td><td>"Single "<Prim prim=Transpose/></td></tr>
@@ -316,9 +316,7 @@ pub fn Optimizations() -> impl IntoView {
                 "The following splitting patterns are optimized for monadic function "<code>"F"</code>":"
                 <ul>
                     <li><Prims prims=[Partition]/><code>"F"</code><Prims prims=[By, Ne]/></li>
-                    <li><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Ne]/><code>"constant"</code><Prims prims=[Dup]/></li>
                     <li><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Not, By, Mask]/></li>
-                    <li><Prims prims=[Partition]/><code>"F"</code><Prims prims=[Not, Mask]/><code>"constant"</code><Prims prims=[Dup]/></li>
                 </ul>
             </li>
         </ul>

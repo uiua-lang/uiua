@@ -883,6 +883,13 @@ impl Compiler {
                     node.prepend(flip);
                 } else {
                     match sig.args() {
+                        1 => {
+                            self.experimental_error_it(&modified.modifier.span.clone(), || {
+                                format!("Monadic {}", Backward.format())
+                            });
+                            let span = self.add_span(modified.modifier.span.clone());
+                            node.prepend(Node::Prim(Flip, span));
+                        }
                         2 => {
                             let span = self.add_span(modified.modifier.span.clone());
                             node.prepend(Node::Prim(Flip, span));
@@ -899,7 +906,7 @@ impl Compiler {
                             self.add_error(
                                 modified.modifier.span.clone(),
                                 format!(
-                                    "Non-sided {}'s function must take 2 or 4 arguments, \
+                                    "Non-sided {}'s function must take 1, 2 or 4 arguments, \
                                     but its signature is {sig}",
                                     Backward.format(),
                                 ),

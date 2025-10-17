@@ -6,6 +6,7 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
+- Add experimental monadic [`backward ˜`](https://uiua.org/docs/backward)
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)

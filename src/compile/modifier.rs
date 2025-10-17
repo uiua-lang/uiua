@@ -894,6 +894,13 @@ impl Compiler {
                             let span = self.add_span(modified.modifier.span.clone());
                             node.prepend(Node::Prim(Flip, span));
                         }
+                        3 => {
+                            self.experimental_error_it(&modified.modifier.span.clone(), || {
+                                format!("Triadic {}", Backward.format())
+                            });
+                            let span = self.add_span(modified.modifier.span.clone());
+                            node.prepend(Node::Prim(Flip, span));
+                        }
                         4 => {
                             let span = self.add_span(modified.modifier.span.clone());
                             node.prepend(Node::Mod(
@@ -906,7 +913,7 @@ impl Compiler {
                             self.add_error(
                                 modified.modifier.span.clone(),
                                 format!(
-                                    "Non-sided {}'s function must take 1, 2 or 4 arguments, \
+                                    "Non-sided {}'s function must take between 1 and 4 arguments, \
                                     but its signature is {sig}",
                                     Backward.format(),
                                 ),

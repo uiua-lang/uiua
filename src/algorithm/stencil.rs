@@ -1,6 +1,7 @@
 use std::{collections::VecDeque, mem::take};
 
 use ecow::EcoVec;
+use uiua_parser::SubSide;
 
 use crate::{
     algorithm::{
@@ -87,9 +88,15 @@ where
     }
 
     // Determine shape stuff
+    let fill = env.scalar_fill::<T>().ok();
     let mut shape_prefix = Shape::SCALAR;
+    let fill_side_count = if fill.as_ref().is_some_and(|fv| fv.side.is_some()) {
+        1
+    } else {
+        2
+    };
     for (d, s) in dims.iter().zip(&arr.shape) {
-        let total_len = *s + 2 * d.fill * d.stride;
+        let total_len = *s + fill_side_count * d.fill * d.stride;
         shape_prefix.push((total_len + d.stride).saturating_sub(d.size) / d.stride);
     }
     let window_shape = Shape::from_iter(
@@ -140,7 +147,6 @@ where
         return Ok(());
     }
 
-    let fill = env.scalar_fill::<T>().ok().map(|fv| fv.value);
     if dims.len() == 1 && (fill.is_none() || dims[0].fill == 0) {
         // Linear optimization
         let dim = dims[0];
@@ -197,19 +203,26 @@ where
     }
 
     let mut corner_starts = vec![0isize; dims.len()];
+    let (fill_is_left, fill_is_right) =
+        fill.as_ref()
+            .and_then(|fv| fv.side)
+            .map_or((1, 1), |side| match side {
+                SubSide::Left => (1, 0),
+                SubSide::Right => (0, 1),
+            });
     for (c, d) in corner_starts.iter_mut().zip(dims) {
-        *c -= (d.fill * d.stride) as isize;
+        *c -= (d.fill * fill_is_left * d.stride) as isize;
     }
     let mut maxs = vec![0isize; dims.len()];
     for ((m, d), s) in maxs.iter_mut().zip(dims).zip(&arr.shape) {
-        *m = (*s + d.fill * d.stride) as isize;
+        *m = (*s + d.fill * fill_is_right * d.stride) as isize;
     }
     let mut corner = corner_starts.clone();
     let mut curr = corner.clone();
     let mut offset = vec![0usize; corner.len()];
     let cell_shape = Shape::from(&arr.shape[dims.len()..]);
     let cell_len = cell_shape.elements();
-    let fill = fill.unwrap_or_else(T::proxy);
+    let fill = fill.map(|fv| fv.value).unwrap_or_else(T::proxy);
     // dbg!(&arr.shape, &dims, &shape_prefix);
     // dbg!(&window_shape, &cell_shape, &maxs);
     env.without_fill(|env| -> UiuaResult {
@@ -539,9 +552,20 @@ where
 fn pad_adjacent_fill<T: ArrayValue>(arr: &mut Array<T>, n: usize, env: &Uiua) {
     if let Ok(fv) = env.scalar_fill::<T>() {
         let row_len = arr.row_len();
-        arr.data.extend_repeat_fill(&fv, (n - 1) * row_len * 2);
-        arr.data.as_mut_slice().rotate_right((n - 1) * row_len);
-        *arr.shape.row_count_mut() += (n - 1) * 2;
+        match fv.side {
+            None => {
+                arr.data.extend_repeat(&fv.value, (n - 1) * row_len * 2);
+                arr.data.as_mut_slice().rotate_right((n - 1) * row_len);
+                *arr.shape.row_count_mut() += (n - 1) * 2;
+            }
+            Some(side) => {
+                arr.data.extend_repeat(&fv.value, (n - 1) * row_len);
+                if side == SubSide::Left {
+                    arr.data.as_mut_slice().rotate_right((n - 1) * row_len);
+                }
+                *arr.shape.row_count_mut() += n - 1;
+            }
+        }
     }
 }
 

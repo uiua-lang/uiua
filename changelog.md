@@ -8,6 +8,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
+- Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)
 - Deprecate experimental [`reach 𝄐`](https://uiua.org/docs/reach)

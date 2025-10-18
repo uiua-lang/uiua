@@ -1185,23 +1185,11 @@ impl Value {
         val_as_arr!(self, |arr| arr.transpose());
     }
     pub(crate) fn transpose_depth(&mut self, depth: usize, amnt: i32) {
-        match self {
-            Value::Num(n) => n.transpose_depth(depth, amnt),
-            Value::Byte(b) => b.transpose_depth(depth, amnt),
-            Value::Complex(c) => c.transpose_depth(depth, amnt),
-            Value::Char(c) => c.transpose_depth(depth, amnt),
-            Value::Box(b) => b.transpose_depth(depth, amnt),
-        }
+        val_as_arr!(self, |arr| arr.transpose_depth(depth, amnt))
     }
     /// Like transpose, but the axes are reversed instead of rotated
     pub(crate) fn retropose_depth(&mut self, depth: usize) {
-        match self {
-            Value::Num(n) => n.retropose_depth(depth),
-            Value::Byte(b) => b.retropose_depth(depth),
-            Value::Complex(c) => c.retropose_depth(depth),
-            Value::Char(c) => c.retropose_depth(depth),
-            Value::Box(b) => b.retropose_depth(depth),
-        }
+        val_as_arr!(self, |arr| arr.retropose_depth(depth))
     }
 }
 

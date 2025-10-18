@@ -2215,13 +2215,22 @@ impl Compiler {
                         }
                     }
                     Transpose => {
-                        self.subscript_experimental(prim, &span);
-                        if n > 100 {
-                            self.add_error(span.clone(), "Too many subscript repetitions");
+                        if n.abs() < 2 {
+                            return Ok(Node::empty());
                         }
-                        (0..n.min(100))
-                            .map(|_| self.primitive(prim, span.clone()))
-                            .collect()
+                        let span = self.add_span(span);
+                        if n > 0 {
+                            Node::from([
+                                Node::new_push(n - 1),
+                                Node::ImplPrim(ImplPrimitive::AntiOrient, span),
+                            ])
+                        } else {
+                            Node::ImplMod(
+                                ImplPrimitive::RowsSub(n.abs().into(), false),
+                                eco_vec![SigNode::new((1, 1), Node::Prim(Transpose, span))],
+                                span,
+                            )
+                        }
                     }
                     Neg => {
                         use crate::Complex;

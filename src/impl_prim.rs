@@ -62,6 +62,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::MaxRowCount(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
                     ImplPrimitive::Ga(op, _) => op.args(),
+                    ImplPrimitive::FixMatchRanks(n) => *n,
                     _ => return None
                 })
             }
@@ -75,6 +76,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::MaxRowCount(n) => *n + 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
                     ImplPrimitive::Ga(op, _) => op.outputs(),
+                    ImplPrimitive::FixMatchRanks(n) => *n,
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })
@@ -246,6 +248,7 @@ impl_primitive!(
     (2, MultiKeep(usize)),
     (1, Utf16),
     (1, Retropose),
+    (, FixMatchRanks(usize)),
     ([2], RepeatWithInverse),
     ([1], RepeatCountConvergence),
     (2(1), ValidateType),
@@ -484,6 +487,7 @@ impl fmt::Display for ImplPrimitive {
             BothImpl(sub) => write!(f, "{Both}{sub}"),
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
             Retropose => write!(f, "<{Evert}>"),
+            FixMatchRanks(_) => write!(f, "<{Evert}>"),
             Ga(op, _) => op.fmt(f),
             Over => write!(f, "over"),
             &MultiKeep(n) => {

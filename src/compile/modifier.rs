@@ -938,12 +938,40 @@ impl Compiler {
             Evert => {
                 let mut sn = self.monadic_modifier_op(modified)?.0;
                 let span = self.add_span(modified.modifier.span.clone());
-                let retropose = Node::ImplPrim(ImplPrimitive::Retropose, span)
-                    .sig_node()
-                    .unwrap();
-                sn.node
-                    .prepend(retropose.clone().on_all(sn.sig.args(), span).node);
-                sn.node.push(retropose.on_all(sn.sig.outputs(), span).node);
+
+                // Some eversions can be implemented by fixing the arguments to match ranks
+                fn fixable(node: &Node) -> bool {
+                    match node {
+                        Node::Run(nodes) => nodes.iter().all(fixable),
+                        Node::Mod(prim, args, _) if prim.class() == PrimClass::Arguments => {
+                            args.iter().all(|sn| fixable(&sn.node))
+                        }
+                        Node::ImplMod(ImplPrimitive::BothImpl(_), args, _) => {
+                            args.iter().all(|sn| fixable(&sn.node))
+                        }
+                        Node::Prim(prim, _) => [
+                            PrimClass::MonadicPervasive,
+                            PrimClass::DyadicPervasive,
+                            PrimClass::Arguments,
+                        ]
+                        .contains(&prim.class()),
+                        _ => false,
+                    }
+                }
+
+                if fixable(&sn.node) {
+                    sn.node.prepend(Node::ImplPrim(
+                        ImplPrimitive::FixMatchRanks(sn.sig.args()),
+                        span,
+                    ))
+                } else {
+                    let retropose = Node::ImplPrim(ImplPrimitive::Retropose, span)
+                        .sig_node()
+                        .unwrap();
+                    sn.node
+                        .prepend(retropose.clone().on_all(sn.sig.args(), span).node);
+                    sn.node.push(retropose.on_all(sn.sig.outputs(), span).node);
+                }
                 sn.node
             }
             Repeat => {

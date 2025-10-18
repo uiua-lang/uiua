@@ -467,6 +467,10 @@ impl VirtualEnv {
                     self.sig_node(sn)?;
                     self.handle_args_outputs(0, n);
                 }
+                FixMatchRanks => {
+                    let [sn] = get_args_nodes(args)?;
+                    self.sig_node(sn)?;
+                }
                 &DipN(n) => {
                     let [mut sig] = get_args(args)?;
                     sig.update_args_outputs(|a, o| (a + n, o + n));

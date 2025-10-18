@@ -231,6 +231,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &InsertPat,
     &RepeatPat,
     &DupPat,
+    &FixMatchRanksPat,
     &DumpPat,
     &NBitsPat,
     &(Sqrt, (Dup, Mul)),
@@ -1111,6 +1112,19 @@ inverse!(AntiMultiKeepPat, input, _, ImplPrim(MultiKeep(n), span), {
     Ok((input, node))
 });
 
+inverse!(
+    (FixMatchRanksPat, input, asm),
+    ref,
+    ImplMod(FixMatchRanks, args, span),
+    {
+        let [f] = args.as_slice() else {
+            return generic();
+        };
+        let inv = f.un_inverse(asm)?;
+        Ok((input, ImplMod(FixMatchRanks, eco_vec![inv], *span)))
+    }
+);
+
 inverse!(DumpPat, input, _, ref, Mod(Dump, args, span), {
     Ok((input, ImplMod(UnDump, args.clone(), *span)))
 });
@@ -1346,6 +1360,7 @@ inverse!(ImplPrimPat, input, _, ImplPrim(prim, span), {
         UnDatetime => Prim(DateTime, span),
         UnRawMode => Prim(Sys(SysOp::RawMode), span),
         UnClip => Prim(Sys(SysOp::Clip), span),
+        Retropose => ImplPrim(Retropose, span),
         StackN { n, inverse } => ImplPrim(
             StackN {
                 n,

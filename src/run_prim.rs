@@ -1111,18 +1111,6 @@ impl ImplPrimitive {
                 return Err(env.error(env.error(format!("Pattern match failed: {message}"))));
             }
             ImplPrimitive::Retropose => env.monadic_mut(|val| val.retropose_depth(0))?,
-            &ImplPrimitive::FixMatchRanks(n) => {
-                let vals = env.top_n_mut(n)?;
-                let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
-                for val in vals {
-                    if val.rank() == 0 {
-                        continue;
-                    }
-                    while val.rank() < max_rank {
-                        val.fix();
-                    }
-                }
-            }
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
             // Implementation details
             ImplPrimitive::ValidateType | ImplPrimitive::ValidateTypeConsume => {
@@ -1595,6 +1583,20 @@ impl ImplPrimitive {
                         ))
                     }
                 }
+            }
+            ImplPrimitive::FixMatchRanks => {
+                let [f] = get_ops(ops, env)?;
+                let vals = env.top_n_mut(f.sig.args())?;
+                let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
+                for val in vals {
+                    if val.rank() == 0 {
+                        continue;
+                    }
+                    while val.rank() < max_rank {
+                        val.fix();
+                    }
+                }
+                env.exec(f)?;
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

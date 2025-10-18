@@ -118,6 +118,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &UnpackPat,
     &FillPat,
     &DupPat,
+    &FixMatchRanksPat,
     // Sign ops
     &(Abs, (CopyUnd(1), Abs), (PopUnd(1), Sign, Mul)),
     &(Sign, (CopyUnd(1), Sign), (PopUnd(1), Flip, SetSign)),
@@ -1181,6 +1182,23 @@ under!(FlipPat, input, g_sig, inverse, asm, Prim(Flip, span), {
     };
     Ok((input, before, after))
 });
+
+under!(
+    (FixMatchRanksPat, input, g_sig, inverse, asm),
+    ref,
+    ImplMod(FixMatchRanks, args, span),
+    {
+        let [f] = args.as_slice() else {
+            return generic();
+        };
+        let (before, after) = f.under_inverse(g_sig, inverse, asm)?;
+        Ok((
+            input,
+            ImplMod(FixMatchRanks, eco_vec![before], *span),
+            ImplMod(FixMatchRanks, eco_vec![after], *span),
+        ))
+    }
+);
 
 under!(ConstPat, input, _, _, asm, {
     let (input, val) = Val.invert_extract(input, asm)?;

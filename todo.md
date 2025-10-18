@@ -2,7 +2,6 @@
 
 # 0.18
 - Recursion ergonomics for `path`
-- `evert` optimizations
 - `transpose` subscripts for leading or trailing axes
 - Sided `box`?
 - Sided `join`

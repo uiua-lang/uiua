@@ -960,10 +960,7 @@ impl Compiler {
                 }
 
                 if fixable(&sn.node) {
-                    sn.node.prepend(Node::ImplPrim(
-                        ImplPrimitive::FixMatchRanks(sn.sig.args()),
-                        span,
-                    ))
+                    Node::ImplMod(ImplPrimitive::FixMatchRanks, eco_vec![sn], span)
                 } else {
                     let retropose = Node::ImplPrim(ImplPrimitive::Retropose, span)
                         .sig_node()
@@ -971,8 +968,8 @@ impl Compiler {
                     sn.node
                         .prepend(retropose.clone().on_all(sn.sig.args(), span).node);
                     sn.node.push(retropose.on_all(sn.sig.outputs(), span).node);
+                    sn.node
                 }
-                sn.node
             }
             Repeat => {
                 let (sn, span) = self.monadic_modifier_op(modified)?;

@@ -1092,7 +1092,7 @@ impl Uiua {
         while let Some((_, prev)) = sigs.pop_last() {
             if prev.outputs() > curr.args() {
                 let n = prev.outputs() - curr.args();
-                lines.push(stack.split_off(stack.len() - n));
+                lines.push(stack.split_off(stack.len().saturating_sub(n)));
                 curr = prev;
             } else {
                 curr = curr.compose(prev)

@@ -475,6 +475,7 @@ li {
 #settings>*>* {
     display: inline-block;
     white-space: nowrap;
+    width: max(20%, 10em)
 }
 
 input[type=number] {

@@ -2027,7 +2027,7 @@ pub fn Editor<'a>(
                             />
                         </div>
                         <div title="Enable LGBTQ+ colors">
-                            "Gayness:"
+                            "🏳️‍🌈:"
                             <select on:change=on_select_gayness>
                                 <option value={Gayness::None.str()} selected={get_gayness() == Gayness::None}>
                                     {Gayness::None.str()}

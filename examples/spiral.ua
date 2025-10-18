@@ -4,7 +4,7 @@ F ← ⌝⊡⊃(
     ⊏⊙A₂                  # Directions
     ⊂0\+                  # Offsets
   )
-  +¤⌊÷2⊟. # Indices
+  +¤⌊÷2˙⊟ # Indices
 | +1⇡˙×   # Numbers
 )
 

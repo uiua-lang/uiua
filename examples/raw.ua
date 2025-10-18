@@ -2,7 +2,7 @@
 &raw1
 Dirs ← [0_1 0_¯1 ¯1_0 1_0 0_0]
 Keys ← "wsad"
-Size ← ⊟.⊢&ts
+Size ← ˙⊟⊢&ts
 ◌◌⍢(
   ⊏⊙Dirs⬚4⊢⊚=Keys       # Select input dir
   ↧-1Size↥⊚2+           # Move

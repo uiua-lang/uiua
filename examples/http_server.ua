@@ -16,18 +16,18 @@ Listener ← &tcpl "0.0.0.0:8080"
 &p $ Server started
 
 # Mime types
-GetExt ← °□⊣ ⊜□ ≠@. .
+GetExt ← °□⊣ ⊜□ ⊸≠@.
 °⊟⍉[
   {"js" "text/javascript"}
   {"wasm" "application/wasm"}
 ]
 ExtMimeExt  ←
 ExtMimeMime ←
-ExtMime     ← °□⊏:⊂ExtMimeMime □⊂"text/": ⨂ ExtMimeExt□.
+ExtMime     ← °□⊏⊃(⨂ExtMimeExt□|⊂ExtMimeMime□⊂"text/")
 
 # ? Status Mime Bytes
 Response ← (
-  ⊙⊙(⧻.)
+  ⊙⊙⊸⧻
   $$ HTTP/1.1 _
   $$ Content-Type: _
   $$ Content-Length: _
@@ -40,7 +40,7 @@ Response ← (
 NotFound    ← Response "404 Not Found" "text/plain" utf₈"Not Found"
 ServerError ← Response "500 Internal Server Error" "text/plain"
 PageLoadError ← ⋅(
-  /↥⌕"The system cannot find the file specified".
+  /↥⊸⌕"The system cannot find the file specified"
   ⨬(NotFound◌|ServerError)
 )
 Page ← ⍣(
@@ -50,10 +50,10 @@ Page ← ⍣(
 Home ← (Page "/index.html")
 
 Respond ← ◌pool(
-  &p $"Request from _" &tcpaddr.
+  &p $"Request from _" ⊸&tcpaddr
   # Extract path from request
-  °□⊡1 ⊜□≠@ . &ru "\r\n\r\n".
-  &p $"Request:\n_".
+  °□⊡1 ⊜□⊸≠@  ⊸&ru "\r\n\r\n"
+  &p⊸$"Request:\n_"
 
   # Route to handler
   ⨬(Page|Home) ⊸≍"/"

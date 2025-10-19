@@ -29,7 +29,7 @@ If code generates multiple outputs, those outputs will be displayed on multiple 
 × 2 10
 ```
 
-Outputs will be displayed on multiple lines even if they were generated on the same line. The value that was generated last will be displayed at the bottom.
+Outputs generated on the same line will appear on the same line in output.
 
 ```uiua
 + 1 2 5

@@ -757,8 +757,7 @@ impl Parser<'_> {
             self.diagnostics.push(Diagnostic::new(
                 format!(
                     "Binding names with 2 or more characters should be TitleCase \
-                    to avoid collisions with future builtin functions.\n\
-                    Try `{}` instead of `{}`",
+                    to avoid collisions with future builtin functions. Try `{}` instead of `{}`.",
                     captialized, name.value
                 ),
                 name.span.clone(),

@@ -18,6 +18,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add an `Amen` audio constant
 - Optimize [`evert ⧋`](https://uiua.org/docs/evert) on pervasives
 - Values generated on the same line in code will appear on the same line in output
+- Fix a bug preventing identifiers with non-alphabetic combining characters
 ### Website
 - Reword all documentation and tutorials to no longer refer to a stack
   - Introduce argument manipulation modifiers earlier in the tutorial

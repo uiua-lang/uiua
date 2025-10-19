@@ -1327,7 +1327,7 @@ impl<'a> Lexer<'a> {
                 }
                 // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c)
-                    || c.chars().all(is_ident_char)
+                    || c.chars().any(is_ident_char)
                     || "&!‼'′″‴".contains(c) =>
                 {
                     // Get ident start

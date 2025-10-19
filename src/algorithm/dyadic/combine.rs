@@ -421,8 +421,10 @@ impl<T: ArrayValue> Array<T> {
                                 self.meta.label = Some(label);
                             }
                         }
-                        self.data.extend_from_cowslice(other.data);
                         self.shape[0] += other.shape[0];
+                        validate_size_of::<T>(self.shape.iter().copied())
+                            .map_err(|e| ctx.error(e))?;
+                        self.data.extend_from_cowslice(other.data);
                     } else {
                         if other.meta.label.is_none() {
                             if let Some(label) = self.meta.take_label() {
@@ -431,8 +433,10 @@ impl<T: ArrayValue> Array<T> {
                         }
                         let rot_len = self.data.len();
                         other.data.extend_from_cowslice(self.data);
-                        other.data.as_mut_slice().rotate_right(rot_len);
                         other.shape[0] += self.shape[0];
+                        validate_size_of::<T>(other.shape.iter().copied())
+                            .map_err(|e| ctx.error(e))?;
+                        other.data.as_mut_slice().rotate_right(rot_len);
                         other.meta = self.meta;
                         self = other;
                     }

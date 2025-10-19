@@ -992,10 +992,7 @@ impl Uiua {
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
-        self.rt
-            .stack
-            .pop()
-            .ok_or_else(|| self.error(format!("Stack was empty when getting {}", arg.arg_name())))
+        (self.rt.stack.pop()).ok_or_else(|| self.error(format!("Missing {}", arg.arg_name())))
     }
     /// Pop a value and try to convert it
     pub fn pop_convert<T>(
@@ -1202,10 +1199,7 @@ impl Uiua {
     }
     pub(crate) fn require_height(&self, n: usize) -> UiuaResult<usize> {
         if self.rt.stack.len() < n {
-            return Err(self.error(format!(
-                "Stack was empty when getting argument {}",
-                self.rt.stack.len() + 1
-            )));
+            return Err(self.error(format!("Missing argument {}", self.rt.stack.len() + 1)));
         }
         Ok(self.rt.stack.len() - n)
     }
@@ -1246,10 +1240,7 @@ impl Uiua {
     /// Values are cloned in the order they were pushed
     pub fn clone_stack_top(&self, n: usize) -> UiuaResult<Vec<Value>> {
         if self.rt.stack.len() < n {
-            return Err(self.error(format!(
-                "Stack was empty getting argument {}",
-                n - self.rt.stack.len()
-            )));
+            return Err(self.error(format!("Missing argument {}", n - self.rt.stack.len())));
         }
         Ok(self.rt.stack.iter().rev().take(n).rev().cloned().collect())
     }
@@ -1748,7 +1739,7 @@ impl Uiua {
 
 /// A trait for types that can be used as argument specifiers for [`Uiua::pop`]
 ///
-/// If the stack is empty, the error message will be "Stack was empty when getting {arg_name}"
+/// If the stack is empty, the error message will be "Missing {arg_name}"
 pub trait StackArg {
     /// Get the name of the argument
     fn arg_name(self) -> String;

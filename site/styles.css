@@ -641,8 +641,8 @@ option,
 
 .output-values {
     display: flex;
-    flex-wrap: nowrap;
-    gap: 1em;
+    flex-wrap: wrap-reverse;
+    column-gap: 1em;
     align-items: center;
     font-family: "Code Font", monospace;
     font-size: inherit;

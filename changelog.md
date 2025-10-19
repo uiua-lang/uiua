@@ -9,12 +9,14 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
+- Change experimental subscripted [`transpose ⍉`](https://uiua.org/docs/transpose) to transpose the first N axes
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)
 - Deprecate experimental [`reach 𝄐`](https://uiua.org/docs/reach)
 ### Interpreter
 - Add option to provide folder as test cases destination
 - Add an `Amen` audio constant
+- Optimize [`evert ⧋`](https://uiua.org/docs/evert) on pervasives
 - Values generated on the same line in code will appear on the same line in output
 ### Website
 - Reword all documentation and tutorials to no longer refer to a stack

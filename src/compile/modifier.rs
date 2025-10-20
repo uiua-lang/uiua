@@ -588,14 +588,28 @@ impl Compiler {
                 node
             }),
             Dip => func!({
-                let (f, span) = self.monadic_modifier_op(modified)?;
-                let span = self.add_span(span);
+                let (f, _) = self.monadic_modifier_op(modified)?;
+                let span = modified.modifier.span.clone();
                 match f.node {
-                    Node::Mod(Dip, args, _) => Node::ImplMod(ImplPrimitive::DipN(2), args, span),
-                    Node::ImplMod(ImplPrimitive::DipN(n), args, _) => {
+                    Node::Mod(Dip, args, spandex) => {
+                        let inner_span =
+                            (self.get_span(spandex).code()).unwrap_or_else(CodeSpan::dummy);
+                        let span = self.add_span(span.merge(inner_span));
+                        Node::ImplMod(ImplPrimitive::DipN(2), args, span)
+                    }
+                    Node::ImplMod(ImplPrimitive::DipN(n), args, spandex) => {
+                        let inner_span =
+                            (self.get_span(spandex).code()).unwrap_or_else(CodeSpan::dummy);
+                        let span = self.add_span(span.merge(inner_span));
                         Node::ImplMod(ImplPrimitive::DipN(n + 1), args, span)
                     }
-                    _ => Node::Mod(Dip, eco_vec![f], span),
+                    Node::Prim(Identity, spandex) => {
+                        let inner_span =
+                            (self.get_span(spandex).code()).unwrap_or_else(CodeSpan::dummy);
+                        let span = self.add_span(span.merge(inner_span));
+                        Node::ImplMod(ImplPrimitive::DipN(2), eco_vec![SigNode::default()], span)
+                    }
+                    _ => Node::Mod(Dip, eco_vec![f], self.add_span(span)),
                 }
             }),
             Fork => {

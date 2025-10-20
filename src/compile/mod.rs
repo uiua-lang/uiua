@@ -1614,7 +1614,16 @@ impl Compiler {
                 inner
             }
             SemanticComment::NoInline => Node::NoInline(inner.into()),
-            SemanticComment::TrackCaller => Node::TrackCaller(inner.into()),
+            SemanticComment::TrackCaller => Node::TrackCaller(
+                match self.sig_of(&inner, &span) {
+                    Ok(sig) => SigNode::new(sig, inner),
+                    Err(e) => {
+                        self.errors.push(e);
+                        SigNode::default()
+                    }
+                }
+                .into(),
+            ),
             SemanticComment::External => inner,
             SemanticComment::Deprecated(_) => inner,
             SemanticComment::Boo => {

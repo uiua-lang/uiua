@@ -1985,7 +1985,8 @@ impl Compiler {
                 .iter()
                 .find_map(|branch| self.node_unbound_index(&branch.node)),
             Node::Array { inner, .. } => self.node_unbound_index(inner),
-            Node::NoInline(node) | Node::TrackCaller(node) => self.node_unbound_index(node),
+            Node::NoInline(node) => self.node_unbound_index(node),
+            Node::TrackCaller(sn) => self.node_unbound_index(&sn.node),
             _ => None,
         }
     }

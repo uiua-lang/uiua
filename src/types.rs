@@ -361,7 +361,8 @@ impl TypeRt<'_> {
                 }
                 _ => return Err(TypeError::NotSupported),
             },
-            Node::NoInline(inner) | Node::TrackCaller(inner) => self.node(inner)?,
+            Node::NoInline(inner) => self.node(inner)?,
+            Node::TrackCaller(inner) => self.node(&inner.node)?,
             &Node::PushUnder(n, _) => {
                 for _ in 0..n {
                     let value = self.pop()?;

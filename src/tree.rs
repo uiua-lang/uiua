@@ -73,7 +73,7 @@ node!(
     /// Do not inline this node
     NoInline(inner(Arc<Node>)),
     /// Track the caller of this node
-    TrackCaller(inner(Arc<Node>)),
+    TrackCaller(inner(Arc<SigNode>)),
     /// Push a value onto the stack
     (#[serde(untagged)] rep),
     Push(val(Value)),
@@ -555,7 +555,8 @@ impl Node {
     }
     pub(crate) fn inner(&self) -> &Node {
         match self {
-            Node::TrackCaller(inner) | Node::NoInline(inner) => inner.inner(),
+            Node::NoInline(inner) => inner.inner(),
+            Node::TrackCaller(inner) => inner.node.inner(),
             Node::CustomInverse(cust, ..) => {
                 if let Ok(sn) = cust.normal.as_ref() {
                     sn.node.inner()
@@ -568,7 +569,8 @@ impl Node {
     }
     fn inner_mut(&mut self) -> &mut Node {
         match self {
-            Node::TrackCaller(inner) | Node::NoInline(inner) => Arc::make_mut(inner),
+            Node::NoInline(inner) => Arc::make_mut(inner).inner_mut(),
+            Node::TrackCaller(inner) => Arc::make_mut(inner).node.inner_mut(),
             node => node,
         }
     }
@@ -601,9 +603,8 @@ impl Node {
     pub fn sub_nodes(&self) -> Box<dyn Iterator<Item = &Node> + '_> {
         match self {
             Node::Run(nodes) => Box::new(nodes.iter()),
-            Node::Array { inner, .. } | Node::TrackCaller(inner) | Node::NoInline(inner) => {
-                Box::new(once(&**inner))
-            }
+            Node::Array { inner, .. } | Node::NoInline(inner) => Box::new(once(&**inner)),
+            Node::TrackCaller(inner) => Box::new(once(&inner.node)),
             Node::Mod(_, args, _) | Node::ImplMod(_, args, _) => {
                 Box::new(args.iter().map(|sn| &sn.node))
             }
@@ -615,9 +616,10 @@ impl Node {
     pub fn sub_nodes_mut(&mut self) -> Box<dyn Iterator<Item = &mut Node> + '_> {
         match self {
             Node::Run(nodes) => Box::new(nodes.make_mut().iter_mut()),
-            Node::Array { inner, .. } | Node::TrackCaller(inner) | Node::NoInline(inner) => {
+            Node::Array { inner, .. } | Node::NoInline(inner) => {
                 Box::new(once(Arc::make_mut(inner)))
             }
+            Node::TrackCaller(inner) => Box::new(once(&mut Arc::make_mut(inner).node)),
             Node::Mod(_, args, _) | Node::ImplMod(_, args, _) => {
                 Box::new(args.make_mut().iter_mut().map(|sn| &mut sn.node))
             }

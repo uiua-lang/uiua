@@ -575,7 +575,8 @@ impl VirtualEnv {
                     self.stack.push();
                 }
             }
-            Node::TrackCaller(inner) | Node::NoInline(inner) => self.node(inner)?,
+            Node::NoInline(inner) => self.node(inner)?,
+            Node::TrackCaller(inner) => self.node(&inner.node)?,
         }
         self.node_depth -= 1;
         // println!("{node:?} -> {} ({})", self.stack.sig(), self.under.sig());

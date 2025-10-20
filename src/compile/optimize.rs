@@ -78,7 +78,7 @@ impl Node {
             NoInline(inner) => {
                 optimized |= Arc::make_mut(inner).optimize_impl(level.min(OptLevel::Early), true)
             }
-            TrackCaller(inner) => optimized |= Arc::make_mut(inner).optimize_impl(level, true),
+            TrackCaller(inner) => optimized |= Arc::make_mut(inner).node.optimize_impl(level, true),
             CustomInverse(cust, _) => {
                 let cust = Arc::make_mut(cust);
                 if let Ok(normal) = cust.normal.as_mut() {

@@ -288,7 +288,7 @@ impl Compiler {
             }
             node.push(Node::new_push(i));
             node.push(Node::Prim(Primitive::Pick, span));
-            node = Node::TrackCaller(node.into());
+            node = Node::TrackCaller(node.sig_node().unwrap().into());
             if boxed {
                 node.push(Node::ImplPrim(ImplPrimitive::UnBox, span));
                 node.push(Node::RemoveLabel(Some(field.name.clone()), span));
@@ -365,7 +365,10 @@ impl Compiler {
                     arg.node.push(Node::Label(field.name.clone(), span));
                 } else if data.variant {
                     arg.node.push(Node::TrackCaller(
-                        Node::ImplPrim(ImplPrimitive::ValidateNonBoxedVariant, field.span).into(),
+                        Node::ImplPrim(ImplPrimitive::ValidateNonBoxedVariant, field.span)
+                            .sig_node()
+                            .unwrap()
+                            .into(),
                     ));
                 }
                 field_nodes.push(arg);

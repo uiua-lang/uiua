@@ -295,7 +295,7 @@ impl Compiler {
                     }
                 }
                 if prelude.track_caller {
-                    node = Node::TrackCaller(node.into());
+                    node = Node::TrackCaller(SigNode::new(sig, node).into());
                 }
                 if prelude.no_inline {
                     node = Node::NoInline(node.into());

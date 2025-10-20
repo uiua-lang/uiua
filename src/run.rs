@@ -751,10 +751,10 @@ impl Uiua {
                 Ok(())
             }),
             Node::NoInline(inner) => self.exec(inner),
-            Node::TrackCaller(inner) => {
+            Node::TrackCaller(inner) => self.require_height(inner.sig.args()).and_then(|_| {
                 self.rt.call_stack.last_mut().unwrap().track_caller = true;
                 self.exec(inner)
-            }
+            }),
         };
         #[allow(clippy::print_stdout)]
         if self.rt.time_instrs {

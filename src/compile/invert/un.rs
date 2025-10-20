@@ -213,7 +213,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &ImplBothPat,
     &BracketPat,
     &OnPat,
-    &ByPat,
+    &UnByPat,
     &WithPat,
     &OffPat,
     &RowsPat,
@@ -298,6 +298,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
         DecodeBytes(Some(SubSide::Right)),
     ),
     &(IndexIn, (Flip, Select)),
+    &AntiByPat,
     &AntiMultiKeepPat,
     &AntiEncodings,
     &MatrixDivPat,
@@ -496,7 +497,7 @@ inverse!(OffPat, input, asm, Off, span, [f], {
     Ok((input, inv))
 });
 
-inverse!(ByPat, input, asm, By, span, [f], {
+inverse!(UnByPat, input, asm, By, span, [f], {
     // Under's undo step
     if f.sig.args() == 1 {
         if let [Prim(Shape, span), Prim(Len, _)] = f.node.as_slice() {
@@ -545,6 +546,24 @@ inverse!(ByPat, input, asm, By, span, [f], {
         }
     }
     generic()
+});
+
+inverse!(AntiByPat, input, asm, By, span, [f], {
+    if f.sig.args() != 2 {
+        return generic();
+    }
+    let (before, after) = f.node.under_inverse(Signature::new(1, 1), false, asm)?;
+    let mut inv = before;
+    (0..f.sig.outputs()).for_each(|_| inv.push(Prim(Pop, span)));
+    inv = inv.sig_node()?.dipped(f.sig.outputs(), span).node;
+    inv.prepend(Prim(Flip, span));
+    inv.push(after);
+    let inv_sig = nodes_sig(&inv)?;
+    if inv_sig.args() != f.sig.args() + f.sig.outputs() {
+        // Temporary fix to deny broken inverse
+        return generic();
+    }
+    return Ok((input, inv));
 });
 
 inverse!("Match a constant exactly", (MatchConst, input, asm), {

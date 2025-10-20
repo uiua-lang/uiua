@@ -1,11 +1,9 @@
 # Uiua Todo
 
 # 0.18
-- Recursion ergonomics for `path`
-- `transpose` subscripts for leading or trailing axes
-- Sided `box`?
+- Recursion ergonomics for `path` / revise `recur`
 - Sided `join`
-- `anti by` inverses?
+- `table` non-lists optimizations?
 - `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`

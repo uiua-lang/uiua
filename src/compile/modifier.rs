@@ -518,7 +518,6 @@ impl Compiler {
             }
             On => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
-                let span = self.add_span(modified.modifier.span.clone());
                 if let Some(n) = subscript
                     .and_then(|sub| {
                         self.subscript_n_only(&sub, On)
@@ -526,10 +525,23 @@ impl Compiler {
                     })
                     .filter(|&n| n > 1)
                 {
+                    let span = self.add_span(modified.modifier.span.clone());
                     Node::ImplMod(ImplPrimitive::OnSub(n), eco_vec![sn], span)
                 } else {
-                    let prim = if sn.sig.args() == 0 { Dip } else { On };
-                    Node::Mod(prim, eco_vec![sn], span)
+                    match sn.node {
+                        Node::Prim(Identity, spandex) => {
+                            let inner_span =
+                                (self.get_span(spandex).code()).unwrap_or_else(CodeSpan::dummy);
+                            let span =
+                                self.add_span(modified.modifier.span.clone().merge(inner_span));
+                            Node::Prim(Dup, span)
+                        }
+                        _ => {
+                            let prim = if sn.sig.args() == 0 { Dip } else { On };
+                            let span = self.add_span(modified.modifier.span.clone());
+                            Node::Mod(prim, eco_vec![sn], span)
+                        }
+                    }
                 }
             }
             By => {

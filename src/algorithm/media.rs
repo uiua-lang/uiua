@@ -256,9 +256,8 @@ pub(crate) fn audio_encode(env: &mut Uiua) -> UiuaResult {
 
         let value = env.pop(3)?;
         let bytes = match format.as_str() {
-            "wav" => {
-                crate::media::value_to_wav_bytes(&value, sample_rate).map_err(|e| env.error(e))?
-            }
+            "wav" => value_to_wav_bytes(&value, sample_rate).map_err(|e| env.error(e))?,
+            "ogg" => value_to_ogg_bytes(&value, sample_rate).map_err(|e| env.error(e))?,
             format => {
                 return Err(env.error(format!("Invalid or unsupported audio format: {format}")))
             }
@@ -294,12 +293,17 @@ pub(crate) fn audio_decode(env: &mut Uiua) -> UiuaResult {
             }
             _ => return Err(env.error("Audio bytes must be a numeric array")),
         };
-        let (array, sample_rate) =
-            crate::media::array_from_wav_bytes(&bytes).map_err(|e| env.error(e))?;
-        env.push(array);
-        env.push(sample_rate as usize);
-        env.push("wav");
-        Ok(())
+        if let Ok(((array, sample_rate), format)) = array_from_wav_bytes(&bytes)
+            .map(|a| (a, "wav"))
+            .or_else(|_| array_from_ogg_bytes(&bytes).map(|a| (a, "ogg")))
+        {
+            env.push(array);
+            env.push(sample_rate as usize);
+            env.push(format);
+            Ok(())
+        } else {
+            Err(env.error("Invalid or unsupported audio bytes"))
+        }
     }
     #[cfg(not(feature = "audio_encode"))]
     Err(env.error("Audio decoding is not supported in this environment"))
@@ -440,7 +444,7 @@ fn complex_color(c: Complex) -> [f64; 3] {
 }
 
 #[doc(hidden)]
-pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
+pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f32>>, String> {
     let orig = audio;
     let mut audio = audio;
     let mut transposed;
@@ -449,9 +453,9 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
         transposed.transpose();
         audio = &transposed;
     }
-    let interleaved: Vec<f64> = match audio {
-        Value::Num(nums) => nums.data.iter().copied().collect(),
-        Value::Byte(byte) => byte.data.iter().map(|&b| b as f64).collect(),
+    let interleaved: Vec<f32> = match audio {
+        Value::Num(nums) => nums.data.iter().map(|&n| n as f32).collect(),
+        Value::Byte(byte) => byte.data.iter().map(|&b| b as f32).collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
     let (length, mut channels) = match &*audio.shape {
@@ -493,7 +497,7 @@ pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, St
     {
         channels_to_wav_bytes_impl(
             channels,
-            |f| (f * i16::MAX as f64) as i16,
+            |f| (f * i16::MAX as f32) as i16,
             16,
             SampleFormat::Int,
             sample_rate,
@@ -501,14 +505,48 @@ pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, St
     }
     #[cfg(feature = "audio")]
     {
-        channels_to_wav_bytes_impl(channels, |f| f as f32, 32, SampleFormat::Float, sample_rate)
+        channels_to_wav_bytes_impl(channels, |f| f, 32, SampleFormat::Float, sample_rate)
     }
+}
+
+#[doc(hidden)]
+#[cfg(feature = "audio_encode")]
+pub fn value_to_ogg_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, String> {
+    use vorbis_rs::*;
+    if sample_rate == 0 {
+        return Err("Sample rate must not be 0".to_string());
+    }
+    let channels = value_to_audio_channels(audio)?;
+    let mut bytes = Vec::new();
+    let mut encoder = VorbisEncoderBuilder::new(
+        sample_rate.try_into().unwrap(),
+        (channels.len() as u8).try_into().unwrap(),
+        &mut bytes,
+    )
+    .map_err(|e| e.to_string())?
+    .build()
+    .map_err(|e| e.to_string())?;
+    let mut start = 0;
+    let mut buffers = vec![[].as_slice(); channels.len()];
+    const WINDOW_SIZE: usize = 1000;
+    while start < channels[0].len() {
+        let end = channels[0].len().min(start + WINDOW_SIZE);
+        for (i, ch) in channels.iter().enumerate() {
+            buffers[i] = &ch[start..end];
+        }
+        encoder
+            .encode_audio_block(&buffers)
+            .map_err(|e| e.to_string())?;
+        start += WINDOW_SIZE;
+    }
+    drop(encoder);
+    Ok(bytes)
 }
 
 #[cfg(feature = "audio_encode")]
 fn channels_to_wav_bytes_impl<T: hound::Sample + Copy>(
-    channels: Vec<Vec<f64>>,
-    convert_samples: impl Fn(f64) -> T + Copy,
+    channels: Vec<Vec<f32>>,
+    convert_samples: impl Fn(f32) -> T + Copy,
     bits_per_sample: u16,
     sample_format: SampleFormat,
     sample_rate: u32,
@@ -590,6 +628,32 @@ pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
             "Unsupported sample format: {sample_format:?} {bits_per_sample} bits per sample"
         )),
     }
+}
+
+#[cfg(feature = "audio_encode")]
+#[doc(hidden)]
+pub fn array_from_ogg_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
+    use vorbis_rs::*;
+    let mut decoder = VorbisDecoder::<&[u8]>::new(bytes).map_err(|e| e.to_string())?;
+    let sample_rate: u32 = decoder.sampling_frequency().into();
+    let channel_count = u8::from(decoder.channels()) as usize;
+    let mut channels = vec![Vec::new(); channel_count];
+    while let Some(block) = decoder.decode_audio_block().map_err(|e| e.to_string())? {
+        for (i, ch) in block.samples().iter().enumerate() {
+            channels[i].extend(ch.iter().map(|&s| s as f64));
+        }
+    }
+    let shape = if channel_count == 1 {
+        Shape::from(channels[0].len())
+    } else {
+        Shape::from([channel_count, channels[0].len()])
+    };
+    let mut channels = channels.into_iter();
+    let mut data = EcoVec::from(channels.next().unwrap());
+    for ch in channels {
+        data.extend_from_slice(&ch);
+    }
+    Ok((Array::new(shape, data), sample_rate))
 }
 
 #[cfg(feature = "audio_encode")]

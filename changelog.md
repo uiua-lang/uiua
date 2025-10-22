@@ -17,6 +17,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Add option to provide folder as test cases destination
 - Add an `Amen` audio constant
+- Add `ogg` support to [`audio`](https://uiua.org/docs/audio)
 - Optimize [`evert ⧋`](https://uiua.org/docs/evert) on pervasives
 - Values generated on the same line in code will appear on the same line in output
 - Fix a bug preventing identifiers with non-alphabetic combining characters

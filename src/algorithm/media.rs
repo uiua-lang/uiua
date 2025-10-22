@@ -511,17 +511,17 @@ pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, St
 
 #[doc(hidden)]
 #[cfg(feature = "audio_encode")]
-pub fn value_to_ogg_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, String> {
+pub fn value_to_ogg_bytes(_audio: &Value, _sample_rate: u32) -> Result<Vec<u8>, String> {
     #[cfg(feature = "ogg")]
     {
         use vorbis_rs::*;
-        if sample_rate == 0 {
+        if _sample_rate == 0 {
             return Err("Sample rate must not be 0".to_string());
         }
-        let channels = value_to_audio_channels(audio)?;
+        let channels = value_to_audio_channels(_audio)?;
         let mut bytes = Vec::new();
         let mut encoder = VorbisEncoderBuilder::new(
-            sample_rate.try_into().unwrap(),
+            _sample_rate.try_into().unwrap(),
             (channels.len() as u8).try_into().unwrap(),
             &mut bytes,
         )
@@ -545,7 +545,7 @@ pub fn value_to_ogg_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, St
         Ok(bytes)
     }
     #[cfg(not(feature = "ogg"))]
-    Err("ogg encoding is not supported in this environment")
+    Err("ogg encoding is not supported in this environment".into())
 }
 
 #[cfg(feature = "audio_encode")]
@@ -637,11 +637,11 @@ pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
 
 #[cfg(feature = "audio_encode")]
 #[doc(hidden)]
-pub fn array_from_ogg_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
+pub fn array_from_ogg_bytes(_bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
     #[cfg(feature = "ogg")]
     {
         use vorbis_rs::*;
-        let mut decoder = VorbisDecoder::<&[u8]>::new(bytes).map_err(|e| e.to_string())?;
+        let mut decoder = VorbisDecoder::<&[u8]>::new(_bytes).map_err(|e| e.to_string())?;
         let sample_rate: u32 = decoder.sampling_frequency().into();
         let channel_count = u8::from(decoder.channels()) as usize;
         let mut channels = vec![Vec::new(); channel_count];

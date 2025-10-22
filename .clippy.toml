@@ -1,23 +1,22 @@
 allowed-duplicate-crates = [
   "bitflags",
+  "core-foundation",
+  "core-foundation-sys",
+  "cfg-if", # 0.1.10 used by nokhwa
   "dashmap", # upgraded to 6.* by dependabot, not sure if it should be downgraded back
-
   "getrandom",
   "wasi", # 0.14 needed by getrandom@0.3.2, 0.11 by mio@1.0.3 and getrandom@0.2.15
-
   "hashbrown", # TODO: can be resolved by updating dashmap to 7.0.0-rc0
   "objc2",
   "objc2-foundation",
-
   "proc-macro-utils", # TODO: can be resolved by updating leptos crates to 0.7.0
   "serde_qs", # TODO: can be resolved by updating leptos crates to 0.7.0
-
   "rustix",
   "linux-raw-sys", # needed by rustix@0.38
-
   "thiserror",
   "thiserror-impl",
   "ttf-parser", # both versions are brought by cosmic-text@0.12.1
+  "windows",
   "windows-core",
   "windows-implement",
   "windows-interface",

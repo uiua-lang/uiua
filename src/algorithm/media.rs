@@ -512,35 +512,40 @@ pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, St
 #[doc(hidden)]
 #[cfg(feature = "audio_encode")]
 pub fn value_to_ogg_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, String> {
-    use vorbis_rs::*;
-    if sample_rate == 0 {
-        return Err("Sample rate must not be 0".to_string());
-    }
-    let channels = value_to_audio_channels(audio)?;
-    let mut bytes = Vec::new();
-    let mut encoder = VorbisEncoderBuilder::new(
-        sample_rate.try_into().unwrap(),
-        (channels.len() as u8).try_into().unwrap(),
-        &mut bytes,
-    )
-    .map_err(|e| e.to_string())?
-    .build()
-    .map_err(|e| e.to_string())?;
-    let mut start = 0;
-    let mut buffers = vec![[].as_slice(); channels.len()];
-    const WINDOW_SIZE: usize = 1000;
-    while start < channels[0].len() {
-        let end = channels[0].len().min(start + WINDOW_SIZE);
-        for (i, ch) in channels.iter().enumerate() {
-            buffers[i] = &ch[start..end];
+    #[cfg(feature = "ogg")]
+    {
+        use vorbis_rs::*;
+        if sample_rate == 0 {
+            return Err("Sample rate must not be 0".to_string());
         }
-        encoder
-            .encode_audio_block(&buffers)
-            .map_err(|e| e.to_string())?;
-        start += WINDOW_SIZE;
+        let channels = value_to_audio_channels(audio)?;
+        let mut bytes = Vec::new();
+        let mut encoder = VorbisEncoderBuilder::new(
+            sample_rate.try_into().unwrap(),
+            (channels.len() as u8).try_into().unwrap(),
+            &mut bytes,
+        )
+        .map_err(|e| e.to_string())?
+        .build()
+        .map_err(|e| e.to_string())?;
+        let mut start = 0;
+        let mut buffers = vec![[].as_slice(); channels.len()];
+        const WINDOW_SIZE: usize = 1000;
+        while start < channels[0].len() {
+            let end = channels[0].len().min(start + WINDOW_SIZE);
+            for (i, ch) in channels.iter().enumerate() {
+                buffers[i] = &ch[start..end];
+            }
+            encoder
+                .encode_audio_block(&buffers)
+                .map_err(|e| e.to_string())?;
+            start += WINDOW_SIZE;
+        }
+        drop(encoder);
+        Ok(bytes)
     }
-    drop(encoder);
-    Ok(bytes)
+    #[cfg(not(feature = "ogg"))]
+    Err("ogg encoding is not supported in this environment")
 }
 
 #[cfg(feature = "audio_encode")]
@@ -633,27 +638,32 @@ pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
 #[cfg(feature = "audio_encode")]
 #[doc(hidden)]
 pub fn array_from_ogg_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
-    use vorbis_rs::*;
-    let mut decoder = VorbisDecoder::<&[u8]>::new(bytes).map_err(|e| e.to_string())?;
-    let sample_rate: u32 = decoder.sampling_frequency().into();
-    let channel_count = u8::from(decoder.channels()) as usize;
-    let mut channels = vec![Vec::new(); channel_count];
-    while let Some(block) = decoder.decode_audio_block().map_err(|e| e.to_string())? {
-        for (i, ch) in block.samples().iter().enumerate() {
-            channels[i].extend(ch.iter().map(|&s| s as f64));
+    #[cfg(feature = "ogg")]
+    {
+        use vorbis_rs::*;
+        let mut decoder = VorbisDecoder::<&[u8]>::new(bytes).map_err(|e| e.to_string())?;
+        let sample_rate: u32 = decoder.sampling_frequency().into();
+        let channel_count = u8::from(decoder.channels()) as usize;
+        let mut channels = vec![Vec::new(); channel_count];
+        while let Some(block) = decoder.decode_audio_block().map_err(|e| e.to_string())? {
+            for (i, ch) in block.samples().iter().enumerate() {
+                channels[i].extend(ch.iter().map(|&s| s as f64));
+            }
         }
+        let shape = if channel_count == 1 {
+            Shape::from(channels[0].len())
+        } else {
+            Shape::from([channel_count, channels[0].len()])
+        };
+        let mut channels = channels.into_iter();
+        let mut data = EcoVec::from(channels.next().unwrap());
+        for ch in channels {
+            data.extend_from_slice(&ch);
+        }
+        Ok((Array::new(shape, data), sample_rate))
     }
-    let shape = if channel_count == 1 {
-        Shape::from(channels[0].len())
-    } else {
-        Shape::from([channel_count, channels[0].len()])
-    };
-    let mut channels = channels.into_iter();
-    let mut data = EcoVec::from(channels.next().unwrap());
-    for ch in channels {
-        data.extend_from_slice(&ch);
-    }
-    Ok((Array::new(shape, data), sample_rate))
+    #[cfg(not(feature = "ogg"))]
+    Err("ogg decoding is not supported in this environment".into())
 }
 
 #[cfg(feature = "audio_encode")]

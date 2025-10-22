@@ -3391,7 +3391,7 @@ primitive!(
     /// You can decode a byte array into audio with [un][audio].
     /// This returns the audio format as a string, the audio sample rate, and an array representing the audio samples.
     ///
-    /// Currently, `wav` and `ogg` formats are supported.
+    /// Currently `wav` encoding is supported in most environments. `ogg` encoding is supported on native environments only.
     ///
     /// This simple example will load an audio file, halve its sample rate, and re-encode it.
     /// ex! ⍜(°audio &frab "test.wav")⊙⊓(⌊÷2|▽0.5)

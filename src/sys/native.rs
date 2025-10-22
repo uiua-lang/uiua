@@ -1161,6 +1161,14 @@ impl SysBackend for NativeSys {
             }
         }
     }
+    #[cfg(feature = "webcam")]
+    fn webcam_list(&self) -> Result<Vec<String>, String> {
+        Ok(nokhwa::query(nokhwa::utils::ApiBackend::Auto)
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .map(|info| info.human_name())
+            .collect())
+    }
     #[cfg(feature = "ffi")]
     fn ffi(
         &self,

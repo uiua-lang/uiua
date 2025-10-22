@@ -13,8 +13,6 @@
 - `under group/partition inventory` optimization
 - Reserved modifier glyphs?
 - Streaming gif and audio encoding
-- Add system function to list cameras
-  - Make `&camcap` accept a name for the camera
 
 ## Planned Features
 Features that are planned to be implemented in the future.

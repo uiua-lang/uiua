@@ -4066,10 +4066,13 @@ sys_op! {
     (2(0), UdpSetMaxMsgLength, Udp, "&udpsml", "udp - set maximum message length", Mutating),
     /// Capture an image from a webcam
     ///
-    /// Takes the index of the webcam to capture from.
+    /// Takes the index or name of the webcam to capture from.
+    /// Webcam names can be listed with `&camlist`.
     ///
     /// Returnes a rank-3 numeric array representing the image.
     (1, WebcamCapture, Misc, "&camcap", "webcam - capture", Mutating),
+    /// List names of available webcams
+    (0(1), WebcamList, Misc, "&camlist", "webcam - list"),
     /// Call a foreign function interface
     ///
     /// *Warning ⚠️: Using FFI is deeply unsafe. Calling a function incorrectly is undefined behavior.*

@@ -10,6 +10,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`anti ⌝`](https://uiua.org/docs/anti)[`by ⊸`](https://uiua.org/docs/by) for dyadic functions
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
+- Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
+  - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
 - Change experimental subscripted [`transpose ⍉`](https://uiua.org/docs/transpose) to transpose the first N axes
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)

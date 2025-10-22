@@ -491,6 +491,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn webcam_capture(&self, index: usize) -> Result<WebcamImage, String> {
         Err("Capturing from webcam is not supported in this environment".into())
     }
+    /// List available webcams
+    fn webcam_list(&self) -> Result<Vec<String>, String> {
+        Err("Listing webcams is not supported in this environment".into())
+    }
     /// Call a foreign function interface
     fn ffi(
         &self,
@@ -1233,7 +1237,16 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 .map_err(|e| env.error(e))?;
         }
         SysOp::WebcamCapture => {
-            let index = env.pop(1)?.as_nat(env, "Webcam index must be an integer")?;
+            let index = env.pop(1)?;
+            let index = match index.as_nat(env, "Webcam selector must be an integer or string") {
+                Ok(index) => index,
+                Err(e) => {
+                    let name = index.as_string(env, "").map_err(|_| e)?;
+                    let names = env.rt.backend.webcam_list().map_err(|e| env.error(e))?;
+                    (names.iter().position(|n| n == &name))
+                        .ok_or_else(|| env.error(format!("Webcam {name:?} is not available")))?
+                }
+            };
             let _image = (env.rt.backend)
                 .webcam_capture(index)
                 .map_err(|e| env.error(e))?;
@@ -1241,6 +1254,11 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             env.push(crate::media::rgb_image_to_array(_image));
             #[cfg(not(feature = "image"))]
             return Err(env.error("Webcam capture is not supported in this environment"));
+        }
+        SysOp::WebcamList => {
+            let names = env.rt.backend.webcam_list().map_err(|e| env.error(e))?;
+            let arr = Array::from_iter(names.into_iter().map(Into::into).map(Boxed));
+            env.push(arr);
         }
         SysOp::Ffi => {
             let sig_def = env.pop(1)?;

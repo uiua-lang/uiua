@@ -217,6 +217,7 @@ clipboard = ["arboard"]
 debug = []
 default = [
   # "window", # Comment in for dev
+  "webcam", # Comment in for dev
   "binary",
   "terminal_image",
   "lsp",

@@ -44,7 +44,7 @@ struct GlobalNativeSys {
     tls_sockets: DashMap<Handle, TlsSocket>,
     udp_sockets: DashMap<Handle, UdpSocket>,
     #[cfg(feature = "webcam")]
-    cam_channels: DashMap<usize, WebcamChannel>,
+    cam_channels: std::sync::Mutex<std::collections::HashMap<usize, WebcamChannel>>,
     hostnames: DashMap<Handle, String>,
     git_paths: DashMap<String, Result<PathBuf, String>>,
     #[cfg(feature = "audio")]
@@ -123,6 +123,7 @@ impl WebcamChannel {
                     recv_tries += 1;
                     if recv_tries > 100 {
                         _ = camera.stop_stream();
+                        _ = image_send.send(Err("camera timed out".into()));
                         break;
                     } else {
                         sleep();
@@ -220,7 +221,7 @@ impl Default for GlobalNativeSys {
             tls_sockets: DashMap::new(),
             udp_sockets: DashMap::new(),
             #[cfg(feature = "webcam")]
-            cam_channels: DashMap::new(),
+            cam_channels: Default::default(),
             hostnames: DashMap::new(),
             git_paths: DashMap::new(),
             #[cfg(feature = "audio")]
@@ -1132,13 +1133,14 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "webcam")]
     fn webcam_capture(&self, index: usize) -> Result<crate::WebcamImage, String> {
+        use std::collections::hash_map::Entry;
         let cam_channels = &NATIVE_SYS.cam_channels;
-        if !cam_channels.contains_key(&index) {
-            let ch = WebcamChannel::new(index)?;
-            cam_channels.insert(index, ch);
-        }
-        let ch = cam_channels.get_mut(&index).unwrap();
-        if ch.send.send(()).is_ok() {
+        let mut cam_channels = cam_channels.lock().unwrap();
+        let ch = match cam_channels.entry(index) {
+            Entry::Occupied(ch) => ch.into_mut(),
+            Entry::Vacant(ch) => ch.insert(WebcamChannel::new(index)?),
+        };
+        if ch.send.try_send(()).is_ok() {
             if let Ok(res) = ch.recv.recv() {
                 res
             } else {
@@ -1148,7 +1150,7 @@ impl SysBackend for NativeSys {
             let ch = WebcamChannel::new(index)?;
             cam_channels.insert(index, ch);
             let ch = cam_channels.get_mut(&index).unwrap();
-            if ch.send.send(()).is_ok() {
+            if ch.send.try_send(()).is_ok() {
                 if let Ok(res) = ch.recv.recv() {
                     res
                 } else {

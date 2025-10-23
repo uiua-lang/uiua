@@ -1362,6 +1362,24 @@ pub fn print_stack(stack: &[Value], color: bool) {
 #[allow(clippy::print_stdout)]
 #[doc(hidden)]
 pub fn print_stack_lines(stack_lines: &[Vec<Value>], color: bool) {
+    #[cfg(feature = "window")]
+    if crate::window::use_window() {
+        use crate::{media::SmartOutput, window::Request};
+        _ = Request::Separator.send();
+        _ = Request::ShowAll(
+            (stack_lines.iter().flat_map(|line| line.iter().rev()))
+                .map(|v| SmartOutput::from_value(v.clone(), 24.0, &NativeSys))
+                .collect(),
+        )
+        .send();
+        _ = Request::ClearBeforeNext.send();
+        let count: usize = stack_lines.iter().map(|line| line.len()).sum();
+        eprintln!(
+            "{count} value{} displayed in window",
+            if count == 1 { "" } else { "s" }
+        );
+        return;
+    }
     for line in format_stack_lines(stack_lines, color) {
         eprintln!("{line}");
     }

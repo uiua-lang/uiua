@@ -349,7 +349,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Group], No, "Inner function must be invertible", "⍜⊕□≡⇌ ⊸≠@ \"I love arrays\"") }
             { inverse_row([Partition], No, "Inner function must be invertible", "⍜⊜□≡⇌ ⊸≠@ \"Hello World\"") }
             { inverse_row([Fold], No, "Inner function must be invertible", "⍜∧⊏(×10) [0 2] ↯2_3⇡6") }
-            { inverse_row([Repeat], Required, "Inner function must be invertible", "⊸⍜⍥(×2) 5 1") }
+            { inverse_row([Repeat], Required, "Inner function must be invertible", "⍜⍥(×2)⟜∘ 5 1") }
             { inverse_row([Repeat], No, "Inner function must be invertible", "°⍥°(↧1000×2) 5") }
             { inverse_row([Switch], No, "", "⍜(⨬⊢⊣|×10) 1 [1 2 3 4]") }
             { inverse_row([Regex], Optional, "Substitution", r#"⍜regex≡(□⊂⋅⊙⇌°□₃) ⊙"Hello, world!" $ (\w)(\w+)"#) }

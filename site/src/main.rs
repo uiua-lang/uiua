@@ -98,13 +98,21 @@ pub fn Site() -> impl IntoView {
         .set_item("visits", &visits.to_string())
         .unwrap();
 
+    let date = Date::new_0();
     let logo_src = match visits % 9 {
         _ if its_called_weewuh() => "/assets/weewuh-logo.png",
         1 => "/assets/uiua-logo.png",
         3 => "/assets/uiua-logo-pride.png",
         5 => "/assets/uiua-logo-scrambledine.png",
         7 => "/assets/uiua-logo-jacob.svg",
-        _ if Date::new_0().get_month() == 5 => "/assets/uiua-logo-pride.png",
+        // Trans Day of Visibility
+        _ if date.get_month() == 2 && date.get_date() == 31 => "/assets/uiua-logo-trans.png",
+        // Pride month
+        _ if date.get_month() == 5 => "/assets/uiua-logo-pride.png",
+        // Halloween
+        _ if date.get_month() == 9 && (28..=31).contains(&date.get_date()) => {
+            "/assets/uiua-logo-halloween.png"
+        }
         _ => "/assets/uiua-logo.png",
     };
 

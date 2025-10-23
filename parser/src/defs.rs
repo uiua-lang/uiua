@@ -1798,9 +1798,9 @@ primitive!(
     ///   : ∧+ [] 10
     ///
     /// If the function takes at least 1 more argument than it returns:
-    /// Later arguments will be used as accumulators.
+    /// Later arguments in the argument list will be used as accumulators.
     /// There will be as many accumulators as the function's outputs.
-    /// Earlier arguments will be iterated over.
+    /// Earlier arguments in the argument list will be iterated over.
     /// The number of iterated arrays is the number of arguments minus the number of outputs.
     /// The function will be repeatedly called with the rows of the iterated arrays, followed by the accumulators.
     /// On each iteration, the returned values will be used as the new accumulators.

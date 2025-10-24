@@ -2008,6 +2008,14 @@ F ← (
   )
 )
 ⊟₁₂₃₄₅₆₇₈₉₀₁
+123,456,789
+1,2,3,4
+12,34
+1,23,456
+123,45,6
+1,2
+123,456.78,9
+123,456.7,9
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

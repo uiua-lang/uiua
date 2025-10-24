@@ -8,6 +8,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Add [`anti ⌝`](https://uiua.org/docs/anti)[`by ⊸`](https://uiua.org/docs/by) for dyadic functions
+- Add digit separators for number literals with `,`. Ex: `123,456.078,9`
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams

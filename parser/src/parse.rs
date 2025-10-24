@@ -1298,7 +1298,7 @@ impl Parser<'_> {
         // Numerator
         let ((numer, mut s), mut span) = self.numer_or_denom()?.into();
         // Denominator
-        if !s.contains(['.', '∞']) {
+        if !s.contains(['.', ',', '∞']) {
             let reset = self.index;
             if self.exact(Primitive::Reduce.into()).is_some() {
                 if let Some(((denom, ds), dspan)) = self
@@ -1391,7 +1391,7 @@ impl Parser<'_> {
             (Ok(1.0), String::new(), None)
         } else if let Some((r, span)) = self.real().map(Into::into) {
             let s = &self.input[span.byte_range()];
-            let s = match &r {
+            let mut s = match &r {
                 Ok(_) if s.contains(['e', 'E']) => {
                     if s.contains('`') {
                         s.replace('`', "¯")
@@ -1399,11 +1399,28 @@ impl Parser<'_> {
                         s.into()
                     }
                 }
+                Ok(_) if s.contains(',') => {
+                    let (whole, frac) = s.split_once('.').map_or((s, ""), |pair| pair);
+                    if let Some(sec) = (whole.split(',').skip(1).find(|sec| sec.len() <= 1))
+                        .or_else(|| frac.rsplit(',').skip(1).find(|sec| sec.len() <= 1))
+                        .or_else(|| whole.rsplit(',').next().filter(|sec| sec.len() <= 2))
+                    {
+                        self.diagnostics.push(Diagnostic::new(
+                            format!("Separated section `{sec}` is too short"),
+                            span.clone(),
+                            DiagnosticKind::Style,
+                            self.inputs.clone(),
+                        ));
+                    }
+                    s.into()
+                }
                 Ok(_) if s.contains('.') && s.ends_with('0') => s.into(),
-                Ok(n) => n.to_string().replace('-', "¯"),
-                Err(_) if s.contains('`') => s.replace('`', "¯"),
+                Ok(n) => n.to_string(),
                 Err(_) => s.into(),
             };
+            if s.contains('`') {
+                s = s.replace('`', "¯");
+            }
             (r, s, Some(span))
         } else if let Some(((n, s), span)) = self.infinity().map(Into::into) {
             is_inf = true;
@@ -1541,6 +1558,10 @@ impl Parser<'_> {
         }
         if s.contains('¯') {
             replaced = s.replace('¯', "-");
+            s = &replaced;
+        }
+        if s.contains(',') {
+            replaced = s.replace(',', "");
             s = &replaced;
         }
         Some(span.sp(s.parse::<f64>().map_err(|e| e.to_string())))

@@ -1425,8 +1425,8 @@ impl Parser<'_> {
                 Ok(n) => n.to_string(),
                 Err(_) => s.into(),
             };
-            if s.contains('`') {
-                s = s.replace('`', "¯");
+            if s.contains(['`', '-']) {
+                s = s.replace(['`', '-'], "¯");
             }
             (r, s, Some(span))
         } else if let Some(((n, s), span)) = self.infinity().map(Into::into) {

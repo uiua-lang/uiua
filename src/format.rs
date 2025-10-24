@@ -2044,12 +2044,14 @@ F,1
 \\\\25cb
 ⊗
 ˜⊗
+`5
 ";
     let output = "\
 F₁
 ○
 ˜⨂
 ⨂
+¯5
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, output);

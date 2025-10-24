@@ -11,6 +11,7 @@ allowed-duplicate-crates = [
   "objc2-foundation",
   "proc-macro-utils", # TODO: can be resolved by updating leptos crates to 0.7.0
   "serde_qs", # TODO: can be resolved by updating leptos crates to 0.7.0
+  "rand_core",
   "rustix",
   "linux-raw-sys", # needed by rustix@0.38
   "thiserror",

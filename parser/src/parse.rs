@@ -1402,8 +1402,15 @@ impl Parser<'_> {
                 Ok(_) if s.contains(',') => {
                     let (whole, frac) = s.split_once('.').map_or((s, ""), |pair| pair);
                     if let Some(sec) = (whole.split(',').skip(1).find(|sec| sec.len() <= 1))
-                        .or_else(|| frac.rsplit(',').skip(1).find(|sec| sec.len() <= 1))
-                        .or_else(|| whole.rsplit(',').next().filter(|sec| sec.len() <= 2))
+                        .filter(|_| whole.contains(','))
+                        .or_else(|| {
+                            (frac.rsplit(',').skip(1).find(|sec| sec.len() <= 1))
+                                .filter(|_| frac.contains(','))
+                        })
+                        .or_else(|| {
+                            (whole.rsplit(',').next())
+                                .filter(|sec| sec.len() <= 2 && whole.contains(','))
+                        })
                     {
                         self.diagnostics.push(Diagnostic::new(
                             format!("Separated section `{sec}` is too short"),

@@ -1327,10 +1327,14 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// `classify` the rows of the value
     pub fn classify(&self) -> Self {
-        if self.rank() == 0 {
-            return 0.into();
-        }
         let map_keys = self.meta.map_keys.clone();
+        if self.rank() == 0 {
+            let mut res = Value::from(0);
+            if let Some(map_keys) = map_keys {
+                res.meta.map_keys = Some(map_keys);
+            }
+            return res;
+        }
         let mut val: Value = val_as_arr!(self, Array::classify).into_iter().collect();
         if let Some(map_keys) = map_keys {
             val.meta.map_keys = Some(map_keys);

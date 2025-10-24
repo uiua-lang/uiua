@@ -1803,7 +1803,6 @@ pub fn seed_random(seed: u64) {
 
 fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
     env.require_height(n)?;
-    let boundaries = stack_boundaries(env);
     let span = format!("{} {}", ImplPrimitive::StackN { n, inverse }, env.span());
     let max_line_len = span.chars().count() + 2;
     let stack_height = env.stack_height() - n;
@@ -1812,18 +1811,6 @@ fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
         .map(Value::show)
         .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
         .map(|lines| format_trace_item_lines(lines, max_line_len))
-        .enumerate()
-        .flat_map(|(i, lines)| {
-            if let Some((_, id)) = boundaries
-                .iter()
-                .find(|(height, _)| i + stack_height == *height)
-            {
-                let id = id.as_ref().map_or_else(String::new, ToString::to_string);
-                vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
-            } else {
-                vec![lines]
-            }
-        })
         .collect();
     env.rt.backend.print_str_trace(&format!("┌╴{span}\n"));
     for line in item_lines.iter().flatten() {
@@ -1853,7 +1840,7 @@ fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
         .map(|lines| format_trace_item_lines(lines, max_line_len))
         .enumerate()
         .flat_map(|(i, lines)| {
-            if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
+            if let Some((_, id)) = boundaries.iter().rfind(|(height, _)| i == *height) {
                 let id = id.as_ref().map_or_else(String::new, ToString::to_string);
                 vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
             } else {

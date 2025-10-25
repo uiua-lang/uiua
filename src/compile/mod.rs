@@ -2138,7 +2138,7 @@ impl Compiler {
                             | (Slf | Backward | Reach | On | By | With | Off)
                             | (Rows | Each | Inventory)
                             | (Repeat | Tuples | Stencil)
-                            | (Fill | Geometric)
+                            | (Fill | Under | Geometric)
                     ) {
                         self.add_error(
                             m.modifier.span.clone().merge(scr.span.clone()),

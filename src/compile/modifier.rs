@@ -1117,16 +1117,27 @@ impl Compiler {
                 Node::CustomInverse(cust.into(), span)
             }
             Under => {
+                let sub_side = subscript.and_then(|sub| {
+                    self.subscript_experimental(Under, &sub.span);
+                    self.subscript_side_only(&sub, Under.format())
+                        .map(|side| sub.span.sp(side))
+                });
                 let (f, g, f_span, _) = self.dyadic_modifier_ops(modified)?;
                 invert::dbgln!("\n/////////////////\n// begin UNDER //\n/////////////////");
                 let normal = {
-                    let (f_before, f_after) = f
-                        .node
+                    let (f_before, mut f_after) = f
                         .under_inverse(g.sig, false, &self.asm)
                         .map_err(|e| self.error(f_span.clone(), e))?;
-                    let mut node = f_before;
+                    if let Some(ss) = sub_side {
+                        if ss.value == SubSide::Right && g.sig.outputs() > f_after.sig.args() {
+                            let span = self.add_span(ss.span);
+                            let depth = g.sig.outputs() - f_after.sig.args();
+                            f_after = f_after.dipped(depth, span);
+                        }
+                    }
+                    let mut node = f_before.node;
                     node.push(g.node.clone());
-                    node.push(f_after);
+                    node.push(f_after.node);
                     let sig = self.sig_of(&node, &f_span)?;
                     SigNode::new(sig, node)
                 };

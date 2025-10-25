@@ -6,13 +6,14 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
-- Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Add [`anti ⌝`](https://uiua.org/docs/anti)[`by ⊸`](https://uiua.org/docs/by) for dyadic functions
 - Add digit separators for number literals with `,`. Ex: `123,456.078,9`
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
+- Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
+- Add exeprimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), wich automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
 - Change experimental subscripted [`transpose ⍉`](https://uiua.org/docs/transpose) to transpose the first N axes
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)

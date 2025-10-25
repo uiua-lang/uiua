@@ -588,10 +588,15 @@ pub fn Subscripts() -> impl IntoView {
             "Flip the first or last pair of arguments",
             "# Experimental!\n˜⌞⊟₃ 1 2 3\n˜⌟⊟₃ 1 2 3",
         ),
+        // subscript(
+        //     Reach,
+        //     "Put the second argument above or below the outputs",
+        //     "# Experimental!\n{𝄐⌞⊟ 1 2 3}\n{𝄐⌟⊟ 1 2 3}",
+        // ),
         subscript(
-            Reach,
-            "Put the second argument above or below the outputs",
-            "# Experimental!\n{𝄐⌞⊟ 1 2 3}\n{𝄐⌟⊟ 1 2 3}",
+            Under,
+            "Apply the undoing function to later arguments",
+            "# Experimental!\n⍜⌟¯°+ ¯1.25"
         ),
         subscript(
             Fill,

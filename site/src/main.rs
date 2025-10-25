@@ -60,6 +60,7 @@ pub fn Site() -> impl IntoView {
         "An array-oriented tacit programming language",
         "A programming language for point-free enjoyers",
         "A programming language for variable dislikers",
+        "A programming language to make you smile 😊",
     ];
     let subtitles_rare = [
         view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>"!").into_view(),
@@ -77,6 +78,12 @@ pub fn Site() -> impl IntoView {
         "Abandon nominativity. Embrace relativity.".into_view(),
         view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_view(),
         "It's got um...I um...arrays".into_view(),
+        view!(<p style="font-size: 0.9em; max-width: 25em;">
+            "A monad is a "
+            <s>"monoid in the category of endofunctors"</s>
+            " a function with 1 argument"
+        </p>)
+        .into_view(),
     ];
     let mut visits = visits();
     let subtitle = if visits % 3 < 2 {

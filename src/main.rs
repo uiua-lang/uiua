@@ -5,8 +5,9 @@ compile_error!("To compile the uiua interpreter binary, you must enable the `bin
 use std::{
     env,
     error::Error,
-    fmt, fs,
-    io::{self, stderr, stdin, stdout, BufRead, Write},
+    fmt::{self, Display},
+    fs,
+    io::{self, stderr, stdin, stdout, BufRead, Read, Write},
     path::{is_separator, Path, PathBuf},
     process::{exit, Child, Command, Stdio},
     sync::{
@@ -29,14 +30,19 @@ use uiua::{
     lsp::BindingDocsKind,
     parse, print_stack, print_stack_lines, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode,
     PrimClass, PrimDoc, PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans,
-    Subscript, Token, Uiua, UiuaError, UiuaErrorKind, UiuaResult, CONSTANTS,
+    Subscript, Token, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
 static WATCH_CHILD: Mutex<Option<Child>> = Mutex::new(None);
 
-fn fail<T>(e: UiuaError) -> T {
+fn uiua_fail<T>(e: UiuaError) -> T {
     eprintln!("{}", e.report());
+    exit(1)
+}
+
+fn fail<T>(e: impl Display) -> T {
+    eprintln!("{e}");
     exit(1)
 }
 
@@ -111,7 +117,7 @@ fn main() {
     #[cfg(feature = "stand")]
     if let Some(asm) = &*uiua::stand::STAND_ASM {
         let mut rt = Uiua::with_native_sys().with_args(env::args().skip(1).collect());
-        rt.run_asm(asm.clone()).unwrap_or_else(fail);
+        rt.run_asm(asm.clone()).unwrap_or_else(uiua_fail);
         print_stack(&rt.take_stack(), true);
         return;
     }
@@ -127,7 +133,8 @@ fn main() {
         .filter(|arg| arg.ends_with(".ua") || arg.contains(is_separator))
     {
         let args = args.collect();
-        run(path.as_ref(), args, false, None, None, None, false);
+        let path = path.as_ref();
+        run(path, args, Vec::new(), false, None, None, None, false);
         return;
     }
 
@@ -148,7 +155,7 @@ fn main() {
         }) => {
             let config =
                 FormatConfig::from_source(formatter_options.format_config_source, path.as_deref())
-                    .unwrap_or_else(fail);
+                    .unwrap_or_else(uiua_fail);
 
             if io {
                 let mut buffer = String::new();
@@ -165,12 +172,12 @@ fn main() {
                     }
                     code.push_str(&buffer);
                 }
-                let formatted = format_str(&code, &config).unwrap_or_else(fail);
+                let formatted = format_str(&code, &config).unwrap_or_else(uiua_fail);
                 print!("{}", formatted.output);
             } else if let Some(path) = path {
-                format_single_file(path, &config).unwrap_or_else(fail);
+                format_single_file(path, &config).unwrap_or_else(uiua_fail);
             } else {
-                format_multi_files(&config).unwrap_or_else(fail);
+                format_multi_files(&config).unwrap_or_else(uiua_fail);
             }
         }
         Some(Comm::Run {
@@ -181,6 +188,7 @@ fn main() {
             time_instrs,
             limit,
             mode,
+            stdin,
             #[cfg(feature = "audio")]
             audio_options,
             window,
@@ -189,13 +197,7 @@ fn main() {
             let path = if let Some(path) = path {
                 path
             } else {
-                match working_file_path() {
-                    Ok(path) => path,
-                    Err(e) => {
-                        eprintln!("{e}");
-                        return;
-                    }
-                }
+                working_file_path().unwrap_or_else(fail)
             };
             #[cfg(feature = "audio")]
             setup_audio(audio_options);
@@ -203,6 +205,7 @@ fn main() {
             run(
                 &path,
                 args,
+                stdin.then(get_stdin).into_iter().map(Into::into).collect(),
                 time_instrs,
                 limit,
                 mode,
@@ -214,22 +217,12 @@ fn main() {
             let path = if let Some(path) = path {
                 path
             } else {
-                match working_file_path() {
-                    Ok(path) => path,
-                    Err(e) => {
-                        eprintln!("{e}");
-                        return;
-                    }
-                }
+                working_file_path().unwrap_or_else(fail)
             };
             if ast {
-                let input = match fs::read_to_string(&path) {
-                    Ok(input) => input,
-                    Err(e) => {
-                        eprintln!("Failed to read file: {e}");
-                        exit(1);
-                    }
-                };
+                let input = fs::read_to_string(&path)
+                    .map_err(|e| format!("Failed to read file: {e}"))
+                    .unwrap_or_else(fail);
                 let mut inputs = Default::default();
                 let (items, errors, _) = parse(&input, &path, &mut inputs);
                 if !errors.is_empty() {
@@ -258,7 +251,7 @@ fn main() {
                     .mode(RunMode::Normal)
                     .print_diagnostics(true)
                     .load_file(&path)
-                    .unwrap_or_else(fail)
+                    .unwrap_or_else(uiua_fail)
                     .finish();
                 let output = output.unwrap_or_else(|| path.with_extension("uasm"));
                 let uasm = assembly.to_uasm();
@@ -271,6 +264,7 @@ fn main() {
             code,
             no_color,
             experimental,
+            stdin,
             #[cfg(feature = "audio")]
             audio_options,
             args,
@@ -278,13 +272,16 @@ fn main() {
             #[cfg(feature = "audio")]
             setup_audio(audio_options);
             let mut rt = Uiua::with_native_sys().with_args(args);
+            if stdin {
+                rt.push(get_stdin());
+            }
             rt.compile_run(|comp| {
                 comp.mode(RunMode::Normal)
                     .experimental(experimental)
                     .print_diagnostics(true)
                     .load_str(&code)
             })
-            .unwrap_or_else(fail);
+            .unwrap_or_else(uiua_fail);
             print_stack_lines(&rt.take_stack_lines(), !no_color);
         }
         Some(Comm::Test {
@@ -296,22 +293,13 @@ fn main() {
                 if path.is_file() {
                     vec![path]
                 } else {
-                    match uiua_files_in(&path, None) {
-                        Ok(paths) => paths,
-                        Err(e) => {
-                            eprintln!("{e}");
-                            return;
-                        }
-                    }
+                    uiua_files_in(&path, None).unwrap_or_else(fail)
                 }
             } else {
                 match working_file_path() {
                     Ok(path) => vec![path],
                     Err(NoWorkingFile::MultipleFiles(paths)) => paths,
-                    Err(e) => {
-                        eprintln!("{e}");
-                        return;
-                    }
+                    Err(e) => fail(e),
                 }
             };
             for path in paths {
@@ -319,8 +307,8 @@ fn main() {
                     formatter_options.format_config_source.clone(),
                     Some(&path),
                 )
-                .unwrap_or_else(fail);
-                format_file(&path, &config).unwrap_or_else(fail);
+                .unwrap_or_else(uiua_fail);
+                format_file(&path, &config).unwrap_or_else(uiua_fail);
                 let mut rt = Uiua::with_native_sys()
                     .with_file_path(&path)
                     .with_args(args.clone());
@@ -377,7 +365,7 @@ fn main() {
             let config = FormatConfig {
                 trailing_newline: false,
                 ..FormatConfig::from_source(formatter_options.format_config_source, None)
-                    .unwrap_or_else(fail)
+                    .unwrap_or_else(uiua_fail)
             };
 
             #[cfg(feature = "audio")]
@@ -389,8 +377,8 @@ fn main() {
                 .print_diagnostics(true)
                 .experimental(experimental);
             if let Some(file) = file {
-                compiler.load_file(file).unwrap_or_else(fail);
-                rt.run_compiler(&mut compiler).unwrap_or_else(fail);
+                compiler.load_file(file).unwrap_or_else(uiua_fail);
+                rt.run_compiler(&mut compiler).unwrap_or_else(uiua_fail);
             }
             repl(rt, compiler, true, stack, config);
         }
@@ -401,13 +389,9 @@ fn main() {
             features,
         }) => update(main, check, features),
         Some(Comm::Module { command }) => {
-            let paths = match list_modules() {
-                Ok(paths) => paths,
-                Err(e) => {
-                    eprintln!("Failed to list modules: {e}");
-                    return;
-                }
-            };
+            let paths = list_modules()
+                .map_err(|e| format!("Failed to list modules: {e}"))
+                .unwrap_or_else(fail);
             match command.unwrap_or(ModuleCommand::List) {
                 ModuleCommand::List => {
                     if let Some(paths) = paths {
@@ -426,7 +410,7 @@ fn main() {
                         return;
                     };
                     if let Err(e) = update_modules(&modules) {
-                        eprintln!("Failed to update modules: {e}");
+                        fail(format!("Failed to update modules: {e}"))
                     }
                 }
             }
@@ -438,42 +422,34 @@ fn main() {
                 eprintln!("{} does not exist", main.display());
                 exit(1);
             }
-            match uiua::stand::build_exe(&main) {
-                Ok(bytes) => {
-                    let name = name
-                        .or_else(|| {
-                            env::current_dir().ok().and_then(|p| {
-                                p.file_stem().map(|p| p.to_string_lossy().into_owned())
-                            })
-                        })
-                        .unwrap_or_else(|| "program".into());
-                    let path = PathBuf::from(name).with_extension(env::consts::EXE_EXTENSION);
-                    #[allow(clippy::needless_borrows_for_generic_args)]
-                    if let Err(e) = fs::write(&path, bytes) {
-                        eprintln!("Failed to write executable: {e}");
-                        exit(1);
-                    }
-                    // Set executable permissions on Unix
-                    #[cfg(unix)]
-                    if let Err(e) = (|| {
-                        use std::os::unix::fs::PermissionsExt;
-                        let mut perms = fs::metadata(&path)?.permissions();
-                        perms.set_mode(0o755);
-                        fs::set_permissions(&path, perms)
-                    })() {
-                        eprintln!("Failed to set executable permissions: {e}");
-                        exit(1);
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Failed to build executable: {e}");
-                    exit(1);
-                }
+            let bytes = uiua::stand::build_exe(&main).unwrap_or_else(uiua_fail);
+            let name = name
+                .or_else(|| {
+                    env::current_dir()
+                        .ok()
+                        .and_then(|p| p.file_stem().map(|p| p.to_string_lossy().into_owned()))
+                })
+                .unwrap_or_else(|| "program".into());
+            let path = PathBuf::from(name).with_extension(env::consts::EXE_EXTENSION);
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            if let Err(e) = fs::write(&path, bytes) {
+                eprintln!("Failed to write executable: {e}");
+                exit(1);
+            }
+            // Set executable permissions on Unix
+            #[cfg(unix)]
+            if let Err(e) = (|| {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = fs::metadata(&path)?.permissions();
+                perms.set_mode(0o755);
+                fs::set_permissions(&path, perms)
+            })() {
+                fail(format!("Failed to set executable permissions: {e}"))
             }
         }
         Some(Comm::Doc { name }) => doc(&name),
-        Some(Comm::Check { path }) => check(path).unwrap_or_else(fail),
-        Some(Comm::Find { path, text, raw }) => find(path, text, raw).unwrap_or_else(fail),
+        Some(Comm::Check { path }) => check(path).unwrap_or_else(uiua_fail),
+        Some(Comm::Find { path, text, raw }) => find(path, text, raw).unwrap_or_else(uiua_fail),
         None => {
             set_use_window(app.window);
             let res = match working_file_path() {
@@ -495,19 +471,21 @@ fn main() {
                         .unwrap_err()
                         .print();
                     eprintln!("\n{nwf}");
-                    return;
+                    exit(1);
                 }
             };
             if let Err(e) = res {
-                eprintln!("Error watching file: {e}");
+                fail(format!("Error watching file: {e}"))
             }
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run(
     path: &Path,
     args: Vec<String>,
+    stack: Vec<Value>,
     time_instrs: bool,
     limit: Option<f64>,
     mode: Option<RunMode>,
@@ -519,28 +497,21 @@ fn run(
         .with_args(args)
         .time_instrs(time_instrs)
         .maybe_with_execution_limit(limit.map(Duration::from_secs_f64));
+    rt.push_all(stack);
     if path.extension().is_some_and(|ext| ext == "uasm") {
-        let uasm = match fs::read_to_string(path) {
-            Ok(json) => json,
-            Err(e) => {
-                eprintln!("Failed to read assembly: {e}");
-                return;
-            }
-        };
-        let assembly = match Assembly::from_uasm(&uasm) {
-            Ok(assembly) => assembly,
-            Err(e) => {
-                eprintln!("Failed to parse assembly: {e}");
-                return;
-            }
-        };
-        rt.run_asm(assembly).unwrap_or_else(fail);
+        let uasm = fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read assembly: {e}"))
+            .unwrap_or_else(fail);
+        let assembly = Assembly::from_uasm(&uasm)
+            .map_err(|e| format!("Failed to parse assembly: {e}"))
+            .unwrap_or_else(fail);
+        rt.run_asm(assembly).unwrap_or_else(uiua_fail);
     } else {
         if let Some(formatter_options) = formatter_options {
             let config =
                 FormatConfig::from_source(formatter_options.format_config_source, Some(path))
-                    .unwrap_or_else(fail);
-            format_file(path, &config).unwrap_or_else(fail);
+                    .unwrap_or_else(uiua_fail);
+            format_file(path, &config).unwrap_or_else(uiua_fail);
         }
         let mode = mode.unwrap_or(RunMode::Normal);
         let res = rt.compile_run(|comp| comp.mode(mode).print_diagnostics(true).load_file(path));
@@ -605,6 +576,14 @@ fn working_file_path() -> Result<PathBuf, NoWorkingFile> {
             _ => Err(NoWorkingFile::MultipleFiles(paths)),
         }
     }
+}
+
+fn get_stdin() -> String {
+    let mut s = String::new();
+    (stdin().lock().read_to_string(&mut s))
+        .map_err(|e| format!("Error reading from stdin: {e}"))
+        .unwrap_or_else(fail);
+    s.trim_end_matches(['\r', '\n']).into()
 }
 
 struct WatchArgs {
@@ -819,6 +798,12 @@ enum Comm {
         time_instrs: bool,
         #[clap(long, short = 'l', help = "Set an execution limit in seconds")]
         limit: Option<f64>,
+        #[clap(
+            long,
+            short = 'i',
+            help = "Pipe stdin to a string before the program runs"
+        )]
+        stdin: bool,
         #[clap(long, help = "Run the file in a specific mode")]
         mode: Option<RunMode>,
         #[cfg(feature = "audio")]
@@ -849,6 +834,12 @@ enum Comm {
         no_color: bool,
         #[clap(short = 'x', long, help = "Enable experimental features")]
         experimental: bool,
+        #[clap(
+            long,
+            short = 'i',
+            help = "Pipe stdin to a string before the program runs"
+        )]
+        stdin: bool,
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,

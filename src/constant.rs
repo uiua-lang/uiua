@@ -10,7 +10,7 @@ use ecow::EcoVec;
 use rand::prelude::*;
 
 use crate::{
-    parse_doc_line_fragments, Array, Boxed, PrimDocFragment, SysBackend, Value, WILDCARD_NAN,
+    media, parse_doc_line_fragments, Array, Boxed, PrimDocFragment, SysBackend, Value, WILDCARD_NAN,
 };
 
 /// The definition of a shadowable constant
@@ -66,6 +66,8 @@ pub enum ConstantValue {
 /// Identifier for a constant that's kind of big
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BigConstant {
+    /// An elevation map of the world
+    Elevation,
     /// A gif representing the Bad Apple!! video
     ///
     /// It is transposed such that the axes are ordered [Height Width Frames]
@@ -99,10 +101,12 @@ impl ConstantValue {
                         Entry::Vacant(e) => {
                             let bytes = backend.big_constant(big)?;
                             e.insert(match big {
+                                BigConstant::Elevation => {
+                                    media::image_bytes_to_array(&bytes, true, false)?.into()
+                                }
                                 BigConstant::BadAppleTransposed => {
-                                    let (_, mut val) =
-                                        crate::media::gif_bytes_to_value_gray(&bytes)
-                                            .map_err(|e| e.to_string())?;
+                                    let (_, mut val) = media::gif_bytes_to_value_gray(&bytes)
+                                        .map_err(|e| e.to_string())?;
                                     let Value::Byte(_) = &mut val else {
                                         return Err(
                                             "Bad Apple gif data is not properly rounded to 0 or 1"
@@ -127,7 +131,7 @@ impl ConstantValue {
                 static AMEN: OnceLock<Value> = OnceLock::new();
                 AMEN.get_or_init(|| {
                     let (samples, sr) =
-                        crate::media::array_from_wav_bytes(include_bytes!("assets/amen-break.wav"))
+                        media::array_from_wav_bytes(include_bytes!("assets/amen-break.wav"))
                             .unwrap();
                     let new_row_count = (samples.row_count() as f64
                         * backend.audio_sample_rate() as f64
@@ -412,28 +416,24 @@ constant!(
     /// Emoji hair components
     ("Hair", Fun, "🦰🦱🦲🦳"),
     /// The Uiua logo
-    (#[cfg(feature = "image")] "Logo", Media, crate::media::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), false, true).unwrap()),
+    (#[cfg(feature = "image")] "Logo", Media, media::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), false, true).unwrap()),
     /// Ethically sourced Lena picture
     /// Morten Rieger Hannemose
     /// 2019
     /// https://mortenhannemose.github.io/lena/
-    (#[cfg(feature = "image")] "Lena", Media, crate::media::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false, false).unwrap()),
+    (#[cfg(feature = "image")] "Lena", Media, media::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false, false).unwrap()),
     /// Depth map for Lena picture
-    (#[cfg(feature = "image")] "LenaDepth", Media, crate::media::image_bytes_to_array(include_bytes!("assets/lena_depth.png"), true, false).unwrap()),
+    (#[cfg(feature = "image")] "LenaDepth", Media, media::image_bytes_to_array(include_bytes!("assets/lena_depth.png"), true, false).unwrap()),
     /// A picture of two cats
     ///
     /// Their names are Murphy and Louie
-    (#[cfg(feature = "image")] "Cats", Media, crate::media::image_bytes_to_array(include_bytes!("assets/cats.webp"), false, false).unwrap()),
+    (#[cfg(feature = "image")] "Cats", Media, media::image_bytes_to_array(include_bytes!("assets/cats.webp"), false, false).unwrap()),
     /// Depth map for the cats
-    (#[cfg(feature = "image")] "CatsDepth", Media, crate::media::image_bytes_to_array(include_bytes!("assets/cats_depth.png"), true, false).unwrap()),
+    (#[cfg(feature = "image")] "CatsDepth", Media, media::image_bytes_to_array(include_bytes!("assets/cats_depth.png"), true, false).unwrap()),
     /// An elevation map of the world
     ///
     /// Sea level is at 0.562
-    (
-        #[cfg(all(feature = "image", not(target_arch = "wasm32")))] "Elevation",
-        Media,
-        crate::media::image_bytes_to_array(include_bytes!("assets/elevation.webp"), true, false).unwrap()
-    ),
+    (#[cfg(feature = "image")] "Elevation", Media, ConstantValue::Big(BigConstant::Elevation)),
     /// Sample music data
     ("Music", Media, ConstantValue::Music),
     /// Amen break

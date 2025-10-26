@@ -649,6 +649,7 @@ impl SysBackend for WebBackend {
             WORKING.with(|working| working.borrow_mut().insert(key));
             spawn_local(async move {
                 let path = match key {
+                    BigConstant::Elevation => "/assets/elevation.webp",
                     BigConstant::BadAppleTransposed => "/assets/bad_apple_transposed.gif",
                 };
                 let fetch_res = fetch_bytes(path).await;

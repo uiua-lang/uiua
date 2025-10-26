@@ -590,22 +590,22 @@ fn pad_src() -> String {
     let mut url_decoded = src.clone().into_bytes();
     if let Some((_, encoded)) = src.split_once("__") {
         if let Ok(dec) = URL_SAFE.decode(encoded.as_bytes()) {
-            logging::log!("decoded base64 after version number");
+            // logging::log!("decoded base64 after version number");
             url_decoded = dec;
         }
     } else if let Ok(dec) = URL_SAFE.decode(src.as_bytes()) {
-        logging::log!("decoded base64 without version number");
+        // logging::log!("decoded base64 without version number");
         url_decoded = dec;
     }
     let mut decoder = ZlibDecoder::new(url_decoded.as_slice());
     let mut unzipped = String::new();
     match decoder.read_to_string(&mut unzipped) {
         Ok(_) => {
-            logging::log!("decompressed");
+            // logging::log!("decompressed");
             unzipped
         }
-        Err(e) => {
-            logging::log!("decompression error: {e}");
+        Err(_e) => {
+            // logging::log!("decompression error: {_e}");
             String::from_utf8_lossy(&url_decoded).into_owned()
         }
     }

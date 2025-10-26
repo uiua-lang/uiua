@@ -13,6 +13,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) now accepts non-boolean integers
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
+- Add experimental [`&fetch`](https://uiua.org/docs/&fetch) function to easily fetch data from a url
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Add exeprimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), wich automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
 - Change experimental subscripted [`transpose ⍉`](https://uiua.org/docs/transpose) to transpose the first N axes

@@ -4008,7 +4008,7 @@ sys_op! {
     ///   : $ Connection: close
     ///   : $
     ///   : $
-    ///   : ⍜(&tcpc "example.com:80"|&rs∞⊸&w:)
+    ///   : ⍜(&tcpc "example.com:80"|&rs∞˜⊸&w)
     ///
     /// See also: [&tlsc]
     (1, TcpConnect, Tcp, "&tcpc", "tcp - connect", Mutating),
@@ -4034,6 +4034,12 @@ sys_op! {
     (2(0), TcpSetWriteTimeout, Tcp, "&tcpswt", "tcp - set write timeout", Mutating),
     /// Get the connection address of a TCP socket
     (1, TcpAddr, Tcp, "&tcpaddr", "tcp - address", Mutating),
+    /// Fetch data from a url
+    ///
+    /// Takes a url and returns bytes. It is often usful to use [un][utf₈] to decode into a string
+    /// ex: # Experimental!
+    ///   : °utf₈ &fetch "example.com"
+    (1, Fetch, Tcp, "&fetch", "fetch url", Mutating, { experimental: true }),
     /// Bind a UDP socket
     ///
     /// Returns a UDP socket handle

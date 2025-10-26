@@ -439,6 +439,48 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     ) -> Result<(), String> {
         Err("TCP sockets are not supported in this environment".into())
     }
+    /// Fetch a URL
+    fn fetch(&self, url: &str) -> Result<Vec<u8>, String> {
+        let no_protocol = url
+            .trim_start_matches("https://")
+            .trim_start_matches("http://");
+        let (host, route) =
+            if let Some((i, _)) = no_protocol.char_indices().find(|(_, c)| *c == '/') {
+                no_protocol.split_at(i)
+            } else {
+                (no_protocol, "/")
+            };
+        let req = format!(
+            "\
+            GET {route} HTTP/1.1\r\n\
+            Host: {host}\r\n\
+            Connection: close\r\n\
+            User-Agent: Uiua/{}\r\n\
+            \r\n",
+            crate::VERSION
+        );
+        let mut addr = host.to_string();
+        if (host.rsplit_once(':')).is_none_or(|(_, port)| port.parse::<u16>().is_err()) {
+            addr = format!("{addr}:443");
+        }
+        let handle = self.tls_connect(&addr)?;
+        self.write(handle, req.as_bytes())?;
+        let mut bytes = self.read_all(handle)?;
+        self.close(handle)?;
+        let status =
+            String::from_utf8_lossy(bytes.split(|&b| b == b' ').nth(1).unwrap_or(b"no status"))
+                .into_owned();
+        if let Some(i) = bytes.windows(4).position(|win| win == b"\r\n\r\n") {
+            let offset = i + 4;
+            bytes.rotate_left(offset);
+            bytes.truncate(bytes.len() - offset);
+        }
+        if status != "200" {
+            let message = String::from_utf8_lossy(&bytes);
+            return Err(format!("{status} {message}"));
+        }
+        Ok(bytes)
+    }
     /// Create a UDP socket and bind it to an address
     fn udp_bind(&self, addr: &str) -> Result<Handle, String> {
         Err("UDP sockets are not supported in this environment".into())
@@ -1157,6 +1199,11 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             (env.rt.backend)
                 .tcp_set_write_timeout(handle, timeout)
                 .map_err(|e| env.error(e))?;
+        }
+        SysOp::Fetch => {
+            let url = env.pop(1)?.as_string(env, "Url must be a string")?;
+            let bytes = env.rt.backend.fetch(&url).map_err(|e| env.error(e))?;
+            env.push(bytes);
         }
         SysOp::UdpBind => {
             let addr = env.pop(1)?.as_string(env, "Address must be a string")?;

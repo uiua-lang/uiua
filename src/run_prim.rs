@@ -2267,7 +2267,7 @@ mod tests {
                     if [
                         "&sl", "&tcpc", "&tlsc", "&ast", "&clip", "&fo", "&fc", "&fde", "&ftr",
                         "&fld", "&fif", "&fras", "&frab", "&fmd", "timezone", "&b", "&udpb",
-                        "&udpr", "&udps", "&udpsml",
+                        "&udpr", "&udps", "&udpsml", "&fetch",
                     ]
                     .iter()
                     .any(|prim| ex.input.contains(prim))

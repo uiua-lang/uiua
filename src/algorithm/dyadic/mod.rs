@@ -818,23 +818,29 @@ impl<T: ArrayValue> Array<T> {
         Ok((counts.into(), self))
     }
     fn anti_keep(&self, counts: &[f64], env: &Uiua) -> UiuaResult<Self> {
-        if counts.iter().any(|&n| n != 0.0 && n != 1.0) {
-            return Err(env.error("Anti keep amount must be a list of booleans"));
+        if counts.iter().any(|&n| n.fract() != 0.0) {
+            return Err(env.error("Anti keep amount must be a list of integers"));
         }
-        let trues = counts.iter().filter(|&&n| n == 1.0).count();
+        let trues = counts.iter().filter(|&&n| n > 0.0).count();
         if trues == 0 {
             return Err(env.error("Cannot anti keep with all 0 counts"));
         }
-        let falses = counts.iter().filter(|&&n| n == 0.0).count();
-        let target_len = self.row_count().max(
-            (self.row_count() as f64 * (trues + falses) as f64 / trues as f64).floor() as usize,
-        );
+        let sum = counts.iter().map(|n| n.max(0.0)).sum::<f64>() as usize;
+        // let target_len =
+        //     (self.row_count() as f64 / sum as f64 * counts.len() as f64).floor() as usize;
+        // let target_len =
+        //     ((self.row_count() as f64 / sum as f64).ceil() * counts.len() as f64) as usize;
+        let target_len = (self.row_count() as f64 / sum as f64 * counts.len() as f64)
+            .floor()
+            .min((self.row_count() as f64 / sum as f64).ceil() * counts.len() as f64)
+            as usize;
         let counts = pad_keep_counts(counts, target_len, true, env)?;
         let mut fill: Option<T> = None;
         let mut new_data = EcoVec::with_capacity(counts.len());
         let mut rows = self.row_slices();
         for &count in counts.iter() {
-            if count == 0.0 {
+            let count = count as usize;
+            if count == 0 {
                 let fill = if let Some(fill) = &fill {
                     fill
                 } else {
@@ -846,6 +852,11 @@ impl<T: ArrayValue> Array<T> {
                 };
                 extend_repeat(&mut new_data, fill, self.row_len());
             } else if let Some(row) = rows.next() {
+                for next in rows.by_ref().take(count - 1) {
+                    if ArrayCmpSlice(next) != ArrayCmpSlice(row) {
+                        return Err(env.error("Anti keep failed"));
+                    }
+                }
                 new_data.extend_from_slice(row);
             } else {
                 let fill = if let Some(fill) = &fill {
@@ -862,6 +873,9 @@ impl<T: ArrayValue> Array<T> {
                 };
                 extend_repeat(&mut new_data, fill, self.row_len());
             }
+        }
+        if rows.next().is_some() {
+            return Err(env.error("Anti keep failed"));
         }
         let mut new_shape = self.shape.clone();
         *new_shape.row_count_mut() = counts.len();

@@ -10,6 +10,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add digit separators for number literals with `,`. Ex: `123,456.078,9`
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
+- [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) now accepts non-boolean integers
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)

@@ -1911,7 +1911,13 @@ impl Compiler {
             self.code_meta
                 .constant_references
                 .insert(span.clone().sp(ident));
-            Node::Push((constant.value).resolve(self.scope_file_path(), &*self.backend()))
+            let value = (constant.value)
+                .resolve(self.scope_file_path(), &*self.backend())
+                .unwrap_or_else(|e| {
+                    self.add_error(span, e);
+                    Value::default()
+                });
+            Node::Push(value)
         } else {
             self.add_error(span, format!("Unknown identifier `{ident}`"));
             Node::new_push(Value::default())

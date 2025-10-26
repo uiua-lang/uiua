@@ -1,5 +1,6 @@
 use std::{
     any::Any,
+    borrow::Cow,
     cell::RefCell,
     collections::{BTreeSet, HashMap, HashSet},
     hash::{DefaultHasher, Hash, Hasher},
@@ -13,9 +14,11 @@ use std::{
 
 use crate::{get_ast_time, START_TIME};
 use futures::future::join_all;
-use js_sys::Date;
+use js_sys::{Date, Uint8Array};
 use leptos::*;
-use uiua::{now, GitTarget, Handle, Report, Span, SysBackend, Uiua, EXAMPLE_TXT, EXAMPLE_UA};
+use uiua::{
+    now, BigConstant, GitTarget, Handle, Report, Span, SysBackend, Uiua, EXAMPLE_TXT, EXAMPLE_UA,
+};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{HtmlAudioElement, Request, RequestInit, RequestMode, Response};
@@ -628,26 +631,88 @@ impl SysBackend for WebBackend {
         self.trace.lock().unwrap().push_str(&message);
         Ok(false)
     }
+    fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
+        thread_local! {
+            static CACHE: RefCell<HashMap<BigConstant, Result<Vec<u8>, String>>> = Default::default();
+            static WORKING: RefCell<HashSet<BigConstant>> = Default::default();
+        }
+
+        if WORKING.with(|working| working.borrow().contains(&key)) {
+            return Err("Waiting for data, try running again in a moment...".into());
+        }
+
+        CACHE.with(|cache| {
+            if let Some(bytes) = cache.borrow().get(&key).cloned() {
+                WORKING.with(|working| working.borrow_mut().remove(&key));
+                return bytes.map(Cow::Owned);
+            }
+            WORKING.with(|working| working.borrow_mut().insert(key));
+            spawn_local(async move {
+                let path = match key {
+                    BigConstant::BadAppleTransposed => "/assets/bad_apple_transposed.gif",
+                };
+                let fetch_res = fetch_bytes(path).await;
+                CACHE.with(|cache| cache.borrow_mut().insert(key, fetch_res.clone()));
+                WORKING.with(|working| working.borrow_mut().remove(&key));
+            });
+            match cache.borrow().get(&key).cloned() {
+                Some(Ok(bytes)) => Ok(Cow::Owned(bytes)),
+                Some(Err(err)) => Err(err),
+                None => Err("Waiting for module, try running again in a moment...".into()),
+            }
+        })
+    }
 }
 
 pub async fn fetch(url: &str) -> Result<String, String> {
     let opts = RequestInit::new();
     opts.set_method("GET");
     opts.set_mode(RequestMode::Cors);
-    let request = Request::new_with_str_and_init(url, &opts).map_err(|e| format!("{e:?}"))?;
+    let request = Request::new_with_str_and_init(url, &opts)
+        .map_err(|e| format!("Fetch request error: {e:?}"))?;
     let window = web_sys::window().unwrap();
     let resp_value = JsFuture::from(window.fetch_with_request(&request))
         .await
-        .map_err(|e| format!("{e:?}"))?;
+        .map_err(|e| format!("Fetch response error: {e:?}"))?;
     assert!(resp_value.is_instance_of::<Response>());
     let resp: Response = resp_value.dyn_into().unwrap();
-    let text = JsFuture::from(resp.text().map_err(|e| format!("{e:?}"))?)
+    let text = JsFuture::from(resp.text().map_err(|e| format!("Fetch error: {e:?}"))?)
         .await
         .map(|s| s.as_string().unwrap())
-        .map_err(|e| format!("{e:?}"))?;
+        .map_err(|e| format!("Fetch error: {e:?}"))?;
     if resp.status() == 200 {
         Ok(text)
     } else {
         Err(text)
+    }
+}
+
+pub async fn fetch_bytes(url: &str) -> Result<Vec<u8>, String> {
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
+    let request = Request::new_with_str_and_init(url, &opts)
+        .map_err(|e| format!("Fetch request error: {e:?}"))?;
+    let window = web_sys::window().unwrap();
+    let resp_value = JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|e| format!("Fetch response error: {e:?}"))?;
+    assert!(resp_value.is_instance_of::<Response>());
+    let resp: Response = resp_value.dyn_into().unwrap();
+    if resp.status() == 200 {
+        JsFuture::from(
+            resp.array_buffer()
+                .map_err(|e| format!("Fetch error: {e:?}"))?,
+        )
+        .await
+        .map(|s| Uint8Array::new(&s).to_vec())
+        .map_err(|e| format!("Fetch error: {e:?}"))
+    } else {
+        Err(
+            JsFuture::from(resp.text().map_err(|e| format!("Fetch error: {e:?}"))?)
+                .await
+                .map(|s| s.as_string().unwrap())
+                .map_err(|e| format!("Fetch error: {e:?}"))?,
+        )
     }
 }

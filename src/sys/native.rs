@@ -1,5 +1,6 @@
 use std::{
     any::Any,
+    borrow::Cow,
     env::{self, set_current_dir},
     fs::{self, File, OpenOptions},
     io::{stderr, stdin, stdout, BufRead, BufReader, Read, Write},
@@ -24,8 +25,8 @@ use dashmap::DashMap;
 
 use crate::{
     grid_fmt::{GridFmt, GridFmtParams},
-    terminal_size, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend,
-    Uiua, Value,
+    terminal_size, BigConstant, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span,
+    SysBackend, Uiua, Value,
 };
 
 /// The default native system backend
@@ -1308,6 +1309,13 @@ impl SysBackend for NativeSys {
         eprintln!();
         _ = stdin().read_line(&mut String::new());
         Ok(true)
+    }
+    fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
+        Ok(match key {
+            BigConstant::BadAppleTransposed => {
+                Cow::Borrowed(include_bytes!("../assets/bad_apple_transposed.gif"))
+            }
+        })
     }
 }
 

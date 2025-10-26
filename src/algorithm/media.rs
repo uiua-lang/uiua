@@ -212,18 +212,12 @@ pub(crate) fn gif_encode(env: &mut Uiua) -> UiuaResult {
 }
 
 pub(crate) fn gif_decode(env: &mut Uiua) -> UiuaResult {
-    #[cfg(feature = "gif")]
-    {
-        let bytes = env.pop(1)?;
-        let bytes = bytes.as_bytes(env, "Gif bytes must be a byte array")?;
-        let (frame_rate, value) =
-            crate::media::gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
-        env.push(value);
-        env.push(frame_rate);
-        Ok(())
-    }
-    #[cfg(not(feature = "gif"))]
-    Err(env.error("GIF encoding is not supported in this environment"))
+    let bytes = env.pop(1)?;
+    let bytes = bytes.as_bytes(env, "Gif bytes must be a byte array")?;
+    let (frame_rate, value) = crate::media::gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
+    env.push(value);
+    env.push(frame_rate);
+    Ok(())
 }
 
 pub(crate) fn apng_encode(env: &mut Uiua) -> UiuaResult {
@@ -693,7 +687,7 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
 
 #[doc(hidden)]
 #[cfg(feature = "gif")]
-pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, String> {
+pub fn value_to_gif_bytes(value: &Value, mut frame_rate: f64) -> Result<Vec<u8>, String> {
     use std::collections::{HashMap, HashSet};
 
     use color_quant::NeuQuant;
@@ -703,7 +697,8 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
     if value.row_count() == 0 {
         return Err("Cannot convert empty array into GIF".into());
     }
-    let mut frames = Vec::with_capacity(value.row_count());
+    let frame_count = value.row_count();
+    let mut frames = Vec::with_capacity(frame_count);
     let mut width = 0;
     let mut height = 0;
     for row in value.rows() {
@@ -767,11 +762,12 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
     let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
         .map_err(|e| e.to_string())?;
     const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
-    let delay = ((1.0 / frame_rate.max(MIN_FRAME_RATE)).abs() * 100.0) as u16;
+    frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
     encoder
         .set_repeat(gif::Repeat::Infinite)
         .map_err(|e| e.to_string())?;
-    for image in frames {
+    let mut t = 0;
+    for (i, image) in frames.into_iter().enumerate() {
         let mut has_transparent = false;
         let indices: Vec<u8> = image
             .as_raw()
@@ -800,7 +796,8 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
                 Some(transparent_index),
             )
         };
-        frame.delay = delay;
+        frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
+        t += frame.delay;
         encoder.write_frame(&frame).map_err(|e| e.to_string())?;
     }
     drop(encoder);
@@ -808,10 +805,35 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
 }
 
 #[doc(hidden)]
+#[cfg(not(feature = "gif"))]
+pub fn gif_bytes_to_value(_bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
+    Err(env.error("GIF decoding is not supported in this environment"))
+}
+
+#[cfg(not(feature = "gif"))]
+pub(crate) fn gif_bytes_to_value(_bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
+    Err(env.error("GIF decoding is not supported in this environment"))
+}
+
+#[doc(hidden)]
 #[cfg(feature = "gif")]
 pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
+    gif_bytes_to_value_impl(bytes, gif::ColorOutput::RGBA)
+}
+
+#[cfg(feature = "gif")]
+pub(crate) fn gif_bytes_to_value_gray(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
+    gif_bytes_to_value_impl(bytes, gif::ColorOutput::Indexed)
+}
+
+#[doc(hidden)]
+#[cfg(feature = "gif")]
+pub fn gif_bytes_to_value_impl(
+    bytes: &[u8],
+    mode: gif::ColorOutput,
+) -> Result<(f64, Value), gif::DecodingError> {
     let mut decoder = gif::DecodeOptions::new();
-    decoder.set_color_output(gif::ColorOutput::RGBA);
+    decoder.set_color_output(mode);
     let mut decoder = decoder.read_info(bytes)?;
     let first_frame = decoder.read_next_frame()?.unwrap();
     let gif_width = first_frame.width as usize;
@@ -821,7 +843,10 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     let mut delay_sum = first_frame.delay as f64 / 100.0;
     // Init frame data with the first frame
     let mut frame_data = first_frame.buffer.to_vec();
-    data.extend(frame_data.iter().map(|b| *b as f64 / 255.0));
+    match mode {
+        gif::ColorOutput::RGBA => data.extend(frame_data.iter().map(|b| *b as f64 / 255.0)),
+        gif::ColorOutput::Indexed => data.extend(frame_data.iter().map(|b| *b as f64)),
+    }
     // Loop through the rest of the frames
     while let Some(frame) = decoder.read_next_frame()? {
         let frame_width = frame.width as usize;
@@ -843,13 +868,19 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
                 }
             }
         }
-        data.extend(frame_data.iter().map(|b| *b as f64 / 255.0));
+        match mode {
+            gif::ColorOutput::RGBA => data.extend(frame_data.iter().map(|b| *b as f64 / 255.0)),
+            gif::ColorOutput::Indexed => data.extend(frame_data.iter().map(|b| *b as f64)),
+        }
         frame_count += 1;
         delay_sum += frame.delay as f64 / 100.0;
     }
     let avg_delay = delay_sum / frame_count as f64;
     let frame_rate = 1.0 / avg_delay;
-    let shape = crate::Shape::from_iter([frame_count, gif_height, gif_width, 4]);
+    let mut shape = crate::Shape::from_iter([frame_count, gif_height, gif_width]);
+    if let gif::ColorOutput::RGBA = mode {
+        shape.push(4)
+    }
     let mut num = Value::Num(Array::new(shape, data));
     num.compress();
     Ok((frame_rate, num))

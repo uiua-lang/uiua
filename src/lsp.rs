@@ -485,7 +485,7 @@ impl Spanner {
             let sys = &crate::NativeSys;
             #[cfg(not(feature = "native_sys"))]
             let sys = &crate::SafeSys::new();
-            let val = constant.value.resolve(path, sys);
+            let val = constant.value.resolve(path, sys).ok();
             let meta = BindingMeta {
                 comment: Some(constant.doc().into()),
                 ..Default::default()
@@ -494,7 +494,7 @@ impl Spanner {
                 BindingDocs {
                     src_span: span.clone(),
                     is_public: true,
-                    kind: BindingDocsKind::Constant(Some(val)),
+                    kind: BindingDocsKind::Constant(val),
                     escape: None,
                     meta,
                 }

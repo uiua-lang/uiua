@@ -1,4 +1,6 @@
 use std::{
+    cell::RefCell,
+    collections::{hash_map::Entry, HashMap},
     f64::consts::TAU,
     path::{Path, PathBuf},
     sync::{LazyLock, OnceLock},
@@ -44,6 +46,8 @@ impl ConstantDef {
 pub enum ConstantValue {
     /// A static value that is always the same
     Static(Value),
+    /// A big constant
+    Big(BigConstant),
     /// The music constant
     Music,
     /// The amen constant
@@ -59,13 +63,22 @@ pub enum ConstantValue {
     WorkingDir,
 }
 
+/// Identifier for a constant that's kind of big
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BigConstant {
+    /// A gif representing the Bad Apple!! video
+    ///
+    /// It is transposed such that the axes are ordered [Height Width Frames]
+    BadAppleTransposed,
+}
+
 impl ConstantValue {
     /// Resolve the constant to a value
     pub(crate) fn resolve(
         &self,
         current_file_path: Option<&Path>,
         backend: &dyn SysBackend,
-    ) -> Value {
+    ) -> Result<Value, String> {
         let current_file_path = current_file_path.map(|p| {
             let mut path = PathBuf::new();
             for comp in p.components() {
@@ -73,8 +86,38 @@ impl ConstantValue {
             }
             path
         });
-        match self {
+        Ok(match self {
             ConstantValue::Static(val) => val.clone(),
+            &ConstantValue::Big(big) => {
+                thread_local! {
+                    static CACHE: RefCell<HashMap<BigConstant, Value>> = Default::default();
+                }
+                CACHE.with(|cache| -> Result<_, String> {
+                    let mut cache = cache.borrow_mut();
+                    Ok(match cache.entry(big) {
+                        Entry::Occupied(e) => e.get().clone(),
+                        Entry::Vacant(e) => {
+                            let bytes = backend.big_constant(big)?;
+                            e.insert(match big {
+                                BigConstant::BadAppleTransposed => {
+                                    let (_, mut val) =
+                                        crate::media::gif_bytes_to_value_gray(&bytes)
+                                            .map_err(|e| e.to_string())?;
+                                    let Value::Byte(_) = &mut val else {
+                                        return Err(
+                                            "Bad Apple gif data is not properly rounded to 0 or 1"
+                                                .into(),
+                                        );
+                                    };
+                                    val.transpose();
+                                    val
+                                }
+                            })
+                            .clone()
+                        }
+                    })
+                })?
+            }
             ConstantValue::Music => {
                 static MUSIC: OnceLock<Value> = OnceLock::new();
                 MUSIC.get_or_init(|| music_constant(backend)).clone()
@@ -110,7 +153,7 @@ impl ConstantValue {
                 .display()
                 .to_string()
                 .into(),
-        }
+        })
     }
 }
 
@@ -397,6 +440,8 @@ constant!(
     ///
     /// Thank you Gregory Coleman 🙏
     (#[cfg(feature = "audio_encode")] "Amen", Media, ConstantValue::Amen),
+    /// Frames for Bad Apple!! at 16fps
+    ("BadApple", Media, ConstantValue::Big(BigConstant::BadAppleTransposed)),
     /// Lorem Ipsum text
     ("Lorem", Media, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
     /// Rainbow flag colors

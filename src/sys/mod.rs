@@ -3,6 +3,7 @@ pub(crate) mod native;
 
 use std::{
     any::Any,
+    borrow::Cow,
     fmt,
     mem::take,
     net::SocketAddr,
@@ -21,8 +22,8 @@ pub use self::native::*;
 use crate::{
     algorithm::{multi_output, validate_size},
     cowslice::cowslice,
-    get_ops, Array, Boxed, FfiArg, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua, UiuaErrorKind,
-    UiuaResult, Value,
+    get_ops, Array, BigConstant, Boxed, FfiArg, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua,
+    UiuaErrorKind, UiuaResult, Value,
 };
 
 /// The text of Uiua's example module
@@ -583,6 +584,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Returns whether to continue the program
     fn breakpoint(&self, env: &Uiua) -> Result<bool, String> {
         Err("Breakpoints are not supported in this environment".into())
+    }
+    /// Resolve a big constant
+    fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
+        Err("Retrieval of big constants is not supported in this environment".into())
     }
 }
 

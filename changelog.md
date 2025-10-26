@@ -26,6 +26,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Optimize [`evert ⧋`](https://uiua.org/docs/evert) on pervasives
 - Values generated on the same line in code will appear on the same line in output
 - Add `-i/--stdin` flag to `uiua run` and `uiua eval` to pipe stdin to the first argument in a program
+- Add `gh:` prefix for import strings to shorten GitHub imports
 - Fix a bug preventing identifiers with non-alphabetic combining characters
 ### Website
 - Reword all documentation and tutorials to no longer refer to a stack

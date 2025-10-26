@@ -825,7 +825,11 @@ impl Compiler {
     /// Import a module
     pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
         // Resolve path
-        let (path, file_kind) = if let Some(mut url) = path_str.trim().strip_prefix("git:") {
+        let (path, file_kind) = if let Some(url) =
+            (path_str.trim().strip_prefix("git:").map(Into::into)).or_else(|| {
+                (path_str.trim().strip_prefix("gh:")).map(|s| format!("github.com/{}", s.trim()))
+            }) {
+            let mut url = url.as_str();
             if url.contains("branch:") && url.contains("commit:") {
                 return Err(self.error(
                     span.clone(),

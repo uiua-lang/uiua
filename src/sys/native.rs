@@ -4,6 +4,7 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{stderr, stdin, stdout, BufRead, BufReader, Read, Write},
     iter::repeat_n,
+    mem::take,
     net::*,
     path::{Path, PathBuf},
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
@@ -1392,47 +1393,77 @@ fn format_stack_lines(stack_lines: &[Vec<Value>], color: bool) -> Vec<String> {
     let is_light = terminal_light::luma().is_ok_and(|luma| luma > 0.6);
     #[cfg(not(feature = "terminal-light"))]
     let is_light = false;
+    let max_width = terminal_size().map_or(80, |(w, _)| w);
     for line in stack_lines {
-        let grids: Vec<_> = line
-            .iter()
-            .map(|v| {
-                v.fmt_grid(GridFmtParams {
-                    label: true,
-                    ..Default::default()
-                })
-            })
-            .collect();
-        let max_height = grids.iter().map(|grid| grid.len()).max().unwrap_or(0);
-        let widths: Vec<usize> = grids.iter().map(|grid| grid[0].len()).collect();
-        for j in 0..max_height {
-            let mut full_line = String::new();
-            for (k, grid) in grids.iter().enumerate() {
-                let (w, b) = if is_light { (0, 35) } else { (255, 200) };
-                let (r, g, b) = match (i + k + 3) % 6 {
-                    0 => (w, b, b),
-                    1 => (w, w, b),
-                    2 => (b, w, b),
-                    3 => (b, w, w),
-                    4 => (b, b, w),
-                    5 => (w, b, w),
-                    _ => unreachable!(),
-                };
-                let offset = max_height / 2 - grid.len() / 2;
-                if let Some(line) = grid.get(j.saturating_sub(offset)).filter(|_| j >= offset) {
-                    if color {
-                        let line: String = line.iter().copied().collect();
-                        full_line.push_str(&line.truecolor(r, g, b).to_string());
-                    } else {
-                        full_line.extend(line.iter().copied())
-                    }
-                } else {
-                    full_line.extend(repeat_n(' ', widths[k]));
-                }
-                full_line.push_str("  ");
+        let mut curr_width = 4;
+        let mut line_grids = Vec::new();
+        let mut curr_line = Vec::new();
+        for val in line.iter().rev() {
+            let grid = val.fmt_grid(GridFmtParams {
+                label: true,
+                ..Default::default()
+            });
+            for w in grid.windows(2) {
+                assert_eq!(w[0].len(), w[1].len());
             }
-            formatted_lines.push(full_line);
+            let width = grid[0].len();
+            if curr_width > 4 && curr_width + 2 + width > max_width {
+                line_grids.push(take(&mut curr_line));
+                curr_width = 4 + width;
+            } else {
+                curr_width += 2 + width;
+            }
+            curr_line.push(grid);
         }
-        i += grids.len();
+        if !curr_line.is_empty() {
+            line_grids.push(curr_line);
+        }
+        let grid_line_count = line_grids.len();
+        for (j, mut grids) in line_grids.into_iter().enumerate() {
+            grids.reverse();
+            let max_height = grids.iter().map(|grid| grid.len()).max().unwrap_or(0);
+            let widths: Vec<usize> = grids.iter().map(|grid| grid[0].len()).collect();
+            for k in 0..max_height {
+                let mut full_line = String::new();
+                if grid_line_count > 1 {
+                    if j < grid_line_count - 1 && k == max_height / 2 {
+                        full_line.push_str("↱ ")
+                    } else {
+                        full_line.push_str("  ")
+                    }
+                }
+                for (l, grid) in grids.iter().enumerate() {
+                    let (w, b) = if is_light { (0, 35) } else { (255, 200) };
+                    let (r, g, b) = match (i + l + 3) % 6 {
+                        0 => (w, b, b),
+                        1 => (w, w, b),
+                        2 => (b, w, b),
+                        3 => (b, w, w),
+                        4 => (b, b, w),
+                        5 => (w, b, w),
+                        _ => unreachable!(),
+                    };
+                    let offset = max_height / 2 - grid.len() / 2;
+                    if let Some(line) = grid.get(k.saturating_sub(offset)).filter(|_| k >= offset) {
+                        if color {
+                            let line: String = line.iter().copied().collect();
+                            full_line.push_str(&line.truecolor(r, g, b).to_string());
+                        } else {
+                            full_line.extend(line.iter().copied())
+                        }
+                    } else {
+                        full_line.extend(repeat_n(' ', widths[l]));
+                    }
+                    if grid_line_count > 1 && j > 0 && k == max_height / 2 && l == grids.len() - 1 {
+                        full_line.push_str(" ⬏");
+                    } else {
+                        full_line.push_str("  ");
+                    }
+                }
+                formatted_lines.push(full_line);
+            }
+            i += grids.len();
+        }
     }
     formatted_lines
 }

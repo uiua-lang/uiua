@@ -606,6 +606,12 @@ pub fn stereo_to_wave_bytes<T: hound::Sample + Copy>(
     Ok(bytes.into_inner())
 }
 
+#[cfg(not(feature = "audio_encode"))]
+#[doc(hidden)]
+pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
+    Err("Audio decoding is not supported in this environment".into())
+}
+
 #[cfg(feature = "audio_encode")]
 #[doc(hidden)]
 pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
@@ -627,6 +633,12 @@ pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
             "Unsupported sample format: {sample_format:?} {bits_per_sample} bits per sample"
         )),
     }
+}
+
+#[cfg(not(feature = "audio_encode"))]
+#[doc(hidden)]
+pub fn array_from_ogg_bytes(_bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
+    Err("Audio decoding is not supported in this environment".into())
 }
 
 #[cfg(feature = "audio_encode")]

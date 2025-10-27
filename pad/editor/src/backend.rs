@@ -650,7 +650,8 @@ impl SysBackend for WebBackend {
             spawn_local(async move {
                 let path = match key {
                     BigConstant::Elevation => "/assets/elevation.webp",
-                    BigConstant::BadAppleGif => "/assets/bad_apple.gif",
+                    BigConstant::BadAppleGif => "/assets/bad-apple.gif",
+                    BigConstant::Amen => "/assets/amen-break.wav",
                 };
                 let fetch_res = fetch_bytes(path).await;
                 CACHE.with(|cache| cache.borrow_mut().insert(key, fetch_res.clone()));

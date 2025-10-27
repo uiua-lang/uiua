@@ -51,9 +51,6 @@ pub enum ConstantValue {
     Big(BigConstant),
     /// The music constant
     Music,
-    /// The amen constant
-    #[cfg(feature = "audio_encode")]
-    Amen,
     /// Bad Apple!! audio
     BadAppleAudio,
     /// The path of the current source file relative to the current working directory
@@ -73,6 +70,8 @@ pub enum BigConstant {
     Elevation,
     /// A gif representing the Bad Apple!! video
     BadAppleGif,
+    /// Audio for the Amen break
+    Amen,
 }
 
 impl ConstantValue {
@@ -116,6 +115,16 @@ impl ConstantValue {
                                     };
                                     val
                                 }
+                                BigConstant::Amen => {
+                                    let (samples, sr) =
+                                        media::array_from_wav_bytes(&bytes).unwrap();
+                                    let new_row_count = (samples.row_count() as f64
+                                        * backend.audio_sample_rate() as f64
+                                        / sr as f64)
+                                        .round()
+                                        as usize;
+                                    samples.keep_scalar_real_impl(new_row_count).into()
+                                }
                             })
                             .clone()
                         }
@@ -137,21 +146,6 @@ impl ConstantValue {
                         env.pop("samples").unwrap()
                     })
                     .clone()
-            }
-            #[cfg(feature = "audio_encode")]
-            ConstantValue::Amen => {
-                static AMEN: OnceLock<Value> = OnceLock::new();
-                AMEN.get_or_init(|| {
-                    let (samples, sr) =
-                        media::array_from_wav_bytes(include_bytes!("assets/amen-break.wav"))
-                            .unwrap();
-                    let new_row_count = (samples.row_count() as f64
-                        * backend.audio_sample_rate() as f64
-                        / sr as f64)
-                        .round() as usize;
-                    samples.keep_scalar_real_impl(new_row_count).into()
-                })
-                .clone()
             }
             ConstantValue::ThisFile => {
                 current_file_path.map_or_else(|| "".into(), |p| p.display().to_string().into())
@@ -435,13 +429,13 @@ constant!(
     /// https://mortenhannemose.github.io/lena/
     (#[cfg(feature = "image")] "Lena", Media, media::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false, false).unwrap()),
     /// Depth map for Lena picture
-    (#[cfg(feature = "image")] "LenaDepth", Media, media::image_bytes_to_array(include_bytes!("assets/lena_depth.png"), true, false).unwrap()),
+    (#[cfg(feature = "image")] "LenaDepth", Media, media::image_bytes_to_array(include_bytes!("assets/lena-depth.png"), true, false).unwrap()),
     /// A picture of two cats
     ///
     /// Their names are Murphy and Louie
     (#[cfg(feature = "image")] "Cats", Media, media::image_bytes_to_array(include_bytes!("assets/cats.webp"), false, false).unwrap()),
     /// Depth map for the cats
-    (#[cfg(feature = "image")] "CatsDepth", Media, media::image_bytes_to_array(include_bytes!("assets/cats_depth.png"), true, false).unwrap()),
+    (#[cfg(feature = "image")] "CatsDepth", Media, media::image_bytes_to_array(include_bytes!("assets/cats-depth.png"), true, false).unwrap()),
     /// An elevation map of the world
     ///
     /// Sea level is at 0.562
@@ -451,10 +445,10 @@ constant!(
     /// Amen break
     ///
     /// Thank you Gregory Coleman 🙏
-    (#[cfg(feature = "audio_encode")] "Amen", Media, ConstantValue::Amen),
+    ("Amen", Media, ConstantValue::Big(BigConstant::Amen)),
     /// Audio for Bad Apple!! (WIP)
     ("Bad", Media, ConstantValue::BadAppleAudio),
-    /// Frames for Bad Apple!! at 16fps
+    /// Frames for Bad Apple!! at 24fps
     ("Apple", Media, ConstantValue::Big(BigConstant::BadAppleGif)),
     /// Lorem Ipsum text
     ("Lorem", Media, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),

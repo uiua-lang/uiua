@@ -55,7 +55,7 @@ pub enum ConstantValue {
     #[cfg(feature = "audio_encode")]
     Amen,
     /// Bad Apple!! audio
-    BadApple,
+    BadAppleAudio,
     /// The path of the current source file relative to the current working directory
     ThisFile,
     /// The name of the current source file
@@ -131,7 +131,7 @@ impl ConstantValue {
                     .get_or_init(|| music_constant(backend.as_ref()))
                     .clone()
             }
-            ConstantValue::BadApple => {
+            ConstantValue::BadAppleAudio => {
                 static MUSIC: OnceLock<Value> = OnceLock::new();
                 MUSIC
                     .get_or_init(|| {
@@ -455,10 +455,10 @@ constant!(
     ///
     /// Thank you Gregory Coleman 🙏
     (#[cfg(feature = "audio_encode")] "Amen", Media, ConstantValue::Amen),
+    /// Audio for Bad Apple!! (WIP)
+    ("Bad", Media, ConstantValue::BadAppleAudio),
     /// Frames for Bad Apple!! at 16fps
-    ("BadApple", Media, ConstantValue::Big(BigConstant::BadAppleTransposed)),
-    /// Audio for Bad Apple!!
-    ("BadAppleAudio", Media, ConstantValue::BadApple),
+    ("Apple", Media, ConstantValue::Big(BigConstant::BadAppleTransposed)),
     /// Lorem Ipsum text
     ("Lorem", Media, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
     /// Rainbow flag colors

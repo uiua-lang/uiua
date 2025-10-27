@@ -13,6 +13,7 @@
 - `under group/partition inventory` optimization
 - Reserved modifier glyphs?
 - Streaming gif and audio encoding
+- Window "restart all" button
 
 ## Planned Features
 Features that are planned to be implemented in the future.

@@ -188,7 +188,6 @@ struct App {
     clear_before_next: bool,
     #[cfg(feature = "audio")]
     audio_output: Option<hodaun::OutputDeviceMixer<hodaun::Stereo>>,
-    #[cfg(feature = "audio")]
     autoplay: bool,
 }
 
@@ -220,8 +219,9 @@ enum OutputItem {
     },
     Gif {
         frames: Vec<(TextureId, f32)>,
-        curr: f32,
         play: bool,
+        play_offset: f32,
+        play_start: Instant,
         state: ImageState,
         bytes: Vec<u8>,
     },
@@ -255,10 +255,11 @@ impl ImageState {
 
 impl App {
     fn new(recv: Receiver<Request>, ctx: &Context) -> Self {
-        let (ppp, clear) = ctx.memory_mut(|mem| {
+        let (ppp, clear, autoplay) = ctx.memory_mut(|mem| {
             (
                 mem.data.get_persisted(Id::new("ppp")).unwrap_or(1.5),
                 mem.data.get_persisted(Id::new("clear")).unwrap_or(true),
+                mem.data.get_persisted(Id::new("autoplay")).unwrap_or(true),
             )
         });
         ctx.set_pixels_per_point(ppp);
@@ -278,8 +279,7 @@ impl App {
             clear_before_next: true,
             #[cfg(feature = "audio")]
             audio_output: hodaun::default_output().ok(),
-            #[cfg(feature = "audio")]
-            autoplay: false,
+            autoplay,
         }
     }
 }
@@ -427,6 +427,7 @@ impl eframe::App for App {
                 data.clear();
                 data.insert_persisted(Id::new("ppp"), self.cache.ppp);
                 data.insert_persisted(Id::new("clear"), self.clear);
+                data.insert_persisted(Id::new("autplay"), self.autoplay);
             });
         }
         ctx.request_repaint_after_secs(0.1);
@@ -571,22 +572,28 @@ impl App {
             }
             OutputItem::Gif {
                 frames,
-                curr,
                 play,
                 state,
                 bytes,
+                play_offset,
+                play_start,
             } => {
                 if let Some(label) = &state.label {
                     ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                 }
                 let total_time: f32 = frames.iter().map(|(_, d)| d).sum();
+                if !*play {
+                    *play_start = Instant::now();
+                }
                 ui.horizontal(|ui| {
                     // Frames
                     let size = cache.image_size(state.size);
                     let mut t = 0.0;
                     let mut rendered = false;
+                    let mut curr =
+                        ((Instant::now() - *play_start).as_secs_f32() + *play_offset) % total_time;
                     for (tex_id, delay) in &*frames {
-                        if t < *curr - delay {
+                        if t < curr - delay {
                             t += delay;
                             continue;
                         }
@@ -618,11 +625,16 @@ impl App {
                                 "Play"
                             });
                             // Time slider
-                            Slider::new(curr, 0.0..=total_time)
+                            if Slider::new(&mut curr, 0.0..=total_time)
                                 .min_decimals(2)
                                 .max_decimals(2)
                                 .suffix(format!("/{total_time:.2}"))
-                                .ui(ui);
+                                .ui(ui)
+                                .dragged()
+                            {
+                                *play_start = Instant::now();
+                                *play_offset = curr;
+                            }
                         });
                         // Save
                         if ui.button("Save").clicked() {
@@ -644,10 +656,6 @@ impl App {
                         }
                     });
                 });
-                if *play {
-                    *curr += cache.last_frame.elapsed().as_secs_f32();
-                    *curr %= total_time;
-                }
             }
             #[cfg(feature = "audio")]
             OutputItem::Audio {
@@ -812,10 +820,11 @@ impl App {
                 }
                 OutputItem::Gif {
                     frames: tex_ids,
-                    curr: 0.0,
                     play: true,
                     state: ImageState::new([gif_width, gif_height], label),
                     bytes,
+                    play_offset: 0.0,
+                    play_start: Instant::now(),
                 }
             }
             SmartOutput::Apng(..) => {

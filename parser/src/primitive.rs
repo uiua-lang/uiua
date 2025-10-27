@@ -251,6 +251,23 @@ impl Primitive {
             _ => return None,
         })
     }
+    #[allow(unused_parens)]
+    pub fn subscript_margs(&self, sub: Option<&Subscript>) -> Option<usize> {
+        use Primitive::*;
+        let Some(sub) = sub else {
+            return self.modifier_args();
+        };
+        Some(match self {
+            (Slf | Backward | On | By | With | Off | Both)
+            | (Rows | Each | Inventory)
+            | (Repeat | Tuples | Stencil)
+            | Geometric => 1,
+            Bracket | Under | Fill => 2,
+            Reach if sub.side.is_some() => 2,
+            Reach | OldReach => 1,
+            _ => return None,
+        })
+    }
     /// A suggested replacement if the primitive is deprecated
     pub fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
@@ -261,7 +278,7 @@ impl Primitive {
                 By.format()
             ),
             Flip => format!("use {} instead", Backward.format()),
-            Reach => String::new(),
+            OldReach => format!("use {} instead", Reach.format()),
             Log => format!("use subscripted {} or {Anti}{Backward}{Pow}", Exp.format()),
             Rerank => format!(
                 "use subscripted {} or {Un}{By}({Len}{Shape}) instead",

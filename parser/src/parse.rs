@@ -1103,7 +1103,8 @@ impl Parser<'_> {
             self.spaces();
         }
         let mut args = Vec::new();
-        for i in 0..modifier.args() {
+        let margs = modifier.subscript_margs(subscript.as_ref().map(|s| &s.value));
+        for i in 0..margs {
             loop {
                 args.extend(self.spaces());
                 if let Some(span) = self.exact(DoubleSemicolon.into()) {

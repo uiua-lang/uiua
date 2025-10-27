@@ -310,7 +310,7 @@ impl Compiler {
                 let main = args.next().unwrap();
                 self.geometric(main, subscript, Some(metrics))
             }
-            m if m.args() >= 2 => {
+            m if m.subscript_margs(subscript.as_ref().map(|s| &s.value)) >= 2 => {
                 let new = Modified {
                     modifier: modifier.clone(),
                     operands: pack
@@ -371,7 +371,8 @@ impl Compiler {
             }
         }
 
-        let required_ops = modified.modifier.value.args();
+        let required_ops =
+            (modified.modifier.value).subscript_margs(subscript.as_ref().map(|s| &s.value));
         if op_count < required_ops {
             // Warn about not enough args
             if !matches!(
@@ -573,31 +574,67 @@ impl Compiler {
                     Node::Mod(By, eco_vec![sn], span)
                 }
             }
-            Reach => func!({
+            OldReach => func!({
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let mut node = sn.node;
-                if let Some(side) = subscript.and_then(|sub| self.subscript_side_only(&sub, Reach))
-                {
-                    match side {
-                        SubSide::Left => {
-                            node = Node::Mod(Dip, eco_vec![SigNode::new(sn.sig, node)], span);
-                            node.prepend(Node::Prim(Flip, span));
-                        }
-                        SubSide::Right => {
-                            node.prepend(Node::Prim(Pop, span));
-                            node = Node::Mod(Off, eco_vec![node.sig_node().unwrap()], span);
-                            node.prepend(Node::Prim(Flip, span));
-                        }
-                    }
-                } else {
-                    node.prepend(Node::Mod(
-                        Dip,
-                        eco_vec![SigNode::new((1, 0), Node::Prim(Pop, span))],
-                        span,
-                    ));
-                }
+                node.prepend(Node::Prim(Pop, span));
+                node = Node::Mod(Off, eco_vec![node.sig_node().unwrap()], span);
+                node.prepend(Node::Prim(Flip, span));
                 node
+            }),
+            Reach => func!({
+                let (f, g) = if (subscript.as_ref()).is_some_and(|sub| sub.value.side.is_some()) {
+                    let (f, g, ..) = self.dyadic_modifier_ops(modified)?;
+                    (f, g)
+                } else {
+                    let (sn, _) = self.monadic_modifier_op(modified)?;
+                    (sn, SigNode::default())
+                };
+                let span = self.add_span(modified.modifier.span.clone());
+                let mut dip_count = 1;
+                let mut pop_count = 1;
+                let mut side = None;
+                if let Some(subscript) = subscript.map(|sub| self.validate_subscript(sub)) {
+                    if let Some(n) = subscript.value.num {
+                        dip_count = self.positive_subscript(n, Reach, &subscript.span);
+                    }
+                    if let Some(ss) = subscript.value.side {
+                        side = Some(ss.side);
+                        pop_count = ss.n.unwrap_or_else(|| match ss.side {
+                            SubSide::Left => f.sig.args(),
+                            SubSide::Right => g.sig.args(),
+                        });
+                    }
+                }
+                let select_kept = Node::from_iter(repeat_n(Node::Prim(Pop, span), pop_count))
+                    .sig_node()
+                    .unwrap()
+                    .dipped(dip_count, span)
+                    .node;
+                match side {
+                    None => Node::from([select_kept, f.node]),
+                    Some(side) => {
+                        let select_popped = SigNode::default()
+                            .dipped(pop_count, span)
+                            .gapped(dip_count, span)
+                            .node;
+                        Node::Mod(
+                            Fork,
+                            match side {
+                                SubSide::Left => eco_vec![
+                                    Node::from([select_popped, f.node]).sig_node().unwrap(),
+                                    Node::from([select_kept, g.node]).sig_node().unwrap(),
+                                ],
+                                SubSide::Right => eco_vec![
+                                    Node::from([select_kept, f.node]).sig_node().unwrap(),
+                                    Node::from([select_popped, g.node]).sig_node().unwrap(),
+                                ],
+                            },
+                            span,
+                        )
+                    }
+                }
             }),
             Dip => func!({
                 let (f, _) = self.monadic_modifier_op(modified)?;

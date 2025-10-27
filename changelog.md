@@ -11,15 +11,16 @@ This version is not yet released. If you are reading this on the website, then t
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
 - [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) now accepts non-boolean integers
+- Change [`reach ∪`](https://uiua.org/docs/reach)'s glyph
+- Change how sided [`reach ∪`](https://uiua.org/docs/reach) works
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
 - Add experimental [`&fetch`](https://uiua.org/docs/&fetch) function to easily fetch data from a url
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
-- Add exeprimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), wich automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
+- Add experimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), wich automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
 - Change experimental subscripted [`transpose ⍉`](https://uiua.org/docs/transpose) to transpose the first N axes
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)
-- Deprecate experimental [`reach 𝄐`](https://uiua.org/docs/reach)
 ### Interpreter
 - Add option to provide folder as test cases destination
 - Add an `Amen` audio constant
@@ -272,7 +273,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
   - You can find a short blog post about this change [here](https://uiua.org/blog/its-so-over)
 - Stabilize [sided subscripts](https://uiua.org/tutorial/evenmoreargument#sided-subscripts) for [`both ∩`](https://uiua.org/docs/both) and [`bracket ⊓`](https://uiua.org/docs/bracket)
 - Add [`un °`](https://uiua.org/docs/un) [`with ⤙`](https://uiua.org/docs/with) and [`un °`](https://uiua.org/docs/un) [`off ⤚`](https://uiua.org/docs/off)
-- Add sided subscripts for [`reach 𝄐`](https://uiua.org/docs/reach)
+- Add sided subscripts for [`reach ∪`](https://uiua.org/docs/reach)
 - Add the [`# External!`](https://www.uiua.org/tutorial/documentation#external) semantic comment to mark functions that are provided via Rust code
   - These functions don't require a Uiua implementation and will show up in the LSP
   - Calling an `# External!` function that hasn't been bound will throw an error

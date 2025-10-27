@@ -516,7 +516,7 @@ impl Spanner {
                     Some("Meow".into())
                 }
                 "🐕" | "🐶" | "🦮" | "🐕‍🦺" => Some("Woof".into()),
-                "🐖" | "🐷" | "🐽" /* | "👮" */ => Some("Oink".into()),
+                "🐖" | "🐷" | "🐽" | "👮" => Some("Oink".into()),
                 "🐄" | "🐮" => Some("Moo".into()),
                 "🐸" => Some("Ribbit".into()),
                 "ඞ" => Some("SUS".into()),
@@ -1613,14 +1613,15 @@ mod server {
             let mut prev_char = 0;
             let for_prim = |p: Primitive, sub: Option<&Subscript>| {
                 let args = p.subscript_sig(sub).map(|sig| sig.args()).or(p.args());
+                let margs = p.subscript_margs(sub).or_else(|| p.modifier_args());
                 Some(match p.class() {
                     PrimClass::Arguments | PrimClass::Debug if p.modifier_args().is_none() => {
                         STACK_FUNCTION_STT
                     }
                     PrimClass::Constant => UIUA_NUMBER_STT,
-                    _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
-                    _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
-                    _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,
+                    _ if margs == Some(1) => MONADIC_MODIFIER_STT,
+                    _ if margs == Some(2) => DYADIC_MODIFIER_STT,
+                    _ if margs.is_some() => TRIADIC_MODIFIER_STT,
                     _ if args == Some(0) => NOADIC_FUNCTION_STT,
                     _ if args == Some(1) => MONADIC_FUNCTION_STT,
                     _ if args == Some(2) => DYADIC_FUNCTION_STT,

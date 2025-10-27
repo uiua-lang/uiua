@@ -2255,21 +2255,24 @@ primitive!(
     /// ex: ≡◇⧻ {"These" "are" "some" "words"}
     /// ex: ≡◇/+ {3_0_1 5 2_7}
     ([1], Content, OtherModifier, ("content", '◇')),
-    /// Call a function on the first and third values on the stack
+    /// Call a function skipping the second argument
     ///
     /// ex: # Experimental!
-    ///   : 𝄐+ 1 2 3
-    /// This can simplify some common stack access patterns.
+    ///   : ∪+ 1 2 3
+    /// You can chain [reach] to skip more arguments
     /// ex: # Experimental!
-    ///   : [⊃⊟𝄐⊟ @a@b@c]
+    ///   : ∪∪⊟ 1 2 3 4
+    ///   : ∪∪∪⊟ 1 2 3 4 5
+    /// Numeric subscripts make [reach] include additional leading arguments.
     /// ex: # Experimental!
-    ///   : [⊃⋅⊟𝄐⊟ @a@b@c]
-    /// [reach] supports sided subscripts. They put the 2nd stack value above or below the outputs of the function.
+    ///   : ∪₂⊟₃ 1 2 3 4
+    /// Sided subscripts cause [reach] to take 2 functions instead of one. The function of the given side will operate on the skipped arguments.
     /// ex: # Experimental!
-    ///   : {𝄐⌞⊟ 1 2 3}
-    /// ex: # Experimental!
-    ///   : {𝄐⌟⊟ 1 2 3}
-    ([1], Reach, Arguments, ("reach", '𝄐'), { experimental: true }),
+    ///   : ∪⌞⊟⊟₃ 1 2 3 4 5
+    ///   : ∪⌟⊟⊟₃ 1 2 3 4 5
+    ([1], Reach, Arguments, ("reach", '∪'), { experimental: true }),
+    /// Old reach
+    ([1], OldReach, Arguments,  ("old reach", '𝄐'), { experimental: true }),
     /// Define the various inverses of a function
     ///
     /// [obverse] defines how a function should interact with [un], [anti], and [under].

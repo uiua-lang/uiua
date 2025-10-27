@@ -549,6 +549,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),
         subscript(Off, "First N values", "{⤚₂[⊙⊙∘] 1 2 3}"),
         subscript(Both, "Apply to N argument sets", "[∩₃+ 1 2 3 4 5 6]"),
+        subscript(Reach, "Include first N values", "∪₂⊟₃ 1 2 3 4"),
         subscript(Rows, "Apply to rank-N subarrays", "≡₁□ °△2_3_4"),
         subscript(Inventory, "Apply to rank-N subarrays", "⍚₁⇡ °△2_3"),
         subscript(Repeat, "Repetition count", "⍥₅(⊂⟜/+) [1 2]"),
@@ -588,11 +589,11 @@ pub fn Subscripts() -> impl IntoView {
             "Flip the first or last pair of arguments",
             "# Experimental!\n˜⌞⊟₃ 1 2 3\n˜⌟⊟₃ 1 2 3",
         ),
-        // subscript(
-        //     Reach,
-        //     "Put the second argument above or below the outputs",
-        //     "# Experimental!\n{𝄐⌞⊟ 1 2 3}\n{𝄐⌟⊟ 1 2 3}",
-        // ),
+        subscript(
+            Reach,
+            "Call an additional function on the skipped arguments",
+            "# Experimental!\n{∪⌞¯⊟ 1 2 3}\n{∪⌟⊟¯ 1 2 3}",
+        ),
         subscript(
             Under,
             "Apply the undoing function to later arguments",
@@ -615,6 +616,11 @@ pub fn Subscripts() -> impl IntoView {
             Both,
             "Apply to N sets of arguments but some arguments N times",
             "{∩₃⌞₂⊟₃} 1 2 3 4 5\n{∩₃⌟₂⊟₃} 1 2 3 4 5",
+        ),
+        subscript(
+            Reach,
+            "Call an additional function on N skipped arguments",
+            "# Experimental!\n{∪₂⌟⊟₃⊟ 1 2 3 4 5}\n{∪₂⌞⊟⊟₃ 1 2 3 4 5}",
         ),
         subscript(
             Rows,

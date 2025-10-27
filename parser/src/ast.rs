@@ -784,6 +784,13 @@ impl Modifier {
             Modifier::Macro(mac) => ident_modifier_args(&mac.ident.value),
         }
     }
+    /// Get the number of arguments this modifier takes given a subscript
+    pub fn subscript_margs(&self, sub: Option<&Subscript>) -> usize {
+        match self {
+            Modifier::Primitive(prim) => prim.subscript_margs(sub).unwrap_or_else(|| self.args()),
+            m => m.args(),
+        }
+    }
 }
 
 /// An argument setter

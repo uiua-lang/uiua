@@ -1082,6 +1082,15 @@
     "class": "Arguments",
     "description": "Call a function but keep its first argument after its outputs"
   },
+  "old reach": {
+    "glyph": "𝄐",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Arguments",
+    "description": "Old reach",
+    "experimental": true,
+    "deprecated": true
+  },
   "on": {
     "glyph": "⟜",
     "outputs": 1,
@@ -1215,13 +1224,12 @@
     "description": "Make an array of all natural numbers less than a number"
   },
   "reach": {
-    "glyph": "𝄐",
+    "glyph": "∪",
     "outputs": 1,
     "modifier_args": 1,
     "class": "Arguments",
-    "description": "Call a function on the first and third values on the stack",
-    "experimental": true,
-    "deprecated": true
+    "description": "Call a function skipping the second argument",
+    "experimental": true
   },
   "reciprocal": {
     "glyph": "⨪",

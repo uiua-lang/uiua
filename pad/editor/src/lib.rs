@@ -2460,7 +2460,7 @@ fn prim_sig_class(prim: Primitive, subscript: Option<&Subscript>) -> &'static st
         }
         prim if prim.class() == PrimClass::Constant => code_font!("number-literal"),
         prim => {
-            if let Some(m) = prim.modifier_args() {
+            if let Some(m) = prim.subscript_margs(subscript) {
                 modifier_class(m)
             } else {
                 prim.subscript_sig(subscript)

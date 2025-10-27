@@ -2122,9 +2122,8 @@ impl Compiler {
         let spandex = self.add_span(span.clone());
         Node::Prim(prim, spandex)
     }
-    #[allow(clippy::match_single_binding, unused_parens)]
+    #[allow(clippy::match_single_binding)]
     fn subscript(&mut self, sub: Subscripted, span: CodeSpan) -> UiuaResult<Node> {
-        use Primitive::*;
         let scr = sub.script;
         Ok(match sub.word.value {
             Word::Modified(m) => match m.modifier.value {
@@ -2136,14 +2135,7 @@ impl Compiler {
                     self.modified(*m, Some(scr.map(Into::into)))?
                 }
                 Modifier::Primitive(prim) => {
-                    if !matches!(
-                        prim,
-                        (Both | Bracket)
-                            | (Slf | Backward | Reach | On | By | With | Off)
-                            | (Rows | Each | Inventory)
-                            | (Repeat | Tuples | Stencil)
-                            | (Fill | Under | Geometric)
-                    ) {
+                    if prim.subscript_margs(Some(&scr.value)).is_none() {
                         self.add_error(
                             m.modifier.span.clone().merge(scr.span.clone()),
                             format!("Subscripts are not implemented for {}", prim.format()),

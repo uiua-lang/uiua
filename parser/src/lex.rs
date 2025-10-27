@@ -1036,6 +1036,18 @@ impl<'a> Lexer<'a> {
                     self.end(Primitive::Occurrences, start);
                     self.end(Subscr(Subscript::from(1)), self.loc);
                 }
+                "𝄐" => {
+                    if self.next_char_exact("⌞") {
+                        self.end(Primitive::Reach, start);
+                        self.end(Subscr(SubSide::Left.into()), self.loc);
+                        self.end(Primitive::Identity, self.loc);
+                    } else if self.next_char_exact("⌟") {
+                        self.end(Primitive::OldReach, start);
+                        self.end(Subscr(SubSide::Right.into()), self.loc);
+                    } else {
+                        self.end(Primitive::Reach, start);
+                    }
+                }
 
                 "(" => self.end(OpenParen, start),
                 ")" => self.end(CloseParen, start),

@@ -44,6 +44,15 @@ impl From<i32> for Subscript<i32> {
     }
 }
 
+impl<N> From<SubSide> for Subscript<N> {
+    fn from(side: SubSide) -> Self {
+        Subscript {
+            num: None,
+            side: Some(SidedSubscript { side, n: None }),
+        }
+    }
+}
+
 /// The numeric part of a subscript
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]

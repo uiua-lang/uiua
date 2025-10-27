@@ -12,12 +12,12 @@ site/dist
 *.jpg
 *.txt
 *.db
-!*/assets/*
-!src/primitive/assets/*
-
 *.ua
 *.uasm
 *.dll
+!*/assets/*
+!src/primitive/assets/*
+
 profile.yaml
 uiua.tmLanguage.json
 !/tests*/*

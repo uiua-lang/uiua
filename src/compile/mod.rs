@@ -1912,7 +1912,7 @@ impl Compiler {
                 .constant_references
                 .insert(span.clone().sp(ident));
             let value = (constant.value)
-                .resolve(self.scope_file_path(), &*self.backend())
+                .resolve(self.scope_file_path(), self.backend().clone())
                 .unwrap_or_else(|e| {
                     self.add_error(span, e);
                     Value::default()

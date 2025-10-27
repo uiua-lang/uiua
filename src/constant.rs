@@ -3,14 +3,15 @@ use std::{
     collections::{hash_map::Entry, HashMap},
     f64::consts::TAU,
     path::{Path, PathBuf},
-    sync::{LazyLock, OnceLock},
+    sync::{Arc, LazyLock, OnceLock},
 };
 
 use ecow::EcoVec;
 use rand::prelude::*;
 
 use crate::{
-    media, parse_doc_line_fragments, Array, Boxed, PrimDocFragment, SysBackend, Value, WILDCARD_NAN,
+    media, parse_doc_line_fragments, Array, Boxed, PrimDocFragment, SysBackend, Uiua, Value,
+    WILDCARD_NAN,
 };
 
 /// The definition of a shadowable constant
@@ -53,6 +54,8 @@ pub enum ConstantValue {
     /// The amen constant
     #[cfg(feature = "audio_encode")]
     Amen,
+    /// Bad Apple!! audio
+    BadApple,
     /// The path of the current source file relative to the current working directory
     ThisFile,
     /// The name of the current source file
@@ -79,7 +82,7 @@ impl ConstantValue {
     pub(crate) fn resolve(
         &self,
         current_file_path: Option<&Path>,
-        backend: &dyn SysBackend,
+        backend: Arc<dyn SysBackend>,
     ) -> Result<Value, String> {
         let current_file_path = current_file_path.map(|p| {
             let mut path = PathBuf::new();
@@ -124,7 +127,19 @@ impl ConstantValue {
             }
             ConstantValue::Music => {
                 static MUSIC: OnceLock<Value> = OnceLock::new();
-                MUSIC.get_or_init(|| music_constant(backend)).clone()
+                MUSIC
+                    .get_or_init(|| music_constant(backend.as_ref()))
+                    .clone()
+            }
+            ConstantValue::BadApple => {
+                static MUSIC: OnceLock<Value> = OnceLock::new();
+                MUSIC
+                    .get_or_init(|| {
+                        let mut env = Uiua::with_backend(backend);
+                        env.run_str(include_str!("assets/bad_apple.ua")).unwrap();
+                        env.pop("samples").unwrap()
+                    })
+                    .clone()
             }
             #[cfg(feature = "audio_encode")]
             ConstantValue::Amen => {
@@ -442,6 +457,8 @@ constant!(
     (#[cfg(feature = "audio_encode")] "Amen", Media, ConstantValue::Amen),
     /// Frames for Bad Apple!! at 16fps
     ("BadApple", Media, ConstantValue::Big(BigConstant::BadAppleTransposed)),
+    /// Audio for Bad Apple!!
+    ("BadAppleAudio", Media, ConstantValue::BadApple),
     /// Lorem Ipsum text
     ("Lorem", Media, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
     /// Rainbow flag colors

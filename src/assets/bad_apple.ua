@@ -21,7 +21,6 @@ Distort  ← ⍜⌵↧₁ ×
 Kick     ← ×⊃(¬ₑ×10-1÷⟜⇡⧻|∿×τ ×40 ⁿ0.2)
 Noise    ← -⊸¬⍥⚂10000
 Snare    ← ⍜⟜↙(×⊸(√¬÷⟜⇡⧻) ↙⊙Noise ⊙◌)2500
-Tempo    ← 130
 
 MainDrums ← /+[
   IntroKick ← [
@@ -36,13 +35,14 @@ MainDrums ← /+[
     0 0 0 0 1 0 0 0 0 0 0 0 1 1 1 1
     1 0 0 0 1 0 0 0 0 0 0 0 1 0 1 0
   ]
-  (/⊂⍉⊞× Kick Sixteenth Tempo IntroKick)
-  (×0.5 /⊂⍉⊞× Snare Sixteenth Tempo IntroSnare)
+  (/⊂⍉⊞× Kick Sixteenth 130 IntroKick)
+  (×0.5 /⊂⍉⊞× Snare Sixteenth 130 IntroSnare)
 ]
 
-&ap ×0.2 /◇⊂ {
+×0.5 /◇⊂ {
   # Intro
   /+⬚0[
+    ?
     Intro ← [
       0 ∞ 0 7 ∞ 7 6 7 0 ∞ 0 7 ∞ 7 6 7
       0 ∞ 0 7 ∞ 7 6 7 0 0 7 9 2 2 9 10
@@ -50,7 +50,7 @@ MainDrums ← /+[
       0 ∞ 0 7 ∞ 7 6 7 3 3 9 10 2 2 7 9
     ]
     (EbMinor 1 ⊂⊃(≡₀⋅∞|♭↯2) Intro
-     SmoothTime Sixteenth Tempo
+     SmoothTime Sixteenth 130
      ×0.5 /+ Distort 5 Saw 20)
     ♭↯3 MainDrums
   ]
@@ -74,10 +74,10 @@ MainDrums ← /+[
       ¯2 5 ¯2 5 ¯2 5 ¯2 5 ¯1 6 ¯1 6 ¯1 6 ¯1 6
     ]
     (EbMinor 4 /≡⊂ [[⟜≡₀⋅∞ VerseM] [VerseM VerseM′]]
-     SmoothTime Eighth Tempo
+     SmoothTime Eighth 130
      /+ ×0.5 ×[1 0.6] Square 4)
     (EbMinor 1 VerseH
-     SmoothTime Eighth Tempo
+     SmoothTime Eighth 130
      ♭↯2 ×0.5 /+ Distort 2 Saw 20)
     ♭↯4 MainDrums
   ]
@@ -111,10 +111,10 @@ MainDrums ← /+[
       0 2 4 2 7 4 2 4 0 2 4 2 7 4 2 4
     ]
     (EbMinor 4 /≡⊂ [[ChorusM ChorusM′] [⟜+₇ ChorusM₂] [ChorusM ChorusM′]]
-     SmoothTime Eighth Tempo
+     SmoothTime Eighth 130
      /+ ×0.5 ×[1 0.6] Square 4)
     (⊂ ˜∩EbMinor 1 2 ∩(♭↯2) ChorusH ChorusH₂
-     SmoothTime Eighth Tempo
+     SmoothTime Eighth 130
      ×0.5 /+ Distort 2 Saw 20)
     ♭↯6 MainDrums
   ]

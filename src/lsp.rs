@@ -7,6 +7,7 @@ use std::{
     fmt,
     path::PathBuf,
     slice,
+    sync::Arc,
 };
 
 use crate::{
@@ -482,10 +483,10 @@ impl Spanner {
                 None
             };
             #[cfg(feature = "native_sys")]
-            let sys = &crate::NativeSys;
+            let sys = crate::NativeSys;
             #[cfg(not(feature = "native_sys"))]
-            let sys = &crate::SafeSys::new();
-            let val = constant.value.resolve(path, sys).ok();
+            let sys = crate::SafeSys::new();
+            let val = constant.value.resolve(path, Arc::new(sys)).ok();
             let meta = BindingMeta {
                 comment: Some(constant.doc().into()),
                 ..Default::default()

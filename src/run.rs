@@ -1040,7 +1040,7 @@ impl Uiua {
         boxed: bool,
         allow_ext: bool,
     ) -> UiuaResult {
-        self.exec(inner)?;
+        self.without_fill(|env| env.exec(inner))?;
         let start = self.require_height(len)?;
         let values = self.rt.stack.drain(start..).rev();
         let values: Vec<Value> = if boxed {

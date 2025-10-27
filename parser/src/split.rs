@@ -215,6 +215,7 @@ impl Primitive {
             alias!((wi, Stencil), (n, Identity)),
             alias!((du, On), (p, Identity)),
             alias!((r, Pop), (e, Un), (al, Complex)),
+            alias!((d, Fork), (u, Reach), (n, Both), (e, Join)),
             (
                 "kork",
                 &[

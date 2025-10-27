@@ -2259,6 +2259,8 @@ primitive!(
     ///
     /// ex: # Experimental!
     ///   : ∪+ 1 2 3
+    /// ex: # Experimental!
+    ///   : ∪⊂₃ 1_2 3_4 5_6 7_8
     /// You can chain [reach] to skip more arguments
     /// ex: # Experimental!
     ///   : ∪∪⊟ 1 2 3 4
@@ -2266,7 +2268,7 @@ primitive!(
     /// Numeric subscripts make [reach] include additional leading arguments.
     /// ex: # Experimental!
     ///   : ∪₂⊟₃ 1 2 3 4
-    /// Sided subscripts cause [reach] to take 2 functions instead of one. The function of the given side will operate on the skipped arguments.
+    /// Sided subscripts cause [reach] to take 2 functions instead of one. The function on the given side will operate on the skipped arguments.
     /// ex: # Experimental!
     ///   : ∪⌞⊟⊟₃ 1 2 3 4 5
     ///   : ∪⌟⊟⊟₃ 1 2 3 4 5

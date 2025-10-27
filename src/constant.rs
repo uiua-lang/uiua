@@ -72,9 +72,7 @@ pub enum BigConstant {
     /// An elevation map of the world
     Elevation,
     /// A gif representing the Bad Apple!! video
-    ///
-    /// It is transposed such that the axes are ordered [Height Width Frames]
-    BadAppleTransposed,
+    BadAppleGif,
 }
 
 impl ConstantValue {
@@ -107,7 +105,7 @@ impl ConstantValue {
                                 BigConstant::Elevation => {
                                     media::image_bytes_to_array(&bytes, true, false)?.into()
                                 }
-                                BigConstant::BadAppleTransposed => {
+                                BigConstant::BadAppleGif => {
                                     let (_, mut val) = media::gif_bytes_to_value_gray(&bytes)
                                         .map_err(|e| e.to_string())?;
                                     let Value::Byte(_) = &mut val else {
@@ -116,7 +114,6 @@ impl ConstantValue {
                                                 .into(),
                                         );
                                     };
-                                    val.transpose();
                                     val
                                 }
                             })
@@ -458,7 +455,7 @@ constant!(
     /// Audio for Bad Apple!! (WIP)
     ("Bad", Media, ConstantValue::BadAppleAudio),
     /// Frames for Bad Apple!! at 16fps
-    ("Apple", Media, ConstantValue::Big(BigConstant::BadAppleTransposed)),
+    ("Apple", Media, ConstantValue::Big(BigConstant::BadAppleGif)),
     /// Lorem Ipsum text
     ("Lorem", Media, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
     /// Rainbow flag colors

@@ -183,7 +183,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.16.0).
 - Stabilize [inline macros](https://uiua.org/tutorial/Macros#inline-macros)
 - The first argument to [`rotate ↻`](https://uiua.org/docs/rotate) can now be rank > 1.
   - This creates an array with multiple copies of the target array rotated by different amounts
-- [Output comments](https://uiua.org/tutorial/Basic Data Manipulation and Formatting#output-comments) now show values on the stack *after* their line rather than before it
+- [Output comments](<https://uiua.org/tutorial/Basic Data Manipulation and Formatting#output-comments>) now show values on the stack *after* their line rather than before it
 - Add [`un °`](https://uiua.org/docs/un) [`fill ⬚`](https://uiua.org/docs/fill)ed [`take ↙`](https://uiua.org/docs/take)
 - Add [`un °`](https://uiua.org/docs/un) [`add +`](https://uiua.org/docs/add), [`un °`](https://uiua.org/docs/un) [`multiply ×`](https://uiua.org/docs/multiply) and [`un °`](https://uiua.org/docs/un) [`divide ÷`](https://uiua.org/docs/divide)
   - These split into fraction and whole, sign and magnitude, and denominator and numerator respectively

@@ -6,7 +6,7 @@ use std::convert::identity;
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
-    algorithm::{get_ops, loops::flip, pervade::*},
+    algorithm::{get_ops, loops::flip, pervade::*, validate_size},
     check::{nodes_clean_sig, nodes_sig},
     cowslice::cowslice,
     Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
@@ -51,12 +51,12 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
             env.push(xs);
         }
         (Some((prim, flipped)), Value::Num(nums)) => {
-            if let Err(nums) = reduce_nums(prim, flipped, nums, depth, env) {
+            if let Err(nums) = reduce_nums(prim, flipped, nums, depth, env)? {
                 return generic_reduce(f, Value::Num(nums), depth, env);
             }
         }
         (Some((prim, flipped)), Value::Complex(nums)) => {
-            if let Err(nums) = reduce_coms(prim, flipped, nums, depth, env) {
+            if let Err(nums) = reduce_coms(prim, flipped, nums, depth, env)? {
                 return generic_reduce(f, Value::Complex(nums), depth, env);
             }
         }
@@ -66,10 +66,16 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                 return generic_reduce(f, Value::Byte(bytes), depth, env);
             }
             let mut val: Value = match prim {
-                Primitive::Add => {
-                    fast_reduce_different(bytes, 0.0, fill, depth, add::num_num, add::num_byte)
-                        .into()
-                }
+                Primitive::Add => fast_reduce_different(
+                    bytes,
+                    0.0,
+                    fill,
+                    depth,
+                    add::num_num,
+                    add::num_byte,
+                    env,
+                )?
+                .into(),
                 #[cfg(feature = "opt")]
                 Primitive::Sub if _flipped => fast_reduce_different(
                     bytes,
@@ -78,35 +84,64 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     depth,
                     flip(sub::num_num),
                     flip(sub::byte_num),
-                )
+                    env,
+                )?
                 .into(),
                 #[cfg(feature = "opt")]
-                Primitive::Sub => {
-                    fast_reduce_different(bytes, 0.0, fill, depth, sub::num_num, sub::num_byte)
-                        .into()
-                }
+                Primitive::Sub => fast_reduce_different(
+                    bytes,
+                    0.0,
+                    fill,
+                    depth,
+                    sub::num_num,
+                    sub::num_byte,
+                    env,
+                )?
+                .into(),
                 Primitive::Mul if bytes.meta.flags.is_boolean() => {
                     let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
-                        fast_reduce_different(bytes, 1.0, fill, depth, mul::num_num, mul::num_byte)
-                            .into()
+                        fast_reduce_different(
+                            bytes,
+                            1.0,
+                            fill,
+                            depth,
+                            mul::num_num,
+                            mul::num_byte,
+                            env,
+                        )?
+                        .into()
                     } else {
-                        fast_reduce(bytes, 1, byte_fill, depth, mul::bool_bool).into()
+                        fast_reduce(bytes, 1, byte_fill, depth, mul::bool_bool, env)?.into()
                     }
                 }
-                Primitive::Mul => {
-                    fast_reduce_different(bytes, 1.0, fill, depth, mul::num_num, mul::num_byte)
-                        .into()
-                }
+                Primitive::Mul => fast_reduce_different(
+                    bytes,
+                    1.0,
+                    fill,
+                    depth,
+                    mul::num_num,
+                    mul::num_byte,
+                    env,
+                )?
+                .into(),
                 Primitive::Or => {
                     let byte_fill = env.scalar_fill::<u8>().ok().map(|fv| fv.value);
                     if fill.is_some() && byte_fill.is_none() {
-                        fast_reduce_different(bytes, 0.0, fill, depth, or::num_num, or::num_byte)
-                            .into()
+                        fast_reduce_different(
+                            bytes,
+                            0.0,
+                            fill,
+                            depth,
+                            or::num_num,
+                            or::num_byte,
+                            env,
+                        )?
+                        .into()
                     } else if bytes.meta.flags.is_boolean() {
-                        fast_reduce(bytes, 0, byte_fill, depth, or::bool_bool).into()
+                        fast_reduce(bytes, 0, byte_fill, depth, or::bool_bool, env)?.into()
                     } else {
-                        fast_reduce(bytes, 0, byte_fill, depth, or::byte_byte).into()
+                        fast_reduce(bytes, 0, byte_fill, depth, or::byte_byte, env)?.into()
                     }
                 }
                 Primitive::Min => {
@@ -137,10 +172,11 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                             depth,
                             min::num_num,
                             min::num_byte,
-                        )
+                            env,
+                        )?
                         .into()
                     } else {
-                        fast_reduce(bytes, 0, byte_fill, depth, min::byte_byte).into()
+                        fast_reduce(bytes, 0, byte_fill, depth, min::byte_byte, env)?.into()
                     }
                 }
                 Primitive::Max => {
@@ -171,10 +207,11 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                             depth,
                             max::num_num,
                             max::num_byte,
-                        )
+                            env,
+                        )?
                         .into()
                     } else {
-                        fast_reduce(bytes, 0, byte_fill, depth, max::byte_byte).into()
+                        fast_reduce(bytes, 0, byte_fill, depth, max::byte_byte, env)?.into()
                     }
                 }
                 _ => return generic_reduce(f, Value::Byte(bytes), depth, env),
@@ -186,7 +223,7 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
         (_, xs) if f.sig == (2, 1) => {
             if depth == 0 && env.value_fill().is_none() {
                 if xs.row_count() == 0 {
-                    let val = reduce_identity(&f.node, xs).ok_or_else(|| {
+                    let val = reduce_identity(&f.node, xs, env)?.ok_or_else(|| {
                         env.error(format!(
                             "Cannot {} empty array. Function has no identity value.",
                             Primitive::Reduce.format()
@@ -227,17 +264,21 @@ fn trim_node(node: &Node) -> &[Node] {
     nodes
 }
 
-fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
+fn reduce_identity(node: &Node, mut val: Value, env: &Uiua) -> UiuaResult<Option<Value>> {
     use Primitive::*;
     let nodes = trim_node(node);
     let mut shape = val.shape.clone();
     shape.make_row();
     let len: usize = shape.iter().product();
-    let (first, tail) = nodes.split_first()?;
-    let (last, init) = nodes.split_last()?;
+    let Some((first, tail)) = nodes.split_first() else {
+        return Ok(None);
+    };
+    let Some((last, init)) = nodes.split_last() else {
+        return Ok(None);
+    };
     let init_sig = || nodes_sig(init).is_ok_and(|sig| sig.args() == sig.outputs());
     let tail_sig = || nodes_sig(tail).is_ok_and(|sig| sig.args() >= 1 && sig.outputs() == 1);
-    Some(match first {
+    Ok(Some(match first {
         Node::Prim(Join, _) if tail_sig() => {
             if val.rank() < 2 {
                 val.shape[0] = 0;
@@ -249,15 +290,19 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
         }
         _ => match last {
             Node::Prim(Add | Sub | Or | Complex, _) if init_sig() => {
+                let len = validate_size::<u8>([len], env)?;
                 Array::new(shape, eco_vec![0u8; len]).into()
             }
             Node::Prim(Mul | Div | Pow, _) if init_sig() => {
+                let len = validate_size::<u8>([len], env)?;
                 Array::new(shape, eco_vec![1u8; len]).into()
             }
             Node::Prim(Max, _) if init_sig() => {
+                let len = validate_size::<f64>([len], env)?;
                 Array::new(shape, eco_vec![f64::NEG_INFINITY; len]).into()
             }
             Node::Prim(Modulo | Min, _) if init_sig() => {
+                let len = validate_size::<f64>([len], env)?;
                 Array::new(shape, eco_vec![f64::INFINITY; len]).into()
             }
             Node::Prim(Join, _) if init_sig() => {
@@ -272,9 +317,9 @@ fn reduce_identity(node: &Node, mut val: Value) -> Option<Value> {
             Node::Format(parts, _) if parts.len() == 3 && init_sig() => {
                 EcoVec::<char>::new().into()
             }
-            _ => return None,
+            _ => return Ok(None),
         },
-    })
+    }))
 }
 
 fn reduce_singleton(node: &Node, val: Value, process: impl Fn(Value) -> Value) -> Value {
@@ -332,25 +377,25 @@ macro_rules! reduce_math {
             xs: Array<$ty>,
             depth: usize,
             env: &mut Uiua,
-        ) -> Result<(), Array<$ty>>
+        ) -> UiuaResult<Result<(), Array<$ty>>>
         where
             $ty: From<f64>,
         {
             let fill = env.scalar_fill::<$ty>().ok().map(|fv| fv.value);
             if fill.is_none() && env.value_fill().is_some() {
-                return Err(xs);
+                return Ok(Err(xs));
             }
             const TID: u8 = <$ty>::TYPE_ID;
             env.push(match prim {
-                Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, add::$f),
+                Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, add::$f, env)?,
                 #[cfg(feature = "opt")]
                 Primitive::Sub if _flipped => {
-                    fast_reduce(xs, 0.0.into(), fill, depth, flip(sub::$f))
+                    fast_reduce(xs, 0.0.into(), fill, depth, flip(sub::$f), env)?
                 }
                 #[cfg(feature = "opt")]
-                Primitive::Sub => fast_reduce(xs, 0.0.into(), fill, depth, sub::$f),
-                Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, depth, mul::$f),
-                Primitive::Or => fast_reduce(xs, 0.0.into(), fill, depth, or::$f),
+                Primitive::Sub => fast_reduce(xs, 0.0.into(), fill, depth, sub::$f, env)?,
+                Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, depth, mul::$f, env)?,
+                Primitive::Or => fast_reduce(xs, 0.0.into(), fill, depth, or::$f, env)?,
                 Primitive::Min if TID == 0 && xs.rank() == 1 && xs.meta.is_sorted_up() => {
                     (xs.data.first().copied())
                         .unwrap_or(f64::INFINITY.into())
@@ -375,11 +420,13 @@ macro_rules! reduce_math {
                         .max(fill.unwrap_or(f64::NEG_INFINITY.into()))
                         .into()
                 }
-                Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), fill, depth, min::$f),
-                Primitive::Max => fast_reduce(xs, f64::NEG_INFINITY.into(), fill, depth, max::$f),
-                _ => return Err(xs),
+                Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), fill, depth, min::$f, env)?,
+                Primitive::Max => {
+                    fast_reduce(xs, f64::NEG_INFINITY.into(), fill, depth, max::$f, env)?
+                }
+                _ => return Ok(Err(xs)),
             });
-            Ok(())
+            Ok(Ok(()))
         }
     };
 }
@@ -394,23 +441,24 @@ fn fast_reduce_different<T, U>(
     mut depth: usize,
     fuu: impl Fn(U, U) -> U,
     fut: impl Fn(U, T) -> U,
-) -> Array<U>
+    env: &Uiua,
+) -> UiuaResult<Array<U>>
 where
     T: ArrayValue + Copy + Into<U>,
     U: ArrayValue + Copy,
 {
     depth = depth.min(arr.rank());
     if depth == 0 && arr.rank() == 1 {
-        return if let Some(default) = default {
+        return Ok(if let Some(default) = default {
             arr.data.into_iter().fold(default, fut).into()
         } else if arr.row_count() == 0 {
             identity.into()
         } else {
             let first = arr.data[0].into();
             arr.data[1..].iter().copied().fold(first, fut).into()
-        };
+        });
     }
-    fast_reduce(arr.convert(), identity, default, depth, fuu)
+    fast_reduce(arr.convert(), identity, default, depth, fuu, env)
 }
 
 fn fast_reduce<T>(
@@ -419,20 +467,21 @@ fn fast_reduce<T>(
     default: Option<T>,
     mut depth: usize,
     f: impl Fn(T, T) -> T,
-) -> Array<T>
+    env: &Uiua,
+) -> UiuaResult<Array<T>>
 where
     T: ArrayValue + Copy,
 {
     depth = depth.min(arr.rank());
     if depth == 0 && arr.rank() == 1 {
-        return if let Some(default) = default {
+        return Ok(if let Some(default) = default {
             arr.data.iter().copied().fold(default, f).into()
         } else if arr.row_count() == 0 {
             identity.into()
         } else {
             let first = arr.data[0];
             arr.data[1..].iter().copied().fold(first, f).into()
-        };
+        });
     }
     let mut arr = match (arr.rank(), depth) {
         (r, d) if r == d => arr,
@@ -456,13 +505,14 @@ where
             let row_len = arr.row_len();
             if row_len == 0 {
                 arr.shape.remove(0);
-                return Array::new(arr.shape, EcoVec::new());
+                return Ok(Array::new(arr.shape, EcoVec::new()));
             }
+            validate_size::<T>([row_len], env)?;
             let row_count = arr.row_count();
+            arr.shape.remove(0);
             if row_count == 0 {
-                arr.shape.remove(0);
                 let data = cowslice![default.unwrap_or(identity); row_len];
-                return Array::new(arr.shape, data);
+                return Ok(Array::new(arr.shape, data));
             }
             let sliced = arr.data.as_mut_slice();
             let (acc, rest) = sliced.split_at_mut(row_len);
@@ -478,7 +528,6 @@ where
                 acc
             });
             arr.data.truncate(row_len);
-            arr.shape.remove(0);
             arr
         }
         (_, depth) => {
@@ -516,7 +565,7 @@ where
     };
     arr.meta.take_sorted_flags();
     arr.validate();
-    arr
+    Ok(arr)
 }
 
 fn generic_reduce(f: SigNode, xs: Value, depth: usize, env: &mut Uiua) -> UiuaResult {
@@ -598,7 +647,7 @@ fn generic_reduce_inner(
     let value_fill = env.value_fill();
     if depth == 0 && value_fill.is_none() {
         if xs.row_count() == 0 {
-            return reduce_identity(&f.node, xs).ok_or_else(|| {
+            return reduce_identity(&f.node, xs, env)?.ok_or_else(|| {
                 env.error(format!(
                     "Cannot {} empty array. Function has no identity value.",
                     Primitive::Reduce.format()
@@ -641,7 +690,7 @@ fn generic_reduce_inner(
 
             // Handle empty arrays
             if xs.row_count() == 0 {
-                if let Some(mut xs) = reduce_identity(&f.node, xs.clone()) {
+                if let Some(mut xs) = reduce_identity(&f.node, xs.clone(), env)? {
                     if xs.shape.elements() == 0 {
                         xs.shape.prepend(0);
                         return Ok(xs);
@@ -912,7 +961,7 @@ fn generic_scan(f: SigNode, xs: Value, env: &mut Uiua) -> UiuaResult {
             }
             let xs = repeated.pop().unwrap();
             if xs.row_count() == 0 {
-                let val = reduce_identity(&f.node, xs.clone())
+                let val = reduce_identity(&f.node, xs.clone(), env)?
                     .map(|v| v.first_dim_zero())
                     .unwrap_or(xs);
                 env.push(val);

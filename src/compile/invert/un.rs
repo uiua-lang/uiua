@@ -205,6 +205,7 @@ pub static UN_PATTERNS: &[&dyn InvertPattern] = &[
     &InnerAnti,
     &InnerContraDip,
     &JoinPat,
+    &SidedJoinPat,
     &ArrayPat,
     &NoUnder(UnpackPat),
     &DipPat,
@@ -891,6 +892,14 @@ inverse!(JoinPat, input, asm, {
     if orig_sig.inverse() != inverted_sig {
         return generic();
     }
+    Ok((input, node))
+});
+
+inverse!(SidedJoinPat, input, _, ImplPrim(SidedJoin(side), span), {
+    let node = match side {
+        SubSide::Left => Node::ImplPrim(UnJoin, span),
+        SubSide::Right => Node::from([Node::ImplPrim(UnJoinEnd, span), Node::Prim(Flip, span)]),
+    };
     Ok((input, node))
 });
 

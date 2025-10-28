@@ -1209,6 +1209,12 @@ impl ImplPrimitive {
                 let res = count.multikeep(val, dims, env)?;
                 env.push(res);
             }
+            &ImplPrimitive::SidedJoin(side) => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                let res = a.sided_join(b, side, env)?;
+                env.push(res);
+            }
             ImplPrimitive::LayoutArgs => {
                 let args = env.pop(1)?;
                 let size = env.pop(2)?;

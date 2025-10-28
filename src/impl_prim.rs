@@ -244,6 +244,7 @@ impl_primitive!(
     (1, ParseSub(usize)),
     (1, TransposeN(i32)),
     (2, MultiKeep(usize)),
+    (2, SidedJoin(SubSide)),
     (1, Utf16),
     (1, Retropose),
     ([1], FixMatchRanks),
@@ -492,6 +493,7 @@ impl fmt::Display for ImplPrimitive {
                 write!(f, "{Keep}")?;
                 fmt_subscript(f, n as i32)
             }
+            &SidedJoin(side) => write!(f, "{Join}{side}"),
             &DipN(n) => {
                 for _ in 0..n {
                     write!(f, "{Dip}")?;

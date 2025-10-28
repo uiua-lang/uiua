@@ -3,6 +3,7 @@
 use std::{cmp::Ordering, iter::once};
 
 use ecow::EcoVec;
+use uiua_parser::SubSide;
 
 use crate::{
     algorithm::{
@@ -108,6 +109,36 @@ impl Value {
     /// `allow_ext` allows extending one of the arrays if they have different shapes
     pub fn join(self, other: Self, allow_ext: bool, env: &Uiua) -> UiuaResult<Self> {
         self.join_impl(other, allow_ext, env)
+    }
+    pub(crate) fn sided_join(
+        mut self,
+        mut other: Self,
+        side: SubSide,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        match side {
+            SubSide::Right => {
+                if self.rank() < other.rank() {
+                    for &d in other.shape.iter().rev().skip(self.rank()) {
+                        self.reshape_scalar(Ok(d as isize), true, env)?;
+                    }
+                }
+                if self.rank() == other.rank() {
+                    self.fix()
+                }
+            }
+            SubSide::Left => {
+                if self.rank() > other.rank() {
+                    for &d in self.shape.iter().rev().skip(other.rank()) {
+                        other.reshape_scalar(Ok(d as isize), true, env)?;
+                    }
+                }
+                if self.rank() == other.rank() {
+                    other.fix()
+                }
+            }
+        }
+        self.join(other, true, env)
     }
     /// `join` the array with another
     ///

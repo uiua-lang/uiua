@@ -2,7 +2,6 @@
 
 # 0.18
 - Recursion ergonomics for `path` / revise `recur`
-- Sided `join`
 - `table` non-lists optimizations?
 - `table` subscripts for rank selection
 - Mixed subscripts

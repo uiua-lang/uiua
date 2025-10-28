@@ -10,6 +10,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add digit separators for number literals with `,`. Ex: `123,456.078,9`
 - Rename `stack ?` to [`args ?`](https://uiua.org/docs/args)
 - Make sided [`fill ⬚`](https://uiua.org/docs/fill) work with [`stencil ⧈`](https://uiua.org/docs/stencil)
+- Add sided subscripts for [`join ⊂`](https://uiua.org/docs/join), which joins with one side as the list
 - [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) now accepts non-boolean integers
 - Change [`reach ∪`](https://uiua.org/docs/reach)'s glyph
 - Change how sided [`reach ∪`](https://uiua.org/docs/reach) works

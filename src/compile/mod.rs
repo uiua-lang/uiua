@@ -2200,6 +2200,23 @@ impl Compiler {
                 let span = self.add_span(span);
                 Node::ImplPrim(ImplPrimitive::SidedEncodeBytes(side), span)
             }
+            Join => {
+                let Some(nos) = self.subscript_n_or_side(&scr, Join.format()) else {
+                    return Ok(self.primitive(Join, span));
+                };
+                match nos {
+                    SubNOrSide::N(n) => match self.positive_subscript(n, Join, &span) {
+                        0 => Node::new_push(Value::default()),
+                        1 => Node::Prim(Identity, self.add_span(span)),
+                        n => {
+                            Node::from_iter(repeat_n(Node::Prim(Join, self.add_span(span)), n - 1))
+                        }
+                    },
+                    SubNOrSide::Side(side) => {
+                        Node::ImplPrim(ImplPrimitive::SidedJoin(side), self.add_span(span))
+                    }
+                }
+            }
             prim => {
                 let Some(n) = self.subscript_n_only(&scr, prim.format()) else {
                     return Ok(self.primitive(prim, span));
@@ -2307,13 +2324,6 @@ impl Compiler {
                             prim: Some(Couple),
                             span: self.add_span(span),
                         },
-                    },
-                    Join => match self.positive_subscript(n, Join, &span) {
-                        0 => Node::new_push(Value::default()),
-                        1 => Node::Prim(Identity, self.add_span(span)),
-                        n => {
-                            Node::from_iter(repeat_n(Node::Prim(Join, self.add_span(span)), n - 1))
-                        }
                     },
                     Box => Node::Array {
                         len: self.positive_subscript(n, Box, &span),

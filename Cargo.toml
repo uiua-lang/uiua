@@ -18,6 +18,7 @@ version = "0.18.0-dev.2"
 [workspace.lints.clippy]
 cargo = {level = "warn", priority = -1}
 dbg_macro = "warn"
+multiple_crate_versions = "allow"
 negative_feature_names = "allow"
 non_std_lazy_statics = "warn"
 print_stdout = "warn"

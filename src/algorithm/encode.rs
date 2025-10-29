@@ -112,10 +112,7 @@ impl Value {
                 let mut values = Vec::with_capacity(map.len());
                 for (k, v) in map {
                     keys.push(Boxed(k.into()));
-                    let mut value = Value::from_json_value(v, _env)?;
-                    if value.meta.map_keys.is_some() {
-                        value = Boxed(value).into();
-                    }
+                    let value = Value::from_json_value(v, _env)?;
                     values.push(value);
                 }
                 let mut values = if values.iter().all(|val| val.shape.is_empty())

@@ -439,7 +439,7 @@ impl Value {
         self.meta.take_sorted_flags();
         self.validate();
     }
-    /// Ensure the value's invariants are upheld
+    /// Ensure the value's invariants are upheld. Only runs in debug mode.
     #[track_caller]
     pub(crate) fn validate(&self) {
         val_as_arr!(self, |arr| arr.validate());

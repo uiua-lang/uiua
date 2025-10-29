@@ -1057,6 +1057,7 @@ fn fast_invscan<T>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T>
 where
     T: ArrayValue + Copy,
 {
+    arr.meta.take_sorted_flags();
     match arr.shape.len() {
         0 => unreachable!("fast_invscan called on unit array, should have been guarded against"),
         1 => {

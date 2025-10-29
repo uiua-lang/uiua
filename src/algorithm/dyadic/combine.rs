@@ -1246,7 +1246,7 @@ impl Value {
         }
         value.shape.prepend(1);
         value.meta.take_label();
-        Ok(match value {
+        let value: Value = match value {
             Value::Num(mut a) => {
                 for val in row_values {
                     match val {
@@ -1295,7 +1295,9 @@ impl Value {
                 }
                 a.into()
             }
-        })
+        };
+        value.validate();
+        Ok(value)
     }
 }
 

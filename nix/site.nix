@@ -1,7 +1,7 @@
 {
   craneLib,
   lib,
-  wasm-bindgen-cli_0_2_93,
+  wasm-bindgen-cli_0_2_100,
   doCheck ? true,
 }:
 let
@@ -34,7 +34,7 @@ let
       cd ..
       mv ./docs/ ./dist
     '';
-    wasm-bindgen-cli = wasm-bindgen-cli_0_2_93;
+    wasm-bindgen-cli = wasm-bindgen-cli_0_2_100;
   };
 in
 craneLib.buildTrunkPackage totalArgs

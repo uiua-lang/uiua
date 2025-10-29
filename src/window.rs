@@ -158,7 +158,7 @@ pub fn run_window() {
             let mut fonts = FontDefinitions::default();
             fonts.font_data.insert(
                 "Uiua386".into(),
-                FontData::from_static(include_bytes!("algorithm/Uiua386.ttf")),
+                FontData::from_static(include_bytes!("algorithm/Uiua386.ttf")).into(),
             );
             (fonts.families)
                 .entry(FontFamily::Monospace)
@@ -618,12 +618,19 @@ impl App {
                         ));
                         ui.horizontal(|ui| {
                             // Play/pause
-                            let play_text = if *play { "⏸" } else { "▶" };
-                            ui.toggle_value(play, play_text).on_hover_text(if *play {
-                                "Pause"
-                            } else {
-                                "Play"
-                            });
+                            if Button::new(if *play { "⏸" } else { "▶" })
+                                .min_size(vec2(30.0, 0.0))
+                                .frame(true)
+                                .ui(ui)
+                                .on_hover_text(if *play { "Pause" } else { "Play" })
+                                .clicked()
+                            {
+                                *play = !*play;
+                                if !*play {
+                                    *play_start = Instant::now();
+                                    *play_offset = curr;
+                                }
+                            };
                             // Time slider
                             if Slider::new(&mut curr, 0.0..=total_time)
                                 .min_decimals(2)
@@ -693,7 +700,7 @@ impl App {
                         .max_decimals(2)
                         .suffix(format!("/{total_time:.2}"))
                         .ui(ui)
-                        .dragged;
+                        .dragged();
                     done |= dragged;
                     if t != orig_t {
                         controls.curr.set(t);
@@ -756,6 +763,7 @@ impl App {
                     .collect();
                 let color_image = ColorImage {
                     size: [width as usize, height as usize],
+                    source_size: vec2(width as f32, height as f32),
                     pixels,
                 };
                 let text_id = ctx.tex_manager().write().alloc(
@@ -788,6 +796,7 @@ impl App {
                         String::new(),
                         ImageData::Color(Arc::new(ColorImage {
                             size: [gif_width as usize, gif_height as usize],
+                            source_size: vec2(gif_width as f32, gif_height as f32),
                             pixels: first_frame
                                 .buffer
                                 .chunks(4)
@@ -805,6 +814,7 @@ impl App {
                             String::new(),
                             ImageData::Color(Arc::new(ColorImage {
                                 size: [gif_width as usize, gif_height as usize],
+                                source_size: vec2(gif_width as f32, gif_height as f32),
                                 pixels: frame
                                     .buffer
                                     .chunks(4)

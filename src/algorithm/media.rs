@@ -430,6 +430,11 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 }
 
 fn complex_color(c: Complex) -> [f64; 3] {
+    match (c.re.is_nan(), c.im.is_nan()) {
+        (true, true) => return [0.0; 3],
+        (true, false) | (false, true) => return [0.5; 3],
+        (false, false) => {}
+    }
     let h = c.arg();
     let mag = c.abs();
     let s = (0.3 + 0.7 * (-mag / 10.0).exp()) / (0.3 + 0.7 * (-0.1_f64).exp());

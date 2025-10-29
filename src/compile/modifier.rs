@@ -1437,11 +1437,11 @@ impl Compiler {
                 }
             }
             prim @ (Rows | Inventory) => {
-                let (sn, _) = self.monadic_modifier_op(modified)?;
-                let span = self.add_span(modified.modifier.span.clone());
                 let Some(sub) = subscript else {
                     return Ok(None);
                 };
+                let (sn, _) = self.monadic_modifier_op(modified)?;
+                let span = self.add_span(modified.modifier.span.clone());
                 let sub = self.validate_subscript(sub);
                 let sub_span = sub.span;
                 let mut sub = sub.value;

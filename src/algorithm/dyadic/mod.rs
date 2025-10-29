@@ -727,7 +727,7 @@ impl<T: ArrayValue> Array<T> {
             if counts.len() != 1 {
                 return Err(env.error("Scalar array can only be kept with a single number"));
             }
-            let count = counts[0].max(0.0) as usize;
+            let count = validate_size::<T>([counts[0].max(0.0) as usize], env)?;
             let mut new_data = EcoVec::with_capacity(count);
             for _ in 0..count {
                 new_data.push(self.data[0].clone());

@@ -1578,6 +1578,9 @@ primitive!(
     /// In this example, and a mask is created from it using `greater or equal``@a`, preserving the original string with [by]. Then, [keep] uses the mask to filter the string.
     /// ex: ▽⊸≥@a "lOWERCASe onLY"
     ///
+    /// Negative numbers are treated like `0`s.
+    /// ex: ▽ [¯2 ¯1 0 1 2] "abcde"
+    ///
     /// [keep] with a scalar for the first argument repeats each row of the second argument that many times.
     /// ex: ▽ 3 [1 2 3]
     /// ex: ▽ 2 [1_2_3 4_5_6]

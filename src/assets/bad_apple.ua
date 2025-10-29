@@ -27,22 +27,34 @@ Tempo ← 138
 Key   ← Minor 3
 
 Drums ← /+⊓[
-  ♭↯2 /⊂⍉⊞× Kick Sixteenth Tempo
-| ×0.4♭↯2 /⊂⍉⊞× Snare Sixteenth Tempo]
-IntroDrums ← /+[
-  Kicks ← [
-    1 0 0 0 1 0 0 0 1 0 0 0 1 1 1 1
-    1 0 0 0 1 0 0 0 1 0 0 0 1 0 1 0
-    1 0 0 0 1 0 0 0 1 0 0 0 1 1 1 1
-    1 0 0 0 1 0 0 0 1 0 0 0 1 0 1 0
+  /⊂⍉⊞× Kick Sixteenth Tempo
+| ×0.4 /⊂⍉⊞× Snare Sixteenth Tempo]
+Intro ← /+⬚0[
+  IntroDrums ← /+[
+    Kicks ← [
+      1 0 0 0 1 0 0 0 1 0 0 0 1 1 1 1
+      1 0 0 0 1 0 0 0 1 0 0 0 1 0 1 0
+      1 0 0 0 1 0 0 0 1 0 0 0 1 1 1 1
+      1 0 0 0 1 0 0 0 1 0 0 0 1 0 1 0
+    ]
+    Snares ← [
+      0 0 0 0 1 0 0 0 0 0 0 0 1 1 1 1
+      1 0 0 0 1 0 0 0 0 0 0 0 1 0 1 0
+      0 0 0 0 1 0 0 0 0 0 0 0 1 1 1 1
+      1 0 0 0 1 0 0 0 0 0 0 0 1 0 1 0
+    ]
+    Drums ∩(⊂⟜⍜↙₋₂×₀) Kicks Snares
   ]
-  Snares ← [
-    0 0 0 0 1 0 0 0 0 0 0 0 1 1 1 1
-    1 0 0 0 1 0 0 0 0 0 0 0 1 0 1 0
-    0 0 0 0 1 0 0 0 0 0 0 0 1 1 1 1
-    1 0 0 0 1 0 0 0 0 0 0 0 1 0 1 0
+  Hit ← [
+    0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0
   ]
-  Drums Kicks Snares
+  (IntroDrums
+   ×↯⊙Noise¤⊸⧻ ↥0-⊸¬÷⟜⇡⊸⧻ # Build
+   ×0.5 ⁿ10 ⍜↙×₀ ¯⧻Quarter Tempo)
+  ×2 /⊂⍉⊞× Snare Eighth Tempo Hit
 ]
 MainDrums ← /+[
   Kicks ← [
@@ -57,7 +69,7 @@ MainDrums ← /+[
     0 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0
     0 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0
   ]
-  Drums Kicks Snares
+  Drums ∩˙⊂ Kicks Snares
 ]
 
 BassSaw ← ×0.5 /+ Distort 5 Saw 10
@@ -154,7 +166,7 @@ Chorus ← /+⬚0[
 ]
 
 ×0.5 /◇⊂ {
-  IntroDrums
+  Intro
   Bassy
   Verse
   Chorus
@@ -163,3 +175,4 @@ Chorus ← /+⬚0[
   Chorus
   Bassy
 }
+Apple

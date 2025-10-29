@@ -152,6 +152,14 @@ impl Value {
                     return Err(env.error("Cannot undo pick with duplicate indices"));
                 }
             } else {
+                if idx_shape[..index.rank() - 1] != self.shape[..self.rank().min(index.rank() - 1)]
+                {
+                    return Err(env.error(format!(
+                        "Cannot invert pick with indices of shape {} \
+                        and values of shape {}",
+                        index.shape, self.shape
+                    )));
+                }
                 let mut sorted_indices = Vec::with_capacity(index_data.len() / last_axis_len);
                 for (i, index) in index_data.chunks(last_axis_len).enumerate() {
                     sorted_indices.push((i, index));

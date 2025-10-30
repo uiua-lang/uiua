@@ -7,5 +7,5 @@ public_url = "/"
 watch = [".", "../src", "../parser", "../pad/editor", "../changelog.md"]
 
 [serve]
-address = "0.0.0.0"
+addresses = ["0.0.0.0"]
 port = 8080

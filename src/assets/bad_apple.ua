@@ -175,4 +175,3 @@ Chorus ← /+⬚0[
   Chorus
   Bassy
 }
-Apple

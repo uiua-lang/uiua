@@ -34,7 +34,7 @@ use crate::{
     backend::{OutputItem, WebBackend},
     binding_class, code_font, modifier_class, prim_sig_class,
 };
-use crate::{binding_style, sig_class};
+use crate::{binding_style, comment_class, module_class, number_class, sig_class, string_class};
 
 #[derive(Clone)]
 pub struct ChallengeDef {
@@ -651,6 +651,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
     // logging::log!("gen_code_view({code:?})");
     let CodeLines { frags } = build_code_lines(id, code);
     let mut line_views = Vec::new();
+    let gayness = get_gayness();
     for line in frags {
         if line.is_empty() {
             line_views.push(view! {
@@ -684,20 +685,12 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         SpanKind::Primitive(prim, subscript) => {
                             prim_sig_class(*prim, subscript.as_ref())
                         }
-                        SpanKind::PrimArgs(_) => "module",
+                        SpanKind::PrimArgs(_) => module_class(),
                         SpanKind::Obverse(_) => prim_sig_class(Primitive::Obverse, None),
-                        SpanKind::Number if very_gay() => "text-gradient number-lesbian",
-                        SpanKind::Number => "number-literal",
-                        SpanKind::String | SpanKind::ImportSrc(_) if very_gay() => {
-                            "text-gradient bright-rainbow"
-                        }
-                        SpanKind::String | SpanKind::ImportSrc(_) => "string-literal-span",
-                        SpanKind::Comment | SpanKind::OutputComment if very_gay() => {
-                            "text-gradient graynbow"
-                        }
-                        SpanKind::Comment | SpanKind::OutputComment => "comment-span",
+                        SpanKind::Number | SpanKind::Subscript(None, _) => number_class(),
+                        SpanKind::String | SpanKind::ImportSrc(_) => string_class(),
+                        SpanKind::Comment | SpanKind::OutputComment => comment_class(),
                         SpanKind::Strand => "strand-span",
-                        SpanKind::Subscript(None, _) => "number-literal",
                         SpanKind::Subscript(Some(prim), n) => prim_sig_class(*prim, n.as_ref()),
                         SpanKind::MacroDelim(margs) => modifier_class(*margs),
                         SpanKind::ArgSetter(_) => sig_class((1, 0).into()),
@@ -705,12 +698,16 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                     };
                     match kind {
                         SpanKind::Primitive(Primitive::On, _)
-                            if frags.peek().is_some_and(|frag| {
-                                matches!(
-                                    frag,
-                                    CodeFragment::Span(_, SpanKind::Primitive(Primitive::By, _))
-                                )
-                            }) =>
+                            if at_least_a_little_gay()
+                                && frags.peek().is_some_and(|frag| {
+                                    matches!(
+                                        frag,
+                                        CodeFragment::Span(
+                                            _,
+                                            SpanKind::Primitive(Primitive::By, _)
+                                        )
+                                    )
+                                }) =>
                         {
                             let Some(CodeFragment::Span(next_text, _)) = frags.next() else {
                                 unreachable!()
@@ -723,10 +720,10 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             );
                             let class = format!(
                                 "code-span code-underline {}",
-                                if at_least_a_little_gay() {
-                                    code_font!("nb2 text-gradient")
-                                } else {
-                                    "monadic-modifier"
+                                match gayness {
+                                    Gayness::None => "monadic-modifier",
+                                    Gayness::Gray => "",
+                                    _ => code_font!("nb2 text-gradient"),
                                 }
                             );
                             let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
@@ -1589,6 +1586,7 @@ pub fn its_called_weewuh() -> bool {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Gayness {
+    Gray,
     None,
     Ally,
     VeryGay,
@@ -1596,6 +1594,7 @@ pub enum Gayness {
 impl Gayness {
     pub const fn str(&self) -> &'static str {
         match self {
+            Gayness::Gray => "Very Gray",
             Gayness::None => "None 😢",
             Gayness::Ally => "Ally",
             Gayness::VeryGay => "Very Gay",
@@ -1608,6 +1607,8 @@ impl From<&str> for Gayness {
             Gayness::None
         } else if s == Gayness::VeryGay.str() {
             Gayness::VeryGay
+        } else if s == Gayness::Gray.str() {
+            Gayness::Gray
         } else {
             Gayness::Ally
         }

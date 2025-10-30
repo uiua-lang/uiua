@@ -1228,17 +1228,7 @@ pub fn Editor<'a>(
 
             // Additional code buttons
             let syntax_buttons = [
-                (
-                    "¯",
-                    "(`) negative",
-                    if very_gay() {
-                        "text-gradient lesbian"
-                    } else {
-                        "number-literal"
-                    },
-                    None,
-                    "",
-                ),
+                ("¯", "(`) negative", number_class(), None, ""),
                 (
                     "_",
                     "strand",
@@ -1270,33 +1260,21 @@ pub fn Editor<'a>(
                 (
                     "@",
                     "character",
-                    if very_gay() {
-                        "text-gradient bright-rainbow"
-                    } else {
-                        "string-literal-span"
-                    },
+                    string_class(),
                     None,
                     "tutorial/Types#characters",
                 ),
                 (
                     "$",
                     "format/multiline string",
-                    if very_gay() {
-                        "text-gradient bright-rainbow"
-                    } else {
-                        "string-literal-span"
-                    },
+                    string_class(),
                     None,
                     "tutorial/Modifiers and Functions#format-strings",
                 ),
                 (
                     "\"",
                     "string",
-                    if very_gay() {
-                        "text-gradient bright-rainbow"
-                    } else {
-                        "string-literal-span"
-                    },
+                    string_class(),
                     Some(('"', '"')),
                     "tutorial/Types#characters",
                 ),
@@ -2029,6 +2007,9 @@ pub fn Editor<'a>(
                         <div title="Enable LGBTQ+ colors">
                             "🏳️‍🌈:"
                             <select on:change=on_select_gayness>
+                                <option value={Gayness::Gray.str()} selected={get_gayness() == Gayness::Gray}>
+                                    {Gayness::Gray.str()}
+                                </option>
                                 <option value={Gayness::None.str()} selected={get_gayness() == Gayness::None}>
                                     {Gayness::None.str()}
                                 </option>
@@ -2398,7 +2379,40 @@ macro_rules! code_font {
 
 pub(crate) use code_font;
 
+fn number_class() -> &'static str {
+    match get_gayness() {
+        Gayness::VeryGay => "text-gradient number-lesbian",
+        Gayness::Gray => "",
+        _ => "number-literal",
+    }
+}
+
+fn string_class() -> &'static str {
+    match get_gayness() {
+        Gayness::VeryGay => "text-gradient bright-rainbow",
+        Gayness::Gray => "",
+        _ => "string-literal-span",
+    }
+}
+
+fn module_class() -> &'static str {
+    match get_gayness() {
+        Gayness::Gray => "",
+        _ => "module",
+    }
+}
+
+fn comment_class() -> &'static str {
+    match get_gayness() {
+        Gayness::VeryGay => "text-gradient graynbow",
+        _ => "comment-span",
+    }
+}
+
 fn sig_class(sig: Signature) -> &'static str {
+    if get_gayness() == Gayness::Gray {
+        return code_font!("");
+    }
     match sig.args() {
         0 => code_font!("noadic-function"),
         1 if very_gay() => code_font!("text-gradient monadic-aro"),
@@ -2413,6 +2427,9 @@ fn sig_class(sig: Signature) -> &'static str {
 }
 
 fn modifier_class(margs: usize) -> &'static str {
+    if get_gayness() == Gayness::Gray {
+        return code_font!("");
+    }
     match margs {
         0 | 1 if very_gay() => code_font!("text-gradient monadic-pan"),
         0 | 1 => code_font!("monadic-modifier"),
@@ -2423,6 +2440,9 @@ fn modifier_class(margs: usize) -> &'static str {
 }
 
 fn prim_sig_class(prim: Primitive, subscript: Option<&Subscript>) -> &'static str {
+    if get_gayness() == Gayness::Gray {
+        return code_font!("");
+    }
     match prim {
         Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose if at_least_a_little_gay() => {

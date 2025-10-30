@@ -36,6 +36,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Introduce argument manipulation modifiers earlier in the tutorial
 - Remove hidden cases from tutorial challenges
 - Pad links will automatically be compressed if it would be shorter
+- Add gray color option for pad
 
 ## 0.17.3 - 2025-10-07
 ### Interpreter

@@ -6560,6 +6560,7 @@ dependencies = [
  "ecow",
  "eframe",
  "enum-iterator",
+ "flate2",
  "gif",
  "hodaun",
  "hound",

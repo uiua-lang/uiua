@@ -842,3 +842,102 @@ impl Value {
         Ok(val)
     }
 }
+
+impl Value {
+    #[cfg(not(feature = "compress"))]
+    pub(crate) fn compress(&self, _algo: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        Err(env.error("Compression is not supported in this environment"))
+    }
+    #[cfg(feature = "compress")]
+    pub(crate) fn compress(&self, algo: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        use flate2::{
+            write::{GzEncoder, ZlibEncoder},
+            Compression,
+        };
+        use std::io::Write;
+        let algo = algo.as_string(env, "Compression algorithm must be a string")?;
+        let bytes = self.as_bytes(env, "Value to compress must be bytes")?;
+        let compressed = match algo.as_str() {
+            "gzip" => {
+                let mut data = EcoVec::new();
+                let mut encoder = GzEncoder::new(&mut data, Compression::best());
+                encoder.write_all(&bytes).map_err(|e| env.error(e))?;
+                encoder.finish().map_err(|e| env.error(e))?;
+                data
+            }
+            "zlib" => {
+                let mut data = EcoVec::new();
+                let mut encoder = ZlibEncoder::new(&mut data, Compression::best());
+                encoder.write_all(&bytes).map_err(|e| env.error(e))?;
+                encoder.finish().map_err(|e| env.error(e))?;
+                data
+            }
+            algo => {
+                return Err(env.error(format!(
+                    "Unknown/unsupported compression algorithm {algo:?}"
+                )))
+            }
+        };
+        Ok(compressed.into())
+    }
+    #[cfg(not(feature = "compress"))]
+    pub(crate) fn decompress(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        Err(env.error("Compression is not supported in this environment"))
+    }
+    #[cfg(feature = "compress")]
+    pub(crate) fn decompress(&self, env: &Uiua) -> UiuaResult<(Array<char>, Array<u8>)> {
+        use flate2::write::{GzDecoder, ZlibDecoder};
+        use std::io::Write;
+        let bytes = self.as_bytes(env, "Value to decompress must be bytes")?;
+        let mut data = EcoVec::new();
+        {
+            // Gzip
+            let mut encoder = GzDecoder::new(&mut data);
+            if encoder.write_all(&bytes).is_ok() && encoder.finish().is_ok() {
+                return Ok(("gzip".into(), data.into()));
+            }
+        }
+        data.clear();
+        {
+            // Zlib
+            let mut encoder = ZlibDecoder::new(&mut data);
+            if encoder.write_all(&bytes).is_ok() && encoder.finish().is_ok() {
+                return Ok(("zlib".into(), data.into()));
+            }
+        }
+        Err(env.error("The compressed data was corrupted or its algorithm is unsupported."))
+    }
+    #[cfg(not(feature = "compress"))]
+    pub(crate) fn decompress_by(&self, _algo: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        Err(env.error("Compression is not supported in this environment"))
+    }
+    #[cfg(feature = "compress")]
+    pub(crate) fn decompress_by(&self, algo: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        use flate2::write::{GzDecoder, ZlibDecoder};
+        use std::io::Write;
+        let algo = algo.as_string(env, "Compression algorithm must be a string")?;
+        let bytes = self.as_bytes(env, "Value to decompress must be bytes")?;
+        let compressed = match algo.as_str() {
+            "gzip" => {
+                let mut data = EcoVec::new();
+                let mut decorder = GzDecoder::new(&mut data);
+                decorder.write_all(&bytes).map_err(|e| env.error(e))?;
+                decorder.finish().map_err(|e| env.error(e))?;
+                data
+            }
+            "zlib" => {
+                let mut data = EcoVec::new();
+                let mut decorder = ZlibDecoder::new(&mut data);
+                decorder.write_all(&bytes).map_err(|e| env.error(e))?;
+                decorder.finish().map_err(|e| env.error(e))?;
+                data
+            }
+            algo => {
+                return Err(env.error(format!(
+                    "Unknown/unsupported compression algorithm {algo:?}"
+                )))
+            }
+        };
+        Ok(compressed.into())
+    }
+}

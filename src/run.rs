@@ -586,7 +586,7 @@ impl Uiua {
                         This is a bug in the interpreter",
                     ));
                 };
-                value.compress();
+                value.try_shrink();
                 // Binding is a constant
                 self.asm
                     .bind_const(local, Some(value), span, BindingMeta::default());

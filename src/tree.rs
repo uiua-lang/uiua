@@ -331,7 +331,7 @@ impl Node {
     /// Create a push node from a value
     pub fn new_push(val: impl Into<Value>) -> Self {
         let mut value = val.into();
-        value.compress();
+        value.try_shrink();
         value.derive_sortedness();
         Self::Push(value)
     }

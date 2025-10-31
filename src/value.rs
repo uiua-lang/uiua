@@ -1438,7 +1438,7 @@ impl Value {
     /// Turn a number array into a byte array if no information is lost.
     ///
     /// Also sets the boolean flag if the array contains only 0s and 1s.
-    pub fn compress(&mut self) {
+    pub fn try_shrink(&mut self) {
         match self {
             Value::Num(nums) => {
                 let mut compress = true;

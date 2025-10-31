@@ -3285,6 +3285,21 @@ primitive!(
     /// ex: # Experimental!
     ///   : ÷∩⧻⟜binary ℂ0 ⇡256
     (1, Binary, Encoding, "binary", { experimental: true }),
+    /// Compress bytes according to some algorithm
+    ///
+    /// The first argument is a string representing the compression algorithm.
+    /// The second argument is the bytes to compress.
+    /// Currently supported algorithms are `gzip` and `zlib`.
+    /// ex: compress "gzip" [1 2 3 4]
+    /// For compressing text, use [utf₈] first.
+    /// ex: compress "gzip" utf₈ "Uiua 😊"
+    /// [un][compress] will attempt to decompress bytes by multiple algorithms and will return which one worked.
+    /// ex: [120 218 11 205 44 77 84 248 48 127 198 12 0 19 204 4 116]
+    ///   : ⊙°utf₈ °compress
+    /// [anti][compress] will decompress bytes by a specific algorithm.
+    /// ex: ⌝compress "zlib" [120 218 99 100 98 102 1 0 0 24 0 11]
+    /// ex! ⌝compress "gzip" [120 218 99 100 98 102 1 0 0 24 0 11]
+    (2, Compress, Encoding, "compress"),
     /// Convert a value to its code representation
     ///
     /// ex: repr π

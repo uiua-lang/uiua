@@ -1134,7 +1134,7 @@ impl<T: ArrayValue> Array<T> {
             return Ok(take_amnt[0].into());
         }
         let mut take_amnt = Value::from(take_amnt);
-        take_amnt.compress();
+        take_amnt.try_shrink();
         self.validate();
         Ok(take_amnt)
     }

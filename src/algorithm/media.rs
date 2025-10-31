@@ -899,7 +899,7 @@ pub fn gif_bytes_to_value_impl(
         shape.push(4)
     }
     let mut num = Value::Num(Array::new(shape, data));
-    num.compress();
+    num.try_shrink();
     Ok((frame_rate, num))
 }
 

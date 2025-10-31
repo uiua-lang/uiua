@@ -653,7 +653,7 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         let mut val: Value = Array::new(haystack.shape.clone(), result_data).into();
-        val.compress();
+        val.try_shrink();
         Ok(val)
     }
 }

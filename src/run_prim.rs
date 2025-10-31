@@ -305,6 +305,12 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         Primitive::Hsv => env.monadic_env(Value::rgb_to_hsv)?,
         Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
         Primitive::Binary => env.monadic_ref_env(Value::to_binary)?,
+        Primitive::Compress => {
+            let algo = env.pop(1)?;
+            let bytes = env.pop(2)?;
+            let compressed = bytes.compress(&algo, env)?;
+            env.push(compressed);
+        }
         Primitive::Csv => env.monadic_ref_env(Value::to_csv)?,
         Primitive::Xlsx => {
             env.monadic_ref_env(|value, env| value.to_xlsx(env).map(EcoVec::from))?
@@ -724,6 +730,18 @@ impl ImplPrimitive {
                 let bytes = bytes.as_bytes(env, "Binary expects bytes")?;
                 let val = Value::from_binary(&bytes, env)?;
                 env.push(val);
+            }
+            ImplPrimitive::UnCompress => {
+                let bytes = env.pop(1)?;
+                let (algo, decompressed) = bytes.decompress(env)?;
+                env.push(decompressed);
+                env.push(algo);
+            }
+            ImplPrimitive::AntiCompress => {
+                let algo = env.pop(1)?;
+                let bytes = env.pop(2)?;
+                let decompressed = bytes.decompress_by(&algo, env)?;
+                env.push(decompressed);
             }
             ImplPrimitive::UnCsv => {
                 let csv = env.pop(1)?.as_string(env, "CSV expects a string")?;

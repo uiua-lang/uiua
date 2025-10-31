@@ -193,6 +193,6 @@ joins the first argument to each list in the second argument
 
 0 +1°△3_4
 0 [1 2 3]
-@| ⬚@\s[["Hey""there""buddy"] [@a "bc" "def"]]
+@| ⬚@ [⬚@ ["Hey""there""buddy"] ⬚@ [@a "bc" "def"]]
 η_π_τ ⇡2_2_2
 ```

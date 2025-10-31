@@ -31,6 +31,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Rust version
+        id: rustv
+        run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Cargo cache (registry+git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
+
+      - name: Cargo cache (target)
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
+
       - name: Run interpreter tests
         run: cargo test --lib
   # Test the site
@@ -38,6 +57,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Rust version
+        id: rustv
+        run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Cargo cache (registry+git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
+      - name: Cargo cache (target)
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
       - name: Run site tests
         run: cargo test -p site
   # Test ffi
@@ -45,17 +81,56 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run site tests
+      - name: Rust version
+        id: rustv
+        run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Cargo cache (registry+git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
+
+      - name: Cargo cache (target)
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
+
+      - name: Run ffi tests
         run: cargo test -p tests_ffi
   # Build the site
   build_site:
     needs: test_site
     runs-on: ubuntu-latest
+    env:
+      CACHE_TARGET: wasm32-unknown-unknown
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: main
+      - name: Rust version
+        id: rustv
+        run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Cargo cache (registry+git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
+
+      - name: Cargo cache (target; wasm)
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-${{ env.CACHE_TARGET }}-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-${{ env.CACHE_TARGET }}-${{ steps.rustv.outputs.version }}-
       - name: Authenticate git
         run: |
           git config user.name "github-actions[bot]"
@@ -144,7 +219,23 @@ jobs:
             }
     steps:
       - uses: actions/checkout@v4
-
+      - name: Rust version
+        id: rustv
+        run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Cargo cache (registry+git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
+      - name: Cargo cache (target; per matrix)
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-${{ matrix.target }}-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}-${{ matrix.features }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-${{ matrix.target }}-${{ steps.rustv.outputs.version }}-
       # Install dependencies
       - if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get install -y musl-tools
@@ -153,19 +244,16 @@ jobs:
           sudo apt-get update -y
           sudo apt-get --fix-missing install -y
           sudo apt-get install -y libasound2-dev libudev-dev libx11-dev libjpeg-dev libclang-dev
-
       # Build
       - name: Install target
-        run: rustup target add ${{matrix.target}}
+        run: rustup target add ${{ matrix.target }}
       - name: Build
-        run: cargo build --bin uiua --features ${{matrix.features}} --release --target ${{matrix.target}} --verbose
-
+        run: cargo build --bin uiua --features ${{ matrix.features }} --release --target ${{ matrix.target }} --verbose
       - name: Zip
-        run: 7z a -tzip uiua-bin-${{matrix.target}}${{matrix.name}}.zip ./target/${{matrix.target}}/release/uiua${{env.BINARY_EXT}}
-
+        run: 7z a -tzip uiua-bin-${{ matrix.target }}${{ matrix.name }}.zip ./target/${{ matrix.target }}/release/uiua${{ env.BINARY_EXT }}
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
           tag_name: latest
           files: |
-            uiua-bin-${{matrix.target}}${{matrix.name}}.zip
+            uiua-bin-${{ matrix.target }}${{ matrix.name }}.zip

@@ -1430,7 +1430,7 @@ impl Array<f64> {
                     &mut prod_row,
                     None,
                     None,
-                    InfalliblePervasiveFn::new(pervade::mul::num_num),
+                    InfalliblePervasiveFn::new(pervade::scalar_mul::num_num),
                     env,
                 );
                 let (sum, rest) = prod_row.split_at_mut(prod_elems);

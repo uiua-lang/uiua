@@ -23,7 +23,7 @@ use std::{
 use rand::prelude::*;
 
 use crate::{
-    algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
+    algorithm::{self, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
     fill::FillFrame,
@@ -296,6 +296,12 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             env.push(vals);
         }
         Primitive::Args => stack(env, false)?,
+        Primitive::Geometric => {
+            let dims_or_blades = env.pop(1)?;
+            let value = env.pop(2)?;
+            let res = value.geometric(&dims_or_blades, env)?;
+            env.push(res);
+        }
         Primitive::Regex => {
             regex(env)?;
             // NOTE: if you want to expose the match locations, n.t. they are given in bytes rather than codepoints
@@ -1228,38 +1234,6 @@ impl ImplPrimitive {
                 let res = media::voxels(val, Some(args), env)?;
                 env.push(res);
             }
-            &ImplPrimitive::Ga(op, spec) => match op {
-                GaOp::GeometricProduct => env.dyadic_oo_env_with(spec, ga::product)?,
-                GaOp::GeometricInner => env.dyadic_oo_env_with(spec, ga::inner_product)?,
-                GaOp::GeometricWedge => env.dyadic_oo_env_with(spec, ga::wedge_product)?,
-                GaOp::GeometricRegressive => {
-                    env.dyadic_oo_env_with(spec, ga::regressive_product)?
-                }
-                GaOp::GeometricDivide => env.dyadic_oo_env_with(spec, ga::divide)?,
-                GaOp::GeometricMagnitude => env.monadic_env_with(spec, ga::magnitude)?,
-                GaOp::GeometricNormalize => env.monadic_env_with(spec, ga::normalize)?,
-                GaOp::GeometricSqrt => env.monadic_env_with(spec, ga::sqrt)?,
-                GaOp::GeometricReverse => env.monadic_env_with(spec, ga::reverse)?,
-                GaOp::GeometricDual => env.monadic_env_with(spec, ga::dual)?,
-                GaOp::GeometricAdd => env.dyadic_oo_env_with(spec, ga::add)?,
-                GaOp::GeometricSub => env.dyadic_oo_env_with(spec, |spec, a, b, env| {
-                    let a = a.neg(env)?;
-                    ga::add(spec, a, b, env)
-                })?,
-                GaOp::GeometricRotor => env.dyadic_oo_env_with(spec, ga::rotor)?,
-                GaOp::GeometricSandwich => env.dyadic_oo_env_with(spec, ga::sandwich)?,
-                GaOp::PadBlades => env.dyadic_oo_env_with(spec, ga::pad_blades)?,
-                GaOp::ExtractBlades => env.dyadic_oo_env_with(spec, ga::extract_blades)?,
-                GaOp::GeometricCouple => env.dyadic_oo_env(ga::couple)?,
-                GaOp::GeometricUnCouple => {
-                    let val = env.pop(1)?;
-                    let (a, b) = ga::uncouple(val, env)?;
-                    env.push(b);
-                    env.push(a);
-                }
-                GaOp::GeometricParse => env.monadic_env_with(spec, ga::parse)?,
-                GaOp::GeometricUnParse => env.monadic_env_with(spec, ga::unparse)?,
-            },
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(

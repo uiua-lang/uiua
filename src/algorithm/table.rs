@@ -208,13 +208,15 @@ pub fn table_list(f: SigNode, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
             Primitive::Ge if !flipped => {
                 env.push(fast_table_list(xs, ys, other_is_ge::generic, env)?)
             }
-            Primitive::Add => env.push(fast_table_list(xs, ys, add::byte_byte, env)?),
+            Primitive::Add => env.push(fast_table_list(xs, ys, scalar_add::byte_byte, env)?),
             #[cfg(feature = "opt")]
             Primitive::Sub if flipped => {
-                env.push(fast_table_list(xs, ys, flip(sub::byte_byte), env)?)
+                env.push(fast_table_list(xs, ys, flip(scalar_sub::byte_byte), env)?)
             }
-            Primitive::Sub if !flipped => env.push(fast_table_list(xs, ys, sub::byte_byte, env)?),
-            Primitive::Mul => env.push(fast_table_list(xs, ys, mul::byte_byte, env)?),
+            Primitive::Sub if !flipped => {
+                env.push(fast_table_list(xs, ys, scalar_sub::byte_byte, env)?)
+            }
+            Primitive::Mul => env.push(fast_table_list(xs, ys, scalar_mul::byte_byte, env)?),
             #[cfg(feature = "opt")]
             Primitive::Div if flipped => {
                 env.push(fast_table_list(xs, ys, flip(div::byte_byte), env)?)
@@ -351,11 +353,11 @@ macro_rules! table_math {
                 }
                 $(#[$attr])*
                 Primitive::Ge => env.push(fast_table_list(xs, ys, other_is_ge::$f, env)?),
-                Primitive::Add => env.push(fast_table_list(xs, ys, add::$f, env)?),
+                Primitive::Add => env.push(fast_table_list(xs, ys, scalar_add::$f, env)?),
                 #[cfg(feature = "opt")]
-                Primitive::Sub if flipped => env.push(fast_table_list(xs, ys, flip(sub::$f), env)?),
-                Primitive::Sub if !flipped => env.push(fast_table_list(xs, ys, sub::$f, env)?),
-                Primitive::Mul => env.push(fast_table_list(xs, ys, mul::$f, env)?),
+                Primitive::Sub if flipped => env.push(fast_table_list(xs, ys, flip(scalar_sub::$f), env)?),
+                Primitive::Sub if !flipped => env.push(fast_table_list(xs, ys, scalar_sub::$f, env)?),
+                Primitive::Mul => env.push(fast_table_list(xs, ys, scalar_mul::$f, env)?),
                 #[cfg(feature = "opt")]
                 Primitive::Div if flipped => env.push(fast_table_list(xs, ys, flip(div::$f), env)?),
                 Primitive::Div if !flipped => env.push(fast_table_list(xs, ys, div::$f, env)?),
@@ -505,9 +507,9 @@ fn reduce_table_bytes(
         ($xs:expr, $ys:expr, $ff:expr, $ff_complex:expr, $iden:expr, $ciden:expr, $fill:expr, $arith:ident, $cmp:ident) => {{
             let fill = $fill.map(Into::into);
             match gp {
-                Primitive::Add => env.push(frtl($xs, $ys, $ff, add::$arith, $iden, fill)),
-                Primitive::Sub => env.push(frtl($xs, $ys, $ff, sub::$arith, $iden, fill)),
-                Primitive::Mul => env.push(frtl($xs, $ys, $ff, mul::$arith, $iden, fill)),
+                Primitive::Add => env.push(frtl($xs, $ys, $ff, scalar_add::$arith, $iden, fill)),
+                Primitive::Sub => env.push(frtl($xs, $ys, $ff, scalar_sub::$arith, $iden, fill)),
+                Primitive::Mul => env.push(frtl($xs, $ys, $ff, scalar_mul::$arith, $iden, fill)),
                 Primitive::Div => env.push(frtl($xs, $ys, $ff, div::$arith, $iden, fill)),
                 Primitive::Modulo => env.push(frtl($xs, $ys, $ff, modulo::$arith, $iden, fill)),
                 #[cfg(feature = "opt")]
@@ -539,8 +541,8 @@ fn reduce_table_bytes(
             all_gs!(
                 xs,
                 ys,
-                to_left(add::num_num),
-                add::com_x,
+                to_left(scalar_add::num_num),
+                scalar_add::com_x,
                 0.0,
                 0.0,
                 fill,
@@ -552,8 +554,8 @@ fn reduce_table_bytes(
             all_gs!(
                 xs,
                 ys,
-                to_left(mul::num_num),
-                mul::com_x,
+                to_left(scalar_mul::num_num),
+                scalar_mul::com_x,
                 1.0,
                 0.0,
                 fill,
@@ -711,9 +713,15 @@ macro_rules! reduce_table_math {
             macro_rules! all_gs {
                 ($ff:expr, $ff_complex:expr, $iden:expr, $ciden:expr) => {
                     match g_prim {
-                        Primitive::Add => env.push(frtl(xs, ys, $ff, add::$f, $iden.into(), fill)),
-                        Primitive::Sub => env.push(frtl(xs, ys, $ff, sub::$f, $iden.into(), fill)),
-                        Primitive::Mul => env.push(frtl(xs, ys, $ff, mul::$f, $iden.into(), fill)),
+                        Primitive::Add => {
+                            env.push(frtl(xs, ys, $ff, scalar_add::$f, $iden.into(), fill))
+                        }
+                        Primitive::Sub => {
+                            env.push(frtl(xs, ys, $ff, scalar_sub::$f, $iden.into(), fill))
+                        }
+                        Primitive::Mul => {
+                            env.push(frtl(xs, ys, $ff, scalar_mul::$f, $iden.into(), fill))
+                        }
                         Primitive::Div => env.push(frtl(xs, ys, $ff, div::$f, $iden.into(), fill)),
                         Primitive::Modulo => {
                             env.push(frtl(xs, ys, $ff, modulo::$f, $iden.into(), fill))
@@ -758,8 +766,8 @@ macro_rules! reduce_table_math {
                 };
             }
             match f_prim {
-                Primitive::Add => all_gs!(add::$f, add::com_x, 0.0, 0.0),
-                Primitive::Mul => all_gs!(mul::$f, mul::com_x, 1.0, 0.0),
+                Primitive::Add => all_gs!(scalar_add::$f, scalar_add::com_x, 0.0, 0.0),
+                Primitive::Mul => all_gs!(scalar_mul::$f, scalar_mul::com_x, 1.0, 0.0),
                 Primitive::Min => all_gs!(min::$f, min::com_x, f64::INFINITY, f64::INFINITY),
                 Primitive::Max => {
                     all_gs!(max::$f, max::com_x, f64::NEG_INFINITY, f64::NEG_INFINITY)

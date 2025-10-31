@@ -25,7 +25,6 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    algorithm::ga::Spec,
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},

@@ -1,8 +1,6 @@
 //! Compiler code for modifiers
 #![allow(clippy::redundant_closure_call)]
 
-use crate::algorithm::ga;
-
 use super::*;
 use algebra::{derivative, integral};
 use invert::InversionError;
@@ -303,12 +301,6 @@ impl Compiler {
                 args.make_mut().swap(1, 2);
                 let span = self.add_span(modifier.span.clone());
                 Ok(Node::ImplMod(ImplPrimitive::Astar, args, span))
-            }
-            Modifier::Primitive(Primitive::Geometric) if pack.branches.len() == 2 => {
-                let mut args = pack.lexical_order().cloned().map(|w| w.map(Word::Func));
-                let metrics = args.next().unwrap();
-                let main = args.next().unwrap();
-                self.geometric(main, subscript, Some(metrics))
             }
             m if m.subscript_margs(subscript.as_ref().map(|s| &s.value)) >= 2 => {
                 let new = Modified {
@@ -1602,10 +1594,6 @@ impl Compiler {
                     }
                 }
             }
-            Geometric => {
-                let op = modified.code_operands().next().unwrap().clone();
-                self.geometric(op, subscript, None)?
-            }
             _ => return Ok(None),
         }))
     }
@@ -2245,161 +2233,5 @@ impl Compiler {
         }
         self.scope = replaced_scope;
         res
-    }
-    fn geometric(
-        &mut self,
-        word: Sp<Word>,
-        subscript: Option<Sp<Subscript>>,
-        metrics: Option<Sp<Word>>,
-    ) -> UiuaResult<Node> {
-        let span = word.span.clone();
-        let mut node = self.word(word)?;
-
-        let mut met = None;
-        if let Some(metrics) = metrics {
-            let metrics_span = metrics.span.clone();
-            let (vals, sig) = self.do_comptime_vals(
-                &format!("{}'s second ", Primitive::Geometric.format()),
-                metrics,
-                &metrics_span,
-            )?;
-            if vals.len() == 1 {
-                match ga::metrics_from_val(&vals[0]) {
-                    Ok(metrics) => met = Some(metrics),
-                    Err(e) => self.add_error(metrics_span, e),
-                }
-            } else {
-                self.add_error(
-                    metrics_span,
-                    format!(
-                        "{}'s second function must have exactly one output, \
-                        but its signature is {sig}",
-                        Primitive::Geometric.format()
-                    ),
-                );
-            }
-        }
-        let dims = if let Some(sub) = subscript {
-            let sub = self.validate_subscript(sub);
-            let dims = sub.value.num.map(|n| {
-                let mut n = self.positive_subscript(n, Primitive::Geometric, &sub.span);
-                const MAX_DIMS: usize = ga::MAX_DIMS as usize;
-                if n > MAX_DIMS {
-                    self.add_error(
-                        sub.span.clone(),
-                        format!("Max geometric algebra dimensions is currently {MAX_DIMS}"),
-                    );
-                    n = MAX_DIMS;
-                }
-                n as u8
-            });
-            if sub.value.side.is_some() {
-                self.add_error(
-                    sub.span,
-                    format!(
-                        "{} does not support side subscripts",
-                        Primitive::Geometric.format()
-                    ),
-                );
-            }
-            dims
-        } else {
-            None
-        };
-        self.translate_geo(&mut node, dims, met, &span);
-        Ok(node)
-    }
-    #[allow(unused_parens)]
-    fn translate_geo(
-        &mut self,
-        node: &mut Node,
-        dims: Option<u8>,
-        metrics: Option<ga::Metrics>,
-        span: &CodeSpan,
-    ) -> bool {
-        use {
-            ga::GaOp::{self, *},
-            ImplPrimitive::*,
-            Node::*,
-            Primitive::*,
-        };
-        let op = |op: GaOp, span: usize| {
-            let metrics = metrics.unwrap_or_default();
-            ImplPrim(Ga(op, Spec { dims, metrics }), span)
-        };
-        match *node {
-            Prim(Mul, span) => *node = op(GeometricProduct, span),
-            Prim(Max, span) => *node = op(GeometricInner, span),
-            Prim(Min, span) => *node = op(GeometricWedge, span),
-            Prim(Or, span) => *node = op(GeometricRegressive, span),
-            Prim(Div, span) => *node = op(GeometricDivide, span),
-            Prim(Abs, span) => *node = op(GeometricMagnitude, span),
-            Prim(Sign, span) => *node = op(GeometricNormalize, span),
-            Prim(Sqrt, span) => *node = op(GeometricSqrt, span),
-            Prim(Neg, span) => *node = op(GeometricReverse, span),
-            Prim(Not, span) => *node = op(GeometricDual, span),
-            Prim(Add, span) => *node = op(GeometricAdd, span),
-            Prim(Sub, span) => *node = op(GeometricSub, span),
-            Prim(Atan, span) => *node = op(GeometricRotor, span),
-            Prim(Rotate, span) => *node = op(GeometricSandwich, span),
-            ImplPrim(AntiRotate, span) => {
-                *node = Node::from([op(GeometricReverse, span), op(GeometricSandwich, span)])
-            }
-            Prim(Couple, span) => *node = op(GeometricCouple, span),
-            ImplPrim(UnCouple, span) => *node = op(GeometricUnCouple, span),
-            Prim(Parse, span) => *node = op(GeometricParse, span),
-            ImplPrim(UnParse, span) => *node = op(GeometricUnParse, span),
-            Prim(Select, span) => *node = op(ExtractBlades, span),
-            ImplPrim(AntiSelect, span) => *node = op(PadBlades, span),
-            ImplPrim(Ga(_, ref mut spec), _) => {
-                spec.dims = spec.dims.or(dims);
-                if let Some(metrics) = metrics {
-                    spec.metrics = metrics;
-                }
-            }
-            Prim(Identity | Dup | Flip | Pop | Args | Sys(_), _) => {}
-            ImplPrim(Over | StackN { .. }, _) => {}
-            Push(_) | Array { .. } => {}
-            Mod(
-                (Fork | Bracket | Both)
-                | (Dip | Gap | Reach)
-                | (On | By | With | Off)
-                | (Above | Below)
-                | (Slf | Backward),
-                ..,
-            ) => {}
-            ImplMod(BothImpl(_), ..) => {}
-            Run(_) | CustomInverse(..) | PushUnder(..) | PopUnder(..) | CopyToUnder(..) => {}
-            Prim(prim, span) => {
-                let span = self.get_span(span);
-                let message = format!("{} does not support {}", Geometric.format(), prim.format());
-                self.add_error(span, message);
-                return false;
-            }
-            ImplPrim(prim, span) => {
-                let span = self.get_span(span);
-                let message = format!("{} does not support {prim}", Geometric.format());
-                self.add_error(span, message);
-                return false;
-            }
-            ref mut node => {
-                let span = if let Some(spandex) = node.span() {
-                    self.get_span(spandex)
-                        .code()
-                        .unwrap_or_else(|| span.clone())
-                } else {
-                    span.clone()
-                };
-                let message = format!("{} does not support {node:?}", Geometric.format());
-                self.add_error(span, message);
-                return false;
-            }
-        }
-        for node in node.sub_nodes_mut() {
-            if !self.translate_geo(node, dims, metrics, span) {
-                return false;
-            }
-        }
-        true
     }
 }

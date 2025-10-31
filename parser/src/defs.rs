@@ -3034,7 +3034,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⩜°⋕ 5_1
     ///   : ⩜°⋕ [1_2 3_4]
-    ([1], Geometric, Algorithm, ("geometric", '⩜'), { experimental: true }),
+    (2, Geometric, Algorithm, ("geometric", '⩜'), { experimental: true }),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.

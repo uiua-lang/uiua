@@ -437,10 +437,10 @@ fn derive_dims(
 fn adjacent_impl(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult {
     match (f.node.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
-            Primitive::Add => fast_adjacent(nums, n, env, add::num_num),
-            Primitive::Sub if flipped => fast_adjacent(nums, n, env, flip(sub::num_num)),
-            Primitive::Sub => fast_adjacent(nums, n, env, sub::num_num),
-            Primitive::Mul => fast_adjacent(nums, n, env, mul::num_num),
+            Primitive::Add => fast_adjacent(nums, n, env, scalar_add::num_num),
+            Primitive::Sub if flipped => fast_adjacent(nums, n, env, flip(scalar_sub::num_num)),
+            Primitive::Sub => fast_adjacent(nums, n, env, scalar_sub::num_num),
+            Primitive::Mul => fast_adjacent(nums, n, env, scalar_mul::num_num),
             Primitive::Div if flipped => fast_adjacent(nums, n, env, flip(div::num_num)),
             Primitive::Div => fast_adjacent(nums, n, env, div::num_num),
             Primitive::Modulo if flipped => fast_adjacent(nums, n, env, flip(modulo::num_num)),
@@ -455,12 +455,12 @@ fn adjacent_impl(f: SigNode, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult 
             _ => return generic_adjacent(f, Value::Num(nums), n, env),
         }?),
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push::<Value>(match prim {
-            Primitive::Add => fast_adjacent(bytes.convert(), n, env, add::num_num)?.into(),
+            Primitive::Add => fast_adjacent(bytes.convert(), n, env, scalar_add::num_num)?.into(),
             Primitive::Sub if flipped => {
-                fast_adjacent(bytes.convert(), n, env, flip(sub::num_num))?.into()
+                fast_adjacent(bytes.convert(), n, env, flip(scalar_sub::num_num))?.into()
             }
-            Primitive::Sub => fast_adjacent(bytes.convert(), n, env, sub::num_num)?.into(),
-            Primitive::Mul => fast_adjacent(bytes.convert(), n, env, mul::num_num)?.into(),
+            Primitive::Sub => fast_adjacent(bytes.convert(), n, env, scalar_sub::num_num)?.into(),
+            Primitive::Mul => fast_adjacent(bytes.convert(), n, env, scalar_mul::num_num)?.into(),
             Primitive::Div if flipped => {
                 fast_adjacent(bytes.convert(), n, env, flip(div::num_num))?.into()
             }

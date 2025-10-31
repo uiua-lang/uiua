@@ -1257,7 +1257,7 @@ impl Uiua {
         self.push(f(value, self)?);
         Ok(())
     }
-    pub(crate) fn monadic_env_with<T, V: Into<Value>>(
+    pub(crate) fn _monadic_env_with<T, V: Into<Value>>(
         &mut self,
         with: T,
         f: fn(T, Value, &Self) -> UiuaResult<V>,
@@ -1304,7 +1304,7 @@ impl Uiua {
         self.push(f(a, b, self)?);
         Ok(())
     }
-    pub(crate) fn dyadic_oo_env_with<V: Into<Value>, T>(
+    pub(crate) fn _dyadic_oo_env_with<V: Into<Value>, T>(
         &mut self,
         with: T,
         f: fn(T, Value, Value, &Self) -> UiuaResult<V>,

@@ -15,14 +15,15 @@ use serde::{de::DeserializeOwned, *};
 
 use crate::{
     algorithm::{
+        ga,
         map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
         ArrayCmpSlice,
     },
     cowslice::{cowslice, CowSlice},
     fill::{Fill, FillValue},
     grid_fmt::GridFmt,
-    Boxed, Complex, ExactDoubleIterator, FfiType, HandleKind, Shape, Value, WILDCARD_CHAR,
-    WILDCARD_NAN,
+    is_default, Boxed, Complex, ExactDoubleIterator, FfiType, HandleKind, Shape, Value,
+    WILDCARD_CHAR, WILDCARD_NAN,
 };
 
 /// Uiua's array type
@@ -64,6 +65,9 @@ pub struct ArrayMetaInner {
     /// The kind of system handle
     #[serde(skip)]
     pub handle_kind: Option<HandleKind>,
+    /// The geometric algebra specification
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub ga_spec: ga::Spec,
 }
 
 /// Default metadata for an array
@@ -73,6 +77,7 @@ static DEFAULT_META_INNER: ArrayMetaInner = ArrayMetaInner {
     map_keys: None,
     pointer: None,
     handle_kind: None,
+    ga_spec: ga::Spec::DEFAULT,
 };
 
 /// Non-shape metadata for an array
@@ -118,6 +123,10 @@ impl ArrayMeta {
             && self.handle_kind.is_none()
             && self.pointer.is_none()
             && self.flags.is_empty()
+    }
+    /// Check if the array is a multivector
+    pub fn is_multivector(&self) -> bool {
+        self.ga_spec.dims.is_some()
     }
     /// Check if the array is sorted ascending
     pub fn is_sorted_up(&self) -> bool {

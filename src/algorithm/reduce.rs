@@ -71,8 +71,8 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     0.0,
                     fill,
                     depth,
-                    add::num_num,
-                    add::num_byte,
+                    scalar_add::num_num,
+                    scalar_add::num_byte,
                     env,
                 )?
                 .into(),
@@ -82,8 +82,8 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     0.0,
                     fill,
                     depth,
-                    flip(sub::num_num),
-                    flip(sub::byte_num),
+                    flip(scalar_sub::num_num),
+                    flip(scalar_sub::byte_num),
                     env,
                 )?
                 .into(),
@@ -93,8 +93,8 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     0.0,
                     fill,
                     depth,
-                    sub::num_num,
-                    sub::num_byte,
+                    scalar_sub::num_num,
+                    scalar_sub::num_byte,
                     env,
                 )?
                 .into(),
@@ -106,13 +106,13 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                             1.0,
                             fill,
                             depth,
-                            mul::num_num,
-                            mul::num_byte,
+                            scalar_mul::num_num,
+                            scalar_mul::num_byte,
                             env,
                         )?
                         .into()
                     } else {
-                        fast_reduce(bytes, 1, byte_fill, depth, mul::bool_bool, env)?.into()
+                        fast_reduce(bytes, 1, byte_fill, depth, scalar_mul::bool_bool, env)?.into()
                     }
                 }
                 Primitive::Mul => fast_reduce_different(
@@ -120,8 +120,8 @@ pub(crate) fn reduce_impl(f: SigNode, depth: usize, env: &mut Uiua) -> UiuaResul
                     1.0,
                     fill,
                     depth,
-                    mul::num_num,
-                    mul::num_byte,
+                    scalar_mul::num_num,
+                    scalar_mul::num_byte,
                     env,
                 )?
                 .into(),
@@ -387,14 +387,14 @@ macro_rules! reduce_math {
             }
             const TID: u8 = <$ty>::TYPE_ID;
             env.push(match prim {
-                Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, add::$f, env)?,
+                Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, scalar_add::$f, env)?,
                 #[cfg(feature = "opt")]
                 Primitive::Sub if _flipped => {
-                    fast_reduce(xs, 0.0.into(), fill, depth, flip(sub::$f), env)?
+                    fast_reduce(xs, 0.0.into(), fill, depth, flip(scalar_sub::$f), env)?
                 }
                 #[cfg(feature = "opt")]
-                Primitive::Sub => fast_reduce(xs, 0.0.into(), fill, depth, sub::$f, env)?,
-                Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, depth, mul::$f, env)?,
+                Primitive::Sub => fast_reduce(xs, 0.0.into(), fill, depth, scalar_sub::$f, env)?,
+                Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, depth, scalar_mul::$f, env)?,
                 Primitive::Or => fast_reduce(xs, 0.0.into(), fill, depth, or::$f, env)?,
                 Primitive::Min if TID == 0 && xs.rank() == 1 && xs.meta.is_sorted_up() => {
                     (xs.data.first().copied())
@@ -784,10 +784,10 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
             let mut arr = match prim {
                 Primitive::Eq => fast_scan(nums, |a, b| is_eq::num_num(a, b) as f64),
                 Primitive::Ne => fast_scan(nums, |a, b| is_ne::num_num(a, b) as f64),
-                Primitive::Add => fast_scan(nums, add::num_num),
-                Primitive::Sub if flipped => fast_scan(nums, flip(sub::num_num)),
-                Primitive::Sub => fast_scan(nums, sub::num_num),
-                Primitive::Mul => fast_scan(nums, mul::num_num),
+                Primitive::Add => fast_scan(nums, scalar_add::num_num),
+                Primitive::Sub if flipped => fast_scan(nums, flip(scalar_sub::num_num)),
+                Primitive::Sub => fast_scan(nums, scalar_sub::num_num),
+                Primitive::Mul => fast_scan(nums, scalar_mul::num_num),
                 Primitive::Div if flipped => fast_scan(nums, flip(div::num_num)),
                 Primitive::Div => fast_scan(nums, div::num_num),
                 Primitive::Modulo if flipped => fast_scan(nums, flip(modulo::num_num)),
@@ -824,12 +824,12 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
             let mut val: Value = match prim {
                 Primitive::Eq => fast_scan(bytes, is_eq::generic).into(),
                 Primitive::Ne => fast_scan(bytes, is_ne::generic).into(),
-                Primitive::Add => fast_scan::<f64>(bytes.convert(), add::num_num).into(),
+                Primitive::Add => fast_scan::<f64>(bytes.convert(), scalar_add::num_num).into(),
                 Primitive::Sub if flipped => {
-                    fast_scan::<f64>(bytes.convert(), flip(sub::num_num)).into()
+                    fast_scan::<f64>(bytes.convert(), flip(scalar_sub::num_num)).into()
                 }
-                Primitive::Sub => fast_scan::<f64>(bytes.convert(), sub::num_num).into(),
-                Primitive::Mul => fast_scan::<f64>(bytes.convert(), mul::num_num).into(),
+                Primitive::Sub => fast_scan::<f64>(bytes.convert(), scalar_sub::num_num).into(),
+                Primitive::Mul => fast_scan::<f64>(bytes.convert(), scalar_mul::num_num).into(),
                 Primitive::Div if flipped => {
                     fast_scan::<f64>(bytes.convert(), flip(div::num_num)).into()
                 }
@@ -1012,7 +1012,7 @@ pub fn unscan(ops: Ops, env: &mut Uiua) -> UiuaResult {
     match xs {
         Value::Num(nums) => match f.node.as_flipped_primitive() {
             Some((Primitive::Sub, false)) => {
-                env.push(fast_invscan(nums, sub::num_num));
+                env.push(fast_invscan(nums, scalar_sub::num_num));
                 return Ok(());
             }
             Some((Primitive::Div, false)) => {
@@ -1023,7 +1023,7 @@ pub fn unscan(ops: Ops, env: &mut Uiua) -> UiuaResult {
         },
         Value::Byte(bytes) => match f.node.as_flipped_primitive() {
             Some((Primitive::Sub, false)) => {
-                env.push(fast_invscan(bytes.convert(), sub::num_num));
+                env.push(fast_invscan(bytes.convert(), scalar_sub::num_num));
                 return Ok(());
             }
             Some((Primitive::Div, false)) => {

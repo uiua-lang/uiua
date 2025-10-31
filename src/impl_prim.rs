@@ -4,7 +4,7 @@ use std::fmt;
 
 use serde::*;
 
-use crate::{algorithm::ga, Primitive, Purity, SubSide, Subscript, SysOp, SUBSCRIPT_DIGITS};
+use crate::{Primitive, Purity, SubSide, Subscript, SysOp, SUBSCRIPT_DIGITS};
 
 macro_rules! impl_primitive {
     ($(
@@ -46,7 +46,6 @@ macro_rules! impl_primitive {
             MaxRowCount(usize),
             BothImpl(Subscript<u32>),
             UnBothImpl(Subscript<u32>),
-            Ga(ga::GaOp, ga::Spec),
         }
 
         impl ImplPrimitive {
@@ -61,7 +60,6 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
-                    ImplPrimitive::Ga(op, _) => op.args(),
                     _ => return None
                 })
             }
@@ -74,7 +72,6 @@ macro_rules! impl_primitive {
                     ImplPrimitive::StackN { n, .. } => *n,
                     ImplPrimitive::MaxRowCount(n) => *n + 1,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 1,
-                    ImplPrimitive::Ga(op, _) => op.outputs(),
                     _ if self.modifier_args().is_some() => return None,
                     _ => 1
                 })
@@ -487,7 +484,6 @@ impl fmt::Display for ImplPrimitive {
             UnBothImpl(sub) => write!(f, "{Un}{Both}{sub}"),
             Retropose => write!(f, "<{Evert}>"),
             FixMatchRanks => write!(f, "{Evert}"),
-            Ga(op, _) => op.fmt(f),
             Over => write!(f, "over"),
             &MultiKeep(n) => {
                 write!(f, "{Keep}")?;

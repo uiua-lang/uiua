@@ -52,7 +52,7 @@ fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueMonFn> {
         Sign => spanned_mon_fn(span, |v, _, env| Value::sign(v, env)),
         Neg => spanned_mon_fn(span, |v, _, env| Value::neg(v, env)),
         Abs => spanned_mon_fn(span, |v, _, env| Value::abs(v, env)),
-        Sqrt => spanned_mon_fn(span, |v, _, env| Value::sqrt(v, env)),
+        Sqrt => spanned_mon_fn(span, |v, _, env| Value::scalar_sqrt(v, env)),
         Floor => spanned_mon_fn(span, |v, _, env| Value::floor(v, env)),
         Ceil => spanned_mon_fn(span, |v, _, env| Value::ceil(v, env)),
         Round => spanned_mon_fn(span, |v, _, env| Value::round(v, env)),
@@ -351,7 +351,7 @@ fn prim_dy_fast_fn(
     Some(match prim {
         Add => spanned_dy_fn(span, Value::add),
         Sub => spanned_dy_fn(span, Value::sub),
-        Mul => spanned_dy_fn(span, Value::mul),
+        Mul => spanned_dy_fn(span, Value::scalar_mul),
         Div => spanned_dy_fn(span, Value::div),
         Pow => spanned_dy_fn(span, Value::pow),
         Modulo => spanned_dy_fn(span, Value::modulo),

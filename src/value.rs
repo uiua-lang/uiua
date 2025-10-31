@@ -12,7 +12,7 @@ use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    algorithm::{pervade::*, ErrorContext, FillContext},
+    algorithm::{ga, pervade::*, ErrorContext, FillContext},
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
@@ -1054,6 +1054,47 @@ impl Value {
         }
         self.as_number_list(ctx, requirement)
     }
+    /// Attempt to convert the array to a byte
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_byte<C: ErrorContext>(
+        &self,
+        ctx: &C,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> Result<u8, C::Error> {
+        let requirement = requirement.into().unwrap_or("Expected value to be a byte");
+        Ok(match self {
+            Value::Num(nums) => {
+                if nums.rank() > 0 {
+                    return Err(
+                        ctx.error(format!("{requirement}, but its rank is {}", nums.rank()))
+                    );
+                }
+                let num = nums.data[0];
+                if num.is_infinite() {
+                    return Err(ctx.error(format!("{requirement}, but it is infinite")));
+                }
+                if num.is_nan() {
+                    return Err(ctx.error(format!("{requirement}, but it is NaN")));
+                }
+                if num.fract() != 0.0 {
+                    return Err(ctx.error(format!("{requirement}, but it has a fractional part")));
+                }
+                num as u8
+            }
+            Value::Byte(bytes) => {
+                if bytes.rank() > 0 {
+                    return Err(
+                        ctx.error(format!("{requirement}, but its rank is {}", bytes.rank()))
+                    );
+                }
+                bytes.data[0]
+            }
+            value => {
+                return Err(ctx.error(format!("{requirement}, but it is {}", value.type_name())))
+            }
+        })
+    }
     /// Attempt to convert the array to a list of bytes
     ///
     /// The `requirement` parameter is used in error messages.
@@ -1820,7 +1861,7 @@ value_mon_impl!(
 );
 value_mon_impl!(recip, [Num, num], (Byte, byte), [Complex, com]);
 value_mon_impl!(
-    sqrt,
+    scalar_sqrt,
     [Num, num],
     [|meta| meta.flags.is_boolean(), Byte, bool],
     (Byte, byte),
@@ -1871,6 +1912,9 @@ value_mon_impl!(complex_im, [Num, num], [Byte, byte], (Complex, com));
 impl Value {
     /// Get the `absolute value` of a value
     pub fn abs(self, env: &Uiua) -> UiuaResult<Self> {
+        if self.meta.is_multivector() {
+            return ga::magnitude(self, env).map(Into::into);
+        }
         match self {
             Value::Char(mut chars) if chars.rank() == 1 && env.scalar_fill::<char>().is_ok() => {
                 chars.data = (chars.data.into_iter())
@@ -1938,12 +1982,44 @@ impl Value {
         val.or_sorted_flags_rev(sorted_flags);
         Ok(val)
     }
+    /// Take the square root of a value
+    pub fn sqrt(self, env: &Uiua) -> UiuaResult<Self> {
+        if self.meta.is_multivector() {
+            ga::sqrt(self, env).map(Into::into)
+        } else {
+            self.scalar_sqrt(env)
+        }
+    }
+    /// Add two values
+    pub fn add(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        if ga::resolve_specs(&self, &other, env)?.is_some() {
+            ga::add(self, other, env).map(Into::into)
+        } else {
+            self.scalar_add(other, env)
+        }
+    }
+    /// Subtract two values
+    pub fn sub(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        if ga::resolve_specs(&self, &other, env)?.is_some() {
+            ga::subtract(self, other, env).map(Into::into)
+        } else {
+            self.scalar_sub(other, env)
+        }
+    }
+    /// Multiply two values
+    pub fn mul(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        if let Some(spec) = ga::resolve_specs(&self, &other, env)? {
+            ga::product(spec, self, other, env).map(Into::into)
+        } else {
+            self.scalar_mul(other, env)
+        }
+    }
     /// Raise a value to a power
     pub fn pow(self, base: Self, env: &Uiua) -> UiuaResult<Self> {
         if let Ok(pow) = self.as_int(env, None) {
             match pow {
                 1 => return Ok(base),
-                2 => return base.clone().mul(base, env),
+                2 => return base.clone().scalar_mul(base, env),
                 -1 => return base.div(Value::from(1), env),
                 _ => {}
             }
@@ -2178,7 +2254,7 @@ macro_rules! value_dy_math_impl {
 }
 
 value_dy_math_impl!(
-    add,
+    scalar_add,
     (
         (Num, Char, num_char),
         (Char, Num, char_num),
@@ -2189,7 +2265,7 @@ value_dy_math_impl!(
     maintain_both_sortedness
 );
 value_dy_math_impl!(
-    sub,
+    scalar_sub,
     (
         (Num, Char, num_char),
         (Char, Char, char_char),
@@ -2198,7 +2274,7 @@ value_dy_math_impl!(
     maintain_scalar_sortedness(true)
 );
 value_dy_math_impl!(
-    mul,
+    scalar_mul,
     (
         (Num, Char, num_char),
         (Char, Num, char_num),

@@ -961,7 +961,7 @@ pub mod recip {
         env.error(format!("Cannot get the reciprocal of {a}"))
     }
 }
-pub mod sqrt {
+pub mod scalar_sqrt {
     use super::*;
     pub fn num(a: f64) -> f64 {
         a.sqrt()
@@ -1238,7 +1238,7 @@ cmp_impl!(other_is_le != Ordering::Greater);
 cmp_impl!(other_is_gt == Ordering::Greater);
 cmp_impl!(other_is_ge != Ordering::Less);
 
-pub mod add {
+pub mod scalar_add {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
         b + a
@@ -1280,7 +1280,7 @@ pub mod add {
     }
 }
 
-pub mod sub {
+pub mod scalar_sub {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
         b - a
@@ -1352,7 +1352,7 @@ macro_rules! bin_op_mod {
     };
 }
 
-pub mod mul {
+pub mod scalar_mul {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
         b * a
@@ -1404,7 +1404,7 @@ pub mod set_sign {
     use super::*;
 
     pub fn num_num(a: f64, b: f64) -> f64 {
-        mul::num_num(a, b.abs())
+        scalar_mul::num_num(a, b.abs())
     }
     pub fn byte_byte(a: u8, b: u8) -> f64 {
         num_num(a as f64, b as f64)

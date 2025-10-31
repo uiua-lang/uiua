@@ -222,6 +222,14 @@ jobs:
       - name: Rust version
         id: rustv
         run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Normalize features
+        id: feat
+        shell: bash
+        run: |
+          f='${{ matrix.features }}'
+          f="${f//,/+}"   # replace commas
+          f="${f// /}"    # strip spaces
+          echo "safe=$f" >> "$GITHUB_OUTPUT"
       - name: Cargo cache (registry+git)
         uses: actions/cache@v4
         with:
@@ -233,10 +241,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: target
-          key: ${{ runner.os }}-cargo-target-${{ matrix.target }}-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}-${{ matrix.features }}
+          key: ${{ runner.os }}-cargo-target-${{ matrix.target }}-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}-${{ steps.feat.outputs.safe }}
           restore-keys: |
             ${{ runner.os }}-cargo-target-${{ matrix.target }}-${{ steps.rustv.outputs.version }}-
-      # Install dependencies
       - if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get install -y musl-tools
       - if: matrix.os == 'ubuntu-latest'

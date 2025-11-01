@@ -1923,7 +1923,7 @@ primitive!(
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to each unboxed row of an array and re-box the results
     ///
-    /// For box arrays, this is equivalent to `rows``under``un``box`.
+    /// For monadic functions, this is equivalent to `rows``under``un``box`.
     /// ex: ≡⍜°□(⊂⊙@!) {"a" "bc" "def"}
     ///   :    ⍚(⊂⊙@!) {"a" "bc" "def"}
     /// For non-box arrays, [inventory] works identically to [rows], except it [box]es each result row.

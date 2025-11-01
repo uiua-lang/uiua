@@ -523,7 +523,11 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Join, "Join N arrays", "⊂₃ 1 2_3 4"),
         subscript(Box, "Group N arrays as boxed rows", "□₃ 1_2_3 5 \"wow\""),
         subscript(Deshape, "Change rank", "♭₂ ⇡ 2_2"),
-        subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
+        subscript(
+            Transpose,
+            "Only first N axes",
+            "# Experimental!\n△ ⍉₃ °△1_2_3_4_5",
+        ),
         subscript(Sqrt, "Nth root", "√₃ [8 27 125]"),
         subscript(Neg, "Turn one Nth in the complex plane", "⁅₃ ⍥₄⊸¯₄ 1"),
         subscript(Exp, "Base N exponential", "ₑ₂ 8"),

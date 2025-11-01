@@ -1398,7 +1398,8 @@ fn format_stack_lines(stack_lines: &[Vec<Value>], color: bool) -> Vec<String> {
     let mut formatted_lines = Vec::new();
     let mut i = 0;
     #[cfg(feature = "terminal-light")]
-    let is_light = terminal_light::luma().is_ok_and(|luma| luma > 0.6);
+    let is_light =
+        color && !stack_lines.is_empty() && terminal_light::luma().is_ok_and(|luma| luma > 0.6);
     #[cfg(not(feature = "terminal-light"))]
     let is_light = false;
     let max_width = terminal_size().map_or(80, |(w, _)| w);
@@ -1441,19 +1442,19 @@ fn format_stack_lines(stack_lines: &[Vec<Value>], color: bool) -> Vec<String> {
                     }
                 }
                 for (l, grid) in grids.iter().enumerate() {
-                    let (w, b) = if is_light { (0, 35) } else { (255, 200) };
-                    let (r, g, b) = match (i + l + 3) % 6 {
-                        0 => (w, b, b),
-                        1 => (w, w, b),
-                        2 => (b, w, b),
-                        3 => (b, w, w),
-                        4 => (b, b, w),
-                        5 => (w, b, w),
-                        _ => unreachable!(),
-                    };
                     let offset = max_height / 2 - grid.len() / 2;
                     if let Some(line) = grid.get(k.saturating_sub(offset)).filter(|_| k >= offset) {
                         if color {
+                            let (w, b) = if is_light { (0, 35) } else { (255, 200) };
+                            let (r, g, b) = match (i + l + 3) % 6 {
+                                0 => (w, b, b),
+                                1 => (w, w, b),
+                                2 => (b, w, b),
+                                3 => (b, w, w),
+                                4 => (b, b, w),
+                                5 => (w, b, w),
+                                _ => unreachable!(),
+                            };
                             let line: String = line.iter().copied().collect();
                             full_line.push_str(&line.truecolor(r, g, b).to_string());
                         } else {

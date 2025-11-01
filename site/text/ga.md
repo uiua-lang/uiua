@@ -2,7 +2,7 @@
 
 The [geometric]() modifier changes the behavior of its function to be an operation in [Geometric Algebra](https://en.wikipedia.org/wiki/Geometric_algebra).
 
-Geometric Algebra unifies many useful mathematical concepts, including complex numbers, quaternions, and linear transformations. This page does not go into detail on all the ins and outs of the topic. [This video](https://youtu.be/60z_hpEAtD8?si=AKSbIE8vJxbgkizO) is a great introduction to Geometric Algebra.
+Geometric Algebra unifies many useful mathematical concepts, including complex numbers, quaternions, and linear transformations. This page does not go into detail on all the ins and outs of the topic. [This video](https://youtu.be/60z_hpEAtD8) is a great introduction to Geometric Algebra.
 
 Here is a quick reference table of each transformed operation. They will be explained in more detail below.
 

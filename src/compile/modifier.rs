@@ -1437,11 +1437,16 @@ impl Compiler {
                 }
             }
             prim @ (Rows | Inventory) => {
-                let Some(sub) = subscript else {
-                    return Ok(None);
-                };
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
+                let Some(sub) = subscript else {
+                    return Ok(Some(construct_extracted_monadic_modifier(
+                        Node::Mod,
+                        prim,
+                        sn,
+                        span,
+                    )));
+                };
                 let sub = self.validate_subscript(sub);
                 let sub_span = sub.span;
                 let mut sub = sub.value;
@@ -1469,9 +1474,10 @@ impl Compiler {
                         }
                     }
                 }
-                Node::ImplMod(
+                construct_extracted_monadic_modifier(
+                    Node::ImplMod,
                     ImplPrimitive::RowsSub(sub, prim == Inventory),
-                    eco_vec![sn],
+                    sn,
                     span,
                 )
             }
@@ -1503,7 +1509,12 @@ impl Compiler {
                                 .collect();
                             Node::Mod(Fork, args, fork_span)
                         }
-                        node => Node::Mod(Table, eco_vec![SigNode::new(sn.sig, node)], table_span),
+                        node => construct_extracted_monadic_modifier(
+                            Node::Mod,
+                            Table,
+                            SigNode::new(sn.sig, node),
+                            table_span,
+                        ),
                     }
                 }
                 let table_span = self.add_span(modified.modifier.span.clone());
@@ -2402,4 +2413,51 @@ impl Compiler {
         }
         true
     }
+}
+
+fn construct_extracted_monadic_modifier<T>(
+    node_kind: fn(T, EcoVec<SigNode>, usize) -> Node,
+    m: T,
+    mut sn: SigNode,
+    span: usize,
+) -> Node {
+    let (node, extracted) = extract_node_pervasives(sn.node);
+    if node.is_empty() {
+        return extracted;
+    }
+    sn.node = node;
+    let mut node = node_kind(m, eco_vec![sn], span);
+    if !extracted.is_empty() {
+        node.extend(extracted);
+    }
+    node
+}
+
+/// Extract a pervasive suffix from the node
+fn extract_node_pervasives(mut node: Node) -> (Node, Node) {
+    let mut split_index = node.len();
+    loop {
+        if split_index >= 1
+            && matches!(
+                node[split_index - 1],
+                Node::Prim(prim, _) if prim.class() == PrimClass::MonadicPervasive
+            )
+        {
+            split_index -= 1;
+            continue;
+        }
+        if split_index >= 2
+            && matches!(
+                &node[split_index - 2..split_index],
+                [Node::Push(val), Node::Prim(prim, _)]
+                    if val.rank() == 0 && prim.class() == PrimClass::DyadicPervasive
+            )
+        {
+            split_index -= 2;
+            continue;
+        }
+        break;
+    }
+    let extracted = node.split_off(split_index);
+    (node, extracted)
 }

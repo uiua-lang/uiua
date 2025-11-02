@@ -161,6 +161,7 @@ mod function;
 mod grid_fmt;
 mod impl_prim;
 pub mod lsp;
+mod multivector;
 #[doc(hidden)]
 pub mod profile;
 mod run;
@@ -190,6 +191,7 @@ pub use self::{
     function::*,
     impl_prim::*,
     lsp::{SpanKind, Spans},
+    multivector::*,
     run::*,
     run_prim::*,
     shape::*,

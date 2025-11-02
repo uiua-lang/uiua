@@ -3038,6 +3038,8 @@ primitive!(
     ///   : ⩜°⋕ 5_1
     ///   : ⩜°⋕ [1_2 3_4]
     ([1], Geometric, Algorithm, ("geometric", '⩜'), { experimental: true }),
+    /// Create a multivector
+    (2, Multivector, Algorithm, ("multivector", '𝕍'), { experimental: true }),
     /// Find the shortest path between two things
     ///
     /// Expects 2 functions and at least 1 value.

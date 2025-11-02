@@ -21,8 +21,8 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     fill::{Fill, FillValue},
     grid_fmt::GridFmt,
-    Boxed, Complex, ExactDoubleIterator, FfiType, HandleKind, Shape, Value, WILDCARD_CHAR,
-    WILDCARD_NAN,
+    Boxed, Complex, ExactDoubleIterator, FfiType, HandleKind, Multivector, Shape, Value,
+    WILDCARD_CHAR, WILDCARD_NAN,
 };
 
 /// Uiua's array type
@@ -1194,6 +1194,27 @@ impl ArrayValue for Complex {
     }
 }
 
+impl ArrayValue for Multivector {
+    const NAME: &'static str = "complex";
+    const SYMBOL: char = 'ℂ';
+    const TYPE_ID: u8 = 3;
+    fn get_scalar_fill(_fill: &Fill) -> Result<FillValue<Self>, &'static str> {
+        todo!()
+    }
+    fn get_array_fill(_fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
+        todo!()
+    }
+    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
+        self.dims().hash(hasher);
+        for n in self.data() {
+            n.array_hash(hasher);
+        }
+    }
+    fn proxy() -> Self {
+        Self::COMPLEX_0
+    }
+}
+
 /// Trait for [`ArrayValue`]s that are real numbers
 pub trait RealArrayValue: ArrayValue + Copy {
     /// Whether the value is an integer
@@ -1253,6 +1274,14 @@ impl ArrayCmp for Complex {
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap_or_else(|| {
             (self.re.is_nan(), self.im.is_nan()).cmp(&(other.re.is_nan(), other.im.is_nan()))
+        })
+    }
+}
+
+impl ArrayCmp for Multivector {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap_or_else(|| {
+            (self.data().iter().map(|v| v.is_nan())).cmp(other.data().iter().map(|v| v.is_nan()))
         })
     }
 }

@@ -15,7 +15,7 @@ use crate::{
     boxed::Boxed,
     terminal_size, val_as_arr,
     value::Value,
-    Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
+    Complex, Multivector, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -388,6 +388,15 @@ impl GridFmt for Complex {
                 max.grid_string(false),
                 mean.grid_string(false)
             )
+        }
+    }
+}
+
+impl GridFmt for Multivector {
+    fn fmt_grid(&self, params: GridFmtParams) -> Grid {
+        match self.get() {
+            Ok(c) => c.fmt_grid(params),
+            _ => vec![self.to_string().chars().collect()],
         }
     }
 }

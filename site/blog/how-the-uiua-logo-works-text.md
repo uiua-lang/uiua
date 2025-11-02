@@ -34,7 +34,7 @@ Then creating our coordinates is a simple matter of calling [`table ⊞`](https:
 ˙⊞⊟ -⊸¬ ÷⟜⇡8
 ```
 
-This array has the shape `[N N 2]`. To make it easier to access all the x components or all the y components at once. We can [`un °`](https://uiua.org/docs/un) [`transpose ⍉`](https://uiua.org/docs/transpose) the array so that the `2` axis is at the front.
+This array has the shape `[N N 2]`. To make it easier to access all the x components or all the y components at once, we can [`un °`](https://uiua.org/docs/un) [`transpose ⍉`](https://uiua.org/docs/transpose) the array so that the `2` axis is at the front.
 
 ```uiua
 °⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡8

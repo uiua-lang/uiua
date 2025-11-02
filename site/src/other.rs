@@ -546,8 +546,9 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Occurrences,
             "Within first N occurrences",
-            "# Experimental!\n⧆₁ \"lego helmet\"",
+            "⧆₁ \"lego helmet\"",
         ),
+        subscript(Classify, "Rank-N subrows", "⊛₀ [\"hello\"\"world\"]"),
         subscript(On, "First N values", "{⟜₂[⊙⊙∘] 1 2 3}"),
         subscript(By, "Last N values", "{⊸₂[⊙⊙∘] 1 2 3}"),
         subscript(With, "Last N values", "{⤙₂[⊙⊙∘] 1 2 3}"),

@@ -2430,7 +2430,7 @@ impl Compiler {
                         ])
                     }
                     Classify => {
-                        let n = self.positive_subscript(n, Occurrences, &span);
+                        let n = self.positive_subscript(n, Classify, &span);
                         Node::ImplPrim(ImplPrimitive::ClassifySub(n), self.add_span(span))
                     }
                     _ => {

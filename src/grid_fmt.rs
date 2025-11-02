@@ -711,7 +711,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     let mut row = match &keys.keys {
                         Value::Num(_) => shape_row::<f64>(&keys_row_shape),
                         Value::Byte(_) => shape_row::<u8>(&keys_row_shape),
-                        Value::Complex(_) => shape_row::<Complex>(&keys_row_shape),
+                        Value::Complex(_) => shape_row::<Multivector>(&keys_row_shape),
                         Value::Char(_) => shape_row::<char>(&keys_row_shape),
                         Value::Box(_) => shape_row::<Boxed>(&keys_row_shape),
                     };
@@ -994,7 +994,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         }
 
         // Add complex marker
-        if T::TYPE_ID == Complex::TYPE_ID && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
+        if T::TYPE_ID == Multivector::TYPE_ID
+            && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
         {
             if self.shape.is_empty() {
                 grid[0].push('ℂ');
@@ -1077,7 +1078,7 @@ impl<T: ArrayValue> Array<T> {
             let mut s: String = match keys.keys {
                 Value::Num(_) => shape_row::<f64>(&keys_shape),
                 Value::Byte(_) => shape_row::<u8>(&keys_shape),
-                Value::Complex(_) => shape_row::<Complex>(&keys_shape),
+                Value::Complex(_) => shape_row::<Multivector>(&keys_shape),
                 Value::Char(_) => shape_row::<char>(&keys_shape),
                 Value::Box(_) => shape_row::<Boxed>(&keys_shape),
             }

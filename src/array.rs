@@ -1174,26 +1174,6 @@ impl ArrayValue for Boxed {
     }
 }
 
-impl ArrayValue for Complex {
-    const NAME: &'static str = "complex";
-    const SYMBOL: char = 'ℂ';
-    const TYPE_ID: u8 = 3;
-    fn get_scalar_fill(fill: &Fill) -> Result<FillValue<Self>, &'static str> {
-        fill.complex_scalar()
-    }
-    fn get_array_fill(fill: &Fill) -> Result<FillValue<Array<Self>>, &'static str> {
-        fill.complex_array()
-    }
-    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
-        for n in [self.re, self.im] {
-            n.array_hash(hasher);
-        }
-    }
-    fn proxy() -> Self {
-        Complex::new(0.0, 0.0)
-    }
-}
-
 impl ArrayValue for Multivector {
     const NAME: &'static str = "complex";
     const SYMBOL: char = 'ℂ';
@@ -1482,27 +1462,27 @@ impl ArrayValueSer for Boxed {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum ComplexCollection {
-    #[serde(rename = "empty_complex")]
-    Empty([Complex; 0]),
+enum MultivectorCollection {
+    #[serde(rename = "empty_multivector")]
+    Empty([Multivector; 0]),
     #[serde(untagged)]
-    List(CowSlice<Complex>),
+    List(CowSlice<Multivector>),
 }
 
-impl ArrayValueSer for Complex {
-    type Scalar = Complex;
-    type Collection = ComplexCollection;
+impl ArrayValueSer for Multivector {
+    type Scalar = Multivector;
+    type Collection = MultivectorCollection;
     fn make_collection(data: CowSlice<Self>) -> Self::Collection {
         if data.is_empty() {
-            ComplexCollection::Empty([])
+            MultivectorCollection::Empty([])
         } else {
-            ComplexCollection::List(data)
+            MultivectorCollection::List(data)
         }
     }
     fn make_data(collection: Self::Collection) -> CowSlice<Self> {
         match collection {
-            ComplexCollection::Empty(_) => CowSlice::new(),
-            ComplexCollection::List(data) => data,
+            MultivectorCollection::Empty(_) => CowSlice::new(),
+            MultivectorCollection::List(data) => data,
         }
     }
     fn no_scalar() -> bool {

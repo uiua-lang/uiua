@@ -1019,9 +1019,7 @@ impl ImplPrimitive {
                     }
                     (Value::Complex(a), Value::Complex(b))
                         if a.shape == b.shape
-                            && a.data.iter().zip(&b.data).all(|(a, b)| {
-                                (a.re - b.re).abs() < 1e-12 && (a.im - b.im).abs() < 1e-12
-                            }) =>
+                            && a.data.iter().zip(&b.data).all(|(a, b)| a == b) =>
                     {
                         return Ok(())
                     }

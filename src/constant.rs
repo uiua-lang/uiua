@@ -241,9 +241,9 @@ constant!(
     /// Euler's constant
     ("e", Math, std::f64::consts::E),
     /// The real complex unit
-    ("r", Math, crate::Complex::ONE),
+    ("r", Math, crate::Multivector::COMPLEX_1),
     /// The imaginary unit
-    ("i", Math, crate::Complex::I),
+    ("i", Math, crate::Multivector::COMPLEX_I),
     /// IEEE 754-2008's `NaN`
     ("NaN", Math, f64::NAN),
     /// The wildcard `NaN` value that equals any other number

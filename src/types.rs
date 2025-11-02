@@ -3,8 +3,8 @@ use std::{array, cmp::Ordering, mem::take};
 use uiua_parser::PrimClass;
 
 use crate::{
-    cowslice::CowSlice, Array, Assembly, Boxed, Complex, ImplPrimitive, Node, PersistentMeta,
-    Primitive, Shape, SigNode, Uiua, Value,
+    cowslice::CowSlice, Array, Assembly, Boxed, Complex, ImplPrimitive, Multivector, Node,
+    PersistentMeta, Primitive, Shape, SigNode, Uiua, Value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -97,7 +97,7 @@ fn make_val(mut ty: Ty) -> Value {
     ty.shape.prepend(0);
     match ty.scalar {
         ScalarType::Real => Array::<u8>::new(ty.shape, CowSlice::default()).into(),
-        ScalarType::Complex => Array::<Complex>::new(ty.shape, CowSlice::default()).into(),
+        ScalarType::Complex => Array::<Multivector>::new(ty.shape, CowSlice::default()).into(),
         ScalarType::Char => Array::<char>::new(ty.shape, CowSlice::default()).into(),
         ScalarType::Box(_) => Array::<Boxed>::new(ty.shape, CowSlice::default()).into(),
     }

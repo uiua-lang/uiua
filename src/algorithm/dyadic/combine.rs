@@ -11,8 +11,8 @@ use crate::{
     },
     cowslice::cowslice,
     fill::FillValue,
-    val_as_arr, Array, ArrayValue, Boxed, Complex, FormatShape, Primitive, Shape, Uiua, UiuaResult,
-    Value,
+    val_as_arr, Array, ArrayValue, Boxed, Complex, FormatShape, Multivector, Primitive, Shape,
+    Uiua, UiuaResult, Value,
 };
 
 fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
@@ -1200,7 +1200,7 @@ impl Value {
                         ))))
                     }
                 },
-                Value::Complex(arr) => match ctx.scalar_fill::<Complex>() {
+                Value::Complex(arr) => match ctx.scalar_fill::<Multivector>() {
                     Ok(fill) => arr.fill_to_shape(&max_shape, fill),
                     Err(e) => {
                         return Err(C::fill_error(ctx.error(format!(

@@ -16,7 +16,7 @@ use crate::{
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
-    Boxed, Complex, Shape, Uiua, UiuaResult,
+    Boxed, Complex, Multivector, Shape, Uiua, UiuaResult,
 };
 
 /// A generic array value
@@ -31,7 +31,7 @@ pub enum Value {
     /// Common number array
     Num(Array<f64>),
     /// Complex number array
-    Complex(Array<Complex>),
+    Complex(Array<Multivector>),
     /// Common character array
     Char(Array<char>),
     /// Common box array
@@ -274,7 +274,7 @@ impl Value {
                 CowSlice::from_elem(
                     env.scalar_fill()
                         .map(|fv| fv.value)
-                        .unwrap_or_else(|_| Complex::proxy()),
+                        .unwrap_or_else(|_| Multivector::proxy()),
                     elem_count,
                 ),
             )
@@ -307,7 +307,7 @@ impl Value {
             Value::Num(_) => env.array_fill::<f64>().map(|fv| fv.value).map(Into::into),
             Value::Byte(_) => env.array_fill::<u8>().map(|fv| fv.value).map(Into::into),
             Value::Complex(_) => env
-                .array_fill::<Complex>()
+                .array_fill::<Multivector>()
                 .map(|fv| fv.value)
                 .map(Into::into),
             Value::Char(_) => env.array_fill::<char>().map(|fv| fv.value).map(Into::into),
@@ -470,7 +470,7 @@ impl Value {
         other: Self,
         n: impl FnOnce(Array<f64>, Array<f64>) -> Result<T, E>,
         _b: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, E>,
-        _co: impl FnOnce(Array<Complex>, Array<Complex>) -> Result<T, E>,
+        _co: impl FnOnce(Array<Multivector>, Array<Multivector>) -> Result<T, E>,
         ch: impl FnOnce(Array<char>, Array<char>) -> Result<T, E>,
         f: impl FnOnce(Array<Boxed>, Array<Boxed>) -> Result<T, E>,
         err: impl FnOnce(Self, Self) -> E,
@@ -498,7 +498,7 @@ impl Value {
         other: &Self,
         n: impl FnOnce(&Array<f64>, &Array<f64>) -> Result<T, E>,
         _b: impl FnOnce(&Array<u8>, &Array<u8>) -> Result<T, E>,
-        _co: impl FnOnce(&Array<Complex>, &Array<Complex>) -> Result<T, E>,
+        _co: impl FnOnce(&Array<Multivector>, &Array<Multivector>) -> Result<T, E>,
         ch: impl FnOnce(&Array<char>, &Array<char>) -> Result<T, E>,
         f: impl FnOnce(&Array<Boxed>, &Array<Boxed>) -> Result<T, E>,
         err: impl FnOnce(&Self, &Self) -> E,
@@ -526,7 +526,7 @@ impl Value {
         other: Self,
         n: impl FnOnce(&mut Array<f64>, Array<f64>) -> Result<T, E>,
         _b: impl FnOnce(&mut Array<u8>, Array<u8>) -> Result<T, E>,
-        _co: impl FnOnce(&mut Array<Complex>, Array<Complex>) -> Result<T, E>,
+        _co: impl FnOnce(&mut Array<Multivector>, Array<Multivector>) -> Result<T, E>,
         ch: impl FnOnce(&mut Array<char>, Array<char>) -> Result<T, E>,
         f: impl FnOnce(&mut Array<Boxed>, Array<Boxed>) -> Result<T, E>,
         err: impl FnOnce(&Self, &Self) -> E,
@@ -1660,7 +1660,7 @@ value_from!(f64, Num);
 value_from!(u8, Byte);
 value_from!(char, Char);
 value_from!(Boxed, Box);
-value_from!(Complex, Complex);
+value_from!(Multivector, Complex);
 
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
@@ -1695,6 +1695,12 @@ impl From<i64> for Value {
 impl From<String> for Value {
     fn from(s: String) -> Self {
         s.chars().collect()
+    }
+}
+
+impl From<Complex> for Value {
+    fn from(c: Complex) -> Self {
+        Multivector::from(c).into()
     }
 }
 

@@ -2,8 +2,12 @@
 
 use std::{cmp::Ordering, fmt, sync::Arc};
 
+use serde::*;
+
 use crate::{grid_fmt::GridFmt, Complex};
 
+#[derive(Serialize, Deserialize)]
+#[serde(from = "Rep", into = "Rep")]
 pub struct Multivector(Complex);
 
 impl Default for Multivector {
@@ -70,6 +74,12 @@ impl Multivector {
         } else {
             Ok(self.0)
         }
+    }
+}
+
+impl From<u8> for Multivector {
+    fn from(val: u8) -> Self {
+        (val as f64).into()
     }
 }
 
@@ -186,6 +196,31 @@ fn mask_table(dims: u8) -> Vec<usize> {
     let mut mask_table: Vec<usize> = (0..1usize << dims).collect();
     mask_table.sort_by_key(|&a| a.count_ones());
     mask_table
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum Rep {
+    Complex(f64, f64),
+    Mv(u8, Vec<f64>),
+}
+
+impl From<Rep> for Multivector {
+    fn from(rep: Rep) -> Self {
+        match rep {
+            Rep::Complex(re, im) => Self::new_complex(re, im),
+            Rep::Mv(dims, data) => Self::new_multi(dims, data),
+        }
+    }
+}
+
+impl From<Multivector> for Rep {
+    fn from(m: Multivector) -> Self {
+        match m.get() {
+            Ok(c) => Rep::Complex(c.re, c.im),
+            Err((dims, data)) => Rep::Mv(dims, data.to_vec()),
+        }
+    }
 }
 
 const EXP_ALL_ONES: u64 = 0x7FF;

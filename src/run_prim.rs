@@ -2561,7 +2561,7 @@ mod tests {
 	"repository": {{
         "idents": {{
             "name": "variable.parameter.uiua",
-            "match": "\\b[a-zA-Z]+['′″‴]*(₋?[₀₁₂₃₄₅₆₇₈₉]|,`?\\d+)*[!‼]*\\b"
+            "match": "\\b[a-zA-Z]+['′″‴]*(₋?[₀₁₂₃₄₅₆₇₈₉⌞⌟]|,`?\\d+)*[!‼]*\\b"
         }},
 		"comments": {{
 			"name": "comment.line.uiua",
@@ -2574,7 +2574,7 @@ mod tests {
 			"patterns": [
 				{{
 					"name": "string.quoted",
-					"match": "\\\\[\\\\\"0nrt]"
+					"match": "\\\\[\\\\\"0nrtW]"
 				}}
 			]
 		}},
@@ -2585,7 +2585,7 @@ mod tests {
 			"patterns": [
 				{{
 					"name": "string.quoted",
-					"match": "\\\\[\\\\\"0nrt_]"
+					"match": "\\\\[\\\\\"0nrtW_]"
 				}},
 				{{
 					"name": "constant.numeric",

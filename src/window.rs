@@ -158,7 +158,7 @@ pub fn run_window() {
             let mut fonts = FontDefinitions::default();
             fonts.font_data.insert(
                 "Uiua386".into(),
-                FontData::from_static(include_bytes!("algorithm/Uiua386.ttf")).into(),
+                FontData::from_static(include_bytes!("assets/Uiua386.ttf")).into(),
             );
             (fonts.families)
                 .entry(FontFamily::Monospace)

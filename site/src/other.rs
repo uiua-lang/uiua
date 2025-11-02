@@ -68,7 +68,7 @@ pub fn Install() -> impl IntoView {
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
 
         <Hd id="fonts">"Fonts"</Hd>
-        <p><a href="https://github.com/uiua-lang/uiua/blob/main/src/algorithm/Uiua386.ttf">{lang}"386"</a>" is the only font that is updated alongside the language itself. It is a heavily modified version of BQN386. Thanks to Gifti for doing the original redesign!"</p>
+        <p><a href="https://github.com/uiua-lang/uiua/blob/main/src/assets/Uiua386.ttf">{lang}"386"</a>" is the only font that is updated alongside the language itself. It is a heavily modified version of BQN386. Thanks to Gifti for doing the original redesign!"</p>
         <p>"Other fonts will work, but they may look odd in some cases, especially if they do not have every glyph."</p>
 
         <Hd id="editor-support">"Editor Support"</Hd>

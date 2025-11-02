@@ -1501,6 +1501,10 @@ impl ImplPrimitive {
                     zip::rows(f, depth - 1, inv, env)?;
                 }
             }
+            &ImplPrimitive::TableSub(i) => {
+                let [f] = get_ops(ops, env)?;
+                table::table_sub(f, i, env)?;
+            }
             ImplPrimitive::UndoRows | ImplPrimitive::UndoInventory => {
                 let [f] = get_ops(ops, env)?;
                 let len = env

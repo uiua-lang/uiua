@@ -17,6 +17,38 @@ pub fn table(ops: Ops, env: &mut Uiua) -> UiuaResult {
     table_impl(f, env)
 }
 
+pub fn table_sub(f: SigNode, sub: i32, env: &mut Uiua) -> UiuaResult {
+    let sig = f.sig;
+    let inputs = env.top_n_mut(sig.args())?;
+    let shapes: Vec<Shape> = inputs.iter().map(|v| v.shape.clone()).rev().collect();
+    for val in inputs {
+        if sub != -1 {
+            val.deshape_sub(sub + 1, 0, false, &())?;
+        }
+    }
+    table_impl(f, env)?;
+    let outputs = env.top_n_mut(sig.outputs())?;
+    let shape_prefix: Shape = if sub >= 0 {
+        (shapes.into_iter())
+            .flat_map(|s| {
+                let take = s.len().saturating_sub(sub.unsigned_abs() as usize);
+                s.into_iter().take(take)
+            })
+            .collect()
+    } else {
+        (shapes.into_iter())
+            .flat_map(|s| s.into_iter().take(sub.unsigned_abs() as usize))
+            .collect()
+    };
+    for val in outputs {
+        let mut shape = shape_prefix.clone();
+        shape.extend(val.shape[sig.args()..].iter().copied());
+        val.shape = shape;
+        val.validate();
+    }
+    Ok(())
+}
+
 pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     match f.sig.args() {

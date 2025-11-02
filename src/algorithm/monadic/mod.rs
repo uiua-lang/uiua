@@ -53,13 +53,13 @@ impl Value {
         self.meta.take_sorted_flags();
         self.validate();
     }
-    pub(crate) fn deshape_sub(
+    pub(crate) fn deshape_sub<C: FillContext>(
         &mut self,
         irank: i32,
         mut depth: usize,
         extend: bool,
-        env: &Uiua,
-    ) -> UiuaResult {
+        ctx: &C,
+    ) -> Result<(), C::Error> {
         depth = depth.min(self.rank());
         let deep_rank = self.rank() - depth;
         if irank > 0 && irank as usize == deep_rank {
@@ -73,10 +73,10 @@ impl Value {
                 // First scalar
                 if depth == 0 {
                     if shape.contains(&0) {
-                        if let Some(fv) = env.value_fill() {
+                        if let Some(fv) = ctx.value_fill() {
                             *self = fv.value.clone();
                         } else {
-                            return Err(env.error(format!(
+                            return Err(ctx.error(format!(
                                 "Cannot get first scalar of an empty array (shape {shape})"
                             )));
                         }
@@ -123,7 +123,7 @@ impl Value {
                 // Negative rank
                 if rank + 1 > deep_rank {
                     return if extend {
-                        Err(env.error(format!(
+                        Err(ctx.error(format!(
                             "Negative {} has magnitude {}, but the \
                             rank-{} array cannot be reduced that much",
                             Primitive::Deshape.format(),

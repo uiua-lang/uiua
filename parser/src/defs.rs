@@ -1970,6 +1970,15 @@ primitive!(
     /// If you want to fix one of the arrays so that it is present in every call of the function, you can simply add a dimension to it, though you may need to collapse it later.
     /// Here, we add a dimension to the second array to [fix] it, then collapse with `reduce``join`.
     /// ex: /⊂ ⊞(⊂⊂) ⊙¤ 1_2 3_4 5_6
+    ///
+    /// [table] with a numeric subscript operates on all combinations of subarrays of that rank.
+    /// ex: ⊞₁(□⊂) ["abc""def"] ["1234""5678"]
+    ///   : ⊸≍ ⊞₋₁(□⊂) ["abc""def"] ["1234""5678"]
+    /// ex: ⊞₀(□⊂) ["abc""def"] ["1234""5678"]
+    ///   : ⊸≍ ⊞₋₂(□⊂) ["abc""def"] ["1234""5678"]
+    /// ex: ⊞₁(□⊂) "abc" ["1234""5678"]
+    /// ex: ⊸≍ ⊃⊞(□⊂)⊞₋₁(□⊂) "abc" ["1234""5678"]
+    /// ex: ⊞₀(□⊂) "abc" ["1234""5678"]
     ([1], Table, IteratingModifier, ("table", '⊞')),
     /// Get permutations or combinations of an array
     ///

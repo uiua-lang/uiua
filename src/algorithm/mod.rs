@@ -258,6 +258,7 @@ impl FillError for Infallible {
 }
 
 pub trait FillContext: ErrorContext {
+    fn value_fill(&self) -> Option<FillValue<&Value>>;
     fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str>;
     fn array_fill<T: ArrayValue>(&self) -> Result<FillValue<Array<T>>, &'static str>;
     fn scalar_unfill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str>;
@@ -283,6 +284,9 @@ pub trait FillContext: ErrorContext {
 }
 
 impl FillContext for Uiua {
+    fn value_fill(&self) -> Option<FillValue<&Value>> {
+        self.value_fill()
+    }
     fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
         T::get_scalar_fill(&self.fill())
     }
@@ -304,6 +308,9 @@ impl FillContext for Uiua {
 }
 
 impl FillContext for () {
+    fn value_fill(&self) -> Option<FillValue<&Value>> {
+        None
+    }
     fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
         Err(". No fill is set.")
     }
@@ -325,6 +332,9 @@ impl FillContext for () {
 }
 
 impl FillContext for (&CodeSpan, &Inputs) {
+    fn value_fill(&self) -> Option<FillValue<&Value>> {
+        None
+    }
     fn scalar_fill<T: ArrayValue>(&self) -> Result<FillValue<T>, &'static str> {
         Err(". No fill is set.")
     }

@@ -2,9 +2,7 @@
 
 # 0.18
 - Recursion ergonomics for `path` / revise `recur`
-- Optimize pervasive monadics or dyadics + constants to be outside loops
 - `table` non-lists optimizations?
-- `table` subscripts for rank selection
 - Mixed subscripts
   - `bracket`
 - Compile-time code string evaluation?

@@ -1518,7 +1518,13 @@ impl Compiler {
                     }
                 }
                 let table_span = self.add_span(modified.modifier.span.clone());
-                table_fork(sn, table_span, &self.asm)
+                if let Some(i) =
+                    subscript.and_then(|sub| self.subscript_n_only(&sub, Table.format()))
+                {
+                    Node::ImplMod(ImplPrimitive::TableSub(i), eco_vec![sn], table_span)
+                } else {
+                    table_fork(sn, table_span, &self.asm)
+                }
             }
             Fold => {
                 let (sn, _) = self.monadic_modifier_op(modified)?;

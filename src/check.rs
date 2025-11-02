@@ -529,6 +529,10 @@ impl VirtualEnv {
                     });
                     self.handle_sig(f);
                 }
+                TableSub(_) => {
+                    let [sig] = get_args(args)?;
+                    self.handle_sig(sig);
+                }
                 UndoRows | UndoInventory => {
                     let [f] = get_args_nodes(args)?;
                     self.stack.pop();

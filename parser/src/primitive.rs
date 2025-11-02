@@ -260,7 +260,7 @@ impl Primitive {
         };
         Some(match self {
             (Slf | Backward | On | By | With | Off | Both)
-            | (Rows | Each | Inventory)
+            | (Rows | Each | Inventory | Table)
             | (Repeat | Tuples | Stencil)
             | Geometric => 1,
             Bracket | Under | Fill => 2,

@@ -557,6 +557,11 @@ pub fn Subscripts() -> impl IntoView {
         subscript(Reach, "Include first N values", "∪₂⊟₃ 1 2 3 4"),
         subscript(Rows, "Apply to rank-N subarrays", "≡₁□ °△2_3_4"),
         subscript(Inventory, "Apply to rank-N subarrays", "⍚₁⇡ °△2_3"),
+        subscript(
+            Table,
+            "Apply to rank-N subarrays",
+            "⊞₀⊂[\"ab\"\"cd\"][\"123\"\"456\"]",
+        ),
         subscript(Repeat, "Repetition count", "⍥₅(⊂⟜/+) [1 2]"),
         subscript(Tuples, "Tuple size", "⧅₂< ⇡4"),
         subscript(Stencil, "Window size", "⧈₃∘ ⇡6"),

@@ -434,8 +434,20 @@ li {
 }
 
 #editor-wrapper {
+    position: relative;
+}
+
+#editor-wrapper>div {
     margin-bottom: 0.5em;
     font-size: min(1em, 3.5vw);
+}
+
+.editor-side-icon {
+    height: 5em;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: 1em;
 }
 
 .small-editor {

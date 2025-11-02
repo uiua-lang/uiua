@@ -98,7 +98,7 @@ This makes some things that *seem* like they have obvious inverses not actually 
 
 One workaround is to put one of the arguments inside the inverted function. This makes the function's signature `|1.1`, which is its own inverse.
 
-```uiua
+```uiua kala arms
 °(-3) 5
 ```
 
@@ -142,7 +142,7 @@ This may not seem immediately useful, but you'll find it is a pattern you encoun
 
 Many functions that do not work with [un](/docs/un) work with [under](/docs/under) because [under](/docs/under) can keep track of *context*. One example of this in action is [under](/docs/under)[pick](/docs/pick), which allows us to modify an element or row of an array.
 
-```uiua
+```uiua kala under
 ⍜(⊡2|×10) [1 2 3 4]
 ```
 
@@ -208,6 +208,12 @@ This is useful to set rows that are at static indices.
 
 ```uiua
 °⊸(⊡2) 5 [1 2 3 4]
+```
+
+[anti](/docs/anti)[by](/docs/by) allows the index to be dynamic.
+
+```uiua
+⌝⊸⊡ 2 5 [1 2 3 4]
 ```
 
 ## Setting Inverses with [obverse](/docs/obverse)

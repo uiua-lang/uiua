@@ -66,6 +66,8 @@ pub fn Editor<'a>(
     #[prop(optional)] challenge: Option<ChallengeDef>,
     #[prop(optional)] nonprogressive: bool,
     #[prop(optional)] examples: Option<Vec<String>>,
+    #[prop(optional)] should_fail: bool,
+    #[prop(optional)] kala: &'a str,
 ) -> impl IntoView {
     START_TIME.get_or_init(|| Date::now() / 1000.0);
 
@@ -1931,8 +1933,8 @@ pub fn Editor<'a>(
     });
 
     // Render
-    view! {
-        <div id="editor-wrapper">
+    view! { <div id="editor-wrapper">
+        <div>
             <div id=editor_wrapper_id class=editor_class style=editor_style>
                 {glyph_buttons_container}
                 {file_tab_display}
@@ -2307,7 +2309,16 @@ pub fn Editor<'a>(
                 on:change=files_selected
             />
         </div>
-    }
+        {
+            if should_fail {
+                Some(view!(<img src="/assets/kala/confused.svg" class="editor-side-icon"/>))
+            } else if !kala.is_empty() {
+                Some(view!(<img src=format!("/assets/kala/{kala}.svg") class="editor-side-icon"/>))
+            } else {
+                None
+            }
+        }
+    </div> }
 }
 
 #[component]

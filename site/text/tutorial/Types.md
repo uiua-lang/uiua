@@ -114,7 +114,7 @@ Character literals, denoted with a preceding `@`, create rank 0 (scalar) charact
 @a @b
 ```
 
-```uiua should fail
+```uiua should diag
 [@u @i @u @a]
 ```
 

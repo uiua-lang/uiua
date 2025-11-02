@@ -43,3 +43,5 @@ Note that Uiua is not yet stable. While most of the core features are unlikely t
 This tutorial is targeted at people who have at least a little bit of experience with programming. While you don't need to be proficient in any particular language, it will be helpful to understand concepts like variables and functions. However, even if you are a beginner, you can likely find your way through by taking the time to understand each example.
 
 Click the link to the next section to get started!
+
+`kala default` By the way, this is Kala! She will appear from time to time in this tutorial to react to code samples. She is Uiua's official mascot!

@@ -156,7 +156,7 @@ But here, the shape of the first array (`[2]`) is a prefix of the shape of the s
 
 If you want to do some pervasive operation on arrays whose shapes do not match, you can set a default value with the [fill]() modifier. Any places where the shapes don't match will be filled in with that value.
 
-```uiua
+```uiua kala pleased
 ⬚10+ [1 2] [3 4 5 6 7]
 ```
 
@@ -277,7 +277,7 @@ The array below cannot be constructed normally because its rows have different [
 
 By using [box](), we can turn any value into a **box** that contains that value. We can then put these boxes into an array together.
 
-```uiua
+```uiua kala arms
 [□1_2 □3 □[4 5 6] □[7]]
 ```
 
@@ -314,7 +314,7 @@ This is very useful for making lists of strings.
 ```uiua should fail
 ["Uiua" "APL" "J" "BQN" "K" "Q"] # Fails
 ```
-```uiua
+```uiua kala stars
 {"Uiua" "APL" "J" "BQN" "K" "Q"} # Works!
 ```
 

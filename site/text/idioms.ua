@@ -9,8 +9,7 @@
 ⍜↻↘₁ 2 "abcde"
 
 # Replace a row at an index
-⍜⊡◌ 2 [1 2 3 4] 10
-⍜⊙⊡⊙◌ 10 2 [1 2 3 4]
+⌝⊸⊡ 2 10 [1 2 3 4]
 
 # Split on a scalar
 ⊜□⊸≠ @, "a,bc,d"

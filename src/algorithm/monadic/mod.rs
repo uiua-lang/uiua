@@ -1343,6 +1343,12 @@ impl Value {
         val.validate();
         val
     }
+    pub(crate) fn classify_sub(&self, sub: usize) -> Self {
+        if sub >= self.rank() {
+            return 0.into();
+        }
+        val_as_arr!(self, |a| a.classify_sub(sub))
+    }
     pub(crate) fn classify_depth(&self, depth: usize) -> Self {
         let map_keys = self.meta.map_keys.clone();
         let mut val = val_as_arr!(self, |a| a.classify_depth(depth));
@@ -1453,6 +1459,44 @@ impl<T: ArrayValue> Array<T> {
                     classified_slice[i] = class as f64;
                     i += 1;
                 }
+            }
+            Array::new(classified_shape, classified).into()
+        };
+        val.validate();
+        val
+    }
+    fn classify_sub(&self, sub: usize) -> Value {
+        let mut classes = HashMap::new();
+        let classified_shape = Shape::from(&self.shape[..self.rank() - sub]);
+        let cell_count = classified_shape.elements();
+        if cell_count == 0 {
+            return Array::<u8>::new(classified_shape, EcoVec::new()).into();
+        }
+        let cell_size = self.element_count() / cell_count;
+        if cell_size == 0 {
+            return Array::new(classified_shape, eco_vec![0u8; cell_count]).into();
+        }
+        let mut i = 0;
+        let val: Value = if cell_count < 256 {
+            // Fits in a u8
+            let mut classified = eco_vec![0u8; cell_count];
+            let classified_slice = classified.make_mut();
+            for chunk in self.data.chunks_exact(cell_size) {
+                let new_class = classes.len();
+                let class = *classes.entry(ArrayCmpSlice(chunk)).or_insert(new_class);
+                classified_slice[i] = class as u8;
+                i += 1;
+            }
+            Array::new(classified_shape, classified).into()
+        } else {
+            // Doesn't fit in a u8
+            let mut classified = eco_vec![0.0; cell_count];
+            let classified_slice = classified.make_mut();
+            for chunk in self.data.chunks_exact(cell_size) {
+                let new_class = classes.len();
+                let class = *classes.entry(ArrayCmpSlice(chunk)).or_insert(new_class);
+                classified_slice[i] = class as f64;
+                i += 1;
             }
             Array::new(classified_shape, classified).into()
         };

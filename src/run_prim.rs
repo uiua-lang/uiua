@@ -555,8 +555,13 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
 impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
-            ImplPrimitive::DeshapeSub(i) => {
-                env.monadic_mut_env(|val, env| val.deshape_sub(*i, 0, true, env))?
+            &ImplPrimitive::DeshapeSub(i) => {
+                env.monadic_mut_env(|val, env| val.deshape_sub(i, 0, true, env))?
+            }
+            &ImplPrimitive::ClassifySub(i) => {
+                let val = env.pop(1)?;
+                let res = val.classify_sub(i);
+                env.push(res);
             }
             &ImplPrimitive::ParseSub(i) => {
                 let strs = env.pop(1)?;

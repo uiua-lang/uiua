@@ -243,6 +243,7 @@ impl_primitive!(
     ([1], DipN(usize)),
     (1, NBits(usize)),
     (1, DeshapeSub(i32)),
+    (1, ClassifySub(usize)),
     (1, ParseSub(usize)),
     (1, TransposeN(i32)),
     (2, MultiKeep(usize)),
@@ -275,6 +276,10 @@ impl fmt::Display for ImplPrimitive {
             &DeshapeSub(i) => {
                 write!(f, "{Deshape}")?;
                 fmt_subscript(f, i)
+            }
+            &ClassifySub(i) => {
+                write!(f, "{Classify}")?;
+                fmt_subscript(f, i as i32)
             }
             &ParseSub(i) => {
                 write!(f, "{Parse}")?;

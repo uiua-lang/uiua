@@ -2429,6 +2429,10 @@ impl Compiler {
                             Node::Prim(Lt, span),
                         ])
                     }
+                    Classify => {
+                        let n = self.positive_subscript(n, Occurrences, &span);
+                        Node::ImplPrim(ImplPrimitive::ClassifySub(n), self.add_span(span))
+                    }
                     _ => {
                         self.add_error(
                             span.clone(),

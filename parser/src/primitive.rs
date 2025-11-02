@@ -244,7 +244,8 @@ impl Primitive {
             (Couple | Join, None) => Signature::new(2, 1),
             (Box, None) => Signature::new(1, 1),
             (
-                Transpose | Sqrt | Exp | Round | Floor | Ceil | Rand | Utf8 | Len | Shape | Range,
+                Transpose | Sqrt | Exp | Round | Floor | Ceil | Rand | Utf8 | Len | Shape | Range
+                | Classify,
                 _,
             ) => return self.sig(),
             (Args, Some(n)) if n >= 0 => Signature::new(n as usize, n as usize),

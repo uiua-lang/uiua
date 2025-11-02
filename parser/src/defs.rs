@@ -1067,6 +1067,9 @@ primitive!(
     /// When combined with [group], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters in this string
     ///   : ⊕($"_ _"⊃⊢⧻) ⊸⊛ ⍆
+    ///
+    /// Numeric subscripts for [classify] classifies all rank-N subrows.
+    /// ex: ⊛₀ ["hello""world"]
     (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Mark each row of an array with its occurrence count
     ///

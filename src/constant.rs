@@ -66,6 +66,8 @@ pub enum ConstantValue {
 /// Identifier for a constant that's kind of big
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BigConstant {
+    /// The Uiua386 font
+    Uiua386,
     /// An elevation map of the world
     Elevation,
     /// A gif representing the Bad Apple!! video
@@ -101,6 +103,7 @@ impl ConstantValue {
                         Entry::Vacant(e) => {
                             let bytes = backend.big_constant(big)?;
                             e.insert(match big {
+                                BigConstant::Uiua386 => bytes.into_owned().into(),
                                 BigConstant::Elevation => {
                                     media::image_bytes_to_array(&bytes, true, false)?.into()
                                 }

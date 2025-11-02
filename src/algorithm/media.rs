@@ -1582,7 +1582,12 @@ fn layout_text_impl(
             db.load_system_fonts();
             db.set_monospace_family("Uiua386");
             db.set_sans_serif_family("Uiua386");
-            db.load_font_data(include_bytes!("Uiua386.ttf").to_vec());
+            db.load_font_data(
+                (env.rt.backend)
+                    .big_constant(crate::BigConstant::Uiua386)
+                    .map_err(|e| env.error(e))?
+                    .into_owned(),
+            );
             let locale = sys_locale::get_locale().unwrap_or_else(|| "en-US".into());
             let system = FontSystem::new_with_locale_and_db(locale, db);
             *stuff = Some(FontStuff {

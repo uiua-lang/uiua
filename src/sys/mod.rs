@@ -635,6 +635,10 @@ impl SysBackend for SafeSys {
     fn allow_thread_spawning(&self) -> bool {
         self.allow_thread_spawning
     }
+    #[cfg(feature = "native_sys")]
+    fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
+        NativeSys.big_constant(key)
+    }
 }
 
 impl SafeSys {

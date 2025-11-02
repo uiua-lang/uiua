@@ -1312,6 +1312,7 @@ impl SysBackend for NativeSys {
     }
     fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
         Ok(Cow::Borrowed(match key {
+            BigConstant::Uiua386 => include_bytes!("../assets/Uiua386.ttf"),
             BigConstant::Elevation => include_bytes!("../assets/elevation.webp"),
             BigConstant::BadAppleGif => include_bytes!("../assets/bad-apple.gif"),
             BigConstant::Amen => include_bytes!("../assets/amen-break.wav"),

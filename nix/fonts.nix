@@ -8,7 +8,7 @@ runCommandLocal "uiua-fonts"
       root = ../site;
       fileset = lib.fileset.fileFilter ({ hasExt, ... }: hasExt "ttf") ../site;
     };
-    uiua386 = ../src/algorithm/Uiua386.ttf;
+    uiua386 = ../src/assets/Uiua386.ttf;
   }
   ''
     mkdir -p "$out/share/fonts/truetype"

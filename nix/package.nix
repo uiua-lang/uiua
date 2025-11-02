@@ -32,7 +32,6 @@ let
         [
           (lib.fileset.fromSource (craneLib.cleanCargoSource ../.))
           ../src/assets
-          ../src/algorithm/Uiua386.ttf
         ]
         ++ lib.optionals doCheck [
           ../site/favicon.ico

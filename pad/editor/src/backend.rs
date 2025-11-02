@@ -632,6 +632,13 @@ impl SysBackend for WebBackend {
         Ok(false)
     }
     fn big_constant(&self, key: BigConstant) -> Result<Cow<'static, [u8]>, String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        if key == BigConstant::Uiua386 {
+            return Ok(Cow::Borrowed(include_bytes!(
+                "../../../src/assets/Uiua386.ttf"
+            )));
+        }
+
         thread_local! {
             static CACHE: RefCell<HashMap<BigConstant, Result<Vec<u8>, String>>> = Default::default();
             static WORKING: RefCell<HashSet<BigConstant>> = Default::default();
@@ -649,6 +656,7 @@ impl SysBackend for WebBackend {
             WORKING.with(|working| working.borrow_mut().insert(key));
             spawn_local(async move {
                 let path = match key {
+                    BigConstant::Uiua386 => "/Uiua386.ttf",
                     BigConstant::Elevation => "/assets/elevation.webp",
                     BigConstant::BadAppleGif => "/assets/bad-apple.gif",
                     BigConstant::Amen => "/assets/amen-break.wav",

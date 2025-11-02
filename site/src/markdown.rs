@@ -308,10 +308,11 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
         NodeValue::CodeBlock(block) => {
             if block.literal.trim() == "LOGO" {
                 view!(<Editor example=LOGO/>).into_view()
-            } else if (block.info.is_empty() || block.info.starts_with("uiua"))
-                && uiua::parse(&block.literal, (), &mut Default::default())
-                    .1
-                    .is_empty()
+            } else if block.info.starts_with("uiua")
+                || block.info.is_empty()
+                    && uiua::parse(&block.literal, (), &mut Default::default())
+                        .1
+                        .is_empty()
             {
                 let mut help: &[_] = &[];
                 let hlp;

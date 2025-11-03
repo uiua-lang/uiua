@@ -753,7 +753,7 @@ impl Compiler {
                 })
             }
             prim @ (With | Off) => {
-                let (mut sn, _) = self.monadic_modifier_op(modified)?;
+                let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let sig = sn.sig;
                 let sub_n = subscript
@@ -762,11 +762,11 @@ impl Compiler {
                             .map(|n| self.positive_subscript(n, prim, &sub.span))
                     })
                     .filter(|&n| n > 1);
-                if sig.args() < 2 {
+                if sig.args() < 1 {
                     self.add_error(
                         modified.modifier.span.clone(),
                         format!(
-                            "{}'s function must take at least 2 arguments, \
+                            "{}'s function must take at least 1 arguments, \
                             but its signature is {sig}",
                             prim.format()
                         ),
@@ -774,18 +774,6 @@ impl Compiler {
                 }
                 let (inner, before) = match sn.sig.args() {
                     0 => (SigNode::new((2, 2), Node::Prim(Identity, span)), sn.node),
-                    1 if prim == With => {
-                        sn.sig.update_outputs(|o| o + 1);
-                        sn.sig.update_args(|_| 2);
-                        (sn, Node::empty())
-                    }
-                    1 if prim == Off && sub_n.is_none() => {
-                        let mut outer_sig = sig;
-                        outer_sig.update_outputs(|o| o + 1);
-                        outer_sig.update_args(|_| 2);
-                        let inner = Node::Mod(Dip, eco_vec![sn], span);
-                        (SigNode::new(outer_sig, inner), Node::empty())
-                    }
                     _ => (sn, Node::empty()),
                 };
                 Node::from_iter([

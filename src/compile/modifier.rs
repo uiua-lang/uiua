@@ -771,6 +771,20 @@ impl Compiler {
                             prim.format()
                         ),
                     );
+                } else if sig.args() == 1 {
+                    self.emit_diagnostic(
+                        format!(
+                            "{} with one argument is just {}. Use {1} instead.",
+                            prim.format(),
+                            if prim == With {
+                                On.format()
+                            } else {
+                                By.format()
+                            },
+                        ),
+                        DiagnosticKind::Style,
+                        modified.modifier.span.clone(),
+                    );
                 }
                 let (inner, before) = match sn.sig.args() {
                     0 => (SigNode::new((2, 2), Node::Prim(Identity, span)), sn.node),

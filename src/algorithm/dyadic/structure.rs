@@ -756,10 +756,10 @@ impl<T: ArrayValue> Array<T> {
                 let row_count = self.row_count();
                 let abs_dropping = dropping.unsigned_abs().min(row_count);
                 if dropping >= 0 {
-                    self.data.as_mut_slice().rotate_left(abs_dropping * row_len);
+                    self.data = self.data.slice(abs_dropping * row_len..)
+                } else {
                     self.data.truncate((row_count - abs_dropping) * row_len);
                 }
-                self.data.truncate((row_count - abs_dropping) * row_len);
                 if self.shape.is_empty() {
                     self.shape.push(1);
                 }

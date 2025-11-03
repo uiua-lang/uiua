@@ -762,29 +762,25 @@ impl Compiler {
                             .map(|n| self.positive_subscript(n, prim, &sub.span))
                     })
                     .filter(|&n| n > 1);
-                if sig.args() < 1 {
-                    self.add_error(
+                match sig.args() {
+                    0 => self.add_error(
                         modified.modifier.span.clone(),
                         format!(
-                            "{}'s function must take at least 1 arguments, \
+                            "{}'s function must take at least 1 argument, \
                             but its signature is {sig}",
                             prim.format()
                         ),
-                    );
-                } else if sig.args() == 1 {
-                    self.emit_diagnostic(
+                    ),
+                    1 => self.emit_diagnostic(
                         format!(
-                            "{} with one argument is just {}. Use {1} instead.",
+                            "Prefer {} over {} on monadic functions",
+                            if prim == With { On } else { By }.format(),
                             prim.format(),
-                            if prim == With {
-                                On.format()
-                            } else {
-                                By.format()
-                            },
                         ),
                         DiagnosticKind::Style,
                         modified.modifier.span.clone(),
-                    );
+                    ),
+                    _ => {}
                 }
                 let (inner, before) = match sn.sig.args() {
                     0 => (SigNode::new((2, 2), Node::Prim(Identity, span)), sn.node),

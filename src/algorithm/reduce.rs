@@ -784,6 +784,10 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
             let mut arr = match prim {
                 Primitive::Eq => fast_scan(nums, |a, b| is_eq::num_num(a, b) as f64),
                 Primitive::Ne => fast_scan(nums, |a, b| is_ne::num_num(a, b) as f64),
+                Primitive::Lt => fast_scan(nums, |a, b| other_is_lt::num_num(a, b) as f64),
+                Primitive::Le => fast_scan(nums, |a, b| other_is_le::num_num(a, b) as f64),
+                Primitive::Gt => fast_scan(nums, |a, b| other_is_gt::num_num(a, b) as f64),
+                Primitive::Ge => fast_scan(nums, |a, b| other_is_ge::num_num(a, b) as f64),
                 Primitive::Add => fast_scan(nums, add::num_num),
                 Primitive::Sub if flipped => fast_scan(nums, flip(sub::num_num)),
                 Primitive::Sub => fast_scan(nums, sub::num_num),
@@ -824,6 +828,10 @@ pub fn scan(ops: Ops, env: &mut Uiua) -> UiuaResult {
             let mut val: Value = match prim {
                 Primitive::Eq => fast_scan(bytes, is_eq::generic).into(),
                 Primitive::Ne => fast_scan(bytes, is_ne::generic).into(),
+                Primitive::Lt => fast_scan(bytes, other_is_lt::generic).into(),
+                Primitive::Le => fast_scan(bytes, other_is_le::generic).into(),
+                Primitive::Gt => fast_scan(bytes, other_is_gt::generic).into(),
+                Primitive::Ge => fast_scan(bytes, other_is_ge::generic).into(),
                 Primitive::Add => fast_scan::<f64>(bytes.convert(), add::num_num).into(),
                 Primitive::Sub if flipped => {
                     fast_scan::<f64>(bytes.convert(), flip(sub::num_num)).into()

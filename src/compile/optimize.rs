@@ -27,76 +27,167 @@ impl Node {
         self.optimize_impl(OptLevel::Full, true)
     }
     fn optimize_impl(&mut self, level: OptLevel, opt_single: bool) -> bool {
-        let mut optimized = false;
-        fn optimize_run(nodes: &mut EcoVec<Node>, level: OptLevel, opt_single: bool) -> bool {
-            let mut optimized = false;
-            for node in nodes.make_mut() {
-                optimized |= node.optimize_impl(level, opt_single);
-            }
-            while OPTIMIZATIONS
-                .iter()
-                .filter(|opt| opt.level() <= level)
-                .any(|op| {
-                    if !op.match_and_replace(nodes) {
-                        return false;
-                    }
-                    dbgln!("applied optimization {op:?}");
-                    true
-                })
-            {
-                optimized = true;
-            }
-            optimized
+        use std::ptr::NonNull;
+
+        enum WorkItem {
+            ProcessNode {
+                node: NonNull<Node>,
+                level: OptLevel,
+                opt_single: bool,
+            },
+            ApplyVecOptimizations {
+                node: NonNull<Node>,
+                level: OptLevel,
+            },
+            Normalize {
+                node: NonNull<Node>,
+            },
         }
 
-        match &mut *self {
-            Run(nodes) => {
-                optimized |= optimize_run(nodes, level, opt_single);
-                self.normalize();
+        let mut stack = vec![WorkItem::ProcessNode {
+            node: NonNull::from(self),
+            level,
+            opt_single,
+        }];
+        let mut optimized = false;
+
+        while let Some(work) = stack.pop() {
+            match work {
+                WorkItem::ProcessNode {
+                    mut node,
+                    level,
+                    opt_single,
+                } => {
+                    let node_ref = unsafe { node.as_mut() };
+
+                    match node_ref {
+                        Run(nodes) => {
+                            // Stack execution order (reverse): children → vec opts → normalize
+                            stack.push(WorkItem::Normalize { node });
+                            stack.push(WorkItem::ApplyVecOptimizations { node, level });
+
+                            for child in nodes.make_mut().iter_mut().rev() {
+                                stack.push(WorkItem::ProcessNode {
+                                    node: NonNull::from(child),
+                                    level,
+                                    opt_single,
+                                });
+                            }
+                        }
+                        Mod(_, args, _) | ImplMod(_, args, _) => {
+                            stack.push(WorkItem::Normalize { node });
+
+                            if opt_single {
+                                stack.push(WorkItem::ApplyVecOptimizations { node, level });
+                            }
+
+                            for arg in args.make_mut().iter_mut().rev() {
+                                stack.push(WorkItem::ProcessNode {
+                                    node: NonNull::from(&mut arg.node),
+                                    level,
+                                    opt_single: true,
+                                });
+                            }
+                        }
+                        Node::Switch { branches, .. } => {
+                            stack.push(WorkItem::Normalize { node });
+
+                            if opt_single {
+                                stack.push(WorkItem::ApplyVecOptimizations { node, level });
+                            }
+
+                            for branch in branches.make_mut().iter_mut().rev() {
+                                stack.push(WorkItem::ProcessNode {
+                                    node: NonNull::from(&mut branch.node),
+                                    level,
+                                    opt_single: true,
+                                });
+                            }
+                        }
+                        Node::Array { inner, .. } => {
+                            stack.push(WorkItem::ProcessNode {
+                                node: NonNull::from(Arc::make_mut(inner)),
+                                level,
+                                opt_single: true,
+                            });
+                        }
+                        NoInline(inner) => {
+                            stack.push(WorkItem::ProcessNode {
+                                node: NonNull::from(Arc::make_mut(inner)),
+                                level: level.min(OptLevel::Early),
+                                opt_single: true,
+                            });
+                        }
+                        TrackCaller(inner) => {
+                            stack.push(WorkItem::ProcessNode {
+                                node: NonNull::from(&mut Arc::make_mut(inner).node),
+                                level,
+                                opt_single: true,
+                            });
+                        }
+                        CustomInverse(cust, _) => {
+                            let cust = Arc::make_mut(cust);
+                            if let Some((before, after)) = cust.under.as_mut() {
+                                stack.push(WorkItem::ProcessNode {
+                                    node: NonNull::from(&mut after.node),
+                                    level,
+                                    opt_single: true,
+                                });
+                                stack.push(WorkItem::ProcessNode {
+                                    node: NonNull::from(&mut before.node),
+                                    level,
+                                    opt_single: true,
+                                });
+                            }
+                            if let Some(anti) = cust.anti.as_mut() {
+                                stack.push(WorkItem::ProcessNode {
+                                    node: NonNull::from(&mut anti.node),
+                                    level,
+                                    opt_single: true,
+                                });
+                            }
+                            if let Some(un) = cust.un.as_mut() {
+                                stack.push(WorkItem::ProcessNode {
+                                    node: NonNull::from(&mut un.node),
+                                    level,
+                                    opt_single: true,
+                                });
+                            }
+                            if let Ok(normal) = cust.normal.as_mut() {
+                                stack.push(WorkItem::ProcessNode {
+                                    node: NonNull::from(&mut normal.node),
+                                    level,
+                                    opt_single: true,
+                                });
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                WorkItem::ApplyVecOptimizations { mut node, level } => {
+                    let node_ref = unsafe { node.as_mut() };
+                    let nodes = node_ref.as_vec();
+
+                    while OPTIMIZATIONS
+                        .iter()
+                        .filter(|opt| opt.level() <= level)
+                        .any(|op| {
+                            if !op.match_and_replace(nodes) {
+                                return false;
+                            }
+                            dbgln!("applied optimization {op:?}");
+                            true
+                        })
+                    {
+                        optimized = true;
+                    }
+                }
+                WorkItem::Normalize { mut node } => {
+                    unsafe { node.as_mut() }.normalize();
+                }
             }
-            Mod(_, args, _) | ImplMod(_, args, _) => {
-                for arg in args.make_mut() {
-                    optimized |= arg.node.optimize_impl(level, true);
-                }
-                if opt_single {
-                    optimized |= optimize_run(self.as_vec(), level, false);
-                    self.normalize();
-                }
-            }
-            Node::Switch { branches, .. } => {
-                for branch in branches.make_mut() {
-                    optimized |= branch.node.optimize_impl(level, true);
-                }
-                if opt_single {
-                    optimized |= optimize_run(self.as_vec(), level, false);
-                    self.normalize();
-                }
-            }
-            Node::Array { inner, .. } => {
-                optimized |= Arc::make_mut(inner).optimize_impl(level, true)
-            }
-            NoInline(inner) => {
-                optimized |= Arc::make_mut(inner).optimize_impl(level.min(OptLevel::Early), true)
-            }
-            TrackCaller(inner) => optimized |= Arc::make_mut(inner).node.optimize_impl(level, true),
-            CustomInverse(cust, _) => {
-                let cust = Arc::make_mut(cust);
-                if let Ok(normal) = cust.normal.as_mut() {
-                    optimized |= normal.node.optimize_impl(level, true);
-                }
-                if let Some(un) = cust.un.as_mut() {
-                    optimized |= un.node.optimize_impl(level, true);
-                }
-                if let Some(anti) = cust.anti.as_mut() {
-                    optimized |= anti.node.optimize_impl(level, true);
-                }
-                if let Some((before, after)) = cust.under.as_mut() {
-                    optimized |= before.node.optimize_impl(level, true);
-                    optimized |= after.node.optimize_impl(level, true);
-                }
-            }
-            _ => {}
         }
+
         optimized
     }
 }

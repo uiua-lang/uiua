@@ -1662,7 +1662,7 @@ impl Compiler {
                     }
                 }
             }
-            self.expand_index_macro(None, &mut words, operands, span.clone(), false)?;
+            self.expand_index_macro(None, &mut words, operands, span.clone())?;
             // Compile
             let node = self.suppress_diagnostics(|comp| comp.words(words))?;
             // Add
@@ -1868,7 +1868,6 @@ impl Compiler {
                     &mut mac.words,
                     operands,
                     ref_span.clone(),
-                    true,
                 )?;
                 // Handle recursion
                 // Recursive macros work by creating a binding for the expansion.
@@ -2084,14 +2083,9 @@ impl Compiler {
         &mut self,
         name: Option<Ident>,
         macro_words: &mut Vec<Sp<Word>>,
-        mut operands: Vec<Sp<Word>>,
+        operands: Vec<Sp<Word>>,
         span: CodeSpan,
-        hygenic: bool,
     ) -> UiuaResult {
-        // Mark the operands as macro arguments
-        if hygenic {
-            set_in_macro_arg(&mut operands);
-        }
         let span = span.merge(operands.last().unwrap().span.clone());
         let operands: Vec<Sp<Word>> = operands.into_iter().filter(|w| w.value.is_code()).collect();
         self.replace_placeholders(macro_words, &operands)?;

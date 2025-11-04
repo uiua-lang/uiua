@@ -491,10 +491,6 @@ pub struct Ref {
     pub path: Vec<RefComponent>,
     /// The name of the item
     pub name: Sp<Ident>,
-    /// Whether this ref is in a macro argument
-    ///
-    /// This allows macros to be hygienic
-    pub in_macro_arg: bool,
 }
 
 /// A component of a reference

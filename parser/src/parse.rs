@@ -917,11 +917,7 @@ impl Parser<'_> {
                     colon_span,
                 }))
         } else {
-            span.sp(Word::Ref(Ref {
-                name,
-                path,
-                in_macro_arg: false,
-            }))
+            span.sp(Word::Ref(Ref { name, path }))
         })
     }
     fn signature(&mut self, error_on_invalid: bool) -> Option<Sp<Signature>> {

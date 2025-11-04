@@ -2794,21 +2794,6 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
     })
 }
 
-fn set_in_macro_arg(words: &mut [Sp<Word>]) {
-    recurse_words_mut_impl(
-        words,
-        &|word| match &word.value {
-            Word::Modified(m) => matches!(m.modifier.value, Modifier::Primitive(_)),
-            _ => true,
-        },
-        &mut |word| match &mut word.value {
-            Word::Ref(r) => r.in_macro_arg = true,
-            Word::IncompleteRef { in_macro_arg, .. } => *in_macro_arg = true,
-            _ => {}
-        },
-    );
-}
-
 fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
     for word in words {
         f(word);

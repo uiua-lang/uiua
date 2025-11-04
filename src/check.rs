@@ -369,8 +369,10 @@ impl VirtualEnv {
                     let [_] = get_args(args)?;
                 }
                 Fork => {
-                    let [f, g] = get_args(args)?;
-                    self.handle_args_outputs(f.args().max(g.args()), f.outputs() + g.outputs());
+                    self.handle_args_outputs(
+                        args.iter().map(|sn| sn.sig.args()).max().unwrap_or(0),
+                        args.iter().map(|sn| sn.sig.outputs()).sum(),
+                    );
                 }
                 Bracket => {
                     let (args, outputs) = args.iter().fold((0, 0), |(a, o), sn| {

@@ -455,6 +455,7 @@ map {"alice" "bob" "charlie"} [1 2 3]
 ⍤⤙≍ "wham" ⍜⊃⊢⊣⋅◌ "that" @w @m
 ⍤⤙≍ "wham" °⊸⊃⊢⊣ @w @m "that"
 ⍤⤙≍ "THESE THOSE" °⊸⊃±◴ 1 "thes o" "abcdceabfdc"
+⍤⤙≍ [2 3 4 10] ⍜⊃[⊡0|⊡1|⊡2]+₁ [1 2 3 10]
 
 # Bracket
 ⍤⤙≍ {[6 2 3] [4 5 1]} {⍜⊓⊢⊣˜⊙∘} [1 2 3] [4 5 6]

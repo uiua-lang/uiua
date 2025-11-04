@@ -115,6 +115,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &TransposePat,
     &RotatePat,
     &AtanPat,
+    &ArrayPat,
     &UnpackPat,
     &FillPat,
     &DupPat,
@@ -515,8 +516,8 @@ under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {
     Ok((&[], before, after))
 });
 
-under!(ForkPat, input, g_sig, inverse, asm, Fork, span, [f1, f2], {
-    if f1.sig.args() != 1 || f2.sig.args() != 1 {
+under!(ForkPat, input, g_sig, inverse, asm, Fork, span, ops, {
+    if ops.iter().any(|sn| sn.sig.args() != 1) {
         return Err(
             SigCheckError::from("Cannot invert fork of non monadic functions")
                 .no_inverse()
@@ -527,23 +528,24 @@ under!(ForkPat, input, g_sig, inverse, asm, Fork, span, [f1, f2], {
     let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;
 
     let mut before = CopyToUnder(1, span);
-    before.push(Mod(Fork, eco_vec![f1.clone(), f2.clone()], span));
+    before.push(Mod(Fork, ops.into(), span));
     before.push(rest_before);
 
-    let f2_after = Mod(By, eco_vec![f2.clone()], span)
-        .un_inverse(asm)?
-        .sig_node()?
-        .dipped(f1.sig.outputs(), span);
+    let mut afters = Vec::with_capacity(ops.len());
+    let mut dip = 0;
+    for op in ops {
+        afters.push(
+            Mod(By, eco_vec![op.clone()], span)
+                .un_inverse(asm)?
+                .sig_node()?
+                .dipped(dip, span),
+        );
+        dip += op.sig.outputs();
+    }
 
     let mut after = rest_after;
-    after.push(
-        PopUnder(1, span)
-            .sig_node()?
-            .dipped(f1.sig.outputs() + f2.sig.outputs(), span)
-            .node,
-    );
-    after.push(f2_after.node);
-    after.push(Mod(By, eco_vec![f1.clone()], span).un_inverse(asm)?);
+    after.push(PopUnder(1, span).sig_node()?.dipped(dip, span).node);
+    after.extend(afters.into_iter().rev().map(|sn| sn.node));
 
     Ok((&[], before, after))
 });
@@ -1122,11 +1124,43 @@ under!(AtanPat, input, _, _, _, Prim(Atan, span), {
 });
 
 under!(
-    UnpackPat,
-    input,
-    g_sig,
-    inverse,
-    asm,
+    (ArrayPat, input, g_sig, inverse, asm),
+    ref,
+    Array {
+        len,
+        inner,
+        boxed,
+        allow_ext,
+        prim,
+        span
+    },
+    {
+        let (len, boxed, allow_ext, prim, span) = (*len, *boxed, *allow_ext, *prim, *span);
+        let (inner_before, inner_after) = inner.under_inverse(g_sig, inverse, asm)?;
+        let before = Array {
+            len,
+            inner: inner_before.into(),
+            boxed,
+            allow_ext,
+            prim,
+            span,
+        };
+        let after = Node::from([
+            Unpack {
+                count: len,
+                unbox: boxed,
+                allow_ext,
+                prim,
+                span,
+            },
+            inner_after,
+        ]);
+        Ok((input, before, after))
+    }
+);
+
+under!(
+    (UnpackPat, input, g_sig, inverse, asm),
     Unpack {
         count,
         unbox,

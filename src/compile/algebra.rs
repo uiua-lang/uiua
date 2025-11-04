@@ -548,27 +548,27 @@ impl<'a> AlgebraEnv<'a> {
                 }
                 _ => return Err(AlgebraError::NotSupported(prim.to_string())),
             },
-            Mod(prim, args, _) => match prim {
+            Mod(prim, ops, _) => match prim {
                 Dip => {
-                    let [f] = get_ops(args)?;
+                    let [f] = get_ops(ops)?;
                     let a = self.pop()?;
                     self.node(&f.node)?;
                     self.stack.push(a);
                 }
                 Gap => {
-                    let [f] = get_ops(args)?;
+                    let [f] = get_ops(ops)?;
                     let _a = self.pop()?;
                     self.node(&f.node)?;
                 }
                 On => {
-                    let [f] = get_ops(args)?;
+                    let [f] = get_ops(ops)?;
                     let a = self.pop()?;
                     self.stack.push(a.clone());
                     self.node(&f.node)?;
                     self.stack.push(a);
                 }
                 By => {
-                    let [f] = get_ops(args)?;
+                    let [f] = get_ops(ops)?;
                     let mut args = Vec::with_capacity(f.sig.args());
                     for _ in 0..f.sig.args() {
                         args.push(self.pop()?);
@@ -580,7 +580,7 @@ impl<'a> AlgebraEnv<'a> {
                     self.node(&f.node)?;
                 }
                 Both => {
-                    let [f] = get_ops(args)?;
+                    let [f] = get_ops(ops)?;
                     let mut args = Vec::with_capacity(f.sig.args());
                     for _ in 0..f.sig.args() {
                         args.push(self.pop()?);
@@ -592,7 +592,7 @@ impl<'a> AlgebraEnv<'a> {
                     self.node(&f.node)?;
                 }
                 Bracket => {
-                    let [f, g] = get_ops(args)?;
+                    let [f, g] = get_ops(ops)?;
                     let mut args = Vec::with_capacity(f.sig.args());
                     for _ in 0..f.sig.args() {
                         args.push(self.pop()?);
@@ -604,33 +604,17 @@ impl<'a> AlgebraEnv<'a> {
                     self.node(&f.node)?;
                 }
                 Fork => {
-                    let [f, g] = get_ops(args)?;
-                    if f.sig.args() > g.sig.args() {
-                        let mut f_args = Vec::with_capacity(f.sig.args());
-                        for _ in 0..f.sig.args() {
-                            f_args.push(self.pop()?);
-                        }
-                        for arg in f_args.iter().rev().take(g.sig.args()) {
+                    let arg_count = ops.iter().map(|sn| sn.sig.args()).max().unwrap_or(0);
+                    let mut args = Vec::with_capacity(arg_count);
+                    for _ in 0..arg_count {
+                        args.push(self.pop()?);
+                    }
+                    args.reverse();
+                    for op in ops.iter().rev() {
+                        for arg in args.iter().take(op.sig.args()) {
                             self.stack.push(arg.clone());
                         }
-                        self.node(&g.node)?;
-                        for arg in f_args {
-                            self.stack.push(arg);
-                        }
-                        self.node(&f.node)?;
-                    } else {
-                        let mut f_args = Vec::with_capacity(f.sig.args());
-                        for _ in 0..f.sig.args() {
-                            f_args.push(self.pop()?);
-                        }
-                        for arg in f_args.iter().rev() {
-                            self.stack.push(arg.clone());
-                        }
-                        self.node(&g.node)?;
-                        for arg in f_args {
-                            self.stack.push(arg);
-                        }
-                        self.node(&f.node)?;
+                        self.node(&op.node)?;
                     }
                 }
                 prim => return Err(AlgebraError::NotSupported(prim.to_string())),

@@ -106,7 +106,7 @@ impl Compiler {
                 }
                 self.modified(new, subscript)
             }
-            Modifier::Primitive(Primitive::Fork | Primitive::Try | Primitive::Fill) => {
+            Modifier::Primitive(Primitive::Try | Primitive::Fill) => {
                 let mut branches = pack.lexical_order().cloned().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),
@@ -422,7 +422,7 @@ impl Compiler {
             }
         } else {
             let strict_args = match &modified.modifier.value {
-                Modifier::Primitive(Primitive::Bracket) => false,
+                Modifier::Primitive(Primitive::Fork | Primitive::Bracket) => false,
                 Modifier::Primitive(_) => true,
                 Modifier::Macro(..) => false,
                 Modifier::Ref(name) => self

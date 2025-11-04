@@ -6542,7 +6542,7 @@ dependencies = [
 
 [[package]]
 name = "uiua"
-version = "0.18.0-dev.2"
+version = "0.18.0-dev.3"
 dependencies = [
  "arboard",
  "bitflags 2.10.0",
@@ -6637,7 +6637,7 @@ dependencies = [
 
 [[package]]
 name = "uiua_parser"
-version = "0.18.0-dev.2"
+version = "0.18.0-dev.3"
 dependencies = [
  "bytemuck",
  "colored",

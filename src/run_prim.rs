@@ -405,11 +405,25 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
 
         // Stack
         Primitive::Fork => {
-            let [f, g] = get_ops(ops, env)?;
-            let f_args = env.prepare_fork(f.sig.args(), g.sig.args())?;
-            env.exec(g)?;
-            env.push_all(f_args);
-            env.exec(f)?;
+            if ops.len() == 2 {
+                let [f, g] = get_ops(ops, env)?;
+                let f_args = env.prepare_fork(f.sig.args(), g.sig.args())?;
+                env.exec(g)?;
+                env.push_all(f_args);
+                env.exec(f)?;
+            } else {
+                let max_args = ops.iter().map(|sn| sn.sig.args()).max().unwrap_or(0);
+                let mut args = env.pop_n(max_args)?;
+                args.reverse();
+                let mut ops = ops.into_iter();
+                let last = ops.next().unwrap();
+                for op in ops.rev() {
+                    env.push_all(args.iter().take(op.sig.args()).rev().cloned());
+                    env.exec(op)?;
+                }
+                env.push_all(args.into_iter().take(last.sig.args()).rev());
+                env.exec(last)?;
+            }
         }
         Primitive::Bracket => {
             let mut args: SmallVec<[Vec<Value>; 3]> = SmallVec::new();

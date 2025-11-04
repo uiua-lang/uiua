@@ -41,7 +41,7 @@ serde = {version = "1", features = ["derive"]}
 serde_json = "1.0.115"
 unicode-segmentation = "1.10"
 urlencoding = "2"
-vorbis_rs = "0.5.4"
+vorbis_rs = "0.5.5"
 # NOTE: if you change the wasm-bindgen version, remember to change it in nix/site.nix as well
 wasm-bindgen = "=0.2.100"
 
@@ -111,7 +111,7 @@ rand.workspace = true
 rawrrr = {version = "0.2.1", optional = true}
 rayon = "1.9.0"
 regex = "1.10.3"
-rustls = {version = "0.23.2", optional = true, default-features = false, features = [
+rustls = {version = "0.23.35", optional = true, default-features = false, features = [
   "std",
   "tls12",
   "ring",

@@ -14,37 +14,33 @@ use std::{
 };
 
 use bytemuck::allocation::cast_vec;
-use ecow::{eco_vec, EcoVec};
+use ecow::{EcoVec, eco_vec};
 use rand::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
 use smallvec::SmallVec;
 
 use crate::{
-    algorithm::pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
+    Complex, RNG, Shape, Uiua, UiuaResult,
+    algorithm::pervade::{self, InfalliblePervasiveFn, bin_pervade_recursive},
     array::*,
     boxed::Boxed,
-    cowslice::{cowslice, extend_repeat, CowSlice},
+    cowslice::{CowSlice, cowslice, extend_repeat},
     fill::FillValue,
     grid_fmt::GridFmt,
     val_as_arr,
     value::Value,
-    Complex, Shape, Uiua, UiuaResult, RNG,
 };
 
 use super::{
-    shape_prefixes_match, validate_size, validate_size_of, ArrayCmpSlice, FillContext, SizeError,
+    ArrayCmpSlice, FillContext, SizeError, shape_prefixes_match, validate_size, validate_size_of,
 };
 
 macro_rules! par_if {
     ($cond:expr, $if_true:expr, $if_false:expr) => {{
         #[cfg(not(target_arch = "wasm32"))]
         {
-            if $cond {
-                $if_true
-            } else {
-                $if_false
-            }
+            if $cond { $if_true } else { $if_false }
         }
         #[cfg(target_arch = "wasm32")]
         $if_false
@@ -1050,7 +1046,7 @@ pub(super) fn pad_keep_counts<'a>(
             Err(e) if counts.is_empty() => {
                 return Err(env.error(format!(
                     "Cannot keep array of length {len} with array of length 0{e}",
-                )))
+                )));
             }
             Err(_) => {
                 let amount = amount.to_mut();
@@ -1738,14 +1734,14 @@ impl<T: ArrayValue> Array<T> {
                     undices.len(),
                     self.shape,
                     into.shape
-                )))
+                )));
             }
             Ordering::Greater => {
                 return Err(env.error(format!(
                     "Cannot reorient because the rank of the array changed from {} to {}",
                     new_shape.len() - into.rank(),
                     self.rank(),
-                )))
+                )));
             }
         }
         self.orient_into(&mut into, &undices);
@@ -1765,7 +1761,7 @@ impl Value {
                     return Err(env.error(format!(
                         "Cannot get base digits of a {} array",
                         val.type_name()
-                    )))
+                    )));
                 }
             }
         } else {
@@ -1776,7 +1772,7 @@ impl Value {
                     return Err(env.error(format!(
                         "Cannot get base digits of a {} array",
                         val.type_name()
-                    )))
+                    )));
                 }
             }
         })
@@ -1791,7 +1787,7 @@ impl Value {
                     return Err(env.error(format!(
                         "Cannot get undo base of a {} array",
                         val.type_name()
-                    )))
+                    )));
                 }
             }
         } else {
@@ -1802,7 +1798,7 @@ impl Value {
                     return Err(env.error(format!(
                         "Cannot get base digits of a {} array",
                         val.type_name()
-                    )))
+                    )));
                 }
             }
         })
@@ -2122,7 +2118,7 @@ impl Value {
         }
     }
     /// Generate randomly seeded arrays
-    pub fn gen(&self, seed: &Self, env: &Uiua) -> UiuaResult<Value> {
+    pub fn seeded_gen(&self, seed: &Self, env: &Uiua) -> UiuaResult<Value> {
         let mut hasher = DefaultHasher::new();
         seed.hash(&mut hasher);
         let seed = hasher.finish();
@@ -2131,23 +2127,23 @@ impl Value {
         const SHAPE_REQ: &str = "Shape must be an array of natural \
             numbers with at most rank 2";
 
-        let mut gen = |shape: &[usize]| -> UiuaResult<_> {
+        let mut random = |shape: &[usize]| -> UiuaResult<_> {
             let shape = Shape::from(shape);
             let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
             let mut data = eco_vec![0.0; elem_count];
             for x in data.make_mut() {
-                *x = rng.gen();
+                *x = rng.random();
             }
             Ok(Array::new(shape, data))
         };
 
         Ok(match self.as_natural_array(env, SHAPE_REQ) {
             Ok(nats) => match nats.rank() {
-                0 | 1 => gen(&nats.data)?.into(),
+                0 | 1 => random(&nats.data)?.into(),
                 2 => {
                     let mut data = EcoVec::new();
                     for row in nats.row_slices() {
-                        data.push(Boxed(gen(row)?.into()))
+                        data.push(Boxed(random(row)?.into()))
                     }
                     data.into()
                 }
@@ -2158,13 +2154,13 @@ impl Value {
                     match arr.rank() {
                         0 => {
                             let shape = arr.data[0].0.as_nats(env, SHAPE_REQ)?;
-                            gen(&shape)?.into()
+                            random(&shape)?.into()
                         }
                         1 => {
                             let mut data = EcoVec::new();
                             for Boxed(row) in &arr.data {
                                 let shape = row.as_nats(env, SHAPE_REQ)?;
-                                data.push(Boxed(gen(&shape)?.into()));
+                                data.push(Boxed(random(&shape)?.into()));
                             }
                             data.into()
                         }
@@ -2182,7 +2178,7 @@ impl Value {
             0 => Err(env.error("Cannot pick random row of an empty array").fill()),
             1 => Ok(self.row(0)),
             len => {
-                let i = RNG.with_borrow_mut(|rng| rng.gen_range(0..len));
+                let i = RNG.with_borrow_mut(|rng| rng.random_range(0..len));
                 Ok(self.row(i))
             }
         }

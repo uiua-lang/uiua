@@ -35,6 +35,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `-i/--stdin` flag to `uiua run` and `uiua eval` to pipe stdin to the first argument in a program
 - Add `gh:` prefix for import strings to shorten GitHub imports
 - Fix a bug preventing identifiers with non-alphabetic combining characters
+- Upgrade to Rust 2024 edition
+  - Increase minumum Rust version to 1.85.0
 ### Website
 - Reword all documentation and tutorials to no longer refer to a stack
   - Introduce argument manipulation modifiers earlier in the tutorial

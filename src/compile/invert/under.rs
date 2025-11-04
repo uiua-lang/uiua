@@ -337,7 +337,7 @@ macro_rules! under {
     // Ref pattern
     ($(#[$attr:meta])* $($doc:literal)? $name:ident, $input:ident, $g_sig:tt, $inverse:tt, $asm:tt, ref, $pat:pat, $body:expr) => {
         under!($([$attr])* $($doc)? $name, $input, $g_sig, $inverse, $asm, {
-            let [$pat, ref $input @ ..] = $input else {
+            let [$pat, $input @ ..] = $input else {
                 return generic();
             };
             $body
@@ -573,7 +573,9 @@ under!(
         for pat in UN_PATTERNS.iter().filter(|pat| pat.allowed_in_under()) {
             if let Ok((inp, inv)) = pat.invert_extract(input, asm) {
                 let node = Node::from(&input[..input.len() - inp.len()]);
-                dbgln!("matched un pattern for under {pat:?}\n  on {input:?}\n  to {node:?}\n  and {inv:?}");
+                dbgln!(
+                    "matched un pattern for under {pat:?}\n  on {input:?}\n  to {node:?}\n  and {inv:?}"
+                );
                 return Ok((inp, node, inv));
             }
         }
@@ -595,7 +597,9 @@ under!(
                     .unwrap_or(0);
                 let before = Node::from_iter([CopyToUnder(1, span), Node::from(nodes)]);
                 let after = Node::from_iter([PopUnder(1, span), inv]);
-                dbgln!("matched anti pattern for under {pat:?}\n  on {input:?}\n  to {before:?}\n  and {after:?}");
+                dbgln!(
+                    "matched anti pattern for under {pat:?}\n  on {input:?}\n  to {before:?}\n  and {after:?}"
+                );
                 return Ok((new, before, after));
             }
         }
@@ -618,7 +622,9 @@ under!(
                 let before =
                     Node::from_iter([ImplPrim(Over, span), PushUnder(1, span), Node::from(nodes)]);
                 let after = Node::from_iter([PopUnder(1, span), Prim(Flip, span), inv]);
-                dbgln!("matched contra pattern for under {pat:?}\n  on {input:?}\n  to {before:?}\n  and {after:?}");
+                dbgln!(
+                    "matched contra pattern for under {pat:?}\n  on {input:?}\n  to {before:?}\n  and {after:?}"
+                );
                 return Ok((new, before, after));
             }
         }

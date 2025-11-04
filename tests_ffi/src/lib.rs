@@ -2,12 +2,12 @@
 
 use std::ffi::*;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn add(a: c_int, b: c_int) -> c_int {
     a + b
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn strlen(s: *const c_char) -> c_int {
     let mut len = 0;
     while unsafe { *s.offset(len) } != 0 {
@@ -16,12 +16,12 @@ pub unsafe extern "C" fn strlen(s: *const c_char) -> c_int {
     len as c_int
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn reverse(list: *mut c_int, len: c_int) {
-    std::slice::from_raw_parts_mut(list, len as usize).reverse();
+    unsafe { std::slice::from_raw_parts_mut(list, len as usize) }.reverse();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn multi_list(
     _a: *mut c_int,
     _a_len: c_int,
@@ -31,21 +31,21 @@ pub unsafe extern "C" fn multi_list(
     c_len: c_int,
 ) {
     for i in 0..c_len {
-        *c.offset(i as isize) = i;
+        unsafe { *c.offset(i as isize) = i };
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe fn change_string(s: *mut *const c_char) {
     let new_str = CString::new("Hello, World!").unwrap();
-    *s = new_str.into_raw();
+    unsafe { *s = new_str.into_raw() };
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe fn change_string_to_sum(a: c_int, b: c_int, s: *mut *const c_char) {
     let sum = a + b;
     let new_str = CString::new(format!("{a} + {b} = {sum}")).unwrap();
-    *s = new_str.into_raw();
+    unsafe { *s = new_str.into_raw() };
 }
 
 #[repr(C)]
@@ -55,18 +55,18 @@ pub struct Vec2 {
     pub y: f64,
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vec2_len(v: Vec2) -> f64 {
     (v.x * v.x + v.y * v.y).sqrt()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vec2_len_ref(v: *const Vec2) -> f64 {
-    let v = &*v;
+    let v = unsafe { &*v };
     (v.x * v.x + v.y * v.y).sqrt()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vec2_add(a: Vec2, b: Vec2) -> Vec2 {
     Vec2 {
         x: a.x + b.x,
@@ -74,9 +74,9 @@ pub unsafe extern "C" fn vec2_add(a: Vec2, b: Vec2) -> Vec2 {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vec2_normalize(v: *mut Vec2) {
-    let v = &mut *v;
+    let v = unsafe { &mut *v };
     let len = (v.x * v.x + v.y * v.y).sqrt();
     if len == 0.0 {
         v.x = 0.0;
@@ -87,18 +87,18 @@ pub unsafe extern "C" fn vec2_normalize(v: *mut Vec2) {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vec2_list_sum(list: *const Vec2, len: c_int) -> Vec2 {
-    let slice = std::slice::from_raw_parts(list, len as usize);
+    let slice = unsafe { std::slice::from_raw_parts(list, len as usize) };
     slice.iter().fold(Vec2 { x: 0.0, y: 0.0 }, |acc, v| Vec2 {
         x: acc.x + v.x,
         y: acc.y + v.y,
     })
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vec2_list_reverse(list: *mut Vec2, len: c_int) {
-    let slice = std::slice::from_raw_parts_mut(list, len as usize);
+    let slice = unsafe { std::slice::from_raw_parts_mut(list, len as usize) };
     slice.reverse();
 }
 
@@ -108,14 +108,17 @@ pub struct Person {
     pub age: c_int,
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn person_new(name: *const c_char, age: c_int) -> Person {
     Person { name, age }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn person_children(name: *const c_char, age: c_int) -> *const Person {
-    let name = CStr::from_ptr(name).to_str().unwrap().to_string();
+    let name = unsafe { CStr::from_ptr(name) }
+        .to_str()
+        .unwrap()
+        .to_string();
     let mut children = Vec::new();
     children.push(Person {
         name: CString::new(format!("{name} Jr.")).unwrap().into_raw(),
@@ -128,14 +131,14 @@ pub unsafe extern "C" fn person_children(name: *const c_char, age: c_int) -> *co
     children.leak() as *mut _ as *const _
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn person_val_age(p: Person) -> c_int {
     p.age
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn person_ptr_age(p: *const Person) -> c_int {
-    (*p).age
+    unsafe { &*p }.age
 }
 
 #[repr(C)]
@@ -144,23 +147,23 @@ pub struct TwoPeople {
     pub b: Person,
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn two_people_new(a: Person, b: Person) -> TwoPeople {
     TwoPeople { a, b }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn array_ptr(arr: *const c_int, len: c_int) -> *const c_int {
-    let copied = std::slice::from_raw_parts(arr, len as usize).to_vec();
+    let copied = unsafe { std::slice::from_raw_parts(arr, len as usize) }.to_vec();
     copied.leak().as_ptr()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn first_byte(arr: *const c_uchar) -> c_uchar {
-    *arr
+    unsafe { *arr }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dummy_md5(
     m: *const c_uchar,
     len: c_int,
@@ -173,12 +176,12 @@ pub unsafe extern "C" fn dummy_md5(
     if out.is_null() {
         let new_out = vec![0; 16].leak().as_mut_ptr();
         for i in 0..len.min(16) {
-            *new_out.offset(i) = *m.offset(i);
+            unsafe { *new_out.offset(i) = *m.offset(i) };
         }
         new_out
     } else {
         for i in 0..len.min(16) {
-            *out.offset(i) = *m.offset(i);
+            unsafe { *out.offset(i) = *m.offset(i) };
         }
         out
     }
@@ -190,7 +193,7 @@ pub struct VoidStruct {
     pub b: *const c_void,
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn make_void_struct(_: c_int) -> VoidStruct {
     VoidStruct {
         a: std::ptr::null(),
@@ -198,7 +201,7 @@ pub extern "C" fn make_void_struct(_: c_int) -> VoidStruct {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn make_void_struct_a(a: c_int) -> VoidStruct {
     VoidStruct {
         a: Box::into_raw(Box::new(a)) as *const c_void,
@@ -211,12 +214,12 @@ pub struct Bytes {
     pub bytes: *const c_uchar,
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn bytes_first_byte(bytes: Bytes) -> c_uchar {
-    first_byte(bytes.bytes)
+    unsafe { first_byte(bytes.bytes) }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn pointerify(i: c_int) -> *const c_int {
     Box::leak(Box::new(i))
 }

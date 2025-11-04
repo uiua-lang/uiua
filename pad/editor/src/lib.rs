@@ -11,7 +11,7 @@ use std::{
     time::Duration,
 };
 
-use base64::engine::{general_purpose::STANDARD, Engine};
+use base64::engine::{Engine, general_purpose::STANDARD};
 
 use ev::mousemove;
 use leptos::{
@@ -19,15 +19,15 @@ use leptos::{
     *,
 };
 
-use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
+use leptos_router::{BrowserIntegration, History, LocationChange, NavigateOptions, use_navigate};
 use uiua::{
-    format::{format_str, FormatConfig},
+    IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SysOp, Token,
+    format::{FormatConfig, format_str},
     is_ident_char, lex,
     lsp::{BindingDocs, BindingDocsKind},
-    now, seed_random, IgnoreError, PrimClass, PrimDoc, Primitive, Signature, Subscript, SysOp,
-    Token,
+    now, seed_random,
 };
-use wasm_bindgen::{closure::Closure, JsCast, JsValue};
+use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::{
     DragEvent, Event, FileList, FileReader, HtmlAnchorElement, HtmlBodyElement, HtmlDivElement,
     HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
@@ -36,7 +36,7 @@ use web_sys::{
 use utils::*;
 use utils::{element, format_insert_file_code, get_ast_time};
 
-use backend::{delete_file, drop_file, OutputItem, WebBackend};
+use backend::{OutputItem, WebBackend, delete_file, drop_file};
 use js_sys::Date;
 use std::sync::OnceLock;
 
@@ -1856,10 +1856,10 @@ pub fn Editor<'a>(
                     run(true, false);
                 };
 
-                let path_clone = path.clone();
+                let path = path.to_string_lossy().into_owned();
                 view! {
                     <div class="pad-file-tab" on:click=on_insert>
-                        {&path_clone.to_string_lossy().into_owned()}
+                        {path}
                         <span
                             class="material-symbols-rounded pad-file-tab-button"
                             on:click=on_download

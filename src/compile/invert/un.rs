@@ -388,7 +388,7 @@ macro_rules! inverse {
     };
     ($(#[$attr:meta])* $($doc:literal,)? $name:ident, $input:ident, $asm:tt, ref, $pat:pat, $body:expr) => {
         inverse!($([$attr])* $($doc)? $name, $input, $asm, {
-            let [$pat, ref $input @ ..] = $input else {
+            let [$pat, $input @ ..] = $input else {
                 return generic();
             };
             $body
@@ -1187,7 +1187,12 @@ inverse!(AntiContraFlip, input, asm, Prim(Flip, span), {
 });
 
 inverse!(MatrixDivPat, input, _, Prim(Transpose, _), {
-    let [Mod(Table, args, span), ImplPrim(TransposeN(-1), _), input @ ..] = input else {
+    let [
+        Mod(Table, args, span),
+        ImplPrim(TransposeN(-1), _),
+        input @ ..,
+    ] = input
+    else {
         return generic();
     };
     let [table_node] = args.as_slice() else {

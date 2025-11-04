@@ -264,7 +264,7 @@ impl<T: Clone> CowSlice<T> {
         I: IntoIterator<Item = T>,
         I::IntoIter: ExactSizeIterator,
     {
-        self.modify_end(|data| data.extend_from_trusted(iter))
+        self.modify_end(|data| unsafe { data.extend_from_trusted(iter) })
     }
 }
 

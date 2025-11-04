@@ -15,14 +15,16 @@ use std::{
     f64::consts::{PI, TAU},
     iter::repeat_n,
     sync::{
-        atomic::{self, AtomicUsize},
         OnceLock,
+        atomic::{self, AtomicUsize},
     },
 };
 
 use rand::prelude::*;
 
 use crate::{
+    FunctionId, ImplPrimitive, Ops, Primitive, Shape, SubSide, SysOp, Uiua, UiuaErrorKind,
+    UiuaResult,
     algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
@@ -30,8 +32,6 @@ use crate::{
     grid_fmt::GridFmt,
     media, run_sys_op, run_sys_op_mod,
     value::*,
-    FunctionId, ImplPrimitive, Ops, Primitive, Shape, SubSide, SysOp, Uiua, UiuaErrorKind,
-    UiuaResult,
 };
 
 macro_rules! constant {
@@ -232,7 +232,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             }
         }
         Primitive::Rand => env.push(random()),
-        Primitive::Gen => env.dyadic_rr_env(Value::gen)?,
+        Primitive::Gen => env.dyadic_rr_env(Value::seeded_gen)?,
         Primitive::Tag => {
             static NEXT_TAG: AtomicUsize = AtomicUsize::new(0);
             let tag = NEXT_TAG.fetch_add(1, atomic::Ordering::Relaxed);
@@ -341,7 +341,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             return Err(env.error(format!(
                 "{} was not inlined. This is a bug in the interpreter",
                 prim.format()
-            )))
+            )));
         }
         Primitive::Os => env.push(std::env::consts::OS),
         Primitive::OsFamily => env.push(std::env::consts::FAMILY),
@@ -364,7 +364,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
                         This is a bug in the interpreter",
                     prim.format()
                 )
-            }))
+            }));
         }
     }
     Ok(())
@@ -560,7 +560,7 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
                         This is a bug in the interpreter",
                     prim.format()
                 )
-            }))
+            }));
         }
     }
     Ok(())
@@ -1029,7 +1029,7 @@ impl ImplPrimitive {
                         if a.shape == b.shape
                             && (a.data.iter().zip(&b.data)).all(|(a, b)| (a - b).abs() < 1e-12) =>
                     {
-                        return Ok(())
+                        return Ok(());
                     }
                     (Value::Complex(a), Value::Complex(b))
                         if a.shape == b.shape
@@ -1037,7 +1037,7 @@ impl ImplPrimitive {
                                 (a.re - b.re).abs() < 1e-12 && (a.im - b.im).abs() < 1e-12
                             }) =>
                     {
-                        return Ok(())
+                        return Ok(());
                     }
                     (a, b) if a == b => return Ok(()),
                     _ => {}
@@ -1308,7 +1308,7 @@ impl ImplPrimitive {
                         "{prim} was not handled as a function. \
                         This is a bug in the interpreter"
                     )
-                }))
+                }));
             }
         }
         Ok(())
@@ -1627,7 +1627,7 @@ impl ImplPrimitive {
                         return Err(env.error(
                             "Attempted to invert sided both. \
                             This is a bug in the interpreter.",
-                        ))
+                        ));
                     }
                 }
             }
@@ -1656,7 +1656,7 @@ impl ImplPrimitive {
                         "{prim} was handled as a modifier. \
                         This is a bug in the interpreter"
                     )
-                }))
+                }));
             }
         }
         Ok(())
@@ -1715,7 +1715,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
 }
 
 fn undo_regex(env: &mut Uiua) -> UiuaResult {
-    use std::iter::{once, repeat, zip, Repeat};
+    use std::iter::{Repeat, once, repeat, zip};
     let locations = env
         .pop(1)?
         .as_nats(env, "Capture locations should be natural numbers")?;
@@ -1766,14 +1766,14 @@ fn undo_regex(env: &mut Uiua) -> UiuaResult {
             match (repls, rank) {
                 (Value::Char(arr), 0 | 1) => break One(arr.data.into_iter().collect()),
                 (Value::Char(arr), 2) => {
-                    break Many(arr.row_slices().map(|x| x.iter().collect()).collect())
+                    break Many(arr.row_slices().map(|x| x.iter().collect()).collect());
                 }
                 (Value::Char(arr), 3) => {
                     break Many(
                         arr.into_rows()
                             .map(|x| x.first(env).map(|x| x.data.into_iter().collect()))
                             .collect::<UiuaResult<Vec<_>>>()?,
-                    )
+                    );
                 }
                 (Value::Box(bx), 0) => bx
                     .into_unboxed()
@@ -1785,7 +1785,7 @@ fn undo_regex(env: &mut Uiua) -> UiuaResult {
                             .map(|x| x.0)
                             .map(|x| x.as_string(env, "Expected boxed replacements to be strings"))
                             .collect::<UiuaResult<_>>()?,
-                    )
+                    );
                 }
                 (Value::Box(arr), 2) => {
                     break Many(
@@ -1798,7 +1798,7 @@ fn undo_regex(env: &mut Uiua) -> UiuaResult {
                                 })
                             })
                             .collect::<UiuaResult<_>>()?,
-                    )
+                    );
                 }
                 _ => return Err(env.error(
                     "Expected replacements to be a string, array of strings or 2d array of strings",
@@ -1830,12 +1830,12 @@ fn undo_regex(env: &mut Uiua) -> UiuaResult {
 }
 
 thread_local! {
-    pub(crate) static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
+    pub(crate) static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_os_rng());
 }
 
 /// Generate a random number, equivalent to [`Primitive::Rand`]
 pub fn random() -> f64 {
-    random_with(|rng| rng.gen())
+    random_with(|rng| rng.random())
 }
 
 /// Access the interpreter's random number generator for the thread
@@ -2289,7 +2289,7 @@ pub(crate) fn parse_doc_line_fragments(mut line: &str) -> Vec<PrimDocFragment> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{split_name, PrimComponent};
+    use crate::{PrimComponent, split_name};
 
     #[test]
     fn name_collisions() {

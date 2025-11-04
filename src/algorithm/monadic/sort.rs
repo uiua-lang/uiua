@@ -4,7 +4,7 @@ use ecow::EcoVec;
 use rand::Rng;
 use rayon::prelude::*;
 
-use crate::{algorithm::ArrayCmpSlice, random_with, val_as_arr, Array, ArrayValue, Value};
+use crate::{Array, ArrayValue, Value, algorithm::ArrayCmpSlice, random_with, val_as_arr};
 
 impl Value {
     /// Get the `rise` of the value
@@ -232,7 +232,7 @@ impl<T: ArrayValue> Array<T> {
             let row_len = self.row_len();
             let slice = self.data.as_mut_slice();
             for i in (1..row_count).rev() {
-                let j = rng.gen_range(0..=i);
+                let j = rng.random_range(0..=i);
                 if i == j {
                     continue;
                 }

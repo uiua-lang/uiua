@@ -1,6 +1,6 @@
-use base64::engine::{general_purpose::URL_SAFE, Engine};
-use flate2::write::ZlibEncoder;
+use base64::engine::{Engine, general_purpose::URL_SAFE};
 use flate2::Compression;
+use flate2::write::ZlibEncoder;
 use js_sys::Date;
 use leptos::*;
 use std::cmp::min_by_key;
@@ -17,11 +17,11 @@ use std::{
 use uiua::{PrimDoc, UiuaErrorKind};
 
 use uiua::{
+    Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
+    Spans, Uiua, UiuaError, UiuaResult, Value,
     ast::Item,
     lsp::{BindingDocsKind, ImportSrc},
     media::SmartOutput,
-    Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
-    Spans, Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
@@ -363,7 +363,7 @@ impl CodeLines {
     }
     fn push_str(&mut self, s: &str) {
         match self.frag() {
-            CodeFragment::Unspanned(ref mut unspanned) => unspanned.push_str(s),
+            CodeFragment::Unspanned(unspanned) => unspanned.push_str(s),
             _ => self.line().push(CodeFragment::Unspanned(s.to_string())),
         }
     }

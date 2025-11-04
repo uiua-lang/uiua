@@ -220,7 +220,7 @@ impl FromStr for FfiArg {
 pub(crate) use enabled::*;
 #[cfg(feature = "ffi")]
 mod enabled {
-    use crate::{cowslice::CowSlice, Array, Boxed, MetaPtr, Value};
+    use crate::{Array, Boxed, MetaPtr, Value, cowslice::CowSlice};
 
     use super::*;
     use core::slice;
@@ -421,12 +421,14 @@ mod enabled {
     /// This is an in-lined version of [`libffi::middle::Cif::call`] with the change that instead of using a generic to specify the size of memory that is copied into, it uses a parameter and a vector.
     pub unsafe fn call(cif: &Cif, fun: CodePtr, args: &[Arg], result_size: usize) -> Vec<u8> {
         let mut result = vec![0; result_size];
-        libffi::raw::ffi_call(
-            cif.as_raw_ptr(),
-            Some(*fun.as_safe_fun()),
-            result.as_mut_ptr() as *mut c_void,
-            args.as_ptr() as *mut *mut c_void,
-        );
+        unsafe {
+            libffi::raw::ffi_call(
+                cif.as_raw_ptr(),
+                Some(*fun.as_safe_fun()),
+                result.as_mut_ptr() as *mut c_void,
+                args.as_ptr() as *mut *mut c_void,
+            )
+        };
         result
     }
 
@@ -684,7 +686,7 @@ mod enabled {
                     return Err(format!(
                         "Array of {} is unsupported for FFI argument {ty}",
                         value.type_name_plural()
-                    ))
+                    ));
                 }
             })
         }

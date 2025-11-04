@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::{hash_map::Entry, HashMap},
+    collections::{HashMap, hash_map::Entry},
     f64::consts::TAU,
     path::{Path, PathBuf},
     sync::{Arc, LazyLock, OnceLock},
@@ -10,8 +10,8 @@ use ecow::EcoVec;
 use rand::prelude::*;
 
 use crate::{
-    media, parse_doc_line_fragments, Array, Boxed, PrimDocFragment, SysBackend, Uiua, Value,
-    WILDCARD_NAN,
+    Array, Boxed, PrimDocFragment, SysBackend, Uiua, Value, WILDCARD_NAN, media,
+    parse_doc_line_fragments,
 };
 
 /// The definition of a shadowable constant
@@ -555,11 +555,11 @@ fn music_constant(backend: &dyn SysBackend) -> Value {
             let h = if (h * secs % 1.0) < 0.5 { 1.0 } else { -1.0 } / 3.0; // Square wave
             let kick = ((secs % BEAT).powf(0.4) * 40.0 * TAU).sin();
             let hat = 0.3
-                * rng.gen_range(-1.0..=1.0)
+                * rng.random_range(-1.0..=1.0)
                 * hat_mask[(4.0 * beat) as usize % 32]
                 * (0.0..=0.1).contains(&(secs % (BEAT / 4.0) / (BEAT / 4.0))) as u8 as f64;
             let snare = 0.5
-                * rng.gen_range(-1.0..=1.0)
+                * rng.random_range(-1.0..=1.0)
                 * ((0.5..=0.6).contains(&(secs % (2.0 * BEAT) / (2.0 * BEAT))) as u8 as f64);
 
             0.5 * (m + h + kick + hat + snare)

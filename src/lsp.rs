@@ -11,9 +11,9 @@ use std::{
 };
 
 use crate::{
-    ast::*, is_custom_glyph, parse, parse::ident_modifier_args, Assembly, BindingInfo, BindingKind,
-    BindingMeta, CodeSpan, Compiler, Ident, InputSrc, Inputs, LocalName, PreEvalMode, Primitive,
-    SafeSys, Shape, Signature, Sp, Subscript, SysBackend, UiuaError, Value, CONSTANTS,
+    Assembly, BindingInfo, BindingKind, BindingMeta, CONSTANTS, CodeSpan, Compiler, Ident,
+    InputSrc, Inputs, LocalName, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp, Subscript,
+    SysBackend, UiuaError, Value, ast::*, is_custom_glyph, parse, parse::ident_modifier_args,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -872,9 +872,10 @@ mod server {
     use super::*;
 
     use crate::{
-        format::{format_str, FormatConfig},
-        is_ident_char, lex, split_name, AsciiToken, Assembly, BindingInfo, Loc, NativeSys,
-        PrimClass, PrimDoc, PrimDocFragment, PrimDocLine, Span, Token, UiuaErrorKind,
+        AsciiToken, Assembly, BindingInfo, Loc, NativeSys, PrimClass, PrimDoc, PrimDocFragment,
+        PrimDocLine, Span, Token, UiuaErrorKind,
+        format::{FormatConfig, format_str},
+        is_ident_char, lex, split_name,
     };
 
     pub struct LspDoc {
@@ -918,7 +919,9 @@ mod server {
             .build()
             .unwrap()
             .block_on(async {
-                std::env::set_var("UIUA_NO_FORMAT", "1");
+                unsafe {
+                    std::env::set_var("UIUA_NO_FORMAT", "1");
+                }
 
                 let stdin = tokio::io::stdin();
                 let stdout = tokio::io::stdout();
@@ -1257,7 +1260,7 @@ mod server {
                                     value: format!("[View Git repository]({url})"),
                                 }),
                                 range: Some(uiua_span_to_lsp(span, &doc.asm.inputs)),
-                            }))
+                            }));
                         }
                         ImportSrc::File(_) => {}
                     };
@@ -2022,7 +2025,7 @@ mod server {
                             return Ok(Some(GotoDefinitionResponse::Scalar(Location {
                                 uri: path_to_uri(path)?,
                                 range: Range::new(Position::new(0, 0), Position::new(0, 0)),
-                            })))
+                            })));
                         }
                         ImportSrc::Git(_) => {}
                     };
@@ -2208,15 +2211,12 @@ mod server {
                 )
                 .await
                 .unwrap_or_default();
-            let (binding_sigs, inline_sigs, min_length, show_values) = if let [serde_json::Value::Bool(
-                    binding_sigs,
-                ), serde_json::Value::Bool(
-                    inline_sigs,
-                ), serde_json::Value::Number(
-                    min_length,
-                ), serde_json::Value::Bool(
-                    show_values,
-                )] = config.as_slice()
+            let (binding_sigs, inline_sigs, min_length, show_values) = if let [
+                serde_json::Value::Bool(binding_sigs),
+                serde_json::Value::Bool(inline_sigs),
+                serde_json::Value::Number(min_length),
+                serde_json::Value::Bool(show_values),
+            ] = config.as_slice()
             {
                 (
                     *binding_sigs,

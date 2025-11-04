@@ -7,9 +7,9 @@ use std::{
     error::Error,
     fmt::{self, Display},
     fs,
-    io::{self, stderr, stdin, stdout, BufRead, Read, Write},
-    path::{is_separator, Path, PathBuf},
-    process::{exit, Child, Command, Stdio},
+    io::{self, BufRead, Read, Write, stderr, stdin, stdout},
+    path::{Path, PathBuf, is_separator},
+    process::{Child, Command, Stdio, exit},
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::channel,
@@ -20,17 +20,18 @@ use std::{
 
 use clap::{Parser, Subcommand};
 use colored::*;
-use notify::{event::ModifyKind, EventKind, RecursiveMode, Watcher};
+use notify::{EventKind, RecursiveMode, Watcher, event::ModifyKind};
 use parking_lot::Mutex;
-use rustyline::{error::ReadlineError, DefaultEditor};
+use rustyline::{DefaultEditor, error::ReadlineError};
 use terminal_size::terminal_size;
 use uiua::{
-    format::{format_file, format_str, FormatConfig, FormatConfigSource},
+    Assembly, CONSTANTS, CodeSpan, Compiler, NativeSys, PreEvalMode, PrimClass, PrimDoc,
+    PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans, Subscript, Token,
+    Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
+    format::{FormatConfig, FormatConfigSource, format_file, format_str},
     lex,
     lsp::BindingDocsKind,
-    parse, print_stack, print_stack_lines, Assembly, CodeSpan, Compiler, NativeSys, PreEvalMode,
-    PrimClass, PrimDoc, PrimDocFragment, PrimDocLine, Primitive, RunMode, SafeSys, SpanKind, Spans,
-    Subscript, Token, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
+    parse, print_stack, print_stack_lines,
 };
 
 static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
@@ -1267,11 +1268,7 @@ fn color_func(args: usize) -> Option<Color> {
 }
 
 fn color_mod(margs: usize) -> Color {
-    if margs == 1 {
-        MONADIC_MOD
-    } else {
-        DYADIC_MOD
-    }
+    if margs == 1 { MONADIC_MOD } else { DYADIC_MOD }
 }
 
 fn color_code(code: &str, compiler: &Compiler) -> String {

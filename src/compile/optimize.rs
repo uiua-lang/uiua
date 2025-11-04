@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::{check::nodes_clean_sig, ImplPrimitive::*, Node::*, Primitive::*};
+use crate::{ImplPrimitive::*, Node::*, Primitive::*, check::nodes_clean_sig};
 
 pub(crate) const DEBUG: bool = false;
 
@@ -257,7 +257,11 @@ struct ReduceConjoinInventoryOpt;
 impl Optimization for ReduceConjoinInventoryOpt {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
         match_and_replace(nodes, |nodes| {
-            let [Mod(Inventory, inv_args, span), ImplMod(ReduceContent, rc_args, _), ..] = nodes
+            let [
+                Mod(Inventory, inv_args, span),
+                ImplMod(ReduceContent, rc_args, _),
+                ..,
+            ] = nodes
             else {
                 return None;
             };
@@ -334,7 +338,11 @@ impl Optimization for PathOpt {
                 let node = Mod(Fill, eco_vec![get_fill.clone(), inner], *fill_span);
                 Some((2, node))
             }
-            [ImplMod(Astar, args, span), Mod(Fill, fill_args, fill_span), ..] => {
+            [
+                ImplMod(Astar, args, span),
+                Mod(Fill, fill_args, fill_span),
+                ..,
+            ] => {
                 let [get_fill, filled] = fill_args.as_slice() else {
                     return None;
                 };
@@ -358,11 +366,13 @@ struct AllSameOpt;
 impl Optimization for AllSameOpt {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
         match_and_replace(nodes, |nodes| match nodes {
-            [Prim(Dup, span), Push(val), Prim(Rotate, _), Prim(Match, _), ..]
-                if *val == 1 || *val == -1 =>
-            {
-                Some((4, ImplPrim(AllSame, *span)))
-            }
+            [
+                Prim(Dup, span),
+                Push(val),
+                Prim(Rotate, _),
+                Prim(Match, _),
+                ..,
+            ] if *val == 1 || *val == -1 => Some((4, ImplPrim(AllSame, *span))),
             [Mod(By | On, args, span), Prim(Match, _), ..] => {
                 let [f] = args.as_slice() else {
                     return None;
@@ -383,7 +393,11 @@ impl Optimization for AllSameOpt {
                 3,
                 Node::from([ImplPrim(OneUnique, *span), Prim(Not, *span)]),
             )),
-            [Mod(Stencil, stencil_args, span), Mod(Reduce, reduce_args, _), ..] => {
+            [
+                Mod(Stencil, stencil_args, span),
+                Mod(Reduce, reduce_args, _),
+                ..,
+            ] => {
                 let ([stencil_f], [reduce_f]) = (stencil_args.as_slice(), reduce_args.as_slice())
                 else {
                     return None;
@@ -437,7 +451,14 @@ impl Optimization for SplitByOpt {
                 ]);
                 Some((4, new))
             }
-            [Prim(Dup, _), Push(delim), Prim(Mask, _), Prim(Not, _), last, ..] => {
+            [
+                Prim(Dup, _),
+                Push(delim),
+                Prim(Mask, _),
+                Prim(Not, _),
+                last,
+                ..,
+            ] => {
                 let (f, span) = par_f(last)?;
                 let new =
                     Node::from_iter([Push(delim.clone()), ImplMod(SplitBy, eco_vec![f], span)]);

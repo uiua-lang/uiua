@@ -14,15 +14,15 @@ use ecow::eco_vec;
 use serde::*;
 
 use crate::{
-    assembly::{Assembly, Function},
-    check::nodes_sig,
-    check::{nodes_clean_sig, SigCheckError},
-    compile::algebra::algebraic_inverse,
     CustomInverse, FunctionId,
     ImplPrimitive::{self, *},
     Node::{self, *},
     Primitive::{self, *},
     SigNode, Signature, SubSide, Subscript, SysOp, Uiua, UiuaResult,
+    assembly::{Assembly, Function},
+    check::nodes_sig,
+    check::{SigCheckError, nodes_clean_sig},
+    compile::algebra::algebraic_inverse,
 };
 
 use un::*;
@@ -294,9 +294,9 @@ impl From<()> for InversionError {
 
 impl Error for InversionError {}
 
+use InversionError::Generic;
 use ecow::{EcoString, EcoVec};
 use regex::Regex;
-use InversionError::Generic;
 
 use super::algebra::AlgebraError;
 /// A generic inversion error

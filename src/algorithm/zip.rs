@@ -11,17 +11,17 @@ use std::{
 use ecow::eco_vec;
 
 use crate::{
+    Array, ArrayValue, Boxed, ImplPrimitive, Node, Ops, PersistentMeta, Primitive, Shape, SigNode,
+    Uiua, UiuaResult,
     algorithm::{pervade::bin_pervade_values, reduce},
     cowslice::CowSlice,
     get_ops, random,
     types::push_empty_rows_value,
     val_as_arr,
     value::Value,
-    Array, ArrayValue, Boxed, ImplPrimitive, Node, Ops, PersistentMeta, Primitive, Shape, SigNode,
-    Uiua, UiuaResult,
 };
 
-use super::{fill_value_shapes, fixed_rows, multi_output, FixedRowsData, MultiOutput};
+use super::{FixedRowsData, MultiOutput, fill_value_shapes, fixed_rows, multi_output};
 
 pub(crate) type ValueMonFn = Rc<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 type ValueMon2Fn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<(Value, Value)>>;
@@ -165,7 +165,7 @@ fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMo
                 f_mon_fast_fn_impl(f.node.as_slice(), deep, env)
             } else {
                 None
-            }
+            };
         }
         [Node::Mod(Rows, args, _)] => {
             let (f, d) = f_mon_fast_fn(&args[0].node, env)?;
@@ -257,7 +257,7 @@ fn f_mon2_fast_fn_impl(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize
                 f_mon2_fast_fn_impl(f.node.as_slice(), env)
             } else {
                 None
-            }
+            };
         }
         [Node::Mod(Rows, args, _)] => {
             let (f, d) = f_mon2_fast_fn(args[0].node.as_slice(), env)?;
@@ -346,8 +346,8 @@ fn prim_dy_fast_fn(
     _a_filled: bool,
     b_filled: bool,
 ) -> Option<ValueDyFn> {
-    use std::boxed::Box;
     use Primitive::*;
+    use std::boxed::Box;
     Some(match prim {
         Add => spanned_dy_fn(span, Value::add),
         Sub => spanned_dy_fn(span, Value::sub),
@@ -382,8 +382,8 @@ fn impl_prim_dy_fast_fn(
     _a_filled: bool,
     b_filled: bool,
 ) -> Option<ValueDyFn> {
-    use std::boxed::Box;
     use ImplPrimitive::*;
+    use std::boxed::Box;
     Some(match prim {
         AntiRotate if !b_filled => Box::new(move |a, mut b, depth, env| {
             env.with_span(span, |env| {
@@ -400,8 +400,8 @@ pub(crate) fn f_dy_fast_fn(
     a_filled: bool,
     b_filled: bool,
 ) -> Option<(ValueDyFn, usize)> {
-    use std::boxed::Box;
     use Primitive::*;
+    use std::boxed::Box;
 
     match nodes {
         &[Node::Prim(prim, span)] => Some((prim_dy_fast_fn(prim, span, a_filled, b_filled)?, 0)),

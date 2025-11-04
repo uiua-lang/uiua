@@ -13,21 +13,20 @@ mod uiuisms;
 
 use std::{cell::Cell, io::Read, sync::OnceLock, time::Duration};
 
-use base64::engine::{general_purpose::URL_SAFE, Engine};
+use base64::engine::{Engine, general_purpose::URL_SAFE};
 use flate2::read::ZlibDecoder;
 use js_sys::Date;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use rand::prelude::*;
-use uiua::{now, ConstantDef, Primitive, SysOp};
+use uiua::{ConstantDef, Primitive, SysOp, now};
 use uiua_editor::{
-    binding_name_class, lang,
+    EDITOR_SHORTCUTS, Editor, EditorMode, Prim, binding_name_class, lang,
     utils::{
-        get_april_fools_setting, get_april_fools_time, its_called_weewuh, set_april_fools,
-        ChallengeDef,
+        ChallengeDef, get_april_fools_setting, get_april_fools_time, its_called_weewuh,
+        set_april_fools,
     },
-    Editor, EditorMode, Prim, EDITOR_SHORTCUTS,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlAudioElement};

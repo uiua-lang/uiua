@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
-use enum_iterator::{all, Sequence};
+use enum_iterator::{Sequence, all};
 use leptos::*;
 use leptos_meta::Title;
 use leptos_router::*;
 use uiua::{Primitive, SysOp};
-use uiua_editor::{lang, Editor};
+use uiua_editor::{Editor, lang};
 
-use crate::{title_markdown, Challenge, Hd, Prim, Prims};
+use crate::{Challenge, Hd, Prim, Prims, title_markdown};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum OtherTutorialPage {
@@ -75,7 +75,7 @@ impl OtherTutorialPage {
             OtherTutorialPage::Audio => "how to generate and play audio",
             OtherTutorialPage::Images => "how to generate images and GIFs",
             OtherTutorialPage::Documentation => {
-                return Cow::Owned(format!("how to document {} code", lang()))
+                return Cow::Owned(format!("how to document {} code", lang()));
             }
             OtherTutorialPage::CodeTactility => "tools for debugging and editing code",
             OtherTutorialPage::Ranges => "various ways to generate ranges",

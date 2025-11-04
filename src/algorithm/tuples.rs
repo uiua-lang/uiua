@@ -1,10 +1,10 @@
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 
 use ecow::EcoVec;
 
 use crate::{
-    get_ops, grid_fmt::GridFmt, types::push_empty_rows_value, val_as_arr, Array, ArrayValue, Node,
-    Ops, Primitive, SigNode, Uiua, UiuaResult, Value,
+    Array, ArrayValue, Node, Ops, Primitive, SigNode, Uiua, UiuaResult, Value, get_ops,
+    grid_fmt::GridFmt, types::push_empty_rows_value, val_as_arr,
 };
 
 use super::{monadic::range, table::table_impl, validate_size};
@@ -35,7 +35,7 @@ pub fn tuples(ops: Ops, env: &mut Uiua) -> UiuaResult {
                 but its signature is {}",
                 Primitive::Tuples.format(),
                 f.sig
-            )))
+            )));
         }
     }
     Ok(())
@@ -119,7 +119,11 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
                 env.push(n);
                 return Ok(());
             }
-            [Node::Prim(Primitive::Pop, _), Node::Prim(Primitive::Pop, _), Node::Push(val)] => {
+            [
+                Node::Prim(Primitive::Pop, _),
+                Node::Prim(Primitive::Pop, _),
+                Node::Push(val),
+            ] => {
                 if let Ok(reps) = val.as_nat(env, None) {
                     if k > 2 && reps > 1 {
                         return Err(val

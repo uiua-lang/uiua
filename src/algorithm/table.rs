@@ -3,11 +3,11 @@
 use ecow::eco_vec;
 
 use crate::{
-    algorithm::{get_ops, pervade::*, zip::rows1, FillContext},
-    random,
-    value::Value,
     Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
     UiuaResult,
+    algorithm::{FillContext, get_ops, pervade::*, zip::rows1},
+    random,
+    value::Value,
 };
 
 use super::{loops::flip, multi_output, reduce::reduce_impl, validate_size};
@@ -60,31 +60,33 @@ pub(crate) fn table_impl(f: SigNode, env: &mut Uiua) -> UiuaResult {
             if n == 2 && xs.rank() <= 1 && ys.rank() <= 1 {
                 table_list(f, xs, ys, env)
             } else {
-                if let [Node::Prim(Primitive::Mul, _), Node::Mod(Primitive::Reduce, args, _)] =
-                    f.node.as_slice()
+                if let [
+                    Node::Prim(Primitive::Mul, _),
+                    Node::Mod(Primitive::Reduce, args, _),
+                ] = f.node.as_slice()
                 {
                     if let [sn] = args.as_slice() {
                         if let Some((Primitive::Add, _)) = sn.node.as_flipped_primitive() {
                             match (&xs, &ys) {
                                 (Value::Num(a), Value::Num(b)) => {
-                                    return a.matrix_mul(b, env).map(|val| env.push(val))
+                                    return a.matrix_mul(b, env).map(|val| env.push(val));
                                 }
                                 (Value::Num(a), Value::Byte(b)) => {
                                     return a
                                         .matrix_mul(&b.convert_ref(), env)
-                                        .map(|val| env.push(val))
+                                        .map(|val| env.push(val));
                                 }
                                 (Value::Byte(a), Value::Num(b)) => {
                                     return a
                                         .convert_ref()
                                         .matrix_mul(b, env)
-                                        .map(|val| env.push(val))
+                                        .map(|val| env.push(val));
                                 }
                                 (Value::Byte(a), Value::Byte(b)) => {
                                     return a
                                         .convert_ref()
                                         .matrix_mul(&b.convert_ref(), env)
-                                        .map(|val| env.push(val))
+                                        .map(|val| env.push(val));
                                 }
                                 _ => {}
                             }

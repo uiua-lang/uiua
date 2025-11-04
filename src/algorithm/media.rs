@@ -2,8 +2,8 @@
 
 use std::f64::consts::PI;
 
-use ecow::{eco_vec, EcoVec};
-use enum_iterator::{all, Sequence};
+use ecow::{EcoVec, eco_vec};
+use enum_iterator::{Sequence, all};
 #[cfg(feature = "audio_encode")]
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 #[cfg(feature = "image")]
@@ -253,7 +253,7 @@ pub(crate) fn audio_encode(env: &mut Uiua) -> UiuaResult {
             "wav" => value_to_wav_bytes(&value, sample_rate).map_err(|e| env.error(e))?,
             "ogg" => value_to_ogg_bytes(&value, sample_rate).map_err(|e| env.error(e))?,
             format => {
-                return Err(env.error(format!("Invalid or unsupported audio format: {format}")))
+                return Err(env.error(format!("Invalid or unsupported audio format: {format}")));
             }
         };
         env.push(Array::<u8>::from(bytes.as_slice()));
@@ -424,7 +424,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
         n => {
             return Err(format!(
                 "For a color image, the last dimension of the image array must be between 1 and 4 but it is {n}"
-            ))
+            ));
         }
     })
 }
@@ -469,7 +469,7 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f32>>, String> {
             return Err(format!(
                 "Audio must be a rank 1 or 2 numeric array, but it is rank {}",
                 orig.rank()
-            ))
+            ));
         }
     };
     if channels.len() > 5 {
@@ -1008,7 +1008,7 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
             return Err(env.error(format!(
                 "Voxel array must be numeric, but it is {}",
                 val.type_name_plural()
-            )))
+            )));
         }
     };
     let mut pos: Option<[f64; 3]> = None;
@@ -1033,7 +1033,7 @@ pub(crate) fn voxels(val: Value, args: Option<Value>, env: &mut Uiua) -> UiuaRes
                         return Err(env.error(format!(
                             "Fog must be a scalar or list of 3 numbers, but its shape is {}",
                             arg.shape
-                        )))
+                        )));
                     }
                 }
             }
@@ -1411,7 +1411,7 @@ fn layout_text_impl(
     use cosmic_text::*;
     use ecow::eco_vec;
 
-    use crate::{algorithm::validate_size, grid_fmt::GridFmt, Boxed, Shape};
+    use crate::{Boxed, Shape, algorithm::validate_size, grid_fmt::GridFmt};
     struct FontStuff {
         system: FontSystem,
         swash_cache: SwashCache,
@@ -1510,7 +1510,7 @@ fn layout_text_impl(
                         return Err(env.error(format!(
                             "Size must be a scalar or list of 2 numbers, but its shape is {}",
                             arg.shape
-                        )))
+                        )));
                     }
                 };
                 if w < 0.0 || w.is_nan() {
@@ -1540,17 +1540,16 @@ fn layout_text_impl(
                     env,
                     "Color must be a scalar number or list of 3 or 4 numbers",
                 )?;
-                let ([r, g, b], a) = match *nums {
-                    [gray] if arg.shape.is_empty() => ([gray; 3], None),
-                    [r, g, b] => ([r, g, b], None),
-                    [r, g, b, a] => ([r, g, b], Some(a)),
-                    _ => {
-                        return Err(env.error(format!(
+                let ([r, g, b], a) =
+                    match *nums {
+                        [gray] if arg.shape.is_empty() => ([gray; 3], None),
+                        [r, g, b] => ([r, g, b], None),
+                        [r, g, b, a] => ([r, g, b], Some(a)),
+                        _ => return Err(env.error(format!(
                             "Color must be a scalar or list of 3 or 4 numbers, but its shape is {}",
                             arg.shape
-                        )))
-                    }
-                };
+                        ))),
+                    };
                 color = Some(if let Some(a) = a {
                     Color::rgba(
                         (r * 255.0) as u8,

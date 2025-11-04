@@ -752,11 +752,7 @@ impl Expr {
     }
     fn as_constant(&self) -> Option<Complex> {
         let (term, coef) = self.single()?;
-        if term == Term::ONE {
-            Some(coef)
-        } else {
-            None
-        }
+        if term == Term::ONE { Some(coef) } else { None }
     }
     fn pow(self, power: Self) -> Option<Self> {
         if self.as_constant().is_some_and(|c| c == E.into()) {

@@ -98,11 +98,7 @@ impl Complex {
     /// Normalize a complex number
     pub fn normalize(self) -> Self {
         let len = self.abs();
-        if len == 0.0 {
-            Self::ZERO
-        } else {
-            self / len
-        }
+        if len == 0.0 { Self::ZERO } else { self / len }
     }
     /// Calculate the principal value of the complex number
     pub fn arg(self) -> f64 {

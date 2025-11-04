@@ -10,12 +10,12 @@ use std::{
 use ecow::EcoString;
 
 use crate::{
+    Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
     terminal_size, val_as_arr,
     value::Value,
-    Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -662,9 +662,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             if ffi_type.len() > 20 {
                 ffi_type = "{…}".to_string();
             }
-            vec![format!("0x{:x}: {}", pointer.ptr, ffi_type)
-                .chars()
-                .collect()]
+            vec![
+                format!("0x{:x}: {}", pointer.ptr, ffi_type)
+                    .chars()
+                    .collect(),
+            ]
         } else if self.rank() == 0 && !self.is_map() {
             // Scalar
             let params = GridFmtParams {

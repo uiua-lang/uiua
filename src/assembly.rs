@@ -9,14 +9,15 @@ use std::{
 };
 
 use dashmap::DashMap;
-use ecow::{eco_vec, EcoString, EcoVec};
+use ecow::{EcoString, EcoVec, eco_vec};
 use serde::*;
 use uiua_parser::SUBSCRIPT_DIGITS;
 
 use crate::{
+    BindingCounts, CodeSpan, FunctionId, Inputs, Node, SigNode, Signature, Span, Uiua, UiuaResult,
+    Value,
     compile::{LocalName, Module},
-    is_ident_char, BindingCounts, CodeSpan, FunctionId, Inputs, Node, SigNode, Signature, Span,
-    Uiua, UiuaResult, Value,
+    is_ident_char,
 };
 
 /// A compiled Uiua assembly

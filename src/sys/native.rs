@@ -3,7 +3,7 @@ use std::{
     borrow::Cow,
     env::{self, set_current_dir},
     fs::{self, File, OpenOptions},
-    io::{stderr, stdin, stdout, BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Read, Write, stderr, stdin, stdout},
     iter::repeat_n,
     mem::take,
     net::*,
@@ -11,8 +11,8 @@ use std::{
     process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
     slice,
     sync::{
-        atomic::{self, AtomicBool, AtomicU64},
         Arc, LazyLock,
+        atomic::{self, AtomicBool, AtomicU64},
     },
     thread::sleep,
     time::Duration,
@@ -24,9 +24,10 @@ use crossbeam_channel as channel;
 use dashmap::DashMap;
 
 use crate::{
+    BigConstant, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span, SysBackend,
+    Uiua, Value,
     grid_fmt::{GridFmt, GridFmtParams},
-    terminal_size, BigConstant, GitTarget, Handle, MetaPtr, ReadLinesFn, ReadLinesReturnFn, Span,
-    SysBackend, Uiua, Value,
+    terminal_size,
 };
 
 /// The default native system backend
@@ -97,9 +98,9 @@ struct WebcamChannel {
 impl WebcamChannel {
     fn new(index: usize) -> Result<Self, String> {
         use nokhwa::{
+            Camera,
             pixel_format::RgbFormat,
             utils::{CameraIndex, RequestedFormat, RequestedFormatType},
-            Camera,
         };
         let (req_send, req_recv) = channel::unbounded();
         let (image_send, image_recv) = channel::unbounded();

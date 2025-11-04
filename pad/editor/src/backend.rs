@@ -7,17 +7,17 @@ use std::{
     io::Cursor,
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
         Mutex,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
 };
 
-use crate::{get_ast_time, START_TIME};
+use crate::{START_TIME, get_ast_time};
 use futures::future::join_all;
 use js_sys::{Date, Uint8Array};
 use leptos::*;
 use uiua::{
-    now, BigConstant, GitTarget, Handle, Report, Span, SysBackend, Uiua, EXAMPLE_TXT, EXAMPLE_UA,
+    BigConstant, EXAMPLE_TXT, EXAMPLE_UA, GitTarget, Handle, Report, Span, SysBackend, Uiua, now,
 };
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
@@ -466,10 +466,10 @@ impl SysBackend for WebBackend {
         match target {
             GitTarget::Default => {}
             GitTarget::Branch(_) => {
-                return Err("Git branch specification is not supported in the web backend".into())
+                return Err("Git branch specification is not supported in the web backend".into());
             }
             GitTarget::Commit(_) => {
-                return Err("Git commit specification is not supported in the web backend".into())
+                return Err("Git commit specification is not supported in the web backend".into());
             }
         }
         let (repo_owner, repo_name, path) = {

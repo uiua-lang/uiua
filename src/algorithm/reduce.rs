@@ -3,17 +3,17 @@
 use core::f64;
 use std::convert::identity;
 
-use ecow::{eco_vec, EcoVec};
+use ecow::{EcoVec, eco_vec};
 
 use crate::{
+    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
+    UiuaResult, Value,
     algorithm::{get_ops, loops::flip, pervade::*, validate_size},
     check::{nodes_clean_sig, nodes_sig},
     cowslice::cowslice,
-    Array, ArrayValue, Complex, ImplPrimitive, Node, Ops, Primitive, Shape, SigNode, Uiua,
-    UiuaResult, Value,
 };
 
-use super::{fixed_rows, FillContext, FixedRowsData};
+use super::{FillContext, FixedRowsData, fixed_rows};
 
 pub fn reduce(ops: Ops, depth: usize, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();

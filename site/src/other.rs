@@ -1,12 +1,12 @@
 use leptos::*;
 use leptos_meta::*;
-use uiua::{ConstClass, Primitive, SysOp, CONSTANTS};
-use uiua_editor::{lang, Editor};
+use uiua::{CONSTANTS, ConstClass, Primitive, SysOp};
+use uiua_editor::{Editor, lang};
 
 use crate::{
-    markdown::{markdown_view, Markdown},
-    primitive::doc_line_fragments_to_view,
     Const, Hd, Prim, Prims,
+    markdown::{Markdown, markdown_view},
+    primitive::doc_line_fragments_to_view,
 };
 
 #[component]
@@ -572,7 +572,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Join,
             "Use the left or right argument as the list",
-            "⊂⌟ 1 2_3 ⊂⌟ 1_2 3 ⊂⌟ 1_2 3_4\n⊂⌞ 1 2_3 ⊂⌞ 1_2 3 ⊂⌞ 1_2 3_4"
+            "⊂⌟ 1 2_3 ⊂⌟ 1_2 3 ⊂⌟ 1_2 3_4\n⊂⌞ 1 2_3 ⊂⌞ 1_2 3 ⊂⌞ 1_2 3_4",
         ),
         subscript(
             Both,
@@ -612,7 +612,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             Under,
             "Apply the undoing function to later arguments",
-            "# Experimental!\n⍜⌟¯°+ ¯1.25"
+            "# Experimental!\n⍜⌟¯°+ ¯1.25",
         ),
         subscript(
             Fill,
@@ -622,7 +622,7 @@ pub fn Subscripts() -> impl IntoView {
         subscript(
             EncodeBytes,
             "Choose little or big endian",
-            "# Experimental!\nbytes⌞ \"u64\" 1234567890 # Little endian\nbytes⌟ \"u64\" 1234567890 # Big endian"
+            "# Experimental!\nbytes⌞ \"u64\" 1234567890 # Little endian\nbytes⌟ \"u64\" 1234567890 # Big endian",
         ),
     ];
 

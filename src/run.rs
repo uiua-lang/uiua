@@ -6,7 +6,7 @@ use std::{
     collections::HashMap,
     hash::Hash,
     mem::{size_of, take},
-    panic::{catch_unwind, AssertUnwindSafe},
+    panic::{AssertUnwindSafe, catch_unwind},
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
@@ -20,13 +20,13 @@ use thread_local::ThreadLocal;
 use threadpool::ThreadPool;
 
 use crate::{
+    Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function, FunctionId,
+    Ident, Inputs, IntoSysBackend, LocalName, Node, Primitive, Report, SafeSys, SigNode, Signature,
+    Span, SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::{self, validate_size_impl},
     fill::{Fill, FillFrame, FillValue},
     invert::match_format_pattern,
-    run_prim_func, run_prim_mod, Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan,
-    Compiler, Function, FunctionId, Ident, Inputs, IntoSysBackend, LocalName, Node, Primitive,
-    Report, SafeSys, SigNode, Signature, Span, SysBackend, TraceFrame, UiuaError, UiuaErrorKind,
-    UiuaResult, Value, VERSION,
+    run_prim_func, run_prim_mod,
 };
 
 /// The Uiua interpreter
@@ -569,7 +569,7 @@ impl Uiua {
                         return Err(env.error(
                             "Recursive macro is not bound as a function. \
                             This is a bug in the interpreter.",
-                        ))
+                        ));
                     }
                 };
                 env.call(&func)
@@ -1712,7 +1712,7 @@ impl Uiua {
                     e
                 } else {
                     self.error("Thread channel closed")
-                })
+                });
             }
         };
         self.push(value);

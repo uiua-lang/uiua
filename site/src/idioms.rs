@@ -2,7 +2,7 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::A;
 use uiua::{PrimComponent, Primitive};
-use uiua_editor::{lang, Editor};
+use uiua_editor::{Editor, lang};
 
 use crate::{Hd, Prim};
 

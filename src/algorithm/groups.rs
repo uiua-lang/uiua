@@ -3,11 +3,11 @@ use std::{
     ptr,
 };
 
-use ecow::{eco_vec, EcoVec};
+use ecow::{EcoVec, eco_vec};
 
 use crate::{
-    cowslice::CowSlice, get_ops, types::push_empty_rows_value, val_as_arr, Array, ArrayValue,
-    Boxed, Node, Ops, Primitive, ScalarNum, Shape, SigNode, Uiua, UiuaResult, Value,
+    Array, ArrayValue, Boxed, Node, Ops, Primitive, ScalarNum, Shape, SigNode, Uiua, UiuaResult,
+    Value, cowslice::CowSlice, get_ops, types::push_empty_rows_value, val_as_arr,
 };
 
 use super::multi_output;

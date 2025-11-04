@@ -29,7 +29,7 @@ pub(crate) mod enabled {
     use std::{
         collections::HashMap,
         fs,
-        io::{stdout, Write},
+        io::{Write, stdout},
         sync::OnceLock,
         time::Instant,
     };
@@ -307,10 +307,6 @@ Life ← ↥∩=₃⟜+⊸(/+↻⊂A₂C₂)
     }
 
     fn percent_change(a: f64, b: f64) -> f64 {
-        if b > a {
-            b / a - 1.0
-        } else {
-            1.0 - a / b
-        }
+        if b > a { b / a - 1.0 } else { 1.0 - a / b }
     }
 }

@@ -4,10 +4,10 @@ use std::{
     io::{ErrorKind, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
     path::Path,
-    process::{exit, Command, Stdio},
+    process::{Command, Stdio, exit},
     sync::{
-        atomic::{self, AtomicBool},
         Arc,
+        atomic::{self, AtomicBool},
     },
     thread::{self, sleep},
     time::{Duration, Instant},

@@ -5,12 +5,12 @@ use std::{
     iter::{once, repeat_n},
 };
 
-use ecow::{eco_vec, EcoVec};
+use ecow::{EcoVec, eco_vec};
 use serde::*;
 
 use crate::{
-    algorithm::pervade::derive_new_shape, grid_fmt::GridFmt, is_default, Array, Boxed, Primitive,
-    Shape, Uiua, UiuaResult, Value,
+    Array, Boxed, Primitive, Shape, Uiua, UiuaResult, Value, algorithm::pervade::derive_new_shape,
+    grid_fmt::GridFmt, is_default,
 };
 
 macro_rules! ga_op {
@@ -107,7 +107,7 @@ fn ga_arg(value: Value, env: &Uiua) -> UiuaResult<(Array<f64>, Shape, usize)> {
             return Err(env.error(format!(
                 "Cannot do geometric algebra on {}",
                 val.type_name_plural()
-            )))
+            )));
         }
     };
     let mut semishape = arr.shape.clone();
@@ -168,7 +168,7 @@ enum VectorHint {
 use VectorHint::*;
 
 use super::{
-    pervade::{self, bin_pervade_mut, bin_pervade_recursive, InfalliblePervasiveFn},
+    pervade::{self, InfalliblePervasiveFn, bin_pervade_mut, bin_pervade_recursive},
     tuples::combinations,
 };
 
@@ -518,11 +518,7 @@ fn normalize_impl_not_transposed(
 }
 
 fn div(num: f64, denom: f64) -> f64 {
-    if denom == 0.0 {
-        0.0
-    } else {
-        num / denom
-    }
+    if denom == 0.0 { 0.0 } else { num / denom }
 }
 
 pub fn sqrt(spec: Spec, val: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -874,11 +870,7 @@ fn blade_name(dims: u8, mask: usize) -> String {
             s.push(crate::SUBSCRIPT_DIGITS[i as usize]);
         }
     }
-    if s.is_empty() {
-        1.to_string()
-    } else {
-        s
-    }
+    if s.is_empty() { 1.to_string() } else { s }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -992,7 +984,7 @@ pub fn metrics_from_val(val: &Value) -> Result<Metrics, String> {
             return Err(format!(
                 "Metrics array must be numbers, but it is {}",
                 val.type_name_plural()
-            ))
+            ));
         }
     })
 }
@@ -1183,7 +1175,7 @@ pub fn couple(mut a: Value, mut b: Value, env: &Uiua) -> UiuaResult<Value> {
                 "Cannot geometric couple {} and {} arrays",
                 a.type_name(),
                 b.type_name()
-            )))
+            )));
         }
     }
     if a.shape.ends_with(&b.shape) || b.shape.ends_with(&a.shape) {
@@ -1207,7 +1199,7 @@ pub fn uncouple(mut val: Value, env: &Uiua) -> UiuaResult<(Value, Value)> {
             return Err(env.error(format!(
                 "Cannot geometric uncouple {}",
                 val.type_name_plural()
-            )))
+            )));
         }
     }
     if val.shape.last().is_none_or(|&d| d == 1) {

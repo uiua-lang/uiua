@@ -14,15 +14,15 @@ use rayon::prelude::*;
 use serde::{de::DeserializeOwned, *};
 
 use crate::{
-    algorithm::{
-        map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
-        ArrayCmpSlice,
-    },
-    cowslice::{cowslice, CowSlice},
-    fill::{Fill, FillValue},
-    grid_fmt::GridFmt,
     Boxed, Complex, ExactDoubleIterator, FfiType, HandleKind, Shape, Value, WILDCARD_CHAR,
     WILDCARD_NAN,
+    algorithm::{
+        ArrayCmpSlice,
+        map::{EMPTY_NAN, MapKeys, TOMBSTONE_NAN},
+    },
+    cowslice::{CowSlice, cowslice},
+    fill::{Fill, FillValue},
+    grid_fmt::GridFmt,
 };
 
 /// Uiua's array type

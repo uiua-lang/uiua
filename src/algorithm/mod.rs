@@ -16,9 +16,9 @@ use ecow::{EcoString, EcoVec};
 use smallvec::SmallVec;
 
 use crate::{
-    cowslice::ecovec_extend_cowslice, fill::FillValue, grid_fmt::GridFmt, Array, ArrayValue, Boxed,
-    CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops, PersistentMeta, Shape, SigNode, Signature,
-    Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
+    Array, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Inputs, Ops, PersistentMeta,
+    Shape, SigNode, Signature, Span, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
+    cowslice::ecovec_extend_cowslice, fill::FillValue, grid_fmt::GridFmt,
 };
 
 mod dyadic;
@@ -859,7 +859,7 @@ pub fn unfft(env: &mut Uiua) -> UiuaResult {
 fn fft_impl(env: &mut Uiua, reverse: bool) -> UiuaResult {
     use bytemuck::must_cast_slice_mut;
 
-    use rustfft::{num_complex::Complex64, FftPlanner};
+    use rustfft::{FftPlanner, num_complex::Complex64};
 
     use crate::Complex;
 

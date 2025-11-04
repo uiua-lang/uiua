@@ -14,8 +14,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
 use crate::{
-    element, idioms::Idioms, markdown::Markdown, other::*, other_tutorial::OtherTutorialPage,
-    primitive::*, tutorial::TUTORIAL_NAMES, uiuisms::Uiuisms, Hd, Prim, Tour,
+    Hd, Prim, Tour, element, idioms::Idioms, markdown::Markdown, other::*,
+    other_tutorial::OtherTutorialPage, primitive::*, tutorial::TUTORIAL_NAMES, uiuisms::Uiuisms,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

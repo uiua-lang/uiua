@@ -8,13 +8,13 @@ use std::{
 use ecow::eco_vec;
 
 use crate::{
+    Complex, Shape, Uiua, UiuaError, UiuaResult, Value,
     algorithm::{loops::flip, validate_size},
     array::*,
     fill::FillValue,
-    Complex, Shape, Uiua, UiuaError, UiuaResult, Value,
 };
 
-use super::{multi_output, FillContext, MultiOutput};
+use super::{FillContext, MultiOutput, multi_output};
 
 pub trait PervasiveFn<A, B> {
     type Output;
@@ -102,7 +102,7 @@ pub fn derive_new_shape(
                         Err(e) => {
                             return Err(
                                 env.error(format!("Shapes {ash} and {bsh} are not compatible{e}"))
-                            )
+                            );
                         }
                     }
                 } else {
@@ -116,7 +116,7 @@ pub fn derive_new_shape(
                         Err(e) => {
                             return Err(
                                 env.error(format!("Shapes {ash} and {bsh} are not compatible{e}"))
-                            )
+                            );
                         }
                     }
                 }
@@ -361,7 +361,7 @@ where
                             Some(e) => {
                                 return Err(env.error(format!(
                                     "Shapes {ash} and {bsh} are not compatible{e}"
-                                )))
+                                )));
                             }
                         }
                     }
@@ -927,11 +927,7 @@ fn character_sign(a: char) -> f64 {
 pub mod sign {
     use super::*;
     pub fn num(a: f64) -> f64 {
-        if a == 0.0 {
-            0.0
-        } else {
-            a.signum()
-        }
+        if a == 0.0 { 0.0 } else { a.signum() }
     }
     pub fn byte(a: u8) -> u8 {
         (a > 0) as u8
@@ -1370,18 +1366,10 @@ pub mod mul {
         f64::from(b) * a
     }
     pub fn num_char(a: f64, b: char) -> char {
-        if a < 0.0 {
-            toggle_char_case(b)
-        } else {
-            b
-        }
+        if a < 0.0 { toggle_char_case(b) } else { b }
     }
     pub fn char_num(a: char, b: f64) -> char {
-        if b < 0.0 {
-            toggle_char_case(a)
-        } else {
-            a
-        }
+        if b < 0.0 { toggle_char_case(a) } else { a }
     }
     pub fn byte_char(_: u8, b: char) -> char {
         b
@@ -1428,11 +1416,7 @@ pub mod set_sign {
         num_char(b, a)
     }
     pub fn byte_char(a: u8, b: char) -> char {
-        if a > 0 {
-            scalar_abs::char(b)
-        } else {
-            b
-        }
+        if a > 0 { scalar_abs::char(b) } else { b }
     }
     pub fn char_byte(a: char, b: u8) -> char {
         byte_char(b, a)
@@ -1463,11 +1447,7 @@ pub mod div {
         f64::from(b) / a
     }
     pub fn num_char(a: f64, b: char) -> char {
-        if a < 0.0 {
-            toggle_char_case(b)
-        } else {
-            b
-        }
+        if a < 0.0 { toggle_char_case(b) } else { b }
     }
     pub fn byte_char(_: u8, b: char) -> char {
         b

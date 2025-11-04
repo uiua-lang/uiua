@@ -10,8 +10,8 @@ use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    algorithm::ArrayCmpSlice, val_as_arr, Array, ArrayValue, Boxed, Complex, FormatShape, Uiua,
-    UiuaResult, Value,
+    Array, ArrayValue, Boxed, Complex, FormatShape, Uiua, UiuaResult, Value,
+    algorithm::ArrayCmpSlice, val_as_arr,
 };
 
 use super::{ErrorContext, FillContext};

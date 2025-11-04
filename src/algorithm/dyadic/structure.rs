@@ -10,10 +10,11 @@ use std::{
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::{validate_size, FillContext},
-    cowslice::{cowslice, extend_repeat_slice, CowSlice},
+    Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
+    algorithm::{FillContext, validate_size},
+    cowslice::{CowSlice, cowslice, extend_repeat_slice},
     grid_fmt::GridFmt,
-    val_as_arr, Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
+    val_as_arr,
 };
 
 impl Value {
@@ -127,7 +128,7 @@ impl Value {
                 return Err(env.error(format!(
                     "Index must be an array of integers, not {}",
                     value.type_name_plural()
-                )))
+                )));
             }
         })
     }
@@ -1254,21 +1255,13 @@ impl Value {
 
 fn index_in_bounds(index: isize, len: usize) -> bool {
     let ui = index.unsigned_abs();
-    if index >= 0 {
-        ui < len
-    } else {
-        ui <= len
-    }
+    if index >= 0 { ui < len } else { ui <= len }
 }
 
 #[track_caller]
 fn normalize_index(index: isize, len: usize) -> usize {
     let ui = index.unsigned_abs();
-    if index >= 0 {
-        ui
-    } else {
-        len - ui
-    }
+    if index >= 0 { ui } else { len - ui }
 }
 
 fn indices_are_total(indices: &[isize], row_count: usize) -> bool {

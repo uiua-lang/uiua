@@ -4,7 +4,7 @@ use std::{collections::HashMap, fmt, sync::LazyLock};
 
 use enum_iterator::Sequence;
 
-use crate::{ast::NumWord, Complex, SysOp};
+use crate::{Complex, SysOp, ast::NumWord};
 
 use super::Primitive;
 

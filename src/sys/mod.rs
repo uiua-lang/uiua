@@ -20,10 +20,11 @@ use time::UtcOffset;
 #[cfg(feature = "native_sys")]
 pub use self::native::*;
 use crate::{
+    Array, BigConstant, Boxed, FfiArg, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua,
+    UiuaErrorKind, UiuaResult, Value,
     algorithm::{multi_output, validate_size},
     cowslice::cowslice,
-    get_ops, Array, BigConstant, Boxed, FfiArg, FfiType, MetaPtr, Ops, Primitive, SysOp, Uiua,
-    UiuaErrorKind, UiuaResult, Value,
+    get_ops,
 };
 
 /// The text of Uiua's example module
@@ -1005,7 +1006,9 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                 Value::Byte(arr) => arr.data.into(),
                 Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                 val => {
-                    return Err(env.error(format!("Cannot write {} array to file", val.type_name())))
+                    return Err(
+                        env.error(format!("Cannot write {} array to file", val.type_name()))
+                    );
                 }
             };
             (env.rt.backend)
@@ -1324,7 +1327,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                     return Err(env.error(format!(
                         "FFI signature must be a box array, but it is {}",
                         val.type_name_plural()
-                    )))
+                    )));
                 }
             };
             if sig_def.rank() != 1 {
@@ -1417,7 +1420,7 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
                         This is a bug in the interpreter",
                     Primitive::Sys(*prim)
                 )
-            }))
+            }));
         }
     }
     Ok(())
@@ -1521,7 +1524,7 @@ pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult
                         This is a bug in the interpreter",
                     Primitive::Sys(*prim)
                 )
-            }))
+            }));
         }
     }
     Ok(())
@@ -1541,7 +1544,7 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                 return Err(env.error(format!(
                     "Character array as command must be rank 0, 1, \
                     or 2, but its rank is {n}"
-                )))
+                )));
             }
         },
         Value::Box(arr) => match arr.rank() {
@@ -1556,7 +1559,7 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                                 "Function array as command must be all boxed strings, \
                                 but at least one is a {}",
                                 val.type_name()
-                            )))
+                            )));
                         }
                     }
                 }
@@ -1565,14 +1568,14 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                 return Err(env.error(format!(
                     "Function array as command must be rank 0 or 1, \
                     but its rank is {n}"
-                )))
+                )));
             }
         },
         val => {
             return Err(env.error(format!(
                 "Command must be a string or box array, but it is {}",
                 val.type_name_plural()
-            )))
+            )));
         }
     }
     if strings.is_empty() {
@@ -1601,7 +1604,7 @@ pub fn now() -> f64 {
         }
         #[cfg(feature = "web")]
         {
-            use wasm_bindgen::{prelude::*, JsCast};
+            use wasm_bindgen::{JsCast, prelude::*};
             js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str("performance"))
                 .expect("failed to get performance from global object")
                 .unchecked_into::<web_sys::Performance>()

@@ -4,18 +4,19 @@ use ecow::EcoVec;
 use uiua_parser::SubSide;
 
 use crate::{
+    Array, ArrayValue, Boxed, Node, Primitive, Shape, SigNode, Uiua, UiuaResult, Value,
     algorithm::{
+        FillContext, MultiOutput,
         pervade::*,
         validate_size, validate_size_of,
-        zip::{f_mon_fast_fn, ValueMonFn},
-        FillContext, MultiOutput,
+        zip::{ValueMonFn, f_mon_fast_fn},
     },
     cowslice::extend_repeat,
     types::push_empty_rows_value,
-    val_as_arr, Array, ArrayValue, Boxed, Node, Primitive, Shape, SigNode, Uiua, UiuaResult, Value,
+    val_as_arr,
 };
 
-use super::{get_ops, loops::flip, multi_output, Ops};
+use super::{Ops, get_ops, loops::flip, multi_output};
 
 pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
@@ -428,7 +429,7 @@ fn derive_dims(
         _ => {
             return Err(env.error(format!(
                 "Window size may be at most rank 2, but its shape is {shape}"
-            )))
+            )));
         }
     };
     Ok(dims)

@@ -1,7 +1,7 @@
 use std::{
     borrow::Borrow,
     cell::RefCell,
-    collections::{hash_map::DefaultHasher, HashMap},
+    collections::{HashMap, hash_map::DefaultHasher},
     fmt,
     hash::{Hash, Hasher},
     iter::once,
@@ -11,15 +11,15 @@ use std::{
     sync::Arc,
 };
 
-use ecow::{eco_vec, EcoString, EcoVec};
+use ecow::{EcoString, EcoVec, eco_vec};
 use indexmap::IndexSet;
 use serde::*;
 
 use crate::{
-    check::SigCheckError,
-    compile::invert::{InversionError, InversionResult},
     Assembly, BindingKind, DynamicFunction, Function, HashLabels, ImplPrimitive, Primitive, Purity,
     Signature, Value,
+    check::SigCheckError,
+    compile::invert::{InversionError, InversionResult},
 };
 
 node!(
@@ -1006,9 +1006,11 @@ impl Node {
                     let init = &node.as_slice()[..i];
                     let noreturn = match init {
                         [.., Node::Push(val), Node::Prim(Dup | Flip, _)] if *val != 1 => true,
-                        [.., Node::Format(..) | Node::Prim(Couple | Join, _) | Node::Array { .. }, Node::Prim(Dup, _)] => {
-                            true
-                        }
+                        [
+                            ..,
+                            Node::Format(..) | Node::Prim(Couple | Join, _) | Node::Array { .. },
+                            Node::Prim(Dup, _),
+                        ] => true,
                         [.., Node::Push(val), Node::Push(_)] if *val != 1 => true,
                         [.., Node::Mod(Dip, args, _)]
                             if args.len() == 1

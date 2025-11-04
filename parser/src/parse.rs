@@ -12,10 +12,10 @@ use std::{
 use ecow::EcoString;
 
 use crate::{
-    ast::*,
-    lex::{AsciiToken::*, Token::*, *},
     BindingCounts, Complex, Diagnostic, DiagnosticKind, Ident, Inputs, NumComponent, Primitive,
     Signature,
+    ast::*,
+    lex::{AsciiToken::*, Token::*, *},
 };
 
 /// An error that occurred while parsing
@@ -1011,11 +1011,7 @@ impl Parser<'_> {
 
             words.push(word);
         }
-        if words.is_empty() {
-            None
-        } else {
-            Some(words)
-        }
+        if words.is_empty() { None } else { Some(words) }
     }
     fn word(&mut self) -> Option<Sp<Word>> {
         self.comment()
@@ -1618,11 +1614,7 @@ impl Parser<'_> {
         }
         let end = self.expect_close(
             if is_array {
-                if boxes {
-                    CloseCurly
-                } else {
-                    CloseBracket
-                }
+                if boxes { CloseCurly } else { CloseBracket }
             } else {
                 CloseParen
             }

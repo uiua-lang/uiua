@@ -12,11 +12,11 @@ use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    algorithm::{pervade::*, ErrorContext, FillContext},
+    Boxed, Complex, Shape, Uiua, UiuaResult,
+    algorithm::{ErrorContext, FillContext, pervade::*},
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
-    Boxed, Complex, Shape, Uiua, UiuaResult,
 };
 
 /// A generic array value
@@ -874,7 +874,7 @@ impl Value {
                 return Err(env.error(format!(
                     "{requirement}, but it is {}",
                     value.type_name_plural()
-                )))
+                )));
             }
         })
     }
@@ -934,7 +934,7 @@ impl Value {
                 Some(bytes.data[0] as usize)
             }
             value => {
-                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
+                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())));
             }
         })
     }
@@ -977,7 +977,7 @@ impl Value {
                 bytes.data[0] as isize
             }
             value => {
-                return Err(ctx.error(format!("{requirement}, but it is {}", value.type_name())))
+                return Err(ctx.error(format!("{requirement}, but it is {}", value.type_name())));
             }
         })
     }
@@ -1010,7 +1010,7 @@ impl Value {
                 bytes.data[0] as f64
             }
             value => {
-                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
+                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())));
             }
         })
     }
@@ -1159,7 +1159,7 @@ impl Value {
                 return Err(ctx.error(format!(
                     "{requirement}, but it is {}",
                     value.type_name_plural()
-                )))
+                )));
             }
         })
     }
@@ -1221,7 +1221,7 @@ impl Value {
                 return Err(env.error(format!(
                     "{requirement}, but its type is {}",
                     value.type_name()
-                )))
+                )));
             }
         })
     }
@@ -1331,7 +1331,7 @@ impl Value {
                 return Err(env.error(format!(
                     "{requirement}, but its type is {}",
                     value.type_name()
-                )))
+                )));
             }
         })
     }
@@ -1403,19 +1403,11 @@ impl Value {
     }
     /// Remove a single layer of boxing if the condition is met
     pub fn unboxed_if(self, unbox: bool) -> Self {
-        if unbox {
-            self.unboxed()
-        } else {
-            self
-        }
+        if unbox { self.unboxed() } else { self }
     }
     /// Box the value if the condition is met
     pub fn boxed_if(self, do_box: bool) -> Self {
-        if do_box {
-            Boxed(self).into()
-        } else {
-            self
-        }
+        if do_box { Boxed(self).into() } else { self }
     }
     /// Turn the value into a scalar box if it is not one already
     pub fn box_if_not(&mut self) {

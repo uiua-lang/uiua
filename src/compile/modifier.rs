@@ -276,7 +276,7 @@ impl Compiler {
                                 Primitive::Obverse.format(),
                                 funcs.len()
                             ),
-                        ))
+                        ));
                     }
                 };
                 let set_inverses = SetInverses {
@@ -453,7 +453,7 @@ impl Compiler {
         let prim = match modified.modifier.value {
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {
-                return self.modifier_ref(r, modified.modifier.span, modified.operands)
+                return self.modifier_ref(r, modified.modifier.span, modified.operands);
             }
             Modifier::Macro(mac) => {
                 return self.inline_macro(mac, modified.modifier.span, modified.operands);
@@ -741,9 +741,11 @@ impl Compiler {
                             ),
                             SubSide::Right => Node::Mod(
                                 Dip,
-                                eco_vec![Node::ImplPrim(ImplPrimitive::Over, sub_span)
-                                    .sig_node()
-                                    .unwrap()],
+                                eco_vec![
+                                    Node::ImplPrim(ImplPrimitive::Over, sub_span)
+                                        .sig_node()
+                                        .unwrap()
+                                ],
                                 sub_span,
                             ),
                         };
@@ -1568,7 +1570,7 @@ impl Compiler {
                                 rank {} array rather than a string",
                                 chars.rank()
                             ),
-                        ))
+                        ));
                     }
                     Node::Push(value) => {
                         return Err(self.error(
@@ -1578,7 +1580,7 @@ impl Compiler {
                                 {} array rather than a string",
                                 value.type_name()
                             ),
-                        ))
+                        ));
                     }
                     _ => {
                         return Err(self.error(
@@ -2327,10 +2329,10 @@ impl Compiler {
         span: &CodeSpan,
     ) -> bool {
         use {
-            ga::GaOp::{self, *},
             ImplPrimitive::*,
             Node::*,
             Primitive::*,
+            ga::GaOp::{self, *},
         };
         let op = |op: GaOp, span: usize| {
             let metrics = metrics.unwrap_or_default();

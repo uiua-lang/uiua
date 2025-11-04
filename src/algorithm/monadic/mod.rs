@@ -16,21 +16,21 @@ use std::{
     time::Duration,
 };
 
-use ecow::{eco_vec, EcoVec};
+use ecow::{EcoVec, eco_vec};
 use rayon::prelude::*;
 use time::{Date, Month, OffsetDateTime, Time};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
+    Boxed, Complex, Primitive, Shape, Uiua, UiuaResult, WILDCARD_NAN,
     array::*,
-    cowslice::{cowslice, CowSlice},
-    grid_fmt::{format_char_inner_repr, GridFmt},
+    cowslice::{CowSlice, cowslice},
+    grid_fmt::{GridFmt, format_char_inner_repr},
     val_as_arr,
     value::Value,
-    Boxed, Complex, Primitive, Shape, Uiua, UiuaResult, WILDCARD_NAN,
 };
 
-use super::{validate_size, ArrayCmpSlice, FillContext};
+use super::{ArrayCmpSlice, FillContext, validate_size};
 
 impl Value {
     /// Make the value 1-dimensional
@@ -573,7 +573,7 @@ impl Value {
                     return Err(env.error(format!(
                         "Cannot unparse {} array in base {base}",
                         val.type_name()
-                    )))
+                    )));
                 }
             }
         } else {
@@ -2447,11 +2447,7 @@ fn f64_repr(n: f64) -> String {
     } else {
         abs.to_string()
     };
-    if n < 0.0 {
-        format!("¯{pos}")
-    } else {
-        pos
-    }
+    if n < 0.0 { format!("¯{pos}") } else { pos }
 }
 
 impl Value {
@@ -2603,7 +2599,7 @@ impl Value {
             Value::Num(arr) => arr.clone(),
             Value::Byte(arr) => arr.convert_ref(),
             value => {
-                return Err(env.error(format!("Cannot decode datetime from {}", value.type_name())))
+                return Err(env.error(format!("Cannot decode datetime from {}", value.type_name())));
             }
         };
         let convert = |chunk: &[f64]| -> UiuaResult<f64> {

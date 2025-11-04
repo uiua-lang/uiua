@@ -148,7 +148,7 @@ pub fn recur(is_leaf: SigNode, children: SigNode, combine: SigNode, env: &mut Ui
                         a length of 1 but it is {} {}",
                         value.shape,
                         value.type_name_plural()
-                    )))
+                    )));
                 }
             };
             if this_is_leaf {

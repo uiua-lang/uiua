@@ -3,10 +3,10 @@
 use std::mem::size_of;
 
 use crate::{
-    algorithm::{fixed_rows, get_ops, pervade::pervade_dim, FixedRowsData},
+    Ops, Primitive, Shape, SigNode, Signature, Uiua, UiuaResult,
+    algorithm::{FixedRowsData, fixed_rows, get_ops, pervade::pervade_dim},
     array::Array,
     value::Value,
-    Ops, Primitive, Shape, SigNode, Signature, Uiua, UiuaResult,
 };
 
 use super::{multi_output, validate_size_impl};
@@ -132,7 +132,7 @@ fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
                 natural numbers or infinity, \
                 but it is {}",
                 val.type_name_plural()
-            )))
+            )));
         }
     })
 }

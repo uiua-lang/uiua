@@ -6,10 +6,10 @@ use comrak::{
 };
 use leptos::*;
 use leptos_router::*;
-use uiua::{Inputs, Primitive, Token, EXAMPLE_UA};
-use uiua_editor::{backend::fetch, lang, replace_lang_name, utils::ChallengeDef, Editor};
+use uiua::{EXAMPLE_UA, Inputs, Primitive, Token};
+use uiua_editor::{Editor, backend::fetch, lang, replace_lang_name, utils::ChallengeDef};
 
-use crate::{examples::LOGO, Hd, Hd3, NotFound, Prim, ScrollToHash};
+use crate::{Hd, Hd3, NotFound, Prim, ScrollToHash, examples::LOGO};
 
 #[component]
 #[allow(unused_braces)]

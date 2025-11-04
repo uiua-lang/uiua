@@ -5,15 +5,15 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use ecow::{eco_vec, EcoVec};
+use ecow::{EcoVec, eco_vec};
 
 use crate::{
+    Primitive, Shape, Uiua, UiuaResult,
     algorithm::{max_shape, validate_size},
     array::*,
     cowslice::cowslice,
     fill::FillValue,
     value::Value,
-    Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{ArrayCmpSlice, FillContext};

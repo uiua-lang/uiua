@@ -14,17 +14,23 @@ use std::{
     fmt, fs,
     iter::{once, repeat_n},
     mem::{replace, swap, take},
-    panic::{catch_unwind, AssertUnwindSafe},
+    panic::{AssertUnwindSafe, catch_unwind},
     path::{Path, PathBuf},
     slice,
     sync::Arc,
 };
 
-use ecow::{eco_vec, EcoString, EcoVec};
+use ecow::{EcoString, EcoVec, eco_vec};
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeSpan,
+    CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
+    ExactDoubleIterator, Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc,
+    IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass, Primitive, Purity, RunMode,
+    SUBSCRIPT_DIGITS, SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript,
+    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::ga::Spec,
     ast::*,
     check::nodes_sig,
@@ -35,12 +41,6 @@ use crate::{
         flip_unsplit_items, flip_unsplit_lines, ident_modifier_args, max_placeholder, parse,
         split_items, split_words,
     },
-    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, CustomInverse,
-    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, ExactDoubleIterator, Function,
-    FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Node,
-    NumericSubscript, PrimClass, Primitive, Purity, RunMode, SemanticComment, SigNode, Signature,
-    Sp, Span, SubSide, Subscript, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
-    CONSTANTS, EXAMPLE_UA, SUBSCRIPT_DIGITS, VERSION,
 };
 pub(crate) use modifier::*;
 pub use pre_eval::PreEvalMode;
@@ -1411,7 +1411,7 @@ impl Compiler {
                         return Err(self.error(
                             word.span.clone(),
                             format!("Cannot infer array signature: {e}"),
-                        ))
+                        ));
                     }
                 };
                 // Diagnostic for array of characters
@@ -1747,25 +1747,25 @@ impl Compiler {
                 return Err(self.error(
                     first.module.span.clone(),
                     format!("`{}` is a function, not a module", first.module.value),
-                ))
+                ));
             }
             BindingKind::Const(_) => {
                 return Err(self.error(
                     first.module.span.clone(),
                     format!("`{}` is a constant, not a module", first.module.value),
-                ))
+                ));
             }
             BindingKind::IndexMacro(_) => {
                 return Err(self.error(
                     first.module.span.clone(),
                     format!("`{}` is an index macro, not a module", first.module.value),
-                ))
+                ));
             }
             BindingKind::CodeMacro(_) => {
                 return Err(self.error(
                     first.module.span.clone(),
                     format!("`{}` is a code macro, not a module", first.module.value),
-                ))
+                ));
             }
             BindingKind::Error => return Ok(None),
         };
@@ -1786,25 +1786,25 @@ impl Compiler {
                     return Err(self.error(
                         comp.module.span.clone(),
                         format!("`{}` is a function, not a module", comp.module.value),
-                    ))
+                    ));
                 }
                 BindingKind::Const(_) => {
                     return Err(self.error(
                         comp.module.span.clone(),
                         format!("`{}` is a constant, not a module", comp.module.value),
-                    ))
+                    ));
                 }
                 BindingKind::IndexMacro(_) => {
                     return Err(self.error(
                         comp.module.span.clone(),
                         format!("`{}` is an index macro, not a module", comp.module.value),
-                    ))
+                    ));
                 }
                 BindingKind::CodeMacro(_) => {
                     return Err(self.error(
                         comp.module.span.clone(),
                         format!("`{}` is a code macro, not a module", comp.module.value),
-                    ))
+                    ));
                 }
                 BindingKind::Error => return Ok(None),
             };

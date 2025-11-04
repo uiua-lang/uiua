@@ -4,7 +4,7 @@ use std::fmt;
 
 use serde::*;
 
-use crate::{algorithm::ga, Primitive, Purity, SubSide, Subscript, SysOp, SUBSCRIPT_DIGITS};
+use crate::{Primitive, Purity, SUBSCRIPT_DIGITS, SubSide, Subscript, SysOp, algorithm::ga};
 
 macro_rules! impl_primitive {
     ($(

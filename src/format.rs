@@ -12,16 +12,16 @@ use std::{
     time::Duration,
 };
 
-use paste::paste;
 use InlineMacro;
+use paste::paste;
 
 use crate::{
+    CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
+    SUBSCRIPT_DIGITS, SafeSys, Signature, Sp, Subscript, SysBackend, Uiua, UiuaErrorKind,
+    UiuaResult, Value,
     ast::*,
     is_ident_char,
     parse::{flip_unsplit_items, flip_unsplit_lines, parse, split_words, trim_spaces},
-    CodeSpan, Compiler, Handle, Ident, InputSrc, Inputs, Loc, PreEvalMode, Primitive, RunMode,
-    SafeSys, Signature, Sp, Subscript, SysBackend, Uiua, UiuaErrorKind, UiuaResult, Value,
-    SUBSCRIPT_DIGITS,
 };
 
 trait ConfigValue: Sized {

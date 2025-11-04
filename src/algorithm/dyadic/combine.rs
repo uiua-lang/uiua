@@ -6,13 +6,13 @@ use ecow::EcoVec;
 use uiua_parser::SubSide;
 
 use crate::{
+    Array, ArrayValue, Boxed, Complex, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
     algorithm::{
-        max_shape, validate_size_impl, validate_size_of, ArrayCmpSlice, FillContext, Indexable,
+        ArrayCmpSlice, FillContext, Indexable, max_shape, validate_size_impl, validate_size_of,
     },
     cowslice::cowslice,
     fill::FillValue,
-    val_as_arr, Array, ArrayValue, Boxed, Complex, FormatShape, Primitive, Shape, Uiua, UiuaResult,
-    Value,
+    val_as_arr,
 };
 
 fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
@@ -1076,7 +1076,7 @@ impl Value {
                         Value::Complex(_) => has_complex = true,
                         Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
                         Value::Char(_) => {
-                            return Err(ctx.error("Cannot combine number and character arrays"))
+                            return Err(ctx.error("Cannot combine number and character arrays"));
                         }
                         _ => {}
                     }
@@ -1104,7 +1104,7 @@ impl Value {
                         Value::Complex(_) => has_complex = true,
                         Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
                         Value::Char(_) => {
-                            return Err(ctx.error("Cannot combine number and character arrays"))
+                            return Err(ctx.error("Cannot combine number and character arrays"));
                         }
                         _ => {}
                     }
@@ -1130,7 +1130,7 @@ impl Value {
                     match b {
                         Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
                         Value::Char(_) => {
-                            return Err(ctx.error("Cannot combine complex and character arrays"))
+                            return Err(ctx.error("Cannot combine complex and character arrays"));
                         }
                         _ => {}
                     }
@@ -1152,10 +1152,10 @@ impl Value {
                     match b {
                         Value::Box(arr) => box_rank = box_rank.max(Some(arr.rank())),
                         Value::Num(_) | Value::Byte(_) => {
-                            return Err(ctx.error("Cannot combine character and number arrays"))
+                            return Err(ctx.error("Cannot combine character and number arrays"));
                         }
                         Value::Complex(_) => {
-                            return Err(ctx.error("Cannot combine character and complex arrays"))
+                            return Err(ctx.error("Cannot combine character and complex arrays"));
                         }
                         _ => {}
                     }
@@ -1188,7 +1188,7 @@ impl Value {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
                             arr.shape
-                        ))))
+                        ))));
                     }
                 },
                 Value::Byte(arr) => match ctx.scalar_fill::<u8>() {
@@ -1197,7 +1197,7 @@ impl Value {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
                             arr.shape
-                        ))))
+                        ))));
                     }
                 },
                 Value::Complex(arr) => match ctx.scalar_fill::<Complex>() {
@@ -1206,7 +1206,7 @@ impl Value {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
                             arr.shape
-                        ))))
+                        ))));
                     }
                 },
                 Value::Char(arr) => match ctx.scalar_fill::<char>() {
@@ -1215,7 +1215,7 @@ impl Value {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
                             arr.shape
-                        ))))
+                        ))));
                     }
                 },
                 Value::Box(arr) => match ctx.scalar_fill::<Boxed>() {
@@ -1224,7 +1224,7 @@ impl Value {
                         return Err(C::fill_error(ctx.error(format!(
                             "Cannot combine arrays with shapes {} and {max_shape}{e}",
                             arr.shape
-                        ))))
+                        ))));
                     }
                 },
             }

@@ -3,8 +3,8 @@ use std::{array, cmp::Ordering, mem::take};
 use uiua_parser::PrimClass;
 
 use crate::{
-    cowslice::CowSlice, Array, Assembly, Boxed, Complex, ImplPrimitive, Node, PersistentMeta,
-    Primitive, Shape, SigNode, Uiua, Value,
+    Array, Assembly, Boxed, Complex, ImplPrimitive, Node, PersistentMeta, Primitive, Shape,
+    SigNode, Uiua, Value, cowslice::CowSlice,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

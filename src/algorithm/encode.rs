@@ -2,12 +2,12 @@
 
 use std::str;
 
-use ecow::{eco_vec, EcoVec};
-use enum_iterator::{all, Sequence};
+use ecow::{EcoVec, eco_vec};
+use enum_iterator::{Sequence, all};
 
 use crate::{
-    algorithm::validate_size, cowslice::CowSlice, fill::FillValue, Array, ArrayFlags, ArrayMeta,
-    Boxed, Complex, Shape, SubSide, Uiua, UiuaResult, Value,
+    Array, ArrayFlags, ArrayMeta, Boxed, Complex, Shape, SubSide, Uiua, UiuaResult, Value,
+    algorithm::validate_size, cowslice::CowSlice, fill::FillValue,
 };
 
 use super::FillContext;
@@ -416,7 +416,7 @@ impl Value {
                 return Err(env.error(format!(
                     "Cannot encode {} as bytes",
                     value.type_name_plural()
-                )))
+                )));
             }
         };
         if elem_size != 1 {
@@ -447,14 +447,14 @@ impl Value {
             Value::Byte(arr) if format == "u8" => return Ok(arr.into()),
             Value::Byte(arr) => arr,
             Value::Num(arr) if format == "u8" => {
-                return Ok(arr.convert_ref_with(|n| n as u8).into())
+                return Ok(arr.convert_ref_with(|n| n as u8).into());
             }
             Value::Num(arr) => arr.convert_ref_with(|n| n as u8),
             value => {
                 return Err(env.error(format!(
                     "Cannot decode {} as bytes",
                     value.type_name_plural()
-                )))
+                )));
             }
         };
         let mut new_shape = bytes.shape;
@@ -851,8 +851,8 @@ impl Value {
     #[cfg(feature = "compress")]
     pub(crate) fn compress(&self, algo: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
         use flate2::{
-            write::{GzEncoder, ZlibEncoder},
             Compression,
+            write::{GzEncoder, ZlibEncoder},
         };
         use std::io::Write;
         let algo = algo.as_string(env, "Compression algorithm must be a string")?;
@@ -875,7 +875,7 @@ impl Value {
             algo => {
                 return Err(env.error(format!(
                     "Unknown/unsupported compression algorithm {algo:?}"
-                )))
+                )));
             }
         };
         Ok(compressed.into())
@@ -935,7 +935,7 @@ impl Value {
             algo => {
                 return Err(env.error(format!(
                     "Unknown/unsupported compression algorithm {algo:?}"
-                )))
+                )));
             }
         };
         Ok(compressed.into())

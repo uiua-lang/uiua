@@ -1,8 +1,8 @@
 use std::{convert::Infallible, error::Error, fmt, io, mem::take, path::PathBuf, sync::Arc};
 
 use crate::{
-    function::FunctionId, parse::ParseError, value::Value, CodeSpan, DiagnosticKind, Ident, Inputs,
-    Report, ReportFragment, ReportKind, Sp, Span,
+    CodeSpan, DiagnosticKind, Ident, Inputs, Report, ReportFragment, ReportKind, Sp, Span,
+    function::FunctionId, parse::ParseError, value::Value,
 };
 
 /// An error produced when running/compiling/formatting a Uiua program
@@ -316,7 +316,7 @@ impl UiuaError {
                 return Report {
                     fragments: vec![ReportFragment::Plain(self.to_string())],
                     color: true,
-                }
+                };
             }
         };
         report = report_trace(report, &self.meta.trace);

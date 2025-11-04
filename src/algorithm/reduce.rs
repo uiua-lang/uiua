@@ -643,7 +643,7 @@ fn generic_reduce_inner(
     for i in 0..n - 2 {
         repeated.push(process(env.pop(i + 1)?));
     }
-    let mut xs = env.pop(n - 1)?;
+    let xs = env.pop(n - 1)?;
     let value_fill = env.value_fill();
     if depth == 0 && value_fill.is_none() {
         if xs.row_count() == 0 {
@@ -655,14 +655,6 @@ fn generic_reduce_inner(
             });
         }
         if xs.row_count() == 1 {
-            let row_count = if xs.rank() == 0 {
-                None
-            } else {
-                Some(xs.shape.remove(0))
-            };
-            if let Some(row_count) = row_count {
-                xs.shape.prepend(row_count);
-            }
             return Ok(reduce_singleton(&f.node, xs, process));
         }
     }

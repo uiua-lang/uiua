@@ -2824,6 +2824,7 @@ fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
             Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
                 (branch.value.word_lines()).for_each(|line| recurse_words(line, f))
             }),
+            Word::Subscripted(sub) => recurse_words(slice::from_ref(&sub.word), f),
             _ => {}
         }
     }

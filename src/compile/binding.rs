@@ -721,6 +721,13 @@ impl Compiler {
                         self.analyze_macro_body(mac_name, &m.operands, code_macro, recursive, loc)
                     }
                 }
+                Word::Subscripted(sub) => self.analyze_macro_body(
+                    mac_name,
+                    slice::from_ref(&sub.word),
+                    code_macro,
+                    recursive,
+                    loc,
+                ),
                 _ => {}
             }
             if let Some((nm, name_span, local)) = name_local {

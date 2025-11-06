@@ -116,7 +116,7 @@ F "ababab|abababab"
 
 ## Format String Tricks
 
-As discussed [in the main tutorial](/tutorial/Modifiers and Functions#format-strings), format strings allow you to create strings with interpolated values.
+As discussed [in the main tutorial](</tutorial/Modifiers and Functions#format-strings>), format strings allow you to create strings with interpolated values.
 
 ```uiua
 $"_ + _ = _" 1 2 3

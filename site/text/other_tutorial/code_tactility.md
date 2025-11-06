@@ -10,7 +10,7 @@ This section covers a few tools that Uiua provides for making code easier to wor
 
 Uiua already prints out any leftover values when the program ends. This is usually enough for smaller programs, but sometimes, you need to be able to see the current arguments somewhere in the middle of the code.
 
-[args]() was mentioned near the [beginning](/tutorial/Basic Data Manipulation and Formatting#args) of this tutorial. It prints out arguments without removing them. Subscripting [args]() prints out only that many values.
+[args]() was mentioned near the [beginning](</tutorial/Basic Data Manipulation and Formatting#args>) of this tutorial. It prints out arguments without removing them. Subscripting [args]() prints out only that many values.
 
 ```uiua
 5 ? 1 [2 3] "uiua"

@@ -110,8 +110,14 @@ impl Value {
                     }
                     Ordering::Greater => {
                         if extend {
-                            for _ in 0..rank - shape.len() {
-                                shape.insert(depth, 1);
+                            if depth > 0 {
+                                for _ in 0..=rank - shape.len() {
+                                    shape.insert(depth, 1);
+                                }
+                            } else {
+                                for _ in 0..rank - shape.len() {
+                                    shape.insert(depth, 1);
+                                }
                             }
                         } else {
                             shape.insert(depth, 1);

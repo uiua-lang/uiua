@@ -195,7 +195,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &Stash(1, Shape, UndoShape),
     &(
         Len,
-        (CopyUnd(1), Shape, CopyUnd(1), First),
+        (CopyUnd(1), Dup, Shape, PushUnd(1), Len),
         (PopUnd(1), UndoFirst, PopUnd(1), Flip, Reshape),
     ),
     &(

@@ -22,6 +22,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`&fetch`](https://uiua.org/docs/&fetch) function to easily fetch data from a url
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Add experimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), wich automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
+- Add mathematical constants `φ` (golden ratio) and `γ` (Euler-Mascheroni)
+- Add `PlanetSymbols` and `ZodiacSymbols` constants, symbolic versions of `Planets` and `Zodiac`
+- Add `Elements` and `ElementSymbols` constants listing the chemical elements
 - Change experimental subscripted [`transpose ⍉`](https://uiua.org/docs/transpose) to transpose the first N axes
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)
@@ -510,7 +513,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.13.0).
 - `uiua repl` now has a `-s/--stack` flag to disable clearing the stack after each line
   - Clearing the stack is now the default
   - The `-c/--clear` has been removed
-- After programs finish executing, the terminal raw mode will be automatically disabled if it was left on. 
+- After programs finish executing, the terminal raw mode will be automatically disabled if it was left on.
 ### Website
 - Add [Ranges](https://uiua.org/tutorial/ranges) tutorial
 - Update the [Inverses](https://uiua.org/tutorial/inverses) tutorial with information about [`anti ⌝`](https://uiua.org/docs/anti) and [`obverse ⌅`](https://uiua.org/docs/obverse)
@@ -1222,8 +1225,8 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ### Language
 - Add the `reach ⟜` modifier, which removes the second value from the stack and calls its function.
 - Change how short spellings of [`dip ⊙`](https://uiua.org/docs/dip), [`gap ⋅`](https://uiua.org/docs/gap), and [`identity ∘`](https://uiua.org/docs/identity) work
-  - Instead of allowing them to be spelled with 2 characters, they can now be spelled with 1 character as long as there are at least 2 in the sequence. 
-  - If present, `'i'` may only come last. 
+  - Instead of allowing them to be spelled with 2 characters, they can now be spelled with 1 character as long as there are at least 2 in the sequence.
+  - If present, `'i'` may only come last.
   - `reach ⟜` is included.
 - Add 2-letter spellings of `deep ≊`, `abyss ≃`, and `seabed ∸` to make them consistent with `rock ⋄`.
 ### Interpreter
@@ -1451,7 +1454,7 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
 ## 2023-09-29
 ### Language
 - Make binding names case-sensitive
-- Add `^` syntax to terminate modifier parsing. 
+- Add `^` syntax to terminate modifier parsing.
 - Add [`&runi`](https://uiua.org/docs/&runi) and [`&runc`](https://uiua.org/docs/&runc) functions for running commands
 - Add [`&cd`](https://uiua.org/docs/&cd) function for changing the current working directory
 - Add shadowable [constants](https://uiua.org/docs/constants) like `e` and `os`

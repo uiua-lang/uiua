@@ -243,6 +243,10 @@ pub enum ConstClass {
 constant!(
     /// Euler's constant
     ("e", Math, std::f64::consts::E),
+    /// The golden ratio phi
+    ("φ", Math, 1.618_033_988_749_895_f64),
+    /// The Euler-Mascheroni constant
+    ("γ", Math, 0.577_215_664_901_532_9_f64),
     /// The real complex unit
     ("r", Math, crate::Complex::ONE),
     /// The imaginary unit
@@ -379,7 +383,13 @@ constant!(
         Fun,
         ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"].as_slice()
     ),
-    /// The symbols of the zodiac
+    /// Symbols for each of the planets
+    (
+        "PlanetSymbols",
+        Fun,
+        ['☿', '♀', '🜨', '♂', '♃', '♄', '⛢', '♆']
+    ),
+    /// The signs of the zodiac
     (
         "Zodiac",
         Fun,
@@ -398,6 +408,12 @@ constant!(
             "Pisces"
         ]
         .as_slice()
+    ),
+    /// The symbols of the zodiac
+    (
+        "ZodiacSymbols",
+        Fun,
+        ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓']
     ),
     /// The suits of a standard deck of playing cards
     ("Suits", Fun, ['♣', '♦', '♥', '♠']),
@@ -424,6 +440,36 @@ constant!(
     ("People", Fun, "👨👩👦👧"),
     /// Emoji hair components
     ("Hair", Fun, "🦰🦱🦲🦳"),
+    /// Names of each of the chemical elements
+    (
+        "Elements",
+        Fun,
+        [
+            "Hydrogen", "Helium", "Lithium", "Beryllium", "Boron", "Carbon", "Nitrogen", "Oxygen", "Fluorine", "Neon", "Sodium", "Magnesium", "Aluminium",
+            "Silicon", "Phosphorus", "Sulfur", "Chlorine", "Argon", "Potassium", "Calcium", "Scandium", "Titanium", "Vanadium", "Chromium", "Manganese",
+            "Iron", "Cobalt", "Nickel", "Copper", "Zinc", "Gallium", "Germanium", "Arsenic", "Selenium", "Bromine", "Krypton", "Rubidium", "Strontium",
+            "Yttrium", "Zirconium", "Niobium", "Molybdenum", "Technetium", "Ruthenium", "Rhodium", "Palladium", "Silver", "Cadmium", "Indium", "Tin",
+            "Antimony", "Tellurium", "Iodine", "Xenon", "Cesium", "Barium", "Lanthanum", "Cerium", "Praseodymium", "Neodymium", "Promethium", "Samarium",
+            "Europium", "Gadolinium", "Terbium", "Dysprosium", "Holmium", "Erbium", "Thulium", "Ytterbium", "Lutetium", "Hafnium", "Tantalum", "Tungsten",
+            "Rhenium", "Osmium", "Iridium", "Platinum", "Gold", "Mercury", "Thallium", "Lead", "Bismuth", "Polonium", "Astatine", "Radon", "Francium",
+            "Radium", "Actinium", "Thorium", "Protactinium", "Uranium", "Neptunium", "Plutonium", "Americium", "Curium", "Berkelium", "Californium",
+            "Einsteinium", "Fermium", "Mendelevium", "Nobelium", "Lawrencium", "Rutherfordium", "Dubnium", "Seaborgium", "Bohrium", "Hassium", "Meitnerium",
+            "Darmstadtium", "Roentgenium", "Copernicium", "Nihonium", "Flerovium", "Moscovium", "Livermorium", "Tennessine", "Oganesson"
+        ].as_slice()
+    ),
+    /// Symbols for each of the chemical elements
+    (
+        "ElementSymbols",
+        Fun,
+        [
+            "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V",
+            "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",
+            "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho",
+            "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac",
+            "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg",
+            "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og"
+        ].as_slice()
+    ),
     /// The Uiua logo
     (#[cfg(feature = "image")] "Logo", Media, media::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), false, true).unwrap()),
     /// Ethically sourced Lena picture

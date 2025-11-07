@@ -616,6 +616,13 @@ fn text_code_blocks() {
         }
     }
 
+    #[derive(Debug)]
+    enum Expect {
+        Success,
+        Error,
+        Diagnostic,
+    }
+
     for path in file_paths {
         eprintln!("Testing code blocks in {:?}", path.display());
         let text = std::fs::read_to_string(path).unwrap();
@@ -626,7 +633,7 @@ fn text_code_blocks() {
             .replace("<code block delim>", "```");
         let root = parse_document(&arena, &text, &ComrakOptions::default());
 
-        fn text_code_blocks<'a>(node: &'a AstNode<'a>) -> Vec<(String, bool)> {
+        fn text_code_blocks<'a>(node: &'a AstNode<'a>) -> Vec<(String, Expect)> {
             let mut blocks = Vec::new();
             for child in node.children() {
                 match &child.data.borrow().value {
@@ -634,14 +641,19 @@ fn text_code_blocks() {
                         if block.info.contains("not uiua") {
                             continue;
                         }
-                        let should_fail = block.info.contains("should fail")
-                            || block.info.contains("should diag");
+                        let expect = if block.info.contains("should fail") {
+                            Expect::Error
+                        } else if block.info.contains("should diag") {
+                            Expect::Diagnostic
+                        } else {
+                            Expect::Success
+                        };
                         let literal = if block.literal.trim() == "LOGO" {
                             LOGO
                         } else {
                             block.literal.as_str()
                         };
-                        blocks.push((literal.into(), should_fail))
+                        blocks.push((literal.into(), expect))
                     }
                     _ => blocks.extend(text_code_blocks(child)),
                 }
@@ -649,7 +661,7 @@ fn text_code_blocks() {
             blocks
         }
 
-        for (block, should_fail) in text_code_blocks(root) {
+        for (block, expect) in text_code_blocks(root) {
             if block.contains("~ \"git:") {
                 continue;
             }
@@ -659,20 +671,24 @@ fn text_code_blocks() {
             let res = comp
                 .load_str(&block)
                 .and_then(|comp| env.run_compiler(comp));
-            let failure_report = match res {
-                Ok(_) => comp
-                    .take_diagnostics()
-                    .into_iter()
-                    .next()
-                    .map(|diag| diag.report()),
-                Err(e) => Some(e.report()),
-            };
-            if let Some(report) = failure_report {
-                if !should_fail {
-                    panic!("\nBlock failed:\n{block}\n{report}")
+            let diags = comp.take_diagnostics();
+            match (res, expect) {
+                (Ok(_), Expect::Success) if diags.is_empty() => {}
+                (Ok(_), Expect::Diagnostic) if !diags.is_empty() => {}
+                (Err(_), Expect::Error) => {}
+                (res, exp) => {
+                    let (report, found) = (res.err().map(|e| (Some(e.report()), Expect::Error)))
+                        .or_else(|| {
+                            (diags.into_iter().next())
+                                .map(|d| (Some(d.report()), Expect::Diagnostic))
+                        })
+                        .unwrap_or((None, Expect::Success));
+                    if let Some(report) = report {
+                        panic!("\nExpected {exp:?}, but got {found:?}\n{block}\n{report}")
+                    } else {
+                        panic!("\nExpected {exp:?}, but got {found:?}\n{block}")
+                    }
                 }
-            } else if should_fail {
-                panic!("\nBlock should have failed:\n{block}")
             }
         }
     }

@@ -175,14 +175,14 @@ If this is *not* the case, the declared signature will be *made* to be correct b
 
 For example, even though this function has signature `|2.1`, the declared signature of `|2.2` causes an extra debug output to be returned. This debug output is a boxed string. This is done to ensure that the function does in fact have 2 outputs.
 
-```uiua should fail
+```uiua should diag
 F ← |2.2 ⊟+1
 F 1 4 5
 ```
 
 Conversely, if the function needs to have more *arguments*, such as here where we declare it to have signature `|4.2`, some extra arguments will be consumed. In this case, it is the `6` that is removed. We can see that this does in fact make the function turn 4 values into 2.
 
-```uiua should fail
+```uiua should diag
 F ← |4.2 ⊟+1
 F 1 4 5 6
 ```

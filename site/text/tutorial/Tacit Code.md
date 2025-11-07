@@ -92,7 +92,7 @@ And there we have it, the Quadratic Formula! One important quality this code has
 
 If you like, you can pull out the discriminant into its own function to break the code up a little.
 
-```uiua
+```uiua kala pleased
 Disc ↚ -⊃(×4×⊙⋅∘)⋅˙×
 Quad ← ÷⊃(×2|-⊃⋅∘(⊟⟜¯ √ℂ0 Disc))
 Quad 1 ¯3 2

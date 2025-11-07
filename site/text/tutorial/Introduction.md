@@ -44,4 +44,4 @@ This tutorial is targeted at people who have at least a little bit of experience
 
 Click the link to the next section to get started!
 
-`kala default` By the way, this is Kala! She will appear from time to time in this tutorial to react to code samples. She is Uiua's official mascot!
+`kala default flip` By the way, this is Kala! She will appear from time to time in this tutorial to react to code samples. She is Uiua's official mascot!

@@ -185,7 +185,7 @@ The first pair of `()`s is not actually necessary, so let's remove them.
 
 Finally, we can combine the two parts with another [fork]().
 
-```uiua
+```uiua kala stars
 ×⊃(+⊙⋅⋅∘)(-⊃⋅⋅∘(×⋅⊙⋅∘)) 1 2 3 4
 ```
 
@@ -197,7 +197,7 @@ If you like, you can factor out the [gap]() in the second part.
 
 Alternatively, you can use a function pack.
 
-```uiua
+```uiua kala pleased
 ×⊃(+⊙⋅⋅∘|-⊃⋅⋅∘(×⋅⊙⋅∘)) 1 2 3 4
 ```
 

@@ -82,7 +82,7 @@ If a function returns multiple values, you can simply box them with `{}`s.
 
 ---
 
-Hooray! You've reached the end of the tutorial!
+Hooray! You've reached the end of the tutorial! `kala stars`
 
 To keep going with Uiua, you can check out:
 

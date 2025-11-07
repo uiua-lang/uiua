@@ -2308,7 +2308,7 @@ pub fn Editor<'a>(
                 on:change=files_selected
             />
         </div>
-        { kala.is_empty().then(||
+        { (!kala.is_empty()).then(||
             view!(<img src=format!("/assets/kala/{kala}.svg") class="editor-side-icon"/>)
         ) }
     </div> }

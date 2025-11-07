@@ -54,13 +54,18 @@ fn markdown_view_impl(text: &str, make_paragraph: bool) -> View {
         .replace("<code block delim>", "```")
         .replace("<code backtick>", "`` ` ``");
     let root = parse_document(&arena, &text, &options());
-    node_view(
-        root,
-        &mut State {
-            make_paragraph,
-            ..Default::default()
-        },
-    )
+    view!(<div style="overflow:hidden">
+    {
+        node_view(
+            root,
+            &mut State {
+                make_paragraph,
+                ..Default::default()
+            },
+        )
+    }
+    </div>)
+    .into_view()
 }
 
 #[cfg(test)]
@@ -223,8 +228,16 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 }
                 "\\" => return view!(<code>"\\"</code>).into_view(),
                 lit => {
-                    if let Some(kala) = lit.strip_prefix("kala ") {
-                        return view!(<img src=format!("/assets/kala/{kala}.svg") style="width:15em;float:left;margin-right:1em;transform: scaleX(-1)"/>).into_view();
+                    if let Some(mut kala) = lit.strip_prefix("kala ") {
+                        let mut flip = "float:right";
+                        if let Some(k) = kala.strip_suffix(" flip") {
+                            flip = "transform: scaleX(-1); float:left;";
+                            kala = k;
+                        }
+                        return view!(<img
+                            src=format!("/assets/kala/{kala}.svg")
+                            style=format!("width:15em;margin-right:1em;{flip}")
+                        />).into_view();
                     }
                     for (prefix, class) in [
                         ("monadic mod", "monadic-modifier"),

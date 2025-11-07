@@ -53,7 +53,7 @@ The [fix]() function turns an array into an array of a single row by prepending 
 
 With [fix](), we can rewrite the previous examples.
 
-```uiua
+```uiua kala arms
 ≡⊂ ¤1_2 3_4_5
 ```
 
@@ -133,7 +133,7 @@ One option is to simply chain [rows]() multiple times.
 
 This can get a bit unwieldy if an array has a lot of dimensions. You can instead use [numeric subscripts](</tutorial/More Argument Manipulation#subscripts>) with [rows]() to specify the rank of the arrays you want to work on.
 
-```uiua
+```uiua kala stars
 ≡₀□ °△ 2_3_4 # Scalars
 ≡₁□ °△ 2_3_4 # Vectors
 ≡₂□ °△ 2_3_4 # Matrices

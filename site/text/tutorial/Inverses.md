@@ -92,7 +92,7 @@ The [un](/docs/un) inverse of a function must always have the opposite signature
 
 This makes some things that *seem* like they have obvious inverses not actually work. For example, [un](/docs/un)[subtract](/docs/add) is *not* just [add](/docs/sub).
 
-```uiua should fail
+```uiua should fail kala confused
 °- 3 5
 ```
 

@@ -143,7 +143,7 @@ When doing a pervasive operation on two arrays, the shape of one array must be t
 
 Here, neither of the shapes `[2]` or `[3]` are prefixes of the other.
 
-```uiua should fail
+```uiua should fail kala confused
 + [1 2] [3 4 5]
 ```
 But here, the shape of the first array (`[2]`) is a prefix of the shape of the second array (`[2 3]`).
@@ -271,7 +271,7 @@ However, there is an escape hatch for when you really want jagged, nested, or mi
 
 The array below cannot be constructed normally because its rows have different [shape]()s.
 
-```uiua should fail
+```uiua should fail kala confused
 [1_2 3 [4 5 6] [7]]
 ```
 
@@ -311,7 +311,7 @@ Using `{}`s instead of `[]`s for array notation will automatically [box]() every
 
 This is very useful for making lists of strings.
 
-```uiua should fail
+```uiua should fail kala confused
 ["Uiua" "APL" "J" "BQN" "K" "Q"] # Fails
 ```
 ```uiua kala stars

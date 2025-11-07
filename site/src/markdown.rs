@@ -324,12 +324,11 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                     hlp = ["", text];
                     help = &hlp;
                 }
-                let should_fail = block.info.contains("should fail");
                 let kala = (block.info.split_whitespace())
                     .skip_while(|&w| w != "kala")
                     .nth(1)
                     .unwrap_or_default();
-                view!(<Editor example={block.literal.trim_end()} help=help should_fail=should_fail kala=kala/>).into_view()
+                view!(<Editor example={block.literal.trim_end()} help=help kala=kala/>).into_view()
             } else if block.info.starts_with("challenge") {
                 let mut lines = block.literal.lines().map(|s| s.to_string());
                 let prompt = markdown_view_impl(&lines.next().unwrap_or_default(), false);

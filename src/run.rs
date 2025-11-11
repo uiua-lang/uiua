@@ -1353,6 +1353,11 @@ impl Uiua {
         let height = self.require_height(n)?;
         Ok(self.rt.stack.split_off(height))
     }
+    /// Get a slice of the top `n` stack values
+    pub fn top_n(&self, n: usize) -> UiuaResult<&[Value]> {
+        let height = self.require_height(n)?;
+        Ok(&self.rt.stack[height..])
+    }
     /// Get a mutable slice of the top `n` stack values
     pub fn top_n_mut(&mut self, n: usize) -> UiuaResult<&mut [Value]> {
         let height = self.require_height(n)?;

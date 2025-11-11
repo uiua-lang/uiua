@@ -2208,9 +2208,8 @@ impl Compiler {
                     SubNOrSide::N(n) => match self.positive_subscript(n, Join, &span) {
                         0 => Node::new_push(Value::default()),
                         1 => Node::Prim(Identity, self.add_span(span)),
-                        n => {
-                            Node::from_iter(repeat_n(Node::Prim(Join, self.add_span(span)), n - 1))
-                        }
+                        2 => Node::Prim(Join, self.add_span(span)),
+                        n => Node::ImplPrim(ImplPrimitive::MultiJoin(n), self.add_span(span)),
                     },
                     SubNOrSide::Side(side) => {
                         Node::ImplPrim(ImplPrimitive::SidedJoin(side), self.add_span(span))

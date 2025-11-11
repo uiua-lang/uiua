@@ -62,6 +62,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::MaxRowCount(n) => *n,
                     ImplPrimitive::SidedEncodeBytes(_) | ImplPrimitive::DecodeBytes(_) => 2,
                     ImplPrimitive::Ga(op, _) => op.args(),
+                    ImplPrimitive::MultiJoin(n) => *n,
                     _ => return None
                 })
             }
@@ -249,6 +250,7 @@ impl_primitive!(
     (1, TransposeN(i32)),
     (2, MultiKeep(usize)),
     (2, SidedJoin(SubSide)),
+    ((1), MultiJoin(usize)),
     (1, Utf16),
     (1, Retropose),
     ([1], FixMatchRanks),
@@ -508,6 +510,10 @@ impl fmt::Display for ImplPrimitive {
                 fmt_subscript(f, n as i32)
             }
             &SidedJoin(side) => write!(f, "{Join}{side}"),
+            &MultiJoin(n) => {
+                write!(f, "{Join}")?;
+                fmt_subscript(f, n as i32)
+            }
             &DipN(n) => {
                 for _ in 0..n {
                     write!(f, "{Dip}")?;

@@ -1252,6 +1252,43 @@ impl ImplPrimitive {
                 let res = a.sided_join(b, side, env)?;
                 env.push(res);
             }
+            &ImplPrimitive::MultiJoin(n) => {
+                assert!(n >= 3, "multijoin must have at least 3");
+                let (mut min_rank, mut max_rank) = (usize::MAX, 0);
+                for val in env.top_n(n)? {
+                    min_rank = min_rank.min(val.rank());
+                    max_rank = max_rank.max(val.rank());
+                }
+                if max_rank == min_rank {
+                    for _ in 0..n - 1 {
+                        env.dyadic_oo_env(|a, b, env| a.join(b, true, env))?;
+                    }
+                } else {
+                    let mut vals = env.pop_n(n)?;
+                    'outer: while vals.len() > 2 {
+                        for i in 0..vals.len() - 1 {
+                            if vals[i].rank() == max_rank {
+                                let (b, a) = (vals.remove(i), vals.remove(i));
+                                let joined = a.join(b, true, env)?;
+                                vals.insert(i, joined);
+                                continue 'outer;
+                            }
+                        }
+                        let mut iter = vals.drain(vals.len() - 2..);
+                        let b = iter.next().unwrap();
+                        let a = iter.next().unwrap();
+                        drop(iter);
+                        vals.push(a.join(b, true, env)?);
+                    }
+                    if vals.len() == 2 {
+                        let [b, a] = vals.try_into().unwrap();
+                        let joined = a.join(b, true, env)?;
+                        env.push(joined);
+                    } else {
+                        env.push(vals.into_iter().next().unwrap());
+                    }
+                }
+            }
             ImplPrimitive::LayoutArgs => {
                 let args = env.pop(1)?;
                 let size = env.pop(2)?;

@@ -1,6 +1,6 @@
 # More Argument Manipulation
 
-[self](), [backward](), [on](), [by](), and [dip](), which were introduced in the [first tutorial](</tutorial/Basic Data Manipulation#Manipulating-Data-with-Modifiers>), can get you pretty far writing tacit code. However, there are some argument access patterns that require much more powerful control over which arguments go where.
+[self](), [backward](), [on](), [by](), and [dip](), which were introduced in the [first tutorial](</tutorial/Basic Data Manipulation and Formatting#Manipulating-Data-with-Modifiers>), can get you pretty far writing tacit code. However, there are some argument access patterns that require much more powerful control over which arguments go where.
 
 ## A Bunch of Arguments
 

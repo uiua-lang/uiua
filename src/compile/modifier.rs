@@ -328,6 +328,8 @@ impl Compiler {
                         if self.code_macros.contains_key(&local.index) {
                             return Ok(None);
                         }
+                    } else {
+                        return Ok(None);
                     }
                 }
                 return Err(self.error(

@@ -2045,6 +2045,7 @@ F,1
 ⊗
 ˜⊗
 `5
+unwrench
 ";
     let output = "\
 F₁
@@ -2052,6 +2053,7 @@ F₁
 ˜⨂
 ⨂
 ¯5
+°(-⊸¬)
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, output);

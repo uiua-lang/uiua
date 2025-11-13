@@ -63,6 +63,10 @@ pub enum PrimComponent {
     Sub0,
     /// Subscript 2
     Sub2,
+    /// (
+    OpenParen,
+    /// )
+    CloseParen,
 }
 
 impl From<Primitive> for PrimComponent {
@@ -85,6 +89,8 @@ impl PrimComponent {
             PrimComponent::Num(num) => num.name(),
             PrimComponent::Sub0 => "₀",
             PrimComponent::Sub2 => "₂",
+            PrimComponent::OpenParen => "(",
+            PrimComponent::CloseParen => ")",
         }
     }
     /// Try to parse a component from a name prefix
@@ -133,7 +139,7 @@ impl fmt::Display for PrimComponent {
         match self {
             PrimComponent::Prim(prim) => prim.fmt(f),
             PrimComponent::Num(num) => num.fmt(f),
-            PrimComponent::Sub0 | PrimComponent::Sub2 => self.name().fmt(f),
+            _ => self.name().fmt(f),
         }
     }
 }
@@ -182,12 +188,18 @@ impl Primitive {
     pub fn multi_aliases() -> &'static [(&'static str, &'static [(PrimComponent, &'static str)])] {
         use Primitive::*;
         macro_rules! alias {
-            ($(($s:ident, $prim:expr)),* $(,)*) => {
+            (PrimComponent::$comp:ident) => {
+                PrimComponent::$comp
+            };
+            ($prim:ident) => {
+                PrimComponent::Prim($prim)
+            };
+            ($(($($s:ident)?, $($prim:tt)*)),+ $(,)*) => {
                 (
-                    concat!($(stringify!($s)),*),
-                    &[$((PrimComponent::Prim($prim), stringify!($s))),*]
+                    concat!($(stringify!($($s)?)),*),
+                    &[$((alias!($($prim)*), stringify!($($s)?))),*]
                 )
-            }
+            };
         }
         &[
             alias!((a, Assert), (w, With), (m, Match)),
@@ -210,26 +222,31 @@ impl Primitive {
             alias!((p, Dip), (e, Pop), (r, Under), (f, Now)),
             alias!((s, Un), (et, By)),
             alias!((wr, Sub), (en, By), (ch, Not)),
+            alias!((w, Sub), (r, By), (e, Not)),
+            alias!(
+                (un, Un),
+                (, PrimComponent::OpenParen),
+                (wr, Sub),
+                (en, By),
+                (ch, Not),
+                (, PrimComponent::CloseParen),
+            ),
+            alias!(
+                (un, Un),
+                (, PrimComponent::OpenParen),
+                (w, Sub),
+                (r, By),
+                (e, Not),
+                (, PrimComponent::CloseParen),
+            ),
             alias!((sel, Select), (first, First)),
             alias!((l, Un), (og, Exp)),
             alias!((wi, Stencil), (n, Identity)),
             alias!((du, On), (p, Identity)),
             alias!((r, Pop), (e, Un), (al, Complex)),
             alias!((d, Fork), (u, Reach), (n, Both), (e, Join)),
-            (
-                "kork",
-                &[
-                    (PrimComponent::Prim(Keep), "kor"),
-                    (PrimComponent::Sub2, "k"),
-                ],
-            ),
-            (
-                "each",
-                &[
-                    (PrimComponent::Prim(Rows), "eac"),
-                    (PrimComponent::Sub0, "h"),
-                ],
-            ),
+            alias!((kor, Keep), (k, PrimComponent::Sub2)),
+            alias!((eac, Rows), (h, PrimComponent::Sub0)),
         ]
     }
     /// Look up a multi-alias from [`Self::multi_aliases`]

@@ -2309,7 +2309,7 @@ pub fn Editor<'a>(
             />
         </div>
         { (!kala.is_empty()).then(||
-            view!(<img src=format!("/assets/kala/{kala}.svg") class="editor-side-icon"/>)
+            view!(<img src=format!("/assets/kala/{kala}.png") class="editor-side-icon"/>)
         ) }
     </div> }
 }

@@ -402,7 +402,7 @@ pub fn MainPage() -> impl IntoView {
             <p>"For a quick overview of how the language works, see the "<A href="/tour">"Language Tour"</A>"."</p>
             <p>"For a full tutorial, see the "<A href="/docs#tutorial">"Tutorial"</A>"."</p>
             <p>"For a reference of all the built-in functions, the documentation has a "<A href="/docs#functions">"full list"</A>"."</p>
-            <img src="assets/kala/default.svg" style="width:20em;display:block;margin:auto"/>
+            <img src="assets/kala/default.png" style="width:20em;display:block;margin:auto"/>
         </div>
     }
 }
@@ -413,7 +413,7 @@ fn NotFound() -> impl IntoView {
         <h1>"Page not found"</h1>
         <Editor example="$ Where could it be?\n×101⧻⊜⧻⊸≠@ "/>
         <h3><A href="/">"Go home"</A></h3>
-        <img src="assets/kala/confused.svg" style="width:20em;display:block;margin:auto"/>
+        <img src="assets/kala/confused.png" style="width:20em;display:block;margin:auto"/>
     }
 }
 

@@ -15,7 +15,6 @@ site/dist
 *.ua
 *.uasm
 *.dll
-!*/assets/*
 !src/primitive/assets/*
 
 profile.yaml
@@ -24,6 +23,7 @@ uiua.tmLanguage.json
 !/examples/*
 !/site/*.ua
 !/site/text/*.ua
+!/site/assets/**
 
 # symlink created by `nix build`
 result

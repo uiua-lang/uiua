@@ -235,7 +235,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                             kala = k;
                         }
                         return view!(<img
-                            src=format!("/assets/kala/{kala}.svg")
+                            src=format!("/assets/kala/{kala}.png")
                             style=format!("width:15em;margin-right:1em;{flip}")
                         />).into_view();
                     }

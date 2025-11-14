@@ -396,6 +396,18 @@ impl Value {
                 return Ok(num.into());
             }
 
+            if base == 10 {
+                // Happy path for base 10
+                if s.chars()
+                    .all(|c| c.is_ascii_digit() || c == '-' || c == '.')
+                {
+                    if let Ok(num) = s.parse::<f64>() {
+                        return Ok(num.into());
+                    }
+                }
+                // Fall through
+            }
+
             let sign = if let Some(pos) = s.strip_prefix("-") {
                 s = pos;
                 -1.0

@@ -6,11 +6,11 @@
 - Mixed subscripts
   - `bracket`
 - Compile-time code string evaluation?
-- `un`/`anti` `stencil`
 - `first group/partition` optimization
 - `under group/partition inventory` optimization
 - Reserved modifier glyphs?
 - Streaming gif and audio encoding
+- Make `&seek ∞` seek to the end
 - Window "restart all" button
 
 ## Planned Features

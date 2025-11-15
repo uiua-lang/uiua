@@ -2,7 +2,11 @@
 <description>Blog of the Uiua Programming Language</description>
 <link>https://uiua.org/blog</link>
 <atom:link href="https://uiua.org/blog/feed.rss" rel="self" type="application/rss+xml"></atom:link>
-<lastBuildDate>Tue, 14 Oct 2025 04:28:06 +0000</lastBuildDate>
+<lastBuildDate>Sat, 15 Nov 2025 19:25:00 +0000</lastBuildDate>
+<item><link>https://uiua.org/blog/uiuas-official-mascot</link>
+<guid isPermaLink="false">136f50c2-a212-40ee-8062-0c4530830a27</guid>
+<pubDate>Sat, 15 Nov 2025 00:00:00 +0000</pubDate>
+<title>Uiua's Official Mascot</title></item>
 <item><link>https://uiua.org/blog/uiua-0.17.0</link>
 <guid isPermaLink="false">f0369adf-a4f1-4267-96e1-9c6527298cd3</guid>
 <pubDate>Tue, 23 Sep 2025 00:00:00 +0000</pubDate>

@@ -54,18 +54,13 @@ fn markdown_view_impl(text: &str, make_paragraph: bool) -> View {
         .replace("<code block delim>", "```")
         .replace("<code backtick>", "`` ` ``");
     let root = parse_document(&arena, &text, &options());
-    view!(<div style="overflow:hidden">
-    {
-        node_view(
-            root,
-            &mut State {
-                make_paragraph,
-                ..Default::default()
-            },
-        )
-    }
-    </div>)
-    .into_view()
+    node_view(
+        root,
+        &mut State {
+            make_paragraph,
+            ..Default::default()
+        },
+    )
 }
 
 #[cfg(test)]

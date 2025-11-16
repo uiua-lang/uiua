@@ -10,7 +10,6 @@
 - `under group/partition inventory` optimization
 - Reserved modifier glyphs?
 - Streaming gif and audio encoding
-- Make `&seek ∞` seek to the end
 - Window "restart all" button
 
 ## Planned Features

@@ -881,6 +881,7 @@ impl<T: ArrayValue> Array<T> {
         ctx: &C,
     ) -> Result<(), C::Error> {
         crate::profile_function!();
+        let map_keys = self.meta.take_map_keys().zip(other.meta.take_map_keys());
         self.meta.combine(&other.meta);
         match (self.meta.take_label(), other.meta.take_label()) {
             (Some(a), Some(b)) => {
@@ -937,6 +938,14 @@ impl<T: ArrayValue> Array<T> {
         self.meta.mark_sorted_up(sorted_up);
         self.meta.mark_sorted_down(sorted_down);
         self.validate();
+        // Combine map keys
+        if let Some((mut a, b)) = map_keys {
+            let remove = a.couple(b, ctx)?;
+            if remove {
+                self.remove_row(0);
+            }
+            self.meta.map_keys = Some(a);
+        }
         Ok(())
     }
     /// Uncouple the array into two arrays

@@ -52,6 +52,16 @@ impl<T: ArrayValue> Array<T> {
                 values.row_count()
             )));
         }
+        if keys.rank() == 0 {
+            let map_keys = MapKeys {
+                keys,
+                indices: vec![0],
+                len: 1,
+                fix_stack: Vec::new(),
+            };
+            values.meta.map_keys = Some(map_keys);
+            return Ok(());
+        }
         let mut map_keys = MapKeys {
             keys: keys.clone(),
             indices: Vec::new(),
@@ -349,7 +359,7 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct MapKeys {
     pub(crate) keys: Value,
     indices: Vec<usize>,
@@ -609,15 +619,20 @@ impl MapKeys {
         keys
     }
     pub(crate) fn fix(&mut self) {
+        if self.keys.rank() > 0 {
+            let indices = replace(&mut self.indices, vec![0]);
+            let len = replace(&mut self.len, 1);
+            self.fix_stack.push((len, indices));
+        }
         self.keys.fix();
-        let indices = replace(&mut self.indices, vec![0]);
-        let len = replace(&mut self.len, 1);
-        self.fix_stack.push((len, indices));
     }
     pub(crate) fn unfix(&mut self) -> bool {
         if let Some((len, indices)) = self.fix_stack.pop() {
             self.len = len;
             self.indices = indices;
+            self.keys.undo_fix();
+            true
+        } else if self.keys.shape.starts_with(&[1]) {
             self.keys.undo_fix();
             true
         } else {
@@ -724,6 +739,16 @@ impl MapKeys {
             }
         }
         Ok(to_remove)
+    }
+    pub(crate) fn couple<C>(&mut self, other: Self, ctx: &C) -> Result<bool, C::Error>
+    where
+        C: FillContext,
+    {
+        let mut map_keys = MapKeys::default();
+        map_keys.insert(take(self).normalized(), 0, ctx)?;
+        let res = map_keys.insert(other.normalized(), 1, ctx)?.is_some();
+        *self = map_keys;
+        Ok(res)
     }
 }
 

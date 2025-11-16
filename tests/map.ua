@@ -104,3 +104,14 @@ map "cba" [1 3 2]
 # Put in arrays
 ⍤⤙≍ ⊃¤[∘] map [1 2 3] [4 5 6]
 ⍤⤙≍ [3_4 7_8] [map 1_2 3_4 map 5_6 7_8]
+⍤⤙≍ map [1_2_3 7_8_9] [4_5_6 10_11_12] ⊟ map 1_2_3 4_5_6 map 7_8_9 10_11_12
+Entry ← map∩□
+A     ← Entry "A"
+B     ← Entry "B"
+C     ← Entry "C"
+⍤⤙≍ map {"A""C""B"} {5"wow"[]} [A 5 C "wow" B []]
+
+# Maplings
+⍤⤙≍ map [1 3] [2 4] ⊂ map 1 2 map 3 4
+⍤⤙≍ ⊃⊂⊂⌟ map 1 2 map 3 4
+⍤⤙≍ ⊃⊂⊂⌞ map 1 2 map 3 4

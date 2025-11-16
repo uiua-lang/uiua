@@ -380,6 +380,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 alt = a.trim_end().into();
                 class = "image-visibility";
             }
+            let class = format!("{class} markdown-image");
             view!(<img src={&image.url} alt={alt.clone()} title=alt class=class/>).into_view()
         }
         NodeValue::Table(_) => view!(<table class="bordered-table">{children}</table>).into_view(),
@@ -567,7 +568,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                 class = "image-visibility";
             }
             format!(
-                r#"<img src="{}" alt="{alt}" title="{alt}" class="{class}"/>"#,
+                r#"<img src="{}" alt="{alt}" title="{alt}" class="{class} markdown-image"/>"#,
                 image.url
             )
         }

@@ -1677,6 +1677,11 @@ a.clean {
     }
 }
 
+.markdown-image {
+    max-width: 49%;
+    vertical-align: middle;
+}
+
 @media (prefers-color-scheme: dark) {
 
     .image-visibility {

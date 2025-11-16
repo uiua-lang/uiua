@@ -41,7 +41,6 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
-
       - name: Cargo cache (target)
         uses: actions/cache@v4
         with:
@@ -49,7 +48,6 @@ jobs:
           key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
           restore-keys: |
             ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
-
       - name: Run interpreter tests
         run: cargo test --lib
   # Test the site
@@ -91,7 +89,6 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
-
       - name: Cargo cache (target)
         uses: actions/cache@v4
         with:
@@ -99,7 +96,6 @@ jobs:
           key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
           restore-keys: |
             ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
-
       - name: Run ffi tests
         run: cargo test -p tests_ffi
   # Build the site
@@ -123,7 +119,6 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/build_latest.yml') }}
-
       - name: Cargo cache (target; wasm)
         uses: actions/cache@v4
         with:

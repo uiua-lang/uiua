@@ -2,31 +2,31 @@ name: Validate
 
 on:
   push:
-    branches: ["main"]
+    branches: ['main']
     paths:
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "src/**"
-      - "parser/**"
-      - "site/**"
-      - "pad/**"
-      - "tests*/**"
-      - "changelog.md"
-      - "readme.md"
-      - ".github/workflows/validate.yml"
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - 'parser/**'
+      - 'site/**'
+      - 'pad/**'
+      - 'tests*/**'
+      - 'changelog.md'
+      - 'readme.md'
+      - '.github/workflows/validate.yml'
   pull_request:
-    branches: ["main"]
+    branches: ['main']
     paths:
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "src/**"
-      - "parser/**"
-      - "site/**"
-      - "pad/**"
-      - "tests*/**"
-      - "changelog.md"
-      - "readme.md"
-      - ".github/workflows/validate.yml"
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - 'parser/**'
+      - 'site/**'
+      - 'pad/**'
+      - 'tests*/**'
+      - 'changelog.md'
+      - 'readme.md'
+      - '.github/workflows/validate.yml'
 
 env:
   CARGO_TERM_COLOR: always
@@ -39,62 +39,106 @@ jobs:
   check_formatting:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Check formatting
-      run: cargo fmt --all --check
+      - uses: actions/checkout@v4
+      - name: Check formatting
+        run: cargo fmt --all --check
   clippy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: target
-        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-        restore-keys: |
-          build-${{ runner.os }}-
-    - name: Install deps
-      run: |
-        sudo apt-get update -y
-        sudo apt-get --fix-missing install -y
-        sudo apt-get install libasound2-dev
-    - name: Run clippy
-      run: cargo clippy --no-deps --all-targets --workspace --all-features -- --deny=warnings
+      - uses: actions/checkout@v4
+      - name: Rust version
+        id: rustv
+        run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Cargo cache (registry+git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
+      - name: Cargo cache (target)
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
+      - name: Install deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get --fix-missing install -y
+          sudo apt-get install libasound2-dev
+      - name: Run clippy
+        run: cargo clippy --no-deps --all-targets --workspace --all-features -- --deny=warnings
   # Test the interpreter
   test_bin:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: target
-        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-        restore-keys: |
-          build-${{ runner.os }}-
-    - name: Run interpreter tests
-      run: cargo test --lib
+      - uses: actions/checkout@v4
+      - name: Rust version
+        id: rustv
+        run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Cargo cache (registry+git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
+      - name: Cargo cache (target)
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
+      - name: Run interpreter tests
+        run: cargo test --lib
   # Test the site
   test_site:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: target
-        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-        restore-keys: |
-          build-${{ runner.os }}-
-    - name: Run site tests
-      run: cargo test -p site
+      - uses: actions/checkout@v4
+      - name: Rust version
+        id: rustv
+        run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Cargo cache (registry+git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
+      - name: Cargo cache (target)
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
+      - name: Run site tests
+        run: cargo test -p site
   # Test ffi
   test_ffi:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: target
-        key: build-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-        restore-keys: |
-          build-${{ runner.os }}-
-    - name: Run site tests
-      run: cargo test -p tests_ffi
+      - uses: actions/checkout@v4
+      - name: Rust version
+        id: rustv
+        run: echo "version=$(rustc -V)" >> "$GITHUB_OUTPUT"
+      - name: Cargo cache (registry+git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-rg-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
+      - name: Cargo cache (target)
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-${{ hashFiles('**/Cargo.lock', '.github/workflows/validate.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-host-${{ steps.rustv.outputs.version }}-
+      - name: Run site tests
+        run: cargo test -p tests_ffi

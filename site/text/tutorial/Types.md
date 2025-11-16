@@ -1,6 +1,6 @@
 # Types
 
-Every value in Uiua is an array. However, different arrays on the stack can have different *types* of items. Every element of an array is always the same type. Unlike some other array programming languages, Uiua arrays cannot have elements of different types.
+Every value in Uiua is an array. However, different arrays can have different *types* of items. Every element of an array is always the same type. Unlike some other array programming languages, Uiua arrays cannot have elements of different types.
 
 There are four types of arrays:
 - **Number**

@@ -8,7 +8,7 @@ B ← 5
 + A B
 ```
 
-Valid binding names can be made up of any sequence of upperscase or lowercase alphabetic characters OR a single non-alphanumeric character that is not already used for a Uiua function or syntax.
+Valid binding names can be made up of any sequence of uppercase or lowercase alphabetic characters OR a single non-alphanumeric character that is not already used for a Uiua function or syntax.
 
 ```uiua
 NumOne ← 1

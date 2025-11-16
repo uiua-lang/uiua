@@ -121,7 +121,7 @@ F "def - 2"
 
 But what happens if we give an input that matches the pattern but fails elsewhere in the branch?
 
-```uiua
+```uiua kala confused
 F ← ⍣(⊏⋕ °$"_: _"|˜⊏⊙⋕ °$"_ - _"|∘)
 F "r: xyz"  # Can't parse
 F "ghi - 3" # Out of bounds
@@ -133,7 +133,7 @@ The [case]() modifier can be used to make the branch fail properly. [case]() sim
 
 Wrapping the code after a pattern match in [case]() will make the error propagate properly.
 
-```uiua should fail
+```uiua kala arms should fail
 F ← ⍣(
   ⍩(⊏⋕) °$"_: _"
 | ⍩(˜⊏⊙⋕) °$"_ - _"

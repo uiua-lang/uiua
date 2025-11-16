@@ -14,7 +14,7 @@ The `┌─╴` should be immediately followed by a name for the module. Module 
 
 Names from inside the module can be referenced by following the module name with a `~`.
 
-```uiua help(Try formatting!)
+```uiua kala arms help(Try formatting!)
 ---Mod
   A ← 5
   F ← +1

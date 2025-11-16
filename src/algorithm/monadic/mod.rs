@@ -1856,15 +1856,16 @@ impl Value {
     }
     /// Get the `first` index `where` the value is nonzero
     pub fn first_where(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        self.first_where_impl(env, identity, identity)
+        self.first_where_impl(env, "first", identity, identity)
     }
     /// Get the last index `where` the value is nonzero
     pub fn last_where(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        self.first_where_impl(env, Iterator::rev, Iterator::rev)
+        self.first_where_impl(env, "last", Iterator::rev, Iterator::rev)
     }
     fn first_where_impl<'a, B, N>(
         &'a self,
         env: &Uiua,
+        name: &str,
         byte_iter: impl Fn(iter::Enumerate<slice::Iter<'a, u8>>) -> B,
         num_iter: impl Fn(iter::Enumerate<slice::Iter<'a, f64>>) -> N,
     ) -> UiuaResult<Array<f64>>
@@ -1885,7 +1886,7 @@ impl Value {
                     }
                     env.scalar_fill::<f64>()
                         .map(|fv| fv.value.into())
-                        .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
+                        .map_err(|e| env.error(format!("Cannot take {name} of an empty array{e}")))
                 }
                 Value::Byte(bytes) => {
                     for (i, n) in byte_iter(bytes.data.iter().enumerate()) {
@@ -1895,7 +1896,7 @@ impl Value {
                     }
                     env.scalar_fill::<f64>()
                         .map(|fv| fv.value.into())
-                        .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
+                        .map_err(|e| env.error(format!("Cannot take {name} of an empty array{e}")))
                 }
                 value => Err(env.error(format!(
                     "Argument to where must be an array of naturals, but it is {}",
@@ -1921,7 +1922,7 @@ impl Value {
                     }
                     env.scalar_fill::<f64>()
                         .map(|fv| fv.value.into())
-                        .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
+                        .map_err(|e| env.error(format!("Cannot take {name} of an empty array{e}")))
                 }
                 Value::Byte(bytes) => {
                     for (i, n) in byte_iter(bytes.data.iter().enumerate()) {
@@ -1937,7 +1938,7 @@ impl Value {
                     }
                     env.scalar_fill::<f64>()
                         .map(|fv| fv.value.into())
-                        .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
+                        .map_err(|e| env.error(format!("Cannot take {name} of an empty array{e}")))
                 }
                 value => Err(env.error(format!(
                     "Argument to where must be an array of naturals, but it is {}",

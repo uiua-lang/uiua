@@ -40,11 +40,11 @@ Here is a simple example that generates the fibonacci sequence.
 
 Old version:
 ```not uiua
-⇌[⍥◡+9].1
+⇌[⍥◡+9]∩1
 ```
 New version:
 ```uiua
-⍥◡+9 .1
+⍥◡+9 ∩1
 ```
 
 As you can see, the fix for this is generally to remove wrapping `[]`s and potentially a `⇌`.
@@ -139,5 +139,5 @@ You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the
 )                     # Heart
 ⍉⊞× [1 0.3 0.3] ⤸2 ≤0 # Threshold/color
 ×τ ÷⟜⇡24              # Rotation angles
-≡⌟(voxels °⊸Fog Black °⊸Camera [0.2 °∠])
+≡⌟voxels!(°⊸Fog Black °⊸Camera [0.2 °∠])
 ```

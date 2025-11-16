@@ -381,7 +381,17 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                 class = "image-visibility";
             }
             let class = format!("{class} markdown-image");
-            view!(<img src={&image.url} alt={alt.clone()} title=alt class=class/>).into_view()
+            let mut size = String::new();
+            if let Some(a) = alt.strip_suffix('%') {
+                if let Some((a, last)) = a.rsplit_once(' ') {
+                    if let Ok(s) = last.parse::<u16>() {
+                        size = format!("max-width: {s}%");
+                    }
+                    alt = a.into();
+                }
+            }
+            view!(<img src={&image.url} alt={alt.clone()} title=alt class=class style=size/>)
+                .into_view()
         }
         NodeValue::Table(_) => view!(<table class="bordered-table">{children}</table>).into_view(),
         &NodeValue::TableRow(is_header) => {

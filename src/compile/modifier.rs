@@ -1182,10 +1182,12 @@ impl Compiler {
                 };
                 let span = self.add_span(modified.modifier.span.clone());
                 let un = if normal.sig == (1, 1) || self.allow_experimental() {
-                    let (f_before, f_after) = f
-                        .node
-                        .under_inverse(g.sig, true, &self.asm)
-                        .map_err(|e| self.error(f_span.clone(), e))?;
+                    let (f_before, f_after) =
+                        f.node.under_inverse(g.sig, true, &self.asm).map_err(|e| {
+                            let span = (e.span().map(|s| self.get_span(s)))
+                                .unwrap_or_else(|| f_span.clone().into());
+                            self.error(span, e)
+                        })?;
                     (g.node.un_inverse(&self.asm).ok())
                         .map(|g_inv| -> UiuaResult<SigNode> {
                             let mut node = f_before;

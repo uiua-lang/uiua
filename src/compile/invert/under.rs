@@ -518,11 +518,7 @@ under!(OnPat, input, g_sig, inverse, asm, On, span, [f], {
 
 under!(ForkPat, input, g_sig, inverse, asm, Fork, span, ops, {
     if ops.iter().any(|sn| sn.sig.args() != 1) {
-        return Err(
-            SigCheckError::from("Cannot invert fork of non monadic functions")
-                .no_inverse()
-                .into(),
-        );
+        return Err(InversionError::UnderNonMonadicFork(span));
     }
 
     let (rest_before, rest_after) = under_inverse(input, g_sig, inverse, asm)?;

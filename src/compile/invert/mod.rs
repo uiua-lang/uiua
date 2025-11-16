@@ -195,6 +195,7 @@ pub enum InversionError {
     Pretty,
     SidedBoth,
     LateBinding(String),
+    UnderNonMonadicFork(usize),
 }
 
 pub type InversionResult<T = ()> = Result<T, InversionError>;
@@ -265,6 +266,9 @@ impl fmt::Display for InversionError {
             InversionError::LateBinding(name) => {
                 write!(f, "Cannot invert late binding of constant {name}")
             }
+            InversionError::UnderNonMonadicFork(_) => {
+                write!(f, "Cannot invert with non-monadic function")
+            }
         }
     }
 }
@@ -278,6 +282,12 @@ impl InversionError {
             }
             e => InversionError::InnerFunc(vec![f.id.clone()], e.into()),
         }
+    }
+    pub(crate) fn span(&self) -> Option<usize> {
+        Some(match self {
+            InversionError::UnderNonMonadicFork(span) => *span,
+            _ => return None,
+        })
     }
 }
 

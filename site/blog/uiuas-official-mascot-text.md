@@ -12,9 +12,9 @@ Kala's pronouns are she/her. She will now appear in various places on the Uiua w
 
 Uiua now continues the rich history of programming [languages](https://www.php.net/elephpant.php) [having](https://go.dev/blog/gopher) [fun](https://rustacean.net/) [animal](https://github.com/ziglang/logo?tab=readme-ov-file#official-mascots) [mascots](https://gleam.run/branding/).
 
-Kala's design was inspired by a artwork from Uiua community member Jacob Lockwood, the sister of community member Omnikar, and user Æroplane:
+Kala's design was inspired by artwork from Uiua community members Jacob Lockwood and Æroplane:
 
-![Jacob's drawing of a colorful Uiua cuttlefish 32%](https://raw.githubusercontent.com/uiua-lang/uiua/refs/heads/main/site/assets/kala/colored_pencil.png) ![Omnikar's sister's artwork 32%](https://raw.githubusercontent.com/uiua-lang/uiua/refs/heads/main/site/assets/kala/gradients.png) ![Æroplane's artwork 32%](https://raw.githubusercontent.com/uiua-lang/uiua/refs/heads/main/site/assets/kala/simple_art.jpg)
+![Jacob's drawing of a colorful Uiua cuttlefish 32%](https://raw.githubusercontent.com/uiua-lang/uiua/refs/heads/main/site/assets/kala/colored_pencil.png) ![Æroplane's initial artwork 32%](https://raw.githubusercontent.com/uiua-lang/uiua/refs/heads/main/site/assets/kala/gradients.png) ![Æroplane's other artwork 32%](https://raw.githubusercontent.com/uiua-lang/uiua/refs/heads/main/site/assets/kala/simple_art.jpg)
 
 Kala's vector design was created by artist [Nikola D](https://pro.fiverr.com/freelancers/johnny_kelevra?source=gig_page).
 

@@ -843,16 +843,10 @@ impl Array<Boxed> {
 
 impl<T: ArrayValue + ArrayCmp<U>, U: ArrayValue> PartialEq<Array<U>> for Array<T> {
     fn eq(&self, other: &Array<U>) -> bool {
-        if self.shape != other.shape {
-            return false;
-        }
-        if self.meta.map_keys != other.meta.map_keys {
-            return false;
-        }
-        self.data
-            .iter()
-            .zip(&other.data)
-            .all(|(a, b)| a.array_eq(b))
+        self.shape == other.shape
+            && self.meta.map_keys == other.meta.map_keys
+            && self.meta.pointer == other.meta.pointer
+            && ((self.data.iter()).zip(&other.data)).all(|(a, b)| a.array_eq(b))
     }
 }
 
@@ -885,6 +879,9 @@ impl<T: ArrayValue> Hash for Array<T> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         if let Some(keys) = &self.meta.map_keys {
             keys.hash(hasher);
+        }
+        if let Some(ptr) = &self.meta.pointer {
+            ptr.get().hash(hasher);
         }
         T::TYPE_ID.hash(hasher);
         if let Some(scalar) = self.as_scalar() {

@@ -632,6 +632,7 @@ pub(crate) enum FromU8Error {
 
 pub(crate) enum FromF64Error {
     NaN,
+    Infinite,
     TooHigh,
     TooLow,
     NonInteger,
@@ -650,6 +651,7 @@ impl fmt::Display for FromF64Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             FromF64Error::NaN => write!(f, "present"),
+            FromF64Error::Infinite => write!(f, "infinite"),
             FromF64Error::TooHigh => write!(f, "too high"),
             FromF64Error::TooLow => write!(f, "too low"),
             FromF64Error::NonInteger => write!(f, "not an integer"),
@@ -665,6 +667,8 @@ impl ScalarNum for usize {
     fn from_f64(f: f64) -> Result<Self, FromF64Error> {
         if f.is_nan() {
             Err(FromF64Error::NaN)
+        } else if f.is_infinite() {
+            Err(FromF64Error::Infinite)
         } else if f.fract() != 0.0 {
             Err(FromF64Error::NonInteger)
         } else if f > usize::MAX as f64 {
@@ -684,6 +688,8 @@ impl ScalarNum for isize {
     fn from_f64(f: f64) -> Result<Self, FromF64Error> {
         if f.is_nan() {
             Err(FromF64Error::NaN)
+        } else if f.is_infinite() {
+            Err(FromF64Error::Infinite)
         } else if f.fract() != 0.0 {
             Err(FromF64Error::NonInteger)
         } else if f > isize::MAX as f64 {
@@ -703,6 +709,8 @@ impl ScalarNum for i64 {
     fn from_f64(f: f64) -> Result<Self, FromF64Error> {
         if f.is_nan() {
             Err(FromF64Error::NaN)
+        } else if f.is_infinite() {
+            Err(FromF64Error::Infinite)
         } else if f > i64::MAX as f64 {
             Err(FromF64Error::TooHigh)
         } else if f < i64::MIN as f64 {
@@ -745,6 +753,19 @@ impl ScalarNum for Option<isize> {
     }
 }
 
+impl ScalarNum for Option<usize> {
+    fn from_u8(u: u8) -> Result<Self, FromU8Error> {
+        Ok(Some(u as usize))
+    }
+    fn from_f64(f: f64) -> Result<Self, FromF64Error> {
+        if f == f64::INFINITY {
+            Ok(None)
+        } else {
+            usize::from_f64(f).map(Some)
+        }
+    }
+}
+
 impl ScalarNum for u8 {
     fn from_u8(u: u8) -> Result<Self, FromU8Error> {
         Ok(u)
@@ -752,6 +773,8 @@ impl ScalarNum for u8 {
     fn from_f64(f: f64) -> Result<Self, FromF64Error> {
         if f.is_nan() {
             Err(FromF64Error::NaN)
+        } else if f.is_infinite() {
+            Err(FromF64Error::Infinite)
         } else if f > u8::MAX as f64 {
             Err(FromF64Error::TooHigh)
         } else if f < 0.0 {
@@ -771,6 +794,8 @@ impl ScalarNum for u16 {
     fn from_f64(f: f64) -> Result<Self, FromF64Error> {
         if f.is_nan() {
             Err(FromF64Error::NaN)
+        } else if f.is_infinite() {
+            Err(FromF64Error::Infinite)
         } else if f > u16::MAX as f64 {
             Err(FromF64Error::TooHigh)
         } else if f < 0.0 {
@@ -839,44 +864,7 @@ impl Value {
         requirement: impl Into<Option<&'static str>>,
     ) -> UiuaResult<bool> {
         let requirement = requirement.into().unwrap_or("Expected value to be boolean");
-        Ok(match self {
-            Value::Num(nums) => {
-                if nums.rank() > 0 {
-                    return Err(
-                        env.error(format!("{requirement}, but its rank is {}", nums.rank()))
-                    );
-                }
-                let num = nums.data[0];
-                if num == 0.0 {
-                    false
-                } else if num == 1.0 {
-                    true
-                } else {
-                    return Err(env.error(format!("{requirement}, but it is {num}")));
-                }
-            }
-            Value::Byte(bytes) => {
-                if bytes.rank() > 0 {
-                    return Err(
-                        env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
-                    );
-                }
-                let num = bytes.data[0];
-                if num == 0 {
-                    false
-                } else if num == 1 {
-                    true
-                } else {
-                    return Err(env.error(format!("{requirement}, but it is {num}")));
-                }
-            }
-            value => {
-                return Err(env.error(format!(
-                    "{requirement}, but it is {}",
-                    value.type_name_plural()
-                )));
-            }
-        })
+        self.as_number(env, requirement)
     }
     /// Attempt to convert the array to a single natural number
     ///
@@ -889,8 +877,7 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be a natural number");
-        self.as_nat_or_inf(env, requirement)?
-            .ok_or_else(|| env.error(format!("{requirement}, but it is infinity")))
+        self.as_number(env, requirement)
     }
     pub(crate) fn as_nat_or_inf(
         &self,
@@ -900,43 +887,7 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be a natural number or infinity");
-        Ok(match self {
-            Value::Num(nums) => {
-                if nums.rank() > 0 {
-                    return Err(
-                        env.error(format!("{requirement}, but its rank is {}", nums.rank()))
-                    );
-                }
-                let num = nums.data[0];
-                if num.is_nan() {
-                    return Err(env.error(format!("{requirement}, but it is NaN")));
-                }
-                if num < 0.0 {
-                    return Err(env.error(format!("{requirement}, but it is negative")));
-                }
-                if num.is_infinite() {
-                    None
-                } else {
-                    if num.fract() != 0.0 {
-                        return Err(
-                            env.error(format!("{requirement}, but it has a fractional part"))
-                        );
-                    }
-                    Some(num as usize)
-                }
-            }
-            Value::Byte(bytes) => {
-                if bytes.rank() > 0 {
-                    return Err(
-                        env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
-                    );
-                }
-                Some(bytes.data[0] as usize)
-            }
-            value => {
-                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())));
-            }
-        })
+        self.as_number(env, requirement)
     }
     /// Attempt to convert the array to a single integer
     ///
@@ -949,37 +900,17 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be an integer");
-        Ok(match self {
-            Value::Num(nums) => {
-                if nums.rank() > 0 {
-                    return Err(
-                        ctx.error(format!("{requirement}, but its rank is {}", nums.rank()))
-                    );
-                }
-                let num = nums.data[0];
-                if num.is_infinite() {
-                    return Err(ctx.error(format!("{requirement}, but it is infinite")));
-                }
-                if num.is_nan() {
-                    return Err(ctx.error(format!("{requirement}, but it is NaN")));
-                }
-                if num.fract() != 0.0 {
-                    return Err(ctx.error(format!("{requirement}, but it has a fractional part")));
-                }
-                num as isize
-            }
-            Value::Byte(bytes) => {
-                if bytes.rank() > 0 {
-                    return Err(
-                        ctx.error(format!("{requirement}, but its rank is {}", bytes.rank()))
-                    );
-                }
-                bytes.data[0] as isize
-            }
-            value => {
-                return Err(ctx.error(format!("{requirement}, but it is {}", value.type_name())));
-            }
-        })
+        self.as_number(ctx, requirement)
+    }
+    pub(crate) fn as_int_or_inf(
+        &self,
+        env: &Uiua,
+        requirement: impl Into<Option<&'static str>>,
+    ) -> UiuaResult<Result<isize, bool>> {
+        let requirement = requirement
+            .into()
+            .unwrap_or("Expected value to be an integer or infinity");
+        self.as_number(env, requirement)
     }
     /// Attempt to convert the array to a single number
     ///
@@ -992,27 +923,7 @@ impl Value {
         let requirement = requirement
             .into()
             .unwrap_or("Expected value to be a number");
-        Ok(match self {
-            Value::Num(nums) => {
-                if nums.rank() > 0 {
-                    return Err(
-                        env.error(format!("{requirement}, but its rank is {}", nums.rank()))
-                    );
-                }
-                nums.data[0]
-            }
-            Value::Byte(bytes) => {
-                if bytes.rank() > 0 {
-                    return Err(
-                        env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
-                    );
-                }
-                bytes.data[0] as f64
-            }
-            value => {
-                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())));
-            }
-        })
+        self.as_number(env, requirement)
     }
     /// Attempt to convert the array to a list of numbers
     ///
@@ -1112,6 +1023,38 @@ impl Value {
             .into()
             .unwrap_or("Elements of rank list must be integers or infinity");
         self.as_number_list(env, requirement)
+    }
+    fn as_number<T, C>(&self, ctx: &C, requirement: &'static str) -> Result<T, C::Error>
+    where
+        T: ScalarNum,
+        C: ErrorContext,
+    {
+        if self.rank() != 0 {
+            return Err(ctx.error(format!("{requirement}, but its rank is {}", self.rank())));
+        }
+        Ok(match self {
+            Value::Num(nums) => {
+                let n = nums.data[0];
+                T::from_f64(n).map_err(|e| {
+                    ctx.error(format!(
+                        "{requirement}, but {} is {e}",
+                        n.grid_string(false)
+                    ))
+                })?
+            }
+            Value::Byte(bytes) => {
+                let n = bytes.data[0];
+                T::from_u8(n).map_err(|e| {
+                    ctx.error(format!(
+                        "{requirement}, but {} is {e}",
+                        n.grid_string(false)
+                    ))
+                })?
+            }
+            value => {
+                return Err(ctx.error(format!("{requirement}, but it is a {}", value.type_name())));
+            }
+        })
     }
     pub(crate) fn as_number_list<T, C>(
         &self,

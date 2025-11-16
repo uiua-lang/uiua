@@ -3852,6 +3852,7 @@ sys_op! {
     /// Move to an absolute position in a file stream
     ///
     /// If the position is negative, it is an offset from the file end.
+    /// An offset of [infinity] seeks to the end of the file.
     ///
     /// ex: &rs 4 ⊸&seek 47 &fo "example.txt"
     (2(0), Seek, Stream, "&seek", "seek", Mutating),

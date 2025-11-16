@@ -965,10 +965,12 @@ pub(crate) fn run_sys_op(op: &SysOp, env: &mut Uiua) -> UiuaResult {
             }
         }
         SysOp::Seek => {
-            let pos = env.pop(1)?.as_int(env, None)?;
+            let pos = env.pop(1)?.as_int_or_inf(env, None)?;
             let pos = match pos {
-                ..0 => StreamSeek::End((-pos) as usize),
-                0.. => StreamSeek::Start(pos as usize),
+                Ok(pos @ ..0) => StreamSeek::End(pos.unsigned_abs()),
+                Ok(pos @ 0..) => StreamSeek::Start(pos.unsigned_abs()),
+                Err(false) => StreamSeek::End(0),
+                Err(true) => StreamSeek::Start(0),
             };
             let handle = env.pop(2)?.as_handle(env, None)?;
             env.rt.backend.seek(handle, pos).map_err(|e| env.error(e))?;

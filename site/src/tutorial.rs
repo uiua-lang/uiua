@@ -15,6 +15,7 @@ pub const TUTORIAL_NAMES: &[&str] = &[
     "Modifiers and Functions",
     "More Argument Manipulation",
     "Inverses",
+    "Control Flow",
     "Pattern Matching",
     "More Array Manipulation",
     "Thinking With Arrays",

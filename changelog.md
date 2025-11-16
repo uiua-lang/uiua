@@ -1283,7 +1283,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - Boxes still work as normal, but are now their own type distinct from functions
   - Remove `sig`, as everything that can be on the stack now has the same signature
 - Add new syntax for defining [custom modifiers](https://uiua.org/tutorial/custommodifiers)
-- Add new syntax for [calling a function from a list of functions](https://uiua.org/tutorial/Control Flow#switch)
+- Add new syntax for [calling a function from a list of functions](<https://uiua.org/tutorial/Control Flow#switch>)
 - Add the `pack ⊐` modifier, which calls its function and implicitly boxes/unboxes values
 - Add the `combinate ◳` modifier, which is a rank-generic version of [`table ⊞`](https://uiua.org/docs/table)
 - [`fold ∧`](https://uiua.org/docs/fold) is now rank-generic and requires a rank list

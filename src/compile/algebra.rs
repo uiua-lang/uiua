@@ -157,7 +157,7 @@ pub fn derivative(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
     dbgln!("derivative of {node:?}");
     let data = nodes_expr(node, asm);
     let expr = data.expr.inspect_err(|e| dbgln!("{e:?}"))?;
-    dbgln!("experession: {expr:?}");
+    dbgln!("expression: {expr:?}");
     let deriv = expr_deriv(expr).ok_or(AlgebraError::TooComplex)?;
     dbgln!("derivative: {deriv:?}");
     let node = expr_to_node(deriv, data.any_complex, asm);
@@ -169,7 +169,7 @@ pub fn integral(node: &Node, asm: &Assembly) -> AlgebraResult<Node> {
     dbgln!("integral of {node:?}");
     let data = nodes_expr(node, asm);
     let expr = data.expr.inspect_err(|e| dbgln!("{e:?}"))?;
-    dbgln!("experession: {expr:?}");
+    dbgln!("expression: {expr:?}");
     let integral = expr_integral(expr).ok_or(AlgebraError::TooComplex)?;
     dbgln!("integral: {integral:?}");
     let node = expr_to_node(integral, data.any_complex, asm);
@@ -249,58 +249,75 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
     let span = asm.spans.len() - 1;
     let mut node = Node::empty();
     fn recur(node: &mut Node, expr: Expr, any_complex: bool, span: usize) {
-        for (i, (term, coef)) in expr.0.into_iter().enumerate() {
+        let mut identity = false;
+        for (term, coef) in expr.0 {
             if coef == ZERO {
-                node.push(Node::new_push(0.0));
-                node.push(Prim(Mul, span));
-            } else {
-                match term {
-                    Term::X(pow) => {
-                        if i > 0 {
-                            *node = Mod(On, eco_vec![take(node).sig_node().unwrap()], span);
+                continue;
+            }
+            let is_first_term = !identity && node.is_empty();
+            let mut mul_coef = coef != ONE;
+            match term {
+                Term::X(pow) => {
+                    if !is_first_term {
+                        *node = if node.is_empty() {
+                            Prim(Dup, span)
+                        } else {
+                            Mod(On, eco_vec![take(node).sig_node().unwrap()], span)
+                        };
+                    }
+                    match pow {
+                        0.0 => {
+                            node.push(Node::new_push(0));
+                            node.push(Prim(Mul, span));
+                            node.push(if any_complex {
+                                Node::new_push(coef)
+                            } else {
+                                Node::new_push(coef.into_real().unwrap_or(f64::NAN))
+                            });
+                            node.push(Prim(Add, span));
+                            mul_coef = false;
                         }
-                        if pow != 1.0 {
-                            if pow == 0.5 {
-                                node.push(Prim(Sqrt, span));
-                            } else if pow == 2.0 {
-                                node.push(Prim(Dup, span));
-                                node.push(Prim(Mul, span));
-                            } else if pow != 1.0 {
-                                node.push(Node::new_push(pow));
-                                node.push(Prim(Pow, span));
-                            }
+                        0.5 => node.push(Prim(Sqrt, span)),
+                        1.0 => identity = true,
+                        2.0 => {
+                            node.push(Prim(Dup, span));
+                            node.push(Prim(Mul, span));
                         }
-                    }
-                    Term::Div(expr) if coef == Complex::ONE => {
-                        recur(node, expr, any_complex, span);
-                        node.push(Prim(Reciprocal, span));
-                    }
-                    Term::Div(expr) => {
-                        recur(node, expr, any_complex, span);
-                        node.push(Node::new_push(1.0));
-                        node.push(Prim(Flip, span));
-                        node.push(Prim(Div, span));
-                    }
-                    Term::Exp(expr) => {
-                        recur(node, expr, any_complex, span);
-                        node.push(Prim(Exp, span));
-                    }
-                    Term::Log(base, expr) => {
-                        recur(node, expr, any_complex, span);
-                        node.push(Node::new_push(base));
-                        node.push(Prim(Log, span));
-                    }
-                    Term::Sin(expr) => {
-                        recur(node, expr, any_complex, span);
-                        node.push(Prim(Sin, span));
-                    }
-                    Term::Cos(expr) => {
-                        recur(node, expr, any_complex, span);
-                        node.push(ImplPrim(Cos, span));
+                        _ => {
+                            node.push(Node::new_push(pow));
+                            node.push(Prim(Pow, span));
+                        }
                     }
                 }
+                Term::Div(expr) if coef == Complex::ONE => {
+                    recur(node, expr, any_complex, span);
+                    node.push(Prim(Reciprocal, span));
+                }
+                Term::Div(expr) => {
+                    recur(node, expr, any_complex, span);
+                    node.push(Node::new_push(1.0));
+                    node.push(Prim(Flip, span));
+                    node.push(Prim(Div, span));
+                }
+                Term::Exp(expr) => {
+                    recur(node, expr, any_complex, span);
+                    node.push(Prim(Exp, span));
+                }
+                Term::Log(base, expr) => {
+                    recur(node, expr, any_complex, span);
+                    node.push(Node::new_push(base));
+                    node.push(Prim(Log, span));
+                }
+                Term::Sin(expr) => {
+                    recur(node, expr, any_complex, span);
+                    node.push(Prim(Sin, span));
+                }
+                Term::Cos(expr) => {
+                    recur(node, expr, any_complex, span);
+                    node.push(ImplPrim(Cos, span));
+                }
             }
-            if coef != ZERO && coef != ONE {
+            if mul_coef {
                 node.push(if any_complex {
                     Node::new_push(coef)
                 } else {
@@ -308,8 +325,16 @@ fn expr_to_node(expr: Expr, any_complex: bool, asm: &Assembly) -> Node {
                 });
                 node.push(Prim(Mul, span));
             }
-            if i > 0 {
+            if !is_first_term {
                 node.push(Prim(Add, span));
+            }
+        }
+        if node.is_empty() {
+            if identity {
+                node.push(Prim(Identity, span))
+            } else {
+                node.push(Node::new_push(0));
+                node.push(Prim(Mul, span));
             }
         }
     }

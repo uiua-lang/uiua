@@ -607,6 +607,9 @@ impl MapKeys {
         while self.unfix() {
             fix_count += 1;
         }
+        if self.keys.rank() == 0 && fix_count == 0 {
+            return self.keys;
+        }
         if self.len == 0 {
             return self.keys.first_dim_zero();
         }
@@ -634,7 +637,7 @@ impl MapKeys {
             true
         } else if self.keys.shape.starts_with(&[1]) {
             self.keys.undo_fix();
-            true
+            false
         } else {
             false
         }
@@ -746,7 +749,9 @@ impl MapKeys {
     {
         let mut map_keys = MapKeys::default();
         map_keys.insert(take(self).normalized(), 0, ctx)?;
-        let res = map_keys.insert(other.normalized(), 1, ctx)?.is_some();
+        let b = other.normalized();
+        let index = map_keys.get(&b).unwrap_or(1);
+        let res = map_keys.insert(b, index, ctx)?.is_some();
         *self = map_keys;
         Ok(res)
     }

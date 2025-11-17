@@ -111,6 +111,9 @@ B     ← Entry "B"
 C     ← Entry "C"
 ⍤⤙≍ map {"A""C""B"} {5"wow"[]} [A 5 C "wow" B []]
 
+⍤⤙≍ map 1_4 2_3 ⊟ map 1 2 map 4 3
+⍤⤙≍ map [1] [3] ⊟ map 1 2 map 1 3
+
 # Maplings
 ⍤⤙≍ map [1 3] [2 4] ⊂ map 1 2 map 3 4
 ⍤⤙≍ ⊃⊂⊂⌟ map 1 2 map 3 4

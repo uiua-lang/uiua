@@ -582,16 +582,16 @@ impl App {
                     ui.label(RichText::new(format!("{label}:")).font(FontId::monospace(14.0)));
                 }
                 let total_time: f32 = frames.iter().map(|(_, d)| d).sum();
+                let now = Instant::now();
                 if !*play {
-                    *play_start = Instant::now();
+                    *play_start = now;
                 }
                 ui.horizontal(|ui| {
                     // Frames
                     let size = cache.image_size(state.size);
                     let mut t = 0.0;
                     let mut rendered = false;
-                    let mut curr =
-                        ((Instant::now() - *play_start).as_secs_f32() + *play_offset) % total_time;
+                    let mut curr = ((now - *play_start).as_secs_f32() + *play_offset) % total_time;
                     for (tex_id, delay) in &*frames {
                         if t < curr - delay {
                             t += delay;
@@ -627,20 +627,20 @@ impl App {
                             {
                                 *play = !*play;
                                 if !*play {
-                                    *play_start = Instant::now();
+                                    *play_start = now;
                                     *play_offset = curr;
                                 }
                             };
                             // Time slider
-                            if Slider::new(&mut curr, 0.0..=total_time)
+                            if Slider::new(&mut curr, 0.0..=total_time - delay * 0.5)
                                 .min_decimals(2)
                                 .max_decimals(2)
                                 .suffix(format!("/{total_time:.2}"))
                                 .ui(ui)
                                 .dragged()
                             {
-                                *play_start = Instant::now();
-                                *play_offset = curr;
+                                *play_start = now;
+                                *play_offset = curr.min(total_time);
                             }
                         });
                         // Save

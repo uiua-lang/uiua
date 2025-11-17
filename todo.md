@@ -3,14 +3,10 @@
 # 0.18
 - Recursion ergonomics for `path` / revise `recur`
 - `table` non-lists optimizations?
-- Mixed subscripts
-  - `bracket`
-- Compile-time code string evaluation?
 - `first group/partition` optimization
 - `under group/partition inventory` optimization
 - Reserved modifier glyphs?
 - Streaming gif and audio encoding
-- Window "restart all" button
 
 ## Planned Features
 Features that are planned to be implemented in the future.

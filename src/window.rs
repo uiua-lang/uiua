@@ -394,6 +394,29 @@ impl eframe::App for App {
                     ui.toggle_value(&mut self.autoplay, "▶")
                         .on_hover_text("Autoplay audio");
                 }
+                let rewind_text = if cfg!(feature = "audio") {
+                    "Rewind GIFs and audio"
+                } else {
+                    "Rewind GIFs"
+                };
+                if ui.button("⏮").on_hover_text(rewind_text).clicked() {
+                    let now = Instant::now();
+                    for item in &mut self.items {
+                        match item {
+                            #[cfg(feature = "audio")]
+                            OutputItem::Audio { controls, .. } => controls.curr.set(0.0),
+                            OutputItem::Gif {
+                                play_offset,
+                                play_start,
+                                ..
+                            } => {
+                                *play_offset = 0.0;
+                                *play_start = now;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
             })
         });
 

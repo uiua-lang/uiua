@@ -83,7 +83,7 @@ fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueMonFn> {
     })
 }
 
-fn replace_rand(v: Value, d: usize) -> Value {
+fn replace_rand(v: &Value, d: usize) -> Value {
     let shape = &v.shape[..d.min(v.rank())];
     let elem_count: usize = shape.iter().product();
     let mut data = eco_vec![0.0; elem_count];
@@ -104,7 +104,7 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMonFn>
             Value::deshape_sub(&mut v, i, d, true, env)?;
             Ok(v)
         }),
-        ReplaceRand => spanned_mon_fn(span, |v, d, _| Ok(replace_rand(v, d))),
+        ReplaceRand => spanned_mon_fn(span, |v, d, _| Ok(replace_rand(&v, d))),
         SortDown => spanned_mon_fn(span, |mut v, d, _| {
             v.sort_down_depth(d);
             Ok(v)
@@ -315,8 +315,8 @@ fn f_mon2_fast_fn_impl(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize
         [rest @ .., Node::Prim(Rand, _)] => {
             let (before, d1) = f_mon_fast_fn_impl(rest, false, env)?;
             let f = std::boxed::Box::new(move |val: Value, depth: usize, env: &mut Uiua| {
-                let before = before(val.clone(), d1 + depth, env)?;
-                let replaced = replace_rand(val, depth);
+                let replaced = replace_rand(&val, depth);
+                let before = before(val, d1 + depth, env)?;
                 Ok((before, replaced))
             });
             (f, 0)

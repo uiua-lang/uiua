@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.18
+- Module member access chaining
 - Recursion ergonomics for `path` / revise `recur`
 - `table` non-lists optimizations?
 - `first group/partition` optimization

@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use super::*;
 
 use crate::{ImplPrimitive::*, Node::*, Primitive::*, check::nodes_clean_sig};
@@ -30,21 +32,17 @@ impl Node {
         let mut optimized = false;
         fn optimize_run(nodes: &mut EcoVec<Node>, level: OptLevel, opt_single: bool) -> bool {
             let mut optimized = false;
+            while (OPTIMIZATIONS.iter().filter(|opt| opt.level() <= level)).any(|op| {
+                if !op.match_and_replace(nodes) {
+                    return false;
+                }
+                dbgln!("applied optimization {op:?}");
+                true
+            }) {
+                optimized = true;
+            }
             for node in nodes.make_mut() {
                 optimized |= node.optimize_impl(level, opt_single);
-            }
-            while OPTIMIZATIONS
-                .iter()
-                .filter(|opt| opt.level() <= level)
-                .any(|op| {
-                    if !op.match_and_replace(nodes) {
-                        return false;
-                    }
-                    dbgln!("applied optimization {op:?}");
-                    true
-                })
-            {
-                optimized = true;
             }
             optimized
         }
@@ -101,7 +99,7 @@ impl Node {
     }
 }
 
-static OPTIMIZATIONS: &[&dyn Optimization] = &[
+static UNSORTED_OPTS: &[&dyn Optimization] = &[
     &((Reverse, First), Last),
     &((Reverse, Last), First),
     &((Rise, First), FirstMinIndex),
@@ -136,10 +134,17 @@ static OPTIMIZATIONS: &[&dyn Optimization] = &[
     &PathOpt,
     &SplitByOpt,
     &AllSameOpt,
+    &SortedUpOpt,
     &RangeStartOpt,
     &PopConst,
     &ValidateTypeOpt,
 ];
+
+static OPTIMIZATIONS: LazyLock<Vec<&'static dyn Optimization>> = LazyLock::new(|| {
+    let mut vec: Vec<_> = UNSORTED_OPTS.into();
+    vec.sort_by_key(|opt| opt.level());
+    vec
+});
 
 opt!(
     InlineCustomInverse,
@@ -413,6 +418,22 @@ impl Optimization for AllSameOpt {
 }
 
 #[derive(Debug)]
+struct SortedUpOpt;
+impl Optimization for SortedUpOpt {
+    fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
+        match_and_replace(nodes, |nodes| match nodes {
+            [Mod(On | By, args, span), Prim(Match, _), ..] if matches!(args.as_slice(), [f] if matches!(f.node, Prim(Sort, _))) => {
+                Some((2, ImplPrim(SortedUp, *span)))
+            }
+            _ => None,
+        })
+    }
+    fn level(&self) -> OptLevel {
+        OptLevel::Early
+    }
+}
+
+#[derive(Debug)]
 struct SplitByOpt;
 impl Optimization for SplitByOpt {
     fn match_and_replace(&self, nodes: &mut EcoVec<Node>) -> bool {
@@ -429,16 +450,12 @@ impl Optimization for SplitByOpt {
             Some((f.clone(), *span))
         }
         match_and_replace(nodes, |nodes| match nodes {
-            [Mod(By, args, _), last, ..]
-                if matches!(args.as_slice(), [f]
-                            if matches!(f.node, Prim(Ne, _))) =>
+            [Mod(By, args, _), last, ..] if matches!(args.as_slice(), [f] if matches!(f.node, Prim(Ne, _))) =>
             {
                 let (f, span) = par_f(last)?;
                 Some((2, ImplMod(SplitByScalar, eco_vec![f], span)))
             }
-            [Mod(By, args, _), Prim(Not, _), last, ..]
-                if matches!(args.as_slice(), [f]
-                            if matches!(f.node, Prim(Mask, _))) =>
+            [Mod(By, args, _), Prim(Not, _), last, ..] if matches!(args.as_slice(), [f]    if matches!(f.node, Prim(Mask, _))) =>
             {
                 let (f, span) = par_f(last)?;
                 Some((3, ImplMod(SplitBy, eco_vec![f], span)))
@@ -642,7 +659,9 @@ fn replace_nodes(nodes: &mut EcoVec<Node>, i: usize, n: usize, new: Node) {
     debug_assert!(orig_len - n >= i);
     nodes.make_mut()[i..].rotate_left(n);
     nodes.truncate(orig_len - n);
-    nodes.extend(new);
+    for new in new {
+        nodes.extend(new);
+    }
     let added = nodes.len() - (orig_len - n);
     nodes.make_mut()[i..].rotate_right(added);
 }

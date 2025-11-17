@@ -33,6 +33,10 @@ impl Value {
     pub fn shuffle(&mut self) {
         val_as_arr!(self, Array::shuffle)
     }
+    /// Check if a value is sorted up
+    pub fn is_sorted_up(&self) -> bool {
+        val_as_arr!(self, Array::is_sorted_up)
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -248,6 +252,23 @@ impl<T: ArrayValue> Array<T> {
         });
         self.meta.take_sorted_flags();
         self.validate();
+    }
+    /// Check whether the array is sorted up
+    pub fn is_sorted_up(&self) -> bool {
+        if self.meta.is_sorted_up() {
+            return true;
+        }
+        let mut rows = self.row_slices().map(ArrayCmpSlice);
+        let Some(mut prev) = rows.next() else {
+            return true;
+        };
+        for row in rows {
+            if prev > row {
+                return false;
+            }
+            prev = row;
+        }
+        true
     }
 }
 

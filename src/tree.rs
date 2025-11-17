@@ -381,11 +381,15 @@ impl Node {
             eco_vec![self]
         }
     }
-    /// Turn a run of 1 node into a single node
+    /// Flatten runs of nodes
     pub fn normalize(&mut self) {
         if let Node::Run(nodes) = self {
             if nodes.len() == 1 {
                 *self = take(nodes).remove(0);
+                self.normalize();
+            } else if nodes.iter().any(|node| matches!(node, Node::Run(_))) {
+                *self = take(nodes).into_iter().flatten().collect();
+                self.normalize();
             }
         }
     }
@@ -677,7 +681,7 @@ impl FromIterator<Node> for Node {
 
 impl Extend<Node> for Node {
     fn extend<T: IntoIterator<Item = Node>>(&mut self, iter: T) {
-        for node in iter {
+        for node in iter.into_iter().flatten() {
             self.push(node);
         }
     }

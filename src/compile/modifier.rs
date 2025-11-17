@@ -1,8 +1,6 @@
 //! Compiler code for modifiers
 #![allow(clippy::redundant_closure_call)]
 
-use crate::algorithm::ga;
-
 use super::*;
 use algebra::{derivative, integral};
 use invert::InversionError;
@@ -539,6 +537,10 @@ impl Compiler {
                                 self.add_span(modified.modifier.span.clone().merge(inner_span));
                             Node::Prim(Dup, span)
                         }
+                        // _ if sn.sig == (0, 1) => Node::from([
+                        //     sn.node,
+                        //     Node::Prim(Flip, self.add_span(modified.modifier.span.clone())),
+                        // ]),
                         _ => {
                             let prim = if sn.sig.args() == 0 { Dip } else { On };
                             let span = self.add_span(modified.modifier.span.clone());
@@ -680,18 +682,17 @@ impl Compiler {
                 }
             }
             Both => {
-                let Some(sub) = subscript else {
-                    return Ok(None);
-                };
                 func!({
-                    let sub = self.validate_subscript(sub);
-                    let sub_span = sub.span;
-                    let mut sub = sub
-                        .value
-                        .map_num(|n| self.positive_subscript(n, Both, &sub_span) as u32);
+                    let (mut sub, sub_span) = subscript.map_or((Subscript::from(2), None), |sub| {
+                        let sub = self.validate_subscript(sub);
+                        let sub_span = sub.span;
+                        let sub = (sub.value)
+                            .map_num(|n| self.positive_subscript(n, Both, &sub_span) as u32);
+                        (sub, Some(sub_span))
+                    });
                     let span = self.add_span(modified.modifier.span.clone());
                     let op = self.monadic_modifier_op(modified)?.0;
-                    if let Some(side) = &mut sub.side {
+                    if let Some((side, sub_span)) = sub.side.as_mut().zip(sub_span) {
                         if let Some(side_n) = side.n {
                             if side_n > op.sig.args() {
                                 self.add_error(
@@ -707,8 +708,15 @@ impl Compiler {
                                 side.n = Some(op.sig.args());
                             }
                         }
+                    } else if op.sig.args() == 0 {
+                        let n = sub.num.unwrap_or(2) as usize;
+                        return Ok(Node::from_iter(repeat_n(op.node, n).flatten()));
                     }
-                    Node::ImplMod(ImplPrimitive::BothImpl(sub), eco_vec![op], span)
+                    if sub.num.unwrap_or(2) == 2 && sub.side.is_none() {
+                        Node::Mod(Both, eco_vec![op], span)
+                    } else {
+                        Node::ImplMod(ImplPrimitive::BothImpl(sub), eco_vec![op], span)
+                    }
                 })
             }
             Bracket => {

@@ -44,6 +44,15 @@ impl From<i32> for Subscript<i32> {
     }
 }
 
+impl From<u32> for Subscript<u32> {
+    fn from(i: u32) -> Self {
+        Subscript {
+            num: Some(i),
+            side: None,
+        }
+    }
+}
+
 impl<N> From<SubSide> for Subscript<N> {
     fn from(side: SubSide) -> Self {
         Subscript {

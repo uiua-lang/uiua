@@ -83,6 +83,16 @@ fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueMonFn> {
     })
 }
 
+fn replace_rand(v: Value, d: usize) -> Value {
+    let shape = &v.shape[..d.min(v.rank())];
+    let elem_count: usize = shape.iter().product();
+    let mut data = eco_vec![0.0; elem_count];
+    for n in data.make_mut() {
+        *n = random();
+    }
+    Array::new(shape, data).into()
+}
+
 fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMonFn> {
     use ImplPrimitive::*;
     Some(match prim {
@@ -94,15 +104,7 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMonFn>
             Value::deshape_sub(&mut v, i, d, true, env)?;
             Ok(v)
         }),
-        ReplaceRand => spanned_mon_fn(span, |v, d, _| {
-            let shape = &v.shape[..d.min(v.rank())];
-            let elem_count: usize = shape.iter().product();
-            let mut data = eco_vec![0.0; elem_count];
-            for n in data.make_mut() {
-                *n = random();
-            }
-            Ok(Array::new(shape, data).into())
-        }),
+        ReplaceRand => spanned_mon_fn(span, |v, d, _| Ok(replace_rand(v, d))),
         SortDown => spanned_mon_fn(span, |mut v, d, _| {
             v.sort_down_depth(d);
             Ok(v)
@@ -146,6 +148,7 @@ pub(crate) fn f_mon_fast_fn(node: &Node, env: &Uiua) -> Option<(ValueMonFn, usiz
 fn f_mon_fast_fn_impl(nodes: &[Node], deep: bool, env: &Uiua) -> Option<(ValueMonFn, usize)> {
     use Primitive::*;
     Some(match nodes {
+        [] => (Rc::new(|val, _, _| Ok(val)), 0),
         // Box cannot be combined with other depth primives because
         // it is often used to fix shape mismatches between rows.
         // We handle it separately here.
@@ -297,6 +300,27 @@ fn f_mon2_fast_fn_impl(nodes: &[Node], env: &Uiua) -> Option<(ValueMon2Fn, usize
             });
             (f, 0)
         }
+        // Push after mon1
+        [rest @ .., Node::Push(repl)] => {
+            let (before, d1) = f_mon_fast_fn_impl(rest, false, env)?;
+            let repl = repl.clone();
+            let f = std::boxed::Box::new(move |val: Value, depth: usize, env: &mut Uiua| {
+                let before = before(val.clone(), d1 + depth, env)?;
+                let replaced = val.replace_depth(repl.clone(), depth);
+                Ok((before, replaced))
+            });
+            (f, 0)
+        }
+        // Rand after mon1
+        [rest @ .., Node::Prim(Rand, _)] => {
+            let (before, d1) = f_mon_fast_fn_impl(rest, false, env)?;
+            let f = std::boxed::Box::new(move |val: Value, depth: usize, env: &mut Uiua| {
+                let before = before(val.clone(), d1 + depth, env)?;
+                let replaced = replace_rand(val, depth);
+                Ok((before, replaced))
+            });
+            (f, 0)
+        }
         _ => return None,
     })
 }
@@ -443,6 +467,12 @@ pub(crate) fn each1(f: SigNode, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         let rank = xs.rank();
         let val = f(xs, rank, env)?;
         env.push(val);
+        return Ok(());
+    } else if let Some((f, ..)) = f_mon2_fast_fn(&f.node, env) {
+        let rank = xs.rank();
+        let (xs, ys) = f(xs, rank, env)?;
+        env.push(ys);
+        env.push(xs);
         return Ok(());
     }
     let outputs = f.sig.outputs();

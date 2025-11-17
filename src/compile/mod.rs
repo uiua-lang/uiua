@@ -31,7 +31,7 @@ use crate::{
     IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass, Primitive, Purity, RunMode,
     SUBSCRIPT_DIGITS, SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript,
     SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
-    algorithm::ga::Spec,
+    algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
     format::{format_word, format_words},

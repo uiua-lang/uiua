@@ -2168,7 +2168,7 @@ primitive!(
     /// ex! ⍜⊕□⇌ ⊸≠@  $ These are some words
     ///
     /// [group] is closely related to [partition].
-    (2[1], Group, AggregatingModifier, ("group", '⊕')),
+    ([1], Group, AggregatingModifier, ("group", '⊕')),
     /// Group sequential sections of an array
     ///
     /// The most common use of [partition] is to split an array by a delimiter.
@@ -2220,7 +2220,7 @@ primitive!(
     /// ex: ⍜⊜⊢⌵  ⊸≠@  $ These are some words
     ///
     /// [partition] is closely related to [group].
-    (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
+    ([1], Partition, AggregatingModifier, ("partition", '⊜')),
     /// Call a function with its arguments' axes reversed
     ///
     /// Uiua primitives tend to treat axes near the front of the shape as spanning items in a collection. Axes near the end of the shape are often treated as the items or components of the items.

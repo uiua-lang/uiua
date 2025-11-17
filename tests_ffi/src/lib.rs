@@ -224,6 +224,13 @@ pub unsafe extern "C" fn pointerify(i: c_int) -> *const c_int {
     Box::leak(Box::new(i))
 }
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fmt_ptr(ptr: *const c_void) -> *const c_char {
+    let s = format!("{ptr:p}");
+    let s = CString::new(s).unwrap();
+    s.into_raw()
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

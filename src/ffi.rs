@@ -678,7 +678,10 @@ mod enabled {
                 (FfiType::ULong, Value::Num(arr)) => scalar!(arr, c_ulong),
                 (FfiType::ULongLong, Value::Byte(arr)) => scalar!(arr, c_ulonglong),
                 (FfiType::ULongLong, Value::Num(arr)) => scalar!(arr, c_ulonglong),
-
+                (FfiType::Ptr(ty), Value::Byte(arr)) if **ty == FfiType::Void => {
+                    scalar!(arr, usize)
+                }
+                (FfiType::Ptr(ty), Value::Num(arr)) if **ty == FfiType::Void => scalar!(arr, usize),
                 (FfiType::Ptr(ty), value) => ty.repr_arr(value, true)?,
                 (FfiType::Struct(fields), value) => FfiType::repr_struct(fields, value)?,
 

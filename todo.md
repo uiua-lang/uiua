@@ -2,7 +2,6 @@
 
 # 0.18
 - Make path components search for modules first
-- Format remove space between subscript and number
 - Sided `stencil` for simpler chunking
 - Recursion ergonomics for `path` / revise `recur`
 - `table` non-lists optimizations?

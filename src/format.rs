@@ -1007,6 +1007,15 @@ impl Formatter<'_> {
                     || s.starts_with(|c: char| c.is_ascii_digit()) && self.output.ends_with('¯')
                 {
                     self.output.push(' ');
+                } else if self.output.ends_with(' ')
+                    && self.output[..self.output.len() - 1]
+                        .ends_with(|c: char| SUBSCRIPT_DIGITS.contains(&c) || "⌞⌟".contains(c))
+                    && (self.glyph_map.last()).is_some_and(|(last_span, _)| {
+                        last_span.end.char_pos - last_span.start.char_pos == 1
+                    })
+                {
+                    self.output.pop();
+                    self.glyph_map.pop();
                 }
                 self.push(&word.span, s)
             }
@@ -2048,6 +2057,8 @@ F,1
 ˜⊗
 `5
 unwrench
+ran,1 10
+ran,1  10
 ";
     let output = "\
 F₁
@@ -2056,6 +2067,8 @@ F₁
 ⨂
 ¯5
 °(-⊸¬)
+⇡₁10
+⇡₁ 10
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, output);

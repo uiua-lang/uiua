@@ -63,8 +63,9 @@ impl Compiler {
             && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
         {
             if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
-                Word::Ref(r)
-                    if ident_modifier_args(&r.name.value) == 0
+                Word::Ref(r, chained)
+                    if chained.is_empty()
+                        && ident_modifier_args(&r.name.value) == 0
                         && !(r.path.is_empty() && r.name.value == name) =>
                 {
                     Some(r)
@@ -659,7 +660,7 @@ impl Compiler {
                         }
                     }
                 }
-                Word::Ref(r) => match self.ref_local(r) {
+                Word::Ref(r, chained) if chained.is_empty() => match self.ref_local(r) {
                     Ok(Some((pl, l))) => {
                         path_locals = Some((&r.path, pl));
                         name_local = Some((&r.name, &word.span, l));
@@ -667,6 +668,14 @@ impl Compiler {
                     Ok(None) => {}
                     Err(e) => self.errors.push(e),
                 },
+                Word::Ref(r, chained) => {
+                    let words: Vec<_> = r
+                        .clone()
+                        .chain_refs(chained.iter().cloned())
+                        .map(|r| r.span().sp(Word::Ref(r, Vec::new())))
+                        .collect();
+                    self.analyze_macro_body(mac_name, &words, code_macro, recursive, mod_locals);
+                }
                 Word::IncompleteRef { path, .. } => match self.ref_path(path) {
                     Ok(Some((_, pl))) => path_locals = Some((path, pl)),
                     Ok(None) => {}

@@ -75,6 +75,20 @@ Foo 1 2 3
 ⍤⤙≍ {1 2 3} Foo 1 2 3
 ⍤⤙≍ "bar" Bar
 
+# Chaining
+┌─╴M
+  ~A {B C}
+  ~B {D}
+  ~C {E F}
+  Ax ← A B 5 C 12 "Hi!"
+  ⍤⤙≍ 5 A~B≈D Ax
+  ⍤⤙≍ 12 A~C≈E Ax
+  ⍤⤙≍ "Hi!" A~C≈F Ax
+  ⍤⤙≍ A B 6 C 12 "Hi!" ⍜A~B≈D+₁ Ax
+  F! ← A~C≈E A B ^ C⊃+₂×₁₀^
+└─╴
+⍤⤙≍ 7 M~F!5
+
 # Experimental!
 
 # Field validators

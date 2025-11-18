@@ -1,6 +1,6 @@
 //! Uiua's abstract syntax tree
 
-use std::{collections::BTreeMap, fmt, mem::discriminant};
+use std::{collections::BTreeMap, fmt, iter::once, mem::discriminant};
 
 use ecow::EcoString;
 use serde::*;
@@ -337,7 +337,7 @@ pub enum Word {
     FormatString(Vec<String>),
     MultilineFormatString(Vec<Sp<Vec<String>>>),
     Label(String),
-    Ref(Ref),
+    Ref(Ref, Vec<ChainComponent>),
     IncompleteRef {
         path: Vec<RefComponent>,
         in_macro_arg: bool,
@@ -372,7 +372,7 @@ impl PartialEq for Word {
             (Self::Label(a), Self::Label(b)) => a == b,
             (Self::FormatString(a), Self::FormatString(b)) => a == b,
             (Self::MultilineFormatString(a), Self::MultilineFormatString(b)) => a == b,
-            (Self::Ref(a), Self::Ref(b)) => a == b,
+            (Self::Ref(a, ach), Self::Ref(b, bch)) => a == b && ach == bch,
             (Self::Strand(a), Self::Strand(b)) => words_eq(a, b),
             (Self::Array(a), Self::Array(b)) => a.lines == b.lines,
             (Self::Func(a), Self::Func(b)) => a.lines == b.lines,
@@ -457,7 +457,13 @@ impl fmt::Debug for Word {
                 Ok(())
             }
             Word::Label(label) => write!(f, "${label}"),
-            Word::Ref(ident) => write!(f, "ref({ident})"),
+            Word::Ref(r, chained) => {
+                write!(f, "ref({r}")?;
+                for comp in chained {
+                    write!(f, "≈{}", comp.name.value)?;
+                }
+                write!(f, ")")
+            }
             Word::IncompleteRef { path, .. } => {
                 write!(f, "incomplete_ref({}~...)", path[0].module.value)
             }
@@ -502,7 +508,24 @@ pub struct RefComponent {
     pub tilde_span: CodeSpan,
 }
 
+/// A component of a reference
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ChainComponent {
+    /// The span of the ≈
+    pub tilde_span: CodeSpan,
+    /// The name of the item
+    pub name: Sp<Ident>,
+}
+
 impl Ref {
+    /// Get the span of this reference
+    pub fn span(&self) -> CodeSpan {
+        if let Some(comp) = self.path.first() {
+            comp.module.span.clone().merge(self.name.span.clone())
+        } else {
+            self.name.span.clone()
+        }
+    }
     /// Get the number of modifier arguments this reference's name implies
     pub fn modifier_args(&self) -> usize {
         ident_modifier_args(&self.name.value)
@@ -510,6 +533,24 @@ impl Ref {
     /// Get the root module of this reference
     pub fn root_module(&self) -> Option<&Ident> {
         self.path.first().map(|c| &c.module.value)
+    }
+    /// Get all `Ref`s that desugar from chaining this ref with some names
+    pub fn chain_refs(
+        self,
+        chained: impl IntoIterator<Item = ChainComponent>,
+    ) -> impl Iterator<Item = Self> {
+        let mut prev = self.name.clone();
+        once(self).chain(chained.into_iter().map(move |comp| {
+            let r = Ref {
+                path: vec![RefComponent {
+                    module: prev.clone(),
+                    tilde_span: comp.tilde_span,
+                }],
+                name: comp.name,
+            };
+            prev = r.name.clone();
+            r
+        }))
     }
 }
 

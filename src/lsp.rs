@@ -601,7 +601,17 @@ impl Spanner {
                 Word::MultilineFormatString(lines) => {
                     spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
                 }
-                Word::Ref(r) => spans.extend(self.ref_spans(r)),
+                Word::Ref(r, chained) => {
+                    spans.extend(self.ref_spans(r));
+                    for comp in chained {
+                        spans.push(comp.tilde_span.clone().sp(SpanKind::Delimiter));
+                        let docs = self.reference_docs(&comp.name.span);
+                        spans.push(comp.name.span.clone().sp(SpanKind::Ident {
+                            docs,
+                            original: false,
+                        }));
+                    }
+                }
                 Word::IncompleteRef { path, .. } => spans.extend(self.ref_path_spans(path)),
                 Word::Strand(items) => {
                     for i in 0..items.len() {

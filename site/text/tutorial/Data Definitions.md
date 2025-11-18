@@ -233,6 +233,46 @@ A module that contains variants has a `Variants` binding that lists their names.
 IpAddr~Variants
 ```
 
+## Chained Access
+
+When data definitions are nested, it is common to name parent fields according to the name of the child's definition.
+
+Consider this simple nested structure.
+
+```uiua
+~Bars [Hp ← 100|Mp ← 100|Sta ← 100]
+~Player {Name Bars ← Bars}
+```
+
+If we wanted to get the player's HP, we would have to use two different field accesses.
+
+```uiua
+~Bars [Hp ← 100|Mp ← 100|Sta ← 100]
+~Player {Name Bars ← Bars}
+Player "Roni"
+Bars~Hp Player~Bars
+```
+
+We can use the `≈` symbol, which formats from `~~`, to simplify this common pattern. This is syntactic sugar for the example above, so it is compatible with other [`under`]() and the like.
+
+```uiua
+~Bars [Hp ← 100|Mp ← 100|Sta ← 100]
+~Player {Name Bars ← Bars}
+Player "Roni"
+⍜Player~Bars≈Hp(-10)
+```
+
+These are arbitrarily chainable and work as long as the name of the field and the name of the data definition in that field are the same.
+
+```uiua
+~A {B Q}
+~B {C R}
+~C {D S ← []}
+~D {E F}
+A⊙[1 2 3] B C⊙0 D "EE" @f
+⊸A~B≈C≈D≈E
+```
+
 ## Structs of Arrays
 
 There is a well-known optimization for lower-level languages called "structs of arrays". It is a design pattern where instead of making a list of similar data structures, you make a single structure with a list for each field. This makes code faster by making data take up less memory and therefore making CPU cache misses less likely.

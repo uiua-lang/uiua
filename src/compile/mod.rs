@@ -1258,7 +1258,7 @@ impl Compiler {
                 parts.push(curr_part);
                 Node::Format(parts, span)
             }
-            Word::Ref(r) => self.reference(r),
+            Word::Ref(r, chained) => r.chain_refs(chained).map(|r| self.reference(r)).collect(),
             Word::IncompleteRef { path, .. } => 'blk: {
                 if let Some((_, locals)) = self.ref_path(&path)? {
                     self.add_error(

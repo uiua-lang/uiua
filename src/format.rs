@@ -721,8 +721,9 @@ impl Formatter<'_> {
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
-                    Some(Word::Ref(r))
+                    Some(Word::Ref(r, chained))
                         if binding.words.len() == 1
+                            && chained.is_empty()
                             && r.root_module()
                                 .zip(self.prev_import_function.as_ref())
                                 .is_some_and(|(a, b)| a == b) =>
@@ -1063,7 +1064,13 @@ impl Formatter<'_> {
                         .push_str(&self.inputs.get(&line.span.src)[line.span.byte_range()]);
                 }
             }
-            Word::Ref(r) => self.format_ref(r),
+            Word::Ref(r, chained) => {
+                self.format_ref(r);
+                for comp in chained {
+                    self.push(&comp.tilde_span, "≈");
+                    self.push(&comp.name.span, &comp.name.value);
+                }
+            }
             Word::IncompleteRef { path, .. } => self.format_ref_path(path, true),
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
@@ -1654,7 +1661,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::FormatString(_) => false,
         Word::MultilineString(_) => true,
         Word::MultilineFormatString(_) => true,
-        Word::Ref(_) => false,
+        Word::Ref(..) => false,
         Word::IncompleteRef { .. } => false,
         Word::Strand(_) => false,
         Word::Array(arr) => {

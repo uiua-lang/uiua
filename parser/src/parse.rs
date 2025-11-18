@@ -449,11 +449,7 @@ impl Parser<'_> {
         let (glyph_span, public) =
             if let Some(span) = self.exact(Equal.into()).or_else(|| self.exact(LeftArrow)) {
                 (span, true)
-            } else if let Some(span) = self
-                .exact(EqualTilde.into())
-                .or_else(|| self.exact(LeftArrowTilde))
-                .or_else(|| self.exact(LeftStrokeArrow))
-            {
+            } else if let Some(span) = self.exact(LeftStrokeArrow) {
                 (span, false)
             } else {
                 self.index = start;
@@ -917,7 +913,17 @@ impl Parser<'_> {
                     colon_span,
                 }))
         } else {
-            span.sp(Word::Ref(Ref { name, path }))
+            let mut chained = Vec::new();
+            while let Some(tilde_span) = self
+                .exact(DoubleTilde.into())
+                .or_else(|| self.exact(AlmostEqual))
+            {
+                let Some(name) = self.ident() else {
+                    break;
+                };
+                chained.push(ChainComponent { tilde_span, name })
+            }
+            span.sp(Word::Ref(Ref { name, path }, chained))
         })
     }
     fn signature(&mut self, error_on_invalid: bool) -> Option<Sp<Signature>> {
@@ -1078,9 +1084,9 @@ impl Parser<'_> {
         } else {
             let term = self.term()?;
             match term.value {
-                Word::Ref(item) => {
+                Word::Ref(item, chained) => {
                     if item.modifier_args() == 0 {
-                        return Some(term.span.sp(Word::Ref(item)));
+                        return Some(term.span.sp(Word::Ref(item, chained)));
                     }
                     (Modifier::Ref(item), term.span)
                 }

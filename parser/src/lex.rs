@@ -613,8 +613,8 @@ pub enum Token {
     Subscr(Subscript),
     LeftArrow,
     LeftStrokeArrow,
-    LeftArrowTilde,
     TildeStroke,
+    AlmostEqual,
     DownArrow,
     OpenAngle,
     CloseAngle,
@@ -730,8 +730,8 @@ impl fmt::Display for Token {
             Token::Glyph(p) => p.fmt(f),
             Token::LeftArrow => write!(f, "←"),
             Token::LeftStrokeArrow => write!(f, "↚"),
-            Token::LeftArrowTilde => write!(f, "←~"),
             Token::TildeStroke => write!(f, "≁"),
+            Token::AlmostEqual => write!(f, "≈"),
             Token::DownArrow => write!(f, "↓"),
             Token::OpenAngle => write!(f, "⟨"),
             Token::CloseAngle => write!(f, "⟩"),
@@ -765,7 +765,6 @@ pub enum AsciiToken {
     Star,
     Percent,
     Equal,
-    EqualTilde,
     BangEqual,
     LessEqual,
     GreaterEqual,
@@ -793,7 +792,6 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Percent => write!(f, "%"),
             AsciiToken::Equal => write!(f, "="),
             AsciiToken::BangEqual => write!(f, "!="),
-            AsciiToken::EqualTilde => write!(f, "=~"),
             AsciiToken::LessEqual => write!(f, "<="),
             AsciiToken::GreaterEqual => write!(f, ">="),
             AsciiToken::Backtick => write!(f, "`"),
@@ -1078,6 +1076,7 @@ impl<'a> Lexer<'a> {
                 "~" if self.next_char_exact("~") => self.end(DoubleTilde, start),
                 "~" => self.end(Tilde, start),
                 "≁" => self.end(TildeStroke, start),
+                "≈" => self.end(AlmostEqual, start),
                 "'" => self.end(Quote, start),
                 "`" => {
                     if self.number("-") {
@@ -1103,12 +1102,12 @@ impl<'a> Lexer<'a> {
                         self.end(Placeholder(None), start)
                     }
                 }
-                "=" if self.next_char_exact("~") => self.end(EqualTilde, start),
+                "=" if self.next_char_exact("~") => self.end(LeftStrokeArrow, start),
                 "=" => self.end(Equal, start),
                 "<" if self.next_char_exact("=") => self.end(LessEqual, start),
                 ">" if self.next_char_exact("=") => self.end(GreaterEqual, start),
                 "!" if self.next_char_exact("=") => self.end(BangEqual, start),
-                "←" if self.next_char_exact("~") => self.end(LeftArrowTilde, start),
+                "←" if self.next_char_exact("~") => self.end(LeftStrokeArrow, start),
                 "←" => self.end(LeftArrow, start),
                 "↚" => self.end(LeftStrokeArrow, start),
                 "┌" if self.next_char_exact("─") && self.next_char_exact("╴")

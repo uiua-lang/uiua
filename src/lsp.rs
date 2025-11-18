@@ -605,7 +605,7 @@ impl Spanner {
                     spans.extend(self.ref_spans(r));
                     for comp in chained {
                         spans.push(comp.tilde_span.clone().sp(SpanKind::Delimiter));
-                        spans.extend(self.ref_spans(r));
+                        spans.extend(self.ref_spans(&comp.item));
                     }
                 }
                 Word::IncompleteRef(path) => spans.extend(self.ref_path_spans(path)),

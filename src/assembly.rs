@@ -16,7 +16,7 @@ use uiua_parser::SUBSCRIPT_DIGITS;
 use crate::{
     BindingCounts, CodeSpan, FunctionId, Inputs, Node, SigNode, Signature, Span, Uiua, UiuaResult,
     Value,
-    compile::{LocalName, Module},
+    compile::{LocalIndex, Module},
     is_ident_char,
 };
 
@@ -121,7 +121,7 @@ impl Assembly {
     }
     pub(crate) fn add_binding_at(
         &mut self,
-        local: LocalName,
+        local: LocalIndex,
         kind: BindingKind,
         span: Option<CodeSpan>,
         meta: BindingMeta,
@@ -150,7 +150,7 @@ impl Assembly {
     }
     pub(crate) fn bind_const(
         &mut self,
-        local: LocalName,
+        local: LocalIndex,
         value: Option<Value>,
         span: usize,
         meta: BindingMeta,
@@ -426,9 +426,21 @@ impl BindingKind {
             Self::Error => None,
         }
     }
-    /// Check if the global is a once-bound constant
+    /// Check if the binding is a once-bound constant
     pub fn is_constant(&self) -> bool {
         matches!(self, Self::Const(_))
+    }
+    /// Check if the binding is a module
+    pub fn is_module(&self) -> bool {
+        matches!(self, Self::Import(_) | Self::Module(_))
+    }
+    /// Check if the binding is a constant or function
+    pub fn has_sig(&self) -> bool {
+        match self {
+            Self::Const(_) | Self::Func(_) => true,
+            Self::Module(m) => m.names.contains_key("Call") || m.names.contains_key("New"),
+            _ => false,
+        }
     }
 }
 

@@ -21,8 +21,8 @@ use threadpool::ThreadPool;
 
 use crate::{
     Array, Assembly, BindingKind, BindingMeta, Boxed, CodeSpan, Compiler, Function, FunctionId,
-    Ident, Inputs, IntoSysBackend, LocalName, Node, Primitive, Report, SafeSys, SigNode, Signature,
-    Span, SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
+    Ident, Inputs, IntoSysBackend, LocalIndex, Node, Primitive, Report, SafeSys, SigNode,
+    Signature, Span, SysBackend, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::{self, validate_size_impl},
     fill::{Fill, FillFrame, FillValue},
     invert::match_format_pattern,
@@ -575,7 +575,7 @@ impl Uiua {
                 env.call(&func)
             }),
             Node::BindGlobal { span, index } => {
-                let local = LocalName {
+                let local = LocalIndex {
                     index,
                     public: false,
                 };

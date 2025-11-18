@@ -37,7 +37,7 @@ impl Compiler {
             if let Some(name) = data.name.clone() {
                 let global_index = self.next_global;
                 self.next_global += 1;
-                let local = LocalName {
+                let local = LocalIndex {
                     index: global_index,
                     public: data.public,
                 };
@@ -298,7 +298,7 @@ impl Compiler {
             let func = self
                 .asm
                 .add_function(id.clone(), Signature::new(1, 1), node);
-            let local = LocalName {
+            let local = LocalIndex {
                 index: self.next_global,
                 public: true,
             };
@@ -324,7 +324,7 @@ impl Compiler {
 
         // Make field names
         let span = self.add_span(data.init_span.clone());
-        let local = LocalName {
+        let local = LocalIndex {
             index: self.next_global,
             public: true,
         };
@@ -402,7 +402,7 @@ impl Compiler {
             Signature::new(constructor_args, 1),
             node,
         );
-        let constr_local = LocalName {
+        let constr_local = LocalIndex {
             index: self.next_global,
             public: true,
         };
@@ -454,7 +454,7 @@ impl Compiler {
                 let span = comp.add_span(word_span.clone());
                 // Compile function
                 let names = fields.iter().map(|field| {
-                    let local = LocalName {
+                    let local = LocalIndex {
                         index: field.global_index,
                         public: false,
                     };
@@ -468,7 +468,7 @@ impl Compiler {
                 // Make with args function
                 if !fields.iter().any(|field| field.name == "Args") {
                     let sn = sn.clone();
-                    let local = LocalName {
+                    let local = LocalIndex {
                         index: comp.next_global,
                         public: true,
                     };
@@ -483,7 +483,7 @@ impl Compiler {
                 sn.node.prepend(Node::Call(constructor_func.clone(), span));
                 sn.sig = sn.sig.compose(Signature::new(constructor_args, 1));
                 // Make function
-                let local = LocalName {
+                let local = LocalIndex {
                     index: comp.next_global,
                     public: true,
                 };
@@ -530,11 +530,13 @@ impl Compiler {
     pub(super) fn end_enum(&mut self) -> UiuaResult {
         // Add Variants binding
         if !self.scope.data_variants.is_empty()
-            && !self.scope.names.get("Variants").is_some_and(|ln| ln.public)
+            && !(self.scope.names)
+                .get_prefer_function("Variants", &self.asm)
+                .is_some_and(|ln| ln.public)
         {
             let index = self.next_global;
             self.next_global += 1;
-            let local = LocalName {
+            let local = LocalIndex {
                 index,
                 public: true,
             };

@@ -1759,9 +1759,9 @@ impl Compiler {
                 })
         {
             // Module import macro
-            let call = names.get("Call").copied();
+            let call = names.get_last("Call");
             let (_, sn) = self.in_scope(ScopeKind::AllInModule, move |comp| {
-                comp.scope.names.extend(names);
+                comp.scope.names.extend_from_other(names);
                 comp.words_sig(operands)
             })?;
             let (mut node, sig) = sn.into();
@@ -1822,7 +1822,7 @@ impl Compiler {
                         Node::Prim(Primitive::Pick, span),
                         Node::ImplPrim(ImplPrimitive::UnBox, span),
                     ]);
-                    let local = LocalName {
+                    let local = LocalIndex {
                         index: comp.next_global,
                         public: true,
                     };
@@ -1840,7 +1840,7 @@ impl Compiler {
                         .add_binding_at(local, BindingKind::Func(func), None, meta);
                     comp.prim_arg_bindings.insert(key.clone(), local.index);
                 }
-                let local = LocalName {
+                let local = LocalIndex {
                     index: comp.prim_arg_bindings[&key],
                     public: true,
                 };
@@ -1880,7 +1880,7 @@ impl Compiler {
         mut mac: IndexMacro,
         operands: Vec<Sp<Word>>,
         name: Sp<Ident>,
-        local: LocalName,
+        local: LocalIndex,
         ref_span: CodeSpan,
     ) -> UiuaResult<Node> {
         let span = self.add_span(ref_span.clone());
@@ -1914,7 +1914,7 @@ impl Compiler {
                     let count = ident_modifier_args(&name.value);
                     // Add temporary binding
                     self.asm.add_binding_at(
-                        LocalName {
+                        LocalIndex {
                             index: expansion_index,
                             public: false,
                         },
@@ -1931,7 +1931,7 @@ impl Compiler {
                 };
                 // Compile
                 let node = self.suppress_diagnostics(|comp| {
-                    comp.macro_scope(IndexMap::new(), Some(macro_local), |comp| {
+                    comp.macro_scope(LocalNames::default(), Some(macro_local), |comp| {
                         comp.words(mac.words)
                     })
                 })?;
@@ -2006,7 +2006,7 @@ impl Compiler {
         let mut code: Option<String> = None;
         (|| -> UiuaResult {
             if let Some(index) = self.node_unbound_index(&mac.root.node) {
-                let name = self.scope.names.iter().find_map(|(name, local)| {
+                let name = self.scope.names.all_iter().find_map(|(name, local)| {
                     if local.index == index {
                         Some(name)
                     } else {
@@ -2218,7 +2218,7 @@ impl Compiler {
             ));
         }
         if let Some(index) = self.node_unbound_index(&sn.node) {
-            let name = (self.scope.names.iter())
+            let name = (self.scope.names.visible_iter())
                 .find_map(|(ident, local)| (local.index == index).then_some(ident));
             return Err(if let Some(name) = name {
                 let name_span = self.asm.bindings[index].span.clone();
@@ -2262,7 +2262,7 @@ impl Compiler {
     /// Newly created bindings will be added to the current scope after the function is run.
     fn macro_scope<T>(
         &mut self,
-        names: IndexMap<Ident, LocalName>,
+        names: LocalNames,
         macro_local: Option<MacroLocal>,
         f: impl FnOnce(&mut Self) -> T,
     ) -> T {
@@ -2282,8 +2282,11 @@ impl Compiler {
         let mut replaced_scope = self.higher_scopes.pop().unwrap();
         // If temp scope has a new name, or if its binding index changed,
         // then it is a new binding and should be added to the current scope
-        for (name, local) in self.scope.names.drain(..) {
-            if orig_names.get(&name).is_none_or(|l| l.index != local.index) {
+        for (name, local) in take(&mut self.scope.names).into_visible_iter() {
+            if orig_names
+                .get_last(&name)
+                .is_none_or(|l| l.index != local.index)
+            {
                 replaced_scope.names.insert(name, local);
             }
         }

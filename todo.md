@@ -1,6 +1,10 @@
 # Uiua Todo
 
 # 0.18
+- Make path components search for modules first
+- Don't do SoA tables for strings
+- Format remove space between subscript and number
+- Sided `stencil` for simpler chunking
 - Recursion ergonomics for `path` / revise `recur`
 - `table` non-lists optimizations?
 - `first group/partition` optimization

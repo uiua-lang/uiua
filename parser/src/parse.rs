@@ -871,10 +871,9 @@ impl Parser<'_> {
         }
         Some(ident)
     }
-    fn ref_(&mut self) -> Option<Sp<Word>> {
+    fn ref_inner(&mut self) -> Option<Result<Ref, Vec<RefComponent>>> {
         let mut checkpoint = self.index;
         let mut name = self.ident()?;
-        let start_span = name.span.clone();
         let mut path = Vec::new();
         while let Some(tilde_span) = self.exact(Tilde.into()) {
             let comp = RefComponent {
@@ -888,12 +887,8 @@ impl Parser<'_> {
                     .get(self.index)
                     .is_none_or(|t| !matches!(t.value, Token::Str(_)))
                 {
-                    let span = start_span.merge(comp.tilde_span.clone());
                     path.push(comp);
-                    return Some(span.sp(Word::IncompleteRef {
-                        path,
-                        in_macro_arg: false,
-                    }));
+                    return Some(Err(path));
                 }
                 self.index = checkpoint;
                 return None;
@@ -902,29 +897,34 @@ impl Parser<'_> {
             path.push(comp);
             name = next;
         }
-        let span = start_span.merge(name.span.clone());
-        let colon_span = (path.is_empty() && !name.value.contains(['&', '!']))
-            .then(|| self.exact(AsciiToken::Colon.into()))
-            .flatten();
-        Some(if let Some(colon_span) = colon_span {
-            span.merge(colon_span.clone())
-                .sp(Word::ArgSetter(ArgSetter {
-                    ident: name,
-                    colon_span,
-                }))
-        } else {
-            let mut chained = Vec::new();
-            while let Some(tilde_span) = self
-                .exact(DoubleTilde.into())
-                .or_else(|| self.exact(AlmostEqual))
-            {
-                let Some(name) = self.ident() else {
-                    break;
-                };
-                chained.push(ChainComponent { tilde_span, name })
+        Some(Ok(Ref { name, path }))
+    }
+    fn chained_ref(&mut self) -> Option<Sp<Word>> {
+        let first = match self.ref_inner()? {
+            Ok(r) => r,
+            Err(path) => {
+                let span = (path.first().unwrap().module.span.clone())
+                    .merge(path.last().unwrap().tilde_span.clone());
+                return Some(span.sp(Word::IncompleteRef(path)));
             }
-            span.sp(Word::Ref(Ref { name, path }, chained))
-        })
+        };
+        let mut chained = Vec::new();
+        while let Some(tilde_span) = self
+            .exact(DoubleTilde.into())
+            .or_else(|| self.exact(AlmostEqual))
+        {
+            let reset = self.index;
+            let Some(Ok(item)) = self.ref_inner() else {
+                self.index = reset;
+                break;
+            };
+            chained.push(ChainComponent { tilde_span, item })
+        }
+        let mut span = first.span();
+        if let Some(comp) = chained.last() {
+            span.merge_with(comp.item.name.span.clone());
+        }
+        Some(span.sp(Word::Ref(first, chained)))
     }
     fn signature(&mut self, error_on_invalid: bool) -> Option<Sp<Signature>> {
         let reset = self.index;
@@ -1223,7 +1223,7 @@ impl Parser<'_> {
             n.map(|(n, s)| Word::Number(n, s))
         } else if let Some(prim) = self.prim() {
             prim.map(Word::Primitive)
-        } else if let Some(refer) = self.ref_() {
+        } else if let Some(refer) = self.chained_ref() {
             refer
         } else if let Some(n) = self.num() {
             n.map(|(n, s)| Word::Number(n, s))

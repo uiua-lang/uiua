@@ -338,10 +338,7 @@ pub enum Word {
     MultilineFormatString(Vec<Sp<Vec<String>>>),
     Label(String),
     Ref(Ref, Vec<ChainComponent>),
-    IncompleteRef {
-        path: Vec<RefComponent>,
-        in_macro_arg: bool,
-    },
+    IncompleteRef(Vec<RefComponent>),
     Strand(Vec<Sp<Word>>),
     Array(Arr),
     Func(Func),
@@ -354,13 +351,9 @@ pub enum Word {
     BreakLine,
     FlipLine,
     SemanticComment(SemanticComment),
-    OutputComment {
-        i: usize,
-        n: usize,
-    },
+    OutputComment { i: usize, n: usize },
     Subscripted(Box<Subscripted>),
     InlineMacro(InlineMacro),
-    ArgSetter(ArgSetter),
 }
 
 impl PartialEq for Word {
@@ -460,11 +453,11 @@ impl fmt::Debug for Word {
             Word::Ref(r, chained) => {
                 write!(f, "ref({r}")?;
                 for comp in chained {
-                    write!(f, "≈{}", comp.name.value)?;
+                    write!(f, "≈{}", comp.item)?;
                 }
                 write!(f, ")")
             }
-            Word::IncompleteRef { path, .. } => {
+            Word::IncompleteRef(path) => {
                 write!(f, "incomplete_ref({}~...)", path[0].module.value)
             }
             Word::Array(arr) => arr.fmt(f),
@@ -485,7 +478,6 @@ impl fmt::Debug for Word {
             Word::InlineMacro(InlineMacro { ident, func, .. }) => {
                 write!(f, "inline_macro({:?}{}))", func.value, ident.value)
             }
-            Word::ArgSetter(setter) => setter.fmt(f),
         }
     }
 }
@@ -513,8 +505,8 @@ pub struct RefComponent {
 pub struct ChainComponent {
     /// The span of the ≈
     pub tilde_span: CodeSpan,
-    /// The name of the item
-    pub name: Sp<Ident>,
+    /// The ref of the item
+    pub item: Ref,
 }
 
 impl Ref {
@@ -541,12 +533,14 @@ impl Ref {
     ) -> impl Iterator<Item = Self> {
         let mut prev = self.name.clone();
         once(self).chain(chained.into_iter().map(move |comp| {
+            let mut path = vec![RefComponent {
+                module: prev.clone(),
+                tilde_span: comp.tilde_span,
+            }];
+            path.extend(comp.item.path);
             let r = Ref {
-                path: vec![RefComponent {
-                    module: prev.clone(),
-                    tilde_span: comp.tilde_span,
-                }],
-                name: comp.name,
+                path,
+                name: comp.item.name,
             };
             prev = r.name.clone();
             r

@@ -1259,7 +1259,7 @@ impl Compiler {
                 Node::Format(parts, span)
             }
             Word::Ref(r, chained) => r.chain_refs(chained).map(|r| self.reference(r)).collect(),
-            Word::IncompleteRef { path, .. } => 'blk: {
+            Word::IncompleteRef(path) => 'blk: {
                 if let Some((_, locals)) = self.ref_path(&path)? {
                     self.add_error(
                         path.last().unwrap().tilde_span.clone(),
@@ -1506,18 +1506,6 @@ impl Compiler {
                     This is a bug in the interpreter",
                 );
                 Node::empty()
-            }
-            Word::ArgSetter(_) => {
-                self.add_error(
-                    word.span.clone(),
-                    format!(
-                        "Argument setters are no longer supported. \
-                        Use {}{} aka `set` instead.",
-                        Primitive::Un,
-                        Primitive::By
-                    ),
-                );
-                Node::Prim(Primitive::Pop, self.add_span(word.span))
             }
         })
     }

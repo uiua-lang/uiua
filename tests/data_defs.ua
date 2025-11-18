@@ -89,6 +89,14 @@ Foo 1 2 3
 └─╴
 ⍤⤙≍ 7 M~F!5
 
+┌─╴Enum
+  |A
+  |B {Test}
+└─╴
+~Struct {Enum}
+Struct Enum~B 4
+⍤⤙≍ 4 Struct~Enum≈B~Test
+
 # Experimental!
 
 # Field validators

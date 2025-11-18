@@ -676,7 +676,7 @@ impl Compiler {
                         .collect();
                     self.analyze_macro_body(mac_name, &words, code_macro, recursive, mod_locals);
                 }
-                Word::IncompleteRef { path, .. } => match self.ref_path(path) {
+                Word::IncompleteRef(path) => match self.ref_path(path) {
                     Ok(Some((_, pl))) => path_locals = Some((path, pl)),
                     Ok(None) => {}
                     Err(e) => self.errors.push(e),

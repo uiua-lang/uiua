@@ -1068,10 +1068,10 @@ impl Formatter<'_> {
                 self.format_ref(r);
                 for comp in chained {
                     self.push(&comp.tilde_span, "≈");
-                    self.push(&comp.name.span, &comp.name.value);
+                    self.format_ref(&comp.item);
                 }
             }
-            Word::IncompleteRef { path, .. } => self.format_ref_path(path, true),
+            Word::IncompleteRef(path) => self.format_ref_path(path, true),
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
                     if i > 0 {
@@ -1303,10 +1303,6 @@ impl Formatter<'_> {
                     self.push(span, "^");
                 }
                 self.push(&ident.span, &ident.value);
-            }
-            Word::ArgSetter(setter) => {
-                self.push(&setter.ident.span, &setter.ident.value);
-                self.push(&setter.colon_span, ":");
             }
         }
     }
@@ -1700,7 +1696,6 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::FlipLine => false,
         Word::SemanticComment(_) => true,
         Word::OutputComment { .. } => true,
-        Word::ArgSetter(_) => false,
     }
 }
 

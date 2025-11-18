@@ -605,14 +605,10 @@ impl Spanner {
                     spans.extend(self.ref_spans(r));
                     for comp in chained {
                         spans.push(comp.tilde_span.clone().sp(SpanKind::Delimiter));
-                        let docs = self.reference_docs(&comp.name.span);
-                        spans.push(comp.name.span.clone().sp(SpanKind::Ident {
-                            docs,
-                            original: false,
-                        }));
+                        spans.extend(self.ref_spans(r));
                     }
                 }
-                Word::IncompleteRef { path, .. } => spans.extend(self.ref_path_spans(path)),
+                Word::IncompleteRef(path) => spans.extend(self.ref_path_spans(path)),
                 Word::Strand(items) => {
                     for i in 0..items.len() {
                         let word = &items[i];
@@ -795,13 +791,6 @@ impl Spanner {
                         spans.push(span.clone().sp(mac_delim_kind.clone()));
                     }
                     spans.push(ident.span.clone().sp(mac_delim_kind));
-                }
-                Word::ArgSetter(setter) => {
-                    let comment = (self.code_meta.arg_setter_docs)
-                        .get(&setter.ident.span)
-                        .cloned();
-                    let kind = SpanKind::ArgSetter(comment);
-                    spans.push(word.span.clone().sp(kind));
                 }
             }
         }

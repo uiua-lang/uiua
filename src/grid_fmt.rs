@@ -628,7 +628,7 @@ impl GridFmt for Boxed {
         let mut rows = Vec::new();
         let mut len = None;
         for Boxed(val) in &arr.data {
-            if val.rank() == 0 {
+            if val.rank() == 0 || val.rank() == 1 && matches!(val, Value::Char(_)) {
                 return None;
             }
             let label = val.meta.label.as_ref()?;

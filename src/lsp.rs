@@ -12,7 +12,7 @@ use std::{
 
 use crate::{
     Assembly, BindingInfo, BindingKind, BindingMeta, CONSTANTS, CodeSpan, Compiler, Ident,
-    InputSrc, Inputs, LocalName, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp, Subscript,
+    InputSrc, Inputs, LocalIndex, PreEvalMode, Primitive, SafeSys, Shape, Signature, Sp, Subscript,
     SysBackend, UiuaError, Value, ast::*, is_custom_glyph, parse, parse::ident_modifier_args,
 };
 
@@ -172,7 +172,7 @@ pub struct CodeMeta {
     /// A map of inline macro functions to their number of arguments
     pub inline_macros: HashMap<CodeSpan, usize>,
     /// A map of top-level binding names to their indices
-    pub top_level_names: HashMap<Ident, LocalName>,
+    pub top_level_names: HashMap<Ident, LocalIndex>,
     /// A map of the spans of top-level lines to values
     pub top_level_values: HashMap<CodeSpan, Vec<Value>>,
     /// A map of strand spans
@@ -554,7 +554,9 @@ impl Spanner {
             }
             BindingKind::Import(_) | BindingKind::Scope(_) => BindingDocsKind::Module { sig: None },
             BindingKind::Module(m) => {
-                let sig = if let Some(local) = m.names.get("Call").or_else(|| m.names.get("New")) {
+                let sig = if let Some(local) =
+                    m.names.get_last("Call").or_else(|| m.names.get_last("New"))
+                {
                     self.asm.bindings[local.index].kind.sig()
                 } else {
                     None

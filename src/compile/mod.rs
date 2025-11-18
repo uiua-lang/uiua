@@ -136,7 +136,62 @@ struct BindingPrelude {
     deprecation: Option<EcoString>,
 }
 
-type LocalNames = IndexMap<Ident, LocalName>;
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(transparent)]
+/// Names in a scope
+pub struct LocalNames(IndexMap<Ident, Vec<LocalIndex>>);
+
+#[allow(missing_docs)]
+impl LocalNames {
+    pub fn insert(&mut self, name: impl Into<Ident>, local: LocalIndex) {
+        self.0.entry(name.into()).or_default().push(local);
+    }
+    pub fn remove(&mut self, name: &str) {
+        self.0.swap_remove(name);
+    }
+    pub fn visible_iter(&self) -> impl Iterator<Item = (&Ident, LocalIndex)> {
+        (self.0.iter()).map(|(name, locals)| (name, *locals.last().unwrap()))
+    }
+    pub fn into_visible_iter(self) -> impl Iterator<Item = (Ident, LocalIndex)> {
+        (self.0.into_iter()).map(|(name, locals)| (name, locals.into_iter().next_back().unwrap()))
+    }
+    pub fn all_iter(&self) -> impl Iterator<Item = (&Ident, LocalIndex)> {
+        (self.0.iter()).flat_map(|(name, locals)| locals.iter().map(move |local| (name, *local)))
+    }
+    pub fn get_prefer_module(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
+        let locals = self.0.get(name)?;
+        (locals.iter().rev())
+            .find(|local| asm.bindings[local.index].kind.is_module())
+            .or_else(|| locals.last())
+            .copied()
+    }
+    pub fn get_prefer_function(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
+        let locals = self.0.get(name)?;
+        (locals.iter().rev())
+            .find(|local| asm.bindings[local.index].kind.has_sig())
+            .or_else(|| locals.last())
+            .copied()
+    }
+    pub fn get_last(&self, name: &str) -> Option<LocalIndex> {
+        self.0.get(name)?.last().copied()
+    }
+    pub fn extend_from_other(&mut self, other: Self) {
+        for (name, locals) in other.0 {
+            self.0.entry(name).or_default().extend(locals);
+        }
+    }
+    pub fn contains_key(&self, name: &str) -> bool {
+        self.0.contains_key(name)
+    }
+}
+
+impl Extend<(Ident, LocalIndex)> for LocalNames {
+    fn extend<T: IntoIterator<Item = (Ident, LocalIndex)>>(&mut self, iter: T) {
+        for (name, local) in iter {
+            self.0.entry(name).or_default().push(local);
+        }
+    }
+}
 
 /// A Uiua module
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -251,7 +306,7 @@ impl Default for Scope {
             kind: ScopeKind::File(FileScopeKind::Source),
             file_path: None,
             comment: None,
-            names: IndexMap::new(),
+            names: LocalNames::default(),
             has_data_def: false,
             is_data_func: false,
             data_variants: IndexSet::new(),
@@ -262,15 +317,15 @@ impl Default for Scope {
 }
 
 impl Scope {
-    pub(crate) fn add_module_name(&mut self, name: EcoString, local: LocalName) {
-        self.names.swap_remove(format!("{name}!").as_str());
+    pub(crate) fn add_module_name(&mut self, name: EcoString, local: LocalIndex) {
+        self.names.remove(format!("{name}!").as_str());
         self.names.insert(name, local);
     }
 }
 
 /// The index of a named local in the bindings, and whether it is public
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct LocalName {
+pub struct LocalIndex {
     /// The index of the binding in assembly's bindings
     pub index: usize,
     /// Whether the binding is public
@@ -489,8 +544,8 @@ impl Compiler {
         }
 
         // Update top-level bindings
-        self.code_meta.top_level_names = (self.scope.names.iter())
-            .map(|(name, local)| (name.clone(), *local))
+        self.code_meta.top_level_names = (self.scope.names.all_iter())
+            .map(|(name, local)| (name.clone(), local))
             .collect();
 
         if let InputSrc::File(_) = &src {
@@ -794,7 +849,7 @@ impl Compiler {
     fn compile_bind_function(
         &mut self,
         name: Ident,
-        local: LocalName,
+        local: LocalIndex,
         function: Function,
         span: usize,
         meta: BindingMeta,
@@ -812,7 +867,7 @@ impl Compiler {
     fn compile_bind_const(
         &mut self,
         name: Ident,
-        local: LocalName,
+        local: LocalIndex,
         value: Option<Value>,
         span: usize,
         meta: BindingMeta,
@@ -1278,7 +1333,7 @@ impl Compiler {
                         _ => break 'blk Node::empty(),
                     };
                     let mut completions = Vec::new();
-                    for (name, local) in names {
+                    for (name, local) in names.visible_iter() {
                         if !local.public {
                             continue;
                         }
@@ -1627,15 +1682,18 @@ impl Compiler {
     /// Find the [`LocalName`]s of both the name and all parts of the path of a [`Ref`]
     ///
     /// Returns [`None`] if the reference is to a constant
-    fn ref_local(&self, r: &Ref) -> UiuaResult<Option<(Vec<LocalName>, LocalName)>> {
+    fn ref_local(&self, r: &Ref) -> UiuaResult<Option<(Vec<LocalIndex>, LocalIndex)>> {
         if let Some((names, path_locals)) = self.ref_path(&r.path)? {
-            if let Some(local) = names.get(&r.name.value).copied().or_else(|| {
-                (r.name.value.strip_suffix('!')).and_then(|name| {
-                    names.get(name).copied().filter(|local| {
-                        matches!(&self.asm.bindings[local.index].kind, BindingKind::Module(_))
+            if let Some(local) = names
+                .get_prefer_function(&r.name.value, &self.asm)
+                .or_else(|| {
+                    (r.name.value.strip_suffix('!')).and_then(|name| {
+                        names.get_prefer_module(name, &self.asm).filter(|local| {
+                            matches!(&self.asm.bindings[local.index].kind, BindingKind::Module(_))
+                        })
                     })
                 })
-            }) {
+            {
                 if local.public {
                     Ok(Some((path_locals, local)))
                 } else {
@@ -1650,7 +1708,7 @@ impl Compiler {
                     format!("Item `{}` not found", r.name.value),
                 ))
             }
-        } else if let Some(local) = self.find_name(&r.name.value, &r.name.span) {
+        } else if let Some(local) = self.find_name_function(&r.name.value, &r.name.span) {
             Ok(Some((Vec::new(), local)))
         } else if r.path.is_empty() && CONSTANTS.iter().any(|def| def.name == r.name.value) {
             Ok(None)
@@ -1661,15 +1719,19 @@ impl Compiler {
             ))
         }
     }
-    fn find_name(&self, name: &str, span: &CodeSpan) -> Option<LocalName> {
-        self.find_name_impl(name, span, false)
+    fn find_name_module(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
+        self.find_name_impl(name, span, true, false)
+    }
+    fn find_name_function(&self, name: &str, span: &CodeSpan) -> Option<LocalIndex> {
+        self.find_name_impl(name, span, false, false)
     }
     fn find_name_impl(
         &self,
         name: &str,
         span: &CodeSpan,
+        prefer_module: bool,
         stop_at_binding: bool,
-    ) -> Option<LocalName> {
+    ) -> Option<LocalIndex> {
         // println!("name: {name:?} @ {}", span);
         // for scope in self.scopes() {
         //     println!("  {:?} {:?}", scope.kind, scope.names);
@@ -1685,7 +1747,12 @@ impl Compiler {
                 hit_stop = true;
             }
             // Look in the scope's names
-            if let Some(local) = scope.names.get(name).copied() {
+            let local = if prefer_module {
+                scope.names.get_prefer_module(name, &self.asm)
+            } else {
+                scope.names.get_prefer_function(name, &self.asm)
+            };
+            if let Some(local) = local {
                 return Some(local);
             }
             // Look in the macro's locals. We look up by span rather than
@@ -1694,7 +1761,7 @@ impl Compiler {
             if let ScopeKind::Macro(Some(mac_local)) = &scope.kind {
                 let mac = &self.index_macros[&mac_local.macro_index];
                 if let Some(index) = mac.locals.get(span).copied() {
-                    return Some(LocalName {
+                    return Some(LocalIndex {
                         index,
                         public: true,
                     });
@@ -1702,7 +1769,8 @@ impl Compiler {
             }
         }
         // Attempt to look up the identifier as a non-macro
-        let as_non_macro = self.find_name_impl(name.strip_suffix('!')?, span, stop_at_binding)?;
+        let as_non_macro =
+            self.find_name_impl(name.strip_suffix('!')?, span, true, stop_at_binding)?;
         if let BindingKind::Module(_) | BindingKind::Scope(_) | BindingKind::Import(_) =
             self.asm.bindings[as_non_macro.index].kind
         {
@@ -1712,13 +1780,16 @@ impl Compiler {
             None
         }
     }
-    fn ref_path(&self, path: &[RefComponent]) -> UiuaResult<Option<(&LocalNames, Vec<LocalName>)>> {
+    fn ref_path(
+        &self,
+        path: &[RefComponent],
+    ) -> UiuaResult<Option<(&LocalNames, Vec<LocalIndex>)>> {
         let Some(first) = path.first() else {
             return Ok(None);
         };
         let mut path_locals = Vec::new();
         let module_local = self
-            .find_name(&first.module.value, &first.module.span)
+            .find_name_module(&first.module.value, &first.module.span)
             .ok_or_else(|| {
                 self.error(
                     first.module.span.clone(),
@@ -1758,12 +1829,14 @@ impl Compiler {
             BindingKind::Error => return Ok(None),
         };
         for comp in path.iter().skip(1) {
-            let submod_local = names.get(&comp.module.value).copied().ok_or_else(|| {
-                self.error(
-                    comp.module.span.clone(),
-                    format!("Module `{}` not found", comp.module.value),
-                )
-            })?;
+            let submod_local = names
+                .get_prefer_module(&comp.module.value, &self.asm)
+                .ok_or_else(|| {
+                    self.error(
+                        comp.module.span.clone(),
+                        format!("Module `{}` not found", comp.module.value),
+                    )
+                })?;
             path_locals.push(submod_local);
             let global = &self.asm.bindings[submod_local.index].kind;
             names = match global {
@@ -1827,7 +1900,7 @@ impl Compiler {
     }
     fn completions(&self, prefix: &str, names: &LocalNames, public_only: bool) -> Vec<Completion> {
         let mut completions = Vec::new();
-        for (name, local) in names {
+        for (name, local) in names.visible_iter() {
             if public_only && !local.public {
                 continue;
             }
@@ -1858,7 +1931,7 @@ impl Compiler {
             self.code_meta.completions.insert(span.clone(), completions);
         }
 
-        if let Some(local) = self.find_name_impl(&ident, &span, true) {
+        if let Some(local) = self.find_name_impl(&ident, &span, false, true) {
             // Name exists in binding scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
@@ -1875,7 +1948,7 @@ impl Compiler {
             } else {
                 Node::empty()
             }
-        } else if let Some(local) = self.find_name(&ident, &span) {
+        } else if let Some(local) = self.find_name_function(&ident, &span) {
             // Name exists in scope
             self.validate_local(&ident, local, &span);
             (self.code_meta.global_references).insert(span.clone(), local.index);
@@ -1928,7 +2001,9 @@ impl Compiler {
             BindingKind::Const(None) => Node::CallGlobal(index, Signature::new(0, 1)),
             BindingKind::Func(f) => Node::Call(f, self.add_span(span.clone())),
             BindingKind::Import(path) => {
-                if let Some(local) = self.imports.get(&path).and_then(|m| m.names.get("Call")) {
+                if let Some(local) = (self.imports.get(&path))
+                    .and_then(|m| m.names.get_prefer_function("Call", &self.asm))
+                {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
                     self.global_index(local.index, span)
@@ -1950,7 +2025,7 @@ impl Compiler {
                     }
                     _ => unreachable!(),
                 };
-                if let Some(&local) = names.get("Call").or_else(|| names.get("New")) {
+                if let Some(local) = names.get_last("Call").or_else(|| names.get_last("New")) {
                     self.code_meta.global_references.remove(&span);
                     (self.code_meta.global_references).insert(span.clone(), local.index);
                     self.global_index(local.index, span.clone())
@@ -2646,7 +2721,7 @@ impl Compiler {
         }
         .into()
     }
-    fn validate_local(&mut self, name: &str, local: LocalName, span: &CodeSpan) {
+    fn validate_local(&mut self, name: &str, local: LocalIndex, span: &CodeSpan) {
         // Emit deprecation warning
         if let Some(suggestion) = &self.asm.bindings[local.index].meta.deprecation {
             let mut message = format!("{name} is deprecated");
@@ -2664,9 +2739,7 @@ impl Compiler {
             return;
         }
         let get = |scope: &Scope| {
-            (scope.names.get(name))
-                .or_else(|| scope.names.get(name.strip_suffix('!')?))
-                .copied()
+            (scope.names.get_last(name)).or_else(|| scope.names.get_last(name.strip_suffix('!')?))
         };
         if !local.public
             && get(&self.scope)
@@ -2725,7 +2798,7 @@ impl Compiler {
         meta: BindingMeta,
     ) -> UiuaResult {
         let name = name.into();
-        let local = LocalName {
+        let local = LocalIndex {
             index: self.next_global,
             public: true,
         };

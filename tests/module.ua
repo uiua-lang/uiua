@@ -51,6 +51,14 @@ N ↚ M
 └─╴
 M! ← ^0 Foo!New
 
+┌─╴M
+  X ← 5
+└─╴
+M ← +1
+
+⍤⤙≍ 5 M~X
+⍤⤙≍ 11 M 10
+
 # Experimental!
 
 ┌─╴F ~ D‼ M!

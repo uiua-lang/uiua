@@ -18,7 +18,7 @@ impl Compiler {
         if is_external
             && self.scopes().any(|sc| {
                 sc.names
-                    .get(&binding.name.value)
+                    .get_last(&binding.name.value)
                     .is_some_and(|b| self.asm.bindings[b.index].meta.external)
             })
         {
@@ -87,7 +87,7 @@ impl Compiler {
                                 .insert(comp.module.span.clone(), local.index);
                         }
                         (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
-                        let local = LocalName { public, ..local };
+                        let local = LocalIndex { public, ..local };
                         self.scope.names.insert(name, local);
                         return Ok(());
                     }
@@ -98,7 +98,7 @@ impl Compiler {
         let span = &binding.name.span;
 
         let spandex = self.add_span(span.clone());
-        let local = LocalName {
+        let local = LocalIndex {
             index: self.next_global,
             public,
         };
@@ -506,7 +506,7 @@ impl Compiler {
             ModuleKind::Named(name) => {
                 let global_index = self.next_global;
                 self.next_global += 1;
-                let local = LocalName {
+                let local = LocalIndex {
                     index: global_index,
                     public: m.public,
                 };
@@ -539,7 +539,7 @@ impl Compiler {
             // Add local imports
             if let Some(line) = m.imports {
                 for item in line.items {
-                    if let Some(mut local) = module.names.get(&item.value).copied() {
+                    if let Some(mut local) = module.names.get_last(&item.value) {
                         local.public = false;
                         (self.code_meta.global_references).insert(item.span.clone(), local.index);
                         self.scope.names.insert(item.value, local);
@@ -576,7 +576,7 @@ impl Compiler {
             let imported = self.imports.get(&module_path).unwrap();
             let global_index = self.next_global;
             self.next_global += 1;
-            let local = LocalName {
+            let local = LocalIndex {
                 index: global_index,
                 public: import.public,
             };
@@ -595,15 +595,14 @@ impl Compiler {
         }
         // Bind items
         for item in import.items() {
-            if let Some(local) = (self.imports.get(&module_path))
-                .and_then(|i| i.names.get(item.value.as_str()))
-                .copied()
+            if let Some(local) =
+                (self.imports.get(&module_path)).and_then(|i| i.names.get_last(item.value.as_str()))
             {
                 self.validate_local(&item.value, local, &item.span);
                 (self.code_meta.global_references).insert(item.span.clone(), local.index);
                 self.scope.names.insert(
                     item.value.clone(),
-                    LocalName {
+                    LocalIndex {
                         index: local.index,
                         public: true,
                     },
@@ -700,7 +699,7 @@ impl Compiler {
                             let names = module.names.clone();
                             let recursive = &mut *recursive;
                             if let Err(e) = self.in_scope(ScopeKind::AllInModule, move |comp| {
-                                comp.scope.names.extend(names);
+                                comp.scope.names.extend_from_other(names);
                                 comp.analyze_macro_body(
                                     mac_name,
                                     &m.operands,

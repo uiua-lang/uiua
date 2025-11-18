@@ -190,7 +190,7 @@ Shape~Circle 5
 Shape~Rectangle~Height
 ```
 
-We can use [pattern matching](/tutorial/Pattern Matching) to do something different depending on which variant we have.
+We can use [pattern matching](</tutorial/Pattern Matching>) to do something different depending on which variant we have.
 
 ```uiua
 ┌─╴Shape

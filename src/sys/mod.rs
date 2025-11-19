@@ -441,46 +441,81 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     ) -> Result<(), String> {
         Err("TCP sockets are not supported in this environment".into())
     }
-    /// Fetch a URL
+    /// Fetch a URL, respecting protocol and port (defaults to https and 443)
     fn fetch(&self, url: &str) -> Result<Vec<u8>, String> {
+        let is_https = url.starts_with("https://");
+        let is_http = url.starts_with("http://");
         let no_protocol = url
             .trim_start_matches("https://")
             .trim_start_matches("http://");
-        let (host, route) =
-            if let Some((i, _)) = no_protocol.char_indices().find(|(_, c)| *c == '/') {
-                no_protocol.split_at(i)
-            } else {
-                (no_protocol, "/")
-            };
+        let (host, route) = match no_protocol.find('/') {
+            Some(i) => no_protocol.split_at(i),
+            None => (no_protocol, "/"),
+        };
+        let (host_only, port, use_tls) = match host.rsplit_once(':') {
+            Some((h, p)) if p.parse::<u16>().is_ok() => (h, p, is_https || !is_http),
+            _ => {
+                let tls = is_https || !is_http;
+                let port = if tls { "443" } else { "80" };
+                (host, port, tls)
+            }
+        };
+        let addr = format!("{host_only}:{port}");
+        let default_port = if use_tls { "443" } else { "80" };
+        let host_header = if port == default_port {
+            host_only.to_owned()
+        } else {
+            format!("{host_only}:{port}")
+        };
         let req = format!(
             "\
-            GET {route} HTTP/1.1\r\n\
-            Host: {host}\r\n\
-            Connection: close\r\n\
-            User-Agent: Uiua/{}\r\n\
-            \r\n",
+GET {route} HTTP/1.1\r\n\
+Host: {host_header}\r\n\
+Connection: close\r\n\
+User-Agent: Uiua/{}\r\n\
+\r\n",
             crate::VERSION
         );
-        let mut addr = host.to_string();
-        if (host.rsplit_once(':')).is_none_or(|(_, port)| port.parse::<u16>().is_err()) {
-            addr = format!("{addr}:443");
-        }
-        let handle = self.tls_connect(&addr)?;
+        let handle = if use_tls {
+            self.tls_connect(&addr)?
+        } else {
+            self.tcp_connect(&addr)?
+        };
         self.write(handle, req.as_bytes())?;
-        let mut bytes = self.read_all(handle)?;
-        self.close(handle)?;
-        let status =
-            String::from_utf8_lossy(bytes.split(|&b| b == b' ').nth(1).unwrap_or(b"no status"))
-                .into_owned();
-        if let Some(i) = bytes.windows(4).position(|win| win == b"\r\n\r\n") {
-            let offset = i + 4;
-            bytes.rotate_left(offset);
-            bytes.truncate(bytes.len() - offset);
+
+        let mut bytes = match self.read_all(handle) {
+            Ok(b) => b,
+            Err(e) => {
+                if e.contains("close_notify") || e.contains("UnexpectedEof") {
+                    return Err("Connection closed without close_notify".into());
+                } else {
+                    return Err(e);
+                }
+            }
+        };
+
+        let _ = self.close(handle);
+
+        if bytes.is_empty() {
+            return Err("Empty HTTP response".into());
         }
-        if status != "200" {
-            let message = String::from_utf8_lossy(&bytes);
-            return Err(format!("{status} {message}"));
+        let status_line = bytes.split(|&b| b == b'\n').next().unwrap();
+        let status = status_line
+            .split(|&b| b == b' ')
+            .nth(1)
+            .ok_or("Invalid HTTP response: missing status code")?;
+        let status_str = String::from_utf8_lossy(status);
+        if !status_str.starts_with('2') && !status_str.starts_with('3') {
+            return Err(format!("HTTP {status_str}"));
         }
+        let body_start = bytes
+            .windows(4)
+            .position(|w| w == b"\r\n\r\n")
+            .map(|i| i + 4)
+            .or(bytes.windows(2).position(|w| w == b"\n\n").map(|i| i + 2))
+            .ok_or("Invalid HTTP response: missing header separator")?;
+        bytes.rotate_left(body_start);
+        bytes.truncate(bytes.len() - body_start);
         Ok(bytes)
     }
     /// Create a UDP socket and bind it to an address

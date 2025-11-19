@@ -559,8 +559,20 @@ impl SysBackend for NativeSys {
             }
             SysStream::TlsSocket(socket) => {
                 let mut buf = Vec::new();
-                ((&mut &*socket).read_to_end(&mut buf)).map_err(|e| e.to_string())?;
-                buf
+                match (&mut &*socket).read_to_end(&mut buf) {
+                    Ok(_) => buf,
+                    Err(e) if !buf.is_empty() => {
+                        // Many servers don't send close_notify for performance reasons.
+                        // If we got some data before the connection closed, accept it.
+                        let err_str = e.to_string();
+                        if err_str.contains("close_notify") || err_str.contains("UnexpectedEof") {
+                            buf
+                        } else {
+                            return Err(err_str);
+                        }
+                    }
+                    Err(e) => return Err(e.to_string()),
+                }
             }
         })
     }

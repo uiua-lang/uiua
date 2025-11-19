@@ -469,11 +469,11 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         };
         let req = format!(
             "\
-GET {route} HTTP/1.1\r\n\
-Host: {host_header}\r\n\
-Connection: close\r\n\
-User-Agent: Uiua/{}\r\n\
-\r\n",
+            GET {route} HTTP/1.1\r\n\
+            Host: {host_header}\r\n\
+            Connection: close\r\n\
+            User-Agent: Uiua/{}\r\n\
+            \r\n",
             crate::VERSION
         );
         let handle = if use_tls {

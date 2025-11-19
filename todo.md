@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.18
-- Make path components search for modules first
-- Sided `stencil` for simpler chunking
 - Recursion ergonomics for `path` / revise `recur`
 - `table` non-lists optimizations?
 - `first group/partition` optimization

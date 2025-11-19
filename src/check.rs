@@ -503,6 +503,13 @@ impl VirtualEnv {
                     self.push();
                 }
                 UnFill | SidedFill(_) => self.fill(args)?,
+                SidedStencil(_) => {
+                    let [sig] = get_args(args)?;
+                    if sig.args() <= 1 {
+                        self.pop();
+                    }
+                    self.handle_args_outputs(1, sig.outputs());
+                }
                 UnBracket => {
                     let (args, outputs) = args.iter().fold((0, 0), |(a, o), sn| {
                         (a + sn.sig.args(), o + sn.sig.outputs())

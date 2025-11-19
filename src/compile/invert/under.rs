@@ -218,6 +218,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     )),
     &MaybeVal((Windows, (CopyUnd(1), Windows), (PopUnd(1), UndoWindows))),
     &MaybeVal(StencilPat),
+    &MaybeVal(SidedStencilPat),
     // Classify and deduplicate
     &(
         Classify,
@@ -949,6 +950,26 @@ under!(StencilPat, input, _, _, _, Stencil, span, [f], {
     let after = Node::from_iter([PopUnder(1, span), ImplPrim(UndoWindows, span)]);
     Ok((input, before, after))
 });
+
+under!(
+    (SidedStencilPat, input, _, _, _),
+    ref,
+    ImplMod(SidedStencil(side), args, span),
+    {
+        let [f] = args.as_slice() else {
+            return generic();
+        };
+        if !matches!(f.node, Prim(Identity, _)) {
+            return generic();
+        }
+        let before = Node::from_iter([
+            CopyToUnder(1, *span),
+            ImplMod(SidedStencil(*side), eco_vec![f.clone()], *span),
+        ]);
+        let after = Node::from_iter([PopUnder(1, *span), ImplPrim(UndoWindows, *span)]);
+        Ok((input, before, after))
+    }
+);
 
 #[derive(Debug)]
 struct Trivial;

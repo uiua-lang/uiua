@@ -1108,20 +1108,36 @@ impl Compiler {
                 let (sn, _) = self.monadic_modifier_op(modified)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let inner_sig = sn.sig;
-                let mut node = Node::Mod(Primitive::Stencil, eco_vec![sn], span);
-                if let Some(n) = subscript.and_then(|sub| {
+                let (mut n, mut side) = (None, None);
+                if let Some(sub) = subscript {
                     if inner_sig.args() != 1 {
                         self.add_error(
                             modified.modifier.span.clone().merge(sub.span.clone()),
                             format!(
                                 "{} can only be subscripted if its function \
                                 is monadic, but the signature is {inner_sig}",
-                                Primitive::Stencil.format()
+                                Stencil.format()
                             ),
                         );
                     }
-                    self.subscript_n_only(&sub, Stencil.format())
-                }) {
+                    let sub = self.validate_subscript(sub);
+                    n = sub.value.num;
+                    if let Some(ss) = sub.value.side {
+                        side = Some(ss.side);
+                        if ss.n.is_some() {
+                            self.add_error(
+                                modified.modifier.span.clone().merge(sub.span.clone()),
+                                format!("Sided {} may not have a quantifier", Stencil.format()),
+                            );
+                        }
+                    }
+                }
+                let mut node = if let Some(side) = side {
+                    Node::ImplMod(ImplPrimitive::SidedStencil(side), eco_vec![sn], span)
+                } else {
+                    Node::Mod(Stencil, eco_vec![sn], span)
+                };
+                if let Some(n) = n {
                     node.prepend(Node::new_push(n));
                 }
                 node

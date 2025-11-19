@@ -2050,7 +2050,7 @@ primitive!(
     /// ex: ⬚0⧈∘ 3 [1 2 3]
     /// ex: ⬚0⧈□ 2_3 +1°△3_3
     ///
-    /// A subscript sets the window size.
+    /// A numeric subscript sets the window size.
     /// ex: ⧈₃∘ ⇡6
     ///
     /// [stencil] only takes a window size if its function is monadic. For functions with 2 or more arguments, the window size is the number of arguments.
@@ -2065,16 +2065,21 @@ primitive!(
     /// This can be useful when you want to get horizontal windows.
     /// ex: ⧈□¯1_2 °△4_4
     ///
-    /// [stencil] with a scalar or list window size will always produce overlapping windows that shift by one row at a time.
-    /// 2-dimensional window sizes allow more control over the windows.
-    /// A rank-2 array with only one row will "chunk" the array with non-overlapping windows.
+    /// A sided subscript will "chunk" the array. The side indicates to which side of the array the chunks will be aligned.
+    /// ex: ⧈⌞∘ 4 ⇡10
+    ///   : ⧈⌟∘ 4 ⇡10
+    /// This works for multidimensional chunking as well.
+    /// ex: ⧈⌞□ 2_3 °△7_7
+    ///
+    /// If we want full control over the window size, stride, and fill amount, we can pass [stencil] a rank-2 array for the window size.
+    /// A rank-2 array with only one row will chunk the array with non-overlapping windows.
     /// ex: ⧈∘[[4]] ⇡12
     /// ex: ⧈∘ ¤¤4  ⇡12
     /// ex: ⊸⧈□ ¤[2 2] °△4_6
     /// Negative sizes still specify the number of windows desired.
     /// ex: ⧈∘ ¤¤¯4 ⇡12
     /// ex: ⊸⧈□ ¤[¯2 ¯2] °△4_6
-    /// A rank-2 array with two rows allows the "stride" of the windows to be specified.
+    /// A rank-2 array with two rows allows the stride of the windows to be specified.
     /// The first row specifies the window size, and the second row specifies the stride.
     /// ex: ⧈□ [¤3¤4] ⇡12
     /// ex: ⧈□ [¤4¤2] ⇡12

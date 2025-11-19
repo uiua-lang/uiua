@@ -13,6 +13,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add sided subscripts for [`join ⊂`](https://uiua.org/docs/join), which joins with one side as the list
 - Add numeric subscripts for [`classify ⊛`](https://uiua.org/docs/classify), which classifies all subrows of a given rank
 - Add numeric subscripts for [`table ⊛`](https://uiua.org/docs/table), which operates on all combinations of subrows of a given rank
+- Add sided subscripts for [`stencil ⧈`](https://uiua.org/docs/stencil) for simpler chunking
 - Add [chained field accessors](<https://uiua.org/tutorial/Data Definitions#chained-access>) for data definitions
 - [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) now accepts non-boolean integers
 - Add [`compress`](https://uiua.org/docs/compress) function to compress arrays of bytes

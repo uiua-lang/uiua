@@ -251,6 +251,7 @@ impl_primitive!(
     (1, TransposeN(i32)),
     (2, MultiKeep(usize)),
     (2, SidedJoin(SubSide)),
+    ([1], SidedStencil(SubSide)),
     ((1), MultiJoin(usize)),
     (1, Utf16),
     (1, Retropose),
@@ -516,6 +517,7 @@ impl fmt::Display for ImplPrimitive {
                 write!(f, "{Join}")?;
                 fmt_subscript(f, n as i32)
             }
+            &SidedStencil(side) => write!(f, "{Stencil}{side}"),
             &DipN(n) => {
                 for _ in 0..n {
                     write!(f, "{Dip}")?;

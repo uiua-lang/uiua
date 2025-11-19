@@ -397,7 +397,7 @@ pub fn run_prim_mod(prim: &Primitive, mut ops: Ops, env: &mut Uiua) -> UiuaResul
             groups::partition(f, env)?
         }
         Primitive::Tuples => tuples::tuples(ops, env)?,
-        Primitive::Stencil => stencil::stencil(ops, env)?,
+        Primitive::Stencil => stencil::stencil(ops, None, env)?,
         Primitive::Recur => {
             let [is_leaf, children, combine] = get_ops(ops, env)?;
             recur::recur(is_leaf, children, combine, env)?;
@@ -1432,6 +1432,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnDump => dump(ops, env, true)?,
             ImplPrimitive::UnFill => fill!(ops, None, env, with_unfill, without_unfill_but),
             &ImplPrimitive::SidedFill(side) => fill!(ops, side, env, with_fill, without_fill_but),
+            &ImplPrimitive::SidedStencil(side) => stencil::stencil(ops, Some(side), env)?,
             ImplPrimitive::ReduceTable => table::reduce_table(ops, env)?,
             ImplPrimitive::UnBracket => {
                 let mut outputs: SmallVec<[Vec<Value>; 3]> = SmallVec::new();

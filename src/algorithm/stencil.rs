@@ -18,7 +18,7 @@ use crate::{
 
 use super::{Ops, get_ops, loops::flip, multi_output};
 
-pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
+pub fn stencil(ops: Ops, side: Option<SubSide>, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
     if f.sig.args() == 0 {
         return Err(env.error(format!(
@@ -28,7 +28,7 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
         )));
     }
     // Adjacent stencil
-    if f.sig.args() > 1 {
+    if f.sig.args() > 1 && side.is_none() {
         let mut xs = env.pop(1)?;
         xs.match_fill(env);
         let n = f.sig.args();
@@ -69,7 +69,7 @@ pub fn stencil(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let mut xs = env.pop(2)?;
     xs.match_fill(env);
     let has_fill = env.fill().value_for(&xs).is_some();
-    let dims = derive_dims(&size, &xs.shape, has_fill, env)?;
+    let dims = derive_dims(&size, &xs.shape, has_fill, side, env)?;
     val_as_arr!(xs, |arr| stencil_array(arr, &dims, f, env))
 }
 
@@ -151,17 +151,19 @@ where
     if dims.len() == 1 && (fill.is_none() || dims[0].fill == 0) {
         // Linear optimization
         let dim = dims[0];
-        if dim.size == dim.stride && matches!(&action, WindowAction::Id(..)) {
+        if dim.size == dim.stride
+            && let WindowAction::Id(_, Some((f, d))) = &action
+        {
             // Simple chunking
+            let rotation = dim.start * arr.row_len();
+            arr.data.as_mut_slice().rotate_left(rotation);
             let chunk_count = arr.shape[0] / dim.size;
             arr.shape[0] = dim.size;
             arr.shape.prepend(chunk_count);
             arr.data.truncate(arr.shape.elements());
             arr.meta.take_map_keys();
             let mut val: Value = arr.into();
-            if let WindowAction::Id(_, Some((f, d))) = &action {
-                val = f(val, dims.len() + d, env)?;
-            }
+            val = f(val, dims.len() + d, env)?;
             env.push(val);
             return Ok(());
         } else {
@@ -175,7 +177,8 @@ where
                 WindowAction::Id(mut data, f) => {
                     for i in 0..win_count {
                         data.extend_from_slice(
-                            &arr.data[i * dim.stride * row_len..][..dim.size * row_len],
+                            &arr.data[dim.start..][i * dim.stride * row_len..]
+                                [..dim.size * row_len],
                         );
                     }
                     let mut new_shape = arr.shape;
@@ -190,10 +193,8 @@ where
                 }
                 WindowAction::Box(mut boxes, _) => {
                     for i in 0..win_count {
-                        boxes.push(Boxed(
-                            arr.slice_rows(i * dim.stride, i * dim.stride + dim.size)
-                                .into(),
-                        ));
+                        let start = dim.start + i * dim.stride;
+                        boxes.push(Boxed(arr.slice_rows(start, start + dim.size).into()));
                     }
                     env.push(Array::from(boxes));
                     return Ok(());
@@ -203,7 +204,7 @@ where
         }
     }
 
-    let mut corner_starts = vec![0isize; dims.len()];
+    let mut corner_starts: Vec<_> = dims.iter().map(|dim| dim.start as isize).collect();
     let (fill_is_left, fill_is_right) =
         fill.as_ref()
             .and_then(|fv| fv.side)
@@ -322,6 +323,7 @@ where
 #[derive(Debug, Clone, Copy)]
 struct WindowDim {
     size: usize,
+    start: usize,
     stride: usize,
     fill: usize,
 }
@@ -347,6 +349,7 @@ fn derive_dims(
     size: &Value,
     shape: &Shape,
     has_fill: bool,
+    side: Option<SubSide>,
     env: &Uiua,
 ) -> UiuaResult<Vec<WindowDim>> {
     let ints = size.as_integer_array(env, "Window size must be an array of integers")?;
@@ -356,9 +359,16 @@ fn derive_dims(
                 return Err(env.error("Cannot get windows from a scalar"));
             }
             let size = derive_size(ints.data[0], shape.row_count(), false, env)?;
+            // let (start, stride) = if side.is_some() { size } else { (0, 1) };
+            let (start, stride) = match side {
+                None => (0, 1),
+                Some(SubSide::Left) => (0, size),
+                Some(SubSide::Right) => (shape.row_count() % size, size),
+            };
             vec![WindowDim {
                 size,
-                stride: 1,
+                start,
+                stride,
                 fill: (size - 1) * has_fill as usize,
             }]
         }
@@ -372,15 +382,27 @@ fn derive_dims(
             let mut dims = Vec::with_capacity(n);
             for (size, dim) in ints.data.iter().zip(shape) {
                 let size = derive_size(*size, *dim, false, env)?;
+                let (start, stride) = match side {
+                    None => (0, 1),
+                    Some(SubSide::Left) => (0, size),
+                    Some(SubSide::Right) => (dim % size, size),
+                };
                 dims.push(WindowDim {
                     size,
-                    stride: 1,
+                    start,
+                    stride,
                     fill: (size - 1) * has_fill as usize,
                 });
             }
             dims
         }
         &[m, n] => {
+            if side.is_some() {
+                return Err(env.error(
+                    "Sided stencil's window size must be \
+                    rank 0 or 1, but it is rank 2",
+                ));
+            }
             if n > shape.len() {
                 return Err(env.error(format!(
                     "Window size specifies {n} axes, \
@@ -422,7 +444,12 @@ fn derive_dims(
                     )));
                 }
                 let fill = fill as usize * has_fill as usize;
-                dims.push(WindowDim { size, stride, fill });
+                dims.push(WindowDim {
+                    size,
+                    start: 0,
+                    stride,
+                    fill,
+                });
             }
             dims
         }

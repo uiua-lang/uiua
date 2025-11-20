@@ -267,6 +267,7 @@ impl_primitive!(
     (2(1), TagVariant),
     (3, LayoutArgs),
     (2, VoxelsArgs),
+    ([1], FoldGif),
 );
 
 fn fmt_subscript(f: &mut fmt::Formatter<'_>, i: i32) -> fmt::Result {
@@ -526,6 +527,7 @@ impl fmt::Display for ImplPrimitive {
             }
             LayoutArgs => write!(f, "layout!"),
             VoxelsArgs => write!(f, "voxels!"),
+            FoldGif => write!(f, "gif!"),
         }
     }
 }

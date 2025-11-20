@@ -1803,6 +1803,11 @@ impl Compiler {
         let (args_prim, args) = match prim {
             Primitive::Layout => (ImplPrimitive::LayoutArgs, LayoutParam::args()),
             Primitive::Voxels => (ImplPrimitive::VoxelsArgs, VoxelsParam::args()),
+            Primitive::GifEncode => {
+                let inner = self.words_sig(operands)?;
+                let span = self.add_span(modifier_span);
+                return Ok(Node::ImplMod(ImplPrimitive::FoldGif, eco_vec![inner], span));
+            }
             _ => return Err(self.error(modifier_span, format!("{prim} has no optional arguments"))),
         };
         let span = self.add_span(modifier_span);

@@ -10,6 +10,8 @@ use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use image::{DynamicImage, ImageFormat};
 use serde::*;
 
+#[cfg(feature = "gif")]
+use crate::SigNode;
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
 use crate::{Complex, OptionalArg, Shape, SysBackend};
@@ -816,6 +818,164 @@ pub fn value_to_gif_bytes(value: &Value, mut frame_rate: f64) -> Result<Vec<u8>,
         frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
         t += frame.delay;
         encoder.write_frame(&frame).map_err(|e| e.to_string())?;
+    }
+    drop(encoder);
+    Ok(bytes.into_inner())
+}
+
+#[cfg(feature = "gif")]
+pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
+    use gif::Frame;
+    use image::{Rgba, RgbaImage};
+
+    if f.sig.outputs() != 1 {
+        return Err(env.error(format!(
+            "gif!'s function must have 1 output, \
+            but its signature is {}",
+            f.sig
+        )));
+    }
+
+    let mut frame_rate = env
+        .pop("frame rate")?
+        .as_num(env, "Framerate must be a number")?;
+
+    use crate::algorithm::*;
+    let mut args = Vec::with_capacity(f.sig.args());
+    for i in 0..f.sig.args() {
+        args.push(env.pop(i + 1)?);
+    }
+    let FixedRowsData {
+        mut rows,
+        row_count: frame_count,
+        ..
+    } = fixed_rows("gif", 1, args, env)?;
+
+    fn nearest_color(Rgba([r, g, b, a]): Rgba<u8>) -> (u8, [f32; 3]) {
+        if a == 0 {
+            return (0, [0.0; 3]);
+        }
+        let mut err = [0.0; 3];
+        let mut q = [0u8; 3];
+        // TODO: use a lookup table for calcs
+        for (((c, n), e), q) in [(r, 7.0), (g, 7.0), (b, 3.0)]
+            .into_iter()
+            .zip(&mut err)
+            .zip(&mut q)
+        {
+            let k = n / 255.0;
+            let qf = (c as f32 * k).round();
+            *q = qf as u8;
+            *e = c as f32 - qf / k;
+        }
+        let quan = ((q[0] << 5) | (q[1] << 2) | q[2]).saturating_add(1);
+        // println!("rgba: {:?}, q: {q:?} -> {quan:?}, e: {err:?}", [r, g, b, a]);
+        (quan, err)
+    }
+
+    fn dither(mut img: RgbaImage, width: u32, height: u32) -> Vec<u8> {
+        let (width, height) = (width, height);
+        let mut buffer = vec![0; (width * height) as usize];
+        for y in 0..height {
+            // TODO: Maybe use a scaline buffer for the adjusted colors on this line
+            for x in 0..width {
+                let (index, [er, eg, eb]) = nearest_color(img[(x, y)]);
+                buffer[(y * width + x) as usize] = index;
+                for (f, dx, dy) in [
+                    (7f32 / 16.0, 1i32, 0i32),
+                    (3f32 / 16.0, -1, 1),
+                    (5f32 / 16.0, 0, 1),
+                    (1f32 / 16.0, 1, 1),
+                ] {
+                    let Some(Rgba([r, g, b, a])) =
+                        img.get_pixel_mut_checked((x as i32 + dx) as u32, (y as i32 + dy) as u32)
+                    else {
+                        continue;
+                    };
+                    if *a == 0 {
+                        continue;
+                    }
+                    *r = (*r as f32 + er * f).round() as u8;
+                    *g = (*g as f32 + eg * f).round() as u8;
+                    *b = (*b as f32 + eb * f).round() as u8;
+                }
+            }
+        }
+        buffer
+    }
+
+    let mut palette = vec![0; 256 * 3];
+    for r in 0u8..8 {
+        for g in 0u8..8 {
+            for b in 0u8..4 {
+                let q = (((r << 5) | (g << 2) | b) as usize + 1).min(255);
+                // println!("{:?} -> {q}", [r, g, b]);
+                palette[q * 3] = (r as f32 / 7.0 * 255.0).round() as u8;
+                palette[q * 3 + 1] = (g as f32 / 7.0 * 255.0).round() as u8;
+                palette[q * 3 + 2] = (b as f32 / 3.0 * 255.0).round() as u8;
+            }
+        }
+    }
+
+    // First frame
+    for arg in rows.iter_mut().rev() {
+        match arg {
+            Ok(rows) => env.push(rows.next().unwrap()),
+            Err(row) => env.push(row.clone()),
+        }
+    }
+    env.exec(f.clone())?;
+    let first_frame = value_to_image(&env.pop("first frame")?)
+        .map_err(|e| env.error(e))?
+        .into_rgba8();
+    let (width, height) = first_frame.dimensions();
+    if width > u16::MAX as u32 || height > u16::MAX as u32 {
+        return Err(env.error(format!(
+            "GIF dimensions must be at most {}x{}, but the frames are {}x{}",
+            u16::MAX,
+            u16::MAX,
+            width,
+            height
+        )));
+    }
+    let mut bytes = std::io::Cursor::new(Vec::new());
+    let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
+        .map_err(|e| env.error(e))?;
+
+    encoder
+        .set_repeat(gif::Repeat::Infinite)
+        .map_err(|e| env.error(e))?;
+    const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
+    frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
+    let mut t = 0;
+    let mut write_frame = |i: usize, frame: RgbaImage, env: &mut Uiua| -> UiuaResult {
+        let indices = dither(frame, width, height);
+        let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, indices, Some(0));
+        frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
+        t += frame.delay;
+        encoder.write_frame(&frame).map_err(|e| env.error(e))?;
+        Ok(())
+    };
+    write_frame(0, first_frame, env)?;
+    for i in 1..frame_count {
+        for arg in rows.iter_mut().rev() {
+            match arg {
+                Ok(rows) => env.push(rows.next().unwrap()),
+                Err(row) => env.push(row.clone()),
+            }
+        }
+        env.exec(f.clone())?;
+        let frame = value_to_image(&env.pop("first frame")?)
+            .map_err(|e| env.error(e))?
+            .into_rgba8();
+        let (this_width, this_height) = frame.dimensions();
+        if this_width != width || this_height != height {
+            return Err(env.error(format!(
+                "First frame was [{width} × {height}], \
+                but frame {i} is [{this_width} × {this_height}]"
+            )));
+        }
+        write_frame(i, frame, env)?;
     }
     drop(encoder);
     Ok(bytes.into_inner())

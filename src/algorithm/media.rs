@@ -711,128 +711,25 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
 
 #[doc(hidden)]
 #[cfg(feature = "gif")]
-pub fn value_to_gif_bytes(value: &Value, mut frame_rate: f64) -> Result<Vec<u8>, String> {
-    use std::collections::{HashMap, HashSet};
-
-    use color_quant::NeuQuant;
-    use gif::{Decoder, DisposalMethod, Encoder, Frame};
-    use image::Rgba;
-
+pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, String> {
     // Maybe the array is the already-encoded GIF
     if let Value::Byte(arr) = value {
-        if Decoder::new(arr.data.as_slice()).is_ok() {
+        if gif::Decoder::new(arr.data.as_slice()).is_ok() {
             return Ok(arr.data.as_slice().into());
         }
     }
-
-    if value.row_count() == 0 {
-        return Err("Cannot convert empty array into GIF".into());
-    }
-    let frame_count = value.row_count();
-    let mut frames = Vec::with_capacity(frame_count);
-    let mut width = 0;
-    let mut height = 0;
-    for row in value.rows() {
-        let image = value_to_image(&row)?.into_rgba8();
-        width = image.width();
-        height = image.height();
-        frames.push(image);
-    }
-    if width > u16::MAX as u32 || height > u16::MAX as u32 {
-        return Err(format!(
-            "GIF dimensions must be at most {}x{}, but the frames are {}x{}",
-            u16::MAX,
-            u16::MAX,
-            width,
-            height
-        ));
-    }
-    let mut bytes = std::io::Cursor::new(Vec::new());
-    let mut opaque_colors = HashSet::new();
-    for frame in &frames {
-        for &Rgba([r, g, b, a]) in frame.pixels() {
-            if a > 0 {
-                opaque_colors.insert([r, g, b]);
-            }
-        }
-    }
-    let mut opaque_colors = opaque_colors.into_iter().collect::<Vec<_>>();
-    opaque_colors.sort_unstable();
-    let mut reduced_colors = HashSet::new();
-    let mut color_reduction = HashMap::new();
-    if opaque_colors.len() <= 255 {
-        for color in opaque_colors {
-            reduced_colors.insert(color);
-            color_reduction.insert(color, color);
-        }
-    } else {
-        let opaque_data: Vec<u8> = opaque_colors
-            .iter()
-            .flat_map(|c| c.iter().copied().chain([128]))
-            .collect();
-        let nq = NeuQuant::new(10, 255, &opaque_data);
-        let map = nq.color_map_rgb();
-        for color in opaque_colors {
-            let index = nq.index_of(&[color[0], color[1], color[2], 128]);
-            let start = index * 3;
-            let reduced = [map[start], map[start + 1], map[start + 2]];
-            reduced_colors.insert(reduced);
-            color_reduction.insert(color, reduced);
-        }
-    }
-    let mut reduced_colors = reduced_colors.into_iter().collect::<Vec<_>>();
-    reduced_colors.sort_unstable();
-    let mut palette = Vec::with_capacity(reduced_colors.len() * 3);
-    let mut color_map: HashMap<[u8; 3], u8> = HashMap::new();
-    for color in reduced_colors {
-        color_map.insert(color, (palette.len() / 3) as u8);
-        palette.extend(color);
-    }
-    let transparent_index = color_map.len() as u8;
-    palette.extend([0; 3]);
-    let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &palette)
-        .map_err(|e| e.to_string())?;
-    const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
-    frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
-    encoder
-        .set_repeat(gif::Repeat::Infinite)
-        .map_err(|e| e.to_string())?;
-    let mut t = 0;
-    for (i, image) in frames.into_iter().enumerate() {
-        let mut has_transparent = false;
-        let indices: Vec<u8> = image
-            .as_raw()
-            .chunks_exact(4)
-            .map(|chunk| {
-                if chunk[3] == 0 {
-                    has_transparent = true;
-                    return transparent_index;
-                }
-                let color = [chunk[0], chunk[1], chunk[2]];
-                let reduced = color_reduction[&color];
-                color_map[&reduced]
-            })
-            .collect();
-        let dispose = if has_transparent {
-            DisposalMethod::Previous
-        } else {
-            DisposalMethod::Any
-        };
-        let mut frame = Frame {
-            dispose,
-            ..Frame::from_indexed_pixels(
-                width as u16,
-                height as u16,
-                indices,
-                Some(transparent_index),
-            )
-        };
-        frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
-        t += frame.delay;
-        encoder.write_frame(&frame).map_err(|e| e.to_string())?;
-    }
-    drop(encoder);
-    Ok(bytes.into_inner())
+    // Encode frames from rows
+    let mut rows = value.rows();
+    encode_gif_impl(
+        frame_rate,
+        &mut (),
+        |_| {
+            rows.next()
+                .map(|row| value_to_image(&row).map(|im| im.into_rgba8()))
+                .transpose()
+        },
+        |_, e| e,
+    )
 }
 
 #[cfg(feature = "gif")]
@@ -853,9 +750,66 @@ static GIF_PALETTE: std::sync::LazyLock<Vec<u8>> = std::sync::LazyLock::new(|| {
 });
 
 #[cfg(feature = "gif")]
+fn nearest_color(image::Rgba([r, g, b, a]): image::Rgba<u8>) -> (u8, [f32; 3]) {
+    if a == 0 {
+        return (0, [0.0; 3]);
+    }
+    let mut err = [0.0; 3];
+    let mut q = [0u8; 3];
+    // TODO: use a lookup table for calcs
+    for (((c, n), e), q) in [(r, 7.0), (g, 7.0), (b, 3.0)]
+        .into_iter()
+        .zip(&mut err)
+        .zip(&mut q)
+    {
+        let k = n / 255.0;
+        let qf = (c as f32 * k).round();
+        *q = qf as u8;
+        *e = c as f32 - qf / k;
+    }
+    let quan = ((q[0] << 5) | (q[1] << 2) | q[2]).saturating_add(1);
+    // println!("rgba: {:?}, q: {q:?} -> {quan:?}, e: {err:?}", [r, g, b, a]);
+    (quan, err)
+}
+
+/// Returns flat dithered color indices and whether there are any transparent pixels
+#[cfg(feature = "gif")]
+fn dither(mut img: image::RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool) {
+    let (width, height) = (width, height);
+    let mut buffer = vec![0; (width * height) as usize];
+    let mut has_transparent = false;
+    for y in 0..height {
+        // TODO: Maybe use a scaline buffer for the adjusted colors on this line
+        for x in 0..width {
+            let (index, [er, eg, eb]) = nearest_color(img[(x, y)]);
+            has_transparent |= index == 0;
+            buffer[(y * width + x) as usize] = index;
+            for (f, dx, dy) in [
+                (7f32 / 16.0, 1i32, 0i32),
+                (3f32 / 16.0, -1, 1),
+                (5f32 / 16.0, 0, 1),
+                (1f32 / 16.0, 1, 1),
+            ] {
+                let Some(image::Rgba([r, g, b, a])) =
+                    img.get_pixel_mut_checked((x as i32 + dx) as u32, (y as i32 + dy) as u32)
+                else {
+                    continue;
+                };
+                if *a == 0 {
+                    continue;
+                }
+                *r = (*r as f32 + er * f).round() as u8;
+                *g = (*g as f32 + eg * f).round() as u8;
+                *b = (*b as f32 + eb * f).round() as u8;
+            }
+        }
+    }
+    (buffer, has_transparent)
+}
+
+#[cfg(feature = "gif")]
 pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
-    use gif::{DisposalMethod, Encoder, Frame};
-    use image::{Rgba, RgbaImage};
+    use crate::algorithm::{FixedRowsData, fixed_rows};
 
     let acc_count = f.sig.args().saturating_sub(f.sig.outputs() + 1);
     let iter_count = f.sig.args() - acc_count;
@@ -868,11 +822,10 @@ pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
         )));
     }
 
-    let mut frame_rate = env
+    let frame_rate = env
         .pop("frame rate")?
         .as_num(env, "Framerate must be a number")?;
 
-    use crate::algorithm::*;
     let mut args = Vec::with_capacity(iter_count);
     for i in 0..iter_count {
         args.push(env.pop(i + 1)?);
@@ -883,128 +836,95 @@ pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
         ..
     } = fixed_rows("gif", 1, args, env)?;
 
-    fn nearest_color(Rgba([r, g, b, a]): Rgba<u8>) -> (u8, [f32; 3]) {
-        if a == 0 {
-            return (0, [0.0; 3]);
-        }
-        let mut err = [0.0; 3];
-        let mut q = [0u8; 3];
-        // TODO: use a lookup table for calcs
-        for (((c, n), e), q) in [(r, 7.0), (g, 7.0), (b, 3.0)]
-            .into_iter()
-            .zip(&mut err)
-            .zip(&mut q)
-        {
-            let k = n / 255.0;
-            let qf = (c as f32 * k).round();
-            *q = qf as u8;
-            *e = c as f32 - qf / k;
-        }
-        let quan = ((q[0] << 5) | (q[1] << 2) | q[2]).saturating_add(1);
-        // println!("rgba: {:?}, q: {q:?} -> {quan:?}, e: {err:?}", [r, g, b, a]);
-        (quan, err)
-    }
-
-    /// Returns flat dithered color indices and whether there are any transparent pixels
-    fn dither(mut img: RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool) {
-        let (width, height) = (width, height);
-        let mut buffer = vec![0; (width * height) as usize];
-        let mut has_transparent = false;
-        for y in 0..height {
-            // TODO: Maybe use a scaline buffer for the adjusted colors on this line
-            for x in 0..width {
-                let (index, [er, eg, eb]) = nearest_color(img[(x, y)]);
-                has_transparent |= index == 0;
-                buffer[(y * width + x) as usize] = index;
-                for (f, dx, dy) in [
-                    (7f32 / 16.0, 1i32, 0i32),
-                    (3f32 / 16.0, -1, 1),
-                    (5f32 / 16.0, 0, 1),
-                    (1f32 / 16.0, 1, 1),
-                ] {
-                    let Some(Rgba([r, g, b, a])) =
-                        img.get_pixel_mut_checked((x as i32 + dx) as u32, (y as i32 + dy) as u32)
-                    else {
-                        continue;
-                    };
-                    if *a == 0 {
-                        continue;
-                    }
-                    *r = (*r as f32 + er * f).round() as u8;
-                    *g = (*g as f32 + eg * f).round() as u8;
-                    *b = (*b as f32 + eb * f).round() as u8;
+    let mut i = 0;
+    encode_gif_impl(
+        frame_rate,
+        env,
+        |env| -> UiuaResult<_> {
+            if i == frame_count {
+                return Ok(None);
+            }
+            i += 1;
+            for arg in rows.iter_mut().rev() {
+                match arg {
+                    Ok(rows) => env.push(rows.next().unwrap()),
+                    Err(row) => env.push(row.clone()),
                 }
             }
-        }
-        (buffer, has_transparent)
-    }
+            env.exec(f.clone())?;
+            let frame = value_to_image(&env.pop("frame")?)
+                .map_err(|e| env.error(e))?
+                .into_rgba8();
+            Ok(Some(frame))
+        },
+        |env, e| env.error(e),
+    )
+    .map_err(|e| env.error(e))
+}
 
-    // First frame
-    for arg in rows.iter_mut().rev() {
-        match arg {
-            Ok(rows) => env.push(rows.next().unwrap()),
-            Err(row) => env.push(row.clone()),
-        }
-    }
-    env.exec(f.clone())?;
-    let first_frame = value_to_image(&env.pop("first frame")?)
-        .map_err(|e| env.error(e))?
-        .into_rgba8();
+#[cfg(feature = "gif")]
+fn encode_gif_impl<C, E>(
+    mut frame_rate: f64,
+    ctx: &mut C,
+    mut next_frame: impl FnMut(&mut C) -> Result<Option<image::RgbaImage>, E>,
+    error: impl Fn(&C, String) -> E,
+) -> Result<Vec<u8>, E> {
+    use gif::{DisposalMethod, Encoder, Frame};
+
+    let first_frame =
+        next_frame(ctx)?.ok_or_else(|| error(ctx, "Cannot encode empty GIF".into()))?;
     let (width, height) = first_frame.dimensions();
     if width > u16::MAX as u32 || height > u16::MAX as u32 {
-        return Err(env.error(format!(
+        let message = format!(
             "GIF dimensions must be at most {}x{}, but the frames are {}x{}",
             u16::MAX,
             u16::MAX,
             width,
             height
-        )));
+        );
+        return Err(error(ctx, message));
     }
     let mut bytes = std::io::Cursor::new(Vec::new());
     let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &GIF_PALETTE)
-        .map_err(|e| env.error(e))?;
-
-    encoder
-        .set_repeat(gif::Repeat::Infinite)
-        .map_err(|e| env.error(e))?;
+        .map_err(|e| error(ctx, e.to_string()))?;
+    (encoder.set_repeat(gif::Repeat::Infinite)).map_err(|e| error(ctx, e.to_string()))?;
     const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
     frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
     let mut t = 0;
-    let mut write_frame = |i: usize, frame: RgbaImage, env: &mut Uiua| -> UiuaResult {
+    let mut write_frame = |i: usize, frame, ctx: &mut C| -> Result<(), E> {
         let (indices, has_transparent) = dither(frame, width, height);
         let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, indices, Some(0));
         frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
         frame.dispose = if has_transparent {
-            DisposalMethod::Previous
-        } else {
             DisposalMethod::Any
+        } else {
+            DisposalMethod::Background
         };
         t += frame.delay;
-        encoder.write_frame(&frame).map_err(|e| env.error(e))?;
+        encoder
+            .write_frame(&frame)
+            .map_err(|e| error(ctx, e.to_string()))?;
         Ok(())
     };
-    write_frame(0, first_frame, env)?;
-    for i in 1..frame_count {
-        for arg in rows.iter_mut().rev() {
-            match arg {
-                Ok(rows) => env.push(rows.next().unwrap()),
-                Err(row) => env.push(row.clone()),
-            }
-        }
-        env.exec(f.clone())?;
-        let frame = value_to_image(&env.pop("first frame")?)
-            .map_err(|e| env.error(e))?
-            .into_rgba8();
+    write_frame(0, first_frame, ctx)?;
+    let mut i = 1;
+    while let Some(frame) = next_frame(ctx)? {
         let (this_width, this_height) = frame.dimensions();
         if this_width != width || this_height != height {
-            return Err(env.error(format!(
-                "First frame was [{width} × {height}], \
-                but frame {i} is [{this_width} × {this_height}]"
-            )));
+            return Err(error(
+                ctx,
+                format!(
+                    "First frame was [{width} × {height}], \
+                    but frame {i} is [{this_width} × {this_height}]"
+                ),
+            ));
         }
-        write_frame(i, frame, env)?;
+        write_frame(i, frame, ctx)?;
+        i += 1;
     }
-    drop(encoder);
+    encoder
+        .into_inner()
+        .map_err(|e| error(ctx, e.to_string()))?;
     Ok(bytes.into_inner())
 }
 

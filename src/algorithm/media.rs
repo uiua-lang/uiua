@@ -754,22 +754,37 @@ fn nearest_color(image::Rgba([r, g, b, a]): image::Rgba<u8>) -> (u8, [f32; 3]) {
     if a == 0 {
         return (0, [0.0; 3]);
     }
-    let mut err = [0.0; 3];
-    let mut q = [0u8; 3];
-    // TODO: use a lookup table for calcs
-    for (((c, n), e), q) in [(r, 7.0), (g, 7.0), (b, 3.0)]
-        .into_iter()
-        .zip(&mut err)
-        .zip(&mut q)
-    {
-        let k = n / 255.0;
-        let qf = (c as f32 * k).round();
-        *q = qf as u8;
-        *e = c as f32 - qf / k;
+    macro_rules! comp {
+        ($name:ident, $n:literal) => {
+            static $name: [(u8, f32); 256] = {
+                let mut arr = [(0u8, 0.0); 256];
+                let mut i = 0;
+                while i < 256 {
+                    const K: f32 = $n / 255.0;
+                    let mut qf = i as f32 * K;
+                    let floor = qf as u8 as f32;
+                    let fract = qf - floor;
+                    qf = floor;
+                    if fract >= 0.5 {
+                        qf += 1.0;
+                    }
+                    let q = qf as u8;
+                    let e = i as f32 - qf / K;
+                    arr[i] = (q, e);
+                    i += 1;
+                }
+                arr
+            };
+        };
     }
-    let quan = ((q[0] << 5) | (q[1] << 2) | q[2]).saturating_add(1);
-    // println!("rgba: {:?}, q: {q:?} -> {quan:?}, e: {err:?}", [r, g, b, a]);
-    (quan, err)
+    comp!(RS, 7.0);
+    comp!(GS, 7.0);
+    comp!(BS, 3.0);
+    let (rq, re) = RS[r as usize];
+    let (gq, ge) = GS[g as usize];
+    let (bq, be) = BS[b as usize];
+    let q = ((rq << 5) | (gq << 2) | bq).saturating_add(1);
+    (q, [re, ge, be])
 }
 
 /// Returns flat dithered color indices and whether there are any transparent pixels
@@ -781,9 +796,13 @@ fn dither(mut img: image::RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool)
     for y in 0..height {
         // TODO: Maybe use a scaline buffer for the adjusted colors on this line
         for x in 0..width {
-            let (index, [er, eg, eb]) = nearest_color(img[(x, y)]);
+            let (index, err) = nearest_color(img[(x, y)]);
             has_transparent |= index == 0;
             buffer[(y * width + x) as usize] = index;
+            if err == [0.0; 3] {
+                continue;
+            }
+            let [er, eg, eb] = err;
             for (f, dx, dy) in [
                 (7f32 / 16.0, 1i32, 0i32),
                 (3f32 / 16.0, -1, 1),
@@ -811,8 +830,8 @@ fn dither(mut img: image::RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool)
 pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
     use crate::algorithm::{FixedRowsData, fixed_rows};
 
-    let acc_count = f.sig.args().saturating_sub(f.sig.outputs() + 1);
-    let iter_count = f.sig.args() - acc_count;
+    let acc_count = f.sig.outputs().saturating_sub(1);
+    let iter_count = f.sig.args().saturating_sub(acc_count);
 
     if f.sig.outputs() < 1 {
         return Err(env.error(format!(

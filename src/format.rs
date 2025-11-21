@@ -1013,6 +1013,8 @@ impl Formatter<'_> {
                     && (self.glyph_map.last()).is_some_and(|(last_span, _)| {
                         last_span.end.char_pos - last_span.start.char_pos == 1
                     })
+                    && (self.glyph_map.iter().nth_back(1))
+                        .is_none_or(|(span, _)| span.as_str(self.inputs, |s| s.contains(',')))
                 {
                     self.output.pop();
                     self.glyph_map.pop();
@@ -2059,6 +2061,7 @@ F,1
 unwrench
 ran,1 10
 ran,1  10
+⇡₁ 10
 ";
     let output = "\
 F₁
@@ -2068,6 +2071,7 @@ F₁
 ¯5
 °(-⊸¬)
 ⇡₁10
+⇡₁ 10
 ⇡₁ 10
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;

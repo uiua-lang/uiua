@@ -106,6 +106,11 @@ impl SmartOutput {
     fn try_gif(value: &Value, frame_rate: f64) -> Option<Self> {
         let bytes = value_to_gif_bytes(value, frame_rate).ok()?;
         match &*value.shape {
+            &[_] => {
+                // Already encoded
+                let label = value.meta.label.as_ref().map(Into::into);
+                Some(Self::Gif(bytes, label))
+            }
             &[f, h, w] | &[f, h, w, _]
                 if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
             {
@@ -710,8 +715,15 @@ pub fn value_to_gif_bytes(value: &Value, mut frame_rate: f64) -> Result<Vec<u8>,
     use std::collections::{HashMap, HashSet};
 
     use color_quant::NeuQuant;
-    use gif::{DisposalMethod, Frame};
+    use gif::{Decoder, DisposalMethod, Encoder, Frame};
     use image::Rgba;
+
+    // Maybe the array is the already-encoded GIF
+    if let Value::Byte(arr) = value {
+        if Decoder::new(arr.data.as_slice()).is_ok() {
+            return Ok(arr.data.as_slice().into());
+        }
+    }
 
     if value.row_count() == 0 {
         return Err("Cannot convert empty array into GIF".into());
@@ -778,7 +790,7 @@ pub fn value_to_gif_bytes(value: &Value, mut frame_rate: f64) -> Result<Vec<u8>,
     }
     let transparent_index = color_map.len() as u8;
     palette.extend([0; 3]);
-    let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
+    let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &palette)
         .map_err(|e| e.to_string())?;
     const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
     frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();

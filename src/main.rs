@@ -359,7 +359,7 @@ fn main() {
             formatter_options,
             #[cfg(feature = "audio")]
             audio_options,
-            stack,
+            persist,
             experimental,
             args,
         }) => {
@@ -381,7 +381,7 @@ fn main() {
                 compiler.load_file(file).unwrap_or_else(uiua_fail);
                 rt.run_compiler(&mut compiler).unwrap_or_else(uiua_fail);
             }
-            repl(rt, compiler, true, stack, config);
+            repl(rt, compiler, true, persist, config);
         }
         #[cfg(not(feature = "no_self_update"))]
         Some(Comm::Update {
@@ -912,8 +912,8 @@ enum Comm {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
-        #[clap(short = 's', long, help = "Don't clear the stack after each line")]
-        stack: bool,
+        #[clap(short = 'p', long, help = "Don't clear the arguments after each line")]
+        persist: bool,
         #[clap(short = 'x', long, help = "Enable experimental features")]
         experimental: bool,
         #[clap(trailing_var_arg = true)]
@@ -1153,7 +1153,7 @@ fn format_multi_files(config: &FormatConfig) -> Result<(), UiuaError> {
     Ok(())
 }
 
-fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, stack: bool, config: FormatConfig) {
+fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, persist: bool, config: FormatConfig) {
     env = env.with_interrupt_hook(|| PRESSED_CTRL_C.swap(false, Ordering::Relaxed));
     compiler.pre_eval_mode(PreEvalMode::Line);
     println!(
@@ -1168,7 +1168,7 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, stack: bool, config:
                     "help" => {
                         println!(
                             "\n\
-                            clear - Clear the stack \n\
+                            clear - Clear the arguments \n\
                             exit  - Exit the repl \n\
                             help  - Show this message \n\
                             "
@@ -1213,7 +1213,7 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, stack: bool, config:
         match res {
             Ok(()) => {
                 print_stack(env.stack(), color);
-                if !stack {
+                if !persist {
                     env.take_stack();
                 }
             }

@@ -824,13 +824,33 @@ pub fn value_to_gif_bytes(value: &Value, mut frame_rate: f64) -> Result<Vec<u8>,
 }
 
 #[cfg(feature = "gif")]
+static GIF_PALETTE: std::sync::LazyLock<Vec<u8>> = std::sync::LazyLock::new(|| {
+    let mut palette = vec![0; 256 * 3];
+    for r in 0u8..8 {
+        for g in 0u8..8 {
+            for b in 0u8..4 {
+                let q = (((r << 5) | (g << 2) | b) as usize + 1).min(255);
+                // println!("{:?} -> {q}", [r, g, b]);
+                palette[q * 3] = (r as f32 / 7.0 * 255.0).round() as u8;
+                palette[q * 3 + 1] = (g as f32 / 7.0 * 255.0).round() as u8;
+                palette[q * 3 + 2] = (b as f32 / 3.0 * 255.0).round() as u8;
+            }
+        }
+    }
+    palette
+});
+
+#[cfg(feature = "gif")]
 pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
-    use gif::Frame;
+    use gif::{DisposalMethod, Encoder, Frame};
     use image::{Rgba, RgbaImage};
 
-    if f.sig.outputs() != 1 {
+    let acc_count = f.sig.args().saturating_sub(f.sig.outputs() + 1);
+    let iter_count = f.sig.args() - acc_count;
+
+    if f.sig.outputs() < 1 {
         return Err(env.error(format!(
-            "gif!'s function must have 1 output, \
+            "gif!'s function must have at least 1 output, \
             but its signature is {}",
             f.sig
         )));
@@ -841,8 +861,8 @@ pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
         .as_num(env, "Framerate must be a number")?;
 
     use crate::algorithm::*;
-    let mut args = Vec::with_capacity(f.sig.args());
-    for i in 0..f.sig.args() {
+    let mut args = Vec::with_capacity(iter_count);
+    for i in 0..iter_count {
         args.push(env.pop(i + 1)?);
     }
     let FixedRowsData {
@@ -873,13 +893,16 @@ pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
         (quan, err)
     }
 
-    fn dither(mut img: RgbaImage, width: u32, height: u32) -> Vec<u8> {
+    /// Returns flat dithered color indices and whether there are any transparent pixels
+    fn dither(mut img: RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool) {
         let (width, height) = (width, height);
         let mut buffer = vec![0; (width * height) as usize];
+        let mut has_transparent = false;
         for y in 0..height {
             // TODO: Maybe use a scaline buffer for the adjusted colors on this line
             for x in 0..width {
                 let (index, [er, eg, eb]) = nearest_color(img[(x, y)]);
+                has_transparent |= index == 0;
                 buffer[(y * width + x) as usize] = index;
                 for (f, dx, dy) in [
                     (7f32 / 16.0, 1i32, 0i32),
@@ -901,20 +924,7 @@ pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
                 }
             }
         }
-        buffer
-    }
-
-    let mut palette = vec![0; 256 * 3];
-    for r in 0u8..8 {
-        for g in 0u8..8 {
-            for b in 0u8..4 {
-                let q = (((r << 5) | (g << 2) | b) as usize + 1).min(255);
-                // println!("{:?} -> {q}", [r, g, b]);
-                palette[q * 3] = (r as f32 / 7.0 * 255.0).round() as u8;
-                palette[q * 3 + 1] = (g as f32 / 7.0 * 255.0).round() as u8;
-                palette[q * 3 + 2] = (b as f32 / 3.0 * 255.0).round() as u8;
-            }
-        }
+        (buffer, has_transparent)
     }
 
     // First frame
@@ -939,7 +949,7 @@ pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
         )));
     }
     let mut bytes = std::io::Cursor::new(Vec::new());
-    let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
+    let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &GIF_PALETTE)
         .map_err(|e| env.error(e))?;
 
     encoder
@@ -949,9 +959,14 @@ pub(crate) fn fold_to_gif(f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
     frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
     let mut t = 0;
     let mut write_frame = |i: usize, frame: RgbaImage, env: &mut Uiua| -> UiuaResult {
-        let indices = dither(frame, width, height);
+        let (indices, has_transparent) = dither(frame, width, height);
         let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, indices, Some(0));
         frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
+        frame.dispose = if has_transparent {
+            DisposalMethod::Previous
+        } else {
+            DisposalMethod::Any
+        };
         t += frame.delay;
         encoder.write_frame(&frame).map_err(|e| env.error(e))?;
         Ok(())

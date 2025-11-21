@@ -21,6 +21,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Change how sided [`reach ∪`](https://uiua.org/docs/reach) works
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
+- Add modifier version of [`gif`](https://uiua.org/docs/gif), written as `gif!`
+  - Operates similar to [`fold ∧`](https://uiua.org/docs/fold)
+  - Encodes frames as they are generated
+  - Good for when gif frames don't fit all at once in memory
 - Add experimental [`&fetch`](https://uiua.org/docs/&fetch) function to easily fetch data from a url
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Add experimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), wich automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions
@@ -32,6 +36,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Deprecate [`flip :`](https://uiua.org/docs/flip)
 - Remove the previously deprecated signature promoting behavior of [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off), allowing them to work on monadic functions
 ### Interpreter
+- Gifs now use Floyd-Steinberg dithering rather than color quantization
+  - It's both faster and looks better
 - Add option to provide folder as test cases destination
 - Add an `Amen` audio constant
 - Add `ogg` support to [`audio`](https://uiua.org/docs/audio)

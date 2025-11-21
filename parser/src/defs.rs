@@ -3415,7 +3415,12 @@ primitive!(
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
     /// The rows of the array are the frames of the gif, and their format must conform to that of [img].
     ///
+    /// ex: ⊸△ gif24 ⍜⊙°⍉÷⟜⇡↯3 100
+    ///
     /// You can decode a byte array into a gif with [un][gif].
+    ///
+    /// Using [gif] with a `!` makes it a modifier. It operates similar to [fold], with the result of each iteration being encoded immediately. This is useful when the frames would be too large to hold all of them uncompressed in memory.
+    /// ex: gif!(↯⟜↯100 °hsv⊂⊙1_1)24 ×τ÷⟜⇡24
     ///
     /// See also: [&gifs]
     (2, GifEncode, Encoding, "gif"),

@@ -358,8 +358,7 @@ fn derive_dims(
             if shape.is_empty() {
                 return Err(env.error("Cannot get windows from a scalar"));
             }
-            let size = derive_size(ints.data[0], shape.row_count(), false, env)?;
-            // let (start, stride) = if side.is_some() { size } else { (0, 1) };
+            let size = derive_size(ints.data[0], shape.row_count(), side.is_some(), env)?;
             let (start, stride) = match side {
                 None => (0, 1),
                 Some(SubSide::Left) => (0, size),
@@ -381,7 +380,7 @@ fn derive_dims(
             }
             let mut dims = Vec::with_capacity(n);
             for (size, dim) in ints.data.iter().zip(shape) {
-                let size = derive_size(*size, *dim, false, env)?;
+                let size = derive_size(*size, *dim, side.is_some(), env)?;
                 let (start, stride) = match side {
                     None => (0, 1),
                     Some(SubSide::Left) => (0, size),

@@ -2331,30 +2331,43 @@ impl Hash for Value {
 }
 
 #[derive(Clone)]
-pub(crate) struct HashLabels<V = Value>(pub V);
+/// Hash values including things that don't affect their actual value
+pub(crate) struct AestheticHash<V = Value>(pub V);
 
-impl PartialEq for HashLabels<Value> {
+impl PartialEq for AestheticHash<Value> {
     fn eq(&self, other: &Self) -> bool {
-        HashLabels(&self.0) == HashLabels(&other.0)
+        AestheticHash(&self.0) == AestheticHash(&other.0)
     }
 }
-impl Eq for HashLabels<Value> {}
-impl Hash for HashLabels<Value> {
+impl Eq for AestheticHash<Value> {}
+impl Hash for AestheticHash<Value> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        HashLabels(&self.0).hash(hasher)
+        AestheticHash(&self.0).hash(hasher)
     }
 }
 
-impl PartialEq for HashLabels<&Value> {
+impl PartialEq for AestheticHash<&Value> {
     fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0 && self.0.meta.label == other.0.meta.label
+        self.0 == other.0
+            && self.0.meta.label == other.0.meta.label
+            && match (&self.0, &other.0) {
+                (Value::Num(a), Value::Num(b)) => (a.data.iter().zip(&b.data))
+                    .all(|(a, b)| a.is_sign_positive() == b.is_sign_positive()),
+                _ => true,
+            }
     }
 }
-impl Eq for HashLabels<&Value> {}
-impl Hash for HashLabels<&Value> {
+impl Eq for AestheticHash<&Value> {}
+impl Hash for AestheticHash<&Value> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.0.meta.label.hash(hasher);
         match self.0 {
+            Value::Num(arr) => {
+                arr.hash(hasher);
+                for n in &arr.data {
+                    n.is_sign_positive().hash(hasher);
+                }
+            }
             Value::Box(arr) => {
                 if let Some(keys) = &arr.meta.map_keys {
                     keys.hash(hasher);
@@ -2367,7 +2380,7 @@ impl Hash for HashLabels<&Value> {
                     }
                 }
                 arr.shape.hash(hasher);
-                arr.data.iter().for_each(|x| HashLabels(&x.0).hash(hasher));
+                (arr.data.iter()).for_each(|x| AestheticHash(&x.0).hash(hasher));
             }
             val => val_as_arr!(val, |arr| arr.hash(hasher)),
         }

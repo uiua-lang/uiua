@@ -1,6 +1,7 @@
 # Uiua Todo
 
 # 0.18
+- Make assemblies importable
 - Recursion ergonomics for `path` / revise `recur`
 - `table` non-lists optimizations?
 - `first group/partition` optimization

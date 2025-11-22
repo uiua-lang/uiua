@@ -16,8 +16,8 @@ use indexmap::IndexSet;
 use serde::*;
 
 use crate::{
-    Assembly, BindingKind, DynamicFunction, Function, HashLabels, ImplPrimitive, Primitive, Purity,
-    Signature, Value,
+    AestheticHash, Assembly, BindingKind, DynamicFunction, Function, ImplPrimitive, Primitive,
+    Purity, Signature, Value,
     check::SigCheckError,
     compile::invert::{InversionError, InversionResult},
 };
@@ -1168,7 +1168,7 @@ macro_rules! node {
             fn hash<H: Hasher>(&self, state: &mut H) {
                 macro_rules! hash_field {
                     (span span) => {};
-                    (val $val:ident) => {Hash::hash(&HashLabels($val), state)};
+                    (val $val:ident) => {Hash::hash(&AestheticHash($val), state)};
                     ($nm:ident $_nm:ident) => {Hash::hash($nm, state)};
                 }
                 match self {

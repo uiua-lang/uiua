@@ -34,7 +34,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Change experimental subscripted [`transpose ⍉`](https://uiua.org/docs/transpose) to transpose the first N axes
 - Deprecate [`duplicate .`](https://uiua.org/docs/duplicate)
 - Deprecate [`flip :`](https://uiua.org/docs/flip)
+- Deprecate [`above ◠`](https://uiua.org/docs/above)
 - Remove the previously deprecated signature promoting behavior of [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off), allowing them to work on monadic functions
+- Remove previously deprecated `progressive indexof ⊘` function
+- Remove previously deprecated `tag` function
 ### Interpreter
 - Gifs now use Floyd-Steinberg dithering rather than color quantization
   - It's both faster and looks better

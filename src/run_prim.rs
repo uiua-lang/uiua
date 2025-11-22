@@ -14,10 +14,7 @@ use std::{
     collections::HashMap,
     f64::consts::{PI, TAU},
     iter::repeat_n,
-    sync::{
-        OnceLock,
-        atomic::{self, AtomicUsize},
-    },
+    sync::OnceLock,
 };
 
 use rand::prelude::*;
@@ -146,7 +143,6 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
             let res = b.index_of(&a, env)?;
             env.push(res);
         }
-        Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
         Primitive::Box => {
             let val = env.pop(1)?;
             if val.box_nesting() > 1000 {
@@ -233,11 +229,6 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         }
         Primitive::Rand => env.push(random()),
         Primitive::Gen => env.dyadic_rr_env(Value::seeded_gen)?,
-        Primitive::Tag => {
-            static NEXT_TAG: AtomicUsize = AtomicUsize::new(0);
-            let tag = NEXT_TAG.fetch_add(1, atomic::Ordering::Relaxed);
-            env.push(tag);
-        }
         Primitive::Type => {
             let val = env.pop(1)?;
             env.push(val.type_id());

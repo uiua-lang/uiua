@@ -5,8 +5,6 @@
 - `table` non-lists optimizations?
 - `first group/partition` optimization
 - `under group/partition inventory` optimization
-- Reserved modifier glyphs?
-- Streaming gif and audio encoding
 
 ## Planned Features
 Features that are planned to be implemented in the future.

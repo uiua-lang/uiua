@@ -271,32 +271,38 @@ impl Primitive {
     }
     /// A suggested replacement if the primitive is deprecated
     pub fn deprecation_suggestion(&self) -> Option<String> {
+        self.deprecation_suggestion_impl().map(|s| s())
+    }
+    fn deprecation_suggestion_impl(&self) -> Option<impl FnOnce() -> String + '_> {
         use Primitive::*;
         Some(match self {
-            Dup => format!(
-                "use {}, {}, or {On}{Identity} instead",
-                Slf.format(),
-                By.format()
-            ),
-            Flip => format!("use {} instead", Backward.format()),
-            OldReach => format!("use {} instead", Reach.format()),
-            Log => format!("use subscripted {} or {Anti}{Backward}{Pow}", Exp.format()),
-            Rerank => format!(
-                "use subscripted {} or {Un}{By}({Len}{Shape}) instead",
-                Deshape.format()
-            ),
-            Windows => format!("use {} {} instead", Stencil.format(), Identity.format()),
-            Each => format!("use {} instead", Rows.format()),
-            Tag => "use data variants instead".into(),
-            ProgressiveIndexOf => format!("use {} instead", Occurrences.format()),
-            Unique => format!("use {Occurrences}₁"),
-            IndexOf => format!("use {} {} instead", Backward.format(), IndexIn.format()),
+            Dup => || {
+                format!(
+                    "use {}, {}, or {On}{Identity} instead",
+                    Slf.format(),
+                    By.format()
+                )
+            },
+            Flip => || format!("use {} instead", Backward.format()),
+            OldReach => || format!("use {} instead", Reach.format()),
+            Log => || format!("use subscripted {} or {Anti}{Backward}{Pow}", Exp.format()),
+            Rerank => || {
+                format!(
+                    "use subscripted {} or {Un}{By}({Len}{Shape}) instead",
+                    Deshape.format()
+                )
+            },
+            Windows => || format!("use {} {} instead", Stencil.format(), Identity.format()),
+            Each => || format!("use {} instead", Rows.format()),
+            Unique => || format!("use {Occurrences}₁"),
+            IndexOf => || format!("use {} {} instead", Backward.format(), IndexIn.format()),
+            Above => || format!("use {} or {} instead", Fork.format(), On.format()),
             _ => return None,
         })
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {
-        self.deprecation_suggestion().is_some()
+        self.deprecation_suggestion_impl().is_some()
     }
 }
 

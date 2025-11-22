@@ -299,7 +299,7 @@ fn EvenMoreArgument() -> impl IntoView {
             <tr>
                 <td><Prim prim=On/></td>
                 <td><Prim prim=With/></td>
-                <td><Prim prim=Above/><span title="Experimental">"🧪"</span></td>
+                <td></td>
                 <th>"above"</th>
                 <td rowspan="2">"__ the outputs"</td>
             </tr>

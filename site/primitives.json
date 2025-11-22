@@ -391,7 +391,8 @@
     "modifier_args": 1,
     "class": "Arguments",
     "description": "Keep all arguments to a function above the outputs on the stack",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "absolute value": {
     "glyph": "⌵",
@@ -1196,15 +1197,6 @@
     "class": "Misc",
     "description": "Convert a value to its pretty-printed output representation"
   },
-  "progressive indexof": {
-    "glyph": "⊘",
-    "args": 2,
-    "outputs": 1,
-    "class": "DyadicArray",
-    "description": "Get sequential indices of each row of an array in another",
-    "experimental": true,
-    "deprecated": true
-  },
   "quote": {
     "args": 0,
     "outputs": 1,
@@ -1435,13 +1427,6 @@
     "modifier_args": 1,
     "class": "IteratingModifier",
     "description": "Apply a function to each combination of rows of some arrays"
-  },
-  "tag": {
-    "args": 0,
-    "outputs": 1,
-    "class": "Misc",
-    "description": "Generate a unique tag",
-    "deprecated": true
   },
   "take": {
     "glyph": "↙",

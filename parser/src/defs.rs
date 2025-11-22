@@ -1300,7 +1300,7 @@ primitive!(
     /// Negative indices will always use the fill value if there is one.
     /// ex: ⬚@-⊏[¯2 ¯1 0 1 2 3 4 5 6] "hello!"
     ///
-    /// [un][select] is equivalent to [range][length][duplicate]. This is a common way to enumerate the indices of the rows an array.
+    /// [un][select] is equivalent to [range][by][length]. This is a common way to enumerate the indices of the rows an array.
     /// ex: °⊏ "hello!"
     /// ex: °⊏ {1 2_3 4_5_6}
     ///
@@ -1325,7 +1325,7 @@ primitive!(
     /// If the index's rank is `2` or greater, then multiple rows or elements will be picked.
     /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
     ///
-    /// [un][pick] is equivalent to [range][shape][duplicate]. This is a common way to enumerate the indices of the elements of an array.
+    /// [un][pick] is equivalent to [range][by][shape]. This is a common way to enumerate the indices of the elements of an array.
     /// ex: °⊡ "hello!"
     /// ex: °⊡ ["ab" "cd"]
     ///
@@ -1523,7 +1523,7 @@ primitive!(
     /// ex: ⌝⤸ 1_1_0 °△ 2_2_2
     /// ex: ⌝⤸ 1_0_1 °△ 2_2_2
     ///
-    /// [un][orient] is equivalent to [range][length][shape][duplicate]. This is an easy way to enumerate the indices of the axes of an array.
+    /// [un][orient] is equivalent to [range][length][by][shape]. This is an easy way to enumerate the indices of the axes of an array.
     /// ex: °⤸ "hello!"
     /// ex: °⤸ ["ab" "cd"]
     /// ex: °⤸ [[1_2 3_4] [5_6 7_8]]
@@ -1661,7 +1661,7 @@ primitive!(
     /// With the help of [keep], you can use [memberof] to get a set intersection.
     /// ex: ▽⊸∊ "abracadabra" "that's really cool"
     ///
-    /// [memberof] is closely related to [indexof].
+    /// [memberof] is closely related to [indexin].
     (2, MemberOf, DyadicArray, ("memberof", '∊')),
     /// Find the first index in an array of each row of another array
     ///
@@ -1707,27 +1707,6 @@ primitive!(
     ///
     /// [indexof] is closely related to [memberof].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
-    /// Get sequential indices of each row of an array in another
-    ///
-    /// Unlike [indexof], [progressive indexof] will never return the same index twice unless the item is not found.
-    /// ex: # Experimental!
-    ///   : ⊗ "hello dog" "lego helmet"
-    ///   : ⊘ "hello dog" "lego helmet"
-    /// When no more rows from the searched-in array match the next row of the searched-for array, the resulting index will be the [length] of the searched-in array.
-    /// ex: # Experimental!
-    ///   : ⊘ [1 1 1 1 1 1 1 1] [1 1 1 1 0 0 0 0 0 0 0 0]
-    /// ex: # Experimental!
-    ///   : ⊘ [1 2 3 1 2 3 1 2 3] [1 2 3]
-    /// If the searched-for array has a greater rank than the searched-in array, the next index for each row of the searched-for array will be tracked separately.
-    /// Notice here that the indices of the `1`s are `2` and `3` but index of the both `2`s is `4`. This is because the `1`s are in the same row while the `2`s are in different rows.
-    /// ex: # Experimental!
-    ///   : ⊘ [1_1_2 2_3_3] [0 0 1 1 2 2 3]
-    ///
-    /// [fill] can be used to set the value of missing items. This includes rows in the searched-for array that have run out of corresponding items in the searched-in array.
-    /// ex: # Experimental!
-    ///   :   ⊘ [4 8 2 9 1] [1 2 3 4]
-    ///   : ⬚∞⊘ [4 8 2 9 1] [1 2 3 4]
-    (2, ProgressiveIndexOf, DyadicArray, ("progressive indexof", '⊘'), { experimental: true }),
     /// Get the base digits of a number
     ///
     /// When passed a scalar number, [base] returns the base-N digits of the numbers in an array.
@@ -2404,9 +2383,9 @@ primitive!(
     ///
     /// A list of all [under]-compatible functions can be found [below](#unders).
     ///
-    /// [under] takes 2 functions `f` and `g` and some other arguments `xs`.
-    /// It applies `f` to `xs`, then applies `g` to the result.
-    /// It then applies the inverse of `f` to the result of `g`.
+    /// [under] takes 2 functions `F` and `G`.
+    /// It calls `F`, then applies `G` to the result(s).
+    /// It then applies a function that "undoes" `F` to the result(s) of `G`.
     ///
     /// Any function that can be [un]ed can be used with [under].
     /// Some functions that can't be [un]ed can still be used with [under].
@@ -2419,10 +2398,10 @@ primitive!(
     /// In general, if two functions are compatible with [under] separately, then they are compatible together.
     /// ex: ⍜(↙⊙↘|×10) 2 1 [1 2 3 4 5]
     ///
-    /// [under][both] works, and whether [both] is applied when undoing depends on the signature of `g`.
-    /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
+    /// [under][both] works, and whether [both] is applied when undoing depends on the signature of `G`.
+    /// For example, this hypotenuse function does not use [both] when undoing because its `G` (`add`) returns a single value.
     /// ex: ⍜∩˙×+ 3 4
-    /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
+    /// However, this function whose `G` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
     /// ex: ⍜∩°□(⊂◡⋅⊢) □[1 2 3] □[4 5 6 7 8]
     ///
     /// [obverse] can be used to define a function's [under] behavior.
@@ -2615,7 +2594,7 @@ primitive!(
     /// ex: ⍤"Oh no!" 1
     /// ex! ⍤"Oh no!" 0
     /// As you can see, a top-level [assert] is interpreted as a test in some contexts. See the [Testing Tutorial](/tutorial/Testing) for more information.
-    /// Use [duplicate] if you do not care about the message.
+    /// Use [self] if you do not care about the message.
     /// ex: ˙⍤ =6 6
     /// ex! ˙⍤ =8 9
     /// Errors thrown by [assert] can be caught with [try].
@@ -2776,12 +2755,6 @@ primitive!(
     /// [graphemes] works with [un] and [under].
     /// ex: ⍜graphemes≡◇⊢ "ų̶̢̢̛̥͈̖̦̜̥͔͕̙͚̜͚͊͋̑̿̔̓̐͐̀̓̐̈́̑͆͆͘į̴̥̞̀̑̋̀̽̌̓̐̓̚ư̷̯̖͈͇̌͌́̄̿͑̓̚͜͜à̶͓̜̗̩̝̰̲͎͉̲͆̇͗̄̆̏̍̑̍͌͝ͅ"
     (1, Graphemes, Encoding, "graphemes"),
-    /// Generate a unique tag
-    ///
-    /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.
-    /// ex: ⍥tag5
-    ///   : ⍥tag5
-    (0, Tag, Misc, "tag", Impure),
     /// Check the type of an array
     ///
     /// `0` indicates a number array.

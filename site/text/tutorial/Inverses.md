@@ -138,9 +138,9 @@ For `dyadic` function `F` and values `A` and `B`, `⌝F A B` is equivalent to `�
 
 This may not seem immediately useful, but you'll find it is a pattern you encounter everywhere, even in your everyday life. You might open a drawer, take something out, then close the drawer. You might get on a bus, the bus travels, then you get off the bus.
 
-[under](/docs/under) takes two functions which we will call `F` and `G`. It calls `F`, then calls `G`, then calls an inverse of `F`.
+[under](/docs/under) takes two functions which we will call `F` and `G`. It calls `F`, then calls `G`, then "undoes" `F`.
 
-Many functions that do not work with [un](/docs/un) work with [under](/docs/under) because [under](/docs/under) can keep track of *context*. One example of this in action is [under](/docs/under)[pick](/docs/pick), which allows us to modify an element or row of an array.
+While [under](/docs/under) sometimes uses [un](/docs/un)`F` as its undoing function, many functions that do not work with [un](/docs/un) work with [under](/docs/under) because [under](/docs/under) can keep track of *context*. One example of this in action is [under](/docs/under)[pick](/docs/pick), which allows us to modify an element or row of an array.
 
 ```uiua kala under
 ⍜(⊡2|×10) [1 2 3 4]

@@ -12,11 +12,11 @@ use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    Boxed, Complex, Shape, Uiua, UiuaResult,
-    algorithm::{ErrorContext, FillContext, pervade::*},
+    algorithm::{pervade::*, ErrorContext, FillContext},
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
+    Boxed, Complex, Shape, Uiua, UiuaResult,
 };
 
 /// A generic array value
@@ -1346,11 +1346,19 @@ impl Value {
     }
     /// Remove a single layer of boxing if the condition is met
     pub fn unboxed_if(self, unbox: bool) -> Self {
-        if unbox { self.unboxed() } else { self }
+        if unbox {
+            self.unboxed()
+        } else {
+            self
+        }
     }
     /// Box the value if the condition is met
     pub fn boxed_if(self, do_box: bool) -> Self {
-        if do_box { Boxed(self).into() } else { self }
+        if do_box {
+            Boxed(self).into()
+        } else {
+            self
+        }
     }
     /// Turn the value into a scalar box if it is not one already
     pub fn box_if_not(&mut self) {

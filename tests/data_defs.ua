@@ -97,6 +97,15 @@ Foo 1 2 3
 Struct Enum~B 4
 ⍤⤙≍ 4 Struct~Enum≈B~Test
 
+~Foo {A}
+┌─╴Bar
+  ~ {Foo}
+  Func₁ ← Foo~A Foo
+  Func₂ ← Foo≈A
+└─╴
+Bar Foo 5
+⍤⤙≍5 Bar~Func₂
+
 # Experimental!
 
 # Field validators

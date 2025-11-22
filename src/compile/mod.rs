@@ -158,19 +158,25 @@ impl LocalNames {
     pub fn all_iter(&self) -> impl Iterator<Item = (&Ident, LocalIndex)> {
         (self.0.iter()).flat_map(|(name, locals)| locals.iter().map(move |local| (name, *local)))
     }
-    pub fn get_prefer_module(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
+    pub fn get_only_module(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
         let locals = self.0.get(name)?;
         (locals.iter().rev())
             .find(|local| asm.bindings[local.index].kind.is_module())
-            .or_else(|| locals.last())
             .copied()
     }
-    pub fn get_prefer_function(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
+    pub fn get_only_function(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
         let locals = self.0.get(name)?;
         (locals.iter().rev())
             .find(|local| asm.bindings[local.index].kind.has_sig())
-            .or_else(|| locals.last())
             .copied()
+    }
+    pub fn get_prefer_module(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
+        self.get_only_module(name, asm)
+            .or_else(|| self.get_last(name))
+    }
+    pub fn get_prefer_function(&self, name: &str, asm: &Assembly) -> Option<LocalIndex> {
+        self.get_only_function(name, asm)
+            .or_else(|| self.get_last(name))
     }
     pub fn get_last(&self, name: &str) -> Option<LocalIndex> {
         self.0.get(name)?.last().copied()
@@ -1736,35 +1742,41 @@ impl Compiler {
         // for scope in self.scopes() {
         //     println!("  {:?} {:?}", scope.kind, scope.names);
         // }
-        let mut hit_stop = false;
-        for scope in self.scopes() {
-            if matches!(scope.kind, ScopeKind::File(_))
-                || stop_at_binding && matches!(scope.kind, ScopeKind::Binding)
-            {
-                if hit_stop {
-                    break;
+        let mut only_modules = [false, true];
+        if prefer_module {
+            only_modules.reverse();
+        }
+        'outer: for only_modules in only_modules {
+            let mut hit_stop = false;
+            for scope in self.scopes() {
+                if matches!(scope.kind, ScopeKind::File(_))
+                    || stop_at_binding && matches!(scope.kind, ScopeKind::Binding)
+                {
+                    if hit_stop {
+                        break 'outer;
+                    }
+                    hit_stop = true;
                 }
-                hit_stop = true;
-            }
-            // Look in the scope's names
-            let local = if prefer_module {
-                scope.names.get_prefer_module(name, &self.asm)
-            } else {
-                scope.names.get_prefer_function(name, &self.asm)
-            };
-            if let Some(local) = local {
-                return Some(local);
-            }
-            // Look in the macro's locals. We look up by span rather than
-            // name to disambiguate the macro declaration's locals from
-            // the current ones.
-            if let ScopeKind::Macro(Some(mac_local)) = &scope.kind {
-                let mac = &self.index_macros[&mac_local.macro_index];
-                if let Some(index) = mac.locals.get(span).copied() {
-                    return Some(LocalIndex {
-                        index,
-                        public: true,
-                    });
+                // Look in the scope's names
+                let local = if only_modules {
+                    scope.names.get_only_module(name, &self.asm)
+                } else {
+                    scope.names.get_prefer_function(name, &self.asm)
+                };
+                if let Some(local) = local {
+                    return Some(local);
+                }
+                // Look in the macro's locals. We look up by span rather than
+                // name to disambiguate the macro declaration's locals from
+                // the current ones.
+                if let ScopeKind::Macro(Some(mac_local)) = &scope.kind {
+                    let mac = &self.index_macros[&mac_local.macro_index];
+                    if let Some(index) = mac.locals.get(span).copied() {
+                        return Some(LocalIndex {
+                            index,
+                            public: true,
+                        });
+                    }
                 }
             }
         }
@@ -1797,8 +1809,8 @@ impl Compiler {
                 )
             })?;
         path_locals.push(module_local);
-        let global = &self.asm.bindings[module_local.index].kind;
-        let mut names = match global {
+        let bkind = &self.asm.bindings[module_local.index].kind;
+        let mut names = match bkind {
             BindingKind::Import(path) => &self.imports[path].names,
             BindingKind::Module(module) => &module.names,
             BindingKind::Scope(i) => &self.higher_scopes.get(*i).unwrap_or(&self.scope).names,

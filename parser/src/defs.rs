@@ -2426,7 +2426,7 @@ primitive!(
     /// A composed signature with a positive net signature will collect the outputs into an array.
     /// ex: ⍢( ⊸×2|≤1000) 10
     /// ex: ⍢(⟜∘×2|≤1000) 10
-    /// A composed signature with a negative net signature will reuse values lower on the stack.
+    /// A composed signature with a negative net signature will reuse later arguments.
     /// ex: ⍢(×|<100) 1 2
     /// ex: ⍢(⊂⤚(×⊢)|<100⊢) 1 2
     ([2], Do, IteratingModifier, ("do", '⍢')),

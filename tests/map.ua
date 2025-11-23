@@ -118,3 +118,5 @@ C     ← Entry "C"
 ⍤⤙≍ map [1 3] [2 4] ⊂ map 1 2 map 3 4
 ⍤⤙≍ ⊃⊂⊂⌟ map 1 2 map 3 4
 ⍤⤙≍ ⊃⊂⊂⌞ map 1 2 map 3 4
+⍤⤙≍ 1 get1 map 1 1
+⍤⤙≍ 0 ⍣(get5)0 map 1 1

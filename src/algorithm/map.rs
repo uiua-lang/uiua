@@ -114,7 +114,10 @@ impl Value {
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
         // Check for higher-ranked keys
         if let Some(keys) = self.meta.map_keys.as_ref() {
-            if key.rank() == keys.keys.rank() && key.type_id() == keys.keys.type_id() {
+            if key.rank() > 0
+                && key.rank() == keys.keys.rank()
+                && key.type_id() == keys.keys.type_id()
+            {
                 let mut values = Vec::with_capacity(key.row_count());
                 for key in key.rows() {
                     values.push(self.get(&key, env)?);

@@ -17,6 +17,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [chained field accessors](<https://uiua.org/tutorial/Data Definitions#chained-access>) for data definitions
 - [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) now accepts non-boolean integers
 - Add [`compress`](https://uiua.org/docs/compress) function to compress arrays of bytes
+- A function/constant and a module with the same name can now be in scope at the same time
 - Change [`reach ∪`](https://uiua.org/docs/reach)'s glyph
 - Change how sided [`reach ∪`](https://uiua.org/docs/reach) works
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams

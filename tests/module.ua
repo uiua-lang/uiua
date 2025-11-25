@@ -59,6 +59,20 @@ M ← +1
 ⍤⤙≍ 5 M~X
 ⍤⤙≍ 11 M 10
 
+# Smart lookup
+~Foo {A}
+Foo ← ¯
+⍤⤙≍ ¯1 Foo 1
+⍤⤙≍ 2 Foo~A {2}
+~Foo {A}
+⍤⤙≍ {3} Foo 3
+Foo ← ⇡
+┌─╴Foo
+  X ← 4
+└─╴
+⍤⤙≍ [0 1 2] Foo 3
+⍤⤙≍ 4 Foo~X
+
 # Experimental!
 
 ┌─╴F ~ D‼ M!

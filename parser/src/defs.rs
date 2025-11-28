@@ -1921,11 +1921,15 @@ primitive!(
     /// ex: {⍜ {⊙⊙∘}⍚⊂    1_2 3_4_5 6_7_8_9 10}
     ///   : {⍜⊙{⊙⊙∘}⍚⊂ 10 1_2 3_4_5 6_7_8_9   }
     ///
-    /// Subscripted [inventory] operates N subarrays deep.
+    /// Subscripted [inventory] operates on rank-N subarrays.
     /// ex: ⍚₀∘ °△2_3_4
     ///   : ⍚₁∘ °△2_3_4
     ///   : ⍚₂∘ °△2_3_4
     ///   : ⍚₃∘ °△2_3_4
+    /// Making the subscript negative instead operates N ranks deep.
+    /// ex: ⍚₋₁□ °△2_3_4
+    ///   : ⍚₋₂□ °△2_3_4
+    ///   : ⍚₋₃□ °△2_3_4
     /// Sided [inventory] [fix]es either the first or last argument so that it can be reused in multiple iterations.
     /// ex: ⍚⌞⊂ 1_2 3_4
     ///   : ⍚⌟⊂ 1_2 3_4

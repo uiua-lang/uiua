@@ -685,6 +685,28 @@ impl Compiler {
             }
         }
     }
+    /// Handle comment words to modify a binding prelude.
+    /// Returns whether the word was used.
+    fn prelude_word(&self, word: &Word, prelude: &mut BindingPrelude) -> bool {
+        match word {
+            Word::Comment(c) => {
+                if let Some(curr_com) = &mut prelude.comment {
+                    curr_com.push('\n');
+                    curr_com.push_str(c);
+                } else {
+                    prelude.comment = Some(c.as_str().into());
+                }
+            }
+            Word::SemanticComment(SemanticComment::NoInline) => prelude.no_inline = true,
+            Word::SemanticComment(SemanticComment::TrackCaller) => prelude.track_caller = true,
+            Word::SemanticComment(SemanticComment::External) => prelude.external = true,
+            Word::SemanticComment(SemanticComment::Deprecated(s)) => {
+                prelude.deprecation = Some(s.clone())
+            }
+            _ => return false,
+        }
+        true
+    }
     fn top_level_words(
         &mut self,
         mut line: Vec<Sp<Word>>,
@@ -694,26 +716,8 @@ impl Compiler {
     ) -> UiuaResult {
         // Populate prelude
         let mut words = line.iter().filter(|w| !matches!(w.value, Word::Spaces));
-        if words.clone().count() == 1 {
-            let word = words.next().unwrap();
-            match &word.value {
-                Word::Comment(c) => {
-                    if let Some(curr_com) = &mut prelude.comment {
-                        curr_com.push('\n');
-                        curr_com.push_str(c);
-                    } else {
-                        prelude.comment = Some(c.as_str().into());
-                    }
-                    line.clear();
-                }
-                Word::SemanticComment(SemanticComment::NoInline) => prelude.no_inline = true,
-                Word::SemanticComment(SemanticComment::TrackCaller) => prelude.track_caller = true,
-                Word::SemanticComment(SemanticComment::External) => prelude.external = true,
-                Word::SemanticComment(SemanticComment::Deprecated(s)) => {
-                    prelude.deprecation = Some(s.clone())
-                }
-                _ => *prelude = BindingPrelude::default(),
-            }
+        if words.clone().count() == 1 && self.prelude_word(&words.next().unwrap().value, prelude) {
+            line.clear();
         } else {
             *prelude = BindingPrelude::default();
         }

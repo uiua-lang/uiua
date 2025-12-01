@@ -5,17 +5,20 @@ use crate::BindingMeta;
 use super::*;
 
 impl Compiler {
-    pub(super) fn binding(&mut self, mut binding: Binding, prelude: BindingPrelude) -> UiuaResult {
+    pub(super) fn binding(
+        &mut self,
+        mut binding: Binding,
+        mut prelude: BindingPrelude,
+    ) -> UiuaResult {
         let public = binding.public;
 
-        let last_word = binding.words.iter().last();
+        if (binding.words.iter().last()).is_some_and(|w| self.prelude_word(&w.value, &mut prelude))
+        {
+            binding.words.pop();
+        }
 
         // If marked external and already bound, don't bind again
-        let is_external = prelude.external
-            || last_word.is_some_and(|w| {
-                matches!(w.value, Word::SemanticComment(SemanticComment::External))
-            });
-        if is_external
+        if prelude.external
             && self.scopes().any(|sc| {
                 sc.names
                     .get_last(&binding.name.value)
@@ -26,31 +29,10 @@ impl Compiler {
         }
 
         // Create meta
-        let deprecation = prelude.deprecation.or_else(|| {
-            last_word.and_then(|w| match &w.value {
-                Word::SemanticComment(SemanticComment::Deprecated(s)) => Some(s.clone()),
-                _ => None,
-            })
-        });
-        let mut last_word_comment = false;
-        let comment = prelude
-            .comment
-            .map(|text| DocComment::from(text.as_str()))
-            .or_else(|| {
-                last_word.and_then(|w| match &w.value {
-                    Word::Comment(c) => {
-                        last_word_comment = true;
-                        Some(DocComment::from(c.as_str()))
-                    }
-                    _ => None,
-                })
-            });
-        if last_word_comment {
-            binding.words.pop();
-        }
+        let comment = prelude.comment.map(|text| DocComment::from(text.as_str()));
         let meta = BindingMeta {
             comment,
-            deprecation,
+            deprecation: prelude.deprecation,
             counts: Some(binding.counts),
             external: false,
         };
@@ -60,6 +42,7 @@ impl Compiler {
         let ident_margs = ident_modifier_args(&name);
         if ident_margs == 0
             && meta.comment.is_none()
+            && !prelude.track_caller
             && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
         {
             if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
@@ -107,7 +90,7 @@ impl Compiler {
         // Handle macro
         let max_placeholder = max_placeholder(&binding.words);
         if binding.code_macro {
-            if is_external {
+            if prelude.external {
                 self.add_error(span.clone(), "Macros cannot be external");
             }
             if max_placeholder.is_some() {
@@ -231,7 +214,7 @@ impl Compiler {
             }
         }
         if max_placeholder.is_some() || ident_margs > 0 {
-            if is_external {
+            if prelude.external {
                 self.add_error(span.clone(), "Macros cannot be external");
             }
 
@@ -347,7 +330,7 @@ impl Compiler {
             .any(|n| matches!(n, Node::CustomInverse(cust, _) if cust.is_obverse));
 
         // Normalize external
-        if is_external {
+        if prelude.external {
             if node.is_empty() {
                 let Some(sig) = &binding.signature else {
                     return Err(self.error(
@@ -404,7 +387,13 @@ impl Compiler {
                     }
                 }
 
-                if sig == (0, 1) && !self_referenced && !is_func && !is_obverse && !is_external {
+                if sig == (0, 1)
+                    && !self_referenced
+                    && !is_func
+                    && !is_obverse
+                    && !prelude.external
+                    && !prelude.track_caller
+                {
                     // Binding is a constant
                     let val = if let [Node::Push(v)] = node.as_slice() {
                         Some(v.clone())

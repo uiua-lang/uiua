@@ -38,12 +38,6 @@ impl Value {
         self.deshape_depth(0);
     }
     pub(crate) fn deshape_depth(&mut self, mut depth: usize) {
-        if let Value::Box(arr) = self {
-            if let Some(Boxed(val)) = arr.as_scalar_mut() {
-                val.deshape_depth(depth);
-                return;
-            }
-        }
         if self.is_map() {
             self.meta.take_map_keys();
         }

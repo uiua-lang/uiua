@@ -25,5 +25,5 @@ dashmap.workspace = true
 ecow.workspace = true
 enum-iterator.workspace = true
 serde = {workspace = true, features = ["rc"]}
-serde_tuple = "1.0.0"
+serde_tuple = "1.1.3"
 unicode-segmentation.workspace = true

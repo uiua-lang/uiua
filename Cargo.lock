@@ -2512,6 +2512,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "gif"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f954a9e9159ec994f73a30a12b96a702dde78f5547bcb561174597924f7d4162"
+dependencies = [
+ "weezl",
+]
+
+[[package]]
 name = "gimli"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3001,7 +3010,7 @@ dependencies = [
  "byteorder-lite",
  "color_quant",
  "exr",
- "gif",
+ "gif 0.13.3",
  "image-webp",
  "num-traits",
  "png",
@@ -6595,7 +6604,7 @@ dependencies = [
  "eframe",
  "enum-iterator",
  "flate2",
- "gif",
+ "gif 0.14.0",
  "hodaun",
  "hound",
  "icy_sixel",

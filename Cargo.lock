@@ -5686,9 +5686,9 @@ dependencies = [
 
 [[package]]
 name = "serde_tuple"
-version = "1.1.2"
+version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52569c5296679bd28e2457f067f97d270077df67da0340647da5412c8eac8d9e"
+checksum = "6af196b9c06f0aa5555ab980c01a2527b0f67517da8d68b1731b9d4764846a6f"
 dependencies = [
  "serde",
  "serde_tuple_macros",
@@ -5696,9 +5696,9 @@ dependencies = [
 
 [[package]]
 name = "serde_tuple_macros"
-version = "1.1.2"
+version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f46c707781471741d5f2670edb36476479b26e94cf43efe21ca3c220b97ef2e"
+checksum = "ec3a1e7d2eadec84deabd46ae061bf480a91a6bce74d25dad375bd656f2e19d8"
 dependencies = [
  "proc-macro2",
  "quote",

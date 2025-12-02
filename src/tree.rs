@@ -857,6 +857,8 @@ impl Node {
                 Node::CustomInverse(cust, _) => (cust.normal.as_ref().ok())
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, purity, asm, visited)),
+                Node::TrackCaller(sn) => recurse(&sn.node, purity, asm, visited),
+                Node::NoInline(n) => recurse(n, purity, asm, visited),
                 Node::Dynamic(_) => false,
                 _ => true,
             };
@@ -912,6 +914,8 @@ impl Node {
                 Node::CustomInverse(cust, _) => (cust.normal.as_ref().ok())
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, asm, visited)),
+                Node::TrackCaller(sn) => recurse(&sn.node, asm, visited),
+                Node::NoInline(n) => recurse(n, asm, visited),
                 _ => true,
             };
             visited.truncate(len);
@@ -940,6 +944,8 @@ impl Node {
                     .or(cust.un.as_ref())
                     .is_some_and(|sn| recurse(&sn.node, asm, visited)),
                 Node::Array { inner, .. } => recurse(inner, asm, visited),
+                Node::TrackCaller(sn) => recurse(&sn.node, asm, visited),
+                Node::NoInline(n) => recurse(n, asm, visited),
                 _ => false,
             };
             visited.truncate(len);
@@ -980,6 +986,8 @@ impl Node {
                     .iter()
                     .find_map(|br| recurse(&br.node, asm, spans, visited)),
                 Node::Array { inner, .. } => recurse(inner, asm, spans, visited),
+                Node::TrackCaller(sn) => recurse(&sn.node, asm, spans, visited),
+                Node::NoInline(n) => recurse(n, asm, spans, visited),
                 _ => None,
             };
             visited.truncate(len);

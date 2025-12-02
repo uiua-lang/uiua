@@ -571,7 +571,7 @@ impl<'a> AlgebraEnv<'a> {
                     self.stack.push(a);
                     self.stack.push(b);
                 }
-                _ => return Err(AlgebraError::NotSupported(prim.to_string())),
+                _ => return Err(AlgebraError::NotSupported("this".into())),
             },
             Mod(prim, ops, _) => match prim {
                 Dip => {
@@ -644,7 +644,7 @@ impl<'a> AlgebraEnv<'a> {
                 }
                 prim => return Err(AlgebraError::NotSupported(prim.to_string())),
             },
-            ImplMod(prim, ..) => return Err(AlgebraError::NotSupported(prim.to_string())),
+            ImplMod(..) => return Err(AlgebraError::NotSupported("this".into())),
             CustomInverse(cust, _) => {
                 if cust.is_obverse {
                     return Err(AlgebraError::NotSupported("custom inverses".into()));

@@ -699,7 +699,7 @@ impl fmt::Debug for Node {
             }
             Node::Push(value) => write!(f, "push {value}"),
             Node::Prim(prim, _) => write!(f, "{prim}"),
-            Node::ImplPrim(impl_prim, _) => write!(f, "{impl_prim}"),
+            Node::ImplPrim(impl_prim, _) => write!(f, "{impl_prim:?}"),
             Node::Mod(prim, args, _) => {
                 let mut tuple = f.debug_tuple(&prim.to_string());
                 for sn in args {
@@ -708,7 +708,7 @@ impl fmt::Debug for Node {
                 tuple.finish()
             }
             Node::ImplMod(impl_prim, args, _) => {
-                let mut tuple = f.debug_tuple(&impl_prim.to_string());
+                let mut tuple = f.debug_tuple(&format!("{impl_prim:?}"));
                 for sn in args {
                     tuple.field(&sn.node);
                 }

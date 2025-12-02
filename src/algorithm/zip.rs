@@ -982,11 +982,10 @@ fn rowsn(f: SigNode, args: Vec<Value>, depth: usize, inv: bool, env: &mut Uiua) 
 pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
     if f.sig.outputs() != 1 {
-        return Err(env.error(format!(
-            "{}'s function does not return a single value. \
+        return Err(env.error(
+            "/◇⊂⍚'s function does not return a single value. \
             This is a bug in the interpreter.",
-            ImplPrimitive::ReduceConjoinInventory
-        )));
+        ));
     }
     let mut args = Vec::with_capacity(f.sig.args());
     for i in 0..f.sig.args() {

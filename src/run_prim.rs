@@ -20,8 +20,8 @@ use std::{
 use rand::prelude::*;
 
 use crate::{
-    FunctionId, ImplPrimitive, Ops, Primitive, Shape, SubSide, SysOp, Uiua, UiuaErrorKind,
-    UiuaResult,
+    FunctionId, ImplPrimitive, NumericSubscript, Ops, Primitive, Shape, SubSide, SysOp, Uiua,
+    UiuaErrorKind, UiuaResult,
     algorithm::{self, ga::GaOp, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
@@ -1329,12 +1329,12 @@ impl ImplPrimitive {
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(
-                        "{prim} was handled as a function. \
+                        "{prim:?} was handled as a function. \
                         This is a bug in the interpreter"
                     )
                 } else {
                     format!(
-                        "{prim} was not handled as a function. \
+                        "{prim:?} was not handled as a function. \
                         This is a bug in the interpreter"
                     )
                 }));
@@ -1683,12 +1683,12 @@ impl ImplPrimitive {
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {
                     format!(
-                        "{prim} was not handled as a modifier. \
+                        "{prim:?} was not handled as a modifier. \
                         This is a bug in the interpreter"
                     )
                 } else {
                     format!(
-                        "{prim} was handled as a modifier. \
+                        "{prim:?} was handled as a modifier. \
                         This is a bug in the interpreter"
                     )
                 }));
@@ -1885,7 +1885,12 @@ pub fn seed_random(seed: u64) {
 
 fn stack_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
     env.require_height(n)?;
-    let span = format!("{} {}", ImplPrimitive::StackN { n, inverse }, env.span());
+    let span = format!(
+        "{}?{} {}",
+        if inverse { "°" } else { "" },
+        NumericSubscript::N(n as i32),
+        env.span()
+    );
     let max_line_len = span.chars().count() + 2;
     let stack_height = env.stack_height() - n;
     let item_lines: Vec<Vec<String>> = env.stack()[stack_height..]

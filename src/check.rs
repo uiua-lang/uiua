@@ -278,10 +278,10 @@ impl VirtualEnv {
             Node::ImplPrim(prim, _) => {
                 let args = prim
                     .args()
-                    .ok_or_else(|| format!("{prim} has indeterminate args"))?;
+                    .ok_or_else(|| format!("{prim:?} has indeterminate args"))?;
                 let outputs = prim
                     .outputs()
-                    .ok_or_else(|| format!("{prim} has indeterminate outputs"))?;
+                    .ok_or_else(|| format!("{prim:?} has indeterminate outputs"))?;
                 self.handle_args_outputs(args, outputs);
             }
             Node::Mod(prim, args, _) => match prim {
@@ -559,10 +559,10 @@ impl VirtualEnv {
                 prim => {
                     let args = prim
                         .args()
-                        .ok_or_else(|| format!("{prim} has indeterminate args"))?;
+                        .ok_or_else(|| format!("{prim:?} has indeterminate args"))?;
                     let outputs = prim
                         .outputs()
-                        .ok_or_else(|| format!("{prim} has indeterminate outputs"))?;
+                        .ok_or_else(|| format!("{prim:?} has indeterminate outputs"))?;
                     for _ in 0..args {
                         self.pop();
                     }

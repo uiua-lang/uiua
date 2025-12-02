@@ -2423,9 +2423,9 @@ impl Compiler {
                 self.add_error(span, message);
                 return false;
             }
-            ImplPrim(prim, span) => {
+            ImplPrim(_, span) => {
                 let span = self.get_span(span);
-                let message = format!("{} does not support {prim}", Geometric.format());
+                let message = format!("{} does not support this", Geometric.format());
                 self.add_error(span, message);
                 return false;
             }

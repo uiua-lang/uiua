@@ -995,13 +995,18 @@ pub fn unscan(ops: Ops, env: &mut Uiua) -> UiuaResult {
     let [f] = get_ops(ops, env)?;
     let mut xs = env.pop(1)?;
     if xs.rank() == 0 {
-        return Err(env.error(format!("Cannot {} rank 0 array", ImplPrimitive::UnScan,)));
+        return Err(env.error(format!(
+            "Cannot {}{} rank 0 array",
+            Primitive::Un,
+            Primitive::Scan
+        )));
     }
     let sig = f.sig;
     if sig != (2, 1) {
         return Err(env.error(format!(
-            "{} unscan's function's signature must be |2.1, but it is {sig}",
-            ImplPrimitive::UnScan,
+            "{}{}'s function's signature must be |2.1, but it is {sig}",
+            Primitive::Un,
+            Primitive::Scan
         )));
     }
     if xs.row_count() == 0 {

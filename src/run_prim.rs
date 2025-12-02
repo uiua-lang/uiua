@@ -595,6 +595,10 @@ impl ImplPrimitive {
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
             ImplPrimitive::Ln => env.monadic_env(Value::ln)?,
+            ImplPrimitive::Exp2 => env.monadic_env(Value::exp2)?,
+            ImplPrimitive::Exp10 => env.monadic_env(Value::exp10)?,
+            ImplPrimitive::Log2 => env.monadic_env(Value::log2)?,
+            ImplPrimitive::Log10 => env.monadic_env(Value::log10)?,
             ImplPrimitive::UnPop => {
                 let frame = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
                 env.push(frame.values.first().cloned().unwrap_or_default());

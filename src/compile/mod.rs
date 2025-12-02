@@ -2350,11 +2350,15 @@ impl Compiler {
                     }
                     Exp => {
                         let span = self.add_span(span);
-                        Node::from_iter([
-                            Node::new_push(n as f64),
-                            Node::Prim(Flip, span),
-                            Node::Prim(Pow, span),
-                        ])
+                        match n {
+                            2 => Node::ImplPrim(ImplPrimitive::Exp2, span),
+                            10 => Node::ImplPrim(ImplPrimitive::Exp10, span),
+                            n => Node::from_iter([
+                                Node::new_push(n as f64),
+                                Node::Prim(Flip, span),
+                                Node::Prim(Pow, span),
+                            ]),
+                        }
                     }
                     Floor | Ceil => {
                         self.subscript_experimental(prim, &span);

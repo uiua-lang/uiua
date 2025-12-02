@@ -238,6 +238,10 @@ impl_primitive!(
     (2, AbsComplex),
     (2, MatrixDiv),
     (2, RangeStart),
+    (1, Exp2),
+    (1, Exp10),
+    (1, Log2),
+    (1, Log10),
     // Implementation details
     (2(3), Over),
     ([1], DipN(usize)),

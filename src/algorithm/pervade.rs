@@ -1143,6 +1143,75 @@ pub mod complex_im {
     }
 }
 
+pub mod exp2 {
+    use super::*;
+
+    pub fn byte(a: u8) -> f64 {
+        num(a as f64)
+    }
+    pub fn num(a: f64) -> f64 {
+        a.exp2()
+    }
+    pub fn com(a: Complex) -> Complex {
+        Complex::from(2.0).powc(a)
+    }
+
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot raise {a} to the 2nd"))
+    }
+}
+pub mod exp10 {
+    use super::*;
+
+    pub fn byte(a: u8) -> f64 {
+        10f64.powi(a as i32)
+    }
+    pub fn num(a: f64) -> f64 {
+        10f64.powf(a)
+    }
+    pub fn com(a: Complex) -> Complex {
+        Complex::from(10.0).powc(a)
+    }
+
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot raise {a} to the 10th"))
+    }
+}
+pub mod log2 {
+    use super::*;
+
+    pub fn byte(a: u8) -> f64 {
+        num(a as f64)
+    }
+    pub fn num(a: f64) -> f64 {
+        a.log2()
+    }
+    pub fn com(a: Complex) -> Complex {
+        a.log(2.0)
+    }
+
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the log₂ of {a}"))
+    }
+}
+pub mod log10 {
+    use super::*;
+
+    pub fn byte(a: u8) -> f64 {
+        num(a as f64)
+    }
+    pub fn num(a: f64) -> f64 {
+        a.log10()
+    }
+    pub fn com(a: Complex) -> Complex {
+        a.log(10.0)
+    }
+
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the log₁₀ of {a}"))
+    }
+}
+
 macro_rules! eq_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {

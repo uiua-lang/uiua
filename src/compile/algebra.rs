@@ -558,9 +558,33 @@ impl<'a> AlgebraEnv<'a> {
                     self.stack.push(Term::Cos(a).into());
                     self.handled += 1;
                 }
+                Exp2 => {
+                    let a = self.pop()?;
+                    let res = Expr::from(2.0).pow(a).ok_or(AlgebraError::TooComplex)?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
+                Exp10 => {
+                    let a = self.pop()?;
+                    let res = Expr::from(10.0).pow(a).ok_or(AlgebraError::TooComplex)?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
                 Ln => {
                     let a = self.pop()?;
                     let res = a.log(E.into()).ok_or(AlgebraError::TooComplex)?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
+                Log2 => {
+                    let a = self.pop()?;
+                    let res = a.log(2.0.into()).ok_or(AlgebraError::TooComplex)?;
+                    self.stack.push(res);
+                    self.handled += 1;
+                }
+                Log10 => {
+                    let a = self.pop()?;
+                    let res = a.log(10.0.into()).ok_or(AlgebraError::TooComplex)?;
                     self.stack.push(res);
                     self.handled += 1;
                 }

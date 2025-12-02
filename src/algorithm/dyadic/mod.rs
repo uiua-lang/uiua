@@ -1809,11 +1809,12 @@ fn digits_needed_for_base(n: f64, base: f64) -> usize {
     if n == 0.0 {
         0
     } else {
-        let mut log = n.abs().log(base);
-        if (log.fract() - 1.0).abs() <= 4.0 * f64::EPSILON {
-            log = log.ceil();
-        }
-        log.floor() as usize + 1
+        let log = match base {
+            2.0 => n.abs().log2(),
+            10.0 => n.abs().log10(),
+            base => n.abs().log(base),
+        };
+        log as usize + 1
     }
 }
 

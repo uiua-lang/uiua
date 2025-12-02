@@ -1794,14 +1794,12 @@ value_mon_impl!(
         val.meta.or_sorted_flags(flags)
     }
 );
-value_mon_impl!(
-    complex_re,
-    [Num, generic],
-    [Byte, generic],
-    (Complex, com),
-    [Char, generic]
-);
+value_mon_impl!(complex_re, [Num, generic], [Byte, generic], (Complex, com));
 value_mon_impl!(complex_im, [Num, num], [Byte, byte], (Complex, com));
+value_mon_impl!(exp2, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(exp10, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(log2, [Num, num], (Byte, byte), [Complex, com]);
+value_mon_impl!(log10, [Num, num], (Byte, byte), [Complex, com]);
 
 impl Value {
     /// Get the `absolute value` of a value

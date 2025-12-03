@@ -78,8 +78,8 @@ pub fn Site() -> impl IntoView {
         view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_view(),
         "It's got um...I um...arrays".into_view(),
         view!(<p style="font-size: 0.9em; max-width: 25em;">
-            "A monad is a "
-            <s>"monoid in the category of endofunctors"</s>
+            "A monad is "
+            <s>"a monoid in the category of endofunctors"</s>
             " a function with 1 argument"
         </p>)
         .into_view(),

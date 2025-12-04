@@ -1337,28 +1337,8 @@ impl<'a> Lexer<'a> {
                     while let Some(ch) = self.next_char_if(|ch| "'′″‴".contains(ch)) {
                         ident.push_str(ch);
                     }
-                    let mut exclam_count = match c {
-                        "!" => 1,
-                        "‼" => 2,
-                        _ => 0,
-                    };
-                    while let Some((ch, count)) = if self.next_char_exact("!") {
-                        Some(('!', 1))
-                    } else if self.next_char_exact("‼") {
-                        Some(('‼', 2))
-                    } else {
-                        None
-                    } {
-                        ident.push(ch);
-                        exclam_count += count;
-                    }
-                    let ambiguous_ne = exclam_count == 1
-                        && self.input_segments.get(self.loc.char_pos as usize) == Some(&"=");
-                    if ambiguous_ne {
-                        ident.pop();
-                        self.loc.char_pos -= 1;
-                        self.loc.byte_pos -= 1;
-                        self.loc.col -= 1;
+                    while let Some(ch) = self.next_char_if(|c| "!‼".contains(c)) {
+                        ident.push_str(ch);
                     }
                     // Try to parse as primitives
                     let lowercase_end = ident

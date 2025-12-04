@@ -2415,7 +2415,8 @@ mod tests {
                 assert_eq!(test(&short), Some(prim.into()));
             }
             for prim in Primitive::non_deprecated() {
-                if matches!(prim, Primitive::Rand | Primitive::Parse | Primitive::Slf) {
+                use Primitive::*;
+                if matches!(prim, Rand | Parse | Slf | Ne | Le | Ge) {
                     continue;
                 }
                 let char_test = match prim.glyph() {

@@ -490,7 +490,7 @@ primitive!(
         2,
         Ne,
         DyadicPervasive,
-        ("not equals", AsciiToken::BangEqual, '≠')
+        ("not equals", '≠')
     ),
     /// Compare for less than
     ///
@@ -521,7 +521,7 @@ primitive!(
         2,
         Le,
         DyadicPervasive,
-        ("less or equal", AsciiToken::LessEqual, '≤')
+        ("less or equal", '≤')
     ),
     /// Compare for greater than
     ///
@@ -552,7 +552,7 @@ primitive!(
         2,
         Ge,
         DyadicPervasive,
-        ("greater or equal", AsciiToken::GreaterEqual, '≥')
+        ("greater or equal", '≥')
     ),
     /// Add values
     ///

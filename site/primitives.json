@@ -817,7 +817,6 @@
     "description": "Convert a string to a list of UTF-8 grapheme clusters"
   },
   "greater or equal": {
-    "ascii": ">=",
     "glyph": "≥",
     "args": 2,
     "outputs": 1,
@@ -948,7 +947,6 @@
     "description": "Get the number of rows in an array"
   },
   "less or equal": {
-    "ascii": "<=",
     "glyph": "≤",
     "args": 2,
     "outputs": 1,
@@ -1048,7 +1046,6 @@
     "description": "Logical not"
   },
   "not equals": {
-    "ascii": "!=",
     "glyph": "≠",
     "args": 2,
     "outputs": 1,

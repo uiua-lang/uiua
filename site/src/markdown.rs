@@ -167,40 +167,55 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
             // Special cases
             match code.literal.as_str() {
                 "EXAMPLE.UA" => return view!(<Editor example=EXAMPLE_UA/>).into_view(),
-                "END OF TUTORIAL LIST" => return view! {
-                    <ul>
-                        <li><A href="/docs#functions">"The list of all functions"</A></li>
-                        <li><A href="/docs#other-tutorials">"Other tutorials about more specific topics"</A></li>
-                        <li><A href="/docs#other-docs">"Other language topics"</A></li>
-                        <li>"The online "<A href="/pad">"pad"</A>" for writing longer code"</li>
-                    </ul>
-                }.into_view(),
+                "END OF TUTORIAL LIST" => {
+                    return view! {
+                        <ul>
+                            <li><A href="/docs#functions">"The list of all functions"</A></li>
+                            <li><A href="/docs#other-tutorials">
+                                "Other tutorials about more specific topics"
+                            </A></li>
+                            <li><A href="/docs#other-docs">"Other language topics"</A></li>
+                            <li>"The online "<A href="/pad">"pad"</A>" for writing longer code"</li>
+                        </ul>
+                    }
+                    .into_view();
+                }
                 "MATH TABLES" => {
                     use Primitive::*;
                     fn primitive_rows(
                         prims: impl IntoIterator<Item = Primitive>,
+                        alias: bool,
                     ) -> Vec<impl IntoView> {
                         prims
                             .into_iter()
                             .map(|p| {
-                                let ascii = p.ascii().map(|s| s.to_string()).or_else(|| {
-                                    p.glyph().filter(|c| c.is_ascii()).map(|c| c.to_string())
-                                });
+                                let alias = if alias {
+                                    p.aliases().iter().find(|a| a.len() == 2).map(|&a| a.into())
+                                } else {
+                                    p.ascii().map(|s| s.to_string()).or_else(|| {
+                                        p.glyph().filter(|c| c.is_ascii()).map(|c| c.to_string())
+                                    })
+                                };
                                 view! {
                                     <tr>
                                         <td><Prim prim=p/></td>
-                                        <td>{maybe_code(ascii)}</td>
+                                        <td>{maybe_code(alias)}</td>
                                         <td>{view!(<code>{p.args()}</code>)}</td>
                                     </tr>
                                 }
                             })
                             .collect()
                     }
-                    let math_table = primitive_rows([
-                        Add, Sub, Mul, Div, Modulo, Pow, Log, Neg, Abs, Sqrt, Sign, Sin, Atan,
-                    ]);
-                    let comp_table =
-                        primitive_rows([Eq, Ne, Lt, Gt, Le, Ge, Min, Max, Floor, Ceil, Round]);
+                    let math_table = primitive_rows(
+                        [
+                            Add, Sub, Mul, Div, Modulo, Pow, Log, Neg, Abs, Sqrt, Sign, Sin, Atan,
+                        ],
+                        false,
+                    );
+                    let comp_table = primitive_rows(
+                        [Eq, Ne, Lt, Gt, Le, Ge, Min, Max, Floor, Ceil, Round],
+                        true,
+                    );
                     return view!(<div id="ascii-glyphs">
                         <table class="bordered-table">
                             <tr>
@@ -213,7 +228,7 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                         <table class="bordered-table">
                             <tr>
                                 <th>"Function"</th>
-                                <th>"ASCII"</th>
+                                <th>"Alias"</th>
                                 <th>"Args"</th>
                             </tr>
                             {comp_table}
@@ -232,7 +247,8 @@ fn node_view<'a>(node: &'a AstNode<'a>, state: &mut State) -> View {
                         return view!(<img
                             src=format!("/assets/kala/{kala}.png")
                             style=format!("width:min(15em,40%);margin-right:1em;{flip}")
-                        />).into_view();
+                        />)
+                        .into_view();
                     }
                     for (prefix, class) in [
                         ("monadic mod", "monadic-modifier"),

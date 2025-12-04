@@ -20,6 +20,11 @@ This version is not yet released. If you are reading this on the website, then t
 - A function/constant and a module with the same name can now be in scope at the same time
 - Change [`reach ∪`](https://uiua.org/docs/reach)'s glyph
 - Change how sided [`reach ∪`](https://uiua.org/docs/reach) works
+- Remove the 2-character ASCII aliases for comparison functions in favor of 2-letter aliases
+  - These symbolic aliases created conflicts with other language syntax
+  - `!=` for [`not equals ≠`](<https://uiua.org/docs/not equals>) is now `ne`
+  - `<=` for [`less or equal ≤`](<https://uiua.org/docs/less or equal>) is now `le`
+  - `>=` for [`less or equal ≤`](<https://uiua.org/docs/greater or equal>) is now `ge`
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
 - Add modifier version of [`gif`](https://uiua.org/docs/gif), written as `gif!`

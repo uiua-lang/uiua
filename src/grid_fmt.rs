@@ -1014,27 +1014,35 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     grid[0] = (label.chars().chain([':', ' ']))
                         .chain(take(&mut grid[0]))
                         .collect();
-                } else if grid[0].len() >= 2 && "┌╭".contains(grid[0][1]) {
-                    grid[0] = label
-                        .chars()
-                        .chain(take(&mut grid[0]).into_iter().skip(1))
-                        .collect();
-                    for row in grid.iter_mut().skip(1) {
-                        let ext = label.chars().count() - 1;
-                        row.extend(repeat_n(' ', ext));
-                        row.rotate_right(ext);
-                    }
                 } else {
-                    if "┌╭".contains(grid[0][0]) {
-                        let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
-                        grid[0].truncate(trunc);
-                        grid[0].push(' ');
+                    if grid[0].len() >= 2 && "┌╭".contains(grid[0][1]) {
+                        grid[0] = label
+                            .chars()
+                            .chain(take(&mut grid[0]).into_iter().skip(1))
+                            .collect();
+                        for row in grid.iter_mut().skip(1) {
+                            let ext = label.chars().count() - 1;
+                            row.extend(repeat_n(' ', ext));
+                            row.rotate_right(ext);
+                        }
                     } else {
-                        grid.insert(0, Vec::new());
+                        if "┌╭".contains(grid[0][0]) {
+                            let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
+                            grid[0].truncate(trunc);
+                            grid[0].push(' ');
+                        } else {
+                            grid.insert(0, Vec::new());
+                        }
+                        grid[0].extend(label.chars());
                     }
-                    grid[0].extend(label.chars());
+                    // Normalize lengths
                     while grid[0].len() < grid[1].len() {
                         grid[0].push(' ');
+                    }
+                    for i in 1..grid.len() {
+                        while grid[i].len() < grid[0].len() {
+                            grid[i].push(' ');
+                        }
                     }
                 }
             }

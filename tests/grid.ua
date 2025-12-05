@@ -123,5 +123,11 @@ RoundtripRepr!@\u{100002}
 ⍤⟜≍ pretty@\u{100001} ¤$ @\∅
 ⍤⟜≍ pretty@\u{100002} ¤$ @\⊥
 
+pretty ¤ $label [1]
+["╭─ label"
+ "╷ 1     "
+ "    ╯   "]
+⍤⤙≍
+
 # Experimental!
 ⍤⤙≍ ["∅"] pretty⍜(bytes"f64")⍜⊢+₁NaN

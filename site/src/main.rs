@@ -66,10 +66,10 @@ pub fn Site() -> impl IntoView {
         view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
         view! {
             <div style="font-style: normal">
-                <a href="/tutorial/More Argument Manipulation#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
-                <code style="font-style: normal">
-                    <span class="monadic-modifier">"⋅⋅⊙⋅⋅"</span>
-                    <span class="stack-function">"∘"</span>
+                <a href="/tutorial/More Argument Manipulation#-planet-notation-" style="text-decoration: none">"🌍🪐"</a>" "
+                <code style="font-family: Code Font, font-style: normal">
+                    <span style="padding: 0" class="monadic-modifier">"⋅⋅⊙⋅⋅"</span>
+                    <span style="padding: 0" class="stack-function">"∘"</span>
                 </code>
             </div>
         }

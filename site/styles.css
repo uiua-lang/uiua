@@ -70,7 +70,8 @@ button:active {
     transform: translateY(0.1em);
 }
 
-code {
+code,
+code>* {
     font-family: "Code Font", monospace;
     border-radius: 0.2em;
     padding: 0.2em;

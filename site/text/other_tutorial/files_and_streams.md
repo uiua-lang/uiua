@@ -5,6 +5,7 @@ Uiua has support for reading and writing files from the filesystem. It has helpe
 ## Reading and Writing Entire Files
 
 Loading an entire file into an array is very simple.
+
 For demonstration purposes, this website has a built-in file called `example.txt` that we will work with.
 
 We can read an entire file as a string with [`&fras`]() (file read all string).

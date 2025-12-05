@@ -1814,11 +1814,10 @@ primitive!(
     /// If the function returns the same or more values than it takes as arguments:
     /// There will be exactly one iterated array. The rest of the arguments will be used as accumulators.
     /// Excess outputs will be collected into arrays. When the [fold] is done, these arrays will be placed *after* the accumulators.
-    /// This behavior is currently `# Experimental!`.
+    /// This behavior is currently `# Experimental!` for more than 2 outputs.
     ///
     /// For example, [scan] can be manually reimplemented by duplicating the result of the function.
-    /// ex: # Experimental!
-    ///   : ∧(⟜∘+) [1 2 3 4 5] 0
+    /// ex: ∧(⟜∘+) [1 2 3 4 5] 0
     /// ex: # Experimental!
     ///   : ∧(◡⊙∘⊓⌞+×) [1 2 3 4 5] 0 1
     ([1], Fold, AggregatingModifier, ("fold", '∧')),
@@ -3101,12 +3100,12 @@ primitive!(
     ///   : Fact 7
     /// The [less than]`2` determines when to cease recursion. The [subtract]`1` is the next recursive call, the "child node". The [multiply] gets called on a node and the result of its child.
     ///
-    /// We can express the classic recursive fibanacci function in a similar way. In this example, the second function returns two children. The third function ignores the parent node and simply adds the results of the children.
+    /// We can express the classic recursive Fibonacci function in a similar way. In this example, the second function returns two children. The third function ignores the parent node and simply adds the results of the children.
     /// ex: # Experimental!
     ///   : Fib ← recur(<2|⊃[-1|-2]|/+)
     ///   : Fib 10
-    /// Because a boolean result from the first function returns a node as its own result, that example interprets the 0th fibonacci number to be `0`.
-    /// If we instead want the 0th fibonacci to be `1`, we can return a list of 0 or 1 items from the first function instead. A 1-item list is interpreted as a leaf node, with that item as the result.
+    /// Because a boolean result from the first function returns a node as its own result, that example interprets the 0th Fibonacci number to be `0`.
+    /// If we instead want the 0th Fibonacci to be `1`, we can return a list of 0 or 1 items from the first function instead. A 1-item list is interpreted as a leaf node, with that item as the result.
     /// In this example, we use `keep``dip``1` to return `[1]` if the node is `less than``2` or `[]` if it is not.
     /// ex: # Experimental!
     ///   : Fib ← recur(▽⊙1<2|⊃[-1|-2]|/+)

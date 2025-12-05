@@ -24,7 +24,7 @@ This version is not yet released. If you are reading this on the website, then t
   - These symbolic aliases created conflicts with other language syntax
   - `!=` for [`not equals ≠`](<https://uiua.org/docs/not equals>) is now `ne`
   - `<=` for [`less or equal ≤`](<https://uiua.org/docs/less or equal>) is now `le`
-  - `>=` for [`less or equal ≤`](<https://uiua.org/docs/greater or equal>) is now `ge`
+  - `>=` for [`greater or equal ≤`](<https://uiua.org/docs/greater or equal>) is now `ge`
 - Add [`&camlist`](https://uiua.org/docs/&camlist) function to list available webcams
   - [`&camcap`](https://uiua.org/docs/&camcap) may now take a webcam name instead of an index
 - Add modifier version of [`gif`](https://uiua.org/docs/gif), written as `gif!`

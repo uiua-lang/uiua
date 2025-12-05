@@ -141,6 +141,7 @@ This can get a bit unwieldy if an array has a lot of dimensions. You can instead
 ```
 
 This is useful when you are approaching the array's structure from the bottom up, but what if you want to start at the top, like [rows]() normally does?
+
 This is what *negative* subscripts do. [rows]()`₋₁` is equivalent to normal [rows](), [rows]()`₋₂` is equivalent to `rowsrows`, etc.
 
 ```uiua

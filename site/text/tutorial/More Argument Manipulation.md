@@ -139,7 +139,7 @@ For example, let's say you want to [multiply]() the 2nd and 4th arguments and di
 
 Notice how the circles correspond to the arguments we want.
 
-Alternatively, maybe you want to [add]() the 1st and 3rd arguments while discarding the 2nd and 4th. In this case, you would terminal the chain with [pop]() rather than [identity]().
+Alternatively, maybe you want to [add]() the 1st and 3rd arguments while discarding the 2nd and 4th. In this case, you would terminate the chain with [pop]() rather than [identity]().
 
 ```uiua
 +⊙⋅⊙◌ 10 2 3 4

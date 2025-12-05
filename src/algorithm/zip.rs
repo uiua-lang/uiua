@@ -991,6 +991,12 @@ pub fn reduce_conjoin_inventory(ops: Ops, env: &mut Uiua) -> UiuaResult {
     for i in 0..f.sig.args() {
         args.push(env.pop(i + 1)?);
     }
+    if args.iter().any(|v| v.row_count() == 0)
+        && args.iter().all(|v| v.row_count() <= 1)
+        && push_empty_rows_value(&f, &args, false, &mut Default::default(), env)
+    {
+        return Ok(());
+    }
     let FixedRowsData {
         mut rows,
         row_count,

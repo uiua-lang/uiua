@@ -758,7 +758,7 @@ impl SysBackend for NativeSys {
                 if let Some(mut child) = NATIVE_SYS
                     .gifs_child
                     .lock()
-                    .replace(command.arg(&temp_path).spawn()?)
+                    .replace(command.spawn()?)
                 {
                     child.kill()?;
                 }
@@ -785,7 +785,7 @@ impl SysBackend for NativeSys {
                 if let Some(mut child) = NATIVE_SYS
                     .gifs_child
                     .lock()
-                    .replace(command.arg(&temp_path).spawn()?)
+                    .replace(command.spawn()?)
                 {
                     child.kill()?;
                 }

@@ -1226,7 +1226,7 @@ pub mod square_abs {
     }
 
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the log₁₀ of {a}"))
+        env.error(format!("Cannot square {a}"))
     }
 }
 

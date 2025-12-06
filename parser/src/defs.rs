@@ -478,8 +478,6 @@ primitive!(
     (2, Eq, DyadicPervasive, ("equals", AsciiToken::Equal, '=')),
     /// Compare for inequality
     ///
-    /// Formats from `!=`.
-    ///
     /// ex: ≠1 2
     /// ex: ≠5 5
     /// ex: ≠1 [1 2 3]
@@ -505,8 +503,6 @@ primitive!(
     /// ex: < {1 2_3 4_5_6} {1_2 3 4_5_6}
     (2, Lt, DyadicPervasive, ("less than", '<')),
     /// Compare for less than or equal
-    ///
-    /// Formats from `<=`.
     ///
     /// The second value is checked to be less than or equal to the first.
     /// This is so you can think of `≤``x` as a single unit.
@@ -536,8 +532,6 @@ primitive!(
     /// ex: > {1 2_3 4_5_6} {1_2 3 4_5_6}
     (2, Gt, DyadicPervasive, ("greater than", '>')),
     /// Compare for greater than or equal
-    ///
-    /// Formats from `>=`.
     ///
     /// The second value is checked to be greater than or equal to the first.
     /// This is so you can think of `≥``x` as a single unit.

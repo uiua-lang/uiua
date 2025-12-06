@@ -566,7 +566,7 @@ impl Formatter<'_> {
             let mut groups: Vec<(usize, Vec<EoLComment>)> = Vec::new();
             let mut lines: Vec<String> = (self.output.split('\n'))
                 .map(|s| {
-                    if s.ends_with(' ') {
+                    if s.ends_with(' ') && !s.trim_start().starts_with("$ ") {
                         let mut trim_s = s.trim_end().to_string();
                         if trim_s.ends_with(['@', '$']) && trim_s != s {
                             trim_s.push(' ');

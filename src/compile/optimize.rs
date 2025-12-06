@@ -123,6 +123,7 @@ static UNSORTED_OPTS: &[&dyn Optimization] = &[
     &((-1, Pow), (1, Flip, Div)),
     &((2, Pow), (Dup, Mul)),
     &((Complex, Abs), AbsComplex),
+    &((Abs, Dup, Mul), (SquareAbs)),
     &ByToDup,
     &RowsFlipOpt,
     &InlineCustomInverse,

@@ -1212,6 +1212,24 @@ pub mod log10 {
     }
 }
 
+pub mod square_abs {
+    use super::*;
+
+    pub fn byte(a: u8) -> f64 {
+        num(a as f64)
+    }
+    pub fn num(a: f64) -> f64 {
+        a * a
+    }
+    pub fn com(a: Complex) -> f64 {
+        a.re * a.re + a.im * a.im
+    }
+
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the log₁₀ of {a}"))
+    }
+}
+
 macro_rules! eq_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {

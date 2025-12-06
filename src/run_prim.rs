@@ -991,6 +991,7 @@ impl ImplPrimitive {
             ImplPrimitive::SetSign => env.dyadic_oo_env(Value::set_sign)?,
             // Optimizations
             ImplPrimitive::AbsComplex => env.dyadic_oo_env(Value::abs_complex)?,
+            ImplPrimitive::SquareAbs => env.monadic_env(Value::square_abs)?,
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,
             ImplPrimitive::FirstMaxIndex => env.monadic_ref_env(Value::first_max_index)?,
             ImplPrimitive::LastMinIndex => env.monadic_ref_env(Value::last_min_index)?,

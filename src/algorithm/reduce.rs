@@ -1,7 +1,7 @@
 //! Algorithms for reducing modifiers
 
 use core::f64;
-use std::convert::identity;
+use std::{convert::identity, mem::take};
 
 use ecow::{EcoVec, eco_vec};
 
@@ -264,7 +264,16 @@ fn trim_node(node: &Node) -> &[Node] {
     nodes
 }
 
-fn reduce_identity(node: &Node, mut val: Value, env: &Uiua) -> UiuaResult<Option<Value>> {
+fn reduce_identity(node: &Node, val: Value, env: &Uiua) -> UiuaResult<Option<Value>> {
+    reduce_identity_impl(node, val, false, env)
+}
+
+fn reduce_identity_impl(
+    node: &Node,
+    mut val: Value,
+    unbox: bool,
+    env: &Uiua,
+) -> UiuaResult<Option<Value>> {
     use Primitive::*;
     let nodes = trim_node(node);
     let mut shape = val.shape.clone();
@@ -282,11 +291,16 @@ fn reduce_identity(node: &Node, mut val: Value, env: &Uiua) -> UiuaResult<Option
         Node::Prim(Join, _) if tail_sig() => {
             if val.rank() < 2 {
                 val.shape[0] = 0;
+                if unbox {
+                    Array::<u8>::new(take(&mut val.shape), []).into()
+                } else {
+                    val
+                }
             } else {
                 let first = val.shape.remove(0);
                 val.shape[0] *= first;
+                val
             }
-            val
         }
         _ => match last {
             Node::Prim(Add | Sub | Or | Complex, _) if init_sig() => {
@@ -308,11 +322,16 @@ fn reduce_identity(node: &Node, mut val: Value, env: &Uiua) -> UiuaResult<Option
             Node::Prim(Join, _) if init_sig() => {
                 if val.rank() < 2 {
                     val.shape[0] = 0;
+                    if unbox {
+                        Array::<u8>::new(take(&mut val.shape), []).into()
+                    } else {
+                        val
+                    }
                 } else {
                     let first = val.shape.remove(0);
                     val.shape[0] *= first;
+                    val
                 }
-                val
             }
             Node::Format(parts, _) if parts.len() == 3 && init_sig() => {
                 EcoVec::<char>::new().into()
@@ -609,6 +628,15 @@ pub fn reduce_content(ops: Ops, env: &mut Uiua) -> UiuaResult {
             acc = acc.join(row, true, env)?;
         }
         env.push(acc);
+        return Ok(());
+    } else if xs.row_count() == 0 {
+        let val = reduce_identity_impl(&f.node, xs, true, env)?.ok_or_else(|| {
+            env.error(format!(
+                "Cannot {} empty array. Function has no identity value.",
+                Primitive::Reduce.format()
+            ))
+        })?;
+        env.push(val);
         return Ok(());
     }
     env.push(xs);

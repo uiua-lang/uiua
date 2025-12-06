@@ -87,6 +87,7 @@ impl Ty {
     }
 }
 
+#[derive(Debug)]
 enum TypeError {
     StackUnderflow,
     NotSupported,

@@ -755,11 +755,7 @@ impl SysBackend for NativeSys {
             fs::write(&temp_path, gif_bytes)?;
             let commands = open::commands(&temp_path);
             if let Some(mut command) = commands.into_iter().next() {
-                if let Some(mut child) = NATIVE_SYS
-                    .gifs_child
-                    .lock()
-                    .replace(command.arg(&temp_path).spawn()?)
-                {
+                if let Some(mut child) = NATIVE_SYS.gifs_child.lock().replace(command.spawn()?) {
                     child.kill()?;
                 }
             }
@@ -782,11 +778,7 @@ impl SysBackend for NativeSys {
             fs::write(&temp_path, apng_bytes)?;
             let commands = open::commands(&temp_path);
             if let Some(mut command) = commands.into_iter().next() {
-                if let Some(mut child) = NATIVE_SYS
-                    .gifs_child
-                    .lock()
-                    .replace(command.arg(&temp_path).spawn()?)
-                {
+                if let Some(mut child) = NATIVE_SYS.gifs_child.lock().replace(command.spawn()?) {
                     child.kill()?;
                 }
             }

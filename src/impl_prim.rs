@@ -236,6 +236,7 @@ impl_primitive!(
     (2[1], SplitBy),
     (2[1], SplitByKeepEmpty),
     (2, AbsComplex),
+    (1, SquareAbs),
     (2, MatrixDiv),
     (2, RangeStart),
     (1, Exp2),

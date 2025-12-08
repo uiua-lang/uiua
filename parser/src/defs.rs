@@ -1258,7 +1258,7 @@ primitive!(
     ///
     /// Numeric subscripted [join] joins that many arrays.
     /// ex: ⊂₃ 1 2_3_4 5_6
-    /// ex: ⊂₄ "al" "ig" "at" "or"
+    /// ex: ⊂₅ "al" "li" "ga" "to" "rs"
     ///
     /// Sided subscripted [join] uses the argument on that side as the list, automatically promoting the rank if necessary.
     /// ex: ⊂⌟ 1_2 3_4

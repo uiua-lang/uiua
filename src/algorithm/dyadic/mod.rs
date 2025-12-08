@@ -1500,11 +1500,15 @@ impl Value {
         val_as_arr!(target, |a| a.anti_orient(undices, env).map(Into::into))
     }
     pub(crate) fn undo_anti_orient(
-        self,
+        mut self,
         indices: Self,
         into: Self,
         env: &Uiua,
     ) -> UiuaResult<Self> {
+        if self.rank() == into.rank() {
+            indices.orient(&mut self, env)?;
+            return Ok(self);
+        }
         let indices = indices.as_ints(env, "Orient indices must be integers")?;
         let undices = derive_undices(indices, self.rank(), env)?;
         self.generic_bin_into(

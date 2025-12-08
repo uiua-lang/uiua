@@ -142,7 +142,12 @@ fn repeat_impl(f: SigNode, inv: Option<SigNode>, n: f64, env: &mut Uiua) -> Uiua
     let (f, n) = if n >= 0.0 {
         (f, n)
     } else {
-        let f = inv.ok_or_else(|| env.error("No inverse found"))?;
+        let f = inv.ok_or_else(|| {
+            env.error(format!(
+                "Cannot use negative repetition count {n} \
+                because the function is not invertible"
+            ))
+        })?;
         (f, -n)
     };
     let excess_count = sig.outputs().saturating_sub(sig.args());

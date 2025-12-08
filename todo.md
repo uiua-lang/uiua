@@ -2,6 +2,8 @@
 
 # 0.18
 - Make assemblies importable
+- `noise` function
+- `group` function pack
 - Recursion ergonomics for `path` / revise `recur`
 - `table` non-lists optimizations?
 - `first group/partition` optimization

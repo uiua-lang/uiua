@@ -1,7 +1,6 @@
 # Design
 
-This page explains the reasons for some of Uiua's design decisions.  
-It serves as a [defense of design](https://news.knowledia.com/US/en/articles/more-software-projects-need-defenses-of-design-85ea9e23ffd85f5fde5a2d3d42001393cbce169a).
+This page explains the reasons for some of Uiua's design decisions.
 
 ## Tacit Code
 

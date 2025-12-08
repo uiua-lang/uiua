@@ -205,6 +205,8 @@ pub struct DataFields {
     pub open_span: CodeSpan,
     /// The data fields
     pub fields: Vec<DataField>,
+    /// Comments after the fields
+    pub post_comments: Option<Comments>,
     /// A trailing newline
     pub trailing_newline: bool,
     /// The close delimiter span
@@ -220,6 +222,8 @@ pub struct DataField {
     pub name: Sp<Ident>,
     /// The validator of the field
     pub validator: Option<FieldValidator>,
+    /// An inline comment when there is no init
+    pub eol_comment: Option<Sp<EcoString>>,
     /// The default value of the field
     pub init: Option<FieldInit>,
     /// The span of a trailing bar
@@ -346,7 +350,7 @@ pub enum Word {
     Primitive(Primitive),
     Modified(Box<Modified>),
     Placeholder(Option<usize>),
-    Comment(String),
+    Comment(EcoString),
     Spaces,
     BreakLine,
     FlipLine,

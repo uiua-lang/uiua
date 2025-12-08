@@ -13,6 +13,7 @@ use std::{
 };
 
 use InlineMacro;
+use ecow::EcoString;
 use paste::paste;
 
 use crate::{
@@ -803,6 +804,8 @@ impl Formatter<'_> {
                         self.output.push(' ');
                         self.push(&fields.open_span, if fields.boxed { "{" } else { "[" });
                         let multiline = fields.trailing_newline
+                            || fields.post_comments.is_some()
+                            || fields.fields.iter().any(|f| f.eol_comment.is_some())
                             || fields.fields.len() > 1
                                 && fields.fields.iter().enumerate().any(|(i, f)| {
                                     f.init.is_some()
@@ -828,6 +831,10 @@ impl Formatter<'_> {
                             if let Some(default) = &field.init {
                                 parts.push((&default.arrow_span, " ← ", &default.words));
                             }
+                            if let Some(comment) = &field.eol_comment {
+                                self.output.push(' ');
+                                self.format_comment(comment);
+                            }
                             for (span, sep, words) in parts {
                                 self.push(span, sep);
                                 let mut lines = flip_unsplit_lines(split_words(words.clone()));
@@ -852,6 +859,7 @@ impl Formatter<'_> {
                                     );
                                 }
                             }
+
                             if i < fields.fields.len() - 1 {
                                 if multiline {
                                     self.newline(depth + 1);
@@ -866,7 +874,13 @@ impl Formatter<'_> {
                                 }
                             }
                         }
-                        if multiline {
+                        if let Some(comments) = &fields.post_comments {
+                            self.newline(depth + 1);
+                            self.format_comments(comments, depth + 1);
+                            for _ in 0..self.config.multiline_indent {
+                                self.output.pop();
+                            }
+                        } else if multiline {
                             self.newline(depth);
                         }
                         if let Some(span) = &fields.close_span {
@@ -1448,6 +1462,9 @@ impl Formatter<'_> {
             self.push(span, &sem.to_string());
             self.newline(depth);
         }
+    }
+    fn format_comment(&mut self, comment: &Sp<EcoString>) {
+        self.push(&comment.span, &format!("# {}", comment.value));
     }
     fn eval_output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {
@@ -2033,6 +2050,11 @@ F ← (
 1,2
 123,456.78,9
 123,456.7,9
+~ {
+  A # hi
+  # cool
+  # wow
+}
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     if formatted != input {

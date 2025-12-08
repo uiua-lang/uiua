@@ -88,7 +88,7 @@ impl Compiler {
             name_span: CodeSpan,
             span: usize,
             global_index: usize,
-            comment: Option<String>,
+            comment: Option<EcoString>,
             validator_inv: Option<Node>,
             init: Option<SigNode>,
         }
@@ -101,17 +101,22 @@ impl Compiler {
             has_fields = true;
             for mut data_field in data_fields.fields {
                 let span = self.add_span(data_field.name.span.clone());
-                let mut comment = data_field.comments.as_ref().map(|comments| {
-                    (comments.lines.iter().enumerate())
-                        .flat_map(|(i, com)| {
-                            if i == 0 {
-                                vec![com.value.as_str()]
-                            } else {
-                                vec![com.value.as_str(), "\n"]
-                            }
-                        })
-                        .collect::<String>()
-                });
+                let mut comment = data_field
+                    .comments
+                    .as_ref()
+                    .map(|comments| {
+                        (comments.lines.iter().enumerate())
+                            .flat_map(|(i, com)| {
+                                if i == 0 {
+                                    vec![com.value.as_str()]
+                                } else {
+                                    vec![com.value.as_str(), "\n"]
+                                }
+                            })
+                            .collect::<String>()
+                            .into()
+                    })
+                    .or_else(|| data_field.eol_comment.map(|c| c.value));
                 // Compile validator
                 let validator_and_inv = if let Some(validator) = data_field.validator {
                     self.experimental_error(&data.init_span, || {

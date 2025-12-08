@@ -419,10 +419,10 @@ impl Parser<'_> {
         };
         Some(span.sp(module))
     }
-    fn comment(&mut self) -> Option<Sp<String>> {
+    fn comment(&mut self) -> Option<Sp<EcoString>> {
         let span = self.exact(Token::Comment)?;
         let s = &self.input[span.byte_range()];
-        let s = s.strip_prefix('#').unwrap_or(s).into();
+        let s = s.strip_prefix('#').unwrap_or(s).trim_start().into();
         Some(span.sp(s))
     }
     fn output_comment(&mut self) -> Option<Sp<Word>> {
@@ -636,10 +636,10 @@ impl Parser<'_> {
             }
             self.spaces();
             let mut trailing_newline = false;
-            loop {
+            let post_comments = loop {
                 let comments = self.comments();
                 let Some(name) = self.ident() else {
-                    break;
+                    break comments;
                 };
                 trailing_newline = false;
                 self.spaces();
@@ -688,6 +688,12 @@ impl Parser<'_> {
                     init = Some(FieldInit { arrow_span, words })
                 };
 
+                let mut eol_comment = None;
+                if init.is_none() {
+                    eol_comment = self.comment();
+                    self.next_token_map(Token::as_semantic_comment); // Eat semantic comment
+                }
+
                 trailing_newline |= self.ignore_whitespace();
                 let mut bar_span = self.exact(Bar.into());
                 if self.exact(Newline).is_some() || self.exact(DoubleSemicolon.into()).is_some() {
@@ -701,10 +707,11 @@ impl Parser<'_> {
                     name,
                     validator,
                     init,
+                    eol_comment,
                     bar_span,
                 });
                 trailing_newline |= self.ignore_whitespace();
-            }
+            };
             let close = self.expect_close(if boxed { CloseCurly } else { CloseBracket }.into());
             let close_span = close.value.then_some(close.span);
             self.spaces();
@@ -712,6 +719,7 @@ impl Parser<'_> {
                 boxed,
                 open_span,
                 fields,
+                post_comments,
                 trailing_newline,
                 close_span,
             })

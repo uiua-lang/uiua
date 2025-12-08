@@ -1416,6 +1416,10 @@ impl<'a> Lexer<'a> {
             };
         }
 
+        // for tok in &self.tokens {
+        //     println!("{}", tok.value);
+        // }
+
         (self.tokens, self.errors)
     }
     fn ident(&mut self, start: Loc, c: &str) -> String {

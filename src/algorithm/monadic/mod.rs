@@ -49,13 +49,16 @@ impl Value {
     }
     pub(crate) fn deshape_sub<C: FillContext>(
         &mut self,
-        irank: i32,
+        mut irank: i32,
         mut depth: usize,
         extend: bool,
         ctx: &C,
     ) -> Result<(), C::Error> {
         depth = depth.min(self.rank());
         let deep_rank = self.rank() - depth;
+        if !extend && irank < 0 {
+            irank = irank.max(1 - (self.rank() as i32))
+        }
         if irank > 0 && irank as usize == deep_rank {
             return Ok(());
         }

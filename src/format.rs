@@ -1326,6 +1326,10 @@ impl Formatter<'_> {
             && (self.glyph_map.last()).is_some_and(|(last_span, _)| {
                 last_span.end.char_pos - last_span.start.char_pos == 1
             })
+            && (self.output.chars().rev()) // Only for idents
+                .skip_while(|c| c.is_whitespace())
+                .find(|&c| !(is_ident_char(c) && c.is_lowercase()))
+                .is_some_and(|c| c.is_uppercase())
         {
             self.output.pop();
             self.glyph_map.pop();
@@ -2062,6 +2066,10 @@ unwrench
 ran,1 10
 ran,1  10
 ⇡₁ 10
+json by
+json  by
+Abc by
+Abc  by
 ";
     let output = "\
 F₁
@@ -2073,6 +2081,10 @@ F₁
 ⇡₁10
 ⇡₁ 10
 ⇡₁ 10
+json ⊸
+json ⊸
+Abc⊸
+Abc ⊸
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, output);

@@ -1483,7 +1483,14 @@ impl ImplPrimitive {
                     env.push(value);
                 }
             }
-            &ImplPrimitive::RowsSub(sub, inv) => {
+            &ImplPrimitive::RowsSub(sub, inv) | &ImplPrimitive::UndoRowsSub(sub, inv) => {
+                let undo = matches!(self, ImplPrimitive::UndoRowsSub(..));
+                let len = if undo {
+                    env.pop(1)?
+                        .as_nat(env, "Rows length must be a natural number")?
+                } else {
+                    0
+                };
                 let [f] = get_ops(ops, env)?;
                 let sig = f.sig;
                 let arg_count = sig
@@ -1531,6 +1538,28 @@ impl ImplPrimitive {
                         }
                     }
                 }
+
+                if undo {
+                    for val in &mut *vals {
+                        if val.row_count() != len {
+                            let message = format!(
+                                "Cannot undo {} of length {len} when \
+                            transformed array has shape {}",
+                                if inv {
+                                    Primitive::Inventory
+                                } else {
+                                    Primitive::Rows
+                                }
+                                .format(),
+                                val.shape
+                            );
+                            return Err(env.error(message));
+                        }
+                        val.reverse();
+                    }
+                }
+
+                let outputs = f.sig.outputs();
                 if depth == 0 {
                     if inv {
                         for val in vals {
@@ -1548,6 +1577,12 @@ impl ImplPrimitive {
                     zip::each1(f, xs, env)?;
                 } else {
                     zip::rows(f, depth - 1, inv, env)?;
+                }
+
+                if undo {
+                    for val in env.top_n_mut(outputs)? {
+                        val.reverse();
+                    }
                 }
             }
             &ImplPrimitive::TableSub(i) => {

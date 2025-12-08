@@ -28,6 +28,7 @@ macro_rules! impl_primitive {
             UndoDeshape(Option<i32>),
             EachSub(i32),
             RowsSub(Subscript<i32>, bool),
+            UndoRowsSub(Subscript<i32>, bool),
             UndoTransposeN(usize, i32),
             UndoReverse { n: usize, all: bool },
             UndoRotate(usize),

@@ -109,6 +109,7 @@ static UNDER_PATTERNS: &[&dyn UnderPattern] = &[
     &GroupPat,
     &EachPat,
     &RowsPat,
+    &RowsSubPat,
     &RepeatPat,
     &FoldPat,
     &ReversePat,
@@ -673,6 +674,53 @@ under!(RowsPat, input, g_sig, inverse, asm, {
 
     Ok((input, befores, afters))
 });
+
+under!(
+    (RowsSubPat, input, g_sig, inverse, asm),
+    ref,
+    ImplMod(RowsSub(sub, inventory), args, span),
+    {
+        let [f] = args.as_slice() else {
+            return generic();
+        };
+        let (f_before, f_after) = f.under_inverse(g_sig, inverse, asm)?;
+        let ends_with_box = *inventory
+            || (f_before.node.last()).is_some_and(|node| node.as_primitive() == Some(Box));
+        let undo_sub = if ends_with_box {
+            Subscript {
+                num: Some(0),
+                ..*sub
+            }
+        } else {
+            *sub
+        };
+        let (befores, afters) = if f_before.sig.under() == (0, 0) && f_after.sig.under() == (0, 0) {
+            (
+                ImplMod(RowsSub(*sub, *inventory), eco_vec![f_before], *span),
+                ImplMod(RowsSub(undo_sub, *inventory), eco_vec![f_after], *span),
+            )
+        } else {
+            let befores = Node::from_iter([
+                ImplPrim(MaxRowCount(f.sig.args()), *span),
+                Mod(
+                    Dip,
+                    eco_vec![
+                        ImplMod(RowsSub(*sub, *inventory), eco_vec![f_before], *span).sig_node()?
+                    ],
+                    *span,
+                ),
+                PushUnder(1, *span),
+            ]);
+            let afters = Node::from_iter([
+                PopUnder(1, *span),
+                ImplMod(UndoRowsSub(undo_sub, *inventory), eco_vec![f_after], *span),
+            ]);
+            (befores, afters)
+        };
+
+        Ok((input, befores, afters))
+    }
+);
 
 under!(RepeatPat, input, g_sig, inverse, asm, {
     let (input, val) = if let Ok((input, val)) = Val.invert_extract(input, asm) {

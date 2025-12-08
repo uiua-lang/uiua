@@ -608,8 +608,12 @@ pub fn switch(
                     || selector.rank() == 0
                     || is_empty
                     || arg_shapes[i].row_count() == 1
+                    || row.row_count() == 1
                 {
-                    let r = row.shape.iter().take_while(|&&d| d == 1).count();
+                    let r = (row.shape.iter())
+                        .skip((row.row_count() == 1) as usize)
+                        .take_while(|&&d| d == 1)
+                        .count();
                     let row_shape: Shape =
                         row.shape[selector.rank().saturating_sub(r).min(row.rank())..].into();
                     let row_count: usize = (row.shape.iter())

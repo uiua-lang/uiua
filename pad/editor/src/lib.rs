@@ -904,9 +904,17 @@ pub fn Editor<'a>(
                         .chars()
                         .nth(start as usize)
                         .is_none_or(|c| c.is_whitespace() || "(){}[]".contains(c));
-                    let at_behind =
-                        code.chars().nth((start as usize).saturating_sub(1)) == Some('@');
-                    if (start != end || can_couple) && !at_behind {
+                    let just_one = code.chars().nth((start as usize).saturating_sub(1))
+                        == Some('@')
+                        || start == end && {
+                            let before = code.chars().take(start as usize).collect::<String>();
+                            let count = (before.chars().rev())
+                                .take_while(|&c| c != '\n')
+                                .filter(|&c| c == '"')
+                                .count();
+                            count % 2 == 1
+                        };
+                    if (start != end || can_couple) && !just_one {
                         surround_code(state, '"', '"');
                     } else if start == end && code.chars().nth(start as usize) == Some('"') {
                         state.set_cursor((start + 1, start + 1));

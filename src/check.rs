@@ -566,6 +566,10 @@ impl VirtualEnv {
                     let [f] = get_args(args)?;
                     self.handle_args_outputs(f.args() + 1, f.outputs());
                 }
+                GroupMerge => {
+                    let [f, g] = get_args(args)?;
+                    self.handle_args_outputs(f.args().max(g.args()) + 1, 1);
+                }
                 prim => {
                     let args = prim
                         .args()

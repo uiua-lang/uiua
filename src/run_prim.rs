@@ -1715,6 +1715,10 @@ impl ImplPrimitive {
                 }
                 env.exec(f)?;
             }
+            ImplPrimitive::GroupMerge => {
+                let [f, g] = get_ops(ops, env)?;
+                groups::group_merge(f, g, env)?;
+            }
             ImplPrimitive::FoldGif => {
                 let [f] = get_ops(ops, env)?;
                 let bytes = media::fold_to_gif(f, env)?;

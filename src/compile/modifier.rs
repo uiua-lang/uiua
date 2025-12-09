@@ -308,6 +308,38 @@ impl Compiler {
                 let main = args.next().unwrap();
                 self.geometric(main, subscript, Some(metrics))
             }
+            Modifier::Primitive(Primitive::Group) => {
+                if pack.branches.len() != 2 {
+                    self.add_error(
+                        span.clone(),
+                        format!(
+                            "{} function pack must have 2 functions, but it has {}",
+                            Primitive::Group.format(),
+                            pack.branches.len()
+                        ),
+                    );
+                } else {
+                    self.experimental_error(&modifier.span, || {
+                        format!(
+                            "{} function packs are experimental. To use them, \
+                            add `# Experimental!` to the top of the file.",
+                            Primitive::Group.format()
+                        )
+                    });
+                }
+                let mut args = pack
+                    .lexical_order()
+                    .cloned()
+                    .map(|w| self.word_sig(w.map(Word::Func)));
+                let join = args.next().unwrap()?;
+                let mask = args.next().unwrap()?;
+                let span = self.add_span(modifier.span.clone());
+                Ok(Node::ImplMod(
+                    ImplPrimitive::GroupMerge,
+                    eco_vec![join, mask],
+                    span,
+                ))
+            }
             m if m.subscript_margs(subscript.as_ref().map(|s| &s.value)) >= 2 => {
                 let new = Modified {
                     modifier: modifier.clone(),

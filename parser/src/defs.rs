@@ -2149,6 +2149,35 @@ primitive!(
     /// ex! ⍜⊕□⇌ ⊸≠@  $ These are some words
     ///
     /// [group] is closely related to [partition].
+    ///
+    /// `# Experimental!` [group] function pack behavior allows the creation and merging of groups based on a predicate rather than a list of indices.
+    /// The first function is called to either add items to a group or to merge groups.
+    /// The second function generates a mask of which groups an item belongs in. If it belongs in more than one group, those groups are merged.
+    /// It also takes an initial value for an empty group. This value will be reused and passed to the first function whenever a new group is created.
+    ///
+    /// In this example, the grouped items represent edges in a graph. It uses [group] with a function pack to find all the [connected components](https://en.wikipedia.org/wiki/Component_(graph_theory)) of the graph.
+    /// The first function adds node indices of edges, removing duplicates.
+    /// The second function creates the mask by checking which groups the nodes of the edge are already in.
+    /// When `2_4` is encountered, it merges the existing groups that were created by `1_2` and `4_5`.
+    /// ex: # Experimental!
+    ///   : [1_2 4_5 3_6 2_4 7_3]
+    ///   : ⊕(□◴◇⊂|/↥⊞◇˜∊) []
+    ///
+    /// In this example, we achieve results similar to multidimensional [partition] by grouping adjacent indices.
+    /// ex: # Experimental!
+    ///   : [1_0_1_1_0
+    ///   :  1_0_0_0_1
+    ///   :  1_1_0_1_0]
+    ///   : ⊕(□◇⊂|≡⌞◇(/↥=1≡⌞(/+⌵-))) °△0_2 ⊚ # Group
+    ///   : ⊸(∧◇∧⌝⊸⊡ ⟜(⇡₁⧻) ⊙(↯3_5 0))       # Label grid
+    /// However, unlike multidimensional [partition], we can define diagonals as adjacent by simply tweaking [group]'s second function.
+    /// ex: # Experimental!
+    ///   : [1_0_1_1_0
+    ///   :  1_0_0_0_1
+    ///   :  1_1_0_1_0]
+    ///   : ⊕(□◇⊂|≡⌞◇(/↥=1≡⌞(/↥⌵-))) °△0_2 ⊚ # Group
+    ///   : ⊸(∧◇∧⌝⊸⊡ ⟜(⇡₁⧻) ⊙(↯3_5 0))       # Label grid
+    /// Because groups created this way vary in size, they usually have to be boxed as in the examples above.
     ([1], Group, AggregatingModifier, ("group", '⊕')),
     /// Group sequential sections of an array
     ///

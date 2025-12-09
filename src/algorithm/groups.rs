@@ -928,3 +928,124 @@ pub fn un_partition(f: SigNode, env: &mut Uiua) -> UiuaResult {
     env.push(Array::from(indices));
     Ok(())
 }
+
+pub fn group_merge(join: SigNode, mask: SigNode, env: &mut Uiua) -> UiuaResult {
+    if join.sig.args() < 2 {
+        return Err(env.error(format!(
+            "Merging {}'s first function must take at least 2 arguments, \
+            but its signature is {}",
+            Primitive::Group.format(),
+            join.sig
+        )));
+    }
+    if mask.sig.args() < 2 {
+        return Err(env.error(format!(
+            "Merging {}'s second function must take at least 2 arguments, \
+            but its signature is {}",
+            Primitive::Group.format(),
+            mask.sig
+        )));
+    }
+    if join.sig.outputs() != 1 {
+        return Err(env.error(format!(
+            "Merging {}'s first function must have 1 output, \
+            but its signature is {}",
+            Primitive::Group.format(),
+            join.sig
+        )));
+    }
+    if mask.sig.outputs() != 1 {
+        return Err(env.error(format!(
+            "Merging {}'s second function must have 1 output, \
+            but its signature is {}",
+            Primitive::Group.format(),
+            mask.sig
+        )));
+    }
+    let init = env.pop(1)?;
+    let mut grouped = env.pop(2)?.into_rows();
+    let join_other_count = join.sig.args() - 2;
+    let mask_other_count = mask.sig.args() - 2;
+    let other_count = join_other_count.max(mask_other_count);
+    let mut others = Vec::with_capacity(other_count);
+    for i in 0..other_count {
+        others.push(env.pop(i + 3)?);
+    }
+    let Some(first) = grouped.next() else {
+        env.push(Value::default());
+        return Ok(());
+    };
+    for other in others.iter().take(join_other_count) {
+        env.push(other.clone());
+    }
+    env.push(first);
+    env.push(init.clone());
+    env.exec(join.clone())?;
+    let mut groups = env.pop("first group")?;
+    groups.fix();
+    for val in grouped {
+        for other in others.iter().take(mask_other_count) {
+            env.push(other.clone());
+        }
+        env.push(groups.clone());
+        env.push(val.clone());
+        env.exec(mask.clone())?;
+        let mask = env
+            .pop("mask")?
+            .as_bools(env, "Mask must be an array of booleans")?;
+        if mask.len() != groups.row_count() {
+            return Err(env.error(format!(
+                "Mask must have the same length as groups, \
+                but their lengths are {} and {}",
+                mask.len(),
+                groups.row_count()
+            )));
+        }
+        match mask.iter().filter(|&&b| b).count() {
+            0 => {
+                for other in others.iter().take(join_other_count) {
+                    env.push(other.clone());
+                }
+                env.push(val);
+                env.push(init.clone());
+                env.exec(join.clone())?;
+                let new_group = env.pop("new group")?;
+                groups = groups.join(new_group, false, env)?;
+            }
+            1 => {
+                let index = mask.iter().position(|&b| b).unwrap();
+                let group = groups.row(index);
+                for other in others.iter().take(join_other_count) {
+                    env.push(other.clone());
+                }
+                env.push(val);
+                env.push(group);
+                env.exec(join.clone())?;
+                let group = env.pop("joined group")?;
+                groups.set_row(index, group, env)?;
+            }
+            _ => {
+                let mut removed_groups = Vec::with_capacity(1);
+                let mut indices = mask.iter().enumerate().filter(|(_, b)| **b).map(|(i, _)| i);
+                let main_index = indices.next().unwrap();
+                let mut group = groups.row(main_index);
+                for i in indices.rev() {
+                    removed_groups.push(groups.row(i));
+                    groups.remove_row(i);
+                }
+                for val in removed_groups.into_iter().rev() {
+                    for other in others.iter().take(join_other_count) {
+                        env.push(other.clone());
+                    }
+                    env.push(val);
+                    env.push(group);
+                    env.exec(join.clone())?;
+                    group = env.pop("joined group")?;
+                }
+                groups.set_row(main_index, group, env)?;
+            }
+        }
+    }
+    env.push(groups);
+    Ok(())
+}

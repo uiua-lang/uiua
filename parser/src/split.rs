@@ -239,6 +239,7 @@ impl Primitive {
                 (e, Not),
                 (, PrimComponent::CloseParen),
             ),
+            alias!((s, Un), (huf, Sort)),
             alias!((sel, Select), (first, First)),
             alias!((l, Un), (og, Exp)),
             alias!((wi, Stencil), (n, Identity)),

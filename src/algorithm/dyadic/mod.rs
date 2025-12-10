@@ -2177,6 +2177,109 @@ impl Value {
             }
         })
     }
+    /// Generate `noise`
+    pub fn noise(&self, seed: &Self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        #[inline]
+        fn smoothstep(x: f64) -> f64 {
+            3.0 * x * x - 2.0 * x * x * x
+        }
+
+        let mut hasher = DefaultHasher::new();
+        seed.hash(&mut hasher);
+        let mut shape = self.shape.clone();
+        let (n, coords) = match self {
+            Value::Num(arr) => {
+                if arr.rank() == 0 {
+                    arr.data[0].to_bits().hash(&mut hasher);
+                    return Ok(f64::from_bits(hasher.finish()).into());
+                }
+                let n = shape.pop().unwrap();
+                (n, Cow::Borrowed(arr.data.as_slice()))
+            }
+            Value::Byte(arr) => {
+                if arr.rank() == 0 {
+                    (arr.data[0] as f64).to_bits().hash(&mut hasher);
+                    return Ok(f64::from_bits(hasher.finish()).into());
+                }
+                let n = shape.pop().unwrap();
+                let data = Cow::Owned(arr.data.iter().map(|&x| x as f64).collect());
+                (n, data)
+            }
+            Value::Complex(arr) => (
+                2,
+                Cow::Owned(arr.data.iter().flat_map(|&c| [c.re, c.im]).collect()),
+            ),
+            value => {
+                return Err(env.error(format!(
+                    "Cannot generate noise from {} array",
+                    value.type_name()
+                )));
+            }
+        };
+        let mut data = eco_vec![0f64; shape.elements()];
+        if n == 0 {
+            return Ok(Array::new(shape, data));
+        }
+        let slice = data.make_mut();
+        let mut tl = vec![0f64; n];
+        let mut corner = vec![0f64; n];
+        let mut gradient = vec![0f64; n];
+        let mut delta = vec![0f64; n];
+        let (corner_count, overflowed) = 2usize.overflowing_pow(n as u32);
+        if overflowed {
+            return Err(env.error(format!(
+                "The coordinate array has shape {}, \
+                which implies {n} dimensions, \
+                which is too many for noise",
+                self.shape
+            )));
+        }
+        let mut prods = vec![1f64; corner_count];
+        for (noise, coord) in slice.iter_mut().zip(coords.chunks_exact(n)) {
+            for (t, x) in tl.iter_mut().zip(coord) {
+                *t = x.floor();
+            }
+            for (offset, prod) in prods.iter_mut().enumerate() {
+                for (i, (((c, d), t), x)) in corner
+                    .iter_mut()
+                    .zip(&mut delta)
+                    .zip(&tl)
+                    .zip(coord)
+                    .enumerate()
+                {
+                    *c = *t + ((offset >> i) & 1) as f64;
+                    *d = *x - *c;
+                }
+                let mut hasher = hasher.clone();
+                corner.iter().for_each(|c| c.to_bits().hash(&mut hasher));
+                for (i, g) in gradient.iter_mut().enumerate() {
+                    let mut hasher = hasher.clone();
+                    i.hash(&mut hasher);
+                    *g = hasher.finish() as f64 / u64::MAX as f64 * 2.0 - 1.0;
+                }
+                let g_dist = gradient.iter().map(|&g| g * g).sum::<f64>().sqrt();
+                for g in &mut gradient {
+                    *g /= g_dist;
+                }
+                *prod = delta.iter().zip(&gradient).map(|(d, g)| *d * *g).sum();
+                // println!(
+                //     "  corner: {corner:?}, delta: {delta:?}, gradient: {gradient:?}, prod: {prod}"
+                // );
+            }
+            for (i, x) in coord.iter().enumerate() {
+                let fract = x.rem_euclid(1.0).fract();
+                for (j, prod) in prods.iter_mut().enumerate() {
+                    *prod *= if (j >> i & 1) == 0 {
+                        smoothstep(1.0 - fract)
+                    } else {
+                        smoothstep(fract)
+                    }
+                }
+            }
+            *noise = prods.iter().sum::<f64>() + 0.5;
+        }
+        Ok(Array::new(shape, data))
+    }
     /// Pick a random row of an array
     pub fn random_row(&self, env: &Uiua) -> UiuaResult<Value> {
         match self.row_count() {

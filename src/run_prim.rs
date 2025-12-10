@@ -229,6 +229,7 @@ pub fn run_prim_func(prim: &Primitive, env: &mut Uiua) -> UiuaResult {
         }
         Primitive::Rand => env.push(random()),
         Primitive::Gen => env.dyadic_rr_env(Value::seeded_gen)?,
+        Primitive::Noise => env.dyadic_rr_env(|seed, val, env| val.noise(seed, env))?,
         Primitive::Type => {
             let val = env.pop(1)?;
             env.push(val.type_id());

@@ -738,7 +738,8 @@ primitive!(
     /// For non-determinism, [random] can be used as a seed.
     /// ex: ⌊×10 gen 3_4 ⚂
     (2, Gen, Rng, "gen"),
-
+    /// Generate noise from coordinates and a seed
+    (2, Noise, Rng, "noise"),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`

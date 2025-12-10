@@ -16,6 +16,7 @@ use std::{
 use bytemuck::allocation::cast_vec;
 use ecow::{EcoVec, eco_vec};
 use rand::prelude::*;
+use rapidhash::quality::RapidHasher;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -2178,13 +2179,13 @@ impl Value {
         })
     }
     /// Generate `noise`
-    pub fn noise(&self, seed: &Self, env: &Uiua) -> UiuaResult<Array<f64>> {
+    pub fn noise(&self, seed: &Self, octaves: &Self, env: &Uiua) -> UiuaResult<Array<f64>> {
         #[inline]
         fn smoothstep(x: f64) -> f64 {
             3.0 * x * x - 2.0 * x * x * x
         }
 
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = RapidHasher::default();
         seed.hash(&mut hasher);
         let mut shape = self.shape.clone();
         let (n, coords) = match self {
@@ -2216,15 +2217,69 @@ impl Value {
                 )));
             }
         };
+
+        let octaves: Array<f64> =
+            octaves.as_number_array(env, "Octaves must be a rank 0, 1, or 2 array of numbers")?;
+        enum Octaves<'a> {
+            Pow2(usize),
+            Specified(&'a [f64]),
+            PerDim(usize, &'a [f64]),
+        }
+        impl Octaves<'_> {
+            fn count(&self) -> usize {
+                match self {
+                    Octaves::Pow2(n) => *n,
+                    Octaves::Specified(os) => os.len(),
+                    Octaves::PerDim(n, os) => os.len() / *n,
+                }
+            }
+            fn get(&self, o: usize, i: usize) -> f64 {
+                match self {
+                    Octaves::Pow2(_) => 2f64.powi(o as i32),
+                    Octaves::Specified(os) => os[o],
+                    Octaves::PerDim(n, os) => os[o * n + i],
+                }
+            }
+            fn avg(&self, o: usize) -> f64 {
+                match self {
+                    Octaves::Pow2(_) => 2f64.powi(o as i32),
+                    Octaves::Specified(os) => os[o],
+                    Octaves::PerDim(n, os) => os[o * n..][..*n].iter().sum::<f64>() / *n as f64,
+                }
+            }
+        }
+        let octaves = match octaves.rank() {
+            0 => Octaves::Pow2(octaves.data[0].round() as usize),
+            1 => Octaves::Specified(&octaves.data),
+            2 => {
+                if *octaves.shape.last().unwrap() != n {
+                    return Err(env.error(format!(
+                        "Octaves array's last axis must be the same as \
+                        the number of noise dimensions, but {} ≠ {n}",
+                        octaves.shape.last().unwrap(),
+                    )));
+                }
+                Octaves::PerDim(n, &octaves.data)
+            }
+            rank => {
+                return Err(env.error(format!(
+                    "Noise octaves must be rank 0, 1, or 2, \
+                    but the array is rank {rank}"
+                )));
+            }
+        };
+
         let mut data = eco_vec![0f64; shape.elements()];
         if n == 0 {
             return Ok(Array::new(shape, data));
         }
+        let sqrt_n = (n as f64).sqrt();
         let slice = data.make_mut();
         let mut tl = vec![0f64; n];
         let mut corner = vec![0f64; n];
         let mut gradient = vec![0f64; n];
         let mut delta = vec![0f64; n];
+        let mut scaled = vec![0f64; n];
         let (corner_count, overflowed) = 2usize.overflowing_pow(n as u32);
         if overflowed {
             return Err(env.error(format!(
@@ -2234,49 +2289,54 @@ impl Value {
                 self.shape
             )));
         }
-        let mut prods = vec![1f64; corner_count];
-        for (noise, coord) in slice.iter_mut().zip(coords.chunks_exact(n)) {
-            for (t, x) in tl.iter_mut().zip(coord) {
-                *t = x.floor();
-            }
-            for (offset, prod) in prods.iter_mut().enumerate() {
-                for (i, (((c, d), t), x)) in corner
-                    .iter_mut()
-                    .zip(&mut delta)
-                    .zip(&tl)
-                    .zip(coord)
-                    .enumerate()
-                {
-                    *c = *t + ((offset >> i) & 1) as f64;
-                    *d = *x - *c;
+        let mut prods = vec![0f64; corner_count];
+        for o in 0..octaves.count() {
+            let oct_avg = octaves.avg(o);
+            for (noise, coord) in slice.iter_mut().zip(coords.chunks_exact(n)) {
+                for (i, ((t, x), s)) in tl.iter_mut().zip(coord).zip(&mut scaled).enumerate() {
+                    *s = *x * octaves.get(o, i);
+                    *t = s.floor();
                 }
-                let mut hasher = hasher.clone();
-                corner.iter().for_each(|c| c.to_bits().hash(&mut hasher));
-                for (i, g) in gradient.iter_mut().enumerate() {
-                    let mut hasher = hasher.clone();
-                    i.hash(&mut hasher);
-                    *g = hasher.finish() as f64 / u64::MAX as f64 * 2.0 - 1.0;
+                for (offset, prod) in prods.iter_mut().enumerate() {
+                    for (i, (((c, d), t), x)) in corner
+                        .iter_mut()
+                        .zip(&mut delta)
+                        .zip(&tl)
+                        .zip(&scaled)
+                        .enumerate()
+                    {
+                        *c = *t + ((offset >> i) & 1) as f64;
+                        *d = (*x - *c) / sqrt_n;
+                    }
+                    let mut hasher = hasher;
+                    corner.iter().for_each(|c| c.to_bits().hash(&mut hasher));
+                    for (i, g) in gradient.iter_mut().enumerate() {
+                        let mut hasher = hasher;
+                        i.hash(&mut hasher);
+                        *g = hasher.finish() as f64 / u64::MAX as f64 * 2.0 - 1.0;
+                    }
+                    let g_dist = gradient.iter().map(|&g| g * g).sum::<f64>().sqrt();
+                    for g in &mut gradient {
+                        *g /= g_dist;
+                    }
+                    *prod = delta.iter().zip(&gradient).map(|(d, g)| *d * *g).sum();
                 }
-                let g_dist = gradient.iter().map(|&g| g * g).sum::<f64>().sqrt();
-                for g in &mut gradient {
-                    *g /= g_dist;
-                }
-                *prod = delta.iter().zip(&gradient).map(|(d, g)| *d * *g).sum();
-                // println!(
-                //     "  corner: {corner:?}, delta: {delta:?}, gradient: {gradient:?}, prod: {prod}"
-                // );
-            }
-            for (i, x) in coord.iter().enumerate() {
-                let fract = x.rem_euclid(1.0).fract();
-                for (j, prod) in prods.iter_mut().enumerate() {
-                    *prod *= if (j >> i & 1) == 0 {
-                        smoothstep(1.0 - fract)
-                    } else {
-                        smoothstep(fract)
+                for (i, x) in scaled.iter().enumerate() {
+                    let fract = x.rem_euclid(1.0).fract();
+                    for (j, prod) in prods.iter_mut().enumerate() {
+                        *prod *= smoothstep(if (j >> i & 1) == 0 {
+                            1.0 - fract
+                        } else {
+                            fract
+                        })
                     }
                 }
+                let prod: f64 = prods.iter().sum::<f64>();
+                *noise += prod / oct_avg;
             }
-            *noise = prods.iter().sum::<f64>() + 0.5;
+        }
+        for noise in slice {
+            *noise += 0.5;
         }
         Ok(Array::new(shape, data))
     }

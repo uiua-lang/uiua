@@ -2,6 +2,7 @@
 
 # 0.18
 - Make assemblies importable
+- Improve GIF appearance when whole thing is known
 - Change how range subscripts work
 - Recursion ergonomics for `path` / revise `recur`
 - `table` non-lists optimizations?

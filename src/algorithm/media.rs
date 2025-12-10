@@ -1912,6 +1912,7 @@ impl Value {
         if n == 0 {
             return Ok(Array::new(shape, data));
         }
+        let slice = data.make_mut();
 
         // Setup
         let (corner_count, overflowed) = 2usize.overflowing_pow(n as u32);
@@ -1924,59 +1925,95 @@ impl Value {
             )));
         }
         let sqrt_n = (n as f64).sqrt();
-        let slice = data.make_mut();
-        let mut top_left = vec![0f64; n];
-        let mut corner = vec![0f64; n];
-        let mut scaled = vec![0f64; n];
-        let mut coefs = vec![0f64; n * 2];
-        let mut prods = vec![0f64; corner_count];
 
-        // Main loop
-        for o in 0..octaves.count() {
-            let oct_avg = octaves.avg(o);
-            for (noise, coord) in slice.iter_mut().zip(coords.chunks_exact(n)) {
-                // Scale coord to octave and fine top-left corner
-                for (i, ((t, x), s)) in top_left.iter_mut().zip(coord).zip(&mut scaled).enumerate()
-                {
-                    *s = *x * octaves.get(o, i);
-                    *t = s.floor();
-                }
-                prods.fill(0.0);
-                for (offset, prod) in prods.iter_mut().enumerate() {
-                    // Calculate corner position
-                    for (i, (cor, tl)) in corner.iter_mut().zip(&top_left).enumerate() {
-                        *cor = *tl + ((offset >> i) & 1) as f64;
-                    }
-                    // Hash corner for gradient
-                    let mut hasher = hasher;
-                    corner.iter().for_each(|c| c.to_bits().hash(&mut hasher));
-                    // Dot product with delta from point to corner and normalize
-                    let mut grad_sqr_sum = 0.0;
-                    for (i, (x, c)) in scaled.iter().zip(&corner).enumerate() {
+        if n == 2 {
+            // Fast case for 2D
+            for o in 0..octaves.count() {
+                let oct_avg_sqrt_n = octaves.avg(o) * sqrt_n;
+                for (noise, coord) in slice.iter_mut().zip(coords.chunks_exact(n)) {
+                    let x = coord[0] * octaves.get(o, 0);
+                    let y = coord[1] * octaves.get(o, 1);
+                    let (xfract, yfract) = (x.rem_euclid(1.0).fract(), y.rem_euclid(1.0).fract());
+                    let (xl, xr) = (smoothstep(1.0 - xfract), smoothstep(xfract));
+                    let (yl, yr) = (smoothstep(1.0 - yfract), smoothstep(yfract));
+                    let (x1, y1) = (x.floor(), y.floor());
+                    let (x2, y2) = (x1 + 1.0, y1 + 1.0);
+                    for [cx, cy, kx, ky] in [
+                        [x1, y1, xl, yl],
+                        [x2, y1, xr, yl],
+                        [x1, y2, xl, yr],
+                        [x2, y2, xr, yr],
+                    ] {
                         let mut hasher = hasher;
-                        i.hash(&mut hasher);
-                        let grad = hasher_uniform(hasher);
-                        grad_sqr_sum += grad * grad;
-                        *prod += grad * (*x - *c);
-                    }
-                    *prod /= sqrt_n * grad_sqr_sum.sqrt();
-                }
-                // Apply coefficients to product
-                for (x, cs) in scaled.iter().zip(coefs.chunks_exact_mut(2)) {
-                    let fract = x.rem_euclid(1.0).fract();
-                    cs[0] = smoothstep(1.0 - fract);
-                    cs[1] = smoothstep(fract);
-                }
-                for (j, prod) in prods.iter_mut().enumerate() {
-                    for i in 0..n {
-                        *prod *= coefs[i * 2 + (j >> i & 1)];
+                        cx.to_bits().hash(&mut hasher);
+                        cy.to_bits().hash(&mut hasher);
+                        let (mut hx, mut hy) = (hasher, hasher);
+                        0.hash(&mut hx);
+                        1.hash(&mut hy);
+                        let (gradx, grady) = (hasher_uniform(hx), hasher_uniform(hy));
+                        *noise += kx * ky * (gradx * (x - cx) + grady * (y - cy))
+                            / (gradx * gradx + grady * grady).sqrt()
+                            / oct_avg_sqrt_n;
                     }
                 }
-                // Add product
-                let prod: f64 = prods.iter().sum::<f64>();
-                *noise += prod / oct_avg;
+            }
+        } else {
+            // General nD case
+            let mut top_left = vec![0f64; n];
+            let mut corner = vec![0f64; n];
+            let mut scaled = vec![0f64; n];
+            let mut coefs = vec![0f64; n * 2];
+            let mut prods = vec![0f64; corner_count];
+
+            // Main loop
+            for o in 0..octaves.count() {
+                let oct_avg_sqrt_n = octaves.avg(o) * sqrt_n;
+                for (noise, coord) in slice.iter_mut().zip(coords.chunks_exact(n)) {
+                    // Scale coord to octave and fine top-left corner
+                    for (i, ((t, x), s)) in
+                        top_left.iter_mut().zip(coord).zip(&mut scaled).enumerate()
+                    {
+                        *s = *x * octaves.get(o, i);
+                        *t = s.floor();
+                    }
+                    prods.fill(0.0);
+                    for (offset, prod) in prods.iter_mut().enumerate() {
+                        // Calculate corner position
+                        for (i, (cor, tl)) in corner.iter_mut().zip(&top_left).enumerate() {
+                            *cor = *tl + ((offset >> i) & 1) as f64;
+                        }
+                        // Hash corner for gradient
+                        let mut hasher = hasher;
+                        corner.iter().for_each(|c| c.to_bits().hash(&mut hasher));
+                        // Dot product with delta from point to corner and normalize
+                        let mut grad_sqr_sum = 0.0;
+                        for (i, (x, c)) in scaled.iter().zip(&corner).enumerate() {
+                            let mut hasher = hasher;
+                            i.hash(&mut hasher);
+                            let grad = hasher_uniform(hasher);
+                            grad_sqr_sum += grad * grad;
+                            *prod += grad * (*x - *c);
+                        }
+                        *prod /= grad_sqr_sum.sqrt();
+                    }
+                    // Apply coefficients to product
+                    for (x, cs) in scaled.iter().zip(coefs.chunks_exact_mut(2)) {
+                        let fract = x.rem_euclid(1.0).fract();
+                        cs[0] = smoothstep(1.0 - fract);
+                        cs[1] = smoothstep(fract);
+                    }
+                    for (j, prod) in prods.iter_mut().enumerate() {
+                        for i in 0..n {
+                            *prod *= coefs[i * 2 + (j >> i & 1)];
+                        }
+                    }
+                    // Add product
+                    let prod: f64 = prods.iter().sum::<f64>();
+                    *noise += prod / oct_avg_sqrt_n;
+                }
             }
         }
+
         // Map to ~[0, 1]
         for noise in slice {
             *noise += 0.5;

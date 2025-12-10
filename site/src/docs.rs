@@ -5,7 +5,7 @@ use std::{
 };
 
 use enum_iterator::all;
-use leptos::{leptos_dom::helpers::location, *};
+use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{PrimClass, Primitive, SysOpClass};
@@ -264,7 +264,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
                 }
             }</a>" - a community catalog of many common "{lang}" snippets"</li>
             <li>
-                <A href="/primitives.json" on:click = |_| _ = location().set_href("/primitives.json")>"Primitives JSON"</A>
+                <a href="/primitives.json" target="_self">"Primitives JSON"</a>
                 " - a JSON file of all the primitives, for tooling and other projects"</li>
         </ul>
 

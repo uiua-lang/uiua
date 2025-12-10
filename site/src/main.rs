@@ -19,7 +19,10 @@ use js_sys::Date;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use rand::prelude::*;
+use rand_xoshiro::{
+    Xoshiro256Plus,
+    rand_core::{RngCore, SeedableRng},
+};
 use uiua::{ConstantDef, Primitive, SysOp, now};
 use uiua_editor::{
     EDITOR_SHORTCUTS, Editor, EditorMode, Prim, binding_name_class, lang,
@@ -267,9 +270,23 @@ pub fn MainPage() -> impl IntoView {
     let indices = if visits < 4 {
         vec![0, rich_prims.len() - 3, rich_prims.len() - 1]
     } else {
-        let mut rng = SmallRng::seed_from_u64(visits as u64);
         let mut indices: Vec<usize> = (0..rich_prims.len()).collect();
-        indices.shuffle(&mut rng);
+        {
+            // Shuffle indices
+            let l = indices.len();
+            let upper = l.next_power_of_two();
+            let mut rng = Xoshiro256Plus::seed_from_u64(visits as u64);
+
+            for i in 0..indices.len() {
+                let index = loop {
+                    let r = rng.next_u64() as usize % upper;
+                    if r < l {
+                        break r;
+                    }
+                };
+                indices.swap(i, index);
+            }
+        }
         indices.truncate(3);
         indices.sort_unstable();
         indices

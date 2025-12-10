@@ -1927,9 +1927,8 @@ impl Value {
         let slice = data.make_mut();
         let mut top_left = vec![0f64; n];
         let mut corner = vec![0f64; n];
-        let mut gradient = vec![0f64; n];
-        let mut delta = vec![0f64; n];
         let mut scaled = vec![0f64; n];
+        let mut coefs = vec![0f64; n * 2];
         let mut prods = vec![0f64; corner_count];
 
         // Main loop
@@ -1942,45 +1941,35 @@ impl Value {
                     *s = *x * octaves.get(o, i);
                     *t = s.floor();
                 }
+                prods.fill(0.0);
                 for (offset, prod) in prods.iter_mut().enumerate() {
-                    // Calculate corner position and delta
-                    for (i, (((cor, del), tl), x)) in corner
-                        .iter_mut()
-                        .zip(&mut delta)
-                        .zip(&top_left)
-                        .zip(&scaled)
-                        .enumerate()
-                    {
+                    // Calculate corner position
+                    for (i, (cor, tl)) in corner.iter_mut().zip(&top_left).enumerate() {
                         *cor = *tl + ((offset >> i) & 1) as f64;
-                        *del = *x - *cor;
                     }
-                    // Hash corner for gradient and normalize
+                    // Hash corner for gradient
                     let mut hasher = hasher;
                     corner.iter().for_each(|c| c.to_bits().hash(&mut hasher));
-                    for (i, g) in gradient.iter_mut().enumerate() {
+                    // Dot product with delta from point to corner and normalize
+                    let mut grad_sqr_sum = 0.0;
+                    for (i, (x, c)) in scaled.iter().zip(&corner).enumerate() {
                         let mut hasher = hasher;
                         i.hash(&mut hasher);
-                        *g = hasher_uniform(hasher);
+                        let grad = hasher_uniform(hasher);
+                        grad_sqr_sum += grad * grad;
+                        *prod += grad * (*x - *c);
                     }
-                    let g_dist = gradient.iter().map(|&g| g * g).sum::<f64>().sqrt();
-                    for g in &mut gradient {
-                        *g /= g_dist;
-                    }
-                    // Dot product the delta with the gradient for this corner's contribution
-                    *prod = (delta.iter().zip(&gradient))
-                        .map(|(d, g)| *d * *g)
-                        .sum::<f64>()
-                        / sqrt_n;
+                    *prod /= sqrt_n * grad_sqr_sum.sqrt();
                 }
                 // Apply coefficients to product
-                for (i, x) in scaled.iter().enumerate() {
+                for (x, cs) in scaled.iter().zip(coefs.chunks_exact_mut(2)) {
                     let fract = x.rem_euclid(1.0).fract();
-                    for (j, prod) in prods.iter_mut().enumerate() {
-                        *prod *= smoothstep(if (j >> i & 1) == 0 {
-                            1.0 - fract
-                        } else {
-                            fract
-                        })
+                    cs[0] = smoothstep(1.0 - fract);
+                    cs[1] = smoothstep(fract);
+                }
+                for (j, prod) in prods.iter_mut().enumerate() {
+                    for i in 0..n {
+                        *prod *= coefs[i * 2 + (j >> i & 1)];
                     }
                 }
                 // Add product

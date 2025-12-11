@@ -1621,7 +1621,9 @@ primitive!(
     /// ex: ↯ 3 [1 2 3]
     /// ex: ↯ 2 [1_2_3 4_5_6]
     ///
-    /// The counts list can be [fill]ed if it is shorter than the kept array.
+    /// The counts list is repeated if it is shorter than the kept array.
+    /// ex: ▽ [1 0 1] ⇡ 10
+    /// The counts list can also be [fill]ed if it is shorter than the kept array.
     /// ex: ⬚3▽ [1 0 2] [8 3 9 2 0]
     /// The fill value may be a list, in which case it will be repeated.
     /// ex: ⬚[1 2 0]▽ [0] ⇡10

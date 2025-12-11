@@ -17,6 +17,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add sided subscripts for [`stencil ⧈`](https://uiua.org/docs/stencil) for simpler chunking
 - Add [chained field accessors](<https://uiua.org/tutorial/Data Definitions#chained-access>) for data definitions
 - [`anti ⌝`](https://uiua.org/docs/anti) [`keep ▽`](https://uiua.org/docs/keep) now accepts non-boolean integers
+- Stabilize [`evert ⧋`](https://uiua.org/docs/evert) modifier
+- Stabilize [`reciprocal ⨪`](https://uiua.org/docs/reciprocal) function
 - Add [`compress`](https://uiua.org/docs/compress) function to compress arrays of bytes
 - A function/constant and a module with the same name can now be in scope at the same time
 - Change [`reach ∪`](https://uiua.org/docs/reach)'s glyph
@@ -32,6 +34,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Operates similar to [`fold ∧`](https://uiua.org/docs/fold)
   - Encodes frames as they are generated
   - Good for when gif frames don't fit all at once in memory
+- Add experimental [`noise`](https://uiua.org/docs/noise) function, which generates random noise from a seed and coordinates
 - Add experimental [`&fetch`](https://uiua.org/docs/&fetch) function to easily fetch data from a url
 - Add experimental monadic and triadic [`backward ˜`](https://uiua.org/docs/backward)
 - Add experimental sided subscripts for [`under ⍜`](https://uiua.org/docs/under), wich automatically [`dip ⊙`](https://uiua.org/docs/dip) on net-positive second functions

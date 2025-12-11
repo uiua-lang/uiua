@@ -2260,26 +2260,22 @@ primitive!(
     /// This is because because dyadic pervasive functions in Uiua operate on the leading axes of their arguments rather than the trailing ones.
     /// [evert] reverses a function's arguments' axes so that the leading axes are the trailing ones. It reverses them back when the function is done.
     /// With this, we can use a single function for all of our shift operations!
-    /// ex: # Experimental!
-    ///   : ⧋+ 2_4 [1_2 2_0 3_4]
+    /// ex: ⧋+ 2_4 [1_2 2_0 3_4]
     ///   : ⧋+ 2_4 [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
     ///   : ⧋+ [0_1 1_0] [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
     /// And it's not just pervasives. Suppose we wanted to elevate our table of 2D vectors to 3D. We could [evert][join].
-    /// ex: # Experimental!
-    ///   : ⧋⊂⊙0 [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
+    /// ex: ⧋⊂⊙0 [[1_2 2_0] [3_4 0_0] [10_0 5_1]]
     /// The classic [divide][on][range] idiom generates `N` numbers between `0` and `1`.
     /// ex: ÷⟜⇡4
     /// But it doesn't work for multidimensional ranges.
     /// ex! ÷⟜⇡4_4
     /// [evert] makes it work with any rank!
-    /// ex: # Experimental!
-    ///   : ⧋÷⟜⇡4
+    /// ex: ⧋÷⟜⇡4
     ///   : ⧋÷⟜⇡4_4
     ///   : ⧋÷⟜⇡2_4_4
     ///
     /// While [evert] can technically be achieved with [under] and [orient], the spelling can be a bit long and is different for different numbers of arguments.
-    /// ex: # Experimental!
-    ///   : ⍜∩⍜°⤸⇌+ 2_4 [1_2 2_0 3_4]
+    /// ex: ⍜∩⍜°⤸⇌+ 2_4 [1_2 2_0 3_4]
     ///   :      ⧋+ 2_4 [1_2 2_0 3_4]
     ///
     /// The word "evert" means to turn something inside out.

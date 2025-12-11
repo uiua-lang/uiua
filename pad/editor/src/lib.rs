@@ -372,6 +372,11 @@ pub fn Editor<'a>(
             }
             .into_view(),
         };
+        let flex_wrap = if get_top_at_top() {
+            "flex-wrap: wrap;"
+        } else {
+            "flex-wrap: wrap-reverse;"
+        };
         let render_output_items = move |items: Vec<OutputItem>| match items.as_slice() {
             [] => View::default(),
             [OutputItem::Separator] => view!(<div class="output-item">
@@ -379,7 +384,7 @@ pub fn Editor<'a>(
                 </div>)
             .into_view(),
             [OutputItem::String(s)] if s.is_empty() => View::default(),
-            _ => view!(<div class="output-values">
+            _ => view!(<div class="output-values" style=flex_wrap>
                     {(items.into_iter())
                         .map(|item| {
                             render_output_item(item)
@@ -2047,12 +2052,12 @@ pub fn Editor<'a>(
                             />
                         </div>
                         <div>
-                            "Stack:" <select on:change=on_select_top_at_top>
+                            "Args:" <select on:change=on_select_top_at_top>
                                 <option value="false" selected=get_top_at_top()>
-                                    "Top at bottom"
+                                    "First at bottom"
                                 </option>
                                 <option value="true" selected=get_top_at_top()>
-                                    "Top at top"
+                                    "First at top"
                                 </option>
                             </select>
                         </div>

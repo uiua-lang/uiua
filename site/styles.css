@@ -654,7 +654,6 @@ option,
 
 .output-values {
     display: flex;
-    flex-wrap: wrap-reverse;
     column-gap: 1em;
     align-items: center;
     font-family: "Code Font", monospace;

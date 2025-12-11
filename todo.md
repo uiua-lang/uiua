@@ -2,8 +2,8 @@
 
 # 0.18
 - Make assemblies importable
-- `noise` function
-- `group` function pack
+- Improve GIF appearance when whole thing is known
+- Change how range subscripts work
 - Recursion ergonomics for `path` / revise `recur`
 - `table` non-lists optimizations?
 - `first group/partition` optimization

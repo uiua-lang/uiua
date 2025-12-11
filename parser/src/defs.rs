@@ -738,7 +738,46 @@ primitive!(
     /// For non-determinism, [random] can be used as a seed.
     /// ex: ⌊×10 gen 3_4 ⚂
     (2, Gen, Rng, "gen"),
-
+    /// Generate random noise
+    ///
+    /// The first argument is a seed.
+    /// The second argument defines noise octaves.
+    /// The third argument is an array of coordinates.
+    ///
+    /// In the simplest case, you can provide a scalar seed and number of octaves.
+    /// This example interprets the third argument as a single 2D coodinate.
+    /// ex: # Experimental!
+    ///   : noise 0 1 0.5_0.6
+    /// If we [rows][fix] that list, it is interpreted as two 1D coordinates.
+    /// ex: # Experimental!
+    ///   : noise 0 1 ≡¤0.5_0.6
+    /// To form more visually interesting noise, we can operate on a [N×N×2] coordinate array.
+    /// ex: # Experimental!
+    ///   : noise 0 1 ⧋÷⟜⇡100_100
+    /// The example above only shows noise in the range `[0, 0]` to `[1, 1]`. To create the noise at a larger scale, simply scale the coordinates with [multiply].
+    /// ex: # Experimental!
+    ///   : noise 0 1 ×3 ⧋÷⟜⇡100_100
+    /// To make the noise more detailed, we can increase the number of octaves. Each octave has more detail but a lower amplitude. When providing a scalar number of octaves, the scales of the octaves are increasing powers of 2.
+    /// ex: # Experimental!
+    ///   : noise 0 1 ×3 ⧋÷⟜⇡100_100
+    ///   : noise 0 2 ×3 ⧋÷⟜⇡100_100
+    ///   : noise 0 3 ×3 ⧋÷⟜⇡100_100
+    ///   : noise 0 4 ×3 ⧋÷⟜⇡100_100
+    /// If you don't want powers of 2 octave scales, you can specify the octaves as a list of scales.
+    /// ex: # Experimental!
+    ///   : noise 0 [1 3 5] ×3 ⧋÷⟜⇡100_100
+    /// Specifying the octaves as a matrix allows you to define different scales for different axes.
+    /// ex: # Experimental!
+    ///   : noise 0 [1_1 2_1 1_4] ×5 ⧋÷⟜⇡100_100
+    /// Noise can be any number of dimensions. The number of dimensions is the size of the last axis of the coordinate array.
+    /// ex: # Experimental!
+    ///   : noise 0 2 ×3 ⧋÷⟜⇡50_50_50
+    /// Complex numbers may be used as coordinates. They will always be interpreted as 2D.
+    /// ex: # Experimental!
+    ///   : noise 0 3 ×10 ˙⊞ℂ÷⟜⇡100
+    ///
+    /// The current algorithm is Perlin noise.
+    (3, Noise, Rng, "noise", { experimental: true }),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`

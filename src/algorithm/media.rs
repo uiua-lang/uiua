@@ -1,6 +1,10 @@
 //! En/decode Uiua arrays to/from media formats
 
-use std::f64::consts::PI;
+use std::{
+    borrow::Cow,
+    f64::consts::PI,
+    hash::{Hash, Hasher},
+};
 
 use ecow::{EcoVec, eco_vec};
 use enum_iterator::{Sequence, all};
@@ -8,6 +12,7 @@ use enum_iterator::{Sequence, all};
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 #[cfg(feature = "image")]
 use image::{DynamicImage, ImageFormat};
+use rapidhash::quality::RapidHasher;
 use serde::*;
 
 #[cfg(feature = "gif")]
@@ -1800,4 +1805,219 @@ fn layout_text_impl(
         });
         Ok(Array::new(canvas_shape, canvas_data).into())
     })
+}
+
+impl Value {
+    /// Generate `noise`
+    pub fn noise(&self, seed: &Self, octaves: &Self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        #[inline]
+        fn smoothstep(x: f64) -> f64 {
+            3.0 * x.powi(2) - 2.0 * x.powi(3)
+        }
+        #[inline]
+        /// Produces [0, 1) from a hasher
+        fn hasher_uniform(hasher: impl Hasher) -> f64 {
+            hasher.finish() as f64 / u64::MAX as f64 * 2.0 - 1.0
+        }
+
+        // Seed chosen as a pleasant-looking default for range 0-1
+        let mut hasher = RapidHasher::new(1);
+        seed.hash(&mut hasher);
+        let mut shape = self.shape.clone();
+
+        // Get coords
+        let (n, coords) = match self {
+            Value::Num(arr) => {
+                if arr.rank() == 0 {
+                    arr.data[0].to_bits().hash(&mut hasher);
+                    return Ok(hasher_uniform(hasher).into());
+                }
+                let n = shape.pop().unwrap();
+                (n, Cow::Borrowed(arr.data.as_slice()))
+            }
+            Value::Byte(arr) => {
+                if arr.rank() == 0 {
+                    (arr.data[0] as f64).to_bits().hash(&mut hasher);
+                    return Ok(hasher_uniform(hasher).into());
+                }
+                let n = shape.pop().unwrap();
+                let data = Cow::Owned(arr.data.iter().map(|&x| x as f64).collect());
+                (n, data)
+            }
+            Value::Complex(arr) => (
+                2,
+                Cow::Owned(arr.data.iter().flat_map(|&c| [c.re, c.im]).collect()),
+            ),
+            value => {
+                return Err(env.error(format!(
+                    "Cannot generate noise from {} array",
+                    value.type_name()
+                )));
+            }
+        };
+
+        // Get octaves
+        let octaves: Array<f64> =
+            octaves.as_number_array(env, "Octaves must be a rank 0, 1, or 2 array of numbers")?;
+        enum Octaves<'a> {
+            Pow2(usize),
+            Specified(&'a [f64]),
+            PerDim(usize, &'a [f64]),
+        }
+        impl Octaves<'_> {
+            fn count(&self) -> usize {
+                match self {
+                    Octaves::Pow2(n) => *n,
+                    Octaves::Specified(os) => os.len(),
+                    Octaves::PerDim(n, os) => os.len() / *n,
+                }
+            }
+            fn get(&self, o: usize, i: usize) -> f64 {
+                match self {
+                    Octaves::Pow2(_) => 2f64.powi(o as i32),
+                    Octaves::Specified(os) => os[o],
+                    Octaves::PerDim(n, os) => os[o * n + i],
+                }
+            }
+            fn avg(&self, o: usize) -> f64 {
+                match self {
+                    Octaves::Pow2(_) => 2f64.powi(o as i32),
+                    Octaves::Specified(os) => os[o],
+                    Octaves::PerDim(n, os) => os[o * n..][..*n].iter().sum::<f64>() / *n as f64,
+                }
+            }
+        }
+        let octaves = match octaves.rank() {
+            0 => Octaves::Pow2(octaves.data[0].round() as usize),
+            1 => Octaves::Specified(&octaves.data),
+            2 => {
+                if *octaves.shape.last().unwrap() != n {
+                    return Err(env.error(format!(
+                        "Octaves array's last axis must be the same as \
+                        the number of noise dimensions, but {} ≠ {n}",
+                        octaves.shape.last().unwrap(),
+                    )));
+                }
+                Octaves::PerDim(n, &octaves.data)
+            }
+            rank => {
+                return Err(env.error(format!(
+                    "Noise octaves must be rank 0, 1, or 2, \
+                    but the array is rank {rank}"
+                )));
+            }
+        };
+
+        let mut data = eco_vec![0f64; shape.elements()];
+        if n == 0 {
+            return Ok(Array::new(shape, data));
+        }
+        let slice = data.make_mut();
+
+        // Setup
+        let (corner_count, overflowed) = 2usize.overflowing_pow(n as u32);
+        if overflowed {
+            return Err(env.error(format!(
+                "The coordinate array has shape {}, \
+                which implies {n} dimensions, \
+                which is too many for noise",
+                self.shape
+            )));
+        }
+        let sqrt_n = (n as f64).sqrt();
+
+        if n == 2 {
+            // Fast case for 2D
+            for o in 0..octaves.count() {
+                let oct_avg_sqrt_n = octaves.avg(o) * sqrt_n;
+                for (noise, coord) in slice.iter_mut().zip(coords.chunks_exact(n)) {
+                    let x = coord[0] * octaves.get(o, 0);
+                    let y = coord[1] * octaves.get(o, 1);
+                    let (xfract, yfract) = (x.rem_euclid(1.0).fract(), y.rem_euclid(1.0).fract());
+                    let (xl, xr) = (smoothstep(1.0 - xfract), smoothstep(xfract));
+                    let (yl, yr) = (smoothstep(1.0 - yfract), smoothstep(yfract));
+                    let (x1, y1) = (x.floor(), y.floor());
+                    let (x2, y2) = (x1 + 1.0, y1 + 1.0);
+                    for [cx, cy, kx, ky] in [
+                        [x1, y1, xl, yl],
+                        [x2, y1, xr, yl],
+                        [x1, y2, xl, yr],
+                        [x2, y2, xr, yr],
+                    ] {
+                        let mut hasher = hasher;
+                        cx.to_bits().hash(&mut hasher);
+                        cy.to_bits().hash(&mut hasher);
+                        let (mut hx, mut hy) = (hasher, hasher);
+                        0.hash(&mut hx);
+                        1.hash(&mut hy);
+                        let (gradx, grady) = (hasher_uniform(hx), hasher_uniform(hy));
+                        *noise += kx * ky * (gradx * (x - cx) + grady * (y - cy))
+                            / (gradx * gradx + grady * grady).sqrt()
+                            / oct_avg_sqrt_n;
+                    }
+                }
+            }
+        } else {
+            // General nD case
+            let mut top_left = vec![0f64; n];
+            let mut corner = vec![0f64; n];
+            let mut scaled = vec![0f64; n];
+            let mut coefs = vec![0f64; n * 2];
+            let mut prods = vec![0f64; corner_count];
+
+            // Main loop
+            for o in 0..octaves.count() {
+                let oct_avg_sqrt_n = octaves.avg(o) * sqrt_n;
+                for (noise, coord) in slice.iter_mut().zip(coords.chunks_exact(n)) {
+                    // Scale coord to octave and fine top-left corner
+                    for (i, ((t, x), s)) in
+                        top_left.iter_mut().zip(coord).zip(&mut scaled).enumerate()
+                    {
+                        *s = *x * octaves.get(o, i);
+                        *t = s.floor();
+                    }
+                    prods.fill(0.0);
+                    for (offset, prod) in prods.iter_mut().enumerate() {
+                        // Calculate corner position
+                        for (i, (cor, tl)) in corner.iter_mut().zip(&top_left).enumerate() {
+                            *cor = *tl + ((offset >> i) & 1) as f64;
+                        }
+                        // Hash corner for gradient
+                        let mut hasher = hasher;
+                        corner.iter().for_each(|c| c.to_bits().hash(&mut hasher));
+                        // Dot product with delta from point to corner and normalize
+                        let mut grad_sqr_sum = 0.0;
+                        for (i, (x, c)) in scaled.iter().zip(&corner).enumerate() {
+                            let mut hasher = hasher;
+                            i.hash(&mut hasher);
+                            let grad = hasher_uniform(hasher);
+                            grad_sqr_sum += grad * grad;
+                            *prod += grad * (*x - *c);
+                        }
+                        *prod /= grad_sqr_sum.sqrt();
+                    }
+                    // Apply coefficients to product
+                    for (x, cs) in scaled.iter().zip(coefs.chunks_exact_mut(2)) {
+                        let fract = x.rem_euclid(1.0).fract();
+                        cs[0] = smoothstep(1.0 - fract);
+                        cs[1] = smoothstep(fract);
+                    }
+                    for (j, prod) in prods.iter_mut().enumerate() {
+                        for i in 0..n {
+                            *prod *= coefs[i * 2 + (j >> i & 1)];
+                        }
+                    }
+                    // Add product
+                    let prod: f64 = prods.iter().sum::<f64>();
+                    *noise += prod / oct_avg_sqrt_n;
+                }
+            }
+        }
+
+        // Map to ~[0, 1]
+        for noise in slice {
+            *noise += 0.5;
+        }
+        Ok(Array::new(shape, data))
+    }
 }

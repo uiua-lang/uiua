@@ -690,8 +690,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "OtherModifier",
-    "description": "Call a function with its arguments' axes reversed",
-    "experimental": true
+    "description": "Call a function with its arguments' axes reversed"
   },
   "exeext": {
     "args": 0,
@@ -1038,6 +1037,13 @@
     "class": "MonadicPervasive",
     "description": "Negate a number"
   },
+  "noise": {
+    "args": 3,
+    "outputs": 1,
+    "class": "RNG",
+    "description": "Generate random noise",
+    "experimental": true
+  },
   "not": {
     "glyph": "¬",
     "args": 1,
@@ -1229,8 +1235,7 @@
     "args": 1,
     "outputs": 1,
     "class": "MonadicPervasive",
-    "description": "Get the reciprocal of a number",
-    "experimental": true
+    "description": "Get the reciprocal of a number"
   },
   "recur": {
     "outputs": 1,

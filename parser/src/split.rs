@@ -203,6 +203,7 @@ impl Primitive {
         }
         &[
             alias!((a, Assert), (w, With), (m, Match)),
+            alias!((e, Evert), (d, Div), (o, On), (r, Range)),
             alias!((d, Div), (o, On), (r, Range)),
             alias!((p, Partition), (b, Box), (b, By), (n, Ne)),
             alias!((p, Partition), (p, Parse), (b, By), (n, Ne)),

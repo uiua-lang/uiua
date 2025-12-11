@@ -387,6 +387,12 @@ primitive!(
         MonadicPervasive,
         ("negate", AsciiToken::Backtick, '¯')
     ),
+    /// Get the reciprocal of a number
+    ///
+    /// ex: ⨪3
+    /// ex: ⨪[1 2 3 6]
+    /// ex: ⨪ℂ2 1
+    (1, Reciprocal, MonadicPervasive, ("reciprocal", '⨪')),
     /// Get the absolute value of a number
     ///
     /// ex: ⌵ ¯1
@@ -399,15 +405,6 @@ primitive!(
     ///
     /// The glyph looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, ("absolute value", '⌵')),
-    /// Get the reciprocal of a number
-    ///
-    /// ex: # Experimental!
-    ///   : ⨪3
-    /// ex: # Experimental!
-    ///   : ⨪[1 2 3 6]
-    /// ex: # Experimental!
-    ///   : ⨪ℂ2 1
-    (1, Reciprocal, MonadicPervasive, ("reciprocal", '⨪'), { experimental: true }),
     /// Take the square root of a number
     ///
     /// ex: √4
@@ -2286,7 +2283,7 @@ primitive!(
     ///   :      ⧋+ 2_4 [1_2 2_0 3_4]
     ///
     /// The word "evert" means to turn something inside out.
-    ([1], Evert, OtherModifier, ("evert", '⧋'), { experimental: true }),
+    ([1], Evert, OtherModifier, ("evert", '⧋')),
     /// Unbox the arguments to a function before calling it
     ///
     /// ex:  ⊂ □[1 2 3] □[4 5 6]

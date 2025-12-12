@@ -62,6 +62,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `gh:` prefix for import strings to shorten GitHub imports
 - Upgrade to Rust 2024 edition
   - Increase minumum Rust version to 1.85.0
+- Add support for multiline input in REPL by ending lines with a `\`
 ### Website
 - Reword all documentation and tutorials to no longer refer to a stack
   - Introduce argument manipulation modifiers earlier in the tutorial

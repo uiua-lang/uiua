@@ -1188,6 +1188,16 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, persist: bool, confi
             Err(ReadlineError::Eof | ReadlineError::Interrupted) => break,
             Err(_) => panic!("Failed to read from Stdin"),
         };
+        while code.ends_with(r"\") {
+            code.pop();
+            code.push('\n');
+
+            code.push_str(&match line_reader.readline("... ") {
+                Ok(code) => code,
+                Err(ReadlineError::Eof | ReadlineError::Interrupted) => break,
+                Err(_) => panic!("Failed to read from Stdin"),
+            });
+        }
         if code.is_empty() {
             continue;
         }
@@ -1207,7 +1217,13 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, persist: bool, confi
         let backup_comp = compiler.clone();
         let backup_stack = env.stack().to_vec();
         let res = compiler.load_str(&code).map(drop);
-        println!("    {}", color_code(&code, &compiler));
+        println!(
+            "    {}",
+            color_code(&code, &compiler)
+                .split("\n")
+                .collect::<Vec<_>>()
+                .join("\n    ")
+        );
         let res = res.and_then(|()| env.run_compiler(&mut compiler));
 
         match res {

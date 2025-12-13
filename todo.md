@@ -1,10 +1,11 @@
 # Uiua Todo
 
 # 0.18
-- Make assemblies importable
-- Improve GIF appearance when whole thing is known
 - Change how range subscripts work
-- Recursion ergonomics for `path` / revise `recur`
+- Improve GIF appearance when whole thing is known
+- `keep by rows` optimization?
+- Early-terminating `fold`
+- Make assemblies importable
 - `table` non-lists optimizations?
 - `first group/partition` optimization
 - `under group/partition inventory` optimization

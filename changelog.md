@@ -288,7 +288,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.15.0).
   - These preserve N arguments rather than just the first or last
 - Add data definition methods
 - Stabilize most of data definitions
-  - A new [section](https://uiua.org/tutorial/Data Definitions) has been added to the tutorial
+  - A new [section](<https://uiua.org/tutorial/Data Definitions>) has been added to the tutorial
   - Things not stabilized:
     - Data functions
     - Methods

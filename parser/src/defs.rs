@@ -2182,7 +2182,7 @@ primitive!(
     /// ex: °⊕□ {1 2_3_4 5_6}
     ///
     /// [under][group] works if [group]'s function is [under]able.
-    /// ex: ⍜⊕□≡⇌ ⊸≠@  $ These are some words
+    /// ex: ⍜⊕□⍚⇌ ⊸≠@  $ These are some words
     /// The length of each group must not change.
     /// ex! ⍜⊕□⇌ ⊸≠@  $ These are some words
     ///

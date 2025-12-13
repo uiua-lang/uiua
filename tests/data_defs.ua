@@ -149,7 +149,7 @@ M! ← F!^
 └─╴
 
 ⍤⤙≍ ⇡5 Range 5
-⍤⤙≍ ⇡₄6 Range!°⊸Min 4 10
+⍤⤙≍ ⇡₄9 Range!°⊸Min 4 10
 ⍤⤙≍ ⇡₁5 Range~APL 5
 ⍤⤙≍ ⇡6 Range~Incl 5
 

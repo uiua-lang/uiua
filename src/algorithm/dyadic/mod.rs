@@ -412,7 +412,7 @@ impl<T: ArrayValue> Array<T> {
                 )));
             }
             let ishape: EcoVec<_> = shape.iter().map(|v| *v as isize).collect();
-            let range_data: EcoVec<_> = match super::monadic::range(&ishape, 0, env)? {
+            let range_data: EcoVec<_> = match super::monadic::range(&ishape, 0, false, env)? {
                 Ok(a) => a.iter().map(|v| *v as isize).collect(),
                 Err(a) => a.iter().map(|v| *v as isize).collect(),
             };

@@ -5,6 +5,8 @@ Uiua is not yet stable.
 ## 0.18.0 - 202?-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- **Breaking Change** - Subscripted [`range ⇡`](https://uiua.org/docs/range) now makes the range inclusive up to the maximum while still changing the start, rather than offsetting the entire range
+  - This breaks all uses of subscripted [`range ⇡`](https://uiua.org/docs/range) *other* than `⇡₁`
 - Allow for multiple [`fill ⬚`](https://uiua.org/docs/fill) values by returning multiple values from the fill function.
 - Add [`anti ⌝`](https://uiua.org/docs/anti)[`by ⊸`](https://uiua.org/docs/by) for dyadic functions
 - Add digit separators for number literals with `,`. Ex: `123,456.078,9`

@@ -2481,21 +2481,12 @@ impl Compiler {
                         ])
                     }
                     Range => {
-                        if n == 0 {
-                            self.emit_diagnostic(
-                                format!("{Range}₀ is equivalent to just {}", Range.format()),
-                                DiagnosticKind::Advice,
-                                span.clone().merge(scr.span),
-                            );
-                            Node::Prim(Range, self.add_span(span))
-                        } else {
-                            let span = self.add_span(span);
-                            Node::from_iter([
-                                Node::Prim(Range, span),
-                                Node::new_push(n),
-                                Node::Prim(Add, span),
-                            ])
-                        }
+                        let span = self.add_span(span);
+                        Node::from_iter([
+                            Node::Prim(Range, span),
+                            Node::new_push(n),
+                            Node::Prim(Add, span),
+                        ])
                     }
                     Keep => {
                         let n = self.positive_subscript(n, Keep, &span);

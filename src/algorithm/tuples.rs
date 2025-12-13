@@ -174,7 +174,7 @@ fn tuple2(f: SigNode, env: &mut Uiua) -> UiuaResult {
             } else {
                 xs.row_count()
             };
-            let range: Value = match range(&[n as isize], 0, env)? {
+            let range: Value = match range(&[n as isize], 0, false, env)? {
                 Ok(data) => data.into(),
                 Err(data) => data.into(),
             };

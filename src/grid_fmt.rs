@@ -816,17 +816,19 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 let mut subrows = vec![vec![]; row_height];
                 let mut div_pos = HashMap::new();
                 // Vertical offset for row dividers
-                let vert = (0..self.rank().saturating_sub(1))
-                    .rev()
-                    .step_by(2)
-                    .scan(1, |prod, d| {
-                        let is_mul = (i + 1) % (*prod).max(1) == 0;
-                        *prod *= self.shape[d];
-                        Some(is_mul)
-                    })
-                    .filter(|&is_mul| is_mul)
-                    .count()
-                    .saturating_sub(1);
+                let vert = if self.shape.contains(&0) {
+                    0
+                } else {
+                    ((0..self.rank().saturating_sub(1)).rev().step_by(2))
+                        .scan(1, |prod, d| {
+                            let is_mul = (i + 1) % (*prod).max(1) == 0;
+                            *prod *= self.shape[d];
+                            Some(is_mul)
+                        })
+                        .filter(|&is_mul| is_mul)
+                        .count()
+                        .saturating_sub(1)
+                };
                 for (j, ((col_width, max_lr_lens), cell)) in (column_widths.iter())
                     .zip(&max_lr_lens)
                     .zip(&mut metagrid[i])
@@ -846,17 +848,19 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         cell,
                     );
                     // Horizontal offset for column dividers
-                    let horiz = (0..self.rank())
-                        .rev()
-                        .step_by(2)
-                        .scan(1, |prod, d| {
-                            let is_mul = (j + 1) % (*prod).max(1) == 0;
-                            *prod *= self.shape[d];
-                            Some(is_mul)
-                        })
-                        .filter(|&is_mul| is_mul)
-                        .count()
-                        .saturating_sub(1);
+                    let horiz = if self.shape.contains(&0) {
+                        0
+                    } else {
+                        ((0..self.rank()).rev().step_by(2))
+                            .scan(1, |prod, d| {
+                                let is_mul = (j + 1) % (*prod).max(1) == 0;
+                                *prod *= self.shape[d];
+                                Some(is_mul)
+                            })
+                            .filter(|&is_mul| is_mul)
+                            .count()
+                            .saturating_sub(1)
+                    };
                     for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
                         subrow.extend(cell_row);
                         // Add column dividers

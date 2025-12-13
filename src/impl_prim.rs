@@ -239,7 +239,7 @@ impl_primitive!(
     (2, AbsComplex),
     (1, SquareAbs),
     (2, MatrixDiv),
-    (2, RangeStart),
+    (1, RangeSub(i32)),
     (1, Exp2),
     (1, Exp10),
     (1, Log2),

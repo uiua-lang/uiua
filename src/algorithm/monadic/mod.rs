@@ -756,14 +756,8 @@ impl Value {
     pub fn range(&self, env: &Uiua) -> UiuaResult<Self> {
         self.range_impl(0, false, env)
     }
-    pub(crate) fn range_start(&self, shape: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let start = self.as_num(env, "Range start should be a scalar number")?;
-        if start.fract() == 0.0 && (isize::MIN as f64..=isize::MAX as f64).contains(&start) {
-            shape.range_impl(start as isize, true, env)
-        } else {
-            let range = shape.range(env)?;
-            self.clone().add(range, env)
-        }
+    pub(crate) fn range_sub(&self, start: i32, env: &Uiua) -> UiuaResult<Self> {
+        self.range_impl(start as isize, true, env)
     }
     fn range_impl(&self, start: isize, inclusive: bool, env: &Uiua) -> UiuaResult<Self> {
         let ishape = self.as_ints(

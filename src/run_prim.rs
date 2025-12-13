@@ -797,7 +797,11 @@ impl ImplPrimitive {
                     .map_err(|e| env.error(e))?;
             }
             ImplPrimitive::MatrixDiv => env.dyadic_rr_env(Value::matrix_div)?,
-            ImplPrimitive::RangeStart => env.dyadic_rr_env(Value::range_start)?,
+            &ImplPrimitive::RangeSub(n) => {
+                let v = env.pop(1)?;
+                let range = v.range_sub(n, env)?;
+                env.push(range);
+            }
             // Unders
             ImplPrimitive::UndoUnBits => {
                 let orig_shape = env.pop(1)?;

@@ -25,12 +25,12 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Array, ArrayValue, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeSpan,
-    CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
-    ExactDoubleIterator, Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc,
-    IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass, Primitive, Purity, RunMode,
-    SUBSCRIPT_DIGITS, SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript,
-    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
+    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeSpan, CustomInverse,
+    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA, ExactDoubleIterator,
+    Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend,
+    Node, NumericSubscript, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
+    SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript, SysBackend, Uiua, UiuaError,
+    UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
@@ -2480,14 +2480,7 @@ impl Compiler {
                             Node::Prim(Take, span),
                         ])
                     }
-                    Range => {
-                        let span = self.add_span(span);
-                        Node::from_iter([
-                            Node::Prim(Range, span),
-                            Node::new_push(n),
-                            Node::Prim(Add, span),
-                        ])
-                    }
+                    Range => Node::ImplPrim(ImplPrimitive::RangeSub(n), self.add_span(span)),
                     Keep => {
                         let n = self.positive_subscript(n, Keep, &span);
                         let span = self.add_span(span);

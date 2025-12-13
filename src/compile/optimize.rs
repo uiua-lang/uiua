@@ -136,7 +136,6 @@ static UNSORTED_OPTS: &[&dyn Optimization] = &[
     &SplitByOpt,
     &AllSameOpt,
     &SortedUpOpt,
-    &RangeStartOpt,
     &PopConst,
     &ValidateTypeOpt,
 ];
@@ -486,14 +485,6 @@ impl Optimization for SplitByOpt {
         })
     }
 }
-
-opt!(
-    RangeStartOpt,
-    (
-        [Prim(Range, span), Push(n), Prim(Add, _)](n.rank() == 0 && n.type_id() == f64::TYPE_ID),
-        Node::from_iter([Push(n.clone()), ImplPrim(RangeStart, *span),])
-    )
-);
 
 #[derive(Debug)]
 struct ByToDup;

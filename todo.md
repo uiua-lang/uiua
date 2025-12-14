@@ -1,8 +1,6 @@
 # Uiua Todo
 
 # 0.18
-- Change how range subscripts work
-- Improve GIF appearance when whole thing is known
 - `keep by rows` optimization?
 - Early-terminating `fold`
 - Make assemblies importable

@@ -15,10 +15,10 @@ use image::{DynamicImage, ImageFormat};
 use rapidhash::quality::RapidHasher;
 use serde::*;
 
-#[cfg(feature = "gif")]
-use crate::SigNode;
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
+#[cfg(feature = "gif")]
+use crate::{ArrayValue, RealArrayValue, SigNode};
 use crate::{Complex, OptionalArg, Shape, SysBackend};
 
 use super::monadic::hsv_to_rgb;
@@ -723,6 +723,16 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
             return Ok(arr.data.as_slice().into());
         }
     }
+    // Faster and higher-quality for grayscale GIFs
+    if value.rank() == 3 && value.type_id() == f64::TYPE_ID {
+        let (width, height) = (value.shape[2], value.shape[1]);
+        return match value {
+            Value::Num(arr) => encode_grayscale_gif(frame_rate, width, height, &arr.data),
+            Value::Byte(arr) => encode_grayscale_gif(frame_rate, width, height, &arr.data),
+            _ => unreachable!(),
+        };
+    }
+
     // Encode frames from rows
     let mut rows = value.rows();
     encode_gif_impl(
@@ -949,6 +959,46 @@ fn encode_gif_impl<C, E>(
     encoder
         .into_inner()
         .map_err(|e| error(ctx, e.to_string()))?;
+    Ok(bytes.into_inner())
+}
+
+#[cfg(feature = "gif")]
+fn encode_grayscale_gif<T>(
+    mut frame_rate: f64,
+    width: usize,
+    height: usize,
+    data: &[T],
+) -> Result<Vec<u8>, String>
+where
+    T: RealArrayValue,
+{
+    use gif::{Encoder, Frame};
+
+    if width > u16::MAX as usize || height > u16::MAX as usize {
+        return Err(format!(
+            "GIF dimensions must be at most {}x{}, but the frames are {}x{}",
+            u16::MAX,
+            u16::MAX,
+            width,
+            height
+        ));
+    }
+    let mut bytes = std::io::Cursor::new(Vec::new());
+    let pallete: Vec<u8> = (0..=255).flat_map(|c| [c, c, c]).collect();
+    let mut encoder = Encoder::new(&mut bytes, width as u16, height as u16, &pallete)
+        .map_err(|e| e.to_string())?;
+    (encoder.set_repeat(gif::Repeat::Infinite)).map_err(|e| e.to_string())?;
+    const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
+    frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
+    let mut t = 0;
+    for (i, frame) in data.chunks_exact(width * height).enumerate() {
+        let frame: Vec<u8> = frame.iter().map(|&x| (x.to_f64() * 255.0) as u8).collect();
+        let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, frame, Some(0));
+        frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
+        t += frame.delay;
+        encoder.write_frame(&frame).map_err(|e| e.to_string())?;
+    }
+    encoder.into_inner().map_err(|e| e.to_string())?;
     Ok(bytes.into_inner())
 }
 

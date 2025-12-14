@@ -610,7 +610,8 @@ option,
     }
 }
 
-.code-span {
+.code-span,
+.code-span>* {
     font-size: 1em;
     font-family: "Code Font", monospace;
     white-space: pre;

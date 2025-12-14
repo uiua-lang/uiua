@@ -640,8 +640,8 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
             }
         };
         let view = view! {
-            <span class=class data-title=title on:mouseover=onmouseover on:click=onclick>
-                {text}
+            <span class={class.clone()} data-title=title on:mouseover=onmouseover on:click=onclick>
+                <span class=class inert=true>{text}</span>
             </span>
         }
         .into_view();
@@ -672,13 +672,13 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                 CodeFragment::Ghost(short, Some(long)) => frag_views.push(
                     view! {
                         <span class="code-span value-hint" data-title=long>
-                            {short}
+                            <span inert=true>{short}</span>
                         </span>
                     }
                     .into_view(),
                 ),
                 CodeFragment::Ghost(short, None) => frag_views
-                    .push(view! { <span class="code-span value-hint">{short}</span> }.into_view()),
+                    .push(view! { <span class="code-span value-hint"><span inert=true>{short}</span></span> }.into_view()),
                 CodeFragment::Br => frag_views.push(view! { <br /> }.into_view()),
                 CodeFragment::Span(text, kind) => {
                     let color_class = match &kind {
@@ -826,7 +826,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                 frag_views.push(
                                     view! {
                                         <span class=class data-title=title>
-                                            {text}
+                                            <span inert=true>{text}</span>
                                         </span>
                                     }
                                     .into_view(),
@@ -849,7 +849,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                                     on:mouseover=onmouseover
                                     on:click=onclick
                                 >
-                                    {text}
+                                    <span inert=true>{text}</span>
                                 </span>
                             }
                             .into_view();
@@ -905,7 +905,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             frag_views.push(
                                 view! {
                                     <span class="code-span" style=style data-title="label">
-                                        {text}
+                                        <span inert=true>{text}</span>
                                     </span>
                                 }
                                 .into_view(),
@@ -1007,7 +1007,7 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                             frag_views.push(
                                 view! {
                                     <span class=class style=style data-title=title>
-                                        {text}
+                                        <span inert=true>{text}</span>
                                     </span>
                                 }
                                 .into_view(),
@@ -1042,7 +1042,9 @@ pub fn gen_code_view(id: &str, code: &str) -> View {
                         }
                         _ => {
                             let class = format!("code-span {color_class}");
-                            frag_views.push(view! { <span class=class>{text}</span> }.into_view())
+                            frag_views.push(
+                                view! { <span class=class inert=true>{text}</span> }.into_view(),
+                            )
                         }
                     }
                 }

@@ -109,16 +109,17 @@ impl SmartOutput {
     }
     #[cfg(feature = "gif")]
     fn try_gif(value: &Value, frame_rate: f64) -> Option<Self> {
-        let bytes = value_to_gif_bytes(value, frame_rate).ok()?;
         match &*value.shape {
             &[_] => {
                 // Already encoded
+                let bytes = value_to_gif_bytes(value, frame_rate).ok()?;
                 let label = value.meta.label.as_ref().map(Into::into);
                 Some(Self::Gif(bytes, label))
             }
             &[f, h, w] | &[f, h, w, _]
                 if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
             {
+                let bytes = value_to_gif_bytes(value, frame_rate).ok()?;
                 let label = value.meta.label.as_ref().map(Into::into);
                 Some(Self::Gif(bytes, label))
             }
@@ -131,11 +132,11 @@ impl SmartOutput {
     }
     #[cfg(feature = "apng")]
     fn try_apng(value: &Value, frame_rate: f64) -> Option<Self> {
-        let bytes = value_to_apng_bytes(value, frame_rate).ok()?;
         match &*value.shape {
             &[f, h, w] | &[f, h, w, _]
                 if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
             {
+                let bytes = value_to_apng_bytes(value, frame_rate).ok()?;
                 let label = value.meta.label.as_ref().map(Into::into);
                 Some(Self::Apng(bytes.into_iter().collect(), label))
             }
@@ -973,7 +974,6 @@ where
     T: RealArrayValue,
 {
     use gif::{Encoder, Frame};
-
     if width > u16::MAX as usize || height > u16::MAX as usize {
         return Err(format!(
             "GIF dimensions must be at most {}x{}, but the frames are {}x{}",
@@ -991,12 +991,14 @@ where
     const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
     frame_rate = frame_rate.max(MIN_FRAME_RATE).abs();
     let mut t = 0;
-    for (i, frame) in data.chunks_exact(width * height).enumerate() {
-        let frame: Vec<u8> = frame.iter().map(|&x| (x.to_f64() * 255.0) as u8).collect();
-        let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, frame, Some(0));
-        frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
-        t += frame.delay;
-        encoder.write_frame(&frame).map_err(|e| e.to_string())?;
+    if width > 0 && height > 0 {
+        for (i, frame) in data.chunks_exact(width * height).enumerate() {
+            let frame: Vec<u8> = frame.iter().map(|&x| (x.to_f64() * 255.0) as u8).collect();
+            let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, frame, Some(0));
+            frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
+            t += frame.delay;
+            encoder.write_frame(&frame).map_err(|e| e.to_string())?;
+        }
     }
     encoder.into_inner().map_err(|e| e.to_string())?;
     Ok(bytes.into_inner())

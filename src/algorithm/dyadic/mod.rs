@@ -331,6 +331,12 @@ impl Value {
         self.match_fill(env);
 
         let axes_input = shape.as_ints_or_infs(env, "Shape should be integers or infinity")?;
+        if axes_input.len() == self.rank()
+            && (axes_input.iter().zip(&self.shape))
+                .all(|(a, b)| a.is_ok_and(|a| a.unsigned_abs() == *b))
+        {
+            return self.reshape_impl(&axes_input, env);
+        }
         let mut reversed_axes = SmallVec::<[_; 32]>::new();
         let rank_shift = self.shape.len() as isize - axes_input.len() as isize;
         let shape: Shape = axes_input

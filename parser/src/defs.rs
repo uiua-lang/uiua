@@ -1165,8 +1165,8 @@ primitive!(
     ///   : > □"banana"  "orange"
     ///
     /// For non-pervasive functions, boxed arrays need to be [un][box]ed before they can be operated on.
-    /// ex: ⊢  □[1 2 3]
-    /// ex: ⊢ °□[1 2 3]
+    /// ex: ⊢    □[1 2 3]
+    /// ex: ⊢ °□ □[1 2 3]
     /// [under][un][box] is useful when you want to re-[box] the result.
     /// ex: $ Reverse these words
     ///   : ⊜□⊸≠@ #

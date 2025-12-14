@@ -313,7 +313,7 @@ pub static ANTI_PATTERNS: &[&dyn InvertPattern] = &[
     &AntiRepeatPat,
     &AntiInsertPat,
     &AntiJoinPat,
-    &AntiContraFlip,
+    &NoUnder(AntiContraFlip),
     &AntiCustomPat,
 ];
 

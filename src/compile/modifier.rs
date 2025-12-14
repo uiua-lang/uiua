@@ -1366,8 +1366,10 @@ impl Compiler {
 
                 // Filled function
                 let mode = replace(&mut self.pre_eval_mode, PreEvalMode::Lsp);
+                let in_fill = replace(&mut self.in_fill, true);
                 let f = self.word_sig(operands.next().unwrap());
                 self.pre_eval_mode = mode;
+                self.in_fill = in_fill;
                 let f = f?;
 
                 // Get-fill function
@@ -1473,6 +1475,7 @@ impl Compiler {
                         prim,
                         sn,
                         span,
+                        self,
                     )));
                 };
                 let sub = self.validate_subscript(sub);
@@ -1507,6 +1510,7 @@ impl Compiler {
                     ImplPrimitive::RowsSub(sub, prim == Inventory),
                     sn,
                     span,
+                    self,
                 )
             }
             Table => {
@@ -1525,15 +1529,15 @@ impl Compiler {
                     )
                 }
 
-                fn table_fork(sn: SigNode, table_span: usize, asm: &Assembly) -> Node {
+                fn table_fork(sn: SigNode, table_span: usize, comp: &Compiler) -> Node {
                     match sn.node {
                         Node::Mod(Fork, args, fork_span)
-                            if (args.iter()).all(|arg| arg.node.is_pure(asm))
+                            if (args.iter()).all(|arg| arg.node.is_pure(&comp.asm))
                                 && args.windows(2).all(|w| w[0].sig.args() == w[1].sig.args()) =>
                         {
                             let args: EcoVec<SigNode> = args
                                 .into_iter()
-                                .map(|arg| SigNode::new(arg.sig, table_fork(arg, table_span, asm)))
+                                .map(|arg| SigNode::new(arg.sig, table_fork(arg, table_span, comp)))
                                 .collect();
                             Node::Mod(Fork, args, fork_span)
                         }
@@ -1542,6 +1546,7 @@ impl Compiler {
                             Table,
                             SigNode::new(sn.sig, node),
                             table_span,
+                            comp,
                         ),
                     }
                 }
@@ -1551,7 +1556,7 @@ impl Compiler {
                 {
                     Node::ImplMod(ImplPrimitive::TableSub(i), eco_vec![sn], table_span)
                 } else {
-                    table_fork(sn, table_span, &self.asm)
+                    table_fork(sn, table_span, self)
                 }
             }
             Fold => {
@@ -2456,7 +2461,11 @@ fn construct_extracted_monadic_modifier<T>(
     m: T,
     mut sn: SigNode,
     span: usize,
+    comp: &Compiler,
 ) -> Node {
+    if comp.in_fill {
+        return node_kind(m, eco_vec![sn], span);
+    }
     let (node, extracted) = extract_node_pervasives(sn.node);
     if node.is_empty() {
         return extracted;

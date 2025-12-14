@@ -74,6 +74,8 @@ pub struct Compiler {
     comptime_depth: usize,
     /// Whether the compiler is in a try
     in_try: bool,
+    /// Whether the compiler is in a fill
+    in_fill: bool,
     /// Accumulated errors
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are deprecated
@@ -113,6 +115,7 @@ impl Default for Compiler {
             externals: HashMap::new(),
             comptime_depth: 0,
             in_try: false,
+            in_fill: false,
             errors: Vec::new(),
             deprecated_prim_errors: HashSet::new(),
             deprecated_const_errors: HashSet::new(),

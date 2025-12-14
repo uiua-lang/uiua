@@ -5,6 +5,7 @@ use std::{
     any::Any,
     borrow::Cow,
     fmt,
+    io::stdin,
     mem::take,
     net::SocketAddr,
     path::{Path, PathBuf},
@@ -1467,11 +1468,18 @@ pub(crate) fn run_sys_op_mod(op: &SysOp, ops: Ops, env: &mut Uiua) -> UiuaResult
         SysOp::ReadLines => {
             let [f] = get_ops(ops, env)?;
             let handle = env.pop(1)?.as_handle(env, None)?;
-            let mut read_lines = env
-                .rt
-                .backend
-                .read_lines(handle)
-                .map_err(|e| env.error(e))?;
+            let mut read_lines: ReadLinesReturnFn = match handle {
+                Handle::STDIN => Box::new(|env, mut f| {
+                    for line in stdin().lines() {
+                        let line = line.map_err(|e| env.error(e))?;
+                        f(line, env)?;
+                    }
+                    Ok(())
+                }),
+                _ => (env.rt.backend)
+                    .read_lines(handle)
+                    .map_err(|e| env.error(e))?,
+            };
             let sig = f.sig;
             if sig.args() == 0 {
                 return env.exec(f);

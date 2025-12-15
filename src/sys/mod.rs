@@ -598,7 +598,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn mem_free(&self, ptr: &MetaPtr) -> Result<(), String> {
         Err("Pointer freeing is not supported in this environment".into())
     }
-    /// Load a git repo as a module
+    /// Load a git repo as a module and return the path to its `lib.ua` file
     ///
     /// The returned path should be loadable via [`SysBackend::file_read_all`]
     fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {

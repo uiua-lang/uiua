@@ -10,12 +10,13 @@ use std::{
 
 use dashmap::DashMap;
 use ecow::{EcoString, EcoVec, eco_vec};
+use indexmap::IndexMap;
 use serde::*;
 use uiua_parser::SUBSCRIPT_DIGITS;
 
 use crate::{
-    BindingCounts, CodeSpan, FunctionId, Inputs, Node, SigNode, Signature, Span, Uiua, UiuaResult,
-    Value,
+    BindingCounts, CodeSpan, FunctionId, Ident, Inputs, Node, SigNode, Signature, Span, Uiua,
+    UiuaResult, Value,
     compile::{LocalIndex, Module},
     is_ident_char,
 };
@@ -27,6 +28,8 @@ pub struct Assembly {
     pub root: Node,
     /// Functions
     pub(crate) functions: EcoVec<Node>,
+    /// A list of top-level names
+    pub exports: Arc<IndexMap<Ident, usize>>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
     pub(crate) spans: EcoVec<Span>,
@@ -158,10 +161,19 @@ impl Assembly {
         let span = self.spans[span].clone();
         self.add_binding_at(local, BindingKind::Const(value), span.code(), meta);
     }
+    pub(crate) fn module(&self) -> Module {
+        let mut module = Module::default();
+        for (name, &index) in &*self.exports {
+            let public = self.bindings[index].public;
+            (module.names).insert(name.clone(), LocalIndex { index, public });
+        }
+        module
+    }
     /// Parse a `.uasm` file into an assembly
     pub fn from_uasm(src: &str) -> Result<Self, String> {
         let rest = src;
-        let (root_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
+        let (root_src, rest) = rest.split_once("EXPORTS").ok_or("No exports")?;
+        let (exports_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
         let (bindings_src, rest) = rest.trim().split_once("FUNCTIONS").ok_or("No functions")?;
         let (functions_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
         let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
@@ -176,6 +188,19 @@ impl Assembly {
             let node: Node = serde_json::from_str(line).unwrap();
             root.push(node);
         }
+
+        let mut exports = IndexMap::new();
+        for line in exports_src.lines().filter(|line| !line.trim().is_empty()) {
+            let mut words = line.split_whitespace();
+            let name = words.next().ok_or("Missing export name")?;
+            let index = words
+                .next()
+                .ok_or("Missing export index")?
+                .parse::<usize>()
+                .map_err(|e| format!("Invalid export index: {e}"))?;
+            exports.insert(name.into(), index);
+        }
+        let exports = Arc::new(exports);
 
         let mut bindings = EcoVec::new();
         for line in bindings_src.lines().filter(|line| !line.trim().is_empty()) {
@@ -238,6 +263,7 @@ impl Assembly {
 
         Ok(Self {
             root,
+            exports,
             bindings,
             functions,
             spans,
@@ -257,6 +283,11 @@ impl Assembly {
         for node in self.root.iter() {
             uasm.push_str(&serde_json::to_string(node).unwrap());
             uasm.push('\n');
+        }
+
+        uasm.push_str("\nEXPORTS\n");
+        for (name, index) in &*self.exports {
+            uasm.push_str(&format!("{name} {index}\n"));
         }
 
         uasm.push_str("\nBINDINGS\n");
@@ -343,6 +374,7 @@ impl Default for Assembly {
     fn default() -> Self {
         Self {
             root: Node::default(),
+            exports: Arc::new(IndexMap::new()),
             functions: EcoVec::new(),
             spans: eco_vec![Span::Builtin],
             bindings: EcoVec::new(),

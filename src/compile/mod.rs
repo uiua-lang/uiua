@@ -1,6 +1,7 @@
 pub(crate) mod algebra;
 mod binding;
 mod data;
+mod import;
 pub(crate) mod invert;
 mod modifier;
 pub(crate) mod optimize;
@@ -12,6 +13,7 @@ use std::{
     collections::{BTreeSet, HashMap, HashSet, VecDeque},
     env::current_dir,
     fmt, fs,
+    hash::{DefaultHasher, Hash, Hasher},
     iter::{once, repeat_n},
     mem::{replace, swap, take},
     panic::{AssertUnwindSafe, catch_unwind},
@@ -61,7 +63,7 @@ pub struct Compiler {
     /// Determines which How test scopes are run
     mode: RunMode,
     /// The paths of files currently being imported (used to detect import cycles)
-    current_imports: Vec<PathBuf>,
+    current_imports: EcoVec<PathBuf>,
     /// The bindings of imported files
     imports: HashMap<PathBuf, Module>,
     /// Unexpanded index macros
@@ -108,7 +110,7 @@ impl Default for Compiler {
             scope: Scope::default(),
             higher_scopes: Vec::new(),
             mode: RunMode::All,
-            current_imports: Vec::new(),
+            current_imports: EcoVec::new(),
             imports: HashMap::new(),
             index_macros: HashMap::new(),
             code_macros: HashMap::new(),
@@ -553,6 +555,10 @@ impl Compiler {
         }
 
         // Update top-level bindings
+        let exports = Arc::make_mut(&mut self.asm.exports);
+        for (name, locals) in &self.scope.names.0 {
+            exports.insert(name.clone(), locals.last().unwrap().index);
+        }
         self.code_meta.top_level_names = (self.scope.names.all_iter())
             .map(|(name, local)| (name.clone(), local))
             .collect();
@@ -889,133 +895,6 @@ impl Compiler {
         self.asm
             .add_binding_at(local, BindingKind::Const(value), span, meta);
         self.scope.names.insert(name, local);
-    }
-    /// Import a module
-    pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
-        // Resolve path
-        let (path, file_kind) = if let Some(url) =
-            (path_str.trim().strip_prefix("git:").map(Into::into)).or_else(|| {
-                (path_str.trim().strip_prefix("gh:")).map(|s| format!("github.com/{}", s.trim()))
-            }) {
-            let mut url = url.as_str();
-            if url.contains("branch:") && url.contains("commit:") {
-                return Err(self.error(
-                    span.clone(),
-                    "Cannot specify both branch and commit in git import",
-                ));
-            }
-            let target = if let Some((a, b)) = url.split_once("branch:") {
-                url = a;
-                GitTarget::Branch(b.trim().into())
-            } else if let Some((a, b)) = url.split_once("commit:") {
-                url = a;
-                GitTarget::Commit(b.trim().into())
-            } else {
-                GitTarget::Default
-            };
-            // Git import
-            let mut url = url.trim().trim_end_matches(".git").to_string();
-            if url.ends_with("/uiua") {
-                return Err(self.error(span.clone(), "Cannot import what looks like a Uiua fork"));
-            }
-            if !(url.starts_with("https://") || url.starts_with("http://")) {
-                url = format!("https://{url}");
-            }
-            self.code_meta
-                .import_srcs
-                .insert(span.clone(), ImportSrc::Git(url.clone()));
-            let path = self
-                .backend()
-                .load_git_module(&url, target)
-                .map_err(|e| self.error(span.clone(), e))?;
-            (path, FileScopeKind::Git)
-        } else {
-            // Normal import
-            let path = self.resolve_import_path(Path::new(path_str));
-            self.code_meta
-                .import_srcs
-                .insert(span.clone(), ImportSrc::File(path.clone()));
-            (path, FileScopeKind::Source)
-        };
-        if !self.imports.contains_key(&path) {
-            // We cache Git modules on WASM so that the pad doesn't have to recompile big modules constantly
-            thread_local! {
-                static GIT_CACHE: RefCell<HashMap<PathBuf, Compiler>> = RefCell::new(HashMap::new());
-            }
-            let bytes = self
-                .backend()
-                .file_read_all(&path)
-                .or_else(|e| {
-                    if path.ends_with(Path::new("example.ua")) {
-                        Ok(EXAMPLE_UA.as_bytes().to_vec())
-                    } else {
-                        Err(e)
-                    }
-                })
-                .map_err(|e| self.error(span.clone(), e))?;
-            if let Some(mut comp) = (bytes.len() > 1000)
-                .then(|| GIT_CACHE.with(|cache| cache.borrow().get(&path).cloned()))
-                .flatten()
-            {
-                swap(self, &mut comp);
-                self.macro_env.rt.backend = comp.macro_env.rt.backend;
-                self.asm.inputs.strings = comp.asm.inputs.strings;
-                self.asm.inputs.files.extend(comp.asm.inputs.files);
-                self.scope.experimental = comp.scope.experimental;
-                self.higher_scopes = comp.higher_scopes;
-                self.diagnostics.extend(comp.diagnostics);
-            } else {
-                let input: EcoString = String::from_utf8(bytes)
-                    .map_err(|e| self.error(span.clone(), format!("Failed to read file: {e}")))?
-                    .into();
-                if self.current_imports.iter().any(|p| p == &path) {
-                    return Err(self.error(
-                        span.clone(),
-                        format!("Cycle detected importing {}", path.to_string_lossy()),
-                    ));
-                }
-                let (module, ()) = self.in_scope(ScopeKind::File(file_kind), |comp| {
-                    comp.load_str_src(&input, &path).map(drop)
-                })?;
-                self.imports.insert(path.clone(), module);
-                #[cfg(target_arch = "wasm32")]
-                if file_kind == FileScopeKind::Git {
-                    GIT_CACHE.with(|cache| {
-                        let mut clone = self.clone();
-                        clone.macro_env.rt.backend = Arc::new(crate::SafeSys::default());
-                        cache.borrow_mut().insert(path.clone(), clone);
-                    });
-                }
-            };
-        }
-        let module = self.imports.get(&path).unwrap();
-        if module.experimental {
-            self.experimental_error(span, || {
-                format!(
-                    "Module `{path_str}` is experimental. \
-                    To use it, add `# Experimental!` to the top of this file."
-                )
-            });
-        }
-        Ok(path)
-    }
-    /// Resolve a declared import path relative to the path of the file that is being executed
-    pub(crate) fn resolve_import_path(&self, path: &Path) -> PathBuf {
-        let mut target = if let Some(parent) = self.current_imports.last().and_then(|p| p.parent())
-        {
-            parent.join(path)
-        } else {
-            path.to_path_buf()
-        };
-        if !target.exists() && target.extension().is_none() {
-            target = target.with_extension("ua");
-        }
-        let base = Path::new(".");
-        if let (Ok(canon_target), Ok(canon_base)) = (target.canonicalize(), base.canonicalize()) {
-            pathdiff::diff_paths(canon_target, canon_base).unwrap_or(target)
-        } else {
-            pathdiff::diff_paths(&target, base).unwrap_or(target)
-        }
     }
     // Compile a line, checking an end-of-line signature comment
     fn line(&mut self, mut line: Vec<Sp<Word>>) -> UiuaResult<Node> {

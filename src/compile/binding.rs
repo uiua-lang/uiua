@@ -553,62 +553,6 @@ impl Compiler {
         }
         Ok(())
     }
-    pub(super) fn import(
-        &mut self,
-        import: crate::ast::Import,
-        prev_com: Option<EcoString>,
-    ) -> UiuaResult {
-        // Import module
-        let module_path = self.import_module(&import.path.value, &import.path.span)?;
-        // Bind name
-        if let Some(name) = &import.name {
-            let imported = self.imports.get(&module_path).unwrap();
-            let global_index = self.next_global;
-            self.next_global += 1;
-            let local = LocalIndex {
-                index: global_index,
-                public: import.public,
-            };
-            self.asm.add_binding_at(
-                local,
-                BindingKind::Import(module_path.clone()),
-                Some(name.span.clone()),
-                BindingMeta {
-                    comment: prev_com
-                        .or_else(|| imported.comment.clone())
-                        .map(|text| DocComment::from(text.as_str())),
-                    ..Default::default()
-                },
-            );
-            self.scope.add_module_name(name.value.clone(), local);
-        }
-        // Bind items
-        for (item, public) in import.items() {
-            if let Some(local) =
-                (self.imports.get(&module_path)).and_then(|i| i.names.get_last(item.value.as_str()))
-            {
-                self.validate_local(&item.value, local, &item.span);
-                (self.code_meta.global_references).insert(item.span.clone(), local.index);
-                self.scope.names.insert(
-                    item.value.clone(),
-                    LocalIndex {
-                        index: local.index,
-                        public,
-                    },
-                );
-            } else {
-                self.add_error(
-                    item.span.clone(),
-                    format!(
-                        "`{}` not found in module {}",
-                        item.value,
-                        module_path.display()
-                    ),
-                );
-            }
-        }
-        Ok(())
-    }
     fn analyze_macro_body(
         &mut self,
         mac_name: &str,

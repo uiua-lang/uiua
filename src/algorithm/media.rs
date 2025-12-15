@@ -931,9 +931,9 @@ fn encode_gif_impl<C, E>(
         let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, indices, Some(0));
         frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
         frame.dispose = if has_transparent {
-            DisposalMethod::Any
-        } else {
             DisposalMethod::Background
+        } else {
+            DisposalMethod::Any
         };
         t += frame.delay;
         encoder
@@ -994,7 +994,7 @@ where
     if width > 0 && height > 0 {
         for (i, frame) in data.chunks_exact(width * height).enumerate() {
             let frame: Vec<u8> = frame.iter().map(|&x| (x.to_f64() * 255.0) as u8).collect();
-            let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, frame, Some(0));
+            let mut frame = Frame::from_indexed_pixels(width as u16, height as u16, frame, None);
             frame.delay = ((i + 1) as f64 * 100.0 / frame_rate).round() as u16 - t;
             t += frame.delay;
             encoder.write_frame(&frame).map_err(|e| e.to_string())?;

@@ -1727,9 +1727,18 @@ impl ImplPrimitive {
                 env.exec(f)?;
             }
             ImplPrimitive::FoldGif => {
-                let [f] = get_ops(ops, env)?;
-                let bytes = media::fold_to_gif(f, env)?;
-                env.push(bytes);
+                #[cfg(feature = "gif")]
+                {
+                    let [f] = get_ops(ops, env)?;
+                    let bytes = media::fold_to_gif(f, env)?;
+                    env.push(bytes);
+                }
+
+                #[cfg(not(feature = "gif"))]
+                return Err(env.error(
+                    "Attempted to fold to gif in unsupported environment. \
+                    This is a bug in the interpreter",
+                ));
             }
             prim => {
                 return Err(env.error(if prim.modifier_args().is_some() {

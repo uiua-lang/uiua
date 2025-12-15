@@ -105,18 +105,36 @@ impl ConstantValue {
                             e.insert(match big {
                                 BigConstant::Uiua386 => bytes.into_owned().into(),
                                 BigConstant::Elevation => {
-                                    media::image_bytes_to_array(&bytes, true, false)?.into()
+                                    #[cfg(feature = "image")]
+                                    {
+                                        media::image_bytes_to_array(&bytes, true, false)?.into()
+                                    }
+
+                                    #[cfg(not(feature = "image"))]
+                                    return Err(
+                                        "Working with images is not supported in this environment"
+                                            .into(),
+                                    );
                                 }
                                 BigConstant::BadAppleGif => {
-                                    let (_, mut val) = media::gif_bytes_to_value_gray(&bytes)
-                                        .map_err(|e| e.to_string())?;
-                                    let Value::Byte(_) = &mut val else {
-                                        return Err(
+                                    #[cfg(feature = "gif")]
+                                    {
+                                        let (_, mut val) = media::gif_bytes_to_value_gray(&bytes)
+                                            .map_err(|e| e.to_string())?;
+                                        let Value::Byte(_) = &mut val else {
+                                            return Err(
                                             "Bad Apple gif data is not properly rounded to 0 or 1"
                                                 .into(),
                                         );
-                                    };
-                                    val
+                                        };
+                                        val
+                                    }
+
+                                    #[cfg(not(feature = "gif"))]
+                                    return Err(
+                                        "Working with gifs is not supported in this environment"
+                                            .into(),
+                                    );
                                 }
                                 BigConstant::Amen => {
                                     let (samples, sr) =

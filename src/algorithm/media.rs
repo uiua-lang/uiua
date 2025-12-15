@@ -227,7 +227,8 @@ pub(crate) fn gif_encode(env: &mut Uiua) -> UiuaResult {
 pub(crate) fn gif_decode(env: &mut Uiua) -> UiuaResult {
     let bytes = env.pop(1)?;
     let bytes = bytes.as_bytes(env, "Gif bytes must be a byte array")?;
-    let (frame_rate, value) = crate::media::gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
+    let (frame_rate, value) =
+        crate::media::gif_bytes_to_value(env, &bytes).map_err(|e| env.error(e))?;
     env.push(value);
     env.push(frame_rate);
     Ok(())
@@ -1006,18 +1007,13 @@ where
 
 #[doc(hidden)]
 #[cfg(not(feature = "gif"))]
-pub fn gif_bytes_to_value(_bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
-    Err(env.error("GIF decoding is not supported in this environment"))
-}
-
-#[cfg(not(feature = "gif"))]
-pub(crate) fn gif_bytes_to_value(_bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
+pub fn gif_bytes_to_value(env: &Uiua, _bytes: &[u8]) -> UiuaResult<(f64, Value)> {
     Err(env.error("GIF decoding is not supported in this environment"))
 }
 
 #[doc(hidden)]
 #[cfg(feature = "gif")]
-pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
+pub fn gif_bytes_to_value(_env: &Uiua, bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
     gif_bytes_to_value_impl(bytes, gif::ColorOutput::RGBA)
 }
 

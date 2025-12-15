@@ -881,7 +881,7 @@ impl Value {
         Ok(compressed.into())
     }
     #[cfg(not(feature = "compress"))]
-    pub(crate) fn decompress(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
+    pub(crate) fn decompress(&self, env: &Uiua) -> UiuaResult<(Array<char>, Array<u8>)> {
         Err(env.error("Compression is not supported in this environment"))
     }
     #[cfg(feature = "compress")]

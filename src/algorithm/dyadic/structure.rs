@@ -1721,15 +1721,17 @@ impl<T: ArrayValue> Array<T> {
                     &fill.as_ref().unwrap().data,
                     (i - next) * fill_rep,
                 )
-            } else if i < next
-                && !(data[data.len() - cell_size..].iter())
+            } else if i < next {
+                if !(data[data.len() - cell_size..].iter())
                     .zip(&self.data[rise * cell_size..][..cell_size])
                     .all(|(a, b)| a.array_eq(b))
-            {
-                return Err(env.error(
-                    "Cannot invert pick with duplicate \
+                {
+                    return Err(env.error(
+                        "Cannot invert pick with duplicate \
                     indices but different values",
-                ));
+                    ));
+                }
+                continue;
             }
             data.extend_from_slice(&self.data[rise * cell_size..][..cell_size]);
             next = i + 1;

@@ -1,6 +1,62 @@
 use super::*;
 
 impl Compiler {
+    pub(super) fn import(
+        &mut self,
+        import: crate::ast::Import,
+        prev_com: Option<EcoString>,
+    ) -> UiuaResult {
+        // Import module
+        let module_path = self.import_module(&import.path.value, &import.path.span)?;
+        // Bind name
+        if let Some(name) = &import.name {
+            let imported = self.imports.get(&module_path).unwrap();
+            let global_index = self.next_global;
+            self.next_global += 1;
+            let local = LocalIndex {
+                index: global_index,
+                public: import.public,
+            };
+            self.asm.add_binding_at(
+                local,
+                BindingKind::Import(module_path.clone()),
+                Some(name.span.clone()),
+                BindingMeta {
+                    comment: prev_com
+                        .or_else(|| imported.comment.clone())
+                        .map(|text| DocComment::from(text.as_str())),
+                    ..Default::default()
+                },
+            );
+            self.scope.add_module_name(name.value.clone(), local);
+        }
+        // Bind items
+        for item in import.items() {
+            if let Some(local) =
+                (self.imports.get(&module_path)).and_then(|i| i.names.get_last(item.value.as_str()))
+            {
+                self.validate_local(&item.value, local, &item.span);
+                (self.code_meta.global_references).insert(item.span.clone(), local.index);
+                self.scope.names.insert(
+                    item.value.clone(),
+                    LocalIndex {
+                        index: local.index,
+                        public: true,
+                    },
+                );
+            } else {
+                self.add_error(
+                    item.span.clone(),
+                    format!(
+                        "`{}` not found in module {}",
+                        item.value,
+                        module_path.display()
+                    ),
+                );
+            }
+        }
+        Ok(())
+    }
     /// Import a module
     pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
         // Resolve path
@@ -98,6 +154,7 @@ impl Compiler {
 
                 let mut sub_comp = Compiler::with_backend(self.backend().clone());
                 sub_comp.current_imports = self.current_imports.clone();
+                sub_comp.mode = self.mode;
                 sub_comp.in_scope(ScopeKind::File(file_kind), |comp| {
                     comp.load_str_src(&input, &path).map(drop)
                 })?;
@@ -150,62 +207,6 @@ impl Compiler {
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
     }
-    pub(super) fn import(
-        &mut self,
-        import: crate::ast::Import,
-        prev_com: Option<EcoString>,
-    ) -> UiuaResult {
-        // Import module
-        let module_path = self.import_module(&import.path.value, &import.path.span)?;
-        // Bind name
-        if let Some(name) = &import.name {
-            let imported = self.imports.get(&module_path).unwrap();
-            let global_index = self.next_global;
-            self.next_global += 1;
-            let local = LocalIndex {
-                index: global_index,
-                public: import.public,
-            };
-            self.asm.add_binding_at(
-                local,
-                BindingKind::Import(module_path.clone()),
-                Some(name.span.clone()),
-                BindingMeta {
-                    comment: prev_com
-                        .or_else(|| imported.comment.clone())
-                        .map(|text| DocComment::from(text.as_str())),
-                    ..Default::default()
-                },
-            );
-            self.scope.add_module_name(name.value.clone(), local);
-        }
-        // Bind items
-        for item in import.items() {
-            if let Some(local) =
-                (self.imports.get(&module_path)).and_then(|i| i.names.get_last(item.value.as_str()))
-            {
-                self.validate_local(&item.value, local, &item.span);
-                (self.code_meta.global_references).insert(item.span.clone(), local.index);
-                self.scope.names.insert(
-                    item.value.clone(),
-                    LocalIndex {
-                        index: local.index,
-                        public: true,
-                    },
-                );
-            } else {
-                self.add_error(
-                    item.span.clone(),
-                    format!(
-                        "`{}` not found in module {}",
-                        item.value,
-                        module_path.display()
-                    ),
-                );
-            }
-        }
-        Ok(())
-    }
     fn import_assembly(&mut self, mut asm: Assembly) {
         fn offset_indices(
             node: &mut Node,
@@ -237,10 +238,12 @@ impl Compiler {
             offset_indices(node, span_offset, bind_offset, func_offset);
         }
 
+        self.next_global += asm.bindings.len();
         self.asm.root.extend(asm.root);
         self.asm.spans.extend(asm.spans);
         self.asm.functions.extend(asm.functions);
         self.asm.bindings.extend(asm.bindings);
         self.asm.inputs.files.extend(asm.inputs.files);
+        self.asm.test_assert_count += asm.test_assert_count;
     }
 }

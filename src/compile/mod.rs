@@ -1797,6 +1797,7 @@ impl Compiler {
         }
     }
     fn completions(&self, prefix: &str, names: &LocalNames, public_only: bool) -> Vec<Completion> {
+        // println!("prefix: {prefix:?}, names: {names:?}");
         let mut completions = Vec::new();
         for (name, local) in names.visible_iter() {
             if public_only && !local.public {

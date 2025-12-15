@@ -252,7 +252,7 @@ mod tests {
                 let code = std::fs::read_to_string(&path).unwrap();
                 // Test running
                 let mut env = Uiua::with_native_sys();
-                let mut comp = Compiler::new();
+                let mut comp = Compiler::with_backend(NativeSys);
                 if let Err(e) = comp
                     .load_str_src(&code, &path)
                     .and_then(|comp| env.run_asm(comp.asm.clone()))

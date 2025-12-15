@@ -1753,14 +1753,14 @@ impl Compiler {
         if prefer_module {
             only_modules.reverse();
         }
-        'outer: for only_modules in only_modules {
+        for only_modules in only_modules {
             let mut hit_stop = false;
             for scope in self.scopes() {
                 if matches!(scope.kind, ScopeKind::File(_))
                     || stop_at_binding && matches!(scope.kind, ScopeKind::Binding)
                 {
                     if hit_stop {
-                        break 'outer;
+                        break;
                     }
                     hit_stop = true;
                 }

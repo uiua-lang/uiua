@@ -61,14 +61,24 @@ impl Compiler {
                 })
                 .map_err(|e| self.error(span.clone(), e))?;
 
+            let mut hasher = DefaultHasher::default();
+            bytes.hash(&mut hasher);
+            let hash = hasher.finish();
             let cache_path = match file_kind {
-                FileScopeKind::Source => {
-                    let mut hasher = DefaultHasher::default();
-                    bytes.hash(&mut hasher);
-                    let hash = hasher.finish();
-                    Path::new("uiua_modules/cache").with_file_name(format!("{hash:08x}.uasm"))
+                FileScopeKind::Source => PathBuf::from(format!(
+                    "uiua-modules/cache/{}/{hash:016x}.uasm",
+                    path.with_extension("").display()
+                )),
+                FileScopeKind::Git => {
+                    let mut path = PathBuf::from("uiua-modules/cache");
+                    if let Some(author) = path.components().nth_back(2) {
+                        path = path.join(author);
+                    }
+                    if let Some(repo) = path.components().nth_back(1) {
+                        path = path.join(repo);
+                    }
+                    path.join(format!("{hash:016x}.uasm"))
                 }
-                FileScopeKind::Git => path.with_file_name("cache.uasm"),
             };
             let asm = if let Some(asm) = (self.backend().file_read_all(&cache_path).ok())
                 .and_then(|uasm| Assembly::from_uasm(&String::from_utf8_lossy(&uasm)).ok())

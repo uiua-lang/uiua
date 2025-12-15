@@ -414,6 +414,7 @@ fn main() {
                         fail(format!("Failed to update modules: {e}"))
                     }
                 }
+                ModuleCommand::Clean => _ = fs::remove_dir_all("uiua-modules/cache"),
             }
         }
         #[cfg(feature = "stand")]
@@ -956,6 +957,8 @@ enum ModuleCommand {
         #[clap(help = "The module to update")]
         module: Option<PathBuf>,
     },
+    #[clap(about = "Clean module cache")]
+    Clean,
 }
 
 #[derive(clap::Args)]

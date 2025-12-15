@@ -60,8 +60,6 @@ node!(
     },
     /// Set some values for an output comment
     SetOutputComment { i: usize, n: usize },
-    /// Validate that a value has a certain type
-    ValidateType { index: usize, type_num: u8, name: EcoString, span: usize },
     /// Call a Rust function
     Dynamic(func(DynamicFunction)),
     /// Push some values to the under stack
@@ -622,6 +620,7 @@ impl Node {
                 Box::new(args.iter().map(|sn| &sn.node))
             }
             Node::CustomInverse(cust, _) => Box::new(cust.nodes().map(|sn| &sn.node)),
+            Node::Switch { branches, .. } => Box::new(branches.iter().map(|sn| &sn.node)),
             _ => Box::new([].into_iter()),
         }
     }
@@ -638,6 +637,9 @@ impl Node {
             }
             Node::CustomInverse(cust, _) => {
                 Box::new(Arc::make_mut(cust).nodes_mut().map(|sn| &mut sn.node))
+            }
+            Node::Switch { branches, .. } => {
+                Box::new(branches.make_mut().iter_mut().map(|sn| &mut sn.node))
             }
             _ => Box::new([].into_iter()),
         }
@@ -789,9 +791,6 @@ impl fmt::Debug for Node {
                 count, unbox: true, ..
             } => write!(f, "<unpack (unbox) {count}>"),
             Node::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
-            Node::ValidateType { type_num, name, .. } => {
-                write!(f, "<validate {name} as {type_num}>")
-            }
             Node::Dynamic(func) => write!(f, "<dynamic function {}>", func.index),
             Node::PushUnder(count, _) => write!(f, "push-u-{count}"),
             Node::CopyToUnder(count, _) => write!(f, "copy-u-{count}"),

@@ -18,8 +18,8 @@ use serde::*;
 #[allow(unused_imports)]
 use crate::{Array, Uiua, UiuaResult, Value};
 #[cfg(feature = "gif")]
-use crate::{ArrayValue, RealArrayValue, SigNode};
-use crate::{Complex, OptionalArg, Shape, SysBackend};
+use crate::{ArrayValue, RealArrayValue};
+use crate::{Complex, OptionalArg, Shape, SigNode, SysBackend};
 
 use super::monadic::hsv_to_rgb;
 
@@ -850,6 +850,11 @@ fn dither(mut img: image::RgbaImage, width: u32, height: u32) -> (Vec<u8>, bool)
         }
     }
     (buffer, has_transparent)
+}
+
+#[cfg(not(feature = "gif"))]
+pub(crate) fn fold_to_gif(_f: SigNode, env: &mut Uiua) -> UiuaResult<Vec<u8>> {
+    Err(env.error("GIF encoding is not supported in this environment"))
 }
 
 #[cfg(feature = "gif")]

@@ -815,7 +815,7 @@ impl From<SemanticComment> for Token {
 }
 
 /// The kinds of semantic comments
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[allow(clippy::manual_non_exhaustive)]
 pub enum SemanticComment {
     /// Allow experimental features

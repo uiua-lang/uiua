@@ -121,7 +121,7 @@ impl Inputs {
 }
 
 /// Character counts for a binding
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BindingCounts {
     /// The number of characters
     pub char: usize,

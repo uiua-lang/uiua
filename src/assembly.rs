@@ -12,11 +12,11 @@ use dashmap::DashMap;
 use ecow::{EcoString, EcoVec, eco_vec};
 use indexmap::IndexMap;
 use serde::*;
-use uiua_parser::SUBSCRIPT_DIGITS;
 
 use crate::{
-    BindingCounts, CodeSpan, FunctionId, Ident, Inputs, Node, SigNode, Signature, Span, Uiua,
-    UiuaResult, Value,
+    BindingCounts, CodeSpan, FunctionId, Ident, Inputs, LocalNames, Node, SUBSCRIPT_DIGITS,
+    SigNode, Signature, Sp, Span, Uiua, UiuaResult, Value,
+    ast::Word,
     compile::{LocalIndex, Module},
     is_ident_char,
 };
@@ -26,10 +26,14 @@ use crate::{
 pub struct Assembly {
     /// The top-level node
     pub root: Node,
-    /// Functions
-    pub(crate) functions: EcoVec<Node>,
     /// A list of top-level names
     pub exports: Arc<IndexMap<Ident, usize>>,
+    /// Functions
+    pub(crate) functions: EcoVec<Node>,
+    /// Unexpanded index macros
+    pub(crate) index_macros: Arc<IndexMap<usize, IndexMacro>>,
+    /// Unexpanded code macros
+    pub(crate) code_macros: Arc<IndexMap<usize, CodeMacro>>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
     pub(crate) spans: EcoVec<Span>,
@@ -100,6 +104,27 @@ impl<'de> Deserialize<'de> for Function {
             hash,
         })
     }
+}
+
+/// An index macro
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct IndexMacro {
+    pub(crate) words: Vec<Sp<Word>>,
+    /// Map of spans of identifiers used in the macro that were in scope
+    /// when the macro was declared to their local indices. This is used
+    /// for name resolution. It is keyed by span rather than by name so
+    /// that names in both the declaration and invocation's scope can
+    /// be disambiguated.
+    pub(crate) locals: EcoVec<(CodeSpan, usize)>,
+    pub(crate) sig: Option<Signature>,
+    pub(crate) recursive: bool,
+}
+
+/// A code macro
+#[derive(Clone, Serialize, Deserialize)]
+pub(crate) struct CodeMacro {
+    pub(crate) root: SigNode,
+    pub(crate) names: Arc<LocalNames>,
 }
 
 impl Assembly {
@@ -175,7 +200,15 @@ impl Assembly {
         let (root_src, rest) = rest.split_once("EXPORTS").ok_or("No exports")?;
         let (exports_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
         let (bindings_src, rest) = rest.trim().split_once("FUNCTIONS").ok_or("No functions")?;
-        let (functions_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
+        let (functions_src, rest) = rest
+            .trim()
+            .split_once("INDEX MACROS")
+            .ok_or("No functions")?;
+        let (index_macros_src, rest) = rest
+            .trim()
+            .split_once("CODE MACROS")
+            .ok_or("No functions")?;
+        let (code_macros_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
         let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
         let (files_src, rest) = rest
             .trim()
@@ -232,6 +265,36 @@ impl Assembly {
             functions.push(func);
         }
 
+        let mut index_macros = IndexMap::new();
+        for line in index_macros_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+        {
+            let (first, rest) = line.split_once(' ').ok_or("invalid index macro line")?;
+            let i: usize = first
+                .parse()
+                .map_err(|_| format!("invalid index macro index {first:?}"))?;
+            let index_macro: IndexMacro =
+                serde_json::from_str(rest).map_err(|e| format!("invalid index macro #{i}: {e}"))?;
+            index_macros.insert(i, index_macro);
+        }
+        let index_macros = Arc::new(index_macros);
+
+        let mut code_macros = IndexMap::new();
+        for line in code_macros_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+        {
+            let (first, rest) = line.split_once(' ').ok_or("invalid code macro line")?;
+            let i: usize = first
+                .parse()
+                .map_err(|_| format!("invalid code macro code {first:?}"))?;
+            let code_macro: CodeMacro =
+                serde_json::from_str(rest).map_err(|e| format!("invalid code macro: {e}"))?;
+            code_macros.insert(i, code_macro);
+        }
+        let code_macros = Arc::new(code_macros);
+
         let mut spans = EcoVec::new();
         spans.push(Span::Builtin);
         for line in spans_src.lines().filter(|line| !line.trim().is_empty()) {
@@ -266,6 +329,8 @@ impl Assembly {
             exports,
             bindings,
             functions,
+            index_macros,
+            code_macros,
             spans,
             inputs: Inputs {
                 files,
@@ -310,6 +375,18 @@ impl Assembly {
         uasm.push_str("\nFUNCTIONS\n");
         for func in &self.functions {
             uasm.push_str(&serde_json::to_string(&func).unwrap());
+            uasm.push('\n');
+        }
+
+        uasm.push_str("\nINDEX MACROS\n");
+        for (i, mac) in &*self.index_macros {
+            uasm.push_str(&format!("{i} {}", serde_json::to_string(mac).unwrap()));
+            uasm.push('\n');
+        }
+
+        uasm.push_str("\nCODE MACROS\n");
+        for (i, mac) in &*self.code_macros {
+            uasm.push_str(&format!("{i} {}", serde_json::to_string(mac).unwrap()));
             uasm.push('\n');
         }
 
@@ -376,6 +453,8 @@ impl Default for Assembly {
             root: Node::default(),
             exports: Arc::new(IndexMap::new()),
             functions: EcoVec::new(),
+            index_macros: Arc::new(IndexMap::new()),
+            code_macros: Arc::new(IndexMap::new()),
             spans: eco_vec![Span::Builtin],
             bindings: EcoVec::new(),
             dynamic_functions: EcoVec::new(),

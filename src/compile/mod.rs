@@ -27,12 +27,12 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeSpan, CustomInverse,
-    Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA, ExactDoubleIterator,
-    Function, FunctionId, GitTarget, Ident, ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend,
-    Node, NumericSubscript, PrimClass, Primitive, Purity, RunMode, SUBSCRIPT_DIGITS,
-    SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript, SysBackend, Uiua, UiuaError,
-    UiuaErrorKind, UiuaResult, VERSION, Value,
+    Array, Assembly, BindingKind, BindingMeta, Boxed, CONSTANTS, CodeMacro, CodeSpan,
+    CustomInverse, Diagnostic, DiagnosticKind, DocComment, DocCommentSig, EXAMPLE_UA,
+    ExactDoubleIterator, Function, FunctionId, GitTarget, Ident, ImplPrimitive, IndexMacro,
+    InputSrc, IntoInputSrc, IntoSysBackend, Node, NumericSubscript, PrimClass, Primitive, Purity,
+    RunMode, SUBSCRIPT_DIGITS, SemanticComment, SigNode, Signature, Sp, Span, SubSide, Subscript,
+    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, VERSION, Value,
     algorithm::ga::{self, Spec},
     ast::*,
     check::nodes_sig,
@@ -66,10 +66,6 @@ pub struct Compiler {
     current_imports: EcoVec<PathBuf>,
     /// The bindings of imported files
     imports: HashMap<PathBuf, Module>,
-    /// Unexpanded index macros
-    index_macros: HashMap<usize, IndexMacro>,
-    /// Unexpanded code macros
-    code_macros: HashMap<usize, CodeMacro>,
     /// Indices of named external functions
     externals: HashMap<Ident, usize>,
     /// The depth of compile-time evaluation
@@ -112,8 +108,6 @@ impl Default for Compiler {
             mode: RunMode::All,
             current_imports: EcoVec::new(),
             imports: HashMap::new(),
-            index_macros: HashMap::new(),
-            code_macros: HashMap::new(),
             externals: HashMap::new(),
             comptime_depth: 0,
             in_try: false,
@@ -215,27 +209,6 @@ pub struct Module {
     data_func: bool,
     /// Whether the module uses experimental features
     experimental: bool,
-}
-
-/// An index macro
-#[derive(Clone)]
-struct IndexMacro {
-    words: Vec<Sp<Word>>,
-    /// Map of spans of identifiers used in the macro that were in scope
-    /// when the macro was declared to their local indices. This is used
-    /// for name resolution. It is keyed by span rather than by name so
-    /// that names in both the declaration and invocation's scope can
-    /// be disambiguated.
-    locals: HashMap<CodeSpan, usize>,
-    sig: Option<Signature>,
-    recursive: bool,
-}
-
-/// A code macro
-#[derive(Clone)]
-struct CodeMacro {
-    root: SigNode,
-    names: LocalNames,
 }
 
 impl AsRef<Assembly> for Compiler {
@@ -1157,6 +1130,8 @@ impl Compiler {
         self.check_depth(&word.span)?;
         Ok(match word.value {
             Word::Number(NumWord::Real(n), _) => Node::new_push(n),
+            Word::Number(NumWord::Infinity(false), _) => Node::new_push(f64::INFINITY),
+            Word::Number(NumWord::Infinity(true), _) => Node::new_push(f64::NEG_INFINITY),
             Word::Number(NumWord::Complex(c), _) => Node::new_push(c),
             Word::Number(NumWord::Err(s), _) => {
                 self.add_error(word.span.clone(), format!("Invalid number `{s}`"));
@@ -1656,8 +1631,11 @@ impl Compiler {
                 // name to disambiguate the macro declaration's locals from
                 // the current ones.
                 if let ScopeKind::Macro(Some(mac_local)) = &scope.kind {
-                    let mac = &self.index_macros[&mac_local.macro_index];
-                    if let Some(index) = mac.locals.get(span).copied() {
+                    let mac = &self.asm.index_macros[&mac_local.macro_index];
+                    if let Some(index) = (mac.locals.iter())
+                        .find(|(sp, _)| sp == span)
+                        .map(|(_, i)| *i)
+                    {
                         return Some(LocalIndex {
                             index,
                             public: true,

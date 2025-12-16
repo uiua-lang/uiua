@@ -126,19 +126,28 @@ impl Compiler {
                     path.with_extension("").display()
                 )),
                 FileScopeKind::Git => {
-                    let mut path = PathBuf::from("uiua-modules/cache");
+                    let mut p = PathBuf::from("uiua-modules/cache");
                     if let Some(author) = path.components().nth_back(2) {
-                        path = path.join(author);
+                        p = p.join(author);
                     }
                     if let Some(repo) = path.components().nth_back(1) {
-                        path = path.join(repo);
+                        p = p.join(repo);
                     }
-                    path.join(format!("{hash:016x}.uasm"))
+                    p.join(format!("{hash:016x}.uasm"))
                 }
             };
-            let asm = if let Some(asm) = (self.backend().file_read_all(&cache_path).ok())
-                .and_then(|uasm| Assembly::from_uasm(&String::from_utf8_lossy(&uasm)).ok())
-            {
+            let asm = if let Some(asm) =
+                (self.backend().file_read_all(&cache_path).ok()).and_then(|uasm| {
+                    Assembly::from_uasm(&String::from_utf8_lossy(&uasm))
+                        .inspect_err(|e| {
+                            self.emit_diagnostic(
+                                format!("Error loading cached assemebly: {e}"),
+                                DiagnosticKind::Warning,
+                                span.clone(),
+                            )
+                        })
+                        .ok()
+                }) {
                 asm
             } else {
                 let input: EcoString = String::from_utf8(bytes)
@@ -230,6 +239,7 @@ impl Compiler {
             node.sub_nodes_mut()
                 .for_each(|n| offset_indices(n, span_offset, bind_offset, func_offset));
         }
+        // Offset root and functions
         let span_offset = self.asm.spans.len();
         let func_offset = self.asm.functions.len();
         let bind_offset = self.asm.bindings.len();
@@ -237,7 +247,38 @@ impl Compiler {
         for node in asm.functions.make_mut() {
             offset_indices(node, span_offset, bind_offset, func_offset);
         }
-
+        // Offset bindings
+        for binfo in asm.bindings.make_mut() {
+            match &mut binfo.kind {
+                BindingKind::Func(f) => f.index += func_offset,
+                BindingKind::Module(module) => (module.names.0.values_mut().flatten())
+                    .for_each(|local| local.index += bind_offset),
+                BindingKind::CodeMacro(node) => {
+                    offset_indices(node, span_offset, bind_offset, func_offset)
+                }
+                _ => {}
+            }
+        }
+        // Offset and append index macros
+        Arc::make_mut(&mut self.asm.index_macros).extend(
+            (Arc::unwrap_or_clone(asm.index_macros).into_iter()).map(|(i, mut mac)| {
+                for (_, index) in mac.locals.make_mut() {
+                    *index += bind_offset
+                }
+                (i + bind_offset, mac)
+            }),
+        );
+        // Offset and append code macros
+        Arc::make_mut(&mut self.asm.code_macros).extend(
+            (Arc::unwrap_or_clone(asm.code_macros).into_iter()).map(|(i, mut mac)| {
+                offset_indices(&mut mac.root.node, span_offset, bind_offset, func_offset);
+                for local in &mut Arc::make_mut(&mut mac.names).0.values_mut().flatten() {
+                    local.index += bind_offset;
+                }
+                (i + bind_offset, mac)
+            }),
+        );
+        // Append everything else
         self.next_global += asm.bindings.len();
         self.asm.root.extend(asm.root);
         self.asm.spans.extend(asm.spans);

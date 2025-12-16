@@ -104,7 +104,7 @@ impl SmartOutput {
         Self::Normal(value.show())
     }
     #[cfg(not(feature = "gif"))]
-    fn try_gif(value: &Value, frame_rate: f64) -> Option<Self> {
+    fn try_gif(_value: &Value, _frame_rate: f64) -> Option<Self> {
         None
     }
     #[cfg(feature = "gif")]
@@ -127,7 +127,7 @@ impl SmartOutput {
         }
     }
     #[cfg(not(feature = "apng"))]
-    fn try_apng(value: &Value, frame_rate: f64) -> Option<Self> {
+    fn try_apng(_value: &Value, _frame_rate: f64) -> Option<Self> {
         None
     }
     #[cfg(feature = "apng")]
@@ -227,8 +227,7 @@ pub(crate) fn gif_encode(env: &mut Uiua) -> UiuaResult {
 pub(crate) fn gif_decode(env: &mut Uiua) -> UiuaResult {
     let bytes = env.pop(1)?;
     let bytes = bytes.as_bytes(env, "Gif bytes must be a byte array")?;
-    let (frame_rate, value) =
-        crate::media::gif_bytes_to_value(env, &bytes).map_err(|e| env.error(e))?;
+    let (frame_rate, value) = crate::media::gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
     env.push(value);
     env.push(frame_rate);
     Ok(())
@@ -345,6 +344,16 @@ pub fn rgba_image_to_array(image: image::RgbaImage) -> Array<f64> {
             .map(|b| b as f64 / 255.0)
             .collect::<crate::cowslice::CowSlice<_>>(),
     )
+}
+
+#[doc(hidden)]
+#[cfg(not(feature = "image"))]
+pub fn image_bytes_to_array(
+    _bytes: &[u8],
+    _gray: bool,
+    _alpha: bool,
+) -> Result<Array<f64>, String> {
+    Err("Decoding images is not supported in this environment".into())
 }
 
 #[doc(hidden)]
@@ -627,7 +636,7 @@ pub fn stereo_to_wave_bytes<T: hound::Sample + Copy>(
 
 #[cfg(not(feature = "audio_encode"))]
 #[doc(hidden)]
-pub fn array_from_wav_bytes(bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
+pub fn array_from_wav_bytes(_bytes: &[u8]) -> Result<(Array<f64>, u32), String> {
     Err("Audio decoding is not supported in this environment".into())
 }
 
@@ -1007,19 +1016,24 @@ where
 
 #[doc(hidden)]
 #[cfg(not(feature = "gif"))]
-pub fn gif_bytes_to_value(env: &Uiua, _bytes: &[u8]) -> UiuaResult<(f64, Value)> {
-    Err(env.error("GIF decoding is not supported in this environment"))
+pub fn gif_bytes_to_value(_bytes: &[u8]) -> Result<(f64, Value), String> {
+    Err("GIF decoding is not supported in this environment".into())
 }
 
 #[doc(hidden)]
 #[cfg(feature = "gif")]
-pub fn gif_bytes_to_value(_env: &Uiua, bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
-    gif_bytes_to_value_impl(bytes, gif::ColorOutput::RGBA)
+pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), String> {
+    gif_bytes_to_value_impl(bytes, gif::ColorOutput::RGBA).map_err(|e| e.to_string())
+}
+
+#[cfg(not(feature = "gif"))]
+pub(crate) fn gif_bytes_to_value_gray(_bytes: &[u8]) -> Result<(f64, Value), String> {
+    Err("GIF decoding is not supported in this environment".into())
 }
 
 #[cfg(feature = "gif")]
-pub(crate) fn gif_bytes_to_value_gray(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
-    gif_bytes_to_value_impl(bytes, gif::ColorOutput::Indexed)
+pub(crate) fn gif_bytes_to_value_gray(bytes: &[u8]) -> Result<(f64, Value), String> {
+    gif_bytes_to_value_impl(bytes, gif::ColorOutput::Indexed).map_err(|e| e.to_string())
 }
 
 #[doc(hidden)]

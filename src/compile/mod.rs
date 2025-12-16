@@ -64,8 +64,6 @@ pub struct Compiler {
     mode: RunMode,
     /// The paths of files currently being imported (used to detect import cycles)
     current_imports: EcoVec<PathBuf>,
-    /// The bindings of imported files
-    imports: HashMap<PathBuf, Module>,
     /// Indices of named external functions
     externals: HashMap<Ident, usize>,
     /// The depth of compile-time evaluation
@@ -107,7 +105,6 @@ impl Default for Compiler {
             higher_scopes: Vec::new(),
             mode: RunMode::All,
             current_imports: EcoVec::new(),
-            imports: HashMap::new(),
             externals: HashMap::new(),
             comptime_depth: 0,
             in_try: false,
@@ -201,13 +198,19 @@ impl Extend<(Ident, LocalIndex)> for LocalNames {
 /// A Uiua module
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Module {
+    /// The path this module was imported from
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<PathBuf>,
     /// The top level comment
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub comment: Option<EcoString>,
     /// Map module-local names to global indices
     pub names: LocalNames,
-    /// Whether the mode is a data function
+    /// Whether the module is a data function
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     data_func: bool,
     /// Whether the module uses experimental features
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     experimental: bool,
 }
 
@@ -467,6 +470,7 @@ impl Compiler {
 
         let res = res?;
         let module = Module {
+            path: None,
             comment: scope.comment,
             names: scope.names,
             data_func: scope.is_data_func,
@@ -1195,7 +1199,6 @@ impl Compiler {
                     }
                     let index = locals.last().unwrap().index;
                     let names = match &self.asm.bindings[index].kind {
-                        BindingKind::Import(path) => &self.imports[path].names,
                         BindingKind::Module(module) => &module.names,
                         _ => break 'blk Node::empty(),
                     };
@@ -1647,7 +1650,7 @@ impl Compiler {
         // Attempt to look up the identifier as a non-macro
         let as_non_macro =
             self.find_name_impl(name.strip_suffix('!')?, span, true, stop_at_binding)?;
-        if let BindingKind::Module(_) | BindingKind::Scope(_) | BindingKind::Import(_) =
+        if let BindingKind::Module(_) | BindingKind::Scope(_) =
             self.asm.bindings[as_non_macro.index].kind
         {
             // Only allow it if it is a module
@@ -1675,7 +1678,6 @@ impl Compiler {
         path_locals.push(module_local);
         let bkind = &self.asm.bindings[module_local.index].kind;
         let mut names = match bkind {
-            BindingKind::Import(path) => &self.imports[path].names,
             BindingKind::Module(module) => &module.names,
             BindingKind::Scope(i) => &self.higher_scopes.get(*i).unwrap_or(&self.scope).names,
             BindingKind::Func(_) => {
@@ -1716,7 +1718,6 @@ impl Compiler {
             path_locals.push(submod_local);
             let global = &self.asm.bindings[submod_local.index].kind;
             names = match global {
-                BindingKind::Import(path) => &self.imports[path].names,
                 BindingKind::Module(module) => &module.names,
                 BindingKind::Scope(i) => &self.higher_scopes.get(*i).unwrap_or(&self.scope).names,
                 BindingKind::Func(_) => {
@@ -1790,7 +1791,6 @@ impl Compiler {
             }
             let subnames = match &self.asm.bindings[local.index].kind {
                 BindingKind::Module(m) => &m.names,
-                BindingKind::Import(path) => &self.imports[path].names,
                 _ => continue,
             };
             let subcompletions = self.completions(prefix, subnames, true);
@@ -1877,22 +1877,6 @@ impl Compiler {
             BindingKind::Const(Some(val)) => Node::new_push(val),
             BindingKind::Const(None) => Node::CallGlobal(index, Signature::new(0, 1)),
             BindingKind::Func(f) => Node::Call(f, self.add_span(span.clone())),
-            BindingKind::Import(path) => {
-                if let Some(local) = (self.imports.get(&path))
-                    .and_then(|m| m.names.get_prefer_function("Call", &self.asm))
-                {
-                    self.code_meta.global_references.remove(&span);
-                    (self.code_meta.global_references).insert(span.clone(), local.index);
-                    self.global_index(local.index, span)
-                } else {
-                    self.add_error(
-                        span,
-                        "Module cannot be called here as \
-                        it has no `Call` function.",
-                    );
-                    Node::empty()
-                }
-            }
             global @ (BindingKind::Module(_) | BindingKind::Scope(_)) => {
                 // Handle called modules
                 let names = match &global {

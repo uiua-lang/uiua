@@ -7,34 +7,10 @@ impl Compiler {
         prev_com: Option<EcoString>,
     ) -> UiuaResult {
         // Import module
-        let module_path = self.import_module(&import.path.value, &import.path.span)?;
-        // Bind name
-        if let Some(name) = &import.name {
-            let imported = self.imports.get(&module_path).unwrap();
-            let global_index = self.next_global;
-            self.next_global += 1;
-            let local = LocalIndex {
-                index: global_index,
-                public: import.public,
-            };
-            self.asm.add_binding_at(
-                local,
-                BindingKind::Import(module_path.clone()),
-                Some(name.span.clone()),
-                BindingMeta {
-                    comment: prev_com
-                        .or_else(|| imported.comment.clone())
-                        .map(|text| DocComment::from(text.as_str())),
-                    ..Default::default()
-                },
-            );
-            self.scope.add_module_name(name.value.clone(), local);
-        }
+        let module = self.import_module(&import.path.value, &import.path.span)?;
         // Bind items
         for item in import.items() {
-            if let Some(local) =
-                (self.imports.get(&module_path)).and_then(|i| i.names.get_last(item.value.as_str()))
-            {
+            if let Some(local) = module.names.get_last(item.value.as_str()) {
                 self.validate_local(&item.value, local, &item.span);
                 (self.code_meta.global_references).insert(item.span.clone(), local.index);
                 self.scope.names.insert(
@@ -47,18 +23,36 @@ impl Compiler {
             } else {
                 self.add_error(
                     item.span.clone(),
-                    format!(
-                        "`{}` not found in module {}",
-                        item.value,
-                        module_path.display()
-                    ),
+                    format!("`{}` not found in module", item.value),
                 );
             }
+        }
+        // Bind name
+        if let Some(name) = &import.name {
+            let global_index = self.next_global;
+            self.next_global += 1;
+            let local = LocalIndex {
+                index: global_index,
+                public: import.public,
+            };
+            let meta = BindingMeta {
+                comment: prev_com
+                    .or_else(|| module.comment.clone())
+                    .map(|text| DocComment::from(text.as_str())),
+                ..Default::default()
+            };
+            self.asm.add_binding_at(
+                local,
+                BindingKind::Module(module),
+                Some(name.span.clone()),
+                meta,
+            );
+            self.scope.add_module_name(name.value.clone(), local);
         }
         Ok(())
     }
     /// Import a module
-    pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
+    pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<Module> {
         // Resolve path
         let (path, file_kind) = if let Some(url) =
             (path_str.trim().strip_prefix("git:").map(Into::into)).or_else(|| {
@@ -104,7 +98,15 @@ impl Compiler {
                 .insert(span.clone(), ImportSrc::File(path.clone()));
             (path, FileScopeKind::Source)
         };
-        if !self.imports.contains_key(&path) {
+        // println!("Import path: {}", path.display());
+        let module = if let Some(module) = (self.asm.bindings.iter())
+            .filter_map(|binfo| binfo.kind.as_module())
+            .find(|m| m.path.as_ref().is_some_and(|p| p == &path))
+        {
+            // println!("  {} already imported", path.display());
+            module.clone()
+        } else {
+            // println!("  {} not yet imported", path.display());
             let bytes = self
                 .backend()
                 .file_read_all(&path)
@@ -136,6 +138,7 @@ impl Compiler {
                     p.join(format!("{hash:016x}.uasm"))
                 }
             };
+            // println!("  Cache path: {}", cache_path.display());
             let asm = if let Some(asm) =
                 (self.backend().file_read_all(&cache_path).ok()).and_then(|uasm| {
                     Assembly::from_uasm(&String::from_utf8_lossy(&uasm))
@@ -148,8 +151,10 @@ impl Compiler {
                         })
                         .ok()
                 }) {
+                // println!("  Cache Hit!");
                 asm
             } else {
+                // println!("  Cache Miss!");
                 let input: EcoString = String::from_utf8(bytes)
                     .map_err(|e| self.error(span.clone(), format!("Failed to read file: {e}")))?
                     .into();
@@ -185,9 +190,8 @@ impl Compiler {
                 local.index += self.asm.bindings.len();
             }
             self.import_assembly(asm);
-            self.imports.insert(path.clone(), module);
-        }
-        let module = self.imports.get(&path).unwrap();
+            module
+        };
         if module.experimental {
             self.experimental_error(span, || {
                 format!(
@@ -196,7 +200,10 @@ impl Compiler {
                 )
             });
         }
-        Ok(path)
+        Ok(Module {
+            path: Some(path),
+            ..module
+        })
     }
     /// Resolve a declared import path relative to the path of the file that is being executed
     pub(crate) fn resolve_import_path(&self, path: &Path) -> PathBuf {

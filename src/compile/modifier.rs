@@ -1749,10 +1749,6 @@ impl Compiler {
         } else if let Some((names, data_func)) =
             (self.asm.bindings.get(local.index)).and_then(|binfo| match &binfo.kind {
                 BindingKind::Module(m) => Some((m.names.clone(), m.data_func)),
-                BindingKind::Import(path) => {
-                    let m = self.imports.get(path)?;
-                    Some((m.names.clone(), m.data_func))
-                }
                 BindingKind::Scope(i) => {
                     let scope = self.higher_scopes.get(*i).unwrap_or(&self.scope);
                     Some((scope.names.clone(), scope.is_data_func))

@@ -507,9 +507,7 @@ pub enum BindingKind {
     Const(Option<Value>),
     /// A function
     Func(Function),
-    /// An imported module
-    Import(PathBuf),
-    /// A scoped module
+    /// A module
     Module(Module),
     /// A scope being compiled
     Scope(usize),
@@ -529,7 +527,6 @@ impl BindingKind {
         match self {
             Self::Const(_) => Some(Signature::new(0, 1)),
             Self::Func(func) => Some(func.sig),
-            Self::Import { .. } => None,
             Self::Module(_) => None,
             Self::Scope(_) => None,
             Self::IndexMacro(_) => None,
@@ -543,7 +540,14 @@ impl BindingKind {
     }
     /// Check if the binding is a module
     pub fn is_module(&self) -> bool {
-        matches!(self, Self::Import(_) | Self::Module(_))
+        self.as_module().is_some()
+    }
+    /// Get the binding as a module
+    pub fn as_module(&self) -> Option<&Module> {
+        match self {
+            BindingKind::Module(m) => Some(m),
+            _ => None,
+        }
     }
     /// Check if the binding is a constant or function
     pub fn has_sig(&self) -> bool {

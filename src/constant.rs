@@ -108,8 +108,7 @@ impl ConstantValue {
                                     media::image_bytes_to_array(&bytes, true, false)?.into()
                                 }
                                 BigConstant::BadAppleGif => {
-                                    let (_, mut val) = media::gif_bytes_to_value_gray(&bytes)
-                                        .map_err(|e| e.to_string())?;
+                                    let (_, mut val) = media::gif_bytes_to_value_gray(&bytes)?;
                                     let Value::Byte(_) = &mut val else {
                                         return Err(
                                             "Bad Apple gif data is not properly rounded to 0 or 1"

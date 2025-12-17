@@ -86,12 +86,8 @@ impl Compiler {
             if !(url.starts_with("https://") || url.starts_with("http://")) {
                 url = format!("https://{url}");
             }
-            self.code_meta
-                .import_srcs
-                .insert(span.clone(), ImportSrc::Git(url.clone()));
-            let path = self
-                .backend()
-                .load_git_module(&url, target)
+            (self.code_meta.import_srcs).insert(span.clone(), ImportSrc::Git(url.clone()));
+            let path = (self.backend().load_git_module(&url, target))
                 .map_err(|e| self.error(span.clone(), e))?;
             (path, FileScopeKind::Git)
         } else {
@@ -111,9 +107,7 @@ impl Compiler {
             module.clone()
         } else {
             // println!("  {} not yet imported", path.display());
-            let bytes = self
-                .backend()
-                .file_read_all(&path)
+            let bytes = (self.backend().file_read_all(&path))
                 .or_else(|e| {
                     if path.ends_with(Path::new("example.ua")) {
                         Ok(EXAMPLE_UA.as_bytes().to_vec())
@@ -123,37 +117,47 @@ impl Compiler {
                 })
                 .map_err(|e| self.error(span.clone(), e))?;
 
+            // Hash file and determine cache path
             let mut hasher = DefaultHasher::default();
             bytes.hash(&mut hasher);
-            let hash = hasher.finish();
-            let cache_path = match file_kind {
+            let ua_hash = hasher.finish();
+            let cache_subpath = match file_kind {
                 FileScopeKind::Source => PathBuf::from(format!(
-                    "uiua-modules/cache/{}/{hash:016x}.uasm",
+                    "{}/{ua_hash:016x}.uasm",
                     path.with_extension("").display()
                 )),
                 FileScopeKind::Git => {
-                    let mut p = PathBuf::from("uiua-modules/cache");
+                    let mut p = PathBuf::new();
                     if let Some(author) = path.components().nth_back(2) {
                         p = p.join(author);
                     }
                     if let Some(repo) = path.components().nth_back(1) {
                         p = p.join(repo);
                     }
-                    p.join(format!("{hash:016x}.uasm"))
+                    p.join(format!("{ua_hash:016x}.uasm"))
                 }
             };
+            let cache_dir = PathBuf::from("uiua-modules/cache");
+            let cache_path = cache_dir.join(&cache_subpath);
             // println!("  Cache path: {}", cache_path.display());
-            let asm = if let Some(asm) =
-                (self.backend().file_read_all(&cache_path).ok()).and_then(|uasm| {
-                    Assembly::from_uasm(&String::from_utf8_lossy(&uasm))
-                        .inspect_err(|e| {
-                            self.emit_diagnostic(
-                                format!("Error loading cached assemebly: {e}"),
-                                DiagnosticKind::Warning,
-                                span.clone(),
-                            )
-                        })
-                        .ok()
+            let asm = if let Ok(uasm) = self.backend().file_read_all(&cache_path)
+                && let Ok(asm) =
+                    Assembly::from_uasm(&String::from_utf8_lossy(&uasm)).inspect_err(|e| {
+                        self.emit_diagnostic(
+                            format!("Error loading cached assemebly: {e}"),
+                            DiagnosticKind::Warning,
+                            span.clone(),
+                        )
+                    })
+                && asm.dependencies.iter().all(|(path, hash)| {
+                    let Ok(bytes) = self.backend().file_read_all(path) else {
+                        return false;
+                    };
+                    let mut hasher = DefaultHasher::default();
+                    bytes.hash(&mut hasher);
+                    let curr_hash = hasher.finish();
+                    // println!("    {} same: {}", path.display(), curr_hash == *hash);
+                    curr_hash == *hash
                 }) {
                 // println!("  Cache Hit!");
                 asm
@@ -194,6 +198,7 @@ impl Compiler {
                 local.index += self.asm.bindings.len();
             }
             self.import_assembly(asm);
+            (self.asm.dependencies).push((path.clone(), ua_hash));
             module
         };
         if module.experimental {
@@ -296,6 +301,7 @@ impl Compiler {
         self.asm.functions.extend(asm.functions);
         self.asm.bindings.extend(asm.bindings);
         self.asm.inputs.files.extend(asm.inputs.files);
+        self.asm.dependencies.extend(asm.dependencies);
         self.asm.test_assert_count += asm.test_assert_count;
     }
 }

@@ -26,6 +26,8 @@ use crate::{
 pub struct Assembly {
     /// The top-level node
     pub root: Node,
+    /// A list of dependency paths and their hashes
+    pub dependencies: EcoVec<(PathBuf, u64)>,
     /// A list of top-level names
     pub exports: Arc<IndexMap<Ident, usize>>,
     /// Functions
@@ -197,17 +199,16 @@ impl Assembly {
     /// Parse a `.uasm` file into an assembly
     pub fn from_uasm(src: &str) -> Result<Self, String> {
         let rest = src;
-        let (root_src, rest) = rest.split_once("EXPORTS").ok_or("No exports")?;
+        let (root_src, rest) = rest.split_once("DEPENDENCIES").ok_or("No dependencies")?;
+        let (dependencies_src, rest) = rest.split_once("EXPORTS").ok_or("No exports")?;
         let (exports_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
         let (bindings_src, rest) = rest.trim().split_once("FUNCTIONS").ok_or("No functions")?;
-        let (functions_src, rest) = rest
-            .trim()
+        let (functions_src, rest) = (rest.trim())
             .split_once("INDEX MACROS")
-            .ok_or("No functions")?;
-        let (index_macros_src, rest) = rest
-            .trim()
+            .ok_or("No index macros")?;
+        let (index_macros_src, rest) = (rest.trim())
             .split_once("CODE MACROS")
-            .ok_or("No functions")?;
+            .ok_or("No code macros")?;
         let (code_macros_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
         let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
         let (files_src, rest) = rest
@@ -221,6 +222,19 @@ impl Assembly {
         for line in root_src.lines().filter(|line| !line.trim().is_empty()) {
             let node: Node = serde_json::from_str(line).unwrap();
             root.push(node);
+        }
+
+        // Dependencies
+        let mut dependencies = EcoVec::new();
+        for line in dependencies_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+        {
+            let (path, hash) = line.rsplit_once(' ').ok_or("Missing dependency hash")?;
+            dependencies.push((
+                PathBuf::from(path),
+                hash.parse::<u64>().map_err(|_| "Invalid dependency hash")?,
+            ));
         }
 
         // Exports
@@ -370,6 +384,7 @@ impl Assembly {
 
         Ok(Self {
             root,
+            dependencies,
             exports,
             bindings,
             functions,
@@ -392,6 +407,11 @@ impl Assembly {
         for node in self.root.iter() {
             uasm.push_str(&serde_json::to_string(node).unwrap());
             uasm.push('\n');
+        }
+
+        uasm.push_str("\nDEPENDENCIES\n");
+        for (path, hash) in &self.dependencies {
+            uasm.push_str(&format!("{} {hash}\n", path.display()));
         }
 
         uasm.push_str("\nEXPORTS\n");
@@ -515,6 +535,7 @@ impl Default for Assembly {
     fn default() -> Self {
         Self {
             root: Node::default(),
+            dependencies: EcoVec::new(),
             exports: Arc::new(IndexMap::new()),
             functions: EcoVec::new(),
             index_macros: Arc::new(IndexMap::new()),

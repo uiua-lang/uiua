@@ -28,7 +28,7 @@ impl Compiler {
             }
         }
         // Bind name
-        if let Some(name) = &import.name {
+        if let Some(name) = import.name {
             let global_index = self.next_global;
             self.next_global += 1;
             let local = LocalIndex {
@@ -47,6 +47,7 @@ impl Compiler {
                 Some(name.span.clone()),
                 meta,
             );
+            self.add_span(name.span);
             self.scope.add_module_name(name.value.clone(), local);
         }
         Ok(())

@@ -183,6 +183,13 @@ impl Span {
             Span::Builtin => None,
         }
     }
+    /// Get the code span, if any
+    pub fn code_ref(&self) -> Option<&CodeSpan> {
+        match self {
+            Span::Code(span) => Some(span),
+            Span::Builtin => None,
+        }
+    }
 }
 
 /// The source of code input into the interpreter

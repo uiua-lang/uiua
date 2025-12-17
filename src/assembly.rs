@@ -251,6 +251,40 @@ impl Assembly {
         }
         let exports = Arc::new(exports);
 
+        // Files
+        let files = DashMap::new();
+        let mut file_paths = Vec::new();
+        for line in files_src.lines().filter(|line| !line.trim().is_empty()) {
+            let (path, src) = line.split_once(": ").ok_or("No path")?;
+            file_paths.push(path);
+            let path = PathBuf::from(path);
+            let src: EcoString = serde_json::from_str(src).map_err(|e| e.to_string())?;
+            files.insert(path, src);
+        }
+
+        // Spans
+        let mut spans = EcoVec::new();
+        spans.push(Span::Builtin);
+        for line in spans_src.lines() {
+            if line.trim().is_empty() {
+                spans.push(Span::Builtin);
+            } else {
+                let (src_start, end) = line.trim().rsplit_once(' ').ok_or("invalid span")?;
+                let (src, start) = src_start.split_once(' ').ok_or("invalid span")?;
+                let src = if let Some(i) = src
+                    .strip_prefix("file")
+                    .and_then(|s| s.parse::<usize>().ok())
+                {
+                    InputSrc::File(PathBuf::from(&file_paths[i]).into())
+                } else {
+                    serde_json::from_str(src).map_err(|e| e.to_string())?
+                };
+                let start = serde_json::from_str(start).map_err(|e| e.to_string())?;
+                let end = serde_json::from_str(end).map_err(|e| e.to_string())?;
+                spans.push(Span::Code(CodeSpan { src, start, end }));
+            }
+        }
+
         // Bindings
         let mut bindings = EcoVec::new();
         let mut lines = bindings_src
@@ -268,6 +302,7 @@ impl Assembly {
             } else {
                 (false, line)
             };
+            let (line, span) = line.rsplit_once(' ').ok_or("Missing binding span")?;
             let kind: BindingKind = serde_json::from_str(line).or_else(|e| {
                 if let Some((key, val)) = line.split_once(' ') {
                     let json = format!("{{{key:?}: {val}}}");
@@ -276,6 +311,11 @@ impl Assembly {
                     Err("No key".into())
                 }
             })?;
+            let span: usize = span.parse().map_err(|_| "Invalid binding span")?;
+            let span = (spans.get(span + 1).cloned())
+                .unwrap_or_else(|| panic!("Invalid span for binding {kind:?}"))
+                .code()
+                .unwrap_or_else(CodeSpan::dummy);
             let comment = (lines.peek())
                 .and_then(|line| line.strip_prefix("  comment: "))
                 .and_then(|s| {
@@ -291,7 +331,7 @@ impl Assembly {
             bindings.push(BindingInfo {
                 kind,
                 public,
-                span: CodeSpan::dummy(),
+                span,
                 meta: BindingMeta {
                     comment,
                     deprecation,
@@ -341,40 +381,6 @@ impl Assembly {
         }
         let code_macros = Arc::new(code_macros);
 
-        // Files
-        let files = DashMap::new();
-        let mut file_paths = Vec::new();
-        for line in files_src.lines().filter(|line| !line.trim().is_empty()) {
-            let (path, src) = line.split_once(": ").ok_or("No path")?;
-            file_paths.push(path);
-            let path = PathBuf::from(path);
-            let src: EcoString = serde_json::from_str(src).map_err(|e| e.to_string())?;
-            files.insert(path, src);
-        }
-
-        // Spans
-        let mut spans = EcoVec::new();
-        spans.push(Span::Builtin);
-        for line in spans_src.lines().filter(|line| !line.trim().is_empty()) {
-            if line.trim().is_empty() {
-                spans.push(Span::Builtin);
-            } else {
-                let (src_start, end) = line.trim().rsplit_once(' ').ok_or("invalid span")?;
-                let (src, start) = src_start.split_once(' ').ok_or("invalid span")?;
-                let src = if let Some(i) = src
-                    .strip_prefix("file")
-                    .and_then(|s| s.parse::<usize>().ok())
-                {
-                    InputSrc::File(PathBuf::from(&file_paths[i]).into())
-                } else {
-                    serde_json::from_str(src).map_err(|e| e.to_string())?
-                };
-                let start = serde_json::from_str(start).map_err(|e| e.to_string())?;
-                let end = serde_json::from_str(end).map_err(|e| e.to_string())?;
-                spans.push(Span::Code(CodeSpan { src, start, end }));
-            }
-        }
-
         // Strings
         let mut strings = EcoVec::new();
         for line in strings_src.lines() {
@@ -420,6 +426,9 @@ impl Assembly {
         }
 
         uasm.push_str("\nBINDINGS\n");
+        let span_indices: HashMap<&CodeSpan, usize> = (self.spans.iter().skip(1).enumerate())
+            .filter_map(|(i, span)| span.code_ref().map(|s| (s, i)))
+            .collect();
         for binding in &self.bindings {
             if !binding.public {
                 uasm.push_str("private ");
@@ -436,6 +445,12 @@ impl Assembly {
             } else {
                 uasm.push_str(&serde_json::to_string(&binding.kind).unwrap());
             }
+            uasm.push(' ');
+            uasm.push_str(
+                &(span_indices.get(&binding.span).copied())
+                    .unwrap_or(0)
+                    .to_string(),
+            );
             uasm.push('\n');
             if let Some(com) = &binding.meta.comment {
                 uasm.push_str("  comment: ");

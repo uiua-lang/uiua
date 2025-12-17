@@ -236,11 +236,20 @@ impl Assembly {
         let exports = Arc::new(exports);
 
         let mut bindings = EcoVec::new();
-        for line in bindings_src.lines().filter(|line| !line.trim().is_empty()) {
+        let mut lines = bindings_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .peekable();
+        while let Some(line) = lines.next() {
             let (public, line) = if let Some(line) = line.strip_prefix("private ") {
                 (false, line)
             } else {
                 (true, line)
+            };
+            let (external, line) = if let Some(line) = line.strip_prefix("external ") {
+                (true, line)
+            } else {
+                (false, line)
             };
             let kind: BindingKind = serde_json::from_str(line).or_else(|e| {
                 if let Some((key, val)) = line.split_once(' ') {
@@ -250,11 +259,28 @@ impl Assembly {
                     Err("No key".into())
                 }
             })?;
+            let comment = (lines.peek())
+                .and_then(|line| line.strip_prefix("  comment: "))
+                .and_then(|s| {
+                    lines.next();
+                    serde_json::from_str::<DocComment>(s).ok()
+                });
+            let deprecation = (lines.peek())
+                .and_then(|line| line.strip_prefix("  deprecation: "))
+                .and_then(|s| {
+                    lines.next();
+                    serde_json::from_str::<EcoString>(s).ok()
+                });
             bindings.push(BindingInfo {
                 kind,
                 public,
                 span: CodeSpan::dummy(),
-                meta: BindingMeta::default(),
+                meta: BindingMeta {
+                    comment,
+                    deprecation,
+                    external,
+                    ..Default::default()
+                },
                 used: true,
             });
         }
@@ -360,16 +386,29 @@ impl Assembly {
             if !binding.public {
                 uasm.push_str("private ");
             }
-            if let serde_json::Value::Object(map) = serde_json::to_value(&binding.kind).unwrap() {
-                if map.len() == 1 {
-                    let key = map.keys().next().unwrap();
-                    let value = map.values().next().unwrap();
-                    uasm.push_str(&format!("{key} {value}\n"));
-                    continue;
-                }
+            if binding.meta.external {
+                uasm.push_str("external ");
             }
-            uasm.push_str(&serde_json::to_string(&binding.kind).unwrap());
+            if let serde_json::Value::Object(map) = serde_json::to_value(&binding.kind).unwrap()
+                && map.len() == 1
+            {
+                let key = map.keys().next().unwrap();
+                let value = map.values().next().unwrap();
+                uasm.push_str(&format!("{key} {value}"));
+            } else {
+                uasm.push_str(&serde_json::to_string(&binding.kind).unwrap());
+            }
             uasm.push('\n');
+            if let Some(com) = &binding.meta.comment {
+                uasm.push_str("  comment: ");
+                uasm.push_str(&serde_json::to_string(com).unwrap());
+                uasm.push('\n');
+            }
+            if let Some(deprecation) = &binding.meta.deprecation {
+                uasm.push_str("  deprecation: ");
+                uasm.push_str(&serde_json::to_string(deprecation).unwrap());
+                uasm.push('\n');
+            }
         }
 
         uasm.push_str("\nFUNCTIONS\n");
@@ -487,15 +526,19 @@ pub struct BindingInfo {
 }
 
 /// Metadata about a binding
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct BindingMeta {
     /// The comment preceding the binding
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub comment: Option<DocComment>,
     /// The character counts for golfing
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub counts: Option<BindingCounts>,
     /// The deprecation message
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deprecation: Option<EcoString>,
     /// Whether this binding's code was externally provided
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub external: bool,
 }
 
@@ -563,8 +606,10 @@ impl BindingKind {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct DocComment {
     /// The comment text
+    #[serde(default, skip_serializing_if = "str::is_empty")]
     pub text: EcoString,
     /// The signature of the binding
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sig: Option<DocCommentSig>,
 }
 

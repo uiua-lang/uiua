@@ -1882,7 +1882,7 @@ impl Value {
             3.0 * x.powi(2) - 2.0 * x.powi(3)
         }
         #[inline]
-        /// Produces [0, 1) from a hasher
+        /// Produces [-1, 1) from a hasher
         fn hasher_uniform(hasher: impl Hasher) -> f64 {
             hasher.finish() as f64 / u64::MAX as f64 * 2.0 - 1.0
         }
@@ -1997,30 +1997,29 @@ impl Value {
             // Fast case for 2D
             for o in 0..octaves.count() {
                 let oct_avg_sqrt_n = octaves.avg(o) * sqrt_n;
+                let (o0, o1) = (octaves.get(o, 0), octaves.get(o, 1));
                 for (noise, coord) in slice.iter_mut().zip(coords.chunks_exact(n)) {
-                    let x = coord[0] * octaves.get(o, 0);
-                    let y = coord[1] * octaves.get(o, 1);
+                    let (x, y) = (coord[0] * o0, coord[1] * o1);
                     let (xfract, yfract) = (x.rem_euclid(1.0).fract(), y.rem_euclid(1.0).fract());
                     let (xl, xr) = (smoothstep(1.0 - xfract), smoothstep(xfract));
                     let (yl, yr) = (smoothstep(1.0 - yfract), smoothstep(yfract));
                     let (x1, y1) = (x.floor(), y.floor());
                     let (x2, y2) = (x1 + 1.0, y1 + 1.0);
-                    for [cx, cy, kx, ky] in [
-                        [x1, y1, xl, yl],
-                        [x2, y1, xr, yl],
-                        [x1, y2, xl, yr],
-                        [x2, y2, xr, yr],
-                    ] {
+                    for [cx, kx] in [[x1, xl], [x2, xr]] {
                         let mut hasher = hasher;
                         cx.to_bits().hash(&mut hasher);
-                        cy.to_bits().hash(&mut hasher);
-                        let (mut hx, mut hy) = (hasher, hasher);
-                        0.hash(&mut hx);
-                        1.hash(&mut hy);
-                        let (gradx, grady) = (hasher_uniform(hx), hasher_uniform(hy));
-                        *noise += kx * ky * (gradx * (x - cx) + grady * (y - cy))
-                            / (gradx * gradx + grady * grady).sqrt()
-                            / oct_avg_sqrt_n;
+                        let dx = x - cx;
+                        let kx_over_oct_avg_sqrt_n = kx / oct_avg_sqrt_n;
+                        for [cy, ky] in [[y1, yl], [y2, yr]] {
+                            let mut hasher = hasher;
+                            cy.to_bits().hash(&mut hasher);
+                            let (hx, mut hy) = (hasher, hasher);
+                            1.hash(&mut hy);
+                            let (gradx, grady) = (hasher_uniform(hx), hasher_uniform(hy));
+                            let dy = y - cy;
+                            *noise += kx_over_oct_avg_sqrt_n * ky * (gradx * dx + grady * dy)
+                                / (gradx * gradx + grady * grady).sqrt();
+                        }
                     }
                 }
             }

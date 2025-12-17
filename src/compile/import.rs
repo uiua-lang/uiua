@@ -107,91 +107,118 @@ impl Compiler {
             module.clone()
         } else {
             // println!("  {} not yet imported", path.display());
-            let bytes = (self.backend().file_read_all(&path))
-                .or_else(|e| {
-                    if path.ends_with(Path::new("example.ua")) {
-                        Ok(EXAMPLE_UA.as_bytes().to_vec())
-                    } else {
-                        Err(e)
-                    }
-                })
-                .map_err(|e| self.error(span.clone(), e))?;
 
-            // Hash file and determine cache path
-            let mut hasher = DefaultHasher::default();
-            bytes.hash(&mut hasher);
-            let ua_hash = hasher.finish();
-            let cache_subpath = match file_kind {
-                FileScopeKind::Source => PathBuf::from(format!(
-                    "{}/{ua_hash:016x}.uasm",
-                    path.with_extension("").display()
-                )),
-                FileScopeKind::Git => {
-                    let mut p = PathBuf::new();
-                    if let Some(author) = path.components().nth_back(2) {
-                        p = p.join(author);
-                    }
-                    if let Some(repo) = path.components().nth_back(1) {
-                        p = p.join(repo);
-                    }
-                    p.join(format!("{ua_hash:016x}.uasm"))
+            #[cfg(target_arch = "wasm32")]
+            thread_local! {
+                static CACHE: RefCell<HashMap<PathBuf, (Assembly, u64)>> = RefCell::new(HashMap::new());
+            }
+            #[allow(unused_mut)]
+            let mut asm = None;
+            #[cfg(target_arch = "wasm32")]
+            CACHE.with(|cache| {
+                if let Some(a) = cache.borrow().get(&path).cloned() {
+                    asm = Some(a);
                 }
-            };
-            let cache_dir = PathBuf::from("uiua-modules/cache");
-            let cache_path = cache_dir.join(&cache_subpath);
-            // println!("  Cache path: {}", cache_path.display());
-            let asm = if let Ok(uasm) = self.backend().file_read_all(&cache_path)
-                && let Ok(asm) =
-                    Assembly::from_uasm(&String::from_utf8_lossy(&uasm)).inspect_err(|e| {
-                        self.emit_diagnostic(
-                            format!("Error loading cached assemebly: {e}"),
-                            DiagnosticKind::Warning,
-                            span.clone(),
-                        )
-                    })
-                && asm.dependencies.iter().all(|(path, hash)| {
-                    let Ok(bytes) = self.backend().file_read_all(path) else {
-                        return false;
-                    };
-                    let mut hasher = DefaultHasher::default();
-                    bytes.hash(&mut hasher);
-                    let curr_hash = hasher.finish();
-                    // println!("    {} same: {}", path.display(), curr_hash == *hash);
-                    curr_hash == *hash
-                }) {
-                // println!("  Cache Hit!");
+            });
+
+            let (asm, ua_hash) = if let Some(asm) = asm {
                 asm
             } else {
-                // println!("  Cache Miss!");
-                let input: EcoString = String::from_utf8(bytes)
-                    .map_err(|e| self.error(span.clone(), format!("Failed to read file: {e}")))?
-                    .into();
+                let bytes = (self.backend().file_read_all(&path))
+                    .or_else(|e| {
+                        if path.ends_with(Path::new("example.ua")) {
+                            Ok(EXAMPLE_UA.as_bytes().to_vec())
+                        } else {
+                            Err(e)
+                        }
+                    })
+                    .map_err(|e| self.error(span.clone(), e))?;
 
-                if self.current_imports.iter().any(|p| p == &path) {
-                    return Err(self.error(
-                        span.clone(),
-                        format!("Cycle detected importing {}", path.to_string_lossy()),
-                    ));
-                }
+                // Hash file and determine cache path
+                let mut hasher = DefaultHasher::default();
+                bytes.hash(&mut hasher);
+                let ua_hash = hasher.finish();
+                let cache_subpath = match file_kind {
+                    FileScopeKind::Source => PathBuf::from(format!(
+                        "{}/{ua_hash:016x}.uasm",
+                        path.with_extension("").display()
+                    )),
+                    FileScopeKind::Git => {
+                        let mut p = PathBuf::new();
+                        if let Some(author) = path.components().nth_back(2) {
+                            p = p.join(author);
+                        }
+                        if let Some(repo) = path.components().nth_back(1) {
+                            p = p.join(repo);
+                        }
+                        p.join(format!("{ua_hash:016x}.uasm"))
+                    }
+                };
+                let cache_dir = PathBuf::from("uiua-modules/cache");
+                let cache_path = cache_dir.join(&cache_subpath);
+                // println!("  Cache path: {}", cache_path.display());
+                let asm = if let Ok(uasm) = self.backend().file_read_all(&cache_path)
+                    && let Ok(asm) = Assembly::from_uasm(&String::from_utf8_lossy(&uasm))
+                        .inspect_err(|e| {
+                            self.emit_diagnostic(
+                                format!("Error loading cached assemebly: {e}"),
+                                DiagnosticKind::Warning,
+                                span.clone(),
+                            )
+                        })
+                    && asm.dependencies.iter().all(|(path, hash)| {
+                        let Ok(bytes) = self.backend().file_read_all(path) else {
+                            return false;
+                        };
+                        let mut hasher = DefaultHasher::default();
+                        bytes.hash(&mut hasher);
+                        let curr_hash = hasher.finish();
+                        // println!("    {} same: {}", path.display(), curr_hash == *hash);
+                        curr_hash == *hash
+                    }) {
+                    // println!("  Cache Hit!");
+                    asm
+                } else {
+                    // println!("  Cache Miss!");
+                    let input: EcoString = String::from_utf8(bytes)
+                        .map_err(|e| self.error(span.clone(), format!("Failed to read file: {e}")))?
+                        .into();
 
-                let mut sub_comp = Compiler::with_backend(self.backend().clone());
-                sub_comp.current_imports = self.current_imports.clone();
-                sub_comp.mode = self.mode;
-                sub_comp.in_scope(ScopeKind::File(file_kind), |comp| {
-                    comp.load_str_src(&input, &path).map(drop)
-                })?;
-                let uasm = sub_comp.asm.to_uasm();
-                if let Some(parent) = cache_path.parent() {
-                    _ = self.backend().make_dir(parent);
+                    if self.current_imports.iter().any(|p| p == &path) {
+                        return Err(self.error(
+                            span.clone(),
+                            format!("Cycle detected importing {}", path.to_string_lossy()),
+                        ));
+                    }
+
+                    let mut sub_comp = Compiler::with_backend(self.backend().clone());
+                    sub_comp.current_imports = self.current_imports.clone();
+                    sub_comp.mode = self.mode;
+                    sub_comp.in_scope(ScopeKind::File(file_kind), |comp| {
+                        comp.load_str_src(&input, &path).map(drop)
+                    })?;
+                    let uasm = sub_comp.asm.to_uasm();
+                    if let Some(parent) = cache_path.parent() {
+                        _ = self.backend().make_dir(parent);
+                    }
+                    if let Err(e) = self.backend().file_write_all(&cache_path, uasm.as_bytes()) {
+                        self.emit_diagnostic(
+                            format!("Unable to cache import: {e}"),
+                            DiagnosticKind::Warning,
+                            span.clone(),
+                        );
+                    }
+                    sub_comp.asm
+                };
+                #[cfg(target_arch = "wasm32")]
+                if let FileScopeKind::Git = file_kind {
+                    CACHE.with(|cache| {
+                        cache
+                            .borrow_mut()
+                            .insert(path.clone(), (asm.clone(), ua_hash));
+                    });
                 }
-                if let Err(e) = self.backend().file_write_all(&cache_path, uasm.as_bytes()) {
-                    self.emit_diagnostic(
-                        format!("Unable to cache import: {e}"),
-                        DiagnosticKind::Warning,
-                        span.clone(),
-                    );
-                }
-                sub_comp.asm
+                (asm, ua_hash)
             };
             let mut module = asm.module();
             for local in module.names.0.values_mut().flatten() {

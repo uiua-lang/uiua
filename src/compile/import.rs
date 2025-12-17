@@ -7,7 +7,7 @@ impl Compiler {
         prev_com: Option<EcoString>,
     ) -> UiuaResult {
         // Import module
-        let module = self.import_module(&import.path.value, &import.path.span)?;
+        let module = self.import_module_from_path(&import.path.value, &import.path.span)?;
         // Bind items
         for item in import.items() {
             if let Some(local) = module.names.get_last(item.value.as_str()) {
@@ -51,8 +51,12 @@ impl Compiler {
         }
         Ok(())
     }
-    /// Import a module
-    pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<Module> {
+    /// Import a module from a path
+    pub(crate) fn import_module_from_path(
+        &mut self,
+        path_str: &str,
+        span: &CodeSpan,
+    ) -> UiuaResult<Module> {
         // Resolve path
         let (path, file_kind) = if let Some(url) =
             (path_str.trim().strip_prefix("git:").map(Into::into)).or_else(|| {

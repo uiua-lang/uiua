@@ -316,7 +316,11 @@ pub struct LocalIndex {
     /// The index of the binding in assembly's bindings
     pub index: usize,
     /// Whether the binding is public
+    #[serde(default = "tru", skip_serializing_if = "std::ops::Not::not")]
     pub public: bool,
+}
+fn tru() -> bool {
+    true
 }
 
 impl Compiler {

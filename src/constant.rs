@@ -156,10 +156,15 @@ impl ConstantValue {
                 .and_then(|p| p.file_name().map(|f| f.to_string_lossy().into_owned()))
                 .unwrap_or_default()
                 .into(),
-            ConstantValue::ThisFileDir => current_file_path
-                .and_then(|p| p.parent().map(|f| f.display().to_string()))
-                .unwrap_or_default()
-                .into(),
+            ConstantValue::ThisFileDir => {
+                let mut path = current_file_path
+                    .and_then(|p| p.parent().map(|f| f.display().to_string()))
+                    .unwrap_or_default();
+                if path.is_empty() {
+                    path = ".".into();
+                }
+                path.into()
+            }
             ConstantValue::WorkingDir => std::env::current_dir()
                 .unwrap_or_default()
                 .display()
